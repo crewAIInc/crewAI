@@ -56,8 +56,484 @@
         },
         "versions": [
           {
-            "version": "v1.14.2",
+            "version": "v1.14.3",
             "default": true,
+            "tabs": [
+              {
+                "tab": "Home",
+                "icon": "house",
+                "groups": [
+                  {
+                    "group": "Welcome",
+                    "pages": [
+                      "index"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "Documentation",
+                "icon": "book-open",
+                "groups": [
+                  {
+                    "group": "Get Started",
+                    "pages": [
+                      "en/introduction",
+                      "en/guides/coding-tools/build-with-ai",
+                      "en/skills",
+                      "en/installation",
+                      "en/quickstart"
+                    ]
+                  },
+                  {
+                    "group": "Guides",
+                    "pages": [
+                      {
+                        "group": "Strategy",
+                        "icon": "compass",
+                        "pages": [
+                          "en/guides/concepts/evaluating-use-cases"
+                        ]
+                      },
+                      {
+                        "group": "Agents",
+                        "icon": "user",
+                        "pages": [
+                          "en/guides/agents/crafting-effective-agents"
+                        ]
+                      },
+                      {
+                        "group": "Crews",
+                        "icon": "users",
+                        "pages": [
+                          "en/guides/crews/first-crew"
+                        ]
+                      },
+                      {
+                        "group": "Flows",
+                        "icon": "code-branch",
+                        "pages": [
+                          "en/guides/flows/first-flow",
+                          "en/guides/flows/mastering-flow-state"
+                        ]
+                      },
+                      {
+                        "group": "Tools",
+                        "icon": "wrench",
+                        "pages": [
+                          "en/guides/tools/publish-custom-tools"
+                        ]
+                      },
+                      {
+                        "group": "Coding Tools",
+                        "icon": "terminal",
+                        "pages": [
+                          "en/guides/coding-tools/agents-md",
+                          "en/guides/coding-tools/build-with-ai"
+                        ]
+                      },
+                      {
+                        "group": "Advanced",
+                        "icon": "gear",
+                        "pages": [
+                          "en/guides/advanced/customizing-prompts",
+                          "en/guides/advanced/fingerprinting"
+                        ]
+                      },
+                      {
+                        "group": "Migration",
+                        "icon": "shuffle",
+                        "pages": [
+                          "en/guides/migration/migrating-from-langgraph"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "Core Concepts",
+                    "pages": [
+                      "en/concepts/agents",
+                      "en/concepts/agent-capabilities",
+                      "en/concepts/tasks",
+                      "en/concepts/crews",
+                      "en/concepts/flows",
+                      "en/concepts/production-architecture",
+                      "en/concepts/knowledge",
+                      "en/concepts/skills",
+                      "en/concepts/llms",
+                      "en/concepts/files",
+                      "en/concepts/processes",
+                      "en/concepts/collaboration",
+                      "en/concepts/training",
+                      "en/concepts/memory",
+                      "en/concepts/reasoning",
+                      "en/concepts/planning",
+                      "en/concepts/testing",
+                      "en/concepts/cli",
+                      "en/concepts/tools",
+                      "en/concepts/event-listener",
+                      "en/concepts/checkpointing"
+                    ]
+                  },
+                  {
+                    "group": "MCP Integration",
+                    "pages": [
+                      "en/mcp/overview",
+                      "en/mcp/dsl-integration",
+                      "en/mcp/stdio",
+                      "en/mcp/sse",
+                      "en/mcp/streamable-http",
+                      "en/mcp/multiple-servers",
+                      "en/mcp/security"
+                    ]
+                  },
+                  {
+                    "group": "Tools",
+                    "pages": [
+                      "en/tools/overview",
+                      {
+                        "group": "File & Document",
+                        "icon": "folder-open",
+                        "pages": [
+                          "en/tools/file-document/overview",
+                          "en/tools/file-document/filereadtool",
+                          "en/tools/file-document/filewritetool",
+                          "en/tools/file-document/pdfsearchtool",
+                          "en/tools/file-document/docxsearchtool",
+                          "en/tools/file-document/mdxsearchtool",
+                          "en/tools/file-document/xmlsearchtool",
+                          "en/tools/file-document/txtsearchtool",
+                          "en/tools/file-document/jsonsearchtool",
+                          "en/tools/file-document/csvsearchtool",
+                          "en/tools/file-document/directorysearchtool",
+                          "en/tools/file-document/directoryreadtool",
+                          "en/tools/file-document/ocrtool",
+                          "en/tools/file-document/pdf-text-writing-tool"
+                        ]
+                      },
+                      {
+                        "group": "Web Scraping & Browsing",
+                        "icon": "globe",
+                        "pages": [
+                          "en/tools/web-scraping/overview",
+                          "en/tools/web-scraping/scrapewebsitetool",
+                          "en/tools/web-scraping/scrapeelementfromwebsitetool",
+                          "en/tools/web-scraping/scrapflyscrapetool",
+                          "en/tools/web-scraping/seleniumscrapingtool",
+                          "en/tools/web-scraping/scrapegraphscrapetool",
+                          "en/tools/web-scraping/spidertool",
+                          "en/tools/web-scraping/browserbaseloadtool",
+                          "en/tools/web-scraping/hyperbrowserloadtool",
+                          "en/tools/web-scraping/stagehandtool",
+                          "en/tools/web-scraping/firecrawlcrawlwebsitetool",
+                          "en/tools/web-scraping/firecrawlscrapewebsitetool",
+                          "en/tools/web-scraping/oxylabsscraperstool",
+                          "en/tools/web-scraping/brightdata-tools"
+                        ]
+                      },
+                      {
+                        "group": "Search & Research",
+                        "icon": "magnifying-glass",
+                        "pages": [
+                          "en/tools/search-research/overview",
+                          "en/tools/search-research/serperdevtool",
+                          "en/tools/search-research/bravesearchtool",
+                          "en/tools/search-research/exasearchtool",
+                          "en/tools/search-research/linkupsearchtool",
+                          "en/tools/search-research/githubsearchtool",
+                          "en/tools/search-research/websitesearchtool",
+                          "en/tools/search-research/codedocssearchtool",
+                          "en/tools/search-research/youtubechannelsearchtool",
+                          "en/tools/search-research/youtubevideosearchtool",
+                          "en/tools/search-research/tavilysearchtool",
+                          "en/tools/search-research/tavilyextractortool",
+                          "en/tools/search-research/arxivpapertool",
+                          "en/tools/search-research/serpapi-googlesearchtool",
+                          "en/tools/search-research/serpapi-googleshoppingtool",
+                          "en/tools/search-research/databricks-query-tool"
+                        ]
+                      },
+                      {
+                        "group": "Database & Data",
+                        "icon": "database",
+                        "pages": [
+                          "en/tools/database-data/overview",
+                          "en/tools/database-data/mysqltool",
+                          "en/tools/database-data/pgsearchtool",
+                          "en/tools/database-data/snowflakesearchtool",
+                          "en/tools/database-data/nl2sqltool",
+                          "en/tools/database-data/qdrantvectorsearchtool",
+                          "en/tools/database-data/weaviatevectorsearchtool",
+                          "en/tools/database-data/mongodbvectorsearchtool",
+                          "en/tools/database-data/singlestoresearchtool"
+                        ]
+                      },
+                      {
+                        "group": "AI & Machine Learning",
+                        "icon": "brain",
+                        "pages": [
+                          "en/tools/ai-ml/overview",
+                          "en/tools/ai-ml/dalletool",
+                          "en/tools/ai-ml/visiontool",
+                          "en/tools/ai-ml/aimindtool",
+                          "en/tools/ai-ml/llamaindextool",
+                          "en/tools/ai-ml/langchaintool",
+                          "en/tools/ai-ml/ragtool",
+                          "en/tools/ai-ml/codeinterpretertool"
+                        ]
+                      },
+                      {
+                        "group": "Cloud & Storage",
+                        "icon": "cloud",
+                        "pages": [
+                          "en/tools/cloud-storage/overview",
+                          "en/tools/cloud-storage/s3readertool",
+                          "en/tools/cloud-storage/s3writertool",
+                          "en/tools/cloud-storage/bedrockkbretriever"
+                        ]
+                      },
+                      {
+                        "group": "Integrations",
+                        "icon": "plug",
+                        "pages": [
+                          "en/tools/integration/overview",
+                          "en/tools/integration/bedrockinvokeagenttool",
+                          "en/tools/integration/crewaiautomationtool",
+                          "en/tools/integration/mergeagenthandlertool"
+                        ]
+                      },
+                      {
+                        "group": "Automation",
+                        "icon": "bolt",
+                        "pages": [
+                          "en/tools/automation/overview",
+                          "en/tools/automation/apifyactorstool",
+                          "en/tools/automation/composiotool",
+                          "en/tools/automation/multiontool",
+                          "en/tools/automation/zapieractionstool"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "Observability",
+                    "pages": [
+                      "en/observability/tracing",
+                      "en/observability/overview",
+                      "en/observability/arize-phoenix",
+                      "en/observability/braintrust",
+                      "en/observability/datadog",
+                      "en/observability/galileo",
+                      "en/observability/langdb",
+                      "en/observability/langfuse",
+                      "en/observability/langtrace",
+                      "en/observability/maxim",
+                      "en/observability/mlflow",
+                      "en/observability/neatlogs",
+                      "en/observability/openlit",
+                      "en/observability/opik",
+                      "en/observability/patronus-evaluation",
+                      "en/observability/portkey",
+                      "en/observability/weave",
+                      "en/observability/truefoundry"
+                    ]
+                  },
+                  {
+                    "group": "Learn",
+                    "pages": [
+                      "en/learn/overview",
+                      "en/learn/llm-selection-guide",
+                      "en/learn/conditional-tasks",
+                      "en/learn/coding-agents",
+                      "en/learn/create-custom-tools",
+                      "en/learn/custom-llm",
+                      "en/learn/custom-manager-agent",
+                      "en/learn/customizing-agents",
+                      "en/learn/dalle-image-generation",
+                      "en/learn/force-tool-output-as-result",
+                      "en/learn/hierarchical-process",
+                      "en/learn/human-input-on-execution",
+                      "en/learn/human-in-the-loop",
+                      "en/learn/human-feedback-in-flows",
+                      "en/learn/kickoff-async",
+                      "en/learn/kickoff-for-each",
+                      "en/learn/llm-connections",
+                      "en/learn/litellm-removal-guide",
+                      "en/learn/multimodal-agents",
+                      "en/learn/replay-tasks-from-latest-crew-kickoff",
+                      "en/learn/sequential-process",
+                      "en/learn/using-annotations",
+                      "en/learn/execution-hooks",
+                      "en/learn/llm-hooks",
+                      "en/learn/tool-hooks"
+                    ]
+                  },
+                  {
+                    "group": "Telemetry",
+                    "pages": [
+                      "en/telemetry"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "AMP",
+                "icon": "briefcase",
+                "groups": [
+                  {
+                    "group": "Getting Started",
+                    "pages": [
+                      "en/enterprise/introduction"
+                    ]
+                  },
+                  {
+                    "group": "Build",
+                    "pages": [
+                      "en/enterprise/features/automations",
+                      "en/enterprise/features/crew-studio",
+                      "en/enterprise/features/marketplace",
+                      "en/enterprise/features/agent-repositories",
+                      "en/enterprise/features/tools-and-integrations",
+                      "en/enterprise/features/pii-trace-redactions",
+                      "en/enterprise/features/a2a"
+                    ]
+                  },
+                  {
+                    "group": "Operate",
+                    "pages": [
+                      "en/enterprise/features/traces",
+                      "en/enterprise/features/webhook-streaming",
+                      "en/enterprise/features/hallucination-guardrail",
+                      "en/enterprise/features/flow-hitl-management"
+                    ]
+                  },
+                  {
+                    "group": "Manage",
+                    "pages": [
+                      "en/enterprise/features/sso",
+                      "en/enterprise/features/rbac"
+                    ]
+                  },
+                  {
+                    "group": "Integration Docs",
+                    "pages": [
+                      "en/enterprise/integrations/asana",
+                      "en/enterprise/integrations/box",
+                      "en/enterprise/integrations/clickup",
+                      "en/enterprise/integrations/github",
+                      "en/enterprise/integrations/gmail",
+                      "en/enterprise/integrations/google_calendar",
+                      "en/enterprise/integrations/google_contacts",
+                      "en/enterprise/integrations/google_docs",
+                      "en/enterprise/integrations/google_drive",
+                      "en/enterprise/integrations/google_sheets",
+                      "en/enterprise/integrations/google_slides",
+                      "en/enterprise/integrations/hubspot",
+                      "en/enterprise/integrations/jira",
+                      "en/enterprise/integrations/linear",
+                      "en/enterprise/integrations/microsoft_excel",
+                      "en/enterprise/integrations/microsoft_onedrive",
+                      "en/enterprise/integrations/microsoft_outlook",
+                      "en/enterprise/integrations/microsoft_sharepoint",
+                      "en/enterprise/integrations/microsoft_teams",
+                      "en/enterprise/integrations/microsoft_word",
+                      "en/enterprise/integrations/notion",
+                      "en/enterprise/integrations/salesforce",
+                      "en/enterprise/integrations/shopify",
+                      "en/enterprise/integrations/slack",
+                      "en/enterprise/integrations/stripe",
+                      "en/enterprise/integrations/zendesk"
+                    ]
+                  },
+                  {
+                    "group": "Triggers",
+                    "pages": [
+                      "en/enterprise/guides/automation-triggers",
+                      "en/enterprise/guides/gmail-trigger",
+                      "en/enterprise/guides/google-calendar-trigger",
+                      "en/enterprise/guides/google-drive-trigger",
+                      "en/enterprise/guides/outlook-trigger",
+                      "en/enterprise/guides/onedrive-trigger",
+                      "en/enterprise/guides/microsoft-teams-trigger",
+                      "en/enterprise/guides/slack-trigger",
+                      "en/enterprise/guides/hubspot-trigger",
+                      "en/enterprise/guides/salesforce-trigger",
+                      "en/enterprise/guides/zapier-trigger"
+                    ]
+                  },
+                  {
+                    "group": "How-To Guides",
+                    "pages": [
+                      "en/enterprise/guides/build-crew",
+                      "en/enterprise/guides/prepare-for-deployment",
+                      "en/enterprise/guides/deploy-to-amp",
+                      "en/enterprise/guides/private-package-registry",
+                      "en/enterprise/guides/kickoff-crew",
+                      "en/enterprise/guides/update-crew",
+                      "en/enterprise/guides/enable-crew-studio",
+                      "en/enterprise/guides/capture_telemetry_logs",
+                      "en/enterprise/guides/azure-openai-setup",
+                      "en/enterprise/guides/tool-repository",
+                      "en/enterprise/guides/custom-mcp-server",
+                      "en/enterprise/guides/react-component-export",
+                      "en/enterprise/guides/team-management",
+                      "en/enterprise/guides/human-in-the-loop",
+                      "en/enterprise/guides/webhook-automation"
+                    ]
+                  },
+                  {
+                    "group": "Resources",
+                    "pages": [
+                      "en/enterprise/resources/frequently-asked-questions"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "API Reference",
+                "icon": "magnifying-glass",
+                "groups": [
+                  {
+                    "group": "Getting Started",
+                    "pages": [
+                      "en/api-reference/introduction",
+                      "en/api-reference/inputs",
+                      "en/api-reference/kickoff",
+                      "en/api-reference/resume",
+                      "en/api-reference/status"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "Examples",
+                "icon": "code",
+                "groups": [
+                  {
+                    "group": "Examples",
+                    "pages": [
+                      "en/examples/example",
+                      "en/examples/cookbooks"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "Changelog",
+                "icon": "clock",
+                "groups": [
+                  {
+                    "group": "Release Notes",
+                    "pages": [
+                      "en/changelog"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "version": "v1.14.2",
             "tabs": [
               {
                 "tab": "Home",
@@ -5316,8 +5792,467 @@
         },
         "versions": [
           {
-            "version": "v1.14.2",
+            "version": "v1.14.3",
             "default": true,
+            "tabs": [
+              {
+                "tab": "Início",
+                "icon": "house",
+                "groups": [
+                  {
+                    "group": "Bem-vindo",
+                    "pages": [
+                      "pt-BR/index"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "Documentação",
+                "icon": "book-open",
+                "groups": [
+                  {
+                    "group": "Começando",
+                    "pages": [
+                      "pt-BR/introduction",
+                      "pt-BR/guides/coding-tools/build-with-ai",
+                      "pt-BR/skills",
+                      "pt-BR/installation",
+                      "pt-BR/quickstart"
+                    ]
+                  },
+                  {
+                    "group": "Guias",
+                    "pages": [
+                      {
+                        "group": "Estratégia",
+                        "icon": "compass",
+                        "pages": [
+                          "pt-BR/guides/concepts/evaluating-use-cases"
+                        ]
+                      },
+                      {
+                        "group": "Agentes",
+                        "icon": "user",
+                        "pages": [
+                          "pt-BR/guides/agents/crafting-effective-agents"
+                        ]
+                      },
+                      {
+                        "group": "Crews",
+                        "icon": "users",
+                        "pages": [
+                          "pt-BR/guides/crews/first-crew"
+                        ]
+                      },
+                      {
+                        "group": "Flows",
+                        "icon": "code-branch",
+                        "pages": [
+                          "pt-BR/guides/flows/first-flow",
+                          "pt-BR/guides/flows/mastering-flow-state"
+                        ]
+                      },
+                      {
+                        "group": "Ferramentas",
+                        "icon": "wrench",
+                        "pages": [
+                          "pt-BR/guides/tools/publish-custom-tools"
+                        ]
+                      },
+                      {
+                        "group": "Ferramentas de Codificação",
+                        "icon": "terminal",
+                        "pages": [
+                          "pt-BR/guides/coding-tools/agents-md"
+                        ]
+                      },
+                      {
+                        "group": "Avançado",
+                        "icon": "gear",
+                        "pages": [
+                          "pt-BR/guides/advanced/customizing-prompts",
+                          "pt-BR/guides/advanced/fingerprinting"
+                        ]
+                      },
+                      {
+                        "group": "Migração",
+                        "icon": "shuffle",
+                        "pages": [
+                          "pt-BR/guides/migration/migrating-from-langgraph"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "Conceitos-Chave",
+                    "pages": [
+                      "pt-BR/concepts/agents",
+                      "pt-BR/concepts/agent-capabilities",
+                      "pt-BR/concepts/tasks",
+                      "pt-BR/concepts/crews",
+                      "pt-BR/concepts/flows",
+                      "pt-BR/concepts/production-architecture",
+                      "pt-BR/concepts/knowledge",
+                      "pt-BR/concepts/skills",
+                      "pt-BR/concepts/llms",
+                      "pt-BR/concepts/files",
+                      "pt-BR/concepts/processes",
+                      "pt-BR/concepts/collaboration",
+                      "pt-BR/concepts/training",
+                      "pt-BR/concepts/memory",
+                      "pt-BR/concepts/reasoning",
+                      "pt-BR/concepts/planning",
+                      "pt-BR/concepts/testing",
+                      "pt-BR/concepts/cli",
+                      "pt-BR/concepts/tools",
+                      "pt-BR/concepts/event-listener",
+                      "pt-BR/concepts/checkpointing"
+                    ]
+                  },
+                  {
+                    "group": "Integração MCP",
+                    "pages": [
+                      "pt-BR/mcp/overview",
+                      "pt-BR/mcp/dsl-integration",
+                      "pt-BR/mcp/stdio",
+                      "pt-BR/mcp/sse",
+                      "pt-BR/mcp/streamable-http",
+                      "pt-BR/mcp/multiple-servers",
+                      "pt-BR/mcp/security"
+                    ]
+                  },
+                  {
+                    "group": "Ferramentas",
+                    "pages": [
+                      "pt-BR/tools/overview",
+                      {
+                        "group": "Arquivo & Documento",
+                        "icon": "folder-open",
+                        "pages": [
+                          "pt-BR/tools/file-document/overview",
+                          "pt-BR/tools/file-document/filereadtool",
+                          "pt-BR/tools/file-document/filewritetool",
+                          "pt-BR/tools/file-document/pdfsearchtool",
+                          "pt-BR/tools/file-document/docxsearchtool",
+                          "pt-BR/tools/file-document/mdxsearchtool",
+                          "pt-BR/tools/file-document/xmlsearchtool",
+                          "pt-BR/tools/file-document/txtsearchtool",
+                          "pt-BR/tools/file-document/jsonsearchtool",
+                          "pt-BR/tools/file-document/csvsearchtool",
+                          "pt-BR/tools/file-document/directorysearchtool",
+                          "pt-BR/tools/file-document/directoryreadtool"
+                        ]
+                      },
+                      {
+                        "group": "Web Scraping & Navegação",
+                        "icon": "globe",
+                        "pages": [
+                          "pt-BR/tools/web-scraping/overview",
+                          "pt-BR/tools/web-scraping/scrapewebsitetool",
+                          "pt-BR/tools/web-scraping/scrapeelementfromwebsitetool",
+                          "pt-BR/tools/web-scraping/scrapflyscrapetool",
+                          "pt-BR/tools/web-scraping/seleniumscrapingtool",
+                          "pt-BR/tools/web-scraping/scrapegraphscrapetool",
+                          "pt-BR/tools/web-scraping/spidertool",
+                          "pt-BR/tools/web-scraping/browserbaseloadtool",
+                          "pt-BR/tools/web-scraping/hyperbrowserloadtool",
+                          "pt-BR/tools/web-scraping/stagehandtool",
+                          "pt-BR/tools/web-scraping/firecrawlcrawlwebsitetool",
+                          "pt-BR/tools/web-scraping/firecrawlscrapewebsitetool",
+                          "pt-BR/tools/web-scraping/oxylabsscraperstool"
+                        ]
+                      },
+                      {
+                        "group": "Pesquisa",
+                        "icon": "magnifying-glass",
+                        "pages": [
+                          "pt-BR/tools/search-research/overview",
+                          "pt-BR/tools/search-research/serperdevtool",
+                          "pt-BR/tools/search-research/bravesearchtool",
+                          "pt-BR/tools/search-research/exasearchtool",
+                          "pt-BR/tools/search-research/linkupsearchtool",
+                          "pt-BR/tools/search-research/githubsearchtool",
+                          "pt-BR/tools/search-research/websitesearchtool",
+                          "pt-BR/tools/search-research/codedocssearchtool",
+                          "pt-BR/tools/search-research/youtubechannelsearchtool",
+                          "pt-BR/tools/search-research/youtubevideosearchtool"
+                        ]
+                      },
+                      {
+                        "group": "Dados",
+                        "icon": "database",
+                        "pages": [
+                          "pt-BR/tools/database-data/overview",
+                          "pt-BR/tools/database-data/mysqltool",
+                          "pt-BR/tools/database-data/pgsearchtool",
+                          "pt-BR/tools/database-data/snowflakesearchtool",
+                          "pt-BR/tools/database-data/nl2sqltool",
+                          "pt-BR/tools/database-data/qdrantvectorsearchtool",
+                          "pt-BR/tools/database-data/weaviatevectorsearchtool"
+                        ]
+                      },
+                      {
+                        "group": "IA & Machine Learning",
+                        "icon": "brain",
+                        "pages": [
+                          "pt-BR/tools/ai-ml/overview",
+                          "pt-BR/tools/ai-ml/dalletool",
+                          "pt-BR/tools/ai-ml/visiontool",
+                          "pt-BR/tools/ai-ml/aimindtool",
+                          "pt-BR/tools/ai-ml/llamaindextool",
+                          "pt-BR/tools/ai-ml/langchaintool",
+                          "pt-BR/tools/ai-ml/ragtool",
+                          "pt-BR/tools/ai-ml/codeinterpretertool"
+                        ]
+                      },
+                      {
+                        "group": "Cloud & Armazenamento",
+                        "icon": "cloud",
+                        "pages": [
+                          "pt-BR/tools/cloud-storage/overview",
+                          "pt-BR/tools/cloud-storage/s3readertool",
+                          "pt-BR/tools/cloud-storage/s3writertool",
+                          "pt-BR/tools/cloud-storage/bedrockkbretriever"
+                        ]
+                      },
+                      {
+                        "group": "Integrations",
+                        "icon": "plug",
+                        "pages": [
+                          "pt-BR/tools/integration/overview",
+                          "pt-BR/tools/integration/bedrockinvokeagenttool",
+                          "pt-BR/tools/integration/crewaiautomationtool"
+                        ]
+                      },
+                      {
+                        "group": "Automação",
+                        "icon": "bolt",
+                        "pages": [
+                          "pt-BR/tools/automation/overview",
+                          "pt-BR/tools/automation/apifyactorstool",
+                          "pt-BR/tools/automation/composiotool",
+                          "pt-BR/tools/automation/multiontool"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "Observabilidade",
+                    "pages": [
+                      "pt-BR/observability/tracing",
+                      "pt-BR/observability/overview",
+                      "pt-BR/observability/arize-phoenix",
+                      "pt-BR/observability/braintrust",
+                      "pt-BR/observability/datadog",
+                      "pt-BR/observability/galileo",
+                      "pt-BR/observability/langdb",
+                      "pt-BR/observability/langfuse",
+                      "pt-BR/observability/langtrace",
+                      "pt-BR/observability/maxim",
+                      "pt-BR/observability/mlflow",
+                      "pt-BR/observability/openlit",
+                      "pt-BR/observability/opik",
+                      "pt-BR/observability/patronus-evaluation",
+                      "pt-BR/observability/portkey",
+                      "pt-BR/observability/weave",
+                      "pt-BR/observability/truefoundry"
+                    ]
+                  },
+                  {
+                    "group": "Aprenda",
+                    "pages": [
+                      "pt-BR/learn/overview",
+                      "pt-BR/learn/llm-selection-guide",
+                      "pt-BR/learn/conditional-tasks",
+                      "pt-BR/learn/coding-agents",
+                      "pt-BR/learn/create-custom-tools",
+                      "pt-BR/learn/custom-llm",
+                      "pt-BR/learn/custom-manager-agent",
+                      "pt-BR/learn/customizing-agents",
+                      "pt-BR/learn/dalle-image-generation",
+                      "pt-BR/learn/force-tool-output-as-result",
+                      "pt-BR/learn/hierarchical-process",
+                      "pt-BR/learn/human-input-on-execution",
+                      "pt-BR/learn/human-in-the-loop",
+                      "pt-BR/learn/human-feedback-in-flows",
+                      "pt-BR/learn/kickoff-async",
+                      "pt-BR/learn/kickoff-for-each",
+                      "pt-BR/learn/llm-connections",
+                      "pt-BR/learn/multimodal-agents",
+                      "pt-BR/learn/replay-tasks-from-latest-crew-kickoff",
+                      "pt-BR/learn/sequential-process",
+                      "pt-BR/learn/using-annotations",
+                      "pt-BR/learn/execution-hooks",
+                      "pt-BR/learn/llm-hooks",
+                      "pt-BR/learn/tool-hooks"
+                    ]
+                  },
+                  {
+                    "group": "Telemetria",
+                    "pages": [
+                      "pt-BR/telemetry"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "AMP",
+                "icon": "briefcase",
+                "groups": [
+                  {
+                    "group": "Começando",
+                    "pages": [
+                      "pt-BR/enterprise/introduction"
+                    ]
+                  },
+                  {
+                    "group": "Construir",
+                    "pages": [
+                      "pt-BR/enterprise/features/automations",
+                      "pt-BR/enterprise/features/crew-studio",
+                      "pt-BR/enterprise/features/marketplace",
+                      "pt-BR/enterprise/features/agent-repositories",
+                      "pt-BR/enterprise/features/tools-and-integrations",
+                      "pt-BR/enterprise/features/pii-trace-redactions"
+                    ]
+                  },
+                  {
+                    "group": "Operar",
+                    "pages": [
+                      "pt-BR/enterprise/features/traces",
+                      "pt-BR/enterprise/features/webhook-streaming",
+                      "pt-BR/enterprise/features/hallucination-guardrail",
+                      "pt-BR/enterprise/features/flow-hitl-management"
+                    ]
+                  },
+                  {
+                    "group": "Gerenciar",
+                    "pages": [
+                      "pt-BR/enterprise/features/rbac"
+                    ]
+                  },
+                  {
+                    "group": "Documentação de Integração",
+                    "pages": [
+                      "pt-BR/enterprise/integrations/asana",
+                      "pt-BR/enterprise/integrations/box",
+                      "pt-BR/enterprise/integrations/clickup",
+                      "pt-BR/enterprise/integrations/github",
+                      "pt-BR/enterprise/integrations/gmail",
+                      "pt-BR/enterprise/integrations/google_calendar",
+                      "pt-BR/enterprise/integrations/google_contacts",
+                      "pt-BR/enterprise/integrations/google_docs",
+                      "pt-BR/enterprise/integrations/google_drive",
+                      "pt-BR/enterprise/integrations/google_sheets",
+                      "pt-BR/enterprise/integrations/google_slides",
+                      "pt-BR/enterprise/integrations/hubspot",
+                      "pt-BR/enterprise/integrations/jira",
+                      "pt-BR/enterprise/integrations/linear",
+                      "pt-BR/enterprise/integrations/microsoft_excel",
+                      "pt-BR/enterprise/integrations/microsoft_onedrive",
+                      "pt-BR/enterprise/integrations/microsoft_outlook",
+                      "pt-BR/enterprise/integrations/microsoft_sharepoint",
+                      "pt-BR/enterprise/integrations/microsoft_teams",
+                      "pt-BR/enterprise/integrations/microsoft_word",
+                      "pt-BR/enterprise/integrations/notion",
+                      "pt-BR/enterprise/integrations/salesforce",
+                      "pt-BR/enterprise/integrations/shopify",
+                      "pt-BR/enterprise/integrations/slack",
+                      "pt-BR/enterprise/integrations/stripe",
+                      "pt-BR/enterprise/integrations/zendesk"
+                    ]
+                  },
+                  {
+                    "group": "Guias",
+                    "pages": [
+                      "pt-BR/enterprise/guides/build-crew",
+                      "pt-BR/enterprise/guides/prepare-for-deployment",
+                      "pt-BR/enterprise/guides/deploy-to-amp",
+                      "pt-BR/enterprise/guides/private-package-registry",
+                      "pt-BR/enterprise/guides/kickoff-crew",
+                      "pt-BR/enterprise/guides/training-crews",
+                      "pt-BR/enterprise/guides/update-crew",
+                      "pt-BR/enterprise/guides/enable-crew-studio",
+                      "pt-BR/enterprise/guides/capture_telemetry_logs",
+                      "pt-BR/enterprise/guides/azure-openai-setup",
+                      "pt-BR/enterprise/guides/tool-repository",
+                      "pt-BR/enterprise/guides/custom-mcp-server",
+                      "pt-BR/enterprise/guides/react-component-export",
+                      "pt-BR/enterprise/guides/team-management",
+                      "pt-BR/enterprise/guides/human-in-the-loop",
+                      "pt-BR/enterprise/guides/webhook-automation"
+                    ]
+                  },
+                  {
+                    "group": "Triggers",
+                    "pages": [
+                      "pt-BR/enterprise/guides/automation-triggers",
+                      "pt-BR/enterprise/guides/gmail-trigger",
+                      "pt-BR/enterprise/guides/google-calendar-trigger",
+                      "pt-BR/enterprise/guides/google-drive-trigger",
+                      "pt-BR/enterprise/guides/outlook-trigger",
+                      "pt-BR/enterprise/guides/onedrive-trigger",
+                      "pt-BR/enterprise/guides/microsoft-teams-trigger",
+                      "pt-BR/enterprise/guides/slack-trigger",
+                      "pt-BR/enterprise/guides/hubspot-trigger",
+                      "pt-BR/enterprise/guides/salesforce-trigger",
+                      "pt-BR/enterprise/guides/zapier-trigger"
+                    ]
+                  },
+                  {
+                    "group": "Recursos",
+                    "pages": [
+                      "pt-BR/enterprise/resources/frequently-asked-questions"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "Referência da API",
+                "icon": "magnifying-glass",
+                "groups": [
+                  {
+                    "group": "Começando",
+                    "pages": [
+                      "pt-BR/api-reference/introduction",
+                      "pt-BR/api-reference/inputs",
+                      "pt-BR/api-reference/kickoff",
+                      "pt-BR/api-reference/resume",
+                      "pt-BR/api-reference/status"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "Exemplos",
+                "icon": "code",
+                "groups": [
+                  {
+                    "group": "Exemplos",
+                    "pages": [
+                      "pt-BR/examples/example",
+                      "pt-BR/examples/cookbooks"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "Notas de Versão",
+                "icon": "clock",
+                "groups": [
+                  {
+                    "group": "Notas de Versão",
+                    "pages": [
+                      "pt-BR/changelog"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "version": "v1.14.2",
             "tabs": [
               {
                 "tab": "Início",
@@ -10387,8 +11322,479 @@
         },
         "versions": [
           {
-            "version": "v1.14.2",
+            "version": "v1.14.3",
             "default": true,
+            "tabs": [
+              {
+                "tab": "홈",
+                "icon": "house",
+                "groups": [
+                  {
+                    "group": "환영합니다",
+                    "pages": [
+                      "ko/index"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "기술 문서",
+                "icon": "book-open",
+                "groups": [
+                  {
+                    "group": "시작 안내",
+                    "pages": [
+                      "ko/introduction",
+                      "ko/guides/coding-tools/build-with-ai",
+                      "ko/skills",
+                      "ko/installation",
+                      "ko/quickstart"
+                    ]
+                  },
+                  {
+                    "group": "가이드",
+                    "pages": [
+                      {
+                        "group": "전략",
+                        "icon": "compass",
+                        "pages": [
+                          "ko/guides/concepts/evaluating-use-cases"
+                        ]
+                      },
+                      {
+                        "group": "에이전트 (Agents)",
+                        "icon": "user",
+                        "pages": [
+                          "ko/guides/agents/crafting-effective-agents"
+                        ]
+                      },
+                      {
+                        "group": "크루 (Crews)",
+                        "icon": "users",
+                        "pages": [
+                          "ko/guides/crews/first-crew"
+                        ]
+                      },
+                      {
+                        "group": "플로우 (Flows)",
+                        "icon": "code-branch",
+                        "pages": [
+                          "ko/guides/flows/first-flow",
+                          "ko/guides/flows/mastering-flow-state"
+                        ]
+                      },
+                      {
+                        "group": "도구",
+                        "icon": "wrench",
+                        "pages": [
+                          "ko/guides/tools/publish-custom-tools"
+                        ]
+                      },
+                      {
+                        "group": "코딩 도구",
+                        "icon": "terminal",
+                        "pages": [
+                          "ko/guides/coding-tools/agents-md"
+                        ]
+                      },
+                      {
+                        "group": "고급",
+                        "icon": "gear",
+                        "pages": [
+                          "ko/guides/advanced/customizing-prompts",
+                          "ko/guides/advanced/fingerprinting"
+                        ]
+                      },
+                      {
+                        "group": "마이그레이션",
+                        "icon": "shuffle",
+                        "pages": [
+                          "ko/guides/migration/migrating-from-langgraph"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "핵심 개념",
+                    "pages": [
+                      "ko/concepts/agents",
+                      "ko/concepts/tasks",
+                      "ko/concepts/agent-capabilities",
+                      "ko/concepts/crews",
+                      "ko/concepts/flows",
+                      "ko/concepts/production-architecture",
+                      "ko/concepts/knowledge",
+                      "ko/concepts/skills",
+                      "ko/concepts/llms",
+                      "ko/concepts/files",
+                      "ko/concepts/processes",
+                      "ko/concepts/collaboration",
+                      "ko/concepts/training",
+                      "ko/concepts/memory",
+                      "ko/concepts/reasoning",
+                      "ko/concepts/planning",
+                      "ko/concepts/testing",
+                      "ko/concepts/cli",
+                      "ko/concepts/tools",
+                      "ko/concepts/event-listener",
+                      "ko/concepts/checkpointing"
+                    ]
+                  },
+                  {
+                    "group": "MCP 통합",
+                    "pages": [
+                      "ko/mcp/overview",
+                      "ko/mcp/dsl-integration",
+                      "ko/mcp/stdio",
+                      "ko/mcp/sse",
+                      "ko/mcp/streamable-http",
+                      "ko/mcp/multiple-servers",
+                      "ko/mcp/security"
+                    ]
+                  },
+                  {
+                    "group": "도구 (Tools)",
+                    "pages": [
+                      "ko/tools/overview",
+                      {
+                        "group": "파일 & 문서",
+                        "icon": "folder-open",
+                        "pages": [
+                          "ko/tools/file-document/overview",
+                          "ko/tools/file-document/filereadtool",
+                          "ko/tools/file-document/filewritetool",
+                          "ko/tools/file-document/pdfsearchtool",
+                          "ko/tools/file-document/docxsearchtool",
+                          "ko/tools/file-document/mdxsearchtool",
+                          "ko/tools/file-document/xmlsearchtool",
+                          "ko/tools/file-document/txtsearchtool",
+                          "ko/tools/file-document/jsonsearchtool",
+                          "ko/tools/file-document/csvsearchtool",
+                          "ko/tools/file-document/directorysearchtool",
+                          "ko/tools/file-document/directoryreadtool",
+                          "ko/tools/file-document/ocrtool",
+                          "ko/tools/file-document/pdf-text-writing-tool"
+                        ]
+                      },
+                      {
+                        "group": "웹 스크래핑 & 브라우징",
+                        "icon": "globe",
+                        "pages": [
+                          "ko/tools/web-scraping/overview",
+                          "ko/tools/web-scraping/scrapewebsitetool",
+                          "ko/tools/web-scraping/scrapeelementfromwebsitetool",
+                          "ko/tools/web-scraping/scrapflyscrapetool",
+                          "ko/tools/web-scraping/seleniumscrapingtool",
+                          "ko/tools/web-scraping/scrapegraphscrapetool",
+                          "ko/tools/web-scraping/spidertool",
+                          "ko/tools/web-scraping/browserbaseloadtool",
+                          "ko/tools/web-scraping/hyperbrowserloadtool",
+                          "ko/tools/web-scraping/stagehandtool",
+                          "ko/tools/web-scraping/firecrawlcrawlwebsitetool",
+                          "ko/tools/web-scraping/firecrawlscrapewebsitetool",
+                          "ko/tools/web-scraping/oxylabsscraperstool",
+                          "ko/tools/web-scraping/brightdata-tools"
+                        ]
+                      },
+                      {
+                        "group": "검색 및 연구",
+                        "icon": "magnifying-glass",
+                        "pages": [
+                          "ko/tools/search-research/overview",
+                          "ko/tools/search-research/serperdevtool",
+                          "ko/tools/search-research/bravesearchtool",
+                          "ko/tools/search-research/exasearchtool",
+                          "ko/tools/search-research/linkupsearchtool",
+                          "ko/tools/search-research/githubsearchtool",
+                          "ko/tools/search-research/websitesearchtool",
+                          "ko/tools/search-research/codedocssearchtool",
+                          "ko/tools/search-research/youtubechannelsearchtool",
+                          "ko/tools/search-research/youtubevideosearchtool",
+                          "ko/tools/search-research/tavilysearchtool",
+                          "ko/tools/search-research/tavilyextractortool",
+                          "ko/tools/search-research/arxivpapertool",
+                          "ko/tools/search-research/serpapi-googlesearchtool",
+                          "ko/tools/search-research/serpapi-googleshoppingtool",
+                          "ko/tools/search-research/databricks-query-tool"
+                        ]
+                      },
+                      {
+                        "group": "데이터베이스 & 데이터",
+                        "icon": "database",
+                        "pages": [
+                          "ko/tools/database-data/overview",
+                          "ko/tools/database-data/mysqltool",
+                          "ko/tools/database-data/pgsearchtool",
+                          "ko/tools/database-data/snowflakesearchtool",
+                          "ko/tools/database-data/nl2sqltool",
+                          "ko/tools/database-data/qdrantvectorsearchtool",
+                          "ko/tools/database-data/weaviatevectorsearchtool",
+                          "ko/tools/database-data/mongodbvectorsearchtool",
+                          "ko/tools/database-data/singlestoresearchtool"
+                        ]
+                      },
+                      {
+                        "group": "인공지능 & 머신러닝",
+                        "icon": "brain",
+                        "pages": [
+                          "ko/tools/ai-ml/overview",
+                          "ko/tools/ai-ml/dalletool",
+                          "ko/tools/ai-ml/visiontool",
+                          "ko/tools/ai-ml/aimindtool",
+                          "ko/tools/ai-ml/llamaindextool",
+                          "ko/tools/ai-ml/langchaintool",
+                          "ko/tools/ai-ml/ragtool",
+                          "ko/tools/ai-ml/codeinterpretertool"
+                        ]
+                      },
+                      {
+                        "group": "클라우드 & 스토리지",
+                        "icon": "cloud",
+                        "pages": [
+                          "ko/tools/cloud-storage/overview",
+                          "ko/tools/cloud-storage/s3readertool",
+                          "ko/tools/cloud-storage/s3writertool",
+                          "ko/tools/cloud-storage/bedrockkbretriever"
+                        ]
+                      },
+                      {
+                        "group": "Integrations",
+                        "icon": "plug",
+                        "pages": [
+                          "ko/tools/integration/overview",
+                          "ko/tools/integration/bedrockinvokeagenttool",
+                          "ko/tools/integration/crewaiautomationtool"
+                        ]
+                      },
+                      {
+                        "group": "자동화",
+                        "icon": "bolt",
+                        "pages": [
+                          "ko/tools/automation/overview",
+                          "ko/tools/automation/apifyactorstool",
+                          "ko/tools/automation/composiotool",
+                          "ko/tools/automation/multiontool",
+                          "ko/tools/automation/zapieractionstool"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "Observability",
+                    "pages": [
+                      "ko/observability/tracing",
+                      "ko/observability/overview",
+                      "ko/observability/arize-phoenix",
+                      "ko/observability/braintrust",
+                      "ko/observability/datadog",
+                      "ko/observability/galileo",
+                      "ko/observability/langdb",
+                      "ko/observability/langfuse",
+                      "ko/observability/langtrace",
+                      "ko/observability/maxim",
+                      "ko/observability/mlflow",
+                      "ko/observability/neatlogs",
+                      "ko/observability/openlit",
+                      "ko/observability/opik",
+                      "ko/observability/patronus-evaluation",
+                      "ko/observability/portkey",
+                      "ko/observability/weave"
+                    ]
+                  },
+                  {
+                    "group": "학습",
+                    "pages": [
+                      "ko/learn/overview",
+                      "ko/learn/llm-selection-guide",
+                      "ko/learn/conditional-tasks",
+                      "ko/learn/coding-agents",
+                      "ko/learn/create-custom-tools",
+                      "ko/learn/custom-llm",
+                      "ko/learn/custom-manager-agent",
+                      "ko/learn/customizing-agents",
+                      "ko/learn/dalle-image-generation",
+                      "ko/learn/force-tool-output-as-result",
+                      "ko/learn/hierarchical-process",
+                      "ko/learn/human-input-on-execution",
+                      "ko/learn/human-in-the-loop",
+                      "ko/learn/human-feedback-in-flows",
+                      "ko/learn/kickoff-async",
+                      "ko/learn/kickoff-for-each",
+                      "ko/learn/llm-connections",
+                      "ko/learn/multimodal-agents",
+                      "ko/learn/replay-tasks-from-latest-crew-kickoff",
+                      "ko/learn/sequential-process",
+                      "ko/learn/using-annotations",
+                      "ko/learn/execution-hooks",
+                      "ko/learn/llm-hooks",
+                      "ko/learn/tool-hooks"
+                    ]
+                  },
+                  {
+                    "group": "Telemetry",
+                    "pages": [
+                      "ko/telemetry"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "엔터프라이즈",
+                "icon": "briefcase",
+                "groups": [
+                  {
+                    "group": "시작 안내",
+                    "pages": [
+                      "ko/enterprise/introduction"
+                    ]
+                  },
+                  {
+                    "group": "빌드",
+                    "pages": [
+                      "ko/enterprise/features/automations",
+                      "ko/enterprise/features/crew-studio",
+                      "ko/enterprise/features/marketplace",
+                      "ko/enterprise/features/agent-repositories",
+                      "ko/enterprise/features/tools-and-integrations",
+                      "ko/enterprise/features/pii-trace-redactions"
+                    ]
+                  },
+                  {
+                    "group": "운영",
+                    "pages": [
+                      "ko/enterprise/features/traces",
+                      "ko/enterprise/features/webhook-streaming",
+                      "ko/enterprise/features/hallucination-guardrail",
+                      "ko/enterprise/features/flow-hitl-management"
+                    ]
+                  },
+                  {
+                    "group": "관리",
+                    "pages": [
+                      "ko/enterprise/features/rbac"
+                    ]
+                  },
+                  {
+                    "group": "통합 문서",
+                    "pages": [
+                      "ko/enterprise/integrations/asana",
+                      "ko/enterprise/integrations/box",
+                      "ko/enterprise/integrations/clickup",
+                      "ko/enterprise/integrations/github",
+                      "ko/enterprise/integrations/gmail",
+                      "ko/enterprise/integrations/google_calendar",
+                      "ko/enterprise/integrations/google_contacts",
+                      "ko/enterprise/integrations/google_docs",
+                      "ko/enterprise/integrations/google_drive",
+                      "ko/enterprise/integrations/google_sheets",
+                      "ko/enterprise/integrations/google_slides",
+                      "ko/enterprise/integrations/hubspot",
+                      "ko/enterprise/integrations/jira",
+                      "ko/enterprise/integrations/linear",
+                      "ko/enterprise/integrations/microsoft_excel",
+                      "ko/enterprise/integrations/microsoft_onedrive",
+                      "ko/enterprise/integrations/microsoft_outlook",
+                      "ko/enterprise/integrations/microsoft_sharepoint",
+                      "ko/enterprise/integrations/microsoft_teams",
+                      "ko/enterprise/integrations/microsoft_word",
+                      "ko/enterprise/integrations/notion",
+                      "ko/enterprise/integrations/salesforce",
+                      "ko/enterprise/integrations/shopify",
+                      "ko/enterprise/integrations/slack",
+                      "ko/enterprise/integrations/stripe",
+                      "ko/enterprise/integrations/zendesk"
+                    ]
+                  },
+                  {
+                    "group": "How-To Guides",
+                    "pages": [
+                      "ko/enterprise/guides/build-crew",
+                      "ko/enterprise/guides/prepare-for-deployment",
+                      "ko/enterprise/guides/deploy-to-amp",
+                      "ko/enterprise/guides/private-package-registry",
+                      "ko/enterprise/guides/kickoff-crew",
+                      "ko/enterprise/guides/training-crews",
+                      "ko/enterprise/guides/update-crew",
+                      "ko/enterprise/guides/enable-crew-studio",
+                      "ko/enterprise/guides/capture_telemetry_logs",
+                      "ko/enterprise/guides/azure-openai-setup",
+                      "ko/enterprise/guides/tool-repository",
+                      "ko/enterprise/guides/custom-mcp-server",
+                      "ko/enterprise/guides/react-component-export",
+                      "ko/enterprise/guides/team-management",
+                      "ko/enterprise/guides/human-in-the-loop",
+                      "ko/enterprise/guides/webhook-automation"
+                    ]
+                  },
+                  {
+                    "group": "트리거",
+                    "pages": [
+                      "ko/enterprise/guides/automation-triggers",
+                      "ko/enterprise/guides/gmail-trigger",
+                      "ko/enterprise/guides/google-calendar-trigger",
+                      "ko/enterprise/guides/google-drive-trigger",
+                      "ko/enterprise/guides/outlook-trigger",
+                      "ko/enterprise/guides/onedrive-trigger",
+                      "ko/enterprise/guides/microsoft-teams-trigger",
+                      "ko/enterprise/guides/slack-trigger",
+                      "ko/enterprise/guides/hubspot-trigger",
+                      "ko/enterprise/guides/salesforce-trigger",
+                      "ko/enterprise/guides/zapier-trigger"
+                    ]
+                  },
+                  {
+                    "group": "학습 자원",
+                    "pages": [
+                      "ko/enterprise/resources/frequently-asked-questions"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "API 레퍼런스",
+                "icon": "magnifying-glass",
+                "groups": [
+                  {
+                    "group": "시작 안내",
+                    "pages": [
+                      "ko/api-reference/introduction",
+                      "ko/api-reference/inputs",
+                      "ko/api-reference/kickoff",
+                      "ko/api-reference/resume",
+                      "ko/api-reference/status"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "예시",
+                "icon": "code",
+                "groups": [
+                  {
+                    "group": "예시",
+                    "pages": [
+                      "ko/examples/example",
+                      "ko/examples/cookbooks"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "변경 로그",
+                "icon": "clock",
+                "groups": [
+                  {
+                    "group": "릴리스 노트",
+                    "pages": [
+                      "ko/changelog"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "version": "v1.14.2",
             "tabs": [
               {
                 "tab": "홈",
@@ -15590,8 +16996,479 @@
         },
         "versions": [
           {
-            "version": "v1.14.2",
+            "version": "v1.14.3",
             "default": true,
+            "tabs": [
+              {
+                "tab": "الرئيسية",
+                "icon": "house",
+                "groups": [
+                  {
+                    "group": "مرحباً",
+                    "pages": [
+                      "ar/index"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "التقنية التوثيق",
+                "icon": "book-open",
+                "groups": [
+                  {
+                    "group": "البدء",
+                    "pages": [
+                      "ar/introduction",
+                      "ar/guides/coding-tools/build-with-ai",
+                      "ar/skills",
+                      "ar/installation",
+                      "ar/quickstart"
+                    ]
+                  },
+                  {
+                    "group": "الأدلّة",
+                    "pages": [
+                      {
+                        "group": "الاستراتيجية",
+                        "icon": "compass",
+                        "pages": [
+                          "ar/guides/concepts/evaluating-use-cases"
+                        ]
+                      },
+                      {
+                        "group": "الوكلاء",
+                        "icon": "user",
+                        "pages": [
+                          "ar/guides/agents/crafting-effective-agents"
+                        ]
+                      },
+                      {
+                        "group": "الطواقم",
+                        "icon": "users",
+                        "pages": [
+                          "ar/guides/crews/first-crew"
+                        ]
+                      },
+                      {
+                        "group": "التدفقات",
+                        "icon": "code-branch",
+                        "pages": [
+                          "ar/guides/flows/first-flow",
+                          "ar/guides/flows/mastering-flow-state"
+                        ]
+                      },
+                      {
+                        "group": "الأدوات",
+                        "icon": "wrench",
+                        "pages": [
+                          "ar/guides/tools/publish-custom-tools"
+                        ]
+                      },
+                      {
+                        "group": "أدوات البرمجة",
+                        "icon": "terminal",
+                        "pages": [
+                          "ar/guides/coding-tools/agents-md"
+                        ]
+                      },
+                      {
+                        "group": "متقدّم",
+                        "icon": "gear",
+                        "pages": [
+                          "ar/guides/advanced/customizing-prompts",
+                          "ar/guides/advanced/fingerprinting"
+                        ]
+                      },
+                      {
+                        "group": "الترحيل",
+                        "icon": "shuffle",
+                        "pages": [
+                          "ar/guides/migration/migrating-from-langgraph"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "المفاهيم الأساسية",
+                    "pages": [
+                      "ar/concepts/agents",
+                      "ar/concepts/agent-capabilities",
+                      "ar/concepts/tasks",
+                      "ar/concepts/crews",
+                      "ar/concepts/flows",
+                      "ar/concepts/production-architecture",
+                      "ar/concepts/knowledge",
+                      "ar/concepts/skills",
+                      "ar/concepts/llms",
+                      "ar/concepts/files",
+                      "ar/concepts/processes",
+                      "ar/concepts/collaboration",
+                      "ar/concepts/training",
+                      "ar/concepts/memory",
+                      "ar/concepts/reasoning",
+                      "ar/concepts/planning",
+                      "ar/concepts/testing",
+                      "ar/concepts/cli",
+                      "ar/concepts/tools",
+                      "ar/concepts/event-listener",
+                      "ar/concepts/checkpointing"
+                    ]
+                  },
+                  {
+                    "group": "تكامل MCP",
+                    "pages": [
+                      "ar/mcp/overview",
+                      "ar/mcp/dsl-integration",
+                      "ar/mcp/stdio",
+                      "ar/mcp/sse",
+                      "ar/mcp/streamable-http",
+                      "ar/mcp/multiple-servers",
+                      "ar/mcp/security"
+                    ]
+                  },
+                  {
+                    "group": "الأدوات",
+                    "pages": [
+                      "ar/tools/overview",
+                      {
+                        "group": "الملفات والمستندات",
+                        "icon": "folder-open",
+                        "pages": [
+                          "ar/tools/file-document/overview",
+                          "ar/tools/file-document/filereadtool",
+                          "ar/tools/file-document/filewritetool",
+                          "ar/tools/file-document/pdfsearchtool",
+                          "ar/tools/file-document/docxsearchtool",
+                          "ar/tools/file-document/mdxsearchtool",
+                          "ar/tools/file-document/xmlsearchtool",
+                          "ar/tools/file-document/txtsearchtool",
+                          "ar/tools/file-document/jsonsearchtool",
+                          "ar/tools/file-document/csvsearchtool",
+                          "ar/tools/file-document/directorysearchtool",
+                          "ar/tools/file-document/directoryreadtool",
+                          "ar/tools/file-document/ocrtool",
+                          "ar/tools/file-document/pdf-text-writing-tool"
+                        ]
+                      },
+                      {
+                        "group": "استخراج بيانات الويب",
+                        "icon": "globe",
+                        "pages": [
+                          "ar/tools/web-scraping/overview",
+                          "ar/tools/web-scraping/scrapewebsitetool",
+                          "ar/tools/web-scraping/scrapeelementfromwebsitetool",
+                          "ar/tools/web-scraping/scrapflyscrapetool",
+                          "ar/tools/web-scraping/seleniumscrapingtool",
+                          "ar/tools/web-scraping/scrapegraphscrapetool",
+                          "ar/tools/web-scraping/spidertool",
+                          "ar/tools/web-scraping/browserbaseloadtool",
+                          "ar/tools/web-scraping/hyperbrowserloadtool",
+                          "ar/tools/web-scraping/stagehandtool",
+                          "ar/tools/web-scraping/firecrawlcrawlwebsitetool",
+                          "ar/tools/web-scraping/firecrawlscrapewebsitetool",
+                          "ar/tools/web-scraping/oxylabsscraperstool",
+                          "ar/tools/web-scraping/brightdata-tools"
+                        ]
+                      },
+                      {
+                        "group": "البحث والاستكشاف",
+                        "icon": "magnifying-glass",
+                        "pages": [
+                          "ar/tools/search-research/overview",
+                          "ar/tools/search-research/serperdevtool",
+                          "ar/tools/search-research/bravesearchtool",
+                          "ar/tools/search-research/exasearchtool",
+                          "ar/tools/search-research/linkupsearchtool",
+                          "ar/tools/search-research/githubsearchtool",
+                          "ar/tools/search-research/websitesearchtool",
+                          "ar/tools/search-research/codedocssearchtool",
+                          "ar/tools/search-research/youtubechannelsearchtool",
+                          "ar/tools/search-research/youtubevideosearchtool",
+                          "ar/tools/search-research/tavilysearchtool",
+                          "ar/tools/search-research/tavilyextractortool",
+                          "ar/tools/search-research/arxivpapertool",
+                          "ar/tools/search-research/serpapi-googlesearchtool",
+                          "ar/tools/search-research/serpapi-googleshoppingtool",
+                          "ar/tools/search-research/databricks-query-tool"
+                        ]
+                      },
+                      {
+                        "group": "قواعد البيانات",
+                        "icon": "database",
+                        "pages": [
+                          "ar/tools/database-data/overview",
+                          "ar/tools/database-data/mysqltool",
+                          "ar/tools/database-data/pgsearchtool",
+                          "ar/tools/database-data/snowflakesearchtool",
+                          "ar/tools/database-data/nl2sqltool",
+                          "ar/tools/database-data/qdrantvectorsearchtool",
+                          "ar/tools/database-data/weaviatevectorsearchtool",
+                          "ar/tools/database-data/mongodbvectorsearchtool",
+                          "ar/tools/database-data/singlestoresearchtool"
+                        ]
+                      },
+                      {
+                        "group": "الذكاء الاصطناعي والتعلّم الآلي",
+                        "icon": "brain",
+                        "pages": [
+                          "ar/tools/ai-ml/overview",
+                          "ar/tools/ai-ml/dalletool",
+                          "ar/tools/ai-ml/visiontool",
+                          "ar/tools/ai-ml/aimindtool",
+                          "ar/tools/ai-ml/llamaindextool",
+                          "ar/tools/ai-ml/langchaintool",
+                          "ar/tools/ai-ml/ragtool",
+                          "ar/tools/ai-ml/codeinterpretertool"
+                        ]
+                      },
+                      {
+                        "group": "التخزين السحابي",
+                        "icon": "cloud",
+                        "pages": [
+                          "ar/tools/cloud-storage/overview",
+                          "ar/tools/cloud-storage/s3readertool",
+                          "ar/tools/cloud-storage/s3writertool",
+                          "ar/tools/cloud-storage/bedrockkbretriever"
+                        ]
+                      },
+                      {
+                        "group": "Integrations",
+                        "icon": "plug",
+                        "pages": [
+                          "ar/tools/integration/overview",
+                          "ar/tools/integration/bedrockinvokeagenttool",
+                          "ar/tools/integration/crewaiautomationtool"
+                        ]
+                      },
+                      {
+                        "group": "الأتمتة",
+                        "icon": "bolt",
+                        "pages": [
+                          "ar/tools/automation/overview",
+                          "ar/tools/automation/apifyactorstool",
+                          "ar/tools/automation/composiotool",
+                          "ar/tools/automation/multiontool",
+                          "ar/tools/automation/zapieractionstool"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "group": "Observability",
+                    "pages": [
+                      "ar/observability/tracing",
+                      "ar/observability/overview",
+                      "ar/observability/arize-phoenix",
+                      "ar/observability/braintrust",
+                      "ar/observability/datadog",
+                      "ar/observability/galileo",
+                      "ar/observability/langdb",
+                      "ar/observability/langfuse",
+                      "ar/observability/langtrace",
+                      "ar/observability/maxim",
+                      "ar/observability/mlflow",
+                      "ar/observability/neatlogs",
+                      "ar/observability/openlit",
+                      "ar/observability/opik",
+                      "ar/observability/patronus-evaluation",
+                      "ar/observability/portkey",
+                      "ar/observability/weave"
+                    ]
+                  },
+                  {
+                    "group": "التعلّم",
+                    "pages": [
+                      "ar/learn/overview",
+                      "ar/learn/llm-selection-guide",
+                      "ar/learn/conditional-tasks",
+                      "ar/learn/coding-agents",
+                      "ar/learn/create-custom-tools",
+                      "ar/learn/custom-llm",
+                      "ar/learn/custom-manager-agent",
+                      "ar/learn/customizing-agents",
+                      "ar/learn/dalle-image-generation",
+                      "ar/learn/force-tool-output-as-result",
+                      "ar/learn/hierarchical-process",
+                      "ar/learn/human-input-on-execution",
+                      "ar/learn/human-in-the-loop",
+                      "ar/learn/human-feedback-in-flows",
+                      "ar/learn/kickoff-async",
+                      "ar/learn/kickoff-for-each",
+                      "ar/learn/llm-connections",
+                      "ar/learn/multimodal-agents",
+                      "ar/learn/replay-tasks-from-latest-crew-kickoff",
+                      "ar/learn/sequential-process",
+                      "ar/learn/using-annotations",
+                      "ar/learn/execution-hooks",
+                      "ar/learn/llm-hooks",
+                      "ar/learn/tool-hooks"
+                    ]
+                  },
+                  {
+                    "group": "Telemetry",
+                    "pages": [
+                      "ar/telemetry"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "المؤسسات",
+                "icon": "briefcase",
+                "groups": [
+                  {
+                    "group": "البدء",
+                    "pages": [
+                      "ar/enterprise/introduction"
+                    ]
+                  },
+                  {
+                    "group": "البناء",
+                    "pages": [
+                      "ar/enterprise/features/automations",
+                      "ar/enterprise/features/crew-studio",
+                      "ar/enterprise/features/marketplace",
+                      "ar/enterprise/features/agent-repositories",
+                      "ar/enterprise/features/tools-and-integrations",
+                      "ar/enterprise/features/pii-trace-redactions"
+                    ]
+                  },
+                  {
+                    "group": "العمليات",
+                    "pages": [
+                      "ar/enterprise/features/traces",
+                      "ar/enterprise/features/webhook-streaming",
+                      "ar/enterprise/features/hallucination-guardrail",
+                      "ar/enterprise/features/flow-hitl-management"
+                    ]
+                  },
+                  {
+                    "group": "الإدارة",
+                    "pages": [
+                      "ar/enterprise/features/rbac"
+                    ]
+                  },
+                  {
+                    "group": "التكاملات",
+                    "pages": [
+                      "ar/enterprise/integrations/asana",
+                      "ar/enterprise/integrations/box",
+                      "ar/enterprise/integrations/clickup",
+                      "ar/enterprise/integrations/github",
+                      "ar/enterprise/integrations/gmail",
+                      "ar/enterprise/integrations/google_calendar",
+                      "ar/enterprise/integrations/google_contacts",
+                      "ar/enterprise/integrations/google_docs",
+                      "ar/enterprise/integrations/google_drive",
+                      "ar/enterprise/integrations/google_sheets",
+                      "ar/enterprise/integrations/google_slides",
+                      "ar/enterprise/integrations/hubspot",
+                      "ar/enterprise/integrations/jira",
+                      "ar/enterprise/integrations/linear",
+                      "ar/enterprise/integrations/microsoft_excel",
+                      "ar/enterprise/integrations/microsoft_onedrive",
+                      "ar/enterprise/integrations/microsoft_outlook",
+                      "ar/enterprise/integrations/microsoft_sharepoint",
+                      "ar/enterprise/integrations/microsoft_teams",
+                      "ar/enterprise/integrations/microsoft_word",
+                      "ar/enterprise/integrations/notion",
+                      "ar/enterprise/integrations/salesforce",
+                      "ar/enterprise/integrations/shopify",
+                      "ar/enterprise/integrations/slack",
+                      "ar/enterprise/integrations/stripe",
+                      "ar/enterprise/integrations/zendesk"
+                    ]
+                  },
+                  {
+                    "group": "How-To Guides",
+                    "pages": [
+                      "ar/enterprise/guides/build-crew",
+                      "ar/enterprise/guides/prepare-for-deployment",
+                      "ar/enterprise/guides/deploy-to-amp",
+                      "ar/enterprise/guides/private-package-registry",
+                      "ar/enterprise/guides/kickoff-crew",
+                      "ar/enterprise/guides/training-crews",
+                      "ar/enterprise/guides/update-crew",
+                      "ar/enterprise/guides/enable-crew-studio",
+                      "ar/enterprise/guides/capture_telemetry_logs",
+                      "ar/enterprise/guides/azure-openai-setup",
+                      "ar/enterprise/guides/tool-repository",
+                      "ar/enterprise/guides/custom-mcp-server",
+                      "ar/enterprise/guides/react-component-export",
+                      "ar/enterprise/guides/team-management",
+                      "ar/enterprise/guides/human-in-the-loop",
+                      "ar/enterprise/guides/webhook-automation"
+                    ]
+                  },
+                  {
+                    "group": "المشغّلات",
+                    "pages": [
+                      "ar/enterprise/guides/automation-triggers",
+                      "ar/enterprise/guides/gmail-trigger",
+                      "ar/enterprise/guides/google-calendar-trigger",
+                      "ar/enterprise/guides/google-drive-trigger",
+                      "ar/enterprise/guides/outlook-trigger",
+                      "ar/enterprise/guides/onedrive-trigger",
+                      "ar/enterprise/guides/microsoft-teams-trigger",
+                      "ar/enterprise/guides/slack-trigger",
+                      "ar/enterprise/guides/hubspot-trigger",
+                      "ar/enterprise/guides/salesforce-trigger",
+                      "ar/enterprise/guides/zapier-trigger"
+                    ]
+                  },
+                  {
+                    "group": "موارد التعلّم",
+                    "pages": [
+                      "ar/enterprise/resources/frequently-asked-questions"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "API المرجع",
+                "icon": "magnifying-glass",
+                "groups": [
+                  {
+                    "group": "البدء",
+                    "pages": [
+                      "ar/api-reference/introduction",
+                      "ar/api-reference/inputs",
+                      "ar/api-reference/kickoff",
+                      "ar/api-reference/resume",
+                      "ar/api-reference/status"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "أمثلة",
+                "icon": "code",
+                "groups": [
+                  {
+                    "group": "أمثلة",
+                    "pages": [
+                      "ar/examples/example",
+                      "ar/examples/cookbooks"
+                    ]
+                  }
+                ]
+              },
+              {
+                "tab": "التغييرات السجلات",
+                "icon": "clock",
+                "groups": [
+                  {
+                    "group": "سجل التغييرات",
+                    "pages": [
+                      "ar/changelog"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "version": "v1.14.2",
             "tabs": [
               {
                 "tab": "الرئيسية",

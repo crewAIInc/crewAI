@@ -4,6 +4,54 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="Apr 25, 2026">
+  ## v1.14.3
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.3)
+
+  ## What's Changed
+
+  ### Features
+  - Add lifecycle events for checkpoint operations
+  - Add support for e2b
+  - Fall back to DefaultAzureCredential when no API key is provided in Azure integration
+  - Add Bedrock V4 support
+  - Add Daytona sandbox tools for enhanced functionality
+  - Add checkpoint and fork support to standalone agents
+
+  ### Bug Fixes
+  - Fix execution_id to be separate from state.id
+  - Resolve replay of recorded method events on checkpoint resume
+  - Fix serialization of initial_state class references as JSON schema
+  - Preserve metadata-only agent skills
+  - Propagate implicit @CrewBase names to crew events
+  - Merge execution metadata on duplicate batch initialization
+  - Fix serialization of Task class-reference fields for checkpointing
+  - Handle BaseModel result in guardrail retry loop
+  - Preserve thought_signature in Gemini streaming tool calls
+  - Emit task_started on fork resume and redesign checkpoint TUI
+  - Use future dates in checkpoint prune tests to prevent time-dependent failures
+  - Fix dry-run order and handle checked-out stale branch in devtools release
+  - Upgrade lxml to >=6.1.0 for security patch
+  - Bump python-dotenv to >=1.2.2 for security patch
+
+  ### Documentation
+  - Update changelog and version for v1.14.3
+  - Add 'Build with AI' page and update navigation for all languages
+  - Remove pricing FAQ from build-with-ai page across all locales
+
+  ### Performance
+  - Optimize MCP SDK and event types to reduce cold start by ~29%
+
+  ### Refactoring
+  - Refactor checkpoint helpers to eliminate duplication and tighten state type hints
+
+  ## Contributors
+
+  @MatthiasHowellYopp, @akaKuruma, @alex-clawd, @github-actions[bot], @github-advanced-security[bot], @greysonlalonde, @iris-clawd, @lorenzejay, @mattatcha, @renatonitta
+
+</Update>
+
 <Update label="Apr 23, 2026">
   ## v1.14.3a3
 
