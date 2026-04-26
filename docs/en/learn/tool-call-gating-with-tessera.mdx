@@ -39,7 +39,8 @@ pip install crewai tessera-mesh[crewai]
 ## Wire the callback
 
 ```python
-import os, secrets
+import os
+import secrets
 from crewai import Agent, Task, Crew, Process
 from crewai.tools import BaseTool
 from tessera.adapters.crewai import TesseraCrewCallback
@@ -49,16 +50,19 @@ from tessera.labels import TrustLevel
 class FetchTool(BaseTool):
     name: str = "fetch_url"
     description: str = "Fetch a URL and return its body."
+
     def _run(self, url: str) -> str:
-        # Your real HTTP client here. The output is labeled UNTRUSTED
-        # by the Tessera callback automatically.
-        return _do_fetch(url)
+        # Replace with your real HTTP client. The output is
+        # labeled UNTRUSTED by the Tessera callback automatically.
+        return f"<body of {url}>"
+
 
 class BookHotelTool(BaseTool):
     name: str = "book_hotel"
     description: str = "Book a hotel by name + nights."
+
     def _run(self, name: str, nights: int) -> str:
-        return _do_book(name, nights)
+        return f"BOOKED: {name} for {nights} nights"
 
 # Policy: book_hotel requires USER trust; fetch_url is unconstrained.
 policy = Policy()
