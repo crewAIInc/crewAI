@@ -1,8 +1,12 @@
+import os
+
 """Utility for colored console output."""
 
+NO_COLOR = os.environ.get("CREWAI_NO_COLOR", "false") == "true"
 
 class Printer:
     """Handles colored console output formatting."""
+    
 
     @staticmethod
     def print(content: str, color: str | None = None) -> None:
@@ -15,7 +19,7 @@ class Printer:
                 If not provided or if the color is not supported, prints without
                 formatting.
         """
-        if hasattr(Printer, f"_print_{color}"):
+        if not NO_COLOR and hasattr(Printer, f"_print_{color}"):
             getattr(Printer, f"_print_{color}")(content)
         else:
             print(content)  # noqa: T201
