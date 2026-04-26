@@ -2,7 +2,7 @@ import os
 
 """Utility for colored console output."""
 
-NO_COLOR = os.environ.get("CREWAI_NO_COLOR", "false") == "true"
+NO_COLOR = os.environ.get("NO_COLOR", "false") == "true"
 
 class Printer:
     """Handles colored console output formatting."""
