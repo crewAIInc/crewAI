@@ -134,3 +134,41 @@ When using Streamable HTTP transport, general web security best practices are pa
 - **Input Validation**: Ensure your MCP server validates all incoming requests and parameters.
 
 For a comprehensive guide on securing your MCP integrations, please refer to our [Security Considerations](./security.mdx) page and the official [MCP Transport Security documentation](https://modelcontextprotocol.io/docs/concepts/transports#security-considerations).
+## Worked example: connecting to a live remote server
+
+If you want a working server URL to plug into the snippets above without running anything locally, you can use **OpenRegistry** — a free hosted MCP server that proxies 27 national company registries (UK Companies House, Germany Handelsregister, France Sirene+RNE, Italy InfoCamere via EU BRIS, Spain BORME, Korea OPENDART, plus 21 more). Anonymous tier — no signup, no API key.
+
+```python
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import MCPServerAdapter
+
+server_params = {
+    "url": "https://openregistry.sophymarine.com/mcp",
+    "transport": "streamable-http",
+}
+
+with MCPServerAdapter(server_params) as tools:
+    print(f"Tools: {[t.name for t in tools]}")
+
+    analyst = Agent(
+        role="Cross-border KYC Analyst",
+        goal="Verify the statutory record of a counterparty across jurisdictions.",
+        backstory="An AI analyst with live access to national company registries.",
+        tools=tools,
+        verbose=True,
+    )
+
+    task = Task(
+        description=(
+            "Find Tesco PLC on UK Companies House (jurisdiction='gb'), pull "
+            "the list of current directors, then summarise."
+        ),
+        expected_output="A short paragraph quoting the registry's own field names.",
+        agent=analyst,
+    )
+
+    Crew(agents=[analyst], tasks=[task], process=Process.sequential, verbose=True).kickoff()
+```
+
+Docs and the full 27-registry capability matrix: <https://openregistry.sophymarine.com/docs/integrations/crewai>.
+
