@@ -2536,6 +2536,78 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
 
         return "initialized"
 
+    def _save_to_memory(self, output: AgentFinish) -> None:
+        """Save to memory with full conversation context.
+
+        Overrides the base implementation to include the full conversation
+        history (``self.state.messages``) when extracting memories, not just
+        the task description and final result. This produces significantly
+        better memory extraction for standalone Agent.kickoff() sessions
+        where the conversation thread carries important context.
+
+        For Crew-based execution the base implementation (task + result) is
+        sufficient because each task already encodes its own context.
+        """
+        if self.agent is None:
+            return
+
+        from crewai.agents.agent_builder.base_agent_executor import sanitize_scope_name
+
+        memory = getattr(self.agent, "memory", None) or (
+            getattr(self.crew, "_memory", None) if self.crew else None
+        )
+        if memory is None or memory.read_only:
+            return
+
+        # Build context from the full conversation thread
+        conversation_lines: list[str] = []
+        for msg in self.state.messages:
+            role = msg.get("role", "user")
+            content = msg.get("content", "")
+            if content and isinstance(content, str):
+                conversation_lines.append(f"{role}: {content[:500]}")
+
+        if conversation_lines:
+            # Include conversation context + task metadata + final result
+            parts = []
+            if self.task:
+                parts.append(f"Task: {self.task.description}")
+                parts.append(f"Agent: {self.agent.role}")
+                parts.append(f"Expected result: {self.task.expected_output}")
+            parts.append("")
+            parts.append("Conversation:")
+            # Last 20 turns to stay within token limits
+            parts.extend(conversation_lines[-20:])
+            parts.append("")
+            parts.append(f"Final result: {output.text}")
+            raw = "\n".join(parts)
+        else:
+            # Fallback: same as base implementation
+            raw = (
+                f"Task: {self.task.description if self.task else '(none)'}\n"
+                f"Agent: {self.agent.role}\n"
+                f"Expected result: {self.task.expected_output if self.task else '(none)'}\n"
+                f"Result: {output.text}"
+            )
+
+        try:
+            extracted = memory.extract_memories(raw)
+            if extracted:
+                base_root = getattr(memory, "root_scope", None)
+                if isinstance(base_root, str) and base_root:
+                    agent_role = self.agent.role or "unknown"
+                    sanitized_role = sanitize_scope_name(agent_role)
+                    agent_root = f"{base_root.rstrip('/')}/agent/{sanitized_role}"
+                    if not agent_root.startswith("/"):
+                        agent_root = "/" + agent_root
+                    memory.remember_many(
+                        extracted, agent_role=self.agent.role, root_scope=agent_root
+                    )
+                else:
+                    memory.remember_many(extracted, agent_role=self.agent.role)
+        except Exception as e:
+            self.agent._logger.log("error", f"Failed to save to memory: {e}")
+
     def invoke(
         self, inputs: dict[str, Any]
     ) -> dict[str, Any] | Coroutine[Any, Any, dict[str, Any]]:
