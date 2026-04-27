@@ -85,6 +85,7 @@ from crewai.skills.loader import activate_skill, discover_skills
 from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
 from crewai.state.checkpoint_config import CheckpointConfig, apply_checkpoint
 from crewai.tools.agent_tools.agent_tools import AgentTools
+from crewai.tools.flow_tool import create_flow_tools
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.agent_utils import (
     get_tool_names,
@@ -305,6 +306,10 @@ class Agent(BaseAgent):
         Can be a single A2AConfig/A2AClientConfig/A2AServerConfig, or a list of any number of A2AConfig/A2AClientConfig with a single A2AServerConfig.
         """,
     )
+    flows: list[Any] | None = Field(
+        default=None,
+        description="Flow classes that the agent can invoke as tools. Each entry is a Flow subclass (not an instance).",
+    )
     agent_executor: CrewAgentExecutor | AgentExecutor | None = Field(
         default=None, description="An instance of the CrewAgentExecutor class."
     )
@@ -347,6 +352,7 @@ class Agent(BaseAgent):
             )
 
         self.set_skills()
+        self._set_flow_tools()
 
         if self.reasoning and self.planning_config is None:
             warnings.warn(
@@ -458,6 +464,16 @@ class Agent(BaseAgent):
                     resolved.append(item)
 
         self.skills = resolved if resolved else None
+
+    def _set_flow_tools(self) -> None:
+        """Convert Flow classes in ``self.flows`` to tools and merge them."""
+        if not self.flows:
+            return
+        flow_tools = create_flow_tools(self.flows)
+        if flow_tools:
+            if self.tools is None:
+                self.tools = []
+            self.tools.extend(flow_tools)
 
     def _is_any_available_memory(self) -> bool:
         """Check if unified memory is available (agent or crew)."""

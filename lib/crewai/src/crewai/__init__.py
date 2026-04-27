@@ -94,10 +94,16 @@ try:
     }
 
     from crewai.tools.base_tool import BaseTool as _BaseTool
+    from crewai.tools.flow_tool import (
+        FlowTool as _FlowTool,
+        create_flow_tools as _create_flow_tools,
+    )
     from crewai.tools.structured_tool import CrewStructuredTool as _CrewStructuredTool
 
     _base_namespace["BaseTool"] = _BaseTool
     _base_namespace["CrewStructuredTool"] = _CrewStructuredTool
+    _base_namespace["FlowTool"] = _FlowTool
+    _base_namespace["create_flow_tools"] = _create_flow_tools  # type: ignore[assignment]
 
     try:
         from crewai.a2a.config import (
