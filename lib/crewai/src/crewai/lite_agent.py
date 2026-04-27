@@ -9,6 +9,7 @@ import time
 from types import MethodType
 from typing import (
     TYPE_CHECKING,
+    Annotated,
     Any,
     Literal,
     cast,
@@ -25,6 +26,7 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from pydantic.functional_serializers import PlainSerializer
 from typing_extensions import Self, deprecated
 
 
@@ -235,7 +237,14 @@ class LiteAgent(FlowTrackable, BaseModel):
     verbose: bool = Field(
         default=False, description="Whether to print execution details"
     )
-    guardrail: GuardrailType | None = Field(
+    guardrail: Annotated[
+        GuardrailType | None,
+        PlainSerializer(
+            lambda v: v if isinstance(v, str) else None,
+            return_type=str | None,
+            when_used="json",
+        ),
+    ] = Field(
         default=None,
         description="Function or string description of a guardrail to validate agent output",
     )

@@ -285,7 +285,14 @@ class Agent(BaseAgent):
         default=None,
         description="The Agent's role to be used from your repository.",
     )
-    guardrail: GuardrailType | None = Field(
+    guardrail: Annotated[
+        GuardrailType | None,
+        PlainSerializer(
+            lambda v: v if isinstance(v, str) else None,
+            return_type=str | None,
+            when_used="json",
+        ),
+    ] = Field(
         default=None,
         description="Function or string description of a guardrail to validate agent output",
     )
