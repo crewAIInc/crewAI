@@ -1194,7 +1194,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         return "initialized"
 
     @router("force_final_answer")
-    def force_final_answer(self) -> Literal["agent_finished"]:
+    def ensure_force_final_answer(self) -> Literal["agent_finished"]:
         """Force agent to provide final answer when max iterations exceeded."""
         formatted_answer = handle_max_iterations_exceeded(
             formatted_answer=None,
