@@ -153,7 +153,7 @@ class AgentExecutorState(BaseModel):
     )
 
 
-class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignore[pydantic-unexpected]
+class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     """Agent Executor for both standalone agents and crew-bound agents.
 
     _skip_auto_memory prevents Flow from eagerly allocating a Memory
