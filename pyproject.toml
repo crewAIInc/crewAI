@@ -179,7 +179,10 @@ exclude-newer = "2026-04-27"
 # python-multipart <0.0.26 has GHSA-mj87-hwqh-73pj; force 0.0.26+.
 # langsmith <0.7.31 has GHSA-rr7j-v2q5-chgv (streaming token redaction bypass); force 0.7.31+.
 # authlib <1.6.11 has GHSA-jj8c-mmj3-mmgv (CSRF bypass in cache-based state storage).
+# litellm 1.83.8+ hard-pins openai==2.24.0, missing openai.types.responses used by crewai;
+# override to >=2.30.0 (the version litellm 1.83.7 used) until upstream relaxes the pin.
 override-dependencies = [
+    "openai>=2.30.0,<3",
     "rich>=13.7.1",
     "onnxruntime<1.24; python_version < '3.11'",
     "pillow>=12.1.1",
