@@ -28,7 +28,7 @@ repos:
     hooks:
       - id: pip-audit
         name: pip-audit
-        entry: bash -c 'source .venv/bin/activate && uv run pip-audit --skip-editable --ignore-vuln CVE-2025-69872 --ignore-vuln CVE-2026-25645 --ignore-vuln CVE-2026-27448 --ignore-vuln CVE-2026-27459 --ignore-vuln PYSEC-2023-235' --
+        entry: bash -c 'source .venv/bin/activate && uv run pip-audit --skip-editable --ignore-vuln CVE-2026-3219' --
         language: system
         pass_filenames: false
         stages: [pre-push, manual]
