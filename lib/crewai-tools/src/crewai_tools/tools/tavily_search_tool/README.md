@@ -9,7 +9,7 @@ The `TavilySearchTool` provides an interface to the Tavily Search API, enabling 
 To use the `TavilySearchTool`, you need to install the `tavily-python` library:
 
 ```shell
-pip install 'crewai[tools]' tavily-python
+uv add 'crewai[tools]' tavily-python
 ```
 
 ## Environment Variables
