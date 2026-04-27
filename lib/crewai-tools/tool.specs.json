@@ -25040,6 +25040,243 @@
       }
     },
     {
+      "description": "A tool that retrieves the status and results of an existing Tavily research task by request ID. It returns Tavily responses as JSON.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Tavily research service",
+          "name": "TAVILY_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Tavily Get Research",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Tool that uses the Tavily Research status endpoint to retrieve results.",
+        "properties": {},
+        "required": [],
+        "title": "TavilyGetResearchTool",
+        "type": "object"
+      },
+      "name": "TavilyGetResearchTool",
+      "package_dependencies": [
+        "tavily-python"
+      ],
+      "run_params_schema": {
+        "description": "Input schema for TavilyGetResearchTool.",
+        "properties": {
+          "request_id": {
+            "description": "Existing Tavily research request ID to fetch status and results for.",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_id"
+        ],
+        "title": "TavilyGetResearchToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "A tool that creates Tavily research tasks and can stream research progress and results. It returns Tavily responses as JSON or SSE chunks.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Tavily research service",
+          "name": "TAVILY_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Tavily Research",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Tool that uses the Tavily Research API to create research tasks.",
+        "properties": {
+          "citation_format": {
+            "default": "numbered",
+            "description": "Default citation format for Tavily research results.",
+            "enum": [
+              "numbered",
+              "mla",
+              "apa",
+              "chicago"
+            ],
+            "title": "Citation Format",
+            "type": "string"
+          },
+          "model": {
+            "default": "auto",
+            "description": "Default model used for new Tavily research tasks.",
+            "enum": [
+              "mini",
+              "pro",
+              "auto"
+            ],
+            "title": "Model",
+            "type": "string"
+          },
+          "output_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Default JSON Schema used to structure research output.",
+            "title": "Output Schema"
+          },
+          "stream": {
+            "default": false,
+            "description": "Whether new Tavily research tasks should stream responses by default.",
+            "title": "Stream",
+            "type": "boolean"
+          }
+        },
+        "required": [],
+        "title": "TavilyResearchTool",
+        "type": "object"
+      },
+      "name": "TavilyResearchTool",
+      "package_dependencies": [
+        "tavily-python"
+      ],
+      "run_params_schema": {
+        "description": "Input schema for TavilyResearchTool.",
+        "properties": {
+          "citation_format": {
+            "default": "numbered",
+            "description": "Citation format for the research report.",
+            "enum": [
+              "numbered",
+              "mla",
+              "apa",
+              "chicago"
+            ],
+            "title": "Citation Format",
+            "type": "string"
+          },
+          "input": {
+            "description": "The research task or question to investigate.",
+            "title": "Input",
+            "type": "string"
+          },
+          "model": {
+            "default": "auto",
+            "description": "The model used by the Tavily research agent.",
+            "enum": [
+              "mini",
+              "pro",
+              "auto"
+            ],
+            "title": "Model",
+            "type": "string"
+          },
+          "output_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional JSON Schema that structures the research output.",
+            "title": "Output Schema"
+          },
+          "stream": {
+            "default": false,
+            "description": "Whether to stream research progress and results as SSE chunks.",
+            "title": "Stream",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "input"
+        ],
+        "title": "TavilyResearchToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that performs web searches using the Tavily Search API. It returns a JSON object containing the search results.",
       "env_vars": [
         {

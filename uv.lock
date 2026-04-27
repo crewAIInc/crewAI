@@ -13,7 +13,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-04-27T16:00:00Z"
+exclude-newer = "2026-04-28T07:00:00Z"
 
 [manifest]
 members = [
@@ -1660,7 +1660,7 @@ requires-dist = [
     { name = "sqlalchemy", marker = "extra == 'singlestore'", specifier = ">=2.0.40" },
     { name = "sqlalchemy", marker = "extra == 'sqlalchemy'", specifier = ">=2.0.35" },
     { name = "stagehand", marker = "extra == 'stagehand'", specifier = ">=0.4.1" },
-    { name = "tavily-python", marker = "extra == 'tavily-python'", specifier = ">=0.5.4" },
+    { name = "tavily-python", marker = "extra == 'tavily-python'", specifier = "~=0.7.14" },
     { name = "tiktoken", specifier = ">=0.8.0,<0.13" },
     { name = "unstructured", extras = ["all-docs", "local-inference"], marker = "extra == 'xml'", specifier = ">=0.17.2" },
     { name = "weaviate-client", marker = "extra == 'weaviate-client'", specifier = ">=4.10.2" },
