@@ -354,9 +354,17 @@ def prepare_kickoff(
     crew._set_tasks_callbacks()
     crew._set_allow_crewai_trigger_context_for_first_task()
 
+    agents_to_setup: list[BaseAgent] = list(crew.agents)
+    seen_agent_ids: set[int] = {id(agent) for agent in agents_to_setup}
+    for task in crew.tasks:
+        task_agent = getattr(task, "agent", None)
+        if task_agent is not None and id(task_agent) not in seen_agent_ids:
+            agents_to_setup.append(task_agent)
+            seen_agent_ids.add(id(task_agent))
+
     setup_agents(
         crew,
-        crew.agents,
+        agents_to_setup,
         crew.embedder,
         crew.function_calling_llm,
         crew.step_callback,

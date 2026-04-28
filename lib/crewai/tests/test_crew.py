@@ -4798,6 +4798,37 @@ def test_crew_kickoff_started_emits_display_name(
     assert captured == [expected]
 
 
+def test_prepare_kickoff_binds_task_only_agent_to_crew():
+    """Agents referenced only via task.agent must get .crew set during prepare_kickoff.
+
+    Regression for crewAIInc/crewAI#5534: when Crew is built without
+    agents=[...], multimodal input_files were silently dropped because the
+    agent's .crew attribute was never assigned, gating file lookup off in
+    Task and CrewAgentExecutor.
+    """
+    from crewai.crews.utils import prepare_kickoff
+
+    task_only_agent = Agent(
+        role="Solo",
+        goal="Describe inputs",
+        backstory="Solo agent assigned only via task.agent",
+        allow_delegation=False,
+    )
+    task = Task(
+        description="Describe the input.",
+        expected_output="A description.",
+        agent=task_only_agent,
+    )
+    crew = Crew(tasks=[task])
+
+    assert task_only_agent.crew is None
+    assert crew.agents == []
+
+    prepare_kickoff(crew, inputs=None)
+
+    assert task_only_agent.crew is crew
+
+
 @pytest.mark.vcr()
 def test_memory_remember_receives_task_content():
     """With memory=True, extract_memories receives raw content with task, agent, expected output, and result."""
