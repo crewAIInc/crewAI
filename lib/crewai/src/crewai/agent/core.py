@@ -8,6 +8,7 @@ import concurrent.futures
 import contextvars
 from datetime import datetime
 import json
+import os
 from pathlib import Path
 import time
 from typing import (
@@ -93,7 +94,11 @@ from crewai.utilities.agent_utils import (
     parse_tools,
     render_text_description_and_args,
 )
-from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
+from crewai.utilities.constants import (
+    CREWAI_TRAINED_AGENTS_FILE_ENV,
+    TRAINED_AGENTS_DATA_FILE,
+    TRAINING_DATA_FILE,
+)
 from crewai.utilities.converter import Converter, ConverterError
 from crewai.utilities.env import get_env_context
 from crewai.utilities.guardrail import process_guardrail, serialize_guardrail_for_json
@@ -1181,7 +1186,10 @@ class Agent(BaseAgent):
 
     def _use_trained_data(self, task_prompt: str) -> str:
         """Use trained data for the agent task prompt to improve output."""
-        if data := CrewTrainingHandler(TRAINED_AGENTS_DATA_FILE).load():
+        trained_file = os.getenv(
+            CREWAI_TRAINED_AGENTS_FILE_ENV, TRAINED_AGENTS_DATA_FILE
+        )
+        if data := CrewTrainingHandler(trained_file).load():
             if trained_data_output := data.get(self.role):
                 task_prompt += (
                     "\n\nYou MUST follow these instructions: \n - "

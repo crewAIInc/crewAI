@@ -351,9 +351,22 @@ def install(context: click.Context) -> None:
 
 
 @crewai.command()
-def run() -> None:
+@click.option(
+    "-f",
+    "--filename",
+    "trained_agents_file",
+    type=str,
+    default=None,
+    help=(
+        "Path to a trained-agents pickle (produced by `crewai train -f`). "
+        "When set, agents load suggestions from this file instead of the "
+        "default trained_agents_data.pkl. Equivalent to setting "
+        "CREWAI_TRAINED_AGENTS_FILE."
+    ),
+)
+def run(trained_agents_file: str | None) -> None:
     """Run the Crew."""
-    run_crew()
+    run_crew(trained_agents_file=trained_agents_file)
 
 
 @crewai.command()
