@@ -31,10 +31,16 @@ def test_serialize_guardrail_drops_callable_with_warning() -> None:
         assert serialize_guardrail_for_json(_example_guardrail) is None
 
 
-def test_serialize_guardrails_handles_mixed_list() -> None:
+def test_serialize_guardrails_drops_callables_from_list() -> None:
     with pytest.warns(UserWarning):
         result = serialize_guardrails_for_json(["check size", _example_guardrail])
-    assert result == ["check size", None]
+    assert result == ["check size"]
+
+
+def test_serialize_guardrails_all_callables_returns_empty_list() -> None:
+    with pytest.warns(UserWarning):
+        result = serialize_guardrails_for_json([_example_guardrail, _example_guardrail])
+    assert result == []
 
 
 def test_serialize_guardrails_handles_single_string() -> None:
@@ -81,7 +87,23 @@ def test_task_model_dump_json_with_callable_guardrails_list() -> None:
     )
     with pytest.warns(UserWarning):
         dumped = task.model_dump(mode="json")
-    assert dumped["guardrails"] == [None, "also check this"]
+    assert dumped["guardrails"] == ["also check this"]
+
+
+def test_task_guardrails_round_trip_through_model_validate() -> None:
+    """Serialized guardrails must round-trip — None entries would fail validation."""
+    agent = Agent(role="r", goal="g", backstory="b")
+    task = Task(
+        description="Do the thing",
+        expected_output="A thing",
+        agent=agent,
+        guardrails=[_example_guardrail, "also check this"],
+    )
+    with pytest.warns(UserWarning):
+        dumped = task.model_dump(mode="json", exclude={"id"})
+    if isinstance(dumped.get("agent"), dict):
+        dumped["agent"].pop("id", None)
+    Task.model_validate(dumped)
 
 
 def test_agent_model_dump_json_with_callable_guardrail() -> None:

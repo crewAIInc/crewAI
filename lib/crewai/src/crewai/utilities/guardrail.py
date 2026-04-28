@@ -33,10 +33,19 @@ def serialize_guardrail_for_json(
 
 def serialize_guardrails_for_json(
     value: Any, field_name: str = "guardrails"
-) -> list[str | None] | str | None:
-    """Serialize a guardrails value (single or sequence) for JSON checkpointing."""
+) -> list[str] | str | None:
+    """Serialize a guardrails value (single or sequence) for JSON checkpointing.
+
+    Dropped callables are filtered out of lists rather than emitted as ``None``;
+    a ``None`` entry would fail validation against ``GuardrailCallable | str``
+    on checkpoint restore.
+    """
     if isinstance(value, (list, tuple)):
-        return [serialize_guardrail_for_json(item, field_name) for item in value]
+        return [
+            item
+            for item in (serialize_guardrail_for_json(g, field_name) for g in value)
+            if item is not None
+        ]
     return serialize_guardrail_for_json(value, field_name)
 
 

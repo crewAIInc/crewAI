@@ -252,7 +252,7 @@ class Task(BaseModel):
         GuardrailsType | None,
         PlainSerializer(
             serialize_guardrails_for_json,
-            return_type=list[str | None] | str | None,
+            return_type=list[str] | str | None,
             when_used="json",
         ),
     ] = Field(
