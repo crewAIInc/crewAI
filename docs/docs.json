@@ -228,7 +228,8 @@
                           "en/tools/web-scraping/firecrawlcrawlwebsitetool",
                           "en/tools/web-scraping/firecrawlscrapewebsitetool",
                           "en/tools/web-scraping/oxylabsscraperstool",
-                          "en/tools/web-scraping/brightdata-tools"
+                          "en/tools/web-scraping/brightdata-tools",
+                          "en/tools/web-scraping/youai-contents"
                         ]
                       },
                       {
@@ -251,7 +252,8 @@
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
-                          "en/tools/search-research/databricks-query-tool"
+                          "en/tools/search-research/databricks-query-tool",
+                          "en/tools/search-research/youai-search"
                         ]
                       },
                       {
@@ -705,7 +707,8 @@
                           "en/tools/web-scraping/firecrawlcrawlwebsitetool",
                           "en/tools/web-scraping/firecrawlscrapewebsitetool",
                           "en/tools/web-scraping/oxylabsscraperstool",
-                          "en/tools/web-scraping/brightdata-tools"
+                          "en/tools/web-scraping/brightdata-tools",
+                          "en/tools/web-scraping/youai-contents"
                         ]
                       },
                       {
@@ -727,7 +730,8 @@
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
-                          "en/tools/search-research/databricks-query-tool"
+                          "en/tools/search-research/databricks-query-tool",
+                          "en/tools/search-research/youai-search"
                         ]
                       },
                       {
@@ -1181,7 +1185,8 @@
                           "en/tools/web-scraping/firecrawlcrawlwebsitetool",
                           "en/tools/web-scraping/firecrawlscrapewebsitetool",
                           "en/tools/web-scraping/oxylabsscraperstool",
-                          "en/tools/web-scraping/brightdata-tools"
+                          "en/tools/web-scraping/brightdata-tools",
+                          "en/tools/web-scraping/youai-contents"
                         ]
                       },
                       {
@@ -1204,7 +1209,8 @@
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
-                          "en/tools/search-research/databricks-query-tool"
+                          "en/tools/search-research/databricks-query-tool",
+                          "en/tools/search-research/youai-search"
                         ]
                       },
                       {
@@ -1658,7 +1664,8 @@
                           "en/tools/web-scraping/firecrawlcrawlwebsitetool",
                           "en/tools/web-scraping/firecrawlscrapewebsitetool",
                           "en/tools/web-scraping/oxylabsscraperstool",
-                          "en/tools/web-scraping/brightdata-tools"
+                          "en/tools/web-scraping/brightdata-tools",
+                          "en/tools/web-scraping/youai-contents"
                         ]
                       },
                       {
@@ -1681,7 +1688,8 @@
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
-                          "en/tools/search-research/databricks-query-tool"
+                          "en/tools/search-research/databricks-query-tool",
+                          "en/tools/search-research/youai-search"
                         ]
                       },
                       {
@@ -2135,7 +2143,8 @@
                           "en/tools/web-scraping/firecrawlcrawlwebsitetool",
                           "en/tools/web-scraping/firecrawlscrapewebsitetool",
                           "en/tools/web-scraping/oxylabsscraperstool",
-                          "en/tools/web-scraping/brightdata-tools"
+                          "en/tools/web-scraping/brightdata-tools",
+                          "en/tools/web-scraping/youai-contents"
                         ]
                       },
                       {
@@ -2158,7 +2167,8 @@
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
-                          "en/tools/search-research/databricks-query-tool"
+                          "en/tools/search-research/databricks-query-tool",
+                          "en/tools/search-research/youai-search"
                         ]
                       },
                       {
@@ -2612,7 +2622,8 @@
                           "en/tools/web-scraping/firecrawlcrawlwebsitetool",
                           "en/tools/web-scraping/firecrawlscrapewebsitetool",
                           "en/tools/web-scraping/oxylabsscraperstool",
-                          "en/tools/web-scraping/brightdata-tools"
+                          "en/tools/web-scraping/brightdata-tools",
+                          "en/tools/web-scraping/youai-contents"
                         ]
                       },
                       {
@@ -2635,7 +2646,8 @@
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
-                          "en/tools/search-research/databricks-query-tool"
+                          "en/tools/search-research/databricks-query-tool",
+                          "en/tools/search-research/youai-search"
                         ]
                       },
                       {
@@ -3088,7 +3100,8 @@
                           "en/tools/web-scraping/firecrawlcrawlwebsitetool",
                           "en/tools/web-scraping/firecrawlscrapewebsitetool",
                           "en/tools/web-scraping/oxylabsscraperstool",
-                          "en/tools/web-scraping/brightdata-tools"
+                          "en/tools/web-scraping/brightdata-tools",
+                          "en/tools/web-scraping/youai-contents"
                         ]
                       },
                       {
@@ -3111,7 +3124,8 @@
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
-                          "en/tools/search-research/databricks-query-tool"
+                          "en/tools/search-research/databricks-query-tool",
+                          "en/tools/search-research/youai-search"
                         ]
                       },
                       {
@@ -3563,7 +3577,8 @@
                           "en/tools/web-scraping/firecrawlcrawlwebsitetool",
                           "en/tools/web-scraping/firecrawlscrapewebsitetool",
                           "en/tools/web-scraping/oxylabsscraperstool",
-                          "en/tools/web-scraping/brightdata-tools"
+                          "en/tools/web-scraping/brightdata-tools",
+                          "en/tools/web-scraping/youai-contents"
                         ]
                       },
                       {
@@ -3586,7 +3601,8 @@
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
-                          "en/tools/search-research/databricks-query-tool"
+                          "en/tools/search-research/databricks-query-tool",
+                          "en/tools/search-research/youai-search"
                         ]
                       },
                       {
@@ -4038,7 +4054,8 @@
                           "en/tools/web-scraping/firecrawlcrawlwebsitetool",
                           "en/tools/web-scraping/firecrawlscrapewebsitetool",
                           "en/tools/web-scraping/oxylabsscraperstool",
-                          "en/tools/web-scraping/brightdata-tools"
+                          "en/tools/web-scraping/brightdata-tools",
+                          "en/tools/web-scraping/youai-contents"
                         ]
                       },
                       {
@@ -4061,7 +4078,8 @@
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
-                          "en/tools/search-research/databricks-query-tool"
+                          "en/tools/search-research/databricks-query-tool",
+                          "en/tools/search-research/youai-search"
                         ]
                       },
                       {
@@ -4513,7 +4531,8 @@
                           "en/tools/web-scraping/firecrawlcrawlwebsitetool",
                           "en/tools/web-scraping/firecrawlscrapewebsitetool",
                           "en/tools/web-scraping/oxylabsscraperstool",
-                          "en/tools/web-scraping/brightdata-tools"
+                          "en/tools/web-scraping/brightdata-tools",
+                          "en/tools/web-scraping/youai-contents"
                         ]
                       },
                       {
@@ -4536,7 +4555,8 @@
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
-                          "en/tools/search-research/databricks-query-tool"
+                          "en/tools/search-research/databricks-query-tool",
+                          "en/tools/search-research/youai-search"
                         ]
                       },
                       {
@@ -4990,7 +5010,8 @@
                           "en/tools/web-scraping/firecrawlcrawlwebsitetool",
                           "en/tools/web-scraping/firecrawlscrapewebsitetool",
                           "en/tools/web-scraping/oxylabsscraperstool",
-                          "en/tools/web-scraping/brightdata-tools"
+                          "en/tools/web-scraping/brightdata-tools",
+                          "en/tools/web-scraping/youai-contents"
                         ]
                       },
                       {
@@ -5013,7 +5034,8 @@
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
-                          "en/tools/search-research/databricks-query-tool"
+                          "en/tools/search-research/databricks-query-tool",
+                          "en/tools/search-research/youai-search"
                         ]
                       },
                       {
@@ -5466,7 +5488,8 @@
                           "en/tools/web-scraping/firecrawlcrawlwebsitetool",
                           "en/tools/web-scraping/firecrawlscrapewebsitetool",
                           "en/tools/web-scraping/oxylabsscraperstool",
-                          "en/tools/web-scraping/brightdata-tools"
+                          "en/tools/web-scraping/brightdata-tools",
+                          "en/tools/web-scraping/youai-contents"
                         ]
                       },
                       {
@@ -5489,7 +5512,8 @@
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
-                          "en/tools/search-research/databricks-query-tool"
+                          "en/tools/search-research/databricks-query-tool",
+                          "en/tools/search-research/youai-search"
                         ]
                       },
                       {
