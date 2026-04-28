@@ -3,6 +3,7 @@
 import os
 from typing import Dict, List
 
+import pytest
 from crewai.flow.flow import Flow, FlowState, listen, start
 from crewai.flow.persistence import persist
 from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
@@ -248,3 +249,69 @@ def test_persistence_with_base_model(tmp_path):
     assert message.type == "text"
     assert message.content == "Hello, World!"
     assert isinstance(flow.state._unwrap(), State)
+
+
+def test_persist_custom_key_with_pydantic_state(tmp_path):
+    """`@persist(key=...)` uses the named attribute on a Pydantic state."""
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    class KeyedState(FlowState):
+        conversation_id: str = "conv-42"
+        message: str = ""
+
+    class KeyedFlow(Flow[KeyedState]):
+        @start()
+        @persist(persistence, key="conversation_id")
+        def init_step(self):
+            self.state.message = "hello"
+
+    flow = KeyedFlow(persistence=persistence)
+    flow.kickoff()
+
+    saved_state = persistence.load_state("conv-42")
+    assert saved_state is not None
+    assert saved_state["message"] == "hello"
+    # The default `state.id` lookup must NOT have been used as the key.
+    assert persistence.load_state(flow.state.id) is None
+
+
+def test_persist_custom_key_with_dict_state(tmp_path):
+    """`@persist(key=...)` uses the named key on a dict state."""
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    class DictKeyedFlow(Flow[Dict[str, str]]):
+        initial_state = dict()
+
+        @start()
+        @persist(persistence, key="conversation_id")
+        def init_step(self):
+            self.state["conversation_id"] = "conv-dict-7"
+            self.state["message"] = "hi from dict"
+
+    flow = DictKeyedFlow(persistence=persistence)
+    flow.kickoff()
+
+    saved_state = persistence.load_state("conv-dict-7")
+    assert saved_state is not None
+    assert saved_state["message"] == "hi from dict"
+
+
+def test_persist_custom_key_missing_raises(tmp_path):
+    """A missing/falsy custom key must raise a clear ValueError."""
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    class MissingKeyFlow(Flow[Dict[str, str]]):
+        initial_state = dict()
+
+        @start()
+        @persist(persistence, key="conversation_id")
+        def init_step(self):
+            # Intentionally do NOT set "conversation_id" on state.
+            self.state["message"] = "no key here"
+
+    flow = MissingKeyFlow(persistence=persistence)
+    with pytest.raises(ValueError, match="conversation_id"):
+        flow.kickoff()
