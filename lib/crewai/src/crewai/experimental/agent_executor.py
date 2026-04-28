@@ -153,7 +153,7 @@ class AgentExecutorState(BaseModel):
     )
 
 
-class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignore[pydantic-unexpected]
+class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     """Agent Executor for both standalone agents and crew-bound agents.
 
     _skip_auto_memory prevents Flow from eagerly allocating a Memory
@@ -1194,7 +1194,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):  # type: ignor
         return "initialized"
 
     @router("force_final_answer")
-    def force_final_answer(self) -> Literal["agent_finished"]:
+    def ensure_force_final_answer(self) -> Literal["agent_finished"]:
         """Force agent to provide final answer when max iterations exceeded."""
         formatted_answer = handle_max_iterations_exceeded(
             formatted_answer=None,
