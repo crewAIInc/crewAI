@@ -373,6 +373,33 @@ class AnotherFlow(Flow[dict]):
         print("Method-level persisted runs:", self.state["runs"])
 ```
 
+### 사용자 지정 영속성 키
+
+기본적으로 `@persist`는 자동 생성된 `state.id` 필드를 영속성 키로 사용합니다. 여러 세션에 걸쳐 공유되는 `conversation_id`처럼 플로우에 자체 식별자가 있는 경우, `key` 인자를 전달하면 `@persist`가 해당 속성을 플로우 UUID로 사용합니다:
+
+```python
+from crewai.flow.flow import Flow, listen, start
+from crewai.flow.persistence import persist
+from pydantic import BaseModel
+
+class ConversationState(BaseModel):
+    conversation_id: str
+    turn: int = 0
+
+@persist(key="conversation_id")  # 사용자 지정 필드를 영속성 키로 사용
+class ConversationFlow(Flow[ConversationState]):
+    @start()
+    def begin(self):
+        self.state.turn += 1
+        print(f"Conversation {self.state.conversation_id} turn {self.state.turn}")
+
+# 동일한 conversation_id로 다시 실행하면 이전 상태가 다시 로드됩니다
+flow = ConversationFlow(conversation_id="user-42")
+flow.kickoff()
+```
+
+이 데코레이터는 dict 상태의 경우 `state[key]`에서, Pydantic / 객체 상태의 경우 `getattr(state, key)`에서 값을 읽습니다. 저장 시점에 지정된 속성이 없거나 falsy 값이면, `@persist`는 `Flow state is missing required persistence key 'conversation_id'`와 같은 `ValueError`를 발생시킵니다. `key`를 생략하면 기존 동작이 유지되어 `state.id`가 사용됩니다.
+
 ### 작동 방식
 
 1. **고유 상태 식별**

@@ -116,6 +116,33 @@ class PersistentCounterFlow(Flow[CounterState]):
         return self.state.value
 ```
 
+### استخدام مفتاح استمرارية مخصص
+
+افتراضيًا، يستخدم `@persist()` الحقل `state.id` المُولّد تلقائيًا كمفتاح للحالة المحفوظة. عندما يكون لمجالك معرّف طبيعي بالفعل — مثل `conversation_id` يربط عدة تشغيلات للتدفق بنفس جلسة المستخدم — مرّره كوسيط `key` ليستخدمه `@persist` كـ UUID للتدفق بدلًا من `id`:
+
+```python
+from crewai.flow.flow import Flow, listen, start
+from crewai.flow.persistence import persist
+from pydantic import BaseModel
+
+class ConversationState(BaseModel):
+    conversation_id: str
+    history: list[str] = []
+
+@persist(key="conversation_id")
+class ConversationFlow(Flow[ConversationState]):
+    @start()
+    def greet(self):
+        self.state.history.append("hello")
+        return self.state.history
+
+# تشغيل ثانٍ بنفس conversation_id يُعيد تحميل الحالة السابقة
+flow = ConversationFlow(conversation_id="user-42")
+flow.kickoff()
+```
+
+بالنسبة للحالات من نوع dict يقرأ `@persist` القيمة من `state[key]`، ولحالات Pydantic / الكائنات يقرأها من `getattr(state, key)`. إذا كانت السمة المحددة غير موجودة أو قيمتها falsy عند حفظ الحالة، يُطلق `@persist` خطأ `ValueError` مثل `Flow state is missing required persistence key 'conversation_id'`، فيظهر الفشل فورًا بدلًا من فقد بيانات الاستمرارية بصمت. استدعاء `@persist()` بدون `key` يحافظ على السلوك الأصلي ويستخدم `state.id`.
+
 ## أنماط حالة متقدمة
 
 ### المنطق الشرطي المبني على الحالة

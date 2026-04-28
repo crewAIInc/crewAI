@@ -167,6 +167,33 @@ Para mais controle, você pode aplicar `@persist()` em métodos específicos:
 # código não traduzido
 ```
 
+#### Usando uma Chave de Persistência Personalizada
+
+Por padrão, `@persist()` usa o `state.id` gerado automaticamente como chave do estado persistido. Quando seu domínio já possui um identificador natural — por exemplo um `conversation_id` que liga várias execuções do flow à mesma sessão de usuário — passe-o como argumento `key` e `@persist` usará esse atributo como UUID do flow em vez de `id`:
+
+```python
+from crewai.flow.flow import Flow, listen, start
+from crewai.flow.persistence import persist
+from pydantic import BaseModel
+
+class ConversationState(BaseModel):
+    conversation_id: str
+    history: list[str] = []
+
+@persist(key="conversation_id")
+class ConversationFlow(Flow[ConversationState]):
+    @start()
+    def greet(self):
+        self.state.history.append("hello")
+        return self.state.history
+
+# Uma segunda execução com o mesmo conversation_id recarrega o estado anterior
+flow = ConversationFlow(conversation_id="user-42")
+flow.kickoff()
+```
+
+Para estados baseados em dicionário `@persist` lê `state[key]`, e para estados Pydantic / objetos lê `getattr(state, key)`. Se o atributo informado estiver ausente ou for *falsy* no momento em que o estado for salvo, `@persist` lança um `ValueError` como `Flow state is missing required persistence key 'conversation_id'`, fazendo com que a falha apareça imediatamente em vez de descartar silenciosamente os dados persistidos. Chamar `@persist()` sem `key` mantém o comportamento original de usar `state.id`.
+
 ## Padrões Avançados de Estado
 
 ### Lógica Condicional Baseada no Estado

@@ -346,6 +346,33 @@ class SelectivePersistFlow(Flow):
         return f"Complete with count {self.state['count']}"
 ```
 
+#### Using a Custom Persistence Key
+
+By default, `@persist()` keys persisted state by the flow's auto-generated `state.id`. When your domain already has a natural identifier — for example a `conversation_id` that ties multiple flow runs to the same user session — pass it as the `key` argument and `@persist` will use that attribute as the flow UUID instead of `id`:
+
+```python
+from crewai.flow.flow import Flow, listen, start
+from crewai.flow.persistence import persist
+from pydantic import BaseModel
+
+class ConversationState(BaseModel):
+    conversation_id: str
+    history: list[str] = []
+
+@persist(key="conversation_id")
+class ConversationFlow(Flow[ConversationState]):
+    @start()
+    def greet(self):
+        self.state.history.append("hello")
+        return self.state.history
+
+# A second run with the same conversation_id reloads the prior state
+flow = ConversationFlow(conversation_id="user-42")
+flow.kickoff()
+```
+
+For dict-based states `@persist` reads `state[key]`, and for Pydantic / object states it reads `getattr(state, key)`. If the named attribute is missing or falsy when state is being saved, `@persist` raises a `ValueError` like `Flow state is missing required persistence key 'conversation_id'`, so the failure surfaces immediately rather than silently dropping persisted data. Calling `@persist()` without `key` keeps the original behavior of using `state.id`.
+
 
 ## Advanced State Patterns
 
