@@ -126,6 +126,8 @@ https://app.crewai.com
   </Step>
 
   <Step title="Create a Vertex AI service account">
+    `crewai-vertex` is an example name — pick anything that fits your naming conventions, but use the same value in the impersonation binding (next step) and on the LLM connection (Part 2).
+
     ```bash
     gcloud iam service-accounts create crewai-vertex \
       --project=PROJECT_ID \
@@ -175,7 +177,7 @@ https://app.crewai.com
 
     - **Provider:** `Vertex`
     - **Workload Identity Config:** the config from the previous step
-    - **GCP Service Account Email:** `crewai-vertex@PROJECT_ID.iam.gserviceaccount.com`
+    - **GCP Service Account Email:** the SA you created in Part 1 (e.g., `crewai-vertex@PROJECT_ID.iam.gserviceaccount.com`)
 
     No `GOOGLE_API_KEY` environment variable is required — leave that empty. For region, add a single connection-scoped env var:
 
