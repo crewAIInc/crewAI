@@ -139,16 +139,29 @@ def train(n_iterations: int, filename: str) -> None:
     type=str,
     help="Replay the crew from this task ID, including all subsequent tasks.",
 )
-def replay(task_id: str) -> None:
-    """
-    Replay the crew execution from a specific task.
+@click.option(
+    "-f",
+    "--filename",
+    "trained_agents_file",
+    type=str,
+    default=None,
+    help=(
+        "Path to a trained-agents pickle (produced by `crewai train -f`). "
+        "When set, agents load suggestions from this file instead of the "
+        "default trained_agents_data.pkl. Equivalent to setting "
+        "CREWAI_TRAINED_AGENTS_FILE."
+    ),
+)
+def replay(task_id: str, trained_agents_file: str | None) -> None:
+    """Replay the crew execution from a specific task.
 
     Args:
-        task_id (str): The ID of the task to replay from.
+        task_id: The ID of the task to replay from.
+        trained_agents_file: Optional trained-agents pickle path.
     """
     try:
         click.echo(f"Replaying the crew from task {task_id}")
-        replay_task_command(task_id)
+        replay_task_command(task_id, trained_agents_file=trained_agents_file)
     except Exception as e:
         click.echo(f"An error occurred while replaying: {e}", err=True)
 
@@ -332,10 +345,23 @@ def memory(
     default="gpt-4o-mini",
     help="LLM Model to run the tests on the Crew. For now only accepting only OpenAI models.",
 )
-def test(n_iterations: int, model: str) -> None:
+@click.option(
+    "-f",
+    "--filename",
+    "trained_agents_file",
+    type=str,
+    default=None,
+    help=(
+        "Path to a trained-agents pickle (produced by `crewai train -f`). "
+        "When set, agents load suggestions from this file instead of the "
+        "default trained_agents_data.pkl. Equivalent to setting "
+        "CREWAI_TRAINED_AGENTS_FILE."
+    ),
+)
+def test(n_iterations: int, model: str, trained_agents_file: str | None) -> None:
     """Test the crew and evaluate the results."""
     click.echo(f"Testing the crew for {n_iterations} iterations with model {model}")
-    evaluate_crew(n_iterations, model)
+    evaluate_crew(n_iterations, model, trained_agents_file=trained_agents_file)
 
 
 @crewai.command(
