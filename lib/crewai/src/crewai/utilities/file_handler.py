@@ -1,7 +1,6 @@
 from datetime import datetime
 import json
 import os
-import pickle
 from typing import Any, TypedDict
 
 from typing_extensions import Unpack
@@ -128,10 +127,10 @@ class FileHandler:
 
 
 class PickleHandler:
-    """Handler for saving and loading data using pickle.
+    """Handler for saving and loading data using JSON.
 
     Attributes:
-        file_path: The path to the pickle file.
+        file_path: The path to the data file.
     """
 
     def __init__(self, file_name: str) -> None:
@@ -153,17 +152,17 @@ class PickleHandler:
 
     def save(self, data: Any) -> None:
         """
-        Save the data to the specified file using pickle.
+        Save the data to the specified file using JSON.
 
         Args:
           data: The data to be saved to the file.
         """
         with store_lock(f"file:{os.path.realpath(self.file_path)}"):
-            with open(self.file_path, "wb") as f:
-                pickle.dump(obj=data, file=f)
+            with open(self.file_path, "w", encoding="utf-8") as f:
+                json.dump(data, f)
 
     def load(self) -> Any:
-        """Load the data from the specified file using pickle.
+        """Load the data from the specified file using JSON.
 
         Returns:
             The data loaded from the file.
@@ -175,10 +174,8 @@ class PickleHandler:
             ):
                 return {}
 
-            with open(self.file_path, "rb") as file:
+            with open(self.file_path, "r", encoding="utf-8") as file:
                 try:
-                    return pickle.load(file)  # noqa: S301
-                except EOFError:
-                    return {}
+                    return json.load(file)
                 except Exception:
                     raise

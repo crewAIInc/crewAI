@@ -1536,14 +1536,15 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
         agent_training_data = training_data.get(agent_id, {})
 
+        iteration_key = str(train_iteration)
         if human_feedback is not None:
-            agent_training_data[train_iteration] = {
+            agent_training_data[iteration_key] = {
                 "initial_output": result.output,
                 "human_feedback": human_feedback,
             }
         else:
-            if train_iteration in agent_training_data:
-                agent_training_data[train_iteration]["improved_output"] = result.output
+            if iteration_key in agent_training_data:
+                agent_training_data[iteration_key]["improved_output"] = result.output
             else:
                 if self.agent.verbose:
                     PRINTER.print(

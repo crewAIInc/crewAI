@@ -39,10 +39,10 @@ class InternalCrewTrainingHandler(unittest.TestCase):
         # Assert that the new data is appended correctly to the existing agent
         data = self.handler.load()
         assert agent_id in data
-        assert initial_iteration in data[agent_id]
-        assert train_iteration in data[agent_id]
-        assert data[agent_id][initial_iteration] == initial_data
-        assert data[agent_id][train_iteration] == new_data
+        assert str(initial_iteration) in data[agent_id]
+        assert str(train_iteration) in data[agent_id]
+        assert data[agent_id][str(initial_iteration)] == initial_data
+        assert data[agent_id][str(train_iteration)] == new_data
 
     def test_append_new_agent(self):
         train_iteration = 1
@@ -52,4 +52,4 @@ class InternalCrewTrainingHandler(unittest.TestCase):
 
         # Assert that the new agent and data are appended correctly
         data = self.handler.load()
-        assert data[agent_id][train_iteration] == new_data
+        assert data[agent_id][str(train_iteration)] == new_data
