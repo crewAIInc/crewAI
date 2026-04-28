@@ -1,7 +1,7 @@
 [project]
 name = "crewai-a2a"
 dynamic = ["version"]
-description = "Add your description here"
+description = "Agent-to-Agent (A2A) protocol support for CrewAI"
 readme = "README.md"
 authors = [
     { name = "Greyson LaLonde", email = "greyson@crewai.com" }
