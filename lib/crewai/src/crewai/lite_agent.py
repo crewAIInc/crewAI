@@ -9,6 +9,7 @@ import time
 from types import MethodType
 from typing import (
     TYPE_CHECKING,
+    Annotated,
     Any,
     Literal,
     cast,
@@ -25,6 +26,7 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from pydantic.functional_serializers import PlainSerializer
 from typing_extensions import Self, deprecated
 
 
@@ -86,7 +88,7 @@ from crewai.utilities.converter import (
     Converter,
     ConverterError,
 )
-from crewai.utilities.guardrail import process_guardrail
+from crewai.utilities.guardrail import process_guardrail, serialize_guardrail_for_json
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.llm_utils import create_llm
@@ -235,7 +237,14 @@ class LiteAgent(FlowTrackable, BaseModel):
     verbose: bool = Field(
         default=False, description="Whether to print execution details"
     )
-    guardrail: GuardrailType | None = Field(
+    guardrail: Annotated[
+        GuardrailType | None,
+        PlainSerializer(
+            serialize_guardrail_for_json,
+            return_type=str | None,
+            when_used="json",
+        ),
+    ] = Field(
         default=None,
         description="Function or string description of a guardrail to validate agent output",
     )
