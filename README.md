@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/crewaiinc-crewai-badge.png)](https://mseep.ai/app/crewaiinc-crewai)
+
 <p align="center">
   <a href="https://github.com/crewAIInc/crewAI">
     <img src="docs/images/crewai_logo.png" width="600px" alt="Open source Multi-AI Agent orchestration framework">
