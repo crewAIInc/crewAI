@@ -34,7 +34,7 @@ class _A2AAliasFinder(MetaPathFinder, Loader):
         path: Sequence[str] | None = None,
         target: ModuleType | None = None,
     ) -> ModuleSpec | None:
-        if fullname == self._SRC or fullname.startswith(self._SRC + "."):
+        if fullname.startswith(self._SRC + "."):
             return ModuleSpec(fullname, self)
         return None
 
