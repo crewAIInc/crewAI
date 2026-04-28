@@ -1,8 +1,8 @@
-import os
 import subprocess
 
 import click
 
+from crewai.cli.utils import build_env_with_all_tool_credentials
 from crewai.utilities.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
 
 
@@ -15,7 +15,7 @@ def replay_task_command(task_id: str, trained_agents_file: str | None = None) ->
             the subprocess via the ``CREWAI_TRAINED_AGENTS_FILE`` env var.
     """
     command = ["uv", "run", "replay", task_id]
-    env = os.environ.copy()
+    env = build_env_with_all_tool_credentials()
     if trained_agents_file:
         env[CREWAI_TRAINED_AGENTS_FILE_ENV] = trained_agents_file
 

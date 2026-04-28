@@ -1,8 +1,8 @@
-import os
 import subprocess
 
 import click
 
+from crewai.cli.utils import build_env_with_all_tool_credentials
 from crewai.utilities.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
 
 
@@ -18,7 +18,7 @@ def evaluate_crew(
             the subprocess via the ``CREWAI_TRAINED_AGENTS_FILE`` env var.
     """
     command = ["uv", "run", "test", str(n_iterations), model]
-    env = os.environ.copy()
+    env = build_env_with_all_tool_credentials()
     if trained_agents_file:
         env[CREWAI_TRAINED_AGENTS_FILE_ENV] = trained_agents_file
 
