@@ -357,10 +357,9 @@ def prepare_kickoff(
     agents_to_setup: list[BaseAgent] = list(crew.agents)
     seen_agent_ids: set[int] = {id(agent) for agent in agents_to_setup}
     for task in crew.tasks:
-        task_agent = getattr(task, "agent", None)
-        if task_agent is not None and id(task_agent) not in seen_agent_ids:
-            agents_to_setup.append(task_agent)
-            seen_agent_ids.add(id(task_agent))
+        if task.agent is not None and id(task.agent) not in seen_agent_ids:
+            agents_to_setup.append(task.agent)
+            seen_agent_ids.add(id(task.agent))
 
     setup_agents(
         crew,
