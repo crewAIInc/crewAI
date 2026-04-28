@@ -11,11 +11,12 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+from pydantic import BaseModel
 
 from crewai.agent.core import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crew import Crew
-from crewai.flow.flow import Flow, start
+from crewai.flow.flow import _INITIAL_STATE_CLASS_MARKER, Flow, start
 from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.state.checkpoint_listener import (
     _find_checkpoint,
@@ -308,6 +309,65 @@ class TestRuntimeStateLineage:
         first = state._branch
         state.fork()
         assert state._branch != first
+
+
+class TestFlowInitialStateSerialization:
+    """Regression tests for checkpoint serialization of ``Flow.initial_state``."""
+
+    def test_class_ref_serializes_as_schema(self) -> None:
+        class MyState(BaseModel):
+            id: str = "x"
+            foo: str = "bar"
+
+        flow = Flow(initial_state=MyState)
+        state = RuntimeState(root=[flow])
+        dumped = json.loads(state.model_dump_json())
+        entity = dumped["entities"][0]
+        wrapped = entity["initial_state"]
+        assert isinstance(wrapped, dict)
+        assert _INITIAL_STATE_CLASS_MARKER in wrapped
+        assert wrapped[_INITIAL_STATE_CLASS_MARKER].get("title") == "MyState"
+
+    def test_class_ref_round_trips_to_basemodel_subclass(self) -> None:
+        class MyState(BaseModel):
+            id: str = "x"
+            foo: str = "bar"
+
+        flow = Flow(initial_state=MyState)
+        raw = RuntimeState(root=[flow]).model_dump_json()
+        restored = RuntimeState.model_validate_json(
+            raw, context={"from_checkpoint": True}
+        )
+        rehydrated = restored.root[0].initial_state
+        assert isinstance(rehydrated, type)
+        assert issubclass(rehydrated, BaseModel)
+        assert set(rehydrated.model_fields.keys()) == {"id", "foo"}
+
+    def test_instance_serializes_as_values(self) -> None:
+        class MyState(BaseModel):
+            id: str = "x"
+            foo: str = "bar"
+
+        flow = Flow(initial_state=MyState(foo="baz"))
+        state = RuntimeState(root=[flow])
+        dumped = json.loads(state.model_dump_json())
+        entity = dumped["entities"][0]
+        assert entity["initial_state"] == {"id": "x", "foo": "baz"}
+
+    def test_dict_passthrough(self) -> None:
+        flow = Flow(initial_state={"id": "x", "foo": "bar"})
+        state = RuntimeState(root=[flow])
+        dumped = json.loads(state.model_dump_json())
+        entity = dumped["entities"][0]
+        assert entity["initial_state"] == {"id": "x", "foo": "bar"}
+
+    def test_dict_round_trips_as_dict(self) -> None:
+        flow = Flow(initial_state={"id": "x", "foo": "bar"})
+        raw = RuntimeState(root=[flow]).model_dump_json()
+        restored = RuntimeState.model_validate_json(
+            raw, context={"from_checkpoint": True}
+        )
+        assert restored.root[0].initial_state == {"id": "x", "foo": "bar"}
 
 
 # ---------- JsonProvider forking ----------

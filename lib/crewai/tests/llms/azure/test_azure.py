@@ -389,17 +389,41 @@ def test_azure_raises_error_when_endpoint_missing():
             llm._get_sync_client()
 
 
-def test_azure_raises_error_when_api_key_missing():
-    """Credentials are validated lazily: construction succeeds, first
+def test_azure_raises_error_when_api_key_missing_without_azure_identity():
+    """Without an API key AND without ``azure-identity`` installed,
     client build raises the descriptive error."""
     from crewai.llms.providers.azure.completion import AzureCompletion
 
     with patch.dict(os.environ, {}, clear=True):
-        llm = AzureCompletion(
-            model="gpt-4", endpoint="https://test.openai.azure.com"
-        )
-        with pytest.raises(ValueError, match="Azure API key is required"):
-            llm._get_sync_client()
+        with patch.dict("sys.modules", {"azure.identity": None}):
+            llm = AzureCompletion(
+                model="gpt-4", endpoint="https://test.openai.azure.com"
+            )
+            with pytest.raises(ValueError, match="Azure API key is required"):
+                llm._get_sync_client()
+
+
+def test_azure_uses_default_credential_when_api_key_missing():
+    """With ``azure-identity`` installed, a missing API key falls back to
+    ``DefaultAzureCredential`` instead of raising. This is the path that
+    enables keyless auth (OIDC WIF on EKS/AKS, Managed Identity, Azure
+    CLI) without any crewAI-specific config."""
+    from unittest.mock import MagicMock
+
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    sentinel = MagicMock(name="DefaultAzureCredential()")
+    with patch.dict(os.environ, {}, clear=True):
+        with patch(
+            "azure.identity.DefaultAzureCredential", return_value=sentinel
+        ) as mock_cls:
+            llm = AzureCompletion(
+                model="gpt-4",
+                endpoint="https://test-ai.services.example.com",
+            )
+            kwargs = llm._make_client_kwargs()
+            assert kwargs["credential"] is sentinel
+            mock_cls.assert_called()
 
 
 @pytest.mark.asyncio

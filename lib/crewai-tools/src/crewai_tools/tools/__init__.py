@@ -60,6 +60,11 @@ from crewai_tools.tools.directory_search_tool.directory_search_tool import (
     DirectorySearchTool,
 )
 from crewai_tools.tools.docx_search_tool.docx_search_tool import DOCXSearchTool
+from crewai_tools.tools.e2b_sandbox_tool import (
+    E2BExecTool,
+    E2BFileTool,
+    E2BPythonTool,
+)
 from crewai_tools.tools.exa_tools.exa_search_tool import EXASearchTool
 from crewai_tools.tools.file_read_tool.file_read_tool import FileReadTool
 from crewai_tools.tools.file_writer_tool.file_writer_tool import FileWriterTool
@@ -179,6 +184,12 @@ from crewai_tools.tools.stagehand_tool.stagehand_tool import StagehandTool
 from crewai_tools.tools.tavily_extractor_tool.tavily_extractor_tool import (
     TavilyExtractorTool,
 )
+from crewai_tools.tools.tavily_get_research_tool.tavily_get_research_tool import (
+    TavilyGetResearchTool,
+)
+from crewai_tools.tools.tavily_research_tool.tavily_research_tool import (
+    TavilyResearchTool,
+)
 from crewai_tools.tools.tavily_search_tool.tavily_search_tool import TavilySearchTool
 from crewai_tools.tools.txt_search_tool.txt_search_tool import TXTSearchTool
 from crewai_tools.tools.vision_tool.vision_tool import VisionTool
@@ -227,6 +238,9 @@ __all__ = [
     "DaytonaPythonTool",
     "DirectoryReadTool",
     "DirectorySearchTool",
+    "E2BExecTool",
+    "E2BFileTool",
+    "E2BPythonTool",
     "EXASearchTool",
     "FileCompressorTool",
     "FileReadTool",
@@ -285,6 +299,8 @@ __all__ = [
     "StagehandTool",
     "TXTSearchTool",
     "TavilyExtractorTool",
+    "TavilyGetResearchTool",
+    "TavilyResearchTool",
     "TavilySearchTool",
     "VisionTool",
     "WeaviateVectorSearchTool",

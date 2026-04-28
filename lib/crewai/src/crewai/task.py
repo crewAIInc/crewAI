@@ -76,6 +76,8 @@ except ImportError:
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.guardrail import (
     process_guardrail,
+    serialize_guardrail_for_json,
+    serialize_guardrails_for_json,
 )
 from crewai.utilities.guardrail_types import (
     GuardrailCallable,
@@ -235,11 +237,25 @@ class Task(BaseModel):
         default=None,
     )
     processed_by_agents: set[str] = Field(default_factory=set)
-    guardrail: GuardrailType | None = Field(
+    guardrail: Annotated[
+        GuardrailType | None,
+        PlainSerializer(
+            serialize_guardrail_for_json,
+            return_type=str | None,
+            when_used="json",
+        ),
+    ] = Field(
         default=None,
         description="Function or string description of a guardrail to validate task output before proceeding to next task",
     )
-    guardrails: GuardrailsType | None = Field(
+    guardrails: Annotated[
+        GuardrailsType | None,
+        PlainSerializer(
+            serialize_guardrails_for_json,
+            return_type=list[str] | str | None,
+            when_used="json",
+        ),
+    ] = Field(
         default=None,
         description="List of guardrails to validate task output before proceeding to next task. Also supports a single guardrail function or string description of a guardrail to validate task output before proceeding to next task",
     )
