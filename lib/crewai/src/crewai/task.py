@@ -32,6 +32,7 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from pydantic.functional_serializers import PlainSerializer
 from pydantic_core import PydanticCustomError
 from typing_extensions import Self
 
@@ -75,6 +76,8 @@ except ImportError:
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.guardrail import (
     process_guardrail,
+    serialize_guardrail_for_json,
+    serialize_guardrails_for_json,
 )
 from crewai.utilities.guardrail_types import (
     GuardrailCallable,
@@ -84,6 +87,22 @@ from crewai.utilities.guardrail_types import (
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.printer import PRINTER
 from crewai.utilities.string_utils import interpolate_only
+
+
+def _serialize_model_class(v: type[BaseModel] | None) -> dict[str, Any] | None:
+    """Serialize a Pydantic model class reference to its JSON schema."""
+    return v.model_json_schema() if v else None
+
+
+def _deserialize_model_class(v: Any) -> type[BaseModel] | None:
+    """Hydrate a model class reference from checkpoint data."""
+    if v is None or isinstance(v, type):
+        return v
+    if isinstance(v, dict):
+        from crewai.utilities.pydantic_schema_utils import create_model_from_schema
+
+        return create_model_from_schema(v)
+    return None
 
 
 class Task(BaseModel):
@@ -141,15 +160,33 @@ class Task(BaseModel):
         description="Whether the task should be executed asynchronously or not.",
         default=False,
     )
-    output_json: type[BaseModel] | None = Field(
+    output_json: Annotated[
+        type[BaseModel] | None,
+        BeforeValidator(_deserialize_model_class),
+        PlainSerializer(
+            _serialize_model_class, return_type=dict | None, when_used="json"
+        ),
+    ] = Field(
         description="A Pydantic model to be used to create a JSON output.",
         default=None,
     )
-    output_pydantic: type[BaseModel] | None = Field(
+    output_pydantic: Annotated[
+        type[BaseModel] | None,
+        BeforeValidator(_deserialize_model_class),
+        PlainSerializer(
+            _serialize_model_class, return_type=dict | None, when_used="json"
+        ),
+    ] = Field(
         description="A Pydantic model to be used to create a Pydantic output.",
         default=None,
     )
-    response_model: type[BaseModel] | None = Field(
+    response_model: Annotated[
+        type[BaseModel] | None,
+        BeforeValidator(_deserialize_model_class),
+        PlainSerializer(
+            _serialize_model_class, return_type=dict | None, when_used="json"
+        ),
+    ] = Field(
         description="A Pydantic model for structured LLM outputs using native provider features.",
         default=None,
     )
@@ -189,16 +226,36 @@ class Task(BaseModel):
         description="Whether the task should instruct the agent to return the final answer formatted in Markdown",
         default=False,
     )
-    converter_cls: type[Converter] | None = Field(
+    converter_cls: Annotated[
+        type[Converter] | None,
+        BeforeValidator(lambda v: v if v is None or isinstance(v, type) else None),
+        PlainSerializer(
+            _serialize_model_class, return_type=dict | None, when_used="json"
+        ),
+    ] = Field(
         description="A converter class used to export structured output",
         default=None,
     )
     processed_by_agents: set[str] = Field(default_factory=set)
-    guardrail: GuardrailType | None = Field(
+    guardrail: Annotated[
+        GuardrailType | None,
+        PlainSerializer(
+            serialize_guardrail_for_json,
+            return_type=str | None,
+            when_used="json",
+        ),
+    ] = Field(
         default=None,
         description="Function or string description of a guardrail to validate task output before proceeding to next task",
     )
-    guardrails: GuardrailsType | None = Field(
+    guardrails: Annotated[
+        GuardrailsType | None,
+        PlainSerializer(
+            serialize_guardrails_for_json,
+            return_type=list[str] | str | None,
+            when_used="json",
+        ),
+    ] = Field(
         default=None,
         description="List of guardrails to validate task output before proceeding to next task. Also supports a single guardrail function or string description of a guardrail to validate task output before proceeding to next task",
     )
@@ -1241,12 +1298,26 @@ Follow these guidelines:
                 tools=tools,
             )
 
-            pydantic_output, json_output = self._export_output(result)
+            if isinstance(result, BaseModel):
+                raw = result.model_dump_json()
+                if self.output_pydantic:
+                    pydantic_output = result
+                    json_output = None
+                elif self.output_json:
+                    pydantic_output = None
+                    json_output = result.model_dump()
+                else:
+                    pydantic_output = None
+                    json_output = None
+            else:
+                raw = result
+                pydantic_output, json_output = self._export_output(result)
+
             task_output = TaskOutput(
                 name=self.name or self.description,
                 description=self.description,
                 expected_output=self.expected_output,
-                raw=result,
+                raw=raw,
                 pydantic=pydantic_output,
                 json_dict=json_output,
                 agent=agent.role,
@@ -1337,12 +1408,26 @@ Follow these guidelines:
                 tools=tools,
             )
 
-            pydantic_output, json_output = self._export_output(result)
+            if isinstance(result, BaseModel):
+                raw = result.model_dump_json()
+                if self.output_pydantic:
+                    pydantic_output = result
+                    json_output = None
+                elif self.output_json:
+                    pydantic_output = None
+                    json_output = result.model_dump()
+                else:
+                    pydantic_output = None
+                    json_output = None
+            else:
+                raw = result
+                pydantic_output, json_output = self._export_output(result)
+
             task_output = TaskOutput(
                 name=self.name or self.description,
                 description=self.description,
                 expected_output=self.expected_output,
-                raw=result,
+                raw=raw,
                 pydantic=pydantic_output,
                 json_dict=json_output,
                 agent=agent.role,

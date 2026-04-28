@@ -879,3 +879,91 @@ class TestStreamingImports:
         assert StreamChunk is not None
         assert StreamChunkType is not None
         assert ToolCallChunk is not None
+
+
+class TestConcurrentStreamIsolation:
+    """Regression tests for concurrent streaming isolation (issue #5376)."""
+
+    def test_concurrent_streams_do_not_cross_contaminate(self) -> None:
+        """Two concurrent streaming runs must each receive only their own chunks.
+
+        Mirrors the real production path: create_streaming_state in the caller,
+        then temporarily push the stream_id into the ContextVar, copy_context,
+        and reset — exactly as create_chunk_generator does.
+        """
+        import contextvars
+        import threading
+
+        from crewai.utilities.streaming import (
+            TaskInfo,
+            _current_stream_ids,
+            _unregister_handler,
+            create_streaming_state,
+        )
+
+        task_info_a: TaskInfo = {
+            "index": 0,
+            "name": "task_a",
+            "id": "a",
+            "agent_role": "A",
+            "agent_id": "a",
+        }
+        task_info_b: TaskInfo = {
+            "index": 1,
+            "name": "task_b",
+            "id": "b",
+            "agent_role": "B",
+            "agent_id": "b",
+        }
+
+        state_a = create_streaming_state(task_info_a, [])
+        state_b = create_streaming_state(task_info_b, [])
+
+        def make_emitter_ctx(state: Any) -> contextvars.Context:
+            token = _current_stream_ids.set(
+                (*_current_stream_ids.get(), state.stream_id)
+            )
+            ctx = contextvars.copy_context()
+            _current_stream_ids.reset(token)
+            return ctx
+
+        ctx_a = make_emitter_ctx(state_a)
+        ctx_b = make_emitter_ctx(state_b)
+
+        def emit_chunks(prefix: str, call_id: str) -> None:
+            for text in [f"{prefix}1", f"{prefix}2", f"{prefix}3"]:
+                crewai_event_bus.emit(
+                    None,
+                    event=LLMStreamChunkEvent(
+                        chunk=text, call_id=call_id, response_id="r"
+                    ),
+                )
+
+        t_a = threading.Thread(target=ctx_a.run, args=(lambda: emit_chunks("A", "ca"),))
+        t_b = threading.Thread(target=ctx_b.run, args=(lambda: emit_chunks("B", "cb"),))
+        t_a.start()
+        t_b.start()
+        t_a.join()
+        t_b.join()
+
+        chunks_a: list[str] = []
+        while not state_a.sync_queue.empty():
+            item = state_a.sync_queue.get_nowait()
+            if isinstance(item, StreamChunk):
+                chunks_a.append(item.content)
+
+        chunks_b: list[str] = []
+        while not state_b.sync_queue.empty():
+            item = state_b.sync_queue.get_nowait()
+            if isinstance(item, StreamChunk):
+                chunks_b.append(item.content)
+
+        assert set(chunks_a) == {"A1", "A2", "A3"}, (
+            f"Stream A received unexpected chunks: {chunks_a}"
+        )
+        assert set(chunks_b) == {"B1", "B2", "B3"}, (
+            f"Stream B received unexpected chunks: {chunks_b}"
+        )
+
+        _unregister_handler(state_a.handler)
+        _unregister_handler(state_b.handler)

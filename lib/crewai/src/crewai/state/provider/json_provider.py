@@ -95,17 +95,20 @@ class JsonProvider(BaseProvider):
             await f.write(data)
         return str(file_path)
 
-    def prune(self, location: str, max_keep: int, *, branch: str = "main") -> None:
+    def prune(self, location: str, max_keep: int, *, branch: str = "main") -> int:
         """Remove oldest checkpoint files beyond *max_keep* on a branch."""
         _safe_branch(location, branch)
         branch_dir = os.path.join(location, branch)
         pattern = os.path.join(branch_dir, "*.json")
         files = sorted(glob.glob(pattern), key=os.path.getmtime)
+        removed = 0
         for path in files if max_keep == 0 else files[:-max_keep]:
             try:
                 os.remove(path)
+                removed += 1
             except OSError:  # noqa: PERF203
                 logger.debug("Failed to remove %s", path, exc_info=True)
+        return removed
 
     def extract_id(self, location: str) -> str:
         """Extract the checkpoint ID from a file path.

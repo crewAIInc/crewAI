@@ -8,6 +8,7 @@ from concurrent.futures import Future
 from hashlib import md5
 import re
 import sys
+from typing import Any, cast
 from unittest.mock import ANY, MagicMock, call, patch
 
 from crewai.agent import Agent
@@ -17,6 +18,7 @@ from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.crew_events import (
+    CrewKickoffStartedEvent,
     CrewTestCompletedEvent,
     CrewTestStartedEvent,
     CrewTrainCompletedEvent,
@@ -4517,8 +4519,8 @@ def test_sets_flow_context_when_using_crewbase_pattern_inside_flow():
     flow.kickoff()
 
     assert captured_crew is not None
-    assert captured_crew._flow_id == flow.flow_id  # type: ignore[attr-defined]
-    assert captured_crew._request_id == flow.flow_id  # type: ignore[attr-defined]
+    assert captured_crew._flow_id == flow.execution_id  # type: ignore[attr-defined]
+    assert captured_crew._request_id == flow.execution_id  # type: ignore[attr-defined]
 
 
 def test_sets_flow_context_when_outside_flow(researcher, writer):
@@ -4552,8 +4554,8 @@ def test_sets_flow_context_when_inside_flow(researcher, writer):
 
     flow = MyFlow()
     result = flow.kickoff()
-    assert result._flow_id == flow.flow_id  # type: ignore[attr-defined]
-    assert result._request_id == flow.flow_id  # type: ignore[attr-defined]
+    assert result._flow_id == flow.execution_id  # type: ignore[attr-defined]
+    assert result._request_id == flow.execution_id  # type: ignore[attr-defined]
 
 
 def test_reset_knowledge_with_no_crew_knowledge(researcher, writer):
@@ -4739,6 +4741,92 @@ def test_default_crew_name(researcher, writer):
         ],
     )
     assert crew.name == "crew"
+
+
+@pytest.mark.parametrize(
+    "explicit_name,expected",
+    [
+        (None, "ResearchAutomation"),
+        ("My Research Automation", "My Research Automation"),
+    ],
+    ids=["class_name_from_decorator", "explicit_name_preserved"],
+)
+def test_crew_kickoff_started_emits_display_name(
+    researcher, writer, explicit_name, expected
+):
+    """Kickoff events should use the decorator-provided display name when implicit."""
+    from crewai.crews.utils import prepare_kickoff
+    from crewai.project import CrewBase, agent, crew, task
+
+    @CrewBase
+    class ResearchAutomation:
+        agents_config = None
+        tasks_config = None
+
+        @agent
+        def researcher(self):
+            return researcher
+
+        @task
+        def first_task(self):
+            return Task(
+                description="Task 1",
+                expected_output="output",
+                agent=self.researcher(),
+            )
+
+        @crew
+        def crew(self):
+            crew_kwargs: dict[str, Any] = {
+                "agents": self.agents,
+                "tasks": self.tasks,
+            }
+            if explicit_name is not None:
+                crew_kwargs["name"] = explicit_name
+            return Crew(**crew_kwargs)
+
+    captured: list[str | None] = []
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(CrewKickoffStartedEvent)
+        def _capture(_source: Any, event: CrewKickoffStartedEvent) -> None:
+            captured.append(event.crew_name)
+
+        automation_cls = cast(type[Any], ResearchAutomation)
+        prepare_kickoff(cast(Any, automation_cls()).crew(), inputs=None)
+
+    assert captured == [expected]
+
+
+def test_prepare_kickoff_binds_task_only_agent_to_crew():
+    """Agents referenced only via task.agent must get .crew set during prepare_kickoff.
+
+    Regression for crewAIInc/crewAI#5534: when Crew is built without
+    agents=[...], multimodal input_files were silently dropped because the
+    agent's .crew attribute was never assigned, gating file lookup off in
+    Task and CrewAgentExecutor.
+    """
+    from crewai.crews.utils import prepare_kickoff
+
+    task_only_agent = Agent(
+        role="Solo",
+        goal="Describe inputs",
+        backstory="Solo agent assigned only via task.agent",
+        allow_delegation=False,
+    )
+    task = Task(
+        description="Describe the input.",
+        expected_output="A description.",
+        agent=task_only_agent,
+    )
+    crew = Crew(tasks=[task])
+
+    assert task_only_agent.crew is None
+    assert crew.agents == []
+
+    prepare_kickoff(crew, inputs=None)
+
+    assert task_only_agent.crew is crew
 
 
 @pytest.mark.vcr()

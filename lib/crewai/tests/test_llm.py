@@ -648,7 +648,7 @@ def test_handle_streaming_tool_calls_no_tools(mock_emit):
 
     assert_event_count(
         mock_emit=mock_emit,
-        expected_stream_chunk=46,
+        expected_stream_chunk=47,
         expected_completed_llm_call=1,
         expected_final_chunk_result=response,
     )
