@@ -4,6 +4,36 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="Apr 29, 2026">
+  ## v1.14.4a1
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.4a1)
+
+  ## What's Changed
+
+  ### Bug Fixes
+  - Fix crew chat description helpers against LLM failures.
+  - Reset messages and iterations between invocations in executor.
+  - Forward trained-agents file through replay and test in CLI.
+  - Honor custom trained-agents file at inference in agent.
+  - Bind task-only agents to crew to ensure multimodal input_files reach the LLM.
+  - Serialize guardrail callables as null for JSON checkpointing.
+  - Rename `force_final_answer` in agent_executor to avoid self-referential router.
+  - Bump `litellm` for SSTI fix and ignore unfixable pip CVE.
+
+  ### Documentation
+  - Add E2B Sandbox Tools page.
+  - Add Daytona sandbox tools documentation.
+  - Add Vertex AI workload identity setup guide.
+  - Add You.com MCP tools for search, research, and content extraction.
+  - Update changelog and version for v1.14.3.
+
+  ## Contributors
+
+  @EdwardIrby, @dependabot[bot], @factory-droid-oss, @factory-droid[bot], @greysonlalonde, @lorenzejay, @manisrinivasan2k1, @mattatcha
+
+</Update>
+
 <Update label="Apr 25, 2026">
   ## v1.14.3
 

@@ -4,6 +4,36 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="29 abr 2026">
+  ## v1.14.4a1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.4a1)
+
+  ## O que Mudou
+
+  ### Correções de Bugs
+  - Corrigir os ajudantes de descrição do chat da equipe contra falhas do LLM.
+  - Redefinir mensagens e iterações entre invocações no executor.
+  - Encaminhar arquivo de agentes treinados através de replay e teste no CLI.
+  - Respeitar arquivo de agentes treinados personalizados na inferência no agente.
+  - Vincular agentes apenas de tarefa à equipe para garantir que os input_files multimodais cheguem ao LLM.
+  - Serializar chamadas de guardrail como nulas para checkpointing JSON.
+  - Renomear `force_final_answer` no agent_executor para evitar roteador autorreferencial.
+  - Atualizar `litellm` para correção de SSTI e ignorar CVE pip não corrigível.
+
+  ### Documentação
+  - Adicionar página de Ferramentas de Sandbox E2B.
+  - Adicionar documentação de ferramentas de sandbox Daytona.
+  - Adicionar guia de configuração de identidade de carga de trabalho do Vertex AI.
+  - Adicionar ferramentas MCP do You.com para pesquisa, investigação e extração de conteúdo.
+  - Atualizar changelog e versão para v1.14.3.
+
+  ## Contribuidores
+
+  @EdwardIrby, @dependabot[bot], @factory-droid-oss, @factory-droid[bot], @greysonlalonde, @lorenzejay, @manisrinivasan2k1, @mattatcha
+
+</Update>
+
 <Update label="25 abr 2026">
   ## v1.14.3
 
