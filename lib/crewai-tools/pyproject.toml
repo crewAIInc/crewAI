@@ -148,6 +148,10 @@ e2b = [
     "e2b-code-interpreter~=2.6.0",
 ]
 
+vaultfire = [
+    "vaultfire-crewai>=1.0.0",
+]
+
 
 [tool.uv]
 exclude-newer = "3 days"
