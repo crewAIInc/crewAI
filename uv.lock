@@ -13,7 +13,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-04-28T00:00:00Z"
+exclude-newer = "2026-04-27T16:00:00Z"
 
 [manifest]
 members = [
