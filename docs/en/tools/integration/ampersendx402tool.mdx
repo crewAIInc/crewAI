@@ -1,0 +1,109 @@
+---
+title: ampersend x402 Payment Tool
+description: Enables CrewAI agents to make autonomous payments with USDC on Base via ampersend and the x402 protocol
+icon: wallet
+mode: "wide"
+---
+
+# ampersend x402 Payment Tool
+
+The ampersend x402 payment tool enables CrewAI agents to pay for API calls autonomously using USDC on Base. When an agent hits a paid endpoint, ampersend intercepts the `402 Payment Required` response, signs the payment, settles on-chain, and retries the request. The agent gets the response without knowing payment happened.
+
+## Installation
+
+```bash
+uv add ampersend-sdk crewai a2a-sdk==0.3.7
+```
+
+<Note>
+  `a2a-sdk` must be pinned to `0.3.7` until [this fix](https://github.com/edgeandnode/ampersend-sdk/pull/90) is merged.
+</Note>
+
+## Requirements
+
+- An ampersend agent with a funded smart wallet ([dashboard](https://app.ampersend.ai))
+- Smart account address and session key private key from the dashboard
+
+## Usage
+
+```python
+import os
+from crewai import Agent, Crew, Task
+from crewai.tools import tool
+from ampersend_sdk import create_ampersend_http_client
+
+
+@tool("Get joke")
+async def get_joke() -> str:
+    """Get a random joke from a paid API via x402."""
+    async with create_ampersend_http_client(
+        smart_account_address=os.environ["AMPERSEND_SMART_ACCOUNT_ADDRESS"],
+        session_key_private_key=os.environ["AMPERSEND_SESSION_KEY_PRIVATE_KEY"],
+        api_url=os.environ.get("AMPERSEND_API_URL", "https://api.ampersend.ai"),
+    ) as client:
+        response = await client.get("https://services.ampersend.ai/api/joke")
+        return response.text
+
+
+researcher = Agent(
+    role="Research Assistant",
+    goal="Look up data using paid APIs and summarize findings",
+    backstory="You are a helpful assistant with access to paid data APIs.",
+    tools=[get_joke],
+)
+
+task = Task(
+    description="Get a joke and present it in a fun way.",
+    expected_output="A joke with setup and punchline.",
+    agent=researcher,
+)
+
+crew = Crew(agents=[researcher], tasks=[task])
+result = crew.kickoff()
+print(result)
+```
+
+## Environment Variables
+
+```bash
+AMPERSEND_SMART_ACCOUNT_ADDRESS=0xYourSmartAccountAddress
+AMPERSEND_SESSION_KEY_PRIVATE_KEY=0xYourSessionKeyPrivateKey
+AMPERSEND_API_URL=https://api.ampersend.ai
+```
+
+## How the Payment Flow Works
+
+1. Agent tool makes an HTTP request to a paid endpoint
+2. Server returns `402 Payment Required` with a price in USDC
+3. ampersend's HTTP client intercepts the 402
+4. Signs the payment with the agent's session key
+5. Settles on Base via the [x402](https://github.com/coinbase/x402) protocol
+6. Retries the original request with proof of payment
+7. Agent receives the response
+
+## Platform Controls
+
+The [ampersend dashboard](https://app.ampersend.ai) provides guardrails for agent spending:
+
+- **Spending limits**: daily, monthly, and per-transaction caps per agent
+- **Seller allowlists**: restrict which endpoints an agent can pay
+- **Auto top-up**: keep agent wallets funded automatically
+- **Analytics**: track spend and payment flows across your crew in real time
+
+## Use Cases
+
+### Paid API Access
+Agents autonomously pay for data feeds, compute, or any [x402-enabled service](https://www.x402.org/ecosystem) without API keys or subscriptions.
+
+### Multi-Agent Budgets
+Give each agent in a crew its own wallet with its own spending limits. The agents do the work, you set the boundaries.
+
+### Agent-to-Agent Payments
+Agents can pay other agents for services using the same x402 protocol, enabling autonomous agent economies.
+
+## Resources
+
+- [Blog post: Give CrewAI agents a wallet and guardrails](https://www.ampersend.ai/blog/give-crewai-agents-a-wallet-and-guardrails)
+- [Demo repo](https://github.com/marcusrein/ampersend-crewai)
+- [ampersend docs](https://docs.ampersend.ai)
+- [x402 protocol](https://www.x402.org)
