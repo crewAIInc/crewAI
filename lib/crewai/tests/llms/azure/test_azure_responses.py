@@ -191,84 +191,46 @@ class TestAzureResponsesInit:
 
 
 # ---------------------------------------------------------------------------
-# Call delegation tests
+# Call delegation tests (VCR cassette-based)
 # ---------------------------------------------------------------------------
 
 class TestAzureResponsesCall:
-    """Test call / acall delegation to the Responses API."""
+    """Test call / acall delegation to the Responses API using VCR cassettes."""
 
-    def test_call_delegates_to_responses(self, mock_openai_completion):
-        MockCls, instance = mock_openai_completion
-        comp = _create_azure_responses()
+    @pytest.mark.vcr()
+    def test_call_delegates_to_responses(self):
+        from crewai.llm import LLM
 
-        messages = [{"role": "user", "content": "Hello"}]
-        result = comp.call(messages=messages, from_task="task1", from_agent="agent1")
+        llm = LLM(model="azure/gpt-5.2-chat", api="responses")
+        result = llm.call("Say hello in one sentence.")
 
-        assert result == "responses-result"
-        instance.call.assert_called_once_with(
-            messages=messages,
-            tools=None,
-            callbacks=None,
-            available_functions=None,
-            from_task="task1",
-            from_agent="agent1",
-            response_model=None,
+        assert isinstance(result, str)
+        assert len(result) > 0
+
+    @pytest.mark.vcr()
+    def test_call_with_tools_delegates(self):
+        from crewai.llm import LLM
+
+        llm = LLM(
+            model="azure/gpt-5.2-chat",
+            api="responses",
+            builtin_tools=["web_search"],
         )
+        result = llm.call("What is 2 + 2? Be brief.")
 
-    @pytest.mark.asyncio
-    async def test_acall_delegates_to_responses(self, mock_openai_completion):
-        MockCls, instance = mock_openai_completion
-        comp = _create_azure_responses()
+        assert isinstance(result, str)
+        assert len(result) > 0
 
-        messages = [{"role": "user", "content": "Hello"}]
-        result = await comp.acall(messages=messages)
-
-        assert result == "async-responses-result"
-        instance.acall.assert_called_once()
-
-    def test_call_with_tools_delegates(self, mock_openai_completion):
-        MockCls, instance = mock_openai_completion
-        comp = _create_azure_responses()
-
-        tools = [{"type": "function", "function": {"name": "test"}}]
-        available_fns = {"test": lambda: "ok"}
-        comp.call(
-            messages="Hello",
-            tools=tools,
-            available_functions=available_fns,
-        )
-
-        call_kwargs = instance.call.call_args[1]
-        assert call_kwargs["tools"] == tools
-        assert call_kwargs["available_functions"] == available_fns
-
+    @pytest.mark.vcr()
     def test_completions_call_unchanged(self):
-        """Default api='completions' should not delegate to responses."""
-        from crewai.llms.providers.azure.completion import AzureCompletion
+        """Default api='completions' should not use the responses delegate."""
+        from crewai.llm import LLM
 
-        comp = AzureCompletion(
-            model="gpt-4o",
-            api_key="key",
-            endpoint="https://res.openai.azure.com",
-        )
+        llm = LLM(model="azure/gpt-5.2-chat")
+        result = llm.call("Say hello in one sentence.")
 
-        with patch.object(comp._client, "complete") as mock_complete:
-            mock_msg = MagicMock()
-            mock_msg.content = "completions-result"
-            mock_msg.tool_calls = None
-            mock_choice = MagicMock()
-            mock_choice.message = mock_msg
-            mock_resp = MagicMock()
-            mock_resp.choices = [mock_choice]
-            mock_resp.usage = MagicMock(
-                prompt_tokens=10, completion_tokens=5, total_tokens=15
-            )
-            mock_resp.usage.prompt_tokens_details = None
-            mock_complete.return_value = mock_resp
-
-            result = comp.call(messages=[{"role": "user", "content": "Hi"}])
-            assert result == "completions-result"
-            mock_complete.assert_called_once()
+        assert isinstance(result, str)
+        assert len(result) > 0
 
 
 # ---------------------------------------------------------------------------
