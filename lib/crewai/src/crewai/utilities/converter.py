@@ -264,7 +264,7 @@ def handle_partial_json(
         except json.JSONDecodeError:
             pass
         except ValidationError:
-            raise
+            pass
         except Exception as e:
             if agent and getattr(agent, "verbose", True):
                 PRINTER.print(

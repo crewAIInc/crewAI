@@ -34,6 +34,10 @@ class SimpleModel(BaseModel):
     age: int
 
 
+class GraphQLSchema(BaseModel):
+    gql_schema: str
+
+
 class NestedModel(BaseModel):
     id: int
     data: SimpleModel
@@ -175,6 +179,23 @@ def test_handle_partial_json_with_invalid_partial(mock_agent: Mock) -> None:
         mock_convert.return_value = "Converted result"
         output = handle_partial_json(result, SimpleModel, False, mock_agent)
         assert output == "Converted result"
+
+
+def test_handle_partial_json_with_invalid_json_like_partial(mock_agent: Mock) -> None:
+    result = """type Query {
+  countries: [Country]
+  country(code: String!): Country
+}"""
+
+    expected = GraphQLSchema(gql_schema=result)
+
+    with patch("crewai.utilities.converter.convert_with_instructions") as mock_convert:
+        mock_convert.return_value = expected
+
+        output = handle_partial_json(result, GraphQLSchema, False, mock_agent)
+
+    assert output == expected
+    mock_convert.assert_called_once()
 
 
 # Tests for convert_with_instructions
