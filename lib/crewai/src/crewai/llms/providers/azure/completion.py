@@ -1225,8 +1225,6 @@ class AzureCompletion(BaseLLM):
         computer-use-preview) do not support stop sequences.
         See: https://learn.microsoft.com/en-us/azure/ai-foundry/foundry-models/concepts/models-sold-directly-by-azure
         """
-        if self.api == "responses":
-            return False
         model_lower = self.model.lower() if self.model else ""
 
         if "gpt-5" in model_lower:

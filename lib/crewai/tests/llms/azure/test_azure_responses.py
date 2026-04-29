@@ -343,7 +343,7 @@ class TestAzureResponsesFeatures:
 
     def test_supports_stop_words_false_for_responses(self, mock_openai_completion):
         MockCls, _ = mock_openai_completion
-        comp = _create_azure_responses()
+        comp = _create_azure_responses(model="o4-mini")
         assert comp.supports_stop_words() is False
 
     def test_supports_stop_words_true_for_completions_gpt4(self):
