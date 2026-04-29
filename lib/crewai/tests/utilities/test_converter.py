@@ -940,6 +940,8 @@ def test_internal_instructor_real_unsupported_provider() -> None:
     mock_llm.is_litellm = False
     mock_llm.model = "unsupported-model"
     mock_llm.provider = "unsupported"
+    mock_llm.base_url = None
+    mock_llm.api_key = None
 
     # This should raise a ConfigurationError from the real instructor library
     with pytest.raises(Exception) as exc_info:
@@ -952,3 +954,45 @@ def test_internal_instructor_real_unsupported_provider() -> None:
 
     # Verify it's a configuration error about unsupported provider
     assert "Unsupported provider" in str(exc_info.value) or "unsupported" in str(exc_info.value).lower()
+
+
+def test_internal_instructor_forwards_base_url_and_api_key() -> None:
+    """base_url and api_key on the LLM must flow into instructor.from_provider."""
+    from crewai.utilities.internal_instructor import InternalInstructor
+
+    mock_llm = Mock()
+    mock_llm.is_litellm = False
+    mock_llm.model = "gpt-4o"
+    mock_llm.provider = "openai"
+    mock_llm.base_url = "https://custom.example.com/v1"
+    mock_llm.api_key = "sk-custom"
+
+    with patch("instructor.from_provider") as mock_from_provider:
+        mock_from_provider.return_value = Mock()
+
+        InternalInstructor(content="x", model=SimpleModel, llm=mock_llm)
+
+        mock_from_provider.assert_called_once_with(
+            "openai/gpt-4o",
+            base_url="https://custom.example.com/v1",
+            api_key="sk-custom",
+        )
+
+
+def test_internal_instructor_omits_unset_base_url_and_api_key() -> None:
+    """When base_url/api_key are None, they must not be passed to from_provider."""
+    from crewai.utilities.internal_instructor import InternalInstructor
+
+    mock_llm = Mock()
+    mock_llm.is_litellm = False
+    mock_llm.model = "gpt-4o"
+    mock_llm.provider = "openai"
+    mock_llm.base_url = None
+    mock_llm.api_key = None
+
+    with patch("instructor.from_provider") as mock_from_provider:
+        mock_from_provider.return_value = Mock()
+
+        InternalInstructor(content="x", model=SimpleModel, llm=mock_llm)
+
+        mock_from_provider.assert_called_once_with("openai/gpt-4o")
