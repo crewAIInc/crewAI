@@ -2,12 +2,18 @@ from __future__ import annotations
 
 from builtins import type as type_
 import os
-import warnings
 from typing import Any, TypedDict
+import warnings
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import Required
+
+
+try:
+    from exa_py import Exa
+except ImportError:
+    Exa = None  # type: ignore[assignment,misc]
 
 
 class SearchParams(TypedDict, total=False):
@@ -44,8 +50,8 @@ class ExaSearchTool(BaseTool):
     )
     args_schema: type_[BaseModel] = ExaBaseToolSchema
     client: Any | None = None
-    content: bool | None = False
-    summary: bool | None = False
+    content: bool | dict[str, Any] | None = False
+    summary: bool | dict[str, Any] | None = False
     highlights: bool | dict[str, Any] | None = False
     type: str | None = "auto"
     package_dependencies: list[str] = Field(default_factory=lambda: ["exa_py"])
@@ -76,8 +82,8 @@ class ExaSearchTool(BaseTool):
 
     def __init__(
         self,
-        content: bool | None = False,
-        summary: bool | None = False,
+        content: bool | dict[str, Any] | None = False,
+        summary: bool | dict[str, Any] | None = False,
         highlights: bool | dict[str, Any] | None = False,
         type: str | None = "auto",
         **kwargs: Any,
@@ -85,9 +91,8 @@ class ExaSearchTool(BaseTool):
         super().__init__(
             **kwargs,
         )
-        try:
-            from exa_py import Exa
-        except ImportError as e:
+        global Exa
+        if Exa is None:
             import click
 
             if click.confirm(
@@ -97,12 +102,13 @@ class ExaSearchTool(BaseTool):
 
                 subprocess.run(["uv", "add", "exa_py"], check=True)  # noqa: S607
 
-                # Re-import after installation
-                from exa_py import Exa
+                from exa_py import Exa as _Exa
+
+                Exa = _Exa  # type: ignore[misc]
             else:
                 raise ImportError(
-                    "You are missing the 'exa_py' package. Would you like to install it?"
-                ) from e
+                    "You are missing the 'exa_py' package. Please install it to use ExaSearchTool."
+                )
 
         client_kwargs: dict[str, str] = {}
         if self.api_key:
@@ -138,7 +144,7 @@ class ExaSearchTool(BaseTool):
 
         contents_kwargs: dict[str, Any] = {}
         if self.content:
-            contents_kwargs["text"] = True
+            contents_kwargs["text"] = self.content
         if self.highlights:
             contents_kwargs["highlights"] = self.highlights
         if self.summary:
