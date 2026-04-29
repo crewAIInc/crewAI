@@ -1160,7 +1160,7 @@ class LLM(BaseLLM):
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
-                messages=params["messages"],
+                messages=messages,
                 usage=None,
             )
             return structured_response
@@ -1316,7 +1316,7 @@ class LLM(BaseLLM):
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
-                messages=params["messages"],
+                messages=messages,
                 usage=None,
             )
             return structured_response
