@@ -346,6 +346,33 @@ class SelectivePersistFlow(Flow):
         return f"Complete with count {self.state['count']}"
 ```
 
+#### 사용자 지정 영속성 키 사용하기
+
+기본적으로 `@persist()`는 자동 생성된 `state.id`를 영속 상태의 키로 사용합니다. 도메인에 이미 자연스러운 식별자가 있는 경우 — 예를 들어 같은 사용자 세션에 속한 여러 플로우 실행을 묶는 `conversation_id` — `key` 인자로 전달하면 `@persist`는 `id` 대신 해당 속성을 플로우 UUID로 사용합니다:
+
+```python
+from crewai.flow.flow import Flow, listen, start
+from crewai.flow.persistence import persist
+from pydantic import BaseModel
+
+class ConversationState(BaseModel):
+    conversation_id: str
+    history: list[str] = []
+
+@persist(key="conversation_id")
+class ConversationFlow(Flow[ConversationState]):
+    @start()
+    def greet(self):
+        self.state.history.append("hello")
+        return self.state.history
+
+# 동일한 conversation_id로 두 번째 실행 시 이전 상태가 다시 로드됩니다
+flow = ConversationFlow(conversation_id="user-42")
+flow.kickoff()
+```
+
+dict 기반 상태의 경우 `@persist`는 `state[key]`를 읽고, Pydantic / 객체 상태의 경우 `getattr(state, key)`를 읽습니다. 상태가 저장될 때 지정된 속성이 없거나 falsy 값이면 `@persist`는 `Flow state is missing required persistence key 'conversation_id'`와 같은 `ValueError`를 발생시켜, 영속 데이터가 조용히 손실되는 대신 즉시 실패가 드러나도록 합니다. `key` 없이 `@persist()`를 호출하면 기존 동작대로 `state.id`가 사용됩니다.
+
 ## 고급 상태 패턴
 
 ### 상태 기반 조건부 로직

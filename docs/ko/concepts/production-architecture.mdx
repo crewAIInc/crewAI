@@ -146,6 +146,15 @@ class ProductionFlow(Flow[AppState]):
     # ...
 ```
 
+기본적으로 `@persist`는 자동 생성된 `state.id`를 저장된 상태의 키로 사용합니다. 애플리케이션에 이미 자연스러운 식별자가 있는 경우 — 예를 들어 같은 사용자 세션에 속한 여러 실행을 묶는 `conversation_id` — `key`로 전달하면 데코레이터가 해당 속성을 플로우 UUID로 사용합니다. 저장 시점에 지정된 속성이 없거나 falsy 값이면 `ValueError`가 발생합니다.
+
+```python
+@persist(key="conversation_id")
+class ProductionFlow(Flow[AppState]):
+    # AppState는 conversation_id를 노출해야 합니다; 세션을 재개하면 이전 상태가 다시 로드됩니다
+    ...
+```
+
 ## 요약
 
 - **Flow로 시작하세요.**

@@ -193,6 +193,33 @@ Para um controle mais granular, você pode aplicar @persist em métodos específ
 # (O código não é traduzido)
 ```
 
+### Chave de Persistência Personalizada
+
+Por padrão, `@persist` usa o campo `state.id` gerado automaticamente como chave de persistência. Se o seu flow já possui um identificador natural — por exemplo um `conversation_id` compartilhado entre sessões — você pode passar o argumento `key` e `@persist` usará esse atributo como UUID do flow:
+
+```python
+from crewai.flow.flow import Flow, listen, start
+from crewai.flow.persistence import persist
+from pydantic import BaseModel
+
+class ConversationState(BaseModel):
+    conversation_id: str
+    turn: int = 0
+
+@persist(key="conversation_id")  # Usa um campo personalizado como chave de persistência
+class ConversationFlow(Flow[ConversationState]):
+    @start()
+    def begin(self):
+        self.state.turn += 1
+        print(f"Conversa {self.state.conversation_id} turno {self.state.turn}")
+
+# Retomar a mesma conversa recarrega o estado anterior pelo conversation_id
+flow = ConversationFlow(conversation_id="user-42")
+flow.kickoff()
+```
+
+O decorador lê o valor em `state[key]` para estados do tipo dicionário ou `getattr(state, key)` para estados Pydantic / objetos. Se o atributo informado estiver ausente ou for *falsy* no momento de salvar, `@persist` lança um `ValueError` como `Flow state is missing required persistence key 'conversation_id'`. Quando `key` é omitido, o comportamento original é preservado e `state.id` continua sendo usado.
+
 ### Como Funciona
 
 1. **Identificação Única do Estado**

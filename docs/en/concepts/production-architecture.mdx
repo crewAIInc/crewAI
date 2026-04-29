@@ -146,6 +146,15 @@ class ProductionFlow(Flow[AppState]):
     # ...
 ```
 
+By default `@persist` keys saved state by the auto-generated `state.id`. If your application already has a natural identifier — for example a `conversation_id` that ties multiple runs to the same user session — pass it as `key` and the decorator will use that attribute as the flow UUID. A `ValueError` is raised if the named attribute is missing or falsy at save time.
+
+```python
+@persist(key="conversation_id")
+class ProductionFlow(Flow[AppState]):
+    # AppState must expose conversation_id; resuming a session reloads its prior state
+    ...
+```
+
 ## Summary
 
 - **Start with a Flow.**
