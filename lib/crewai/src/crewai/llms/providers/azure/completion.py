@@ -1215,6 +1215,7 @@ class AzureCompletion(BaseLLM):
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""
+        # Azure OpenAI models support function calling
         return self.is_openai_model
 
     def supports_stop_words(self) -> bool:
