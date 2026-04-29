@@ -1,18 +1,27 @@
 ---
 title: Planning
-description: Learn how to add planning to your CrewAI Crew and improve their performance.
+description: Learn how to add planning to CrewAI at the crew level (sequential task planning) and the agent level (Plan-and-Act with PlanningConfig).
 icon: ruler-combined
 mode: "wide"
 ---
 
 ## Overview
 
-The planning feature in CrewAI allows you to add planning capability to your crew. When enabled, before each Crew iteration, 
-all Crew information is sent to an AgentPlanner that will plan the tasks step by step, and this plan will be added to each task description.
+CrewAI provides two complementary planning systems:
+
+- **Crew-level planning** — before each crew iteration, an `AgentPlanner` produces a step-by-step plan for every task and injects it into the task description. Useful when you want the crew to think through the *whole pipeline* before any agent starts working.
+- **Agent-level planning (Plan-and-Act)** — a single agent builds an explicit multi-step plan, executes it step by step, and observes/replans as it goes. Configured per-agent via `PlanningConfig`. Useful when you want one agent to tackle a complex task adaptively.
+
+The two are independent and can be combined: a crew can have planning enabled, and individual agents in that crew can also use `planning_config`.
+
+## Crew-Level Planning
+
+The crew-level planning feature adds planning capability to your crew. When enabled, before each Crew iteration,
+all Crew information is sent to an `AgentPlanner` that will plan the tasks step by step, and this plan will be added to each task description.
 
 ### Using the Planning Feature
 
-Getting started with the planning feature is very easy, the only step required is to add `planning=True` to your Crew:
+Getting started with crew-level planning is very easy, the only step required is to add `planning=True` to your Crew:
 
 <CodeGroup>
 ```python Code
@@ -36,9 +45,9 @@ When planning is enabled, crewAI will use `gpt-4o-mini` as the default LLM for p
 
 #### Planning LLM
 
-Now you can define the LLM that will be used to plan the tasks. 
+Now you can define the LLM that will be used to plan the tasks.
 
-When running the base case example, you will see something like the output below, which represents the output of the `AgentPlanner` 
+When running the base case example, you will see something like the output below, which represents the output of the `AgentPlanner`
 responsible for creating the step-by-step logic to add to the Agents' tasks.
 
 <CodeGroup>
@@ -153,3 +162,190 @@ A list with 10 bullet points of the most relevant information about AI LLMs.
 A fully fledged report with the main topics, each with a full section of information. Formatted as markdown without '```'.
 ```
 </CodeGroup>
+
+## Agent-Level Planning (Plan-and-Act)
+
+Agent-level planning gives a single agent an explicit Plan-and-Act loop: it builds a structured multi-step plan up front, executes each step, observes the result, and can replan or refine when reality diverges from the plan. It's configured per-agent through `PlanningConfig`.
+
+### Enabling Agent Planning
+
+Pass a `PlanningConfig` to the agent. The presence of a `PlanningConfig` enables planning — you don't need a separate flag.
+
+<CodeGroup>
+```python Defaults
+from crewai import Agent, PlanningConfig
+
+agent = Agent(
+    role="Data Analyst",
+    goal="Analyze datasets and surface insights",
+    backstory="You are an experienced data analyst.",
+    planning_config=PlanningConfig(),  # medium effort, defaults
+)
+```
+
+```python Tuned
+from crewai import Agent, PlanningConfig
+
+agent = Agent(
+    role="Data Analyst",
+    goal="Analyze datasets and surface insights",
+    backstory="You are an experienced data analyst.",
+    planning_config=PlanningConfig(
+        reasoning_effort="high",
+        max_steps=10,
+        max_replans=2,
+        max_step_iterations=10,
+        step_timeout=120,
+        llm="gpt-4o-mini",
+    ),
+)
+```
+</CodeGroup>
+
+### Reasoning Effort
+
+`reasoning_effort` controls what happens *between steps* — how aggressively the agent observes, replans, and refines as it executes the plan. It is the most important knob for tuning latency vs. adaptiveness.
+
+<ParamField body="low" type="string">
+  Observe each step for success validation only. Skip the decide/replan/refine pipeline; steps are marked complete and execution continues linearly. **Fastest option** — best when the plan is likely to be correct on the first try and you want minimal overhead per step.
+</ParamField>
+
+<ParamField body="medium" type="string" default="default">
+  Observe each step. On failure, trigger replanning. On success, skip refinement and continue. **Balanced option (default)** — replans only when something goes wrong, so you get adaptiveness without paying for it on the happy path.
+</ParamField>
+
+<ParamField body="high" type="string">
+  Full observation pipeline with `decide_next_action` after every step. Can trigger early goal achievement (finish before all steps run), full replanning, or lightweight step refinement. **Most adaptive, highest latency** — best for open-ended or exploratory tasks where the right path can't be predicted up front.
+</ParamField>
+
+### PlanningConfig Fields
+
+<ParamField body="reasoning_effort" type="Literal['low', 'medium', 'high']" default="medium">
+  Post-step observation/replanning behavior. See above.
+</ParamField>
+
+<ParamField body="max_attempts" type="int | None" default="None">
+  Maximum number of planning refinement attempts during the initial plan creation. If `None`, the agent keeps refining until it indicates readiness.
+</ParamField>
+
+<ParamField body="max_steps" type="int" default="20">
+  Maximum number of steps in the generated plan. Must be `>= 1`. Lower this when you want concise plans; raise it for complex tasks that legitimately need many steps.
+</ParamField>
+
+<ParamField body="max_replans" type="int" default="3">
+  Maximum number of full replanning cycles allowed during execution. Must be `>= 0`. Set to `0` to forbid replanning entirely (the agent will stick to the original plan even if steps fail).
+</ParamField>
+
+<ParamField body="max_step_iterations" type="int" default="15">
+  Maximum LLM iterations per step inside the `StepExecutor` multi-turn loop. Must be `>= 1`. Lower values make individual steps faster but less thorough — useful when each step is a small, well-scoped action.
+</ParamField>
+
+<ParamField body="step_timeout" type="int | None" default="None">
+  Wall-clock seconds for a single step. If exceeded, the step is marked failed and observation decides whether to continue or replan. `None` means no per-step timeout.
+</ParamField>
+
+<ParamField body="system_prompt" type="str | None" default="None">
+  Override the default planning system prompt. Use this to inject domain-specific instructions for how plans should be structured.
+</ParamField>
+
+<ParamField body="plan_prompt" type="str | None" default="None">
+  Override the prompt used to create the initial plan. Supports template variables like `{description}`.
+</ParamField>
+
+<ParamField body="refine_prompt" type="str | None" default="None">
+  Override the prompt used to refine the plan during the `max_attempts` refinement loop.
+</ParamField>
+
+<ParamField body="llm" type="str | BaseLLM | None" default="None">
+  LLM used for planning. Falls back to the agent's own LLM if not provided. Pass either a model string (e.g., `"gpt-4o-mini"`) or a `BaseLLM` instance.
+</ParamField>
+
+### How the Plan-and-Act Loop Works
+
+When `planning_config` is set, the agent executes the task as follows:
+
+1. **Plan** — build an initial multi-step plan, refining up to `max_attempts` times until ready.
+2. **Execute step** — run one step through the `StepExecutor` (up to `max_step_iterations` LLM turns, bounded by `step_timeout`).
+3. **Observe** — validate whether the step succeeded.
+4. **Decide next action** — depending on `reasoning_effort`:
+   - `low`: continue to the next step.
+   - `medium`: continue on success; replan on failure.
+   - `high`: route through `decide_next_action`, which can finish early, replan, refine the next step, or continue.
+5. Repeat until the plan completes, the goal is achieved, or `max_replans` is exhausted.
+
+### Custom Prompts Example
+
+```python
+from crewai import Agent, PlanningConfig
+
+agent = Agent(
+    role="Researcher",
+    goal="Research topics",
+    backstory="Expert researcher",
+    planning_config=PlanningConfig(
+        reasoning_effort="high",
+        max_attempts=3,
+        max_steps=10,
+        plan_prompt="Create a focused plan for: {description}",
+        refine_prompt="Tighten this plan, removing any step that doesn't materially advance the goal.",
+        llm="gpt-4o-mini",
+    ),
+)
+```
+
+### Migration from `reasoning=True`
+
+The original agent reasoning API used two fields directly on `Agent`:
+
+- `reasoning: bool = False`
+- `max_reasoning_attempts: int | None = None`
+
+Both are **deprecated**. They still work — passing them emits a `DeprecationWarning` and CrewAI auto-migrates them to an equivalent `PlanningConfig` — but new code should use `PlanningConfig` directly.
+
+<Warning>
+`Agent(reasoning=True, ...)` and `Agent(max_reasoning_attempts=N, ...)` are deprecated and will be removed in a future release. Migrate to `planning_config=PlanningConfig(...)`.
+</Warning>
+
+<CodeGroup>
+```python Before (deprecated)
+from crewai import Agent
+
+agent = Agent(
+    role="Data Analyst",
+    goal="Analyze data and provide insights",
+    backstory="Expert data analyst.",
+    reasoning=True,
+    max_reasoning_attempts=3,
+)
+```
+
+```python After
+from crewai import Agent, PlanningConfig
+
+agent = Agent(
+    role="Data Analyst",
+    goal="Analyze data and provide insights",
+    backstory="Expert data analyst.",
+    planning_config=PlanningConfig(max_attempts=3),
+)
+```
+</CodeGroup>
+
+The mapping is direct:
+
+- `reasoning=True` → presence of `planning_config` enables planning.
+- `max_reasoning_attempts=N` → `PlanningConfig(max_attempts=N)`.
+
+Everything else (`reasoning_effort`, `max_steps`, `max_replans`, `max_step_iterations`, `step_timeout`, custom prompts, dedicated planning LLM) is new functionality only available through `PlanningConfig`.
+
+## Choosing Between Crew-Level and Agent-Level Planning
+
+| Concern | Crew-level (`Crew(planning=True)`) | Agent-level (`PlanningConfig`) |
+| --- | --- | --- |
+| Scope | Plans every task in the crew up front | Plans one agent's task adaptively |
+| When the plan is built | Once per crew iteration, before any task runs | At the start of each agent's task |
+| Adapts mid-execution | No — the plan is injected as guidance | Yes — observes, replans, and refines per step |
+| Best for | Multi-task pipelines where ordering and hand-offs matter | Open-ended tasks where the right path emerges as the agent works |
+| Configuration surface | `planning`, `planning_llm` on `Crew` | `PlanningConfig` on `Agent` |
+
+The two are complementary — you can enable crew-level planning to coordinate the overall pipeline and use `planning_config` on individual agents that need to think adaptively while executing their step.
