@@ -88,6 +88,7 @@ class AzureCompletion(BaseLLM):
     response_format: type[BaseModel] | None = None
     is_openai_model: bool = False
     is_azure_openai_endpoint: bool = False
+    credential_scopes: list[str] | None = None
 
     # Responses API settings
     api: Literal["completions", "responses"] = "completions"
@@ -129,6 +130,10 @@ class AzureCompletion(BaseLLM):
         data["api_version"] = (
             data.get("api_version") or os.getenv("AZURE_API_VERSION") or "2024-06-01"
         )
+        if data.get("credential_scopes") is None:
+            data["credential_scopes"] = AzureCompletion._parse_credential_scopes_env(
+                os.getenv("AZURE_CREDENTIAL_SCOPES")
+            )
 
         # Credentials and endpoint are validated lazily in `_init_clients`
         # so the LLM can be constructed before deployment env vars are set.
@@ -153,6 +158,14 @@ class AzureCompletion(BaseLLM):
         return (
             hostname == "openai.azure.com" or hostname.endswith(".openai.azure.com")
         ) and "/openai/deployments/" in endpoint
+
+    @staticmethod
+    def _parse_credential_scopes_env(raw: str | None) -> list[str] | None:
+        """Parse ``AZURE_CREDENTIAL_SCOPES`` (comma-separated) into a list."""
+        if not raw:
+            return None
+        scopes = [s.strip() for s in raw.split(",") if s.strip()]
+        return scopes or None
 
     @model_validator(mode="after")
     def _init_clients(self) -> AzureCompletion:
@@ -279,12 +292,19 @@ class AzureCompletion(BaseLLM):
                 "Azure endpoint is required. Set AZURE_ENDPOINT environment "
                 "variable or pass endpoint parameter."
             )
+        if self.credential_scopes is None:
+            self.credential_scopes = AzureCompletion._parse_credential_scopes_env(
+                os.getenv("AZURE_CREDENTIAL_SCOPES")
+            )
+
         client_kwargs: dict[str, Any] = {
             "endpoint": self.endpoint,
             "credential": self._resolve_credential(),
         }
         if self.api_version:
             client_kwargs["api_version"] = self.api_version
+        if self.credential_scopes:
+            client_kwargs["credential_scopes"] = self.credential_scopes
         return client_kwargs
 
     def _resolve_credential(self) -> Any:
@@ -353,6 +373,8 @@ class AzureCompletion(BaseLLM):
             config["store"] = self.store
         if self.max_completion_tokens is not None:
             config["max_completion_tokens"] = self.max_completion_tokens
+        if self.credential_scopes:
+            config["credential_scopes"] = list(self.credential_scopes)
         return config
 
     @staticmethod
