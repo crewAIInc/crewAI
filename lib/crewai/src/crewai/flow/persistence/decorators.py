@@ -90,7 +90,7 @@ class PersistenceDecorator:
             if state is None:
                 raise ValueError("Flow instance has no state")
 
-            lookup_key = key or "id"
+            lookup_key = key if key is not None else "id"
             flow_uuid: str | None = None
             if isinstance(state, dict):
                 flow_uuid = state.get(lookup_key)
