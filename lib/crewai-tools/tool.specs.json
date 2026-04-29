@@ -18235,6 +18235,143 @@
       }
     },
     {
+      "description": "Search the web using Perplexity's Search API. Returns a ranked list of web results (title, URL, snippet, date) for a given query. Supports optional domain and recency filters.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Perplexity",
+          "name": "PERPLEXITY_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Perplexity Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Search the web with Perplexity's Search API.\n\nReturns ranked web results (title, url, snippet, date) suitable for\ngrounding LLM answers.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "API key for Perplexity. Falls back to PERPLEXITY_API_KEY / PPLX_API_KEY.",
+            "title": "Api Key"
+          },
+          "search_url": {
+            "default": "https://api.perplexity.ai/search",
+            "title": "Search Url",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "title": "PerplexitySearchTool",
+        "type": "object"
+      },
+      "name": "PerplexitySearchTool",
+      "package_dependencies": [
+        "requests"
+      ],
+      "run_params_schema": {
+        "description": "Input schema for PerplexitySearchTool using Perplexity's Search API.",
+        "properties": {
+          "max_results": {
+            "default": 5,
+            "description": "Maximum number of search results to return.",
+            "minimum": 1,
+            "title": "Max Results",
+            "type": "integer"
+          },
+          "query": {
+            "description": "The search query to send to Perplexity's Search API.",
+            "title": "Query",
+            "type": "string"
+          },
+          "search_domain_filter": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional list of domains to allow or deny. Prefix a domain with '-' to exclude it (e.g. '-pinterest.com'). Do not mix allow and deny in the same list.",
+            "title": "Search Domain Filter"
+          },
+          "search_recency_filter": {
+            "anyOf": [
+              {
+                "enum": [
+                  "hour",
+                  "day",
+                  "week",
+                  "month",
+                  "year"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Restrict results to a recency window.",
+            "title": "Search Recency Filter"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "PerplexitySearchInput",
+        "type": "object"
+      }
+    },
+    {
       "description": "Search Qdrant vector DB for relevant documents.",
       "env_vars": [
         {

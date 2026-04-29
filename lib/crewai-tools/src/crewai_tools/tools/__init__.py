@@ -128,6 +128,7 @@ from crewai_tools.tools.patronus_eval_tool import (
     PatronusPredefinedCriteriaEvalTool,
 )
 from crewai_tools.tools.pdf_search_tool.pdf_search_tool import PDFSearchTool
+from crewai_tools.tools.perplexity_tools import PerplexitySearchTool
 from crewai_tools.tools.qdrant_vector_search_tool.qdrant_search_tool import (
     QdrantVectorSearchTool,
 )
@@ -274,6 +275,7 @@ __all__ = [
     "PatronusEvalTool",
     "PatronusLocalEvaluatorTool",
     "PatronusPredefinedCriteriaEvalTool",
+    "PerplexitySearchTool",
     "QdrantVectorSearchTool",
     "RagTool",
     "ScrapeElementFromWebsiteTool",
