@@ -1,13 +1,13 @@
 import os
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
-from crewai_tools import EXASearchTool
+from crewai_tools import EXASearchTool, ExaSearchTool
 import pytest
 
 
 @pytest.fixture
 def exa_search_tool():
-    return EXASearchTool(api_key="test_api_key")
+    return ExaSearchTool(api_key="test_api_key")
 
 
 @pytest.fixture(autouse=True)
@@ -22,11 +22,12 @@ def test_exa_search_tool_initialization():
             "crewai_tools.tools.exa_tools.exa_search_tool.Exa"
         ) as mock_exa_class:
             api_key = "test_api_key"
-            tool = EXASearchTool(api_key=api_key)
+            tool = ExaSearchTool(api_key=api_key)
 
             assert tool.api_key == api_key
             assert tool.content is False
             assert tool.summary is False
+            assert tool.highlights is False
             assert tool.type == "auto"
             mock_exa_class.assert_called_once_with(api_key=api_key)
 
@@ -36,7 +37,7 @@ def test_exa_search_tool_initialization_with_env(mock_exa_api_key):
         with patch(
             "crewai_tools.tools.exa_tools.exa_search_tool.Exa"
         ) as mock_exa_class:
-            EXASearchTool()
+            ExaSearchTool()
             mock_exa_class.assert_called_once_with(api_key="test_key_from_env")
 
 
@@ -47,12 +48,13 @@ def test_exa_search_tool_initialization_with_base_url():
         ) as mock_exa_class:
             api_key = "test_api_key"
             base_url = "https://custom.exa.api.com"
-            tool = EXASearchTool(api_key=api_key, base_url=base_url)
+            tool = ExaSearchTool(api_key=api_key, base_url=base_url)
 
             assert tool.api_key == api_key
             assert tool.base_url == base_url
             assert tool.content is False
             assert tool.summary is False
+            assert tool.highlights is False
             assert tool.type == "auto"
             mock_exa_class.assert_called_once_with(api_key=api_key, base_url=base_url)
 
@@ -67,7 +69,7 @@ def test_exa_search_tool_initialization_with_env_base_url(
     mock_exa_api_key, mock_exa_base_url
 ):
     with patch("crewai_tools.tools.exa_tools.exa_search_tool.Exa") as mock_exa_class:
-        EXASearchTool()
+        ExaSearchTool()
         mock_exa_class.assert_called_once_with(
             api_key="test_key_from_env", base_url="https://env.exa.api.com"
         )
@@ -79,8 +81,98 @@ def test_exa_search_tool_initialization_without_base_url():
             "crewai_tools.tools.exa_tools.exa_search_tool.Exa"
         ) as mock_exa_class:
             api_key = "test_api_key"
-            tool = EXASearchTool(api_key=api_key)
+            tool = ExaSearchTool(api_key=api_key)
 
             assert tool.api_key == api_key
             assert tool.base_url is None
             mock_exa_class.assert_called_once_with(api_key=api_key)
+
+
+def test_exa_search_tool_default_run_uses_search():
+    with patch("crewai_tools.tools.exa_tools.exa_search_tool.Exa") as mock_exa_class:
+        mock_client = MagicMock()
+        mock_exa_class.return_value = mock_client
+        tool = ExaSearchTool(api_key="test_api_key")
+
+        tool._run(search_query="hello world")
+
+        mock_client.search.assert_called_once_with("hello world", type="auto")
+        mock_client.search_and_contents.assert_not_called()
+
+
+def test_exa_search_tool_highlights_uses_search_and_contents():
+    with patch("crewai_tools.tools.exa_tools.exa_search_tool.Exa") as mock_exa_class:
+        mock_client = MagicMock()
+        mock_exa_class.return_value = mock_client
+        tool = ExaSearchTool(
+            api_key="test_api_key", highlights={"max_characters": 4000}
+        )
+
+        tool._run(search_query="hello world")
+
+        mock_client.search_and_contents.assert_called_once_with(
+            "hello world",
+            highlights={"max_characters": 4000},
+            type="auto",
+        )
+        mock_client.search.assert_not_called()
+
+
+def test_exa_search_tool_highlights_bool_true():
+    with patch("crewai_tools.tools.exa_tools.exa_search_tool.Exa") as mock_exa_class:
+        mock_client = MagicMock()
+        mock_exa_class.return_value = mock_client
+        tool = ExaSearchTool(api_key="test_api_key", highlights=True)
+
+        tool._run(search_query="hello world")
+
+        mock_client.search_and_contents.assert_called_once_with(
+            "hello world",
+            highlights=True,
+            type="auto",
+        )
+
+
+def test_exa_search_tool_content_and_summary():
+    with patch("crewai_tools.tools.exa_tools.exa_search_tool.Exa") as mock_exa_class:
+        mock_client = MagicMock()
+        mock_exa_class.return_value = mock_client
+        tool = ExaSearchTool(api_key="test_api_key", content=True, summary=True)
+
+        tool._run(search_query="hello world")
+
+        mock_client.search_and_contents.assert_called_once_with(
+            "hello world",
+            text=True,
+            summary=True,
+            type="auto",
+        )
+
+
+def test_exa_search_tool_passes_search_filters():
+    with patch("crewai_tools.tools.exa_tools.exa_search_tool.Exa") as mock_exa_class:
+        mock_client = MagicMock()
+        mock_exa_class.return_value = mock_client
+        tool = ExaSearchTool(api_key="test_api_key")
+
+        tool._run(
+            search_query="hello world",
+            start_published_date="2024-01-01",
+            end_published_date="2024-12-31",
+            include_domains=["example.com"],
+        )
+
+        mock_client.search.assert_called_once_with(
+            "hello world",
+            type="auto",
+            start_published_date="2024-01-01",
+            end_published_date="2024-12-31",
+            include_domains=["example.com"],
+        )
+
+
+def test_exasearchtool_alias_is_deprecated():
+    with patch("crewai_tools.tools.exa_tools.exa_search_tool.Exa"):
+        with pytest.warns(DeprecationWarning, match="ExaSearchTool"):
+            tool = EXASearchTool(api_key="test_api_key")
+        assert isinstance(tool, ExaSearchTool)

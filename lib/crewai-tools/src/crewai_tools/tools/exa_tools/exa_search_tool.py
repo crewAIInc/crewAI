@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from builtins import type as type_
 import os
+import warnings
 from typing import Any, TypedDict
 
 from crewai.tools import BaseTool, EnvVar
@@ -18,7 +19,7 @@ class SearchParams(TypedDict, total=False):
     include_domains: list[str]
 
 
-class EXABaseToolSchema(BaseModel):
+class ExaBaseToolSchema(BaseModel):
     search_query: str = Field(
         ..., description="Mandatory search query you want to use to search the internet"
     )
@@ -31,14 +32,21 @@ class EXABaseToolSchema(BaseModel):
     )
 
 
-class EXASearchTool(BaseTool):
+# Backwards-compat alias for the schema (renamed alongside the tool class).
+EXABaseToolSchema = ExaBaseToolSchema
+
+
+class ExaSearchTool(BaseTool):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    name: str = "EXASearchTool"
-    description: str = "Search the internet using Exa"
-    args_schema: type_[BaseModel] = EXABaseToolSchema
+    name: str = "ExaSearchTool"
+    description: str = (
+        "Search the web with Exa, the fastest and most accurate web search API."
+    )
+    args_schema: type_[BaseModel] = ExaBaseToolSchema
     client: Any | None = None
     content: bool | None = False
     summary: bool | None = False
+    highlights: bool | dict[str, Any] | None = False
     type: str | None = "auto"
     package_dependencies: list[str] = Field(default_factory=lambda: ["exa_py"])
     api_key: str | None = Field(
@@ -70,6 +78,7 @@ class EXASearchTool(BaseTool):
         self,
         content: bool | None = False,
         summary: bool | None = False,
+        highlights: bool | dict[str, Any] | None = False,
         type: str | None = "auto",
         **kwargs: Any,
     ) -> None:
@@ -103,6 +112,7 @@ class EXASearchTool(BaseTool):
         self.client = Exa(**client_kwargs)
         self.content = content
         self.summary = summary
+        self.highlights = highlights
         self.type = type
 
     def _run(
@@ -126,10 +136,31 @@ class EXASearchTool(BaseTool):
         if include_domains:
             search_params["include_domains"] = include_domains
 
+        contents_kwargs: dict[str, Any] = {}
         if self.content:
-            results = self.client.search_and_contents(
-                search_query, summary=self.summary, **search_params
+            contents_kwargs["text"] = True
+        if self.highlights:
+            contents_kwargs["highlights"] = self.highlights
+        if self.summary:
+            contents_kwargs["summary"] = self.summary
+
+        if contents_kwargs:
+            return self.client.search_and_contents(
+                search_query, **contents_kwargs, **search_params
             )
-        else:
-            results = self.client.search(search_query, **search_params)
-        return results
+        return self.client.search(search_query, **search_params)
+
+
+class EXASearchTool(ExaSearchTool):
+    """Deprecated alias for :class:`ExaSearchTool`. Kept for backwards compatibility."""
+
+    name: str = "ExaSearchTool"
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        warnings.warn(
+            "EXASearchTool is deprecated and will be removed in a future release; "
+            "use ExaSearchTool instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(*args, **kwargs)

@@ -774,7 +774,7 @@ def calculator(expression: str) -> str:
 ```
 
 ### Built-in Tools (install with `uv add crewai-tools`)
-Web/Search: SerperDevTool, ScrapeWebsiteTool, WebsiteSearchTool, EXASearchTool, FirecrawlSearchTool
+Web/Search: SerperDevTool, ScrapeWebsiteTool, WebsiteSearchTool, ExaSearchTool, FirecrawlSearchTool
 Documents: FileReadTool, DirectoryReadTool, PDFSearchTool, DOCXSearchTool, CSVSearchTool, JSONSearchTool, XMLSearchTool, MDXSearchTool
 Code: CodeInterpreterTool, CodeDocsSearchTool, GithubSearchTool
 Media: DALL-E Tool, YoutubeChannelSearchTool, YoutubeVideoSearchTool

@@ -5,7 +5,7 @@ icon: "magnifying-glass"
 mode: "wide"
 ---
 
-تتيح أداة `EXASearchTool` لوكلاء CrewAI البحث في الويب باستخدام [Exa](https://exa.ai/) search API. تُرجع النتائج الأكثر صلة لأي استعلام، مع خيارات لمحتوى الصفحة الكامل والملخصات المولّدة بالذكاء الاصطناعي.
+تتيح أداة `ExaSearchTool` لوكلاء CrewAI البحث في الويب باستخدام [Exa](https://exa.ai/) search API. تُرجع النتائج الأكثر صلة لأي استعلام، مع خيارات لمحتوى الصفحة الكامل والملخصات المولّدة بالذكاء الاصطناعي.
 
 ## التثبيت
 
@@ -27,15 +27,15 @@ export EXA_API_KEY='your_exa_api_key'
 
 ## مثال على الاستخدام
 
-إليك كيفية استخدام `EXASearchTool` مع وكيل CrewAI:
+إليك كيفية استخدام `ExaSearchTool` مع وكيل CrewAI:
 
 ```python
 import os
 from crewai import Agent, Task, Crew
-from crewai_tools import EXASearchTool
+from crewai_tools import ExaSearchTool
 
 # Initialize the tool
-exa_tool = EXASearchTool()
+exa_tool = ExaSearchTool()
 
 # Create an agent that uses the tool
 researcher = Agent(
@@ -66,7 +66,7 @@ print(result)
 
 ## خيارات التكوين
 
-تقبل أداة `EXASearchTool` المعاملات التالية أثناء التهيئة:
+تقبل أداة `ExaSearchTool` المعاملات التالية أثناء التهيئة:
 
 - `type` (str، اختياري): نوع البحث المستخدم. الافتراضي هو `"auto"`. الخيارات: `"auto"`، `"instant"`، `"fast"`، `"deep"`.
 - `content` (bool، اختياري): ما إذا كان يجب تضمين محتوى الصفحة الكامل في النتائج. الافتراضي هو `False`.
@@ -87,7 +87,7 @@ print(result)
 
 ```python
 # Get full page content with AI summaries
-exa_tool = EXASearchTool(
+exa_tool = ExaSearchTool(
     content=True,
     summary=True,
     type="deep"
