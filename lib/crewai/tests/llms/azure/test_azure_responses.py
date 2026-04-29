@@ -14,13 +14,17 @@ import pytest
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def azure_env():
     """Set Azure environment variables for tests."""
-    with patch.dict(os.environ, {
-        "AZURE_API_KEY": "test-azure-key",
-        "AZURE_ENDPOINT": "https://myresource.openai.azure.com",
-    }):
+    with patch.dict(
+        os.environ,
+        {
+            "AZURE_API_KEY": "test-azure-key",
+            "AZURE_ENDPOINT": "https://myresource.openai.azure.com",
+        },
+    ):
         yield
 
 
@@ -38,18 +42,19 @@ def mock_openai_completion():
     instance.last_reasoning_items = [{"type": "reasoning"}]
     instance.reset_chain = MagicMock()
     instance.reset_reasoning_chain = MagicMock()
-    MockCls = MagicMock(return_value=instance)
+    mock_cls = MagicMock(return_value=instance)
 
     with patch(
         "crewai.llms.providers.openai.completion.OpenAICompletion",
-        MockCls,
+        mock_cls,
     ):
-        yield MockCls, instance
+        yield mock_cls, instance
 
 
 # ---------------------------------------------------------------------------
 # Helper to build AzureCompletion with api="responses" while mocking imports
 # ---------------------------------------------------------------------------
+
 
 def _create_azure_responses(**overrides):
     """Create an AzureCompletion(api='responses').
@@ -73,6 +78,7 @@ def _create_azure_responses(**overrides):
 # Initialization tests
 # ---------------------------------------------------------------------------
 
+
 class TestAzureResponsesInit:
     """Test initialization with api='responses'."""
 
@@ -89,63 +95,70 @@ class TestAzureResponsesInit:
         assert comp._responses_delegate is None
 
     def test_responses_api_creates_delegate(self, mock_openai_completion):
-        MockCls, instance = mock_openai_completion
+        mock_cls, instance = mock_openai_completion
         comp = _create_azure_responses()
 
         assert comp.api == "responses"
         assert comp._responses_delegate is instance
-        MockCls.assert_called_once()
+        mock_cls.assert_called_once()
 
     def test_completions_clients_not_created_in_responses_mode(
         self, mock_openai_completion
     ):
         """When api='responses', azure-ai-inference clients should not be created."""
-        MockCls, _ = mock_openai_completion
+        _mock_cls, _ = mock_openai_completion
         comp = _create_azure_responses()
 
         assert comp._client is None
         assert comp._async_client is None
 
     def test_responses_base_url_from_base_endpoint(self, mock_openai_completion):
-        MockCls, _ = mock_openai_completion
-        comp = _create_azure_responses(
+        mock_cls, _ = mock_openai_completion
+        _create_azure_responses(
             endpoint="https://myresource.openai.azure.com",
         )
-        call_kwargs = MockCls.call_args[1]
-        assert call_kwargs["base_url"] == "https://myresource.openai.azure.com/openai/v1/"
+        call_kwargs = mock_cls.call_args[1]
+        assert (
+            call_kwargs["base_url"] == "https://myresource.openai.azure.com/openai/v1/"
+        )
 
     def test_responses_base_url_strips_deployment_path(self, mock_openai_completion):
         """Endpoint with /openai/deployments/... should still produce correct base_url."""
-        MockCls, _ = mock_openai_completion
-        comp = _create_azure_responses(
+        mock_cls, _ = mock_openai_completion
+        _create_azure_responses(
             endpoint="https://myresource.openai.azure.com/openai/deployments/gpt-4o",
         )
-        call_kwargs = MockCls.call_args[1]
-        assert call_kwargs["base_url"] == "https://myresource.openai.azure.com/openai/v1/"
+        call_kwargs = mock_cls.call_args[1]
+        assert (
+            call_kwargs["base_url"] == "https://myresource.openai.azure.com/openai/v1/"
+        )
 
     def test_responses_base_url_preserves_port(self, mock_openai_completion):
-        MockCls, _ = mock_openai_completion
-        comp = _create_azure_responses(
+        mock_cls, _ = mock_openai_completion
+        _create_azure_responses(
             endpoint="https://myresource.openai.azure.com:8443/openai/deployments/gpt-4o",
         )
-        call_kwargs = MockCls.call_args[1]
-        assert call_kwargs["base_url"] == "https://myresource.openai.azure.com:8443/openai/v1/"
+        call_kwargs = mock_cls.call_args[1]
+        assert (
+            call_kwargs["base_url"]
+            == "https://myresource.openai.azure.com:8443/openai/v1/"
+        )
 
     def test_delegate_receives_model_and_api_key(self, mock_openai_completion):
-        MockCls, _ = mock_openai_completion
-        comp = _create_azure_responses(
+        mock_cls, _ = mock_openai_completion
+        _create_azure_responses(
             model="gpt-4o",
             api_key="my-key",
         )
-        call_kwargs = MockCls.call_args[1]
+        call_kwargs = mock_cls.call_args[1]
         assert call_kwargs["model"] == "gpt-4o"
         assert call_kwargs["api_key"] == "my-key"
         assert call_kwargs["api"] == "responses"
         assert call_kwargs["provider"] == "openai"
 
     def test_delegate_receives_optional_params(self, mock_openai_completion):
-        MockCls, _ = mock_openai_completion
-        comp = _create_azure_responses(
+        mock_cls, _ = mock_openai_completion
+        _create_azure_responses(
             temperature=0.5,
             top_p=0.9,
             max_tokens=1000,
@@ -161,7 +174,7 @@ class TestAzureResponsesInit:
             auto_chain_reasoning=True,
             stream=True,
         )
-        call_kwargs = MockCls.call_args[1]
+        call_kwargs = mock_cls.call_args[1]
         assert call_kwargs["temperature"] == 0.5
         assert call_kwargs["top_p"] == 0.9
         assert call_kwargs["max_tokens"] == 1000
@@ -179,9 +192,9 @@ class TestAzureResponsesInit:
 
     def test_delegate_omits_unset_optional_params(self, mock_openai_completion):
         """Params left at defaults should not be passed to the delegate."""
-        MockCls, _ = mock_openai_completion
-        comp = _create_azure_responses()
-        call_kwargs = MockCls.call_args[1]
+        mock_cls, _ = mock_openai_completion
+        _create_azure_responses()
+        call_kwargs = mock_cls.call_args[1]
         # These should NOT be in kwargs because they were not set
         assert "temperature" not in call_kwargs
         assert "reasoning_effort" not in call_kwargs
@@ -193,6 +206,7 @@ class TestAzureResponsesInit:
 # ---------------------------------------------------------------------------
 # Call delegation tests (VCR cassette-based)
 # ---------------------------------------------------------------------------
+
 
 class TestAzureResponsesCall:
     """Test call / acall delegation to the Responses API using VCR cassettes."""
@@ -237,11 +251,12 @@ class TestAzureResponsesCall:
 # Delegated property & method tests
 # ---------------------------------------------------------------------------
 
+
 class TestAzureResponsesProperties:
     """Test properties and methods delegated to the responses delegate."""
 
     def test_last_response_id(self, mock_openai_completion):
-        MockCls, _ = mock_openai_completion
+        _mock_cls, _ = mock_openai_completion
         comp = _create_azure_responses()
         assert comp.last_response_id == "resp_abc123"
 
@@ -249,24 +264,25 @@ class TestAzureResponsesProperties:
         from crewai.llms.providers.azure.completion import AzureCompletion
 
         comp = AzureCompletion(
-            model="gpt-4o", api_key="key",
+            model="gpt-4o",
+            api_key="key",
             endpoint="https://res.openai.azure.com",
         )
         assert comp.last_response_id is None
 
     def test_last_reasoning_items(self, mock_openai_completion):
-        MockCls, _ = mock_openai_completion
+        _mock_cls, _ = mock_openai_completion
         comp = _create_azure_responses()
         assert comp.last_reasoning_items == [{"type": "reasoning"}]
 
     def test_reset_chain(self, mock_openai_completion):
-        MockCls, instance = mock_openai_completion
+        _mock_cls, instance = mock_openai_completion
         comp = _create_azure_responses()
         comp.reset_chain()
         instance.reset_chain.assert_called_once()
 
     def test_reset_reasoning_chain(self, mock_openai_completion):
-        MockCls, instance = mock_openai_completion
+        _mock_cls, instance = mock_openai_completion
         comp = _create_azure_responses()
         comp.reset_reasoning_chain()
         instance.reset_reasoning_chain.assert_called_once()
@@ -276,7 +292,8 @@ class TestAzureResponsesProperties:
         from crewai.llms.providers.azure.completion import AzureCompletion
 
         comp = AzureCompletion(
-            model="gpt-4o", api_key="key",
+            model="gpt-4o",
+            api_key="key",
             endpoint="https://res.openai.azure.com",
         )
         comp.reset_chain()  # should not raise
@@ -286,11 +303,12 @@ class TestAzureResponsesProperties:
 # Feature-support method tests
 # ---------------------------------------------------------------------------
 
+
 class TestAzureResponsesFeatures:
     """Test supports_* and config methods."""
 
     def test_supports_function_calling_responses(self, mock_openai_completion):
-        MockCls, _ = mock_openai_completion
+        _mock_cls, _ = mock_openai_completion
         comp = _create_azure_responses()
         assert comp.supports_function_calling() is True
 
@@ -298,13 +316,14 @@ class TestAzureResponsesFeatures:
         from crewai.llms.providers.azure.completion import AzureCompletion
 
         comp = AzureCompletion(
-            model="gpt-4o", api_key="key",
+            model="gpt-4o",
+            api_key="key",
             endpoint="https://res.openai.azure.com",
         )
         assert comp.supports_function_calling() is True
 
     def test_supports_stop_words_false_for_responses(self, mock_openai_completion):
-        MockCls, _ = mock_openai_completion
+        _mock_cls, _ = mock_openai_completion
         comp = _create_azure_responses(model="o4-mini")
         assert comp.supports_stop_words() is False
 
@@ -312,13 +331,14 @@ class TestAzureResponsesFeatures:
         from crewai.llms.providers.azure.completion import AzureCompletion
 
         comp = AzureCompletion(
-            model="gpt-4o", api_key="key",
+            model="gpt-4o",
+            api_key="key",
             endpoint="https://res.openai.azure.com",
         )
         assert comp.supports_stop_words() is True
 
     def test_to_config_dict_includes_responses_fields(self, mock_openai_completion):
-        MockCls, _ = mock_openai_completion
+        _mock_cls, _ = mock_openai_completion
         comp = _create_azure_responses(
             reasoning_effort="high",
             instructions="Be concise",
@@ -336,7 +356,8 @@ class TestAzureResponsesFeatures:
         from crewai.llms.providers.azure.completion import AzureCompletion
 
         comp = AzureCompletion(
-            model="gpt-4o", api_key="key",
+            model="gpt-4o",
+            api_key="key",
             endpoint="https://res.openai.azure.com",
         )
         config = comp.to_config_dict()
@@ -347,6 +368,7 @@ class TestAzureResponsesFeatures:
 # LLM factory integration test
 # ---------------------------------------------------------------------------
 
+
 class TestAzureResponsesViaLLMFactory:
     """Test that the LLM factory passes api='responses' through to AzureCompletion."""
 
@@ -354,16 +376,20 @@ class TestAzureResponsesViaLLMFactory:
     def test_llm_factory_passes_api_kwarg(self):
         """LLM(model='azure/gpt-4o', api='responses') should create AzureCompletion
         with api='responses' and a delegate."""
-        with patch(
-            "crewai.llms.providers.openai.completion.OpenAI",
-        ), patch(
-            "crewai.llms.providers.openai.completion.AsyncOpenAI",
+        with (
+            patch(
+                "crewai.llms.providers.openai.completion.OpenAI",
+            ),
+            patch(
+                "crewai.llms.providers.openai.completion.AsyncOpenAI",
+            ),
         ):
             from crewai.llm import LLM
 
             llm = LLM(model="azure/gpt-4o", api="responses")
 
             from crewai.llms.providers.azure.completion import AzureCompletion
+
             assert isinstance(llm, AzureCompletion)
             assert llm.api == "responses"
             assert llm._responses_delegate is not None
