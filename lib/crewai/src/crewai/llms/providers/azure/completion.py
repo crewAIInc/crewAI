@@ -130,10 +130,10 @@ class AzureCompletion(BaseLLM):
         data["api_version"] = (
             data.get("api_version") or os.getenv("AZURE_API_VERSION") or "2024-06-01"
         )
-        if data.get("credential_scopes") is None:
-            data["credential_scopes"] = AzureCompletion._parse_credential_scopes_env(
-                os.getenv("AZURE_CREDENTIAL_SCOPES")
-            )
+        data["credential_scopes"] = (
+            data.get("credential_scopes")
+            or AzureCompletion._credential_scopes_from_env()
+        )
 
         # Credentials and endpoint are validated lazily in `_init_clients`
         # so the LLM can be constructed before deployment env vars are set.
@@ -160,8 +160,9 @@ class AzureCompletion(BaseLLM):
         ) and "/openai/deployments/" in endpoint
 
     @staticmethod
-    def _parse_credential_scopes_env(raw: str | None) -> list[str] | None:
-        """Parse ``AZURE_CREDENTIAL_SCOPES`` (comma-separated) into a list."""
+    def _credential_scopes_from_env() -> list[str] | None:
+        """Read ``AZURE_CREDENTIAL_SCOPES`` (comma-separated) into a list."""
+        raw = os.getenv("AZURE_CREDENTIAL_SCOPES")
         if not raw:
             return None
         scopes = [s.strip() for s in raw.split(",") if s.strip()]
@@ -293,9 +294,7 @@ class AzureCompletion(BaseLLM):
                 "variable or pass endpoint parameter."
             )
         if self.credential_scopes is None:
-            self.credential_scopes = AzureCompletion._parse_credential_scopes_env(
-                os.getenv("AZURE_CREDENTIAL_SCOPES")
-            )
+            self.credential_scopes = AzureCompletion._credential_scopes_from_env()
 
         client_kwargs: dict[str, Any] = {
             "endpoint": self.endpoint,
@@ -374,7 +373,7 @@ class AzureCompletion(BaseLLM):
         if self.max_completion_tokens is not None:
             config["max_completion_tokens"] = self.max_completion_tokens
         if self.credential_scopes:
-            config["credential_scopes"] = list(self.credential_scopes)
+            config["credential_scopes"] = self.credential_scopes
         return config
 
     @staticmethod
