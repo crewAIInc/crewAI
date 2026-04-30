@@ -4,6 +4,47 @@ description: "تحديثات المنتج والتحسينات وإصلاحات 
 icon: "clock"
 mode: "wide"
 ---
+<Update label="1 مايو 2026">
+  ## v1.14.4
+
+  [عرض الإصدار على GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.4)
+
+  ## ما الذي تغير
+
+  ### الميزات
+  - إضافة دعم لمفتاح الاستمرارية المخصص في @persist
+  - إضافة دعم واجهة برمجة التطبيقات للردود لمزود Azure OpenAI
+  - تمرير credential_scopes إلى عميل Azure AI Inference
+  - إضافة دليل إعداد هوية عبء العمل لـ Vertex AI
+  - إضافة Tavily Research والحصول على Research
+  - إضافة أدوات MCP من You.com للبحث، البحث، واستخراج المحتوى
+
+  ### إصلاحات الأخطاء
+  - إصلاح مشكلة السقوط عند عدم تطابق تعبير JSON regex مع JSON صالح
+  - إصلاح للحفاظ على tool_calls عندما تحتوي الاستجابة أيضًا على نص
+  - إصلاح لتمرير base_url و api_key إلى instructor.from_provider
+  - إصلاح لتحذير وإرجاع فارغ عندما لا يُرجع خادم MCP الأصلي أي أدوات
+  - إصلاح لاستخدام متغير الرسائل الموثقة في معالجات غير البث
+  - إصلاح لحماية مساعدي وصف دردشة الطاقم ضد فشل LLM
+  - إصلاح لإعادة تعيين الرسائل والتكرارات بين الاستدعاءات
+  - إصلاح لتمرير ملف trained-agents من خلال replay و test
+  - إصلاح لاحترام ملف trained-agents المخصص في الاستدلال
+  - إصلاح لربط الوكلاء المخصصين بالمهام فقط بالطاقم لملفات الإدخال متعددة الأنماط
+  - إصلاح لتسلسل callable الحواجز كـ null لتسجيل JSON
+  - إصلاح إعادة تسمية force_final_answer لتجنب توجيه ذاتي
+  - إصلاح زيادة litellm لإصلاح SSTI؛ تجاهل CVE غير القابل للإصلاح في pip
+
+  ### الوثائق
+  - تحديث سجل التغييرات والإصدار لـ v1.14.4a1
+  - إضافة صفحة أدوات E2B Sandbox
+  - إضافة وثائق أدوات صندوق Daytona
+
+  ## المساهمون
+
+  @EdwardIrby, @dependabot[bot], @factory-droid-oss, @factory-droid[bot], @greysonlalonde, @kunalk16, @lorenzejay, @lucasgomide, @manisrinivasan2k1, @mattatcha, @vinibrsl
+
+</Update>
+
 <Update label="29 أبريل 2026">
   ## v1.14.4a1
 

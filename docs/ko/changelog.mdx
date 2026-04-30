@@ -4,6 +4,47 @@ description: "CrewAI의 제품 업데이트, 개선 사항 및 버그 수정"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="2026년 5월 1일">
+  ## v1.14.4
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.4)
+
+  ## 변경 사항
+
+  ### 기능
+  - @persist에서 사용자 정의 지속성 키 지원 추가
+  - Azure OpenAI 공급자를 위한 응답 API 지원 추가
+  - Azure AI 추론 클라이언트에 credential_scopes 전달
+  - Vertex AI 작업 부하 신원 설정 가이드 추가
+  - Tavily Research 및 Research 가져오기 추가
+  - 검색, 연구 및 콘텐츠 추출을 위한 You.com MCP 도구 추가
+
+  ### 버그 수정
+  - JSON 정규 표현식이 유효한 JSON이 아닐 때의 fall through 수정
+  - 응답에 텍스트가 포함될 때 tool_calls를 보존하도록 수정
+  - instructor.from_provider에 base_url 및 api_key를 전달하도록 수정
+  - 기본 MCP 서버가 도구를 반환하지 않을 때 경고하고 빈 값을 반환하도록 수정
+  - 비스트리밍 핸들러에서 검증된 메시지 변수를 사용하도록 수정
+  - LLM 실패에 대한 크루 채팅 설명 도우미를 보호하도록 수정
+  - 호출 간 메시지 및 반복을 재설정하도록 수정
+  - replay 및 test를 통해 훈련된 에이전트 파일을 전달하도록 수정
+  - 추론 시 사용자 정의 훈련된 에이전트 파일을 존중하도록 수정
+  - 다중 모드 input_files에 대해 작업 전용 에이전트를 크루에 바인딩하도록 수정
+  - JSON 체크포인팅을 위해 가드레일 호출 가능 항목을 null로 직렬화하도록 수정
+  - 자기 참조 라우터를 피하기 위해 force_final_answer의 이름 변경 수정
+  - SSTI 수정을 위한 litellm 버전 증가; 수정할 수 없는 pip CVE 무시
+
+  ### 문서
+  - v1.14.4a1에 대한 변경 로그 및 버전 업데이트
+  - E2B 샌드박스 도구 페이지 추가
+  - Daytona 샌드박스 도구 문서 추가
+
+  ## 기여자
+
+  @EdwardIrby, @dependabot[bot], @factory-droid-oss, @factory-droid[bot], @greysonlalonde, @kunalk16, @lorenzejay, @lucasgomide, @manisrinivasan2k1, @mattatcha, @vinibrsl
+
+</Update>
+
 <Update label="2026년 4월 29일">
   ## v1.14.4a1
 
