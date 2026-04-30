@@ -1,7 +1,7 @@
 # ExaSearchTool Documentation
 
 ## Description
-This tool lets CrewAI agents search the web using [Exa](https://exa.ai/), the fastest and most accurate web search API. By default, the tool returns the most relevant search results for any query; you can also opt in to token-efficient highlights, full page content, or AI-generated summaries.
+This tool lets CrewAI agents search the web using [Exa](https://exa.ai/), the fastest and most accurate web search API. By default the tool returns token-efficient highlights of the most relevant results for any query; you can also opt in to full page content.
 
 ## Installation
 To incorporate this tool into your project, follow the installation instructions below:
@@ -15,10 +15,10 @@ The following example demonstrates how to initialize the tool and run a search:
 ```python
 from crewai_tools import ExaSearchTool
 
-# Default: just search results
+# Default: results with token-efficient highlights
 tool = ExaSearchTool(api_key="your_api_key")
 
-# Token-efficient excerpts most relevant to the query (recommended for agents)
+# Configure highlight excerpts
 tool = ExaSearchTool(
     api_key="your_api_key",
     highlights={"max_characters": 4000},
@@ -32,7 +32,7 @@ To effectively use the `ExaSearchTool`, follow these steps:
 2. **API Key Acquisition**: Get an Exa API key from the [Exa dashboard](https://dashboard.exa.ai/api-keys).
 3. **Environment Configuration**: Store your API key in an environment variable named `EXA_API_KEY` so the tool can pick it up automatically.
 
-For details on choosing between highlights, full content, and summaries, see the [Exa search best practices](https://exa.ai/docs/reference/search-best-practices).
+For details on choosing between highlights and full content, see the [Exa search best practices](https://exa.ai/docs/reference/search-best-practices).
 
 ## Note
 `EXASearchTool` is a deprecated alias for `ExaSearchTool`. Existing imports continue to work but emit a deprecation warning; please migrate to `ExaSearchTool`.

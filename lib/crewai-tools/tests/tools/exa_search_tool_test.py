@@ -27,7 +27,7 @@ def test_exa_search_tool_initialization():
             assert tool.api_key == api_key
             assert tool.content is False
             assert tool.summary is False
-            assert tool.highlights is False
+            assert tool.highlights is True
             assert tool.type == "auto"
             mock_exa_class.assert_called_once_with(api_key=api_key)
 
@@ -54,7 +54,7 @@ def test_exa_search_tool_initialization_with_base_url():
             assert tool.base_url == base_url
             assert tool.content is False
             assert tool.summary is False
-            assert tool.highlights is False
+            assert tool.highlights is True
             assert tool.type == "auto"
             mock_exa_class.assert_called_once_with(api_key=api_key, base_url=base_url)
 

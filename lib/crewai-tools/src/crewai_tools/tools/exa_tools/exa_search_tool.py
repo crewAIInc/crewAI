@@ -51,7 +51,7 @@ class ExaSearchTool(BaseTool):
     client: Any | None = None
     content: bool | dict[str, Any] | None = False
     summary: bool | dict[str, Any] | None = False
-    highlights: bool | dict[str, Any] | None = False
+    highlights: bool | dict[str, Any] | None = True
     type: str | None = "auto"
     package_dependencies: list[str] = Field(default_factory=lambda: ["exa_py"])
     api_key: str | None = Field(
@@ -83,7 +83,7 @@ class ExaSearchTool(BaseTool):
         self,
         content: bool | dict[str, Any] | None = False,
         summary: bool | dict[str, Any] | None = False,
-        highlights: bool | dict[str, Any] | None = False,
+        highlights: bool | dict[str, Any] | None = True,
         type: str | None = "auto",
         **kwargs: Any,
     ) -> None:
