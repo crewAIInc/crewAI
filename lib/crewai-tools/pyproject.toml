@@ -10,8 +10,8 @@ requires-python = ">=3.10, <3.14"
 dependencies = [
     "pytube~=15.0.0",
     "requests>=2.33.0,<3",
-    "crewai==1.14.3",
-    "tiktoken~=0.8.0",
+    "crewai==1.14.4",
+    "tiktoken>=0.8.0,<0.13",
     "beautifulsoup4~=4.13.4",
     "python-docx~=1.2.0",
     "youtube-transcript-api~=1.2.2",
@@ -69,7 +69,7 @@ linkup-sdk = [
     "linkup-sdk>=0.2.2",
 ]
 tavily-python = [
-    "tavily-python>=0.5.4",
+    "tavily-python~=0.7.14",
 ]
 hyperbrowser = [
     "hyperbrowser>=0.18.0",

@@ -7,6 +7,7 @@ from crewai.utilities.printer import PrinterColor
 
 TRAINING_DATA_FILE: Final[str] = "training_data.pkl"
 TRAINED_AGENTS_DATA_FILE: Final[str] = "trained_agents_data.pkl"
+CREWAI_TRAINED_AGENTS_FILE_ENV: Final[str] = "CREWAI_TRAINED_AGENTS_FILE"
 KNOWLEDGE_DIRECTORY: Final[str] = "knowledge"
 MAX_FILE_NAME_LENGTH: Final[int] = 255
 EMITTER_COLOR: Final[PrinterColor] = "bold_blue"

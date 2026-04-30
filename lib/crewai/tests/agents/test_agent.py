@@ -1064,6 +1064,23 @@ def test_agent_use_trained_data(crew_training_handler):
     )
 
 
+@patch("crewai.agent.core.CrewTrainingHandler")
+def test_agent_use_trained_data_honors_env_var(crew_training_handler, monkeypatch):
+    monkeypatch.setenv("CREWAI_TRAINED_AGENTS_FILE", "my_custom_trained.pkl")
+    agent = Agent(
+        role="researcher",
+        goal="test goal",
+        backstory="test backstory",
+    )
+    crew_training_handler.return_value.load.return_value = {}
+
+    agent._use_trained_data(task_prompt="What is 1 + 1?")
+
+    crew_training_handler.assert_has_calls(
+        [mock.call("my_custom_trained.pkl"), mock.call().load()]
+    )
+
+
 def test_agent_max_retry_limit():
     agent = Agent(
         role="test role",
