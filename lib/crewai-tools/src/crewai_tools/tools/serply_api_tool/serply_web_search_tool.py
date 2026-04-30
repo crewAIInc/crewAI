@@ -24,8 +24,8 @@ class SerplyWebSearchTool(BaseTool):
     limit: int | None = 10
     device_type: str | None = "desktop"
     proxy_location: str | None = "US"
-    query_payload: dict | None = Field(default_factory=dict)
-    headers: dict | None = Field(default_factory=dict)
+    query_payload: dict[str, Any] | None = Field(default_factory=dict)
+    headers: dict[str, str] | None = Field(default_factory=dict)
     env_vars: list[EnvVar] = Field(
         default_factory=lambda: [
             EnvVar(
@@ -42,8 +42,8 @@ class SerplyWebSearchTool(BaseTool):
         limit: int = 10,
         device_type: str = "desktop",
         proxy_location: str = "US",
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """param: query (str): The query to search for
         param: hl (str): host Language code to display results in
             (reference https://developers.google.com/custom-search/docs/xml_results?hl=en#wsInterfaceLanguages)

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
+import contextvars
 from functools import wraps
 import inspect
 from typing import TYPE_CHECKING, Any, Concatenate, ParamSpec, TypeVar, overload
@@ -169,8 +170,9 @@ def _call_method(method: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
         if loop and loop.is_running():
             import concurrent.futures
 
+            ctx = contextvars.copy_context()
             with concurrent.futures.ThreadPoolExecutor() as pool:
-                return pool.submit(asyncio.run, result).result()
+                return pool.submit(ctx.run, asyncio.run, result).result()
         return asyncio.run(result)
     return result
 
@@ -235,6 +237,8 @@ def crew(
         self.tasks = instantiated_tasks
 
         crew_instance: Crew = _call_method(meth, self, *args, **kwargs)
+        if "name" not in crew_instance.model_fields_set:
+            crew_instance.name = getattr(self, "_crew_name", None) or crew_instance.name
 
         def callback_wrapper(
             hook: Callable[Concatenate[CrewInstance, P2], R2], instance: CrewInstance

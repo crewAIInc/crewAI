@@ -8,16 +8,16 @@ import requests
 
 
 class FixedBaseToolSchema(BaseModel):
-    evaluated_model_input: dict = Field(
+    evaluated_model_input: dict[str, Any] = Field(
         ..., description="The agent's task description in simple text"
     )
-    evaluated_model_output: dict = Field(
+    evaluated_model_output: dict[str, Any] = Field(
         ..., description="The agent's output of the task"
     )
-    evaluated_model_retrieved_context: dict = Field(
+    evaluated_model_retrieved_context: dict[str, Any] = Field(
         ..., description="The agent's context"
     )
-    evaluated_model_gold_answer: dict = Field(
+    evaluated_model_gold_answer: dict[str, Any] = Field(
         ..., description="The agent's gold answer only if available"
     )
     evaluators: list[dict[str, str]] = Field(
@@ -57,8 +57,9 @@ class PatronusPredefinedCriteriaEvalTool(BaseTool):
         evaluated_model_gold_answer = kwargs.get("evaluated_model_gold_answer")
         evaluators = self.evaluators
 
+        api_key = os.getenv("PATRONUS_API_KEY", "")
         headers = {
-            "X-API-KEY": os.getenv("PATRONUS_API_KEY"),
+            "X-API-KEY": api_key,
             "accept": "application/json",
             "content-type": "application/json",
         }

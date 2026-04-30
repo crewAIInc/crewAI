@@ -19,6 +19,7 @@ from crewai.memory.types import (
     embed_texts,
 )
 
+
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "Memory": ("crewai.memory.unified_memory", "Memory"),
     "EncodingFlow": ("crewai.memory.encoding_flow", "EncodingFlow"),

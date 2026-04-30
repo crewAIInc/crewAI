@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import ConfigDict, model_validator
+from typing_extensions import Self
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.events.base_events import BaseEvent
@@ -20,21 +21,14 @@ class AgentExecutionStartedEvent(BaseEvent):
     task: Any
     tools: Sequence[BaseTool | CrewStructuredTool] | None
     task_prompt: str
-    type: str = "agent_execution_started"
+    type: Literal["agent_execution_started"] = "agent_execution_started"
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @model_validator(mode="after")
-    def set_fingerprint_data(self):
+    def set_fingerprint_data(self) -> Self:
         """Set fingerprint data from the agent if available."""
-        if hasattr(self.agent, "fingerprint") and self.agent.fingerprint:
-            self.source_fingerprint = self.agent.fingerprint.uuid_str
-            self.source_type = "agent"
-            if (
-                hasattr(self.agent.fingerprint, "metadata")
-                and self.agent.fingerprint.metadata
-            ):
-                self.fingerprint_metadata = self.agent.fingerprint.metadata
+        _set_agent_fingerprint(self, self.agent)
         return self
 
 
@@ -44,21 +38,14 @@ class AgentExecutionCompletedEvent(BaseEvent):
     agent: BaseAgent
     task: Any
     output: str
-    type: str = "agent_execution_completed"
+    type: Literal["agent_execution_completed"] = "agent_execution_completed"
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @model_validator(mode="after")
-    def set_fingerprint_data(self):
+    def set_fingerprint_data(self) -> Self:
         """Set fingerprint data from the agent if available."""
-        if hasattr(self.agent, "fingerprint") and self.agent.fingerprint:
-            self.source_fingerprint = self.agent.fingerprint.uuid_str
-            self.source_type = "agent"
-            if (
-                hasattr(self.agent.fingerprint, "metadata")
-                and self.agent.fingerprint.metadata
-            ):
-                self.fingerprint_metadata = self.agent.fingerprint.metadata
+        _set_agent_fingerprint(self, self.agent)
         return self
 
 
@@ -68,21 +55,14 @@ class AgentExecutionErrorEvent(BaseEvent):
     agent: BaseAgent
     task: Any
     error: str
-    type: str = "agent_execution_error"
+    type: Literal["agent_execution_error"] = "agent_execution_error"
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @model_validator(mode="after")
-    def set_fingerprint_data(self):
+    def set_fingerprint_data(self) -> Self:
         """Set fingerprint data from the agent if available."""
-        if hasattr(self.agent, "fingerprint") and self.agent.fingerprint:
-            self.source_fingerprint = self.agent.fingerprint.uuid_str
-            self.source_type = "agent"
-            if (
-                hasattr(self.agent.fingerprint, "metadata")
-                and self.agent.fingerprint.metadata
-            ):
-                self.fingerprint_metadata = self.agent.fingerprint.metadata
+        _set_agent_fingerprint(self, self.agent)
         return self
 
 
@@ -93,7 +73,7 @@ class LiteAgentExecutionStartedEvent(BaseEvent):
     agent_info: dict[str, Any]
     tools: Sequence[BaseTool | CrewStructuredTool] | None
     messages: str | list[dict[str, str]]
-    type: str = "lite_agent_execution_started"
+    type: Literal["lite_agent_execution_started"] = "lite_agent_execution_started"
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -103,7 +83,7 @@ class LiteAgentExecutionCompletedEvent(BaseEvent):
 
     agent_info: dict[str, Any]
     output: str
-    type: str = "lite_agent_execution_completed"
+    type: Literal["lite_agent_execution_completed"] = "lite_agent_execution_completed"
 
 
 class LiteAgentExecutionErrorEvent(BaseEvent):
@@ -111,7 +91,7 @@ class LiteAgentExecutionErrorEvent(BaseEvent):
 
     agent_info: dict[str, Any]
     error: str
-    type: str = "lite_agent_execution_error"
+    type: Literal["lite_agent_execution_error"] = "lite_agent_execution_error"
 
 
 # Agent Eval events
@@ -120,7 +100,7 @@ class AgentEvaluationStartedEvent(BaseEvent):
     agent_role: str
     task_id: str | None = None
     iteration: int
-    type: str = "agent_evaluation_started"
+    type: Literal["agent_evaluation_started"] = "agent_evaluation_started"
 
 
 class AgentEvaluationCompletedEvent(BaseEvent):
@@ -130,7 +110,7 @@ class AgentEvaluationCompletedEvent(BaseEvent):
     iteration: int
     metric_category: Any
     score: Any
-    type: str = "agent_evaluation_completed"
+    type: Literal["agent_evaluation_completed"] = "agent_evaluation_completed"
 
 
 class AgentEvaluationFailedEvent(BaseEvent):
@@ -139,4 +119,14 @@ class AgentEvaluationFailedEvent(BaseEvent):
     task_id: str | None = None
     iteration: int
     error: str
-    type: str = "agent_evaluation_failed"
+    type: Literal["agent_evaluation_failed"] = "agent_evaluation_failed"
+
+
+def _set_agent_fingerprint(event: BaseEvent, agent: BaseAgent) -> None:
+    """Set fingerprint data on an event from an agent object."""
+    fp = agent.security_config.fingerprint
+    if fp is not None:
+        event.source_fingerprint = fp.uuid_str
+        event.source_type = "agent"
+        if fp.metadata:
+            event.fingerprint_metadata = fp.metadata

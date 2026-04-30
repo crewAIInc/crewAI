@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 from crewai_tools.tools.rag.rag_tool import RagTool
@@ -27,7 +29,7 @@ class JSONSearchTool(RagTool):
     )
     args_schema: type[BaseModel] = JSONSearchToolSchema
 
-    def __init__(self, json_path: str | None = None, **kwargs):
+    def __init__(self, json_path: str | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         if json_path is not None:
             self.add(json_path)

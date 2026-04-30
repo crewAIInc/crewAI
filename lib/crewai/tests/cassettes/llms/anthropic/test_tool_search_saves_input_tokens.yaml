@@ -1,0 +1,112 @@
+interactions:
+- request:
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"What is the weather
+      in Tokyo?"}],"model":"claude-sonnet-4-5","stream":false,"tools":[{"name":"get_weather","description":"Get
+      current weather conditions for a specified location","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for get_weather"}},"required":["input"]}},{"name":"search_files","description":"Search
+      through files in the workspace by name or content","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for search_files"}},"required":["input"]}},{"name":"read_database","description":"Read
+      records from a database table with optional filtering","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for read_database"}},"required":["input"]}},{"name":"write_database","description":"Write
+      or update records in a database table","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for write_database"}},"required":["input"]}},{"name":"send_email","description":"Send
+      an email message to one or more recipients","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for send_email"}},"required":["input"]}},{"name":"read_email","description":"Read
+      emails from inbox with filtering options","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for read_email"}},"required":["input"]}},{"name":"create_ticket","description":"Create
+      a new support ticket in the ticketing system","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for create_ticket"}},"required":["input"]}},{"name":"update_ticket","description":"Update
+      an existing support ticket status or description","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for update_ticket"}},"required":["input"]}},{"name":"list_users","description":"List
+      all users in the system with optional filters","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for list_users"}},"required":["input"]}},{"name":"get_user_profile","description":"Get
+      detailed profile information for a specific user","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for get_user_profile"}},"required":["input"]}},{"name":"deploy_service","description":"Deploy
+      a service to the specified environment","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for deploy_service"}},"required":["input"]}},{"name":"rollback_service","description":"Rollback
+      a service deployment to a previous version","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for rollback_service"}},"required":["input"]}},{"name":"get_service_logs","description":"Get
+      service logs filtered by time range and severity","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for get_service_logs"}},"required":["input"]}},{"name":"run_sql_query","description":"Run
+      a read-only SQL query against the analytics database","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for run_sql_query"}},"required":["input"]}},{"name":"create_dashboard","description":"Create
+      a new monitoring dashboard with widgets","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for create_dashboard"}},"required":["input"]}}]}'
+    headers:
+      accept:
+      - application/json
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: '{"model":"claude-sonnet-4-5-20250929","id":"msg_01NoSearch001","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01NoSearch001","name":"get_weather","input":{"input":"Tokyo"}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":1943,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":54,"service_tier":"standard"}}'
+    headers:
+      Content-Type:
+      - application/json
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"What is the weather
+      in Tokyo?"}],"model":"claude-sonnet-4-5","stream":false,"tools":[{"type":"tool_search_tool_bm25_20251119","name":"tool_search_tool_bm25"},{"name":"get_weather","description":"Get
+      current weather conditions for a specified location","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for get_weather"}},"required":["input"]},"defer_loading":true},{"name":"search_files","description":"Search
+      through files in the workspace by name or content","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for search_files"}},"required":["input"]},"defer_loading":true},{"name":"read_database","description":"Read
+      records from a database table with optional filtering","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for read_database"}},"required":["input"]},"defer_loading":true},{"name":"write_database","description":"Write
+      or update records in a database table","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for write_database"}},"required":["input"]},"defer_loading":true},{"name":"send_email","description":"Send
+      an email message to one or more recipients","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for send_email"}},"required":["input"]},"defer_loading":true},{"name":"read_email","description":"Read
+      emails from inbox with filtering options","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for read_email"}},"required":["input"]},"defer_loading":true},{"name":"create_ticket","description":"Create
+      a new support ticket in the ticketing system","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for create_ticket"}},"required":["input"]},"defer_loading":true},{"name":"update_ticket","description":"Update
+      an existing support ticket status or description","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for update_ticket"}},"required":["input"]},"defer_loading":true},{"name":"list_users","description":"List
+      all users in the system with optional filters","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for list_users"}},"required":["input"]},"defer_loading":true},{"name":"get_user_profile","description":"Get
+      detailed profile information for a specific user","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for get_user_profile"}},"required":["input"]},"defer_loading":true},{"name":"deploy_service","description":"Deploy
+      a service to the specified environment","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for deploy_service"}},"required":["input"]},"defer_loading":true},{"name":"rollback_service","description":"Rollback
+      a service deployment to a previous version","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for rollback_service"}},"required":["input"]},"defer_loading":true},{"name":"get_service_logs","description":"Get
+      service logs filtered by time range and severity","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for get_service_logs"}},"required":["input"]},"defer_loading":true},{"name":"run_sql_query","description":"Run
+      a read-only SQL query against the analytics database","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for run_sql_query"}},"required":["input"]},"defer_loading":true},{"name":"create_dashboard","description":"Create
+      a new monitoring dashboard with widgets","input_schema":{"type":"object","properties":{"input":{"type":"string","description":"Input
+      for create_dashboard"}},"required":["input"]},"defer_loading":true}]}'
+    headers:
+      accept:
+      - application/json
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: '{"model":"claude-sonnet-4-5-20250929","id":"msg_01WithSearch001","type":"message","role":"assistant","content":[{"type":"text","text":"I''ll search for a weather tool."},{"type":"server_tool_use","id":"srvtoolu_01Search001","name":"tool_search_tool_bm25","input":{"query":"weather conditions"},"caller":{"type":"direct"}},{"type":"tool_search_tool_result","tool_use_id":"srvtoolu_01Search001","content":{"type":"tool_search_tool_search_result","tool_references":[{"type":"tool_reference","tool_name":"get_weather"}]}},{"type":"text","text":"Found it. Let me get the weather for Tokyo."},{"type":"tool_use","id":"toolu_01WithSearch001","name":"get_weather","input":{"input":"Tokyo"},"caller":{"type":"direct"}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":1566,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":155,"service_tier":"standard"}}'
+    headers:
+      Content-Type:
+      - application/json
+    status:
+      code: 200
+      message: OK
+version: 1

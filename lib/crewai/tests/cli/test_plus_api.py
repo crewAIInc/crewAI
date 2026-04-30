@@ -28,7 +28,19 @@ class TestPlusAPI(unittest.TestCase):
         response = self.api.login_to_tool_repository()
 
         mock_make_request.assert_called_once_with(
-            "POST", "/crewai_plus/api/v1/tools/login"
+            "POST", "/crewai_plus/api/v1/tools/login", json={}
+        )
+        self.assertEqual(response, mock_response)
+
+    @patch("crewai.cli.plus_api.PlusAPI._make_request")
+    def test_login_to_tool_repository_with_user_identifier(self, mock_make_request):
+        mock_response = MagicMock()
+        mock_make_request.return_value = mock_response
+
+        response = self.api.login_to_tool_repository(user_identifier="test-hash-123")
+
+        mock_make_request.assert_called_once_with(
+            "POST", "/crewai_plus/api/v1/tools/login", json={"user_identifier": "test-hash-123"}
         )
         self.assertEqual(response, mock_response)
 
@@ -67,7 +79,7 @@ class TestPlusAPI(unittest.TestCase):
         response = self.api.login_to_tool_repository()
 
         self.assert_request_with_org_id(
-            mock_client_instance, "POST", "/crewai_plus/api/v1/tools/login"
+            mock_client_instance, "POST", "/crewai_plus/api/v1/tools/login", json={}
         )
         self.assertEqual(response, mock_response)
 
@@ -124,6 +136,7 @@ class TestPlusAPI(unittest.TestCase):
             "file": encoded_file,
             "description": description,
             "available_exports": None,
+            "tools_metadata": None,
         }
         mock_make_request.assert_called_once_with(
             "POST", "/crewai_plus/api/v1/tools", json=params
@@ -161,6 +174,7 @@ class TestPlusAPI(unittest.TestCase):
             "file": encoded_file,
             "description": description,
             "available_exports": None,
+            "tools_metadata": None,
         }
 
         self.assert_request_with_org_id(
@@ -189,6 +203,48 @@ class TestPlusAPI(unittest.TestCase):
             "file": encoded_file,
             "description": description,
             "available_exports": None,
+            "tools_metadata": None,
+        }
+        mock_make_request.assert_called_once_with(
+            "POST", "/crewai_plus/api/v1/tools", json=params
+        )
+        self.assertEqual(response, mock_response)
+
+    @patch("crewai.cli.plus_api.PlusAPI._make_request")
+    def test_publish_tool_with_tools_metadata(self, mock_make_request):
+        mock_response = MagicMock()
+        mock_make_request.return_value = mock_response
+        handle = "test_tool_handle"
+        public = True
+        version = "1.0.0"
+        description = "Test tool description"
+        encoded_file = "encoded_test_file"
+        available_exports = [{"name": "MyTool"}]
+        tools_metadata = [
+            {
+                "name": "MyTool",
+                "humanized_name": "my_tool",
+                "description": "A test tool",
+                "run_params_schema": {"type": "object", "properties": {}},
+                "init_params_schema": {"type": "object", "properties": {}},
+                "env_vars": [{"name": "API_KEY", "description": "API key", "required": True, "default": None}],
+            }
+        ]
+
+        response = self.api.publish_tool(
+            handle, public, version, description, encoded_file,
+            available_exports=available_exports,
+            tools_metadata=tools_metadata,
+        )
+
+        params = {
+            "handle": handle,
+            "public": public,
+            "version": version,
+            "file": encoded_file,
+            "description": description,
+            "available_exports": available_exports,
+            "tools_metadata": {"package": handle, "tools": tools_metadata},
         }
         mock_make_request.assert_called_once_with(
             "POST", "/crewai_plus/api/v1/tools", json=params

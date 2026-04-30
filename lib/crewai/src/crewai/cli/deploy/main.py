@@ -4,10 +4,33 @@ from rich.console import Console
 
 from crewai.cli import git
 from crewai.cli.command import BaseCommand, PlusAPIMixin
+from crewai.cli.deploy.validate import validate_project
 from crewai.cli.utils import fetch_and_json_env_file, get_project_name
 
 
 console = Console()
+
+
+def _run_predeploy_validation(skip_validate: bool) -> bool:
+    """Run pre-deploy validation unless skipped.
+
+    Returns True if deployment should proceed, False if it should abort.
+    """
+    if skip_validate:
+        console.print(
+            "[yellow]Skipping pre-deploy validation (--skip-validate).[/yellow]"
+        )
+        return True
+
+    console.print("Running pre-deploy validation...", style="bold blue")
+    validator = validate_project()
+    if not validator.ok:
+        console.print(
+            "\n[bold red]Pre-deploy validation failed. "
+            "Fix the issues above or re-run with --skip-validate.[/bold red]"
+        )
+        return False
+    return True
 
 
 class DeployCommand(BaseCommand, PlusAPIMixin):
@@ -15,7 +38,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
     A class to handle deployment-related operations for CrewAI projects.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initialize the DeployCommand with project name and API client.
         """
@@ -60,14 +83,17 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
                 f"{log_message['timestamp']} - {log_message['level']}: {log_message['message']}"
             )
 
-    def deploy(self, uuid: str | None = None) -> None:
+    def deploy(self, uuid: str | None = None, skip_validate: bool = False) -> None:
         """
         Deploy a crew using either UUID or project name.
 
         Args:
             uuid (Optional[str]): The UUID of the crew to deploy.
+            skip_validate (bool): Skip pre-deploy validation checks.
         """
-        self._start_deployment_span = self._telemetry.start_deployment_span(uuid)
+        if not _run_predeploy_validation(skip_validate):
+            return
+        self._telemetry.start_deployment_span(uuid)
         console.print("Starting deployment...", style="bold blue")
         if uuid:
             response = self.plus_api_client.deploy_by_uuid(uuid)
@@ -80,13 +106,17 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         self._validate_response(response)
         self._display_deployment_info(response.json())
 
-    def create_crew(self, confirm: bool = False) -> None:
+    def create_crew(self, confirm: bool = False, skip_validate: bool = False) -> None:
         """
         Create a new crew deployment.
+
+        Args:
+            confirm (bool): Whether to skip the interactive confirmation prompt.
+            skip_validate (bool): Skip pre-deploy validation checks.
         """
-        self._create_crew_deployment_span = (
-            self._telemetry.create_crew_deployment_span()
-        )
+        if not _run_predeploy_validation(skip_validate):
+            return
+        self._telemetry.create_crew_deployment_span()
         console.print("Creating deployment...", style="bold blue")
         env_vars = fetch_and_json_env_file()
 
@@ -236,7 +266,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             uuid (Optional[str]): The UUID of the crew to get logs for.
             log_type (str): The type of logs to retrieve (default: "deployment").
         """
-        self._get_crew_logs_span = self._telemetry.get_crew_logs_span(uuid, log_type)
+        self._telemetry.get_crew_logs_span(uuid, log_type)
         console.print(f"Fetching {log_type} logs...", style="bold blue")
 
         if uuid:
@@ -257,7 +287,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         Args:
             uuid (Optional[str]): The UUID of the crew to remove.
         """
-        self._remove_crew_span = self._telemetry.remove_crew_span(uuid)
+        self._telemetry.remove_crew_span(uuid)
         console.print("Removing deployment...", style="bold blue")
 
         if uuid:

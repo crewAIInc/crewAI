@@ -225,16 +225,6 @@ class TestConvertToolsToOpenaiSchema:
         assert max_results_prop["default"] == 10
 
 
-def _make_mock_i18n() -> MagicMock:
-    """Create a mock i18n with the new structured prompt keys."""
-    mock_i18n = MagicMock()
-    mock_i18n.slice.side_effect = lambda key: {
-        "summarizer_system_message": "You are a precise assistant that creates structured summaries.",
-        "summarize_instruction": "Summarize the conversation:\n{conversation}",
-        "summary": "<summary>\n{merged_summary}\n</summary>\nContinue the task.",
-    }.get(key, "")
-    return mock_i18n
-
 class MCPStyleInput(BaseModel):
     """Input schema mimicking an MCP tool with optional fields."""
 
@@ -330,7 +320,7 @@ class TestSummarizeMessages:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         # System message preserved + summary message = 2
@@ -361,7 +351,7 @@ class TestSummarizeMessages:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         assert len(messages) == 1
@@ -387,7 +377,7 @@ class TestSummarizeMessages:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         assert len(messages) == 1
@@ -410,7 +400,7 @@ class TestSummarizeMessages:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         assert id(messages) == original_list_id
@@ -432,7 +422,7 @@ class TestSummarizeMessages:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         assert len(messages) == 2
@@ -456,7 +446,7 @@ class TestSummarizeMessages:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         # Check what was passed to llm.call
@@ -482,7 +472,7 @@ class TestSummarizeMessages:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         assert "The extracted summary content." in messages[0]["content"]
@@ -506,7 +496,7 @@ class TestSummarizeMessages:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         # Verify the conversation text sent to LLM contains tool labels
@@ -528,7 +518,7 @@ class TestSummarizeMessages:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         # No LLM call should have been made
@@ -733,7 +723,7 @@ class TestParallelSummarization:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         # acall should have been awaited once per chunk
@@ -757,7 +747,7 @@ class TestParallelSummarization:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         mock_llm.call.assert_called_once()
@@ -788,7 +778,7 @@ class TestParallelSummarization:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         # The final summary message should have A, B, C in order
@@ -816,7 +806,7 @@ class TestParallelSummarization:
                 chunks=[chunk_a, chunk_b],
                 llm=mock_llm,
                 callbacks=[],
-                i18n=_make_mock_i18n(),
+    
             )
         )
 
@@ -843,7 +833,7 @@ class TestParallelSummarization:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         assert mock_llm.acall.await_count == 2
@@ -940,10 +930,8 @@ class TestParallelSummarizationVCR:
     def test_parallel_summarize_openai(self) -> None:
         """Test that parallel summarization with gpt-4o-mini produces a valid summary."""
         from crewai.llm import LLM
-        from crewai.utilities.i18n import I18N
 
         llm = LLM(model="gpt-4o-mini", temperature=0)
-        i18n = I18N()
         messages = _build_long_conversation()
 
         original_system = messages[0]["content"]
@@ -959,7 +947,6 @@ class TestParallelSummarizationVCR:
                 messages=messages,
                 llm=llm,
                 callbacks=[],
-                i18n=i18n,
             )
 
         # System message preserved
@@ -975,10 +962,8 @@ class TestParallelSummarizationVCR:
     def test_parallel_summarize_preserves_files(self) -> None:
         """Test that file references survive parallel summarization."""
         from crewai.llm import LLM
-        from crewai.utilities.i18n import I18N
 
         llm = LLM(model="gpt-4o-mini", temperature=0)
-        i18n = I18N()
         messages = _build_long_conversation()
 
         mock_file = MagicMock()
@@ -989,7 +974,6 @@ class TestParallelSummarizationVCR:
                 messages=messages,
                 llm=llm,
                 callbacks=[],
-                i18n=i18n,
             )
 
         summary_msg = messages[-1]

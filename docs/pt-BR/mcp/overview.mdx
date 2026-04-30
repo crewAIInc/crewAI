@@ -25,8 +25,8 @@ agent = Agent(
     mcps=[
         "https://mcp.exa.ai/mcp?api_key=sua_chave",           # Servidor MCP externo
         "https://api.weather.com/mcp#get_forecast",           # Ferramenta específica do servidor
-        "crewai-amp:financial-data",                          # Marketplace CrewAI AMP
-        "crewai-amp:research-tools#pubmed_search"             # Ferramenta AMP específica
+        "snowflake",                                          # MCP conectado do catálogo
+        "stripe#list_invoices"                                # Ferramenta específica de MCP conectado
     ]
 )
 # Ferramentas MCP agora estão automaticamente disponíveis para seu agente!

@@ -8,6 +8,7 @@ from concurrent.futures import Future
 from hashlib import md5
 import re
 import sys
+from typing import Any, cast
 from unittest.mock import ANY, MagicMock, call, patch
 
 from crewai.agent import Agent
@@ -17,6 +18,7 @@ from crewai.crew import Crew
 from crewai.crews.crew_output import CrewOutput
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.crew_events import (
+    CrewKickoffStartedEvent,
     CrewTestCompletedEvent,
     CrewTestStartedEvent,
     CrewTrainCompletedEvent,
@@ -36,7 +38,7 @@ from crewai.flow import Flow, start
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
 from crewai.llm import LLM
-
+from crewai.memory.unified_memory import Memory
 from crewai.process import Process
 from crewai.project import CrewBase, agent, before_kickoff, crew, task
 from crewai.task import Task
@@ -48,7 +50,6 @@ from crewai.tools.agent_tools.add_image_tool import AddImageTool
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
-from crewai_tools import CodeInterpreterTool
 from pydantic import BaseModel, Field
 import pydantic_core
 import pytest
@@ -1101,7 +1102,7 @@ def test_single_task_with_async_execution():
 
     result = crew.kickoff()
     assert result.raw.startswith(
-        "- Ethical implications of AI in law enforcement and surveillance."
+        "- Impact of autonomous AI agents on future workplace automation"
     )
 
 
@@ -1648,11 +1649,8 @@ def test_code_execution_flag_adds_code_tool_upon_kickoff():
             _, kwargs = mock_execute_sync.call_args
             used_tools = kwargs["tools"]
 
-            # Verify that exactly one tool was used and it was a CodeInterpreterTool
-            assert len(used_tools) == 1, "Should have exactly one tool"
-            assert isinstance(used_tools[0], CodeInterpreterTool), (
-                "Tool should be CodeInterpreterTool"
-            )
+            # CodeInterpreterTool was removed; get_code_execution_tools() now returns []
+            assert len(used_tools) == 0, "Should have no tools (code execution tools are deprecated)"
 
 
 @pytest.mark.vcr()
@@ -2141,6 +2139,7 @@ def test_task_same_callback_both_on_task_and_crew():
 
 @pytest.mark.vcr()
 def test_tools_with_custom_caching():
+
     @tool
     def multiplcation_tool(first_number: int, second_number: int) -> int:
         """Useful for when you need to multiply two numbers together."""
@@ -2618,9 +2617,9 @@ def test_memory_remember_called_after_task():
     )
 
     with patch.object(
-        crew._memory, "extract_memories", wraps=crew._memory.extract_memories
+        Memory, "extract_memories", wraps=crew._memory.extract_memories
     ) as extract_mock, patch.object(
-        crew._memory, "remember", wraps=crew._memory.remember
+        Memory, "remember", wraps=crew._memory.remember
     ) as remember_mock:
         crew.kickoff()
 
@@ -3917,16 +3916,13 @@ def test_task_tools_preserve_code_execution_tools():
         assert any(isinstance(tool, TestTool) for tool in used_tools), (
             "Task's TestTool should be present"
         )
-        assert any(isinstance(tool, CodeInterpreterTool) for tool in used_tools), (
-            "CodeInterpreterTool should be present"
-        )
         assert any("delegate" in tool.name.lower() for tool in used_tools), (
             "Delegation tool should be present"
         )
 
-        # Verify the total number of tools (TestTool + CodeInterpreter + 2 delegation tools)
-        assert len(used_tools) == 4, (
-            "Should have TestTool, CodeInterpreter, and 2 delegation tools"
+        # Verify the total number of tools (TestTool + 2 delegation tools; CodeInterpreterTool removed)
+        assert len(used_tools) == 3, (
+            "Should have TestTool and 2 delegation tools"
         )
 
 
@@ -4523,8 +4519,8 @@ def test_sets_flow_context_when_using_crewbase_pattern_inside_flow():
     flow.kickoff()
 
     assert captured_crew is not None
-    assert captured_crew._flow_id == flow.flow_id  # type: ignore[attr-defined]
-    assert captured_crew._request_id == flow.flow_id  # type: ignore[attr-defined]
+    assert captured_crew._flow_id == flow.execution_id  # type: ignore[attr-defined]
+    assert captured_crew._request_id == flow.execution_id  # type: ignore[attr-defined]
 
 
 def test_sets_flow_context_when_outside_flow(researcher, writer):
@@ -4558,8 +4554,8 @@ def test_sets_flow_context_when_inside_flow(researcher, writer):
 
     flow = MyFlow()
     result = flow.kickoff()
-    assert result._flow_id == flow.flow_id  # type: ignore[attr-defined]
-    assert result._request_id == flow.flow_id  # type: ignore[attr-defined]
+    assert result._flow_id == flow.execution_id  # type: ignore[attr-defined]
+    assert result._request_id == flow.execution_id  # type: ignore[attr-defined]
 
 
 def test_reset_knowledge_with_no_crew_knowledge(researcher, writer):
@@ -4747,6 +4743,92 @@ def test_default_crew_name(researcher, writer):
     assert crew.name == "crew"
 
 
+@pytest.mark.parametrize(
+    "explicit_name,expected",
+    [
+        (None, "ResearchAutomation"),
+        ("My Research Automation", "My Research Automation"),
+    ],
+    ids=["class_name_from_decorator", "explicit_name_preserved"],
+)
+def test_crew_kickoff_started_emits_display_name(
+    researcher, writer, explicit_name, expected
+):
+    """Kickoff events should use the decorator-provided display name when implicit."""
+    from crewai.crews.utils import prepare_kickoff
+    from crewai.project import CrewBase, agent, crew, task
+
+    @CrewBase
+    class ResearchAutomation:
+        agents_config = None
+        tasks_config = None
+
+        @agent
+        def researcher(self):
+            return researcher
+
+        @task
+        def first_task(self):
+            return Task(
+                description="Task 1",
+                expected_output="output",
+                agent=self.researcher(),
+            )
+
+        @crew
+        def crew(self):
+            crew_kwargs: dict[str, Any] = {
+                "agents": self.agents,
+                "tasks": self.tasks,
+            }
+            if explicit_name is not None:
+                crew_kwargs["name"] = explicit_name
+            return Crew(**crew_kwargs)
+
+    captured: list[str | None] = []
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(CrewKickoffStartedEvent)
+        def _capture(_source: Any, event: CrewKickoffStartedEvent) -> None:
+            captured.append(event.crew_name)
+
+        automation_cls = cast(type[Any], ResearchAutomation)
+        prepare_kickoff(cast(Any, automation_cls()).crew(), inputs=None)
+
+    assert captured == [expected]
+
+
+def test_prepare_kickoff_binds_task_only_agent_to_crew():
+    """Agents referenced only via task.agent must get .crew set during prepare_kickoff.
+
+    Regression for crewAIInc/crewAI#5534: when Crew is built without
+    agents=[...], multimodal input_files were silently dropped because the
+    agent's .crew attribute was never assigned, gating file lookup off in
+    Task and CrewAgentExecutor.
+    """
+    from crewai.crews.utils import prepare_kickoff
+
+    task_only_agent = Agent(
+        role="Solo",
+        goal="Describe inputs",
+        backstory="Solo agent assigned only via task.agent",
+        allow_delegation=False,
+    )
+    task = Task(
+        description="Describe the input.",
+        expected_output="A description.",
+        agent=task_only_agent,
+    )
+    crew = Crew(tasks=[task])
+
+    assert task_only_agent.crew is None
+    assert crew.agents == []
+
+    prepare_kickoff(crew, inputs=None)
+
+    assert task_only_agent.crew is crew
+
+
 @pytest.mark.vcr()
 def test_memory_remember_receives_task_content():
     """With memory=True, extract_memories receives raw content with task, agent, expected output, and result."""
@@ -4773,13 +4855,13 @@ def test_memory_remember_receives_task_content():
         # Mock extract_memories to return fake memories and capture the raw input.
         # No wraps= needed -- the test only checks what args it receives, not the output.
         patch.object(
-            crew._memory, "extract_memories", return_value=["Fake memory."]
+            Memory, "extract_memories", return_value=["Fake memory."]
         ) as extract_mock,
         # Mock recall to avoid LLM calls for query analysis (not in cassette).
-        patch.object(crew._memory, "recall", return_value=[]),
+        patch.object(Memory, "recall", return_value=[]),
         # Mock remember_many to prevent the background save from triggering
         # LLM calls (field resolution) that aren't in the cassette.
-        patch.object(crew._memory, "remember_many", return_value=[]),
+        patch.object(Memory, "remember_many", return_value=[]),
     ):
         crew.kickoff()
 

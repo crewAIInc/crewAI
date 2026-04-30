@@ -43,6 +43,7 @@ def should_suppress_console_output() -> bool:
 
 class ConsoleFormatter:
     tool_usage_counts: ClassVar[dict[str, int]] = {}
+    _tool_counts_lock: ClassVar[threading.Lock] = threading.Lock()
 
     current_a2a_turn_count: int = 0
     _pending_a2a_message: str | None = None
@@ -126,6 +127,9 @@ To update, run: uv sync --upgrade-package crewai"""
 
     def _show_tracing_disabled_message_if_needed(self) -> None:
         """Show tracing disabled message if tracing is not enabled."""
+        from crewai.events.listeners.tracing.trace_listener import (
+            TraceCollectionListener,
+        )
         from crewai.events.listeners.tracing.utils import (
             has_user_declined_tracing,
             is_tracing_enabled_in_context,
@@ -133,6 +137,12 @@ To update, run: uv sync --upgrade-package crewai"""
         )
 
         if should_suppress_tracing_messages():
+            return
+
+        # Don't show "disabled" message when the first-time handler will show
+        # the trace prompt after execution completes (avoids confusing mid-flow messages)
+        listener = TraceCollectionListener._instance  # type: ignore[misc]
+        if listener and listener.first_time_handler.is_first_time:
             return
 
         if not is_tracing_enabled_in_context():
@@ -445,9 +455,11 @@ To enable tracing, do any one of these:
         if not self.verbose:
             return
 
-        # Update tool usage count
-        self.tool_usage_counts[tool_name] = self.tool_usage_counts.get(tool_name, 0) + 1
-        iteration = self.tool_usage_counts[tool_name]
+        with self._tool_counts_lock:
+            self.tool_usage_counts[tool_name] = (
+                self.tool_usage_counts.get(tool_name, 0) + 1
+            )
+            iteration = self.tool_usage_counts[tool_name]
 
         content = Text()
         content.append("Tool: ", style="white")
@@ -474,7 +486,8 @@ To enable tracing, do any one of these:
         if not self.verbose:
             return
 
-        iteration = self.tool_usage_counts.get(tool_name, 1)
+        with self._tool_counts_lock:
+            iteration = self.tool_usage_counts.get(tool_name, 1)
 
         content = Text()
         content.append("Tool Completed\n", style="green bold")
@@ -500,7 +513,8 @@ To enable tracing, do any one of these:
         if not self.verbose:
             return
 
-        iteration = self.tool_usage_counts.get(tool_name, 1)
+        with self._tool_counts_lock:
+            iteration = self.tool_usage_counts.get(tool_name, 1)
 
         content = Text()
         content.append("Tool Failed\n", style="red bold")
@@ -935,6 +949,152 @@ To enable tracing, do any one of these:
             Error=error,
         )
         self.print_panel(error_content, "❌ Reasoning Error", "red")
+
+    # ----------- OBSERVATION EVENTS (Plan-and-Execute) -----------
+
+    def handle_observation_started(
+        self,
+        agent_role: str,
+        step_number: int,
+        step_description: str,
+    ) -> None:
+        """Handle step observation started event."""
+        if not self.verbose:
+            return
+
+        content = Text()
+        content.append("Observation Started\n", style="cyan bold")
+        content.append("Agent: ", style="white")
+        content.append(f"{agent_role}\n", style="cyan")
+        content.append("Step: ", style="white")
+        content.append(f"{step_number}\n", style="cyan")
+        if step_description:
+            desc_preview = step_description[:80] + (
+                "..." if len(step_description) > 80 else ""
+            )
+            content.append("Description: ", style="white")
+            content.append(f"{desc_preview}\n", style="cyan")
+
+        self.print_panel(content, "🔍 Observing Step Result", "cyan")
+
+    def handle_observation_completed(
+        self,
+        agent_role: str,
+        step_number: int,
+        step_completed: bool,
+        plan_valid: bool,
+        key_info: str,
+        needs_replan: bool,
+        goal_achieved: bool,
+    ) -> None:
+        """Handle step observation completed event."""
+        if not self.verbose:
+            return
+
+        if goal_achieved:
+            style = "green"
+            status = "Goal Achieved Early"
+        elif needs_replan:
+            style = "yellow"
+            status = "Replan Needed"
+        elif plan_valid:
+            style = "green"
+            status = "Plan Valid — Continue"
+        else:
+            style = "red"
+            status = "Step Failed"
+
+        content = Text()
+        content.append("Observation Complete\n", style=f"{style} bold")
+        content.append("Step: ", style="white")
+        content.append(f"{step_number}\n", style=style)
+        content.append("Status: ", style="white")
+        content.append(f"{status}\n", style=style)
+        if key_info:
+            info_preview = key_info[:120] + ("..." if len(key_info) > 120 else "")
+            content.append("Learned: ", style="white")
+            content.append(f"{info_preview}\n", style=style)
+
+        self.print_panel(content, "🔍 Observation Result", style)
+
+    def handle_observation_failed(
+        self,
+        step_number: int,
+        error: str,
+    ) -> None:
+        """Handle step observation failure event."""
+        if not self.verbose:
+            return
+
+        error_content = self.create_status_content(
+            "Observation Failed",
+            "Error",
+            "red",
+            Step=str(step_number),
+            Error=error,
+        )
+        self.print_panel(error_content, "❌ Observation Error", "red")
+
+    def handle_plan_refinement(
+        self,
+        step_number: int,
+        refined_count: int,
+        refinements: list[str] | None,
+    ) -> None:
+        """Handle plan refinement event."""
+        if not self.verbose:
+            return
+
+        content = Text()
+        content.append("Plan Refined\n", style="cyan bold")
+        content.append("After Step: ", style="white")
+        content.append(f"{step_number}\n", style="cyan")
+        content.append("Steps Updated: ", style="white")
+        content.append(f"{refined_count}\n", style="cyan")
+        if refinements:
+            for r in refinements[:3]:
+                content.append(f"  • {r[:80]}\n", style="white")
+
+        self.print_panel(content, "✏️ Plan Refinement", "cyan")
+
+    def handle_plan_replan(
+        self,
+        reason: str,
+        replan_count: int,
+        preserved_count: int,
+    ) -> None:
+        """Handle plan replan triggered event."""
+        if not self.verbose:
+            return
+
+        content = Text()
+        content.append("Full Replan Triggered\n", style="yellow bold")
+        content.append("Reason: ", style="white")
+        content.append(f"{reason}\n", style="yellow")
+        content.append("Replan #: ", style="white")
+        content.append(f"{replan_count}\n", style="yellow")
+        content.append("Preserved Steps: ", style="white")
+        content.append(f"{preserved_count}\n", style="yellow")
+
+        self.print_panel(content, "🔄 Dynamic Replan", "yellow")
+
+    def handle_goal_achieved_early(
+        self,
+        steps_completed: int,
+        steps_remaining: int,
+    ) -> None:
+        """Handle goal achieved early event."""
+        if not self.verbose:
+            return
+
+        content = Text()
+        content.append("Goal Achieved Early!\n", style="green bold")
+        content.append("Completed: ", style="white")
+        content.append(f"{steps_completed} steps\n", style="green")
+        content.append("Skipped: ", style="white")
+        content.append(f"{steps_remaining} remaining steps\n", style="green")
+
+        self.print_panel(content, "🎯 Early Goal Achievement", "green")
 
     # ----------- AGENT LOGGING EVENTS -----------
 

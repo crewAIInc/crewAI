@@ -17,7 +17,7 @@ Use the `mcps` field directly on agents for seamless MCP tool integration. The D
 
 #### String-Based References (Quick Setup)
 
-Perfect for remote HTTPS servers and CrewAI AMP marketplace:
+Perfect for remote HTTPS servers and connected MCP integrations from the CrewAI catalog:
 
 ```python
 from crewai import Agent
@@ -29,8 +29,8 @@ agent = Agent(
     mcps=[
         "https://mcp.exa.ai/mcp?api_key=your_key",           # External MCP server
         "https://api.weather.com/mcp#get_forecast",          # Specific tool from server
-        "crewai-amp:financial-data",                         # CrewAI AMP marketplace
-        "crewai-amp:research-tools#pubmed_search"            # Specific AMP tool
+        "snowflake",                                         # Connected MCP from catalog
+        "stripe#list_invoices"                               # Specific tool from connected MCP
     ]
 )
 # MCP tools are now automatically available to your agent!
@@ -127,7 +127,7 @@ research_agent = Agent(
     backstory="Expert researcher with access to multiple data sources",
     mcps=[
         "https://mcp.exa.ai/mcp?api_key=your_key&profile=your_profile",
-        "crewai-amp:weather-service#current_conditions"
+        "snowflake#run_query"
     ]
 )
 
@@ -204,19 +204,22 @@ mcps=[
 ]
 ```
 
-#### CrewAI AMP Marketplace
+#### Connected MCP Integrations
+
+Connect MCP servers from the CrewAI catalog or bring your own. Once connected in your account, reference them by slug:
 
 ```python
 mcps=[
-    # Full AMP MCP service - get all available tools
-    "crewai-amp:financial-data",
+    # Connected MCP - get all available tools
+    "snowflake",
 
-    # Specific tool from AMP service using # syntax
-    "crewai-amp:research-tools#pubmed_search",
+    # Specific tool from a connected MCP using # syntax
+    "stripe#list_invoices",
 
-    # Multiple AMP services
-    "crewai-amp:weather-service",
-    "crewai-amp:market-analysis"
+    # Multiple connected MCPs
+    "snowflake",
+    "stripe",
+    "github"
 ]
 ```
 
@@ -299,7 +302,7 @@ from crewai.mcp import MCPServerStdio, MCPServerHTTP
 mcps=[
     # String references
     "https://external-api.com/mcp",              # External server
-    "crewai-amp:financial-insights",             # AMP service
+    "snowflake",                                 # Connected MCP from catalog
 
     # Structured configurations
     MCPServerStdio(
@@ -409,7 +412,7 @@ agent = Agent(
         # String references
         "https://reliable-server.com/mcp",        # Will work
         "https://unreachable-server.com/mcp",     # Will be skipped gracefully
-        "crewai-amp:working-service",             # Will work
+        "snowflake",                              # Connected MCP from catalog
 
         # Structured configs
         MCPServerStdio(

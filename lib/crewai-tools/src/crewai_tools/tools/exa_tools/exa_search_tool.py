@@ -71,8 +71,8 @@ class EXASearchTool(BaseTool):
         content: bool | None = False,
         summary: bool | None = False,
         type: str | None = "auto",
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         super().__init__(
             **kwargs,
         )

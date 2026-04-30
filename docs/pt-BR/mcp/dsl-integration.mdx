@@ -62,22 +62,22 @@ Use a sintaxe `#` para selecionar ferramentas específicas de um servidor:
 "https://mcp.exa.ai/mcp?api_key=sua_chave#web_search_exa"
 ```
 
-### Marketplace CrewAI AMP
+### Integrações MCP Conectadas
 
-Acesse ferramentas do marketplace CrewAI AMP:
+Conecte servidores MCP do catálogo CrewAI ou traga os seus próprios. Uma vez conectados em sua conta, referencie-os pelo slug:
 
 ```python
-# Serviço completo com todas as ferramentas
-"crewai-amp:financial-data"
+# MCP conectado com todas as ferramentas
+"snowflake"
 
-# Ferramenta específica do serviço AMP
-"crewai-amp:research-tools#pubmed_search"
+# Ferramenta específica de um MCP conectado
+"stripe#list_invoices"
 
-# Múltiplos serviços AMP
+# Múltiplos MCPs conectados
 mcps=[
-    "crewai-amp:weather-insights",
-    "crewai-amp:market-analysis",
-    "crewai-amp:social-media-monitoring"
+    "snowflake",
+    "stripe",
+    "github"
 ]
 ```
 
@@ -99,10 +99,10 @@ agente_multi_fonte = Agent(
         "https://mcp.exa.ai/mcp?api_key=sua_chave_exa&profile=pesquisa",
         "https://weather.api.com/mcp#get_current_conditions",
 
-        # Marketplace CrewAI AMP
-        "crewai-amp:financial-insights",
-        "crewai-amp:academic-research#pubmed_search",
-        "crewai-amp:market-intelligence#competitor_analysis"
+        # MCPs conectados do catálogo
+        "snowflake",
+        "stripe#list_invoices",
+        "github#search_repositories"
     ]
 )
 
@@ -154,7 +154,7 @@ agente = Agent(
         "https://servidor-confiavel.com/mcp",        # Vai funcionar
         "https://servidor-inalcancavel.com/mcp",     # Será ignorado graciosamente
         "https://servidor-lento.com/mcp",            # Timeout gracioso
-        "crewai-amp:servico-funcionando"             # Vai funcionar
+        "snowflake"                                  # MCP conectado do catálogo
     ]
 )
 # O agente usará ferramentas de servidores funcionais e registrará avisos para os que falharem
@@ -229,6 +229,6 @@ agente = Agent(
 mcps=[
     "https://api-principal.com/mcp",       # Escolha principal
     "https://api-backup.com/mcp",          # Opção de backup
-    "crewai-amp:servico-confiavel"         # Fallback AMP
+    "snowflake"                            # Fallback MCP conectado
 ]
 ```

@@ -7,6 +7,7 @@ import base64
 from collections.abc import AsyncIterator, Callable, MutableMapping
 import concurrent.futures
 from contextlib import asynccontextmanager
+import contextvars
 import logging
 from typing import TYPE_CHECKING, Any, Final, Literal
 import uuid
@@ -229,8 +230,9 @@ def execute_a2a_delegation(
         has_running_loop = False
 
     if has_running_loop:
+        ctx = contextvars.copy_context()
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-            return pool.submit(asyncio.run, coro).result()
+            return pool.submit(ctx.run, asyncio.run, coro).result()
     return asyncio.run(coro)
 
 

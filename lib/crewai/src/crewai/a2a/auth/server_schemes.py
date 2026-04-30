@@ -4,6 +4,7 @@ These schemes validate incoming requests to A2A server endpoints.
 
 Supported authentication methods:
 - Simple token validation with static bearer tokens
+- Enterprise token validation (via PlusAPI)
 - OpenID Connect with JWT validation using JWKS
 - OAuth2 with JWT validation or token introspection
 """
@@ -16,6 +17,7 @@ import logging
 import os
 from typing import TYPE_CHECKING, Annotated, Any, ClassVar, Literal
 
+import httpx
 import jwt
 from jwt import PyJWKClient
 from pydantic import (
@@ -33,6 +35,7 @@ from typing_extensions import Self
 
 if TYPE_CHECKING:
     from a2a.types import OAuth2SecurityScheme
+    from jwt.types import Options
 
 
 logger = logging.getLogger(__name__)
@@ -181,6 +184,24 @@ class SimpleTokenAuth(ServerAuthScheme):
             token=token,
             scheme="simple_token",
         )
+
+
+class EnterpriseTokenAuth(ServerAuthScheme):
+    """Enterprise token authentication.
+
+    Validates tokens via the PlusAPI enterprise verification endpoint.
+    """
+
+    async def authenticate(self, token: str) -> AuthenticatedUser:
+        """Authenticate using enterprise token verification.
+
+        Args:
+            token: The bearer token to authenticate.
+
+        Raises:
+            NotImplementedError
+        """
+        raise NotImplementedError
 
 
 class OIDCAuth(ServerAuthScheme):
@@ -475,7 +496,7 @@ class OAuth2ServerAuth(ServerAuthScheme):
         try:
             signing_key = self._jwk_client.get_signing_key_from_jwt(token)
 
-            decode_options: dict[str, Any] = {
+            decode_options: Options = {
                 "require": self.required_claims,
             }
 
@@ -556,7 +577,6 @@ class OAuth2ServerAuth(ServerAuthScheme):
 
     async def _authenticate_introspection(self, token: str) -> AuthenticatedUser:
         """Authenticate using OAuth2 token introspection (RFC 7662)."""
-        import httpx
 
         if not self.introspection_url:
             raise HTTPException(

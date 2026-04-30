@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel, Field, InstanceOf
+from pydantic import BaseModel, Field
 from rich.box import HEAVY_EDGE
 from rich.console import Console
 from rich.table import Table
@@ -39,9 +39,9 @@ class CrewEvaluator:
     def __init__(
         self,
         crew: Crew,
-        eval_llm: InstanceOf[BaseLLM] | str | None = None,
+        eval_llm: BaseLLM | str | None = None,
         openai_model_name: str | None = None,
-        llm: InstanceOf[BaseLLM] | str | None = None,
+        llm: BaseLLM | str | None = None,
     ) -> None:
         self.crew = crew
         self.llm = eval_llm

@@ -5,22 +5,19 @@ import json
 import logging
 import os
 import re
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import Any, Literal, cast
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM, llm_call_context
+from crewai.llms.hooks.base import BaseInterceptor
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.types import LLMMessage
-
-
-if TYPE_CHECKING:
-    from crewai.llms.hooks.base import BaseInterceptor
 
 
 try:
@@ -44,137 +41,131 @@ class GeminiCompletion(BaseLLM):
     offering native function calling, streaming support, and proper Gemini formatting.
     """
 
-    def __init__(
-        self,
-        model: str = "gemini-2.0-flash-001",
-        api_key: str | None = None,
-        project: str | None = None,
-        location: str | None = None,
-        temperature: float | None = None,
-        top_p: float | None = None,
-        top_k: int | None = None,
-        max_output_tokens: int | None = None,
-        stop_sequences: list[str] | None = None,
-        stream: bool = False,
-        safety_settings: dict[str, Any] | None = None,
-        client_params: dict[str, Any] | None = None,
-        interceptor: BaseInterceptor[Any, Any] | None = None,
-        use_vertexai: bool | None = None,
-        response_format: type[BaseModel] | None = None,
-        thinking_config: types.ThinkingConfig | None = None,
-        **kwargs: Any,
-    ):
-        """Initialize Google Gemini chat completion client.
+    llm_type: Literal["gemini"] = "gemini"
+    model: str = "gemini-2.0-flash-001"
+    project: str | None = None
+    location: str | None = None
+    top_p: float | None = None
+    top_k: int | None = None
+    max_output_tokens: int | None = None
+    stream: bool = False
+    safety_settings: dict[str, Any] = Field(default_factory=dict)
+    client_params: dict[str, Any] = Field(default_factory=dict)
+    interceptor: BaseInterceptor[Any, Any] | None = None
+    use_vertexai: bool = False
+    response_format: type[BaseModel] | None = None
+    thinking_config: Any = None
+    tools: list[dict[str, Any]] | None = None
+    supports_tools: bool = False
+    is_gemini_2_0: bool = False
 
-        Args:
-            model: Gemini model name (e.g., 'gemini-2.0-flash-001', 'gemini-1.5-pro')
-            api_key: Google API key for Gemini API authentication.
-                    Defaults to GOOGLE_API_KEY or GEMINI_API_KEY env var.
-                    NOTE: Cannot be used with Vertex AI (project parameter). Use Gemini API instead.
-            project: Google Cloud project ID for Vertex AI with ADC authentication.
-                    Requires Application Default Credentials (gcloud auth application-default login).
-                    NOTE: Vertex AI does NOT support API keys, only OAuth2/ADC.
-                    If both api_key and project are set, api_key takes precedence.
-            location: Google Cloud location (for Vertex AI with ADC, defaults to 'us-central1')
-            temperature: Sampling temperature (0-2)
-            top_p: Nucleus sampling parameter
-            top_k: Top-k sampling parameter
-            max_output_tokens: Maximum tokens in response
-            stop_sequences: Stop sequences
-            stream: Enable streaming responses
-            safety_settings: Safety filter settings
-            client_params: Additional parameters to pass to the Google Gen AI Client constructor.
-                          Supports parameters like http_options, credentials, debug_config, etc.
-            interceptor: HTTP interceptor (not yet supported for Gemini).
-            use_vertexai: Whether to use Vertex AI instead of Gemini API.
-                         - True: Use Vertex AI (with ADC or Express mode with API key)
-                         - False: Use Gemini API (explicitly override env var)
-                         - None (default): Check GOOGLE_GENAI_USE_VERTEXAI env var
-                         When using Vertex AI with API key (Express mode), http_options with
-                         api_version="v1" is automatically configured.
-            response_format: Pydantic model for structured output. Used as default when
-                           response_model is not passed to call()/acall() methods.
-            thinking_config: ThinkingConfig for thinking models (gemini-2.5+, gemini-3+).
-                           Controls thought output via include_thoughts, thinking_budget,
-                           and thinking_level. When None, thinking models automatically
-                           get include_thoughts=True so thought content is surfaced.
-            **kwargs: Additional parameters
-        """
-        if interceptor is not None:
+    _client: Any = PrivateAttr(default=None)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_gemini_fields(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+
+        if data.get("interceptor") is not None:
             raise NotImplementedError(
                 "HTTP interceptors are not yet supported for Google Gemini provider. "
                 "Interceptors are currently supported for OpenAI and Anthropic providers only."
             )
 
-        super().__init__(
-            model=model, temperature=temperature, stop=stop_sequences or [], **kwargs
+        # Normalize stop_sequences from stop kwarg
+        popped = data.pop("stop_sequences", None)
+        seqs = popped if popped is not None else (data.get("stop") or [])
+        if isinstance(seqs, str):
+            seqs = [seqs]
+        data["stop"] = seqs
+
+        # Resolve env vars
+        data["api_key"] = (
+            data.get("api_key")
+            or os.getenv("GOOGLE_API_KEY")
+            or os.getenv("GEMINI_API_KEY")
+        )
+        data["project"] = data.get("project") or os.getenv("GOOGLE_CLOUD_PROJECT")
+        data["location"] = (
+            data.get("location") or os.getenv("GOOGLE_CLOUD_LOCATION") or "us-central1"
         )
 
-        # Store client params for later use
-        self.client_params = client_params or {}
-
-        # Get API configuration with environment variable fallbacks
-        self.api_key = (
-            api_key or os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-        )
-        self.project = project or os.getenv("GOOGLE_CLOUD_PROJECT")
-        self.location = location or os.getenv("GOOGLE_CLOUD_LOCATION") or "us-central1"
-
-        if use_vertexai is None:
-            use_vertexai = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true"
-
-        self.client = self._initialize_client(use_vertexai)
-
-        # Store completion parameters
-        self.top_p = top_p
-        self.top_k = top_k
-        self.max_output_tokens = max_output_tokens
-        self.stream = stream
-        self.safety_settings = safety_settings or {}
-        self.stop_sequences = stop_sequences or []
-        self.tools: list[dict[str, Any]] | None = None
-        self.response_format = response_format
+        use_vx = data.get("use_vertexai")
+        if use_vx is None:
+            use_vx = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true"
+        data["use_vertexai"] = use_vx
 
         # Model-specific settings
+        model = data.get("model", "gemini-2.0-flash-001")
         version_match = re.search(r"gemini-(\d+(?:\.\d+)?)", model.lower())
-        self.supports_tools = bool(
+        data["supports_tools"] = bool(
             version_match and float(version_match.group(1)) >= 1.5
         )
-        self.is_gemini_2_0 = bool(
+        data["is_gemini_2_0"] = bool(
             version_match and float(version_match.group(1)) >= 2.0
         )
 
-        self.thinking_config = thinking_config
+        # Auto-enable thinking for gemini-2.5+
         if (
-            self.thinking_config is None
+            data.get("thinking_config") is None
             and version_match
             and float(version_match.group(1)) >= 2.5
         ):
-            self.thinking_config = types.ThinkingConfig(include_thoughts=True)
+            data["thinking_config"] = types.ThinkingConfig(include_thoughts=True)
 
-    @property
-    def stop(self) -> list[str]:
-        """Get stop sequences sent to the API."""
-        return self.stop_sequences
+        return data
 
-    @stop.setter
-    def stop(self, value: list[str] | str | None) -> None:
-        """Set stop sequences.
-
-        Synchronizes stop_sequences to ensure values set by CrewAgentExecutor
-        are properly sent to the Gemini API.
-
-        Args:
-            value: Stop sequences as a list, single string, or None
+    @model_validator(mode="after")
+    def _init_client(self) -> GeminiCompletion:
+        """Eagerly build the client when credentials resolve, otherwise defer
+        so ``LLM(model="gemini/...")`` can be constructed at module import time
+        even before deployment env vars are set.
         """
-        if value is None:
-            self.stop_sequences = []
-        elif isinstance(value, str):
-            self.stop_sequences = [value]
-        elif isinstance(value, list):
-            self.stop_sequences = value
-        else:
-            self.stop_sequences = []
+        try:
+            self._client = self._initialize_client(self.use_vertexai)
+        except ValueError:
+            pass
+        return self
+
+    def _get_sync_client(self) -> Any:
+        if self._client is None:
+            # Re-read env vars so a deferred build can pick up credentials
+            # that weren't set at instantiation time.
+            if not self.api_key:
+                self.api_key = os.getenv("GOOGLE_API_KEY") or os.getenv(
+                    "GEMINI_API_KEY"
+                )
+            if not self.project:
+                self.project = os.getenv("GOOGLE_CLOUD_PROJECT")
+            self._client = self._initialize_client(self.use_vertexai)
+        return self._client
+
+    def _get_async_client(self) -> Any:
+        """Gemini uses a single client for both sync and async calls."""
+        return self._get_sync_client()
+
+    def to_config_dict(self) -> dict[str, Any]:
+        """Extend base config with Gemini/Vertex-specific fields."""
+        config = super().to_config_dict()
+        if self.project:
+            config["project"] = self.project
+        if self.location and self.location != "us-central1":
+            config["location"] = self.location
+        if self.top_p is not None:
+            config["top_p"] = self.top_p
+        if self.top_k is not None:
+            config["top_k"] = self.top_k
+        if self.max_output_tokens is not None:
+            config["max_output_tokens"] = self.max_output_tokens
+        if self.safety_settings:
+            config["safety_settings"] = [
+                {"category": str(s.category), "threshold": str(s.threshold)}
+                if hasattr(s, "category") and hasattr(s, "threshold")
+                else s
+                for s in self.safety_settings
+            ]
+        return config
 
     def _initialize_client(self, use_vertexai: bool = False) -> genai.Client:
         """Initialize the Google Gen AI client with proper parameter handling.
@@ -261,8 +252,9 @@ class GeminiCompletion(BaseLLM):
 
         if (
             hasattr(self, "client")
-            and hasattr(self.client, "vertexai")
-            and self.client.vertexai
+            and self._client is not None
+            and hasattr(self._client, "vertexai")
+            and self._client.vertexai
         ):
             # Vertex AI configuration
             params.update(
@@ -634,9 +626,17 @@ class GeminiCompletion(BaseLLM):
                 function_response_part = types.Part.from_function_response(
                     name=tool_name, response=response_data
                 )
-                contents.append(
-                    types.Content(role="user", parts=[function_response_part])
-                )
+                if (
+                    contents
+                    and contents[-1].role == "user"
+                    and contents[-1].parts
+                    and contents[-1].parts[-1].function_response is not None
+                ):
+                    contents[-1].parts.append(function_response_part)
+                else:
+                    contents.append(
+                        types.Content(role="user", parts=[function_response_part])
+                    )
             elif role == "assistant" and message.get("tool_calls"):
                 raw_parts: list[Any] | None = message.get("raw_tool_call_parts")
                 if raw_parts and all(isinstance(p, types.Part) for p in raw_parts):
@@ -691,6 +691,7 @@ class GeminiCompletion(BaseLLM):
         messages_for_event: list[LLMMessage],
         from_task: Any | None = None,
         from_agent: Any | None = None,
+        usage: dict[str, Any] | None = None,
     ) -> BaseModel:
         """Validate content against response model and emit completion event.
 
@@ -716,6 +717,7 @@ class GeminiCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=messages_for_event,
+                usage=usage,
             )
 
             return structured_data
@@ -731,6 +733,7 @@ class GeminiCompletion(BaseLLM):
         response_model: type[BaseModel] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
+        usage: dict[str, Any] | None = None,
     ) -> str | BaseModel:
         """Finalize completion response with validation and event emission.
 
@@ -754,6 +757,7 @@ class GeminiCompletion(BaseLLM):
                 messages_for_event=messages_for_event,
                 from_task=from_task,
                 from_agent=from_agent,
+                usage=usage,
             )
 
         self._emit_call_completed_event(
@@ -762,6 +766,7 @@ class GeminiCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=messages_for_event,
+            usage=usage,
         )
 
         return self._invoke_after_llm_call_hooks(
@@ -775,6 +780,7 @@ class GeminiCompletion(BaseLLM):
         contents: list[types.Content],
         from_task: Any | None = None,
         from_agent: Any | None = None,
+        usage: dict[str, Any] | None = None,
     ) -> BaseModel:
         """Validate and emit event for structured_output tool call.
 
@@ -799,6 +805,7 @@ class GeminiCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=self._convert_contents_to_dict(contents),
+                usage=usage,
             )
             return validated_data
         except Exception as e:
@@ -817,6 +824,7 @@ class GeminiCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
+        usage: dict[str, Any] | None = None,
     ) -> str | Any:
         """Process response, execute function calls, and finalize completion.
 
@@ -857,6 +865,7 @@ class GeminiCompletion(BaseLLM):
                                 contents=contents,
                                 from_task=from_task,
                                 from_agent=from_agent,
+                                usage=usage,
                             )
 
                 # Filter out structured_output from function calls returned to executor
@@ -878,6 +887,7 @@ class GeminiCompletion(BaseLLM):
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=self._convert_contents_to_dict(contents),
+                        usage=usage,
                     )
                     return non_structured_output_parts
 
@@ -919,6 +929,7 @@ class GeminiCompletion(BaseLLM):
             response_model=effective_response_model,
             from_task=from_task,
             from_agent=from_agent,
+            usage=usage,
         )
 
     def _process_stream_chunk(
@@ -926,10 +937,10 @@ class GeminiCompletion(BaseLLM):
         chunk: GenerateContentResponse,
         full_response: str,
         function_calls: dict[int, dict[str, Any]],
-        usage_data: dict[str, int],
+        usage_data: dict[str, int] | None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
-    ) -> tuple[str, dict[int, dict[str, Any]], dict[str, int]]:
+    ) -> tuple[str, dict[int, dict[str, Any]], dict[str, int] | None]:
         """Process a single streaming chunk.
 
         Args:
@@ -965,6 +976,7 @@ class GeminiCompletion(BaseLLM):
                             "id": call_id,
                             "name": part.function_call.name,
                             "args": args_dict,
+                            "raw_part": part,
                         }
 
                         self._emit_stream_chunk_event(
@@ -1005,7 +1017,7 @@ class GeminiCompletion(BaseLLM):
         self,
         full_response: str,
         function_calls: dict[int, dict[str, Any]],
-        usage_data: dict[str, int],
+        usage_data: dict[str, int] | None,
         contents: list[types.Content],
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
@@ -1017,7 +1029,7 @@ class GeminiCompletion(BaseLLM):
         Args:
             full_response: The complete streamed response content
             function_calls: Dictionary of function calls accumulated during streaming
-            usage_data: Token usage data from the stream
+            usage_data: Token usage data from the stream, or None if unavailable
             contents: Original contents for event conversion
             available_functions: Available functions for function calling
             from_task: Task that initiated the call
@@ -1027,7 +1039,8 @@ class GeminiCompletion(BaseLLM):
         Returns:
             Final response content after processing
         """
-        self._track_token_usage_internal(usage_data)
+        if usage_data:
+            self._track_token_usage_internal(usage_data)
 
         if response_model and function_calls:
             for call_data in function_calls.values():
@@ -1039,6 +1052,7 @@ class GeminiCompletion(BaseLLM):
                         contents=contents,
                         from_task=from_task,
                         from_agent=from_agent,
+                        usage=usage_data,
                     )
 
         non_structured_output_calls = {
@@ -1047,28 +1061,20 @@ class GeminiCompletion(BaseLLM):
             if call_data.get("name") != STRUCTURED_OUTPUT_TOOL_NAME
         }
 
-        # If there are function calls but no available_functions,
-        # return them for the executor to handle
         if non_structured_output_calls and not available_functions:
-            formatted_function_calls = [
-                {
-                    "id": call_data["id"],
-                    "function": {
-                        "name": call_data["name"],
-                        "arguments": json.dumps(call_data["args"]),
-                    },
-                    "type": "function",
-                }
+            raw_parts = [
+                call_data["raw_part"]
                 for call_data in non_structured_output_calls.values()
             ]
             self._emit_call_completed_event(
-                response=formatted_function_calls,
+                response=raw_parts,
                 call_type=LLMCallType.TOOL_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=self._convert_contents_to_dict(contents),
+                usage=usage_data,
             )
-            return formatted_function_calls
+            return raw_parts
 
         # Handle completed function calls (excluding structured_output)
         if non_structured_output_calls and available_functions:
@@ -1107,6 +1113,7 @@ class GeminiCompletion(BaseLLM):
             response_model=effective_response_model,
             from_task=from_task,
             from_agent=from_agent,
+            usage=usage_data,
         )
 
     def _handle_completion(
@@ -1122,7 +1129,7 @@ class GeminiCompletion(BaseLLM):
         try:
             # The API accepts list[Content] but mypy is overly strict about variance
             contents_for_api: Any = contents
-            response = self.client.models.generate_content(
+            response = self._get_sync_client().models.generate_content(
                 model=self.model,
                 contents=contents_for_api,
                 config=config,
@@ -1144,6 +1151,7 @@ class GeminiCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             response_model=response_model,
+            usage=usage,
         )
 
     def _handle_streaming_completion(
@@ -1158,11 +1166,11 @@ class GeminiCompletion(BaseLLM):
         """Handle streaming content generation."""
         full_response = ""
         function_calls: dict[int, dict[str, Any]] = {}
-        usage_data = {"total_tokens": 0}
+        usage_data: dict[str, int] | None = None
 
         # The API accepts list[Content] but mypy is overly strict about variance
         contents_for_api: Any = contents
-        for chunk in self.client.models.generate_content_stream(
+        for chunk in self._get_sync_client().models.generate_content_stream(
             model=self.model,
             contents=contents_for_api,
             config=config,
@@ -1200,7 +1208,7 @@ class GeminiCompletion(BaseLLM):
         try:
             # The API accepts list[Content] but mypy is overly strict about variance
             contents_for_api: Any = contents
-            response = await self.client.aio.models.generate_content(
+            response = await self._get_async_client().aio.models.generate_content(
                 model=self.model,
                 contents=contents_for_api,
                 config=config,
@@ -1222,6 +1230,7 @@ class GeminiCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             response_model=response_model,
+            usage=usage,
         )
 
     async def _ahandle_streaming_completion(
@@ -1236,11 +1245,11 @@ class GeminiCompletion(BaseLLM):
         """Handle async streaming content generation."""
         full_response = ""
         function_calls: dict[int, dict[str, Any]] = {}
-        usage_data = {"total_tokens": 0}
+        usage_data: dict[str, int] | None = None
 
         # The API accepts list[Content] but mypy is overly strict about variance
         contents_for_api: Any = contents
-        stream = await self.client.aio.models.generate_content_stream(
+        stream = await self._get_async_client().aio.models.generate_content_stream(
             model=self.model,
             contents=contents_for_api,
             config=config,
@@ -1314,17 +1323,20 @@ class GeminiCompletion(BaseLLM):
 
     @staticmethod
     def _extract_token_usage(response: GenerateContentResponse) -> dict[str, Any]:
-        """Extract token usage from Gemini response."""
+        """Extract token usage and response metadata from Gemini response."""
         if response.usage_metadata:
             usage = response.usage_metadata
             cached_tokens = getattr(usage, "cached_content_token_count", 0) or 0
-            return {
+            thinking_tokens = getattr(usage, "thoughts_token_count", 0) or 0
+            result: dict[str, Any] = {
                 "prompt_token_count": getattr(usage, "prompt_token_count", 0),
                 "candidates_token_count": getattr(usage, "candidates_token_count", 0),
                 "total_token_count": getattr(usage, "total_token_count", 0),
                 "total_tokens": getattr(usage, "total_token_count", 0),
                 "cached_prompt_tokens": cached_tokens,
+                "reasoning_tokens": thinking_tokens,
             }
+            return result
         return {"total_tokens": 0}
 
     @staticmethod
@@ -1444,6 +1456,6 @@ class GeminiCompletion(BaseLLM):
         try:
             from crewai_files.uploaders.gemini import GeminiFileUploader
 
-            return GeminiFileUploader(client=self.client)
+            return GeminiFileUploader(client=self._get_sync_client())
         except ImportError:
             return None

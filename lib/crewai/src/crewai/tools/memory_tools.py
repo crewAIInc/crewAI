@@ -7,7 +7,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from crewai.tools.base_tool import BaseTool
-from crewai.utilities.i18n import get_i18n
+from crewai.utilities.i18n import I18N_DEFAULT
 
 
 class RecallMemorySchema(BaseModel):
@@ -49,7 +49,7 @@ class RecallMemoryTool(BaseTool):
         all_lines: list[str] = []
         seen_ids: set[str] = set()
         for query in queries:
-            matches = self.memory.recall(query)
+            matches = self.memory.recall(query, limit=20)
             for m in matches:
                 if m.record.id not in seen_ids:
                     seen_ids.add(m.record.id)
@@ -114,18 +114,17 @@ def create_memory_tools(memory: Any) -> list[BaseTool]:
     Returns:
         List containing a RecallMemoryTool and, if not read-only, a RememberTool.
     """
-    i18n = get_i18n()
     tools: list[BaseTool] = [
         RecallMemoryTool(
             memory=memory,
-            description=i18n.tools("recall_memory"),
+            description=I18N_DEFAULT.tools("recall_memory"),
         ),
     ]
-    if not getattr(memory, "_read_only", False):
+    if not memory.read_only:
         tools.append(
             RememberTool(
                 memory=memory,
-                description=i18n.tools("save_to_memory"),
+                description=I18N_DEFAULT.tools("save_to_memory"),
             )
         )
     return tools

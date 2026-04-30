@@ -5,10 +5,10 @@ from typing import TypeGuard
 from uuid import uuid4
 
 from qdrant_client import (
-    AsyncQdrantClient,  # type: ignore[import-not-found]
-    QdrantClient as SyncQdrantClient,  # type: ignore[import-not-found]
+    AsyncQdrantClient,
+    QdrantClient as SyncQdrantClient,
 )
-from qdrant_client.models import (  # type: ignore[import-not-found]
+from qdrant_client.models import (
     FieldCondition,
     Filter,
     MatchValue,

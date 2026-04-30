@@ -1,4 +1,5 @@
 import os
+from typing import Any
 from urllib.parse import urlencode
 
 from crewai.tools import EnvVar
@@ -29,7 +30,7 @@ class SerplyJobSearchTool(RagTool):
         proxy_location: (str): Where to get jobs, specifically for a specific country results.
             - Currently only supports US
     """
-    headers: dict | None = Field(default_factory=dict)
+    headers: dict[str, str] | None = Field(default_factory=dict)
     env_vars: list[EnvVar] = Field(
         default_factory=lambda: [
             EnvVar(
@@ -40,12 +41,12 @@ class SerplyJobSearchTool(RagTool):
         ]
     )
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.headers = {
             "X-API-KEY": os.environ["SERPLY_API_KEY"],
             "User-Agent": "crew-tools",
-            "X-Proxy-Location": self.proxy_location,
+            "X-Proxy-Location": self.proxy_location or "US",
         }
 
     def _run(  # type: ignore[override]

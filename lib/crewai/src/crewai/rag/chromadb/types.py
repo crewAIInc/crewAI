@@ -23,7 +23,7 @@ from crewai.rag.core.base_client import BaseCollectionParams, BaseCollectionSear
 ChromaDBClientType = ClientAPI | AsyncClientAPI
 
 
-class ChromaEmbeddingFunctionWrapper(ChromaEmbeddingFunction):
+class ChromaEmbeddingFunctionWrapper(ChromaEmbeddingFunction):  # type: ignore[type-arg]
     """Base class for ChromaDB EmbeddingFunction to work with Pydantic validation."""
 
     @classmethod
@@ -85,7 +85,7 @@ class ChromaDBCollectionCreateParams(BaseCollectionParams, total=False):
 
     configuration: CollectionConfigurationInterface
     metadata: CollectionMetadata
-    embedding_function: ChromaEmbeddingFunction
+    embedding_function: ChromaEmbeddingFunction  # type: ignore[type-arg]
     data_loader: DataLoader[Loadable]
     get_or_create: bool
 

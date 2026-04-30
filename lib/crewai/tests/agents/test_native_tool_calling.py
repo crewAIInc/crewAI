@@ -1158,16 +1158,12 @@ class TestNativeToolCallingJsonParseError:
         mock_task.description = "test"
         mock_task.id = "test-id"
 
-        executor = object.__new__(CrewAgentExecutor)
+        executor = CrewAgentExecutor(
+            tools=structured_tools,
+            original_tools=tools,
+        )
         executor.agent = mock_agent
         executor.task = mock_task
-        executor.crew = Mock()
-        executor.tools = structured_tools
-        executor.original_tools = tools
-        executor.tools_handler = None
-        executor._printer = Mock()
-        executor.messages = []
-
         return executor
 
     def test_malformed_json_returns_parse_error(self) -> None:

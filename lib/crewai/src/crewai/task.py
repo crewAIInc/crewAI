@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Sequence
 from concurrent.futures import Future
+import contextvars
 from copy import copy as shallow_copy
 import datetime
 from hashlib import md5
@@ -11,6 +13,7 @@ import logging
 from pathlib import Path
 import threading
 from typing import (
+    Annotated,
     Any,
     ClassVar,
     cast,
@@ -23,15 +26,17 @@ import warnings
 from pydantic import (
     UUID4,
     BaseModel,
+    BeforeValidator,
     Field,
     PrivateAttr,
     field_validator,
     model_validator,
 )
+from pydantic.functional_serializers import PlainSerializer
 from pydantic_core import PydanticCustomError
 from typing_extensions import Self
 
-from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.agents.agent_builder.base_agent import BaseAgent, _resolve_agent
 from crewai.context import reset_current_task_id, set_current_task_id
 from crewai.core.providers.content_processor import process_content
 from crewai.events.event_bus import crewai_event_bus
@@ -40,6 +45,8 @@ from crewai.events.types.task_events import (
     TaskFailedEvent,
     TaskStartedEvent,
 )
+from crewai.llms.base_llm import BaseLLM
+from crewai.llms.providers.openai.completion import OpenAICompletion
 from crewai.security import Fingerprint, SecurityConfig
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
@@ -66,20 +73,36 @@ except ImportError:
         return []
 
 
+from crewai.types.callback import SerializableCallable
 from crewai.utilities.guardrail import (
     process_guardrail,
+    serialize_guardrail_for_json,
+    serialize_guardrails_for_json,
 )
 from crewai.utilities.guardrail_types import (
     GuardrailCallable,
     GuardrailType,
     GuardrailsType,
 )
-from crewai.utilities.i18n import I18N, get_i18n
-from crewai.utilities.printer import Printer
+from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.printer import PRINTER
 from crewai.utilities.string_utils import interpolate_only
 
 
-_printer = Printer()
+def _serialize_model_class(v: type[BaseModel] | None) -> dict[str, Any] | None:
+    """Serialize a Pydantic model class reference to its JSON schema."""
+    return v.model_json_schema() if v else None
+
+
+def _deserialize_model_class(v: Any) -> type[BaseModel] | None:
+    """Hydrate a model class reference from checkpoint data."""
+    if v is None or isinstance(v, type):
+        return v
+    if isinstance(v, dict):
+        from crewai.utilities.pydantic_schema_utils import create_model_from_schema
+
+        return create_model_from_schema(v)
+    return None
 
 
 class Task(BaseModel):
@@ -112,7 +135,6 @@ class Task(BaseModel):
     used_tools: int = 0
     tools_errors: int = 0
     delegations: int = 0
-    i18n: I18N = Field(default_factory=get_i18n)
     name: str | None = Field(default=None)
     prompt_context: str | None = None
     description: str = Field(description="Description of the actual task.")
@@ -123,12 +145,13 @@ class Task(BaseModel):
         description="Configuration for the agent",
         default=None,
     )
-    callback: Any | None = Field(
+    callback: SerializableCallable | None = Field(
         description="Callback to be executed after the task is completed.", default=None
     )
-    agent: BaseAgent | None = Field(
-        description="Agent responsible for execution the task.", default=None
-    )
+    agent: Annotated[
+        BaseAgent | None,
+        BeforeValidator(_resolve_agent),
+    ] = Field(description="Agent responsible for execution the task.", default=None)
     context: list[Task] | None | _NotSpecified = Field(
         description="Other tasks that will have their output used as context for this task.",
         default=NOT_SPECIFIED,
@@ -137,15 +160,33 @@ class Task(BaseModel):
         description="Whether the task should be executed asynchronously or not.",
         default=False,
     )
-    output_json: type[BaseModel] | None = Field(
+    output_json: Annotated[
+        type[BaseModel] | None,
+        BeforeValidator(_deserialize_model_class),
+        PlainSerializer(
+            _serialize_model_class, return_type=dict | None, when_used="json"
+        ),
+    ] = Field(
         description="A Pydantic model to be used to create a JSON output.",
         default=None,
     )
-    output_pydantic: type[BaseModel] | None = Field(
+    output_pydantic: Annotated[
+        type[BaseModel] | None,
+        BeforeValidator(_deserialize_model_class),
+        PlainSerializer(
+            _serialize_model_class, return_type=dict | None, when_used="json"
+        ),
+    ] = Field(
         description="A Pydantic model to be used to create a Pydantic output.",
         default=None,
     )
-    response_model: type[BaseModel] | None = Field(
+    response_model: Annotated[
+        type[BaseModel] | None,
+        BeforeValidator(_deserialize_model_class),
+        PlainSerializer(
+            _serialize_model_class, return_type=dict | None, when_used="json"
+        ),
+    ] = Field(
         description="A Pydantic model for structured LLM outputs using native provider features.",
         default=None,
     )
@@ -185,16 +226,36 @@ class Task(BaseModel):
         description="Whether the task should instruct the agent to return the final answer formatted in Markdown",
         default=False,
     )
-    converter_cls: type[Converter] | None = Field(
+    converter_cls: Annotated[
+        type[Converter] | None,
+        BeforeValidator(lambda v: v if v is None or isinstance(v, type) else None),
+        PlainSerializer(
+            _serialize_model_class, return_type=dict | None, when_used="json"
+        ),
+    ] = Field(
         description="A converter class used to export structured output",
         default=None,
     )
     processed_by_agents: set[str] = Field(default_factory=set)
-    guardrail: GuardrailType | None = Field(
+    guardrail: Annotated[
+        GuardrailType | None,
+        PlainSerializer(
+            serialize_guardrail_for_json,
+            return_type=str | None,
+            when_used="json",
+        ),
+    ] = Field(
         default=None,
         description="Function or string description of a guardrail to validate task output before proceeding to next task",
     )
-    guardrails: GuardrailsType | None = Field(
+    guardrails: Annotated[
+        GuardrailsType | None,
+        PlainSerializer(
+            serialize_guardrails_for_json,
+            return_type=list[str] | str | None,
+            when_used="json",
+        ),
+    ] = Field(
         default=None,
         description="List of guardrails to validate task output before proceeding to next task. Also supports a single guardrail function or string description of a guardrail to validate task output before proceeding to next task",
     )
@@ -227,6 +288,8 @@ class Task(BaseModel):
     _original_description: str | None = PrivateAttr(default=None)
     _original_expected_output: str | None = PrivateAttr(default=None)
     _original_output_file: str | None = PrivateAttr(default=None)
+    checkpoint_original_description: str | None = Field(default=None, exclude=False)
+    checkpoint_original_expected_output: str | None = Field(default=None, exclude=False)
     _thread: threading.Thread | None = PrivateAttr(default=None)
     model_config = {"arbitrary_types_allowed": True}
 
@@ -296,12 +359,14 @@ class Task(BaseModel):
 
     @model_validator(mode="after")
     def validate_required_fields(self) -> Self:
-        required_fields = ["description", "expected_output"]
-        for field in required_fields:
-            if getattr(self, field) is None:
-                raise ValueError(
-                    f"{field} must be provided either directly or through config"
-                )
+        if self.description is None:
+            raise ValueError(
+                "description must be provided either directly or through config"
+            )
+        if self.expected_output is None:
+            raise ValueError(
+                "expected_output must be provided either directly or through config"
+            )
         return self
 
     @model_validator(mode="after")
@@ -314,6 +379,10 @@ class Task(BaseModel):
             if self.agent is None:
                 raise ValueError("Agent is required to use LLMGuardrail")
 
+            if not isinstance(self.agent.llm, BaseLLM):
+                raise ValueError(
+                    "Agent must have a BaseLLM instance to use LLMGuardrail"
+                )
             self._guardrail = cast(
                 GuardrailCallable,
                 LLMGuardrail(description=self.guardrail, llm=self.agent.llm),
@@ -337,6 +406,10 @@ class Task(BaseModel):
                                 )
                             from crewai.tasks.llm_guardrail import LLMGuardrail
 
+                            if not isinstance(self.agent.llm, BaseLLM):
+                                raise ValueError(
+                                    "Agent must have a BaseLLM instance to use LLMGuardrail"
+                                )
                             guardrails.append(
                                 cast(
                                     GuardrailCallable,
@@ -357,6 +430,10 @@ class Task(BaseModel):
                         )
                     from crewai.tasks.llm_guardrail import LLMGuardrail
 
+                    if not isinstance(self.agent.llm, BaseLLM):
+                        raise ValueError(
+                            "Agent must have a BaseLLM instance to use LLMGuardrail"
+                        )
                     guardrails.append(
                         cast(
                             GuardrailCallable,
@@ -377,11 +454,12 @@ class Task(BaseModel):
 
     @field_validator("id", mode="before")
     @classmethod
-    def _deny_user_set_id(cls, v: UUID4 | None) -> None:
-        if v:
+    def _deny_user_set_id(cls, v: UUID4 | None, info: Any) -> UUID4 | None:
+        if v and not (info.context or {}).get("from_checkpoint"):
             raise PydanticCustomError(
                 "may_not_set_field", "This field is not to be set by the user.", {}
             )
+        return v
 
     @field_validator("input_files", mode="before")
     @classmethod
@@ -524,10 +602,11 @@ class Task(BaseModel):
     ) -> Future[TaskOutput]:
         """Execute the task asynchronously."""
         future: Future[TaskOutput] = Future()
+        ctx = contextvars.copy_context()
         threading.Thread(
             daemon=True,
-            target=self._execute_task_async,
-            args=(agent, context, tools, future),
+            target=ctx.run,
+            args=(self._execute_task_async, agent, context, tools, future),
         ).start()
         return future
 
@@ -577,7 +656,10 @@ class Task(BaseModel):
             tools = tools or self.tools or []
 
             self.processed_by_agents.add(agent.role)
-            crewai_event_bus.emit(self, TaskStartedEvent(context=context, task=self))  # type: ignore[no-untyped-call]
+            if not (agent.agent_executor and agent.agent_executor._resuming):
+                crewai_event_bus.emit(
+                    self, TaskStartedEvent(context=context, task=self)
+                )
             result = await agent.aexecute_task(
                 task=self,
                 context=context,
@@ -643,7 +725,12 @@ class Task(BaseModel):
                     await cb_result
 
             crew = self.agent.crew  # type: ignore[union-attr]
-            if crew and crew.task_callback and crew.task_callback != self.callback:
+            if (
+                crew
+                and not isinstance(crew, str)
+                and crew.task_callback
+                and crew.task_callback != self.callback
+            ):
                 cb_result = crew.task_callback(self.output)
                 if inspect.isawaitable(cb_result):
                     await cb_result
@@ -659,12 +746,12 @@ class Task(BaseModel):
                 self._save_file(content)
             crewai_event_bus.emit(
                 self,
-                TaskCompletedEvent(output=task_output, task=self),  # type: ignore[no-untyped-call]
+                TaskCompletedEvent(output=task_output, task=self),
             )
             return task_output
         except Exception as e:
             self.end_time = datetime.datetime.now()
-            crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))  # type: ignore[no-untyped-call]
+            crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))
             raise e  # Re-raise the exception after emitting the event
         finally:
             clear_task_files(self.id)
@@ -691,7 +778,10 @@ class Task(BaseModel):
             tools = tools or self.tools or []
 
             self.processed_by_agents.add(agent.role)
-            crewai_event_bus.emit(self, TaskStartedEvent(context=context, task=self))  # type: ignore[no-untyped-call]
+            if not (agent.agent_executor and agent.agent_executor._resuming):
+                crewai_event_bus.emit(
+                    self, TaskStartedEvent(context=context, task=self)
+                )
             result = agent.execute_task(
                 task=self,
                 context=context,
@@ -758,7 +848,12 @@ class Task(BaseModel):
                     asyncio.run(cb_result)
 
             crew = self.agent.crew  # type: ignore[union-attr]
-            if crew and crew.task_callback and crew.task_callback != self.callback:
+            if (
+                crew
+                and not isinstance(crew, str)
+                and crew.task_callback
+                and crew.task_callback != self.callback
+            ):
                 cb_result = crew.task_callback(self.output)
                 if inspect.iscoroutine(cb_result):
                     asyncio.run(cb_result)
@@ -774,12 +869,12 @@ class Task(BaseModel):
                 self._save_file(content)
             crewai_event_bus.emit(
                 self,
-                TaskCompletedEvent(output=task_output, task=self),  # type: ignore[no-untyped-call]
+                TaskCompletedEvent(output=task_output, task=self),
             )
             return task_output
         except Exception as e:
             self.end_time = datetime.datetime.now()
-            crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))  # type: ignore[no-untyped-call]
+            crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))
             raise e  # Re-raise the exception after emitting the event
         finally:
             clear_task_files(self.id)
@@ -803,22 +898,26 @@ class Task(BaseModel):
         should_inject = self.allow_crewai_trigger_context
 
         if should_inject and self.agent:
-            crew = getattr(self.agent, "crew", None)
-            if crew and hasattr(crew, "_inputs") and crew._inputs:
+            crew = self.agent.crew
+            if crew and not isinstance(crew, str) and crew._inputs:
                 trigger_payload = crew._inputs.get("crewai_trigger_payload")
                 if trigger_payload is not None:
                     description += f"\n\nTrigger Payload: {trigger_payload}"
 
-        if self.agent and self.agent.crew:
+        if self.agent and self.agent.crew and not isinstance(self.agent.crew, str):
             files = get_all_files(self.agent.crew.id, self.id)
             if files:
                 supported_types: list[str] = []
-                if self.agent.llm and self.agent.llm.supports_multimodal():
-                    provider: str = str(
-                        getattr(self.agent.llm, "provider", None)
-                        or getattr(self.agent.llm, "model", "openai")
+                if (
+                    isinstance(self.agent.llm, BaseLLM)
+                    and self.agent.llm.supports_multimodal()
+                ):
+                    provider: str = self.agent.llm.provider or self.agent.llm.model
+                    api: str | None = (
+                        self.agent.llm.api
+                        if isinstance(self.agent.llm, OpenAICompletion)
+                        else None
                     )
-                    api: str | None = getattr(self.agent.llm, "api", None)
                     supported_types = get_supported_content_types(provider, api)
 
                 def is_auto_injected(content_type: str) -> bool:
@@ -859,7 +958,7 @@ class Task(BaseModel):
 
         tasks_slices = [description]
 
-        output = self.i18n.slice("expected_output").format(
+        output = I18N_DEFAULT.slice("expected_output").format(
             expected_output=self.expected_output
         )
         tasks_slices = [description, output]
@@ -931,7 +1030,7 @@ Follow these guidelines:
                 raise ValueError(f"Error interpolating output_file path: {e!s}") from e
 
         if inputs.get("crew_chat_messages"):
-            conversation_instruction = self.i18n.slice(
+            conversation_instruction = I18N_DEFAULT.slice(
                 "conversation_history_instruction"
             )
 
@@ -941,7 +1040,7 @@ Follow these guidelines:
                 crew_chat_messages = json.loads(crew_chat_messages_json)
             except json.JSONDecodeError as e:
                 if self.agent and self.agent.verbose:
-                    _printer.print(
+                    PRINTER.print(
                         f"An error occurred while parsing crew chat messages: {e}",
                         color="red",
                     )
@@ -968,7 +1067,7 @@ Follow these guidelines:
         self.delegations += 1
 
     def copy(  # type: ignore
-        self, agents: list[BaseAgent], task_mapping: dict[str, Task]
+        self, agents: Sequence[BaseAgent], task_mapping: dict[str, Task]
     ) -> Task:
         """Creates a deep copy of the Task while preserving its original class type.
 
@@ -1182,13 +1281,12 @@ Follow these guidelines:
                 self.retry_count += 1
                 current_retry_count = self.retry_count
 
-            context = self.i18n.errors("validation_error").format(
+            context = I18N_DEFAULT.errors("validation_error").format(
                 guardrail_result_error=guardrail_result.error,
                 task_output=task_output.raw,
             )
             if agent and agent.verbose:
-                printer = Printer()
-                printer.print(
+                PRINTER.print(
                     content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
                     color="yellow",
                 )
@@ -1200,12 +1298,26 @@ Follow these guidelines:
                 tools=tools,
             )
 
-            pydantic_output, json_output = self._export_output(result)
+            if isinstance(result, BaseModel):
+                raw = result.model_dump_json()
+                if self.output_pydantic:
+                    pydantic_output = result
+                    json_output = None
+                elif self.output_json:
+                    pydantic_output = None
+                    json_output = result.model_dump()
+                else:
+                    pydantic_output = None
+                    json_output = None
+            else:
+                raw = result
+                pydantic_output, json_output = self._export_output(result)
+
             task_output = TaskOutput(
                 name=self.name or self.description,
                 description=self.description,
                 expected_output=self.expected_output,
-                raw=result,
+                raw=raw,
                 pydantic=pydantic_output,
                 json_dict=json_output,
                 agent=agent.role,
@@ -1280,13 +1392,12 @@ Follow these guidelines:
                 self.retry_count += 1
                 current_retry_count = self.retry_count
 
-            context = self.i18n.errors("validation_error").format(
+            context = I18N_DEFAULT.errors("validation_error").format(
                 guardrail_result_error=guardrail_result.error,
                 task_output=task_output.raw,
             )
             if agent and agent.verbose:
-                printer = Printer()
-                printer.print(
+                PRINTER.print(
                     content=f"Guardrail {guardrail_index if guardrail_index is not None else ''} blocked (attempt {attempt + 1}/{max_attempts}), retrying due to: {guardrail_result.error}\n",
                     color="yellow",
                 )
@@ -1297,12 +1408,26 @@ Follow these guidelines:
                 tools=tools,
             )
 
-            pydantic_output, json_output = self._export_output(result)
+            if isinstance(result, BaseModel):
+                raw = result.model_dump_json()
+                if self.output_pydantic:
+                    pydantic_output = result
+                    json_output = None
+                elif self.output_json:
+                    pydantic_output = None
+                    json_output = result.model_dump()
+                else:
+                    pydantic_output = None
+                    json_output = None
+            else:
+                raw = result
+                pydantic_output, json_output = self._export_output(result)
+
             task_output = TaskOutput(
                 name=self.name or self.description,
                 description=self.description,
                 expected_output=self.expected_output,
-                raw=result,
+                raw=raw,
                 pydantic=pydantic_output,
                 json_dict=json_output,
                 agent=agent.role,
