@@ -38,7 +38,6 @@ class ExaBaseToolSchema(BaseModel):
     )
 
 
-# Backwards-compat alias for the schema (renamed alongside the tool class).
 EXABaseToolSchema = ExaBaseToolSchema
 
 
