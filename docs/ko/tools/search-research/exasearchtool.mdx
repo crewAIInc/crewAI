@@ -47,7 +47,35 @@ ExaSearchTool을 효과적으로 사용하려면 다음 단계를 따르세요:
     </Step>
 </Steps>
 
+## MCP를 통한 Exa 사용
+
+Exa가 호스팅하는 MCP 서버에 에이전트를 연결할 수도 있습니다. API 키는 `x-api-key` 헤더로 전달하세요:
+
+```python
+from crewai import Agent
+from crewai.mcp import MCPServerHTTP
+
+agent = Agent(
+    role="Research Analyst",
+    goal="Find and analyze information on the web",
+    backstory="Expert researcher with access to Exa's tools",
+    mcps=[
+        MCPServerHTTP(
+            url="https://mcp.exa.ai/mcp",
+            headers={"x-api-key": "YOUR_EXA_API_KEY"},
+        ),
+    ],
+)
+```
+
+API 키는 [Exa 대시보드](https://dashboard.exa.ai/api-keys)에서 발급받을 수 있습니다. CrewAI에서의 MCP 사용에 대한 자세한 내용은 [MCP 개요](/ko/mcp/overview)를 참고하세요.
+
 ## 결론
 
 `ExaSearchTool`을 Python 프로젝트에 통합함으로써, 사용자는 애플리케이션 내에서 실시간으로 인터넷을 직접 검색할 수 있는 능력을 얻게 됩니다.
 제공된 설정 및 사용 지침을 따르면, 이 도구를 프로젝트에 포함하는 과정이 간편하고 직관적입니다.
+
+## 참고 자료
+
+- [Exa 공식 문서](https://exa.ai/docs)
+- [Exa 대시보드 — API 키 및 사용량 관리](https://dashboard.exa.ai)

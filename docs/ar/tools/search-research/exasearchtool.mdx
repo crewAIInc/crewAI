@@ -100,6 +100,29 @@ agent = Agent(
 )
 ```
 
+## استخدام Exa عبر MCP
+
+يمكنك أيضًا ربط وكيلك بخادم MCP المستضاف من Exa. مرّر مفتاح API الخاص بك عبر ترويسة `x-api-key`:
+
+```python
+from crewai import Agent
+from crewai.mcp import MCPServerHTTP
+
+agent = Agent(
+    role="Research Analyst",
+    goal="Find and analyze information on the web",
+    backstory="Expert researcher with access to Exa's tools",
+    mcps=[
+        MCPServerHTTP(
+            url="https://mcp.exa.ai/mcp",
+            headers={"x-api-key": "YOUR_EXA_API_KEY"},
+        ),
+    ],
+)
+```
+
+احصل على مفتاح API من [لوحة تحكم Exa](https://dashboard.exa.ai/api-keys). لمزيد من المعلومات حول MCP في CrewAI، راجع [نظرة عامة على MCP](/ar/mcp/overview).
+
 ## الميزات
 
 - **مقتطفات موفرة للرموز**: الحصول على المقتطفات الأكثر صلة من كل نتيجة، باستخدام رموز أقل بكثير من النص الكامل
@@ -107,3 +130,8 @@ agent = Agent(
 - **استرجاع المحتوى الكامل**: الحصول على النص الكامل لصفحات الويب مع نتائج البحث
 - **تصفية التاريخ**: تقييد النتائج لفترات زمنية محددة باستخدام فلاتر تاريخ النشر
 - **تصفية النطاقات**: تقييد عمليات البحث على نطاقات محددة
+
+## موارد
+
+- [توثيق Exa](https://exa.ai/docs)
+- [لوحة تحكم Exa — إدارة مفاتيح API والاستخدام](https://dashboard.exa.ai)

@@ -111,6 +111,29 @@ exa_tool = ExaSearchTool(
 
 For more on choosing between highlights and full content, see the [Exa search best practices](https://exa.ai/docs/reference/search-best-practices).
 
+## Using Exa via MCP
+
+You can also connect your agent to Exa's hosted MCP server. Pass your API key with the `x-api-key` header:
+
+```python
+from crewai import Agent
+from crewai.mcp import MCPServerHTTP
+
+agent = Agent(
+    role="Research Analyst",
+    goal="Find and analyze information on the web",
+    backstory="Expert researcher with access to Exa's tools",
+    mcps=[
+        MCPServerHTTP(
+            url="https://mcp.exa.ai/mcp",
+            headers={"x-api-key": "YOUR_EXA_API_KEY"},
+        ),
+    ],
+)
+```
+
+Get your API key from the [Exa dashboard](https://dashboard.exa.ai/api-keys). For more on MCP in CrewAI, see the [MCP overview](/en/mcp/overview).
+
 ## Features
 
 - **Token-Efficient Highlights**: Get the most relevant excerpts from each result, ~10x fewer tokens than full text
@@ -122,3 +145,8 @@ For more on choosing between highlights and full content, see the [Exa search be
 <Note>
 `EXASearchTool` is a deprecated alias for `ExaSearchTool`. Existing imports continue to work but will emit a deprecation warning; please migrate to `ExaSearchTool`.
 </Note>
+
+## Resources
+
+- [Exa documentation](https://exa.ai/docs)
+- [Exa dashboard — manage API keys and usage](https://dashboard.exa.ai)
