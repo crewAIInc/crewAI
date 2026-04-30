@@ -177,6 +177,23 @@ def test_handle_partial_json_with_invalid_partial(mock_agent: Mock) -> None:
         assert output == "Converted result"
 
 
+def test_handle_partial_json_falls_through_for_non_json_curly_blocks(
+    mock_agent: Mock,
+) -> None:
+    """A regex match that is not actually JSON (e.g. GraphQL) must fall through
+    to convert_with_instructions instead of raising a ValidationError.
+    """
+    result = (
+        "type Query {\n  countries: [Country]\n}\n\n"
+        "type Country {\n  code: String\n  name: String\n}"
+    )
+    with patch("crewai.utilities.converter.convert_with_instructions") as mock_convert:
+        mock_convert.return_value = "Converted result"
+        output = handle_partial_json(result, SimpleModel, False, mock_agent)
+        assert output == "Converted result"
+        mock_convert.assert_called_once()
+
+
 # Tests for convert_with_instructions
 @patch("crewai.utilities.converter.create_converter")
 @patch("crewai.utilities.converter.get_conversion_instructions")

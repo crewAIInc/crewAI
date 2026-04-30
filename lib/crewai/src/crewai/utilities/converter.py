@@ -256,13 +256,23 @@ def handle_partial_json(
     """
     match = _JSON_PATTERN.search(result)
     if match:
+        candidate = match.group()
         try:
-            exported_result = model.model_validate_json(match.group())
+            json.loads(candidate)
+        except json.JSONDecodeError:
+            return convert_with_instructions(
+                result=result,
+                model=model,
+                is_json_output=is_json_output,
+                agent=agent,
+                converter_cls=converter_cls,
+            )
+
+        try:
+            exported_result = model.model_validate_json(candidate)
             if is_json_output:
                 return exported_result.model_dump()
             return exported_result
-        except json.JSONDecodeError:
-            pass
         except ValidationError:
             raise
         except Exception as e:
