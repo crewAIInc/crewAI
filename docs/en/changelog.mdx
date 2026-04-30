@@ -4,6 +4,47 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="May 01, 2026">
+  ## v1.14.4
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.4)
+
+  ## What's Changed
+
+  ### Features
+  - Add support for custom persistence key in @persist
+  - Add Responses API support for Azure OpenAI provider
+  - Forward credential_scopes to Azure AI Inference client
+  - Add Vertex AI workload identity setup guide
+  - Add Tavily Research and get Research
+  - Add You.com MCP tools for search, research, and content extraction
+
+  ### Bug Fixes
+  - Fix fall through when JSON regex match isn't valid JSON
+  - Fix to preserve tool_calls when response also contains text
+  - Fix to forward base_url and api_key to instructor.from_provider
+  - Fix to warn and return empty when native MCP server returns no tools
+  - Fix to use validated messages variable in non-streaming handlers
+  - Fix to guard crew chat description helpers against LLM failures
+  - Fix to reset messages and iterations between invocations
+  - Fix to forward trained-agents file through replay and test
+  - Fix to honor custom trained-agents file at inference
+  - Fix to bind task-only agents to crew for multimodal input_files
+  - Fix to serialize guardrail callables as null for JSON checkpointing
+  - Fix renaming of force_final_answer to avoid self-referential router
+  - Fix bump of litellm for SSTI fix; ignore unfixable pip CVE
+
+  ### Documentation
+  - Update changelog and version for v1.14.4a1
+  - Add E2B Sandbox Tools page
+  - Add Daytona sandbox tools documentation
+
+  ## Contributors
+
+  @EdwardIrby, @dependabot[bot], @factory-droid-oss, @factory-droid[bot], @greysonlalonde, @kunalk16, @lorenzejay, @lucasgomide, @manisrinivasan2k1, @mattatcha, @vinibrsl
+
+</Update>
+
 <Update label="Apr 29, 2026">
   ## v1.14.4a1
 

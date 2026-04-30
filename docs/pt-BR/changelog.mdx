@@ -4,6 +4,47 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="01 mai 2026">
+  ## v1.14.4
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.4)
+
+  ## O que mudou
+
+  ### Recursos
+  - Adicionar suporte para chave de persistência personalizada em @persist
+  - Adicionar suporte à API de Respostas para o provedor Azure OpenAI
+  - Encaminhar credential_scopes para o cliente de Inferência da Azure AI
+  - Adicionar guia de configuração de identidade de carga de trabalho do Vertex AI
+  - Adicionar Tavily Research e obter Pesquisa
+  - Adicionar ferramentas MCP do You.com para pesquisa, pesquisa e extração de conteúdo
+
+  ### Correções de Bugs
+  - Corrigir falha quando a correspondência de regex JSON não é um JSON válido
+  - Corrigir para preservar tool_calls quando a resposta também contém texto
+  - Corrigir para encaminhar base_url e api_key para instructor.from_provider
+  - Corrigir para avisar e retornar vazio quando o servidor MCP nativo não retorna ferramentas
+  - Corrigir para usar a variável de mensagens validadas em manipuladores não-streaming
+  - Corrigir para proteger os ajudantes de descrição do chat da equipe contra falhas do LLM
+  - Corrigir para redefinir mensagens e iterações entre invocações
+  - Corrigir para encaminhar o arquivo de agentes treinados através de replay e teste
+  - Corrigir para honrar o arquivo de agentes treinados personalizados na inferência
+  - Corrigir para vincular agentes apenas de tarefa à equipe para arquivos de entrada multimodal
+  - Corrigir para serializar chamadas de guardrail como nulas para checkpointing JSON
+  - Corrigir renomeação de force_final_answer para evitar roteador autorreferencial
+  - Corrigir aumento de litellm para correção de SSTI; ignorar CVE pip não corrigível
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.14.4a1
+  - Adicionar página de Ferramentas do Sandbox E2B
+  - Adicionar documentação de ferramentas do sandbox Daytona
+
+  ## Contributors
+
+  @EdwardIrby, @dependabot[bot], @factory-droid-oss, @factory-droid[bot], @greysonlalonde, @kunalk16, @lorenzejay, @lucasgomide, @manisrinivasan2k1, @mattatcha, @vinibrsl
+
+</Update>
+
 <Update label="29 abr 2026">
   ## v1.14.4a1
 

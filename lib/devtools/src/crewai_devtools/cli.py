@@ -1315,7 +1315,8 @@ def _update_deployment_test_repo(version: str, is_prerelease: bool) -> None:
     """Update the deployment test repo to pin the new crewai version.
 
     Clones the repo, updates the crewai[tools] pin in pyproject.toml,
-    regenerates the lockfile, commits, and pushes directly to main.
+    regenerates the lockfile, commits to a branch, pushes, opens a PR
+    against main, then polls until the PR is merged (or closed).
 
     Args:
         version: New crewai version string.
@@ -1370,13 +1371,37 @@ def _update_deployment_test_repo(version: str, is_prerelease: bool) -> None:
                 time.sleep(_PYPI_POLL_INTERVAL)
         console.print("[green]✓[/green] Lockfile updated")
 
+        branch = f"chore/bump-crewai-v{version}"
+        create_or_reset_branch(branch, cwd=repo_dir)
+
         run_command(["git", "add", "pyproject.toml", "uv.lock"], cwd=repo_dir)
         run_command(
             ["git", "commit", "-m", f"chore: bump crewai to {version}"],
             cwd=repo_dir,
         )
-        run_command(["git", "push"], cwd=repo_dir)
-        console.print(f"[green]✓[/green] Pushed to {_DEPLOYMENT_TEST_REPO}")
+        run_command(["git", "push", "-u", "origin", branch], cwd=repo_dir)
+        console.print(f"[green]✓[/green] Pushed branch {branch}")
+
+        pr_url = run_command(
+            [
+                "gh",
+                "pr",
+                "create",
+                "--base",
+                "main",
+                "--head",
+                branch,
+                "--title",
+                f"chore: bump crewai to {version}",
+                "--body",
+                "",
+            ],
+            cwd=repo_dir,
+        )
+        console.print(f"[green]✓[/green] Opened PR on {_DEPLOYMENT_TEST_REPO}")
+        console.print(f"[cyan]PR URL:[/cyan] {pr_url.strip()}")
+
+        _wait_for_pr_merged(branch, repo_dir)
 
 
 def _wait_for_pypi(package: str, version: str) -> None:
@@ -1406,6 +1431,37 @@ def _wait_for_pypi(package: str, version: str) -> None:
         f"[red]Error:[/red] Timed out waiting for {package}=={version} on PyPI"
     )
     sys.exit(1)
+
+
+_PR_MERGE_POLL_INTERVAL: Final[int] = 30
+
+
+def _wait_for_pr_merged(branch: str, cwd: Path) -> None:
+    """Poll a PR until it is merged, exiting on close-without-merge.
+
+    Args:
+        branch: Head branch name of the PR to watch.
+        cwd: Working directory of the cloned repo (so ``gh`` resolves
+            the right remote).
+
+    Raises:
+        SystemExit: If the PR is closed without being merged.
+    """
+    console.print(f"[cyan]Waiting for PR on branch {branch} to be merged...[/cyan]")
+    while True:
+        state = run_command(
+            ["gh", "pr", "view", branch, "--json", "state", "--jq", ".state"],
+            cwd=cwd,
+        ).strip()
+        if state == "MERGED":
+            console.print(f"[green]✓[/green] PR for {branch} merged")
+            return
+        if state == "CLOSED":
+            console.print(
+                f"[red]Error:[/red] PR for {branch} was closed without merging"
+            )
+            sys.exit(1)
+        time.sleep(_PR_MERGE_POLL_INTERVAL)
 
 
 def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> None:
