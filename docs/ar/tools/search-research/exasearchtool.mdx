@@ -86,17 +86,16 @@ print(result)
 يمكنك تكوين الأداة بمعاملات مخصصة للحصول على نتائج أغنى:
 
 ```python
-# Get full page content together with token-efficient highlights
+# Use 'deep' for thorough, multi-step searches
 exa_tool = ExaSearchTool(
-    content=True,
-    highlights={"max_characters": 4000},
+    highlights=True,
     type="deep"
 )
 
 # Use it in an agent
 agent = Agent(
     role="Deep Researcher",
-    goal="Conduct thorough research with full content and highlights",
+    goal="Conduct thorough research",
     tools=[exa_tool]
 )
 ```

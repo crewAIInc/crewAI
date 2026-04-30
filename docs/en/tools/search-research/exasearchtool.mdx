@@ -88,7 +88,7 @@ For most agent workflows we recommend `highlights` — it returns the most relev
 ```python
 # Get token-efficient excerpts most relevant to the query
 exa_tool = ExaSearchTool(
-    highlights={"max_characters": 4000},
+    highlights=True,
     type="auto",
 )
 
@@ -100,12 +100,11 @@ agent = Agent(
 )
 ```
 
-For deep analysis where you need full pages, enable `content=True`. You can keep `highlights` on to also get the most relevant excerpts:
+For thorough, multi-step searches, use `type="deep"`:
 
 ```python
 exa_tool = ExaSearchTool(
-    content=True,
-    highlights={"max_characters": 4000},
+    highlights=True,
     type="deep",
 )
 ```

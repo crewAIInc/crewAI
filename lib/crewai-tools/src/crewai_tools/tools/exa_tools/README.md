@@ -16,13 +16,7 @@ The following example demonstrates how to initialize the tool and run a search:
 from crewai_tools import ExaSearchTool
 
 # Default: results with token-efficient highlights
-tool = ExaSearchTool(api_key="your_api_key")
-
-# Configure highlight excerpts
-tool = ExaSearchTool(
-    api_key="your_api_key",
-    highlights={"max_characters": 4000},
-)
+tool = ExaSearchTool(api_key="your_api_key", highlights=True)
 ```
 
 ## Steps to Get Started
