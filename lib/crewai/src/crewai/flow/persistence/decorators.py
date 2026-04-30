@@ -50,7 +50,6 @@ LOG_MESSAGES: Final[dict[str, str]] = {
     "save_error": "Failed to persist state for method {}: {}",
     "state_missing": "Flow instance has no state",
     "id_missing": "Flow state must have an 'id' field for persistence",
-    "key_missing": "Flow state is missing required persistence key '{}'",
 }
 
 
@@ -64,7 +63,6 @@ class PersistenceDecorator:
         method_name: str,
         persistence_instance: FlowPersistence,
         verbose: bool = False,
-        key: str | None = None,
     ) -> None:
         """Persist flow state with proper error handling and logging.
 
@@ -76,12 +74,9 @@ class PersistenceDecorator:
             method_name: Name of the method that triggered persistence
             persistence_instance: The persistence backend to use
             verbose: Whether to log persistence operations
-            key: Optional state attribute/key to use as the persistence key.
-                When None, falls back to ``state.id``.
 
         Raises:
-            ValueError: If flow has no state, state lacks an ID, or the
-                requested ``key`` is missing or falsy on state.
+            ValueError: If flow has no state or state lacks an ID
             RuntimeError: If state persistence fails
             AttributeError: If flow instance lacks required state attributes
         """
@@ -90,22 +85,19 @@ class PersistenceDecorator:
             if state is None:
                 raise ValueError("Flow instance has no state")
 
-            lookup_key = key if key is not None else "id"
             flow_uuid: str | None = None
             if isinstance(state, dict):
-                flow_uuid = state.get(lookup_key)
+                flow_uuid = state.get("id")
             elif hasattr(state, "_unwrap"):
                 unwrapped = state._unwrap()
                 if isinstance(unwrapped, dict):
-                    flow_uuid = unwrapped.get(lookup_key)
+                    flow_uuid = unwrapped.get("id")
                 else:
-                    flow_uuid = getattr(unwrapped, lookup_key, None)
-            elif isinstance(state, BaseModel) or hasattr(state, lookup_key):
-                flow_uuid = getattr(state, lookup_key, None)
+                    flow_uuid = getattr(unwrapped, "id", None)
+            elif isinstance(state, BaseModel) or hasattr(state, "id"):
+                flow_uuid = getattr(state, "id", None)
 
             if not flow_uuid:
-                if key is not None:
-                    raise ValueError(LOG_MESSAGES["key_missing"].format(key))
                 raise ValueError("Flow state must have an 'id' field for persistence")
 
             # Log state saving only if verbose is True
@@ -135,7 +127,7 @@ class PersistenceDecorator:
             logger.error(error_msg)
             raise ValueError(error_msg) from e
         except (TypeError, ValueError) as e:
-            error_msg = str(e) or LOG_MESSAGES["id_missing"]
+            error_msg = LOG_MESSAGES["id_missing"]
             if verbose:
                 PRINTER.print(error_msg, color="red")
             logger.error(error_msg)
@@ -143,9 +135,7 @@ class PersistenceDecorator:
 
 
 def persist(
-    persistence: FlowPersistence | None = None,
-    verbose: bool = False,
-    key: str | None = None,
+    persistence: FlowPersistence | None = None, verbose: bool = False
 ) -> Callable[[type | Callable[..., T]], type | Callable[..., T]]:
     """Decorator to persist flow state.
 
@@ -158,16 +148,12 @@ def persist(
         persistence: Optional FlowPersistence implementation to use.
                     If not provided, uses SQLiteFlowPersistence.
         verbose: Whether to log persistence operations. Defaults to False.
-        key: Optional name of the state attribute (for Pydantic/object states)
-            or dict key (for dict states) to use as the persistence key. When
-            ``None`` (default) the decorator falls back to ``state.id``.
 
     Returns:
         A decorator that can be applied to either a class or method
 
     Raises:
-        ValueError: If the flow state doesn't have an 'id' field, or the
-            specified ``key`` is missing or falsy on state.
+        ValueError: If the flow state doesn't have an 'id' field
         RuntimeError: If state persistence fails
 
     Example:
@@ -176,10 +162,6 @@ def persist(
             @start()
             def begin(self):
                 pass
-
-        @persist(key="conversation_id")  # Custom persistence key
-        class MyFlow(Flow[MyState]):
-            ...
     """
 
     def decorator(target: type | Callable[..., T]) -> type | Callable[..., T]:
@@ -225,7 +207,7 @@ def persist(
                         ) -> Any:
                             result = await original_method(self, *args, **kwargs)
                             PersistenceDecorator.persist_state(
-                                self, method_name, actual_persistence, verbose, key
+                                self, method_name, actual_persistence, verbose
                             )
                             return result
 
@@ -255,7 +237,7 @@ def persist(
                         def method_wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
                             result = original_method(self, *args, **kwargs)
                             PersistenceDecorator.persist_state(
-                                self, method_name, actual_persistence, verbose, key
+                                self, method_name, actual_persistence, verbose
                             )
                             return result
 
@@ -294,7 +276,7 @@ def persist(
                 else:
                     result = method_coro
                 PersistenceDecorator.persist_state(
-                    flow_instance, method.__name__, actual_persistence, verbose, key
+                    flow_instance, method.__name__, actual_persistence, verbose
                 )
                 return cast(T, result)
 
@@ -313,7 +295,7 @@ def persist(
         def method_sync_wrapper(flow_instance: Any, *args: Any, **kwargs: Any) -> T:
             result = method(flow_instance, *args, **kwargs)
             PersistenceDecorator.persist_state(
-                flow_instance, method.__name__, actual_persistence, verbose, key
+                flow_instance, method.__name__, actual_persistence, verbose
             )
             return result
 

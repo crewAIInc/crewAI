@@ -380,33 +380,6 @@ class AnotherFlow(Flow[dict]):
         print("Method-level persisted runs:", self.state["runs"])
 ```
 
-### مفتاح استمرارية مخصص
-
-افتراضيًا، يستخدم `@persist` الحقل `state.id` المُولّد تلقائيًا كمفتاح للاستمرارية. إذا كان لتدفقك معرّف خاص به — مثل `conversation_id` مشترك بين عدة جلسات — يمكنك تمرير الوسيط `key` ليستخدم `@persist` تلك السمة كـ UUID للتدفق:
-
-```python
-from crewai.flow.flow import Flow, listen, start
-from crewai.flow.persistence import persist
-from pydantic import BaseModel
-
-class ConversationState(BaseModel):
-    conversation_id: str
-    turn: int = 0
-
-@persist(key="conversation_id")  # استخدام حقل مخصص كمفتاح للاستمرارية
-class ConversationFlow(Flow[ConversationState]):
-    @start()
-    def begin(self):
-        self.state.turn += 1
-        print(f"Conversation {self.state.conversation_id} turn {self.state.turn}")
-
-# إعادة تشغيل المحادثة بنفس conversation_id يُعيد تحميل الحالة السابقة
-flow = ConversationFlow(conversation_id="user-42")
-flow.kickoff()
-```
-
-يقرأ المزخرف القيمة من `state[key]` للحالات من نوع dict، ومن `getattr(state, key)` للحالات من نوع Pydantic / كائن. إذا كانت السمة المحددة غير موجودة أو قيمتها falsy عند الحفظ، يُطلق `@persist` خطأ `ValueError` مثل `Flow state is missing required persistence key 'conversation_id'`. عند حذف `key`، يظل السلوك الأصلي قائمًا ويُستخدم `state.id`.
-
 ### كيف تعمل
 
 1. **تعريف الحالة الفريد**

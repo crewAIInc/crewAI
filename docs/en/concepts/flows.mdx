@@ -380,33 +380,6 @@ class AnotherFlow(Flow[dict]):
         print("Method-level persisted runs:", self.state["runs"])
 ```
 
-### Custom Persistence Key
-
-By default, `@persist` uses the auto-generated `state.id` field as the persistence key. If your flow models its own identifier — for example a `conversation_id` shared across sessions — you can pass a `key` argument and `@persist` will use that attribute as the flow UUID instead:
-
-```python
-from crewai.flow.flow import Flow, listen, start
-from crewai.flow.persistence import persist
-from pydantic import BaseModel
-
-class ConversationState(BaseModel):
-    conversation_id: str
-    turn: int = 0
-
-@persist(key="conversation_id")  # Use a custom field as the persistence key
-class ConversationFlow(Flow[ConversationState]):
-    @start()
-    def begin(self):
-        self.state.turn += 1
-        print(f"Conversation {self.state.conversation_id} turn {self.state.turn}")
-
-# Resuming the same conversation reloads its prior state by conversation_id
-flow = ConversationFlow(conversation_id="user-42")
-flow.kickoff()
-```
-
-The decorator reads the value at `state[key]` for dict states, or `getattr(state, key)` for Pydantic / object states. If the named attribute is missing or falsy at save time, `@persist` raises a `ValueError` such as `Flow state is missing required persistence key 'conversation_id'`. When `key` is omitted, the existing behavior is preserved and `state.id` is used.
-
 ### How It Works
 
 1. **Unique State Identification**

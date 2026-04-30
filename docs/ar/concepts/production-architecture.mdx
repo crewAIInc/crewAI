@@ -146,15 +146,6 @@ class ProductionFlow(Flow[AppState]):
     # ...
 ```
 
-افتراضيًا، يستخدم `@persist` الحقل `state.id` المُولّد تلقائيًا كمفتاح للحالة المحفوظة. إذا كان تطبيقك يمتلك معرّفًا طبيعيًا بالفعل — مثل `conversation_id` يربط عدة تشغيلات بنفس جلسة المستخدم — مرّره كـ `key` ليستخدمه المزخرف كـ UUID للتدفق. يُطلق `ValueError` إذا كانت السمة المحددة غير موجودة أو قيمتها falsy عند الحفظ.
-
-```python
-@persist(key="conversation_id")
-class ProductionFlow(Flow[AppState]):
-    # يجب أن يحتوي AppState على conversation_id؛ استئناف الجلسة يُعيد تحميل الحالة السابقة
-    ...
-```
-
 ## الخلاصة
 
 - **ابدأ بتدفق.**
