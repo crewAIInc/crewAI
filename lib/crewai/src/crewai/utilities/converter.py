@@ -256,9 +256,8 @@ def handle_partial_json(
     """
     match = _JSON_PATTERN.search(result)
     if match:
-        candidate = match.group()
         try:
-            json.loads(candidate)
+            parsed = json.loads(match.group())
         except json.JSONDecodeError:
             return convert_with_instructions(
                 result=result,
@@ -269,7 +268,7 @@ def handle_partial_json(
             )
 
         try:
-            exported_result = model.model_validate_json(candidate)
+            exported_result = model.model_validate(parsed)
             if is_json_output:
                 return exported_result.model_dump()
             return exported_result
