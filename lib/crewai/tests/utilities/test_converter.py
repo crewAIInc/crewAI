@@ -177,6 +177,34 @@ def test_handle_partial_json_with_invalid_partial(mock_agent: Mock) -> None:
         assert output == "Converted result"
 
 
+def test_handle_partial_json_accepts_literal_control_chars_in_strings() -> None:
+    """JSON values with literal newlines/tabs (lenient parsing) must still
+    validate, matching the prior model_validate_json behavior.
+    """
+    result = 'prefix {"name": "Charlie\nDoe", "age": 35} suffix'
+    output = handle_partial_json(result, SimpleModel, False, None)
+    assert isinstance(output, SimpleModel)
+    assert output.name == "Charlie\nDoe"
+    assert output.age == 35
+
+
+def test_handle_partial_json_falls_through_for_non_json_curly_blocks(
+    mock_agent: Mock,
+) -> None:
+    """A regex match that is not actually JSON (e.g. GraphQL) must fall through
+    to convert_with_instructions instead of raising a ValidationError.
+    """
+    result = (
+        "type Query {\n  countries: [Country]\n}\n\n"
+        "type Country {\n  code: String\n  name: String\n}"
+    )
+    with patch("crewai.utilities.converter.convert_with_instructions") as mock_convert:
+        mock_convert.return_value = "Converted result"
+        output = handle_partial_json(result, SimpleModel, False, mock_agent)
+        assert output == "Converted result"
+        mock_convert.assert_called_once()
+
+
 # Tests for convert_with_instructions
 @patch("crewai.utilities.converter.create_converter")
 @patch("crewai.utilities.converter.get_conversion_instructions")
