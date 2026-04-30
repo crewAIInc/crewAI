@@ -257,7 +257,7 @@ def handle_partial_json(
     match = _JSON_PATTERN.search(result)
     if match:
         try:
-            parsed = json.loads(match.group())
+            parsed = json.loads(match.group(), strict=False)
         except json.JSONDecodeError:
             return convert_with_instructions(
                 result=result,
