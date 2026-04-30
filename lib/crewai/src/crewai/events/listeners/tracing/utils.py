@@ -53,10 +53,19 @@ def set_suppress_tracing_messages(suppress: bool) -> object:
 def should_suppress_tracing_messages() -> bool:
     """Check if tracing messages should be suppressed.
 
+    Checks the context variable first, then falls back to the
+    CREWAI_SUPPRESS_TRACING_MESSAGES environment variable.
+
     Returns:
         True if messages should be suppressed, False otherwise.
     """
-    return _suppress_tracing_messages.get()
+    if _suppress_tracing_messages.get():
+        return True
+    return os.getenv("CREWAI_SUPPRESS_TRACING_MESSAGES", "false").lower() in (
+        "true",
+        "1",
+        "yes",
+    )
 
 
 def should_enable_tracing(*, override: bool | None = None) -> bool:
