@@ -1074,7 +1074,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     _human_feedback_method_outputs: dict[str, Any] = PrivateAttr(default_factory=dict)
     _input_history: list[InputHistoryEntry] = PrivateAttr(default_factory=list)
     _state: Any = PrivateAttr(default=None)
-    _execution_id: str = PrivateAttr(default_factory=lambda: str(uuid4()))
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:  # type: ignore[override]
         class _FlowGeneric(cls):  # type: ignore[valid-type,misc]
@@ -1865,27 +1864,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         except (AttributeError, TypeError):
             return ""  # Safely handle any unexpected attribute access issues
 
-    @property
-    def execution_id(self) -> str:
-        """Stable identifier for this flow execution.
-
-        Separate from ``flow_id`` / ``state.id``, which consumers may
-        override via ``kickoff(inputs={"id": ...})`` to resume a persisted
-        flow. ``execution_id`` is never affected by ``inputs`` and stays
-        stable for the lifetime of a single run, so it is the correct key
-        for telemetry, tracing, and any external correlation that must
-        uniquely identify a single execution even when callers pass an
-        ``id`` in ``inputs``.
-
-        Defaults to a fresh ``uuid4`` per ``Flow`` instance; assign to
-        override when an outer system already has an execution identity.
-        """
-        return self._execution_id
-
-    @execution_id.setter
-    def execution_id(self, value: str) -> None:
-        self._execution_id = value
-
     def _initialize_state(self, inputs: dict[str, Any]) -> None:
         """Initialize or update flow state with new inputs.
 
@@ -2199,9 +2177,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         flow_id_token = None
         request_id_token = None
         if current_flow_id.get() is None:
-            flow_id_token = current_flow_id.set(self.execution_id)
+            flow_id_token = current_flow_id.set(self.flow_id)
         if current_flow_request_id.get() is None:
-            request_id_token = current_flow_request_id.set(self.execution_id)
+            request_id_token = current_flow_request_id.set(self.flow_id)
 
         try:
             # Reset flow state for fresh execution unless restoring from persistence
