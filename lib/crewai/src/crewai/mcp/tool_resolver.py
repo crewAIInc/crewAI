@@ -374,6 +374,7 @@ class MCPToolResolver:
                             "MCP connection failed due to event loop cleanup issues. "
                             "This may be due to authentication errors or server unavailability."
                         ) from e
+                    raise
                 except asyncio.CancelledError as e:
                     raise ConnectionError(
                         "MCP connection was cancelled. This may indicate an authentication "
@@ -400,6 +401,13 @@ class MCPToolResolver:
                     else:
                         filtered_tools.append(tool)
                 tools_list = filtered_tools
+
+            if not tools_list:
+                self._logger.log(
+                    "warning",
+                    f"No tools discovered from MCP server: {server_name}",
+                )
+                return cast(list[BaseTool], []), []
 
             def _client_factory() -> MCPClient:
                 transport, _ = self._create_transport(mcp_config)

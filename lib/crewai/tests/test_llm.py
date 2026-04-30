@@ -177,6 +177,7 @@ def test_llm_passes_additional_params():
         # Create mocks for response structure
         mock_message = MagicMock()
         mock_message.content = "Test response"
+        mock_message.tool_calls = None
         mock_choice = MagicMock()
         mock_choice.message = mock_message
         mock_response = MagicMock()
@@ -1146,3 +1147,52 @@ async def test_usage_info_streaming_with_acall():
     assert llm._token_usage["total_tokens"] > 0
 
     assert len(result) > 0
+
+
+def _build_response_with_text_and_tool_calls():
+    """Mimic a litellm ModelResponse that contains both content and tool_calls."""
+    from litellm.types.utils import ChatCompletionMessageToolCall, Function
+
+    response_message = MagicMock()
+    response_message.content = "I will search for the given query."
+    response_message.tool_calls = [
+        ChatCompletionMessageToolCall(
+            id="call_123",
+            type="function",
+            function=Function(name="search", arguments='{"q": "x"}'),
+        )
+    ]
+    choice = MagicMock(message=response_message)
+    response = MagicMock(choices=[choice], model_extra=None)
+    return response
+
+
+def test_non_streaming_returns_tool_calls_when_text_also_present():
+    """A response with both text and tool_calls must not drop the tool_calls
+    when available_functions is None (executor-managed tool execution path).
+    """
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+    response = _build_response_with_text_and_tool_calls()
+
+    with patch("crewai.llm.litellm.completion", return_value=response):
+        result = llm.call("anything", available_functions=None)
+
+    assert isinstance(result, list)
+    assert len(result) == 1
+    assert result[0].function.name == "search"
+
+
+@pytest.mark.asyncio
+async def test_non_streaming_async_returns_tool_calls_when_text_also_present():
+    llm = LLM(model="openai/gpt-4o-mini", is_litellm=True, stream=False)
+    response = _build_response_with_text_and_tool_calls()
+
+    async def _ret(*args, **kwargs):
+        return response
+
+    with patch("crewai.llm.litellm.acompletion", side_effect=_ret):
+        result = await llm.acall("anything", available_functions=None)
+
+    assert isinstance(result, list)
+    assert len(result) == 1
+    assert result[0].function.name == "search"
