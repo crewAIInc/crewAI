@@ -3,9 +3,30 @@
 VCR will record HTTP interactions. Inspect cassettes to verify tracing behavior.
 """
 
+from unittest.mock import patch
+
 import pytest
 from crewai import Agent, Crew, Task
+from crewai.events.listeners.tracing.utils import (
+    should_suppress_tracing_messages,
+)
 from tests.utils import wait_for_event_handlers
+
+
+def test_should_suppress_tracing_messages_via_env(monkeypatch):
+    monkeypatch.setenv("CREWAI_SUPPRESS_TRACING_MESSAGES", "true")
+
+    assert should_suppress_tracing_messages() is True
+
+
+def test_should_suppress_tracing_messages_when_user_declined(monkeypatch):
+    monkeypatch.delenv("CREWAI_SUPPRESS_TRACING_MESSAGES", raising=False)
+
+    with patch(
+        "crewai.events.listeners.tracing.utils._load_user_data",
+        return_value={"first_execution_done": True, "trace_consent": False},
+    ):
+        assert should_suppress_tracing_messages() is True
 
 
 class TestTraceEnableDisable:

@@ -37,6 +37,9 @@ _suppress_tracing_messages: ContextVar[bool] = ContextVar(
     "_suppress_tracing_messages", default=False
 )
 
+_SUPPRESS_TRACING_MESSAGES_ENV_VAR = "CREWAI_SUPPRESS_TRACING_MESSAGES"
+_TRUTHY_ENV_VALUES = {"1", "true", "yes", "on"}
+
 
 def set_suppress_tracing_messages(suppress: bool) -> object:
     """Set whether to suppress tracing-related console messages.
@@ -56,7 +59,12 @@ def should_suppress_tracing_messages() -> bool:
     Returns:
         True if messages should be suppressed, False otherwise.
     """
-    return _suppress_tracing_messages.get()
+    env_value = os.getenv(_SUPPRESS_TRACING_MESSAGES_ENV_VAR, "").strip().lower()
+    return (
+        _suppress_tracing_messages.get()
+        or env_value in _TRUTHY_ENV_VALUES
+        or has_user_declined_tracing()
+    )
 
 
 def should_enable_tracing(*, override: bool | None = None) -> bool:

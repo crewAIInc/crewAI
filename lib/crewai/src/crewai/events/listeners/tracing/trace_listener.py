@@ -892,7 +892,6 @@ class TraceCollectionListener(BaseEventListener):
         from rich.panel import Panel
 
         from crewai.events.listeners.tracing.utils import (
-            has_user_declined_tracing,
             should_suppress_tracing_messages,
         )
 
@@ -901,15 +900,7 @@ class TraceCollectionListener(BaseEventListener):
 
         console = Console()
 
-        if has_user_declined_tracing():
-            message = """Info: Tracing is disabled.
-
-To enable tracing, do any one of these:
-• Set tracing=True in your Crew/Flow code
-• Set CREWAI_TRACING_ENABLED=true in your project's .env file
-• Run: crewai traces enable"""
-        else:
-            message = """Info: Tracing is disabled.
+        message = """Info: Tracing is disabled.
 
 To enable tracing, do any one of these:
 • Set tracing=True in your Crew/Flow code
