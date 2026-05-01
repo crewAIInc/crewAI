@@ -373,6 +373,42 @@ class AnotherFlow(Flow[dict]):
         print("Method-level persisted runs:", self.state["runs"])
 ```
 
+### 영속 상태 포크하기
+
+`@persist`는 `kickoff` / `kickoff_async`에서 두 가지 별개의 하이드레이션 모드를 지원합니다:
+
+- `kickoff(inputs={"id": <uuid>})` — **재개(resume)**: 제공된 UUID에 대한 최신 스냅샷을 로드하고 동일한 `flow_uuid` 아래에서 계속 기록합니다. 기록이 확장됩니다.
+- `kickoff(restore_from_state_id=<uuid>)` — **포크(fork)**: 제공된 UUID에 대한 최신 스냅샷을 로드하고 새 실행의 상태를 하이드레이트한 후, 새로운 `state.id`(자동 생성, 또는 `inputs["id"]`가 고정된 경우 그 값)를 할당합니다. 새 실행의 `@persist` 기록은 새로운 `state.id` 아래에 저장되며, 원본 플로우의 기록은 보존됩니다.
+
+```python
+from crewai.flow.flow import Flow, start
+from crewai.flow.persistence import persist
+from pydantic import BaseModel
+
+class CounterState(BaseModel):
+    id: str = ""
+    counter: int = 0
+
+@persist
+class CounterFlow(Flow[CounterState]):
+    @start()
+    def step(self):
+        self.state.counter += 1
+        print(f"[id={self.state.id}] counter={self.state.counter}")
+
+# 실행 1: 새 상태, counter 0 -> 1, flow_1.state.id 아래에 저장됨
+flow_1 = CounterFlow()
+flow_1.kickoff()
+
+# 포크: flow_1의 최신 스냅샷에서 하이드레이트하지만, 새 state.id를 사용
+flow_2 = CounterFlow()
+flow_2.kickoff(restore_from_state_id=flow_1.state.id)
+# flow_2.state.counter는 1(하이드레이트)로 시작하고, step()이 2로 증가시킵니다.
+# flow_2.state.id != flow_1.state.id; flow_1의 기록은 변경되지 않습니다.
+```
+
+제공된 `restore_from_state_id`가 어떤 영속 상태와도 일치하지 않으면, kickoff는 조용히 기본 동작으로 폴백됩니다 — 기존 `inputs["id"]`의 미발견 동작과 동일합니다. `restore_from_state_id`를 `from_checkpoint`와 결합하면 `ValueError`가 발생합니다; 하나의 하이드레이션 소스를 선택하세요. 포크 중 `inputs["id"]`를 고정하면 다른 플로우와 영속 키를 공유하게 됩니다 — 일반적으로 `restore_from_state_id`만 사용하는 것이 좋습니다.
+
 ### 작동 방식
 
 1. **고유 상태 식별**
