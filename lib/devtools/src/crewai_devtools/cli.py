@@ -1207,7 +1207,12 @@ _ENTERPRISE_WORKFLOW_PATHS: Final[tuple[str, ...]] = tuple(
 
 
 def _update_enterprise_crewai_dep(pyproject_path: Path, version: str) -> bool:
-    """Update the crewai[tools] pin in an enterprise pyproject.toml.
+    """Update crewai pins in an enterprise pyproject.toml.
+
+    Pins ``crewai`` / ``crewai[extras]`` via ``_pin_crewai_deps`` and
+    additionally pins any dashed ``crewai-*`` packages configured via
+    ``ENTERPRISE_EXTRA_PACKAGES`` (e.g. ``crewai-enterprise``), which
+    ``_pin_crewai_deps`` does not cover.
 
     Args:
         pyproject_path: Path to the pyproject.toml file.
@@ -1219,19 +1224,56 @@ def _update_enterprise_crewai_dep(pyproject_path: Path, version: str) -> bool:
     if not pyproject_path.exists():
         return False
 
+    changed = False
     content = pyproject_path.read_text()
     new_content = _pin_crewai_deps(content, version)
     if new_content != content:
         pyproject_path.write_text(new_content)
-        return True
-    return False
+        changed = True
+
+    if update_pyproject_dependencies(
+        pyproject_path, version, extra_packages=list(_ENTERPRISE_EXTRA_PACKAGES)
+    ):
+        changed = True
+
+    return changed
+
+
+def _update_workflow_crewai_pins(workflow_path: Path, version: str) -> bool:
+    """Rewrite ``crewai[extras]==<old>`` pins in a single workflow file.
+
+    Operates line-by-line on the raw file via ``_repin_crewai_install``
+    so only version numbers change and all formatting is preserved.
+
+    Args:
+        workflow_path: Path to a workflow YAML file.
+        version: New crewai version string.
+
+    Returns:
+        True if the file was modified.
+    """
+    if not workflow_path.exists():
+        return False
+
+    raw = workflow_path.read_text()
+    lines = raw.splitlines(keepends=True)
+    changed = False
+    for i, line in enumerate(lines):
+        if "crewai[" not in line:
+            continue
+        new_line = _repin_crewai_install(line, version)
+        if new_line != line:
+            lines[i] = new_line
+            changed = True
+
+    if not changed:
+        return False
+    workflow_path.write_text("".join(lines))
+    return True
 
 
 def _update_enterprise_workflows(repo_dir: Path, version: str) -> list[Path]:
     """Update crewai version pins in enterprise CI workflow files.
-
-    Applies ``_repin_crewai_install`` line-by-line on the raw file so
-    only version numbers change and all formatting is preserved.
 
     Args:
         repo_dir: Root of the cloned enterprise repo.
@@ -1243,29 +1285,31 @@ def _update_enterprise_workflows(repo_dir: Path, version: str) -> list[Path]:
     updated: list[Path] = []
     for rel_path in _ENTERPRISE_WORKFLOW_PATHS:
         workflow = repo_dir / rel_path
-        if not workflow.exists():
-            continue
-
-        raw = workflow.read_text()
-        lines = raw.splitlines(keepends=True)
-        changed = False
-        for i, line in enumerate(lines):
-            if "crewai[" not in line:
-                continue
-            new_line = _repin_crewai_install(line, version)
-            if new_line != line:
-                lines[i] = new_line
-                changed = True
-
-        if changed:
-            new_raw = "".join(lines)
-        else:
-            new_raw = raw
-
-        if new_raw != raw:
-            workflow.write_text(new_raw)
+        if _update_workflow_crewai_pins(workflow, version):
             updated.append(workflow)
+    return updated
 
+
+def _update_repo_workflows_crewai_pins(repo_dir: Path, version: str) -> list[Path]:
+    """Update crewai pins across all GitHub workflow files in a repo.
+
+    Args:
+        repo_dir: Root of the cloned repo.
+        version: New crewai version string.
+
+    Returns:
+        List of workflow paths that were modified.
+    """
+    workflows_dir = repo_dir / ".github" / "workflows"
+    if not workflows_dir.exists():
+        return []
+
+    updated: list[Path] = []
+    for workflow in sorted(workflows_dir.iterdir()):
+        if workflow.suffix not in (".yml", ".yaml"):
+            continue
+        if _update_workflow_crewai_pins(workflow, version):
+            updated.append(workflow)
     return updated
 
 
@@ -1314,9 +1358,10 @@ _PYPI_POLL_TIMEOUT: Final[int] = 600
 def _update_deployment_test_repo(version: str, is_prerelease: bool) -> None:
     """Update the deployment test repo to pin the new crewai version.
 
-    Clones the repo, updates the crewai[tools] pin in pyproject.toml,
-    regenerates the lockfile, commits to a branch, pushes, opens a PR
-    against main, then polls until the PR is merged (or closed).
+    Clones the repo, updates the crewai[tools] pin in pyproject.toml
+    and any crewai[extras] pins in .github/workflows, regenerates the
+    lockfile, commits to a branch, pushes, opens a PR against main,
+    then polls until the PR is merged (or closed).
 
     Args:
         version: New crewai version string.
@@ -1341,6 +1386,11 @@ def _update_deployment_test_repo(version: str, is_prerelease: bool) -> None:
             return
         pyproject.write_text(new_content)
         console.print(f"[green]✓[/green] Updated crewai[tools] pin to {version}")
+
+        for wf in _update_repo_workflows_crewai_pins(repo_dir, version):
+            console.print(
+                f"[green]✓[/green] Updated crewai pin in {wf.relative_to(repo_dir)}"
+            )
 
         lock_cmd = [
             "uv",
