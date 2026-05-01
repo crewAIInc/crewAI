@@ -146,6 +146,14 @@ class ProductionFlow(Flow[AppState]):
     # ...
 ```
 
+افتراضيًا، يستأنف `@persist` تدفقًا عند توفير `kickoff(inputs={"id": <uuid>})`، مما يمدّ نفس تاريخ `flow_uuid`. لـ **تفرع** تدفق مستمر إلى نسبٍ جديد — ترطيب الحالة من تشغيل سابق ولكن الكتابة تحت `state.id` جديد — مرّر `restore_from_state_id`:
+
+```python
+flow.kickoff(restore_from_state_id="<previous-run-state-id>")
+```
+
+يحصل التشغيل الجديد على `state.id` جديد (مولّد تلقائيًا، أو `inputs["id"]` إذا تم تثبيته) لذا لا تمتد كتابات `@persist` الخاصة به إلى تاريخ المصدر. الجمع مع `from_checkpoint` يطلق `ValueError`؛ اختر مصدر ترطيب واحدًا.
+
 ## الخلاصة
 
 - **ابدأ بتدفق.**
