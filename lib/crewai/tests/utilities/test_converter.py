@@ -2,12 +2,13 @@
 from enum import Enum
 import json
 import os
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 from crewai.llm import LLM
 from crewai.utilities.converter import (
     Converter,
     ConverterError,
+    aconvert_to_model,
     convert_to_model,
     convert_with_instructions,
     create_converter,
@@ -629,6 +630,37 @@ def test_converter_with_function_calling() -> None:
     llm.call.assert_called_once()
     call_args = llm.call.call_args
     assert call_args[1]["response_model"] == SimpleModel
+
+
+@pytest.mark.asyncio
+async def test_aconvert_to_model_uses_async_llm_call() -> None:
+    llm = Mock(spec=LLM)
+    llm.supports_function_calling.return_value = True
+    llm.acall = AsyncMock(return_value='{"name": "Eve", "age": 35}')
+    llm.call.side_effect = AssertionError("sync call should not be used")
+
+    agent = Mock()
+    agent.function_calling_llm = None
+    agent.llm = llm
+    agent.verbose = False
+    agent.get_output_converter = Mock(
+        side_effect=lambda *args, **kwargs: Converter(*args, **kwargs)
+    )
+
+    output = await aconvert_to_model(
+        "Name: Eve, Age: 35",
+        SimpleModel,
+        None,
+        agent,
+    )
+
+    assert isinstance(output, SimpleModel)
+    assert output.name == "Eve"
+    assert output.age == 35
+    llm.acall.assert_awaited_once()
+    call_args = llm.acall.call_args
+    assert call_args.kwargs["response_model"] == SimpleModel
+    llm.call.assert_not_called()
 
 
 def test_generate_model_description_union_field() -> None:

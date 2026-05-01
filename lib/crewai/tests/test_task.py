@@ -6,7 +6,7 @@ import os
 import time
 from functools import partial
 from hashlib import md5
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from pydantic import BaseModel
@@ -312,6 +312,36 @@ def test_output_pydantic_sequential():
     result = crew.kickoff()
     assert isinstance(result.pydantic, ScoreOutput)
     assert result.to_dict() == {"score": 4}
+
+
+@pytest.mark.asyncio
+async def test_aexport_output_uses_async_converter():
+    class ScoreOutput(BaseModel):
+        score: int
+
+    task = Task(
+        description="Give me a score",
+        expected_output="A score",
+        output_pydantic=ScoreOutput,
+    )
+
+    with patch(
+        "crewai.task.aconvert_to_model",
+        new_callable=AsyncMock,
+        return_value=ScoreOutput(score=4),
+    ) as mock_convert:
+        pydantic_output, json_output = await task._aexport_output("score: 4")
+
+    assert isinstance(pydantic_output, ScoreOutput)
+    assert pydantic_output.score == 4
+    assert json_output is None
+    mock_convert.assert_awaited_once_with(
+        "score: 4",
+        ScoreOutput,
+        None,
+        task.agent,
+        task.converter_cls,
+    )
 
 
 @pytest.mark.vcr()
