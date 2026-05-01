@@ -1387,7 +1387,8 @@ def _update_deployment_test_repo(version: str, is_prerelease: bool) -> None:
         pyproject.write_text(new_content)
         console.print(f"[green]✓[/green] Updated crewai[tools] pin to {version}")
 
-        for wf in _update_repo_workflows_crewai_pins(repo_dir, version):
+        updated_workflows = _update_repo_workflows_crewai_pins(repo_dir, version)
+        for wf in updated_workflows:
             console.print(
                 f"[green]✓[/green] Updated crewai pin in {wf.relative_to(repo_dir)}"
             )
@@ -1424,7 +1425,12 @@ def _update_deployment_test_repo(version: str, is_prerelease: bool) -> None:
         branch = f"chore/bump-crewai-v{version}"
         create_or_reset_branch(branch, cwd=repo_dir)
 
-        run_command(["git", "add", "pyproject.toml", "uv.lock"], cwd=repo_dir)
+        paths_to_add = [
+            "pyproject.toml",
+            "uv.lock",
+            *(str(wf.relative_to(repo_dir)) for wf in updated_workflows),
+        ]
+        run_command(["git", "add", *paths_to_add], cwd=repo_dir)
         run_command(
             ["git", "commit", "-m", f"chore: bump crewai to {version}"],
             cwd=repo_dir,
