@@ -1379,13 +1379,14 @@ def _update_deployment_test_repo(version: str, is_prerelease: bool) -> None:
         pyproject = repo_dir / "pyproject.toml"
         content = pyproject.read_text()
         new_content = _pin_crewai_deps(content, version)
-        if new_content == content:
+        pyproject_changed = new_content != content
+        if pyproject_changed:
+            pyproject.write_text(new_content)
+            console.print(f"[green]✓[/green] Updated crewai[tools] pin to {version}")
+        else:
             console.print(
                 "[yellow]Warning:[/yellow] No crewai[tools] pin found to update"
             )
-            return
-        pyproject.write_text(new_content)
-        console.print(f"[green]✓[/green] Updated crewai[tools] pin to {version}")
 
         updated_workflows = _update_repo_workflows_crewai_pins(repo_dir, version)
         for wf in updated_workflows:
@@ -1393,43 +1394,48 @@ def _update_deployment_test_repo(version: str, is_prerelease: bool) -> None:
                 f"[green]✓[/green] Updated crewai pin in {wf.relative_to(repo_dir)}"
             )
 
-        lock_cmd = [
-            "uv",
-            "lock",
-            "--refresh-package",
-            "crewai",
-            "--refresh-package",
-            "crewai-tools",
-        ]
-        if is_prerelease:
-            lock_cmd.append("--prerelease=allow")
+        if not pyproject_changed and not updated_workflows:
+            console.print("[yellow]Nothing to update; skipping commit and PR.[/yellow]")
+            return
 
-        max_retries = 10
-        for attempt in range(1, max_retries + 1):
-            try:
-                run_command(lock_cmd, cwd=repo_dir)
-                break
-            except subprocess.CalledProcessError:
-                if attempt == max_retries:
+        paths_to_add: list[str] = [
+            str(wf.relative_to(repo_dir)) for wf in updated_workflows
+        ]
+
+        if pyproject_changed:
+            lock_cmd = [
+                "uv",
+                "lock",
+                "--refresh-package",
+                "crewai",
+                "--refresh-package",
+                "crewai-tools",
+            ]
+            if is_prerelease:
+                lock_cmd.append("--prerelease=allow")
+
+            max_retries = 10
+            for attempt in range(1, max_retries + 1):
+                try:
+                    run_command(lock_cmd, cwd=repo_dir)
+                    break
+                except subprocess.CalledProcessError:
+                    if attempt == max_retries:
+                        console.print(
+                            f"[red]Error:[/red] uv lock failed after {max_retries} attempts"
+                        )
+                        raise
                     console.print(
-                        f"[red]Error:[/red] uv lock failed after {max_retries} attempts"
+                        f"[yellow]uv lock failed (attempt {attempt}/{max_retries}),"
+                        f" retrying in {_PYPI_POLL_INTERVAL}s...[/yellow]"
                     )
-                    raise
-                console.print(
-                    f"[yellow]uv lock failed (attempt {attempt}/{max_retries}),"
-                    f" retrying in {_PYPI_POLL_INTERVAL}s...[/yellow]"
-                )
-                time.sleep(_PYPI_POLL_INTERVAL)
-        console.print("[green]✓[/green] Lockfile updated")
+                    time.sleep(_PYPI_POLL_INTERVAL)
+            console.print("[green]✓[/green] Lockfile updated")
+            paths_to_add.extend(["pyproject.toml", "uv.lock"])
 
         branch = f"chore/bump-crewai-v{version}"
         create_or_reset_branch(branch, cwd=repo_dir)
 
-        paths_to_add = [
-            "pyproject.toml",
-            "uv.lock",
-            *(str(wf.relative_to(repo_dir)) for wf in updated_workflows),
-        ]
         run_command(["git", "add", *paths_to_add], cwd=repo_dir)
         run_command(
             ["git", "commit", "-m", f"chore: bump crewai to {version}"],
