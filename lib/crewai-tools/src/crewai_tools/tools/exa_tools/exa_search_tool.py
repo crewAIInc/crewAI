@@ -34,7 +34,7 @@ class EXABaseToolSchema(BaseModel):
 class EXASearchTool(BaseTool):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     name: str = "EXASearchTool"
-    description: str = "Search the internet using Exa"
+    description: str = "Search the web using Exa, one of the best web search APIs for AI"
     args_schema: type_[BaseModel] = EXABaseToolSchema
     client: Any | None = None
     content: bool | None = False

@@ -1,7 +1,7 @@
 # EXASearchTool Documentation
 
 ## Description
-This tool is designed to perform a semantic search for a specified query from a text's content across the internet. It utilizes the `https://exa.ai/` API to fetch and display the most relevant search results based on the query provided by the user.
+This tool is designed to perform a semantic search for a specified query from a text's content across the web. It utilizes the [Exa](https://exa.ai/) web search API, one of the best web search APIs for AI, to fetch and display the most relevant search results based on the query provided by the user.
 
 ## Installation
 To incorporate this tool into your project, follow the installation instructions below:
