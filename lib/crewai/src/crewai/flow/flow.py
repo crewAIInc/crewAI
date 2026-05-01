@@ -2032,6 +2032,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         inputs: dict[str, Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
         from_checkpoint: CheckpointConfig | None = None,
+        restore_from_state_id: str | None = None,
     ) -> Any | FlowStreamingOutput:
         """Start the flow execution in a synchronous context.
 
@@ -2043,10 +2044,24 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             input_files: Optional dict of named file inputs for the flow.
             from_checkpoint: Optional checkpoint config. If ``restore_from``
                 is set, the flow resumes from that checkpoint.
+            restore_from_state_id: Optional UUID of a previously-persisted flow
+                whose latest snapshot should hydrate this run's state. The new
+                run is assigned a fresh ``state.id`` (or ``inputs["id"]`` if
+                pinned), so its ``@persist`` writes land under a separate
+                persistence key and the source flow's history is preserved.
+                If the referenced state is not found, the kickoff falls back
+                silently to baseline behavior. Cannot be combined with
+                ``from_checkpoint``; passing both raises ``ValueError``.
 
         Returns:
             The final output from the flow or FlowStreamingOutput if streaming.
         """
+        if from_checkpoint is not None and restore_from_state_id is not None:
+            raise ValueError(
+                "Cannot combine `from_checkpoint` and `restore_from_state_id`. "
+                "These parameters target different state systems "
+                "(Checkpointing and @persist) and cannot be used together."
+            )
         restored = apply_checkpoint(self, from_checkpoint)
         if restored is not None:
             return restored.kickoff(inputs=inputs, input_files=input_files)
@@ -2068,7 +2083,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             def run_flow() -> None:
                 try:
                     self.stream = False
-                    result = self.kickoff(inputs=inputs, input_files=input_files)
+                    result = self.kickoff(
+                        inputs=inputs,
+                        input_files=input_files,
+                        restore_from_state_id=restore_from_state_id,
+                    )
                     result_holder.append(result)
                 except Exception as e:
                     # HumanFeedbackPending is expected control flow, not an error
@@ -2091,7 +2110,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             return streaming_output
 
         async def _run_flow() -> Any:
-            return await self.kickoff_async(inputs, input_files)
+            return await self.kickoff_async(
+                inputs,
+                input_files,
+                restore_from_state_id=restore_from_state_id,
+            )
 
         try:
             asyncio.get_running_loop()
@@ -2106,6 +2129,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         inputs: dict[str, Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
         from_checkpoint: CheckpointConfig | None = None,
+        restore_from_state_id: str | None = None,
     ) -> Any | FlowStreamingOutput:
         """Start the flow execution asynchronously.
 
@@ -2119,10 +2143,23 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             input_files: Optional dict of named file inputs for the flow.
             from_checkpoint: Optional checkpoint config. If ``restore_from``
                 is set, the flow resumes from that checkpoint.
+            restore_from_state_id: Optional UUID of a previously-persisted flow
+                whose latest snapshot should hydrate this run's state. The new
+                run is assigned a fresh ``state.id`` (or ``inputs["id"]`` if
+                pinned), so subsequent ``@persist`` writes land under a
+                separate persistence key. If the referenced state is not
+                found, falls back silently to baseline. Cannot be combined
+                with ``from_checkpoint``; passing both raises ``ValueError``.
 
         Returns:
             The final output from the flow, which is the result of the last executed method.
         """
+        if from_checkpoint is not None and restore_from_state_id is not None:
+            raise ValueError(
+                "Cannot combine `from_checkpoint` and `restore_from_state_id`. "
+                "These parameters target different state systems "
+                "(Checkpointing and @persist) and cannot be used together."
+            )
         restored = apply_checkpoint(self, from_checkpoint)
         if restored is not None:
             return await restored.kickoff_async(inputs=inputs, input_files=input_files)
@@ -2145,7 +2182,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 try:
                     self.stream = False
                     result = await self.kickoff_async(
-                        inputs=inputs, input_files=input_files
+                        inputs=inputs,
+                        input_files=input_files,
+                        restore_from_state_id=restore_from_state_id,
                     )
                     result_holder.append(result)
                 except Exception as e:
@@ -2202,16 +2241,54 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 if self._completed_methods:
                     self._is_execution_resuming = True
 
+            # Fork hydration: when restore_from_state_id is set and persistence is
+            # available, hydrate self._state from the source UUID's latest snapshot
+            # and reassign state.id to a fresh value so subsequent @persist writes
+            # don't extend the source flow's history. If the source state is not
+            # found, fall through silently to the existing inputs handling.
+            fork_succeeded = False
+            if restore_from_state_id is not None and self.persistence is not None:
+                stored_state = self.persistence.load_state(restore_from_state_id)
+                if stored_state:
+                    self._log_flow_event(
+                        f"Forking flow state from UUID: {restore_from_state_id}"
+                    )
+                    self._restore_state(stored_state)
+                    # Pin to inputs["id"] when provided, otherwise mint a fresh
+                    # UUID. NOTE: pinning inputs.id while forking shares a
+                    # persistence key with another flow — usually you want only
+                    # restore_from_state_id.
+                    new_state_id = (inputs.get("id") if inputs else None) or str(
+                        uuid4()
+                    )
+                    if isinstance(self._state, dict):
+                        self._state["id"] = new_state_id
+                    elif isinstance(self._state, BaseModel):
+                        setattr(self._state, "id", new_state_id)  # noqa: B010
+                    fork_succeeded = True
+                else:
+                    self._log_flow_event(
+                        "No flow state found for restore_from_state_id: "
+                        f"{restore_from_state_id}; proceeding without hydration",
+                        color="yellow",
+                    )
+
             if inputs:
-                # Override the id in the state if it exists in inputs
-                if "id" in inputs:
+                # Override the id in the state if it exists in inputs.
+                # Skip when the fork already assigned state.id above.
+                if "id" in inputs and not fork_succeeded:
                     if isinstance(self._state, dict):
                         self._state["id"] = inputs["id"]
                     elif isinstance(self._state, BaseModel):
                         setattr(self._state, "id", inputs["id"])  # noqa: B010
 
                 # If persistence is enabled, attempt to restore the stored state using the provided id.
-                if "id" in inputs and self.persistence is not None:
+                # Skip when the fork already restored self._state above.
+                if (
+                    "id" in inputs
+                    and self.persistence is not None
+                    and not fork_succeeded
+                ):
                     restore_uuid = inputs["id"]
                     stored_state = self.persistence.load_state(restore_uuid)
                     if stored_state:
