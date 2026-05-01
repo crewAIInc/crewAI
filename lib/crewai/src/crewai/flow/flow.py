@@ -2471,6 +2471,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         inputs: dict[str, Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
         from_checkpoint: CheckpointConfig | None = None,
+        restore_from_state_id: str | None = None,
     ) -> Any | FlowStreamingOutput:
         """Native async method to start the flow execution. Alias for kickoff_async.
 
@@ -2479,11 +2480,19 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             input_files: Optional dict of named file inputs for the flow.
             from_checkpoint: Optional checkpoint config. If ``restore_from``
                 is set, the flow resumes from that checkpoint.
+            restore_from_state_id: Optional UUID of a previously-persisted flow
+                whose latest snapshot should hydrate this run's state. See
+                ``kickoff_async`` for full semantics.
 
         Returns:
             The final output from the flow, which is the result of the last executed method.
         """
-        return await self.kickoff_async(inputs, input_files, from_checkpoint)
+        return await self.kickoff_async(
+            inputs,
+            input_files,
+            from_checkpoint,
+            restore_from_state_id=restore_from_state_id,
+        )
 
     async def _replay_recorded_events(self) -> None:
         """Dispatch recorded ``MethodExecution*`` events from the event record."""

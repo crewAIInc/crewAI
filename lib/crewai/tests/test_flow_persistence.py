@@ -3,6 +3,7 @@
 import os
 from typing import Dict, List
 
+import pytest
 from crewai.flow.flow import Flow, FlowState, listen, start
 from crewai.flow.persistence import persist
 from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
@@ -365,7 +366,6 @@ def test_restore_from_state_id_none_is_no_op(tmp_path):
 def test_fork_conflict_with_from_checkpoint_raises():
     """Passing both from_checkpoint and restore_from_state_id raises ValueError, naming
     both parameters."""
-    import pytest
     from crewai.state import CheckpointConfig
 
     class ConflictFlow(Flow[TestState]):
@@ -376,6 +376,112 @@ def test_fork_conflict_with_from_checkpoint_raises():
     flow = ConflictFlow()
     with pytest.raises(ValueError) as excinfo:
         flow.kickoff(
+            from_checkpoint=CheckpointConfig(),
+            restore_from_state_id="some-uuid",
+        )
+    msg = str(excinfo.value)
+    assert "from_checkpoint" in msg
+    assert "restore_from_state_id" in msg
+
+
+@pytest.mark.asyncio
+async def test_fork_via_kickoff_async(tmp_path):
+    """kickoff_async honors restore_from_state_id: hydrates from source, mints fresh
+    state.id, persists under the new id, source history preserved."""
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    class AsyncForkableFlow(Flow[TestState]):
+        @start()
+        @persist(persistence)
+        def step(self):
+            self.state.counter += 1
+
+    flow1 = AsyncForkableFlow(persistence=persistence)
+    await flow1.kickoff_async()
+    source_uuid = flow1.state.id
+    assert flow1.state.counter == 1
+
+    flow2 = AsyncForkableFlow(persistence=persistence)
+    await flow2.kickoff_async(restore_from_state_id=source_uuid)
+
+    assert flow2.state.id != source_uuid
+    assert flow2.state.counter == 2
+    assert persistence.load_state(source_uuid)["counter"] == 1
+    assert persistence.load_state(flow2.state.id)["counter"] == 2
+
+
+@pytest.mark.asyncio
+async def test_fork_via_akickoff(tmp_path):
+    """akickoff is the public async alias and must accept restore_from_state_id with
+    the same semantics as kickoff_async."""
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    class AkickoffForkableFlow(Flow[TestState]):
+        @start()
+        @persist(persistence)
+        def step(self):
+            self.state.counter += 1
+
+    flow1 = AkickoffForkableFlow(persistence=persistence)
+    await flow1.akickoff()
+    source_uuid = flow1.state.id
+    assert flow1.state.counter == 1
+
+    flow2 = AkickoffForkableFlow(persistence=persistence)
+    await flow2.akickoff(restore_from_state_id=source_uuid)
+
+    assert flow2.state.id != source_uuid
+    assert flow2.state.counter == 2
+    assert persistence.load_state(source_uuid)["counter"] == 1
+    assert persistence.load_state(flow2.state.id)["counter"] == 2
+
+
+@pytest.mark.asyncio
+async def test_akickoff_pinned_fork(tmp_path):
+    """akickoff with both inputs.id and restore_from_state_id pins state.id while
+    hydrating from the source."""
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    class PinnableAsyncFlow(Flow[TestState]):
+        @start()
+        @persist(persistence)
+        def step(self):
+            self.state.counter += 1
+
+    flow1 = PinnableAsyncFlow(persistence=persistence)
+    await flow1.akickoff()
+    source_uuid = flow1.state.id
+
+    pinned_uuid = "pinned-akickoff-fork-uuid"
+    flow2 = PinnableAsyncFlow(persistence=persistence)
+    await flow2.akickoff(
+        inputs={"id": pinned_uuid},
+        restore_from_state_id=source_uuid,
+    )
+
+    assert flow2.state.id == pinned_uuid
+    assert flow2.state.counter == 2
+    assert persistence.load_state(source_uuid)["counter"] == 1
+    assert persistence.load_state(pinned_uuid)["counter"] == 2
+
+
+@pytest.mark.asyncio
+async def test_akickoff_fork_conflict_with_from_checkpoint_raises():
+    """akickoff must raise the same conflict ValueError as kickoff/kickoff_async when
+    both from_checkpoint and restore_from_state_id are set."""
+    from crewai.state import CheckpointConfig
+
+    class AsyncConflictFlow(Flow[TestState]):
+        @start()
+        def step(self):
+            pass
+
+    flow = AsyncConflictFlow()
+    with pytest.raises(ValueError) as excinfo:
+        await flow.akickoff(
             from_checkpoint=CheckpointConfig(),
             restore_from_state_id="some-uuid",
         )
