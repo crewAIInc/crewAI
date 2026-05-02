@@ -84,6 +84,9 @@ from crewai_tools.tools.generate_crewai_automation_tool.generate_crewai_automati
     GenerateCrewaiAutomationTool,
 )
 from crewai_tools.tools.github_search_tool.github_search_tool import GithubSearchTool
+from crewai_tools.tools.gitdealflow_signal_tool.gitdealflow_signal_tool import (
+    GitDealFlowSignalTool,
+)
 from crewai_tools.tools.hyperbrowser_load_tool.hyperbrowser_load_tool import (
     HyperbrowserLoadTool,
 )
