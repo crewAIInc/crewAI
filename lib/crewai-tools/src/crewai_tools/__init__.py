@@ -205,6 +205,12 @@ from crewai_tools.tools.tavily_research_tool.tavily_research_tool import (
 )
 from crewai_tools.tools.tavily_search_tool.tavily_search_tool import TavilySearchTool
 from crewai_tools.tools.txt_search_tool.txt_search_tool import TXTSearchTool
+from crewai_tools.tools.vaultfire_tool import (
+    VaultfireBondsTool,
+    VaultfireDiscoverTool,
+    VaultfireReputationTool,
+    VaultfireTrustTool,
+)
 from crewai_tools.tools.vision_tool.vision_tool import VisionTool
 from crewai_tools.tools.weaviate_tool.vector_search import WeaviateVectorSearchTool
 from crewai_tools.tools.website_search.website_search_tool import WebsiteSearchTool
@@ -320,6 +326,10 @@ __all__ = [
     "TavilyGetResearchTool",
     "TavilyResearchTool",
     "TavilySearchTool",
+    "VaultfireBondsTool",
+    "VaultfireDiscoverTool",
+    "VaultfireReputationTool",
+    "VaultfireTrustTool",
     "VisionTool",
     "WeaviateVectorSearchTool",
     "WebsiteSearchTool",
