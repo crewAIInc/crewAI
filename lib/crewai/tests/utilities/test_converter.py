@@ -87,6 +87,31 @@ def test_convert_to_model_with_no_model() -> None:
     assert output == "Plain text"
 
 
+def test_convert_to_model_with_basemodel_input_matching_pydantic() -> None:
+    instance = SimpleModel(name="John", age=30)
+    output = convert_to_model(instance, SimpleModel, None, None)
+    assert output is instance
+
+
+def test_convert_to_model_with_basemodel_input_matching_json() -> None:
+    instance = SimpleModel(name="John", age=30)
+    output = convert_to_model(instance, None, SimpleModel, None)
+    assert output == {"name": "John", "age": 30}
+
+
+def test_convert_to_model_with_basemodel_input_different_class() -> None:
+    class OtherModel(BaseModel):
+        name: str
+        age: int
+        extra: str = "default"
+
+    instance = OtherModel(name="John", age=30, extra="ignored")
+    output = convert_to_model(instance, SimpleModel, None, None)
+    assert isinstance(output, SimpleModel)
+    assert output.name == "John"
+    assert output.age == 30
+
+
 def test_convert_to_model_with_special_characters() -> None:
     json_string_test = """
     {

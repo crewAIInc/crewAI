@@ -1110,7 +1110,7 @@ Follow these guidelines:
         )
 
     def _export_output(
-        self, result: str
+        self, result: str | BaseModel
     ) -> tuple[BaseModel | None, dict[str, Any] | None]:
         pydantic_output: BaseModel | None = None
         json_output: dict[str, Any] | None = None

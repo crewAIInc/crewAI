@@ -153,16 +153,18 @@ class Converter(OutputConverter):
 
 
 def convert_to_model(
-    result: str,
+    result: str | BaseModel,
     output_pydantic: type[BaseModel] | None,
     output_json: type[BaseModel] | None,
     agent: Agent | BaseAgent | None = None,
     converter_cls: type[Converter] | None = None,
 ) -> dict[str, Any] | BaseModel | str:
-    """Convert a result string to a Pydantic model or JSON.
+    """Convert a result to a Pydantic model or JSON.
 
     Args:
-        result: The result string to convert.
+        result: The result to convert. Usually a JSON string, but a Pydantic
+            instance is also accepted when an upstream caller already produced
+            a structured object.
         output_pydantic: The Pydantic model class to convert to.
         output_json: The Pydantic model class to convert to JSON.
         agent: The agent instance.
@@ -174,6 +176,11 @@ def convert_to_model(
     model = output_pydantic or output_json
     if model is None:
         return result
+
+    if isinstance(result, BaseModel):
+        if isinstance(result, model):
+            return result.model_dump() if output_json else result
+        result = result.model_dump_json()
 
     if converter_cls:
         return convert_with_instructions(
