@@ -11,6 +11,7 @@ import asyncio
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import contextvars
+import copy
 import inspect
 import logging
 from typing import TYPE_CHECKING, Annotated, Any, Literal, cast
@@ -142,14 +143,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
         if not self.after_llm_call_hooks:
             self.after_llm_call_hooks.extend(get_after_llm_call_hooks())
         if self.llm and not isinstance(self.llm, str):
-            existing_stop = getattr(self.llm, "stop", [])
-            self.llm.stop = list(
-                set(
-                    existing_stop + self.stop
-                    if isinstance(existing_stop, list)
-                    else self.stop
-                )
-            )
+            if not set(self.stop).issubset(self.llm.stop):
+                self.llm = copy.copy(self.llm)
+                self.llm.stop = list(set(self.llm.stop + self.stop))
 
     @property
     def use_stop_words(self) -> bool:

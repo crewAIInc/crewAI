@@ -5,6 +5,7 @@ import asyncio
 from collections.abc import Callable, Coroutine
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import contextvars
+import copy
 from datetime import datetime
 import inspect
 import json
@@ -216,10 +217,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         self.after_llm_call_hooks.extend(get_after_llm_call_hooks())
 
         if self.llm:
-            existing_stop = getattr(self.llm, "stop", [])
-            if not isinstance(existing_stop, list):
-                existing_stop = []
-            self.llm.stop = list(set(existing_stop + self.stop_words))
+            if not set(self.stop_words).issubset(self.llm.stop):
+                self.llm = copy.copy(self.llm)
+                self.llm.stop = list(set(self.llm.stop + self.stop_words))
 
         self._state = AgentExecutorState()
         self.max_method_calls = self.max_iter * 10
