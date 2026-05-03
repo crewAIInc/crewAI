@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable, Sequence
-from concurrent.futures import Future
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from copy import copy as shallow_copy
 from hashlib import md5
 import json
@@ -62,6 +62,13 @@ from crewai.agents.agent_builder.base_agent import (
     _validate_llm_ref,
 )
 from crewai.agents.cache.cache_handler import CacheHandler
+from crewai.consensus import (
+    ConsensusEngine,
+    MajorityVoteConsensus,
+    build_handler_ranking_prompt,
+    discover_engines,
+    parse_role_ranking,
+)
 from crewai.crews.crew_output import CrewOutput
 from crewai.crews.utils import (
     StreamingContext,
@@ -149,6 +156,13 @@ from crewai.utilities.training_handler import CrewTrainingHandler
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
 
+# When ``Process.consensual`` polls every agent for a handler ranking, at
+# least this fraction of agents must produce a parseable ballot for the
+# vote to count. Below this threshold we raise rather than risk picking a
+# handler from a tiny minority of voters.
+_MIN_RANKING_RATIO = 0.5
+
+
 def _resolve_agents(value: Any, info: Any) -> Any:
     if not isinstance(value, list):
         return value
@@ -221,6 +235,52 @@ class Crew(FlowTrackable, BaseModel):
         BeforeValidator(_resolve_agents),
     ] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
+    consensus: Any = Field(
+        default=None,
+        description=(
+            "ConsensusEngine for ``process=Process.consensual``. Accepts "
+            "either an instance implementing ``aggregate(candidates, rankings) "
+            "-> str`` (see ``crewai.consensus.ConsensusEngine``) or a string "
+            'naming an installed engine (e.g. ``"majority"``, ``"snowveil"``). '
+            "Strings are resolved via ``crewai.consensus.discover_engines()`` "
+            "and instantiated with default arguments. Defaults to "
+            "``MajorityVoteConsensus`` when unset. Typed as ``Any`` for "
+            "Pydantic compatibility with structural Protocols; validated at runtime."
+        ),
+    )
+
+    @field_validator("consensus")
+    @classmethod
+    def _validate_consensus(cls, v: Any) -> Any:
+        """Resolve string shorthands and runtime-check the structural Protocol.
+
+        Strings are looked up via :func:`crewai.consensus.discover_engines`
+        and default-instantiated. Instances pass through after the structural
+        check (Pydantic can't generate a schema for a Protocol type, so the
+        field is annotated ``Any`` and we validate here).
+        """
+        if v is None:
+            return v
+        if isinstance(v, str):
+            if not v:
+                raise ValueError("consensus engine name cannot be empty")
+            engines = discover_engines()
+            if v not in engines:
+                raise ValueError(
+                    f"unknown consensus engine name {v!r}; installed engines: "
+                    f"{sorted(engines)}. Install a third-party engine (e.g. "
+                    f"`pip install snowveil`) or pass an instance directly. "
+                    f"If a plugin you expect is missing, check "
+                    f"``logging.WARNING`` on 'crewai.consensus' for load failures."
+                )
+            v = engines[v]()
+        if not isinstance(v, ConsensusEngine):
+            raise TypeError(
+                "consensus must implement aggregate(candidates, rankings) -> str "
+                "(see crewai.consensus.ConsensusEngine)"
+            )
+        return v
+
     verbose: bool = Field(default=False)
     memory: bool | Memory | MemoryScope | MemorySlice | None = Field(
         default=False,
@@ -956,6 +1016,8 @@ class Crew(FlowTrackable, BaseModel):
                 result = self._run_sequential_process()
             elif self.process == Process.hierarchical:
                 result = self._run_hierarchical_process()
+            elif self.process == Process.consensual:
+                result = self._run_consensual_process()
             else:
                 raise NotImplementedError(
                     f"The process '{self.process}' is not implemented yet."
@@ -1402,6 +1464,109 @@ class Crew(FlowTrackable, BaseModel):
         """Creates and assigns a manager agent to complete the tasks."""
         self._create_manager_agent()
         return self._execute_tasks(self.tasks)
+
+    def _run_consensual_process(self) -> CrewOutput:
+        """Pick each task's handler via consensus over agent rankings.
+
+        For every task without an explicit ``agent``, every voting agent
+        (excluding self) is asked to rank the candidate handlers; the
+        configured ``ConsensusEngine`` aggregates the ballots and the
+        winning agent is assigned. Tasks with an explicit ``agent`` are
+        left unchanged.
+
+        Requires unique agent roles — duplicates make
+        winner-by-role lookup ambiguous. The default consensus engine is
+        :class:`MajorityVoteConsensus`. Production crews substitute a
+        stronger aggregation rule via ``Crew(consensus=...)``.
+        """
+        self._require_unique_agent_roles()
+        engine: ConsensusEngine = self.consensus or MajorityVoteConsensus()
+        candidate_roles = [a.role for a in self.agents]
+        for task in self.tasks:
+            if task.agent is not None:
+                continue
+            rankings = self._collect_handler_rankings(task, candidate_roles)
+            winner_role = engine.aggregate(candidate_roles, rankings)
+            task.agent = self._agent_by_role(winner_role)
+        return self._execute_tasks(self.tasks)
+
+    def _require_unique_agent_roles(self) -> None:
+        roles = [a.role for a in self.agents]
+        duplicates = sorted({r for r in roles if roles.count(r) > 1})
+        if duplicates:
+            raise ValueError(
+                "Process.consensual requires unique agent roles; "
+                f"found duplicates: {duplicates}"
+            )
+
+    def _agent_by_role(self, role: str) -> BaseAgent:
+        for a in self.agents:
+            if a.role == role:
+                return a
+        raise RuntimeError(f"consensus winner role {role!r} not found in agent list")
+
+    def _collect_handler_rankings(
+        self, task: Task, candidate_roles: list[str]
+    ) -> dict[str, list[str]]:
+        """Ask each agent to rank candidate handlers for ``task``.
+
+        Each agent is prompted to rank only the *other* agents' roles —
+        avoiding self-promotion bias in the LLM response. The voter is
+        then automatically pinned at the bottom of their own ballot, so
+        the aggregation engine receives a *complete* ranking (every
+        candidate appears exactly once) without ever giving a voter
+        credit for ranking themselves first.
+
+        Agents whose response cannot be parsed are dropped with a
+        warning; if fewer than ``_MIN_RANKING_RATIO`` of agents produce
+        valid rankings the method raises rather than risk a low-quorum
+        vote.
+
+        LLM calls run in parallel via a thread pool, since
+        ``agent.execute_task`` is synchronous. Override this method (or
+        the consensus engine) to source rankings from heuristics, voting
+        history, capability tags, etc.
+        """
+
+        def _rank_one(agent: BaseAgent) -> tuple[str, list[str] | None]:
+            eligible = [r for r in candidate_roles if r != agent.role]
+            if not eligible:
+                return agent.role, None
+            prompt = build_handler_ranking_prompt(task.description, eligible)
+            sub = Task(
+                description=prompt,
+                expected_output="A JSON array of role strings, best to worst.",
+                agent=agent,
+            )
+            try:
+                response = str(agent.execute_task(sub))
+                partial = parse_role_ranking(response, eligible)
+                # Pin self at the bottom: bias-free *and* ballot-complete.
+                return agent.role, [*partial, agent.role]
+            except Exception as exc:
+                self._logger.log(
+                    "warning",
+                    f"agent {agent.role!r} failed to rank handlers: {exc}",
+                    color="yellow",
+                )
+                return agent.role, None
+
+        rankings: dict[str, list[str]] = {}
+        with ThreadPoolExecutor(max_workers=max(1, len(self.agents))) as pool:
+            futures = [pool.submit(_rank_one, a) for a in self.agents]
+            for fut in as_completed(futures):
+                role, ranking = fut.result()
+                if ranking is not None:
+                    rankings[role] = ranking
+
+        min_voters = max(1, int(len(self.agents) * _MIN_RANKING_RATIO))
+        if len(rankings) < min_voters:
+            raise RuntimeError(
+                f"only {len(rankings)}/{len(self.agents)} agents produced "
+                f"valid handler rankings; need at least {min_voters} "
+                f"({_MIN_RANKING_RATIO:.0%}) for consensus"
+            )
+        return rankings
 
     def _create_manager_agent(self) -> None:
         if self.manager_agent is not None:
