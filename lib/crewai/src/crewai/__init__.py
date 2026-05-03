@@ -100,7 +100,7 @@ try:
     _base_namespace["CrewStructuredTool"] = _CrewStructuredTool
 
     try:
-        from crewai.a2a.config import (
+        from crewai_a2a.config import (
             A2AClientConfig as _A2AClientConfig,
             A2AConfig as _A2AConfig,
             A2AServerConfig as _A2AServerConfig,

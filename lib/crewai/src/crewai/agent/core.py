@@ -113,15 +113,15 @@ from crewai.utilities.training_handler import CrewTrainingHandler
 
 
 try:
-    from crewai.a2a.types import AgentResponseProtocol
+    from crewai_a2a.types import AgentResponseProtocol
 except ImportError:
     AgentResponseProtocol = None  # type: ignore[assignment, misc]
 
 
 if TYPE_CHECKING:
+    from crewai_a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
     from crewai_files import FileInput
 
-    from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
     from crewai.agents.agent_builder.base_agent import PlatformAppOrAction
     from crewai.mcp.tool_resolver import MCPToolResolver
     from crewai.task import Task

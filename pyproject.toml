@@ -108,6 +108,7 @@ ignore-decorators = ["typing.overload"]
 "lib/crewai/tests/**/*.py" = ["S101", "RET504", "S105", "S106"]  # Allow assert statements, unnecessary assignments, and hardcoded passwords in tests
 "lib/crewai-tools/tests/**/*.py" = ["S101", "RET504", "S105", "S106", "RUF012", "N818", "E402", "RUF043", "S110", "B017"]  # Allow various test-specific patterns
 "lib/crewai-files/tests/**/*.py" = ["S101", "RET504", "S105", "S106", "B017", "F841"]  # Allow assert statements and blind exception assertions in tests
+"lib/crewai-a2a/tests/**/*.py" = ["S101", "RET504", "S105", "S106", "B017", "F841", "F401", "RUF012"]  # Allow assert statements and blind exception assertions in tests
 "lib/devtools/tests/**/*.py" = ["S101"]
 
 
@@ -121,7 +122,7 @@ warn_return_any = true
 show_error_codes = true
 warn_unused_ignores = true
 python_version = "3.12"
-exclude = "(?x)(^lib/crewai/src/crewai/cli/templates/|^lib/crewai/tests/|^lib/crewai-tools/tests/|^lib/crewai-files/tests/)"
+exclude = "(?x)(^lib/crewai/src/crewai/cli/templates/|^lib/crewai/tests/|^lib/crewai-tools/tests/|^lib/crewai-files/tests/|^lib/crewai-a2a/tests/)"
 plugins = ["pydantic.mypy"]
 
 
@@ -204,6 +205,7 @@ members = [
     "lib/crewai-tools",
     "lib/devtools",
     "lib/crewai-files",
+    "lib/crewai-a2a",
 ]
 
 
@@ -212,3 +214,4 @@ crewai = { workspace = true }
 crewai-tools = { workspace = true }
 crewai-devtools = { workspace = true }
 crewai-files = { workspace = true }
+crewai-a2a = { workspace = true }
