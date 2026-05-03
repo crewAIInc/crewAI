@@ -215,6 +215,9 @@ from crewai_tools.tools.youtube_channel_search_tool.youtube_channel_search_tool 
 from crewai_tools.tools.youtube_video_search_tool.youtube_video_search_tool import (
     YoutubeVideoSearchTool,
 )
+from crewai_tools.tools.zero_api_key_web_search_tool.zero_api_key_web_search_tool import (
+    ZeroApiKeyWebSearchTool,
+)
 from crewai_tools.tools.zapier_action_tool.zapier_action_tool import ZapierActionTools
 
 
@@ -326,6 +329,7 @@ __all__ = [
     "XMLSearchTool",
     "YoutubeChannelSearchTool",
     "YoutubeVideoSearchTool",
+    "ZeroApiKeyWebSearchTool",
     "ZapierActionTool",
     "ZapierActionTools",
 ]
