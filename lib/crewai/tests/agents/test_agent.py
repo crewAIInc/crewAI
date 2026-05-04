@@ -2522,8 +2522,16 @@ class TestSharedLLMStopWords:
         assert shared.stop == ["Original:"]
         assert shared.stop_sequences == ["Original:"]
 
-    def test_no_override_when_llm_does_not_support_stop_words(self) -> None:
-        """LLMs that ignore stop words must not see a per-call override."""
+    def test_override_applies_for_post_processing_when_api_lacks_stop_support(
+        self,
+    ) -> None:
+        """Models that lack API-level stop support still need the override.
+
+        Native providers (e.g. Azure on gpt-5/o-series) read ``stop_sequences``
+        in ``_apply_stop_words`` to truncate the response post-hoc even when
+        ``supports_stop_words()`` returns False, so the override must be set
+        regardless of API-level support. (Issue raised by Cursor Bugbot.)
+        """
         from unittest.mock import patch
         from crewai.utilities.agent_utils import _llm_stop_words_applied
 
@@ -2532,9 +2540,10 @@ class TestSharedLLMStopWords:
 
         with patch.object(shared, "supports_stop_words", return_value=False):
             with _llm_stop_words_applied(shared, executor):
-                assert shared.stop_sequences == ["Original:"]
+                assert set(shared.stop_sequences) == {"Original:", "Observation:"}
 
         assert shared.stop == ["Original:"]
+        assert shared.stop_sequences == ["Original:"]
 
     def test_concurrent_overrides_do_not_collide(self) -> None:
         """Concurrent agents on a shared LLM must each see their own effective stop."""

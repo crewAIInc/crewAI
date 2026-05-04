@@ -264,12 +264,7 @@ def _llm_stop_words_applied(
     call's task / thread context.
     """
     extra = _executor_stop_words(executor_context)
-    if (
-        not extra
-        or not isinstance(llm, BaseLLM)
-        or not llm.supports_stop_words()
-        or set(extra).issubset(llm.stop)
-    ):
+    if not extra or not isinstance(llm, BaseLLM) or set(extra).issubset(llm.stop):
         yield
         return
     with call_stop_override(list(set(llm.stop + extra))):
