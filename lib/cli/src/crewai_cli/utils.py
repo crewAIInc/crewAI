@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from functools import reduce
-from inspect import getmro, isclass
 import os
 from pathlib import Path
 import shutil
@@ -237,119 +236,6 @@ def write_env_file(folder_path: Path, env_vars: dict[str, Any]) -> None:
     with open(env_file_path, "w") as file:
         for key, value in env_vars.items():
             file.write(f"{key.upper()}={value}\n")
-
-
-def is_valid_tool(obj: Any) -> bool:
-    """Check if an object is a valid tool class.
-
-    Works without importing crewai by checking MRO class names.
-    Falls back to crewai's ``is_valid_tool`` when available.
-    """
-    try:
-        from crewai.utilities.project_utils import is_valid_tool as _core_is_valid_tool
-
-        return _core_is_valid_tool(obj)
-    except ImportError:
-        pass
-
-    if isclass(obj):
-        try:
-            return any(base.__name__ == "BaseTool" for base in getmro(obj))
-        except (TypeError, AttributeError):
-            return False
-    return False
-
-
-def extract_available_exports(dir_path: str = "src") -> list[dict[str, Any]]:
-    """Extract available tool classes from the project's __init__.py files."""
-    try:
-        init_files = Path(dir_path).glob("**/__init__.py")
-        available_exports: list[dict[str, Any]] = []
-
-        for init_file in init_files:
-            tools = _load_tools_from_init(init_file)
-            available_exports.extend(tools)
-
-        if not available_exports:
-            _print_no_tools_warning()
-            raise SystemExit(1)
-
-        return available_exports
-
-    except SystemExit:
-        raise
-    except Exception as e:
-        console.print(f"[red]Error: Could not extract tool classes: {e!s}[/red]")
-        console.print(
-            "Please ensure your project contains valid tools (classes inheriting from BaseTool or functions with @tool decorator)."
-        )
-        raise SystemExit(1) from e
-
-
-def _load_tools_from_init(init_file: Path) -> list[dict[str, Any]]:
-    """Load and validate tools from a given __init__.py file."""
-    import importlib.util as _importlib_util
-
-    spec = _importlib_util.spec_from_file_location("temp_module", init_file)
-
-    if not spec or not spec.loader:
-        return []
-
-    module = _importlib_util.module_from_spec(spec)
-    sys.modules["temp_module"] = module
-
-    try:
-        spec.loader.exec_module(module)
-
-        if not hasattr(module, "__all__"):
-            console.print(
-                f"Warning: No __all__ defined in {init_file}",
-                style="bold yellow",
-            )
-            raise SystemExit(1)
-
-        return [
-            {"name": name}
-            for name in module.__all__
-            if hasattr(module, name) and is_valid_tool(getattr(module, name))
-        ]
-
-    except SystemExit:
-        raise
-    except Exception as e:
-        console.print(f"[red]Warning: Could not load {init_file}: {e!s}[/red]")
-        raise SystemExit(1) from e
-
-    finally:
-        sys.modules.pop("temp_module", None)
-
-
-def _print_no_tools_warning() -> None:
-    """Display warning and usage instructions if no tools were found."""
-    console.print(
-        "\n[bold yellow]Warning: No valid tools were exposed in your __init__.py file![/bold yellow]"
-    )
-    console.print(
-        "Your __init__.py file must contain all classes that inherit from [bold]BaseTool[/bold] "
-        "or functions decorated with [bold]@tool[/bold]."
-    )
-    console.print(
-        "\nExample:\n[dim]# In your __init__.py file[/dim]\n"
-        "[green]__all__ = ['YourTool', 'your_tool_function'][/green]\n\n"
-        "[dim]# In your tool.py file[/dim]\n"
-        "[green]from crewai.tools import BaseTool, tool\n\n"
-        "# Tool class example\n"
-        "class YourTool(BaseTool):\n"
-        '    name = "your_tool"\n'
-        '    description = "Your tool description"\n'
-        "    # ... rest of implementation\n\n"
-        "# Decorated function example\n"
-        "@tool\n"
-        "def your_tool_function(text: str) -> str:\n"
-        '    """Your tool description"""\n'
-        "    # ... implementation\n"
-        "    return result\n"
-    )
 
 
 def build_env_with_tool_repository_credentials(

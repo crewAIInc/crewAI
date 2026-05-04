@@ -56,11 +56,16 @@ def _save_user_data(data: dict[str, Any]) -> None:
 
 
 def is_tracing_enabled() -> bool:
-    """Check if tracing is enabled (mirrors crewai core logic)."""
+    """Check if tracing is enabled.
+
+    Returns True when the user has positively consented (e.g. via
+    ``crewai traces enable``), False when they have declined, and falls back
+    to the ``CREWAI_TRACING_ENABLED`` env var when consent is unset.
+    """
     data = _load_user_data()
-    if (
-        data.get("first_execution_done", False)
-        and data.get("trace_consent", False) is False
-    ):
+    trace_consent = data.get("trace_consent")
+    if trace_consent is True:
+        return True
+    if data.get("first_execution_done", False) and trace_consent is False:
         return False
     return os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "true"

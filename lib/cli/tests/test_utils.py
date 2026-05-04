@@ -102,45 +102,6 @@ def test_tree_copy_to_existing_directory(temp_tree):
         shutil.rmtree(dest_dir)
 
 
-@pytest.fixture
-def temp_project_dir():
-    """Create a temporary directory for testing tool extraction."""
-    with tempfile.TemporaryDirectory() as temp_dir:
-        yield Path(temp_dir)
-
-
-def create_init_file(directory, content):
-    return create_file(directory / "__init__.py", content)
-
-
-def test_extract_available_exports_empty_project(temp_project_dir, capsys):
-    with pytest.raises(SystemExit):
-        utils.extract_available_exports(dir_path=temp_project_dir)
-    captured = capsys.readouterr()
-
-    assert "No valid tools were exposed in your __init__.py file" in captured.out
-
-
-def test_extract_available_exports_no_init_file(temp_project_dir, capsys):
-    (temp_project_dir / "some_file.py").write_text("print('hello')")
-    with pytest.raises(SystemExit):
-        utils.extract_available_exports(dir_path=temp_project_dir)
-    captured = capsys.readouterr()
-
-    assert "No valid tools were exposed in your __init__.py file" in captured.out
-
-
-def test_extract_available_exports_empty_init_file(temp_project_dir, capsys):
-    create_init_file(temp_project_dir, "")
-    with pytest.raises(SystemExit):
-        utils.extract_available_exports(dir_path=temp_project_dir)
-    captured = capsys.readouterr()
-
-    assert "Warning: No __all__ defined in" in captured.out
-
-
-# Tests for extract_available_exports with crewai.tools (BaseTool, @tool)
-# remain in lib/crewai/tests/cli/test_utils.py as they require the crewai core package.
-
-# Tests for get_crews, get_flows, fetch_crews, is_valid_tool
-# remain in lib/crewai/tests/cli/test_utils.py as they require the crewai core package.
+# Tests for extract_available_exports, get_crews, get_flows, fetch_crews,
+# is_valid_tool live in lib/crewai/tests/cli/test_utils.py — the canonical
+# implementations are in crewai.utilities.project_utils.
