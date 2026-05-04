@@ -59,6 +59,11 @@ class MCPNativeTool(BaseTool):
         self._client_factory = client_factory
         self._original_tool_name = original_tool_name or tool_name
         self._server_name = server_name
+        # Set by MCPToolResolver._resolve_amp when this tool is produced for
+        # an AMP slug; remains None for direct config / external URL refs.
+        # Consumed downstream by enterprise tooling to recover the canonical
+        # tool_id (e.g. "crewai_oauth:<slug>|mcp").
+        self._amp_slug: str | None = None
 
     @property
     def original_tool_name(self) -> str:

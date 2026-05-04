@@ -54,6 +54,11 @@ class MCPToolWrapper(BaseTool):
         self._mcp_server_params = mcp_server_params
         self._original_tool_name = tool_name
         self._server_name = server_name
+        # Set by MCPToolResolver._resolve_amp when this wrapper is produced for
+        # an AMP slug; remains None for direct config / external URL refs.
+        # Consumed downstream by enterprise tooling to recover the canonical
+        # tool_id (e.g. "crewai_oauth:<slug>|mcp").
+        self._amp_slug: str | None = None
 
     @property
     def mcp_server_params(self) -> dict[str, Any]:

@@ -152,6 +152,8 @@ class MCPToolResolver:
 
             try:
                 tools, clients = self._resolve_native(mcp_server_config)
+                for tool in tools:
+                    tool._amp_slug = slug
                 resolved_cache[slug] = (tools, clients)
                 all_clients.extend(clients)
             except Exception as e:
