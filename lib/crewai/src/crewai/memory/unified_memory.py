@@ -253,6 +253,18 @@ class Memory(BaseModel):
                 from crewai.memory.storage.lancedb_storage import LanceDBStorage
 
                 self._storage = LanceDBStorage()
+            elif self.storage == "valkey":
+                from crewai.memory.storage.valkey_storage import ValkeyStorage
+                from crewai.utilities.cache_config import parse_cache_url
+
+                conn = parse_cache_url() or {}
+                self._storage = ValkeyStorage(
+                    host=conn.get("host", "localhost"),
+                    port=conn.get("port", 6379),
+                    db=conn.get("db", 0),
+                    password=conn.get("password"),
+                    use_tls=conn.get("use_tls", False),
+                )
             else:
                 from crewai.memory.storage.lancedb_storage import LanceDBStorage
 
