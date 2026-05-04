@@ -2574,6 +2574,25 @@ class TestSharedLLMStopWords:
         assert shared.stop == ["Original:"]
         assert shared.stop_sequences == ["Original:"]
 
+    def test_override_does_not_leak_to_other_llm_instances(self) -> None:
+        """Override for one LLM must not affect another LLM (e.g. function_calling_llm).
+
+        Regression for Cursor Bugbot: a global ContextVar would leak the
+        override to every BaseLLM that reads stop_sequences during the scope.
+        """
+        from crewai.utilities.agent_utils import _llm_stop_words_applied
+
+        target = LLM(model="gpt-4", stop=["TargetStop:"])
+        other = LLM(model="gpt-4", stop=["OtherStop:"])
+        executor = self._make_executor(target, stop_words=["Observation:"])
+
+        with _llm_stop_words_applied(target, executor):
+            assert set(target.stop_sequences) == {"TargetStop:", "Observation:"}
+            assert other.stop_sequences == ["OtherStop:"]
+
+        assert target.stop_sequences == ["TargetStop:"]
+        assert other.stop_sequences == ["OtherStop:"]
+
     def test_override_propagates_to_nested_direct_llm_calls(self) -> None:
         """Once invoke wraps with the override, nested direct llm.call sites
         (StepExecutor, handle_max_iterations_exceeded) see the merged stops.

@@ -267,7 +267,7 @@ def _llm_stop_words_applied(
     if not extra or not isinstance(llm, BaseLLM) or set(extra).issubset(llm.stop):
         yield
         return
-    with call_stop_override(list(set(llm.stop + extra))):
+    with call_stop_override(llm, list(set(llm.stop + extra))):
         yield
 
 

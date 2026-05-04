@@ -72,7 +72,7 @@ _JSON_EXTRACTION_PATTERN: Final[re.Pattern[str]] = re.compile(r"\{.*}", re.DOTAL
 _current_call_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "_current_call_id", default=None
 )
-_call_stop_override_var: contextvars.ContextVar[list[str] | None] = (
+_call_stop_override_var: contextvars.ContextVar[dict[int, list[str]] | None] = (
     contextvars.ContextVar("_call_stop_override_var", default=None)
 )
 
@@ -89,16 +89,24 @@ def llm_call_context() -> Generator[str, None, None]:
 
 
 @contextmanager
-def call_stop_override(stop: list[str] | None) -> Generator[None, None, None]:
-    """Override the active stop list for the current call scope.
+def call_stop_override(
+    llm: BaseLLM, stop: list[str] | None
+) -> Generator[None, None, None]:
+    """Override the stop list for ``llm`` within the current call scope.
 
-    Reads via :meth:`BaseLLM._effective_stop` (and therefore
-    :attr:`BaseLLM.stop_sequences`) return ``stop`` for the duration of the
-    context. Setting ``None`` clears any active override. The instance-level
-    ``stop`` field is never mutated, so the override is safe under concurrent
-    execution.
+    Only ``llm``'s reads via :attr:`BaseLLM.stop_sequences` see ``stop``;
+    other LLM instances (e.g. an agent's ``function_calling_llm``) keep their
+    own ``stop`` field. Passing ``None`` clears any prior override for ``llm``
+    in the same scope. The instance-level ``stop`` field is never mutated,
+    so the override is safe under concurrent execution.
     """
-    token = _call_stop_override_var.set(stop)
+    current = _call_stop_override_var.get()
+    new_overrides: dict[int, list[str]] = dict(current) if current else {}
+    if stop is None:
+        new_overrides.pop(id(llm), None)
+    else:
+        new_overrides[id(llm)] = stop
+    token = _call_stop_override_var.set(new_overrides)
     try:
         yield
     finally:
@@ -180,13 +188,17 @@ class BaseLLM(BaseModel, ABC):
     def stop_sequences(self) -> list[str]:
         """Stop list active for the current call.
 
-        Returns the per-call override set via :func:`call_stop_override` when
-        one is in effect; otherwise the instance-level ``stop`` field. Kept
-        under this name for backward compatibility with provider APIs that
-        already read ``stop_sequences``.
+        Returns the per-instance override set via :func:`call_stop_override`
+        when one is in effect for this LLM; otherwise the instance-level
+        ``stop`` field. Kept under this name for backward compatibility with
+        provider APIs that already read ``stop_sequences``.
         """
-        override = _call_stop_override_var.get()
-        return override if override is not None else self.stop
+        overrides = _call_stop_override_var.get()
+        if overrides is not None:
+            override = overrides.get(id(self))
+            if override is not None:
+                return override
+        return self.stop
 
     _token_usage: dict[str, int] = PrivateAttr(
         default_factory=lambda: {
