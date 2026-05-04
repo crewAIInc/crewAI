@@ -260,6 +260,8 @@ override-dependencies = [
     "nltk>=3.10.0",
     "h2>=4.4.1",
     "torch>=2.13.0",
+    # scrapegraph-py 2.x removed Client class; pin until upstream fixes type ignores
+    "scrapegraph-py>=1.46.0,<2",
 ]
 
 [tool.uv.workspace]

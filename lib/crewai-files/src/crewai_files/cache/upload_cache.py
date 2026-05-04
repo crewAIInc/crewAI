@@ -1,4 +1,4 @@
-"""Cache for tracking uploaded files using aiocache."""
+"""Cache for tracking uploaded files using aiocache or ValkeyCache."""
 
 from __future__ import annotations
 
@@ -10,10 +10,11 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 from aiocache import Cache  # type: ignore[import-untyped]
 from aiocache.serializers import PickleSerializer  # type: ignore[import-untyped]
+from crewai.utilities.cache_config import parse_cache_url
 
 from crewai_files.core.constants import DEFAULT_MAX_CACHE_ENTRIES, DEFAULT_TTL_SECONDS
 from crewai_files.uploaders.factory import ProviderType
@@ -51,6 +52,33 @@ class CachedUpload:
             return False
         return datetime.now(timezone.utc) >= self.expires_at
 
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize to a JSON-compatible dict."""
+        return {
+            "file_id": self.file_id,
+            "provider": self.provider,
+            "file_uri": self.file_uri,
+            "content_type": self.content_type,
+            "uploaded_at": self.uploaded_at.isoformat(),
+            "expires_at": self.expires_at.isoformat() if self.expires_at else None,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> CachedUpload:
+        """Deserialize from a dict."""
+        return cls(
+            file_id=data["file_id"],
+            provider=data["provider"],
+            file_uri=data.get("file_uri"),
+            content_type=data["content_type"],
+            uploaded_at=datetime.fromisoformat(data["uploaded_at"]),
+            expires_at=(
+                datetime.fromisoformat(data["expires_at"])
+                if data.get("expires_at")
+                else None
+            ),
+        )
+
 
 def _make_key(file_hash: str, provider: str) -> str:
     """Create a cache key from file hash and provider."""
@@ -58,14 +86,7 @@ def _make_key(file_hash: str, provider: str) -> str:
 
 
 def _compute_file_hash_streaming(chunks: Iterator[bytes]) -> str:
-    """Compute SHA-256 hash from streaming chunks.
-
-    Args:
-        chunks: Iterator of byte chunks.
-
-    Returns:
-        Hexadecimal hash string.
-    """
+    """Compute SHA-256 hash from streaming chunks."""
     hasher = hashlib.sha256()
     for chunk in chunks:
         hasher.update(chunk)
@@ -73,10 +94,7 @@ def _compute_file_hash_streaming(chunks: Iterator[bytes]) -> str:
 
 
 def _compute_file_hash(file: FileInput) -> str:
-    """Compute SHA-256 hash of file content.
-
-    Uses streaming for FilePath sources to avoid loading large files into memory.
-    """
+    """Compute SHA-256 hash of file content."""
     from crewai_files.core.sources import FilePath
 
     source = file._file_source
@@ -86,10 +104,73 @@ def _compute_file_hash(file: FileInput) -> str:
     return hashlib.sha256(content).hexdigest()
 
 
-class UploadCache:
-    """Async cache for tracking uploaded files using aiocache.
+class CacheBackend(Protocol):
+    """Protocol for cache backends used by UploadCache."""
 
-    Supports in-memory caching by default, with optional Redis backend
+    async def get(self, key: str) -> CachedUpload | None: ...
+    async def set(self, key: str, value: CachedUpload, ttl: int) -> None: ...
+    async def delete(self, key: str) -> bool: ...
+
+
+class AiocacheBackend:
+    """Cache backend backed by aiocache (memory or Redis)."""
+
+    def __init__(self, cache: Cache) -> None:  # type: ignore[no-any-unimported]
+        self._cache = cache
+
+    async def get(self, key: str) -> CachedUpload | None:
+        result = await self._cache.get(key)
+        if isinstance(result, CachedUpload):
+            return result
+        return None
+
+    async def set(self, key: str, value: CachedUpload, ttl: int) -> None:
+        await self._cache.set(key, value, ttl=ttl)
+
+    async def delete(self, key: str) -> bool:
+        result = await self._cache.delete(key)
+        return bool(result > 0 if isinstance(result, int) else result)
+
+
+class ValkeyCacheBackend:
+    """Cache backend backed by ValkeyCache (JSON serialization)."""
+
+    def __init__(
+        self,
+        host: str = "localhost",
+        port: int = 6379,
+        db: int = 0,
+        password: str | None = None,
+        default_ttl: int | None = None,
+    ) -> None:
+        from crewai.memory.storage.valkey_cache import ValkeyCache
+
+        self._cache = ValkeyCache(
+            host=host, port=port, db=db, password=password, default_ttl=default_ttl
+        )
+
+    async def get(self, key: str) -> CachedUpload | None:
+        data = await self._cache.get(key)
+        if data is None:
+            return None
+        try:
+            return CachedUpload.from_dict(data)
+        except (KeyError, ValueError) as e:
+            logger.warning(f"Failed to deserialize cached upload: {e}")
+            return None
+
+    async def set(self, key: str, value: CachedUpload, ttl: int) -> None:
+        await self._cache.set(key, value.to_dict(), ttl=ttl)
+
+    async def delete(self, key: str) -> bool:
+        await self._cache.delete(key)
+        return True  # ValkeyCache.delete is void
+
+
+class UploadCache:
+    """Async cache for tracking uploaded files.
+
+    Supports in-memory caching by default, with optional Redis or Valkey backend
     for distributed setups.
 
     Attributes:
@@ -110,7 +191,7 @@ class UploadCache:
         Args:
             ttl: Default TTL in seconds.
             namespace: Cache namespace.
-            cache_type: Backend type ("memory" or "redis").
+            cache_type: Backend type ("memory", "redis", or "valkey").
             max_entries: Maximum cache entries (None for unlimited).
             **cache_kwargs: Additional args for cache backend.
         """
@@ -120,18 +201,39 @@ class UploadCache:
         self._provider_keys: dict[ProviderType, set[str]] = {}
         self._key_access_order: list[str] = []
 
+        self._backend: CacheBackend = self._create_backend(
+            cache_type, namespace, ttl, **cache_kwargs
+        )
+
+    @staticmethod
+    def _create_backend(
+        cache_type: str,
+        namespace: str,
+        ttl: int,
+        **cache_kwargs: Any,
+    ) -> CacheBackend:
+        """Create the appropriate cache backend."""
+        if cache_type == "valkey":
+            conn = parse_cache_url() or {}
+            return ValkeyCacheBackend(
+                host=cache_kwargs.get("host", conn.get("host", "localhost")),
+                port=cache_kwargs.get("port", conn.get("port", 6379)),
+                db=cache_kwargs.get("db", conn.get("db", 0)),
+                password=cache_kwargs.get("password", conn.get("password")),
+                default_ttl=ttl,
+            )
         if cache_type == "redis":
-            self._cache = Cache(
-                Cache.REDIS,
-                serializer=PickleSerializer(),
-                namespace=namespace,
-                **cache_kwargs,
+            return AiocacheBackend(
+                Cache(
+                    Cache.REDIS,
+                    serializer=PickleSerializer(),
+                    namespace=namespace,
+                    **cache_kwargs,
+                )
             )
-        else:
-            self._cache = Cache(
-                serializer=PickleSerializer(),
-                namespace=namespace,
-            )
+        return AiocacheBackend(
+            Cache(serializer=PickleSerializer(), namespace=namespace)
+        )
 
     def _track_key(self, provider: ProviderType, key: str) -> None:
         """Track a key for a provider (for cleanup) and access order."""
@@ -157,11 +259,9 @@ class UploadCache:
         """
         if self.max_entries is None:
             return 0
-
         current_count = len(self)
         if current_count < self.max_entries:
             return 0
-
         to_evict = max(1, self.max_entries // 10)
         return await self._evict_oldest(to_evict)
 
@@ -176,31 +276,24 @@ class UploadCache:
         """
         evicted = 0
         keys_to_evict = self._key_access_order[:count]
-
         for key in keys_to_evict:
-            await self._cache.delete(key)
+            await self._backend.delete(key)
             self._key_access_order.remove(key)
             for provider_keys in self._provider_keys.values():
                 provider_keys.discard(key)
             evicted += 1
-
         if evicted > 0:
             logger.debug(f"Evicted {evicted} oldest cache entries")
-
         return evicted
+
+    # ------------------------------------------------------------------
+    # Async public API
+    # ------------------------------------------------------------------
 
     async def aget(
         self, file: FileInput, provider: ProviderType
     ) -> CachedUpload | None:
-        """Get a cached upload for a file.
-
-        Args:
-            file: The file to look up.
-            provider: The provider name.
-
-        Returns:
-            Cached upload if found and not expired, None otherwise.
-        """
+        """Get a cached upload for a file."""
         file_hash = _compute_file_hash(file)
         return await self.aget_by_hash(file_hash, provider)
 
@@ -217,17 +310,14 @@ class UploadCache:
             Cached upload if found and not expired, None otherwise.
         """
         key = _make_key(file_hash, provider)
-        result = await self._cache.get(key)
-
+        result = await self._backend.get(key)
         if result is None:
             return None
-        if isinstance(result, CachedUpload):
-            if result.is_expired():
-                await self._cache.delete(key)
-                self._untrack_key(provider, key)
-                return None
-            return result
-        return None
+        if result.is_expired():
+            await self._backend.delete(key)
+            self._untrack_key(provider, key)
+            return None
+        return result
 
     async def aset(
         self,
@@ -237,18 +327,7 @@ class UploadCache:
         file_uri: str | None = None,
         expires_at: datetime | None = None,
     ) -> CachedUpload:
-        """Cache an uploaded file.
-
-        Args:
-            file: The file that was uploaded.
-            provider: The provider name.
-            file_id: Provider-specific file identifier.
-            file_uri: Optional URI for accessing the file.
-            expires_at: When the upload expires.
-
-        Returns:
-            The created cache entry.
-        """
+        """Cache an uploaded file."""
         file_hash = _compute_file_hash(file)
         return await self.aset_by_hash(
             file_hash=file_hash,
@@ -282,7 +361,6 @@ class UploadCache:
             The created cache entry.
         """
         await self._evict_if_needed()
-
         key = _make_key(file_hash, provider)
         now = datetime.now(timezone.utc)
 
@@ -299,7 +377,7 @@ class UploadCache:
         if expires_at is not None:
             ttl = max(0, int((expires_at - now).total_seconds()))
 
-        await self._cache.set(key, cached, ttl=ttl)
+        await self._backend.set(key, cached, ttl=ttl)
         self._track_key(provider, key)
         logger.debug(f"Cached upload: {file_id} for provider {provider}")
         return cached
@@ -316,9 +394,7 @@ class UploadCache:
         """
         file_hash = _compute_file_hash(file)
         key = _make_key(file_hash, provider)
-
-        result = await self._cache.delete(key)
-        removed = bool(result > 0 if isinstance(result, int) else result)
+        removed = await self._backend.delete(key)
         if removed:
             self._untrack_key(provider, key)
         return removed
@@ -335,11 +411,10 @@ class UploadCache:
         """
         if provider not in self._provider_keys:
             return False
-
         for key in list(self._provider_keys[provider]):
-            cached = await self._cache.get(key)
-            if isinstance(cached, CachedUpload) and cached.file_id == file_id:
-                await self._cache.delete(key)
+            cached = await self._backend.get(key)
+            if cached is not None and cached.file_id == file_id:
+                await self._backend.delete(key)
                 self._untrack_key(provider, key)
                 return True
         return False
@@ -351,17 +426,13 @@ class UploadCache:
             Number of entries removed.
         """
         removed = 0
-
         for provider, keys in list(self._provider_keys.items()):
             for key in list(keys):
-                cached = await self._cache.get(key)
-                if cached is None or (
-                    isinstance(cached, CachedUpload) and cached.is_expired()
-                ):
-                    await self._cache.delete(key)
+                cached = await self._backend.get(key)
+                if cached is None or cached.is_expired():
+                    await self._backend.delete(key)
                     self._untrack_key(provider, key)
                     removed += 1
-
         if removed > 0:
             logger.debug(f"Cleared {removed} expired cache entries")
         return removed
@@ -373,9 +444,12 @@ class UploadCache:
             Number of entries cleared.
         """
         count = sum(len(keys) for keys in self._provider_keys.values())
-        await self._cache.clear(namespace=self.namespace)
+        # Delete all tracked keys individually (works for all backends)
+        for keys in self._provider_keys.values():
+            for key in keys:
+                await self._backend.delete(key)
         self._provider_keys.clear()
-
+        self._key_access_order.clear()
         if count > 0:
             logger.debug(f"Cleared {count} cache entries")
         return count
@@ -391,13 +465,16 @@ class UploadCache:
         """
         if provider not in self._provider_keys:
             return []
-
         results: list[CachedUpload] = []
         for key in list(self._provider_keys[provider]):
-            cached = await self._cache.get(key)
-            if isinstance(cached, CachedUpload) and not cached.is_expired():
+            cached = await self._backend.get(key)
+            if cached is not None and not cached.is_expired():
                 results.append(cached)
         return results
+
+    # ------------------------------------------------------------------
+    # Sync wrappers
+    # ------------------------------------------------------------------
 
     @staticmethod
     def _run_sync(coro: Any) -> Any:
@@ -489,11 +566,7 @@ class UploadCache:
         return sum(len(keys) for keys in self._provider_keys.values())
 
     def get_providers(self) -> builtins.set[ProviderType]:
-        """Get all provider names that have cached entries.
-
-        Returns:
-            Set of provider names.
-        """
+        """Get all provider names that have cached entries."""
         return builtins.set(self._provider_keys.keys())
 
 
@@ -506,17 +579,7 @@ def get_upload_cache(
     cache_type: str = "memory",
     **cache_kwargs: Any,
 ) -> UploadCache:
-    """Get or create the default upload cache.
-
-    Args:
-        ttl: Default TTL in seconds.
-        namespace: Cache namespace.
-        cache_type: Backend type ("memory" or "redis").
-        **cache_kwargs: Additional args for cache backend.
-
-    Returns:
-        The upload cache instance.
-    """
+    """Get or create the default upload cache."""
     global _default_cache
     if _default_cache is None:
         _default_cache = UploadCache(
