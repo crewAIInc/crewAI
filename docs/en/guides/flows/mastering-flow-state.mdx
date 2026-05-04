@@ -311,12 +311,15 @@ class PersistentCounterFlow(Flow[CounterState]):
 # First run
 flow1 = PersistentCounterFlow()
 result1 = flow1.kickoff()
-print(f"First run result: {result1}")
+print(f"First run result: {result1}")  # Output: 2 (incremented to 1, doubled to 2)
 
-# Second run - state is automatically loaded
-flow2 = PersistentCounterFlow()
+# Capture the flow ID to resume the same persisted state
+flow_id = flow1.flow_id
+
+# Second run - pass the same flow_id to load persisted state
+flow2 = PersistentCounterFlow(inputs={"id": flow_id})
 result2 = flow2.kickoff()
-print(f"Second run result: {result2}")  # Will be higher due to persisted state
+print(f"Second run result: {result2}")  # Output: 6 (resumes: value=2, +1=3, *2=6)
 ```
 
 #### Method-Level Persistence
