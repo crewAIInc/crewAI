@@ -18,7 +18,7 @@ class TriggersCommand(BaseCommand, PlusAPIMixin):
 
     def __init__(self) -> None:
         BaseCommand.__init__(self)
-        PlusAPIMixin.__init__(self)
+        PlusAPIMixin.__init__(self, telemetry=self._telemetry)
 
     def list_triggers(self) -> None:
         """List all available triggers from integrations."""

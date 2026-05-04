@@ -40,7 +40,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
     def __init__(self) -> None:
         BaseCommand.__init__(self)
-        PlusAPIMixin.__init__(self)
+        PlusAPIMixin.__init__(self, telemetry=self._telemetry)
 
     def create(self, handle: str) -> None:
         self._ensure_not_in_project()

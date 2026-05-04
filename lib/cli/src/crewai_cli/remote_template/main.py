@@ -131,6 +131,8 @@ class TemplateCommand(BaseCommand):
         zip_bytes = self._download_zip(repo_name)
         self._extract_zip(zip_bytes, dest)
 
+        self._telemetry.template_installed_span(repo_name.removeprefix(TEMPLATE_PREFIX))
+
         console.print(
             f"\n [green]\u2713[/green]  Installed template [bold white]{folder_name}[/bold white]"
             f" [dim](source: github.com/{GITHUB_ORG}/{repo_name})[/dim]\n"

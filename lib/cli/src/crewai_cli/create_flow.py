@@ -2,6 +2,7 @@ from pathlib import Path
 import shutil
 
 import click
+from crewai.telemetry import Telemetry
 
 
 def create_flow(name: str) -> None:
@@ -10,6 +11,9 @@ def create_flow(name: str) -> None:
     class_name = name.replace("_", " ").replace("-", " ").title().replace(" ", "")
 
     click.secho(f"Creating flow {folder_name}...", fg="green", bold=True)
+
+    telemetry = Telemetry()
+    telemetry.flow_creation_span(class_name)
 
     project_root = Path(folder_name)
     if project_root.exists():

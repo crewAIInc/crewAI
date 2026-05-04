@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 
+from crewai.telemetry.telemetry import Telemetry
 import httpx
 from rich.console import Console
 
@@ -14,14 +15,17 @@ console = Console()
 
 class BaseCommand:
     def __init__(self) -> None:
-        pass
+        self._telemetry = Telemetry()
+        self._telemetry.set_tracer()
 
 
 class PlusAPIMixin:
-    def __init__(self) -> None:
+    def __init__(self, telemetry: Telemetry) -> None:
         try:
+            telemetry.set_tracer()
             self.plus_api_client = PlusAPI(api_key=get_auth_token())
         except Exception:
+            telemetry.deploy_signup_error_span()
             console.print(
                 "Please sign up/login to CrewAI+ before using the CLI.",
                 style="bold red",
@@ -30,6 +34,11 @@ class PlusAPIMixin:
             raise SystemExit from None
 
     def _validate_response(self, response: httpx.Response) -> None:
+        """Handle and display error messages from API responses.
+
+        Args:
+            response: The response from the Plus API.
+        """
         try:
             json_response = response.json()
         except (json.JSONDecodeError, ValueError):

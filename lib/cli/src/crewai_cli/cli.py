@@ -737,7 +737,7 @@ def env_view() -> None:
         table.add_row(
             "CREWAI_TRACING_ENABLED",
             "[dim]Not set[/dim]",
-            "[dim]---[/dim]",
+            "[dim]—[/dim]",
         )
 
     # Check other related env vars
@@ -756,7 +756,7 @@ def env_view() -> None:
     # Check if .env file exists
     table.add_row(
         ".env file",
-        "Found" if env_file_exists else "Not found",
+        "✅ Found" if env_file_exists else "❌ Not found",
         str(env_file.resolve()) if env_file_exists else "N/A",
     )
 
@@ -772,11 +772,11 @@ def env_view() -> None:
     # Show helpful message
     if env_file_exists:
         console.print(
-            "\n[dim]Tip: To enable tracing via .env, add: CREWAI_TRACING_ENABLED=true[/dim]"
+            "\n[dim]💡 Tip: To enable tracing via .env, add: CREWAI_TRACING_ENABLED=true[/dim]"
         )
     else:
         console.print(
-            "\n[dim]Tip: Create a .env file in your project root and add: CREWAI_TRACING_ENABLED=true[/dim]"
+            "\n[dim]💡 Tip: Create a .env file in your project root and add: CREWAI_TRACING_ENABLED=true[/dim]"
         )
     console.print()
 
@@ -801,7 +801,7 @@ def traces_enable() -> None:
     _save_user_data(user_data)
 
     panel = Panel(
-        "Trace collection has been enabled!\n\n"
+        "✅ Trace collection has been enabled!\n\n"
         "Your crew/flow executions will now send traces to CrewAI+.\n"
         "Use 'crewai traces disable' to turn off trace collection.",
         title="Traces Enabled",
@@ -826,7 +826,7 @@ def traces_disable() -> None:
     _save_user_data(user_data)
 
     panel = Panel(
-        "Trace collection has been disabled!\n\n"
+        "❌ Trace collection has been disabled!\n\n"
         "Your crew/flow executions will no longer send traces.\n"
         "Use 'crewai traces enable' to turn trace collection back on.",
         title="Traces Disabled",
@@ -858,19 +858,19 @@ def traces_status() -> None:
     # Check user consent
     trace_consent = user_data.get("trace_consent")
     if trace_consent is True:
-        consent_status = "Enabled (user consented)"
+        consent_status = "✅ Enabled (user consented)"
     elif trace_consent is False:
-        consent_status = "Disabled (user declined)"
+        consent_status = "❌ Disabled (user declined)"
     else:
-        consent_status = "Not set (first-time user)"
+        consent_status = "⚪ Not set (first-time user)"
     table.add_row("User Consent", consent_status)
 
     # Check overall status
     if is_tracing_enabled():
-        overall_status = "ENABLED"
+        overall_status = "✅ ENABLED"
         border_style = "green"
     else:
-        overall_status = "DISABLED"
+        overall_status = "❌ DISABLED"
         border_style = "red"
     table.add_row("Overall Status", overall_status)
 

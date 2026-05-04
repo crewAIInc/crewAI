@@ -45,7 +45,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         """
 
         BaseCommand.__init__(self)
-        PlusAPIMixin.__init__(self)
+        PlusAPIMixin.__init__(self, telemetry=self._telemetry)
         self.project_name = get_project_name(require=True)
         self._validate_project_structure()
 
@@ -129,6 +129,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         """
         if not _run_predeploy_validation(skip_validate):
             return
+        self._telemetry.start_deployment_span(uuid)
         console.print("Starting deployment...", style="bold blue")
         if uuid:
             response = self.plus_api_client.deploy_by_uuid(uuid)
@@ -151,6 +152,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         """
         if not _run_predeploy_validation(skip_validate):
             return
+        self._telemetry.create_crew_deployment_span()
         console.print("Creating deployment...", style="bold blue")
         env_vars = fetch_and_json_env_file()
 
@@ -300,6 +302,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             uuid (Optional[str]): The UUID of the crew to get logs for.
             log_type (str): The type of logs to retrieve (default: "deployment").
         """
+        self._telemetry.get_crew_logs_span(uuid, log_type)
         console.print(f"Fetching {log_type} logs...", style="bold blue")
 
         if uuid:
@@ -320,6 +323,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         Args:
             uuid (Optional[str]): The UUID of the crew to remove.
         """
+        self._telemetry.remove_crew_span(uuid)
         console.print("Removing deployment...", style="bold blue")
 
         if uuid:
