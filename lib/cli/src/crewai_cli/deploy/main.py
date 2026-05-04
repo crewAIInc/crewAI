@@ -126,7 +126,8 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             uuid (Optional[str]): The UUID of the crew to deploy.
             skip_validate (bool): Skip pre-deploy validation checks.
         """
-        self._validate_project_structure()
+        if not skip_validate:
+            self._validate_project_structure()
         if not _run_predeploy_validation(skip_validate):
             return
         self._telemetry.start_deployment_span(uuid)
@@ -150,7 +151,8 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             confirm (bool): Whether to skip the interactive confirmation prompt.
             skip_validate (bool): Skip pre-deploy validation checks.
         """
-        self._validate_project_structure()
+        if not skip_validate:
+            self._validate_project_structure()
         if not _run_predeploy_validation(skip_validate):
             return
         self._telemetry.create_crew_deployment_span()
