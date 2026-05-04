@@ -1,0 +1,134 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: Summarize this text
+      briefly.\n\nProvide your complete response:"}, {"inlineData": {"data": "UmV2aWV3IEd1aWRlbGluZXMKCjEuIEJlIGNsZWFyIGFuZCBjb25jaXNlOiBXcml0ZSBmZWVkYmFjayB0aGF0IGlzIGVhc3kgdG8gdW5kZXJzdGFuZC4KMi4gRm9jdXMgb24gYmVoYXZpb3IgYW5kIG91dGNvbWVzOiBEZXNjcmliZSB3aGF0IGhhcHBlbmVkIGFuZCB3aHkgaXQgbWF0dGVycy4KMy4gQmUgc3BlY2lmaWM6IFByb3ZpZGUgZXhhbXBsZXMgdG8gc3VwcG9ydCB5b3VyIHBvaW50cy4KNC4gQmFsYW5jZSBwb3NpdGl2ZXMgYW5kIGltcHJvdmVtZW50czogSGlnaGxpZ2h0IHN0cmVuZ3RocyBhbmQgYXJlYXMgdG8gZ3Jvdy4KNS4gQmUgcmVzcGVjdGZ1bCBhbmQgY29uc3RydWN0aXZlOiBBc3N1bWUgcG9zaXRpdmUgaW50ZW50IGFuZCBvZmZlciBzb2x1dGlvbnMuCjYuIFVzZSBvYmplY3RpdmUgY3JpdGVyaWE6IFJlZmVyZW5jZSBnb2FscywgbWV0cmljcywgb3IgZXhwZWN0YXRpb25zIHdoZXJlIHBvc3NpYmxlLgo3LiBTdWdnZXN0IG5leHQgc3RlcHM6IFJlY29tbWVuZCBhY3Rpb25hYmxlIHdheXMgdG8gaW1wcm92ZS4KOC4gUHJvb2ZyZWFkOiBDaGVjayB0b25lLCBncmFtbWFyLCBhbmQgY2xhcml0eSBiZWZvcmUgc3VibWl0dGluZy4K",
+      "mimeType": "text/plain"}}], "role": "user"}], "systemInstruction": {"parts":
+      [{"text": "You are File Analyst. Expert at analyzing various file types.\nYour
+      personal goal is: Analyze and describe files accurately"}], "role": "user"},
+      "generationConfig": {"stopSequences": ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1226'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"These guidelines provide a framework
+        for giving effective feedback, emphasizing clarity, specificity, balance,
+        respect, objectivity, actionable next steps, and proofreading.\"\n          }\n
+        \       ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        166,\n    \"candidatesTokenCount\": 29,\n    \"totalTokenCount\": 223,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 166\n
+        \     }\n    ],\n    \"thoughtsTokenCount\": 28\n  },\n  \"modelVersion\":
+        \"gemini-2.5-flash\",\n  \"responseId\": \"PUqOaZ3pMYi8_uMP25m7gAQ\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Thu, 12 Feb 2026 21:46:37 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=671
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: Summarize this text
+      briefly.\n\nProvide your complete response:"}, {"inlineData": {"data": "UmV2aWV3IEd1aWRlbGluZXMKCjEuIEJlIGNsZWFyIGFuZCBjb25jaXNlOiBXcml0ZSBmZWVkYmFjayB0aGF0IGlzIGVhc3kgdG8gdW5kZXJzdGFuZC4KMi4gRm9jdXMgb24gYmVoYXZpb3IgYW5kIG91dGNvbWVzOiBEZXNjcmliZSB3aGF0IGhhcHBlbmVkIGFuZCB3aHkgaXQgbWF0dGVycy4KMy4gQmUgc3BlY2lmaWM6IFByb3ZpZGUgZXhhbXBsZXMgdG8gc3VwcG9ydCB5b3VyIHBvaW50cy4KNC4gQmFsYW5jZSBwb3NpdGl2ZXMgYW5kIGltcHJvdmVtZW50czogSGlnaGxpZ2h0IHN0cmVuZ3RocyBhbmQgYXJlYXMgdG8gZ3Jvdy4KNS4gQmUgcmVzcGVjdGZ1bCBhbmQgY29uc3RydWN0aXZlOiBBc3N1bWUgcG9zaXRpdmUgaW50ZW50IGFuZCBvZmZlciBzb2x1dGlvbnMuCjYuIFVzZSBvYmplY3RpdmUgY3JpdGVyaWE6IFJlZmVyZW5jZSBnb2FscywgbWV0cmljcywgb3IgZXhwZWN0YXRpb25zIHdoZXJlIHBvc3NpYmxlLgo3LiBTdWdnZXN0IG5leHQgc3RlcHM6IFJlY29tbWVuZCBhY3Rpb25hYmxlIHdheXMgdG8gaW1wcm92ZS4KOC4gUHJvb2ZyZWFkOiBDaGVjayB0b25lLCBncmFtbWFyLCBhbmQgY2xhcml0eSBiZWZvcmUgc3VibWl0dGluZy4K",
+      "mimeType": "text/plain"}}], "role": "user"}], "systemInstruction": {"parts":
+      [{"text": "You are File Analyst. Expert at analyzing various file types.\nYour
+      personal goal is: Analyze and describe files accurately"}], "role": "user"},
+      "generationConfig": {"stopSequences": ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1226'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"These guidelines provide instructions
+        on how to deliver effective, constructive, and respectful feedback, emphasizing
+        clarity, specificity, balance, and actionable suggestions for improvement.\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        166,\n    \"candidatesTokenCount\": 29,\n    \"totalTokenCount\": 269,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 166\n
+        \     }\n    ],\n    \"thoughtsTokenCount\": 74\n  },\n  \"modelVersion\":
+        \"gemini-2.5-flash\",\n  \"responseId\": \"PkqOaf-bLu-v_uMPnorr8Qs\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Thu, 12 Feb 2026 21:46:38 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=898
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

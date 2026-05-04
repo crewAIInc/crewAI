@@ -10,7 +10,18 @@ from crewai_tools.aws.s3.writer_tool import S3WriterTool
 from crewai_tools.tools.ai_mind_tool.ai_mind_tool import AIMindTool
 from crewai_tools.tools.apify_actors_tool.apify_actors_tool import ApifyActorsTool
 from crewai_tools.tools.arxiv_paper_tool.arxiv_paper_tool import ArxivPaperTool
+from crewai_tools.tools.brave_search_tool.brave_image_tool import BraveImageSearchTool
+from crewai_tools.tools.brave_search_tool.brave_llm_context_tool import (
+    BraveLLMContextTool,
+)
+from crewai_tools.tools.brave_search_tool.brave_local_pois_tool import (
+    BraveLocalPOIsDescriptionTool,
+    BraveLocalPOIsTool,
+)
+from crewai_tools.tools.brave_search_tool.brave_news_tool import BraveNewsSearchTool
 from crewai_tools.tools.brave_search_tool.brave_search_tool import BraveSearchTool
+from crewai_tools.tools.brave_search_tool.brave_video_tool import BraveVideoSearchTool
+from crewai_tools.tools.brave_search_tool.brave_web_tool import BraveWebSearchTool
 from crewai_tools.tools.brightdata_tool.brightdata_dataset import (
     BrightDataDatasetTool,
 )
@@ -23,9 +34,6 @@ from crewai_tools.tools.browserbase_load_tool.browserbase_load_tool import (
 )
 from crewai_tools.tools.code_docs_search_tool.code_docs_search_tool import (
     CodeDocsSearchTool,
-)
-from crewai_tools.tools.code_interpreter_tool.code_interpreter_tool import (
-    CodeInterpreterTool,
 )
 from crewai_tools.tools.composio_tool.composio_tool import ComposioTool
 from crewai_tools.tools.contextualai_create_agent_tool.contextual_create_agent_tool import (
@@ -51,6 +59,11 @@ from crewai_tools.tools.dalle_tool.dalle_tool import DallETool
 from crewai_tools.tools.databricks_query_tool.databricks_query_tool import (
     DatabricksQueryTool,
 )
+from crewai_tools.tools.daytona_sandbox_tool import (
+    DaytonaExecTool,
+    DaytonaFileTool,
+    DaytonaPythonTool,
+)
 from crewai_tools.tools.directory_read_tool.directory_read_tool import (
     DirectoryReadTool,
 )
@@ -58,7 +71,12 @@ from crewai_tools.tools.directory_search_tool.directory_search_tool import (
     DirectorySearchTool,
 )
 from crewai_tools.tools.docx_search_tool.docx_search_tool import DOCXSearchTool
-from crewai_tools.tools.exa_tools.exa_search_tool import EXASearchTool
+from crewai_tools.tools.e2b_sandbox_tool import (
+    E2BExecTool,
+    E2BFileTool,
+    E2BPythonTool,
+)
+from crewai_tools.tools.exa_tools.exa_search_tool import EXASearchTool, ExaSearchTool
 from crewai_tools.tools.file_read_tool.file_read_tool import FileReadTool
 from crewai_tools.tools.file_writer_tool.file_writer_tool import FileWriterTool
 from crewai_tools.tools.files_compressor_tool.files_compressor_tool import (
@@ -179,6 +197,12 @@ from crewai_tools.tools.stagehand_tool.stagehand_tool import StagehandTool
 from crewai_tools.tools.tavily_extractor_tool.tavily_extractor_tool import (
     TavilyExtractorTool,
 )
+from crewai_tools.tools.tavily_get_research_tool.tavily_get_research_tool import (
+    TavilyGetResearchTool,
+)
+from crewai_tools.tools.tavily_research_tool.tavily_research_tool import (
+    TavilyResearchTool,
+)
 from crewai_tools.tools.tavily_search_tool.tavily_search_tool import TavilySearchTool
 from crewai_tools.tools.txt_search_tool.txt_search_tool import TXTSearchTool
 from crewai_tools.tools.vision_tool.vision_tool import VisionTool
@@ -200,14 +224,20 @@ __all__ = [
     "ArxivPaperTool",
     "BedrockInvokeAgentTool",
     "BedrockKBRetrieverTool",
+    "BraveImageSearchTool",
+    "BraveLLMContextTool",
+    "BraveLocalPOIsDescriptionTool",
+    "BraveLocalPOIsTool",
+    "BraveNewsSearchTool",
     "BraveSearchTool",
+    "BraveVideoSearchTool",
+    "BraveWebSearchTool",
     "BrightDataDatasetTool",
     "BrightDataSearchTool",
     "BrightDataWebUnlockerTool",
     "BrowserbaseLoadTool",
     "CSVSearchTool",
     "CodeDocsSearchTool",
-    "CodeInterpreterTool",
     "ComposioTool",
     "ContextualAICreateAgentTool",
     "ContextualAIParseTool",
@@ -218,10 +248,17 @@ __all__ = [
     "DOCXSearchTool",
     "DallETool",
     "DatabricksQueryTool",
+    "DaytonaExecTool",
+    "DaytonaFileTool",
+    "DaytonaPythonTool",
     "DirectoryReadTool",
     "DirectorySearchTool",
+    "E2BExecTool",
+    "E2BFileTool",
+    "E2BPythonTool",
     "EXASearchTool",
     "EnterpriseActionTool",
+    "ExaSearchTool",
     "FileCompressorTool",
     "FileReadTool",
     "FileWriterTool",
@@ -280,6 +317,8 @@ __all__ = [
     "StagehandTool",
     "TXTSearchTool",
     "TavilyExtractorTool",
+    "TavilyGetResearchTool",
+    "TavilyResearchTool",
     "TavilySearchTool",
     "VisionTool",
     "WeaviateVectorSearchTool",
@@ -291,4 +330,4 @@ __all__ = [
     "ZapierActionTools",
 ]
 
-__version__ = "1.7.2"
+__version__ = "1.14.5a1"

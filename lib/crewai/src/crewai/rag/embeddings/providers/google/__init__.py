@@ -1,5 +1,8 @@
 """Google embedding providers."""
 
+from crewai.rag.embeddings.providers.google.genai_vertex_embedding import (
+    GoogleGenAIVertexEmbeddingFunction,
+)
 from crewai.rag.embeddings.providers.google.generative_ai import (
     GenerativeAiProvider,
 )
@@ -18,6 +21,7 @@ __all__ = [
     "GenerativeAiProvider",
     "GenerativeAiProviderConfig",
     "GenerativeAiProviderSpec",
+    "GoogleGenAIVertexEmbeddingFunction",
     "VertexAIProvider",
     "VertexAIProviderConfig",
     "VertexAIProviderSpec",

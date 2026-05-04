@@ -3,8 +3,9 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-import requests
-from requests.exceptions import JSONDecodeError
+import json
+
+import httpx
 
 from crewai.cli.enterprise.main import EnterpriseConfigureCommand
 from crewai.cli.settings.main import SettingsCommand
@@ -25,7 +26,7 @@ class TestEnterpriseConfigureCommand(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.test_dir)
 
-    @patch('crewai.cli.enterprise.main.requests.get')
+    @patch('crewai.cli.enterprise.main.httpx.get')
     @patch('crewai.cli.enterprise.main.get_crewai_version')
     def test_successful_configuration(self, mock_get_version, mock_requests_get):
         mock_get_version.return_value = "1.0.0"
@@ -73,19 +74,23 @@ class TestEnterpriseConfigureCommand(unittest.TestCase):
             self.assertEqual(call_args[0], key)
             self.assertEqual(call_args[1], value)
 
-    @patch('crewai.cli.enterprise.main.requests.get')
+    @patch('crewai.cli.enterprise.main.httpx.get')
     @patch('crewai.cli.enterprise.main.get_crewai_version')
     def test_http_error_handling(self, mock_get_version, mock_requests_get):
         mock_get_version.return_value = "1.0.0"
 
         mock_response = Mock()
-        mock_response.raise_for_status.side_effect = requests.HTTPError("404 Not Found")
+        mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+            "404 Not Found",
+            request=httpx.Request("GET", "http://test"),
+            response=httpx.Response(404),
+        )
         mock_requests_get.return_value = mock_response
 
         with self.assertRaises(SystemExit):
             self.enterprise_command.configure("https://enterprise.example.com")
 
-    @patch('crewai.cli.enterprise.main.requests.get')
+    @patch('crewai.cli.enterprise.main.httpx.get')
     @patch('crewai.cli.enterprise.main.get_crewai_version')
     def test_invalid_json_response(self, mock_get_version, mock_requests_get):
         mock_get_version.return_value = "1.0.0"
@@ -93,13 +98,13 @@ class TestEnterpriseConfigureCommand(unittest.TestCase):
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.raise_for_status.return_value = None
-        mock_response.json.side_effect = JSONDecodeError("Invalid JSON", "", 0)
+        mock_response.json.side_effect = json.JSONDecodeError("Invalid JSON", "", 0)
         mock_requests_get.return_value = mock_response
 
         with self.assertRaises(SystemExit):
             self.enterprise_command.configure("https://enterprise.example.com")
 
-    @patch('crewai.cli.enterprise.main.requests.get')
+    @patch('crewai.cli.enterprise.main.httpx.get')
     @patch('crewai.cli.enterprise.main.get_crewai_version')
     def test_missing_required_fields(self, mock_get_version, mock_requests_get):
         mock_get_version.return_value = "1.0.0"
@@ -115,7 +120,7 @@ class TestEnterpriseConfigureCommand(unittest.TestCase):
         with self.assertRaises(SystemExit):
             self.enterprise_command.configure("https://enterprise.example.com")
 
-    @patch('crewai.cli.enterprise.main.requests.get')
+    @patch('crewai.cli.enterprise.main.httpx.get')
     @patch('crewai.cli.enterprise.main.get_crewai_version')
     def test_settings_update_error(self, mock_get_version, mock_requests_get):
         mock_get_version.return_value = "1.0.0"

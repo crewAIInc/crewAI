@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 import inspect
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from crewai.tools.base_tool import BaseTool, EnvVar
 from pydantic import BaseModel
+from pydantic.fields import FieldInfo
 from pydantic.json_schema import GenerateJsonSchema
-from pydantic_core import PydanticOmit
+from pydantic_core import PydanticOmit, PydanticUndefined
 
 from crewai_tools import tools
 
@@ -44,6 +45,9 @@ class ToolSpecExtractor:
             schema = self._unwrap_schema(core_schema)
             fields = schema.get("schema", {}).get("fields", {})
 
+            # Use model_fields to get defaults (handles both default and default_factory)
+            model_fields = tool_class.model_fields
+
             tool_info = {
                 "name": tool_class.__name__,
                 "humanized_name": self._extract_field_default(
@@ -54,9 +58,9 @@ class ToolSpecExtractor:
                 ).strip(),
                 "run_params_schema": self._extract_params(fields.get("args_schema")),
                 "init_params_schema": self._extract_init_params(tool_class),
-                "env_vars": self._extract_env_vars(fields.get("env_vars")),
-                "package_dependencies": self._extract_field_default(
-                    fields.get("package_dependencies"), fallback=[]
+                "env_vars": self._extract_env_vars_from_model_fields(model_fields),
+                "package_dependencies": self._extract_package_deps_from_model_fields(
+                    model_fields
                 ),
             }
 
@@ -103,10 +107,28 @@ class ToolSpecExtractor:
             return {}
 
     @staticmethod
-    def _extract_env_vars(
-        env_vars_field: dict[str, Any] | None,
+    def _get_field_default(field: FieldInfo | None) -> Any:
+        """Get default value from a FieldInfo, handling both default and default_factory."""
+        if not field:
+            return None
+
+        default_value = field.default
+        if default_value is PydanticUndefined or default_value is None:
+            if field.default_factory:
+                factory = cast(Callable[[], Any], field.default_factory)
+                return factory()
+            return None
+
+        return default_value
+
+    @staticmethod
+    def _extract_env_vars_from_model_fields(
+        model_fields: dict[str, FieldInfo],
     ) -> list[dict[str, Any]]:
-        if not env_vars_field:
+        default_value = ToolSpecExtractor._get_field_default(
+            model_fields.get("env_vars")
+        )
+        if not default_value:
             return []
 
         return [
@@ -116,25 +138,35 @@ class ToolSpecExtractor:
                 "required": env_var.required,
                 "default": env_var.default,
             }
-            for env_var in env_vars_field.get("schema", {}).get("default", [])
+            for env_var in default_value
             if isinstance(env_var, EnvVar)
         ]
 
     @staticmethod
-    def _extract_init_params(tool_class: type[BaseTool]) -> dict[str, Any]:
-        ignored_init_params = [
-            "name",
-            "description",
-            "env_vars",
-            "args_schema",
-            "description_updated",
-            "cache_function",
-            "result_as_answer",
-            "max_usage_count",
-            "current_usage_count",
-            "package_dependencies",
-        ]
+    def _extract_package_deps_from_model_fields(
+        model_fields: dict[str, FieldInfo],
+    ) -> list[str]:
+        default_value = ToolSpecExtractor._get_field_default(
+            model_fields.get("package_dependencies")
+        )
+        if not isinstance(default_value, list):
+            return []
 
+        return default_value
+
+    # Dynamically computed from BaseTool so that any future fields or
+    # computed_fields added to BaseTool are automatically excluded from
+    # the generated spec — no hardcoded denylist to maintain.
+    # ``package_dependencies`` is not a BaseTool field but is extracted
+    # into its own top-level key, so it's also excluded from init_params.
+    _BASE_TOOL_FIELDS: set[str] = (
+        set(BaseTool.model_fields)
+        | set(BaseTool.model_computed_fields)
+        | {"package_dependencies"}
+    )
+
+    @staticmethod
+    def _extract_init_params(tool_class: type[BaseTool]) -> dict[str, Any]:
         json_schema = tool_class.model_json_schema(
             schema_generator=SchemaGenerator, mode="serialization"
         )
@@ -142,8 +174,14 @@ class ToolSpecExtractor:
         json_schema["properties"] = {
             key: value
             for key, value in json_schema["properties"].items()
-            if key not in ignored_init_params
+            if key not in ToolSpecExtractor._BASE_TOOL_FIELDS
         }
+        if "required" in json_schema:
+            json_schema["required"] = [
+                key
+                for key in json_schema["required"]
+                if key not in ToolSpecExtractor._BASE_TOOL_FIELDS
+            ]
         return json_schema
 
     def save_to_json(self, output_path: str) -> None:
@@ -152,7 +190,7 @@ class ToolSpecExtractor:
 
 
 if __name__ == "__main__":
-    output_file = Path(__file__).parent / "tool.specs.json"
+    output_file = Path(__file__).parent.parent.parent / "tool.specs.json"
     extractor = ToolSpecExtractor()
 
     extractor.extract_all_tools()

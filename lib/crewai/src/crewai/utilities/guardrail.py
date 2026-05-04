@@ -1,11 +1,52 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
+import warnings
 
 from pydantic import BaseModel, Field, field_validator
 from typing_extensions import Self
 
 from crewai.utilities.guardrail_types import GuardrailCallable
+
+
+def serialize_guardrail_for_json(
+    value: Any, field_name: str = "guardrail"
+) -> str | None:
+    """Serialize a single guardrail value for JSON checkpointing.
+
+    String descriptions are preserved; callable references cannot be
+    JSON-serialized and are dropped with a warning so users know the
+    guardrail will not be present after a checkpoint restore.
+    """
+    if value is None or isinstance(value, str):
+        return value
+    if callable(value):
+        warnings.warn(
+            f"Callable {field_name!r} cannot be JSON-serialized and will be dropped "
+            f"during checkpointing; restored checkpoints will not run this guardrail.",
+            UserWarning,
+            stacklevel=2,
+        )
+        return None
+    return None
+
+
+def serialize_guardrails_for_json(
+    value: Any, field_name: str = "guardrails"
+) -> list[str] | str | None:
+    """Serialize a guardrails value (single or sequence) for JSON checkpointing.
+
+    Dropped callables are filtered out of lists rather than emitted as ``None``;
+    a ``None`` entry would fail validation against ``GuardrailCallable | str``
+    on checkpoint restore.
+    """
+    if isinstance(value, (list, tuple)):
+        return [
+            item
+            for item in (serialize_guardrail_for_json(g, field_name) for g in value)
+            if item is not None
+        ]
+    return serialize_guardrail_for_json(value, field_name)
 
 
 if TYPE_CHECKING:
@@ -39,7 +80,7 @@ class GuardrailResult(BaseModel):
 
     @field_validator("result", "error")
     @classmethod
-    def validate_result_error_exclusivity(cls, v: Any, info) -> Any:
+    def validate_result_error_exclusivity(cls, v: Any, info: Any) -> Any:
         """Ensure that result and error are mutually exclusive based on success.
 
         Args:
@@ -118,15 +159,13 @@ def process_guardrail(
         LLMGuardrailStartedEvent,
     )
 
-    crewai_event_bus.emit(
-        event_source,
-        LLMGuardrailStartedEvent(
-            guardrail=guardrail,
-            retry_count=retry_count,
-            from_agent=from_agent,
-            from_task=from_task,
-        ),
+    started_event = LLMGuardrailStartedEvent(
+        guardrail=guardrail,
+        retry_count=retry_count,
+        from_agent=from_agent,
+        from_task=from_task,
     )
+    crewai_event_bus.emit(event_source, started_event)
 
     result = guardrail(output)
     guardrail_result = GuardrailResult.from_tuple(result)
@@ -138,6 +177,8 @@ def process_guardrail(
             result=guardrail_result.result,
             error=guardrail_result.error,
             retry_count=retry_count,
+            guardrail_type=started_event.guardrail_type,
+            guardrail_name=started_event.guardrail_name,
             from_agent=from_agent,
             from_task=from_task,
         ),

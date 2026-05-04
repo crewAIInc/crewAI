@@ -8,13 +8,10 @@ authors = [
 ]
 requires-python = ">=3.10, <3.14"
 dependencies = [
-    "lancedb~=0.5.4",
     "pytube~=15.0.0",
-    "requests~=2.32.5",
-    "docker~=7.1.0",
-    "crewai==1.7.2",
-    "lancedb~=0.5.4",
-    "tiktoken~=0.8.0",
+    "requests>=2.33.0,<3",
+    "crewai==1.14.5a1",
+    "tiktoken>=0.8.0,<0.13",
     "beautifulsoup4~=4.13.4",
     "python-docx~=1.2.0",
     "youtube-transcript-api~=1.2.2",
@@ -72,7 +69,7 @@ linkup-sdk = [
     "linkup-sdk>=0.2.2",
 ]
 tavily-python = [
-    "tavily-python>=0.5.4",
+    "tavily-python~=0.7.14",
 ]
 hyperbrowser = [
     "hyperbrowser>=0.18.0",
@@ -110,12 +107,12 @@ stagehand = [
     "stagehand>=0.4.1",
 ]
 github = [
-    "gitpython==3.1.38",
+    "gitpython>=3.1.41,<4",
     "PyGithub==1.59.1",
 ]
 rag = [
     "python-docx>=1.1.0",
-    "lxml>=5.3.0,<5.4.0",  # Pin to avoid etree import issues in 5.4.0
+    "lxml>=6.1.0,<7",  # 6.1.0+ required for GHSA-vfmq-68hx-4jfw (XXE in iterparse)
 ]
 xml = [
     "unstructured[local-inference, all-docs]>=0.17.2"
@@ -142,7 +139,18 @@ contextual = [
     "contextual-client>=0.1.0",
     "nest-asyncio>=1.6.0",
 ]
+daytona = [
+    "daytona~=0.140.0",
+]
 
+e2b = [
+    "e2b~=2.20.0",
+    "e2b-code-interpreter~=2.6.0",
+]
+
+
+[tool.uv]
+exclude-newer = "3 days"
 
 [build-system]
 requires = ["hatchling"]

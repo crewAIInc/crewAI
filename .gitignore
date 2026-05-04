@@ -26,3 +26,8 @@ plan.md
 conceptual_plan.md
 build_image
 chromadb-*.lock
+.claude
+.crewai/memory
+blogs/*
+secrets/*
+UNKNOWN.egg-info/

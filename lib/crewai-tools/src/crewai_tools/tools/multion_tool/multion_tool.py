@@ -31,11 +31,11 @@ class MultiOnTool(BaseTool):
     def __init__(
         self,
         api_key: str | None = None,
-        **kwargs,
+        **kwargs: Any,
     ):
         super().__init__(**kwargs)
         try:
-            from multion.client import MultiOn  # type: ignore
+            from multion.client import MultiOn
         except ImportError:
             import click
 
@@ -78,4 +78,4 @@ class MultiOnTool(BaseTool):
         )
         self.session_id = browse.session_id
 
-        return browse.message + "\n\n STATUS: " + browse.status
+        return str(browse.message) + "\n\n STATUS: " + str(browse.status)

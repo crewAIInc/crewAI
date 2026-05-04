@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Final, Literal
+from typing import Any, Final, Literal
 
 from crewai.tools import BaseTool
 from pydantic import Field, create_model
@@ -22,7 +22,7 @@ class ZapierActionTool(BaseTool):
     action_id: str = Field(description="Zapier action ID")
     api_key: str = Field(description="Zapier API key")
 
-    def _run(self, **kwargs) -> str:
+    def _run(self, **kwargs: Any) -> Any:
         """Execute the Zapier action."""
         headers = {"x-api-key": self.api_key, "Content-Type": "application/json"}
 
@@ -64,9 +64,9 @@ class ZapierActionsAdapter:
             logger.error("Zapier Actions API key is required")
             raise ValueError("Zapier Actions API key is required")
 
-    def get_zapier_actions(self):
+    def get_zapier_actions(self) -> Any:
         headers = {
-            "x-api-key": self.api_key,
+            "x-api-key": self.api_key or "",
         }
         response = requests.request(
             "GET",

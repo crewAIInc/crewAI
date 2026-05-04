@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import logging
+import threading
 from typing import TYPE_CHECKING, Any
 
 from crewai.tools.base_tool import BaseTool
@@ -11,10 +12,10 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 if TYPE_CHECKING:
     # Import types for type checking only
-    from snowflake.connector.connection import (  # type: ignore[import-not-found]
+    from snowflake.connector.connection import (
         SnowflakeConnection,
     )
-    from snowflake.connector.errors import (  # type: ignore[import-not-found]
+    from snowflake.connector.errors import (
         DatabaseError,
         OperationalError,
     )
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
 try:
     from cryptography.hazmat.backends import default_backend
     from cryptography.hazmat.primitives import serialization
-    import snowflake.connector  # type: ignore[import-not-found]
+    import snowflake.connector
 
     SNOWFLAKE_AVAILABLE = True
 except ImportError:
@@ -33,6 +34,7 @@ logger = logging.getLogger(__name__)
 
 # Cache for query results
 _query_cache: dict[str, list[dict[str, Any]]] = {}
+_cache_lock = threading.Lock()
 
 
 class SnowflakeConfig(BaseModel):
@@ -58,7 +60,7 @@ class SnowflakeConfig(BaseModel):
     def has_auth(self) -> bool:
         return bool(self.password or self.private_key_path)
 
-    def model_post_init(self, *args, **kwargs):
+    def model_post_init(self, *args: Any, **kwargs: Any) -> None:
         if not self.has_auth:
             raise ValueError("Either password or private_key_path must be provided")
 
@@ -102,7 +104,7 @@ class SnowflakeSearchTool(BaseTool):
     )
 
     _connection_pool: list[SnowflakeConnection] | None = None
-    _pool_lock: asyncio.Lock | None = None
+    _pool_lock: threading.Lock | None = None
     _thread_pool: ThreadPoolExecutor | None = None
     _model_rebuilt: bool = False
     package_dependencies: list[str] = Field(
@@ -113,7 +115,7 @@ class SnowflakeSearchTool(BaseTool):
         ]
     )
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         """Initialize SnowflakeSearchTool."""
         super().__init__(**data)
         self._initialize_snowflake()
@@ -122,7 +124,7 @@ class SnowflakeSearchTool(BaseTool):
         try:
             if SNOWFLAKE_AVAILABLE:
                 self._connection_pool = []
-                self._pool_lock = asyncio.Lock()
+                self._pool_lock = threading.Lock()
                 self._thread_pool = ThreadPoolExecutor(max_workers=self.pool_size)
             else:
                 raise ImportError
@@ -147,7 +149,7 @@ class SnowflakeSearchTool(BaseTool):
                     )
 
                     self._connection_pool = []
-                    self._pool_lock = asyncio.Lock()
+                    self._pool_lock = threading.Lock()
                     self._thread_pool = ThreadPoolExecutor(max_workers=self.pool_size)
                 except subprocess.CalledProcessError as e:
                     raise ImportError("Failed to install Snowflake dependencies") from e
@@ -163,13 +165,12 @@ class SnowflakeSearchTool(BaseTool):
             raise RuntimeError("Pool lock not initialized")
         if self._connection_pool is None:
             raise RuntimeError("Connection pool not initialized")
-        async with self._pool_lock:
-            if not self._connection_pool:
-                conn = await asyncio.get_event_loop().run_in_executor(
-                    self._thread_pool, self._create_connection
-                )
-                self._connection_pool.append(conn)
-            return self._connection_pool.pop()
+        with self._pool_lock:
+            if self._connection_pool:
+                return self._connection_pool.pop()
+        return await asyncio.get_event_loop().run_in_executor(
+            self._thread_pool, self._create_connection
+        )
 
     def _create_connection(self) -> SnowflakeConnection:
         """Create a new Snowflake connection."""
@@ -204,9 +205,10 @@ class SnowflakeSearchTool(BaseTool):
         """Execute a query with retries and return results."""
         if self.enable_caching:
             cache_key = self._get_cache_key(query, timeout)
-            if cache_key in _query_cache:
-                logger.info("Returning cached result")
-                return _query_cache[cache_key]
+            with _cache_lock:
+                if cache_key in _query_cache:
+                    logger.info("Returning cached result")
+                    return _query_cache[cache_key]
 
         for attempt in range(self.max_retries):
             try:
@@ -225,7 +227,8 @@ class SnowflakeSearchTool(BaseTool):
                     ]
 
                     if self.enable_caching:
-                        _query_cache[self._get_cache_key(query, timeout)] = results
+                        with _cache_lock:
+                            _query_cache[self._get_cache_key(query, timeout)] = results
 
                     return results
                 finally:
@@ -234,7 +237,7 @@ class SnowflakeSearchTool(BaseTool):
                         self._pool_lock is not None
                         and self._connection_pool is not None
                     ):
-                        async with self._pool_lock:
+                        with self._pool_lock:
                             self._connection_pool.append(conn)
             except (DatabaseError, OperationalError) as e:  # noqa: PERF203
                 if attempt == self.max_retries - 1:
@@ -265,7 +268,7 @@ class SnowflakeSearchTool(BaseTool):
             logger.error(f"Error executing query: {e!s}")
             raise
 
-    def __del__(self):
+    def __del__(self) -> None:
         """Cleanup connections on deletion."""
         try:
             if self._connection_pool:

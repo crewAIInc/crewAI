@@ -4,13 +4,15 @@ from unittest.mock import patch
 from crewai.agent import Agent
 from crewai.task import Task
 
+MOCK_TARGET = "crewai.agent.core.datetime"
+
 
 def test_agent_inject_date():
     """Test that the inject_date flag injects the current date into the task.
 
     Tests that when inject_date=True, the current date is added to the task description.
     """
-    with patch("datetime.datetime") as mock_datetime:
+    with patch(MOCK_TARGET) as mock_datetime:
         mock_datetime.now.return_value = datetime(2025, 1, 1)
 
         agent = Agent(
@@ -26,7 +28,6 @@ def test_agent_inject_date():
             agent=agent,
         )
 
-        # Store original description
         original_description = task.description
 
         agent._inject_date_to_task(task)
@@ -44,7 +45,6 @@ def test_agent_without_inject_date():
         role="test_agent",
         goal="test_goal",
         backstory="test_backstory",
-        # inject_date is False by default
     )
 
     task = Task(
@@ -65,7 +65,7 @@ def test_agent_inject_date_custom_format():
 
     Tests that when inject_date=True with a custom date_format, the date is formatted correctly.
     """
-    with patch("datetime.datetime") as mock_datetime:
+    with patch(MOCK_TARGET) as mock_datetime:
         mock_datetime.now.return_value = datetime(2025, 1, 1)
 
         agent = Agent(
@@ -82,7 +82,6 @@ def test_agent_inject_date_custom_format():
             agent=agent,
         )
 
-        # Store original description
         original_description = task.description
 
         agent._inject_date_to_task(task)

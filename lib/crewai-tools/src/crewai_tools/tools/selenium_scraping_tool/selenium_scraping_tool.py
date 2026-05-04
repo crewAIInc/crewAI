@@ -25,7 +25,7 @@ class SeleniumScrapingToolSchema(FixedSeleniumScrapingToolSchema):
 
     @field_validator("website_url")
     @classmethod
-    def validate_website_url(cls, v):
+    def validate_website_url(cls, v: str) -> str:
         if not v:
             raise ValueError("Website URL cannot be empty")
 
@@ -54,7 +54,7 @@ class SeleniumScrapingTool(BaseTool):
     args_schema: type[BaseModel] = SeleniumScrapingToolSchema
     website_url: str | None = None
     driver: Any | None = None
-    cookie: dict | None = None
+    cookie: dict[str, Any] | None = None
     wait_time: int | None = 3
     css_element: str | None = None
     return_html: bool | None = False
@@ -66,17 +66,17 @@ class SeleniumScrapingTool(BaseTool):
     def __init__(
         self,
         website_url: str | None = None,
-        cookie: dict | None = None,
+        cookie: dict[str, Any] | None = None,
         css_element: str | None = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         super().__init__(**kwargs)
         try:
-            from selenium import webdriver  # type: ignore[import-not-found]
-            from selenium.webdriver.chrome.options import (  # type: ignore[import-not-found]
+            from selenium import webdriver
+            from selenium.webdriver.chrome.options import (
                 Options,
             )
-            from selenium.webdriver.common.by import (  # type: ignore[import-not-found]
+            from selenium.webdriver.common.by import (
                 By,
             )
         except ImportError:
@@ -91,11 +91,11 @@ class SeleniumScrapingTool(BaseTool):
                     ["uv", "pip", "install", "selenium", "webdriver-manager"],  # noqa: S607
                     check=True,
                 )
-                from selenium import webdriver  # type: ignore[import-not-found]
-                from selenium.webdriver.chrome.options import (  # type: ignore[import-not-found]
+                from selenium import webdriver
+                from selenium.webdriver.chrome.options import (
                     Options,
                 )
-                from selenium.webdriver.common.by import (  # type: ignore[import-not-found]
+                from selenium.webdriver.common.by import (
                     By,
                 )
             else:
@@ -146,8 +146,10 @@ class SeleniumScrapingTool(BaseTool):
             if self.driver is not None:
                 self.driver.close()
 
-    def _get_content(self, css_element, return_html):
-        content = []
+    def _get_content(
+        self, css_element: str | None, return_html: bool | None
+    ) -> list[str]:
+        content: list[str] = []
 
         if self._is_css_element_empty(css_element):
             content.append(self._get_body_content(return_html))
@@ -156,20 +158,26 @@ class SeleniumScrapingTool(BaseTool):
 
         return content
 
-    def _is_css_element_empty(self, css_element):
+    def _is_css_element_empty(self, css_element: str | None) -> bool:
         return css_element is None or css_element.strip() == ""
 
-    def _get_body_content(self, return_html):
+    def _get_body_content(self, return_html: bool | None) -> str:
+        if self.driver is None or self._by is None:
+            raise RuntimeError("Driver not initialized. Call _run first.")
         body_element = self.driver.find_element(self._by.TAG_NAME, "body")
 
-        return (
+        return str(
             body_element.get_attribute("outerHTML")
             if return_html
             else body_element.text
         )
 
-    def _get_elements_content(self, css_element, return_html):
-        elements_content = []
+    def _get_elements_content(
+        self, css_element: str | None, return_html: bool | None
+    ) -> list[str]:
+        if self.driver is None or self._by is None:
+            raise RuntimeError("Driver not initialized. Call _run first.")
+        elements_content: list[str] = []
 
         for element in self.driver.find_elements(self._by.CSS_SELECTOR, css_element):
             elements_content.append(  # noqa: PERF401
@@ -178,7 +186,9 @@ class SeleniumScrapingTool(BaseTool):
 
         return elements_content
 
-    def _make_request(self, url, cookie, wait_time):
+    def _make_request(
+        self, url: str | None, cookie: dict[str, Any] | None, wait_time: int | None
+    ) -> None:
         if not url:
             raise ValueError("URL cannot be empty")
 
@@ -186,13 +196,17 @@ class SeleniumScrapingTool(BaseTool):
         if not re.match(r"^https?://", url):
             raise ValueError("URL must start with http:// or https://")
 
+        if self.driver is None:
+            raise RuntimeError("Driver not initialized. Call _run first.")
+        sleep_time = wait_time or 0
         self.driver.get(url)
-        time.sleep(wait_time)
+        time.sleep(sleep_time)
         if cookie:
             self.driver.add_cookie(cookie)
-            time.sleep(wait_time)
+            time.sleep(sleep_time)
             self.driver.get(url)
-            time.sleep(wait_time)
+            time.sleep(sleep_time)
 
-    def close(self):
-        self.driver.close()
+    def close(self) -> None:
+        if self.driver is not None:
+            self.driver.close()

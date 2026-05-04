@@ -1,14 +1,20 @@
-"""Base extension interface for A2A wrapper integrations.
+"""Base extension interface for CrewAI A2A wrapper processing hooks.
 
-This module defines the protocol for extending A2A wrapper functionality
-with custom logic for conversation processing, prompt augmentation, and
-agent response handling.
+This module defines the protocol for extending CrewAI's A2A wrapper functionality
+with custom logic for tool injection, prompt augmentation, and response processing.
+
+Note: These are CrewAI-specific processing hooks, NOT A2A protocol extensions.
+A2A protocol extensions are capability declarations using AgentExtension objects
+in AgentCard.capabilities.extensions, activated via the A2A-Extensions HTTP header.
+See: https://a2a-protocol.org/latest/topics/extensions/
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Annotated, Any, Protocol, runtime_checkable
+
+from pydantic import BeforeValidator
 
 
 if TYPE_CHECKING:
@@ -17,6 +23,20 @@ if TYPE_CHECKING:
     from crewai.agent.core import Agent
 
 
+def _validate_a2a_extension(v: Any) -> Any:
+    """Validate that value implements A2AExtension protocol."""
+    if not isinstance(v, A2AExtension):
+        raise ValueError(
+            f"Value must implement A2AExtension protocol. "
+            f"Got {type(v).__name__} which is missing required methods."
+        )
+    return v
+
+
+ValidatedA2AExtension = Annotated[Any, BeforeValidator(_validate_a2a_extension)]
+
+
+@runtime_checkable
 class ConversationState(Protocol):
     """Protocol for extension-specific conversation state.
 
@@ -33,11 +53,32 @@ class ConversationState(Protocol):
         ...
 
 
+@runtime_checkable
 class A2AExtension(Protocol):
     """Protocol for A2A wrapper extensions.
 
     Extensions can implement this protocol to inject custom logic into
     the A2A conversation flow at various integration points.
+
+    Example:
+        class MyExtension:
+            def inject_tools(self, agent: Agent) -> None:
+                pass
+
+            def extract_state_from_history(
+                self, conversation_history: Sequence[Message]
+            ) -> ConversationState | None:
+                return None
+
+            def augment_prompt(
+                self, base_prompt: str, conversation_state: ConversationState | None
+            ) -> str:
+                return base_prompt
+
+            def process_response(
+                self, agent_response: Any, conversation_state: ConversationState | None
+            ) -> Any:
+                return agent_response
     """
 
     def inject_tools(self, agent: Agent) -> None:
@@ -102,6 +143,23 @@ class A2AExtension(Protocol):
 
         Returns:
             The processed agent response (may be modified or original).
+        """
+        ...
+
+    def prepare_message_metadata(
+        self,
+        conversation_state: ConversationState | None,
+    ) -> dict[str, Any]:
+        """Prepare extension-specific metadata for outbound A2A messages.
+
+        Called when constructing A2A messages to inject extension-specific
+        metadata such as client capabilities declarations.
+
+        Args:
+            conversation_state: Extension-specific state from extract_state_from_history.
+
+        Returns:
+            Dict of metadata key-value pairs to merge into the message metadata.
         """
         ...
 
@@ -191,3 +249,21 @@ class ExtensionRegistry:
             state = extension_states.get(type(extension))
             processed = extension.process_response(processed, state)
         return processed
+
+    def prepare_all_metadata(
+        self,
+        extension_states: dict[type[A2AExtension], ConversationState],
+    ) -> dict[str, Any]:
+        """Collect metadata from all registered extensions for outbound messages.
+
+        Args:
+            extension_states: Mapping of extension types to conversation states.
+
+        Returns:
+            Merged metadata dict from all extensions.
+        """
+        metadata: dict[str, Any] = {}
+        for extension in self._extensions:
+            state = extension_states.get(type(extension))
+            metadata.update(extension.prepare_message_metadata(state))
+        return metadata

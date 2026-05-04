@@ -2,9 +2,15 @@
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Protocol
+from typing import Any
 
+from anyio.streams.memory import MemoryObjectReceiveStream, MemoryObjectSendStream
+from mcp.shared.message import SessionMessage
 from typing_extensions import Self
+
+
+MCPReadStream = MemoryObjectReceiveStream[SessionMessage | Exception]
+MCPWriteStream = MemoryObjectSendStream[SessionMessage]
 
 
 class TransportType(str, Enum):
@@ -14,22 +20,6 @@ class TransportType(str, Enum):
     HTTP = "http"
     STREAMABLE_HTTP = "streamable-http"
     SSE = "sse"
-
-
-class ReadStream(Protocol):
-    """Protocol for read streams."""
-
-    async def read(self, n: int = -1) -> bytes:
-        """Read bytes from stream."""
-        ...
-
-
-class WriteStream(Protocol):
-    """Protocol for write streams."""
-
-    async def write(self, data: bytes) -> None:
-        """Write bytes to stream."""
-        ...
 
 
 class BaseTransport(ABC):
@@ -46,8 +36,8 @@ class BaseTransport(ABC):
         Args:
             **kwargs: Transport-specific configuration options.
         """
-        self._read_stream: ReadStream | None = None
-        self._write_stream: WriteStream | None = None
+        self._read_stream: MCPReadStream | None = None
+        self._write_stream: MCPWriteStream | None = None
         self._connected = False
 
     @property
@@ -62,14 +52,14 @@ class BaseTransport(ABC):
         return self._connected
 
     @property
-    def read_stream(self) -> ReadStream:
+    def read_stream(self) -> MCPReadStream:
         """Get the read stream."""
         if self._read_stream is None:
             raise RuntimeError("Transport not connected. Call connect() first.")
         return self._read_stream
 
     @property
-    def write_stream(self) -> WriteStream:
+    def write_stream(self) -> MCPWriteStream:
         """Get the write stream."""
         if self._write_stream is None:
             raise RuntimeError("Transport not connected. Call connect() first.")
@@ -107,7 +97,7 @@ class BaseTransport(ABC):
         """Async context manager exit."""
         ...
 
-    def _set_streams(self, read: ReadStream, write: WriteStream) -> None:
+    def _set_streams(self, read: MCPReadStream, write: MCPWriteStream) -> None:
         """Set the read and write streams.
 
         Args:

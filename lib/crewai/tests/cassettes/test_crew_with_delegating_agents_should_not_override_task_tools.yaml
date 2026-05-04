@@ -74,26 +74,28 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AhLQELAjJpn76wiLmWBinm3sqf32l\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1734893814,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I need to gather information and insights
-      to ensure the Senior Writer produces a high-quality draft about AI Agents, which
-      will then serve as a foundation for the complete article.\\n\\nAction: Ask question
-      to coworker  \\nAction Input: {\\\"question\\\":\\\"Can you provide a detailed
-      overview of what AI Agents are, their functionalities, and their applications
-      in real-world scenarios? Please include examples of how they are being used
-      in various industries, and discuss their potential impact on the future of technology
-      and society.\\\",\\\"context\\\":\\\"We are looking to create a comprehensive
-      understanding of AI Agents as part of a four-paragraph article. This will help
-      generate a high-quality draft for the article.\\\",\\\"coworker\\\":\\\"Senior
-      Writer\\\"}  \",\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n
-      \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      604,\n    \"completion_tokens\": 138,\n    \"total_tokens\": 742,\n    \"prompt_tokens_details\":
-      {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      \"fp_0aa8d3e20b\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AhLQELAjJpn76wiLmWBinm3sqf32l\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1734893814,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"I need to gather information\
+        \ and insights to ensure the Senior Writer produces a high-quality draft about\
+        \ AI Agents, which will then serve as a foundation for the complete article.\\\
+        n\\nAction: Ask question to coworker  \\nAction Input: {\\\"question\\\":\\\
+        \"Can you provide a detailed overview of what AI Agents are, their functionalities,\
+        \ and their applications in real-world scenarios? Please include examples\
+        \ of how they are being used in various industries, and discuss their potential\
+        \ impact on the future of technology and society.\\\",\\\"context\\\":\\\"\
+        We are looking to create a comprehensive understanding of AI Agents as part\
+        \ of a four-paragraph article. This will help generate a high-quality draft\
+        \ for the article.\\\",\\\"coworker\\\":\\\"Senior Writer\\\"}  \",\n    \
+        \    \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\"\
+        : \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 604,\n   \
+        \ \"completion_tokens\": 138,\n    \"total_tokens\": 742,\n    \"prompt_tokens_details\"\
+        : {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"\
+        completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\"\
+        : 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
+        : 0\n    }\n  },\n  \"system_fingerprint\": \"fp_0aa8d3e20b\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -143,8 +145,9 @@ interactions:
       - 0s
       x-request-id:
       - req_53956b48bd1188451efc104e8a234ef4
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 - request:
     body: !!binary |
       CrEMCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSiAwKEgoQY3Jld2FpLnRl
@@ -263,55 +266,60 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AhLQG5ubl99yeBYm6TTV0sodagMND\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1734893816,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"I now can give a great answer  \\nFinal
-      Answer: \\n\\n**Overview of AI Agents**  \\nAI agents are advanced software
-      systems designed to autonomously perform tasks, make decisions, and learn from
-      their environments without needing constant human intervention. They leverage
-      machine learning, natural language processing, and various AI techniques to
-      simulate human-like understanding and autonomy. These agents can be categorized
-      into three types: reactive agents (which operate purely based on their environment),
-      deliberative agents (which can make decisions based on reasoning), and hybrid
-      agents that incorporate aspects of both types. Their ability to adapt and learn
-      over time makes them instrumental in automating processes across various domains.\\n\\n**Functionalities
-      of AI Agents**  \\nThe core functionalities of AI agents include perception,
-      action, learning, and interaction. They perceive data through sensors or data
-      feeds, process information through algorithms, and take actions based on this
-      data. Machine learning allows them to refine their performance over time by
-      analyzing outcomes and adjusting their strategies accordingly. Interaction capabilities
-      enable them to communicate with users, providing insights, answering queries,
-      or even negotiating in some cases. These functionalities make AI agents invaluable
-      for tasks such as predictive analytics, personal assistance, and real-time decision-making
-      in complex systems.\\n\\n**Applications in Various Industries**  \\nAI agents
-      are already being utilized across multiple industries, demonstrating their versatility
-      and efficiency. In healthcare, AI agents assist in diagnostics by analyzing
-      medical records and suggesting treatment plans tailored to individual patients.
-      In finance, they power robo-advisors that manage investment portfolios, automate
-      trading strategies, and provide financial advice based on real-time market analysis.
-      Furthermore, in customer service, AI chatbots serve as virtual assistants, enhancing
-      user experience by providing instant support and resolving queries without human
-      intervention. The logistics and supply chain industries have also seen AI agents
-      optimize inventory management and route planning, significantly improving operational
-      efficiency.\\n\\n**Future Impact on Technology and Society**  \\nThe ongoing
-      development of AI agents is poised to have a profound impact on technology and
-      society. As these agents become more sophisticated, we can anticipate a shift
-      towards increased automation in both professional and personal spheres, leading
-      to enhanced productivity and new business models. However, this automation introduces
-      challenges such as job displacement and ethical considerations regarding decision-making
-      by AI. It is essential to foster an ongoing dialogue on the implications of
-      AI agents to ensure responsible development and integration into our daily lives.
-      As AI agents continue to evolve, they will undoubtedly play a pivotal role in
-      shaping the future of technology and its intersection with societal dynamics,
-      making it critical for us to engage thoughtfully with this emerging paradigm.\",\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 289,\n    \"completion_tokens\":
-      506,\n    \"total_tokens\": 795,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      \"fp_0aa8d3e20b\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AhLQG5ubl99yeBYm6TTV0sodagMND\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1734893816,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"I now can give a great\
+        \ answer  \\nFinal Answer: \\n\\n**Overview of AI Agents**  \\nAI agents are\
+        \ advanced software systems designed to autonomously perform tasks, make decisions,\
+        \ and learn from their environments without needing constant human intervention.\
+        \ They leverage machine learning, natural language processing, and various\
+        \ AI techniques to simulate human-like understanding and autonomy. These agents\
+        \ can be categorized into three types: reactive agents (which operate purely\
+        \ based on their environment), deliberative agents (which can make decisions\
+        \ based on reasoning), and hybrid agents that incorporate aspects of both\
+        \ types. Their ability to adapt and learn over time makes them instrumental\
+        \ in automating processes across various domains.\\n\\n**Functionalities of\
+        \ AI Agents**  \\nThe core functionalities of AI agents include perception,\
+        \ action, learning, and interaction. They perceive data through sensors or\
+        \ data feeds, process information through algorithms, and take actions based\
+        \ on this data. Machine learning allows them to refine their performance over\
+        \ time by analyzing outcomes and adjusting their strategies accordingly. Interaction\
+        \ capabilities enable them to communicate with users, providing insights,\
+        \ answering queries, or even negotiating in some cases. These functionalities\
+        \ make AI agents invaluable for tasks such as predictive analytics, personal\
+        \ assistance, and real-time decision-making in complex systems.\\n\\n**Applications\
+        \ in Various Industries**  \\nAI agents are already being utilized across\
+        \ multiple industries, demonstrating their versatility and efficiency. In\
+        \ healthcare, AI agents assist in diagnostics by analyzing medical records\
+        \ and suggesting treatment plans tailored to individual patients. In finance,\
+        \ they power robo-advisors that manage investment portfolios, automate trading\
+        \ strategies, and provide financial advice based on real-time market analysis.\
+        \ Furthermore, in customer service, AI chatbots serve as virtual assistants,\
+        \ enhancing user experience by providing instant support and resolving queries\
+        \ without human intervention. The logistics and supply chain industries have\
+        \ also seen AI agents optimize inventory management and route planning, significantly\
+        \ improving operational efficiency.\\n\\n**Future Impact on Technology and\
+        \ Society**  \\nThe ongoing development of AI agents is poised to have a profound\
+        \ impact on technology and society. As these agents become more sophisticated,\
+        \ we can anticipate a shift towards increased automation in both professional\
+        \ and personal spheres, leading to enhanced productivity and new business\
+        \ models. However, this automation introduces challenges such as job displacement\
+        \ and ethical considerations regarding decision-making by AI. It is essential\
+        \ to foster an ongoing dialogue on the implications of AI agents to ensure\
+        \ responsible development and integration into our daily lives. As AI agents\
+        \ continue to evolve, they will undoubtedly play a pivotal role in shaping\
+        \ the future of technology and its intersection with societal dynamics, making\
+        \ it critical for us to engage thoughtfully with this emerging paradigm.\"\
+        ,\n        \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"\
+        finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\"\
+        : 289,\n    \"completion_tokens\": 506,\n    \"total_tokens\": 795,\n    \"\
+        prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\"\
+        : 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\"\
+        : 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n\
+        \      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\"\
+        : \"fp_0aa8d3e20b\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -355,8 +363,9 @@ interactions:
       - 0s
       x-request-id:
       - req_c14268346d6ce72ceea4b1472f73c5ae
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 - request:
     body: !!binary |
       CtsBCiQKIgoMc2VydmljZS5uYW1lEhIKEGNyZXdBSS10ZWxlbWV0cnkSsgEKEgoQY3Jld2FpLnRl
@@ -516,59 +525,63 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AhLQOmLKuevpaWtRyyhHjHVYqvNVk\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1734893824,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I have received a comprehensive
-      overview from the Senior Writer that includes the necessary information about
-      AI Agents, their functionalities, applications, and future implications. Now,
-      I can compile this into a final answer following the specified format: a complete
-      four-paragraph article.\\n\\nFinal Answer: \\n\\n**Overview of AI Agents**  \\nAI
-      agents are advanced software systems designed to autonomously perform tasks,
-      make decisions, and learn from their environments without needing constant human
-      intervention. They leverage machine learning, natural language processing, and
-      various AI techniques to simulate human-like understanding and autonomy. These
-      agents can be categorized into three types: reactive agents (which operate purely
-      based on their environment), deliberative agents (which can make decisions based
-      on reasoning), and hybrid agents that incorporate aspects of both types. Their
-      ability to adapt and learn over time makes them instrumental in automating processes
-      across various domains.\\n\\n**Functionalities of AI Agents**  \\nThe core functionalities
-      of AI agents include perception, action, learning, and interaction. They perceive
-      data through sensors or data feeds, process information through algorithms,
-      and take actions based on this data. Machine learning allows them to refine
-      their performance over time by analyzing outcomes and adjusting their strategies
-      accordingly. Interaction capabilities enable them to communicate with users,
-      providing insights, answering queries, or even negotiating in some cases. These
-      functionalities make AI agents invaluable for tasks such as predictive analytics,
-      personal assistance, and real-time decision-making in complex systems.\\n\\n**Applications
-      in Various Industries**  \\nAI agents are already being utilized across multiple
-      industries, demonstrating their versatility and efficiency. In healthcare, AI
-      agents assist in diagnostics by analyzing medical records and suggesting treatment
-      plans tailored to individual patients. In finance, they power robo-advisors
-      that manage investment portfolios, automate trading strategies, and provide
-      financial advice based on real-time market analysis. Furthermore, in customer
-      service, AI chatbots serve as virtual assistants, enhancing user experience
-      by providing instant support and resolving queries without human intervention.
-      The logistics and supply chain industries have also seen AI agents optimize
-      inventory management and route planning, significantly improving operational
-      efficiency.\\n\\n**Future Impact on Technology and Society**  \\nThe ongoing
-      development of AI agents is poised to have a profound impact on technology and
-      society. As these agents become more sophisticated, we can anticipate a shift
-      towards increased automation in both professional and personal spheres, leading
-      to enhanced productivity and new business models. However, this automation introduces
-      challenges such as job displacement and ethical considerations regarding decision-making
-      by AI. It is essential to foster an ongoing dialogue on the implications of
-      AI agents to ensure responsible development and integration into our daily lives.
-      As AI agents continue to evolve, they will undoubtedly play a pivotal role in
-      shaping the future of technology and its intersection with societal dynamics,
-      making it critical for us to engage thoughtfully with this emerging paradigm.\",\n
-      \       \"refusal\": null\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
-      \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 1242,\n    \"completion_tokens\":
-      550,\n    \"total_tokens\": 1792,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-      0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n
-      \     \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-      0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"system_fingerprint\":
-      \"fp_0aa8d3e20b\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AhLQOmLKuevpaWtRyyhHjHVYqvNVk\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1734893824,\n  \"model\": \"gpt-4o-mini-2024-07-18\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"Thought: I have received\
+        \ a comprehensive overview from the Senior Writer that includes the necessary\
+        \ information about AI Agents, their functionalities, applications, and future\
+        \ implications. Now, I can compile this into a final answer following the\
+        \ specified format: a complete four-paragraph article.\\n\\nFinal Answer:\
+        \ \\n\\n**Overview of AI Agents**  \\nAI agents are advanced software systems\
+        \ designed to autonomously perform tasks, make decisions, and learn from their\
+        \ environments without needing constant human intervention. They leverage\
+        \ machine learning, natural language processing, and various AI techniques\
+        \ to simulate human-like understanding and autonomy. These agents can be categorized\
+        \ into three types: reactive agents (which operate purely based on their environment),\
+        \ deliberative agents (which can make decisions based on reasoning), and hybrid\
+        \ agents that incorporate aspects of both types. Their ability to adapt and\
+        \ learn over time makes them instrumental in automating processes across various\
+        \ domains.\\n\\n**Functionalities of AI Agents**  \\nThe core functionalities\
+        \ of AI agents include perception, action, learning, and interaction. They\
+        \ perceive data through sensors or data feeds, process information through\
+        \ algorithms, and take actions based on this data. Machine learning allows\
+        \ them to refine their performance over time by analyzing outcomes and adjusting\
+        \ their strategies accordingly. Interaction capabilities enable them to communicate\
+        \ with users, providing insights, answering queries, or even negotiating in\
+        \ some cases. These functionalities make AI agents invaluable for tasks such\
+        \ as predictive analytics, personal assistance, and real-time decision-making\
+        \ in complex systems.\\n\\n**Applications in Various Industries**  \\nAI agents\
+        \ are already being utilized across multiple industries, demonstrating their\
+        \ versatility and efficiency. In healthcare, AI agents assist in diagnostics\
+        \ by analyzing medical records and suggesting treatment plans tailored to\
+        \ individual patients. In finance, they power robo-advisors that manage investment\
+        \ portfolios, automate trading strategies, and provide financial advice based\
+        \ on real-time market analysis. Furthermore, in customer service, AI chatbots\
+        \ serve as virtual assistants, enhancing user experience by providing instant\
+        \ support and resolving queries without human intervention. The logistics\
+        \ and supply chain industries have also seen AI agents optimize inventory\
+        \ management and route planning, significantly improving operational efficiency.\\\
+        n\\n**Future Impact on Technology and Society**  \\nThe ongoing development\
+        \ of AI agents is poised to have a profound impact on technology and society.\
+        \ As these agents become more sophisticated, we can anticipate a shift towards\
+        \ increased automation in both professional and personal spheres, leading\
+        \ to enhanced productivity and new business models. However, this automation\
+        \ introduces challenges such as job displacement and ethical considerations\
+        \ regarding decision-making by AI. It is essential to foster an ongoing dialogue\
+        \ on the implications of AI agents to ensure responsible development and integration\
+        \ into our daily lives. As AI agents continue to evolve, they will undoubtedly\
+        \ play a pivotal role in shaping the future of technology and its intersection\
+        \ with societal dynamics, making it critical for us to engage thoughtfully\
+        \ with this emerging paradigm.\",\n        \"refusal\": null\n      },\n \
+        \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n\
+        \  \"usage\": {\n    \"prompt_tokens\": 1242,\n    \"completion_tokens\":\
+        \ 550,\n    \"total_tokens\": 1792,\n    \"prompt_tokens_details\": {\n  \
+        \    \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\"\
+        : {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"\
+        accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n\
+        \    }\n  },\n  \"system_fingerprint\": \"fp_0aa8d3e20b\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -612,6 +625,7 @@ interactions:
       - 0s
       x-request-id:
       - req_a812bbb85b3d785660c4662212614ab9
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 version: 1

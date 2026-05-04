@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import asyncio
+import contextvars
 import logging
+import threading
 from typing import TYPE_CHECKING
 
 
@@ -18,6 +21,9 @@ class BrowserSessionManager:
     This class maintains separate browser sessions for different threads,
     enabling concurrent usage of browsers in multi-threaded environments.
     Browsers are created lazily only when needed by tools.
+
+    Uses per-key events to serialize creation for the same thread_id without
+    blocking unrelated callers or wasting resources on duplicate sessions.
     """
 
     def __init__(self, region: str = "us-west-2"):
@@ -27,8 +33,10 @@ class BrowserSessionManager:
             region: AWS region for browser client
         """
         self.region = region
+        self._lock = threading.Lock()
         self._async_sessions: dict[str, tuple[BrowserClient, AsyncBrowser]] = {}
         self._sync_sessions: dict[str, tuple[BrowserClient, SyncBrowser]] = {}
+        self._creating: dict[str, threading.Event] = {}
 
     async def get_async_browser(self, thread_id: str) -> AsyncBrowser:
         """Get or create an async browser for the specified thread.
@@ -39,10 +47,29 @@ class BrowserSessionManager:
         Returns:
             An async browser instance specific to the thread
         """
-        if thread_id in self._async_sessions:
-            return self._async_sessions[thread_id][1]
+        loop = asyncio.get_event_loop()
+        while True:
+            with self._lock:
+                if thread_id in self._async_sessions:
+                    return self._async_sessions[thread_id][1]
+                if thread_id not in self._creating:
+                    self._creating[thread_id] = threading.Event()
+                    break
+                event = self._creating[thread_id]
+            ctx = contextvars.copy_context()
+            await loop.run_in_executor(None, ctx.run, event.wait)
 
-        return await self._create_async_browser_session(thread_id)
+        try:
+            browser_client, browser = await self._create_async_browser_session(
+                thread_id
+            )
+            with self._lock:
+                self._async_sessions[thread_id] = (browser_client, browser)
+            return browser
+        finally:
+            with self._lock:
+                evt = self._creating.pop(thread_id)
+            evt.set()
 
     def get_sync_browser(self, thread_id: str) -> SyncBrowser:
         """Get or create a sync browser for the specified thread.
@@ -53,19 +80,33 @@ class BrowserSessionManager:
         Returns:
             A sync browser instance specific to the thread
         """
-        if thread_id in self._sync_sessions:
-            return self._sync_sessions[thread_id][1]
+        while True:
+            with self._lock:
+                if thread_id in self._sync_sessions:
+                    return self._sync_sessions[thread_id][1]
+                if thread_id not in self._creating:
+                    self._creating[thread_id] = threading.Event()
+                    break
+                event = self._creating[thread_id]
+            event.wait()
 
-        return self._create_sync_browser_session(thread_id)
+        try:
+            return self._create_sync_browser_session(thread_id)
+        finally:
+            with self._lock:
+                evt = self._creating.pop(thread_id)
+            evt.set()
 
-    async def _create_async_browser_session(self, thread_id: str) -> AsyncBrowser:
+    async def _create_async_browser_session(
+        self, thread_id: str
+    ) -> tuple[BrowserClient, AsyncBrowser]:
         """Create a new async browser session for the specified thread.
 
         Args:
             thread_id: Unique identifier for the thread
 
         Returns:
-            The newly created async browser instance
+            Tuple of (BrowserClient, AsyncBrowser).
 
         Raises:
             Exception: If browser session creation fails
@@ -75,10 +116,8 @@ class BrowserSessionManager:
         browser_client = BrowserClient(region=self.region)
 
         try:
-            # Start browser session
             browser_client.start()
 
-            # Get WebSocket connection info
             ws_url, headers = browser_client.generate_ws_headers()
 
             logger.info(
@@ -87,7 +126,6 @@ class BrowserSessionManager:
 
             from playwright.async_api import async_playwright
 
-            # Connect to browser using Playwright
             playwright = await async_playwright().start()
             browser = await playwright.chromium.connect_over_cdp(
                 endpoint_url=ws_url, headers=headers, timeout=30000
@@ -96,17 +134,13 @@ class BrowserSessionManager:
                 f"Successfully connected to async browser for thread {thread_id}"
             )
 
-            # Store session resources
-            self._async_sessions[thread_id] = (browser_client, browser)
-
-            return browser
+            return browser_client, browser
 
         except Exception as e:
             logger.error(
                 f"Failed to create async browser session for thread {thread_id}: {e}"
             )
 
-            # Clean up resources if session creation fails
             if browser_client:
                 try:
                     browser_client.stop()
@@ -132,10 +166,8 @@ class BrowserSessionManager:
         browser_client = BrowserClient(region=self.region)
 
         try:
-            # Start browser session
             browser_client.start()
 
-            # Get WebSocket connection info
             ws_url, headers = browser_client.generate_ws_headers()
 
             logger.info(
@@ -144,7 +176,6 @@ class BrowserSessionManager:
 
             from playwright.sync_api import sync_playwright
 
-            # Connect to browser using Playwright
             playwright = sync_playwright().start()
             browser = playwright.chromium.connect_over_cdp(
                 endpoint_url=ws_url, headers=headers, timeout=30000
@@ -153,8 +184,8 @@ class BrowserSessionManager:
                 f"Successfully connected to sync browser for thread {thread_id}"
             )
 
-            # Store session resources
-            self._sync_sessions[thread_id] = (browser_client, browser)
+            with self._lock:
+                self._sync_sessions[thread_id] = (browser_client, browser)
 
             return browser
 
@@ -163,7 +194,6 @@ class BrowserSessionManager:
                 f"Failed to create sync browser session for thread {thread_id}: {e}"
             )
 
-            # Clean up resources if session creation fails
             if browser_client:
                 try:
                     browser_client.stop()
@@ -178,13 +208,13 @@ class BrowserSessionManager:
         Args:
             thread_id: Unique identifier for the thread
         """
-        if thread_id not in self._async_sessions:
-            logger.warning(f"No async browser session found for thread {thread_id}")
-            return
+        with self._lock:
+            if thread_id not in self._async_sessions:
+                logger.warning(f"No async browser session found for thread {thread_id}")
+                return
 
-        browser_client, browser = self._async_sessions[thread_id]
+            browser_client, browser = self._async_sessions.pop(thread_id)
 
-        # Close browser
         if browser:
             try:
                 await browser.close()
@@ -193,7 +223,6 @@ class BrowserSessionManager:
                     f"Error closing async browser for thread {thread_id}: {e}"
                 )
 
-        # Stop browser client
         if browser_client:
             try:
                 browser_client.stop()
@@ -202,8 +231,6 @@ class BrowserSessionManager:
                     f"Error stopping browser client for thread {thread_id}: {e}"
                 )
 
-        # Remove session from dictionary
-        del self._async_sessions[thread_id]
         logger.info(f"Async browser session cleaned up for thread {thread_id}")
 
     def close_sync_browser(self, thread_id: str) -> None:
@@ -212,13 +239,13 @@ class BrowserSessionManager:
         Args:
             thread_id: Unique identifier for the thread
         """
-        if thread_id not in self._sync_sessions:
-            logger.warning(f"No sync browser session found for thread {thread_id}")
-            return
+        with self._lock:
+            if thread_id not in self._sync_sessions:
+                logger.warning(f"No sync browser session found for thread {thread_id}")
+                return
 
-        browser_client, browser = self._sync_sessions[thread_id]
+            browser_client, browser = self._sync_sessions.pop(thread_id)
 
-        # Close browser
         if browser:
             try:
                 browser.close()
@@ -227,7 +254,6 @@ class BrowserSessionManager:
                     f"Error closing sync browser for thread {thread_id}: {e}"
                 )
 
-        # Stop browser client
         if browser_client:
             try:
                 browser_client.stop()
@@ -236,19 +262,17 @@ class BrowserSessionManager:
                     f"Error stopping browser client for thread {thread_id}: {e}"
                 )
 
-        # Remove session from dictionary
-        del self._sync_sessions[thread_id]
         logger.info(f"Sync browser session cleaned up for thread {thread_id}")
 
     async def close_all_browsers(self) -> None:
         """Close all browser sessions."""
-        # Close all async browsers
-        async_thread_ids = list(self._async_sessions.keys())
+        with self._lock:
+            async_thread_ids = list(self._async_sessions.keys())
+            sync_thread_ids = list(self._sync_sessions.keys())
+
         for thread_id in async_thread_ids:
             await self.close_async_browser(thread_id)
 
-        # Close all sync browsers
-        sync_thread_ids = list(self._sync_sessions.keys())
         for thread_id in sync_thread_ids:
             self.close_sync_browser(thread_id)
 

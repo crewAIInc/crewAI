@@ -46,12 +46,12 @@ class OxylabsGoogleSearchScraperConfig(BaseModel):
     user_agent_type: str | None = Field(None, description="Device type and browser.")
     render: str | None = Field(None, description="Enables JavaScript rendering.")
     callback_url: str | None = Field(None, description="URL to your callback endpoint.")
-    context: list | None = Field(
+    context: list[Any] | None = Field(
         None,
         description="Additional advanced settings and controls for specialized requirements.",
     )
     parse: bool | None = Field(None, description="True will return structured data.")
-    parsing_instructions: dict | None = Field(
+    parsing_instructions: dict[str, Any] | None = Field(
         None, description="Instructions for parsing the results."
     )
 
@@ -76,7 +76,7 @@ class OxylabsGoogleSearchScraperTool(BaseTool):
     description: str = "Scrape Google Search results with Oxylabs Google Search Scraper"
     args_schema: type[BaseModel] = OxylabsGoogleSearchScraperArgs
 
-    oxylabs_api: RealtimeClient
+    oxylabs_api: Any
     config: OxylabsGoogleSearchScraperConfig
     package_dependencies: list[str] = Field(default_factory=lambda: ["oxylabs"])
     env_vars: list[EnvVar] = Field(
@@ -98,9 +98,9 @@ class OxylabsGoogleSearchScraperTool(BaseTool):
         self,
         username: str | None = None,
         password: str | None = None,
-        config: OxylabsGoogleSearchScraperConfig | dict | None = None,
-        **kwargs,
-    ):
+        config: OxylabsGoogleSearchScraperConfig | dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> None:
         bits, _ = architecture()
         sdk_type = (
             f"oxylabs-crewai-sdk-python/"
@@ -158,7 +158,7 @@ class OxylabsGoogleSearchScraperTool(BaseTool):
             )
         return username, password
 
-    def _run(self, query: str, **kwargs) -> str:
+    def _run(self, query: str, **kwargs: Any) -> str:
         response = self.oxylabs_api.google.scrape_search(
             query,
             **self.config.model_dump(exclude_none=True),
@@ -169,4 +169,4 @@ class OxylabsGoogleSearchScraperTool(BaseTool):
         if isinstance(content, dict):
             return json.dumps(content)
 
-        return content
+        return str(content)

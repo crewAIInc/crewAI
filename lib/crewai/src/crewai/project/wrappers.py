@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
+import contextvars
 from functools import partial
 import inspect
 from pathlib import Path
@@ -72,6 +73,8 @@ class CrewInstance(Protocol):
     __crew_metadata__: CrewMetadata
     _mcp_server_adapter: Any
     _all_methods: dict[str, Callable[..., Any]]
+    _registered_hook_functions: list[tuple[str, Callable[..., Any]]]
+    _hooks_being_registered: bool
     agents: list[Agent]
     tasks: list[Task]
     base_directory: Path
@@ -144,8 +147,9 @@ def _resolve_result(result: Any) -> Any:
         if loop and loop.is_running():
             import concurrent.futures
 
+            ctx = contextvars.copy_context()
             with concurrent.futures.ThreadPoolExecutor() as pool:
-                return pool.submit(asyncio.run, result).result()
+                return pool.submit(ctx.run, asyncio.run, result).result()
         return asyncio.run(result)
     return result
 

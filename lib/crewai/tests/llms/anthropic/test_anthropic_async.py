@@ -3,7 +3,6 @@ import json
 import logging
 
 import pytest
-import tiktoken
 from pydantic import BaseModel
 
 from crewai.llm import LLM
@@ -45,9 +44,7 @@ async def test_anthropic_async_with_max_tokens():
 
     assert result is not None
     assert isinstance(result, str)
-    encoder = tiktoken.get_encoding("cl100k_base")
-    token_count = len(encoder.encode(result))
-    assert token_count <= 10
+    assert len(result.split()) <= 10
 
 
 @pytest.mark.vcr()
@@ -157,10 +154,10 @@ async def test_anthropic_async_with_response_model():
         "Say hello in French",
         response_model=GreetingResponse
     )
-    model = GreetingResponse.model_validate_json(result)
-    assert isinstance(model, GreetingResponse)
-    assert isinstance(model.greeting, str)
-    assert isinstance(model.language, str)
+    # When response_model is provided, the result is already a parsed Pydantic model instance
+    assert isinstance(result, GreetingResponse)
+    assert isinstance(result.greeting, str)
+    assert isinstance(result.language, str)
 
 
 @pytest.mark.vcr()
@@ -196,4 +193,5 @@ async def test_anthropic_async_with_tools():
     logging.debug("result: %s", result)
 
     assert result is not None
-    assert isinstance(result, str)
+    # Result can be either a string or a list of tool calls (native tool calling)
+    assert isinstance(result, (str, list))

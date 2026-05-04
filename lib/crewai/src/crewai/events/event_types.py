@@ -1,8 +1,45 @@
+from crewai.events.types.a2a_events import (
+    A2AAgentCardFetchedEvent,
+    A2AArtifactReceivedEvent,
+    A2AAuthenticationFailedEvent,
+    A2AConnectionErrorEvent,
+    A2AConversationCompletedEvent,
+    A2AConversationStartedEvent,
+    A2ADelegationCompletedEvent,
+    A2ADelegationStartedEvent,
+    A2AMessageSentEvent,
+    A2AParallelDelegationCompletedEvent,
+    A2AParallelDelegationStartedEvent,
+    A2APollingStartedEvent,
+    A2APollingStatusEvent,
+    A2APushNotificationReceivedEvent,
+    A2APushNotificationRegisteredEvent,
+    A2APushNotificationSentEvent,
+    A2APushNotificationTimeoutEvent,
+    A2AResponseReceivedEvent,
+    A2AServerTaskCanceledEvent,
+    A2AServerTaskCompletedEvent,
+    A2AServerTaskFailedEvent,
+    A2AServerTaskStartedEvent,
+    A2AStreamingChunkEvent,
+    A2AStreamingStartedEvent,
+)
 from crewai.events.types.agent_events import (
     AgentExecutionCompletedEvent,
     AgentExecutionErrorEvent,
     AgentExecutionStartedEvent,
     LiteAgentExecutionCompletedEvent,
+)
+from crewai.events.types.checkpoint_events import (
+    CheckpointCompletedEvent,
+    CheckpointFailedEvent,
+    CheckpointForkCompletedEvent,
+    CheckpointForkStartedEvent,
+    CheckpointPrunedEvent,
+    CheckpointRestoreCompletedEvent,
+    CheckpointRestoreFailedEvent,
+    CheckpointRestoreStartedEvent,
+    CheckpointStartedEvent,
 )
 from crewai.events.types.crew_events import (
     CrewKickoffCompletedEvent,
@@ -41,6 +78,7 @@ from crewai.events.types.llm_guardrail_events import (
     LLMGuardrailStartedEvent,
 )
 from crewai.events.types.mcp_events import (
+    MCPConfigFetchFailedEvent,
     MCPConnectionCompletedEvent,
     MCPConnectionFailedEvent,
     MCPConnectionStartedEvent,
@@ -53,6 +91,7 @@ from crewai.events.types.memory_events import (
     MemoryQueryFailedEvent,
     MemoryQueryStartedEvent,
     MemoryRetrievalCompletedEvent,
+    MemoryRetrievalFailedEvent,
     MemoryRetrievalStartedEvent,
     MemorySaveCompletedEvent,
     MemorySaveFailedEvent,
@@ -76,7 +115,31 @@ from crewai.events.types.tool_usage_events import (
 
 
 EventTypes = (
-    CrewKickoffStartedEvent
+    A2AAgentCardFetchedEvent
+    | A2AArtifactReceivedEvent
+    | A2AAuthenticationFailedEvent
+    | A2AConnectionErrorEvent
+    | A2AConversationCompletedEvent
+    | A2AConversationStartedEvent
+    | A2ADelegationCompletedEvent
+    | A2ADelegationStartedEvent
+    | A2AMessageSentEvent
+    | A2APollingStartedEvent
+    | A2APollingStatusEvent
+    | A2APushNotificationReceivedEvent
+    | A2APushNotificationRegisteredEvent
+    | A2APushNotificationSentEvent
+    | A2APushNotificationTimeoutEvent
+    | A2AResponseReceivedEvent
+    | A2AServerTaskCanceledEvent
+    | A2AServerTaskCompletedEvent
+    | A2AServerTaskFailedEvent
+    | A2AServerTaskStartedEvent
+    | A2AStreamingChunkEvent
+    | A2AStreamingStartedEvent
+    | A2AParallelDelegationStartedEvent
+    | A2AParallelDelegationCompletedEvent
+    | CrewKickoffStartedEvent
     | CrewKickoffCompletedEvent
     | CrewKickoffFailedEvent
     | CrewTestStartedEvent
@@ -123,10 +186,21 @@ EventTypes = (
     | MemoryQueryFailedEvent
     | MemoryRetrievalStartedEvent
     | MemoryRetrievalCompletedEvent
+    | MemoryRetrievalFailedEvent
     | MCPConnectionStartedEvent
     | MCPConnectionCompletedEvent
     | MCPConnectionFailedEvent
     | MCPToolExecutionStartedEvent
     | MCPToolExecutionCompletedEvent
     | MCPToolExecutionFailedEvent
+    | MCPConfigFetchFailedEvent
+    | CheckpointStartedEvent
+    | CheckpointCompletedEvent
+    | CheckpointFailedEvent
+    | CheckpointForkStartedEvent
+    | CheckpointForkCompletedEvent
+    | CheckpointRestoreStartedEvent
+    | CheckpointRestoreCompletedEvent
+    | CheckpointRestoreFailedEvent
+    | CheckpointPrunedEvent
 )

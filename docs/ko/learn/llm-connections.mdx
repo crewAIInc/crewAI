@@ -7,7 +7,7 @@ mode: "wide"
 
 ## CrewAI를 LLM에 연결하기
 
-CrewAI는 LiteLLM을 사용하여 다양한 언어 모델(LLM)에 연결합니다. 이 통합은 높은 다양성을 제공하여, 여러 공급자의 모델을 간단하고 통합된 인터페이스로 사용할 수 있게 해줍니다.
+CrewAI는 가장 인기 있는 제공자(OpenAI, Anthropic, Google Gemini, Azure, AWS Bedrock)에 대해 네이티브 SDK 통합을 통해 LLM에 연결하며, 그 외 모든 제공자에 대해서는 LiteLLM을 유연한 폴백으로 사용합니다.
 
 <Note>
     기본적으로 CrewAI는 `gpt-4o-mini` 모델을 사용합니다. 이는 `OPENAI_MODEL_NAME` 환경 변수에 의해 결정되며, 설정되지 않은 경우 기본값은 "gpt-4o-mini"입니다.
@@ -40,6 +40,14 @@ LiteLLM은 다음을 포함하되 이에 국한되지 않는 다양한 프로바
 - 그리고 더 많은 프로바이더!
 
 지원되는 프로바이더의 전체 및 최신 목록은 [LiteLLM 프로바이더 문서](https://docs.litellm.ai/docs/providers)를 참조하세요.
+
+<Info>
+  네이티브 통합에서 지원하지 않는 제공자를 사용하려면 LiteLLM을 프로젝트에 의존성으로 추가하세요:
+  ```bash
+  uv add 'crewai[litellm]'
+  ```
+  네이티브 제공자(OpenAI, Anthropic, Google Gemini, Azure, AWS Bedrock)는 자체 SDK extras를 사용합니다 — [공급자 구성 예시](/ko/concepts/llms#공급자-구성-예시)를 참조하세요.
+</Info>
 
 ## LLM 변경하기
 

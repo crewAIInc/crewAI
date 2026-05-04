@@ -13,7 +13,7 @@ mode: "wide"
 
 Shopify 연동을 사용하기 전에 다음을 확인하세요:
 
-- 활성 구독이 있는 [CrewAI AOP](https://app.crewai.com) 계정
+- 활성 구독이 있는 [CrewAI AMP](https://app.crewai.com) 계정
 - 적절한 관리자 권한이 있는 Shopify 스토어
 - [통합 페이지](https://app.crewai.com/integrations)를 통해 Shopify 스토어 연결
 
@@ -21,7 +21,7 @@ Shopify 연동을 사용하기 전에 다음을 확인하세요:
 
 ### 1. Shopify 스토어 연결
 
-1. [CrewAI AOP 통합](https://app.crewai.com/crewai_plus/connectors)으로 이동합니다.
+1. [CrewAI AMP 통합](https://app.crewai.com/crewai_plus/connectors)으로 이동합니다.
 2. 인증 통합 섹션에서 **Shopify**를 찾습니다.
 3. **연결**을 클릭하고 OAuth 과정을 완료합니다.
 4. 스토어 및 제품 관리에 필요한 권한을 부여합니다.
@@ -36,7 +36,8 @@ uv add crewai-tools
 ### 3. 환경 변수 설정
 
 <Note>
-  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로 `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
+  `Agent(apps=[])`와 함께 통합을 사용하려면 Enterprise Token으로
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` 환경 변수를 설정해야 합니다.
 </Note>
 
 ```bash
@@ -64,6 +65,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `updatedAtMin` (string, 선택): 이 날짜 이후에 업데이트된 고객만 반환 (ISO 또는 Unix 타임스탬프)
     - `updatedAtMax` (string, 선택): 이 날짜 이전에 업데이트된 고객만 반환 (ISO 또는 Unix 타임스탬프)
     - `limit` (string, 선택): 반환할 최대 고객 수 (기본값 250)
+
   </Accordion>
 
   <Accordion title="shopify/search_customers">
@@ -72,6 +74,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     **파라미터:**
     - `filterFormula` (object, 선택): 필드별 연산자가 포함된 불리언 합정규형의 고급 필터
     - `limit` (string, 선택): 반환할 최대 고객 수 (기본값 250)
+
   </Accordion>
 
   <Accordion title="shopify/create_customer">
@@ -93,6 +96,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `note` (string, 선택): 고객 메모
     - `sendEmailInvite` (boolean, 선택): 이메일 초대장 전송 여부
     - `metafields` (object, 선택): 추가 메타필드(JSON 형식)
+
   </Accordion>
 
   <Accordion title="shopify/update_customer">
@@ -115,6 +119,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `note` (string, 선택): 고객 메모
     - `sendEmailInvite` (boolean, 선택): 이메일 초대장 전송 여부
     - `metafields` (object, 선택): 추가 메타필드(JSON 형식)
+
   </Accordion>
 </AccordionGroup>
 
@@ -131,6 +136,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `updatedAtMin` (string, optional): 이 날짜 이후에 업데이트된 주문만 반환 (ISO 또는 Unix 타임스탬프)
     - `updatedAtMax` (string, optional): 이 날짜 이전에 업데이트된 주문만 반환 (ISO 또는 Unix 타임스탬프)
     - `limit` (string, optional): 반환할 주문의 최대 개수 (기본값: 250)
+
   </Accordion>
 
   <Accordion title="shopify/create_order">
@@ -144,6 +150,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `financialStatus` (string, optional): 결제 상태 - 옵션: pending, authorized, partially_paid, paid, partially_refunded, refunded, voided
     - `inventoryBehaviour` (string, optional): 인벤토리 동작 - 옵션: bypass, decrement_ignoring_policy, decrement_obeying_policy
     - `note` (string, optional): 주문 메모
+
   </Accordion>
 
   <Accordion title="shopify/update_order">
@@ -158,6 +165,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `financialStatus` (string, optional): 결제 상태 - 옵션: pending, authorized, partially_paid, paid, partially_refunded, refunded, voided
     - `inventoryBehaviour` (string, optional): 인벤토리 동작 - 옵션: bypass, decrement_ignoring_policy, decrement_obeying_policy
     - `note` (string, optional): 주문 메모
+
   </Accordion>
 
   <Accordion title="shopify/get_abandoned_carts">
@@ -170,6 +178,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `createdAtMin` (string, optional): 이 날짜 이후에 생성된 장바구니만 반환 (ISO 또는 Unix 타임스탬프)
     - `createdAtMax` (string, optional): 이 날짜 이전에 생성된 장바구니만 반환 (ISO 또는 Unix 타임스탬프)
     - `limit` (string, optional): 반환할 장바구니의 최대 개수 (기본값: 250)
+
   </Accordion>
 </AccordionGroup>
 
@@ -190,6 +199,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `updatedAtMin` (string, optional): 해당 날짜(ISO 혹은 Unix 타임스탬프) 이후에 수정된 제품만 반환
     - `updatedAtMax` (string, optional): 해당 날짜(ISO 혹은 Unix 타임스탬프) 이전에 수정된 제품만 반환
     - `limit` (string, optional): 반환할 최대 제품 수 (기본값: 250)
+
   </Accordion>
 
   <Accordion title="shopify/create_product">
@@ -206,6 +216,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `imageUrl` (string, optional): 제품 이미지 URL
     - `isPublished` (boolean, optional): 제품 공개 여부
     - `publishToPointToSale` (boolean, optional): 포인트 오브 세일(Point of Sale)에 공개 여부
+
   </Accordion>
 
   <Accordion title="shopify/update_product">
@@ -223,6 +234,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `imageUrl` (string, optional): 제품 이미지 URL
     - `isPublished` (boolean, optional): 제품 공개 여부
     - `publishToPointToSale` (boolean, optional): 포인트 오브 세일(Point of Sale)에 공개 여부
+
   </Accordion>
 </AccordionGroup>
 
@@ -234,6 +246,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
 
     **파라미터:**
     - `productFilterFormula` (object, 선택): id, title, vendor, status, handle, tag, created_at, updated_at, published_at와 같은 필드를 지원하는 불리언 정규합형(DNF) 기반의 고급 필터
+
   </Accordion>
 
   <Accordion title="shopify/create_product_graphql">
@@ -247,6 +260,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `tags` (string, 선택): 배열 또는 쉼표로 구분된 리스트 형태의 제품 태그
     - `media` (object, 선택): 대체 텍스트, 콘텐츠 유형 및 소스 URL을 가진 미디어 객체
     - `additionalFields` (object, 선택): status, requiresSellingPlan, giftCard와 같은 추가 제품 필드
+
   </Accordion>
 
   <Accordion title="shopify/update_product_graphql">
@@ -261,6 +275,7 @@ CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
     - `tags` (string, 선택): 배열 또는 쉼표로 구분된 리스트 형태의 제품 태그
     - `media` (object, 선택): 대체 텍스트, 콘텐츠 유형 및 소스 URL을 포함한 업데이트된 미디어 객체
     - `additionalFields` (object, 선택): status, requiresSellingPlan, giftCard와 같은 추가 제품 필드
+
   </Accordion>
 </AccordionGroup>
 
@@ -387,6 +402,11 @@ crew.kickoff()
 
 ### 도움 받기
 
-<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
-  Shopify 연동 설정 또는 문제 해결에 관한 지원이 필요하시면 고객 지원팀에 문의해 주세요.
+<Card
+  title="도움이 필요하신가요?"
+  icon="headset"
+  href="mailto:support@crewai.com"
+>
+  Shopify 연동 설정 또는 문제 해결에 관한 지원이 필요하시면 고객 지원팀에 문의해
+  주세요.
 </Card>

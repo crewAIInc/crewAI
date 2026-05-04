@@ -1,0 +1,136 @@
+interactions:
+- request:
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"Analyze the following
+      conversation and create a structured summary that preserves all information
+      needed to continue the task seamlessly.\n\n<conversation>\n[USER]: Research
+      the latest developments in large language models. Focus on architecture improvements
+      and training techniques.\n\n[ASSISTANT]: I''ll research the latest developments
+      in large language models. Based on my knowledge, recent advances include:\n1.
+      Mixture of Experts (MoE) architectures\n2. Improved attention mechanisms like
+      Flash Attention\n3. Better training data curation techniques\n4. Constitutional
+      AI and RLHF improvements\n\n[USER]: Can you go deeper on the MoE architectures?
+      What are the key papers?\n\n[ASSISTANT]: Key papers on Mixture of Experts:\n-
+      Switch Transformers (Google, 2021) - simplified MoE routing\n- GShard - scaling
+      to 600B parameters\n- Mixtral (Mistral AI) - open-source MoE model\nThe main
+      advantage is computational efficiency: only a subset of experts is activated
+      per token.\n</conversation>\n\nCreate a summary with these sections:\n1. **Task
+      Overview**: What is the agent trying to accomplish?\n2. **Current State**: What
+      has been completed so far? What step is the agent on?\n3. **Important Discoveries**:
+      Key facts, data, tool results, or findings that must not be lost.\n4. **Next
+      Steps**: What should the agent do next based on the conversation?\n5. **Context
+      to Preserve**: Any specific values, names, URLs, code snippets, or details referenced
+      in the conversation.\n\nWrap your entire summary in <summary> tags.\n\n<summary>\n[Your
+      structured summary here]\n</summary>"}],"model":"claude-3-5-haiku-latest","stream":false,"system":"You
+      are a precise assistant that creates structured summaries of agent conversations.
+      You preserve critical context needed for seamless task continuation.","temperature":0}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '1870'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+      x-api-key:
+      - X-API-KEY-XXX
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 0.73.0
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+      x-stainless-timeout:
+      - NOT_GIVEN
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_01SK3LP6RedPBmpvD1HfKD23","type":"message","role":"assistant","content":[{"type":"text","text":"<summary>\n1.
+        **Task Overview**:\n- Research latest developments in large language models\n-
+        Focus on architecture improvements and training techniques\n\n2. **Current
+        State**:\n- Initial research completed on broad developments\n- Currently
+        exploring Mixture of Experts (MoE) architectures in depth\n- Detailed discussion
+        of key MoE research papers initiated\n\n3. **Important Discoveries**:\nMoE
+        Architecture Insights:\n- Computational efficiency through selective expert
+        activation\n- Key research papers:\n  * Switch Transformers (Google, 2021)\n  *
+        GShard\n  * Mixtral (Mistral AI)\n- Main benefit: Only subset of experts activated
+        per token\n\n4. **Next Steps**:\n- Conduct deeper analysis of MoE architecture
+        mechanisms\n- Compare routing strategies across different MoE implementations\n-
+        Investigate performance metrics and scalability of MoE models\n\n5. **Context
+        to Preserve**:\n- Research Focus: Large Language Model Architectures\n- Specific
+        Interest: Mixture of Experts (MoE) Architectures\n- Key Researchers/Organizations:
+        Google, Mistral AI\n- Years of Significant Papers: 2021 onwards\n</summary>"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":400,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":270,"service_tier":"standard","inference_geo":"not_available"}}'
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Security-Policy:
+      - CSP-FILTERED
+      Content-Type:
+      - application/json
+      Date:
+      - Mon, 09 Feb 2026 20:18:41 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-organization-id:
+      - ANTHROPIC-ORGANIZATION-ID-XXX
+      anthropic-ratelimit-input-tokens-limit:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-input-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-input-tokens-reset:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-output-tokens-limit:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-output-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-output-tokens-reset:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-requests-limit:
+      - '4000'
+      anthropic-ratelimit-requests-remaining:
+      - '3999'
+      anthropic-ratelimit-requests-reset:
+      - '2026-02-09T20:18:35Z'
+      anthropic-ratelimit-tokens-limit:
+      - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-tokens-reset:
+      - ANTHROPIC-RATELIMIT-TOKENS-RESET-XXX
+      cf-cache-status:
+      - DYNAMIC
+      request-id:
+      - REQUEST-ID-XXX
+      strict-transport-security:
+      - STS-XXX
+      x-envoy-upstream-service-time:
+      - '5639'
+    status:
+      code: 200
+      message: OK
+version: 1

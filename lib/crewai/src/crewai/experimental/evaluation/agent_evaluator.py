@@ -1,8 +1,9 @@
+from __future__ import annotations
+
 from collections.abc import Sequence
 import threading
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from crewai.agent.core import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.agent_events import (
@@ -28,15 +29,19 @@ from crewai.experimental.evaluation.evaluation_listener import (
 from crewai.task import Task
 
 
+if TYPE_CHECKING:
+    from crewai.agent import Agent
+
+
 class ExecutionState:
     current_agent_id: str | None = None
     current_task_id: str | None = None
 
-    def __init__(self):
-        self.traces = {}
-        self.iteration = 1
-        self.iterations_results = {}
-        self.agent_evaluators = {}
+    def __init__(self) -> None:
+        self.traces: dict[str, Any] = {}
+        self.iteration: int = 1
+        self.iterations_results: dict[int, dict[str, list[AgentEvaluationResult]]] = {}
+        self.agent_evaluators: dict[str, Sequence[BaseEvaluator] | None] = {}
 
 
 class AgentEvaluator:
@@ -290,7 +295,7 @@ class AgentEvaluator:
 
     def emit_evaluation_started_event(
         self, agent_role: str, agent_id: str, task_id: str | None = None
-    ):
+    ) -> None:
         crewai_event_bus.emit(
             self,
             AgentEvaluationStartedEvent(
@@ -308,7 +313,7 @@ class AgentEvaluator:
         task_id: str | None = None,
         metric_category: MetricCategory | None = None,
         score: EvaluationScore | None = None,
-    ):
+    ) -> None:
         crewai_event_bus.emit(
             self,
             AgentEvaluationCompletedEvent(
@@ -323,7 +328,7 @@ class AgentEvaluator:
 
     def emit_evaluation_failed_event(
         self, agent_role: str, agent_id: str, error: str, task_id: str | None = None
-    ):
+    ) -> None:
         crewai_event_bus.emit(
             self,
             AgentEvaluationFailedEvent(
@@ -336,7 +341,9 @@ class AgentEvaluator:
         )
 
 
-def create_default_evaluator(agents: list[Agent] | list[BaseAgent], llm: None = None):
+def create_default_evaluator(
+    agents: list[Agent] | list[BaseAgent], llm: None = None
+) -> AgentEvaluator:
     from crewai.experimental.evaluation import (
         GoalAlignmentEvaluator,
         ParameterExtractionEvaluator,

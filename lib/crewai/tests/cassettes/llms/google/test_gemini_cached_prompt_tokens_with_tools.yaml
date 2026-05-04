@@ -1,0 +1,280 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "What is the weather in Tokyo?"}], "role":
+      "user"}], "systemInstruction": {"parts": [{"text": "You are a helpful assistant
+      that uses tools. This is padding text to ensure the prompt is large enough for
+      caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. "}], "role": "user"}, "tools": [{"functionDeclarations":
+      [{"description": "Get the current weather for a location", "name": "get_weather",
+      "parameters_json_schema": {"type": "object", "properties": {"location": {"type":
+      "string", "description": "The city name"}}, "required": ["location"]}}]}], "generationConfig":
+      {}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '6172'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"functionCall\": {\n              \"name\": \"get_weather\",\n
+        \             \"args\": {\n                \"location\": \"Tokyo\"\n              }\n
+        \           },\n            \"thoughtSignature\": \"CpECAb4+9vvTFzaczX2PeZjKEs1f6+MRyTMz+xxqs37q0INQ6e0WLt1soet6CL/uzRML9LsycSeQTraXtXR8qcGj6dnrhKLpovpy8EkrtfK6P57PGpostE/UJ6TIKPlWi0pY1h2u9vyy5yGLzpp0PZM6d6f8rzV9uPFNM+onGvcFOdzghRZlHmYkQdbdpZaFQBAK6QFuh8oGbC0Ygrsk1guJo1YZaKtU5Rp/k2rJO61Obgq7aYEb7ACVx7DM9ZlVCun/PbXR4UolFeNPxNdwzC5AVvP7UKa2Cxi8dzQ8RNebtd39/gNO546XzADGZkpSqG6QF0S4IEsmB9FFCctN1evgKicgT2Qo+AR6BY8uzZyWkGQx\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0,\n      \"finishMessage\": \"Model generated
+        function call(s).\"\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        1180,\n    \"candidatesTokenCount\": 15,\n    \"totalTokenCount\": 1253,\n
+        \   \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \       \"tokenCount\": 1180\n      }\n    ],\n    \"thoughtsTokenCount\":
+        58\n  },\n  \"modelVersion\": \"gemini-2.5-flash\",\n  \"responseId\": \"wHmLacb_GL-J-sAPn6azgAo\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 10 Feb 2026 18:32:32 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=755
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"parts": [{"text": "What is the weather in Paris?"}], "role":
+      "user"}], "systemInstruction": {"parts": [{"text": "You are a helpful assistant
+      that uses tools. This is padding text to ensure the prompt is large enough for
+      caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. This is padding text to ensure the prompt is large
+      enough for caching. This is padding text to ensure the prompt is large enough
+      for caching. This is padding text to ensure the prompt is large enough for caching.
+      This is padding text to ensure the prompt is large enough for caching. This
+      is padding text to ensure the prompt is large enough for caching. This is padding
+      text to ensure the prompt is large enough for caching. This is padding text
+      to ensure the prompt is large enough for caching. This is padding text to ensure
+      the prompt is large enough for caching. This is padding text to ensure the prompt
+      is large enough for caching. "}], "role": "user"}, "tools": [{"functionDeclarations":
+      [{"description": "Get the current weather for a location", "name": "get_weather",
+      "parameters_json_schema": {"type": "object", "properties": {"location": {"type":
+      "string", "description": "The city name"}}, "required": ["location"]}}]}], "generationConfig":
+      {}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '6172'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"functionCall\": {\n              \"name\": \"get_weather\",\n
+        \             \"args\": {\n                \"location\": \"Paris\"\n              }\n
+        \           },\n            \"thoughtSignature\": \"CuMBAb4+9vurHOlMBPzqCtd/J0Q5jBhUq8dsk7xntqcTgwBcZ1KeX4F4UJ0rdfg1OLhDkOlOlELA/jBYxATT19QUvw0szvDBDml0PsTBXlt64o7oGVmOCjdiGPu71I9+sCYhlD3QXzwLdQdrvUIfVrB+kaGszmZi1KTIli+qD9ihueDYGY510ouKdfl31UipQEG990+qFJyXe3avVEh3Jo72iXr3Q4UczFdbKSTV4V4fjrokFaB7UqcYy1iuAB5vHRsxYFJeTCi+ddKzn700gbWbiJZUniKiE3QfdOK4A5S0woBDzV0=\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0,\n      \"finishMessage\": \"Model generated
+        function call(s).\"\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        1180,\n    \"candidatesTokenCount\": 15,\n    \"totalTokenCount\": 1242,\n
+        \   \"promptTokensDetails\": [\n      {\n        \"modality\": \"TEXT\",\n
+        \       \"tokenCount\": 1180\n      }\n    ],\n    \"thoughtsTokenCount\":
+        47\n  },\n  \"modelVersion\": \"gemini-2.5-flash\",\n  \"responseId\": \"wXmLadTiEri5jMcPk_6ZgAc\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 10 Feb 2026 18:32:33 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=881
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

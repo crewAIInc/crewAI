@@ -1,0 +1,651 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Counting Agent. You are
+      an agent that counts things. You must try to use the tool for each value requested.\nYour
+      personal goal is: Use the counting tool as many times as requested"},{"role":"user","content":"\nCurrent
+      Task: Call the counting_tool 4 times with values ''one'', ''two'', ''three'',
+      and ''four''\n\nThis is the expected criteria for your final answer: The results
+      of the counting operations, noting any failures\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nThis is VERY important
+      to you, your job depends on it!"}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"counting_tool","description":"A
+      tool that counts how many times it''s been called","parameters":{"properties":{"value":{"description":"Value
+      to count","title":"Value","type":"string"}},"required":["value"],"type":"object"}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '925'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D0x7nZ78jtcPMeE8YiS22c3sJLEnd\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769119647,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_5oUhAsPTXvRf8iYnYNtQ8wc4\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"counting_tool\",\n
+        \             \"arguments\": \"{\\\"value\\\": \\\"one\\\"}\"\n            }\n
+        \         },\n          {\n            \"id\": \"call_WR6ZV1V1Szr4gC92MCJ66c36\",\n
+        \           \"type\": \"function\",\n            \"function\": {\n              \"name\":
+        \"counting_tool\",\n              \"arguments\": \"{\\\"value\\\": \\\"two\\\"}\"\n
+        \           }\n          },\n          {\n            \"id\": \"call_VVclKVRM8I9VLWmxVntIbsIA\",\n
+        \           \"type\": \"function\",\n            \"function\": {\n              \"name\":
+        \"counting_tool\",\n              \"arguments\": \"{\\\"value\\\": \\\"three\\\"}\"\n
+        \           }\n          },\n          {\n            \"id\": \"call_aLqfQKJ3Ua3yMI25pwNQb4o6\",\n
+        \           \"type\": \"function\",\n            \"function\": {\n              \"name\":
+        \"counting_tool\",\n              \"arguments\": \"{\\\"value\\\": \\\"four\\\"}\"\n
+        \           }\n          }\n        ],\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 172,\n    \"completion_tokens\":
+        76,\n    \"total_tokens\": 248,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_c4585b5b9c\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 22:07:29 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '1824'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '2040'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Counting Agent. You are
+      an agent that counts things. You must try to use the tool for each value requested.\nYour
+      personal goal is: Use the counting tool as many times as requested"},{"role":"user","content":"\nCurrent
+      Task: Call the counting_tool 4 times with values ''one'', ''two'', ''three'',
+      and ''four''\n\nThis is the expected criteria for your final answer: The results
+      of the counting operations, noting any failures\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nThis is VERY important
+      to you, your job depends on it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_5oUhAsPTXvRf8iYnYNtQ8wc4","type":"function","function":{"name":"counting_tool","arguments":"{\"value\":
+      \"one\"}"}}]},{"role":"tool","tool_call_id":"call_5oUhAsPTXvRf8iYnYNtQ8wc4","content":"Counted:
+      one"},{"role":"user","content":"Analyze the tool result. If requirements are
+      met, provide the Final Answer. Otherwise, call the next tool. Deliver only the
+      answer without meta-commentary."}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"counting_tool","description":"A
+      tool that counts how many times it''s been called","parameters":{"properties":{"value":{"description":"Value
+      to count","title":"Value","type":"string"}},"required":["value"],"type":"object"}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1376'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D0x7qri4Ji3Ww0gevIAbsxcOWtq6O\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769119650,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_a1j6GAzKyhztwfbljZ8qc7oT\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"counting_tool\",\n
+        \             \"arguments\": \"{\\\"value\\\": \\\"two\\\"}\"\n            }\n
+        \         },\n          {\n            \"id\": \"call_zfH8FTOVvcKV6lNnusv41yvT\",\n
+        \           \"type\": \"function\",\n            \"function\": {\n              \"name\":
+        \"counting_tool\",\n              \"arguments\": \"{\\\"value\\\": \\\"three\\\"}\"\n
+        \           }\n          },\n          {\n            \"id\": \"call_sMwHs5xXPqLGwRtSj1wsejgJ\",\n
+        \           \"type\": \"function\",\n            \"function\": {\n              \"name\":
+        \"counting_tool\",\n              \"arguments\": \"{\\\"value\\\": \\\"four\\\"}\"\n
+        \           }\n          }\n        ],\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 235,\n    \"completion_tokens\":
+        61,\n    \"total_tokens\": 296,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_c4585b5b9c\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 22:07:31 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '1608'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '1871'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Counting Agent. You are
+      an agent that counts things. You must try to use the tool for each value requested.\nYour
+      personal goal is: Use the counting tool as many times as requested"},{"role":"user","content":"\nCurrent
+      Task: Call the counting_tool 4 times with values ''one'', ''two'', ''three'',
+      and ''four''\n\nThis is the expected criteria for your final answer: The results
+      of the counting operations, noting any failures\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nThis is VERY important
+      to you, your job depends on it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_5oUhAsPTXvRf8iYnYNtQ8wc4","type":"function","function":{"name":"counting_tool","arguments":"{\"value\":
+      \"one\"}"}}]},{"role":"tool","tool_call_id":"call_5oUhAsPTXvRf8iYnYNtQ8wc4","content":"Counted:
+      one"},{"role":"user","content":"Analyze the tool result. If requirements are
+      met, provide the Final Answer. Otherwise, call the next tool. Deliver only the
+      answer without meta-commentary."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_a1j6GAzKyhztwfbljZ8qc7oT","type":"function","function":{"name":"counting_tool","arguments":"{\"value\":
+      \"two\"}"}}]},{"role":"tool","tool_call_id":"call_a1j6GAzKyhztwfbljZ8qc7oT","content":"Counted:
+      two"},{"role":"user","content":"Analyze the tool result. If requirements are
+      met, provide the Final Answer. Otherwise, call the next tool. Deliver only the
+      answer without meta-commentary."}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"counting_tool","description":"A
+      tool that counts how many times it''s been called","parameters":{"properties":{"value":{"description":"Value
+      to count","title":"Value","type":"string"}},"required":["value"],"type":"object"}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1827'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D0x7rwRbTZVLfykq2gScxirkoMD2O\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769119651,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_E5qlYQlNJiLT7YodiBAyJrwB\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"counting_tool\",\n
+        \             \"arguments\": \"{\\\"value\\\":\\\"three\\\"}\"\n            }\n
+        \         }\n        ],\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 298,\n    \"completion_tokens\":
+        15,\n    \"total_tokens\": 313,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_c4585b5b9c\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 22:07:32 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '471'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '491'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Counting Agent. You are
+      an agent that counts things. You must try to use the tool for each value requested.\nYour
+      personal goal is: Use the counting tool as many times as requested"},{"role":"user","content":"\nCurrent
+      Task: Call the counting_tool 4 times with values ''one'', ''two'', ''three'',
+      and ''four''\n\nThis is the expected criteria for your final answer: The results
+      of the counting operations, noting any failures\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nThis is VERY important
+      to you, your job depends on it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_5oUhAsPTXvRf8iYnYNtQ8wc4","type":"function","function":{"name":"counting_tool","arguments":"{\"value\":
+      \"one\"}"}}]},{"role":"tool","tool_call_id":"call_5oUhAsPTXvRf8iYnYNtQ8wc4","content":"Counted:
+      one"},{"role":"user","content":"Analyze the tool result. If requirements are
+      met, provide the Final Answer. Otherwise, call the next tool. Deliver only the
+      answer without meta-commentary."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_a1j6GAzKyhztwfbljZ8qc7oT","type":"function","function":{"name":"counting_tool","arguments":"{\"value\":
+      \"two\"}"}}]},{"role":"tool","tool_call_id":"call_a1j6GAzKyhztwfbljZ8qc7oT","content":"Counted:
+      two"},{"role":"user","content":"Analyze the tool result. If requirements are
+      met, provide the Final Answer. Otherwise, call the next tool. Deliver only the
+      answer without meta-commentary."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_E5qlYQlNJiLT7YodiBAyJrwB","type":"function","function":{"name":"counting_tool","arguments":"{\"value\":\"three\"}"}}]},{"role":"tool","tool_call_id":"call_E5qlYQlNJiLT7YodiBAyJrwB","content":"Tool
+      ''counting_tool'' has reached its usage limit of 2 times and cannot be used
+      anymore."},{"role":"user","content":"Analyze the tool result. If requirements
+      are met, provide the Final Answer. Otherwise, call the next tool. Deliver only
+      the answer without meta-commentary."}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"counting_tool","description":"A
+      tool that counts how many times it''s been called","parameters":{"properties":{"value":{"description":"Value
+      to count","title":"Value","type":"string"}},"required":["value"],"type":"object"}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '2354'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D0x7s2BqNX4oSnbtYTbV67u0HXa5s\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769119652,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_bGd1IoWCNxNtkOXdgWuTws2V\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"counting_tool\",\n
+        \             \"arguments\": \"{\\\"value\\\":\\\"four\\\"}\"\n            }\n
+        \         }\n        ],\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 378,\n    \"completion_tokens\":
+        15,\n    \"total_tokens\": 393,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_c4585b5b9c\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 22:07:32 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '576'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '603'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Counting Agent. You are
+      an agent that counts things. You must try to use the tool for each value requested.\nYour
+      personal goal is: Use the counting tool as many times as requested"},{"role":"user","content":"\nCurrent
+      Task: Call the counting_tool 4 times with values ''one'', ''two'', ''three'',
+      and ''four''\n\nThis is the expected criteria for your final answer: The results
+      of the counting operations, noting any failures\nyou MUST return the actual
+      complete content as the final answer, not a summary.\n\nThis is VERY important
+      to you, your job depends on it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_5oUhAsPTXvRf8iYnYNtQ8wc4","type":"function","function":{"name":"counting_tool","arguments":"{\"value\":
+      \"one\"}"}}]},{"role":"tool","tool_call_id":"call_5oUhAsPTXvRf8iYnYNtQ8wc4","content":"Counted:
+      one"},{"role":"user","content":"Analyze the tool result. If requirements are
+      met, provide the Final Answer. Otherwise, call the next tool. Deliver only the
+      answer without meta-commentary."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_a1j6GAzKyhztwfbljZ8qc7oT","type":"function","function":{"name":"counting_tool","arguments":"{\"value\":
+      \"two\"}"}}]},{"role":"tool","tool_call_id":"call_a1j6GAzKyhztwfbljZ8qc7oT","content":"Counted:
+      two"},{"role":"user","content":"Analyze the tool result. If requirements are
+      met, provide the Final Answer. Otherwise, call the next tool. Deliver only the
+      answer without meta-commentary."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_E5qlYQlNJiLT7YodiBAyJrwB","type":"function","function":{"name":"counting_tool","arguments":"{\"value\":\"three\"}"}}]},{"role":"tool","tool_call_id":"call_E5qlYQlNJiLT7YodiBAyJrwB","content":"Tool
+      ''counting_tool'' has reached its usage limit of 2 times and cannot be used
+      anymore."},{"role":"user","content":"Analyze the tool result. If requirements
+      are met, provide the Final Answer. Otherwise, call the next tool. Deliver only
+      the answer without meta-commentary."},{"role":"assistant","content":null,"tool_calls":[{"id":"call_bGd1IoWCNxNtkOXdgWuTws2V","type":"function","function":{"name":"counting_tool","arguments":"{\"value\":\"four\"}"}}]},{"role":"tool","tool_call_id":"call_bGd1IoWCNxNtkOXdgWuTws2V","content":"Tool
+      ''counting_tool'' has reached its usage limit of 2 times and cannot be used
+      anymore."},{"role":"user","content":"Analyze the tool result. If requirements
+      are met, provide the Final Answer. Otherwise, call the next tool. Deliver only
+      the answer without meta-commentary."}],"model":"gpt-4o-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"counting_tool","description":"A
+      tool that counts how many times it''s been called","parameters":{"properties":{"value":{"description":"Value
+      to count","title":"Value","type":"string"}},"required":["value"],"type":"object"}}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '2880'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D0x7tBqbwsqHZecTikRuFN8pqWA0q\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769119653,\n  \"model\": \"gpt-4o-mini-2024-07-18\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Counted: one  \\nCounted: two  \\nTool
+        'counting_tool' has reached its usage limit of 2 times and cannot be used
+        anymore.  \\nTool 'counting_tool' has reached its usage limit of 2 times and
+        cannot be used anymore.\",\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 458,\n    \"completion_tokens\":
+        54,\n    \"total_tokens\": 512,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_c4585b5b9c\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 22 Jan 2026 22:07:34 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '1195'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-envoy-upstream-service-time:
+      - '1211'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

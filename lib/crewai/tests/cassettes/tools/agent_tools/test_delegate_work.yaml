@@ -50,40 +50,43 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7WbKt7If02iTLuH5cJJjeYo9uDi\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727213897,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: I understand why you might think I dislike AI agents, but my perspective
-      is more nuanced. AI agents, in essence, are incredibly versatile tools designed
-      to perform specific tasks autonomously or semi-autonomously. They harness various
-      artificial intelligence techniques, such as machine learning, natural language
-      processing, and computer vision, to interpret data, understand tasks, and execute
-      them efficiently. \\n\\nFrom a technological standpoint, AI agents have revolutionized
-      numerous industries. In customer service, for instance, AI agents like chatbots
-      and virtual assistants handle customer inquiries 24/7, providing quick and efficient
-      solutions. In healthcare, AI agents can assist in diagnosing diseases, managing
-      patient data, and even predicting outbreaks. The automation capabilities of
-      AI agents also enhance productivity in areas such as logistics, finance, and
-      cybersecurity by identifying patterns and anomalies at speeds far beyond human
-      capabilities.\\n\\nHowever, it's important to acknowledge the potential downsides
-      and challenges associated with AI agents. Ethical considerations are paramount.
-      Issues such as data privacy, security, and biases in AI algorithms need to be
-      carefully managed. There is also the human aspect to consider\u2014over-reliance
-      on AI agents might lead to job displacement in certain sectors, and ensuring
-      a fair transition for affected workers is crucial.\\n\\nMy concerns generally
-      stem from these ethical and societal implications rather than from the technology
-      itself. I advocate for responsible AI development, which includes transparency,
-      fairness, and accountability. By addressing these concerns, we can harness the
-      full potential of AI agents while mitigating the associated risks.\\n\\nSo,
-      to clarify, I don't hate AI agents; I recognize their immense potential and
-      the significant benefits they bring to various fields. However, I am equally
-      aware of the challenges they present and advocate for a balanced approach to
-      their development and deployment.\",\n        \"refusal\": null\n      },\n
-      \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
-      \ \"usage\": {\n    \"prompt_tokens\": 200,\n    \"completion_tokens\": 359,\n
-      \   \"total_tokens\": 559,\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\":
-      0\n    }\n  },\n  \"system_fingerprint\": \"fp_3537616b13\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AB7WbKt7If02iTLuH5cJJjeYo9uDi\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1727213897,\n  \"model\": \"gpt-4o-2024-05-13\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"Thought: I now can\
+        \ give a great answer\\nFinal Answer: I understand why you might think I dislike\
+        \ AI agents, but my perspective is more nuanced. AI agents, in essence, are\
+        \ incredibly versatile tools designed to perform specific tasks autonomously\
+        \ or semi-autonomously. They harness various artificial intelligence techniques,\
+        \ such as machine learning, natural language processing, and computer vision,\
+        \ to interpret data, understand tasks, and execute them efficiently. \\n\\\
+        nFrom a technological standpoint, AI agents have revolutionized numerous industries.\
+        \ In customer service, for instance, AI agents like chatbots and virtual assistants\
+        \ handle customer inquiries 24/7, providing quick and efficient solutions.\
+        \ In healthcare, AI agents can assist in diagnosing diseases, managing patient\
+        \ data, and even predicting outbreaks. The automation capabilities of AI agents\
+        \ also enhance productivity in areas such as logistics, finance, and cybersecurity\
+        \ by identifying patterns and anomalies at speeds far beyond human capabilities.\\\
+        n\\nHowever, it's important to acknowledge the potential downsides and challenges\
+        \ associated with AI agents. Ethical considerations are paramount. Issues\
+        \ such as data privacy, security, and biases in AI algorithms need to be carefully\
+        \ managed. There is also the human aspect to consider—over-reliance on AI\
+        \ agents might lead to job displacement in certain sectors, and ensuring a\
+        \ fair transition for affected workers is crucial.\\n\\nMy concerns generally\
+        \ stem from these ethical and societal implications rather than from the technology\
+        \ itself. I advocate for responsible AI development, which includes transparency,\
+        \ fairness, and accountability. By addressing these concerns, we can harness\
+        \ the full potential of AI agents while mitigating the associated risks.\\\
+        n\\nSo, to clarify, I don't hate AI agents; I recognize their immense potential\
+        \ and the significant benefits they bring to various fields. However, I am\
+        \ equally aware of the challenges they present and advocate for a balanced\
+        \ approach to their development and deployment.\",\n        \"refusal\": null\n\
+        \      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n\
+        \    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 200,\n    \"completion_tokens\"\
+        : 359,\n    \"total_tokens\": 559,\n    \"completion_tokens_details\": {\n\
+        \      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"\
+        fp_3537616b13\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -125,6 +128,7 @@ interactions:
       - 0s
       x-request-id:
       - req_761796305026b5adfbb5a6237f14e32a
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 version: 1

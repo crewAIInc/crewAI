@@ -14,6 +14,16 @@ except ImportError:
     A2A_SDK_INSTALLED = False
 
 
+def _create_mock_agent_card(name: str = "Test", url: str = "http://test-endpoint.com/"):
+    """Create a mock agent card with proper model_dump behavior."""
+    mock_card = MagicMock()
+    mock_card.name = name
+    mock_card.url = url
+    mock_card.model_dump.return_value = {"name": name, "url": url}
+    mock_card.model_dump_json.return_value = f'{{"name": "{name}", "url": "{url}"}}'
+    return mock_card
+
+
 @pytest.mark.skipif(not A2A_SDK_INSTALLED, reason="Requires a2a-sdk to be installed")
 def test_trust_remote_completion_status_true_returns_directly():
     """When trust_remote_completion_status=True and A2A returns completed, return result directly."""
@@ -44,8 +54,7 @@ def test_trust_remote_completion_status_true_returns_directly():
         patch("crewai.a2a.wrapper.execute_a2a_delegation") as mock_execute,
         patch("crewai.a2a.wrapper._fetch_agent_cards_concurrently") as mock_fetch,
     ):
-        mock_card = MagicMock()
-        mock_card.name = "Test"
+        mock_card = _create_mock_agent_card()
         mock_fetch.return_value = ({"http://test-endpoint.com/": mock_card}, {})
 
         # A2A returns completed
@@ -110,8 +119,7 @@ def test_trust_remote_completion_status_false_continues_conversation():
         patch("crewai.a2a.wrapper.execute_a2a_delegation") as mock_execute,
         patch("crewai.a2a.wrapper._fetch_agent_cards_concurrently") as mock_fetch,
     ):
-        mock_card = MagicMock()
-        mock_card.name = "Test"
+        mock_card = _create_mock_agent_card()
         mock_fetch.return_value = ({"http://test-endpoint.com/": mock_card}, {})
 
         # A2A returns completed

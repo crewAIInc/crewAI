@@ -20,7 +20,7 @@ class LinkupSearchTool(BaseTool):
     description: str = (
         "Performs an API call to Linkup to retrieve contextual information."
     )
-    _client: LinkupClient = PrivateAttr()  # type: ignore
+    _client: Any = PrivateAttr()
     package_dependencies: list[str] = Field(default_factory=lambda: ["linkup-sdk"])
     env_vars: list[EnvVar] = Field(
         default_factory=lambda: [
@@ -60,7 +60,7 @@ class LinkupSearchTool(BaseTool):
         output_type: Literal[
             "searchResults", "sourcedAnswer", "structured"
         ] = "searchResults",
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Executes a search using the Linkup API.
 
         :param query: The query to search for.

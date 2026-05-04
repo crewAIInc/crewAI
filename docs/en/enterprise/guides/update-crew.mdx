@@ -1,13 +1,14 @@
 ---
 title: "Update Crew"
-description: "Updating a Crew on CrewAI AOP"
+description: "Updating a Crew on CrewAI AMP"
 icon: "pencil"
 mode: "wide"
 ---
 
 <Note>
-After deploying your crew to CrewAI AOP, you may need to make updates to the code, security settings, or configuration.
-This guide explains how to perform these common update operations.
+  After deploying your crew to CrewAI AMP, you may need to make updates to the
+  code, security settings, or configuration. This guide explains how to perform
+  these common update operations.
 </Note>
 
 ## Why Update Your Crew?
@@ -15,6 +16,7 @@ This guide explains how to perform these common update operations.
 CrewAI won't automatically pick up GitHub updates by default, so you'll need to manually trigger updates, unless you checked the `Auto-update` option when deploying your crew.
 
 There are several reasons you might want to update your crew deployment:
+
 - You want to update the code with a latest commit you pushed to GitHub
 - You want to reset the bearer token for security reasons
 - You want to update environment variables
@@ -23,12 +25,10 @@ There are several reasons you might want to update your crew deployment:
 
 When you've pushed new commits to your GitHub repository and want to update your deployment:
 
-1. Navigate to your crew in the CrewAI AOP platform
+1. Navigate to your crew in the CrewAI AMP platform
 2. Click on the `Re-deploy` button on your crew details page
 
-<Frame>
-  ![Re-deploy Button](/images/enterprise/redeploy-button.png)
-</Frame>
+<Frame>![Re-deploy Button](/images/enterprise/redeploy-button.png)</Frame>
 
 This will trigger an update that you can track using the progress bar. The system will pull the latest code from your repository and rebuild your deployment.
 
@@ -36,16 +36,15 @@ This will trigger an update that you can track using the progress bar. The syste
 
 If you need to generate a new bearer token (for example, if you suspect the current token might have been compromised):
 
-1. Navigate to your crew in the CrewAI AOP platform
+1. Navigate to your crew in the CrewAI AMP platform
 2. Find the `Bearer Token` section
 3. Click the `Reset` button next to your current token
 
-<Frame>
-  ![Reset Token](/images/enterprise/reset-token.png)
-</Frame>
+<Frame>![Reset Token](/images/enterprise/reset-token.png)</Frame>
 
 <Warning>
-Resetting your bearer token will invalidate the previous token immediately. Make sure to update any applications or scripts that are using the old token.
+  Resetting your bearer token will invalidate the previous token immediately.
+  Make sure to update any applications or scripts that are using the old token.
 </Warning>
 
 ## 3. Updating Environment Variables
@@ -69,7 +68,8 @@ To update the environment variables for your crew:
 5. Finally, click the `Update Deployment` button at the bottom of the page to apply the changes
 
 <Note>
-Updating environment variables will trigger a new deployment, but this will only update the environment configuration and not the code itself.
+  Updating environment variables will trigger a new deployment, but this will
+  only update the environment configuration and not the code itself.
 </Note>
 
 ## After Updating
@@ -81,9 +81,11 @@ After performing any update:
 3. Once complete, test your crew to ensure the changes are working as expected
 
 <Tip>
-If you encounter any issues after updating, you can view deployment logs in the platform or contact support for assistance.
+  If you encounter any issues after updating, you can view deployment logs in
+  the platform or contact support for assistance.
 </Tip>
 
 <Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
-  Contact our support team for assistance with updating your crew or troubleshooting deployment issues.
+  Contact our support team for assistance with updating your crew or
+  troubleshooting deployment issues.
 </Card>

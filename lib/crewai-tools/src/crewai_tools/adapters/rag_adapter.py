@@ -12,7 +12,7 @@ class RAGAdapter(Adapter):
         embedding_model: str = "text-embedding-3-small",
         top_k: int = 5,
         embedding_api_key: str | None = None,
-        **embedding_kwargs,
+        **embedding_kwargs: Any,
     ):
         super().__init__()
 

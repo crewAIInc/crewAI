@@ -8,15 +8,14 @@ import click
 
 try:
     import weaviate
-    from weaviate.classes.config import Configure, Vectorizers
+    from weaviate.classes.config import Configure, Vectorizers  # noqa: F401
     from weaviate.classes.init import Auth
 
     WEAVIATE_AVAILABLE = True
 except ImportError:
     WEAVIATE_AVAILABLE = False
-    weaviate = Any  # type: ignore[assignment,misc]  # type placeholder
+    weaviate = Any  # type: ignore[assignment]
     Configure = Any  # type: ignore[assignment,misc]
-    Vectorizers = Any  # type: ignore[assignment,misc]
     Auth = Any  # type: ignore[assignment,misc]
 
 from crewai.tools import BaseTool, EnvVar
@@ -64,7 +63,7 @@ class WeaviateVectorSearchTool(BaseTool):
         description="The name of the Weaviate collection to search",
     )
     limit: int | None = Field(default=3)
-    headers: dict | None = None
+    headers: dict[str, str] | None = None
     alpha: float = Field(default=0.75)
     env_vars: list[EnvVar] = Field(
         default_factory=lambda: [
@@ -123,7 +122,7 @@ class WeaviateVectorSearchTool(BaseTool):
         if not internal_docs:
             internal_docs = client.collections.create(
                 name=self.collection_name,
-                vectorizer_config=self.vectorizer,  # type: ignore
+                vectorizer_config=self.vectorizer,
                 generative_config=self.generative_model,
             )
 

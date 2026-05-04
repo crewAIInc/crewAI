@@ -1,8 +1,79 @@
+# sanitize_tool_name adapted from python-slugify by Val Neekman
+# https://github.com/un33k/python-slugify
+# MIT License
+
+import functools
+import hashlib
 import re
 from typing import Any, Final
+import unicodedata
 
 
 _VARIABLE_PATTERN: Final[re.Pattern[str]] = re.compile(r"\{([A-Za-z_][A-Za-z0-9_\-]*)}")
+_QUOTE_PATTERN: Final[re.Pattern[str]] = re.compile(r"[\'\"]+")
+_CAMEL_LOWER_UPPER: Final[re.Pattern[str]] = re.compile(r"([a-z])([A-Z])")
+_CAMEL_UPPER_LOWER: Final[re.Pattern[str]] = re.compile(r"([A-Z]+)([A-Z][a-z])")
+_DISALLOWED_CHARS_PATTERN: Final[re.Pattern[str]] = re.compile(r"[^a-zA-Z0-9]+")
+_DUPLICATE_UNDERSCORE_PATTERN: Final[re.Pattern[str]] = re.compile(r"_+")
+_MAX_TOOL_NAME_LENGTH: Final[int] = 64
+
+
+@functools.lru_cache(maxsize=8)
+def _duplicate_separator_pattern(separator: str) -> re.Pattern[str]:
+    return re.compile(f"(?:{re.escape(separator)}){{2,}}")
+
+
+def sanitize_tool_name(name: str, max_length: int = _MAX_TOOL_NAME_LENGTH) -> str:
+    """Sanitize tool name for LLM provider compatibility.
+
+    Normalizes Unicode, splits camelCase, lowercases, replaces invalid characters
+    with underscores, and truncates to max_length. Conforms to OpenAI/Bedrock requirements.
+
+    Args:
+        name: Original tool name.
+        max_length: Maximum allowed length (default 64 per OpenAI/Bedrock limits).
+
+    Returns:
+        Sanitized tool name (lowercase, a-z0-9_ only, max 64 chars).
+    """
+    name = unicodedata.normalize("NFKD", name)
+    name = name.encode("ascii", "ignore").decode("ascii")
+    name = _CAMEL_UPPER_LOWER.sub(r"\1_\2", name)
+    name = _CAMEL_LOWER_UPPER.sub(r"\1_\2", name)
+    name = name.lower()
+    name = _QUOTE_PATTERN.sub("", name)
+    name = _DISALLOWED_CHARS_PATTERN.sub("_", name)
+    name = _DUPLICATE_UNDERSCORE_PATTERN.sub("_", name)
+    name = name.strip("_")
+
+    if len(name) > max_length:
+        name_hash = hashlib.sha256(name.encode()).hexdigest()[:8]
+        suffix = f"_{name_hash}"
+        name = name[: max_length - len(suffix)].rstrip("_") + suffix
+
+    return name
+
+
+def slugify(text: str, separator: str = "_") -> str:
+    """Convert text to a URL-safe slug.
+
+    Normalizes Unicode characters, removes special characters,
+    and replaces whitespace with the separator.
+
+    Args:
+        text: The text to slugify.
+        separator: The separator to use between words. Defaults to underscore.
+
+    Returns:
+        A URL-safe slug.
+    """
+    text = unicodedata.normalize("NFKD", text)
+    text = text.encode("ascii", "ignore").decode("ascii")
+    text = text.lower()
+    text = _QUOTE_PATTERN.sub("", text)
+    text = _DISALLOWED_CHARS_PATTERN.sub(separator, text)
+    text = _duplicate_separator_pattern(separator).sub(separator, text)
+    return text.strip(separator)
 
 
 def interpolate_only(

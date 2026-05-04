@@ -69,7 +69,7 @@ def create_llm(
 UNACCEPTED_ATTRIBUTES: Final[list[str]] = [
     "AWS_ACCESS_KEY_ID",
     "AWS_SECRET_ACCESS_KEY",
-    "AWS_REGION_NAME",
+    "AWS_DEFAULT_REGION",
 ]
 
 
@@ -146,7 +146,7 @@ def _llm_via_environment_or_fallback() -> LLM | None:
     unaccepted_attributes = [
         "AWS_ACCESS_KEY_ID",
         "AWS_SECRET_ACCESS_KEY",
-        "AWS_REGION_NAME",
+        "AWS_DEFAULT_REGION",
     ]
     set_provider = model_name.partition("/")[0] if "/" in model_name else "openai"
 

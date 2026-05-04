@@ -6,15 +6,16 @@ This module provides evaluator implementations for:
 - Thinking-to-action ratio
 """
 
+from __future__ import annotations
+
 from collections.abc import Sequence
 from enum import Enum
 import logging
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from crewai.agent import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.experimental.evaluation.base_evaluator import (
     BaseEvaluator,
@@ -25,6 +26,10 @@ from crewai.experimental.evaluation.json_parser import extract_json_from_llm_res
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.utilities.types import LLMMessage
+
+
+if TYPE_CHECKING:
+    from crewai.agent import Agent
 
 
 class ReasoningPatternType(Enum):
@@ -219,7 +224,9 @@ Identify any inefficient reasoning patterns and provide specific suggestions for
                 raw_response=response,
             )
 
-    def _detect_loops(self, llm_calls: list[dict]) -> tuple[bool, list[dict]]:
+    def _detect_loops(
+        self, llm_calls: list[dict[str, Any]]
+    ) -> tuple[bool, list[dict[str, Any]]]:
         loop_details = []
 
         messages = []
@@ -267,7 +274,9 @@ Identify any inefficient reasoning patterns and provide specific suggestions for
 
         return intersection / union if union > 0 else 0.0
 
-    def _analyze_reasoning_patterns(self, llm_calls: list[dict]) -> dict[str, Any]:
+    def _analyze_reasoning_patterns(
+        self, llm_calls: list[dict[str, Any]]
+    ) -> dict[str, Any]:
         call_lengths = []
         response_times = []
 
@@ -340,7 +349,7 @@ Identify any inefficient reasoning patterns and provide specific suggestions for
             max_possible_slope = max(values) - min(values)
             if max_possible_slope > 0:
                 normalized_slope = slope / max_possible_slope
-                return max(min(normalized_slope, 1.0), -1.0)
+                return float(max(min(normalized_slope, 1.0), -1.0))
             return 0.0
         except Exception:
             return 0.0
@@ -379,7 +388,7 @@ Identify any inefficient reasoning patterns and provide specific suggestions for
 
         return float(np.mean(indicators)) if indicators else 0.0
 
-    def _get_call_samples(self, llm_calls: list[dict]) -> str:
+    def _get_call_samples(self, llm_calls: list[dict[str, Any]]) -> str:
         samples = []
 
         if len(llm_calls) <= 6:

@@ -1,0 +1,41 @@
+name: PR Title Check
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  pr-title:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            refactor
+            perf
+            test
+            docs
+            chore
+            ci
+            style
+            revert
+          requireScope: false
+          subjectPattern: ^[a-z].+[^.]$
+          subjectPatternError: >
+            The PR title "{title}" does not follow conventional commit format.
+
+            Expected: <type>(<scope>): <lowercase description without trailing period>
+
+            Examples:
+              feat(memory): add lancedb storage backend
+              fix(agents): resolve deadlock in concurrent execution
+              chore(deps): bump pydantic to 2.11.9

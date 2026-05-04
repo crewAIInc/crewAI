@@ -50,45 +50,50 @@ interactions:
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
-    content: "{\n  \"id\": \"chatcmpl-AB7Wsv05NzccAAGC0CZVg03mE72wi\",\n  \"object\":
-      \"chat.completion\",\n  \"created\": 1727213914,\n  \"model\": \"gpt-4o-2024-05-13\",\n
-      \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-      \"assistant\",\n        \"content\": \"Thought: I now can give a great answer\\nFinal
-      Answer: My perspective on AI agents is quite nuanced and not a matter of simple
-      like or dislike. AI agents, depending on their design, deployment, and use cases,
-      can bring about both significant benefits and substantial challenges.\\n\\nOn
-      the positive side, AI agents have the potential to automate mundane tasks, enhance
-      productivity, and provide personalized services in ways that were previously
-      unimaginable. For instance, in customer service, AI agents can handle inquiries
-      24/7, reducing waiting times and improving user satisfaction. In healthcare,
-      they can assist in diagnosing diseases by analyzing vast datasets much faster
-      than humans. These applications demonstrate the transformative power of AI in
-      improving efficiency and delivering better outcomes across various industries.\\n\\nHowever,
-      my reservations stem from several critical concerns. Firstly, there's the issue
-      of reliability and accuracy. Mismanaged or poorly designed AI systems can lead
-      to significant errors, which could be particularly detrimental in high-stakes
-      environments like healthcare or autonomous vehicles. Second, there's a risk
-      of job displacement as AI agents become capable of performing tasks traditionally
-      done by humans. This raises socio-economic concerns that need to be addressed
-      through effective policy-making and upskilling programs.\\n\\nAdditionally,
-      there are ethical and privacy considerations. AI agents often require large
-      amounts of data to function effectively, which can lead to issues concerning
-      consent, data security, and individual privacy rights. The lack of transparency
-      in how these agents make decisions can also pose challenges\u2014this is often
-      referred to as the \\\"black box\\\" problem, where even the developers may
-      not fully understand how specific AI outputs are generated.\\n\\nFinally, the
-      deployment of AI agents by bad actors for malicious purposes, such as deepfakes,
-      misinformation, and hacking, remains a pertinent concern. These potential downsides
-      imply that while AI technology is extremely powerful and promising, it must
-      be developed and implemented with care, consideration, and robust ethical guidelines.\\n\\nSo,
-      in summary, I don't hate AI agents\u2014rather, I approach them critically with
-      a balanced perspective, recognizing both their profound potential and the significant
-      challenges they present. Thoughtful development, responsible deployment, and
-      ethical governance are crucial to harness the benefits while mitigating the
-      risks associated with AI agents.\",\n        \"refusal\": null\n      },\n      \"logprobs\":
-      null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
-      200,\n    \"completion_tokens\": 436,\n    \"total_tokens\": 636,\n    \"completion_tokens_details\":
-      {\n      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"fp_3537616b13\"\n}\n"
+    body:
+      string: "{\n  \"id\": \"chatcmpl-AB7Wsv05NzccAAGC0CZVg03mE72wi\",\n  \"object\"\
+        : \"chat.completion\",\n  \"created\": 1727213914,\n  \"model\": \"gpt-4o-2024-05-13\"\
+        ,\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n  \
+        \      \"role\": \"assistant\",\n        \"content\": \"Thought: I now can\
+        \ give a great answer\\nFinal Answer: My perspective on AI agents is quite\
+        \ nuanced and not a matter of simple like or dislike. AI agents, depending\
+        \ on their design, deployment, and use cases, can bring about both significant\
+        \ benefits and substantial challenges.\\n\\nOn the positive side, AI agents\
+        \ have the potential to automate mundane tasks, enhance productivity, and\
+        \ provide personalized services in ways that were previously unimaginable.\
+        \ For instance, in customer service, AI agents can handle inquiries 24/7,\
+        \ reducing waiting times and improving user satisfaction. In healthcare, they\
+        \ can assist in diagnosing diseases by analyzing vast datasets much faster\
+        \ than humans. These applications demonstrate the transformative power of\
+        \ AI in improving efficiency and delivering better outcomes across various\
+        \ industries.\\n\\nHowever, my reservations stem from several critical concerns.\
+        \ Firstly, there's the issue of reliability and accuracy. Mismanaged or poorly\
+        \ designed AI systems can lead to significant errors, which could be particularly\
+        \ detrimental in high-stakes environments like healthcare or autonomous vehicles.\
+        \ Second, there's a risk of job displacement as AI agents become capable of\
+        \ performing tasks traditionally done by humans. This raises socio-economic\
+        \ concerns that need to be addressed through effective policy-making and upskilling\
+        \ programs.\\n\\nAdditionally, there are ethical and privacy considerations.\
+        \ AI agents often require large amounts of data to function effectively, which\
+        \ can lead to issues concerning consent, data security, and individual privacy\
+        \ rights. The lack of transparency in how these agents make decisions can\
+        \ also pose challenges—this is often referred to as the \\\"black box\\\"\
+        \ problem, where even the developers may not fully understand how specific\
+        \ AI outputs are generated.\\n\\nFinally, the deployment of AI agents by bad\
+        \ actors for malicious purposes, such as deepfakes, misinformation, and hacking,\
+        \ remains a pertinent concern. These potential downsides imply that while\
+        \ AI technology is extremely powerful and promising, it must be developed\
+        \ and implemented with care, consideration, and robust ethical guidelines.\\\
+        n\\nSo, in summary, I don't hate AI agents—rather, I approach them critically\
+        \ with a balanced perspective, recognizing both their profound potential and\
+        \ the significant challenges they present. Thoughtful development, responsible\
+        \ deployment, and ethical governance are crucial to harness the benefits while\
+        \ mitigating the risks associated with AI agents.\",\n        \"refusal\"\
+        : null\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\
+        \n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 200,\n    \"completion_tokens\"\
+        : 436,\n    \"total_tokens\": 636,\n    \"completion_tokens_details\": {\n\
+        \      \"reasoning_tokens\": 0\n    }\n  },\n  \"system_fingerprint\": \"\
+        fp_3537616b13\"\n}\n"
     headers:
       CF-Cache-Status:
       - DYNAMIC
@@ -130,6 +135,7 @@ interactions:
       - 0s
       x-request-id:
       - req_50aa23cad48cfb83b754a5a92939638e
-    http_version: HTTP/1.1
-    status_code: 200
+    status:
+      code: 200
+      message: OK
 version: 1
