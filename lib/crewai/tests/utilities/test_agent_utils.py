@@ -17,6 +17,8 @@ from crewai.utilities.agent_utils import (
     _format_messages_for_summary,
     _split_messages_into_chunks,
     convert_tools_to_openai_schema,
+    execute_single_native_tool_call,
+    NativeToolCallResult,
     parse_tool_call_args,
     summarize_messages,
 )
@@ -225,16 +227,6 @@ class TestConvertToolsToOpenaiSchema:
         assert max_results_prop["default"] == 10
 
 
-def _make_mock_i18n() -> MagicMock:
-    """Create a mock i18n with the new structured prompt keys."""
-    mock_i18n = MagicMock()
-    mock_i18n.slice.side_effect = lambda key: {
-        "summarizer_system_message": "You are a precise assistant that creates structured summaries.",
-        "summarize_instruction": "Summarize the conversation:\n{conversation}",
-        "summary": "<summary>\n{merged_summary}\n</summary>\nContinue the task.",
-    }.get(key, "")
-    return mock_i18n
-
 class MCPStyleInput(BaseModel):
     """Input schema mimicking an MCP tool with optional fields."""
 
@@ -330,7 +322,7 @@ class TestSummarizeMessages:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         # System message preserved + summary message = 2
@@ -361,7 +353,7 @@ class TestSummarizeMessages:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         assert len(messages) == 1
@@ -387,7 +379,7 @@ class TestSummarizeMessages:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         assert len(messages) == 1
@@ -410,7 +402,7 @@ class TestSummarizeMessages:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         assert id(messages) == original_list_id
@@ -432,7 +424,7 @@ class TestSummarizeMessages:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         assert len(messages) == 2
@@ -456,7 +448,7 @@ class TestSummarizeMessages:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         # Check what was passed to llm.call
@@ -482,7 +474,7 @@ class TestSummarizeMessages:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         assert "The extracted summary content." in messages[0]["content"]
@@ -506,7 +498,7 @@ class TestSummarizeMessages:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         # Verify the conversation text sent to LLM contains tool labels
@@ -528,7 +520,7 @@ class TestSummarizeMessages:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         # No LLM call should have been made
@@ -733,7 +725,7 @@ class TestParallelSummarization:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         # acall should have been awaited once per chunk
@@ -757,7 +749,7 @@ class TestParallelSummarization:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         mock_llm.call.assert_called_once()
@@ -788,7 +780,7 @@ class TestParallelSummarization:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         # The final summary message should have A, B, C in order
@@ -816,7 +808,7 @@ class TestParallelSummarization:
                 chunks=[chunk_a, chunk_b],
                 llm=mock_llm,
                 callbacks=[],
-                i18n=_make_mock_i18n(),
+    
             )
         )
 
@@ -843,7 +835,7 @@ class TestParallelSummarization:
             messages=messages,
             llm=mock_llm,
             callbacks=[],
-            i18n=_make_mock_i18n(),
+
         )
 
         assert mock_llm.acall.await_count == 2
@@ -940,10 +932,8 @@ class TestParallelSummarizationVCR:
     def test_parallel_summarize_openai(self) -> None:
         """Test that parallel summarization with gpt-4o-mini produces a valid summary."""
         from crewai.llm import LLM
-        from crewai.utilities.i18n import I18N
 
         llm = LLM(model="gpt-4o-mini", temperature=0)
-        i18n = I18N()
         messages = _build_long_conversation()
 
         original_system = messages[0]["content"]
@@ -959,7 +949,6 @@ class TestParallelSummarizationVCR:
                 messages=messages,
                 llm=llm,
                 callbacks=[],
-                i18n=i18n,
             )
 
         # System message preserved
@@ -975,10 +964,8 @@ class TestParallelSummarizationVCR:
     def test_parallel_summarize_preserves_files(self) -> None:
         """Test that file references survive parallel summarization."""
         from crewai.llm import LLM
-        from crewai.utilities.i18n import I18N
 
         llm = LLM(model="gpt-4o-mini", temperature=0)
-        i18n = I18N()
         messages = _build_long_conversation()
 
         mock_file = MagicMock()
@@ -989,7 +976,6 @@ class TestParallelSummarizationVCR:
                 messages=messages,
                 llm=llm,
                 callbacks=[],
-                i18n=i18n,
             )
 
         summary_msg = messages[-1]
@@ -1049,3 +1035,91 @@ class TestParseToolCallArgs:
         _, error = parse_tool_call_args("{bad json}", "tool", "call_7")
         assert error is not None
         assert set(error.keys()) == {"call_id", "func_name", "result", "from_cache", "original_tool"}
+
+
+class TestExecuteSingleNativeToolCall:
+    """Tests for execute_single_native_tool_call."""
+
+    def test_result_as_answer_false_on_tool_error(self) -> None:
+        """When a tool with result_as_answer=True raises, result_as_answer must be False.
+
+        Regression test for https://github.com/crewAIInc/crewAI/issues/5156
+        """
+        from unittest.mock import MagicMock
+
+        class FailingTool(BaseTool):
+            name: str = "failing_tool"
+            description: str = "A tool that always fails"
+            result_as_answer: bool = True
+
+            def _run(self, **kwargs: Any) -> str:
+                raise RuntimeError("intentional failure")
+
+        tool = FailingTool()
+        tool_call = MagicMock()
+        tool_call.id = "call_1"
+        tool_call.function.name = "failing_tool"
+        tool_call.function.arguments = "{}"
+
+        result = execute_single_native_tool_call(
+            tool_call,
+            available_functions={"failing_tool": tool._run},
+            original_tools=[tool],
+            structured_tools=None,
+            tools_handler=None,
+            agent=None,
+            task=None,
+            crew=None,
+            event_source=MagicMock(),
+            printer=None,
+            verbose=False,
+        )
+
+        assert isinstance(result, NativeToolCallResult)
+        assert result.result_as_answer is False
+        assert "Error executing tool" in result.result
+
+    def test_result_as_answer_false_when_hook_blocks(self) -> None:
+        """When a before-hook blocks a tool with result_as_answer=True, result_as_answer must be False."""
+        from unittest.mock import MagicMock
+
+        from crewai.hooks.tool_hooks import (
+            clear_before_tool_call_hooks,
+            register_before_tool_call_hook,
+        )
+
+        class BlockedTool(BaseTool):
+            name: str = "blocked_tool"
+            description: str = "A tool whose execution will be blocked by a hook"
+            result_as_answer: bool = True
+
+            def _run(self, **kwargs: Any) -> str:
+                return "should not run"
+
+        tool = BlockedTool()
+        tool_call = MagicMock()
+        tool_call.id = "call_1"
+        tool_call.function.name = "blocked_tool"
+        tool_call.function.arguments = "{}"
+
+        register_before_tool_call_hook(lambda _ctx: False)
+        try:
+            result = execute_single_native_tool_call(
+                tool_call,
+                available_functions={"blocked_tool": tool._run},
+                original_tools=[tool],
+                structured_tools=None,
+                tools_handler=None,
+                agent=None,
+                task=None,
+                crew=None,
+                event_source=MagicMock(),
+                printer=None,
+                verbose=False,
+            )
+        finally:
+            clear_before_tool_call_hooks()
+
+        assert isinstance(result, NativeToolCallResult)
+        assert result.result_as_answer is False
+        assert "blocked by hook" in result.result

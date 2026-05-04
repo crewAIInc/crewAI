@@ -5,6 +5,8 @@ from typing import Any, Literal
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
 
+from crewai_tools.security.safe_path import validate_url
+
 
 logger = logging.getLogger(__file__)
 
@@ -69,15 +71,17 @@ class ScrapflyScrapeWebsiteTool(BaseTool):
         scrape_format: str = "markdown",
         scrape_config: dict[str, Any] | None = None,
         ignore_scrape_failures: bool | None = None,
-    ):
-        from scrapfly import ScrapeApiResponse, ScrapeConfig
+    ) -> str | None:
+        from scrapfly import ScrapeConfig
 
+        url = validate_url(url)
         scrape_config = scrape_config if scrape_config is not None else {}
         try:
-            response: ScrapeApiResponse = self.scrapfly.scrape(  # type: ignore[union-attr]
+            response = self.scrapfly.scrape(  # type: ignore[union-attr]
                 ScrapeConfig(url, format=scrape_format, **scrape_config)
             )
-            return response.scrape_result["content"]
+            result: str = response.scrape_result["content"]
+            return result
         except Exception as e:
             if ignore_scrape_failures:
                 logger.error(f"Error fetching data from {url}, exception: {e}")

@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from logging import getLogger
 from threading import Condition, Lock
+import time
 from typing import Any
 import uuid
 
@@ -12,13 +13,13 @@ from crewai.cli.authentication.token import AuthError, get_auth_token
 from crewai.cli.config import Settings
 from crewai.cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 from crewai.cli.plus_api import PlusAPI
-from crewai.cli.version import get_crewai_version
 from crewai.events.listeners.tracing.types import TraceEvent
 from crewai.events.listeners.tracing.utils import (
     get_user_id,
     is_tracing_enabled_in_context,
     should_auto_collect_first_time_traces,
 )
+from crewai.utilities.version import get_crewai_version
 
 
 logger = getLogger(__name__)
@@ -80,8 +81,11 @@ class TraceBatchManager:
         """Initialize a new trace batch (thread-safe)"""
         with self._batch_ready_cv:
             if self.current_batch is not None:
+                # Lazy init (e.g. DefaultEnvEvent) may have created the batch without
+                # execution_type; merge metadata from a later flow/crew initializer.
+                self.current_batch.execution_metadata.update(execution_metadata)
                 logger.debug(
-                    "Batch already initialized, skipping duplicate initialization"
+                    "Batch already initialized, merged execution metadata and skipped duplicate initialization"
                 )
                 return self.current_batch
 
@@ -98,7 +102,7 @@ class TraceBatchManager:
                 self._initialize_backend_batch(
                     user_context, execution_metadata, use_ephemeral
                 )
-                self.backend_initialized = True
+                self.backend_initialized = self.trace_batch_id is not None
 
             self._batch_ready_cv.notify_all()
             return self.current_batch
@@ -108,14 +112,15 @@ class TraceBatchManager:
         user_context: dict[str, str],
         execution_metadata: dict[str, Any],
         use_ephemeral: bool = False,
+        skip_context_check: bool = False,
     ) -> None:
         """Send batch initialization to backend"""
 
-        if not is_tracing_enabled_in_context():
-            return
+        if not skip_context_check and not is_tracing_enabled_in_context():
+            return None
 
         if not self.plus_api or not self.current_batch:
-            return
+            return None
 
         try:
             payload = {
@@ -142,19 +147,53 @@ class TraceBatchManager:
                 payload["ephemeral_trace_id"] = self.current_batch.batch_id
                 payload["user_identifier"] = get_user_id()
 
-            response = (
-                self.plus_api.initialize_ephemeral_trace_batch(payload)
-                if use_ephemeral
-                else self.plus_api.initialize_trace_batch(payload)
-            )
+            max_retries = 1
+            response = None
+
+            try:
+                for attempt in range(max_retries + 1):
+                    response = (
+                        self.plus_api.initialize_ephemeral_trace_batch(payload)
+                        if use_ephemeral
+                        else self.plus_api.initialize_trace_batch(payload)
+                    )
+                    if response is not None and response.status_code < 500:
+                        break
+                    if attempt < max_retries:
+                        logger.debug(
+                            f"Trace batch init attempt {attempt + 1} failed "
+                            f"(status={response.status_code if response else 'None'}), retrying..."
+                        )
+                        time.sleep(0.2)
+            except Exception as e:
+                logger.warning(
+                    f"Error initializing trace batch: {e}. Continuing without tracing."
+                )
+                self.trace_batch_id = None
+                return None
 
             if response is None:
                 logger.warning(
                     "Trace batch initialization failed gracefully. Continuing without tracing."
                 )
-                return
+                self.trace_batch_id = None
+                return None
+
+            # Fall back to ephemeral on auth failure (expired/revoked token)
+            if response.status_code in [401, 403] and not use_ephemeral:
+                logger.warning(
+                    "Auth rejected by server, falling back to ephemeral tracing."
+                )
+                self.is_current_batch_ephemeral = True
+                return self._initialize_backend_batch(
+                    user_context,
+                    execution_metadata,
+                    use_ephemeral=True,
+                    skip_context_check=skip_context_check,
+                )
 
             if response.status_code in [201, 200]:
+                self.is_current_batch_ephemeral = use_ephemeral
                 response_data = response.json()
                 self.trace_batch_id = (
                     response_data["trace_id"]
@@ -165,11 +204,22 @@ class TraceBatchManager:
                 logger.warning(
                     f"Trace batch initialization returned status {response.status_code}. Continuing without tracing."
                 )
+                self.trace_batch_id = None
 
         except Exception as e:
             logger.warning(
                 f"Error initializing trace batch: {e}. Continuing without tracing."
             )
+            self.trace_batch_id = None
+
+    def _mark_batch_as_failed(self, trace_batch_id: str, error_message: str) -> None:
+        """Mark a trace batch as failed, routing to the correct endpoint."""
+        if self.is_current_batch_ephemeral:
+            self.plus_api.mark_ephemeral_trace_batch_as_failed(
+                trace_batch_id, error_message
+            )
+        else:
+            self.plus_api.mark_trace_batch_as_failed(trace_batch_id, error_message)
 
     def begin_event_processing(self) -> None:
         """Mark that an event handler started processing (for synchronization)."""
@@ -260,7 +310,7 @@ class TraceBatchManager:
             logger.error(
                 "Event handler timeout - marking batch as failed due to incomplete events"
             )
-            self.plus_api.mark_trace_batch_as_failed(
+            self._mark_batch_as_failed(
                 self.trace_batch_id,
                 "Timeout waiting for event handlers - events incomplete",
             )
@@ -284,7 +334,7 @@ class TraceBatchManager:
             events_sent_to_backend_status = self._send_events_to_backend()
             self.event_buffer = original_buffer
             if events_sent_to_backend_status == 500 and self.trace_batch_id:
-                self.plus_api.mark_trace_batch_as_failed(
+                self._mark_batch_as_failed(
                     self.trace_batch_id, "Error sending events to backend"
                 )
                 return None
@@ -364,13 +414,16 @@ class TraceBatchManager:
                 logger.error(
                     f"❌ Failed to finalize trace batch: {response.status_code} - {response.text}"
                 )
-                self.plus_api.mark_trace_batch_as_failed(
-                    self.trace_batch_id, response.text
-                )
+                self._mark_batch_as_failed(self.trace_batch_id, response.text)
 
         except Exception as e:
             logger.error(f"❌ Error finalizing trace batch: {e}")
-            self.plus_api.mark_trace_batch_as_failed(self.trace_batch_id, str(e))
+            try:
+                self._mark_batch_as_failed(self.trace_batch_id, str(e))
+            except Exception:
+                logger.debug(
+                    "Could not mark trace batch as failed (network unavailable)"
+                )
 
     def _cleanup_batch_data(self) -> None:
         """Clean up batch data after successful finalization to free memory"""

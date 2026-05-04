@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Callable, Iterator
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from pydantic import BaseModel, Field
+from typing_extensions import Self
 
 
 if TYPE_CHECKING:
@@ -78,12 +79,21 @@ class StreamingOutputBase(Generic[T]):
     via the .result property after streaming completes.
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        sync_iterator: Iterator[StreamChunk] | None = None,
+        async_iterator: AsyncIterator[StreamChunk] | None = None,
+    ) -> None:
         """Initialize streaming output base."""
         self._result: T | None = None
         self._completed: bool = False
         self._chunks: list[StreamChunk] = []
         self._error: Exception | None = None
+        self._cancelled: bool = False
+        self._exhausted: bool = False
+        self._on_cleanup: Callable[[], None] | None = None
+        self._sync_iterator = sync_iterator
+        self._async_iterator = async_iterator
 
     @property
     def result(self) -> T:
@@ -113,6 +123,11 @@ class StreamingOutputBase(Generic[T]):
         return self._completed
 
     @property
+    def is_cancelled(self) -> bool:
+        """Check if streaming was cancelled."""
+        return self._cancelled
+
+    @property
     def chunks(self) -> list[StreamChunk]:
         """Get all collected chunks so far."""
         return self._chunks.copy()
@@ -128,6 +143,98 @@ class StreamingOutputBase(Generic[T]):
             for chunk in self._chunks
             if chunk.chunk_type == StreamChunkType.TEXT
         )
+
+    async def __aenter__(self) -> Self:
+        """Enter async context manager."""
+        return self
+
+    async def __aexit__(self, *exc_info: Any) -> None:
+        """Exit async context manager, cancelling if still running."""
+        await self.aclose()
+
+    async def aclose(self) -> None:
+        """Cancel streaming and clean up resources.
+
+        Cancels any in-flight tasks and closes the underlying async iterator.
+        Safe to call multiple times. No-op if already cancelled or fully consumed.
+        """
+        if self._cancelled or self._exhausted or self._error is not None:
+            return
+        self._cancelled = True
+        self._completed = True
+        if self._async_iterator is not None and hasattr(self._async_iterator, "aclose"):
+            await self._async_iterator.aclose()
+        if self._on_cleanup is not None:
+            self._on_cleanup()
+            self._on_cleanup = None
+
+    def close(self) -> None:
+        """Cancel streaming and clean up resources (sync).
+
+        Closes the underlying sync iterator. Safe to call multiple times.
+        No-op if already cancelled, fully consumed, or errored.
+        """
+        if self._cancelled or self._exhausted or self._error is not None:
+            return
+        self._cancelled = True
+        self._completed = True
+        if self._sync_iterator is not None and hasattr(self._sync_iterator, "close"):
+            self._sync_iterator.close()
+        if self._on_cleanup is not None:
+            self._on_cleanup()
+            self._on_cleanup = None
+
+    def __iter__(self) -> Iterator[StreamChunk]:
+        """Iterate over stream chunks synchronously.
+
+        Yields:
+            StreamChunk objects as they arrive.
+
+        Raises:
+            RuntimeError: If sync iterator not available.
+        """
+        if self._sync_iterator is None:
+            raise RuntimeError("Sync iterator not available")
+        try:
+            for chunk in self._sync_iterator:
+                self._chunks.append(chunk)
+                yield chunk
+            self._exhausted = True
+        except Exception as e:
+            self._error = e
+            raise
+        finally:
+            self._completed = True
+
+    def __aiter__(self) -> AsyncIterator[StreamChunk]:
+        """Return async iterator for stream chunks.
+
+        Returns:
+            Async iterator for StreamChunk objects.
+        """
+        return self._async_iterate()
+
+    async def _async_iterate(self) -> AsyncIterator[StreamChunk]:
+        """Iterate over stream chunks asynchronously.
+
+        Yields:
+            StreamChunk objects as they arrive.
+
+        Raises:
+            RuntimeError: If async iterator not available.
+        """
+        if self._async_iterator is None:
+            raise RuntimeError("Async iterator not available")
+        try:
+            async for chunk in self._async_iterator:
+                self._chunks.append(chunk)
+                yield chunk
+            self._exhausted = True
+        except Exception as e:
+            self._error = e
+            raise
+        finally:
+            self._completed = True
 
 
 class CrewStreamingOutput(StreamingOutputBase["CrewOutput"]):
@@ -167,9 +274,7 @@ class CrewStreamingOutput(StreamingOutputBase["CrewOutput"]):
             sync_iterator: Synchronous iterator for chunks.
             async_iterator: Asynchronous iterator for chunks.
         """
-        super().__init__()
-        self._sync_iterator = sync_iterator
-        self._async_iterator = async_iterator
+        super().__init__(sync_iterator=sync_iterator, async_iterator=async_iterator)
         self._results: list[CrewOutput] | None = None
 
     @property
@@ -204,56 +309,6 @@ class CrewStreamingOutput(StreamingOutputBase["CrewOutput"]):
         self._results = results
         self._completed = True
 
-    def __iter__(self) -> Iterator[StreamChunk]:
-        """Iterate over stream chunks synchronously.
-
-        Yields:
-            StreamChunk objects as they arrive.
-
-        Raises:
-            RuntimeError: If sync iterator not available.
-        """
-        if self._sync_iterator is None:
-            raise RuntimeError("Sync iterator not available")
-        try:
-            for chunk in self._sync_iterator:
-                self._chunks.append(chunk)
-                yield chunk
-        except Exception as e:
-            self._error = e
-            raise
-        finally:
-            self._completed = True
-
-    def __aiter__(self) -> AsyncIterator[StreamChunk]:
-        """Return async iterator for stream chunks.
-
-        Returns:
-            Async iterator for StreamChunk objects.
-        """
-        return self._async_iterate()
-
-    async def _async_iterate(self) -> AsyncIterator[StreamChunk]:
-        """Iterate over stream chunks asynchronously.
-
-        Yields:
-            StreamChunk objects as they arrive.
-
-        Raises:
-            RuntimeError: If async iterator not available.
-        """
-        if self._async_iterator is None:
-            raise RuntimeError("Async iterator not available")
-        try:
-            async for chunk in self._async_iterator:
-                self._chunks.append(chunk)
-                yield chunk
-        except Exception as e:
-            self._error = e
-            raise
-        finally:
-            self._completed = True
-
     def _set_result(self, result: CrewOutput) -> None:
         """Set the final result after streaming completes.
 
@@ -285,71 +340,6 @@ class FlowStreamingOutput(StreamingOutputBase[Any]):
         result = streaming.result
         ```
     """
-
-    def __init__(
-        self,
-        sync_iterator: Iterator[StreamChunk] | None = None,
-        async_iterator: AsyncIterator[StreamChunk] | None = None,
-    ) -> None:
-        """Initialize flow streaming output.
-
-        Args:
-            sync_iterator: Synchronous iterator for chunks.
-            async_iterator: Asynchronous iterator for chunks.
-        """
-        super().__init__()
-        self._sync_iterator = sync_iterator
-        self._async_iterator = async_iterator
-
-    def __iter__(self) -> Iterator[StreamChunk]:
-        """Iterate over stream chunks synchronously.
-
-        Yields:
-            StreamChunk objects as they arrive.
-
-        Raises:
-            RuntimeError: If sync iterator not available.
-        """
-        if self._sync_iterator is None:
-            raise RuntimeError("Sync iterator not available")
-        try:
-            for chunk in self._sync_iterator:
-                self._chunks.append(chunk)
-                yield chunk
-        except Exception as e:
-            self._error = e
-            raise
-        finally:
-            self._completed = True
-
-    def __aiter__(self) -> AsyncIterator[StreamChunk]:
-        """Return async iterator for stream chunks.
-
-        Returns:
-            Async iterator for StreamChunk objects.
-        """
-        return self._async_iterate()
-
-    async def _async_iterate(self) -> AsyncIterator[StreamChunk]:
-        """Iterate over stream chunks asynchronously.
-
-        Yields:
-            StreamChunk objects as they arrive.
-
-        Raises:
-            RuntimeError: If async iterator not available.
-        """
-        if self._async_iterator is None:
-            raise RuntimeError("Async iterator not available")
-        try:
-            async for chunk in self._async_iterator:
-                self._chunks.append(chunk)
-                yield chunk
-        except Exception as e:
-            self._error = e
-            raise
-        finally:
-            self._completed = True
 
     def _set_result(self, result: Any) -> None:
         """Set the final result after streaming completes.

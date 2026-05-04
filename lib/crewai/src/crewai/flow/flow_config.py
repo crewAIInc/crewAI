@@ -6,7 +6,7 @@ customize Flow behavior at runtime.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 
 if TYPE_CHECKING:
@@ -32,17 +32,17 @@ class FlowConfig:
         self._input_provider: InputProvider | None = None
 
     @property
-    def hitl_provider(self) -> Any:
+    def hitl_provider(self) -> HumanFeedbackProvider | None:
         """Get the configured HITL provider."""
         return self._hitl_provider
 
     @hitl_provider.setter
-    def hitl_provider(self, provider: Any) -> None:
+    def hitl_provider(self, provider: HumanFeedbackProvider | None) -> None:
         """Set the HITL provider."""
         self._hitl_provider = provider
 
     @property
-    def input_provider(self) -> Any:
+    def input_provider(self) -> InputProvider | None:
         """Get the configured input provider for ``Flow.ask()``.
 
         Returns:
@@ -52,7 +52,7 @@ class FlowConfig:
         return self._input_provider
 
     @input_provider.setter
-    def input_provider(self, provider: Any) -> None:
+    def input_provider(self, provider: InputProvider | None) -> None:
         """Set the input provider for ``Flow.ask()``.
 
         Args:

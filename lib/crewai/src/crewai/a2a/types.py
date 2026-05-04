@@ -7,12 +7,11 @@ from typing import (
     Any,
     Literal,
     Protocol,
-    TypedDict,
     runtime_checkable,
 )
 
 from pydantic import BeforeValidator, HttpUrl, TypeAdapter
-from typing_extensions import NotRequired
+from typing_extensions import NotRequired, TypedDict
 
 
 try:

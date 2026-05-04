@@ -1,12 +1,14 @@
 """Tests for async task execution."""
 
 import pytest
+from pydantic import BaseModel
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from crewai.agent import Agent
 from crewai.task import Task
 from crewai.tasks.task_output import TaskOutput
 from crewai.tasks.output_format import OutputFormat
+from crewai.utilities.converter import Converter
 
 
 @pytest.fixture
@@ -384,3 +386,72 @@ class TestAsyncTaskOutput:
         assert result.expected_output == "Test expected"
         assert result.raw == "Test result"
         assert result.agent == "Test Agent"
+
+
+class _AsyncOnlyOutput(BaseModel):
+    value: str
+
+
+class TestAsyncOutputConversion:
+    """Regression tests for native-async output conversion (issue #5230).
+
+    Ensures `_aexport_output` reaches the LLM via `acall` and never via the
+    blocking `call` method.
+    """
+
+    @pytest.mark.asyncio
+    async def test_aexport_output_uses_acall_not_call(self) -> None:
+        mock_llm = MagicMock()
+        mock_llm.supports_function_calling.return_value = False
+        mock_llm.acall = AsyncMock(return_value='{"value": "ok"}')
+        mock_llm.call = MagicMock(
+            side_effect=AssertionError("call() must NOT be invoked from async path")
+        )
+
+        converter = Converter(
+            llm=mock_llm,
+            model=_AsyncOnlyOutput,
+            text="raw",
+            instructions="convert",
+            max_attempts=1,
+        )
+        result = await converter.ato_pydantic()
+
+        assert isinstance(result, _AsyncOnlyOutput)
+        assert result.value == "ok"
+        mock_llm.acall.assert_awaited_once()
+        mock_llm.call.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_ato_json_function_calling_does_not_block_event_loop(self) -> None:
+        """The function-calling JSON path must run via asyncio.to_thread.
+
+        ``InternalInstructor`` is sync-only; `ato_json` should offload it so the
+        event loop is not blocked.
+        """
+        mock_llm = MagicMock()
+        mock_llm.supports_function_calling.return_value = True
+
+        converter = Converter(
+            llm=mock_llm,
+            model=_AsyncOnlyOutput,
+            text="raw",
+            instructions="convert",
+            max_attempts=1,
+        )
+
+        sentinel = '{"value": "ok"}'
+        with patch.object(
+            converter, "_create_instructor"
+        ) as mock_create, patch(
+            "crewai.utilities.converter.asyncio.to_thread", new_callable=AsyncMock
+        ) as mock_to_thread:
+            instructor = MagicMock()
+            instructor.to_json = MagicMock(return_value=sentinel)
+            mock_create.return_value = instructor
+            mock_to_thread.return_value = sentinel
+
+            result = await converter.ato_json()
+
+        assert result == sentinel
+        mock_to_thread.assert_awaited_once_with(instructor.to_json)

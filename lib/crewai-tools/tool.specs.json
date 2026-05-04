@@ -83,6 +83,7 @@
             "title": "Mind Name"
           }
         },
+        "required": [],
         "title": "AIMindTool",
         "type": "object"
       },
@@ -166,6 +167,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "ArxivPaperTool",
         "type": "object"
       },
@@ -193,6 +195,1038 @@
           "search_query"
         ],
         "title": "ArxivToolInput",
+        "type": "object"
+      }
+    },
+    {
+      "description": "A tool that performs image searches using the Brave Search API. Results are returned as structured JSON data.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Brave Search",
+          "name": "BRAVE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Brave Image Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "A tool that performs image searches using the Brave Search API.",
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Country"
+          },
+          "header_schema": {
+            "title": "Header Schema"
+          },
+          "n_results": {
+            "default": 10,
+            "title": "N Results",
+            "type": "integer"
+          },
+          "raw": {
+            "default": false,
+            "title": "Raw",
+            "type": "boolean"
+          },
+          "save_file": {
+            "default": false,
+            "title": "Save File",
+            "type": "boolean"
+          },
+          "search_url": {
+            "default": "https://api.search.brave.com/res/v1/images/search",
+            "title": "Search Url",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "title": "BraveImageSearchTool",
+        "type": "object"
+      },
+      "name": "BraveImageSearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Parameters for Brave Image Search endpoint.",
+        "properties": {
+          "count": {
+            "anyOf": [
+              {
+                "maximum": 200,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The maximum number of results to return.",
+            "title": "Count"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Country code for geo-targeting (e.g., 'US', 'BR').",
+            "title": "Country"
+          },
+          "q": {
+            "description": "Search query to perform",
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Q",
+            "type": "string"
+          },
+          "safesearch": {
+            "anyOf": [
+              {
+                "enum": [
+                  "off",
+                  "strict"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Filter out explicit content. Default is strict.",
+            "title": "Safesearch"
+          },
+          "search_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the search results (e.g., 'en', 'es').",
+            "title": "Search Lang"
+          },
+          "spellcheck": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attempt to correct spelling errors in the search query.",
+            "title": "Spellcheck"
+          }
+        },
+        "required": [
+          "q"
+        ],
+        "title": "ImageSearchParams",
+        "type": "object"
+      }
+    },
+    {
+      "description": "A tool that retrieves context for LLM usage from the Brave Search API. Results are returned as structured JSON data.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Brave Search",
+          "name": "BRAVE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Brave LLM Context",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "A tool that retrieves context for LLM usage from the Brave Search API.",
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Country"
+          },
+          "header_schema": {
+            "title": "Header Schema"
+          },
+          "n_results": {
+            "default": 10,
+            "title": "N Results",
+            "type": "integer"
+          },
+          "raw": {
+            "default": false,
+            "title": "Raw",
+            "type": "boolean"
+          },
+          "save_file": {
+            "default": false,
+            "title": "Save File",
+            "type": "boolean"
+          },
+          "search_url": {
+            "default": "https://api.search.brave.com/res/v1/llm/context",
+            "title": "Search Url",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "title": "BraveLLMContextTool",
+        "type": "object"
+      },
+      "name": "BraveLLMContextTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Parameters for Brave LLM Context endpoint.",
+        "properties": {
+          "context_threshold_mode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "disabled",
+                  "strict",
+                  "lenient",
+                  "balanced"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The mode to use for the context thresholding.",
+            "title": "Context Threshold Mode"
+          },
+          "count": {
+            "anyOf": [
+              {
+                "maximum": 50,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The maximum number of results to return. Actual number may be less.",
+            "title": "Count"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Country code for geo-targeting (e.g., 'US', 'BR').",
+            "title": "Country"
+          },
+          "enable_local": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to enable local recall. Not setting this value means auto-detect and uses local recall if any of the localization headers are provided.",
+            "title": "Enable Local"
+          },
+          "goggles": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Goggles act as a custom re-ranking mechanism. Goggle source or URLs.",
+            "title": "Goggles"
+          },
+          "maximum_number_of_snippets": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The maximum number of different snippets to include in the context.",
+            "title": "Maximum Number Of Snippets"
+          },
+          "maximum_number_of_snippets_per_url": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The maximum number of snippets to include per URL.",
+            "title": "Maximum Number Of Snippets Per Url"
+          },
+          "maximum_number_of_tokens": {
+            "anyOf": [
+              {
+                "maximum": 32768,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The approximate maximum number of tokens to include in the context.",
+            "title": "Maximum Number Of Tokens"
+          },
+          "maximum_number_of_tokens_per_url": {
+            "anyOf": [
+              {
+                "maximum": 8192,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The maximum number of tokens to include for each URL in the context.",
+            "title": "Maximum Number Of Tokens Per Url"
+          },
+          "maximum_number_of_urls": {
+            "anyOf": [
+              {
+                "maximum": 50,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The maximum number of URLs to include in the context.",
+            "title": "Maximum Number Of Urls"
+          },
+          "q": {
+            "description": "Search query to perform",
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Q",
+            "type": "string"
+          },
+          "search_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the search results (e.g., 'en', 'es').",
+            "title": "Search Lang"
+          }
+        },
+        "required": [
+          "q"
+        ],
+        "title": "LLMContextParams",
+        "type": "object"
+      }
+    },
+    {
+      "description": "A tool that retrieves AI-generated descriptions for local POIs using the Brave Search API. Results are returned as structured JSON data.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Brave Search",
+          "name": "BRAVE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Brave Local POI Descriptions",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "A tool that retrieves AI-generated descriptions for local POIs using the Brave Search API.",
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Country"
+          },
+          "header_schema": {
+            "title": "Header Schema"
+          },
+          "n_results": {
+            "default": 10,
+            "title": "N Results",
+            "type": "integer"
+          },
+          "raw": {
+            "default": false,
+            "title": "Raw",
+            "type": "boolean"
+          },
+          "save_file": {
+            "default": false,
+            "title": "Save File",
+            "type": "boolean"
+          },
+          "search_url": {
+            "default": "https://api.search.brave.com/res/v1/local/descriptions",
+            "title": "Search Url",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "title": "BraveLocalPOIsDescriptionTool",
+        "type": "object"
+      },
+      "name": "BraveLocalPOIsDescriptionTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Parameters for Brave Local POI Descriptions endpoint.",
+        "properties": {
+          "ids": {
+            "description": "List of POI IDs to retrieve. Maximum of 20. IDs are valid for 8 hours.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "title": "LocalPOIsDescriptionParams",
+        "type": "object"
+      }
+    },
+    {
+      "description": "A tool that retrieves local POIs using the Brave Search API. Results are returned as structured JSON data.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Brave Search",
+          "name": "BRAVE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Brave Local POIs",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "A tool that retrieves local POIs using the Brave Search API.",
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Country"
+          },
+          "header_schema": {
+            "title": "Header Schema"
+          },
+          "n_results": {
+            "default": 10,
+            "title": "N Results",
+            "type": "integer"
+          },
+          "raw": {
+            "default": false,
+            "title": "Raw",
+            "type": "boolean"
+          },
+          "save_file": {
+            "default": false,
+            "title": "Save File",
+            "type": "boolean"
+          },
+          "search_url": {
+            "default": "https://api.search.brave.com/res/v1/local/pois",
+            "title": "Search Url",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "title": "BraveLocalPOIsTool",
+        "type": "object"
+      },
+      "name": "BraveLocalPOIsTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Parameters for Brave Local POIs endpoint.",
+        "properties": {
+          "ids": {
+            "description": "List of POI IDs to retrieve. Maximum of 20. IDs are valid for 8 hours.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Ids",
+            "type": "array"
+          },
+          "search_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the search results (e.g., 'en', 'es').",
+            "title": "Search Lang"
+          },
+          "ui_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}-[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the user interface (e.g., 'en-US', 'es-AR').",
+            "title": "Ui Lang"
+          },
+          "units": {
+            "anyOf": [
+              {
+                "enum": [
+                  "metric",
+                  "imperial"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The units to use for the results. Options: metric/imperial",
+            "title": "Units"
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "title": "LocalPOIsParams",
+        "type": "object"
+      }
+    },
+    {
+      "description": "A tool that performs news searches using the Brave Search API. Results are returned as structured JSON data.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Brave Search",
+          "name": "BRAVE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Brave News Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "A tool that performs news searches using the Brave Search API.",
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Country"
+          },
+          "header_schema": {
+            "title": "Header Schema"
+          },
+          "n_results": {
+            "default": 10,
+            "title": "N Results",
+            "type": "integer"
+          },
+          "raw": {
+            "default": false,
+            "title": "Raw",
+            "type": "boolean"
+          },
+          "save_file": {
+            "default": false,
+            "title": "Save File",
+            "type": "boolean"
+          },
+          "search_url": {
+            "default": "https://api.search.brave.com/res/v1/news/search",
+            "title": "Search Url",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "title": "BraveNewsSearchTool",
+        "type": "object"
+      },
+      "name": "BraveNewsSearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Parameters for Brave News Search endpoint.",
+        "properties": {
+          "count": {
+            "anyOf": [
+              {
+                "maximum": 50,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The maximum number of results to return.",
+            "title": "Count"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Country code for geo-targeting (e.g., 'US', 'BR').",
+            "title": "Country"
+          },
+          "extra_snippets": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Include up to 5 text snippets for each page if possible.",
+            "title": "Extra Snippets"
+          },
+          "freshness": {
+            "anyOf": [
+              {
+                "enum": [
+                  "pd",
+                  "pw",
+                  "pm",
+                  "py"
+                ],
+                "type": "string"
+              },
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}to\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Enforce freshness of results. Options: pd/pw/pm/py, or YYYY-MM-DDtoYYYY-MM-DD",
+            "title": "Freshness"
+          },
+          "goggles": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Goggles act as a custom re-ranking mechanism. Goggle source or URLs.",
+            "title": "Goggles"
+          },
+          "include_fetch_metadata": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to include fetch metadata in the results.",
+            "title": "Include Fetch Metadata"
+          },
+          "offset": {
+            "anyOf": [
+              {
+                "maximum": 9,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Skip the first N result sets/pages. Max is 9.",
+            "title": "Offset"
+          },
+          "operators": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to apply search operators (e.g., site:example.com).",
+            "title": "Operators"
+          },
+          "q": {
+            "description": "Search query to perform",
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Q",
+            "type": "string"
+          },
+          "safesearch": {
+            "anyOf": [
+              {
+                "enum": [
+                  "off",
+                  "moderate",
+                  "strict"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Filter out explicit content. Options: off/moderate/strict",
+            "title": "Safesearch"
+          },
+          "search_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the search results (e.g., 'en', 'es').",
+            "title": "Search Lang"
+          },
+          "spellcheck": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attempt to correct spelling errors in the search query.",
+            "title": "Spellcheck"
+          },
+          "ui_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}-[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the user interface (e.g., 'en-US', 'es-AR').",
+            "title": "Ui Lang"
+          }
+        },
+        "required": [
+          "q"
+        ],
+        "title": "NewsSearchParams",
         "type": "object"
       }
     },
@@ -263,17 +1297,20 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "BraveSearchTool",
         "type": "object"
       },
       "name": "BraveSearchTool",
       "package_dependencies": [],
       "run_params_schema": {
-        "description": "Input for BraveSearchTool",
+        "description": "Parameters for Brave Web Search endpoint.",
         "properties": {
           "count": {
             "anyOf": [
               {
+                "maximum": 20,
+                "minimum": 1,
                 "type": "integer"
               },
               {
@@ -287,6 +1324,7 @@
           "country": {
             "anyOf": [
               {
+                "pattern": "^[A-Z]{2}$",
                 "type": "string"
               },
               {
@@ -296,6 +1334,19 @@
             "default": null,
             "description": "Country code for geo-targeting (e.g., 'US', 'BR').",
             "title": "Country"
+          },
+          "enable_rich_callback": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to enable rich callbacks for the results. Requires Pro level subscription.",
+            "title": "Enable Rich Callback"
           },
           "extra_snippets": {
             "anyOf": [
@@ -333,9 +1384,43 @@
             "description": "Enforce freshness of results. Options: pd/pw/pm/py, or YYYY-MM-DDtoYYYY-MM-DD",
             "title": "Freshness"
           },
+          "goggles": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Goggles act as a custom re-ranking mechanism. Goggle source or URLs.",
+            "title": "Goggles"
+          },
+          "include_fetch_metadata": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to include fetch metadata (e.g., last fetch time) in the results.",
+            "title": "Include Fetch Metadata"
+          },
           "offset": {
             "anyOf": [
               {
+                "maximum": 9,
+                "minimum": 0,
                 "type": "integer"
               },
               {
@@ -359,9 +1444,344 @@
             "description": "Whether to apply search operators (e.g., site:example.com).",
             "title": "Operators"
           },
-          "query": {
+          "q": {
             "description": "Search query to perform",
-            "title": "Query",
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Q",
+            "type": "string"
+          },
+          "result_filter": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "discussions",
+                    "faq",
+                    "infobox",
+                    "news",
+                    "query",
+                    "summarizer",
+                    "videos",
+                    "web",
+                    "locations"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Filter the results by type. Options: discussions/faq/infobox/news/query/summarizer/videos/web/locations. Note: The `count` parameter is applied only to the `web` results.",
+            "title": "Result Filter"
+          },
+          "safesearch": {
+            "anyOf": [
+              {
+                "enum": [
+                  "off",
+                  "moderate",
+                  "strict"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Filter out explicit content. Options: off/moderate/strict",
+            "title": "Safesearch"
+          },
+          "search_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the search results (e.g., 'en', 'es').",
+            "title": "Search Lang"
+          },
+          "spellcheck": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attempt to correct spelling errors in the search query.",
+            "title": "Spellcheck"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to generate a summarizer ID for the results.",
+            "title": "Summary"
+          },
+          "text_decorations": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Include markup to highlight search terms in the results.",
+            "title": "Text Decorations"
+          },
+          "ui_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}-[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the user interface (e.g., 'en-US', 'es-AR').",
+            "title": "Ui Lang"
+          },
+          "units": {
+            "anyOf": [
+              {
+                "enum": [
+                  "metric",
+                  "imperial"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The units to use for the results. Options: metric/imperial",
+            "title": "Units"
+          }
+        },
+        "required": [
+          "q"
+        ],
+        "title": "WebSearchParams",
+        "type": "object"
+      }
+    },
+    {
+      "description": "A tool that performs video searches using the Brave Search API. Results are returned as structured JSON data.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Brave Search",
+          "name": "BRAVE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Brave Video Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "A tool that performs video searches using the Brave Search API.",
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Country"
+          },
+          "header_schema": {
+            "title": "Header Schema"
+          },
+          "n_results": {
+            "default": 10,
+            "title": "N Results",
+            "type": "integer"
+          },
+          "raw": {
+            "default": false,
+            "title": "Raw",
+            "type": "boolean"
+          },
+          "save_file": {
+            "default": false,
+            "title": "Save File",
+            "type": "boolean"
+          },
+          "search_url": {
+            "default": "https://api.search.brave.com/res/v1/videos/search",
+            "title": "Search Url",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "title": "BraveVideoSearchTool",
+        "type": "object"
+      },
+      "name": "BraveVideoSearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Parameters for Brave Video Search endpoint.",
+        "properties": {
+          "count": {
+            "anyOf": [
+              {
+                "maximum": 50,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The maximum number of results to return.",
+            "title": "Count"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Country code for geo-targeting (e.g., 'US', 'BR').",
+            "title": "Country"
+          },
+          "freshness": {
+            "anyOf": [
+              {
+                "enum": [
+                  "pd",
+                  "pw",
+                  "pm",
+                  "py"
+                ],
+                "type": "string"
+              },
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}to\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Enforce freshness of results. Options: pd/pw/pm/py, or YYYY-MM-DDtoYYYY-MM-DD",
+            "title": "Freshness"
+          },
+          "include_fetch_metadata": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to include fetch metadata (e.g., last fetch time) in the results.",
+            "title": "Include Fetch Metadata"
+          },
+          "offset": {
+            "anyOf": [
+              {
+                "maximum": 9,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Skip the first N result sets/pages. Max is 9.",
+            "title": "Offset"
+          },
+          "operators": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to apply search operators (e.g., site:example.com).",
+            "title": "Operators"
+          },
+          "q": {
+            "description": "Search query to perform",
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Q",
             "type": "string"
           },
           "safesearch": {
@@ -382,9 +1802,10 @@
             "description": "Filter out explicit content. Options: off/moderate/strict",
             "title": "Safesearch"
           },
-          "search_language": {
+          "search_lang": {
             "anyOf": [
               {
+                "pattern": "^[a-z]{2}$",
                 "type": "string"
               },
               {
@@ -393,7 +1814,7 @@
             ],
             "default": null,
             "description": "Language code for the search results (e.g., 'en', 'es').",
-            "title": "Search Language"
+            "title": "Search Lang"
           },
           "spellcheck": {
             "anyOf": [
@@ -408,6 +1829,354 @@
             "description": "Attempt to correct spelling errors in the search query.",
             "title": "Spellcheck"
           },
+          "ui_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}-[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the user interface (e.g., 'en-US', 'es-AR').",
+            "title": "Ui Lang"
+          }
+        },
+        "required": [
+          "q"
+        ],
+        "title": "VideoSearchParams",
+        "type": "object"
+      }
+    },
+    {
+      "description": "A tool that performs web searches using the Brave Search API. Results are returned as structured JSON data.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Brave Search",
+          "name": "BRAVE_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Brave Web Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "A tool that performs web searches using the Brave Search API.",
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Country"
+          },
+          "header_schema": {
+            "title": "Header Schema"
+          },
+          "n_results": {
+            "default": 10,
+            "title": "N Results",
+            "type": "integer"
+          },
+          "raw": {
+            "default": false,
+            "title": "Raw",
+            "type": "boolean"
+          },
+          "save_file": {
+            "default": false,
+            "title": "Save File",
+            "type": "boolean"
+          },
+          "search_url": {
+            "default": "https://api.search.brave.com/res/v1/web/search",
+            "title": "Search Url",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "title": "BraveWebSearchTool",
+        "type": "object"
+      },
+      "name": "BraveWebSearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Parameters for Brave Web Search endpoint.",
+        "properties": {
+          "count": {
+            "anyOf": [
+              {
+                "maximum": 20,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The maximum number of results to return. Actual number may be less.",
+            "title": "Count"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Country code for geo-targeting (e.g., 'US', 'BR').",
+            "title": "Country"
+          },
+          "enable_rich_callback": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to enable rich callbacks for the results. Requires Pro level subscription.",
+            "title": "Enable Rich Callback"
+          },
+          "extra_snippets": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Include up to 5 text snippets for each page if possible.",
+            "title": "Extra Snippets"
+          },
+          "freshness": {
+            "anyOf": [
+              {
+                "enum": [
+                  "pd",
+                  "pw",
+                  "pm",
+                  "py"
+                ],
+                "type": "string"
+              },
+              {
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}to\\d{4}-\\d{2}-\\d{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Enforce freshness of results. Options: pd/pw/pm/py, or YYYY-MM-DDtoYYYY-MM-DD",
+            "title": "Freshness"
+          },
+          "goggles": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Goggles act as a custom re-ranking mechanism. Goggle source or URLs.",
+            "title": "Goggles"
+          },
+          "include_fetch_metadata": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to include fetch metadata (e.g., last fetch time) in the results.",
+            "title": "Include Fetch Metadata"
+          },
+          "offset": {
+            "anyOf": [
+              {
+                "maximum": 9,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Skip the first N result sets/pages. Max is 9.",
+            "title": "Offset"
+          },
+          "operators": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to apply search operators (e.g., site:example.com).",
+            "title": "Operators"
+          },
+          "q": {
+            "description": "Search query to perform",
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Q",
+            "type": "string"
+          },
+          "result_filter": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "discussions",
+                    "faq",
+                    "infobox",
+                    "news",
+                    "query",
+                    "summarizer",
+                    "videos",
+                    "web",
+                    "locations"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Filter the results by type. Options: discussions/faq/infobox/news/query/summarizer/videos/web/locations. Note: The `count` parameter is applied only to the `web` results.",
+            "title": "Result Filter"
+          },
+          "safesearch": {
+            "anyOf": [
+              {
+                "enum": [
+                  "off",
+                  "moderate",
+                  "strict"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Filter out explicit content. Options: off/moderate/strict",
+            "title": "Safesearch"
+          },
+          "search_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the search results (e.g., 'en', 'es').",
+            "title": "Search Lang"
+          },
+          "spellcheck": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attempt to correct spelling errors in the search query.",
+            "title": "Spellcheck"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether to generate a summarizer ID for the results.",
+            "title": "Summary"
+          },
           "text_decorations": {
             "anyOf": [
               {
@@ -420,12 +2189,43 @@
             "default": null,
             "description": "Include markup to highlight search terms in the results.",
             "title": "Text Decorations"
+          },
+          "ui_lang": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z]{2}-[A-Z]{2}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Language code for the user interface (e.g., 'en-US', 'es-AR').",
+            "title": "Ui Lang"
+          },
+          "units": {
+            "anyOf": [
+              {
+                "enum": [
+                  "metric",
+                  "imperial"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The units to use for the results. Options: metric/imperial",
+            "title": "Units"
           }
         },
         "required": [
-          "query"
+          "q"
         ],
-        "title": "BraveSearchToolSchema",
+        "title": "WebSearchParams",
         "type": "object"
       }
     },
@@ -535,6 +2335,7 @@
             "title": "Zipcode"
           }
         },
+        "required": [],
         "title": "BrightDataDatasetTool",
         "type": "object"
       },
@@ -718,6 +2519,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "BrightDataSearchTool",
         "type": "object"
       },
@@ -906,6 +2708,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "BrightDataWebUnlockerTool",
         "type": "object"
       },
@@ -1080,6 +2883,7 @@
             "title": "Text Content"
           }
         },
+        "required": [],
         "title": "BrowserbaseLoadTool",
         "type": "object"
       },
@@ -2126,6 +3930,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "CSVSearchTool",
         "type": "object"
       },
@@ -3177,6 +4982,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "CodeDocsSearchTool",
         "type": "object"
       },
@@ -3201,127 +5007,6 @@
           "docs_url"
         ],
         "title": "CodeDocsSearchToolSchema",
-        "type": "object"
-      }
-    },
-    {
-      "description": "Interprets Python3 code strings with a final print statement.",
-      "env_vars": [],
-      "humanized_name": "Code Interpreter",
-      "init_params_schema": {
-        "$defs": {
-          "EnvVar": {
-            "properties": {
-              "default": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
-                "title": "Default"
-              },
-              "description": {
-                "title": "Description",
-                "type": "string"
-              },
-              "name": {
-                "title": "Name",
-                "type": "string"
-              },
-              "required": {
-                "default": true,
-                "title": "Required",
-                "type": "boolean"
-              }
-            },
-            "required": [
-              "name",
-              "description"
-            ],
-            "title": "EnvVar",
-            "type": "object"
-          }
-        },
-        "description": "A tool for executing Python code in isolated environments.\n\nThis tool provides functionality to run Python code either in a Docker container\nfor safe isolation or directly in a restricted sandbox. It can handle installing\nPython packages and executing arbitrary Python code.",
-        "properties": {
-          "code": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Code"
-          },
-          "default_image_tag": {
-            "default": "code-interpreter:latest",
-            "title": "Default Image Tag",
-            "type": "string"
-          },
-          "unsafe_mode": {
-            "default": false,
-            "title": "Unsafe Mode",
-            "type": "boolean"
-          },
-          "user_docker_base_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "User Docker Base Url"
-          },
-          "user_dockerfile_path": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "User Dockerfile Path"
-          }
-        },
-        "title": "CodeInterpreterTool",
-        "type": "object"
-      },
-      "name": "CodeInterpreterTool",
-      "package_dependencies": [],
-      "run_params_schema": {
-        "description": "Schema for defining inputs to the CodeInterpreterTool.\n\nThis schema defines the required parameters for code execution,\nincluding the code to run and any libraries that need to be installed.",
-        "properties": {
-          "code": {
-            "description": "Python3 code used to be interpreted in the Docker container. ALWAYS PRINT the final result and the output of the code",
-            "title": "Code",
-            "type": "string"
-          },
-          "libraries_used": {
-            "description": "List of libraries used in the code with proper installing names separated by commas. Example: numpy,pandas,beautifulsoup4",
-            "items": {
-              "type": "string"
-            },
-            "title": "Libraries Used",
-            "type": "array"
-          }
-        },
-        "required": [
-          "code",
-          "libraries_used"
-        ],
-        "title": "CodeInterpreterSchema",
         "type": "object"
       }
     },
@@ -3376,10 +5061,7 @@
         },
         "description": "Wrapper for composio tools.",
         "properties": {},
-        "required": [
-          "name",
-          "description"
-        ],
+        "required": [],
         "title": "ComposioTool",
         "type": "object"
       },
@@ -3874,6 +5556,10 @@
             "title": "Bucket Name",
             "type": "string"
           },
+          "cluster": {
+            "description": "An instance of the Couchbase Cluster connected to the desired Couchbase server.",
+            "title": "Cluster"
+          },
           "collection_name": {
             "description": "The name of the Couchbase collection to search",
             "title": "Collection Name",
@@ -3922,6 +5608,7 @@
           }
         },
         "required": [
+          "cluster",
           "collection_name",
           "scope_name",
           "bucket_name",
@@ -4972,6 +6659,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "DOCXSearchTool",
         "type": "object"
       },
@@ -5109,6 +6797,7 @@
             "title": "Size"
           }
         },
+        "required": [],
         "title": "DallETool",
         "type": "object"
       },
@@ -5211,6 +6900,7 @@
             "title": "Default Warehouse Id"
           }
         },
+        "required": [],
         "title": "DatabricksQueryTool",
         "type": "object"
       },
@@ -5287,6 +6977,634 @@
       }
     },
     {
+      "description": "Execute a shell command inside a Daytona sandbox and return the exit code and combined output. Use this to run builds, package installs, git operations, or any one-off shell command.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Daytona sandbox service",
+          "name": "DAYTONA_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Daytona API base URL (optional)",
+          "name": "DAYTONA_API_URL",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Daytona target region (optional)",
+          "name": "DAYTONA_TARGET",
+          "required": false
+        }
+      ],
+      "humanized_name": "Daytona Sandbox Exec",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Run a shell command inside a Daytona sandbox.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daytona API key. Falls back to DAYTONA_API_KEY env var.",
+            "required": false,
+            "title": "Api Key"
+          },
+          "api_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daytona API URL override. Falls back to DAYTONA_API_URL env var.",
+            "required": false,
+            "title": "Api Url"
+          },
+          "create_params": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional kwargs forwarded to CreateSandboxFromSnapshotParams when creating a sandbox (e.g. language, snapshot, env_vars, labels).",
+            "title": "Create Params"
+          },
+          "persistent": {
+            "default": false,
+            "description": "If True, reuse one sandbox across all calls to this tool instance and delete it at process exit. Default False creates and deletes a fresh sandbox per call.",
+            "title": "Persistent",
+            "type": "boolean"
+          },
+          "sandbox_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attach to an existing sandbox by id or name instead of creating a new one. The tool will never delete a sandbox it did not create.",
+            "title": "Sandbox Id"
+          },
+          "sandbox_timeout": {
+            "default": 60.0,
+            "description": "Timeout in seconds for sandbox create/delete operations.",
+            "title": "Sandbox Timeout",
+            "type": "number"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daytona target region. Falls back to DAYTONA_TARGET env var.",
+            "required": false,
+            "title": "Target"
+          }
+        },
+        "required": [],
+        "title": "DaytonaExecTool",
+        "type": "object"
+      },
+      "name": "DaytonaExecTool",
+      "package_dependencies": [
+        "daytona"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "command": {
+            "description": "Shell command to execute in the sandbox.",
+            "title": "Command",
+            "type": "string"
+          },
+          "cwd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Working directory to run the command in. Defaults to the sandbox work dir.",
+            "title": "Cwd"
+          },
+          "env": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional environment variables to set for this command.",
+            "title": "Env"
+          },
+          "timeout": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum seconds to wait for the command to finish.",
+            "title": "Timeout"
+          }
+        },
+        "required": [
+          "command"
+        ],
+        "title": "DaytonaExecToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Perform filesystem operations inside a Daytona sandbox: read a file, write content to a path, append content to an existing file, list a directory, delete a path, make a directory, or fetch file metadata. For files larger than a few KB, create the file with action='write' and empty content, then send the body via multiple 'append' calls of ~4KB each to stay within tool-call payload limits.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Daytona sandbox service",
+          "name": "DAYTONA_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Daytona API base URL (optional)",
+          "name": "DAYTONA_API_URL",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Daytona target region (optional)",
+          "name": "DAYTONA_TARGET",
+          "required": false
+        }
+      ],
+      "humanized_name": "Daytona Sandbox Files",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Read, write, and manage files inside a Daytona sandbox.\n\nNotes:\n  - Most useful with `persistent=True` or an explicit `sandbox_id`. With the\n    default ephemeral mode, files disappear when this tool call finishes.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daytona API key. Falls back to DAYTONA_API_KEY env var.",
+            "required": false,
+            "title": "Api Key"
+          },
+          "api_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daytona API URL override. Falls back to DAYTONA_API_URL env var.",
+            "required": false,
+            "title": "Api Url"
+          },
+          "create_params": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional kwargs forwarded to CreateSandboxFromSnapshotParams when creating a sandbox (e.g. language, snapshot, env_vars, labels).",
+            "title": "Create Params"
+          },
+          "persistent": {
+            "default": false,
+            "description": "If True, reuse one sandbox across all calls to this tool instance and delete it at process exit. Default False creates and deletes a fresh sandbox per call.",
+            "title": "Persistent",
+            "type": "boolean"
+          },
+          "sandbox_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attach to an existing sandbox by id or name instead of creating a new one. The tool will never delete a sandbox it did not create.",
+            "title": "Sandbox Id"
+          },
+          "sandbox_timeout": {
+            "default": 60.0,
+            "description": "Timeout in seconds for sandbox create/delete operations.",
+            "title": "Sandbox Timeout",
+            "type": "number"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daytona target region. Falls back to DAYTONA_TARGET env var.",
+            "required": false,
+            "title": "Target"
+          }
+        },
+        "required": [],
+        "title": "DaytonaFileTool",
+        "type": "object"
+      },
+      "name": "DaytonaFileTool",
+      "package_dependencies": [
+        "daytona"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "action": {
+            "description": "The filesystem action to perform: 'read' (returns file contents), 'write' (create or replace a file with content), 'append' (append content to an existing file \u2014 use this for writing large files in chunks to avoid hitting tool-call size limits), 'list' (lists a directory), 'delete' (removes a file/dir), 'mkdir' (creates a directory), 'info' (returns file metadata).",
+            "enum": [
+              "read",
+              "write",
+              "append",
+              "list",
+              "delete",
+              "mkdir",
+              "info"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "binary": {
+            "default": false,
+            "description": "For 'write': treat content as base64 and upload raw bytes. For 'read': return contents as base64 instead of decoded utf-8.",
+            "title": "Binary",
+            "type": "boolean"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Content to write or append. If omitted for 'write', an empty file is created. For files larger than a few KB, prefer one 'write' with empty content followed by multiple 'append' calls of ~4KB each to stay within tool-call payload limits.",
+            "title": "Content"
+          },
+          "mode": {
+            "default": "0755",
+            "description": "For action='mkdir': octal permission string (default 0755).",
+            "title": "Mode",
+            "type": "string"
+          },
+          "path": {
+            "description": "Absolute path inside the sandbox.",
+            "title": "Path",
+            "type": "string"
+          },
+          "recursive": {
+            "default": false,
+            "description": "For action='delete': remove directories recursively.",
+            "title": "Recursive",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "action",
+          "path"
+        ],
+        "title": "DaytonaFileToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Execute a block of Python code inside a Daytona sandbox and return the exit code, captured stdout, and any produced artifacts. Use this for data processing, quick scripts, or analysis that should run in an isolated environment.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Daytona sandbox service",
+          "name": "DAYTONA_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Daytona API base URL (optional)",
+          "name": "DAYTONA_API_URL",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Daytona target region (optional)",
+          "name": "DAYTONA_TARGET",
+          "required": false
+        }
+      ],
+      "humanized_name": "Daytona Sandbox Python",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Run Python source inside a Daytona sandbox.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daytona API key. Falls back to DAYTONA_API_KEY env var.",
+            "required": false,
+            "title": "Api Key"
+          },
+          "api_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daytona API URL override. Falls back to DAYTONA_API_URL env var.",
+            "required": false,
+            "title": "Api Url"
+          },
+          "create_params": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional kwargs forwarded to CreateSandboxFromSnapshotParams when creating a sandbox (e.g. language, snapshot, env_vars, labels).",
+            "title": "Create Params"
+          },
+          "persistent": {
+            "default": false,
+            "description": "If True, reuse one sandbox across all calls to this tool instance and delete it at process exit. Default False creates and deletes a fresh sandbox per call.",
+            "title": "Persistent",
+            "type": "boolean"
+          },
+          "sandbox_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attach to an existing sandbox by id or name instead of creating a new one. The tool will never delete a sandbox it did not create.",
+            "title": "Sandbox Id"
+          },
+          "sandbox_timeout": {
+            "default": 60.0,
+            "description": "Timeout in seconds for sandbox create/delete operations.",
+            "title": "Sandbox Timeout",
+            "type": "number"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daytona target region. Falls back to DAYTONA_TARGET env var.",
+            "required": false,
+            "title": "Target"
+          }
+        },
+        "required": [],
+        "title": "DaytonaPythonTool",
+        "type": "object"
+      },
+      "name": "DaytonaPythonTool",
+      "package_dependencies": [
+        "daytona"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "argv": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional argv passed to the script (forwarded as params.argv).",
+            "title": "Argv"
+          },
+          "code": {
+            "description": "Python source to execute inside the sandbox.",
+            "title": "Code",
+            "type": "string"
+          },
+          "env": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional environment variables for the run (forwarded as params.env).",
+            "title": "Env"
+          },
+          "timeout": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum seconds to wait for the code to finish.",
+            "title": "Timeout"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "DaytonaPythonToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that can be used to recursively list a directory's content.",
       "env_vars": [],
       "humanized_name": "List files in directory",
@@ -5342,6 +7660,7 @@
             "title": "Directory"
           }
         },
+        "required": [],
         "title": "DirectoryReadTool",
         "type": "object"
       },
@@ -6387,6 +8706,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "DirectorySearchTool",
         "type": "object"
       },
@@ -6415,7 +8735,669 @@
       }
     },
     {
-      "description": "Search the internet using Exa",
+      "description": "Execute a shell command inside an E2B sandbox and return the exit code, stdout, and stderr. Use this to run builds, package installs, git operations, or any one-off shell command.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for E2B sandbox service",
+          "name": "E2B_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "E2B API domain (optional)",
+          "name": "E2B_DOMAIN",
+          "required": false
+        }
+      ],
+      "humanized_name": "E2B Sandbox Exec",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Run a shell command inside an E2B sandbox.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "format": "password",
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "E2B API key. Falls back to E2B_API_KEY env var.",
+            "required": false,
+            "title": "Api Key"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "E2B API domain override. Falls back to E2B_DOMAIN env var.",
+            "required": false,
+            "title": "Domain"
+          },
+          "envs": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Environment variables to set inside the sandbox at create time.",
+            "title": "Envs"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Metadata key-value pairs to attach to the sandbox at create time.",
+            "title": "Metadata"
+          },
+          "persistent": {
+            "default": false,
+            "description": "If True, reuse one sandbox across all calls to this tool instance and kill it at process exit. Default False creates and kills a fresh sandbox per call.",
+            "title": "Persistent",
+            "type": "boolean"
+          },
+          "sandbox_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attach to an existing sandbox by id instead of creating a new one. The tool will never kill a sandbox it did not create.",
+            "title": "Sandbox Id"
+          },
+          "sandbox_timeout": {
+            "default": 300,
+            "description": "Idle timeout in seconds after which E2B auto-kills the sandbox. Applied at create time and when attaching via sandbox_id.",
+            "title": "Sandbox Timeout",
+            "type": "integer"
+          },
+          "template": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional template/snapshot name or id to create the sandbox from. Defaults to E2B's base template when omitted.",
+            "title": "Template"
+          }
+        },
+        "required": [],
+        "title": "E2BExecTool",
+        "type": "object"
+      },
+      "name": "E2BExecTool",
+      "package_dependencies": [
+        "e2b"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "command": {
+            "description": "Shell command to execute in the sandbox.",
+            "title": "Command",
+            "type": "string"
+          },
+          "cwd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Working directory to run the command in. Defaults to the sandbox home dir.",
+            "title": "Cwd"
+          },
+          "envs": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional environment variables to set for this command.",
+            "title": "Envs"
+          },
+          "timeout": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum seconds to wait for the command to finish.",
+            "title": "Timeout"
+          }
+        },
+        "required": [
+          "command"
+        ],
+        "title": "E2BExecToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Perform filesystem operations inside an E2B sandbox: read a file, write content to a path, append content to an existing file, list a directory, delete a path, make a directory, fetch file metadata, or check whether a path exists. For files larger than a few KB, create the file with action='write' and empty content, then send the body via multiple 'append' calls of ~4KB each to stay within tool-call payload limits.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for E2B sandbox service",
+          "name": "E2B_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "E2B API domain (optional)",
+          "name": "E2B_DOMAIN",
+          "required": false
+        }
+      ],
+      "humanized_name": "E2B Sandbox Files",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Read, write, and manage files inside an E2B sandbox.\n\nNotes:\n  - Most useful with `persistent=True` or an explicit `sandbox_id`. With\n    the default ephemeral mode, files disappear when this tool call\n    finishes.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "format": "password",
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "E2B API key. Falls back to E2B_API_KEY env var.",
+            "required": false,
+            "title": "Api Key"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "E2B API domain override. Falls back to E2B_DOMAIN env var.",
+            "required": false,
+            "title": "Domain"
+          },
+          "envs": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Environment variables to set inside the sandbox at create time.",
+            "title": "Envs"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Metadata key-value pairs to attach to the sandbox at create time.",
+            "title": "Metadata"
+          },
+          "persistent": {
+            "default": false,
+            "description": "If True, reuse one sandbox across all calls to this tool instance and kill it at process exit. Default False creates and kills a fresh sandbox per call.",
+            "title": "Persistent",
+            "type": "boolean"
+          },
+          "sandbox_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attach to an existing sandbox by id instead of creating a new one. The tool will never kill a sandbox it did not create.",
+            "title": "Sandbox Id"
+          },
+          "sandbox_timeout": {
+            "default": 300,
+            "description": "Idle timeout in seconds after which E2B auto-kills the sandbox. Applied at create time and when attaching via sandbox_id.",
+            "title": "Sandbox Timeout",
+            "type": "integer"
+          },
+          "template": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional template/snapshot name or id to create the sandbox from. Defaults to E2B's base template when omitted.",
+            "title": "Template"
+          }
+        },
+        "required": [],
+        "title": "E2BFileTool",
+        "type": "object"
+      },
+      "name": "E2BFileTool",
+      "package_dependencies": [
+        "e2b"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "action": {
+            "description": "The filesystem action to perform: 'read' (returns file contents), 'write' (create or replace a file with content), 'append' (append content to an existing file \u2014 use this for writing large files in chunks to avoid hitting tool-call size limits), 'list' (lists a directory), 'delete' (removes a file/dir), 'mkdir' (creates a directory), 'info' (returns file metadata), 'exists' (returns a boolean for whether the path exists).",
+            "enum": [
+              "read",
+              "write",
+              "append",
+              "list",
+              "delete",
+              "mkdir",
+              "info",
+              "exists"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "binary": {
+            "default": false,
+            "description": "For 'write'/'append': treat content as base64 and upload raw bytes. For 'read': return contents as base64 instead of decoded utf-8.",
+            "title": "Binary",
+            "type": "boolean"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Content to write or append. If omitted for 'write', an empty file is created. For files larger than a few KB, prefer one 'write' with empty content followed by multiple 'append' calls of ~4KB each to stay within tool-call payload limits.",
+            "title": "Content"
+          },
+          "depth": {
+            "default": 1,
+            "description": "For action='list': how many levels deep to recurse (default 1).",
+            "title": "Depth",
+            "type": "integer"
+          },
+          "path": {
+            "description": "Absolute path inside the sandbox.",
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "path"
+        ],
+        "title": "E2BFileToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Execute a block of Python code inside an E2B code interpreter sandbox and return captured stdout, stderr, the final expression value, and any rich results (charts, dataframes). Use this for data processing, quick scripts, or analysis that should run in an isolated environment.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for E2B sandbox service",
+          "name": "E2B_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "E2B API domain (optional)",
+          "name": "E2B_DOMAIN",
+          "required": false
+        }
+      ],
+      "humanized_name": "E2B Sandbox Python",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Run Python code inside an E2B code interpreter sandbox.\n\nUses `e2b_code_interpreter`, which runs cells in a persistent Jupyter-style\nkernel so state (imports, variables) carries across calls when\n`persistent=True`.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "format": "password",
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "E2B API key. Falls back to E2B_API_KEY env var.",
+            "required": false,
+            "title": "Api Key"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "E2B API domain override. Falls back to E2B_DOMAIN env var.",
+            "required": false,
+            "title": "Domain"
+          },
+          "envs": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Environment variables to set inside the sandbox at create time.",
+            "title": "Envs"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Metadata key-value pairs to attach to the sandbox at create time.",
+            "title": "Metadata"
+          },
+          "persistent": {
+            "default": false,
+            "description": "If True, reuse one sandbox across all calls to this tool instance and kill it at process exit. Default False creates and kills a fresh sandbox per call.",
+            "title": "Persistent",
+            "type": "boolean"
+          },
+          "sandbox_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attach to an existing sandbox by id instead of creating a new one. The tool will never kill a sandbox it did not create.",
+            "title": "Sandbox Id"
+          },
+          "sandbox_timeout": {
+            "default": 300,
+            "description": "Idle timeout in seconds after which E2B auto-kills the sandbox. Applied at create time and when attaching via sandbox_id.",
+            "title": "Sandbox Timeout",
+            "type": "integer"
+          },
+          "template": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional template/snapshot name or id to create the sandbox from. Defaults to E2B's base template when omitted.",
+            "title": "Template"
+          }
+        },
+        "required": [],
+        "title": "E2BPythonTool",
+        "type": "object"
+      },
+      "name": "E2BPythonTool",
+      "package_dependencies": [
+        "e2b_code_interpreter"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "code": {
+            "description": "Python source to execute inside the sandbox.",
+            "title": "Code",
+            "type": "string"
+          },
+          "envs": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional environment variables for the run.",
+            "title": "Envs"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Override the execution language (e.g. 'python', 'r', 'javascript'). Defaults to Python when omitted.",
+            "title": "Language"
+          },
+          "timeout": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum seconds to wait for the code to finish.",
+            "title": "Timeout"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "E2BPythonToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Search the web with Exa, the fastest and most accurate web search API.",
       "env_vars": [
         {
           "default": null,
@@ -6430,7 +9412,226 @@
           "required": false
         }
       ],
-      "humanized_name": "EXASearchTool",
+      "humanized_name": "ExaSearchTool",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Deprecated alias for :class:`ExaSearchTool`. Kept for backwards compatibility.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "API key for Exa services",
+            "required": false,
+            "title": "Api Key"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "API server url",
+            "required": false,
+            "title": "Base Url"
+          },
+          "client": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Client"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": false,
+            "title": "Content"
+          },
+          "highlights": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": true,
+            "title": "Highlights"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": false,
+            "title": "Summary"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "auto",
+            "title": "Type"
+          }
+        },
+        "required": [],
+        "title": "EXASearchTool",
+        "type": "object"
+      },
+      "name": "EXASearchTool",
+      "package_dependencies": [
+        "exa_py"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "end_published_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "End date for the search",
+            "title": "End Published Date"
+          },
+          "include_domains": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "List of domains to include in the search",
+            "title": "Include Domains"
+          },
+          "search_query": {
+            "description": "Mandatory search query you want to use to search the internet",
+            "title": "Search Query",
+            "type": "string"
+          },
+          "start_published_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Start date for the search",
+            "title": "Start Published Date"
+          }
+        },
+        "required": [
+          "search_query"
+        ],
+        "title": "ExaBaseToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Search the web with Exa, the fastest and most accurate web search API.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Exa services",
+          "name": "EXA_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "API url for the Exa services",
+          "name": "EXA_BASE_URL",
+          "required": false
+        }
+      ],
+      "humanized_name": "ExaSearchTool",
       "init_params_schema": {
         "$defs": {
           "EnvVar": {
@@ -6512,16 +9713,40 @@
                 "type": "boolean"
               },
               {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
                 "type": "null"
               }
             ],
             "default": false,
             "title": "Content"
           },
+          "highlights": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": true,
+            "title": "Highlights"
+          },
           "summary": {
             "anyOf": [
               {
                 "type": "boolean"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
               },
               {
                 "type": "null"
@@ -6543,10 +9768,11 @@
             "title": "Type"
           }
         },
-        "title": "EXASearchTool",
+        "required": [],
+        "title": "ExaSearchTool",
         "type": "object"
       },
-      "name": "EXASearchTool",
+      "name": "ExaSearchTool",
       "package_dependencies": [
         "exa_py"
       ],
@@ -6603,7 +9829,7 @@
         "required": [
           "search_query"
         ],
-        "title": "EXABaseToolSchema",
+        "title": "ExaBaseToolSchema",
         "type": "object"
       }
     },
@@ -6650,6 +9876,7 @@
           }
         },
         "properties": {},
+        "required": [],
         "title": "FileCompressorTool",
         "type": "object"
       },
@@ -6753,6 +9980,7 @@
             "title": "File Path"
           }
         },
+        "required": [],
         "title": "FileReadTool",
         "type": "object"
       },
@@ -6843,6 +10071,7 @@
           }
         },
         "properties": {},
+        "required": [],
         "title": "FileWriterTool",
         "type": "object"
       },
@@ -6967,6 +10196,7 @@
             "title": "Config"
           }
         },
+        "required": [],
         "title": "FirecrawlCrawlWebsiteTool",
         "type": "object"
       },
@@ -7058,6 +10288,7 @@
             "type": "object"
           }
         },
+        "required": [],
         "title": "FirecrawlScrapeWebsiteTool",
         "type": "object"
       },
@@ -7156,6 +10387,7 @@
             "title": "Config"
           }
         },
+        "required": [],
         "title": "FirecrawlSearchTool",
         "type": "object"
       },
@@ -7252,6 +10484,7 @@
             "title": "Personal Access Token"
           }
         },
+        "required": [],
         "title": "GenerateCrewaiAutomationTool",
         "type": "object"
       },
@@ -8434,6 +11667,7 @@
             "title": "Hyperbrowser"
           }
         },
+        "required": [],
         "title": "HyperbrowserLoadTool",
         "type": "object"
       },
@@ -9587,6 +12821,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "JSONSearchTool",
         "type": "object"
       },
@@ -9670,7 +12905,9 @@
             "title": "Api Key"
           },
           "headers": {
-            "additionalProperties": true,
+            "additionalProperties": {
+              "type": "string"
+            },
             "title": "Headers",
             "type": "object"
           },
@@ -9687,6 +12924,7 @@
             "title": "Website Url"
           }
         },
+        "required": [],
         "title": "JinaScrapeWebsiteTool",
         "type": "object"
       },
@@ -9758,6 +12996,7 @@
           }
         },
         "properties": {},
+        "required": [],
         "title": "LinkupSearchTool",
         "type": "object"
       },
@@ -9820,8 +13059,6 @@
           }
         },
         "required": [
-          "name",
-          "description",
           "llama_index_tool"
         ],
         "title": "LlamaIndexTool",
@@ -10859,6 +14096,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "MDXSearchTool",
         "type": "object"
       },
@@ -10973,8 +14211,6 @@
           }
         },
         "required": [
-          "name",
-          "description",
           "tool_pack_id",
           "registered_user_id",
           "tool_name"
@@ -11280,6 +14516,7 @@
             "title": "Session Id"
           }
         },
+        "required": [],
         "title": "MultiOnTool",
         "type": "object"
       },
@@ -12347,7 +15584,7 @@
       }
     },
     {
-      "description": "Converts natural language to SQL queries and executes them.",
+      "description": "Converts natural language to SQL queries and executes them against a database. Read-only by default \u2014 only SELECT/SHOW/DESCRIBE/EXPLAIN queries (and read-only CTEs) are allowed unless configured with allow_dml=True.",
       "env_vars": [],
       "humanized_name": "NL2SQLTool",
       "init_params_schema": {
@@ -12388,9 +15625,29 @@
             "type": "object"
           }
         },
+        "description": "Tool that converts natural language to SQL and executes it against a database.\n\nBy default the tool operates in **read-only mode**: only SELECT, SHOW,\nDESCRIBE, EXPLAIN, and read-only CTEs (WITH \u2026 SELECT) are permitted.  Write\noperations (INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, \u2026) are\nblocked unless ``allow_dml=True`` is set explicitly or the environment\nvariable ``CREWAI_NL2SQL_ALLOW_DML=true`` is present.\n\nWritable CTEs (``WITH d AS (DELETE \u2026) SELECT \u2026``) and\n``EXPLAIN ANALYZE <write-stmt>`` are treated as write operations and are\nblocked in read-only mode.\n\nThe ``_fetch_all_available_columns`` helper uses parameterised queries so\nthat table names coming from the database catalogue cannot be used as an\ninjection vector.",
         "properties": {
+          "allow_dml": {
+            "default": false,
+            "description": "When False (default) only read statements are permitted. Set to True to allow INSERT/UPDATE/DELETE/DROP and other write operations.",
+            "title": "Allow DML",
+            "type": "boolean"
+          },
           "columns": {
-            "additionalProperties": true,
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
             "title": "Columns",
             "type": "object"
           },
@@ -12400,7 +15657,10 @@
             "type": "string"
           },
           "tables": {
-            "items": {},
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
             "title": "Tables",
             "type": "array"
           }
@@ -12468,10 +15728,356 @@
             ],
             "title": "EnvVar",
             "type": "object"
+          },
+          "JsonResponseFormat": {
+            "description": "Response format requesting raw JSON output (e.g. ``{\"type\": \"json_object\"}``).",
+            "properties": {
+              "type": {
+                "const": "json_object",
+                "title": "Type",
+                "type": "string"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "title": "JsonResponseFormat",
+            "type": "object"
+          },
+          "LLM": {
+            "properties": {
+              "additional_params": {
+                "additionalProperties": true,
+                "title": "Additional Params",
+                "type": "object"
+              },
+              "api_base": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Api Base"
+              },
+              "api_key": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Api Key"
+              },
+              "api_version": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Api Version"
+              },
+              "base_url": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Base Url"
+              },
+              "callbacks": {
+                "anyOf": [
+                  {
+                    "items": {},
+                    "type": "array"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Callbacks"
+              },
+              "completion_cost": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Completion Cost"
+              },
+              "context_window_size": {
+                "default": 0,
+                "title": "Context Window Size",
+                "type": "integer"
+              },
+              "frequency_penalty": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Frequency Penalty"
+              },
+              "interceptor": {
+                "default": null,
+                "title": "Interceptor"
+              },
+              "is_anthropic": {
+                "default": false,
+                "title": "Is Anthropic",
+                "type": "boolean"
+              },
+              "is_litellm": {
+                "default": false,
+                "title": "Is Litellm",
+                "type": "boolean"
+              },
+              "llm_type": {
+                "const": "litellm",
+                "default": "litellm",
+                "title": "Llm Type",
+                "type": "string"
+              },
+              "logit_bias": {
+                "anyOf": [
+                  {
+                    "additionalProperties": {
+                      "type": "number"
+                    },
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Logit Bias"
+              },
+              "logprobs": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Logprobs"
+              },
+              "max_completion_tokens": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Max Completion Tokens"
+              },
+              "max_tokens": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Max Tokens"
+              },
+              "model": {
+                "title": "Model",
+                "type": "string"
+              },
+              "n": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "N"
+              },
+              "prefer_upload": {
+                "default": false,
+                "title": "Prefer Upload",
+                "type": "boolean"
+              },
+              "presence_penalty": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Presence Penalty"
+              },
+              "provider": {
+                "default": "openai",
+                "title": "Provider",
+                "type": "string"
+              },
+              "reasoning_effort": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "none",
+                      "low",
+                      "medium",
+                      "high"
+                    ],
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Reasoning Effort"
+              },
+              "response_format": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/JsonResponseFormat"
+                  },
+                  {},
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Response Format"
+              },
+              "seed": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Seed"
+              },
+              "stop": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Stop",
+                "type": "array"
+              },
+              "stream": {
+                "default": false,
+                "title": "Stream",
+                "type": "boolean"
+              },
+              "temperature": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Temperature"
+              },
+              "thinking": {
+                "default": null,
+                "title": "Thinking"
+              },
+              "timeout": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Timeout"
+              },
+              "top_logprobs": {
+                "anyOf": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Top Logprobs"
+              },
+              "top_p": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Top P"
+              }
+            },
+            "required": [
+              "model"
+            ],
+            "title": "LLM",
+            "type": "object"
           }
         },
         "description": "A tool for performing Optical Character Recognition on images.\n\nThis tool leverages LLMs to extract text from images. It can process\nboth local image files and images available via URLs.\n\nAttributes:\n    name (str): Name of the tool.\n    description (str): Description of the tool's functionality.\n    args_schema (Type[BaseModel]): Pydantic schema for input validation.\n\nPrivate Attributes:\n    _llm (Optional[LLM]): Language model instance for making API calls.",
-        "properties": {},
+        "properties": {
+          "llm": {
+            "$ref": "#/$defs/LLM"
+          }
+        },
+        "required": [],
         "title": "OCRTool",
         "type": "object"
       },
@@ -12665,9 +16271,13 @@
         "properties": {
           "config": {
             "$ref": "#/$defs/OxylabsAmazonProductScraperConfig"
+          },
+          "oxylabs_api": {
+            "title": "Oxylabs Api"
           }
         },
         "required": [
+          "oxylabs_api",
           "config"
         ],
         "title": "OxylabsAmazonProductScraperTool",
@@ -12890,9 +16500,13 @@
         "properties": {
           "config": {
             "$ref": "#/$defs/OxylabsAmazonSearchScraperConfig"
+          },
+          "oxylabs_api": {
+            "title": "Oxylabs Api"
           }
         },
         "required": [
+          "oxylabs_api",
           "config"
         ],
         "title": "OxylabsAmazonSearchScraperTool",
@@ -13128,9 +16742,13 @@
         "properties": {
           "config": {
             "$ref": "#/$defs/OxylabsGoogleSearchScraperConfig"
+          },
+          "oxylabs_api": {
+            "title": "Oxylabs Api"
           }
         },
         "required": [
+          "oxylabs_api",
           "config"
         ],
         "title": "OxylabsGoogleSearchScraperTool",
@@ -13314,9 +16932,13 @@
         "properties": {
           "config": {
             "$ref": "#/$defs/OxylabsUniversalScraperConfig"
+          },
+          "oxylabs_api": {
+            "title": "Oxylabs Api"
           }
         },
         "required": [
+          "oxylabs_api",
           "config"
         ],
         "title": "OxylabsUniversalScraperTool",
@@ -14377,6 +17999,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "PDFSearchTool",
         "type": "object"
       },
@@ -14460,6 +18083,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "ParallelSearchTool",
         "type": "object"
       },
@@ -14620,6 +18244,7 @@
             "type": "array"
           }
         },
+        "required": [],
         "title": "PatronusEvalTool",
         "type": "object"
       },
@@ -14628,6 +18253,112 @@
       "run_params_schema": {
         "properties": {},
         "title": "_ArgsSchemaPlaceholder",
+        "type": "object"
+      }
+    },
+    {
+      "description": "This tool is used to evaluate the model input and output using custom function evaluators.",
+      "env_vars": [],
+      "humanized_name": "Patronus Local Evaluator Tool",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "client": {
+            "default": null,
+            "title": "Client"
+          },
+          "evaluated_model_gold_answer": {
+            "title": "Evaluated Model Gold Answer",
+            "type": "string"
+          },
+          "evaluator": {
+            "title": "Evaluator",
+            "type": "string"
+          }
+        },
+        "required": [
+          "evaluator",
+          "evaluated_model_gold_answer"
+        ],
+        "title": "PatronusLocalEvaluatorTool",
+        "type": "object"
+      },
+      "name": "PatronusLocalEvaluatorTool",
+      "package_dependencies": [
+        "patronus"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "evaluated_model_gold_answer": {
+            "description": "The agent's gold answer only if available",
+            "title": "Evaluated Model Gold Answer",
+            "type": "string"
+          },
+          "evaluated_model_input": {
+            "description": "The agent's task description in simple text",
+            "title": "Evaluated Model Input",
+            "type": "string"
+          },
+          "evaluated_model_output": {
+            "description": "The agent's output of the task",
+            "title": "Evaluated Model Output",
+            "type": "string"
+          },
+          "evaluated_model_retrieved_context": {
+            "description": "The agent's context",
+            "title": "Evaluated Model Retrieved Context",
+            "type": "string"
+          },
+          "evaluator": {
+            "description": "The registered local evaluator",
+            "title": "Evaluator",
+            "type": "string"
+          }
+        },
+        "required": [
+          "evaluated_model_input",
+          "evaluated_model_output",
+          "evaluated_model_retrieved_context",
+          "evaluated_model_gold_answer",
+          "evaluator"
+        ],
+        "title": "FixedLocalEvaluatorToolSchema",
         "type": "object"
       }
     },
@@ -14691,6 +18422,7 @@
             "type": "array"
           }
         },
+        "required": [],
         "title": "PatronusPredefinedCriteriaEvalTool",
         "type": "object"
       },
@@ -15954,6 +19686,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "RagTool",
         "type": "object"
       },
@@ -16011,7 +19744,9 @@
           "cookies": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -16036,7 +19771,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -16058,6 +19795,7 @@
             "title": "Website Url"
           }
         },
+        "required": [],
         "title": "ScrapeElementFromWebsiteTool",
         "type": "object"
       },
@@ -16131,7 +19869,9 @@
           "cookies": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -16144,7 +19884,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -16166,6 +19908,7 @@
             "title": "Website Url"
           }
         },
+        "required": [],
         "title": "ScrapeWebsiteTool",
         "type": "object"
       },
@@ -16280,6 +20023,7 @@
             "title": "Website Url"
           }
         },
+        "required": [],
         "title": "ScrapegraphScrapeTool",
         "type": "object"
       },
@@ -16382,6 +20126,7 @@
             "title": "Scrapfly"
           }
         },
+        "required": [],
         "title": "ScrapflyScrapeWebsiteTool",
         "type": "object"
       },
@@ -16564,6 +20309,7 @@
             "title": "Website Url"
           }
         },
+        "required": [],
         "title": "SeleniumScrapingTool",
         "type": "object"
       },
@@ -16655,6 +20401,7 @@
             "title": "Client"
           }
         },
+        "required": [],
         "title": "SerpApiGoogleSearchTool",
         "type": "object"
       },
@@ -16752,6 +20499,7 @@
             "title": "Client"
           }
         },
+        "required": [],
         "title": "SerpApiGoogleShoppingTool",
         "type": "object"
       },
@@ -16895,6 +20643,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "SerperDevTool",
         "type": "object"
       },
@@ -16966,6 +20715,7 @@
           }
         },
         "properties": {},
+        "required": [],
         "title": "SerperScrapeWebsiteTool",
         "type": "object"
       },
@@ -18011,7 +21761,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -18053,6 +21805,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "SerplyJobSearchTool",
         "type": "object"
       },
@@ -18127,7 +21880,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -18166,6 +21921,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "SerplyNewsSearchTool",
         "type": "object"
       },
@@ -18240,7 +21996,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -18279,6 +22037,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "SerplyScholarSearchTool",
         "type": "object"
       },
@@ -18365,7 +22124,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -18428,6 +22189,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "SerplyWebSearchTool",
         "type": "object"
       },
@@ -19510,6 +23272,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "SerplyWebpageToMarkdownTool",
         "type": "object"
       },
@@ -19652,6 +23415,7 @@
             "title": "Connection Pool"
           }
         },
+        "required": [],
         "title": "SingleStoreSearchTool",
         "type": "object"
       },
@@ -20065,6 +23829,7 @@
             "title": "Website Url"
           }
         },
+        "required": [],
         "title": "SpiderTool",
         "type": "object"
       },
@@ -20194,6 +23959,10 @@
             "default": null,
             "title": "Model Api Key"
           },
+          "model_name": {
+            "default": "anthropic.claude-3-7-sonnet-20240607",
+            "title": "Model Name"
+          },
           "project_id": {
             "anyOf": [
               {
@@ -20239,6 +24008,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "StagehandTool",
         "type": "object"
       },
@@ -21329,6 +25099,7 @@
             "title": "Txt"
           }
         },
+        "required": [],
         "title": "TXTSearchTool",
         "type": "object"
       },
@@ -21418,6 +25189,26 @@
             "description": "The Tavily API key. If not provided, it will be loaded from the environment variable TAVILY_API_KEY.",
             "title": "Api Key"
           },
+          "async_client": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Async Client"
+          },
+          "client": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Client"
+          },
           "extract_depth": {
             "default": "basic",
             "description": "The depth of extraction. 'basic' for basic extraction, 'advanced' for advanced extraction.",
@@ -21457,6 +25248,7 @@
             "type": "integer"
           }
         },
+        "required": [],
         "title": "TavilyExtractorTool",
         "type": "object"
       },
@@ -21487,6 +25279,243 @@
           "urls"
         ],
         "title": "TavilyExtractorToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "A tool that retrieves the status and results of an existing Tavily research task by request ID. It returns Tavily responses as JSON.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Tavily research service",
+          "name": "TAVILY_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Tavily Get Research",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Tool that uses the Tavily Research status endpoint to retrieve results.",
+        "properties": {},
+        "required": [],
+        "title": "TavilyGetResearchTool",
+        "type": "object"
+      },
+      "name": "TavilyGetResearchTool",
+      "package_dependencies": [
+        "tavily-python"
+      ],
+      "run_params_schema": {
+        "description": "Input schema for TavilyGetResearchTool.",
+        "properties": {
+          "request_id": {
+            "description": "Existing Tavily research request ID to fetch status and results for.",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_id"
+        ],
+        "title": "TavilyGetResearchToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "A tool that creates Tavily research tasks and can stream research progress and results. It returns Tavily responses as JSON or SSE chunks.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Tavily research service",
+          "name": "TAVILY_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Tavily Research",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Tool that uses the Tavily Research API to create research tasks.",
+        "properties": {
+          "citation_format": {
+            "default": "numbered",
+            "description": "Default citation format for Tavily research results.",
+            "enum": [
+              "numbered",
+              "mla",
+              "apa",
+              "chicago"
+            ],
+            "title": "Citation Format",
+            "type": "string"
+          },
+          "model": {
+            "default": "auto",
+            "description": "Default model used for new Tavily research tasks.",
+            "enum": [
+              "mini",
+              "pro",
+              "auto"
+            ],
+            "title": "Model",
+            "type": "string"
+          },
+          "output_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Default JSON Schema used to structure research output.",
+            "title": "Output Schema"
+          },
+          "stream": {
+            "default": false,
+            "description": "Whether new Tavily research tasks should stream responses by default.",
+            "title": "Stream",
+            "type": "boolean"
+          }
+        },
+        "required": [],
+        "title": "TavilyResearchTool",
+        "type": "object"
+      },
+      "name": "TavilyResearchTool",
+      "package_dependencies": [
+        "tavily-python"
+      ],
+      "run_params_schema": {
+        "description": "Input schema for TavilyResearchTool.",
+        "properties": {
+          "citation_format": {
+            "default": "numbered",
+            "description": "Citation format for the research report.",
+            "enum": [
+              "numbered",
+              "mla",
+              "apa",
+              "chicago"
+            ],
+            "title": "Citation Format",
+            "type": "string"
+          },
+          "input": {
+            "description": "The research task or question to investigate.",
+            "title": "Input",
+            "type": "string"
+          },
+          "model": {
+            "default": "auto",
+            "description": "The model used by the Tavily research agent.",
+            "enum": [
+              "mini",
+              "pro",
+              "auto"
+            ],
+            "title": "Model",
+            "type": "string"
+          },
+          "output_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional JSON Schema that structures the research output.",
+            "title": "Output Schema"
+          },
+          "stream": {
+            "default": false,
+            "description": "Whether to stream research progress and results as SSE chunks.",
+            "title": "Stream",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "input"
+        ],
+        "title": "TavilyResearchToolSchema",
         "type": "object"
       }
     },
@@ -21552,6 +25581,26 @@
             ],
             "description": "The Tavily API key. If not provided, it will be loaded from the environment variable TAVILY_API_KEY.",
             "title": "Api Key"
+          },
+          "async_client": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Async Client"
+          },
+          "client": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Client"
           },
           "days": {
             "default": 7,
@@ -21695,6 +25744,7 @@
             "type": "string"
           }
         },
+        "required": [],
         "title": "TavilySearchTool",
         "type": "object"
       },
@@ -21769,6 +25819,7 @@
         },
         "description": "Tool for analyzing images using vision models.\n\nArgs:\n    llm: Optional LLM instance to use\n    model: Model identifier to use if no LLM is provided",
         "properties": {},
+        "required": [],
         "title": "VisionTool",
         "type": "object"
       },
@@ -21854,7 +25905,9 @@
           "headers": {
             "anyOf": [
               {
-                "additionalProperties": true,
+                "additionalProperties": {
+                  "type": "string"
+                },
                 "type": "object"
               },
               {
@@ -22954,6 +27007,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "WebsiteSearchTool",
         "type": "object"
       },
@@ -24005,6 +28059,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "XMLSearchTool",
         "type": "object"
       },
@@ -25056,6 +29111,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "YoutubeChannelSearchTool",
         "type": "object"
       },
@@ -26107,6 +30163,7 @@
             "type": "boolean"
           }
         },
+        "required": [],
         "title": "YoutubeVideoSearchTool",
         "type": "object"
       },

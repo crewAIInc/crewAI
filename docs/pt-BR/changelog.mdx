@@ -4,6 +4,1183 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="01 mai 2026">
+  ## v1.14.5a1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.5a1)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar parâmetro de início `restore_from_state_id`
+  - Adicionar destaques ao ExaSearchTool e renomear de EXASearchTool
+
+  ### Correções de Bugs
+  - Corrigir sites de pinos do crewai ausentes no fluxo de lançamento
+  - Garantir eventos de carregamento de habilidades para rastros
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.14.4
+
+  ## Contribuidores
+
+  @akaKuruma, @github-actions[bot], @greysonlalonde, @lorenzejay, @theishangoswami
+
+</Update>
+
+<Update label="01 mai 2026">
+  ## v1.14.4
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.4)
+
+  ## O que mudou
+
+  ### Recursos
+  - Adicionar suporte para chave de persistência personalizada em @persist
+  - Adicionar suporte à API de Respostas para o provedor Azure OpenAI
+  - Encaminhar credential_scopes para o cliente de Inferência da Azure AI
+  - Adicionar guia de configuração de identidade de carga de trabalho do Vertex AI
+  - Adicionar Tavily Research e obter Pesquisa
+  - Adicionar ferramentas MCP do You.com para pesquisa, pesquisa e extração de conteúdo
+
+  ### Correções de Bugs
+  - Corrigir falha quando a correspondência de regex JSON não é um JSON válido
+  - Corrigir para preservar tool_calls quando a resposta também contém texto
+  - Corrigir para encaminhar base_url e api_key para instructor.from_provider
+  - Corrigir para avisar e retornar vazio quando o servidor MCP nativo não retorna ferramentas
+  - Corrigir para usar a variável de mensagens validadas em manipuladores não-streaming
+  - Corrigir para proteger os ajudantes de descrição do chat da equipe contra falhas do LLM
+  - Corrigir para redefinir mensagens e iterações entre invocações
+  - Corrigir para encaminhar o arquivo de agentes treinados através de replay e teste
+  - Corrigir para honrar o arquivo de agentes treinados personalizados na inferência
+  - Corrigir para vincular agentes apenas de tarefa à equipe para arquivos de entrada multimodal
+  - Corrigir para serializar chamadas de guardrail como nulas para checkpointing JSON
+  - Corrigir renomeação de force_final_answer para evitar roteador autorreferencial
+  - Corrigir aumento de litellm para correção de SSTI; ignorar CVE pip não corrigível
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.14.4a1
+  - Adicionar página de Ferramentas do Sandbox E2B
+  - Adicionar documentação de ferramentas do sandbox Daytona
+
+  ## Contributors
+
+  @EdwardIrby, @dependabot[bot], @factory-droid-oss, @factory-droid[bot], @greysonlalonde, @kunalk16, @lorenzejay, @lucasgomide, @manisrinivasan2k1, @mattatcha, @vinibrsl
+
+</Update>
+
+<Update label="29 abr 2026">
+  ## v1.14.4a1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.4a1)
+
+  ## O que Mudou
+
+  ### Correções de Bugs
+  - Corrigir os ajudantes de descrição do chat da equipe contra falhas do LLM.
+  - Redefinir mensagens e iterações entre invocações no executor.
+  - Encaminhar arquivo de agentes treinados através de replay e teste no CLI.
+  - Respeitar arquivo de agentes treinados personalizados na inferência no agente.
+  - Vincular agentes apenas de tarefa à equipe para garantir que os input_files multimodais cheguem ao LLM.
+  - Serializar chamadas de guardrail como nulas para checkpointing JSON.
+  - Renomear `force_final_answer` no agent_executor para evitar roteador autorreferencial.
+  - Atualizar `litellm` para correção de SSTI e ignorar CVE pip não corrigível.
+
+  ### Documentação
+  - Adicionar página de Ferramentas de Sandbox E2B.
+  - Adicionar documentação de ferramentas de sandbox Daytona.
+  - Adicionar guia de configuração de identidade de carga de trabalho do Vertex AI.
+  - Adicionar ferramentas MCP do You.com para pesquisa, investigação e extração de conteúdo.
+  - Atualizar changelog e versão para v1.14.3.
+
+  ## Contribuidores
+
+  @EdwardIrby, @dependabot[bot], @factory-droid-oss, @factory-droid[bot], @greysonlalonde, @lorenzejay, @manisrinivasan2k1, @mattatcha
+
+</Update>
+
+<Update label="25 abr 2026">
+  ## v1.14.3
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.3)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar eventos de ciclo de vida para operações de checkpoint
+  - Adicionar suporte para e2b
+  - Reverter para DefaultAzureCredential quando nenhuma chave de API for fornecida na integração com o Azure
+  - Adicionar suporte ao Bedrock V4
+  - Adicionar ferramentas de sandbox Daytona para funcionalidade aprimorada
+  - Adicionar suporte a checkpoint e fork para agentes autônomos
+
+  ### Correções de Bugs
+  - Corrigir execution_id para ser separado de state.id
+  - Resolver a reprodução de eventos de método gravados na retomada do checkpoint
+  - Corrigir a serialização de referências de classe initial_state como esquema JSON
+  - Preservar habilidades de agente somente de metadados
+  - Propagar nomes implícitos @CrewBase para eventos da equipe
+  - Mesclar metadados de execução na inicialização de lote duplicado
+  - Corrigir a serialização de campos de referência de classe Task para checkpointing
+  - Lidar com o resultado BaseModel no loop de retry do guardrail
+  - Preservar thought_signature em chamadas de ferramentas de streaming Gemini
+  - Emitir task_started na retomada do fork e redesenhar TUI de checkpoint
+  - Usar datas futuras em testes de poda de checkpoint para evitar falhas dependentes do tempo
+  - Corrigir a ordem de dry-run e lidar com branch obsoleta verificada na liberação do devtools
+  - Atualizar lxml para >=6.1.0 para patch de segurança
+  - Aumentar python-dotenv para >=1.2.2 para patch de segurança
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.14.3
+  - Adicionar página 'Construir com IA' e atualizar navegação para todos os idiomas
+  - Remover FAQ de preços da página construir-com-ia em todos os locais
+
+  ### Desempenho
+  - Otimizar MCP SDK e tipos de eventos para reduzir o tempo de inicialização a frio em ~29%
+
+  ### Refatoração
+  - Refatorar auxiliares de checkpoint para eliminar duplicação e apertar dicas de tipo de estado
+
+  ## Contribuidores
+
+  @MatthiasHowellYopp, @akaKuruma, @alex-clawd, @github-actions[bot], @github-advanced-security[bot], @greysonlalonde, @iris-clawd, @lorenzejay, @mattatcha, @renatonitta
+
+</Update>
+
+<Update label="23 abr 2026">
+  ## v1.14.3a3
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.3a3)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar suporte para e2b
+  - Implementar fallback para DefaultAzureCredential quando nenhuma chave de API for fornecida
+
+  ### Correções de Bugs
+  - Atualizar lxml para >=6.1.0 para resolver problema de segurança GHSA-vfmq-68hx-4jfw
+
+  ### Documentação
+  - Remover FAQ de preços da página build-with-ai em todos os locais
+
+  ### Desempenho
+  - Melhorar o tempo de inicialização a frio em ~29% através do carregamento preguiçoso do SDK MCP e tipos de eventos
+
+  ## Contributors
+
+  @alex-clawd, @github-advanced-security[bot], @greysonlalonde, @iris-clawd, @lorenzejay, @mattatcha
+
+</Update>
+
+<Update label="22 abr 2026">
+  ## v1.14.3a2
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.3a2)
+
+  ## O que mudou
+
+  ### Recursos
+  - Adicionar suporte para bedrock V4
+  - Adicionar ferramentas de sandbox Daytona para funcionalidade aprimorada
+  - Adicionar página 'Construir com IA' — documentação nativa de IA para agentes de codificação
+  - Adicionar Construir com IA à navegação Começar e arquivos de página para todos os idiomas (en, ko, pt-BR, ar)
+
+  ### Correções de Bugs
+  - Corrigir a propagação de nomes implícitos @CrewBase para eventos da equipe
+  - Resolver problema com inicialização de lote duplicada na mesclagem de metadados de execução
+  - Corrigir a serialização de campos de referência de classe Task para checkpointing
+  - Lidar com o resultado BaseModel no loop de repetição de guardrail
+  - Atualizar python-dotenv para a versão >=1.2.2 para conformidade de segurança
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.14.3a1
+  - Atualizar descrições e aplicar traduções reais
+
+  ## Contributors
+
+  @MatthiasHowellYopp, @github-actions[bot], @greysonlalonde, @iris-clawd, @lorenzejay, @renatonitta
+
+</Update>
+
+<Update label="21 abr 2026">
+  ## v1.14.3a1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.3a1)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar suporte a checkpoint e fork para agentes autônomos
+
+  ### Correções de Bugs
+  - Preservar thought_signature nas chamadas da ferramenta de streaming Gemini
+  - Emitir task_started na retomada do fork e redesenhar a TUI de checkpoint
+  - Corrigir a ordem do dry-run e lidar com branch desatualizada em release do devtools
+  - Usar datas futuras nos testes de poda de checkpoint para evitar falhas dependentes do tempo (#5543)
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.14.2
+
+  ## Contribuidores
+
+  @alex-clawd, @greysonlalonde
+
+</Update>
+
+<Update label="17 abr 2026">
+  ## v1.14.2
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.2)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar comandos de retomar, diferenciar e podar checkpoints com melhor descobribilidade.
+  - Adicionar o parâmetro `from_checkpoint` ao `Agent.kickoff` e métodos relacionados.
+  - Adicionar comandos de gerenciamento de templates para templates de projeto.
+  - Adicionar dicas de retomar na liberação de devtools em caso de falha.
+  - Adicionar CLI de validação de implantação e melhorar a ergonomia da inicialização do LLM.
+  - Adicionar bifurcação de checkpoints com rastreamento de linhagem.
+  - Enriquecer o rastreamento de tokens do LLM com tokens de raciocínio e tokens de criação de cache.
+
+  ### Correções de Bugs
+  - Corrigir prompt em conflitos de branch obsoletos na liberação de devtools.
+  - Corrigir vulnerabilidades em `authlib`, `langchain-text-splitters` e `pypdf`.
+  - Restringir manipuladores de streaming para evitar contaminação de chunks entre execuções.
+  - Despachar checkpoints de Flow através das APIs de Flow na TUI.
+  - Usar glob recursivo para descoberta de checkpoints JSON.
+  - Lidar com esquemas JSON cíclicos na resolução de ferramentas MCP.
+  - Preservar os argumentos de chamada da ferramenta Bedrock removendo o padrão truthy.
+  - Emitir evento flow_finished após retomar HITL.
+  - Corrigir várias vulnerabilidades atualizando dependências, incluindo `requests`, `cryptography` e `pytest`.
+  - Corrigir para parar de encaminhar o modo estrito para a API Bedrock Converse.
+
+  ### Documentação
+  - Documentar parâmetros ausentes e adicionar seção de Checkpointing.
+  - Atualizar changelog e versão para v1.14.2 e candidatos a liberação anteriores.
+  - Adicionar documentação da funcionalidade A2A empresarial e atualizar a documentação A2A OSS.
+
+  ## Contribuidores
+
+  @Yanhu007, @alex-clawd, @github-actions[bot], @greysonlalonde, @iris-clawd, @lorenzejay, @lucasgomide
+
+</Update>
+
+<Update label="16 abr 2026">
+  ## v1.14.2rc1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.2rc1)
+
+  ## O que Mudou
+
+  ### Correções de Bugs
+  - Corrigir o manuseio de esquemas JSON cíclicos na resolução da ferramenta MCP
+  - Corrigir vulnerabilidade atualizando python-multipart para 0.0.26
+  - Corrigir vulnerabilidade atualizando pypdf para 6.10.1
+
+  ### Documentação
+  - Atualizar o changelog e a versão para v1.14.2a5
+
+  ## Contribuidores
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="15 abr 2026">
+  ## v1.14.2a5
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.2a5)
+
+  ## O que Mudou
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.14.2a4
+
+  ## Contribuidores
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="15 abr 2026">
+  ## v1.14.2a4
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.2a4)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar dicas de retomar ao release do devtools em caso de falha
+
+  ### Correções de Bugs
+  - Corrigir o encaminhamento do modo estrito para a API Bedrock Converse
+  - Corrigir a versão do pytest para 9.0.3 devido à vulnerabilidade de segurança GHSA-6w46-j5rx-g56g
+  - Aumentar o limite inferior do OpenAI para >=2.0.0
+
+  ### Documentação
+  - Atualizar o changelog e a versão para v1.14.2a3
+
+  ## Contribuidores
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="13 abr 2026">
+  ## v1.14.2a3
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.2a3)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar CLI de validação de deploy
+  - Melhorar a ergonomia de inicialização do LLM
+
+  ### Correções de Bugs
+  - Substituir pypdf e uv por versões corrigidas para CVE-2026-40260 e GHSA-pjjw-68hj-v9mw
+  - Atualizar requests para >=2.33.0 devido à vulnerabilidade de arquivo temporário CVE
+  - Preservar os argumentos de chamada da ferramenta Bedrock removendo o padrão truthy
+  - Sanitizar esquemas de ferramentas para modo estrito
+  - Remover flakiness do teste de serialização de embedding MemoryRecord
+
+  ### Documentação
+  - Limpar a linguagem do A2A empresarial
+  - Adicionar documentação de recursos do A2A empresarial
+  - Atualizar documentação do A2A OSS
+  - Atualizar changelog e versão para v1.14.2a2
+
+  ## Contribuidores
+
+  @Yanhu007, @greysonlalonde
+
+</Update>
+
+<Update label="10 abr 2026">
+  ## v1.14.2a2
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.2a2)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar TUI de ponto de verificação com visualização em árvore, suporte a bifurcações e entradas/saídas editáveis
+  - Enriquecer o rastreamento de tokens LLM com tokens de raciocínio e tokens de criação de cache
+  - Adicionar parâmetro `from_checkpoint` aos métodos de inicialização
+  - Incorporar `crewai_version` em pontos de verificação com o framework de migração
+  - Adicionar bifurcação de ponto de verificação com rastreamento de linhagem
+
+  ### Correções de Bugs
+  - Corrigir o encaminhamento em modo estrito para os provedores Anthropic e Bedrock
+  - Fortalecer NL2SQLTool com padrão somente leitura, validação de consultas e consultas parametrizadas
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.14.2a1
+
+  ## Contributors
+
+  @alex-clawd, @github-actions[bot], @greysonlalonde, @lucasgomide
+
+</Update>
+
+<Update label="09 abr 2026">
+  ## v1.14.2a1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.2a1)
+
+  ## O que Mudou
+
+  ### Correções de Bugs
+  - Corrigir a emissão do evento flow_finished após a retomada do HITL
+  - Corrigir a versão da criptografia para 46.0.7 para resolver o CVE-2026-39892
+
+  ### Refatoração
+  - Refatorar para usar o singleton I18N_DEFAULT compartilhado
+
+  ### Documentação
+  - Atualizar o changelog e a versão para v1.14.1
+
+  ## Contribuidores
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="09 abr 2026">
+  ## v1.14.1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.1)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar navegador TUI de ponto de verificação assíncrono
+  - Adicionar aclose()/close() e gerenciador de contexto assíncrono para saídas de streaming
+
+  ### Correções de Bugs
+  - Corrigir regex para aumentos de versão do template pyproject.toml
+  - Sanitizar nomes de ferramentas nos filtros do decorador de hook
+  - Corrigir registro de manipuladores de ponto de verificação quando CheckpointConfig é criado
+  - Atualizar transformers para 5.5.0 para resolver CVE-2026-1839
+  - Remover wrapper stdout/stderr de FilteredStream
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.14.1rc1
+
+  ### Refatoração
+  - Substituir lista de negação codificada por exclusão dinâmica de campo BaseTool na geração de especificações
+  - Substituir regex por tomlkit na CLI do devtools
+  - Usar singleton PRINTER compartilhado
+  - Fazer BaseProvider um BaseModel com discriminador provider_type
+
+  ## Contribuidores
+
+  @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay
+
+</Update>
+
+<Update label="09 abr 2026">
+  ## v1.14.1rc1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.1rc1)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar navegador TUI de ponto de verificação assíncrono
+  - Adicionar aclose()/close() e gerenciador de contexto assíncrono para saídas de streaming
+
+  ### Correções de Bugs
+  - Corrigir aumentos de versão do template pyproject.toml usando regex
+  - Sanitizar nomes de ferramentas nos filtros do decorador de hook
+  - Atualizar transformers para 5.5.0 para resolver CVE-2026-1839
+  - Registrar manipuladores de ponto de verificação quando CheckpointConfig é criado
+
+  ### Refatoração
+  - Substituir lista de negação codificada por exclusão dinâmica de campo BaseTool na geração de especificações
+  - Substituir regex por tomlkit na CLI do devtools
+  - Usar singleton PRINTER compartilhado
+  - Tornar BaseProvider um BaseModel com discriminador de tipo de provedor
+  - Remover wrapper stdout/stderr de FilteredStream
+  - Remover flow/config.py não utilizado
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.14.0
+
+  ## Contribuidores
+
+  @greysonlalonde, @iris-clawd, @joaomdmoura
+
+</Update>
+
+<Update label="07 abr 2026">
+  ## v1.14.0
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar comandos CLI de lista/informações de checkpoint
+  - Adicionar guardrail_type e nome para distinguir rastros
+  - Adicionar SqliteProvider para armazenamento de checkpoints
+  - Adicionar CheckpointConfig para checkpointing automático
+  - Implementar checkpointing de estado em tempo de execução, sistema de eventos e refatoração do executor
+
+  ### Correções de Bugs
+  - Adicionar proteções contra SSRF e travessia de caminho
+  - Adicionar validação de caminho e URL às ferramentas RAG
+  - Excluir vetores de incorporação da serialização de memória para economizar tokens
+  - Garantir que o diretório de saída exista antes de escrever no modelo de fluxo
+  - Atualizar litellm para >=1.83.0 para resolver CVE-2026-35030
+  - Remover campo de indexação SEO que causava renderização de página em árabe
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.14.0
+  - Atualizar guias de início rápido e instalação para maior clareza
+  - Adicionar seção de provedores de armazenamento, exportar JsonProvider
+  - Adicionar guia da aba de Treinamento AMP
+
+  ### Refatoração
+  - Limpar API de checkpoint
+  - Remover CodeInterpreterTool e descontinuar parâmetros de execução de código
+
+  ## Contribuidores
+
+  @alex-clawd, @github-actions[bot], @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay, @lucasgomide
+
+</Update>
+
+<Update label="07 abr 2026">
+  ## v1.14.0a4
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0a4)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar guardrail_type e nome para distinguir rastros
+  - Adicionar SqliteProvider para armazenamento de checkpoints
+  - Adicionar CheckpointConfig para checkpointing automático
+  - Implementar checkpointing de estado em tempo de execução, sistema de eventos e refatoração do executor
+
+  ### Correções de Bugs
+  - Excluir vetores de incorporação da serialização de memória para economizar tokens
+  - Atualizar litellm para >=1.83.0 para resolver CVE-2026-35030
+
+  ### Documentação
+  - Atualizar guias de início rápido e instalação para melhor clareza
+  - Adicionar seção de provedores de armazenamento e exportar JsonProvider
+
+  ### Desempenho
+  - Usar JSONB para a coluna de dados de checkpoint
+
+  ### Refatoração
+  - Remover CodeInterpreterTool e descontinuar parâmetros de execução de código
+
+  ## Contribuidores
+
+  @alex-clawd, @github-actions[bot], @greysonlalonde, @joaomdmoura, @lorenzejay, @lucasgomide
+
+</Update>
+
+<Update label="06 abr 2026">
+  ## v1.14.0a3
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0a3)
+
+  ## O que Mudou
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.14.0a2
+
+  ## Contribuidores
+
+  @joaomdmoura
+
+</Update>
+
+<Update label="06 abr 2026">
+  ## v1.14.0a2
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0a2)
+
+  ## Lançamento 1.14.0a2
+
+  ### Instruções:
+  - Traduza todos os cabeçalhos de seção e descrições de forma natural
+  - Mantenha a formatação markdown (##, ###, -, etc.) exatamente como está
+  - Mantenha todos os nomes próprios, identificadores de código, nomes de classes e termos técnicos inalterados
+    (por exemplo, "CrewAI", "LiteAgent", "ChromaDB", "MCP", "@username")
+  - Mantenha a seção ## Contribuidores e os nomes de usuários do GitHub inalterados
+  - Não adicione nem remova nenhum conteúdo, apenas traduza
+
+</Update>
+
+<Update label="02 abr 2026">
+  ## v1.13.0
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar RuntimeState RootModel para serialização de estado unificado
+  - Melhorar o listener de eventos com novos spans de telemetria para eventos de habilidade e memória
+  - Adicionar extensão A2UI com suporte a v0.8/v0.9, esquemas e documentação
+  - Emitir dados de uso de token no LLMCallCompletedEvent
+  - Atualizar automaticamente o repositório de testes de implantação durante o lançamento
+  - Melhorar a resiliência e a experiência do usuário na versão empresarial
+
+  ### Correções de Bugs
+  - Adicionar credenciais do repositório de ferramentas ao crewai install
+  - Adicionar credenciais do repositório de ferramentas ao uv build na publicação de ferramentas
+  - Passar metadados de impressão digital via configuração em vez de argumentos de ferramenta
+  - Lidar com modelos GPT-5.x que não suportam o parâmetro API `stop`
+  - Adicionar GPT-5 e a série o aos prefixos de visão multimodal
+  - Limpar cache uv para pacotes recém-publicados na versão empresarial
+  - Limitar lancedb abaixo de 0.30.1 para compatibilidade com Windows
+  - Corrigir níveis de permissão RBAC para corresponder às opções reais da interface do usuário
+  - Corrigir imprecisões nas capacidades do agente em todos os idiomas
+
+  ### Documentação
+  - Adicionar vídeo de demonstração de habilidades do agente de codificação às páginas de introdução
+  - Adicionar guia abrangente de configuração SSO
+  - Adicionar matriz de permissões RBAC abrangente e guia de implantação
+  - Atualizar changelog e versão para v1.13.0
+
+  ### Desempenho
+  - Reduzir a sobrecarga do framework com bus de eventos preguiçoso, pular rastreamento quando desativado
+
+  ### Refatoração
+  - Converter Flow para Pydantic BaseModel
+  - Converter classes LLM para Pydantic BaseModel
+  - Substituir InstanceOf[T] por anotações de tipo simples
+  - Remover diretório LLM de terceiros não utilizado
+
+  ## Contribuidores
+
+  @alex-clawd, @dependabot[bot], @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay, @lucasgomide, @thiagomoretto
+
+</Update>
+
+<Update label="02 abr 2026">
+  ## v1.13.0a7
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a7)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar a extensão A2UI com suporte a v0.8/v0.9, esquemas e documentação
+
+  ### Correções de Bugs
+  - Corrigir prefixos de visão multimodal adicionando GPT-5 e o-series
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.13.0a6
+
+  ## Contribuidores
+
+  @alex-clawd, @greysonlalonde, @joaomdmoura
+
+</Update>
+
+<Update label="01 abr 2026">
+  ## v1.13.0a6
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a6)
+
+  ## O que Mudou
+
+  ### Documentação
+  - Corrigir níveis de permissão RBAC para corresponder às opções reais da interface do usuário (#5210)
+  - Atualizar changelog e versão para v1.13.0a5 (#5200)
+
+  ### Desempenho
+  - Reduzir a sobrecarga do framework implementando um barramento de eventos preguiçoso e pulando o rastreamento quando desativado (#5187)
+
+  ## Contributors
+
+  @alex-clawd, @joaomdmoura, @lucasgomide
+
+</Update>
+
+<Update label="31 mar 2026">
+  ## v1.13.0a5
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a5)
+
+  ## O que Mudou
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.13.0a4
+
+  ## Contributors
+
+  @greysonlalonde, @joaomdmoura
+
+</Update>
+
+<Update label="01 abr 2026">
+  ## v1.13.0a4
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a4)
+
+  ## O que Mudou
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.13.0a3
+
+  ## Contribuidores
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="01 abr 2026">
+  ## v1.13.0a3
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a3)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Emitir dados de uso de token no LLMCallCompletedEvent
+  - Extrair e publicar metadados de ferramentas no AMP
+
+  ### Correções de Bugs
+  - Lidar com modelos GPT-5.x que não suportam o parâmetro de API `stop`
+
+  ### Documentação
+  - Corrigir imprecisões nas capacidades do agente em todas as línguas
+  - Adicionar visão geral das Capacidades do Agente e melhorar a documentação de Habilidades
+  - Adicionar um guia abrangente de configuração de SSO
+  - Atualizar o changelog e a versão para v1.13.0rc1
+
+  ### Refatoração
+  - Converter Flow para Pydantic BaseModel
+  - Converter classes LLM para Pydantic BaseModel
+  - Substituir InstanceOf[T] por anotações de tipo simples
+  - Remover métodos não utilizados
+
+  ## Contribuidores
+
+  @dependabot[bot], @greysonlalonde, @iris-clawd, @lorenzejay, @lucasgomide, @thiagomoretto
+
+</Update>
+
+<Update label="27 mar 2026">
+  ## v1.13.0rc1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0rc1)
+
+  ## O que Mudou
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.13.0a2
+
+  ## Contribuidores
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="27 mar 2026">
+  ## v1.13.0a2
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a2)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Repositório de teste de implantação de autoatualização durante o lançamento
+  - Melhorar a resiliência e a experiência do usuário na versão empresarial
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.13.0a1
+
+  ## Contribuidores
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="27 mar 2026">
+  ## v1.13.0a1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a1)
+
+  ## O que Mudou
+
+  ### Correções de Bugs
+  - Corrigir links quebrados no fluxo de documentação fixando o Node na LTS 22
+  - Limpar o cache uv para pacotes recém-publicados na versão empresarial
+
+  ### Documentação
+  - Adicionar uma matriz abrangente de permissões RBAC e guia de implantação
+  - Atualizar o changelog e a versão para v1.12.2
+
+  ## Contributors
+
+  @greysonlalonde, @iris-clawd, @joaomdmoura
+
+</Update>
+
+<Update label="25 mar 2026">
+  ## v1.12.2
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.12.2)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar fase de lançamento empresarial ao lançamento do devtools
+
+  ### Correções de Bugs
+  - Preservar o valor de retorno do método como saída de fluxo para @human_feedback com emit
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.12.1
+  - Revisar política de segurança e instruções de relatório
+
+  ## Contributors
+
+  @alex-clawd, @greysonlalonde, @joaomdmoura, @theCyberTech
+
+</Update>
+
+<Update label="25 mar 2026">
+  ## v1.12.1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.12.1)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar request_id ao HumanFeedbackRequestedEvent
+  - Adicionar backend de armazenamento Qdrant Edge para sistema de memória
+  - Adicionar comando docs-check para analisar mudanças e gerar documentação com traduções
+  - Adicionar suporte ao idioma árabe para changelog e ferramentas de lançamento
+  - Adicionar tradução em árabe padrão moderno de toda a documentação
+  - Adicionar comando de logout na CLI
+  - Adicionar habilidades de agente
+  - Implementar root_scope automático para isolamento hierárquico de memória
+  - Implementar provedores nativos compatíveis com OpenAI (OpenRouter, DeepSeek, Ollama, vLLM, Cerebras, Dashscope)
+
+  ### Correções de Bugs
+  - Corrigir credenciais incorretas para envio em lote de traces (404)
+  - Resolver múltiplos bugs no sistema de fluxo HITL
+  - Corrigir salvamento de memória do agente
+  - Resolver todos os erros estritos do mypy no pacote crewai
+  - Corrigir uso de __router_paths__ para métodos listener+router em FlowMeta
+  - Corrigir erro de valor em caso de suporte a nenhum arquivo
+  - Corrigir redação da quarentena do litellm na documentação
+  - Corrigir todos os erros do mypy em crewai-files e adicionar todos os pacotes às verificações de tipo do CI
+  - Fixar limite superior do litellm na última versão testada (1.82.6)
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.12.0
+  - Adicionar CONTRIBUTING.md
+  - Adicionar guia para usar CrewAI sem LiteLLM
+
+  ## Contribuidores
+
+  @akaKuruma, @alex-clawd, @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay, @lucasgomide, @nicoferdi96
+
+</Update>
+
+<Update label="25 mar 2026">
+  ## v1.12.0
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.12.0)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar backend de armazenamento Qdrant Edge para sistema de memória
+  - Adicionar comando docs-check para analisar mudanças e gerar documentos com traduções
+  - Adicionar suporte ao idioma árabe para changelog e ferramentas de lançamento
+  - Adicionar tradução em árabe padrão moderno de toda a documentação
+  - Adicionar comando de logout na CLI
+  - Implementar habilidades de agente
+  - Implementar root_scope automático para isolamento hierárquico de memória
+  - Implementar provedores nativos compatíveis com OpenAI (OpenRouter, DeepSeek, Ollama, vLLM, Cerebras, Dashscope)
+
+  ### Correções de Bugs
+  - Corrigir credenciais inválidas para envio em lote de rastros (404)
+  - Resolver múltiplos bugs no sistema de fluxo HITL
+  - Resolver erros do mypy em crewai-files e adicionar todos os pacotes às verificações de tipo do CI
+  - Resolver todos os erros estritos do mypy no pacote crewai-tools
+  - Resolver todos os erros do mypy no pacote crewai
+  - Corrigir economia de memória no agente
+  - Corrigir uso de __router_paths__ para métodos listener+router em FlowMeta
+  - Levantar erro de valor em caso de suporte a arquivos inexistente
+  - Corrigir a redação da quarentena do litellm na documentação
+  - Usar verificação de None em vez de isinstance para memória no aprendizado de feedback humano
+  - Fixar limite superior do litellm na última versão testada (1.82.6)
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.12.0
+  - Adicionar CONTRIBUTING.md
+  - Adicionar guia para usar CrewAI sem LiteLLM
+
+  ### Refatoração
+  - Refatorar para desduplicar execução de tarefas síncronas/assíncronas e início no agente
+  - Simplificar a infraestrutura interna do litellm (contagem de tokens, callbacks, detecção de recursos, erros)
+
+  ## Contribuidores
+
+  @akaKuruma, @alex-clawd, @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay, @nicoferdi96
+
+</Update>
+
+<Update label="26 mar 2026">
+  ## v1.12.0a3
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.12.0a3)
+
+  ## O que Mudou
+
+  ### Correções de Bugs
+  - Corrigir credenciais inválidas para envio em lote de rastros (404)
+  - Resolver múltiplos bugs no sistema de fluxo HITL
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.12.0a2
+
+  ## Contributors
+
+  @akaKuruma, @greysonlalonde
+
+</Update>
+
+<Update label="25 mar 2026">
+  ## v1.12.0a2
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.12.0a2)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar backend de armazenamento Qdrant Edge para sistema de memória
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.12.0a1
+
+  ## Contribuidores
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="25 mar 2026">
+  ## v1.12.0a1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.12.0a1)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar comando docs-check para analisar mudanças e gerar documentação com traduções
+  - Adicionar suporte ao idioma árabe para changelog e ferramentas de lançamento
+  - Adicionar tradução em árabe padrão moderno de toda a documentação
+  - Adicionar provedores compatíveis com OpenAI nativos (OpenRouter, DeepSeek, Ollama, vLLM, Cerebras, Dashscope)
+  - Adicionar habilidades de agente
+  - Adicionar comando de logout na CLI
+  - Implementar root_scope automático para isolamento de memória hierárquico
+
+  ### Correções de Bugs
+  - Corrigir a economia de memória do agente
+  - Resolver erros do mypy em crewai-files e adicionar todos os pacotes às verificações de tipo do CI
+  - Resolver todos os erros estritos do mypy no pacote crewai-tools
+  - Resolver todos os erros do mypy no pacote crewai
+  - Corrigir o uso de __router_paths__ para métodos listener+router em FlowMeta
+  - Fixar o limite superior do litellm na última versão testada (1.82.6)
+  - Levantar erro de valor quando não houver suporte a arquivos
+  - Corrigir a redação da quarentena do litellm na documentação
+
+  ### Documentação
+  - Adicionar CONTRIBUTING.md
+  - Adicionar guia para usar o CrewAI sem o LiteLLM
+  - Atualizar changelog e versão para v1.11.1
+
+  ### Refatoração
+  - Refatorar para deduplicar a execução de tarefas síncronas/assíncronas e o início no agente
+  - Desacoplar a estrutura interna do litellm (contagem de tokens, callbacks, detecção de recursos, erros)
+
+  ## Contribuidores
+
+  @alex-clawd, @greysonlalonde, @iris-clawd, @lorenzejay, @nicoferdi96
+
+</Update>
+
+<Update label="23 mar 2026">
+  ## v1.11.1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.11.1)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar o serializer flow_structure() para introspecção da classe Flow.
+
+  ### Correções de Bugs
+  - Corrigir vulnerabilidades de segurança atualizando pypdf, tinytag e langchain-core.
+  - Preservar a configuração completa do LLM durante a retomada do HITL para provedores que não são da OpenAI.
+  - Prevenir a travessia de caminho no FileWriterTool.
+  - Corrigir a falha do lock_store quando o pacote redis não está instalado.
+  - Passar cache_function de BaseTool para CrewStructuredTool.
+
+  ### Documentação
+  - Adicionar guia de publicação de ferramentas personalizadas com traduções.
+  - Atualizar changelog e versão para v1.11.0.
+  - Adicionar documentação de ouvintes de eventos ausentes.
+
+  ### Refatoração
+  - Substituir urllib por requests no carregador de pdf.
+  - Substituir campos de callback e modelo do tipo Any por tipos serializáveis.
+
+  ## Contribuidores
+
+  @alex-clawd, @danielfsbarreto, @dependabot[bot], @greysonlalonde, @lorenzejay, @lucasgomide, @mattatcha, @theCyberTech, @vinibrsl
+
+</Update>
+
+<Update label="18 mar 2026">
+  ## v1.11.0
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.11.0)
+
+  ## O que Mudou
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.11.0rc2
+
+  ## Contribuidores
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="17 mar 2026">
+  ## v1.11.0rc2
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.11.0rc2)
+
+  ## O que Mudou
+
+  ### Correções de Bugs
+  - Aprimorar o manuseio e a serialização das respostas do LLM.
+  - Atualizar dependências transitivas vulneráveis (authlib, PyJWT, snowflake-connector-python).
+  - Substituir `os.system` por `subprocess.run` na instalação do pip em modo inseguro.
+
+  ### Documentação
+  - Atualizar a página da Ferramenta de Pesquisa Exa com nomes, descrições e opções de configuração aprimoradas.
+  - Adicionar Servidores MCP Personalizados no Guia de Como Fazer.
+  - Atualizar a documentação dos coletores OTEL.
+  - Atualizar a documentação do MCP.
+  - Atualizar o changelog e a versão para v1.11.0rc1.
+
+  ## Contributors
+
+  @10ishq, @greysonlalonde, @joaomdmoura, @lucasgomide, @mattatcha, @theCyberTech, @vinibrsl
+
+</Update>
+
+<Update label="15 mar 2026">
+  ## v1.11.0rc1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.11.0rc1)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar autenticação de token da API Plus
+  - Implementar padrão de execução de plano
+
+  ### Correções de Bugs
+  - Resolver problema de escape do sandbox do interpretador de código
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.10.2rc2
+
+  ## Contribuidores
+
+  @Copilot, @greysonlalonde, @lorenzejay, @theCyberTech
+
+</Update>
+
+<Update label="14 mar 2026">
+  ## v1.10.2rc2
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.2rc2)
+
+  ## O que Mudou
+
+  ### Correções de Bugs
+  - Remover bloqueios exclusivos de operações de armazenamento somente leitura
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.10.2rc1
+
+  ## Contribuidores
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="13 mar 2026">
+  ## v1.10.2rc1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.2rc1)
+
+  ## O que Mudou
+
+  ### Funcionalidades
+  - Adicionar comando de lançamento e acionar publicação no PyPI
+
+  ### Correções de Bugs
+  - Corrigir bloqueio seguro entre processos e threads para I/O não protegido
+  - Propagar contextvars através de todos os limites de thread e executor
+  - Propagar ContextVars para threads de tarefas assíncronas
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.10.2a1
+
+  ## Contribuidores
+
+  @danglies007, @greysonlalonde
+
+</Update>
+
+<Update label="11 mar 2026">
+  ## v1.10.2a1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.2a1)
+
+  ## O que mudou
+
+  ### Recursos
+  - Adicionar suporte para busca de ferramentas, salvamento de tokens e injeção dinâmica de ferramentas apropriadas durante a execução para Anthropics.
+  - Introduzir mais ferramentas de Busca Brave.
+  - Criar ação para lançamentos noturnos.
+
+  ### Correções de Bugs
+  - Corrigir LockException durante a execução concorrente de múltiplos processos.
+  - Resolver problemas com a agrupação de resultados de ferramentas paralelas em uma única mensagem de usuário.
+  - Abordar resoluções de ferramentas MCP e eliminar todas as conexões mutáveis compartilhadas.
+  - Atualizar o manuseio de parâmetros LLM na função human_feedback.
+  - Adicionar métodos de lista/dicionário ausentes a LockedListProxy e LockedDictProxy.
+  - Propagar o contexto de contextvars para as threads de chamada de ferramentas paralelas.
+  - Atualizar a dependência gitpython para >=3.1.41 para resolver a vulnerabilidade de travessia de diretórios CVE.
+
+  ### Refatoração
+  - Refatorar classes de memória para serem serializáveis.
+
+  ### Documentação
+  - Atualizar o changelog e a versão para v1.10.1.
+
+  ## Contribuidores
+
+  @akaKuruma, @github-actions[bot], @giulio-leone, @greysonlalonde, @joaomdmoura, @jonathansampson, @lorenzejay, @lucasgomide, @mattatcha
+
+</Update>
+
+<Update label="04 mar 2026">
+  ## v1.10.1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.10.1)
+
+  ## O que mudou
+
+  ### Recursos
+  - Atualizar Gemini GenAI
+
+  ### Correções de Bugs
+  - Ajustar o valor do listener do executor para evitar recursão
+  - Agrupar partes da resposta da função paralela em um único objeto Content no Gemini
+  - Exibir a saída de pensamento dos modelos de pensamento no Gemini
+  - Carregar ferramentas MCP e da plataforma quando as ferramentas do agente forem None
+  - Suportar ambientes Jupyter com loops de eventos em A2A
+  - Usar ID anônimo para rastreamentos efêmeros
+  - Passar condicionalmente o cabeçalho plus
+  - Ignorar o registro do manipulador de sinal em threads não principais para telemetria
+  - Injetar erros de ferramentas como observações e resolver colisões de nomes
+  - Atualizar pypdf de 4.x para 6.7.4 para resolver alertas do Dependabot
+  - Resolver alertas de segurança críticos e altos do Dependabot
+
+  ### Documentação
+  - Sincronizar a documentação da ferramenta Composio entre locais
+
+  ## Contribuidores
+
+  @giulio-leone, @greysonlalonde, @haxzie, @joaomdmoura, @lorenzejay, @mattatcha, @mplachta, @nicoferdi96
+
+</Update>
+
 <Update label="27 fev 2026">
   ## v1.10.1a1
 

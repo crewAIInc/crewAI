@@ -6,7 +6,7 @@ import click
 from crewai.telemetry import Telemetry
 
 
-def create_flow(name):
+def create_flow(name: str) -> None:
     """Create a new flow."""
     folder_name = name.replace(" ", "_").replace("-", "_").lower()
     class_name = name.replace("_", " ").replace("-", " ").title().replace(" ", "")
@@ -46,10 +46,10 @@ def create_flow(name):
     tools_template_files = ["tools/__init__.py", "tools/custom_tool.py"]
 
     crew_folders = [
-        "poem_crew",
+        "content_crew",
     ]
 
-    def process_file(src_file, dst_file):
+    def process_file(src_file: Path, dst_file: Path) -> None:
         if src_file.suffix in [".pyc", ".pyo", ".pyd"]:
             return
 

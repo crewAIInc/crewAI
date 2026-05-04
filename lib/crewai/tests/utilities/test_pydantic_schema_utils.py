@@ -882,3 +882,110 @@ class TestEndToEndMCPSchema:
         )
         assert obj.filters.date_from == datetime.date(2025, 1, 1)
         assert obj.filters.categories == ["news", "tech"]
+
+
+# ---------------------------------------------------------------------------
+# Recursive / circular $ref schemas (GH-5490)
+# ---------------------------------------------------------------------------
+
+RECURSIVE_NODE_SCHEMA: dict = {
+    "$defs": {
+        "Node": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "children": {
+                    "type": "array",
+                    "items": {"$ref": "#/$defs/Node"},
+                },
+            },
+            "required": ["name"],
+        }
+    },
+    "$ref": "#/$defs/Node",
+}
+
+MUTUAL_RECURSION_SCHEMA: dict = {
+    "$defs": {
+        "A": {
+            "type": "object",
+            "properties": {
+                "val": {"type": "string"},
+                "b": {"$ref": "#/$defs/B"},
+            },
+            "required": ["val"],
+        },
+        "B": {
+            "type": "object",
+            "properties": {
+                "val": {"type": "integer"},
+                "a": {"$ref": "#/$defs/A"},
+            },
+            "required": ["val"],
+        },
+    },
+    "$ref": "#/$defs/A",
+}
+
+
+class TestResolveRefsRecursive:
+    def test_circular_ref_preserves_type(self) -> None:
+        from crewai.utilities.pydantic_schema_utils import resolve_refs
+
+        resolved = resolve_refs(deepcopy(RECURSIVE_NODE_SCHEMA))
+        items = resolved["properties"]["children"]["items"]
+        assert items != {}, "Circular ref should not degrade to {}"
+        assert items.get("type") == "object"
+
+    def test_non_recursive_schema_still_resolves(self) -> None:
+        from crewai.utilities.pydantic_schema_utils import resolve_refs
+
+        schema = {
+            "$defs": {"Foo": {"type": "object", "properties": {"x": {"type": "integer"}}}},
+            "$ref": "#/$defs/Foo",
+        }
+        resolved = resolve_refs(schema)
+        assert resolved["properties"]["x"]["type"] == "integer"
+
+
+class TestSanitizeRecursiveSchemas:
+    def test_anthropic_strict_preserves_recursive_type(self) -> None:
+        from crewai.utilities.pydantic_schema_utils import sanitize_tool_params_for_anthropic_strict
+
+        san = sanitize_tool_params_for_anthropic_strict(deepcopy(RECURSIVE_NODE_SCHEMA))
+        items = san["properties"]["children"]["items"]
+        assert items != {}
+        assert items.get("type") == "object"
+
+    def test_openai_strict_preserves_recursive_type(self) -> None:
+        from crewai.utilities.pydantic_schema_utils import sanitize_tool_params_for_openai_strict
+
+        san = sanitize_tool_params_for_openai_strict(deepcopy(RECURSIVE_NODE_SCHEMA))
+        items = san["properties"]["children"]["items"]
+        assert items != {}
+        assert items.get("type") == "object"
+
+
+class TestCreateModelFromSchemaRecursive:
+    def test_model_creation_succeeds(self) -> None:
+        model = create_model_from_schema(deepcopy(RECURSIVE_NODE_SCHEMA), model_name="Node")
+        assert model is not None
+        assert model.__name__ == "Node"
+
+    def test_model_accepts_valid_recursive_data(self) -> None:
+        model = create_model_from_schema(deepcopy(RECURSIVE_NODE_SCHEMA), model_name="Node")
+        instance = model(name="root", children=[{"name": "child", "children": []}])
+        assert instance.name == "root"
+        assert len(instance.children) == 1
+
+    def test_model_rejects_missing_required_field(self) -> None:
+        import pytest
+
+        model = create_model_from_schema(deepcopy(RECURSIVE_NODE_SCHEMA), model_name="Node")
+        with pytest.raises(Exception):
+            model(children=[])
+
+    def test_mutual_recursion_schema(self) -> None:
+        model = create_model_from_schema(deepcopy(MUTUAL_RECURSION_SCHEMA), model_name="A")
+        instance = model(val="hello", b={"val": 42})
+        assert instance.val == "hello"

@@ -9,8 +9,8 @@ authors = [
 requires-python = ">=3.10, <3.14"
 dependencies = [
     # Core Dependencies
-    "pydantic~=2.11.9",
-    "openai>=1.83.0,<3",
+    "pydantic>=2.11.9,<2.13",
+    "openai>=2.30.0,<3",
     "instructor>=1.3.3",
     # Text Processing
     "pdfplumber~=0.11.4",
@@ -24,7 +24,7 @@ dependencies = [
     "tokenizers>=0.21,<1",
     "openpyxl~=3.1.5",
     # Authentication and Security
-    "python-dotenv~=1.1.1",
+    "python-dotenv>=1.2.2,<2",
     "pyjwt>=2.9.0,<3",
     # TUI
     "textual>=7.5.0",
@@ -40,9 +40,11 @@ dependencies = [
     "pydantic-settings~=2.10.1",
     "httpx~=0.28.1",
     "mcp~=1.26.0",
-    "uv~=0.9.13",
+    "uv~=0.11.6",
     "aiosqlite~=0.21.0",
-    "lancedb>=0.29.2",
+    "pyyaml~=6.0",
+    "aiofiles~=24.1.0",
+    "lancedb>=0.29.2,<0.30.1",
 ]
 
 [project.urls]
@@ -53,10 +55,10 @@ Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
 tools = [
-    "crewai-tools==1.10.1a1",
+    "crewai-tools==1.14.5a1",
 ]
 embeddings = [
-    "tiktoken~=0.8.0"
+    "tiktoken>=0.8.0,<0.13"
 ]
 pandas = [
     "pandas~=2.2.3",
@@ -66,14 +68,14 @@ openpyxl = [
 ]
 mem0 = ["mem0ai~=0.1.94"]
 docling = [
-    "docling~=2.75.0",
+    "docling~=2.84.0",
 ]
 qdrant = [
     "qdrant-client[fastembed]~=1.14.3",
 ]
 aws = [
-    "boto3~=1.40.38",
-    "aiobotocore~=2.25.2",
+    "boto3~=1.42.79",
+    "aiobotocore~=3.4.0",
 ]
 watson = [
     "ibm-watsonx-ai~=1.3.39",
@@ -82,16 +84,17 @@ voyageai = [
     "voyageai~=0.3.5",
 ]
 litellm = [
-    "litellm>=1.74.9,<3",
+    "litellm>=1.83.7,<1.84",
 ]
 bedrock = [
-    "boto3~=1.40.45",
+    "boto3~=1.42.79",
 ]
 google-genai = [
     "google-genai~=1.65.0",
 ]
 azure-ai-inference = [
     "azure-ai-inference~=1.0.0b9",
+    "azure-identity>=1.17.0,<2",
 ]
 anthropic = [
     "anthropic~=0.73.0",
@@ -105,11 +108,17 @@ a2a = [
 file-processing = [
     "crewai-files",
 ]
+qdrant-edge = [
+    "qdrant-edge-py>=0.6.0",
+]
 
 
 [project.scripts]
 crewai = "crewai.cli.cli:crewai"
 
+
+[tool.uv]
+exclude-newer = "3 days"
 
 # PyTorch index configuration, since torch 2.5.0 is not compatible with python 3.13
 [[tool.uv.index]]

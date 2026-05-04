@@ -13,7 +13,7 @@ class BaseKnowledgeSource(BaseModel, ABC):
     chunk_size: int = 4000
     chunk_overlap: int = 200
     chunks: list[str] = Field(default_factory=list)
-    chunk_embeddings: list[np.ndarray] = Field(default_factory=list)
+    chunk_embeddings: list[np.ndarray[Any, np.dtype[Any]]] = Field(default_factory=list)
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
     storage: KnowledgeStorage | None = Field(default=None)
@@ -28,7 +28,7 @@ class BaseKnowledgeSource(BaseModel, ABC):
     def add(self) -> None:
         """Process content, chunk it, compute embeddings, and save them."""
 
-    def get_embeddings(self) -> list[np.ndarray]:
+    def get_embeddings(self) -> list[np.ndarray[Any, np.dtype[Any]]]:
         """Return the list of embeddings for the chunks."""
         return self.chunk_embeddings
 

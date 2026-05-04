@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.task_events import TaskEvaluationEvent
 from crewai.utilities.converter import Converter
-from crewai.utilities.i18n import get_i18n
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.training_converter import TrainingConverter
 
@@ -81,7 +81,7 @@ class TaskEvaluator:
         """
         crewai_event_bus.emit(
             self,
-            TaskEvaluationEvent(evaluation_type="task_evaluation", task=task),  # type: ignore[no-untyped-call]
+            TaskEvaluationEvent(evaluation_type="task_evaluation", task=task),
         )
         evaluation_query = (
             f"Assess the quality of the task completed based on the description, expected output, and actual results.\n\n"
@@ -98,11 +98,9 @@ class TaskEvaluator:
 
         if not self.llm.supports_function_calling():  # type: ignore[union-attr]
             schema_dict = generate_model_description(TaskEvaluation)
-            output_schema: str = (
-                get_i18n()
-                .slice("formatted_task_instructions")
-                .format(output_format=json.dumps(schema_dict, indent=2))
-            )
+            output_schema: str = I18N_DEFAULT.slice(
+                "formatted_task_instructions"
+            ).format(output_format=json.dumps(schema_dict, indent=2))
             instructions = f"{instructions}\n\n{output_schema}"
 
         converter = Converter(
@@ -129,7 +127,7 @@ class TaskEvaluator:
         """
         crewai_event_bus.emit(
             self,
-            TaskEvaluationEvent(evaluation_type="training_data_evaluation"),  # type: ignore[no-untyped-call]
+            TaskEvaluationEvent(evaluation_type="training_data_evaluation"),
         )
 
         output_training_data = training_data[agent_id]
@@ -174,11 +172,9 @@ class TaskEvaluator:
 
         if not self.llm.supports_function_calling():  # type: ignore[union-attr]
             schema_dict = generate_model_description(TrainingTaskEvaluation)
-            output_schema: str = (
-                get_i18n()
-                .slice("formatted_task_instructions")
-                .format(output_format=json.dumps(schema_dict, indent=2))
-            )
+            output_schema: str = I18N_DEFAULT.slice(
+                "formatted_task_instructions"
+            ).format(output_format=json.dumps(schema_dict, indent=2))
             instructions = f"{instructions}\n\n{output_schema}"
 
         converter = TrainingConverter(

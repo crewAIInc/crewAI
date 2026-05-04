@@ -7,7 +7,7 @@ from rich.console import Console
 from crewai.cli.authentication.main import Oauth2Settings, ProviderFactory
 from crewai.cli.command import BaseCommand
 from crewai.cli.settings.main import SettingsCommand
-from crewai.cli.version import get_crewai_version
+from crewai.utilities.version import get_crewai_version
 
 
 console = Console()

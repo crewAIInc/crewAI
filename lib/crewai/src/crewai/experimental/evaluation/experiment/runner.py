@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.experimental.evaluation import AgentEvaluator, create_default_evaluator
-from crewai.experimental.evaluation.evaluation_display import (
+from crewai.experimental.evaluation.base_evaluator import (
     AgentAggregatedEvaluationResult,
 )
 from crewai.experimental.evaluation.experiment.result import (

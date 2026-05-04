@@ -24,17 +24,22 @@ if TYPE_CHECKING:
     from crewai.agent.core import Agent
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
-    from crewai.utilities.i18n import I18N
 
 
 def handle_reasoning(agent: Agent, task: Task) -> None:
-    """Handle the reasoning process for an agent before task execution.
+    """Handle the reasoning/planning process for an agent before task execution.
+
+    This function checks if planning is enabled for the agent and, if so,
+    creates a plan that gets appended to the task description.
+
+    Note: This function is used by CrewAgentExecutor (legacy path).
+    For AgentExecutor, planning is handled in AgentExecutor.generate_plan().
 
     Args:
         agent: The agent performing the task.
         task: The task to execute.
     """
-    if not agent.reasoning:
+    if not getattr(agent, "planning_enabled", False):
         return
 
     try:
@@ -43,55 +48,59 @@ def handle_reasoning(agent: Agent, task: Task) -> None:
             AgentReasoningOutput,
         )
 
-        reasoning_handler = AgentReasoning(task=task, agent=agent)
-        reasoning_output: AgentReasoningOutput = (
-            reasoning_handler.handle_agent_reasoning()
+        planning_handler = AgentReasoning(agent=agent, task=task)
+        planning_output: AgentReasoningOutput = (
+            planning_handler.handle_agent_reasoning()
         )
-        task.description += f"\n\nReasoning Plan:\n{reasoning_output.plan.plan}"
+        task.description += f"\n\nPlanning:\n{planning_output.plan.plan}"
     except Exception as e:
-        agent._logger.log("error", f"Error during reasoning process: {e!s}")
+        agent._logger.log("error", f"Error during planning: {e!s}")
 
 
-def build_task_prompt_with_schema(task: Task, task_prompt: str, i18n: I18N) -> str:
+def build_task_prompt_with_schema(task: Task, task_prompt: str) -> str:
     """Build task prompt with JSON/Pydantic schema instructions if applicable.
 
     Args:
         task: The task being executed.
         task_prompt: The initial task prompt.
-        i18n: Internationalization instance.
 
     Returns:
         The task prompt potentially augmented with schema instructions.
     """
+    from crewai.utilities.i18n import I18N_DEFAULT
+
     if (task.output_json or task.output_pydantic) and not task.response_model:
         if task.output_json:
             schema_dict = generate_model_description(task.output_json)
             schema = json.dumps(schema_dict["json_schema"]["schema"], indent=2)
-            task_prompt += "\n" + i18n.slice("formatted_task_instructions").format(
-                output_format=schema
-            )
+            task_prompt += "\n" + I18N_DEFAULT.slice(
+                "formatted_task_instructions"
+            ).format(output_format=schema)
         elif task.output_pydantic:
             schema_dict = generate_model_description(task.output_pydantic)
             schema = json.dumps(schema_dict["json_schema"]["schema"], indent=2)
-            task_prompt += "\n" + i18n.slice("formatted_task_instructions").format(
-                output_format=schema
-            )
+            task_prompt += "\n" + I18N_DEFAULT.slice(
+                "formatted_task_instructions"
+            ).format(output_format=schema)
     return task_prompt
 
 
-def format_task_with_context(task_prompt: str, context: str | None, i18n: I18N) -> str:
+def format_task_with_context(task_prompt: str, context: str | None) -> str:
     """Format task prompt with context if provided.
 
     Args:
         task_prompt: The task prompt.
         context: Optional context string.
-        i18n: Internationalization instance.
 
     Returns:
         The task prompt formatted with context if provided.
     """
+    from crewai.utilities.i18n import I18N_DEFAULT
+
     if context:
-        return i18n.slice("task_with_context").format(task=task_prompt, context=context)
+        return I18N_DEFAULT.slice("task_with_context").format(
+            task=task_prompt, context=context
+        )
     return task_prompt
 
 
@@ -130,7 +139,8 @@ def handle_knowledge_retrieval(
     Returns:
         The task prompt potentially augmented with knowledge context.
     """
-    if not (agent.knowledge or (agent.crew and agent.crew.knowledge)):
+    _crew = agent.crew if not isinstance(agent.crew, str) else None
+    if not (agent.knowledge or (_crew and _crew.knowledge)):
         return task_prompt
 
     crewai_event_bus.emit(
@@ -203,6 +213,30 @@ def _combine_knowledge_context(agent: Agent) -> str:
     return agent_ctx + separator + crew_ctx
 
 
+def append_skill_context(agent: Agent, task_prompt: str) -> str:
+    """Append activated skill context sections to the task prompt.
+
+    Args:
+        agent: The agent with optional skills.
+        task_prompt: The current task prompt.
+
+    Returns:
+        The task prompt with skill context appended.
+    """
+    if not agent.skills:
+        return task_prompt
+
+    from crewai.skills.loader import format_skill_context
+    from crewai.skills.models import Skill
+
+    skill_sections = [
+        format_skill_context(s) for s in agent.skills if isinstance(s, Skill)
+    ]
+    if skill_sections:
+        task_prompt += "\n\n" + "\n\n".join(skill_sections)
+    return task_prompt
+
+
 def apply_training_data(agent: Agent, task_prompt: str) -> str:
     """Apply training data to the task prompt.
 
@@ -213,7 +247,7 @@ def apply_training_data(agent: Agent, task_prompt: str) -> str:
     Returns:
         The task prompt with training data applied.
     """
-    if agent.crew and agent.crew._train:
+    if agent.crew and not isinstance(agent.crew, str) and agent.crew._train:
         return agent._training_handler(task_prompt=task_prompt)
     return agent._use_trained_data(task_prompt=task_prompt)
 
@@ -324,7 +358,8 @@ async def ahandle_knowledge_retrieval(
     Returns:
         The task prompt potentially augmented with knowledge context.
     """
-    if not (agent.knowledge or (agent.crew and agent.crew.knowledge)):
+    _crew = agent.crew if not isinstance(agent.crew, str) else None
+    if not (agent.knowledge or (_crew and _crew.knowledge)):
         return task_prompt
 
     crewai_event_bus.emit(
@@ -350,15 +385,16 @@ async def ahandle_knowledge_retrieval(
                     if agent.agent_knowledge_context:
                         task_prompt += agent.agent_knowledge_context
 
-            knowledge_snippets = await agent.crew.aquery_knowledge(
-                [agent.knowledge_search_query], **knowledge_config
-            )
-            if knowledge_snippets:
-                agent.crew_knowledge_context = extract_knowledge_context(
-                    knowledge_snippets
+            if _crew:
+                knowledge_snippets = await _crew.aquery_knowledge(
+                    [agent.knowledge_search_query], **knowledge_config
                 )
-                if agent.crew_knowledge_context:
-                    task_prompt += agent.crew_knowledge_context
+                if knowledge_snippets:
+                    agent.crew_knowledge_context = extract_knowledge_context(
+                        knowledge_snippets
+                    )
+                    if agent.crew_knowledge_context:
+                        task_prompt += agent.crew_knowledge_context
 
             crewai_event_bus.emit(
                 agent,

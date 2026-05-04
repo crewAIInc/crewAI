@@ -75,7 +75,7 @@ class RPMController(BaseModel):
         self._current_rpm = 0
 
     def _reset_request_count(self) -> None:
-        def _reset():
+        def _reset() -> None:
             self._current_rpm = 0
             if not self._shutdown_flag:
                 self._timer = threading.Timer(60.0, self._reset_request_count)

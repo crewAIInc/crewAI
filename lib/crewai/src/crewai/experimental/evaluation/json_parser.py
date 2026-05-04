@@ -7,7 +7,8 @@ from typing import Any
 
 def extract_json_from_llm_response(text: str) -> dict[str, Any]:
     try:
-        return json.loads(text)
+        result: dict[str, Any] = json.loads(text)
+        return result
     except json.JSONDecodeError:
         pass
 
@@ -24,7 +25,8 @@ def extract_json_from_llm_response(text: str) -> dict[str, Any]:
         matches = re.findall(pattern, text, re.IGNORECASE | re.DOTALL)
         for match in matches:
             try:
-                return json.loads(match.strip())
+                parsed: dict[str, Any] = json.loads(match.strip())
+                return parsed
             except json.JSONDecodeError:  # noqa: PERF203
                 continue
     raise ValueError("No valid JSON found in the response")
