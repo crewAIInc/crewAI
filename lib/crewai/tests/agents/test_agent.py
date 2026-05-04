@@ -2573,3 +2573,27 @@ class TestSharedLLMStopWords:
         assert b_seen == {"Original:", "StopB:"}
         assert shared.stop == ["Original:"]
         assert shared.stop_sequences == ["Original:"]
+
+    def test_override_propagates_to_nested_direct_llm_calls(self) -> None:
+        """Once invoke wraps with the override, nested direct llm.call sites
+        (StepExecutor, handle_max_iterations_exceeded) see the merged stops.
+
+        Regression for Cursor Bugbot: those direct call sites bypass
+        get_llm_response, so the override must be set at executor entry, not
+        only around get_llm_response.
+        """
+        from crewai.utilities.agent_utils import _llm_stop_words_applied
+
+        shared = LLM(model="gpt-4", stop=["Original:"])
+        executor = self._make_executor(shared, stop_words=["Observation:"])
+
+        seen: list[set[str]] = []
+
+        def nested_direct_call() -> None:
+            seen.append(set(shared.stop_sequences))
+
+        with _llm_stop_words_applied(shared, executor):
+            nested_direct_call()
+
+        assert seen == [{"Original:", "Observation:"}]
+        assert shared.stop == ["Original:"]

@@ -492,16 +492,15 @@ def get_llm_response(
     """
     messages = _prepare_llm_call(executor_context, messages, printer, verbose=verbose)
 
-    with _llm_stop_words_applied(llm, executor_context):
-        answer = llm.call(
-            messages,
-            tools=tools,
-            callbacks=callbacks,
-            available_functions=available_functions,
-            from_task=from_task,
-            from_agent=from_agent,
-            response_model=response_model,
-        )
+    answer = llm.call(
+        messages,
+        tools=tools,
+        callbacks=callbacks,
+        available_functions=available_functions,
+        from_task=from_task,
+        from_agent=from_agent,
+        response_model=response_model,
+    )
 
     return _validate_and_finalize_llm_response(
         answer, executor_context, printer, verbose=verbose
@@ -546,16 +545,15 @@ async def aget_llm_response(
     """
     messages = _prepare_llm_call(executor_context, messages, printer, verbose=verbose)
 
-    with _llm_stop_words_applied(llm, executor_context):
-        answer = await llm.acall(
-            messages,
-            tools=tools,
-            callbacks=callbacks,
-            available_functions=available_functions,
-            from_task=from_task,
-            from_agent=from_agent,
-            response_model=response_model,
-        )
+    answer = await llm.acall(
+        messages,
+        tools=tools,
+        callbacks=callbacks,
+        available_functions=available_functions,
+        from_task=from_task,
+        from_agent=from_agent,
+        response_model=response_model,
+    )
 
     return _validate_and_finalize_llm_response(
         answer, executor_context, printer, verbose=verbose
