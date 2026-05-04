@@ -1909,7 +1909,7 @@ requires-dist = [
     { name = "pytube", specifier = "~=15.0.0" },
     { name = "qdrant-client", marker = "extra == 'qdrant-client'", specifier = ">=1.12.1" },
     { name = "requests", specifier = ">=2.33.0,<3" },
-    { name = "scrapegraph-py", marker = "extra == 'scrapegraph-py'", specifier = ">=1.9.0,<2" },
+    { name = "scrapegraph-py", marker = "extra == 'scrapegraph-py'", specifier = ">=1.46.0,<2" },
     { name = "scrapfly-sdk", marker = "extra == 'scrapfly-sdk'", specifier = ">=0.8.19" },
     { name = "selenium", marker = "extra == 'selenium'", specifier = ">=4.27.1" },
     { name = "serpapi", marker = "extra == 'serpapi'", specifier = ">=0.1.5" },

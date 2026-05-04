@@ -114,15 +114,24 @@ def _ensure_task_cache() -> None:
                 ) from e
 
             conn = parse_cache_url() or {}
-            _task_cache = ValkeyCache(
-                host=conn.get("host", "localhost"),
-                port=conn.get("port", 6379),
-                db=conn.get("db", 0),
-                username=conn.get("username"),
-                password=conn.get("password"),
-                default_ttl=3600,
-                use_tls=conn.get("use_tls", False),
-            )
+            try:
+                _task_cache = ValkeyCache(
+                    host=conn.get("host", "localhost"),
+                    port=conn.get("port", 6379),
+                    db=conn.get("db", 0),
+                    username=conn.get("username"),
+                    password=conn.get("password"),
+                    default_ttl=3600,
+                    use_tls=conn.get("use_tls", False),
+                )
+            except Exception as e:
+                logger.error(
+                    "Failed to initialize ValkeyCache for task cancellation, "
+                    "falling back to aiocache",
+                    extra={"error": str(e)},
+                )
+                caches.set_config(get_aiocache_config())
+                _task_cache = None
 
         _cache_initialized = True
 
