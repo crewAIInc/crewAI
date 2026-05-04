@@ -120,6 +120,46 @@ paths:
         '500':
           $ref: '#/components/responses/ServerError'
 
+  /stop/{kickoff_id}:
+    post:
+      summary: 실행 중지
+      description: |
+        **📋 참조 예제만 제공** - *요청 형식을 보여줍니다. 실제 호출은 cURL 예제를 복사해 URL과 토큰을 교체하세요.*
+
+        실행 중인 crew 또는 flow 실행을 중지하거나 취소합니다. 실행이 활성 상태여야 합니다
+        (SUCCESS, FAILURE, REVOKED 상태가 아닌 경우).
+      operationId: stopCrewExecution
+      parameters:
+        - name: kickoff_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 실행을 성공적으로 중지
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StopExecutionResponse'
+        '400':
+          description: 실행이 이미 종료 상태 (SUCCESS, FAILURE, REVOKED)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Kickoff ID를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
   /resume:
     post:
       summary: Resume Crew Execution with Human Feedback
@@ -313,6 +353,15 @@ components:
           type: string
         execution_time:
           type: number
+
+    StopExecutionResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: ["stopped"]
+        kickoffId:
+          type: string
 
     Error:
       type: object

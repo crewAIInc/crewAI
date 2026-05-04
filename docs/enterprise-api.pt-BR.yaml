@@ -36,6 +36,7 @@ info:
     1. **Descubra os inputs** usando `GET /inputs`
     2. **Inicie a execução** usando `POST /kickoff`
     3. **Monitore o progresso** usando `GET /{kickoff_id}/status`
+    4. **Pare a execução** (se necessário) usando `POST /stop/{kickoff_id}`
   version: 1.0.0
   contact:
     name: CrewAI Suporte
@@ -145,6 +146,46 @@ paths:
                   - $ref: "#/components/schemas/ExecutionRunning"
                   - $ref: "#/components/schemas/ExecutionCompleted"
                   - $ref: "#/components/schemas/ExecutionError"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "404":
+          description: Kickoff ID não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/ServerError"
+
+  /stop/{kickoff_id}:
+    post:
+      summary: Parar Execução da Crew
+      description: |
+        **📋 Exemplo de Referência** - *Mostra o formato da requisição. Para testar com sua crew real, copie o cURL e substitua URL + token.*
+
+        Para ou cancela uma execução de crew ou flow em andamento. A execução deve estar em um estado ativo
+        (não SUCCESS, FAILURE ou REVOKED).
+      operationId: stopCrewExecution
+      parameters:
+        - name: kickoff_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Execução parada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StopExecutionResponse"
+        "400":
+          description: Execução já em estado terminal (SUCCESS, FAILURE ou REVOKED)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "404":
@@ -350,6 +391,15 @@ components:
           type: string
         execution_time:
           type: number
+
+    StopExecutionResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: ["stopped"]
+        kickoffId:
+          type: string
 
     Error:
       type: object
