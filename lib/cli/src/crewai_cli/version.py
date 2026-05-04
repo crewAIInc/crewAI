@@ -10,7 +10,7 @@ from urllib import request
 from urllib.error import URLError
 
 import appdirs
-from crewai.utilities.version import get_crewai_version
+from crewai.utilities.version import get_crewai_version as get_crewai_version
 from packaging.version import InvalidVersion, Version, parse
 
 

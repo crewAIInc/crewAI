@@ -28,7 +28,7 @@ class TestPlusAPI(unittest.TestCase):
         response = self.api.login_to_tool_repository()
 
         mock_make_request.assert_called_once_with(
-            "POST", "/crewai_plus/api/v1/tools/login"
+            "POST", "/crewai_plus/api/v1/tools/login", json={}
         )
         self.assertEqual(response, mock_response)
 
@@ -67,7 +67,7 @@ class TestPlusAPI(unittest.TestCase):
         response = self.api.login_to_tool_repository()
 
         self.assert_request_with_org_id(
-            mock_client_instance, "POST", "/crewai_plus/api/v1/tools/login"
+            mock_client_instance, "POST", "/crewai_plus/api/v1/tools/login", json={}
         )
         self.assertEqual(response, mock_response)
 
