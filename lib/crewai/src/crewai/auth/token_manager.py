@@ -182,7 +182,4 @@ class TokenManager:
         """
         storage_path = self._get_secure_storage_path()
         file_path = storage_path / filename
-        try:
-            file_path.unlink()
-        except FileNotFoundError:
-            pass
+        file_path.unlink(missing_ok=True)

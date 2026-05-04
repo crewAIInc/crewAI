@@ -17,7 +17,7 @@ class TestPlusAPI(unittest.TestCase):
         self.assertEqual(self.api.api_key, self.api_key)
         self.assertEqual(self.api.headers["Authorization"], f"Bearer {self.api_key}")
         self.assertEqual(self.api.headers["Content-Type"], "application/json")
-        self.assertTrue("CrewAI-CLI/" in self.api.headers["User-Agent"])
+        self.assertIn("CrewAI-CLI/", self.api.headers["User-Agent"])
         self.assertTrue(self.api.headers["X-Crewai-Version"])
 
     @patch("crewai_cli.plus_api.PlusAPI._make_request")

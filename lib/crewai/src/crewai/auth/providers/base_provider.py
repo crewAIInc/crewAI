@@ -12,22 +12,28 @@ class BaseProvider(ABC):
         self.settings = settings
 
     @abstractmethod
-    def get_authorize_url(self) -> str: ...
+    def get_authorize_url(self) -> str:
+        """Return the authorization endpoint URL."""
 
     @abstractmethod
-    def get_token_url(self) -> str: ...
+    def get_token_url(self) -> str:
+        """Return the token endpoint URL."""
 
     @abstractmethod
-    def get_jwks_url(self) -> str: ...
+    def get_jwks_url(self) -> str:
+        """Return the JWKS endpoint URL."""
 
     @abstractmethod
-    def get_issuer(self) -> str: ...
+    def get_issuer(self) -> str:
+        """Return the OAuth issuer identifier."""
 
     @abstractmethod
-    def get_audience(self) -> str: ...
+    def get_audience(self) -> str:
+        """Return the OAuth audience identifier."""
 
     @abstractmethod
-    def get_client_id(self) -> str: ...
+    def get_client_id(self) -> str:
+        """Return the OAuth client identifier."""
 
     def get_required_fields(self) -> list[str]:
         """Returns which provider-specific fields inside the "extra" dict will be required."""
