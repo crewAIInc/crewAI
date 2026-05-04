@@ -116,6 +116,9 @@ file-processing = [
 qdrant-edge = [
     "qdrant-edge-py>=0.6.0",
 ]
+valkey = [
+    "valkey-glide>=1.3.0",
+]
 
 
 [tool.uv]
