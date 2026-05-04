@@ -1597,6 +1597,7 @@ def execute_single_native_tool_call(
         and hasattr(original_tool, "result_as_answer")
         and original_tool.result_as_answer
         and not error_event_emitted
+        and not hook_blocked
     )
 
     return NativeToolCallResult(

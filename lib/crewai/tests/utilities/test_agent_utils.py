@@ -1078,3 +1078,48 @@ class TestExecuteSingleNativeToolCall:
         assert isinstance(result, NativeToolCallResult)
         assert result.result_as_answer is False
         assert "Error executing tool" in result.result
+
+    def test_result_as_answer_false_when_hook_blocks(self) -> None:
+        """When a before-hook blocks a tool with result_as_answer=True, result_as_answer must be False."""
+        from unittest.mock import MagicMock
+
+        from crewai.hooks.tool_hooks import (
+            clear_before_tool_call_hooks,
+            register_before_tool_call_hook,
+        )
+
+        class BlockedTool(BaseTool):
+            name: str = "blocked_tool"
+            description: str = "A tool whose execution will be blocked by a hook"
+            result_as_answer: bool = True
+
+            def _run(self, **kwargs: Any) -> str:
+                return "should not run"
+
+        tool = BlockedTool()
+        tool_call = MagicMock()
+        tool_call.id = "call_1"
+        tool_call.function.name = "blocked_tool"
+        tool_call.function.arguments = "{}"
+
+        register_before_tool_call_hook(lambda _ctx: False)
+        try:
+            result = execute_single_native_tool_call(
+                tool_call,
+                available_functions={"blocked_tool": tool._run},
+                original_tools=[tool],
+                structured_tools=None,
+                tools_handler=None,
+                agent=None,
+                task=None,
+                crew=None,
+                event_source=MagicMock(),
+                printer=None,
+                verbose=False,
+            )
+        finally:
+            clear_before_tool_call_hooks()
+
+        assert isinstance(result, NativeToolCallResult)
+        assert result.result_as_answer is False
+        assert "blocked by hook" in result.result
