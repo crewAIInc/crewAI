@@ -77,7 +77,7 @@ CLI_SETTINGS_KEYS = [
 ]
 
 # Default values for CLI settings
-DEFAULT_CLI_SETTINGS = {
+DEFAULT_CLI_SETTINGS: dict[str, Any] = {
     "enterprise_base_url": DEFAULT_CREWAI_ENTERPRISE_URL,
     "oauth2_provider": CREWAI_ENTERPRISE_DEFAULT_OAUTH2_PROVIDER,
     "oauth2_audience": CREWAI_ENTERPRISE_DEFAULT_OAUTH2_AUDIENCE,

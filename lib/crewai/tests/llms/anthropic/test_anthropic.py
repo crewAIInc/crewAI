@@ -125,8 +125,8 @@ def test_anthropic_specific_parameters():
     assert isinstance(llm, AnthropicCompletion)
     assert llm.stop_sequences == ["Human:", "Assistant:"]
     assert llm.stream == True
-    assert llm.client.max_retries == 5
-    assert llm.client.timeout == 60
+    assert llm._client.max_retries == 5
+    assert llm._client.timeout == 60
 
 
 def test_anthropic_completion_call():
@@ -563,8 +563,8 @@ def test_anthropic_environment_variable_api_key():
     with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "test-anthropic-key"}):
         llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
 
-        assert llm.client is not None
-        assert hasattr(llm.client, 'messages')
+        assert llm._client is not None
+        assert hasattr(llm._client, 'messages')
 
 
 def test_anthropic_token_usage_tracking():
@@ -574,7 +574,7 @@ def test_anthropic_token_usage_tracking():
     llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
 
     # Mock the Anthropic response with usage information
-    with patch.object(llm.client.messages, 'create') as mock_create:
+    with patch.object(llm._client.messages, 'create') as mock_create:
         mock_response = MagicMock()
         mock_response.content = [MagicMock(text="test response")]
         mock_response.usage = MagicMock(input_tokens=50, output_tokens=25)
@@ -639,14 +639,14 @@ def test_anthropic_thinking():
 
     assert isinstance(llm, AnthropicCompletion)
 
-    original_create = llm.client.messages.create
+    original_create = llm._client.messages.create
     captured_params = {}
 
     def capture_and_call(**kwargs):
         captured_params.update(kwargs)
         return original_create(**kwargs)
 
-    with patch.object(llm.client.messages, 'create', side_effect=capture_and_call):
+    with patch.object(llm._client.messages, 'create', side_effect=capture_and_call):
         result = llm.call("What is the weather in Tokyo?")
 
         assert result is not None
@@ -677,14 +677,14 @@ def test_anthropic_thinking_blocks_preserved_across_turns():
     assert isinstance(llm, AnthropicCompletion)
 
     # Capture all messages.create calls to verify thinking blocks are included
-    original_create = llm.client.messages.create
+    original_create = llm._client.messages.create
     captured_calls = []
 
     def capture_and_call(**kwargs):
         captured_calls.append(kwargs)
         return original_create(**kwargs)
 
-    with patch.object(llm.client.messages, 'create', side_effect=capture_and_call):
+    with patch.object(llm._client.messages, 'create', side_effect=capture_and_call):
         # First call - establishes context and generates thinking blocks
         messages = [{"role": "user", "content": "What is 2+2?"}]
         first_result = llm.call(messages)
@@ -695,8 +695,8 @@ def test_anthropic_thinking_blocks_preserved_across_turns():
         assert len(first_result) > 0
 
         # Verify thinking blocks were stored after first response
-        assert len(llm.previous_thinking_blocks) > 0, "No thinking blocks stored after first call"
-        first_thinking = llm.previous_thinking_blocks[0]
+        assert len(llm._previous_thinking_blocks) > 0, "No thinking blocks stored after first call"
+        first_thinking = llm._previous_thinking_blocks[0]
         assert first_thinking["type"] == "thinking"
         assert "thinking" in first_thinking
         assert "signature" in first_thinking
@@ -1463,3 +1463,45 @@ def test_tool_search_saves_input_tokens():
         f"Expected tool_search ({usage_search.prompt_tokens}) to use fewer input tokens "
         f"than no search ({usage_no_search.prompt_tokens})"
     )
+
+
+def test_anthropic_cache_creation_tokens_extraction():
+    """Test that cache_creation_input_tokens are extracted from Anthropic responses."""
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    mock_response = MagicMock()
+    mock_response.content = [MagicMock(text="test response")]
+    mock_response.usage = MagicMock(
+        input_tokens=100,
+        output_tokens=50,
+        cache_read_input_tokens=30,
+        cache_creation_input_tokens=20,
+    )
+    mock_response.stop_reason = None
+    mock_response.model = None
+
+    usage = llm._extract_anthropic_token_usage(mock_response)
+    assert usage["input_tokens"] == 100
+    assert usage["output_tokens"] == 50
+    assert usage["total_tokens"] == 150
+    assert usage["cached_prompt_tokens"] == 30
+    assert usage["cache_creation_tokens"] == 20
+
+
+def test_anthropic_missing_cache_fields_default_to_zero():
+    """Test that missing cache fields default to zero."""
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    mock_response = MagicMock()
+    mock_response.content = [MagicMock(text="test response")]
+    mock_response.usage = MagicMock(
+        input_tokens=40,
+        output_tokens=20,
+        spec=["input_tokens", "output_tokens"],
+    )
+    mock_response.usage.cache_read_input_tokens = None
+    mock_response.usage.cache_creation_input_tokens = None
+
+    usage = llm._extract_anthropic_token_usage(mock_response)
+    assert usage["cached_prompt_tokens"] == 0
+    assert usage["cache_creation_tokens"] == 0

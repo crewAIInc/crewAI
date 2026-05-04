@@ -6,6 +6,7 @@ handlers execute in correct order while maximizing parallelism.
 
 from collections import defaultdict, deque
 from collections.abc import Sequence
+from typing import Any
 
 from crewai.events.depends import Depends
 from crewai.events.types.event_bus_types import ExecutionPlan, Handler
@@ -45,7 +46,7 @@ class HandlerGraph:
 
     def __init__(
         self,
-        handlers: dict[Handler, list[Depends]],
+        handlers: dict[Handler, list[Depends[Any]]],
     ) -> None:
         """Initialize the dependency graph.
 
@@ -103,7 +104,7 @@ class HandlerGraph:
 
 def build_execution_plan(
     handlers: Sequence[Handler],
-    dependencies: dict[Handler, list[Depends]],
+    dependencies: dict[Handler, list[Depends[Any]]],
 ) -> ExecutionPlan:
     """Build an execution plan from handlers and their dependencies.
 
@@ -118,7 +119,7 @@ def build_execution_plan(
     Raises:
         CircularDependencyError: If circular dependencies are detected
     """
-    handler_dict: dict[Handler, list[Depends]] = {
+    handler_dict: dict[Handler, list[Depends[Any]]] = {
         h: dependencies.get(h, []) for h in handlers
     }
 

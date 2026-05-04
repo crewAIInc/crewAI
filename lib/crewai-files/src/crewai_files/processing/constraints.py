@@ -15,6 +15,7 @@ from crewai_files.core.types import (
 ProviderName = Literal[
     "anthropic",
     "openai",
+    "openai_responses",
     "gemini",
     "bedrock",
     "azure",

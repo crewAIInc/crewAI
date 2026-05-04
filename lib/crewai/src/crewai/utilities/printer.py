@@ -93,3 +93,6 @@ class Printer:
             file=file,
             flush=flush,
         )
+
+
+PRINTER: Printer = Printer()

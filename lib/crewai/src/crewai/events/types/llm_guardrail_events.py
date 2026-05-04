@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from inspect import getsource
-from typing import Any
+from typing import Any, Literal
 
 from crewai.events.base_events import BaseEvent
 
@@ -12,8 +12,10 @@ class LLMGuardrailBaseEvent(BaseEvent):
     from_agent: Any | None = None
     agent_role: str | None = None
     agent_id: str | None = None
+    guardrail_type: str | None = None
+    guardrail_name: str | None = None
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         super().__init__(**data)
         self._set_agent_params(data)
         self._set_task_params(data)
@@ -27,19 +29,27 @@ class LLMGuardrailStartedEvent(LLMGuardrailBaseEvent):
         retry_count: The number of times the guardrail has been retried
     """
 
-    type: str = "llm_guardrail_started"
-    guardrail: str | Callable
+    type: Literal["llm_guardrail_started"] = "llm_guardrail_started"
+    guardrail: str | Callable[..., Any]
     retry_count: int
 
-    def __init__(self, **data):
+    def __init__(self, **data: Any) -> None:
         from crewai.tasks.hallucination_guardrail import HallucinationGuardrail
         from crewai.tasks.llm_guardrail import LLMGuardrail
 
         super().__init__(**data)
 
-        if isinstance(self.guardrail, (LLMGuardrail, HallucinationGuardrail)):
+        if isinstance(self.guardrail, HallucinationGuardrail):
+            self.guardrail_type = "hallucination"
+            self.guardrail_name = self.guardrail.description.strip()
             self.guardrail = self.guardrail.description.strip()
-        elif isinstance(self.guardrail, Callable):
+        elif isinstance(self.guardrail, LLMGuardrail):
+            self.guardrail_type = "llm"
+            self.guardrail_name = self.guardrail.description.strip()
+            self.guardrail = self.guardrail.description.strip()
+        elif callable(self.guardrail):
+            self.guardrail_type = "function"
+            self.guardrail_name = getattr(self.guardrail, "__name__", None)
             self.guardrail = getsource(self.guardrail).strip()
 
 
@@ -53,21 +63,8 @@ class LLMGuardrailCompletedEvent(LLMGuardrailBaseEvent):
         retry_count: The number of times the guardrail has been retried
     """
 
-    type: str = "llm_guardrail_completed"
+    type: Literal["llm_guardrail_completed"] = "llm_guardrail_completed"
     success: bool
     result: Any
     error: str | None = None
-    retry_count: int
-
-
-class LLMGuardrailFailedEvent(LLMGuardrailBaseEvent):
-    """Event emitted when a guardrail task fails
-
-    Attributes:
-        error: The error message
-        retry_count: The number of times the guardrail has been retried
-    """
-
-    type: str = "llm_guardrail_failed"
-    error: str
     retry_count: int

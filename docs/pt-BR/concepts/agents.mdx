@@ -304,17 +304,12 @@ multimodal_agent = Agent(
 
 #### Execução de Código
 
-- `allow_code_execution`: Deve ser True para permitir execução de código
-- `code_execution_mode`:
-  - `"safe"`: Usa Docker (recomendado para produção)
-  - `"unsafe"`: Execução direta (apenas em ambientes confiáveis)
+<Warning>
+  `allow_code_execution` e `code_execution_mode` estão depreciados. O `CodeInterpreterTool` foi removido do `crewai-tools`. Use um serviço de sandbox dedicado como [E2B](https://e2b.dev) ou [Modal](https://modal.com) para execução segura de código.
+</Warning>
 
-<Note>
-  Isso executa uma imagem Docker padrão. Se você deseja configurar a imagem
-  Docker, veja a ferramenta Code Interpreter na seção de ferramentas. Adicione a
-  ferramenta de interpretação de código como um parâmetro em ferramentas no
-  agente.
-</Note>
+- `allow_code_execution` _(depreciado)_: Anteriormente habilitava a execução de código embutida via `CodeInterpreterTool`.
+- `code_execution_mode` _(depreciado)_: Anteriormente controlava o modo de execução (`"safe"` para Docker, `"unsafe"` para execução direta).
 
 #### Funcionalidades Avançadas
 
@@ -565,9 +560,9 @@ agent = Agent(
 
 ### Segurança e Execução de Código
 
-- Ao usar `allow_code_execution`, seja cauteloso com entradas do usuário e sempre as valide
-- Use `code_execution_mode: "safe"` (Docker) em ambientes de produção
-- Considere definir limites adequados de `max_execution_time` para evitar loops infinitos
+<Warning>
+  `allow_code_execution` e `code_execution_mode` estão depreciados e o `CodeInterpreterTool` foi removido. Use um serviço de sandbox dedicado como [E2B](https://e2b.dev) ou [Modal](https://modal.com) para execução segura de código.
+</Warning>
 
 ### Otimização de Performance
 

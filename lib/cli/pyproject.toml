@@ -9,7 +9,7 @@ authors = [
 requires-python = ">=3.10, <3.14"
 dependencies = [
     "click~=8.1.7",
-    "pydantic~=2.11.9",
+    "pydantic>=2.11.9,<2.13",
     "pydantic-settings~=2.10.1",
     "appdirs~=1.4.4",
     "httpx~=0.28.1",
@@ -18,7 +18,7 @@ dependencies = [
     "tomli~=2.0.2",
     "tomli-w~=1.1.0",
     "packaging>=23.0",
-    "python-dotenv~=1.1.1",
+    "python-dotenv>=1.2.2,<2",
     "uv~=0.9.13",
     "portalocker~=2.7.0",
 ]

@@ -4,6 +4,1103 @@ description: "CrewAI의 제품 업데이트, 개선 사항 및 버그 수정"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="2026년 5월 4일">
+  ## v1.14.5a2
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.5a2)
+
+  ## 변경 사항
+
+  ### 버그 수정
+  - finally 블록에서 작업 출력 복원 수정
+  - 완료 토큰에 `thoughts_token_count` 포함
+  - 비동기 배치 플러시 간 작업 출력 보존
+  - `CrewAIRagAdapter`의 로더 호출에 kwargs 전달
+  - `result_as_answer`가 후크 차단 메시지를 최종 답변으로 반환하지 않도록 방지
+  - `result_as_answer`가 오류를 최종 답변으로 반환하지 않도록 방지
+  - 비동기 경로에서 출력 변환을 위해 `acall` 사용
+  - 에이전트 간 공유 LLM 중지 단어 변형 방지
+  - `convert_to_model`에서 `BaseModel` 입력 처리
+
+  ### 문서화
+  - 추가 환경 변수 문서화
+  - v1.14.5a1에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @NIK-TIGER-BILL, @greysonlalonde, @lorenzejay, @minasami-pr, @theCyberTech, @wishhyt
+
+</Update>
+
+<Update label="2026년 5월 1일">
+  ## v1.14.5a1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.5a1)
+
+  ## 변경 사항
+
+  ### 기능
+  - `restore_from_state_id` 시작 매개변수 추가
+  - ExaSearchTool에 하이라이트 추가 및 EXASearchTool에서 이름 변경
+
+  ### 버그 수정
+  - 릴리스 흐름에서 crewai 핀 사이트 누락 수정
+  - 트레이스를 위한 기술 로딩 이벤트 보장
+
+  ### 문서
+  - v1.14.4에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @akaKuruma, @github-actions[bot], @greysonlalonde, @lorenzejay, @theishangoswami
+
+</Update>
+
+<Update label="2026년 5월 1일">
+  ## v1.14.4
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.4)
+
+  ## 변경 사항
+
+  ### 기능
+  - @persist에서 사용자 정의 지속성 키 지원 추가
+  - Azure OpenAI 공급자를 위한 응답 API 지원 추가
+  - Azure AI 추론 클라이언트에 credential_scopes 전달
+  - Vertex AI 작업 부하 신원 설정 가이드 추가
+  - Tavily Research 및 Research 가져오기 추가
+  - 검색, 연구 및 콘텐츠 추출을 위한 You.com MCP 도구 추가
+
+  ### 버그 수정
+  - JSON 정규 표현식이 유효한 JSON이 아닐 때의 fall through 수정
+  - 응답에 텍스트가 포함될 때 tool_calls를 보존하도록 수정
+  - instructor.from_provider에 base_url 및 api_key를 전달하도록 수정
+  - 기본 MCP 서버가 도구를 반환하지 않을 때 경고하고 빈 값을 반환하도록 수정
+  - 비스트리밍 핸들러에서 검증된 메시지 변수를 사용하도록 수정
+  - LLM 실패에 대한 크루 채팅 설명 도우미를 보호하도록 수정
+  - 호출 간 메시지 및 반복을 재설정하도록 수정
+  - replay 및 test를 통해 훈련된 에이전트 파일을 전달하도록 수정
+  - 추론 시 사용자 정의 훈련된 에이전트 파일을 존중하도록 수정
+  - 다중 모드 input_files에 대해 작업 전용 에이전트를 크루에 바인딩하도록 수정
+  - JSON 체크포인팅을 위해 가드레일 호출 가능 항목을 null로 직렬화하도록 수정
+  - 자기 참조 라우터를 피하기 위해 force_final_answer의 이름 변경 수정
+  - SSTI 수정을 위한 litellm 버전 증가; 수정할 수 없는 pip CVE 무시
+
+  ### 문서
+  - v1.14.4a1에 대한 변경 로그 및 버전 업데이트
+  - E2B 샌드박스 도구 페이지 추가
+  - Daytona 샌드박스 도구 문서 추가
+
+  ## 기여자
+
+  @EdwardIrby, @dependabot[bot], @factory-droid-oss, @factory-droid[bot], @greysonlalonde, @kunalk16, @lorenzejay, @lucasgomide, @manisrinivasan2k1, @mattatcha, @vinibrsl
+
+</Update>
+
+<Update label="2026년 4월 29일">
+  ## v1.14.4a1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.4a1)
+
+  ## 변경 사항
+
+  ### 버그 수정
+  - LLM 실패에 대한 크루 채팅 설명 도우미 수정.
+  - 실행기에서 호출 간 메시지 및 반복 초기화.
+  - CLI에서 재생 및 테스트를 통해 훈련된 에이전트 파일 전달.
+  - 에이전트에서 추론 시 사용자 정의 훈련된 에이전트 파일 존중.
+  - 다중 모드 입력 파일이 LLM에 도달하도록 작업 전용 에이전트를 크루에 바인딩.
+  - JSON 체크포인트를 위해 가드레일 호출 가능 항목을 null로 직렬화.
+  - 자기 참조 라우터를 피하기 위해 agent_executor에서 `force_final_answer` 이름 변경.
+  - SSTI 수정을 위한 `litellm` 버전 증가 및 수정 불가능한 pip CVE 무시.
+
+  ### 문서
+  - E2B 샌드박스 도구 페이지 추가.
+  - Daytona 샌드박스 도구 문서 추가.
+  - Vertex AI 작업 부하 신원 설정 가이드 추가.
+  - 검색, 연구 및 콘텐츠 추출을 위한 You.com MCP 도구 추가.
+  - v1.14.3에 대한 변경 로그 및 버전 업데이트.
+
+  ## 기여자
+
+  @EdwardIrby, @dependabot[bot], @factory-droid-oss, @factory-droid[bot], @greysonlalonde, @lorenzejay, @manisrinivasan2k1, @mattatcha
+
+</Update>
+
+<Update label="2026년 4월 25일">
+  ## v1.14.3
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.3)
+
+  ## 변경 사항
+
+  ### 기능
+  - 체크포인트 작업을 위한 생명주기 이벤트 추가
+  - e2b 지원 추가
+  - Azure 통합에서 API 키가 제공되지 않을 경우 DefaultAzureCredential로 대체
+  - Bedrock V4 지원 추가
+  - 향상된 기능을 위한 Daytona 샌드박스 도구 추가
+  - 독립형 에이전트에 체크포인트 및 포크 지원 추가
+
+  ### 버그 수정
+  - execution_id를 state.id와 분리되도록 수정
+  - 체크포인트 재개 시 기록된 메서드 이벤트 재생 문제 해결
+  - initial_state 클래스 참조의 JSON 스키마 직렬화 수정
+  - 메타데이터 전용 에이전트 기술 보존
+  - 암묵적인 @CrewBase 이름을 크루 이벤트로 전파
+  - 중복 배치 초기화 시 실행 메타데이터 병합
+  - 체크포인트를 위한 Task 클래스 참조 필드의 직렬화 수정
+  - 가드레일 재시도 루프에서 BaseModel 결과 처리
+  - Gemini 스트리밍 도구 호출에서 thought_signature 보존
+  - 포크 재개 시 task_started 방출 및 체크포인트 TUI 재설계
+  - 체크포인트 가지치기 테스트에서 미래 날짜 사용하여 시간 의존적 실패 방지
+  - 드라이 런 주문 수정 및 devtools 릴리스에서 체크아웃된 오래된 브랜치 처리
+  - 보안 패치를 위해 lxml을 >=6.1.0으로 업그레이드
+  - 보안 패치를 위해 python-dotenv를 >=1.2.2로 업그레이드
+
+  ### 문서
+  - v1.14.3에 대한 변경 로그 및 버전 업데이트
+  - 'AI로 빌드하기' 페이지 추가 및 모든 언어에 대한 내비게이션 업데이트
+  - 모든 로케일에서 build-with-ai 페이지의 가격 FAQ 제거
+
+  ### 성능
+  - MCP SDK 및 이벤트 유형 최적화하여 콜드 스타트를 약 29% 감소
+
+  ### 리팩토링
+  - 중복 제거 및 상태 유형 힌트를 강화하기 위해 체크포인트 헬퍼 리팩토링
+
+  ## 기여자
+
+  @MatthiasHowellYopp, @akaKuruma, @alex-clawd, @github-actions[bot], @github-advanced-security[bot], @greysonlalonde, @iris-clawd, @lorenzejay, @mattatcha, @renatonitta
+
+</Update>
+
+<Update label="2026년 4월 23일">
+  ## v1.14.3a3
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.3a3)
+
+  ## 변경 사항
+
+  ### 기능
+  - e2b 지원 추가
+  - API 키가 제공되지 않을 경우 DefaultAzureCredential로 대체 구현
+
+  ### 버그 수정
+  - 보안 문제 GHSA-vfmq-68hx-4jfw를 해결하기 위해 lxml을 >=6.1.0으로 업그레이드
+
+  ### 문서
+  - 모든 지역에서 build-with-ai 페이지의 가격 FAQ 제거
+
+  ### 성능
+  - MCP SDK 및 이벤트 유형의 지연 로딩을 통해 콜드 스타트 시간을 약 29% 개선
+
+  ## 기여자
+
+  @alex-clawd, @github-advanced-security[bot], @greysonlalonde, @iris-clawd, @lorenzejay, @mattatcha
+
+</Update>
+
+<Update label="2026년 4월 22일">
+  ## v1.14.3a2
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.3a2)
+
+  ## 변경 사항
+
+  ### 기능
+  - 베드록 V4 지원 추가
+  - 향상된 기능을 위한 데이토나 샌드박스 도구 추가
+  - 'AI와 함께 빌드' 페이지 추가 — 코딩 에이전트를 위한 AI 네이티브 문서
+  - 모든 언어(en, ko, pt-BR, ar)에 대한 시작하기 탐색 및 페이지 파일에 AI와 함께 빌드 추가
+
+  ### 버그 수정
+  - 크루 이벤트에 대한 암묵적 @CrewBase 이름 전파 수정
+  - 실행 메타데이터 병합에서 중복 배치 초기화 문제 해결
+  - 체크포인트를 위한 Task 클래스 참조 필드 직렬화 수정
+  - 가드레일 재시도 루프에서 BaseModel 결과 처리
+  - 보안 준수를 위해 python-dotenv를 버전 >=1.2.2로 업데이트
+
+  ### 문서
+  - v1.14.3a1에 대한 변경 로그 및 버전 업데이트
+  - 설명 업데이트 및 실제 번역 적용
+
+  ## 기여자
+
+  @MatthiasHowellYopp, @github-actions[bot], @greysonlalonde, @iris-clawd, @lorenzejay, @renatonitta
+
+</Update>
+
+<Update label="2026년 4월 21일">
+  ## v1.14.3a1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.3a1)
+
+  ## 변경 사항
+
+  ### 기능
+  - 독립형 에이전트에 체크포인트 및 포크 지원 추가
+
+  ### 버그 수정
+  - Gemini 스트리밍 도구 호출에서 thought_signature 보존
+  - 포크 재개 시 task_started 방출 및 체크포인트 TUI 재설계
+  - dry-run 순서 수정 및 devtools 릴리스에서 체크아웃된 오래된 브랜치 처리
+  - 체크포인트 가지치기 테스트에서 미래 날짜 사용하여 시간 의존성 실패 방지 (#5543)
+
+  ### 문서
+  - v1.14.2에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @alex-clawd, @greysonlalonde
+
+</Update>
+
+<Update label="2026년 4월 17일">
+  ## v1.14.2
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.2)
+
+  ## 변경 사항
+
+  ### 기능
+  - 체크포인트 재개, 차이(diff), 및 가지치기(prune) 명령을 추가하여 가시성을 개선했습니다.
+  - `Agent.kickoff` 및 관련 메서드에 `from_checkpoint` 매개변수를 추가했습니다.
+  - 프로젝트 템플릿을 위한 템플릿 관리 명령을 추가했습니다.
+  - 실패 시 개발 도구 릴리스에 재개 힌트를 추가했습니다.
+  - 배포 검증 CLI를 추가하고 LLM 초기화의 사용 편의성을 향상시켰습니다.
+  - 계보 추적이 가능한 체크포인트 포킹을 추가했습니다.
+  - 추론 토큰 및 캐시 생성 토큰으로 LLM 토큰 추적을 풍부하게 했습니다.
+
+  ### 버그 수정
+  - 개발 도구 릴리스에서 오래된 브랜치 충돌에 대한 프롬프트를 수정했습니다.
+  - `authlib`, `langchain-text-splitters`, 및 `pypdf`의 취약점을 패치했습니다.
+  - 스트리밍 핸들러의 범위를 설정하여 교차 실행 청크 오염을 방지했습니다.
+  - TUI에서 Flow API를 통해 Flow 체크포인트를 전송했습니다.
+  - JSON 체크포인트 발견을 위해 재귀적 글로브를 사용했습니다.
+  - MCP 도구 해상도에서 순환 JSON 스키마를 처리했습니다.
+  - 진리값이 있는 기본값을 제거하여 Bedrock 도구 호출 인수를 보존했습니다.
+  - HITL 재개 후 flow_finished 이벤트를 발생시켰습니다.
+  - `requests`, `cryptography`, 및 `pytest`를 포함한 종속성을 업데이트하여 다양한 취약점을 수정했습니다.
+  - Bedrock Converse API에 엄격 모드를 전달하지 않도록 수정했습니다.
+
+  ### 문서
+  - 누락된 매개변수를 문서화하고 체크포인팅 섹션을 추가했습니다.
+  - v1.14.2 및 이전 릴리스 후보에 대한 변경 로그 및 버전을 업데이트했습니다.
+  - 기업 A2A 기능 문서를 추가하고 OSS A2A 문서를 업데이트했습니다.
+
+  ## 기여자
+
+  @Yanhu007, @alex-clawd, @github-actions[bot], @greysonlalonde, @iris-clawd, @lorenzejay, @lucasgomide
+
+</Update>
+
+<Update label="2026년 4월 16일">
+  ## v1.14.2rc1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.2rc1)
+
+  ## 변경 사항
+
+  ### 버그 수정
+  - MCP 도구 해상도에서 순환 JSON 스키마 처리 수정
+  - python-multipart를 0.0.26으로 업데이트하여 취약점 수정
+  - pypdf를 6.10.1로 업데이트하여 취약점 수정
+
+  ### 문서
+  - v1.14.2a5에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="2026년 4월 15일">
+  ## v1.14.2a5
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.2a5)
+
+  ## 변경 사항
+
+  ### 문서
+  - v1.14.2a4의 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="2026년 4월 15일">
+  ## v1.14.2a4
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.2a4)
+
+  ## 변경 사항
+
+  ### 기능
+  - 실패 시 devtools 릴리스에 이력서 힌트 추가
+
+  ### 버그 수정
+  - Bedrock Converse API로의 엄격 모드 포워딩 수정
+  - 보안 취약점 GHSA-6w46-j5rx-g56g에 대해 pytest 버전을 9.0.3으로 수정
+  - OpenAI 하한을 >=2.0.0으로 상향 조정
+
+  ### 문서
+  - v1.14.2a3에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="2026년 4월 13일">
+  ## v1.14.2a3
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.2a3)
+
+  ## 변경 사항
+
+  ### 기능
+  - 배포 검증 CLI 추가
+  - LLM 초기화 사용성 개선
+
+  ### 버그 수정
+  - CVE-2026-40260 및 GHSA-pjjw-68hj-v9mw에 대한 패치된 버전으로 pypdf 및 uv 재정의
+  - CVE 임시 파일 취약점에 대해 requests를 >=2.33.0으로 업그레이드
+  - 진리값 기본값을 제거하여 Bedrock 도구 호출 인수 보존
+  - 엄격 모드를 위한 도구 스키마 정리
+  - MemoryRecord 임베딩 직렬화 테스트의 불안정성 제거
+
+  ### 문서
+  - 기업 A2A 언어 정리
+  - 기업 A2A 기능 문서 추가
+  - OSS A2A 문서 업데이트
+  - v1.14.2a2에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @Yanhu007, @greysonlalonde
+
+</Update>
+
+<Update label="2026년 4월 10일">
+  ## v1.14.2a2
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.2a2)
+
+  ## 변경 사항
+
+  ### 기능
+  - 트리 뷰, 포크 지원 및 편집 가능한 입력/출력을 갖춘 체크포인트 TUI 추가
+  - 추론 토큰 및 캐시 생성 토큰으로 LLM 토큰 추적 강화
+  - 킥오프 메서드에 `from_checkpoint` 매개변수 추가
+  - 마이그레이션 프레임워크와 함께 체크포인트에 `crewai_version` 포함
+  - 계보 추적이 가능한 체크포인트 포킹 추가
+
+  ### 버그 수정
+  - Anthropic 및 Bedrock 공급자로의 엄격 모드 포워딩 수정
+  - 읽기 전용 기본값, 쿼리 검증 및 매개변수화된 쿼리로 NL2SQLTool 강화
+
+  ### 문서
+  - v1.14.2a1에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @alex-clawd, @github-actions[bot], @greysonlalonde, @lucasgomide
+
+</Update>
+
+<Update label="2026년 4월 9일">
+  ## v1.14.2a1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.2a1)
+
+  ## 변경 사항
+
+  ### 버그 수정
+  - HITL 재개 후 flow_finished 이벤트 방출 수정
+  - CVE-2026-39892 문제를 해결하기 위해 암호화 버전을 46.0.7로 수정
+
+  ### 리팩토링
+  - 공유 I18N_DEFAULT 싱글톤을 사용하도록 리팩토링
+
+  ### 문서
+  - v1.14.1에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="2026년 4월 9일">
+  ## v1.14.1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.1)
+
+  ## 변경 사항
+
+  ### 기능
+  - 비동기 체크포인트 TUI 브라우저 추가
+  - 스트리밍 출력에 aclose()/close() 및 비동기 컨텍스트 관리자 추가
+
+  ### 버그 수정
+  - 템플릿 pyproject.toml 버전 증가를 위한 정규 표현식 수정
+  - 훅 데코레이터 필터에서 도구 이름 정리
+  - CheckpointConfig 생성 시 체크포인트 핸들러 등록 수정
+  - CVE-2026-1839 해결을 위해 transformers를 5.5.0으로 업데이트
+  - FilteredStream stdout/stderr 래퍼 제거
+
+  ### 문서
+  - v1.14.1rc1에 대한 변경 로그 및 버전 업데이트
+
+  ### 리팩토링
+  - 하드코딩된 거부 목록을 동적 BaseTool 필드 제외로 교체
+  - devtools CLI에서 정규 표현식을 tomlkit으로 교체
+  - 공유 PRINTER 싱글톤 사용
+  - BaseProvider를 provider_type 식별자가 있는 BaseModel로 변경
+
+  ## 기여자
+
+  @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay
+
+</Update>
+
+<Update label="2026년 4월 9일">
+  ## v1.14.1rc1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.1rc1)
+
+  ## 변경 사항
+
+  ### 기능
+  - 비동기 체크포인트 TUI 브라우저 추가
+  - 스트리밍 출력에 aclose()/close() 및 비동기 컨텍스트 관리자 추가
+
+  ### 버그 수정
+  - 정규 표현식을 사용하여 템플릿 pyproject.toml 버전 증가 수정
+  - 후크 데코레이터 필터에서 도구 이름 정리
+  - CVE-2026-1839 해결을 위해 transformers를 5.5.0으로 업데이트
+  - CheckpointConfig가 생성될 때 체크포인트 핸들러 등록
+
+  ### 리팩토링
+  - 하드코딩된 거부 목록을 동적 BaseTool 필드 제외로 교체
+  - devtools CLI에서 정규 표현식을 tomlkit으로 교체
+  - 공유 PRINTER 싱글톤 사용
+  - BaseProvider를 provider_type 구분자가 있는 BaseModel로 변경
+  - FilteredStream stdout/stderr 래퍼 제거
+  - 사용되지 않는 flow/config.py 제거
+
+  ### 문서
+  - v1.14.0에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @greysonlalonde, @iris-clawd, @joaomdmoura
+
+</Update>
+
+<Update label="2026년 4월 7일">
+  ## v1.14.0
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0)
+
+  ## 변경 사항
+
+  ### 기능
+  - 체크포인트 목록/정보 CLI 명령 추가
+  - 추적을 구분하기 위한 guardrail_type 및 이름 추가
+  - 체크포인트 저장을 위한 SqliteProvider 추가
+  - 자동 체크포인트 생성을 위한 CheckpointConfig 추가
+  - 런타임 상태 체크포인트, 이벤트 시스템 및 실행기 리팩토링 구현
+
+  ### 버그 수정
+  - SSRF 및 경로 탐색 보호 추가
+  - RAG 도구에 경로 및 URL 유효성 검사 추가
+  - 토큰 절약을 위해 메모리 직렬화에서 임베딩 벡터 제외
+  - 흐름 템플릿에 쓰기 전에 출력 디렉토리가 존재하는지 확인
+  - CVE-2026-35030 문제를 해결하기 위해 litellm을 >=1.83.0으로 업데이트
+  - 아랍어 페이지 렌더링을 유발하는 SEO 인덱싱 필드 제거
+
+  ### 문서
+  - v1.14.0에 대한 변경 로그 및 버전 업데이트
+  - 명확성을 개선하기 위해 빠른 시작 및 설치 가이드 업데이트
+  - 저장소 제공자 섹션 추가, JsonProvider 내보내기
+  - AMP 교육 탭 가이드 추가
+
+  ### 리팩토링
+  - 체크포인트 API 정리
+  - CodeInterpreterTool 제거 및 코드 실행 매개변수 사용 중단
+
+  ## 기여자
+
+  @alex-clawd, @github-actions[bot], @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay, @lucasgomide
+
+</Update>
+
+<Update label="2026년 4월 7일">
+  ## v1.14.0a4
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0a4)
+
+  ## 변경 사항
+
+  ### 기능
+  - 추적을 구분하기 위해 guardrail_type 및 이름 추가
+  - 체크포인트 저장을 위한 SqliteProvider 추가
+  - 자동 체크포인트 생성을 위한 CheckpointConfig 추가
+  - 런타임 상태 체크포인트, 이벤트 시스템 및 실행기 리팩토링 구현
+
+  ### 버그 수정
+  - 토큰 절약을 위해 메모리 직렬화에서 임베딩 벡터 제외
+  - CVE-2026-35030 문제를 해결하기 위해 litellm을 >=1.83.0으로 업데이트
+
+  ### 문서
+  - 명확성을 개선하기 위해 빠른 시작 및 설치 가이드 업데이트
+  - 저장소 제공자 섹션 추가 및 JsonProvider 내보내기
+
+  ### 성능
+  - 체크포인트 데이터 열에 JSONB 사용
+
+  ### 리팩토링
+  - CodeInterpreterTool 제거 및 코드 실행 매개변수 사용 중단
+
+  ## 기여자
+
+  @alex-clawd, @github-actions[bot], @greysonlalonde, @joaomdmoura, @lorenzejay, @lucasgomide
+
+</Update>
+
+<Update label="2026년 4월 6일">
+  ## v1.14.0a3
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0a3)
+
+  ## 변경 사항
+
+  ### 문서
+  - v1.14.0a2의 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @joaomdmoura
+
+</Update>
+
+<Update label="2026년 4월 6일">
+  ## v1.14.0a2
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.0a2)
+
+  ## 릴리스 1.14.0a2
+
+  ### 지침:
+  - 모든 섹션 제목과 설명을 자연스럽게 번역합니다.
+  - 마크다운 형식을 그대로 유지합니다 (##, ###, -, 등).
+  - 모든 고유 명사, 코드 식별자, 클래스 이름 및 기술 용어는 변경하지 않습니다.
+    (예: "CrewAI", "LiteAgent", "ChromaDB", "MCP", "@username")
+  - ## 기여자 섹션과 GitHub 사용자 이름은 변경하지 않습니다.
+  - 내용을 추가하거나 제거하지 않고 오직 번역만 합니다.
+
+</Update>
+
+<Update label="2026년 4월 2일">
+  ## v1.13.0
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0)
+
+  ## 변경 사항
+
+  ### 기능
+  - 통합 상태 직렬화를 위한 RuntimeState RootModel 추가
+  - 기술 및 메모리 이벤트에 대한 새로운 텔레메트리 스팬으로 이벤트 리스너 강화
+  - v0.8/v0.9 지원, 스키마 및 문서가 포함된 A2UI 확장 추가
+  - LLMCallCompletedEvent에서 토큰 사용 데이터 방출
+  - 릴리스 중 배포 테스트 리포 자동 업데이트
+  - 기업 릴리스의 복원력 및 사용자 경험 개선
+
+  ### 버그 수정
+  - crewai 설치에 도구 리포지토리 자격 증명 추가
+  - 도구 게시의 uv 빌드에 도구 리포지토리 자격 증명 추가
+  - 도구 인수 대신 구성으로 지문 메타데이터 전달
+  - `stop` API 매개변수를 지원하지 않는 GPT-5.x 모델 처리
+  - 멀티모달 비전 접두사에 GPT-5 및 o-series 추가
+  - 기업 릴리스에서 새로 게시된 패키지에 대한 uv 캐시 무효화
+  - Windows 호환성을 위해 lancedb를 0.30.1 이하로 제한
+  - 실제 UI 옵션과 일치하도록 RBAC 권한 수준 수정
+  - 모든 언어에서 에이전트 기능의 부정확성 수정
+
+  ### 문서
+  - 시작하기 페이지에 코딩 에이전트 기술 데모 비디오 추가
+  - 포괄적인 SSO 구성 가이드 추가
+  - 포괄적인 RBAC 권한 매트릭스 및 배포 가이드 추가
+  - v1.13.0에 대한 변경 로그 및 버전 업데이트
+
+  ### 성능
+  - 비활성화 시 추적 건너뛰기와 함께 지연 이벤트 버스를 사용하여 프레임워크 오버헤드 감소
+
+  ### 리팩토링
+  - Flow를 Pydantic BaseModel로 변환
+  - LLM 클래스를 Pydantic BaseModel로 변환
+  - InstanceOf[T]를 일반 타입 주석으로 교체
+  - 사용되지 않는 third_party LLM 디렉토리 제거
+
+  ## 기여자
+
+  @alex-clawd, @dependabot[bot], @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay, @lucasgomide, @thiagomoretto
+
+</Update>
+
+<Update label="2026년 4월 2일">
+  ## v1.13.0a7
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a7)
+
+  ## 변경 사항
+
+  ### 기능
+  - v0.8/v0.9 지원, 스키마 및 문서가 포함된 A2UI 확장 추가
+
+  ### 버그 수정
+  - GPT-5 및 o-series를 추가하여 다중 모드 비전 접두사 수정
+
+  ### 문서
+  - v1.13.0a6에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @alex-clawd, @greysonlalonde, @joaomdmoura
+
+</Update>
+
+<Update label="2026년 4월 1일">
+  ## v1.13.0a6
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a6)
+
+  ## 변경 사항
+
+  ### 문서
+  - 실제 UI 옵션에 맞게 RBAC 권한 수준 수정 (#5210)
+  - v1.13.0a5에 대한 변경 로그 및 버전 업데이트 (#5200)
+
+  ### 성능
+  - 지연 이벤트 버스를 구현하고 비활성화 시 추적을 건너뛰어 프레임워크 오버헤드 감소 (#5187)
+
+  ## 기여자
+
+  @alex-clawd, @joaomdmoura, @lucasgomide
+
+</Update>
+
+<Update label="2026년 3월 31일">
+  ## v1.13.0a5
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a5)
+
+  ## 변경 사항
+
+  ### 문서
+  - v1.13.0a4에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @greysonlalonde, @joaomdmoura
+
+</Update>
+
+<Update label="2026년 4월 1일">
+  ## v1.13.0a4
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a4)
+
+  ## 변경 사항
+
+  ### 문서
+  - v1.13.0a3에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="2026년 4월 1일">
+  ## v1.13.0a3
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a3)
+
+  ## 변경 사항
+
+  ### 기능
+  - LLMCallCompletedEvent에서 토큰 사용 데이터 발행
+  - 도구 메타데이터를 AMP로 추출 및 게시
+
+  ### 버그 수정
+  - `stop` API 매개변수를 지원하지 않는 GPT-5.x 모델 처리
+
+  ### 문서
+  - 모든 언어에서 에이전트 기능의 부정확성 수정
+  - 에이전트 기능 개요 추가 및 기술 문서 개선
+  - 포괄적인 SSO 구성 가이드 추가
+  - v1.13.0rc1에 대한 변경 로그 및 버전 업데이트
+
+  ### 리팩토링
+  - Flow를 Pydantic BaseModel로 변환
+  - LLM 클래스를 Pydantic BaseModel로 변환
+  - InstanceOf[T]를 일반 타입 주석으로 교체
+  - 사용되지 않는 메서드 제거
+
+  ## 기여자
+
+  @dependabot[bot], @greysonlalonde, @iris-clawd, @lorenzejay, @lucasgomide, @thiagomoretto
+
+</Update>
+
+<Update label="2026년 3월 27일">
+  ## v1.13.0rc1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0rc1)
+
+  ## 변경 사항
+
+  ### 문서
+  - v1.13.0a2의 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="2026년 3월 27일">
+  ## v1.13.0a2
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a2)
+
+  ## 변경 사항
+
+  ### 기능
+  - 릴리스 중 자동 업데이트 배포 테스트 리포지토리
+  - 기업 릴리스의 복원력 및 사용자 경험 개선
+
+  ### 문서
+  - v1.13.0a1에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="2026년 3월 27일">
+  ## v1.13.0a1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.13.0a1)
+
+  ## 변경 사항
+
+  ### 버그 수정
+  - Node를 LTS 22로 고정하여 문서 작업 흐름의 끊어진 링크 수정
+  - 기업 릴리스에서 새로 게시된 패키지의 uv 캐시 초기화
+
+  ### 문서
+  - 포괄적인 RBAC 권한 매트릭스 및 배포 가이드 추가
+  - v1.12.2에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @greysonlalonde, @iris-clawd, @joaomdmoura
+
+</Update>
+
+<Update label="2026년 3월 25일">
+  ## v1.12.2
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.12.2)
+
+  ## 변경 사항
+
+  ### 기능
+  - devtools 릴리스에 기업 릴리스 단계 추가
+
+  ### 버그 수정
+  - @human_feedback과 함께 emit을 사용할 때 메서드 반환 값을 흐름 출력으로 유지
+
+  ### 문서
+  - v1.12.1에 대한 변경 로그 및 버전 업데이트
+  - 보안 정책 및 보고 지침 수정
+
+  ## 기여자
+
+  @alex-clawd, @greysonlalonde, @joaomdmoura, @theCyberTech
+
+</Update>
+
+<Update label="2026년 3월 25일">
+  ## v1.12.1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.12.1)
+
+  ## 변경 사항
+
+  ### 기능
+  - HumanFeedbackRequestedEvent에 request_id 추가
+  - 메모리 시스템을 위한 Qdrant Edge 저장소 백엔드 추가
+  - 변경 사항을 분석하고 번역된 문서와 함께 문서를 생성하는 docs-check 명령어 추가
+  - 변경 로그 및 릴리스 도구에 아랍어 지원 추가
+  - 모든 문서에 대한 현대 표준 아랍어 번역 추가
+  - CLI에 로그아웃 명령어 추가
+  - 에이전트 기술 추가
+  - 계층적 메모리 격리를 위한 자동 root_scope 구현
+  - OpenAI 호환 네이티브 제공자 구현 (OpenRouter, DeepSeek, Ollama, vLLM, Cerebras, Dashscope)
+
+  ### 버그 수정
+  - 트레이스 배치 푸시에 대한 잘못된 자격 증명 수정 (404)
+  - HITL 흐름 시스템의 여러 버그 해결
+  - 에이전트 메모리 저장 수정
+  - crewai 패키지 전반에 걸쳐 모든 엄격한 mypy 오류 해결
+  - FlowMeta의 listener+router 메서드에 대한 __router_paths__ 사용 수정
+  - 파일 지원이 없는 경우 값 오류 수정
+  - 문서에서 litellm 격리 단어 수정
+  - crewai-files의 모든 mypy 오류 수정 및 모든 패키지를 CI 유형 검사에 추가
+  - litellm의 상한을 마지막 테스트된 버전 (1.82.6)으로 고정
+
+  ### 문서
+  - v1.12.0에 대한 변경 로그 및 버전 업데이트
+  - CONTRIBUTING.md 추가
+  - LiteLLM 없이 CrewAI를 사용하는 가이드 추가
+
+  ## 기여자
+
+  @akaKuruma, @alex-clawd, @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay, @lucasgomide, @nicoferdi96
+
+</Update>
+
+<Update label="2026년 3월 25일">
+  ## v1.12.0
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.12.0)
+
+  ## 변경 사항
+
+  ### 기능
+  - 메모리 시스템을 위한 Qdrant Edge 스토리지 백엔드 추가
+  - 변경 사항을 분석하고 번역된 문서와 함께 문서를 생성하는 docs-check 명령어 추가
+  - 변경 로그 및 릴리스 도구에 아랍어 지원 추가
+  - 모든 문서의 현대 표준 아랍어 번역 추가
+  - CLI에 로그아웃 명령어 추가
+  - 에이전트 기술 구현
+  - 계층적 메모리 격리를 위한 자동 root_scope 구현
+  - OpenAI 호환 네이티브 제공자 구현 (OpenRouter, DeepSeek, Ollama, vLLM, Cerebras, Dashscope)
+
+  ### 버그 수정
+  - 트레이스 배치 푸시에 대한 잘못된 자격 증명 수정 (404)
+  - HITL 흐름 시스템의 여러 버그 해결
+  - crewai-files의 mypy 오류 해결 및 모든 패키지를 CI 타입 검사에 추가
+  - crewai-tools 패키지 전반의 모든 엄격한 mypy 오류 해결
+  - crewai 패키지 전반의 모든 mypy 오류 해결
+  - 에이전트의 메모리 절약 수정
+  - FlowMeta에서 listener+router 메서드의 __router_paths__ 사용 수정
+  - 파일 지원이 없을 때 값 오류 발생
+  - 문서에서 litellm 격리 단어 수정
+  - 인간 피드백 학습에서 메모리에 대한 isinstance 대신 None 체크 사용
+  - litellm의 상한을 마지막 테스트된 버전(1.82.6)으로 고정
+
+  ### 문서
+  - v1.12.0에 대한 변경 로그 및 버전 업데이트
+  - CONTRIBUTING.md 추가
+  - LiteLLM 없이 CrewAI를 사용하는 가이드 추가
+
+  ### 리팩토링
+  - 에이전트에서 동기/비동기 작업 실행 및 시작을 중복 제거하도록 리팩토링
+  - litellm의 내부 플러밍 단순화 (토큰 카운팅, 콜백, 기능 감지, 오류)
+
+  ## 기여자
+
+  @akaKuruma, @alex-clawd, @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay, @nicoferdi96
+
+</Update>
+
+<Update label="2026년 3월 26일">
+  ## v1.12.0a3
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.12.0a3)
+
+  ## 변경 사항
+
+  ### 버그 수정
+  - 트레이스 배치 푸시에 대한 잘못된 자격 증명 수정 (404)
+  - HITL 흐름 시스템의 여러 버그 해결
+
+  ### 문서
+  - v1.12.0a2에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @akaKuruma, @greysonlalonde
+
+</Update>
+
+<Update label="2026년 3월 25일">
+  ## v1.12.0a2
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.12.0a2)
+
+  ## 변경 사항
+
+  ### 기능
+  - 메모리 시스템을 위한 Qdrant Edge 스토리지 백엔드 추가
+
+  ### 문서
+  - v1.12.0a1에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="2026년 3월 25일">
+  ## v1.12.0a1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.12.0a1)
+
+  ## 변경 사항
+
+  ### 기능
+  - 변경 사항을 분석하고 번역된 문서 생성하는 docs-check 명령 추가
+  - 변경 로그 및 릴리스 도구에 아랍어 지원 추가
+  - 모든 문서의 현대 표준 아랍어 번역 추가
+  - OpenAI 호환 네이티브 제공업체 추가 (OpenRouter, DeepSeek, Ollama, vLLM, Cerebras, Dashscope)
+  - 에이전트 기술 추가
+  - CLI에 로그아웃 명령 추가
+  - 계층 메모리 격리를 위한 자동 root_scope 구현
+
+  ### 버그 수정
+  - 에이전트 메모리 저장 문제 수정
+  - crewai-files에서 mypy 오류 해결 및 모든 패키지를 CI 유형 검사에 추가
+  - crewai-tools 패키지 전반에 걸쳐 모든 엄격한 mypy 오류 해결
+  - crewai 패키지 전반에 걸쳐 모든 mypy 오류 해결
+  - FlowMeta에서 listener+router 메서드의 __router_paths__ 사용 수정
+  - litellm 상한을 마지막 테스트된 버전(1.82.6)으로 고정
+  - 파일 지원이 없을 경우 값 오류 발생
+  - 문서에서 litellm 격리 단어 수정
+
+  ### 문서
+  - CONTRIBUTING.md 추가
+  - LiteLLM 없이 CrewAI를 사용하는 가이드 추가
+  - v1.11.1에 대한 변경 로그 및 버전 업데이트
+
+  ### 리팩토링
+  - 에이전트에서 동기/비동기 작업 실행 및 시작을 중복 제거하도록 리팩토링
+  - litellm과 내부 플러밍 분리 (토큰 수 세기, 콜백, 기능 감지, 오류)
+
+  ## 기여자
+
+  @alex-clawd, @greysonlalonde, @iris-clawd, @lorenzejay, @nicoferdi96
+
+</Update>
+
+<Update label="2026년 3월 23일">
+  ## v1.11.1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.11.1)
+
+  ## 변경 사항
+
+  ### 기능
+  - Flow 클래스 내성 검사를 위한 flow_structure() 직렬 변환기 추가.
+
+  ### 버그 수정
+  - pypdf, tinytag 및 langchain-core의 버전을 업데이트하여 보안 취약점 수정.
+  - 비-OpenAI 제공자의 HITL 재개 시 전체 LLM 구성 유지.
+  - FileWriterTool에서 경로 탐색 방지.
+  - redis 패키지가 설치되지 않았을 때 lock_store 충돌 수정.
+  - BaseTool에서 CrewStructuredTool로 cache_function 전달.
+
+  ### 문서화
+  - 번역이 포함된 사용자 정의 도구 게시 가이드 추가.
+  - v1.11.0에 대한 변경 로그 및 버전 업데이트.
+  - 누락된 이벤트 리스너 문서 추가.
+
+  ### 리팩토링
+  - pdf 로더에서 urllib를 requests로 교체.
+  - Any 유형의 콜백 및 모델 필드를 직렬화 가능한 유형으로 교체.
+
+  ## 기여자
+
+  @alex-clawd, @danielfsbarreto, @dependabot[bot], @greysonlalonde, @lorenzejay, @lucasgomide, @mattatcha, @theCyberTech, @vinibrsl
+
+</Update>
+
+<Update label="2026년 3월 18일">
+  ## v1.11.0
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.11.0)
+
+  ## 변경 사항
+
+  ### 문서
+  - v1.11.0rc2에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="2026년 3월 17일">
+  ## v1.11.0rc2
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.11.0rc2)
+
+  ## 변경 사항
+
+  ### 버그 수정
+  - LLM 응답 처리 및 직렬화 개선.
+  - 취약한 전이 종속성(authlib, PyJWT, snowflake-connector-python) 업그레이드.
+  - 안전하지 않은 모드에서 pip 설치 시 `os.system`을 `subprocess.run`으로 교체.
+
+  ### 문서
+  - 개선된 이름, 설명 및 구성 옵션으로 Exa 검색 도구 페이지 업데이트.
+  - 사용 방법 가이드에 사용자 지정 MCP 서버 추가.
+  - OTEL 수집기 문서 업데이트.
+  - MCP 문서 업데이트.
+  - v1.11.0rc1에 대한 변경 로그 및 버전 업데이트.
+
+  ## 기여자
+
+  @10ishq, @greysonlalonde, @joaomdmoura, @lucasgomide, @mattatcha, @theCyberTech, @vinibrsl
+
+</Update>
+
+<Update label="2026년 3월 15일">
+  ## v1.11.0rc1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.11.0rc1)
+
+  ## 변경 사항
+
+  ### 기능
+  - Plus API 토큰 인증 추가
+  - 에서 계획 실행 패턴 구현
+
+  ### 버그 수정
+  - 코드 인터프리터 샌드박스 탈출 문제 해결
+
+  ### 문서
+  - v1.10.2rc2의 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @Copilot, @greysonlalonde, @lorenzejay, @theCyberTech
+
+</Update>
+
 <Update label="2026년 3월 14일">
   ## v1.10.2rc2
 

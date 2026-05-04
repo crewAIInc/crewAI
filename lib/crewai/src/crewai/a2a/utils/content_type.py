@@ -28,6 +28,7 @@ APPLICATION_PDF: Literal["application/pdf"] = "application/pdf"
 APPLICATION_OCTET_STREAM: Literal["application/octet-stream"] = (
     "application/octet-stream"
 )
+APPLICATION_A2UI_JSON: Literal["application/json+a2ui"] = "application/json+a2ui"
 
 DEFAULT_CLIENT_INPUT_MODES: Final[list[Literal["text/plain", "application/json"]]] = [
     TEXT_PLAIN,
@@ -311,6 +312,10 @@ def get_part_content_type(part: Part) -> str:
     if root.kind == "text":
         return TEXT_PLAIN
     if root.kind == "data":
+        metadata = root.metadata or {}
+        mime = metadata.get("mimeType", "")
+        if mime == APPLICATION_A2UI_JSON:
+            return APPLICATION_A2UI_JSON
         return APPLICATION_JSON
     if root.kind == "file":
         return root.file.mime_type or APPLICATION_OCTET_STREAM

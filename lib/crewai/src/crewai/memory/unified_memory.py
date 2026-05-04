@@ -22,7 +22,6 @@ from crewai.events.types.memory_events import (
 )
 from crewai.llms.base_llm import BaseLLM
 from crewai.memory.analyze import extract_memories_from_content
-from crewai.memory.recall_flow import RecallFlow
 from crewai.memory.storage.backend import StorageBackend
 from crewai.memory.types import (
     MemoryConfig,
@@ -32,6 +31,7 @@ from crewai.memory.types import (
     compute_composite_score,
     embed_text,
 )
+from crewai.memory.utils import join_scope_paths
 from crewai.rag.embeddings.factory import build_embedder
 from crewai.rag.embeddings.providers.openai.types import OpenAIProviderSpec
 
@@ -127,6 +127,14 @@ class Memory(BaseModel):
         default=False,
         description="If True, remember() and remember_many() are silent no-ops.",
     )
+    root_scope: str | None = Field(
+        default=None,
+        description=(
+            "Structural root scope prefix. When set, LLM-inferred or explicit scopes "
+            "are nested under this root. For example, a crew with root_scope='/crew/research' "
+            "will store memories at '/crew/research/<inferred_scope>'."
+        ),
+    )
 
     _config: MemoryConfig = PrivateAttr()
     _llm_instance: BaseLLM | None = PrivateAttr(default=None)
@@ -139,6 +147,36 @@ class Memory(BaseModel):
     )
     _pending_saves: list[Future[Any]] = PrivateAttr(default_factory=list)
     _pending_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
+
+    def __deepcopy__(self, memo: dict[int, Any] | None = None) -> Memory:
+        """Deepcopy that handles unpickleable private attrs (ThreadPoolExecutor, Lock)."""
+        import copy as _copy
+
+        cls = type(self)
+        new = cls.__new__(cls)
+        if memo is None:
+            memo = {}
+        memo[id(self)] = new
+        object.__setattr__(new, "__dict__", _copy.deepcopy(self.__dict__, memo))
+        object.__setattr__(
+            new, "__pydantic_fields_set__", _copy.copy(self.__pydantic_fields_set__)
+        )
+        object.__setattr__(
+            new, "__pydantic_extra__", _copy.deepcopy(self.__pydantic_extra__, memo)
+        )
+        # Private attrs: create fresh pool/lock instead of deepcopying
+        private = {}
+        for k, v in (self.__pydantic_private__ or {}).items():
+            if isinstance(v, (ThreadPoolExecutor, threading.Lock)):
+                attr = self.__private_attributes__[k]
+                private[k] = attr.get_default()
+            else:
+                try:
+                    private[k] = _copy.deepcopy(v, memo)
+                except Exception:
+                    private[k] = v
+        object.__setattr__(new, "__pydantic_private__", private)
+        return new
 
     def model_post_init(self, __context: Any) -> None:
         """Initialize runtime state from field values."""
@@ -165,13 +203,18 @@ class Memory(BaseModel):
         )
 
         if isinstance(self.storage, str):
-            from crewai.memory.storage.lancedb_storage import LanceDBStorage
+            if self.storage == "qdrant-edge":
+                from crewai.memory.storage.qdrant_edge_storage import QdrantEdgeStorage
 
-            self._storage = (
-                LanceDBStorage()
-                if self.storage == "lancedb"
-                else LanceDBStorage(path=self.storage)
-            )
+                self._storage = QdrantEdgeStorage()
+            elif self.storage == "lancedb":
+                from crewai.memory.storage.lancedb_storage import LanceDBStorage
+
+                self._storage = LanceDBStorage()
+            else:
+                from crewai.memory.storage.lancedb_storage import LanceDBStorage
+
+                self._storage = LanceDBStorage(path=self.storage)
         else:
             self._storage = self.storage
 
@@ -285,8 +328,10 @@ class Memory(BaseModel):
             future.result()  # blocks until done; re-raises exceptions
 
     def close(self) -> None:
-        """Drain pending saves and shut down the background thread pool."""
+        """Drain pending saves, flush storage, and shut down the background thread pool."""
         self.drain_writes()
+        if hasattr(self._storage, "close"):
+            self._storage.close()
         self._save_pool.shutdown(wait=True)
 
     def _encode_batch(
@@ -298,11 +343,26 @@ class Memory(BaseModel):
         importance: float | None = None,
         source: str | None = None,
         private: bool = False,
+        root_scope: str | None = None,
     ) -> list[MemoryRecord]:
         """Run the batch EncodingFlow for one or more items. No event emission.
 
         This is the core encoding logic shared by ``remember()`` and
         ``remember_many()``. Events are managed by the calling method.
+
+        Args:
+            contents: List of text content to encode and store.
+            scope: Optional explicit scope (inner scope, nested under root_scope).
+            categories: Optional categories for all items.
+            metadata: Optional metadata for all items.
+            importance: Optional importance score for all items.
+            source: Optional source identifier for all items.
+            private: Whether items are private.
+            root_scope: Structural root scope prefix. LLM-inferred or explicit
+                scopes are nested under this root.
+
+        Returns:
+            List of created MemoryRecord instances.
         """
         from crewai.memory.encoding_flow import EncodingFlow
 
@@ -321,6 +381,7 @@ class Memory(BaseModel):
                 "importance": importance,
                 "source": source,
                 "private": private,
+                "root_scope": root_scope,
             }
             for c in contents
         ]
@@ -341,6 +402,7 @@ class Memory(BaseModel):
         source: str | None = None,
         private: bool = False,
         agent_role: str | None = None,
+        root_scope: str | None = None,
     ) -> MemoryRecord | None:
         """Store a single item in memory (synchronous).
 
@@ -350,13 +412,15 @@ class Memory(BaseModel):
 
         Args:
             content: Text to remember.
-            scope: Optional scope path; inferred if None.
+            scope: Optional scope path (inner scope); inferred if None.
             categories: Optional categories; inferred if None.
             metadata: Optional metadata; merged with LLM-extracted if inferred.
             importance: Optional importance 0-1; inferred if None.
             source: Optional provenance identifier (e.g. user ID, session ID).
             private: If True, only visible to recall from the same source.
             agent_role: Optional agent role for event metadata.
+            root_scope: Optional root scope override. If provided, this overrides
+                the instance-level root_scope for this call only.
 
         Returns:
             The created MemoryRecord, or None if this memory is read-only.
@@ -366,6 +430,10 @@ class Memory(BaseModel):
         """
         if self.read_only:
             return None
+
+        # Determine effective root_scope: per-call override takes precedence
+        effective_root = root_scope if root_scope is not None else self.root_scope
+
         _source_type = "unified_memory"
         try:
             crewai_event_bus.emit(
@@ -389,6 +457,7 @@ class Memory(BaseModel):
                 importance,
                 source,
                 private,
+                effective_root,
             )
             records = future.result()
             record = records[0] if records else None
@@ -427,6 +496,7 @@ class Memory(BaseModel):
         source: str | None = None,
         private: bool = False,
         agent_role: str | None = None,
+        root_scope: str | None = None,
     ) -> list[MemoryRecord]:
         """Store multiple items in memory (non-blocking).
 
@@ -441,19 +511,24 @@ class Memory(BaseModel):
 
         Args:
             contents: List of text items to remember.
-            scope: Optional scope applied to all items.
+            scope: Optional scope (inner scope) applied to all items.
             categories: Optional categories applied to all items.
             metadata: Optional metadata applied to all items.
             importance: Optional importance applied to all items.
             source: Optional provenance identifier applied to all items.
             private: Privacy flag applied to all items.
             agent_role: Optional agent role for event metadata.
+            root_scope: Optional root scope override. If provided, this overrides
+                the instance-level root_scope for this call only.
 
         Returns:
             Empty list (records are not available until the background save completes).
         """
         if not contents or self.read_only:
             return []
+
+        # Determine effective root_scope: per-call override takes precedence
+        effective_root = root_scope if root_scope is not None else self.root_scope
 
         self._submit_save(
             self._background_encode_batch,
@@ -465,6 +540,7 @@ class Memory(BaseModel):
             source,
             private,
             agent_role,
+            effective_root,
         )
         return []
 
@@ -478,6 +554,7 @@ class Memory(BaseModel):
         source: str | None,
         private: bool,
         agent_role: str | None,
+        root_scope: str | None = None,
     ) -> list[MemoryRecord]:
         """Run the encoding pipeline in a background thread with event emission.
 
@@ -487,6 +564,20 @@ class Memory(BaseModel):
         All ``emit`` calls are wrapped in try/except to handle the case where
         the event bus shuts down before the background save finishes (e.g.
         during process exit).
+
+        Args:
+            contents: List of text content to encode.
+            scope: Optional inner scope for all items.
+            categories: Optional categories for all items.
+            metadata: Optional metadata for all items.
+            importance: Optional importance for all items.
+            source: Optional source identifier for all items.
+            private: Whether items are private.
+            agent_role: Optional agent role for event metadata.
+            root_scope: Optional root scope prefix for hierarchical scoping.
+
+        Returns:
+            List of created MemoryRecord instances.
         """
         try:
             crewai_event_bus.emit(
@@ -503,7 +594,14 @@ class Memory(BaseModel):
         try:
             start = time.perf_counter()
             records = self._encode_batch(
-                contents, scope, categories, metadata, importance, source, private
+                contents,
+                scope,
+                categories,
+                metadata,
+                importance,
+                source,
+                private,
+                root_scope,
             )
             elapsed_ms = (time.perf_counter() - start) * 1000
         except RuntimeError:
@@ -576,6 +674,14 @@ class Memory(BaseModel):
         # so that the search sees all persisted records.
         self.drain_writes()
 
+        # Apply root_scope as default scope_prefix for read isolation
+        effective_scope = scope
+        if effective_scope is None and self.root_scope:
+            effective_scope = self.root_scope
+        elif effective_scope is not None and self.root_scope:
+            # Nest provided scope under root
+            effective_scope = join_scope_paths(self.root_scope, effective_scope)
+
         _source = "unified_memory"
         try:
             crewai_event_bus.emit(
@@ -596,7 +702,7 @@ class Memory(BaseModel):
                 else:
                     raw = self._storage.search(
                         embedding,
-                        scope_prefix=scope,
+                        scope_prefix=effective_scope,
                         categories=categories,
                         limit=limit,
                         min_score=0.0,
@@ -620,6 +726,8 @@ class Memory(BaseModel):
                         )
                     results.sort(key=lambda m: m.score, reverse=True)
             else:
+                from crewai.memory.recall_flow import RecallFlow
+
                 flow = RecallFlow(
                     storage=self._storage,
                     llm=self._llm,
@@ -629,7 +737,7 @@ class Memory(BaseModel):
                 flow.kickoff(
                     inputs={
                         "query": query,
-                        "scope": scope,
+                        "scope": effective_scope,
                         "categories": categories or [],
                         "limit": limit,
                         "source": source,
@@ -683,11 +791,24 @@ class Memory(BaseModel):
     ) -> int:
         """Delete memories matching criteria.
 
+        Args:
+            scope: Scope to delete from. If None and root_scope is set, deletes
+                only within root_scope.
+            categories: Filter by categories.
+            older_than: Delete records older than this datetime.
+            metadata_filter: Filter by metadata fields.
+            record_ids: Specific record IDs to delete.
+
         Returns:
             Number of records deleted.
         """
+        effective_scope = scope
+        if effective_scope is None and self.root_scope:
+            effective_scope = self.root_scope
+        elif effective_scope is not None and self.root_scope:
+            effective_scope = join_scope_paths(self.root_scope, effective_scope)
         return self._storage.delete(
-            scope_prefix=scope,
+            scope_prefix=effective_scope,
             categories=categories,
             record_ids=record_ids,
             older_than=older_than,
@@ -762,9 +883,21 @@ class Memory(BaseModel):
             read_only=read_only,
         )
 
-    def list_scopes(self, path: str = "/") -> list[str]:
-        """List immediate child scopes under path."""
-        return self._storage.list_scopes(path)
+    def list_scopes(self, path: str | None = None) -> list[str]:
+        """List immediate child scopes under path.
+
+        Args:
+            path: Scope path to list children of. If None and root_scope is set,
+                defaults to root_scope. Otherwise defaults to '/'.
+        """
+        effective_path = path
+        if effective_path is None and self.root_scope:
+            effective_path = self.root_scope
+        elif effective_path is not None and self.root_scope:
+            effective_path = join_scope_paths(self.root_scope, effective_path)
+        elif effective_path is None:
+            effective_path = "/"
+        return self._storage.list_scopes(effective_path)
 
     def list_records(
         self, scope: str | None = None, limit: int = 200, offset: int = 0
@@ -772,20 +905,52 @@ class Memory(BaseModel):
         """List records in a scope, newest first.
 
         Args:
-            scope: Optional scope path prefix to filter by.
+            scope: Optional scope path prefix to filter by. If None and root_scope
+                is set, defaults to root_scope.
             limit: Maximum number of records to return.
             offset: Number of records to skip (for pagination).
         """
+        effective_scope = scope
+        if effective_scope is None and self.root_scope:
+            effective_scope = self.root_scope
+        elif effective_scope is not None and self.root_scope:
+            effective_scope = join_scope_paths(self.root_scope, effective_scope)
         return self._storage.list_records(
-            scope_prefix=scope, limit=limit, offset=offset
+            scope_prefix=effective_scope, limit=limit, offset=offset
         )
 
-    def info(self, path: str = "/") -> ScopeInfo:
-        """Return scope info for path."""
-        return self._storage.get_scope_info(path)
+    def info(self, path: str | None = None) -> ScopeInfo:
+        """Return scope info for path.
 
-    def tree(self, path: str = "/", max_depth: int = 3) -> str:
-        """Return a formatted tree of scopes (string)."""
+        Args:
+            path: Scope path to get info for. If None and root_scope is set,
+                defaults to root_scope. Otherwise defaults to '/'.
+        """
+        effective_path = path
+        if effective_path is None and self.root_scope:
+            effective_path = self.root_scope
+        elif effective_path is not None and self.root_scope:
+            effective_path = join_scope_paths(self.root_scope, effective_path)
+        elif effective_path is None:
+            effective_path = "/"
+        return self._storage.get_scope_info(effective_path)
+
+    def tree(self, path: str | None = None, max_depth: int = 3) -> str:
+        """Return a formatted tree of scopes (string).
+
+        Args:
+            path: Root path for the tree. If None and root_scope is set,
+                defaults to root_scope. Otherwise defaults to '/'.
+            max_depth: Maximum depth to traverse.
+        """
+        effective_path = path
+        if effective_path is None and self.root_scope:
+            effective_path = self.root_scope
+        elif effective_path is not None and self.root_scope:
+            effective_path = join_scope_paths(self.root_scope, effective_path)
+        elif effective_path is None:
+            effective_path = "/"
+
         lines: list[str] = []
 
         def _walk(p: str, depth: int, prefix: str) -> None:
@@ -796,16 +961,36 @@ class Memory(BaseModel):
             for child in info.child_scopes[:20]:
                 _walk(child, depth + 1, prefix + "  ")
 
-        _walk(path.rstrip("/") or "/", 0, "")
-        return "\n".join(lines) if lines else f"{path or '/'} (0 records)"
+        _walk(effective_path.rstrip("/") or "/", 0, "")
+        return "\n".join(lines) if lines else f"{effective_path or '/'} (0 records)"
 
     def list_categories(self, path: str | None = None) -> dict[str, int]:
-        """List categories and counts; path=None means global."""
-        return self._storage.list_categories(scope_prefix=path)
+        """List categories and counts.
+
+        Args:
+            path: Scope path to filter categories by. If None and root_scope is set,
+                defaults to root_scope.
+        """
+        effective_path = path
+        if effective_path is None and self.root_scope:
+            effective_path = self.root_scope
+        elif effective_path is not None and self.root_scope:
+            effective_path = join_scope_paths(self.root_scope, effective_path)
+        return self._storage.list_categories(scope_prefix=effective_path)
 
     def reset(self, scope: str | None = None) -> None:
-        """Reset (delete all) memories in scope. None = all."""
-        self._storage.reset(scope_prefix=scope)
+        """Reset (delete all) memories in scope.
+
+        Args:
+            scope: Scope to reset. If None and root_scope is set, resets only
+                within root_scope. If None and no root_scope, resets all.
+        """
+        effective_scope = scope
+        if effective_scope is None and self.root_scope:
+            effective_scope = self.root_scope
+        elif effective_scope is not None and self.root_scope:
+            effective_scope = join_scope_paths(self.root_scope, effective_scope)
+        self._storage.reset(scope_prefix=effective_scope)
 
     async def aextract_memories(self, content: str) -> list[str]:
         """Async variant of extract_memories."""

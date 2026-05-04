@@ -39,340 +39,49 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.13.5
+      - 3.13.3
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-D6L3hzoRVVEa07HZsM9wpi2RVRKQp\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770403289,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
-        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"Here is a structured list of the top
-        10 best soccer players in the world as of 2024, based on recent performances,
-        awards, and overall impact on the game:\\n\\n1. **Kylian Mbapp\xE9**  \\n
-        \  - Nationality: French  \\n   - Club: Paris Saint-Germain (PSG)  \\n   -
-        Position: Forward  \\n   - Key Highlights: Multiple Ligue 1 titles, World
-        Cup winner (2018), known for speed, dribbling, and scoring prowess.\\n\\n2.
-        **Erling Haaland**  \\n   - Nationality: Norwegian  \\n   - Club: Manchester
-        City  \\n   - Position: Striker  \\n   - Key Highlights: Premier League Golden
-        Boot winner, incredible goal-scoring record, physical presence, and finishing
-        skills.\\n\\n3. **Lionel Messi**  \\n   - Nationality: Argentine  \\n   -
-        Club: Inter Miami  \\n   - Position: Forward/Attacking Midfielder  \\n   -
-        Key Highlights: Seven Ballon d\u2019Or awards, World Cup winner (2022), exceptional
-        playmaking and dribbling ability.\\n\\n4. **Kevin De Bruyne**  \\n   - Nationality:
-        Belgian  \\n   - Club: Manchester City  \\n   - Position: Midfielder  \\n
-        \  - Key Highlights: One of the best playmakers globally, assists leader,
-        consistent high-level performance in the Premier League.\\n\\n5. **Robert
-        Lewandowski**  \\n   - Nationality: Polish  \\n   - Club: FC Barcelona  \\n
-        \  - Position: Striker  \\n   - Key Highlights: Exceptional goal-scoring record,
-        multiple Bundesliga top scorer awards, key figure in Bayern Munich\u2019s
-        dominance before transferring.\\n\\n6. **Karim Benzema**  \\n   - Nationality:
-        French  \\n   - Club: Al-Ittihad  \\n   - Position: Striker  \\n   - Key Highlights:
-        Ballon d\u2019Or winner (2022), excellent technical skills, leadership at
-        Real Madrid before recent transfer.\\n\\n7. **Mohamed Salah**  \\n   - Nationality:
-        Egyptian  \\n   - Club: Liverpool  \\n   - Position: Forward  \\n   - Key
-        Highlights: Premier League Golden Boot winner, known for speed, dribbling,
-        and goal-scoring consistency.\\n\\n8. **Vin\xEDcius J\xFAnior**  \\n   - Nationality:
-        Brazilian  \\n   - Club: Real Madrid  \\n   - Position: Winger  \\n   - Key
-        Highlights: Key player for Real Madrid, exceptional dribbling and pace, rising
-        star in world football.\\n\\n9. **Jude Bellingham**  \\n   - Nationality:
-        English  \\n   - Club: Real Madrid  \\n   - Position: Midfielder  \\n   -
-        Key Highlights: Young talent with maturity beyond years, influential midfielder
-        with great vision and work rate.\\n\\n10. **Thibaut Courtois**  \\n    - Nationality:
-        Belgian  \\n    - Club: Real Madrid  \\n    - Position: Goalkeeper  \\n    -
-        Key Highlights: One of the best goalkeepers globally, crucial performances
-        in La Liga and Champions League.\\n\\nThese rankings consider individual talent,
-        recent achievements, influence on matches, and overall contribution to club
-        and country.\",\n        \"refusal\": null,\n        \"annotations\": []\n
-        \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
-        \ ],\n  \"usage\": {\n    \"prompt_tokens\": 68,\n    \"completion_tokens\":
-        621,\n    \"total_tokens\": 689,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-        \"default\",\n  \"system_fingerprint\": \"fp_75546bd1a7\"\n}\n"
-    headers:
-      CF-RAY:
-      - CF-RAY-XXX
-      Connection:
-      - keep-alive
-      Content-Type:
-      - application/json
-      Date:
-      - Fri, 06 Feb 2026 18:41:40 GMT
-      Server:
-      - cloudflare
-      Set-Cookie:
-      - SET-COOKIE-XXX
-      Strict-Transport-Security:
-      - STS-XXX
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - X-CONTENT-TYPE-XXX
-      access-control-expose-headers:
-      - ACCESS-CONTROL-XXX
-      alt-svc:
-      - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
-      openai-organization:
-      - OPENAI-ORG-XXX
-      openai-processing-ms:
-      - '10634'
-      openai-project:
-      - OPENAI-PROJECT-XXX
-      openai-version:
-      - '2020-10-01'
-      x-openai-proxy-wasm:
-      - v0.1
-      x-ratelimit-limit-requests:
-      - X-RATELIMIT-LIMIT-REQUESTS-XXX
-      x-ratelimit-limit-tokens:
-      - X-RATELIMIT-LIMIT-TOKENS-XXX
-      x-ratelimit-remaining-requests:
-      - X-RATELIMIT-REMAINING-REQUESTS-XXX
-      x-ratelimit-remaining-tokens:
-      - X-RATELIMIT-REMAINING-TOKENS-XXX
-      x-ratelimit-reset-requests:
-      - X-RATELIMIT-RESET-REQUESTS-XXX
-      x-ratelimit-reset-tokens:
-      - X-RATELIMIT-RESET-TOKENS-XXX
-      x-request-id:
-      - X-REQUEST-ID-XXX
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages":[{"role":"system","content":"You are Sports Analyst. You are
-      an expert at gathering and organizing information. You carefully collect details
-      and present them in a structured way.\nYour personal goal is: Gather information
-      about the best soccer players"},{"role":"user","content":"\nCurrent Task: Top
-      10 best players in the world?\n\nProvide your complete response:"}],"model":"gpt-4.1-mini"}'
-    headers:
-      User-Agent:
-      - X-USER-AGENT-XXX
-      accept:
-      - application/json
-      accept-encoding:
-      - ACCEPT-ENCODING-XXX
-      authorization:
-      - AUTHORIZATION-XXX
-      connection:
-      - keep-alive
-      content-length:
-      - '404'
-      content-type:
-      - application/json
-      cookie:
-      - COOKIE-XXX
-      host:
-      - api.openai.com
-      x-stainless-arch:
-      - X-STAINLESS-ARCH-XXX
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - X-STAINLESS-OS-XXX
-      x-stainless-package-version:
-      - 1.83.0
-      x-stainless-read-timeout:
-      - X-STAINLESS-READ-TIMEOUT-XXX
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.13.5
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: "{\n  \"id\": \"chatcmpl-D6L3sn9nSnGGOMKrS88avliVF7XTv\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770403300,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
-        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
-        \"assistant\",\n        \"content\": \"Certainly! Here's a structured list
-        of the top 10 best soccer players in the world as of 2024, considering their
-        performance, skills, achievements, and impact in recent seasons:\\n\\n###
-        Top 10 Best Soccer Players in the World (2024)\\n\\n| Rank | Player Name         |
-        Nationality | Club (2023/24 Season)      | Position         | Key Attributes
-        \                  | Recent Achievements                  |\\n|-------|---------------------|-------------|----------------------------|------------------|---------------------------------|------------------------------------|\\n|
-        1     | Lionel Messi        | Argentina   | Paris Saint-Germain (PSG)   |
-        Forward/Playmaker| Dribbling, Vision, Free kicks   | 2023 World Cup Golden
-        Ball, Club Successes |\\n| 2     | Kylian Mbapp\xE9       | France      |
-        Paris Saint-Germain (PSG)   | Forward          | Speed, Finishing, Dribbling
-        \    | Ligue 1 Top Scorer, World Cup Winner 2018|\\n| 3     | Erling Haaland
-        \     | Norway      | Manchester City             | Striker          | Strength,
-        Finishing, Positioning| Premier League Golden Boot, Champions League Impact|\\n|
-        4     | Kevin De Bruyne     | Belgium     | Manchester City             |
-        Midfielder       | Passing, Vision, Creativity     | Premier League Titles,
-        Key Playmaker|\\n| 5     | Robert Lewandowski  | Poland      | FC Barcelona
-        \              | Striker          | Finishing, Positioning, Composure| La
-        Liga Top Scorer, Consistent Scorer|\\n| 6     | Neymar Jr.          | Brazil
-        \     | Al-Hilal                   | Forward/Winger   | Dribbling, Creativity,
-        Flair    | Copa America Titles, Club Success |\\n| 7     | Mohamed Salah       |
-        Egypt       | Liverpool                  | Forward/Winger   | Pace, Finishing,
-        Work Rate      | Premier League Golden Boot, Champions League Winner|\\n|
-        8     | Vin\xEDcius Jr.        | Brazil      | Real Madrid                |
-        Winger           | Speed, Dribbling, Crossing     | La Liga Titles, UEFA Champions
-        League Winner|\\n| 9     | Luka Modri\u0107         | Croatia     | Real Madrid
-        \               | Midfielder       | Passing, Control, Experience    | Ballon
-        d\u2019Or 2018, Multiple Champions League Titles|\\n| 10    | Karim Benzema
-        \      | France      | Al-Ittihad                | Striker          | Finishing,
-        Link-up Play, Movements| Ballon d\u2019Or 2022, UEFA Champions League Top
-        Scorer |\\n\\n### Notes:\\n- The rankings reflect a combination of individual
-        skill, recent performance, consistency, and influence on the game.\\n- Players\u2019
-        clubs are based on the 2023/24 season affiliations.\\n- Achievements highlight
-        recent titles, awards, or standout contributions.\\n\\nIf you would like me
-        to focus on specific leagues, historical players, or emerging talents, just
-        let me know!\",\n        \"refusal\": null,\n        \"annotations\": []\n
-        \     },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n
-        \ ],\n  \"usage\": {\n    \"prompt_tokens\": 68,\n    \"completion_tokens\":
-        605,\n    \"total_tokens\": 673,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
-        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
-        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
-        \"default\",\n  \"system_fingerprint\": \"fp_75546bd1a7\"\n}\n"
-    headers:
-      CF-RAY:
-      - CF-RAY-XXX
-      Connection:
-      - keep-alive
-      Content-Type:
-      - application/json
-      Date:
-      - Fri, 06 Feb 2026 18:41:49 GMT
-      Server:
-      - cloudflare
-      Strict-Transport-Security:
-      - STS-XXX
-      Transfer-Encoding:
-      - chunked
-      X-Content-Type-Options:
-      - X-CONTENT-TYPE-XXX
-      access-control-expose-headers:
-      - ACCESS-CONTROL-XXX
-      alt-svc:
-      - h3=":443"; ma=86400
-      cf-cache-status:
-      - DYNAMIC
-      openai-organization:
-      - OPENAI-ORG-XXX
-      openai-processing-ms:
-      - '9044'
-      openai-project:
-      - OPENAI-PROJECT-XXX
-      openai-version:
-      - '2020-10-01'
-      x-openai-proxy-wasm:
-      - v0.1
-      x-ratelimit-limit-requests:
-      - X-RATELIMIT-LIMIT-REQUESTS-XXX
-      x-ratelimit-limit-tokens:
-      - X-RATELIMIT-LIMIT-TOKENS-XXX
-      x-ratelimit-remaining-requests:
-      - X-RATELIMIT-REMAINING-REQUESTS-XXX
-      x-ratelimit-remaining-tokens:
-      - X-RATELIMIT-REMAINING-TOKENS-XXX
-      x-ratelimit-reset-requests:
-      - X-RATELIMIT-RESET-REQUESTS-XXX
-      x-ratelimit-reset-tokens:
-      - X-RATELIMIT-RESET-TOKENS-XXX
-      x-request-id:
-      - X-REQUEST-ID-XXX
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"messages":[{"role":"system","content":"You are Sports Analyst. You are
-      an expert at gathering and organizing information. You carefully collect details
-      and present them in a structured way.\nYour personal goal is: Gather information
-      about the best soccer players"},{"role":"user","content":"\nCurrent Task: Top
-      10 best players in the world?\n\nProvide your complete response:"}],"model":"gpt-4.1-mini"}'
-    headers:
-      User-Agent:
-      - X-USER-AGENT-XXX
-      accept:
-      - application/json
-      accept-encoding:
-      - ACCEPT-ENCODING-XXX
-      authorization:
-      - AUTHORIZATION-XXX
-      connection:
-      - keep-alive
-      content-length:
-      - '404'
-      content-type:
-      - application/json
-      cookie:
-      - COOKIE-XXX
-      host:
-      - api.openai.com
-      x-stainless-arch:
-      - X-STAINLESS-ARCH-XXX
-      x-stainless-async:
-      - 'false'
-      x-stainless-lang:
-      - python
-      x-stainless-os:
-      - X-STAINLESS-OS-XXX
-      x-stainless-package-version:
-      - 1.83.0
-      x-stainless-read-timeout:
-      - X-STAINLESS-READ-TIMEOUT-XXX
-      x-stainless-retry-count:
-      - '0'
-      x-stainless-runtime:
-      - CPython
-      x-stainless-runtime-version:
-      - 3.13.5
-    method: POST
-    uri: https://api.openai.com/v1/chat/completions
-  response:
-    body:
-      string: "{\n  \"id\": \"chatcmpl-D6L4102eMwTEPeHxfyN9Kh7rjBoX6\",\n  \"object\":
-        \"chat.completion\",\n  \"created\": 1770403309,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+      string: "{\n  \"id\": \"chatcmpl-D8D7BZgW1eWIg0LH5QIshpE0plpmc\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770849409,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
         \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
         \"assistant\",\n        \"content\": \"Certainly! Here is a list of the top
-        10 best soccer players in the world as of 2024, considering their recent performances,
-        skills, impact, and accolades:\\n\\n1. **Lionel Messi**  \\n   - Nationality:
-        Argentine  \\n   - Position: Forward  \\n   - Key Achievements: 7 Ballon d'Or
-        awards, led Argentina to 2021 Copa Am\xE9rica victory and 2022 FIFA World
-        Cup triumph, exceptional dribbling and playmaking skills.\\n\\n2. **Kylian
-        Mbapp\xE9**  \\n   - Nationality: French  \\n   - Position: Forward  \\n   -
-        Key Achievements: FIFA World Cup winner (2018), multiple Ligue 1 titles, known
-        for incredible speed, finishing, and consistency.\\n\\n3. **Erling Haaland**
-        \ \\n   - Nationality: Norwegian  \\n   - Position: Striker  \\n   - Key Achievements:
-        Premier League Golden Boot winner (2022-23), prolific goal scorer, physical
-        presence, and finishing ability.\\n\\n4. **Karim Benzema**  \\n   - Nationality:
-        French  \\n   - Position: Forward  \\n   - Key Achievements: 2022 Ballon d'Or
-        winner, key player for Real Madrid\u2019s recent Champions League victories,
-        excellent technical skills and leadership.\\n\\n5. **Kevin De Bruyne**  \\n
-        \  - Nationality: Belgian  \\n   - Position: Midfielder  \\n   - Key Achievements:
-        Premier League playmaker, known for vision, passing accuracy, and creativity.\\n\\n6.
-        **Robert Lewandowski**  \\n   - Nationality: Polish  \\n   - Position: Striker
-        \ \\n   - Key Achievements: Multiple Bundesliga top scorer titles, consistent
-        goal scorer, known for positioning and finishing.\\n\\n7. **Neymar Jr.**  \\n
-        \  - Nationality: Brazilian  \\n   - Position: Forward  \\n   - Key Achievements:
-        Exceptional dribbling, creativity, and flair; multiple domestic titles and
-        Copa Libertadores winner.\\n\\n8. **Mohamed Salah**  \\n   - Nationality:
-        Egyptian  \\n   - Position: Forward  \\n   - Key Achievements: Premier League
-        Golden Boot, consistent goal scoring with Liverpool, known for speed and finishing.\\n\\n9.
-        **Luka Modri\u0107**  \\n   - Nationality: Croatian  \\n   - Position: Midfielder
-        \ \\n   - Key Achievements: 2018 Ballon d\u2019Or winner, pivotal midfield
-        maestro, excellent passing and control.\\n\\n10. **Thibaut Courtois**  \\n
-        \   - Nationality: Belgian  \\n    - Position: Goalkeeper  \\n    - Key Achievements:
-        Exceptional shot-stopper, key player in Real Madrid's recent successes.\\n\\nThis
-        list includes a blend of forwards, midfielders, and a goalkeeper, showcasing
-        the best talents in various positions worldwide. The rankings may vary slightly
-        depending on current form and opinions, but these players consistently rank
-        among the best globally.\",\n        \"refusal\": null,\n        \"annotations\":
-        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
-        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 68,\n    \"completion_tokens\":
-        575,\n    \"total_tokens\": 643,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
-        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        10 best soccer players in the world as of 2024, based on their recent performances,
+        skills, and overall impact in club and international football:\\n\\n1. **Lionel
+        Messi**  \\n   - Nationality: Argentina  \\n   - Clubs: Paris Saint-Germain
+        (PSG) / Inter Miami  \\n   - Highlights: Multiple Ballon d'Or winner, known
+        for exceptional dribbling, vision, and goal-scoring ability.\\n\\n2. **Kylian
+        Mbapp\xE9**  \\n   - Nationality: France  \\n   - Club: Paris Saint-Germain
+        (PSG)  \\n   - Highlights: Explosive pace, clinical finishing, World Cup winner,
+        young superstar with consistent top-level performances.\\n\\n3. **Erling Haaland**
+        \ \\n   - Nationality: Norway  \\n   - Club: Manchester City  \\n   - Highlights:
+        Phenomenal goal scorer, physical dominance, breaking scoring records in the
+        Premier League.\\n\\n4. **Kevin De Bruyne**  \\n   - Nationality: Belgium
+        \ \\n   - Club: Manchester City  \\n   - Highlights: World-class playmaker,
+        incredible passing range, and vision, key player in Manchester City's success.\\n\\n5.
+        **Karim Benzema**  \\n   - Nationality: France  \\n   - Club: Al-Ittihad  \\n
+        \  - Highlights: Recent Ballon d'Or winner, technical skill, leadership, and
+        consistent goal contributions.\\n\\n6. **Luka Modri\u0107**  \\n   - Nationality:
+        Croatia  \\n   - Club: Real Madrid  \\n   - Highlights: Creative midfielder
+        known for passing, control, and leadership; 2018 Ballon d'Or winner.\\n\\n7.
+        **Mohamed Salah**  \\n   - Nationality: Egypt  \\n   - Club: Liverpool  \\n
+        \  - Highlights: Speedy winger, prolific scorer, multiple Golden Boots in
+        the Premier League.\\n\\n8. **Neymar Jr.**  \\n   - Nationality: Brazil  \\n
+        \  - Club: Paris Saint-Germain (PSG) / Al Hilal  \\n   - Highlights: Skillful
+        dribbling, creativity, and flair, key figure in club and national teams.\\n\\n9.
+        **Robert Lewandowski**  \\n   - Nationality: Poland  \\n   - Club: FC Barcelona
+        \ \\n   - Highlights: Consistent goal scorer, intelligent striker, multiple
+        Bundesliga Golden Boots.\\n\\n10. **Vin\xEDcius J\xFAnior**  \\n    - Nationality:
+        Brazil  \\n    - Club: Real Madrid  \\n    - Highlights: Energetic winger
+        known for dribbling skills, assists, and recent breakthrough at Real Madrid.\\n\\nThis
+        list considers individual skill, achievements, consistency, and influence
+        in top football leagues and international competitions.\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        68,\n    \"completion_tokens\": 537,\n    \"total_tokens\": 605,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
         {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
         0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
         \"default\",\n  \"system_fingerprint\": \"fp_75546bd1a7\"\n}\n"
@@ -384,7 +93,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 06 Feb 2026 18:41:57 GMT
+      - Wed, 11 Feb 2026 22:36:55 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -402,11 +111,739 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '7948'
+      - '5998'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Sports Analyst. You are
+      an expert at gathering and organizing information. You carefully collect details
+      and present them in a structured way.\nYour personal goal is: Gather information
+      about the best soccer players"},{"role":"user","content":"\nCurrent Task: Top
+      10 best players in the world?\n\nProvide your complete response:"}],"model":"gpt-4.1-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '404'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D8D7HuYQiYNY5hftXH3uMc5KlFMUD\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770849415,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Certainly! Here is a list of the top
+        10 best soccer players in the world as of 2024, based on their recent performances,
+        influence, and achievements in club and international football.\\n\\n### Top
+        10 Best Soccer Players in the World (2024)\\n\\n1. **Erling Haaland**  \\n
+        \  - Club: Manchester City  \\n   - Position: Striker  \\n   - Highlights:
+        Haaland continues to dominate with his incredible goal-scoring ability, breaking
+        several Premier League records and being a key player for both club and country.\\n\\n2.
+        **Kylian Mbapp\xE9**  \\n   - Club: Paris Saint-Germain (PSG)  \\n   - Position:
+        Forward  \\n   - Highlights: Known for his speed, dribbling, and finishing,
+        Mbapp\xE9 remains one of the most dangerous attackers in the world and a leader
+        for France.\\n\\n3. **Lionel Messi**  \\n   - Club: Inter Miami / Argentina
+        \ \\n   - Position: Forward / Playmaker  \\n   - Highlights: Even in the latter
+        stages of his career, Messi continues to produce magical moments, with leadership
+        roles at both club and international levels.\\n\\n4. **Kevin De Bruyne**  \\n
+        \  - Club: Manchester City  \\n   - Position: Midfielder  \\n   - Highlights:
+        One of the best midfield creators, renowned for his vision, passing, and ability
+        to control the game.\\n\\n5. **Robert Lewandowski**  \\n   - Club: Barcelona
+        \ \\n   - Position: Striker  \\n   - Highlights: An elite goal scorer with
+        clinical finishing, Lewandowski remains highly effective and consistent in
+        La Liga.\\n\\n6. **Mohamed Salah**  \\n   - Club: Liverpool  \\n   - Position:
+        Winger / Forward  \\n   - Highlights: Known for his pace, dribbling, and goal-scoring,
+        Salah is a crucial player in Liverpool\u2019s attack.\\n\\n7. **Karim Benzema**
+        \ \\n   - Club: Al-Ittihad / France  \\n   - Position: Forward  \\n   - Highlights:
+        Despite moving to a less competitive league recently, Benzema\u2019s recent
+        form and legacy keep him among the top.\\n\\n8. **Vin\xEDcius J\xFAnior**
+        \ \\n   - Club: Real Madrid  \\n   - Position: Winger  \\n   - Highlights:
+        A rising star with tremendous skill and impact, particularly noted for his
+        dribbling and goal contributions.\\n\\n9. **Jude Bellingham**  \\n   - Club:
+        Real Madrid  \\n   - Position: Midfielder  \\n   - Highlights: Young but already
+        one of the most versatile and effective midfielders globally, with great work
+        rate and creativity.\\n\\n10. **Neymar Jr.**  \\n    - Club: Al Hilal  \\n
+        \   - Position: Forward  \\n    - Highlights: Despite injuries, Neymar\u2019s
+        skill and flair keep him notable, and he continues to influence games significantly.\\n\\n---\\n\\n###
+        Summary\\n\\nThese rankings take into account recent club and international
+        performances, consistency, influence on the pitch, and individual skill levels.
+        The landscape of football talent is always evolving, with young stars rising
+        rapidly and established players maintaining elite levels.\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        68,\n    \"completion_tokens\": 619,\n    \"total_tokens\": 687,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_75546bd1a7\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 11 Feb 2026 22:37:04 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '8918'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Sports Analyst. You are
+      an expert at gathering and organizing information. You carefully collect details
+      and present them in a structured way.\nYour personal goal is: Gather information
+      about the best soccer players"},{"role":"user","content":"\nCurrent Task: Top
+      10 best players in the world?\n\nProvide your complete response:"}],"model":"gpt-4.1-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '404'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D8D7QFCOdWuG5ZIKo5pXrBdmQDWTv\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770849424,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Certainly! Here is a list of the top
+        10 best soccer players in the world as of 2024, based on their recent performances,
+        skill levels, achievements, and influence in the sport:\\n\\n1. **Lionel Messi**
+        \ \\n   - Club: Inter Miami (MLS)  \\n   - National Team: Argentina  \\n   -
+        Key Achievements: 7 Ballon d'Or titles, multiple UEFA Champions League titles,
+        2022 FIFA World Cup winner  \\n   - Strengths: Dribbling, playmaking, vision,
+        goal-scoring\\n\\n2. **Kylian Mbapp\xE9**  \\n   - Club: Paris Saint-Germain
+        (PSG)  \\n   - National Team: France  \\n   - Key Achievements: FIFA World
+        Cup winner (2018), multiple Ligue 1 titles, consistent top scorer  \\n   -
+        Strengths: Speed, finishing, positioning, dribbling\\n\\n3. **Erling Haaland**
+        \ \\n   - Club: Manchester City  \\n   - National Team: Norway  \\n   - Key
+        Achievements: Premier League Golden Boot, UEFA Champions League top scorer
+        \ \\n   - Strengths: Physicality, finishing, positioning, pace\\n\\n4. **Kevin
+        De Bruyne**  \\n   - Club: Manchester City  \\n   - National Team: Belgium
+        \ \\n   - Key Achievements: Premier League titles, multiple Player of the
+        Season awards  \\n   - Strengths: Passing, vision, shooting, leadership\\n\\n5.
+        **Robert Lewandowski**  \\n   - Club: FC Barcelona  \\n   - National Team:
+        Poland  \\n   - Key Achievements: Multiple Bundesliga top scorer awards, UEFA
+        Best Forward  \\n   - Strengths: Finishing, positioning, strength, consistency\\n\\n6.
+        **Karim Benzema**  \\n   - Club: Al-Ittihad  \\n   - National Team: France
+        \ \\n   - Key Achievements: Ballon d'Or 2022, multiple UEFA Champions League
+        titles  \\n   - Strengths: Technical skills, intelligence, finishing, link-up
+        play\\n\\n7. **Vin\xEDcius J\xFAnior**  \\n   - Club: Real Madrid  \\n   -
+        National Team: Brazil  \\n   - Key Achievements: La Liga titles, UEFA Champions
+        League winner  \\n   - Strengths: Dribbling, pace, creativity, goal-scoring\\n\\n8.
+        **Pedri**  \\n   - Club: FC Barcelona  \\n   - National Team: Spain  \\n   -
+        Key Achievements: Young Player of the Year awards, key playmaker roles for
+        club and country  \\n   - Strengths: Vision, passing, ball control, intelligence\\n\\n9.
+        **Jude Bellingham**  \\n   - Club: Real Madrid  \\n   - National Team: England
+        \ \\n   - Key Achievements: Rising star in La Liga, key player for England
+        \ \\n   - Strengths: Versatility, stamina, passing, leadership\\n\\n10. **Mohamed
+        Salah**  \\n    - Club: Liverpool  \\n    - National Team: Egypt  \\n    -
+        Key Achievements: Premier League Golden Boot, Champions League winner  \\n
+        \   - Strengths: Speed, finishing, dribbling, consistency\\n\\nThis list reflects
+        the current top performers combining experience and emerging talent as of
+        2024. Rankings may vary depending on different criteria and ongoing seasons.
+        If you want, I can provide a detailed profile or statistics for any of these
+        players.\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n
+        \     \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n
+        \ \"usage\": {\n    \"prompt_tokens\": 68,\n    \"completion_tokens\": 667,\n
+        \   \"total_tokens\": 735,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_75546bd1a7\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 11 Feb 2026 22:37:14 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '9616'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Sports Analyst. You are
+      an expert at gathering and organizing information. You carefully collect details
+      and present them in a structured way.\nYour personal goal is: Gather information
+      about the best soccer players"},{"role":"user","content":"\nCurrent Task: Top
+      10 best players in the world?\n\nProvide your complete response:"}],"model":"gpt-4.1-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '404'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D8D7aJIbe0uKwMC6n61oT3xcqKPHF\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770849434,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Certainly! As of mid-2024, the list
+        of the top 10 best soccer players in the world generally reflects recent performances,
+        achievements, skill levels, and influence on the game. Here's a structured
+        overview:\\n\\n### Top 10 Best Soccer Players in the World (2024)\\n\\n| Rank
+        | Player Name           | Nationality    | Club (2024)          | Position
+        \        | Key Highlights                                            |\\n|-------|----------------------|----------------|----------------------|------------------|----------------------------------------------------------|\\n|
+        1     | Lionel Messi         | Argentina      | Inter Miami CF       | Forward
+        / Attacking Midfielder | Multiple Ballon d'Or awards; 2022 World Cup winner;
+        incredible creativity and scoring ability |\\n| 2     | Kylian Mbapp\xE9        |
+        France         | Paris Saint-Germain  | Forward          | World Cup 2018
+        winner; exceptional speed and finishing; consistent top scorer |\\n| 3     |
+        Erling Haaland       | Norway         | Manchester City      | Striker          |
+        FIFA Best Male Player 2022; prolific goal scorer; physical and technical strength
+        |\\n| 4     | Kevin De Bruyne      | Belgium        | Manchester City      |
+        Midfielder       | Exceptional vision and passing; key player in recent Premier
+        League and Champions League runs |\\n| 5     | Karim Benzema        | France
+        \        | Al-Ittihad           | Striker          | 2022 Ballon d'Or winner;
+        technical brilliance and leadership |\\n| 6     | Pedri                | Spain
+        \         | FC Barcelona         | Midfielder       | Young prodigy; excellent
+        vision and skill; instrumental for club and country |\\n| 7     | Vin\xEDcius
+        J\xFAnior      | Brazil         | Real Madrid          | Winger           |
+        Rapid pace, dribbling skills; vital for Real Madrid\u2019s attack |\\n| 8
+        \    | Robert Lewandowski   | Poland         | FC Barcelona         | Striker
+        \         | Consistent top scorer; excellent positioning and finishing |\\n|
+        9     | Jude Bellingham      | England        | Real Madrid          | Midfielder
+        \      | Young star; all-around skills; growing influence in midfield |\\n|
+        10    | Mohamed Salah        | Egypt          | Liverpool            | Forward/Winger
+        \  | Exceptional goal threat; consistent performance in Premier League |\\n\\n###
+        Notes:\\n- This ranking reflects a combination of individual skill, recent
+        achievements, and influence over their teams and international football.\\n-
+        The list includes a mix of experienced veterans and emerging young talents.\\n-
+        Clubs listed are as per their primary affiliation in 2024.\\n\\nIf you want
+        specific statistics, awards, or more players, please let me know!\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        68,\n    \"completion_tokens\": 536,\n    \"total_tokens\": 604,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_75546bd1a7\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 11 Feb 2026 22:37:21 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '7157'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Sports Analyst. You are
+      an expert at gathering and organizing information. You carefully collect details
+      and present them in a structured way.\nYour personal goal is: Gather information
+      about the best soccer players"},{"role":"user","content":"\nCurrent Task: Top
+      10 best players in the world?\n\nProvide your complete response:"}],"model":"gpt-4.1-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '404'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D8D7hCb2o2QeBMFI0KZZ5mfbSmze8\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770849441,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Certainly! Here is a list of the top
+        10 best soccer players in the world as of 2024, based on recent performances,
+        achievements, and overall impact on the game:\\n\\n### Top 10 Best Soccer
+        Players in the World (2024)\\n\\n1. **Kylian Mbapp\xE9**  \\n   - Nationality:
+        French  \\n   - Position: Forward  \\n   - Current Club: Paris Saint-Germain
+        (PSG)  \\n   - Highlights: Renowned for his incredible speed, dribbling, and
+        goal-scoring ability. Key player for both PSG and the French national team.\\n\\n2.
+        **Erling Haaland**  \\n   - Nationality: Norwegian  \\n   - Position: Striker
+        \ \\n   - Current Club: Manchester City  \\n   - Highlights: Prolific goal
+        scorer known for his physicality, clinical finishing, and consistency.\\n\\n3.
+        **Lionel Messi**  \\n   - Nationality: Argentine  \\n   - Position: Forward
+        \ \\n   - Current Club: Inter Miami  \\n   - Highlights: Record-breaking career
+        with exceptional playmaking, dribbling, and vision. Continues to perform at
+        a high level.\\n\\n4. **Karim Benzema**  \\n   - Nationality: French  \\n
+        \  - Position: Forward  \\n   - Current Club: Al-Ittihad  \\n   - Highlights:
+        Experienced striker with great technical skills, leader on and off the pitch.\\n\\n5.
+        **Kevin De Bruyne**  \\n   - Nationality: Belgian  \\n   - Position: Midfielder
+        \ \\n   - Current Club: Manchester City  \\n   - Highlights: One of the best
+        playmakers in the world, known for his passing, vision, and long-range shots.\\n\\n6.
+        **Mohamed Salah**  \\n   - Nationality: Egyptian  \\n   - Position: Forward/Winger
+        \ \\n   - Current Club: Liverpool  \\n   - Highlights: Fast, skillful winger
+        with an eye for goal. Integral to Liverpool\u2019s attacking play.\\n\\n7.
+        **Robert Lewandowski**  \\n   - Nationality: Polish  \\n   - Position: Striker
+        \ \\n   - Current Club: FC Barcelona  \\n   - Highlights: Consistent goal
+        scorer with excellent positioning and finishing skills.\\n\\n8. **Vin\xEDcius
+        J\xFAnior**  \\n   - Nationality: Brazilian  \\n   - Position: Winger  \\n
+        \  - Current Club: Real Madrid  \\n   - Highlights: Emerging young talent
+        known for pace, dribbling, and creativity.\\n\\n9. **Thibaut Courtois**  \\n
+        \  - Nationality: Belgian  \\n   - Position: Goalkeeper  \\n   - Current Club:
+        Real Madrid  \\n   - Highlights: One of the best goalkeepers globally with
+        outstanding reflexes and command of the penalty area.\\n\\n10. **Jude Bellingham**
+        \ \\n    - Nationality: English  \\n    - Position: Midfielder  \\n    - Current
+        Club: Real Madrid  \\n    - Highlights: Young, versatile midfielder with maturity
+        beyond his years, excellent passing, and work rate.\\n\\n---\\n\\n### Notes:\\n-
+        This list reflects a mixture of attacking and defensive talents, including
+        goalkeepers and midfielders.\\n- The players are chosen based on a combination
+        of individual skills, recent statistics, influence in important matches, and
+        overall consistency.\\n\\nIf you want, I can provide detailed statistics or
+        profiles for any specific player!\",\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 68,\n    \"completion_tokens\":
+        656,\n    \"total_tokens\": 724,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_75546bd1a7\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 11 Feb 2026 22:37:29 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '8025'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Sports Analyst. You are
+      an expert at gathering and organizing information. You carefully collect details
+      and present them in a structured way.\nYour personal goal is: Gather information
+      about the best soccer players"},{"role":"user","content":"\nCurrent Task: Top
+      10 best players in the world?\n\nProvide your complete response:"}],"model":"gpt-4.1-mini"}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '404'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D8D7plZAMg8Jj4n0mOUhTKWZfEp0W\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1770849449,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"Certainly! Here's a list of the top
+        10 best soccer players in the world as of 2024, based on recent performances,
+        achievements, and overall impact at both club and international levels:\\n\\n###
+        Top 10 Best Soccer Players in the World (2024)\\n\\n| Rank | Player               |
+        Nationality      | Current Club        | Position           | Key Highlights
+        (2023-2024)                                     |\\n|-------|----------------------|------------------|---------------------|--------------------|---------------------------------------------------------------|\\n|
+        1     | Lionel Messi         | Argentina        | Inter Miami         | Forward
+        \           | Led Argentina to Copa America win, MLS standout, consistently
+        top scorer. |\\n| 2     | Kylian Mbapp\xE9        | France           | Paris
+        Saint-Germain | Forward            | Top scorer in Ligue 1, key player in
+        World Cup 2022 aftermath, Champions League performer. |\\n| 3     | Erling
+        Haaland       | Norway           | Manchester City     | Striker            |
+        Premier League top scorer, UEFA Champions League winner, prolific goal scorer.
+        |\\n| 4     | Kevin De Bruyne      | Belgium          | Manchester City     |
+        Midfielder         | Playmaker extraordinaire, assists leader in Premier League.
+        |\\n| 5     | Karim Benzema        | France           | Al-Ittihad          |
+        Forward            | Ballon d\u2019Or 2022 winner, consistent goal scoring,
+        leadership qualities. |\\n| 6     | Mohamed Salah        | Egypt            |
+        Liverpool           | Winger/Forward     | Premier League top scorer, key
+        in Liverpool's attacking lineup. |\\n| 7     | Robert Lewandowski   | Poland
+        \          | Barcelona           | Striker            | Consistent goal scorer,
+        vital for Barcelona\u2019s attack. |\\n| 8     | Vin\xEDcius J\xFAnior      |
+        Brazil           | Real Madrid         | Winger             | Key player in
+        Real Madrid\u2019s recent domestic and European successes. |\\n| 9     | Jude
+        Bellingham      | England          | Real Madrid         | Midfielder         |
+        Young talent with impressive performances in La Liga and Champions League.
+        |\\n| 10    | Luka Modri\u0107          | Croatia          | Real Madrid         |
+        Midfielder         | Veteran leader, elegant playmaker, still impactful in
+        midfield. |\\n\\n### Summary:\\n- The list blends established superstars and
+        emerging talents.\\n- Players are chosen based on recent form, titles, and
+        influence on the game.\\n- Positions covered include forwards, midfielders,
+        and wingers, reflecting the diversity of top talent.\\n\\nIf you need information
+        on specific players or different categories like defenders or goalkeepers,
+        please let me know!\",\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 68,\n    \"completion_tokens\":
+        532,\n    \"total_tokens\": 600,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_75546bd1a7\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Wed, 11 Feb 2026 22:37:38 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '8604'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      set-cookie:
+      - SET-COOKIE-XXX
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:

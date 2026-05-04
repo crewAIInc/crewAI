@@ -6,10 +6,7 @@ from chromadb.api.types import Documents, EmbeddingFunction, Embeddings
 from typing_extensions import Unpack
 
 from crewai.rag.embeddings.providers.ibm.types import WatsonXProviderConfig
-from crewai.utilities.printer import Printer
-
-
-_printer = Printer()
+from crewai.utilities.printer import PRINTER
 
 
 class WatsonXEmbeddingFunction(EmbeddingFunction[Documents]):
@@ -164,5 +161,5 @@ class WatsonXEmbeddingFunction(EmbeddingFunction[Documents]):
             return cast(Embeddings, embeddings)
         except Exception as e:
             if self._verbose:
-                _printer.print(f"Error during WatsonX embedding: {e}", color="red")
+                PRINTER.print(f"Error during WatsonX embedding: {e}", color="red")
             raise

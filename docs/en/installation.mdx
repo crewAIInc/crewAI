@@ -5,6 +5,14 @@ icon: wrench
 mode: "wide"
 ---
 
+### Watch: Building CrewAI Agents & Flows with Coding Agent Skills
+
+Install our coding agent skills (Claude Code, Codex, ...) to quickly get your coding agents up and running with CrewAI.
+
+You can install it with `npx skills add crewaiinc/skills`
+
+<iframe src="https://www.loom.com/embed/befb9f68b81f42ad8112bfdd95a780af" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen style={{width: "100%", height: "400px"}}></iframe>
+
 ## Video Tutorial
 
 Watch this video tutorial for a step-by-step demonstration of the installation process:
@@ -163,6 +171,9 @@ We recommend using the `YAML` template scaffolding for a structured approach to 
       ```shell
       uv add <package-name>
       ```
+      <Note>
+        As a supply-chain security measure, CrewAI's internal packages use `exclude-newer = "3 days"` in their `pyproject.toml` files. This means transitive dependencies pulled in by CrewAI won't resolve packages released less than 3 days ago. Your own direct dependencies are not affected by this policy. If you notice a transitive dependency is behind, you can pin the version you want explicitly in your project's dependencies.
+      </Note>
     - To run your crew, execute the following command in the root of your project:
       ```bash
       crewai run
@@ -188,7 +199,7 @@ For teams and organizations, CrewAI offers enterprise deployment options that el
 - Supports any hyperscaler including on prem deployments
 - Integration with your existing security systems
 
-<Card title="Explore Enterprise Options" icon="building" href="https://crewai.com/enterprise">
+<Card title="Explore Enterprise Options" icon="building" href="https://share.hsforms.com/1Ooo2UViKQ22UOzdr7i77iwr87kg">
   Learn about CrewAI's enterprise offerings and schedule a demo
 </Card>
 </Note>
@@ -196,9 +207,8 @@ For teams and organizations, CrewAI offers enterprise deployment options that el
 ## Next Steps
 
 <CardGroup cols={2}>
-  <Card title="Build Your First Agent" icon="code" href="/en/quickstart">
-    Follow our quickstart guide to create your first CrewAI agent and get
-    hands-on experience.
+  <Card title="Quickstart: Flow + agent" icon="code" href="/en/quickstart">
+    Follow the quickstart to scaffold a Flow, run a one-agent crew, and produce a report.
   </Card>
   <Card
     title="Join the Community"

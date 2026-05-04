@@ -67,4 +67,16 @@ tool = DirectorySearchTool(
         },
     }
 )
+
+## Security
+
+### Path Validation
+
+Directory paths provided to this tool are validated against the current working directory. Paths that resolve outside the working directory are rejected with a `ValueError`.
+
+To allow paths outside the working directory (for example, in tests or trusted pipelines), set the environment variable:
+
+```shell
+CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true
+```
 ```

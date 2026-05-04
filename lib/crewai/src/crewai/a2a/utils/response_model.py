@@ -77,7 +77,6 @@ def extract_a2a_agent_ids_from_config(
     else:
         configs = a2a_config
 
-    # Filter to only client configs (those with endpoint)
     client_configs: list[A2AClientConfigTypes] = [
         config for config in configs if isinstance(config, (A2AConfig, A2AClientConfig))
     ]

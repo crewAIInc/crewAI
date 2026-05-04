@@ -124,6 +124,7 @@ class TestPlusAPI(unittest.TestCase):
             "file": encoded_file,
             "description": description,
             "available_exports": None,
+            "tools_metadata": None,
         }
         mock_make_request.assert_called_once_with(
             "POST", "/crewai_plus/api/v1/tools", json=params
@@ -161,6 +162,7 @@ class TestPlusAPI(unittest.TestCase):
             "file": encoded_file,
             "description": description,
             "available_exports": None,
+            "tools_metadata": None,
         }
 
         self.assert_request_with_org_id(
@@ -189,6 +191,7 @@ class TestPlusAPI(unittest.TestCase):
             "file": encoded_file,
             "description": description,
             "available_exports": None,
+            "tools_metadata": None,
         }
         mock_make_request.assert_called_once_with(
             "POST", "/crewai_plus/api/v1/tools", json=params

@@ -132,12 +132,12 @@ def test_embedding_configuration_flow(
 
     embedder_config = {
         "provider": "sentence-transformer",
-        "model_name": "all-MiniLM-L6-v2",
+        "config": {"model_name": "all-MiniLM-L6-v2"},
     }
 
-    KnowledgeStorage(embedder=embedder_config, collection_name="embedding_test")
+    storage = KnowledgeStorage(embedder=embedder_config, collection_name="embedding_test")
 
-    mock_get_embedding.assert_called_once_with(embedder_config)
+    mock_get_embedding.assert_called_once_with(storage.embedder)
 
 
 @patch("crewai.knowledge.storage.knowledge_storage.get_rag_client")

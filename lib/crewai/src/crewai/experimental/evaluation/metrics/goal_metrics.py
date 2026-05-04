@@ -68,7 +68,7 @@ Evaluate how well the agent's output aligns with the assigned task goal.
         ]
         if self.llm is None:
             raise ValueError("LLM must be initialized")
-        response = self.llm.call(prompt)  # type: ignore[arg-type]
+        response = self.llm.call(prompt)
 
         try:
             evaluation_data: dict[str, Any] = extract_json_from_llm_response(response)

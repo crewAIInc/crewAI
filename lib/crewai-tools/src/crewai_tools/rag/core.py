@@ -77,7 +77,7 @@ class RAG(Adapter):
 
         super().model_post_init(__context)
 
-    def add(
+    def add(  # type: ignore[override]
         self,
         content: str | Path,
         data_type: str | DataType | None = None,

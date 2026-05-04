@@ -1,7 +1,7 @@
 """Core type definitions for RAG systems."""
 
 from collections.abc import Sequence
-from typing import TypeVar
+from typing import Any, TypeVar
 
 import numpy as np
 from numpy import floating, integer, number
@@ -16,7 +16,7 @@ Embedding = NDArray[np.int32 | np.float32]
 Embeddings = list[Embedding]
 
 Documents = list[str]
-Images = list[np.ndarray]
+Images = list[np.ndarray[Any, np.dtype[np.generic]]]
 Embeddable = Documents | Images
 
 ScalarType = TypeVar("ScalarType", bound=np.generic)

@@ -19,15 +19,16 @@ from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
 from crewai.types.crew_chat import ChatInputField, ChatInputs
 from crewai.utilities.llm_utils import create_llm
-from crewai.utilities.printer import Printer
+from crewai.utilities.printer import PRINTER
 from crewai.utilities.project_utils import read_toml
 from crewai.utilities.types import LLMMessage
 from crewai.version import get_crewai_version
 
 
-_printer = Printer()
-
 MIN_REQUIRED_VERSION: Final[Literal["0.98.0"]] = "0.98.0"
+
+DEFAULT_INPUT_DESCRIPTION: Final[str] = "Input value for the crew's tasks and agents."
+DEFAULT_CREW_DESCRIPTION: Final[str] = "A CrewAI crew."
 
 
 def check_conversational_crews_version(
@@ -117,9 +118,9 @@ def run_chat() -> None:
 def show_loading(event: threading.Event) -> None:
     """Display animated loading dots while processing."""
     while not event.is_set():
-        _printer.print(".", end="")
+        PRINTER.print(".", end="")
         time.sleep(1)
-    _printer.print("")
+    PRINTER.print("")
 
 
 def initialize_chat_llm(crew: Crew) -> LLM | BaseLLM | None:
@@ -352,7 +353,10 @@ def load_crew_and_name() -> tuple[Crew, str]:
 
 
 def generate_crew_chat_inputs(
-    crew: Crew, crew_name: str, chat_llm: LLM | BaseLLM
+    crew: Crew,
+    crew_name: str,
+    chat_llm: LLM | BaseLLM,
+    generate_descriptions: bool = True,
 ) -> ChatInputs:
     """Generate the ChatInputs required for the crew by analyzing the tasks and agents.
 
@@ -360,6 +364,10 @@ def generate_crew_chat_inputs(
         crew: The crew object containing tasks and agents.
         crew_name: The name of the crew.
         chat_llm: The chat language model to use for AI calls.
+        generate_descriptions: When True (default), use the LLM to generate
+            input and crew descriptions. When False, skip all LLM calls and
+            return static defaults. Production callers that invoke this at
+            startup should pass ``False`` to avoid blocking on the LLM.
 
     Returns:
         An object containing the crew's name, description, and input fields.
@@ -368,10 +376,16 @@ def generate_crew_chat_inputs(
 
     input_fields = []
     for input_name in required_inputs:
-        description = generate_input_description_with_ai(input_name, crew, chat_llm)
+        if generate_descriptions:
+            description = generate_input_description_with_ai(input_name, crew, chat_llm)
+        else:
+            description = DEFAULT_INPUT_DESCRIPTION
         input_fields.append(ChatInputField(name=input_name, description=description))
 
-    crew_description = generate_crew_description_with_ai(crew, chat_llm)
+    if generate_descriptions:
+        crew_description = generate_crew_description_with_ai(crew, chat_llm)
+    else:
+        crew_description = DEFAULT_CREW_DESCRIPTION
 
     return ChatInputs(
         crew_name=crew_name, crew_description=crew_description, inputs=input_fields
@@ -444,7 +458,15 @@ def generate_input_description_with_ai(
         "Context:\n"
         f"{context}"
     )
-    response = chat_llm.call(messages=[{"role": "user", "content": prompt}])
+    try:
+        response = chat_llm.call(messages=[{"role": "user", "content": prompt}])
+    except Exception as exc:
+        click.secho(
+            f"Warning: failed to generate input description for '{input_name}' "
+            f"({exc}); using default.",
+            fg="yellow",
+        )
+        return DEFAULT_INPUT_DESCRIPTION
     return str(response).strip()
 
 
@@ -490,5 +512,12 @@ def generate_crew_description_with_ai(crew: Crew, chat_llm: LLM | BaseLLM) -> st
         "Context:\n"
         f"{context}"
     )
-    response = chat_llm.call(messages=[{"role": "user", "content": prompt}])
+    try:
+        response = chat_llm.call(messages=[{"role": "user", "content": prompt}])
+    except Exception as exc:
+        click.secho(
+            f"Warning: failed to generate crew description ({exc}); using default.",
+            fg="yellow",
+        )
+        return DEFAULT_CREW_DESCRIPTION
     return str(response).strip()

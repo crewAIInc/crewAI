@@ -104,6 +104,7 @@ class I18N(BaseModel):
             "errors",
             "tools",
             "reasoning",
+            "planning",
             "hierarchical_manager_agent",
             "memory",
         ],
@@ -141,3 +142,6 @@ def get_i18n(prompt_file: str | None = None) -> I18N:
         Cached I18N instance.
     """
     return I18N(prompt_file=prompt_file)
+
+
+I18N_DEFAULT: I18N = get_i18n()

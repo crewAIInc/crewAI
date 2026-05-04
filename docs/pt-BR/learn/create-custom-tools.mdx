@@ -11,6 +11,10 @@ Este guia traz instruções detalhadas sobre como criar ferramentas personalizad
 incorporando funcionalidades recentes, como delegação de ferramentas, tratamento de erros e chamada dinâmica de ferramentas. Destaca também a importância de ferramentas de colaboração,
 permitindo que agentes executem uma ampla gama de ações.
 
+<Tip>
+  **Quer publicar sua ferramenta para a comunidade?** Se você está construindo uma ferramenta que pode beneficiar outros, confira o guia [Publicar Ferramentas Personalizadas](/pt-BR/guides/tools/publish-custom-tools) para aprender como empacotar e distribuir sua ferramenta no PyPI.
+</Tip>
+
 ### Subclassificando `BaseTool`
 
 Para criar uma ferramenta personalizada, herde de `BaseTool` e defina os atributos necessários, incluindo o `args_schema` para validação de entrada e o método `_run`.

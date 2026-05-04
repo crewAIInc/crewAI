@@ -3,7 +3,6 @@
 from collections.abc import Mapping
 from datetime import datetime, timedelta
 from functools import lru_cache
-import importlib.metadata
 import json
 from pathlib import Path
 from typing import Any
@@ -11,6 +10,7 @@ from urllib import request
 from urllib.error import URLError
 
 import appdirs
+from crewai.utilities.version import get_crewai_version
 from packaging.version import InvalidVersion, Version, parse
 
 
@@ -23,11 +23,6 @@ def _get_cache_file() -> Path:
     cache_dir = Path(appdirs.user_cache_dir("crewai"))
     cache_dir.mkdir(parents=True, exist_ok=True)
     return cache_dir / "version_cache.json"
-
-
-def get_crewai_version() -> str:
-    """Get the version number of CrewAI running the CLI."""
-    return importlib.metadata.version("crewai")
 
 
 def _is_cache_valid(cache_data: Mapping[str, Any]) -> bool:

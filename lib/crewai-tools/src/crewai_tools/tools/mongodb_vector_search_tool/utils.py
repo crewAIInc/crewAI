@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 
 if TYPE_CHECKING:
-    from pymongo.collection import Collection
+    from pymongo.collection import Collection as MongoCollection
 
 
 def _vector_search_index_definition(
@@ -34,7 +34,7 @@ def _vector_search_index_definition(
 
 
 def create_vector_search_index(
-    collection: Collection,
+    collection: MongoCollection[Any],
     index_name: str,
     dimensions: int,
     path: str,
@@ -84,7 +84,7 @@ def create_vector_search_index(
         )
 
 
-def _is_index_ready(collection: Collection, index_name: str) -> bool:
+def _is_index_ready(collection: MongoCollection[Any], index_name: str) -> bool:
     """Check for the index name in the list of available search indexes to see if the
     specified index is of status READY.
 
@@ -102,7 +102,7 @@ def _is_index_ready(collection: Collection, index_name: str) -> bool:
 
 
 def _wait_for_predicate(
-    predicate: Callable, err: str, timeout: float = 120, interval: float = 0.5
+    predicate: Callable[[], bool], err: str, timeout: float = 120, interval: float = 0.5
 ) -> None:
     """Generic to block until the predicate returns true.
 

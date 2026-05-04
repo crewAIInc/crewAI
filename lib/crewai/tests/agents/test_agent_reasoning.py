@@ -1,240 +1,345 @@
-"""Tests for reasoning in agents."""
+"""Tests for planning/reasoning in agents."""
 
-import json
+import warnings
 
 import pytest
 
-from crewai import Agent, Task
+from crewai import Agent, PlanningConfig, Task
 from crewai.llm import LLM
 
 
-@pytest.fixture
-def mock_llm_responses():
-    """Fixture for mock LLM responses."""
-    return {
-        "ready": "I'll solve this simple math problem.\n\nREADY: I am ready to execute the task.\n\n",
-        "not_ready": "I need to think about derivatives.\n\nNOT READY: I need to refine my plan because I'm not sure about the derivative rules.",
-        "ready_after_refine": "I'll use the power rule for derivatives where d/dx(x^n) = n*x^(n-1).\n\nREADY: I am ready to execute the task.",
-        "execution": "4",
-    }
+# =============================================================================
+# Tests for PlanningConfig configuration (no LLM calls needed)
+# =============================================================================
 
 
-def test_agent_with_reasoning(mock_llm_responses):
-    """Test agent with reasoning."""
-    llm = LLM("gpt-3.5-turbo")
+def test_planning_config_default_values():
+    """Test PlanningConfig default values."""
+    config = PlanningConfig()
+
+    assert config.max_attempts is None
+    assert config.max_steps == 20
+    assert config.system_prompt is None
+    assert config.plan_prompt is None
+    assert config.refine_prompt is None
+    assert config.llm is None
+
+
+def test_planning_config_custom_values():
+    """Test PlanningConfig with custom values."""
+    config = PlanningConfig(
+        max_attempts=5,
+        max_steps=15,
+        system_prompt="Custom system",
+        plan_prompt="Custom plan: {description}",
+        refine_prompt="Custom refine: {current_plan}",
+        llm="gpt-4",
+    )
+
+    assert config.max_attempts == 5
+    assert config.max_steps == 15
+    assert config.system_prompt == "Custom system"
+    assert config.plan_prompt == "Custom plan: {description}"
+    assert config.refine_prompt == "Custom refine: {current_plan}"
+    assert config.llm == "gpt-4"
+
+
+def test_agent_with_planning_config_custom_prompts():
+    """Test agent with PlanningConfig using custom prompts."""
+    llm = LLM("gpt-4o-mini")
+
+    custom_system_prompt = "You are a specialized planner."
+    custom_plan_prompt = "Plan this task: {description}"
+
+    agent = Agent(
+        role="Test Agent",
+        goal="To test custom prompts",
+        backstory="I am a test agent.",
+        llm=llm,
+        planning_config=PlanningConfig(
+            system_prompt=custom_system_prompt,
+            plan_prompt=custom_plan_prompt,
+            max_steps=10,
+        ),
+        verbose=False,
+    )
+
+    # Just test that the agent is created properly
+    assert agent.planning_config is not None
+    assert agent.planning_config.system_prompt == custom_system_prompt
+    assert agent.planning_config.plan_prompt == custom_plan_prompt
+    assert agent.planning_config.max_steps == 10
+
+
+def test_agent_with_planning_config_disabled():
+    """Test agent with PlanningConfig disabled."""
+    llm = LLM("gpt-4o-mini")
+
+    agent = Agent(
+        role="Test Agent",
+        goal="To test disabled planning",
+        backstory="I am a test agent.",
+        llm=llm,
+        planning=False,
+        verbose=False,
+    )
+
+    # Planning should be disabled
+    assert agent.planning_enabled is False
+
+
+def test_planning_enabled_property():
+    """Test the planning_enabled property on Agent."""
+    llm = LLM("gpt-4o-mini")
+
+    # With planning_config enabled
+    agent_with_planning = Agent(
+        role="Test Agent",
+        goal="Test",
+        backstory="Test",
+        llm=llm,
+        planning=True,
+    )
+    assert agent_with_planning.planning_enabled is True
+
+    # With planning_config disabled
+    agent_disabled = Agent(
+        role="Test Agent",
+        goal="Test",
+        backstory="Test",
+        llm=llm,
+        planning=False,
+    )
+    assert agent_disabled.planning_enabled is False
+
+    # Without planning_config
+    agent_no_planning = Agent(
+        role="Test Agent",
+        goal="Test",
+        backstory="Test",
+        llm=llm,
+    )
+    assert agent_no_planning.planning_enabled is False
+
+
+# =============================================================================
+# Tests for backward compatibility with reasoning=True (no LLM calls)
+# =============================================================================
+
+
+def test_agent_with_reasoning_backward_compat():
+    """Test agent with reasoning=True (backward compatibility)."""
+    llm = LLM("gpt-4o-mini")
+
+    # This should emit a deprecation warning
+    with warnings.catch_warnings(record=True):
+        warnings.simplefilter("always")
+        agent = Agent(
+            role="Test Agent",
+            goal="To test the reasoning feature",
+            backstory="I am a test agent created to verify the reasoning feature works correctly.",
+            llm=llm,
+            reasoning=True,
+            verbose=False,
+        )
+
+    # Should have created a PlanningConfig internally
+    assert agent.planning_config is not None
+    assert agent.planning_enabled is True
+
+
+def test_agent_with_reasoning_and_max_attempts_backward_compat():
+    """Test agent with reasoning=True and max_reasoning_attempts (backward compatibility)."""
+    llm = LLM("gpt-4o-mini")
 
     agent = Agent(
         role="Test Agent",
         goal="To test the reasoning feature",
-        backstory="I am a test agent created to verify the reasoning feature works correctly.",
+        backstory="I am a test agent.",
         llm=llm,
         reasoning=True,
-        verbose=True,
+        max_reasoning_attempts=5,
+        verbose=False,
     )
 
-    task = Task(
-        description="Simple math task: What's 2+2?",
-        expected_output="The answer should be a number.",
-        agent=agent,
-    )
-
-    agent.llm.call = lambda messages, *args, **kwargs: (
-        mock_llm_responses["ready"]
-        if any("create a detailed plan" in msg.get("content", "") for msg in messages)
-        else mock_llm_responses["execution"]
-    )
-
-    result = agent.execute_task(task)
-
-    assert result == mock_llm_responses["execution"]
-    assert "Reasoning Plan:" in task.description
+    # Should have created a PlanningConfig with max_attempts
+    assert agent.planning_config is not None
+    assert agent.planning_config.max_attempts == 5
 
 
-def test_agent_with_reasoning_not_ready_initially(mock_llm_responses):
-    """Test agent with reasoning that requires refinement."""
-    llm = LLM("gpt-3.5-turbo")
+# =============================================================================
+# Tests for Agent.kickoff() with planning (uses AgentExecutor)
+# =============================================================================
+
+
+@pytest.mark.vcr()
+def test_agent_kickoff_with_planning():
+    """Test Agent.kickoff() with planning enabled generates a plan."""
+    llm = LLM("gpt-4o-mini")
 
     agent = Agent(
-        role="Test Agent",
-        goal="To test the reasoning feature",
-        backstory="I am a test agent created to verify the reasoning feature works correctly.",
+        role="Math Assistant",
+        goal="Help solve math problems step by step",
+        backstory="A helpful math tutor",
         llm=llm,
-        reasoning=True,
-        max_reasoning_attempts=2,
-        verbose=True,
+        planning_config=PlanningConfig(max_attempts=1),
+        verbose=False,
     )
 
-    task = Task(
-        description="Complex math task: What's the derivative of x²?",
-        expected_output="The answer should be a mathematical expression.",
-        agent=agent,
-    )
+    result = agent.kickoff("What is 15 + 27?")
 
-    call_count = [0]
-
-    def mock_llm_call(messages, *args, **kwargs):
-        if any(
-            "create a detailed plan" in msg.get("content", "") for msg in messages
-        ) or any("refine your plan" in msg.get("content", "") for msg in messages):
-            call_count[0] += 1
-            if call_count[0] == 1:
-                return mock_llm_responses["not_ready"]
-            return mock_llm_responses["ready_after_refine"]
-        return "2x"
-
-    agent.llm.call = mock_llm_call
-
-    result = agent.execute_task(task)
-
-    assert result == "2x"
-    assert call_count[0] == 2  # Should have made 2 reasoning calls
-    assert "Reasoning Plan:" in task.description
+    assert result is not None
+    assert "42" in str(result)
 
 
-def test_agent_with_reasoning_max_attempts_reached():
-    """Test agent with reasoning that reaches max attempts without being ready."""
-    llm = LLM("gpt-3.5-turbo")
+@pytest.mark.vcr()
+def test_agent_kickoff_without_planning():
+    """Test Agent.kickoff() without planning skips plan generation."""
+    llm = LLM("gpt-4o-mini")
 
     agent = Agent(
-        role="Test Agent",
-        goal="To test the reasoning feature",
-        backstory="I am a test agent created to verify the reasoning feature works correctly.",
+        role="Math Assistant",
+        goal="Help solve math problems",
+        backstory="A helpful assistant",
         llm=llm,
-        reasoning=True,
-        max_reasoning_attempts=2,
-        verbose=True,
+        # No planning_config = no planning
+        verbose=False,
     )
 
-    task = Task(
-        description="Complex math task: Solve the Riemann hypothesis.",
-        expected_output="A proof or disproof of the hypothesis.",
-        agent=agent,
-    )
+    result = agent.kickoff("What is 8 * 7?")
 
-    call_count = [0]
-
-    def mock_llm_call(messages, *args, **kwargs):
-        if any(
-            "create a detailed plan" in msg.get("content", "") for msg in messages
-        ) or any("refine your plan" in msg.get("content", "") for msg in messages):
-            call_count[0] += 1
-            return f"Attempt {call_count[0]}: I need more time to think.\n\nNOT READY: I need to refine my plan further."
-        return "This is an unsolved problem in mathematics."
-
-    agent.llm.call = mock_llm_call
-
-    result = agent.execute_task(task)
-
-    assert result == "This is an unsolved problem in mathematics."
-    assert (
-        call_count[0] == 2
-    )  # Should have made exactly 2 reasoning calls (max_attempts)
-    assert "Reasoning Plan:" in task.description
+    assert result is not None
+    assert "56" in str(result)
 
 
-def test_agent_reasoning_error_handling():
-    """Test error handling during the reasoning process."""
-    llm = LLM("gpt-3.5-turbo")
+@pytest.mark.vcr()
+def test_agent_kickoff_with_planning_disabled():
+    """Test Agent.kickoff() with planning explicitly disabled via planning=False."""
+    llm = LLM("gpt-4o-mini")
 
     agent = Agent(
-        role="Test Agent",
-        goal="To test the reasoning feature",
-        backstory="I am a test agent created to verify the reasoning feature works correctly.",
+        role="Math Assistant",
+        goal="Help solve math problems",
+        backstory="A helpful assistant",
         llm=llm,
-        reasoning=True,
+        planning=False,  # Explicitly disable planning
+        verbose=False,
     )
 
-    task = Task(
-        description="Task that will cause an error",
-        expected_output="Output that will never be generated",
-        agent=agent,
-    )
+    result = agent.kickoff("What is 100 / 4?")
 
-    call_count = [0]
-
-    def mock_llm_call_error(*args, **kwargs):
-        call_count[0] += 1
-        if call_count[0] <= 2:  # First calls are for reasoning
-            raise Exception("LLM error during reasoning")
-        return "Fallback execution result"  # Return a value for task execution
-
-    agent.llm.call = mock_llm_call_error
-
-    result = agent.execute_task(task)
-
-    assert result == "Fallback execution result"
-    assert call_count[0] > 2  # Ensure we called the mock multiple times
+    assert result is not None
+    assert "25" in str(result)
 
 
-@pytest.mark.skip(reason="Test requires updates for native tool calling changes")
-def test_agent_with_function_calling():
-    """Test agent with reasoning using function calling."""
-    llm = LLM("gpt-3.5-turbo")
+@pytest.mark.vcr()
+def test_agent_kickoff_multi_step_task_with_planning():
+    """Test Agent.kickoff() with a multi-step task that benefits from planning."""
+    llm = LLM("gpt-4o-mini")
 
     agent = Agent(
-        role="Test Agent",
-        goal="To test the reasoning feature",
-        backstory="I am a test agent created to verify the reasoning feature works correctly.",
+        role="Math Tutor",
+        goal="Solve multi-step math problems",
+        backstory="An expert tutor who explains step by step",
         llm=llm,
-        reasoning=True,
-        verbose=True,
+        planning_config=PlanningConfig(max_attempts=1, max_steps=5),
+        verbose=False,
     )
 
-    task = Task(
-        description="Simple math task: What's 2+2?",
-        expected_output="The answer should be a number.",
-        agent=agent,
+    # Task requires: find primes, sum them, then double
+    result = agent.kickoff(
+        "Find the first 3 prime numbers, add them together, then multiply by 2."
     )
 
-    agent.llm.supports_function_calling = lambda: True
-
-    def mock_function_call(messages, *args, **kwargs):
-        if "tools" in kwargs:
-            return json.dumps(
-                {"plan": "I'll solve this simple math problem: 2+2=4.", "ready": True}
-            )
-        return "4"
-
-    agent.llm.call = mock_function_call
-
-    result = agent.execute_task(task)
-
-    assert result == "4"
-    assert "Reasoning Plan:" in task.description
-    assert "I'll solve this simple math problem: 2+2=4." in task.description
+    assert result is not None
+    # First 3 primes: 2, 3, 5 -> sum = 10 -> doubled = 20
+    assert "20" in str(result)
 
 
-@pytest.mark.skip(reason="Test requires updates for native tool calling changes")
-def test_agent_with_function_calling_fallback():
-    """Test agent with reasoning using function calling that falls back to text parsing."""
-    llm = LLM("gpt-3.5-turbo")
+# =============================================================================
+# Tests for Agent.execute_task() with planning (uses CrewAgentExecutor)
+# These test the legacy path via handle_reasoning()
+# =============================================================================
+
+
+@pytest.mark.vcr()
+def test_agent_execute_task_with_planning():
+    """Test Agent.execute_task() with planning via CrewAgentExecutor."""
+    llm = LLM("gpt-4o-mini")
 
     agent = Agent(
-        role="Test Agent",
-        goal="To test the reasoning feature",
-        backstory="I am a test agent created to verify the reasoning feature works correctly.",
+        role="Math Assistant",
+        goal="Help solve math problems",
+        backstory="A helpful math tutor",
         llm=llm,
-        reasoning=True,
-        verbose=True,
+        planning_config=PlanningConfig(max_attempts=1),
+        verbose=False,
     )
 
     task = Task(
-        description="Simple math task: What's 2+2?",
-        expected_output="The answer should be a number.",
+        description="What is 9 + 11?",
+        expected_output="A number",
         agent=agent,
     )
 
-    agent.llm.supports_function_calling = lambda: True
+    result = agent.execute_task(task)
 
-    def mock_function_call(messages, *args, **kwargs):
-        if "tools" in kwargs:
-            return "Invalid JSON that will trigger fallback. READY: I am ready to execute the task."
-        return "4"
+    assert result is not None
+    assert "20" in str(result)
+    # Planning should be appended to task description
+    assert "Planning:" in task.description
 
-    agent.llm.call = mock_function_call
+
+@pytest.mark.vcr()
+def test_agent_execute_task_without_planning():
+    """Test Agent.execute_task() without planning."""
+    llm = LLM("gpt-4o-mini")
+
+    agent = Agent(
+        role="Math Assistant",
+        goal="Help solve math problems",
+        backstory="A helpful assistant",
+        llm=llm,
+        verbose=False,
+    )
+
+    task = Task(
+        description="What is 12 * 3?",
+        expected_output="A number",
+        agent=agent,
+    )
 
     result = agent.execute_task(task)
 
-    assert result == "4"
-    assert "Reasoning Plan:" in task.description
-    assert "Invalid JSON that will trigger fallback" in task.description
+    assert result is not None
+    assert "36" in str(result)
+    # No planning should be added
+    assert "Planning:" not in task.description
+
+
+@pytest.mark.vcr()
+def test_agent_execute_task_with_planning_refine():
+    """Test Agent.execute_task() with planning that requires refinement."""
+    llm = LLM("gpt-4o-mini")
+
+    agent = Agent(
+        role="Math Tutor",
+        goal="Solve complex math problems step by step",
+        backstory="An expert tutor",
+        llm=llm,
+        planning_config=PlanningConfig(max_attempts=2),
+        verbose=False,
+    )
+
+    task = Task(
+        description="Calculate the area of a circle with radius 5 (use pi = 3.14)",
+        expected_output="The area as a number",
+        agent=agent,
+    )
+
+    result = agent.execute_task(task)
+
+    assert result is not None
+    # Area = pi * r^2 = 3.14 * 25 = 78.5
+    assert "78" in str(result) or "79" in str(result)
+    assert "Planning:" in task.description

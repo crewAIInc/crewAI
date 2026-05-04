@@ -196,6 +196,16 @@ class PlusAPI:
             timeout=30,
         )
 
+    def mark_ephemeral_trace_batch_as_failed(
+        self, trace_batch_id: str, error_message: str
+    ) -> httpx.Response:
+        return self._make_request(
+            "PATCH",
+            f"{self.EPHEMERAL_TRACING_RESOURCE}/batches/{trace_batch_id}",
+            json={"status": "failed", "failure_reason": error_message},
+            timeout=30,
+        )
+
     def get_mcp_configs(self, slugs: list[str]) -> httpx.Response:
         """Get MCP server configurations for the given slugs."""
         return self._make_request(

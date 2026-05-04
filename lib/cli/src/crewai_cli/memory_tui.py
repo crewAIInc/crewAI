@@ -173,13 +173,13 @@ class MemoryTUI(App[None]):
         info = self._memory.info("/")
         tree.root.label = f"/ ({info.record_count} records)"
         tree.root.data = "/"
-        self._add_children(tree.root, "/", depth=0, max_depth=3)
+        self._add_scope_children(tree.root, "/", depth=0, max_depth=3)
         tree.root.expand()
         return tree
 
-    def _add_children(
+    def _add_scope_children(
         self,
-        parent_node: Tree.Node[str],
+        parent_node: Any,
         path: str,
         depth: int,
         max_depth: int,
@@ -191,7 +191,7 @@ class MemoryTUI(App[None]):
             child_info = self._memory.info(child)
             label = f"{child} ({child_info.record_count})"
             node = parent_node.add(label, data=child)
-            self._add_children(node, child, depth + 1, max_depth)
+            self._add_scope_children(node, child, depth + 1, max_depth)
 
     # -- Populating the OptionList -------------------------------------------
 

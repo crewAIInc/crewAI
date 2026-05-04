@@ -13,6 +13,7 @@ from crewai.a2a.auth.client_schemes import (
 )
 from crewai.a2a.auth.server_schemes import (
     AuthenticatedUser,
+    EnterpriseTokenAuth,
     OIDCAuth,
     ServerAuthScheme,
     SimpleTokenAuth,
@@ -25,6 +26,7 @@ __all__ = [
     "AuthenticatedUser",
     "BearerTokenAuth",
     "ClientAuthScheme",
+    "EnterpriseTokenAuth",
     "HTTPBasicAuth",
     "HTTPDigestAuth",
     "OAuth2AuthorizationCode",

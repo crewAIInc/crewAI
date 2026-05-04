@@ -708,7 +708,7 @@ class TestEdgeCases:
     @patch("builtins.input", return_value="")
     @patch("builtins.print")
     def test_empty_feedback_first_outcome_fallback(self, mock_print, mock_input):
-        """Test that empty feedback without default uses first outcome."""
+        """Test that empty feedback without default uses first outcome for routing, but returns method output."""
 
         class FallbackFlow(Flow):
             @start()
@@ -726,12 +726,15 @@ class TestEdgeCases:
         with patch.object(flow, "_request_human_feedback", return_value=""):
             result = flow.kickoff()
 
-        assert result == "first"  # Falls back to first outcome
+        # Flow result is the method's return value, NOT the collapsed outcome
+        assert result == "content"
+        # But outcome is still set to first for routing purposes
+        assert flow.last_human_feedback.outcome == "first"
 
     @patch("builtins.input", return_value="whitespace only   ")
     @patch("builtins.print")
     def test_whitespace_only_feedback_treated_as_empty(self, mock_print, mock_input):
-        """Test that whitespace-only feedback is treated as empty."""
+        """Test that whitespace-only feedback is treated as empty for routing, but returns method output."""
 
         class WhitespaceFlow(Flow):
             @start()
@@ -749,7 +752,10 @@ class TestEdgeCases:
         with patch.object(flow, "_request_human_feedback", return_value="   "):
             result = flow.kickoff()
 
-        assert result == "reject"  # Uses default because feedback is empty after strip
+        # Flow result is the method's return value, NOT the collapsed outcome
+        assert result == "content"
+        # But outcome is set to default because feedback is empty after strip
+        assert flow.last_human_feedback.outcome == "reject"
 
     @patch("builtins.input", return_value="feedback")
     @patch("builtins.print")
@@ -772,3 +778,204 @@ class TestEdgeCases:
         assert result.output == "content"
         assert result.feedback == "feedback"
         assert result.outcome is None  # No routing, no outcome
+
+
+class TestLLMConfigPreservation:
+    """Tests that LLM config is preserved through @human_feedback serialization.
+
+    PR #4970 introduced _hf_llm stashing so the live LLM object survives
+    decorator wrapping for same-process resume. The serialization path
+    (_serialize_llm_for_context / _deserialize_llm_from_context) preserves
+    config for cross-process resume.
+    """
+
+    def test_hf_llm_stashed_on_wrapper_with_llm_instance(self):
+        """Test that passing an LLM instance stashes it on the wrapper as _hf_llm."""
+        from crewai.llm import LLM
+
+        llm_instance = LLM(model="gpt-4o-mini", temperature=0.42)
+
+        class ConfigFlow(Flow):
+            @start()
+            @human_feedback(
+                message="Review:",
+                emit=["approved", "rejected"],
+                llm=llm_instance,
+            )
+            def review(self):
+                return "content"
+
+        method = ConfigFlow.review
+        assert hasattr(method, "_hf_llm"), "_hf_llm not found on wrapper"
+        assert method._hf_llm is llm_instance, "_hf_llm is not the same object"
+
+    def test_hf_llm_preserved_on_listen_method(self):
+        """Test that _hf_llm is preserved when @human_feedback is on a @listen method."""
+        from crewai.llm import LLM
+
+        llm_instance = LLM(model="gpt-4o-mini", temperature=0.7)
+
+        class ListenConfigFlow(Flow):
+            @start()
+            def generate(self):
+                return "draft"
+
+            @listen("generate")
+            @human_feedback(
+                message="Review:",
+                emit=["approved", "rejected"],
+                llm=llm_instance,
+            )
+            def review(self):
+                return "content"
+
+        method = ListenConfigFlow.review
+        assert hasattr(method, "_hf_llm")
+        assert method._hf_llm is llm_instance
+
+    def test_hf_llm_accessible_on_instance(self):
+        """Test that _hf_llm survives Flow instantiation (bound method access)."""
+        from crewai.llm import LLM
+
+        llm_instance = LLM(model="gpt-4o-mini", temperature=0.42)
+
+        class InstanceFlow(Flow):
+            @start()
+            @human_feedback(
+                message="Review:",
+                emit=["approved", "rejected"],
+                llm=llm_instance,
+            )
+            def review(self):
+                return "content"
+
+        flow = InstanceFlow()
+        instance_method = flow.review
+        assert hasattr(instance_method, "_hf_llm")
+        assert instance_method._hf_llm is llm_instance
+
+    def test_serialize_llm_preserves_config_fields(self):
+        """Test that _serialize_llm_for_context captures temperature, base_url, etc."""
+        from crewai.flow.human_feedback import _serialize_llm_for_context
+        from crewai.llm import LLM
+
+        llm = LLM(
+            model="gpt-4o-mini",
+            temperature=0.42,
+            base_url="https://custom.example.com/v1",
+        )
+
+        serialized = _serialize_llm_for_context(llm)
+
+        assert isinstance(serialized, dict), f"Expected dict, got {type(serialized)}"
+        assert serialized["model"] == "openai/gpt-4o-mini"
+        assert serialized["temperature"] == 0.42
+        assert serialized["base_url"] == "https://custom.example.com/v1"
+
+    def test_serialize_llm_excludes_api_key(self):
+        """Test that api_key is NOT included in serialized output (security)."""
+        from crewai.flow.human_feedback import _serialize_llm_for_context
+        from crewai.llm import LLM
+
+        llm = LLM(model="gpt-4o-mini")
+
+        serialized = _serialize_llm_for_context(llm)
+        assert isinstance(serialized, dict)
+        assert "api_key" not in serialized
+
+    def test_deserialize_round_trip_preserves_config(self):
+        """Test that serialize → deserialize round-trip preserves all config."""
+        from crewai.flow.human_feedback import (
+            _deserialize_llm_from_context,
+            _serialize_llm_for_context,
+        )
+        from crewai.llm import LLM
+
+        original = LLM(
+            model="gpt-4o-mini",
+            temperature=0.42,
+            base_url="https://custom.example.com/v1",
+        )
+
+        serialized = _serialize_llm_for_context(original)
+        reconstructed = _deserialize_llm_from_context(serialized)
+
+        assert reconstructed is not None
+        assert reconstructed.model == original.model
+        assert reconstructed.temperature == original.temperature
+        assert reconstructed.base_url == original.base_url
+
+    def test_deserialize_handles_legacy_string_format(self):
+        """Test backward compat: plain string still reconstructs an LLM."""
+        from crewai.flow.human_feedback import _deserialize_llm_from_context
+
+        reconstructed = _deserialize_llm_from_context("openai/gpt-4o-mini")
+
+        assert reconstructed is not None
+        assert reconstructed.model == "gpt-4o-mini"
+
+    def test_deserialize_returns_none_for_none(self):
+        """Test that None input returns None."""
+        from crewai.flow.human_feedback import _deserialize_llm_from_context
+
+        assert _deserialize_llm_from_context(None) is None
+
+    def test_serialize_llm_preserves_provider_specific_fields(self):
+        """Test that provider-specific fields like project/location are serialized."""
+        from crewai.flow.human_feedback import _serialize_llm_for_context
+        from crewai.llm import LLM
+
+        # Create a Gemini-style LLM with project and non-default location
+        llm = LLM(
+            model="gemini-2.0-flash",
+            provider="gemini",
+            project="my-project",
+            location="europe-west1",
+            temperature=0.3,
+        )
+
+        serialized = _serialize_llm_for_context(llm)
+
+        assert isinstance(serialized, dict)
+        assert serialized.get("project") == "my-project"
+        assert serialized.get("location") == "europe-west1"
+        assert serialized.get("temperature") == 0.3
+
+    def test_config_preserved_through_full_flow_execution(self):
+        """Test that the LLM with custom config is used during outcome collapsing."""
+        from crewai.llm import LLM
+
+        llm_instance = LLM(model="gpt-4o-mini", temperature=0.42)
+        collapse_calls = []
+
+        class FullFlow(Flow):
+            @start()
+            @human_feedback(
+                message="Review:",
+                emit=["approved", "rejected"],
+                llm=llm_instance,
+            )
+            def review(self):
+                return "content"
+
+            @listen("approved")
+            def on_approved(self):
+                return "done"
+
+        flow = FullFlow()
+
+        original_collapse = flow._collapse_to_outcome
+
+        def spy_collapse(feedback, outcomes, llm):
+            collapse_calls.append(llm)
+            return "approved"
+
+        with (
+            patch.object(flow, "_request_human_feedback", return_value="looks good"),
+            patch.object(flow, "_collapse_to_outcome", side_effect=spy_collapse),
+        ):
+            flow.kickoff()
+
+        assert len(collapse_calls) == 1
+        # The LLM passed to _collapse_to_outcome should be the original instance
+        assert collapse_calls[0] is llm_instance
