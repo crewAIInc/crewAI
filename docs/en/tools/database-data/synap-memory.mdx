@@ -1,0 +1,57 @@
+---
+title: Synap Memory Backend
+description: Add persistent, cross-session user memory to your CrewAI agents with Synap.
+icon: database
+---
+
+## Overview
+
+[Synap](https://maximem.ai) is a managed memory layer for AI agents. `SynapStorageBackend` is a custom `StorageBackend` that plugs directly into CrewAI's unified `Memory` class — so memories persist across crew runs, deployments, and devices without any manual bookkeeping.
+
+## Installation
+
+```bash
+pip install maximem-synap-crewai
+```
+
+Get an API key at [synap.maximem.ai](https://synap.maximem.ai).
+
+## Usage
+
+Pass `SynapStorageBackend` as the `storage` parameter when constructing `Memory`:
+
+```python
+from crewai import Crew, Agent, Task
+from crewai.memory import Memory
+from maximem_synap import MaximemSynapSDK
+from synap_crewai import SynapStorageBackend
+
+sdk = MaximemSynapSDK(api_key="sk-...")
+
+backend = SynapStorageBackend(
+    sdk=sdk,
+    user_id="user_123",
+    customer_id="acme_corp",
+)
+
+memory = Memory(storage=backend)
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    memory=memory,
+)
+
+result = crew.kickoff()
+```
+
+## How It Works
+
+CrewAI handles what to remember — the LLM analyzes content, infers scope, categories, and importance, and calls `StorageBackend.save()` and `StorageBackend.search()`. Synap handles persistence and retrieval, scoped to the `user_id` and `customer_id` you provide. In multi-tenant crews, different customers never share memory.
+
+## More Resources
+
+- [Synap Documentation](https://docs.maximem.ai)
+- [CrewAI Integration Guide](https://docs.maximem.ai/integrations/crewai)
+- [Dashboard](https://synap.maximem.ai)
+- [PyPI: maximem-synap-crewai](https://pypi.org/project/maximem-synap-crewai/)
