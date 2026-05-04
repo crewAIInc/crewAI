@@ -1,4 +1,5 @@
 import os
+from typing import Any
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field
@@ -11,7 +12,7 @@ class GenerateCrewaiAutomationToolSchema(BaseModel):
     )
     organization_id: str | None = Field(
         default=None,
-        description="The identifier for the CrewAI AOP organization. If not specified, a default organization will be used.",
+        description="The identifier for the CrewAI AMP organization. If not specified, a default organization will be used.",
     )
 
 
@@ -25,11 +26,11 @@ class GenerateCrewaiAutomationTool(BaseTool):
     args_schema: type[BaseModel] = GenerateCrewaiAutomationToolSchema
     crewai_enterprise_url: str = Field(
         default_factory=lambda: os.getenv("CREWAI_PLUS_URL", "https://app.crewai.com"),
-        description="The base URL of CrewAI AOP. If not provided, it will be loaded from the environment variable CREWAI_PLUS_URL with default https://app.crewai.com.",
+        description="The base URL of CrewAI AMP. If not provided, it will be loaded from the environment variable CREWAI_PLUS_URL with default https://app.crewai.com.",
     )
     personal_access_token: str | None = Field(
         default_factory=lambda: os.getenv("CREWAI_PERSONAL_ACCESS_TOKEN"),
-        description="The user's Personal Access Token to access CrewAI AOP API. If not provided, it will be loaded from the environment variable CREWAI_PERSONAL_ACCESS_TOKEN.",
+        description="The user's Personal Access Token to access CrewAI AMP API. If not provided, it will be loaded from the environment variable CREWAI_PERSONAL_ACCESS_TOKEN.",
     )
     env_vars: list[EnvVar] = Field(
         default_factory=lambda: [
@@ -46,7 +47,7 @@ class GenerateCrewaiAutomationTool(BaseTool):
         ]
     )
 
-    def _run(self, **kwargs) -> str:
+    def _run(self, **kwargs: Any) -> str:
         input_data = GenerateCrewaiAutomationToolSchema(**kwargs)
         response = requests.post(  # noqa: S113
             f"{self.crewai_enterprise_url}/crewai_plus/api/v1/studio",
@@ -58,7 +59,7 @@ class GenerateCrewaiAutomationTool(BaseTool):
         studio_project_url = response.json().get("url")
         return f"Generated CrewAI Studio project URL: {studio_project_url}"
 
-    def _get_headers(self, organization_id: str | None = None) -> dict:
+    def _get_headers(self, organization_id: str | None = None) -> dict[str, str]:
         headers = {
             "Authorization": f"Bearer {self.personal_access_token}",
             "Content-Type": "application/json",

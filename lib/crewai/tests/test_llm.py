@@ -177,6 +177,7 @@ def test_llm_passes_additional_params():
         # Create mocks for response structure
         mock_message = MagicMock()
         mock_message.content = "Test response"
+        mock_message.tool_calls = None
         mock_choice = MagicMock()
         mock_choice.message = mock_message
         mock_response = MagicMock()
@@ -211,7 +212,7 @@ def test_llm_passes_additional_params():
 
 
 def test_get_custom_llm_provider_openrouter():
-    llm = LLM(model="openrouter/deepseek/deepseek-chat")
+    llm = LLM(model="openrouter/deepseek/deepseek-chat", is_litellm=True)
     assert llm._get_custom_llm_provider() == "openrouter"
 
 
@@ -232,7 +233,9 @@ def test_validate_call_params_supported():
     # Patch supports_response_schema to simulate a supported model.
     with patch("crewai.llm.supports_response_schema", return_value=True):
         llm = LLM(
-            model="openrouter/deepseek/deepseek-chat", response_format=DummyResponse
+            model="openrouter/deepseek/deepseek-chat",
+            response_format=DummyResponse,
+            is_litellm=True,
         )
         # Should not raise any error.
         llm._validate_call_params()
@@ -646,7 +649,7 @@ def test_handle_streaming_tool_calls_no_tools(mock_emit):
 
     assert_event_count(
         mock_emit=mock_emit,
-        expected_stream_chunk=46,
+        expected_stream_chunk=47,
         expected_completed_llm_call=1,
         expected_final_chunk_result=response,
     )
@@ -678,6 +681,118 @@ def test_llm_call_when_stop_is_unsupported_when_additional_drop_params_is_provid
         assert "Retrying LLM call without the unsupported 'stop'" in caplog.text
     assert isinstance(result, str)
     assert "Paris" in result
+
+
+@pytest.mark.vcr()
+def test_litellm_gpt5_call_succeeds_without_stop_error():
+    """
+    Integration test: GPT-5 call succeeds when stop words are configured,
+    because stop is omitted from API params and applied client-side.
+    """
+    llm = LLM(model="gpt-5", stop=["Observation:"], is_litellm=True)
+    result = llm.call("What is the capital of France?")
+    assert isinstance(result, str)
+    assert len(result) > 0
+
+
+def test_litellm_gpt5_does_not_send_stop_in_params():
+    """
+    Test that the LiteLLM fallback path does not include 'stop' in API params
+    for GPT-5.x models, since they reject it at the API level.
+    """
+    llm = LLM(model="openai/gpt-5.2", stop=["Observation:"], is_litellm=True)
+
+    params = llm._prepare_completion_params(
+        messages=[{"role": "user", "content": "Hello"}]
+    )
+
+    assert params.get("stop") is None, (
+        "GPT-5.x models should not have 'stop' in API params"
+    )
+
+
+def test_litellm_non_gpt5_sends_stop_in_params():
+    """
+    Test that the LiteLLM fallback path still includes 'stop' in API params
+    for models that support it.
+    """
+    llm = LLM(model="gpt-4o", stop=["Observation:"], is_litellm=True)
+
+    params = llm._prepare_completion_params(
+        messages=[{"role": "user", "content": "Hello"}]
+    )
+
+    assert params.get("stop") == ["Observation:"], (
+        "Non-GPT-5 models should have 'stop' in API params"
+    )
+
+
+def test_litellm_retry_catches_litellm_unsupported_params_error(caplog):
+    """
+    Test that the retry logic catches LiteLLM's UnsupportedParamsError format
+    ("does not support parameters") in addition to the OpenAI API format.
+    """
+    llm = LLM(model="openai/gpt-5.2", stop=["Observation:"], is_litellm=True)
+
+    litellm_error = Exception(
+        "litellm.UnsupportedParamsError: openai does not support parameters: "
+        "['stop'], for model=openai/gpt-5.2."
+    )
+
+    call_count = 0
+
+    try:
+        import litellm
+    except ImportError:
+        pytest.skip("litellm is not installed; skipping LiteLLM retry test")
+
+    def mock_completion(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise litellm_error
+        return MagicMock(
+            choices=[MagicMock(message=MagicMock(content="Paris", tool_calls=None))],
+            usage={"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+        )
+
+    with patch("litellm.completion", side_effect=mock_completion):
+        with caplog.at_level(logging.INFO):
+            result = llm.call("What is the capital of France?")
+
+    assert "Retrying LLM call without the unsupported 'stop'" in caplog.text
+    assert "stop" in llm.additional_params.get("additional_drop_params", [])
+
+
+def test_litellm_retry_catches_openai_api_stop_error(caplog):
+    """
+    Test that the retry logic still catches the OpenAI API error format
+    ("Unsupported parameter: 'stop'").
+    """
+    llm = LLM(model="openai/gpt-5.2", stop=["Observation:"], is_litellm=True)
+
+    api_error = Exception(
+        "Unsupported parameter: 'stop' is not supported with this model."
+    )
+
+    call_count = 0
+
+    def mock_completion(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise api_error
+        return MagicMock(
+            choices=[MagicMock(message=MagicMock(content="Paris", tool_calls=None))],
+            usage={"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+        )
+
+    with patch("litellm.completion", side_effect=mock_completion):
+        with caplog.at_level(logging.INFO):
+            llm.call("What is the capital of France?")
+
+    assert "Retrying LLM call without the unsupported 'stop'" in caplog.text
+    assert "stop" in llm.additional_params.get("additional_drop_params", [])
 
 
 @pytest.fixture
@@ -877,3 +992,207 @@ def test_validate_model_in_constants():
         LLM._validate_model_in_constants("anthropic.claude-future-v1:0", "bedrock")
         is True
     )
+
+@pytest.mark.vcr(record_mode="once",decode_compressed_response=True)
+def test_usage_info_non_streaming_with_call():
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+    assert llm._token_usage == {
+        "total_tokens": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "successful_requests": 0,
+        "cached_prompt_tokens": 0,
+        "reasoning_tokens": 0,
+        "cache_creation_tokens": 0,
+    }
+    assert llm.stream is False
+
+    with patch.object(
+        llm, "_handle_non_streaming_response", wraps=llm._handle_non_streaming_response
+    ) as mock_handle:
+        llm.call("Tell me a joke.")
+        mock_handle.assert_called_once()
+
+    assert llm._token_usage["total_tokens"] > 0
+    assert llm._token_usage["prompt_tokens"] > 0
+    assert llm._token_usage["completion_tokens"] > 0
+    assert llm._token_usage["successful_requests"] == 1
+
+
+@pytest.mark.vcr(record_mode="once",decode_compressed_response=True)
+def test_usage_info_streaming_with_call():
+    llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+    assert llm._token_usage == {
+        "total_tokens": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "successful_requests": 0,
+        "cached_prompt_tokens": 0,
+        "reasoning_tokens": 0,
+        "cache_creation_tokens": 0,
+    }
+    assert llm.stream is True
+
+    with patch.object(
+        llm, "_handle_streaming_response", wraps=llm._handle_streaming_response
+    ) as mock_handle:
+        llm.call("Tell me a joke.")
+        mock_handle.assert_called_once()
+
+    assert llm._token_usage["total_tokens"] > 0
+    assert llm._token_usage["prompt_tokens"] > 0
+    assert llm._token_usage["completion_tokens"] > 0
+    assert llm._token_usage["successful_requests"] == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.vcr(record_mode="once",decode_compressed_response=True,match_on=["method", "scheme", "host", "path", "body"])
+async def test_usage_info_non_streaming_with_acall():
+    llm = LLM(
+        model="openai/gpt-4o-mini",
+        is_litellm=True,
+        stream=False,
+    )
+
+    # sanity check
+    assert llm._token_usage == {
+        "total_tokens": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "successful_requests": 0,
+        "cached_prompt_tokens": 0,
+        "reasoning_tokens": 0,
+        "cache_creation_tokens": 0,
+    }
+
+    with patch.object(
+        llm, "_ahandle_non_streaming_response", wraps=llm._ahandle_non_streaming_response
+    ) as mock_handle:
+        result = await llm.acall("Tell me a joke.")
+        mock_handle.assert_called_once()
+
+    # token usage assertions (robust)
+    assert llm._token_usage["successful_requests"] == 1
+    assert llm._token_usage["prompt_tokens"] > 0
+    assert llm._token_usage["completion_tokens"] > 0
+    assert llm._token_usage["total_tokens"] > 0
+
+    assert len(result) > 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.vcr(record_mode="once",decode_compressed_response=True,match_on=["method", "scheme", "host", "path", "body"])
+async def test_usage_info_non_streaming_with_acall_and_stop():
+    llm = LLM(
+        model="openai/gpt-4o-mini",
+        is_litellm=True,
+        stream=False,
+        stop=["END"],
+    )
+
+    assert llm._token_usage == {
+        "total_tokens": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "successful_requests": 0,
+        "cached_prompt_tokens": 0,
+        "reasoning_tokens": 0,
+        "cache_creation_tokens": 0,
+    }
+
+    with patch.object(
+        llm, "_ahandle_non_streaming_response", wraps=llm._ahandle_non_streaming_response
+    ) as mock_handle:
+        result = await llm.acall("Tell me a joke.")
+        mock_handle.assert_called_once()
+
+    assert llm._token_usage["successful_requests"] == 1
+    assert llm._token_usage["prompt_tokens"] > 0
+    assert llm._token_usage["completion_tokens"] > 0
+    assert llm._token_usage["total_tokens"] > 0
+
+    assert len(result) > 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.vcr()
+async def test_usage_info_streaming_with_acall():
+    llm = LLM(
+        model="gpt-4o-mini",
+        is_litellm=True,
+        stream=True,
+    )
+
+    assert llm.stream is True
+    assert llm._token_usage == {
+        "total_tokens": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "successful_requests": 0,
+        "cached_prompt_tokens": 0,
+        "reasoning_tokens": 0,
+        "cache_creation_tokens": 0,
+    }
+
+    with patch.object(
+        llm, "_ahandle_streaming_response", wraps=llm._ahandle_streaming_response
+    ) as mock_handle:
+        result = await llm.acall("Tell me a joke.")
+        mock_handle.assert_called_once()
+
+
+    assert llm._token_usage["successful_requests"] == 1
+    assert llm._token_usage["prompt_tokens"] > 0
+    assert llm._token_usage["completion_tokens"] > 0
+    assert llm._token_usage["total_tokens"] > 0
+
+    assert len(result) > 0
+
+
+def _build_response_with_text_and_tool_calls():
+    """Mimic a litellm ModelResponse that contains both content and tool_calls."""
+    from litellm.types.utils import ChatCompletionMessageToolCall, Function
+
+    response_message = MagicMock()
+    response_message.content = "I will search for the given query."
+    response_message.tool_calls = [
+        ChatCompletionMessageToolCall(
+            id="call_123",
+            type="function",
+            function=Function(name="search", arguments='{"q": "x"}'),
+        )
+    ]
+    choice = MagicMock(message=response_message)
+    response = MagicMock(choices=[choice], model_extra=None)
+    return response
+
+
+def test_non_streaming_returns_tool_calls_when_text_also_present():
+    """A response with both text and tool_calls must not drop the tool_calls
+    when available_functions is None (executor-managed tool execution path).
+    """
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+    response = _build_response_with_text_and_tool_calls()
+
+    with patch("crewai.llm.litellm.completion", return_value=response):
+        result = llm.call("anything", available_functions=None)
+
+    assert isinstance(result, list)
+    assert len(result) == 1
+    assert result[0].function.name == "search"
+
+
+@pytest.mark.asyncio
+async def test_non_streaming_async_returns_tool_calls_when_text_also_present():
+    llm = LLM(model="openai/gpt-4o-mini", is_litellm=True, stream=False)
+    response = _build_response_with_text_and_tool_calls()
+
+    async def _ret(*args, **kwargs):
+        return response
+
+    with patch("crewai.llm.litellm.acompletion", side_effect=_ret):
+        result = await llm.acall("anything", available_functions=None)
+
+    assert isinstance(result, list)
+    assert len(result) == 1
+    assert result[0].function.name == "search"

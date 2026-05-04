@@ -19,6 +19,7 @@ class TestPlatformIntegrationToken:
     def teardown_method(self):
         _platform_integration_token.set(None)
 
+    @patch.dict(os.environ, {}, clear=True)
     def test_set_platform_integration_token(self):
         test_token = "test-token-123"
 
@@ -55,6 +56,7 @@ class TestPlatformIntegrationToken:
 
         assert get_platform_integration_token() is None
 
+    @patch.dict(os.environ, {}, clear=True)
     def test_platform_context_manager_basic_usage(self):
         test_token = "context-manager-token"
 
@@ -65,6 +67,7 @@ class TestPlatformIntegrationToken:
 
         assert get_platform_integration_token() is None
 
+    @patch.dict(os.environ, {}, clear=True)
     def test_platform_context_manager_nested_contexts(self):
         """Test nested platform_context context managers."""
         outer_token = "outer-token"
@@ -109,6 +112,7 @@ class TestPlatformIntegrationToken:
 
         assert get_platform_integration_token() == initial_token
 
+    @patch.dict(os.environ, {}, clear=True)
     def test_platform_context_manager_with_none_initial_state(self):
         """Test platform_context when initial state is None."""
         context_token = "context-token"
@@ -134,6 +138,7 @@ class TestPlatformIntegrationToken:
 
         assert get_platform_integration_token() == "env-backup"
 
+    @patch.dict(os.environ, {}, clear=True)
     def test_multiple_sequential_context_managers(self):
         """Test multiple sequential uses of platform_context."""
         token1 = "token-1"
@@ -194,6 +199,7 @@ class TestPlatformIntegrationToken:
         with pytest.raises(OSError):
             get_platform_integration_token()
 
+    @patch.dict(os.environ, {}, clear=True)
     def test_context_var_isolation_between_tests(self):
         """Test that context variable changes don't leak between test methods."""
         test_token = "isolation-test-token"

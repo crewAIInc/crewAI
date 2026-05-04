@@ -1,0 +1,188 @@
+interactions:
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: This is a tool-calling
+      compliance test. In your next assistant turn, emit exactly 3 tool calls in the
+      same response (parallel tool calls), in this order: 1) parallel_local_search_one(query=''latest
+      OpenAI model release notes''), 2) parallel_local_search_two(query=''latest Anthropic
+      model release notes''), 3) parallel_local_search_three(query=''latest Gemini
+      model release notes''). Do not call any other tools and do not answer before
+      those 3 tool calls are emitted. After the tool results return, provide a one
+      paragraph summary."}], "role": "user"}], "systemInstruction": {"parts": [{"text":
+      "You are Parallel Tool Agent. You follow tool instructions precisely.\nYour
+      personal goal is: Use both tools exactly as instructed"}], "role": "user"},
+      "tools": [{"functionDeclarations": [{"description": "Local search tool #1 for
+      concurrency testing.", "name": "parallel_local_search_one", "parameters_json_schema":
+      {"properties": {"query": {"description": "Search query", "title": "Query", "type":
+      "string"}}, "required": ["query"], "type": "object", "additionalProperties":
+      false}}, {"description": "Local search tool #2 for concurrency testing.", "name":
+      "parallel_local_search_two", "parameters_json_schema": {"properties": {"query":
+      {"description": "Search query", "title": "Query", "type": "string"}}, "required":
+      ["query"], "type": "object", "additionalProperties": false}}, {"description":
+      "Local search tool #3 for concurrency testing.", "name": "parallel_local_search_three",
+      "parameters_json_schema": {"properties": {"query": {"description": "Search query",
+      "title": "Query", "type": "string"}}, "required": ["query"], "type": "object",
+      "additionalProperties": false}}]}], "generationConfig": {"stopSequences": ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1783'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"functionCall\": {\n              \"name\": \"parallel_local_search_one\",\n
+        \             \"args\": {\n                \"query\": \"latest OpenAI model
+        release notes\"\n              }\n            },\n            \"thoughtSignature\":
+        \"CrICAb4+9vtrrkiSatPyOs7fssb9akcgCIiQdJKp/k+hcEZVNFvU/H0e4FFmLIhTCPRyHxmU+AQPtBZ5vg6y9ZCcv11RdcWgYW8rPQzCnC+YTUxPAfDzaObky1QsL5pl9+yglQqVoVM31ZcnoiH02z85pwAv6TSJxdJZEekW6XwcIrCoHNCgY3ghHFEd3y3wLJ5JWL7wmiRNTC9TCT8aJHXKFohYrb+4JMULCx8BqKVxOucZPiDHA8GsoqSlzkYEe2xCh9oSdaZpCFrxhZ9bwoVDbVmPrjaq2hj5BoJ5hNxscHJ/E0EOl4ogeKZW+hIVfdzpjAFZW9Oejkb9G4ZSLbxXsoO7x8bi4LHFRABniGrWvNuOOH0Udh4t57oXHXZO4u5NNTood/GkJGcP+aHqUAH1fwqL\"\n
+        \         },\n          {\n            \"functionCall\": {\n              \"name\":
+        \"parallel_local_search_two\",\n              \"args\": {\n                \"query\":
+        \"latest Anthropic model release notes\"\n              }\n            }\n
+        \         },\n          {\n            \"functionCall\": {\n              \"name\":
+        \"parallel_local_search_three\",\n              \"args\": {\n                \"query\":
+        \"latest Gemini model release notes\"\n              }\n            }\n          }\n
+        \       ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0,\n      \"finishMessage\": \"Model generated
+        function call(s).\"\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        291,\n    \"candidatesTokenCount\": 70,\n    \"totalTokenCount\": 428,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 291\n
+        \     }\n    ],\n    \"thoughtsTokenCount\": 67\n  },\n  \"modelVersion\":
+        \"gemini-2.5-flash\",\n  \"responseId\": \"alKWacytCLi5jMcPhISaoAI\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Wed, 18 Feb 2026 23:59:39 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=999
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"parts": [{"text": "\nCurrent Task: This is a tool-calling
+      compliance test. In your next assistant turn, emit exactly 3 tool calls in the
+      same response (parallel tool calls), in this order: 1) parallel_local_search_one(query=''latest
+      OpenAI model release notes''), 2) parallel_local_search_two(query=''latest Anthropic
+      model release notes''), 3) parallel_local_search_three(query=''latest Gemini
+      model release notes''). Do not call any other tools and do not answer before
+      those 3 tool calls are emitted. After the tool results return, provide a one
+      paragraph summary."}], "role": "user"}, {"parts": [{"functionCall": {"args":
+      {"query": "latest OpenAI model release notes"}, "name": "parallel_local_search_one"},
+      "thoughtSignature": "CrICAb4-9vtrrkiSatPyOs7fssb9akcgCIiQdJKp_k-hcEZVNFvU_H0e4FFmLIhTCPRyHxmU-AQPtBZ5vg6y9ZCcv11RdcWgYW8rPQzCnC-YTUxPAfDzaObky1QsL5pl9-yglQqVoVM31ZcnoiH02z85pwAv6TSJxdJZEekW6XwcIrCoHNCgY3ghHFEd3y3wLJ5JWL7wmiRNTC9TCT8aJHXKFohYrb-4JMULCx8BqKVxOucZPiDHA8GsoqSlzkYEe2xCh9oSdaZpCFrxhZ9bwoVDbVmPrjaq2hj5BoJ5hNxscHJ_E0EOl4ogeKZW-hIVfdzpjAFZW9Oejkb9G4ZSLbxXsoO7x8bi4LHFRABniGrWvNuOOH0Udh4t57oXHXZO4u5NNTood_GkJGcP-aHqUAH1fwqL"},
+      {"functionCall": {"args": {"query": "latest Anthropic model release notes"},
+      "name": "parallel_local_search_two"}}, {"functionCall": {"args": {"query": "latest
+      Gemini model release notes"}, "name": "parallel_local_search_three"}}], "role":
+      "model"}, {"parts": [{"functionResponse": {"name": "parallel_local_search_one",
+      "response": {"result": "[one] latest OpenAI model release notes"}}}], "role":
+      "user"}, {"parts": [{"functionResponse": {"name": "parallel_local_search_two",
+      "response": {"result": "[two] latest Anthropic model release notes"}}}], "role":
+      "user"}, {"parts": [{"functionResponse": {"name": "parallel_local_search_three",
+      "response": {"result": "[three] latest Gemini model release notes"}}}], "role":
+      "user"}], "systemInstruction": {"parts": [{"text": "You are Parallel Tool Agent.
+      You follow tool instructions precisely.\nYour personal goal is: Use both tools
+      exactly as instructed"}], "role": "user"}, "tools": [{"functionDeclarations":
+      [{"description": "Local search tool #1 for concurrency testing.", "name": "parallel_local_search_one",
+      "parameters_json_schema": {"properties": {"query": {"description": "Search query",
+      "title": "Query", "type": "string"}}, "required": ["query"], "type": "object",
+      "additionalProperties": false}}, {"description": "Local search tool #2 for concurrency
+      testing.", "name": "parallel_local_search_two", "parameters_json_schema": {"properties":
+      {"query": {"description": "Search query", "title": "Query", "type": "string"}},
+      "required": ["query"], "type": "object", "additionalProperties": false}}, {"description":
+      "Local search tool #3 for concurrency testing.", "name": "parallel_local_search_three",
+      "parameters_json_schema": {"properties": {"query": {"description": "Search query",
+      "title": "Query", "type": "string"}}, "required": ["query"], "type": "object",
+      "additionalProperties": false}}]}], "generationConfig": {"stopSequences": ["\nObservation:"]}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '3071'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      x-goog-api-client:
+      - google-genai-sdk/1.49.0 gl-python/3.13.3
+      x-goog-api-key:
+      - X-GOOG-API-KEY-XXX
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+  response:
+    body:
+      string: "{\n  \"candidates\": [\n    {\n      \"content\": {\n        \"parts\":
+        [\n          {\n            \"text\": \"Here is a summary of the latest model
+        release notes: I have retrieved information regarding the latest OpenAI model
+        release notes, the latest Anthropic model release notes, and the latest Gemini
+        model release notes. The specific details of these release notes are available
+        through the respective tool outputs.\",\n            \"thoughtSignature\":
+        \"CsoBAb4+9vtPvWFM08lR1S4QrLN+Z1+Zpf04Y/bC8tjOpnxz3EEvHyRNEwkslUX5pftBi8J78Xk4/FUER0xjJZc8clUObTvayxLNup4h1JwJ5ZdatulInNGTEieFnF4w8KjSFB/vqNCZvXWZbiLkpzqAnsoAIf0x4VmMN11V0Ozo+3f2QftD+iBrfu3g21UI5tbG0Z+0QHxjRVKXrQOp7dmoZPzaxI0zalfDEI+A2jGpVl/VvauVNv0jQn0yItcA5tkVeWLq6717CjNoig==\"\n
+        \         }\n        ],\n        \"role\": \"model\"\n      },\n      \"finishReason\":
+        \"STOP\",\n      \"index\": 0\n    }\n  ],\n  \"usageMetadata\": {\n    \"promptTokenCount\":
+        435,\n    \"candidatesTokenCount\": 54,\n    \"totalTokenCount\": 524,\n    \"promptTokensDetails\":
+        [\n      {\n        \"modality\": \"TEXT\",\n        \"tokenCount\": 435\n
+        \     }\n    ],\n    \"thoughtsTokenCount\": 35\n  },\n  \"modelVersion\":
+        \"gemini-2.5-flash\",\n  \"responseId\": \"bFKWaZOZCqCvjMcPvvGNgAc\"\n}\n"
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Wed, 18 Feb 2026 23:59:41 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=967
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      X-Frame-Options:
+      - X-FRAME-OPTIONS-XXX
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

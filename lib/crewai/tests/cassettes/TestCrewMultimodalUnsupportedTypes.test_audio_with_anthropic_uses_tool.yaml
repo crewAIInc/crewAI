@@ -1,0 +1,216 @@
+interactions:
+- request:
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":[{"type":"text","text":"\nCurrent
+      Task: What type of file is this? Just name the file type.\n\nAvailable input
+      files (use the name in quotes with read_file tool):\n  - \"audio\" (sample_audio.wav,
+      audio/x-wav)\n\nThis is the expected criteria for your final answer: The file
+      type.\nyou MUST return the actual complete content as the final answer, not
+      a summary.\n\nThis is VERY important to you, your job depends on it!"}]}],"model":"claude-3-5-haiku-20241022","stop_sequences":["\nObservation:"],"stream":false,"system":"You
+      are File Analyst. Expert analyst.\nYour personal goal is: Analyze files","tools":[{"name":"read_file","description":"Read
+      content from an input file by name. Returns file content as text for text files,
+      or base64 for binary files.","input_schema":{"properties":{"file_name":{"description":"The
+      name of the input file to read","title":"File Name","type":"string"}},"required":["file_name"],"type":"object"}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '990'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+      x-api-key:
+      - X-API-KEY-XXX
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 0.71.1
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+      x-stainless-timeout:
+      - NOT_GIVEN
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_01QU6yxsqjgEv42P6oiBunJt","type":"message","role":"assistant","content":[{"type":"text","text":"I''ll
+        help you determine the file type by reading the file."},{"type":"tool_use","id":"toolu_01SyxRH53DtusM3NbV1FbTxm","name":"read_file","input":{"file_name":"sample_audio.wav"}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":488,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":73,"service_tier":"standard"}}'
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 23 Jan 2026 19:09:06 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-organization-id:
+      - ANTHROPIC-ORGANIZATION-ID-XXX
+      anthropic-ratelimit-input-tokens-limit:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-input-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-input-tokens-reset:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-output-tokens-limit:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-output-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-output-tokens-reset:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-requests-limit:
+      - '4000'
+      anthropic-ratelimit-requests-remaining:
+      - '3999'
+      anthropic-ratelimit-requests-reset:
+      - '2026-01-23T19:09:04Z'
+      anthropic-ratelimit-tokens-limit:
+      - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-tokens-reset:
+      - ANTHROPIC-RATELIMIT-TOKENS-RESET-XXX
+      cf-cache-status:
+      - DYNAMIC
+      request-id:
+      - REQUEST-ID-XXX
+      strict-transport-security:
+      - STS-XXX
+      x-envoy-upstream-service-time:
+      - '1456'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":[{"type":"text","text":"\nCurrent
+      Task: What type of file is this? Just name the file type.\n\nAvailable input
+      files (use the name in quotes with read_file tool):\n  - \"audio\" (sample_audio.wav,
+      audio/x-wav)\n\nThis is the expected criteria for your final answer: The file
+      type.\nyou MUST return the actual complete content as the final answer, not
+      a summary.\n\nThis is VERY important to you, your job depends on it!"}]},{"role":"assistant","content":[{"type":"tool_use","id":"toolu_01SyxRH53DtusM3NbV1FbTxm","name":"read_file","input":{"file_name":"sample_audio.wav"}}]},{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_01SyxRH53DtusM3NbV1FbTxm","content":"File
+      ''sample_audio.wav'' not found. Available files: audio"}]},{"role":"user","content":"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."}],"model":"claude-3-5-haiku-20241022","stop_sequences":["\nObservation:"],"stream":false,"system":"You
+      are File Analyst. Expert analyst.\nYour personal goal is: Analyze files","tools":[{"name":"read_file","description":"Read
+      content from an input file by name. Returns file content as text for text files,
+      or base64 for binary files.","input_schema":{"properties":{"file_name":{"description":"The
+      name of the input file to read","title":"File Name","type":"string"}},"required":["file_name"],"type":"object"}}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '1493'
+      content-type:
+      - application/json
+      host:
+      - api.anthropic.com
+      x-api-key:
+      - X-API-KEY-XXX
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 0.71.1
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+      x-stainless-timeout:
+      - NOT_GIVEN
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_01DV3EtdNM2aejaez5csxZut","type":"message","role":"assistant","content":[{"type":"text","text":"wav"}],"stop_reason":"end_turn","stop_sequence":null,"usage":{"input_tokens":614,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":4,"service_tier":"standard"}}'
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 23 Jan 2026 19:09:07 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-organization-id:
+      - ANTHROPIC-ORGANIZATION-ID-XXX
+      anthropic-ratelimit-input-tokens-limit:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-input-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-input-tokens-reset:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-output-tokens-limit:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-output-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-output-tokens-reset:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-requests-limit:
+      - '4000'
+      anthropic-ratelimit-requests-remaining:
+      - '3999'
+      anthropic-ratelimit-requests-reset:
+      - '2026-01-23T19:09:06Z'
+      anthropic-ratelimit-tokens-limit:
+      - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-tokens-reset:
+      - ANTHROPIC-RATELIMIT-TOKENS-RESET-XXX
+      cf-cache-status:
+      - DYNAMIC
+      request-id:
+      - REQUEST-ID-XXX
+      strict-transport-security:
+      - STS-XXX
+      x-envoy-upstream-service-time:
+      - '1355'
+    status:
+      code: 200
+      message: OK
+version: 1

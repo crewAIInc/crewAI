@@ -1,13 +1,31 @@
 from typing import Annotated, Final
 
+from pydantic_core import CoreSchema
+
 from crewai.utilities.printer import PrinterColor
 
 
 TRAINING_DATA_FILE: Final[str] = "training_data.pkl"
 TRAINED_AGENTS_DATA_FILE: Final[str] = "trained_agents_data.pkl"
+CREWAI_TRAINED_AGENTS_FILE_ENV: Final[str] = "CREWAI_TRAINED_AGENTS_FILE"
 KNOWLEDGE_DIRECTORY: Final[str] = "knowledge"
 MAX_FILE_NAME_LENGTH: Final[int] = 255
 EMITTER_COLOR: Final[PrinterColor] = "bold_blue"
+CC_ENV_VAR: Final[str] = "CLAUDECODE"
+CODEX_ENV_VARS: Final[tuple[str, ...]] = (
+    "CODEX_CI",
+    "CODEX_MANAGED_BY_NPM",
+    "CODEX_SANDBOX",
+    "CODEX_SANDBOX_NETWORK_DISABLED",
+    "CODEX_THREAD_ID",
+)
+CURSOR_ENV_VARS: Final[tuple[str, ...]] = (
+    "CURSOR_AGENT",
+    "CURSOR_EXTENSION_HOST_ROLE",
+    "CURSOR_SANDBOX",
+    "CURSOR_TRACE_ID",
+    "CURSOR_WORKSPACE_LABEL",
+)
 
 
 class _NotSpecified:
@@ -21,6 +39,25 @@ class _NotSpecified:
     def __repr__(self) -> str:
         return "NOT_SPECIFIED"
 
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls, _source_type: object, _handler: object
+    ) -> CoreSchema:
+        from pydantic_core import core_schema
+
+        def _validate(v: object) -> _NotSpecified:
+            if isinstance(v, _NotSpecified) or v == "NOT_SPECIFIED":
+                return NOT_SPECIFIED
+            raise ValueError(f"Expected NOT_SPECIFIED sentinel, got {type(v).__name__}")
+
+        return core_schema.no_info_plain_validator_function(
+            _validate,
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                lambda v: "NOT_SPECIFIED",
+                info_arg=False,
+            ),
+        )
+
 
 NOT_SPECIFIED: Final[
     Annotated[
@@ -30,4 +67,3 @@ NOT_SPECIFIED: Final[
         "allows us to distinguish between 'not passed at all' and 'explicitly passed None' or '[]'.",
     ]
 ] = _NotSpecified()
-CREWAI_BASE_URL: Final[str] = "https://app.crewai.com"

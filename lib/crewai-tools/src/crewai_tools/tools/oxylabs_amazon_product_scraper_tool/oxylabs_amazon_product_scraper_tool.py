@@ -41,12 +41,12 @@ class OxylabsAmazonProductScraperConfig(BaseModel):
     user_agent_type: str | None = Field(None, description="Device type and browser.")
     render: str | None = Field(None, description="Enables JavaScript rendering.")
     callback_url: str | None = Field(None, description="URL to your callback endpoint.")
-    context: list | None = Field(
+    context: list[Any] | None = Field(
         None,
         description="Additional advanced settings and controls for specialized requirements.",
     )
     parse: bool | None = Field(None, description="True will return structured data.")
-    parsing_instructions: dict | None = Field(
+    parsing_instructions: dict[str, Any] | None = Field(
         None, description="Instructions for parsing the results."
     )
 
@@ -71,7 +71,7 @@ class OxylabsAmazonProductScraperTool(BaseTool):
     description: str = "Scrape Amazon product pages with Oxylabs Amazon Product Scraper"
     args_schema: type[BaseModel] = OxylabsAmazonProductScraperArgs
 
-    oxylabs_api: RealtimeClient
+    oxylabs_api: Any
     config: OxylabsAmazonProductScraperConfig
     package_dependencies: list[str] = Field(default_factory=lambda: ["oxylabs"])
     env_vars: list[EnvVar] = Field(
@@ -93,8 +93,8 @@ class OxylabsAmazonProductScraperTool(BaseTool):
         self,
         username: str | None = None,
         password: str | None = None,
-        config: OxylabsAmazonProductScraperConfig | dict | None = None,
-        **kwargs,
+        config: OxylabsAmazonProductScraperConfig | dict[str, Any] | None = None,
+        **kwargs: Any,
     ) -> None:
         bits, _ = architecture()
         sdk_type = (
@@ -164,4 +164,4 @@ class OxylabsAmazonProductScraperTool(BaseTool):
         if isinstance(content, dict):
             return json.dumps(content)
 
-        return content
+        return str(content)

@@ -1,11 +1,12 @@
 from pathlib import Path
+import shutil
 
 import click
 
 from crewai.telemetry import Telemetry
 
 
-def create_flow(name):
+def create_flow(name: str) -> None:
     """Create a new flow."""
     folder_name = name.replace(" ", "_").replace("-", "_").lower()
     class_name = name.replace("_", " ").replace("-", " ").title().replace(" ", "")
@@ -34,16 +35,21 @@ def create_flow(name):
     package_dir = Path(__file__).parent
     templates_dir = package_dir / "templates" / "flow"
 
+    # Copy AGENTS.md to project root
+    agents_md_src = package_dir / "templates" / "AGENTS.md"
+    if agents_md_src.exists():
+        shutil.copy2(agents_md_src, project_root / "AGENTS.md")
+
     # List of template files to copy
     root_template_files = [".gitignore", "pyproject.toml", "README.md"]
     src_template_files = ["__init__.py", "main.py"]
     tools_template_files = ["tools/__init__.py", "tools/custom_tool.py"]
 
     crew_folders = [
-        "poem_crew",
+        "content_crew",
     ]
 
-    def process_file(src_file, dst_file):
+    def process_file(src_file: Path, dst_file: Path) -> None:
         if src_file.suffix in [".pyc", ".pyo", ".pyd"]:
             return
 

@@ -3,7 +3,7 @@ import subprocess
 import unittest
 from unittest.mock import Mock, patch
 
-import requests
+import httpx
 from crewai.cli.triggers.main import TriggersCommand
 
 
@@ -21,7 +21,7 @@ class TestTriggersCommand(unittest.TestCase):
 
     @patch("crewai.cli.triggers.main.console.print")
     def test_list_triggers_success(self, mock_console_print):
-        mock_response = Mock(spec=requests.Response)
+        mock_response = Mock(spec=httpx.Response)
         mock_response.status_code = 200
         mock_response.ok = True
         mock_response.json.return_value = {
@@ -50,7 +50,7 @@ class TestTriggersCommand(unittest.TestCase):
 
     @patch("crewai.cli.triggers.main.console.print")
     def test_list_triggers_no_apps(self, mock_console_print):
-        mock_response = Mock(spec=requests.Response)
+        mock_response = Mock(spec=httpx.Response)
         mock_response.status_code = 200
         mock_response.ok = True
         mock_response.json.return_value = {"apps": []}
@@ -81,7 +81,7 @@ class TestTriggersCommand(unittest.TestCase):
     @patch("crewai.cli.triggers.main.console.print")
     @patch.object(TriggersCommand, "_run_crew_with_payload")
     def test_execute_with_trigger_success(self, mock_run_crew, mock_console_print):
-        mock_response = Mock(spec=requests.Response)
+        mock_response = Mock(spec=httpx.Response)
         mock_response.status_code = 200
         mock_response.ok = True
         mock_response.json.return_value = {
@@ -99,7 +99,7 @@ class TestTriggersCommand(unittest.TestCase):
 
     @patch("crewai.cli.triggers.main.console.print")
     def test_execute_with_trigger_not_found(self, mock_console_print):
-        mock_response = Mock(spec=requests.Response)
+        mock_response = Mock(spec=httpx.Response)
         mock_response.status_code = 404
         mock_response.json.return_value = {"error": "Trigger not found"}
         self.mock_client.get_trigger_payload.return_value = mock_response
@@ -159,7 +159,7 @@ class TestTriggersCommand(unittest.TestCase):
 
     @patch("crewai.cli.triggers.main.console.print")
     def test_execute_with_trigger_with_default_error_message(self, mock_console_print):
-        mock_response = Mock(spec=requests.Response)
+        mock_response = Mock(spec=httpx.Response)
         mock_response.status_code = 404
         mock_response.json.return_value = {}
         self.mock_client.get_trigger_payload.return_value = mock_response

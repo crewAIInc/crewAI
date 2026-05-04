@@ -6,7 +6,7 @@ The GenerateCrewaiAutomationTool integrates with CrewAI Studio API to generate c
 
 ## Environment Variables
 
-Set your CrewAI Personal Access Token (CrewAI AOP > Settings > Account > Personal Access Token):
+Set your CrewAI Personal Access Token (CrewAI AMP > Settings > Account > Personal Access Token):
 
 ```bash
 export CREWAI_PERSONAL_ACCESS_TOKEN="your_personal_access_token_here"

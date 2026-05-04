@@ -1,0 +1,623 @@
+interactions:
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Research Analyst. Expert
+      researcher with access to remote specialized agents\nYour personal goal is:
+      Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
+      Task: Delegate to the A2A agent to find the current time in Tokyo.\n\nProvide
+      your complete response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
+      agent IDs to delegate to.","items":{"const":"http://localhost:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
+      this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
+      the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
+      to false when the remote agent has answered your question - extract their answer
+      and return it as your final message. Set to true ONLY if you need to ask a NEW,
+      DIFFERENT question. NEVER repeat the same request - if the conversation history
+      shows the agent already answered, set is_a2a=false immediately.","title":"Is
+      A2A","type":"boolean"}},"required":["a2a_ids","message","is_a2a"],"title":"AgentResponse","type":"object","additionalProperties":false},"name":"AgentResponse","strict":true}},"stream":false}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1371'
+      content-type:
+      - application/json
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - beta.chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D3qQ7mKtA8Q7mQ8dWafrjQAtMBV7G\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769808859,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"What
+        is the current time in Tokyo?\\\",\\\"is_a2a\\\":true}\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        270,\n    \"completion_tokens\": 39,\n    \"total_tokens\": 309,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_e01c6f58e1\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 30 Jan 2026 21:34:20 GMT
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - SET-COOKIE-XXX
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '1100'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"id":"ef23c1ef-ef7e-4422-8fd0-330f074e5de8","jsonrpc":"2.0","method":"message/stream","params":{"configuration":{"acceptedOutputModes":["application/json"],"blocking":true},"message":{"kind":"message","messageId":"f5952732-b12e-40f9-a9e9-9779501d6467","parts":[{"kind":"text","text":"What
+      is the current time in Tokyo?"}],"referenceTaskIds":[],"role":"user"}}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*, text/event-stream'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      cache-control:
+      - no-store
+      connection:
+      - keep-alive
+      content-length:
+      - '361'
+      content-type:
+      - application/json
+      host:
+      - localhost:9999
+    method: POST
+    uri: http://localhost:9999
+  response:
+    body:
+      string: "data: {\"id\":\"ef23c1ef-ef7e-4422-8fd0-330f074e5de8\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"913b5bd8-c755-4e0c-bbd0-fcf11fcdf257\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"submitted\"},\"taskId\":\"eb05446a-6d96-4964-8e94-3f4ffcc612a7\"}}\r\n\r\ndata:
+        {\"id\":\"ef23c1ef-ef7e-4422-8fd0-330f074e5de8\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"913b5bd8-c755-4e0c-bbd0-fcf11fcdf257\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"working\"},\"taskId\":\"eb05446a-6d96-4964-8e94-3f4ffcc612a7\"}}\r\n\r\ndata:
+        {\"id\":\"ef23c1ef-ef7e-4422-8fd0-330f074e5de8\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"913b5bd8-c755-4e0c-bbd0-fcf11fcdf257\",\"final\":true,\"kind\":\"status-update\",\"status\":{\"message\":{\"kind\":\"message\",\"messageId\":\"41813b78-0e9a-41a4-bb6c-7176f9d4e5b2\",\"parts\":[{\"kind\":\"text\",\"text\":\"[Tool:
+        get_time] 2026-01-31 06:34:21 JST (Asia/Tokyo)\\nThe current time in Tokyo
+        is 06:34:21 JST on January 31, 2026.\"}],\"role\":\"agent\"},\"state\":\"completed\"},\"taskId\":\"eb05446a-6d96-4964-8e94-3f4ffcc612a7\"}}\r\n\r\n"
+    headers:
+      cache-control:
+      - no-store
+      connection:
+      - keep-alive
+      content-type:
+      - text/event-stream; charset=utf-8
+      date:
+      - Fri, 30 Jan 2026 21:34:20 GMT
+      server:
+      - uvicorn
+      transfer-encoding:
+      - chunked
+      x-accel-buffering:
+      - 'no'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Research Analyst. Expert
+      researcher with access to remote specialized agents\nYour personal goal is:
+      Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
+      Task: Delegate to the A2A agent to find the current time in Tokyo.\n\nProvide
+      your complete response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
+      agent IDs to delegate to.","items":{"const":"http://localhost:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
+      this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
+      the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
+      to false when the remote agent has answered your question - extract their answer
+      and return it as your final message. Set to true ONLY if you need to ask a NEW,
+      DIFFERENT question. NEVER repeat the same request - if the conversation history
+      shows the agent already answered, set is_a2a=false immediately.","title":"Is
+      A2A","type":"boolean"}},"required":["a2a_ids","message","is_a2a"],"title":"AgentResponse","type":"object","additionalProperties":false},"name":"AgentResponse","strict":true}},"stream":false}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1371'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - beta.chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D3qQBrUkvfrIi9SeEtGbWxFJjum3o\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769808863,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"Please
+        find the current time in Tokyo and provide it.\\\",\\\"is_a2a\\\":true}\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        270,\n    \"completion_tokens\": 41,\n    \"total_tokens\": 311,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_e01c6f58e1\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 30 Jan 2026 21:34:24 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '966'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"id":"dc04364b-9ad9-4ba4-81a8-bae8a71bee8c","jsonrpc":"2.0","method":"message/stream","params":{"configuration":{"acceptedOutputModes":["application/json"],"blocking":true},"message":{"kind":"message","messageId":"781be5cc-2c77-4c24-a0af-c9d30609ecd7","parts":[{"kind":"text","text":"Please
+      find the current time in Tokyo and provide it."}],"referenceTaskIds":[],"role":"user"}}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*, text/event-stream'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      cache-control:
+      - no-store
+      connection:
+      - keep-alive
+      content-length:
+      - '380'
+      content-type:
+      - application/json
+      host:
+      - localhost:9999
+    method: POST
+    uri: http://localhost:9999
+  response:
+    body:
+      string: "data: {\"id\":\"dc04364b-9ad9-4ba4-81a8-bae8a71bee8c\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"ae6fa54d-f6b0-4c15-b8b0-eb310731bc1a\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"submitted\"},\"taskId\":\"0bda253d-b860-4bd4-9129-691b886e4f8b\"}}\r\n\r\ndata:
+        {\"id\":\"dc04364b-9ad9-4ba4-81a8-bae8a71bee8c\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"ae6fa54d-f6b0-4c15-b8b0-eb310731bc1a\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"working\"},\"taskId\":\"0bda253d-b860-4bd4-9129-691b886e4f8b\"}}\r\n\r\ndata:
+        {\"id\":\"dc04364b-9ad9-4ba4-81a8-bae8a71bee8c\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"ae6fa54d-f6b0-4c15-b8b0-eb310731bc1a\",\"final\":true,\"kind\":\"status-update\",\"status\":{\"message\":{\"kind\":\"message\",\"messageId\":\"82eec93e-3c91-44c8-9acb-343454eb8fb8\",\"parts\":[{\"kind\":\"text\",\"text\":\"[Tool:
+        get_time] 2026-01-31 06:34:25 JST (Asia/Tokyo)\\nThe current time in Tokyo
+        is 06:34 AM on January 31, 2026.\"}],\"role\":\"agent\"},\"state\":\"completed\"},\"taskId\":\"0bda253d-b860-4bd4-9129-691b886e4f8b\"}}\r\n\r\n"
+    headers:
+      cache-control:
+      - no-store
+      connection:
+      - keep-alive
+      content-type:
+      - text/event-stream; charset=utf-8
+      date:
+      - Fri, 30 Jan 2026 21:34:24 GMT
+      server:
+      - uvicorn
+      transfer-encoding:
+      - chunked
+      x-accel-buffering:
+      - 'no'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Research Analyst. Expert
+      researcher with access to remote specialized agents\nYour personal goal is:
+      Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
+      Task: Delegate to the A2A agent to find the current time in Tokyo.\n\nProvide
+      your complete response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
+      agent IDs to delegate to.","items":{"const":"http://localhost:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
+      this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
+      the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
+      to false when the remote agent has answered your question - extract their answer
+      and return it as your final message. Set to true ONLY if you need to ask a NEW,
+      DIFFERENT question. NEVER repeat the same request - if the conversation history
+      shows the agent already answered, set is_a2a=false immediately.","title":"Is
+      A2A","type":"boolean"}},"required":["a2a_ids","message","is_a2a"],"title":"AgentResponse","type":"object","additionalProperties":false},"name":"AgentResponse","strict":true}},"stream":false}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1371'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - beta.chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D3qQGaNP21E5XkyFMtOtKogiqwKnN\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769808868,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"What
+        is the current time in Tokyo? Please provide the current local time there.\\\",\\\"is_a2a\\\":true}\",\n
+        \       \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\":
+        null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        270,\n    \"completion_tokens\": 46,\n    \"total_tokens\": 316,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_e01c6f58e1\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 30 Jan 2026 21:34:29 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '786'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"id":"06a22a9f-0969-414f-a17b-e3e9d4a3bbef","jsonrpc":"2.0","method":"message/stream","params":{"configuration":{"acceptedOutputModes":["application/json"],"blocking":true},"message":{"kind":"message","messageId":"c2ab08c5-ffb1-43e9-9f43-6e8adbaba95b","parts":[{"kind":"text","text":"What
+      is the current time in Tokyo? Please provide the current local time there."}],"referenceTaskIds":[],"role":"user"}}}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - '*/*, text/event-stream'
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      cache-control:
+      - no-store
+      connection:
+      - keep-alive
+      content-length:
+      - '406'
+      content-type:
+      - application/json
+      host:
+      - localhost:9999
+    method: POST
+    uri: http://localhost:9999
+  response:
+    body:
+      string: "data: {\"id\":\"06a22a9f-0969-414f-a17b-e3e9d4a3bbef\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"f86582e4-7d3f-448e-ab51-3522667da9a0\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"submitted\"},\"taskId\":\"5b92d2cb-100e-4be5-ba4d-39b320c3dd4f\"}}\r\n\r\ndata:
+        {\"id\":\"06a22a9f-0969-414f-a17b-e3e9d4a3bbef\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"f86582e4-7d3f-448e-ab51-3522667da9a0\",\"final\":false,\"kind\":\"status-update\",\"status\":{\"state\":\"working\"},\"taskId\":\"5b92d2cb-100e-4be5-ba4d-39b320c3dd4f\"}}\r\n\r\ndata:
+        {\"id\":\"06a22a9f-0969-414f-a17b-e3e9d4a3bbef\",\"jsonrpc\":\"2.0\",\"result\":{\"contextId\":\"f86582e4-7d3f-448e-ab51-3522667da9a0\",\"final\":true,\"kind\":\"status-update\",\"status\":{\"message\":{\"kind\":\"message\",\"messageId\":\"befc6d8b-3618-410b-910d-614dc6de77fd\",\"parts\":[{\"kind\":\"text\",\"text\":\"[Tool:
+        get_time] 2026-01-31 06:34:30 JST (Asia/Tokyo)\\nThe current local time in
+        Tokyo is 06:34 AM on January 31, 2026.\"}],\"role\":\"agent\"},\"state\":\"completed\"},\"taskId\":\"5b92d2cb-100e-4be5-ba4d-39b320c3dd4f\"}}\r\n\r\n"
+    headers:
+      cache-control:
+      - no-store
+      connection:
+      - keep-alive
+      content-type:
+      - text/event-stream; charset=utf-8
+      date:
+      - Fri, 30 Jan 2026 21:34:28 GMT
+      server:
+      - uvicorn
+      transfer-encoding:
+      - chunked
+      x-accel-buffering:
+      - 'no'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"messages":[{"role":"system","content":"You are Research Analyst. Expert
+      researcher with access to remote specialized agents\nYour personal goal is:
+      Find and analyze information about AI developments"},{"role":"user","content":"\nCurrent
+      Task: Delegate to the A2A agent to find the current time in Tokyo.\n\nProvide
+      your complete response:"}],"model":"gpt-4.1-mini","response_format":{"type":"json_schema","json_schema":{"schema":{"properties":{"a2a_ids":{"description":"A2A
+      agent IDs to delegate to.","items":{"const":"http://localhost:9999/.well-known/agent-card.json","type":"string"},"maxItems":1,"title":"A2A
+      Ids","type":"array"},"message":{"description":"The message content. If is_a2a=true,
+      this is sent to the A2A agent. If is_a2a=false, this is your final answer ending
+      the conversation.","title":"Message","type":"string"},"is_a2a":{"description":"Set
+      to false when the remote agent has answered your question - extract their answer
+      and return it as your final message. Set to true ONLY if you need to ask a NEW,
+      DIFFERENT question. NEVER repeat the same request - if the conversation history
+      shows the agent already answered, set is_a2a=false immediately.","title":"Is
+      A2A","type":"boolean"}},"required":["a2a_ids","message","is_a2a"],"title":"AgentResponse","type":"object","additionalProperties":false},"name":"AgentResponse","strict":true}},"stream":false}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      authorization:
+      - AUTHORIZATION-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '1371'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.openai.com
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-helper-method:
+      - beta.chat.completions.parse
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.83.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.12.10
+    method: POST
+    uri: https://api.openai.com/v1/chat/completions
+  response:
+    body:
+      string: "{\n  \"id\": \"chatcmpl-D3qQKvrKehCGN5jjCKyRqyN6g88gg\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769808872,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"{\\\"a2a_ids\\\":[\\\"http://localhost:9999/.well-known/agent-card.json\\\"],\\\"message\\\":\\\"What
+        is the current time in Tokyo?\\\",\\\"is_a2a\\\":true}\",\n        \"refusal\":
+        null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n
+        \     \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\":
+        270,\n    \"completion_tokens\": 39,\n    \"total_tokens\": 309,\n    \"prompt_tokens_details\":
+        {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_e01c6f58e1\"\n}\n"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 30 Jan 2026 21:34:32 GMT
+      Server:
+      - cloudflare
+      Strict-Transport-Security:
+      - STS-XXX
+      Transfer-Encoding:
+      - chunked
+      X-Content-Type-Options:
+      - X-CONTENT-TYPE-XXX
+      access-control-expose-headers:
+      - ACCESS-CONTROL-XXX
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      openai-organization:
+      - OPENAI-ORG-XXX
+      openai-processing-ms:
+      - '742'
+      openai-project:
+      - OPENAI-PROJECT-XXX
+      openai-version:
+      - '2020-10-01'
+      x-openai-proxy-wasm:
+      - v0.1
+      x-ratelimit-limit-requests:
+      - X-RATELIMIT-LIMIT-REQUESTS-XXX
+      x-ratelimit-limit-tokens:
+      - X-RATELIMIT-LIMIT-TOKENS-XXX
+      x-ratelimit-remaining-requests:
+      - X-RATELIMIT-REMAINING-REQUESTS-XXX
+      x-ratelimit-remaining-tokens:
+      - X-RATELIMIT-REMAINING-TOKENS-XXX
+      x-ratelimit-reset-requests:
+      - X-RATELIMIT-RESET-REQUESTS-XXX
+      x-ratelimit-reset-tokens:
+      - X-RATELIMIT-RESET-TOKENS-XXX
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1

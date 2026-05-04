@@ -77,7 +77,7 @@ CLI_SETTINGS_KEYS = [
 ]
 
 # Default values for CLI settings
-DEFAULT_CLI_SETTINGS = {
+DEFAULT_CLI_SETTINGS: dict[str, Any] = {
     "enterprise_base_url": DEFAULT_CREWAI_ENTERPRISE_URL,
     "oauth2_provider": CREWAI_ENTERPRISE_DEFAULT_OAUTH2_PROVIDER,
     "oauth2_audience": CREWAI_ENTERPRISE_DEFAULT_OAUTH2_AUDIENCE,
@@ -103,7 +103,7 @@ HIDDEN_SETTINGS_KEYS = [
 class Settings(BaseModel):
     enterprise_base_url: str | None = Field(
         default=DEFAULT_CLI_SETTINGS["enterprise_base_url"],
-        description="Base URL of the CrewAI AOP instance",
+        description="Base URL of the CrewAI AMP instance",
     )
     tool_repository_username: str | None = Field(
         None, description="Username for interacting with the Tool Repository"

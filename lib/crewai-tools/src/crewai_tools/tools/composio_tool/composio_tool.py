@@ -10,7 +10,7 @@ import typing_extensions as te
 class ComposioTool(BaseTool):
     """Wrapper for composio tools."""
 
-    composio_action: t.Callable
+    composio_action: t.Callable[..., t.Any]
     env_vars: list[EnvVar] = Field(
         default_factory=lambda: [
             EnvVar(
@@ -70,7 +70,7 @@ class ComposioTool(BaseTool):
         schema = action_schema.model_dump(exclude_none=True)
         entity_id = kwargs.pop("entity_id", DEFAULT_ENTITY_ID)
 
-        def function(**kwargs: t.Any) -> dict:
+        def function(**kwargs: t.Any) -> dict[str, t.Any]:
             """Wrapper function for composio action."""
             return toolset.execute_action(
                 action=Action(schema["name"]),

@@ -18,7 +18,7 @@ class VoyageAIEmbeddingFunction(EmbeddingFunction[Documents]):
             **kwargs: Configuration parameters for VoyageAI.
         """
         try:
-            import voyageai  # type: ignore[import-not-found]
+            import voyageai
 
         except ImportError as e:
             raise ImportError(
@@ -26,7 +26,7 @@ class VoyageAIEmbeddingFunction(EmbeddingFunction[Documents]):
                 "Install it with: uv add voyageai"
             ) from e
         self._config = kwargs
-        self._client = voyageai.Client(
+        self._client = voyageai.Client(  # type: ignore[attr-defined]
             api_key=kwargs["api_key"],
             max_retries=kwargs.get("max_retries", 0),
             timeout=kwargs.get("timeout"),

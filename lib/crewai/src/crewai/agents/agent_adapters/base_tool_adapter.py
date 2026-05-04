@@ -3,6 +3,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
+from crewai.utilities.string_utils import sanitize_tool_name as _sanitize_tool_name
+
 
 if TYPE_CHECKING:
     from crewai.tools.base_tool import BaseTool
@@ -35,4 +37,4 @@ class BaseToolAdapter(ABC):
     @staticmethod
     def sanitize_tool_name(tool_name: str) -> str:
         """Sanitize tool name for API compatibility."""
-        return tool_name.replace(" ", "_")
+        return _sanitize_tool_name(tool_name)

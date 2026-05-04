@@ -3,8 +3,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from crewai.events.event_listener import event_listener
-from crewai.hooks.types import AfterToolCallHookType, BeforeToolCallHookType
-from crewai.utilities.printer import Printer
+from crewai.hooks.types import (
+    AfterToolCallHookCallable,
+    AfterToolCallHookType,
+    BeforeToolCallHookCallable,
+    BeforeToolCallHookType,
+)
+from crewai.utilities.printer import PRINTER
 
 
 if TYPE_CHECKING:
@@ -95,16 +100,15 @@ class ToolCallHookContext:
             ...     return None  # Allow execution
         """
 
-        printer = Printer()
         event_listener.formatter.pause_live_updates()
 
         try:
-            printer.print(content=f"\n{prompt}", color="bold_yellow")
-            printer.print(content=default_message, color="cyan")
+            PRINTER.print(content=f"\n{prompt}", color="bold_yellow")
+            PRINTER.print(content=default_message, color="cyan")
             response = input().strip()
 
             if response:
-                printer.print(content="\nProcessing your input...", color="cyan")
+                PRINTER.print(content="\nProcessing your input...", color="cyan")
 
             return response
         finally:
@@ -112,12 +116,12 @@ class ToolCallHookContext:
 
 
 # Global hook registries
-_before_tool_call_hooks: list[BeforeToolCallHookType] = []
-_after_tool_call_hooks: list[AfterToolCallHookType] = []
+_before_tool_call_hooks: list[BeforeToolCallHookType | BeforeToolCallHookCallable] = []
+_after_tool_call_hooks: list[AfterToolCallHookType | AfterToolCallHookCallable] = []
 
 
 def register_before_tool_call_hook(
-    hook: BeforeToolCallHookType,
+    hook: BeforeToolCallHookType | BeforeToolCallHookCallable,
 ) -> None:
     """Register a global before_tool_call hook.
 
@@ -154,7 +158,7 @@ def register_before_tool_call_hook(
 
 
 def register_after_tool_call_hook(
-    hook: AfterToolCallHookType,
+    hook: AfterToolCallHookType | AfterToolCallHookCallable,
 ) -> None:
     """Register a global after_tool_call hook.
 
@@ -184,7 +188,9 @@ def register_after_tool_call_hook(
     _after_tool_call_hooks.append(hook)
 
 
-def get_before_tool_call_hooks() -> list[BeforeToolCallHookType]:
+def get_before_tool_call_hooks() -> list[
+    BeforeToolCallHookType | BeforeToolCallHookCallable
+]:
     """Get all registered global before_tool_call hooks.
 
     Returns:
@@ -193,7 +199,9 @@ def get_before_tool_call_hooks() -> list[BeforeToolCallHookType]:
     return _before_tool_call_hooks.copy()
 
 
-def get_after_tool_call_hooks() -> list[AfterToolCallHookType]:
+def get_after_tool_call_hooks() -> list[
+    AfterToolCallHookType | AfterToolCallHookCallable
+]:
     """Get all registered global after_tool_call hooks.
 
     Returns:
@@ -203,7 +211,7 @@ def get_after_tool_call_hooks() -> list[AfterToolCallHookType]:
 
 
 def unregister_before_tool_call_hook(
-    hook: BeforeToolCallHookType,
+    hook: BeforeToolCallHookType | BeforeToolCallHookCallable,
 ) -> bool:
     """Unregister a specific global before_tool_call hook.
 
@@ -229,7 +237,7 @@ def unregister_before_tool_call_hook(
 
 
 def unregister_after_tool_call_hook(
-    hook: AfterToolCallHookType,
+    hook: AfterToolCallHookType | AfterToolCallHookCallable,
 ) -> bool:
     """Unregister a specific global after_tool_call hook.
 

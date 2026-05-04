@@ -1,9 +1,11 @@
+from typing import Any
+
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
 from crewai_tools.rag.source_content import SourceContent
 
 
 class TextFileLoader(BaseLoader):
-    def load(self, source_content: SourceContent, **kwargs) -> LoaderResult:  # type: ignore[override]
+    def load(self, source_content: SourceContent, **kwargs: Any) -> LoaderResult:  # type: ignore[override]
         source_ref = source_content.source_ref
         if not source_content.path_exists():
             raise FileNotFoundError(
@@ -21,7 +23,7 @@ class TextFileLoader(BaseLoader):
 
 
 class TextLoader(BaseLoader):
-    def load(self, source_content: SourceContent, **kwargs) -> LoaderResult:  # type: ignore[override]
+    def load(self, source_content: SourceContent, **kwargs: Any) -> LoaderResult:  # type: ignore[override]
         return LoaderResult(
             content=source_content.source,
             source=source_content.source_ref,

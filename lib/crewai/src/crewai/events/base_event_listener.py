@@ -23,4 +23,3 @@ class BaseEventListener(ABC):
         Args:
             crewai_event_bus: The event bus to register listeners on.
         """
-        pass

@@ -1,11 +1,39 @@
+import asyncio
+from collections.abc import Coroutine
+import concurrent.futures
+import contextvars
+import inspect
 from typing import Any
 
 from pydantic import BaseModel, Field
+from typing_extensions import TypeIs
 
 from crewai.agent import Agent
 from crewai.lite_agent_output import LiteAgentOutput
 from crewai.llms.base_llm import BaseLLM
 from crewai.tasks.task_output import TaskOutput
+
+
+def _is_coroutine(
+    obj: LiteAgentOutput | Coroutine[Any, Any, LiteAgentOutput],
+) -> TypeIs[Coroutine[Any, Any, LiteAgentOutput]]:
+    """Check if obj is a coroutine for type narrowing."""
+    return inspect.iscoroutine(obj)
+
+
+def _run_coroutine_sync(coro: Coroutine[Any, Any, LiteAgentOutput]) -> LiteAgentOutput:
+    """Run a coroutine synchronously, handling an already-running event loop."""
+    try:
+        asyncio.get_running_loop()
+        has_running_loop = True
+    except RuntimeError:
+        has_running_loop = False
+
+    if has_running_loop:
+        ctx = contextvars.copy_context()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            return pool.submit(ctx.run, asyncio.run, coro).result()
+    return asyncio.run(coro)
 
 
 class LLMGuardrailResult(BaseModel):
@@ -62,7 +90,10 @@ class LLMGuardrail:
         - If the Task result complies with the guardrail, saying that is valid
         """
 
-        return agent.kickoff(query, response_format=LLMGuardrailResult)
+        kickoff_result = agent.kickoff(query, response_format=LLMGuardrailResult)
+        if _is_coroutine(kickoff_result):
+            return _run_coroutine_sync(kickoff_result)
+        return kickoff_result
 
     def __call__(self, task_output: TaskOutput) -> tuple[bool, Any]:
         """Validates the output of a task based on specified criteria.

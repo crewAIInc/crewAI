@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://a2ui.org/specification/v0_9/client_data_model.json",
+  "title": "A2UI Client Data Model Schema",
+  "description": "Schema for attaching the client data model to A2A message metadata. This object should be placed in the `a2uiClientDataModel` field of the metadata.",
+  "type": "object",
+  "properties": {
+    "version": {
+      "const": "v0.9"
+    },
+    "surfaces": {
+      "type": "object",
+      "description": "A map of surface IDs to their current data models.",
+      "additionalProperties": {
+        "type": "object",
+        "description": "The current data model for the surface, as a standard JSON object."
+      }
+    }
+  },
+  "required": ["version", "surfaces"],
+  "additionalProperties": false
+}

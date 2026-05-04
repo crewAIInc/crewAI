@@ -18,12 +18,12 @@ from crewai.utilities.types import LLMMessage
 
 
 class EvaluationDisplayFormatter:
-    def __init__(self):
+    def __init__(self) -> None:
         self.console_formatter = ConsoleFormatter()
 
     def display_evaluation_with_feedback(
         self, iterations_results: dict[int, dict[str, list[Any]]]
-    ):
+    ) -> None:
         if not iterations_results:
             self.console_formatter.print(
                 "[yellow]No evaluation results to display[/yellow]"
@@ -103,7 +103,7 @@ class EvaluationDisplayFormatter:
     def display_summary_results(
         self,
         iterations_results: dict[int, dict[str, list[AgentEvaluationResult]]],
-    ):
+    ) -> None:
         if not iterations_results:
             self.console_formatter.print(
                 "[yellow]No evaluation results to display[/yellow]"

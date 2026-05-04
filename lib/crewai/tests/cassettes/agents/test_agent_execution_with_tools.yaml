@@ -1,7 +1,13 @@
 interactions:
 - request:
-    body: '{"messages":[{"role":"system","content":"You are test role. test backstory\nYour personal goal is: test goal\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: multiplier\nTool Arguments: {''first_number'': {''description'': None, ''type'': ''int''}, ''second_number'': {''description'': None, ''type'': ''int''}}\nTool Description: Useful for when you need to multiply two numbers together.\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought: you should always think about what to do\nAction: the action to take, only one name of [multiplier], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce all necessary information is gathered, return the following format:\n\n```\nThought: I now know the final answer\nFinal Answer: the final
-      answer to the original input question\n```"},{"role":"user","content":"\nCurrent Task: What is 3 times 4?\n\nThis is the expected criteria for your final answer: The result of the multiplication.\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"}],"model":"gpt-4.1-mini"}'
+    body: '{"messages":[{"role":"system","content":"You are test role. test backstory\nYour
+      personal goal is: test goal"},{"role":"user","content":"\nCurrent Task: What
+      is 3 times 4?\n\nThis is the expected criteria for your final answer: The result
+      of the multiplication.\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nThis is VERY important to you, your job depends on
+      it!"}],"model":"gpt-4.1-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"multiplier","description":"Useful
+      for when you need to multiply two numbers together.","parameters":{"properties":{"first_number":{"title":"First
+      Number","type":"integer"},"second_number":{"title":"Second Number","type":"integer"}},"required":["first_number","second_number"],"type":"object"}}}]}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -14,7 +20,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1411'
+      - '792'
       content-type:
       - application/json
       host:
@@ -36,13 +42,26 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.10
+      - 3.13.3
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-CjDtx2f84QkoD2Uvqu7C0GxRoEGCK\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764894233,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"```\\nThought: To find the result of 3 times 4, I need to multiply the two numbers.\\nAction: multiplier\\nAction Input: {\\\"first_number\\\": 3, \\\"second_number\\\": 4}\\n```\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 294,\n    \"completion_tokens\": 45,\n    \"total_tokens\": 339,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\"\
-        : 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_24710c7f06\"\n}\n"
+      string: "{\n  \"id\": \"chatcmpl-D0tOiec4X8af77GlGGB51l8ezcgTz\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769105320,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": null,\n        \"tool_calls\": [\n          {\n
+        \           \"id\": \"call_GAly2Kh4lmjVTjNTIACicQCH\",\n            \"type\":
+        \"function\",\n            \"function\": {\n              \"name\": \"multiplier\",\n
+        \             \"arguments\": \"{\\\"first_number\\\":3,\\\"second_number\\\":4}\"\n
+        \           }\n          }\n        ],\n        \"refusal\": null,\n        \"annotations\":
+        []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"tool_calls\"\n
+        \   }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 134,\n    \"completion_tokens\":
+        20,\n    \"total_tokens\": 154,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_376a7ccef1\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -51,7 +70,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 05 Dec 2025 00:23:54 GMT
+      - Thu, 22 Jan 2026 18:08:40 GMT
       Server:
       - cloudflare
       Set-Cookie:
@@ -71,13 +90,13 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '759'
+      - '531'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '774'
+      - '549'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:
@@ -98,8 +117,16 @@ interactions:
       code: 200
       message: OK
 - request:
-    body: '{"messages":[{"role":"system","content":"You are test role. test backstory\nYour personal goal is: test goal\nYou ONLY have access to the following tools, and should NEVER make up tools that are not listed here:\n\nTool Name: multiplier\nTool Arguments: {''first_number'': {''description'': None, ''type'': ''int''}, ''second_number'': {''description'': None, ''type'': ''int''}}\nTool Description: Useful for when you need to multiply two numbers together.\n\nIMPORTANT: Use the following format in your response:\n\n```\nThought: you should always think about what to do\nAction: the action to take, only one name of [multiplier], just the name, exactly as it''s written.\nAction Input: the input to the action, just a simple JSON object, enclosed in curly braces, using \" to wrap keys and values.\nObservation: the result of the action\n```\n\nOnce all necessary information is gathered, return the following format:\n\n```\nThought: I now know the final answer\nFinal Answer: the final
-      answer to the original input question\n```"},{"role":"user","content":"\nCurrent Task: What is 3 times 4?\n\nThis is the expected criteria for your final answer: The result of the multiplication.\nyou MUST return the actual complete content as the final answer, not a summary.\n\nBegin! This is VERY important to you, use the tools available and give your best Final Answer, your job depends on it!\n\nThought:"},{"role":"assistant","content":"```\nThought: To find the result of 3 times 4, I need to multiply the two numbers.\nAction: multiplier\nAction Input: {\"first_number\": 3, \"second_number\": 4}\n```\nObservation: 12"}],"model":"gpt-4.1-mini"}'
+    body: '{"messages":[{"role":"system","content":"You are test role. test backstory\nYour
+      personal goal is: test goal"},{"role":"user","content":"\nCurrent Task: What
+      is 3 times 4?\n\nThis is the expected criteria for your final answer: The result
+      of the multiplication.\nyou MUST return the actual complete content as the final
+      answer, not a summary.\n\nThis is VERY important to you, your job depends on
+      it!"},{"role":"assistant","content":null,"tool_calls":[{"id":"call_GAly2Kh4lmjVTjNTIACicQCH","type":"function","function":{"name":"multiplier","arguments":"{\"first_number\":3,\"second_number\":4}"}}]},{"role":"tool","tool_call_id":"call_GAly2Kh4lmjVTjNTIACicQCH","content":"12"},{"role":"user","content":"Analyze
+      the tool result. If requirements are met, provide the Final Answer. Otherwise,
+      call the next tool. Deliver only the answer without meta-commentary."}],"model":"gpt-4.1-mini","tool_choice":"auto","tools":[{"type":"function","function":{"name":"multiplier","description":"Useful
+      for when you need to multiply two numbers together.","parameters":{"properties":{"first_number":{"title":"First
+      Number","type":"integer"},"second_number":{"title":"Second Number","type":"integer"}},"required":["first_number","second_number"],"type":"object"}}}]}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -112,7 +139,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1628'
+      - '1250'
       content-type:
       - application/json
       cookie:
@@ -136,12 +163,22 @@ interactions:
       x-stainless-runtime:
       - CPython
       x-stainless-runtime-version:
-      - 3.12.10
+      - 3.13.3
     method: POST
     uri: https://api.openai.com/v1/chat/completions
   response:
     body:
-      string: "{\n  \"id\": \"chatcmpl-CjDtyUk1qPkJH2et3OrceQeUQtlIh\",\n  \"object\": \"chat.completion\",\n  \"created\": 1764894234,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n  \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\": \"assistant\",\n        \"content\": \"```\\nThought: I now know the final answer\\nFinal Answer: 12\\n```\",\n        \"refusal\": null,\n        \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\": \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 348,\n    \"completion_tokens\": 18,\n    \"total_tokens\": 366,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\": 0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\": {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\": 0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\": \"default\",\n  \"system_fingerprint\": \"fp_24710c7f06\"\n}\n"
+      string: "{\n  \"id\": \"chatcmpl-D0tOiyZRvXIDgLTtBnlE9KyQCyDQD\",\n  \"object\":
+        \"chat.completion\",\n  \"created\": 1769105320,\n  \"model\": \"gpt-4.1-mini-2025-04-14\",\n
+        \ \"choices\": [\n    {\n      \"index\": 0,\n      \"message\": {\n        \"role\":
+        \"assistant\",\n        \"content\": \"12\",\n        \"refusal\": null,\n
+        \       \"annotations\": []\n      },\n      \"logprobs\": null,\n      \"finish_reason\":
+        \"stop\"\n    }\n  ],\n  \"usage\": {\n    \"prompt_tokens\": 198,\n    \"completion_tokens\":
+        2,\n    \"total_tokens\": 200,\n    \"prompt_tokens_details\": {\n      \"cached_tokens\":
+        0,\n      \"audio_tokens\": 0\n    },\n    \"completion_tokens_details\":
+        {\n      \"reasoning_tokens\": 0,\n      \"audio_tokens\": 0,\n      \"accepted_prediction_tokens\":
+        0,\n      \"rejected_prediction_tokens\": 0\n    }\n  },\n  \"service_tier\":
+        \"default\",\n  \"system_fingerprint\": \"fp_376a7ccef1\"\n}\n"
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -150,7 +187,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 05 Dec 2025 00:23:54 GMT
+      - Thu, 22 Jan 2026 18:08:41 GMT
       Server:
       - cloudflare
       Strict-Transport-Security:
@@ -168,13 +205,13 @@ interactions:
       openai-organization:
       - OPENAI-ORG-XXX
       openai-processing-ms:
-      - '350'
+      - '216'
       openai-project:
       - OPENAI-PROJECT-XXX
       openai-version:
       - '2020-10-01'
       x-envoy-upstream-service-time:
-      - '361'
+      - '244'
       x-openai-proxy-wasm:
       - v0.1
       x-ratelimit-limit-requests:

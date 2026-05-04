@@ -291,15 +291,13 @@ multimodal_agent = Agent(
 - `max_retry_limit`: 오류 발생 시 재시도 횟수
 
 #### 코드 실행
-- `allow_code_execution`: 코드를 실행하려면 True여야 합니다
-- `code_execution_mode`:
-  - `"safe"`: Docker를 사용합니다 (프로덕션에 권장)
-  - `"unsafe"`: 직접 실행 (신뢰할 수 있는 환경에서만 사용)
 
-<Note>
-  이 옵션은 기본 Docker 이미지를 실행합니다. Docker 이미지를 구성하려면 도구 섹션에 있는 Code Interpreter Tool을 확인하십시오.
-  Code Interpreter Tool을 에이전트의 도구 파라미터로 추가하십시오.
-</Note>
+<Warning>
+  `allow_code_execution` 및 `code_execution_mode`는 더 이상 사용되지 않습니다. `CodeInterpreterTool`이 `crewai-tools`에서 제거되었습니다. 안전한 코드 실행을 위해 [E2B](https://e2b.dev) 또는 [Modal](https://modal.com)과 같은 전용 샌드박스 서비스를 사용하세요.
+</Warning>
+
+- `allow_code_execution` _(지원 중단)_: 이전에 `CodeInterpreterTool`을 통한 내장 코드 실행을 활성화했습니다.
+- `code_execution_mode` _(지원 중단)_: 이전에 실행 모드를 제어했습니다 (Docker의 경우 `"safe"`, 직접 실행의 경우 `"unsafe"`).
 
 #### 고급 기능
 - `multimodal`: 텍스트와 시각적 콘텐츠 처리를 위한 멀티모달 기능 활성화
@@ -627,9 +625,10 @@ asyncio.run(main())
 ## 중요한 고려사항 및 모범 사례
 
 ### 보안 및 코드 실행
-- `allow_code_execution`을 사용할 때는 사용자 입력에 주의하고 항상 입력 값을 검증하세요
-- 운영 환경에서는 `code_execution_mode: "safe"`(Docker)를 사용하세요
-- 무한 루프를 방지하기 위해 적절한 `max_execution_time` 제한을 설정하는 것을 고려하세요
+
+<Warning>
+  `allow_code_execution` 및 `code_execution_mode`는 더 이상 사용되지 않으며 `CodeInterpreterTool`이 제거되었습니다. 안전한 코드 실행을 위해 [E2B](https://e2b.dev) 또는 [Modal](https://modal.com)과 같은 전용 샌드박스 서비스를 사용하세요.
+</Warning>
 
 ### 성능 최적화
 - `respect_context_window: true`를 사용하여 토큰 제한 문제를 방지하세요.
