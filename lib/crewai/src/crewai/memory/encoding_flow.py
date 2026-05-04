@@ -18,7 +18,7 @@ import math
 from typing import Any
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from crewai.flow.flow import Flow, listen, start
 from crewai.memory.analyze import (
@@ -67,6 +67,27 @@ class ItemState(BaseModel):
     top_similarity: float = 0.0
     plan: ConsolidationPlan | None = None
     result_record: MemoryRecord | None = None
+
+    @field_validator("similar_records", "result_record", mode="before")
+    @classmethod
+    def ensure_embedding_is_list(cls, v: Any) -> Any:
+        """Ensure MemoryRecord embeddings are list[float], not bytes.
+
+        Delegates to MemoryRecord.validate_embedding for consistent behavior
+        (e.g. empty bytes → None).
+        """
+        if v is None:
+            return None
+        if isinstance(v, list):
+            for record in v:
+                if isinstance(record, MemoryRecord) and isinstance(
+                    record.embedding, bytes
+                ):
+                    record.embedding = MemoryRecord.validate_embedding(record.embedding)
+            return v
+        if isinstance(v, MemoryRecord) and isinstance(v.embedding, bytes):
+            v.embedding = MemoryRecord.validate_embedding(v.embedding)
+        return v
 
 
 class EncodingState(BaseModel):
