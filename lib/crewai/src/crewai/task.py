@@ -679,12 +679,9 @@ class Task(BaseModel):
                 else:
                     pydantic_output = None
                     json_output = None
-            elif not self._guardrails and not self._guardrail:
-                raw = result
-                pydantic_output, json_output = self._export_output(result)
             else:
                 raw = result
-                pydantic_output, json_output = None, None
+                pydantic_output, json_output = self._export_output(result)
 
             task_output = TaskOutput(
                 name=self.name or self.description,
@@ -801,12 +798,9 @@ class Task(BaseModel):
                 else:
                     pydantic_output = None
                     json_output = None
-            elif not self._guardrails and not self._guardrail:
-                raw = result
-                pydantic_output, json_output = self._export_output(result)
             else:
                 raw = result
-                pydantic_output, json_output = None, None
+                pydantic_output, json_output = self._export_output(result)
 
             task_output = TaskOutput(
                 name=self.name or self.description,
