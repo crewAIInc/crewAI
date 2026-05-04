@@ -23,7 +23,7 @@ from crewai.agents.parser import (
     parse,
 )
 from crewai.cli.config import Settings
-from crewai.llms.base_llm import BaseLLM
+from crewai.llms.base_llm import BaseLLM, call_stop_override
 from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
@@ -256,10 +256,12 @@ def _llm_stop_words_applied(
     llm: LLM | BaseLLM,
     executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
 ) -> Iterator[None]:
-    """Temporarily merge the executor's stop words into the LLM's ``stop`` list.
+    """Apply the executor's stop words to the LLM for the duration of one call.
 
-    Restores the original list on exit so the user's LLM instance is never
-    permanently mutated and stop words don't leak across agents or kickoffs.
+    Uses :func:`crewai.llms.base_llm.call_stop_override` so the LLM's stop
+    field is never mutated. Safe under concurrent execution: the override is
+    propagated via a :class:`contextvars.ContextVar` and is scoped to this
+    call's task / thread context.
     """
     extra = _executor_stop_words(executor_context)
     if (
@@ -270,12 +272,8 @@ def _llm_stop_words_applied(
     ):
         yield
         return
-    saved = llm.stop
-    llm.stop = list(set(saved + extra))
-    try:
+    with call_stop_override(list(set(llm.stop + extra))):
         yield
-    finally:
-        llm.stop = saved
 
 
 def has_reached_max_iterations(iterations: int, max_iterations: int) -> bool:

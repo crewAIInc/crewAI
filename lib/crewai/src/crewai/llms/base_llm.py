@@ -72,6 +72,9 @@ _JSON_EXTRACTION_PATTERN: Final[re.Pattern[str]] = re.compile(r"\{.*}", re.DOTAL
 _current_call_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "_current_call_id", default=None
 )
+_call_stop_override_var: contextvars.ContextVar[list[str] | None] = (
+    contextvars.ContextVar("_call_stop_override_var", default=None)
+)
 
 
 @contextmanager
@@ -83,6 +86,23 @@ def llm_call_context() -> Generator[str, None, None]:
         yield call_id
     finally:
         _current_call_id.reset(token)
+
+
+@contextmanager
+def call_stop_override(stop: list[str] | None) -> Generator[None, None, None]:
+    """Override the active stop list for the current call scope.
+
+    Reads via :meth:`BaseLLM._effective_stop` (and therefore
+    :attr:`BaseLLM.stop_sequences`) return ``stop`` for the duration of the
+    context. Setting ``None`` clears any active override. The instance-level
+    ``stop`` field is never mutated, so the override is safe under concurrent
+    execution.
+    """
+    token = _call_stop_override_var.set(stop)
+    try:
+        yield
+    finally:
+        _call_stop_override_var.reset(token)
 
 
 def get_current_call_id() -> str:
@@ -160,10 +180,20 @@ class BaseLLM(BaseModel, ABC):
     def stop_sequences(self) -> list[str]:
         """Alias for ``stop`` — kept for backward compatibility with provider APIs.
 
-        Writes are handled by ``__setattr__``, which normalizes and redirects
-        ``stop_sequences`` assignments to the ``stop`` field.
+        Honors the per-call stop override set via :func:`call_stop_override` so
+        that callers can supply additional stop sequences for a single call
+        without mutating the shared instance.
         """
-        return self.stop
+        return self._effective_stop()
+
+    def _effective_stop(self) -> list[str]:
+        """Return the stop list active for the current call.
+
+        Falls back to the instance-level ``stop`` field when no per-call
+        override is in effect.
+        """
+        override = _call_stop_override_var.get()
+        return override if override is not None else self.stop
 
     _token_usage: dict[str, int] = PrivateAttr(
         default_factory=lambda: {
@@ -341,7 +371,7 @@ class BaseLLM(BaseModel, ABC):
         Returns:
             True if stop words are configured and can be applied
         """
-        return bool(self.stop)
+        return bool(self._effective_stop())
 
     def _apply_stop_words(self, content: str) -> str:
         """Apply stop words to truncate response content.
@@ -363,14 +393,14 @@ class BaseLLM(BaseModel, ABC):
             >>> llm._apply_stop_words(response)
             "I need to search.\\n\\nAction: search"
         """
-        if not self.stop or not content:
+        effective_stop = self._effective_stop()
+        if not effective_stop or not content:
             return content
 
-        # Find the earliest occurrence of any stop word
         earliest_stop_pos = len(content)
         found_stop_word = None
 
-        for stop_word in self.stop:
+        for stop_word in effective_stop:
             stop_pos = content.find(stop_word)
             if stop_pos != -1 and stop_pos < earliest_stop_pos:
                 earliest_stop_pos = stop_pos

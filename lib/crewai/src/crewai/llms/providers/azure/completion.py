@@ -679,8 +679,9 @@ class AzureCompletion(BaseLLM):
             params["presence_penalty"] = self.presence_penalty
         if self.max_tokens is not None:
             params["max_tokens"] = self.max_tokens
-        if self.stop and self.supports_stop_words():
-            params["stop"] = self.stop
+        effective_stop = self._effective_stop()
+        if effective_stop and self.supports_stop_words():
+            params["stop"] = effective_stop
 
         # Handle tools/functions for Azure OpenAI models
         if tools and self.is_openai_model:

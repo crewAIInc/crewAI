@@ -2494,20 +2494,23 @@ class TestSharedLLMStopWords:
         assert a.llm is shared
         assert b.llm is shared
 
-    def test_stop_words_restored_after_llm_call(self) -> None:
-        """The merge applied around llm.call must be reverted afterwards."""
+    def test_effective_stop_reflects_override_inside_context(self) -> None:
+        """Inside the helper, the effective stop list includes the executor's words."""
         from crewai.utilities.agent_utils import _llm_stop_words_applied
 
         shared = LLM(model="gpt-4", stop=["Original:"])
         executor = self._make_executor(shared, stop_words=["Observation:"])
 
         with _llm_stop_words_applied(shared, executor):
-            assert set(shared.stop) == {"Original:", "Observation:"}
+            assert set(shared._effective_stop()) == {"Original:", "Observation:"}
+            assert set(shared.stop_sequences) == {"Original:", "Observation:"}
+            assert shared.stop == ["Original:"]
 
         assert shared.stop == ["Original:"]
+        assert shared._effective_stop() == ["Original:"]
 
-    def test_stop_words_restored_when_call_raises(self) -> None:
-        """A failed call must still restore the LLM's stop list."""
+    def test_override_cleared_when_context_raises(self) -> None:
+        """A failed call must still clear the per-call stop override."""
         from crewai.utilities.agent_utils import _llm_stop_words_applied
 
         shared = LLM(model="gpt-4", stop=["Original:"])
@@ -2518,9 +2521,10 @@ class TestSharedLLMStopWords:
                 raise RuntimeError("boom")
 
         assert shared.stop == ["Original:"]
+        assert shared._effective_stop() == ["Original:"]
 
-    def test_no_merge_when_llm_does_not_support_stop_words(self) -> None:
-        """LLMs that ignore stop words must not have their stop list touched."""
+    def test_no_override_when_llm_does_not_support_stop_words(self) -> None:
+        """LLMs that ignore stop words must not see a per-call override."""
         from unittest.mock import patch
         from crewai.utilities.agent_utils import _llm_stop_words_applied
 
@@ -2529,19 +2533,33 @@ class TestSharedLLMStopWords:
 
         with patch.object(shared, "supports_stop_words", return_value=False):
             with _llm_stop_words_applied(shared, executor):
-                assert shared.stop == ["Original:"]
+                assert shared._effective_stop() == ["Original:"]
 
         assert shared.stop == ["Original:"]
 
-    def test_no_accumulation_across_repeated_calls(self) -> None:
-        """Repeated entries into the helper must not grow the shared LLM's stop list."""
+    def test_concurrent_overrides_do_not_collide(self) -> None:
+        """Concurrent agents on a shared LLM must each see their own effective stop."""
+        import asyncio
         from crewai.utilities.agent_utils import _llm_stop_words_applied
 
         shared = LLM(model="gpt-4", stop=["Original:"])
-        executor = self._make_executor(shared, stop_words=["Observation:"])
+        exec_a = self._make_executor(shared, stop_words=["StopA:"])
+        exec_b = self._make_executor(shared, stop_words=["StopB:"])
 
-        for _ in range(5):
+        async def run(executor: CrewAgentExecutor, expected: str) -> set[str]:
             with _llm_stop_words_applied(shared, executor):
-                pass
+                await asyncio.sleep(0)
+                seen = set(shared._effective_stop())
+                assert expected in seen
+                return seen
 
+        async def main() -> tuple[set[str], set[str]]:
+            return await asyncio.gather(
+                run(exec_a, "StopA:"), run(exec_b, "StopB:")
+            )
+
+        a_seen, b_seen = asyncio.run(main())
+        assert a_seen == {"Original:", "StopA:"}
+        assert b_seen == {"Original:", "StopB:"}
         assert shared.stop == ["Original:"]
+        assert shared._effective_stop() == ["Original:"]
