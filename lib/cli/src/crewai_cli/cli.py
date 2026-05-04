@@ -801,9 +801,10 @@ def traces_enable() -> None:
     _save_user_data(user_data)
 
     panel = Panel(
-        "✅ Trace collection has been enabled!\n\n"
-        "Your crew/flow executions will now send traces to CrewAI+.\n"
-        "Use 'crewai traces disable' to turn off trace collection.",
+        "✅ Trace consent recorded.\n\n"
+        "To activate trace collection, set [bold]CREWAI_TRACING_ENABLED=true[/bold] "
+        "in your environment or .env file.\n"
+        "Use 'crewai traces disable' to revoke consent.",
         title="Traces Enabled",
         border_style="green",
         padding=(1, 2),
