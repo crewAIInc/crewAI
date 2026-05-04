@@ -9,7 +9,7 @@ The `TavilyExtractorTool` allows CrewAI agents to extract structured content fro
 To use the `TavilyExtractorTool`, you need to install the `tavily-python` library:
 
 ```shell
-pip install 'crewai[tools]' tavily-python
+uv add 'crewai[tools]' tavily-python
 ```
 
 You also need to set your Tavily API key as an environment variable:

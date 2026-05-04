@@ -5,6 +5,7 @@ import click
 from packaging import version
 
 from crewai.cli.utils import build_env_with_all_tool_credentials, read_toml
+from crewai.utilities.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
 from crewai.utilities.version import get_crewai_version
 
 
@@ -13,13 +14,18 @@ class CrewType(Enum):
     FLOW = "flow"
 
 
-def run_crew() -> None:
-    """
-    Run the crew or flow by running a command in the UV environment.
+def run_crew(trained_agents_file: str | None = None) -> None:
+    """Run the crew or flow by running a command in the UV environment.
 
     Starting from version 0.103.0, this command can be used to run both
     standard crews and flows. For flows, it detects the type from pyproject.toml
     and automatically runs the appropriate command.
+
+    Args:
+        trained_agents_file: Optional path to a trained-agents pickle produced
+            by ``crewai train -f``. When set, exported as
+            ``CREWAI_TRAINED_AGENTS_FILE`` so agents load suggestions from this
+            file instead of the default ``trained_agents_data.pkl``.
     """
     crewai_version = get_crewai_version()
     min_required_version = "0.71.0"
@@ -43,19 +49,24 @@ def run_crew() -> None:
     click.echo(f"Running the {'Flow' if is_flow else 'Crew'}")
 
     # Execute the appropriate command
-    execute_command(crew_type)
+    execute_command(crew_type, trained_agents_file=trained_agents_file)
 
 
-def execute_command(crew_type: CrewType) -> None:
-    """
-    Execute the appropriate command based on crew type.
+def execute_command(
+    crew_type: CrewType, trained_agents_file: str | None = None
+) -> None:
+    """Execute the appropriate command based on crew type.
 
     Args:
-        crew_type: The type of crew to run
+        crew_type: The type of crew to run.
+        trained_agents_file: Optional trained-agents pickle path forwarded to
+            the subprocess via the ``CREWAI_TRAINED_AGENTS_FILE`` env var.
     """
     command = ["uv", "run", "kickoff" if crew_type == CrewType.FLOW else "run_crew"]
 
     env = build_env_with_all_tool_credentials()
+    if trained_agents_file:
+        env[CREWAI_TRAINED_AGENTS_FILE_ENV] = trained_agents_file
 
     try:
         subprocess.run(command, capture_output=False, text=True, check=True, env=env)  # noqa: S603

@@ -690,6 +690,27 @@ def test_multiple_guardrails_with_pydantic_output():
     assert parsed["processed"] is True
 
 
+def test_export_output_accepts_pydantic_input():
+    """Regression test for #5458: _export_output must not crash with TypeError
+    when called with a Pydantic instance (e.g. when an upstream caller passes
+    an already-converted model from a context task)."""
+    from pydantic import BaseModel
+
+    class StructuredResult(BaseModel):
+        value: str
+
+    task = create_smart_task(
+        description="Test pydantic export",
+        expected_output="Structured output",
+        output_pydantic=StructuredResult,
+    )
+
+    instance = StructuredResult(value="ok")
+    pydantic_output, json_output = task._export_output(instance)
+    assert pydantic_output is instance
+    assert json_output is None
+
+
 def test_guardrails_vs_single_guardrail_mutual_exclusion():
     """Test that guardrails list nullifies single guardrail."""
 
