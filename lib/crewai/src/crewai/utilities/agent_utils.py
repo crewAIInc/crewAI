@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 import concurrent.futures
+import contextlib
 import contextvars
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -22,7 +23,7 @@ from crewai.agents.parser import (
     parse,
 )
 from crewai.cli.config import Settings
-from crewai.llms.base_llm import BaseLLM
+from crewai.llms.base_llm import BaseLLM, call_stop_override
 from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
@@ -236,6 +237,38 @@ def extract_task_section(text: str) -> str:
     if len(text) > 2000:
         return text[:2000] + "\n... [truncated]"
     return text
+
+
+def _executor_stop_words(
+    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
+) -> list[str]:
+    """Return the executor's stop words, regardless of which field name it uses."""
+    if executor_context is None:
+        return []
+    stops = getattr(executor_context, "stop", None)
+    if stops is None:
+        stops = getattr(executor_context, "stop_words", None)
+    return list(stops) if stops else []
+
+
+@contextlib.contextmanager
+def _llm_stop_words_applied(
+    llm: LLM | BaseLLM,
+    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
+) -> Iterator[None]:
+    """Apply the executor's stop words to the LLM for the duration of one call.
+
+    Uses :func:`crewai.llms.base_llm.call_stop_override` so the LLM's stop
+    field is never mutated. Safe under concurrent execution: the override is
+    propagated via a :class:`contextvars.ContextVar` and is scoped to this
+    call's task / thread context.
+    """
+    extra = _executor_stop_words(executor_context)
+    if not extra or not isinstance(llm, BaseLLM) or set(extra).issubset(llm.stop):
+        yield
+        return
+    with call_stop_override(llm, list(set(llm.stop + extra))):
+        yield
 
 
 def has_reached_max_iterations(iterations: int, max_iterations: int) -> bool:
@@ -459,18 +492,15 @@ def get_llm_response(
     """
     messages = _prepare_llm_call(executor_context, messages, printer, verbose=verbose)
 
-    try:
-        answer = llm.call(
-            messages,
-            tools=tools,
-            callbacks=callbacks,
-            available_functions=available_functions,
-            from_task=from_task,
-            from_agent=from_agent,
-            response_model=response_model,
-        )
-    except Exception as e:
-        raise e
+    answer = llm.call(
+        messages,
+        tools=tools,
+        callbacks=callbacks,
+        available_functions=available_functions,
+        from_task=from_task,
+        from_agent=from_agent,
+        response_model=response_model,
+    )
 
     return _validate_and_finalize_llm_response(
         answer, executor_context, printer, verbose=verbose
@@ -515,18 +545,15 @@ async def aget_llm_response(
     """
     messages = _prepare_llm_call(executor_context, messages, printer, verbose=verbose)
 
-    try:
-        answer = await llm.acall(
-            messages,
-            tools=tools,
-            callbacks=callbacks,
-            available_functions=available_functions,
-            from_task=from_task,
-            from_agent=from_agent,
-            response_model=response_model,
-        )
-    except Exception as e:
-        raise e
+    answer = await llm.acall(
+        messages,
+        tools=tools,
+        callbacks=callbacks,
+        available_functions=available_functions,
+        from_task=from_task,
+        from_agent=from_agent,
+        response_model=response_model,
+    )
 
     return _validate_and_finalize_llm_response(
         answer, executor_context, printer, verbose=verbose

@@ -2452,3 +2452,167 @@ def test_agent_mcps_accepts_legacy_prefix_with_tool():
         mcps=["crewai-amp:notion#get_page"],
     )
     assert agent.mcps == ["crewai-amp:notion#get_page"]
+
+
+class TestSharedLLMStopWords:
+    """Regression tests for shared LLM stop words mutation (issue #5141).
+
+    Stop words from one executor must not leak into the shared LLM permanently
+    or pollute other agents sharing that LLM.
+    """
+
+    @staticmethod
+    def _make_executor(llm: LLM, stop_words: list[str]) -> CrewAgentExecutor:
+        """Build a CrewAgentExecutor with minimal deps."""
+        from crewai.agents.tools_handler import ToolsHandler
+
+        agent = Agent(role="r", goal="g", backstory="b")
+        task = Task(description="d", expected_output="o", agent=agent)
+        return CrewAgentExecutor(
+            agent=agent,
+            task=task,
+            llm=llm,
+            crew=None,
+            prompt={"prompt": "p {input} {tool_names} {tools}"},
+            max_iter=5,
+            tools=[],
+            tools_names="",
+            stop_words=stop_words,
+            tools_description="",
+            tools_handler=ToolsHandler(),
+        )
+
+    def test_executor_init_does_not_mutate_shared_llm(self) -> None:
+        """Constructing executors must not touch the shared LLM's stop list."""
+        shared = LLM(model="gpt-4", stop=["Original:"])
+        original = list(shared.stop)
+
+        a = self._make_executor(shared, stop_words=["StopA:"])
+        b = self._make_executor(shared, stop_words=["StopB:"])
+
+        assert shared.stop == original
+        assert a.llm is shared
+        assert b.llm is shared
+
+    def test_effective_stop_reflects_override_inside_context(self) -> None:
+        """Inside the helper, the effective stop list includes the executor's words."""
+        from crewai.utilities.agent_utils import _llm_stop_words_applied
+
+        shared = LLM(model="gpt-4", stop=["Original:"])
+        executor = self._make_executor(shared, stop_words=["Observation:"])
+
+        with _llm_stop_words_applied(shared, executor):
+            assert set(shared.stop_sequences) == {"Original:", "Observation:"}
+            assert shared.stop == ["Original:"]
+
+        assert shared.stop == ["Original:"]
+        assert shared.stop_sequences == ["Original:"]
+
+    def test_override_cleared_when_context_raises(self) -> None:
+        """A failed call must still clear the per-call stop override."""
+        from crewai.utilities.agent_utils import _llm_stop_words_applied
+
+        shared = LLM(model="gpt-4", stop=["Original:"])
+        executor = self._make_executor(shared, stop_words=["Observation:"])
+
+        try:
+            with _llm_stop_words_applied(shared, executor):
+                raise RuntimeError("boom")
+        except RuntimeError:
+            pass
+
+        assert shared.stop == ["Original:"]
+        assert shared.stop_sequences == ["Original:"]
+
+    def test_override_applies_for_post_processing_when_api_lacks_stop_support(
+        self,
+    ) -> None:
+        """Models that lack API-level stop support still need the override.
+
+        Native providers (e.g. Azure on gpt-5/o-series) read ``stop_sequences``
+        in ``_apply_stop_words`` to truncate the response post-hoc even when
+        ``supports_stop_words()`` returns False, so the override must be set
+        regardless of API-level support. (Issue raised by Cursor Bugbot.)
+        """
+        from unittest.mock import patch
+        from crewai.utilities.agent_utils import _llm_stop_words_applied
+
+        shared = LLM(model="gpt-4", stop=["Original:"])
+        executor = self._make_executor(shared, stop_words=["Observation:"])
+
+        with patch.object(shared, "supports_stop_words", return_value=False):
+            with _llm_stop_words_applied(shared, executor):
+                assert set(shared.stop_sequences) == {"Original:", "Observation:"}
+
+        assert shared.stop == ["Original:"]
+        assert shared.stop_sequences == ["Original:"]
+
+    def test_concurrent_overrides_do_not_collide(self) -> None:
+        """Concurrent agents on a shared LLM must each see their own effective stop."""
+        import asyncio
+        from crewai.utilities.agent_utils import _llm_stop_words_applied
+
+        shared = LLM(model="gpt-4", stop=["Original:"])
+        exec_a = self._make_executor(shared, stop_words=["StopA:"])
+        exec_b = self._make_executor(shared, stop_words=["StopB:"])
+
+        async def run(executor: CrewAgentExecutor, expected: str) -> set[str]:
+            with _llm_stop_words_applied(shared, executor):
+                await asyncio.sleep(0)
+                seen = set(shared.stop_sequences)
+                assert expected in seen
+                return seen
+
+        async def main() -> tuple[set[str], set[str]]:
+            return await asyncio.gather(
+                run(exec_a, "StopA:"), run(exec_b, "StopB:")
+            )
+
+        a_seen, b_seen = asyncio.run(main())
+        assert a_seen == {"Original:", "StopA:"}
+        assert b_seen == {"Original:", "StopB:"}
+        assert shared.stop == ["Original:"]
+        assert shared.stop_sequences == ["Original:"]
+
+    def test_override_does_not_leak_to_other_llm_instances(self) -> None:
+        """Override for one LLM must not affect another LLM (e.g. function_calling_llm).
+
+        Regression for Cursor Bugbot: a global ContextVar would leak the
+        override to every BaseLLM that reads stop_sequences during the scope.
+        """
+        from crewai.utilities.agent_utils import _llm_stop_words_applied
+
+        target = LLM(model="gpt-4", stop=["TargetStop:"])
+        other = LLM(model="gpt-4", stop=["OtherStop:"])
+        executor = self._make_executor(target, stop_words=["Observation:"])
+
+        with _llm_stop_words_applied(target, executor):
+            assert set(target.stop_sequences) == {"TargetStop:", "Observation:"}
+            assert other.stop_sequences == ["OtherStop:"]
+
+        assert target.stop_sequences == ["TargetStop:"]
+        assert other.stop_sequences == ["OtherStop:"]
+
+    def test_override_propagates_to_nested_direct_llm_calls(self) -> None:
+        """Once invoke wraps with the override, nested direct llm.call sites
+        (StepExecutor, handle_max_iterations_exceeded) see the merged stops.
+
+        Regression for Cursor Bugbot: those direct call sites bypass
+        get_llm_response, so the override must be set at executor entry, not
+        only around get_llm_response.
+        """
+        from crewai.utilities.agent_utils import _llm_stop_words_applied
+
+        shared = LLM(model="gpt-4", stop=["Original:"])
+        executor = self._make_executor(shared, stop_words=["Observation:"])
+
+        seen: list[set[str]] = []
+
+        def nested_direct_call() -> None:
+            seen.append(set(shared.stop_sequences))
+
+        with _llm_stop_words_applied(shared, executor):
+            nested_direct_call()
+
+        assert seen == [{"Original:", "Observation:"}]
+        assert shared.stop == ["Original:"]
