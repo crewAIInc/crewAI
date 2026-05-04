@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 from typing import TYPE_CHECKING, Any, Final, TypedDict
@@ -41,6 +42,45 @@ class ConverterError(Exception):
 class Converter(OutputConverter):
     """Class that converts text into either pydantic or json."""
 
+    def _build_messages(self) -> list[dict[str, str]]:
+        return [
+            {"role": "system", "content": self.instructions},
+            {"role": "user", "content": self.text},
+        ]
+
+    def _coerce_response_to_pydantic(self, response: Any) -> BaseModel:
+        """Validate an LLM response into the configured Pydantic model.
+
+        Pure post-processing — performs no I/O. Shared by ``to_pydantic`` and
+        ``ato_pydantic`` so the validation/partial-JSON fallback logic stays in
+        a single place.
+        """
+        if isinstance(response, BaseModel):
+            return response
+        try:
+            return self.model.model_validate_json(response)
+        except ValidationError:
+            partial = handle_partial_json(
+                result=response,
+                model=self.model,
+                is_json_output=False,
+                agent=None,
+            )
+            if isinstance(partial, BaseModel):
+                return partial
+            if isinstance(partial, dict):
+                return self.model.model_validate(partial)
+            if isinstance(partial, str):
+                try:
+                    return self.model.model_validate_json(partial)
+                except Exception as parse_err:
+                    raise ConverterError(
+                        f"Failed to convert partial JSON result into Pydantic: {parse_err}"
+                    ) from parse_err
+            raise ConverterError(
+                "handle_partial_json returned an unexpected type."
+            ) from None
+
     def to_pydantic(self, current_attempt: int = 1) -> BaseModel:
         """Convert text to pydantic.
 
@@ -56,50 +96,12 @@ class Converter(OutputConverter):
         try:
             if self.llm.supports_function_calling():
                 response = self.llm.call(
-                    messages=[
-                        {"role": "system", "content": self.instructions},
-                        {"role": "user", "content": self.text},
-                    ],
+                    messages=self._build_messages(),
                     response_model=self.model,
                 )
-                if isinstance(response, BaseModel):
-                    result = response
-                else:
-                    result = self.model.model_validate_json(response)
             else:
-                response = self.llm.call(
-                    [
-                        {"role": "system", "content": self.instructions},
-                        {"role": "user", "content": self.text},
-                    ]
-                )
-                try:
-                    # Try to directly validate the response JSON
-                    result = self.model.model_validate_json(response)
-                except ValidationError:
-                    # If direct validation fails, attempt to extract valid JSON
-                    result = handle_partial_json(  # type: ignore[assignment]
-                        result=response,
-                        model=self.model,
-                        is_json_output=False,
-                        agent=None,
-                    )
-                    # Ensure result is a BaseModel instance
-                    if not isinstance(result, BaseModel):
-                        if isinstance(result, dict):
-                            result = self.model.model_validate(result)
-                        elif isinstance(result, str):
-                            try:
-                                result = self.model.model_validate_json(result)
-                            except Exception as parse_err:
-                                raise ConverterError(
-                                    f"Failed to convert partial JSON result into Pydantic: {parse_err}"
-                                ) from parse_err
-                        else:
-                            raise ConverterError(
-                                "handle_partial_json returned an unexpected type."
-                            ) from None
-            return result
+                response = self.llm.call(self._build_messages())
+            return self._coerce_response_to_pydantic(response)
         except ValidationError as e:
             if current_attempt < self.max_attempts:
                 return self.to_pydantic(current_attempt + 1)
@@ -109,6 +111,30 @@ class Converter(OutputConverter):
         except Exception as e:
             if current_attempt < self.max_attempts:
                 return self.to_pydantic(current_attempt + 1)
+            raise ConverterError(
+                f"Failed to convert text into a Pydantic model due to error: {e}"
+            ) from e
+
+    async def ato_pydantic(self, current_attempt: int = 1) -> BaseModel:
+        """Async equivalent of ``to_pydantic`` — uses ``acall`` so the event loop is not blocked."""
+        try:
+            if self.llm.supports_function_calling():
+                response = await self.llm.acall(
+                    messages=self._build_messages(),
+                    response_model=self.model,
+                )
+            else:
+                response = await self.llm.acall(self._build_messages())
+            return self._coerce_response_to_pydantic(response)
+        except ValidationError as e:
+            if current_attempt < self.max_attempts:
+                return await self.ato_pydantic(current_attempt + 1)
+            raise ConverterError(
+                f"Failed to convert text into a Pydantic model due to validation error: {e}"
+            ) from e
+        except Exception as e:
+            if current_attempt < self.max_attempts:
+                return await self.ato_pydantic(current_attempt + 1)
             raise ConverterError(
                 f"Failed to convert text into a Pydantic model due to error: {e}"
             ) from e
@@ -129,17 +155,26 @@ class Converter(OutputConverter):
         try:
             if self.llm.supports_function_calling():
                 return self._create_instructor().to_json()
-            return json.dumps(
-                self.llm.call(
-                    [
-                        {"role": "system", "content": self.instructions},
-                        {"role": "user", "content": self.text},
-                    ]
-                )
-            )
+            return json.dumps(self.llm.call(self._build_messages()))
         except Exception as e:
             if current_attempt < self.max_attempts:
                 return self.to_json(current_attempt + 1)
+            return ConverterError(f"Failed to convert text into JSON, error: {e}.")
+
+    async def ato_json(self, current_attempt: int = 1) -> str | ConverterError | Any:
+        """Async equivalent of ``to_json``.
+
+        The function-calling path delegates to ``InternalInstructor`` (currently
+        sync-only); we run it via ``asyncio.to_thread`` so the event loop stays
+        free.
+        """
+        try:
+            if self.llm.supports_function_calling():
+                return await asyncio.to_thread(self._create_instructor().to_json)
+            return json.dumps(await self.llm.acall(self._build_messages()))
+        except Exception as e:
+            if current_attempt < self.max_attempts:
+                return await self.ato_json(current_attempt + 1)
             return ConverterError(f"Failed to convert text into JSON, error: {e}.")
 
     def _create_instructor(self) -> InternalInstructor[Any]:
@@ -341,6 +376,144 @@ def convert_with_instructions(
     )
     exported_result = (
         converter.to_pydantic() if not is_json_output else converter.to_json()
+    )
+
+    if isinstance(exported_result, ConverterError):
+        if agent and getattr(agent, "verbose", True):
+            PRINTER.print(
+                content=f"Failed to convert result to model: {exported_result}",
+                color="red",
+            )
+        return result
+
+    return exported_result
+
+
+async def async_convert_to_model(
+    result: str | BaseModel,
+    output_pydantic: type[BaseModel] | None,
+    output_json: type[BaseModel] | None,
+    agent: Agent | BaseAgent | None = None,
+    converter_cls: type[Converter] | None = None,
+) -> dict[str, Any] | BaseModel | str:
+    """Async equivalent of ``convert_to_model`` — uses native ``acall``.
+
+    Mirrors the dispatch semantics of the sync version exactly; the only
+    difference is that LLM-bearing branches are awaited.
+    """
+    model = output_pydantic or output_json
+    if model is None:
+        return result
+
+    if isinstance(result, BaseModel):
+        if isinstance(result, model):
+            return result.model_dump() if output_json else result
+        result = result.model_dump_json()
+
+    if converter_cls:
+        return await async_convert_with_instructions(
+            result=result,
+            model=model,
+            is_json_output=bool(output_json),
+            agent=agent,
+            converter_cls=converter_cls,
+        )
+
+    try:
+        escaped_result = json.dumps(json.loads(result, strict=False))
+        return validate_model(
+            result=escaped_result, model=model, is_json_output=bool(output_json)
+        )
+    except (json.JSONDecodeError, ValidationError):
+        return await async_handle_partial_json(
+            result=result,
+            model=model,
+            is_json_output=bool(output_json),
+            agent=agent,
+            converter_cls=converter_cls,
+        )
+    except Exception as e:
+        if agent and getattr(agent, "verbose", True):
+            PRINTER.print(
+                content=f"Unexpected error during model conversion: {type(e).__name__}: {e}. Returning original result.",
+                color="red",
+            )
+        return result
+
+
+async def async_handle_partial_json(
+    result: str,
+    model: type[BaseModel],
+    is_json_output: bool,
+    agent: Agent | BaseAgent | None,
+    converter_cls: type[Converter] | None = None,
+) -> dict[str, Any] | BaseModel | str:
+    """Async equivalent of ``handle_partial_json`` — defers LLM fallback to ``acall``."""
+    match = _JSON_PATTERN.search(result)
+    if match:
+        try:
+            parsed = json.loads(match.group(), strict=False)
+        except json.JSONDecodeError:
+            return await async_convert_with_instructions(
+                result=result,
+                model=model,
+                is_json_output=is_json_output,
+                agent=agent,
+                converter_cls=converter_cls,
+            )
+
+        try:
+            exported_result = model.model_validate(parsed)
+            if is_json_output:
+                return exported_result.model_dump()
+            return exported_result
+        except ValidationError:
+            raise
+        except Exception as e:
+            if agent and getattr(agent, "verbose", True):
+                PRINTER.print(
+                    content=f"Unexpected error during partial JSON handling: {type(e).__name__}: {e}. Attempting alternative conversion method.",
+                    color="red",
+                )
+
+    return await async_convert_with_instructions(
+        result=result,
+        model=model,
+        is_json_output=is_json_output,
+        agent=agent,
+        converter_cls=converter_cls,
+    )
+
+
+async def async_convert_with_instructions(
+    result: str,
+    model: type[BaseModel],
+    is_json_output: bool,
+    agent: Agent | BaseAgent | None,
+    converter_cls: type[Converter] | None = None,
+) -> dict[str, Any] | BaseModel | str:
+    """Async equivalent of ``convert_with_instructions`` — calls ``ato_pydantic``/``ato_json``."""
+    if agent is None:
+        raise TypeError("Agent must be provided if converter_cls is not specified.")
+
+    llm = getattr(agent, "function_calling_llm", None) or agent.llm
+
+    if llm is None:
+        raise ValueError("Agent must have a valid LLM instance for conversion")
+
+    instructions = get_conversion_instructions(model=model, llm=llm)
+    converter = create_converter(
+        agent=agent,
+        converter_cls=converter_cls,
+        llm=llm,
+        text=result,
+        model=model,
+        instructions=instructions,
+    )
+    exported_result = (
+        await converter.ato_pydantic()
+        if not is_json_output
+        else await converter.ato_json()
     )
 
     if isinstance(exported_result, ConverterError):
