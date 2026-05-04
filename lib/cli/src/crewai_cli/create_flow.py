@@ -12,13 +12,13 @@ def create_flow(name: str) -> None:
 
     click.secho(f"Creating flow {folder_name}...", fg="green", bold=True)
 
-    telemetry = Telemetry()
-    telemetry.flow_creation_span(class_name)
-
     project_root = Path(folder_name)
     if project_root.exists():
         click.secho(f"Error: Folder {folder_name} already exists.", fg="red")
         return
+
+    telemetry = Telemetry()
+    telemetry.flow_creation_span(class_name)
 
     # Create directory structure
     (project_root / "src" / folder_name).mkdir(parents=True)

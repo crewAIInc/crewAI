@@ -47,7 +47,6 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         BaseCommand.__init__(self)
         PlusAPIMixin.__init__(self, telemetry=self._telemetry)
         self.project_name = get_project_name(require=True)
-        self._validate_project_structure()
 
     def _validate_project_structure(self) -> None:
         """Validate that the local project has the files required for deployment."""
@@ -127,6 +126,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             uuid (Optional[str]): The UUID of the crew to deploy.
             skip_validate (bool): Skip pre-deploy validation checks.
         """
+        self._validate_project_structure()
         if not _run_predeploy_validation(skip_validate):
             return
         self._telemetry.start_deployment_span(uuid)
@@ -150,6 +150,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             confirm (bool): Whether to skip the interactive confirmation prompt.
             skip_validate (bool): Skip pre-deploy validation checks.
         """
+        self._validate_project_structure()
         if not _run_predeploy_validation(skip_validate):
             return
         self._telemetry.create_crew_deployment_span()

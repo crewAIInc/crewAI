@@ -125,8 +125,9 @@ class TestDeployCommand(unittest.TestCase):
             )
             self.assertIn("2023-01-01 - INFO: Test log", fake_out.getvalue())
 
+    @patch.object(DeployCommand, "_validate_project_structure")
     @patch("crewai_cli.deploy.main.DeployCommand._display_deployment_info")
-    def test_deploy_with_uuid(self, mock_display):
+    def test_deploy_with_uuid(self, mock_display, mock_validate_structure):
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"uuid": "test-uuid"}
@@ -137,8 +138,9 @@ class TestDeployCommand(unittest.TestCase):
         self.mock_client.deploy_by_uuid.assert_called_once_with("test-uuid")
         mock_display.assert_called_once_with({"uuid": "test-uuid"})
 
+    @patch.object(DeployCommand, "_validate_project_structure")
     @patch("crewai_cli.deploy.main.DeployCommand._display_deployment_info")
-    def test_deploy_with_project_name(self, mock_display):
+    def test_deploy_with_project_name(self, mock_display, mock_validate_structure):
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"uuid": "test-uuid"}
@@ -149,10 +151,13 @@ class TestDeployCommand(unittest.TestCase):
         self.mock_client.deploy_by_name.assert_called_once_with("test_project")
         mock_display.assert_called_once_with({"uuid": "test-uuid"})
 
+    @patch.object(DeployCommand, "_validate_project_structure")
     @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
     @patch("crewai_cli.deploy.main.git.Repository.origin_url")
     @patch("builtins.input")
-    def test_create_crew(self, mock_input, mock_git_origin_url, mock_fetch_env):
+    def test_create_crew(
+        self, mock_input, mock_git_origin_url, mock_fetch_env, mock_validate_structure
+    ):
         mock_fetch_env.return_value = {"ENV_VAR": "value"}
         mock_git_origin_url.return_value = "https://github.com/test/repo.git"
         mock_input.return_value = ""
