@@ -419,7 +419,6 @@ def test_create_crew_aborts_on_validation_error(tmp_path: Path) -> None:
         mock_patch("crewai_cli.command.get_auth_token", return_value="tok"),
         mock_patch("crewai_cli.deploy.main.get_project_name", return_value="p"),
         mock_patch("crewai_cli.command.PlusAPI") as mock_api,
-        mock_patch.object(DeployCommand, "_validate_project_structure"),
         mock_patch(
             "crewai_cli.deploy.main.validate_project"
         ) as mock_validate,

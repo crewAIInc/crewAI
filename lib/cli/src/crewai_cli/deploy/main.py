@@ -1,4 +1,3 @@
-from pathlib import Path
 from typing import Any
 
 from rich.console import Console
@@ -48,40 +47,6 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         PlusAPIMixin.__init__(self, telemetry=self._telemetry)
         self.project_name = get_project_name(require=True)
 
-    def _validate_project_structure(self) -> None:
-        """Validate that the local project has the files required for deployment."""
-        errors: list[str] = []
-
-        if not Path("pyproject.toml").exists():
-            errors.append("Cannot find pyproject.toml in the current directory.")
-
-        has_lockfile = Path("uv.lock").exists() or Path("poetry.lock").exists()
-        if not has_lockfile:
-            errors.append(
-                "No uv.lock or poetry.lock found. "
-                "Run 'uv lock' or 'poetry lock' to generate one."
-            )
-
-        src_dir = Path("src") / (self.project_name or "")
-        crew_py = src_dir / "crew.py"
-        config_dir = src_dir / "config"
-        if not crew_py.exists() and not config_dir.exists():
-            errors.append(
-                f"Cannot find src/{self.project_name}/crew.py or "
-                f"src/{self.project_name}/config. "
-                "Ensure you are running this command from the project root."
-            )
-
-        if errors:
-            console.print(
-                "\n[bold red]Pre-flight check failed:[/bold red] "
-                "Your project is missing required files for deployment.\n"
-            )
-            for error in errors:
-                console.print(f"  • {error}", style="red")
-            console.print()
-            raise SystemExit(1)
-
     def _standard_no_param_error_message(self) -> None:
         """
         Display a standard error message when no UUID or project name is available.
@@ -126,8 +91,6 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             uuid (Optional[str]): The UUID of the crew to deploy.
             skip_validate (bool): Skip pre-deploy validation checks.
         """
-        if not skip_validate:
-            self._validate_project_structure()
         if not _run_predeploy_validation(skip_validate):
             return
         self._telemetry.start_deployment_span(uuid)
@@ -151,8 +114,6 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             confirm (bool): Whether to skip the interactive confirmation prompt.
             skip_validate (bool): Skip pre-deploy validation checks.
         """
-        if not skip_validate:
-            self._validate_project_structure()
         if not _run_predeploy_validation(skip_validate):
             return
         self._telemetry.create_crew_deployment_span()
