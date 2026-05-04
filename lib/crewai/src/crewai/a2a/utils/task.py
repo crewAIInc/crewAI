@@ -9,9 +9,8 @@ from datetime import datetime
 from functools import wraps
 import json
 import logging
-import os
+import threading
 from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, cast
-from urllib.parse import urlparse
 
 from a2a.server.agent_execution import RequestContext
 from a2a.server.events import EventQueue
@@ -38,7 +37,6 @@ from a2a.utils import (
 from a2a.utils.errors import ServerError
 from aiocache import SimpleMemoryCache, caches  # type: ignore[import-untyped]
 from pydantic import BaseModel
-from typing_extensions import TypedDict
 
 from crewai.a2a.utils.agent_card import _get_server_config
 from crewai.a2a.utils.content_type import validate_message_parts
@@ -50,12 +48,18 @@ from crewai.events.types.a2a_events import (
     A2AServerTaskStartedEvent,
 )
 from crewai.task import Task
+from crewai.utilities.cache_config import (
+    get_aiocache_config,
+    parse_cache_url,
+    use_valkey_cache,
+)
 from crewai.utilities.pydantic_schema_utils import create_model_from_schema
 
 
 if TYPE_CHECKING:
     from crewai.a2a.extensions.server import ExtensionContext, ServerExtensionRegistry
     from crewai.agent import Agent
+    from crewai.memory.storage.valkey_cache import ValkeyCache
 
 
 logger = logging.getLogger(__name__)
@@ -64,52 +68,61 @@ P = ParamSpec("P")
 T = TypeVar("T")
 
 
-class RedisCacheConfig(TypedDict, total=False):
-    """Configuration for aiocache Redis backend."""
+# ---------------------------------------------------------------------------
+# Lazy cache initialisation
+# ---------------------------------------------------------------------------
 
-    cache: str
-    endpoint: str
-    port: int
-    db: int
-    password: str
+_task_cache: ValkeyCache | None = None
+_lazy_init_complete = False
+_cache_init_lock = threading.Lock()
+
+# Cancellation polling interval in seconds.
+_CANCEL_POLL_INTERVAL = 0.1
+
+# Configure aiocache at import time (matches upstream behaviour).
+# This is safe — it only touches aiocache, no optional dependencies.
+# The Valkey path is deferred to _ensure_task_cache() to avoid importing
+# valkey-glide at module level (it may not be installed).
+if not use_valkey_cache():
+    caches.set_config(get_aiocache_config())
 
 
-def _parse_redis_url(url: str) -> RedisCacheConfig:
-    """Parse a Redis URL into aiocache configuration.
+def _ensure_task_cache() -> None:
+    """Initialise the Valkey task cache on first use (thread-safe).
 
-    Args:
-        url: Redis connection URL (e.g., redis://localhost:6379/0).
-
-    Returns:
-        Configuration dict for aiocache.RedisCache.
+    For the aiocache path, configuration happens at module level above.
+    This function only needs to run for the Valkey path.
     """
-    parsed = urlparse(url)
-    config: RedisCacheConfig = {
-        "cache": "aiocache.RedisCache",
-        "endpoint": parsed.hostname or "localhost",
-        "port": parsed.port or 6379,
-    }
-    if parsed.path and parsed.path != "/":
-        try:
-            config["db"] = int(parsed.path.lstrip("/"))
-        except ValueError:
-            pass
-    if parsed.password:
-        config["password"] = parsed.password
-    return config
+    global _task_cache, _lazy_init_complete
+    if _lazy_init_complete:
+        return
 
+    with _cache_init_lock:
+        if _lazy_init_complete:
+            return
 
-_redis_url = os.environ.get("REDIS_URL")
+        if use_valkey_cache():
+            from crewai.memory.storage.valkey_cache import ValkeyCache
 
-caches.set_config(
-    {
-        "default": _parse_redis_url(_redis_url)
-        if _redis_url
-        else {
-            "cache": "aiocache.SimpleMemoryCache",
-        }
-    }
-)
+            conn = parse_cache_url() or {}
+            try:
+                _task_cache = ValkeyCache(
+                    host=conn.get("host", "localhost"),
+                    port=conn.get("port", 6379),
+                    db=conn.get("db", 0),
+                    password=conn.get("password"),
+                    default_ttl=3600,
+                )
+            except Exception as e:
+                logger.error(
+                    "Failed to initialize ValkeyCache for task cancellation, "
+                    "falling back to aiocache",
+                    extra={"error": str(e)},
+                )
+                caches.set_config(get_aiocache_config())
+                _task_cache = None
+
+        _lazy_init_complete = True
 
 
 def cancellable(
@@ -130,6 +143,8 @@ def cancellable(
     @wraps(fn)
     async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
         """Wrap function with cancellation monitoring."""
+        _ensure_task_cache()
+
         context: RequestContext | None = None
         for arg in args:
             if isinstance(arg, RequestContext):
@@ -142,19 +157,34 @@ def cancellable(
             return await fn(*args, **kwargs)
 
         task_id = context.task_id
-        cache = caches.get("default")
 
-        async def poll_for_cancel() -> bool:
-            """Poll cache for cancellation flag."""
+        async def poll_for_cancel_valkey() -> bool:
+            """Poll ValkeyCache for cancellation flag."""
+            while True:
+                if _task_cache is not None and await _task_cache.get(
+                    f"cancel:{task_id}"
+                ):
+                    return True
+                await asyncio.sleep(_CANCEL_POLL_INTERVAL)
+
+        async def poll_for_cancel_aiocache() -> bool:
+            """Poll aiocache for cancellation flag."""
+            cache = caches.get("default")
             while True:
                 if await cache.get(f"cancel:{task_id}"):
                     return True
-                await asyncio.sleep(0.1)
+                await asyncio.sleep(_CANCEL_POLL_INTERVAL)
 
         async def watch_for_cancel() -> bool:
             """Watch for cancellation events via pub/sub or polling."""
+            if _task_cache is not None:
+                # ValkeyCache: use polling (pub/sub not implemented yet)
+                return await poll_for_cancel_valkey()
+
+            # aiocache: use pub/sub if Redis, otherwise poll
+            cache = caches.get("default")
             if isinstance(cache, SimpleMemoryCache):
-                return await poll_for_cancel()
+                return await poll_for_cancel_aiocache()
 
             try:
                 client = cache.client
@@ -168,7 +198,7 @@ def cancellable(
                     "Cancel watcher Redis error, falling back to polling",
                     extra={"task_id": task_id, "error": str(e)},
                 )
-                return await poll_for_cancel()
+                return await poll_for_cancel_aiocache()
             return False
 
         execute_task = asyncio.create_task(fn(*args, **kwargs))
@@ -190,7 +220,12 @@ def cancellable(
             cancel_watch.cancel()
             return execute_task.result()
         finally:
-            await cache.delete(f"cancel:{task_id}")
+            # Clean up cancellation flag
+            if _task_cache is not None:
+                await _task_cache.delete(f"cancel:{task_id}")
+            else:
+                cache = caches.get("default")
+                await cache.delete(f"cancel:{task_id}")
 
     return wrapper
 
@@ -475,6 +510,8 @@ async def cancel(
     if task_id is None or context_id is None:
         raise ServerError(InvalidParamsError(message="task_id and context_id required"))
 
+    _ensure_task_cache()
+
     if context.current_task and context.current_task.status.state in (
         TaskState.completed,
         TaskState.failed,
@@ -482,11 +519,16 @@ async def cancel(
     ):
         return context.current_task
 
-    cache = caches.get("default")
-
-    await cache.set(f"cancel:{task_id}", True, ttl=3600)
-    if not isinstance(cache, SimpleMemoryCache):
-        await cache.client.publish(f"cancel:{task_id}", "cancel")
+    if _task_cache is not None:
+        # Use ValkeyCache
+        await _task_cache.set(f"cancel:{task_id}", True, ttl=3600)
+        # Note: pub/sub not implemented for ValkeyCache yet, relies on polling
+    else:
+        # Use aiocache
+        cache = caches.get("default")
+        await cache.set(f"cancel:{task_id}", True, ttl=3600)
+        if not isinstance(cache, SimpleMemoryCache):
+            await cache.client.publish(f"cancel:{task_id}", "cancel")
 
     await event_queue.enqueue_event(
         TaskStatusUpdateEvent(
