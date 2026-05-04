@@ -4,6 +4,34 @@ description: "تحديثات المنتج والتحسينات وإصلاحات 
 icon: "clock"
 mode: "wide"
 ---
+<Update label="4 مايو 2026">
+  ## v1.14.5a2
+
+  [عرض الإصدار على GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.5a2)
+
+  ## ما الذي تغير
+
+  ### إصلاحات الأخطاء
+  - إصلاح استعادة مخرجات المهام في كتلة finally
+  - تضمين `thoughts_token_count` في رموز الإكمال
+  - الحفاظ على مخرجات المهام عبر تفريغ دفعات غير متزامنة
+  - تمرير kwargs إلى استدعاءات المحمل في `CrewAIRagAdapter`
+  - منع `result_as_answer` من إرجاع رسالة كتلة الخطاف كإجابة نهائية
+  - منع `result_as_answer` من إرجاع خطأ كإجابة نهائية
+  - استخدام `acall` لتحويل المخرجات في المسارات غير المتزامنة
+  - منع تغيير كلمات التوقف المشتركة في LLM عبر الوكلاء
+  - التعامل مع مدخلات `BaseModel` في `convert_to_model`
+
+  ### الوثائق
+  - توثيق متغيرات البيئة الإضافية
+  - تحديث سجل التغييرات والإصدار لـ v1.14.5a1
+
+  ## المساهمون
+
+  @NIK-TIGER-BILL, @greysonlalonde, @lorenzejay, @minasami-pr, @theCyberTech, @wishhyt
+
+</Update>
+
 <Update label="1 مايو 2026">
   ## v1.14.5a1
 
