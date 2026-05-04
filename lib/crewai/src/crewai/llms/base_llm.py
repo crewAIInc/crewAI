@@ -178,19 +178,12 @@ class BaseLLM(BaseModel, ABC):
 
     @property
     def stop_sequences(self) -> list[str]:
-        """Alias for ``stop`` — kept for backward compatibility with provider APIs.
+        """Stop list active for the current call.
 
-        Honors the per-call stop override set via :func:`call_stop_override` so
-        that callers can supply additional stop sequences for a single call
-        without mutating the shared instance.
-        """
-        return self._effective_stop()
-
-    def _effective_stop(self) -> list[str]:
-        """Return the stop list active for the current call.
-
-        Falls back to the instance-level ``stop`` field when no per-call
-        override is in effect.
+        Returns the per-call override set via :func:`call_stop_override` when
+        one is in effect; otherwise the instance-level ``stop`` field. Kept
+        under this name for backward compatibility with provider APIs that
+        already read ``stop_sequences``.
         """
         override = _call_stop_override_var.get()
         return override if override is not None else self.stop
@@ -371,7 +364,7 @@ class BaseLLM(BaseModel, ABC):
         Returns:
             True if stop words are configured and can be applied
         """
-        return bool(self._effective_stop())
+        return bool(self.stop_sequences)
 
     def _apply_stop_words(self, content: str) -> str:
         """Apply stop words to truncate response content.
@@ -393,14 +386,14 @@ class BaseLLM(BaseModel, ABC):
             >>> llm._apply_stop_words(response)
             "I need to search.\\n\\nAction: search"
         """
-        effective_stop = self._effective_stop()
-        if not effective_stop or not content:
+        stops = self.stop_sequences
+        if not stops or not content:
             return content
 
         earliest_stop_pos = len(content)
         found_stop_word = None
 
-        for stop_word in effective_stop:
+        for stop_word in stops:
             stop_pos = content.find(stop_word)
             if stop_pos != -1 and stop_pos < earliest_stop_pos:
                 earliest_stop_pos = stop_pos

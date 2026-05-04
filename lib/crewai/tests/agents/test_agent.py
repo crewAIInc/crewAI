@@ -2502,12 +2502,11 @@ class TestSharedLLMStopWords:
         executor = self._make_executor(shared, stop_words=["Observation:"])
 
         with _llm_stop_words_applied(shared, executor):
-            assert set(shared._effective_stop()) == {"Original:", "Observation:"}
             assert set(shared.stop_sequences) == {"Original:", "Observation:"}
             assert shared.stop == ["Original:"]
 
         assert shared.stop == ["Original:"]
-        assert shared._effective_stop() == ["Original:"]
+        assert shared.stop_sequences == ["Original:"]
 
     def test_override_cleared_when_context_raises(self) -> None:
         """A failed call must still clear the per-call stop override."""
@@ -2521,7 +2520,7 @@ class TestSharedLLMStopWords:
                 raise RuntimeError("boom")
 
         assert shared.stop == ["Original:"]
-        assert shared._effective_stop() == ["Original:"]
+        assert shared.stop_sequences == ["Original:"]
 
     def test_no_override_when_llm_does_not_support_stop_words(self) -> None:
         """LLMs that ignore stop words must not see a per-call override."""
@@ -2533,7 +2532,7 @@ class TestSharedLLMStopWords:
 
         with patch.object(shared, "supports_stop_words", return_value=False):
             with _llm_stop_words_applied(shared, executor):
-                assert shared._effective_stop() == ["Original:"]
+                assert shared.stop_sequences == ["Original:"]
 
         assert shared.stop == ["Original:"]
 
@@ -2549,7 +2548,7 @@ class TestSharedLLMStopWords:
         async def run(executor: CrewAgentExecutor, expected: str) -> set[str]:
             with _llm_stop_words_applied(shared, executor):
                 await asyncio.sleep(0)
-                seen = set(shared._effective_stop())
+                seen = set(shared.stop_sequences)
                 assert expected in seen
                 return seen
 
@@ -2562,4 +2561,4 @@ class TestSharedLLMStopWords:
         assert a_seen == {"Original:", "StopA:"}
         assert b_seen == {"Original:", "StopB:"}
         assert shared.stop == ["Original:"]
-        assert shared._effective_stop() == ["Original:"]
+        assert shared.stop_sequences == ["Original:"]
