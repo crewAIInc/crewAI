@@ -107,7 +107,7 @@ stagehand = [
     "stagehand>=0.4.1",
 ]
 github = [
-    "gitpython>=3.1.41,<4",
+    "gitpython>=3.1.47,<4",
     "PyGithub==1.59.1",
 ]
 rag = [
