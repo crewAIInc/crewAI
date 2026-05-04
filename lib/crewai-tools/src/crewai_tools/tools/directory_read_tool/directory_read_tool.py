@@ -4,6 +4,8 @@ from typing import Any
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
+from crewai_tools.security.safe_path import validate_directory_path
+
 
 class FixedDirectoryReadToolSchema(BaseModel):
     """Input for DirectoryReadTool."""
@@ -23,7 +25,7 @@ class DirectoryReadTool(BaseTool):
     args_schema: type[BaseModel] = DirectoryReadToolSchema
     directory: str | None = None
 
-    def __init__(self, directory: str | None = None, **kwargs):
+    def __init__(self, directory: str | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         if directory is not None:
             self.directory = directory
@@ -39,6 +41,7 @@ class DirectoryReadTool(BaseTool):
         if directory is None:
             raise ValueError("Directory must be provided.")
 
+        directory = validate_directory_path(directory)
         if directory[-1] == "/":
             directory = directory[:-1]
         files_list = [

@@ -138,7 +138,7 @@ class BraveSearchToolBase(BaseTool, ABC):
         self._rate_limit_lock = threading.Lock()
 
     @property
-    def api_key(self) -> str:
+    def api_key(self) -> str | None:
         return self._api_key
 
     @property
@@ -214,7 +214,8 @@ class BraveSearchToolBase(BaseTool, ABC):
             # Response was OK, return the JSON body
             if resp.ok:
                 try:
-                    return resp.json()
+                    result: dict[str, Any] = resp.json()
+                    return result
                 except ValueError as exc:
                     raise RuntimeError(
                         f"Brave Search API returned invalid JSON (HTTP {resp.status_code}): {exc}"
@@ -239,9 +240,9 @@ class BraveSearchToolBase(BaseTool, ABC):
             # (e.g., 422 Unprocessable Entity, 400 Bad Request (OPTION_NOT_IN_PLAN))
             _raise_for_error(resp)
 
-        # All retries exhausted
-        _raise_for_error(last_resp or resp)  # type: ignore[possibly-undefined]
-        return {}  # unreachable (here to satisfy the type checker and linter)
+        # All retries exhausted — last_resp is always set when we reach here
+        _raise_for_error(last_resp or resp)
+        return {}  # unreachable; satisfies return type
 
     def _run(self, q: str | None = None, **params: Any) -> Any:
         # Allow positional usage: tool.run("latest Brave browser features")

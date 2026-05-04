@@ -10,7 +10,7 @@ from functools import wraps
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, TypedDict, cast
+from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, cast
 from urllib.parse import urlparse
 
 from a2a.server.agent_execution import RequestContext
@@ -38,6 +38,7 @@ from a2a.utils import (
 from a2a.utils.errors import ServerError
 from aiocache import SimpleMemoryCache, caches  # type: ignore[import-untyped]
 from pydantic import BaseModel
+from typing_extensions import TypedDict
 
 from crewai.a2a.utils.agent_card import _get_server_config
 from crewai.a2a.utils.content_type import validate_message_parts

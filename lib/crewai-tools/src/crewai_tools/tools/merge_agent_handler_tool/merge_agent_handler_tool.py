@@ -2,7 +2,7 @@
 
 import json
 import logging
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 from crewai.tools import BaseTool, EnvVar
@@ -108,7 +108,7 @@ class MergeAgentHandlerTool(BaseTool):
                 )
                 raise MergeAgentHandlerToolError(f"API Error: {error_msg}")
 
-            return result
+            return cast(dict[str, Any], result)
 
         except requests.exceptions.RequestException as e:
             logger.error(f"Failed to call Agent Handler API: {e!s}")
@@ -219,8 +219,8 @@ class MergeAgentHandlerTool(BaseTool):
                                 required = params.get("required", [])
 
                                 for field_name, field_schema in properties.items():
-                                    field_type = Any  # Default type
-                                    field_default = ...  # Required by default
+                                    field_type: Any = Any
+                                    field_default: Any = ...
 
                                     # Map JSON schema types to Python types
                                     json_type = field_schema.get("type", "string")
@@ -256,7 +256,7 @@ class MergeAgentHandlerTool(BaseTool):
 
                                 # Create the Pydantic model
                                 if fields:
-                                    args_schema = create_model(
+                                    args_schema = create_model(  # type: ignore[call-overload]
                                         f"{tool_name.replace('__', '_').title()}Args",
                                         **fields,
                                     )

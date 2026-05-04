@@ -64,6 +64,23 @@ def test_gemini_completion_module_is_imported():
     assert hasattr(completion_mod, 'GeminiCompletion')
 
 
+def test_gemini_lazy_build_reads_env_vars_set_after_construction():
+    """When `LLM(model="gemini/...")` is constructed before env vars are set,
+    the lazy client builder must re-read `GOOGLE_API_KEY` / `GEMINI_API_KEY`
+    so the LLM works once credentials become available."""
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    with patch.dict(os.environ, {}, clear=True):
+        llm = GeminiCompletion(model="gemini-1.5-pro")
+        assert llm.api_key is None
+        assert llm._client is None
+
+    with patch.dict(os.environ, {"GEMINI_API_KEY": "late-key"}, clear=True):
+        client = llm._get_sync_client()
+        assert client is not None
+        assert llm.api_key == "late-key"
+
+
 def test_native_gemini_raises_error_when_initialization_fails():
     """
     Test that LLM raises ImportError when native Gemini completion fails.
@@ -556,8 +573,8 @@ def test_gemini_environment_variable_api_key():
     with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-google-key"}):
         llm = LLM(model="google/gemini-2.0-flash-001")
 
-        assert llm.client is not None
-        assert hasattr(llm.client, 'models')
+        assert llm._client is not None
+        assert hasattr(llm._client, 'models')
         assert llm.api_key == "test-google-key"
 
 
@@ -577,6 +594,35 @@ def test_gemini_token_usage_tracking():
     assert usage.prompt_tokens > 0
     assert usage.completion_tokens > 0
     assert usage.total_tokens > 0
+
+
+def test_gemini_thoughts_tokens_counted_in_completion_and_total():
+    """Gemini's thoughts_token_count must be folded into completion_tokens so the
+    tracked total matches the API's total_token_count for thinking models."""
+    from crewai.llms.providers.gemini.completion import GeminiCompletion
+
+    llm = GeminiCompletion(model="gemini-2.0-flash-001")
+
+    response = MagicMock()
+    response.usage_metadata = MagicMock(
+        prompt_token_count=100,
+        candidates_token_count=50,
+        thoughts_token_count=25,
+        total_token_count=175,
+        cached_content_token_count=0,
+    )
+
+    usage = llm._extract_token_usage(response)
+    assert usage["candidates_token_count"] == 50
+    assert usage["completion_tokens"] == 75
+    assert usage["reasoning_tokens"] == 25
+
+    llm._track_token_usage_internal(usage)
+    summary = llm.get_token_usage_summary()
+    assert summary.prompt_tokens == 100
+    assert summary.completion_tokens == 75
+    assert summary.total_tokens == 175
+    assert summary.reasoning_tokens == 25
 
 
 @pytest.mark.vcr()
@@ -655,7 +701,7 @@ def test_gemini_stop_sequences_sent_to_api():
     llm.stop = ["\nObservation:", "\nThought:"]
 
     # Patch the API call to capture parameters without making real call
-    with patch.object(llm.client.models, 'generate_content') as mock_generate:
+    with patch.object(llm._client.models, 'generate_content') as mock_generate:
         mock_response = MagicMock()
         mock_response.text = "Hello"
         mock_response.candidates = []
@@ -1190,3 +1236,42 @@ def test_gemini_cached_prompt_tokens_with_tools():
     # cached_prompt_tokens should be populated (may be 0 if Gemini
     # doesn't cache for this particular request, but the field should exist)
     assert usage.cached_prompt_tokens >= 0
+
+
+def test_gemini_reasoning_tokens_extraction():
+    """Test that thoughts_token_count is extracted as reasoning_tokens from Gemini."""
+    llm = LLM(model="google/gemini-2.0-flash-001")
+
+    mock_response = MagicMock()
+    mock_response.usage_metadata = MagicMock(
+        prompt_token_count=100,
+        candidates_token_count=50,
+        total_token_count=150,
+        cached_content_token_count=10,
+        thoughts_token_count=30,
+    )
+    usage = llm._extract_token_usage(mock_response)
+    assert usage["prompt_token_count"] == 100
+    assert usage["candidates_token_count"] == 50
+    assert usage["total_tokens"] == 150
+    assert usage["cached_prompt_tokens"] == 10
+    assert usage["reasoning_tokens"] == 30
+
+
+def test_gemini_no_thinking_tokens_defaults_to_zero():
+    """Test that missing thoughts_token_count defaults to zero."""
+    llm = LLM(model="google/gemini-2.0-flash-001")
+
+    mock_response = MagicMock()
+    mock_response.usage_metadata = MagicMock(
+        prompt_token_count=80,
+        candidates_token_count=40,
+        total_token_count=120,
+        cached_content_token_count=0,
+        thoughts_token_count=None,
+    )
+    mock_response.candidates = []
+
+    usage = llm._extract_token_usage(mock_response)
+    assert usage["reasoning_tokens"] == 0
+    assert usage["cached_prompt_tokens"] == 0

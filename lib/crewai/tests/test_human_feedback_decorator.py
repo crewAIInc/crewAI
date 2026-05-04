@@ -246,7 +246,7 @@ class TestHumanFeedbackExecution:
     @patch("builtins.input", return_value="")
     @patch("builtins.print")
     def test_empty_feedback_with_default_outcome(self, mock_print, mock_input):
-        """Test empty feedback uses default_outcome."""
+        """Test empty feedback uses default_outcome for routing, but flow returns method output."""
 
         class TestFlow(Flow):
             @start()
@@ -264,14 +264,16 @@ class TestHumanFeedbackExecution:
         with patch.object(flow, "_request_human_feedback", return_value=""):
             result = flow.kickoff()
 
-        assert result == "needs_work"
+        # Flow result is the method's return value, NOT the collapsed outcome
+        assert result == "Content"
         assert flow.last_human_feedback is not None
+        # But the outcome is still correctly set for routing purposes
         assert flow.last_human_feedback.outcome == "needs_work"
 
     @patch("builtins.input", return_value="Approved!")
     @patch("builtins.print")
     def test_feedback_collapsing(self, mock_print, mock_input):
-        """Test that feedback is collapsed to an outcome."""
+        """Test that feedback is collapsed to an outcome for routing, but flow returns method output."""
 
         class TestFlow(Flow):
             @start()
@@ -291,8 +293,10 @@ class TestHumanFeedbackExecution:
         ):
             result = flow.kickoff()
 
-        assert result == "approved"
+        # Flow result is the method's return value, NOT the collapsed outcome
+        assert result == "Content"
         assert flow.last_human_feedback is not None
+        # But the outcome is still correctly set for routing purposes
         assert flow.last_human_feedback.outcome == "approved"
 
 
@@ -591,3 +595,162 @@ class TestHumanFeedbackLearn:
         assert config.learn is True
         # llm defaults to "gpt-4o-mini" at the function level
         assert config.llm == "gpt-4o-mini"
+
+
+class TestHumanFeedbackFinalOutputPreservation:
+    """Tests for preserving method return value as flow's final output when @human_feedback with emit is terminal.
+
+    This addresses the bug where the flow's final output was the collapsed outcome string (e.g., 'approved')
+    instead of the method's actual return value when a @human_feedback method with emit is the final method.
+    """
+
+    @patch("builtins.input", return_value="Looks good!")
+    @patch("builtins.print")
+    def test_final_output_is_method_return_not_collapsed_outcome(
+        self, mock_print, mock_input
+    ):
+        """When @human_feedback with emit is the final method, flow output is the method's return value."""
+
+        class FinalHumanFeedbackFlow(Flow):
+            @start()
+            @human_feedback(
+                message="Review this content:",
+                emit=["approved", "rejected"],
+                llm="gpt-4o-mini",
+            )
+            def generate_and_review(self):
+                # This dict should be the final output, NOT the string 'approved'
+                return {"title": "My Article", "content": "Article content here", "status": "ready"}
+
+        flow = FinalHumanFeedbackFlow()
+
+        with (
+            patch.object(flow, "_request_human_feedback", return_value="Looks great, approved!"),
+            patch.object(flow, "_collapse_to_outcome", return_value="approved"),
+        ):
+            result = flow.kickoff()
+
+        # The final output should be the actual method return value, not the collapsed outcome
+        assert isinstance(result, dict), f"Expected dict, got {type(result).__name__}: {result}"
+        assert result == {"title": "My Article", "content": "Article content here", "status": "ready"}
+        # But the outcome should still be tracked in last_human_feedback
+        assert flow.last_human_feedback is not None
+        assert flow.last_human_feedback.outcome == "approved"
+
+    @patch("builtins.input", return_value="approved")
+    @patch("builtins.print")
+    def test_routing_still_works_with_downstream_listener(self, mock_print, mock_input):
+        """When @human_feedback has a downstream listener, routing still triggers the listener."""
+        publish_called = []
+
+        class RoutingFlow(Flow):
+            @start()
+            @human_feedback(
+                message="Review:",
+                emit=["approved", "rejected"],
+                llm="gpt-4o-mini",
+            )
+            def review(self):
+                return {"content": "original content"}
+
+            @listen("approved")
+            def publish(self):
+                publish_called.append(True)
+                return {"published": True, "timestamp": "2024-01-01"}
+
+        flow = RoutingFlow()
+
+        with (
+            patch.object(flow, "_request_human_feedback", return_value="LGTM"),
+            patch.object(flow, "_collapse_to_outcome", return_value="approved"),
+        ):
+            result = flow.kickoff()
+
+        # The downstream listener should have been triggered
+        assert len(publish_called) == 1, "publish() should have been called"
+        # The final output should be from the listener, not the human_feedback method
+        assert result == {"published": True, "timestamp": "2024-01-01"}
+
+    @patch("builtins.input", return_value="")
+    @patch("builtins.print")
+    @pytest.mark.asyncio
+    async def test_async_human_feedback_final_output_preserved(self, mock_print, mock_input):
+        """Async @human_feedback methods also preserve the real return value."""
+
+        class AsyncFinalFlow(Flow):
+            @start()
+            @human_feedback(
+                message="Review async content:",
+                emit=["approved", "rejected"],
+                llm="gpt-4o-mini",
+                default_outcome="approved",
+            )
+            async def async_generate(self):
+                return {"async_data": "value", "computed": 42}
+
+        flow = AsyncFinalFlow()
+
+        with (
+            patch.object(flow, "_request_human_feedback", return_value=""),
+        ):
+            result = await flow.kickoff_async()
+
+        # The final output should be the dict, not "approved"
+        assert isinstance(result, dict), f"Expected dict, got {type(result).__name__}: {result}"
+        assert result == {"async_data": "value", "computed": 42}
+        assert flow.last_human_feedback.outcome == "approved"
+
+    @patch("builtins.input", return_value="feedback")
+    @patch("builtins.print")
+    def test_method_outputs_contains_real_output(self, mock_print, mock_input):
+        """The _method_outputs list should contain the real method output, not the collapsed outcome."""
+
+        class OutputTrackingFlow(Flow):
+            @start()
+            @human_feedback(
+                message="Review:",
+                emit=["approved", "rejected"],
+                llm="gpt-4o-mini",
+            )
+            def generate(self):
+                return {"data": "real output"}
+
+        flow = OutputTrackingFlow()
+
+        with (
+            patch.object(flow, "_request_human_feedback", return_value="approved"),
+            patch.object(flow, "_collapse_to_outcome", return_value="approved"),
+        ):
+            flow.kickoff()
+
+        # _method_outputs should contain the real output
+        assert len(flow._method_outputs) == 1
+        assert flow._method_outputs[0] == {"data": "real output"}
+
+    @patch("builtins.input", return_value="looks good")
+    @patch("builtins.print")
+    def test_none_return_value_is_preserved(self, mock_print, mock_input):
+        """A method returning None should preserve None as flow output, not the outcome string."""
+
+        class NoneReturnFlow(Flow):
+            @start()
+            @human_feedback(
+                message="Review:",
+                emit=["approved", "rejected"],
+                llm="gpt-4o-mini",
+            )
+            def process(self):
+                # Method does work but returns None (implicit)
+                pass
+
+        flow = NoneReturnFlow()
+
+        with (
+            patch.object(flow, "_request_human_feedback", return_value=""),
+            patch.object(flow, "_collapse_to_outcome", return_value="approved"),
+        ):
+            result = flow.kickoff()
+
+        # Final output should be None (the method's real return), not "approved"
+        assert result is None, f"Expected None, got {result!r}"
+        assert flow.last_human_feedback.outcome == "approved"

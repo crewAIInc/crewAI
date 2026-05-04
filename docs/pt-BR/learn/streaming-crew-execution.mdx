@@ -325,6 +325,34 @@ O streaming é particularmente valioso para:
 - **Experiência do Usuário**: Reduzir latência percebida mostrando resultados incrementais
 - **Dashboards ao Vivo**: Construir interfaces de monitoramento que exibem status de execução da crew
 
+## Cancelamento e Limpeza de Recursos
+
+`CrewStreamingOutput` suporta cancelamento gracioso para que o trabalho em andamento pare imediatamente quando o consumidor desconecta.
+
+### Gerenciador de Contexto Assíncrono
+
+```python Code
+streaming = await crew.akickoff(inputs={"topic": "AI"})
+
+async with streaming:
+    async for chunk in streaming:
+        print(chunk.content, end="", flush=True)
+```
+
+### Cancelamento Explícito
+
+```python Code
+streaming = await crew.akickoff(inputs={"topic": "AI"})
+try:
+    async for chunk in streaming:
+        print(chunk.content, end="", flush=True)
+finally:
+    await streaming.aclose()  # assíncrono
+    # streaming.close()       # equivalente síncrono
+```
+
+Após o cancelamento, `streaming.is_cancelled` e `streaming.is_completed` são ambos `True`. Tanto `aclose()` quanto `close()` são idempotentes.
+
 ## Notas Importantes
 
 - O streaming ativa automaticamente o streaming do LLM para todos os agentes na crew

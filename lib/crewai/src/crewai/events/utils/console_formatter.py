@@ -127,6 +127,9 @@ To update, run: uv sync --upgrade-package crewai"""
 
     def _show_tracing_disabled_message_if_needed(self) -> None:
         """Show tracing disabled message if tracing is not enabled."""
+        from crewai.events.listeners.tracing.trace_listener import (
+            TraceCollectionListener,
+        )
         from crewai.events.listeners.tracing.utils import (
             has_user_declined_tracing,
             is_tracing_enabled_in_context,
@@ -134,6 +137,12 @@ To update, run: uv sync --upgrade-package crewai"""
         )
 
         if should_suppress_tracing_messages():
+            return
+
+        # Don't show "disabled" message when the first-time handler will show
+        # the trace prompt after execution completes (avoids confusing mid-flow messages)
+        listener = TraceCollectionListener._instance  # type: ignore[misc]
+        if listener and listener.first_time_handler.is_first_time:
             return
 
         if not is_tracing_enabled_in_context():

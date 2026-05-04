@@ -23,14 +23,14 @@ from crewai.events.types.observation_events import (
     StepObservationStartedEvent,
 )
 from crewai.utilities.agent_utils import extract_task_section
-from crewai.utilities.i18n import I18N, get_i18n
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.planning_types import StepObservation, TodoItem
 from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
-    from crewai.agent import Agent
+    from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.task import Task
 
 logger = logging.getLogger(__name__)
@@ -56,7 +56,7 @@ class PlannerObserver:
 
     def __init__(
         self,
-        agent: Agent,
+        agent: BaseAgent,
         task: Task | None = None,
         kickoff_input: str = "",
     ) -> None:
@@ -64,7 +64,6 @@ class PlannerObserver:
         self.task = task
         self.kickoff_input = kickoff_input
         self.llm = self._resolve_llm()
-        self._i18n: I18N = get_i18n()
 
     def _resolve_llm(self) -> Any:
         """Resolve which LLM to use for observation/planning.
@@ -83,10 +82,6 @@ class PlannerObserver:
                 return config.llm
             return create_llm(config.llm)
         return self.agent.llm
-
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
 
     def observe(
         self,
@@ -183,9 +178,6 @@ class PlannerObserver:
                 ),
             )
 
-            # Don't force a full replan — the step may have succeeded even if the
-            # observer LLM failed to parse the result. Defaulting to "continue" is
-            # far less disruptive than wiping the entire plan on every observer error.
             return StepObservation(
                 step_completed_successfully=True,
                 key_information_learned="",
@@ -222,10 +214,6 @@ class PlannerObserver:
 
         return remaining_todos
 
-    # ------------------------------------------------------------------
-    # Internal: Message building
-    # ------------------------------------------------------------------
-
     def _build_observation_messages(
         self,
         completed_step: TodoItem,
@@ -240,15 +228,11 @@ class PlannerObserver:
             task_desc = self.task.description or ""
             task_goal = self.task.expected_output or ""
         elif self.kickoff_input:
-            # Standalone kickoff path — no Task object, but we have the raw input.
-            # Extract just the ## Task section so the observer sees the actual goal,
-            # not the full enriched instruction with env/tools/verification noise.
             task_desc = extract_task_section(self.kickoff_input)
             task_goal = "Complete the task successfully"
 
-        system_prompt = self._i18n.retrieve("planning", "observation_system_prompt")
+        system_prompt = I18N_DEFAULT.retrieve("planning", "observation_system_prompt")
 
-        # Build context of what's been done
         completed_summary = ""
         if all_completed:
             completed_lines = []
@@ -262,7 +246,6 @@ class PlannerObserver:
                 completed_lines
             )
 
-        # Build remaining plan
         remaining_summary = ""
         if remaining_todos:
             remaining_lines = [
@@ -273,7 +256,9 @@ class PlannerObserver:
                 remaining_lines
             )
 
-        user_prompt = self._i18n.retrieve("planning", "observation_user_prompt").format(
+        user_prompt = I18N_DEFAULT.retrieve(
+            "planning", "observation_user_prompt"
+        ).format(
             task_description=task_desc,
             task_goal=task_goal,
             completed_summary=completed_summary,
@@ -305,17 +290,14 @@ class PlannerObserver:
         if isinstance(response, StepObservation):
             return response
 
-        # JSON string path — most common miss before this fix
         if isinstance(response, str):
             text = response.strip()
             try:
                 return StepObservation.model_validate_json(text)
             except Exception:  # noqa: S110
                 pass
-            # Some LLMs wrap the JSON in markdown fences
             if text.startswith("```"):
                 lines = text.split("\n")
-                # Strip first and last lines (``` markers)
                 inner = "\n".join(
                     lines[1:-1] if lines[-1].strip() == "```" else lines[1:]
                 )
@@ -324,14 +306,12 @@ class PlannerObserver:
                 except Exception:  # noqa: S110
                     pass
 
-        # Dict path
         if isinstance(response, dict):
             try:
                 return StepObservation.model_validate(response)
             except Exception:  # noqa: S110
                 pass
 
-        # Last resort — log what we got so it's diagnosable
         logger.warning(
             "Could not parse observation response (type=%s). "
             "Falling back to default failure observation. Preview: %.200s",

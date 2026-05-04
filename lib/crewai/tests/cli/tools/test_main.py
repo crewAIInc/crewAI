@@ -161,7 +161,8 @@ def test_install_api_error(mock_get, capsys, tool_command):
 
 
 @patch("crewai.cli.tools.main.git.Repository.is_synced", return_value=False)
-def test_publish_when_not_in_sync(mock_is_synced, capsys, tool_command):
+@patch("crewai.cli.tools.main.git.Repository.__init__", return_value=None)
+def test_publish_when_not_in_sync(mock_init, mock_is_synced, capsys, tool_command):
     with raises(SystemExit):
         tool_command.publish(is_public=True)
 
@@ -185,9 +186,14 @@ def test_publish_when_not_in_sync(mock_is_synced, capsys, tool_command):
     "crewai.cli.tools.main.extract_available_exports",
     return_value=[{"name": "SampleTool"}],
 )
+@patch(
+    "crewai.cli.tools.main.extract_tools_metadata",
+    return_value=[{"name": "SampleTool", "humanized_name": "sample_tool", "description": "A sample tool", "run_params_schema": {}, "init_params_schema": {}, "env_vars": []}],
+)
 @patch("crewai.cli.tools.main.ToolCommand._print_current_organization")
 def test_publish_when_not_in_sync_and_force(
     mock_print_org,
+    mock_tools_metadata,
     mock_available_exports,
     mock_is_synced,
     mock_publish,
@@ -213,6 +219,7 @@ def test_publish_when_not_in_sync_and_force(
         ["uv", "build", "--sdist", "--out-dir", unittest.mock.ANY],
         check=True,
         capture_output=False,
+        env=unittest.mock.ANY,
     )
     mock_open.assert_called_with(unittest.mock.ANY, "rb")
     mock_publish.assert_called_with(
@@ -222,6 +229,7 @@ def test_publish_when_not_in_sync_and_force(
         description="A sample tool",
         encoded_file=unittest.mock.ANY,
         available_exports=[{"name": "SampleTool"}],
+        tools_metadata=[{"name": "SampleTool", "humanized_name": "sample_tool", "description": "A sample tool", "run_params_schema": {}, "init_params_schema": {}, "env_vars": []}],
     )
     mock_print_org.assert_called_once()
 
@@ -242,7 +250,12 @@ def test_publish_when_not_in_sync_and_force(
     "crewai.cli.tools.main.extract_available_exports",
     return_value=[{"name": "SampleTool"}],
 )
+@patch(
+    "crewai.cli.tools.main.extract_tools_metadata",
+    return_value=[{"name": "SampleTool", "humanized_name": "sample_tool", "description": "A sample tool", "run_params_schema": {}, "init_params_schema": {}, "env_vars": []}],
+)
 def test_publish_success(
+    mock_tools_metadata,
     mock_available_exports,
     mock_is_synced,
     mock_publish,
@@ -268,6 +281,7 @@ def test_publish_success(
         ["uv", "build", "--sdist", "--out-dir", unittest.mock.ANY],
         check=True,
         capture_output=False,
+        env=unittest.mock.ANY,
     )
     mock_open.assert_called_with(unittest.mock.ANY, "rb")
     mock_publish.assert_called_with(
@@ -277,6 +291,7 @@ def test_publish_success(
         description="A sample tool",
         encoded_file=unittest.mock.ANY,
         available_exports=[{"name": "SampleTool"}],
+        tools_metadata=[{"name": "SampleTool", "humanized_name": "sample_tool", "description": "A sample tool", "run_params_schema": {}, "init_params_schema": {}, "env_vars": []}],
     )
 
 
@@ -295,7 +310,12 @@ def test_publish_success(
     "crewai.cli.tools.main.extract_available_exports",
     return_value=[{"name": "SampleTool"}],
 )
+@patch(
+    "crewai.cli.tools.main.extract_tools_metadata",
+    return_value=[{"name": "SampleTool", "humanized_name": "sample_tool", "description": "A sample tool", "run_params_schema": {}, "init_params_schema": {}, "env_vars": []}],
+)
 def test_publish_failure(
+    mock_tools_metadata,
     mock_available_exports,
     mock_publish,
     mock_open,
@@ -336,7 +356,12 @@ def test_publish_failure(
     "crewai.cli.tools.main.extract_available_exports",
     return_value=[{"name": "SampleTool"}],
 )
+@patch(
+    "crewai.cli.tools.main.extract_tools_metadata",
+    return_value=[{"name": "SampleTool", "humanized_name": "sample_tool", "description": "A sample tool", "run_params_schema": {}, "init_params_schema": {}, "env_vars": []}],
+)
 def test_publish_api_error(
+    mock_tools_metadata,
     mock_available_exports,
     mock_publish,
     mock_open,
@@ -360,6 +385,63 @@ def test_publish_api_error(
     assert "Request to Enterprise API failed" in output
 
     mock_publish.assert_called_once()
+
+
+@patch("crewai.cli.tools.main.get_project_name", return_value="sample-tool")
+@patch("crewai.cli.tools.main.get_project_version", return_value="1.0.0")
+@patch("crewai.cli.tools.main.get_project_description", return_value="A sample tool")
+@patch("crewai.cli.tools.main.subprocess.run")
+@patch("crewai.cli.tools.main.os.listdir", return_value=["sample-tool-1.0.0.tar.gz"])
+@patch(
+    "crewai.cli.tools.main.open",
+    new_callable=unittest.mock.mock_open,
+    read_data=b"sample tarball content",
+)
+@patch("crewai.cli.plus_api.PlusAPI.publish_tool")
+@patch("crewai.cli.tools.main.git.Repository.is_synced", return_value=True)
+@patch(
+    "crewai.cli.tools.main.extract_available_exports",
+    return_value=[{"name": "SampleTool"}],
+)
+@patch(
+    "crewai.cli.tools.main.extract_tools_metadata",
+    side_effect=Exception("Failed to extract metadata"),
+)
+def test_publish_metadata_extraction_failure_continues_with_warning(
+    mock_tools_metadata,
+    mock_available_exports,
+    mock_is_synced,
+    mock_publish,
+    mock_open,
+    mock_listdir,
+    mock_subprocess_run,
+    mock_get_project_description,
+    mock_get_project_version,
+    mock_get_project_name,
+    capsys,
+    tool_command,
+):
+    """Test that metadata extraction failure shows warning but continues publishing."""
+    mock_publish_response = MagicMock()
+    mock_publish_response.status_code = 200
+    mock_publish_response.json.return_value = {"handle": "sample-tool"}
+    mock_publish.return_value = mock_publish_response
+
+    tool_command.publish(is_public=True)
+
+    output = capsys.readouterr().out
+    assert "Warning: Could not extract tool metadata" in output
+    assert "Publishing will continue without detailed metadata" in output
+    assert "No tool metadata extracted" in output
+    mock_publish.assert_called_once_with(
+        handle="sample-tool",
+        is_public=True,
+        version="1.0.0",
+        description="A sample tool",
+        encoded_file=unittest.mock.ANY,
+        available_exports=[{"name": "SampleTool"}],
+        tools_metadata=[],
+    )
 
 
 @patch("crewai.cli.tools.main.Settings")

@@ -102,7 +102,7 @@ def test_crew_memory_with_google_vertex_embedder(
     # Mock _save_to_memory during kickoff so it doesn't make embedding API calls
     # that VCR can't replay (GCP metadata auth, embedding endpoints).
     with patch(
-        "crewai.agents.agent_builder.base_agent_executor_mixin.CrewAgentExecutorMixin._save_to_memory"
+        "crewai.agents.agent_builder.base_agent_executor.BaseAgentExecutor._save_to_memory"
     ):
         result = crew.kickoff()
 
@@ -163,7 +163,7 @@ def test_crew_memory_with_google_vertex_project_id(simple_agent, simple_task) ->
     assert crew._memory is memory
 
     with patch(
-        "crewai.agents.agent_builder.base_agent_executor_mixin.CrewAgentExecutorMixin._save_to_memory"
+        "crewai.agents.agent_builder.base_agent_executor.BaseAgentExecutor._save_to_memory"
     ):
         result = crew.kickoff()
 

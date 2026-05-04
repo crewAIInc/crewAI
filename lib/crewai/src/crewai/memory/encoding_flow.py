@@ -28,6 +28,7 @@ from crewai.memory.analyze import (
     analyze_for_save,
 )
 from crewai.memory.types import MemoryConfig, MemoryRecord, embed_texts
+from crewai.memory.utils import join_scope_paths
 
 
 logger = logging.getLogger(__name__)
@@ -48,6 +49,8 @@ class ItemState(BaseModel):
     importance: float | None = None
     source: str | None = None
     private: bool = False
+    # Structural root scope prefix for hierarchical scoping
+    root_scope: str | None = None
     # Resolved values
     resolved_scope: str = "/"
     resolved_categories: list[str] = Field(default_factory=list)
@@ -95,7 +98,7 @@ class EncodingFlow(Flow[EncodingState]):
 
     _skip_auto_memory: bool = True
 
-    initial_state = EncodingState
+    initial_state: type[EncodingState] = EncodingState
 
     def __init__(
         self,
@@ -104,6 +107,14 @@ class EncodingFlow(Flow[EncodingState]):
         embedder: Any,
         config: MemoryConfig | None = None,
     ) -> None:
+        """Initialize the encoding flow.
+
+        Args:
+            storage: Storage backend for persisting memories.
+            llm: LLM instance for analysis.
+            embedder: Embedder for generating vectors.
+            config: Optional memory configuration.
+        """
         super().__init__(suppress_flow_events=True)
         self._storage = storage
         self._llm = llm
@@ -180,10 +191,18 @@ class EncodingFlow(Flow[EncodingState]):
         def _search_one(
             item: ItemState,
         ) -> list[tuple[MemoryRecord, float]]:
-            scope_prefix = item.scope if item.scope and item.scope.strip("/") else None
+            # Use root_scope as the search boundary, then narrow by explicit scope if provided
+            effective_prefix = None
+            if item.root_scope:
+                effective_prefix = item.root_scope.rstrip("/")
+                if item.scope and item.scope.strip("/"):
+                    effective_prefix = effective_prefix + "/" + item.scope.strip("/")
+            elif item.scope and item.scope.strip("/"):
+                effective_prefix = item.scope
+
             return self._storage.search(  # type: ignore[no-any-return]
                 item.embedding,
-                scope_prefix=scope_prefix,
+                scope_prefix=effective_prefix,
                 categories=None,
                 limit=self._config.consolidation_limit,
                 min_score=0.0,
@@ -253,9 +272,16 @@ class EncodingFlow(Flow[EncodingState]):
         existing_scopes: list[str] = []
         existing_categories: list[str] = []
         if any_needs_fields:
-            existing_scopes = self._storage.list_scopes("/") or ["/"]
+            # Constrain scope/category suggestions to root_scope boundary
+            # Check if any active item has root_scope
+            active_root = next(
+                (it.root_scope for it in items if not it.dropped and it.root_scope),
+                None,
+            )
+            scope_search_root = active_root if active_root else "/"
+            existing_scopes = self._storage.list_scopes(scope_search_root) or ["/"]
             existing_categories = list(
-                self._storage.list_categories(scope_prefix=None).keys()
+                self._storage.list_categories(scope_prefix=active_root).keys()
             )
 
         # Classify items and submit LLM calls
@@ -321,7 +347,13 @@ class EncodingFlow(Flow[EncodingState]):
             for i, future in save_futures.items():
                 analysis = future.result()
                 item = items[i]
-                item.resolved_scope = item.scope or analysis.suggested_scope or "/"
+                # Determine inner scope from explicit scope or LLM-inferred
+                inner_scope = item.scope or analysis.suggested_scope or "/"
+                # Join root_scope with inner scope if root_scope is set
+                if item.root_scope:
+                    item.resolved_scope = join_scope_paths(item.root_scope, inner_scope)
+                else:
+                    item.resolved_scope = inner_scope
                 item.resolved_categories = (
                     item.categories
                     if item.categories is not None
@@ -353,8 +385,18 @@ class EncodingFlow(Flow[EncodingState]):
             pool.shutdown(wait=False)
 
     def _apply_defaults(self, item: ItemState) -> None:
-        """Apply caller values with config defaults (fast path)."""
-        item.resolved_scope = item.scope or "/"
+        """Apply caller values with config defaults (fast path).
+
+        If root_scope is set, prepends it to the inner scope to create the
+        final resolved_scope.
+        """
+        inner_scope = item.scope or "/"
+        # Join root_scope with inner scope if root_scope is set
+        if item.root_scope:
+            item.resolved_scope = join_scope_paths(item.root_scope, inner_scope)
+        else:
+            item.resolved_scope = inner_scope if inner_scope != "/" else "/"
+
         item.resolved_categories = item.categories or []
         item.resolved_metadata = item.metadata or {}
         item.resolved_importance = (

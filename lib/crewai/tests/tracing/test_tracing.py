@@ -7,6 +7,7 @@ from crewai.events.listeners.tracing.first_time_trace_handler import (
     FirstTimeTraceHandler,
 )
 from crewai.events.listeners.tracing.trace_batch_manager import (
+    TraceBatch,
     TraceBatchManager,
 )
 from crewai.events.listeners.tracing.trace_listener import (
@@ -657,6 +658,16 @@ class TestTraceListenerSetup:
 
             trace_listener.first_time_handler.collected_events = True
 
+            mock_batch_response = MagicMock()
+            mock_batch_response.status_code = 201
+            mock_batch_response.json.return_value = {
+                "trace_id": "mock-trace-id",
+                "ephemeral_trace_id": "mock-ephemeral-trace-id",
+                "access_code": "TRACE-mock",
+            }
+            mock_events_response = MagicMock()
+            mock_events_response.status_code = 200
+
             with (
                 patch.object(
                     trace_listener.first_time_handler,
@@ -666,6 +677,40 @@ class TestTraceListenerSetup:
                 patch.object(
                     trace_listener.first_time_handler, "_display_ephemeral_trace_link"
                 ) as mock_display_link,
+                patch.object(
+                    trace_listener.batch_manager.plus_api,
+                    "initialize_trace_batch",
+                    return_value=mock_batch_response,
+                ),
+                patch.object(
+                    trace_listener.batch_manager.plus_api,
+                    "initialize_ephemeral_trace_batch",
+                    return_value=mock_batch_response,
+                ),
+                patch.object(
+                    trace_listener.batch_manager.plus_api,
+                    "send_trace_events",
+                    return_value=mock_events_response,
+                ),
+                patch.object(
+                    trace_listener.batch_manager.plus_api,
+                    "send_ephemeral_trace_events",
+                    return_value=mock_events_response,
+                ),
+                patch.object(
+                    trace_listener.batch_manager.plus_api,
+                    "finalize_trace_batch",
+                    return_value=mock_events_response,
+                ),
+                patch.object(
+                    trace_listener.batch_manager.plus_api,
+                    "finalize_ephemeral_trace_batch",
+                    return_value=mock_events_response,
+                ),
+                patch.object(
+                    trace_listener.batch_manager,
+                    "_cleanup_batch_data",
+                ),
             ):
                 crew.kickoff()
                 wait_for_event_handlers()
@@ -747,6 +792,10 @@ class TestTraceListenerSetup:
             patch(
                 "crewai.events.listeners.tracing.utils._is_test_environment",
                 return_value=False,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.utils._is_interactive_terminal",
+                return_value=True,
             ),
             patch("threading.Thread") as mock_thread,
         ):
@@ -918,3 +967,716 @@ class TestTraceListenerSetup:
                 mock_init.assert_called_once()
                 payload = mock_init.call_args[0][0]
                 assert "user_identifier" not in payload
+
+
+class TestTraceBatchIdClearedOnFailure:
+    """Tests: trace_batch_id is cleared when _initialize_backend_batch fails."""
+
+    def _make_batch_manager(self):
+        """Create a TraceBatchManager with a pre-set trace_batch_id (simulating first-time user)."""
+        with patch(
+            "crewai.events.listeners.tracing.trace_batch_manager.get_auth_token",
+            return_value="mock_token",
+        ):
+            bm = TraceBatchManager()
+        bm.current_batch = TraceBatch(
+            user_context={"privacy_level": "standard"},
+            execution_metadata={"execution_type": "crew", "crew_name": "test"},
+        )
+        bm.trace_batch_id = bm.current_batch.batch_id  # simulate line 96
+        bm.is_current_batch_ephemeral = True
+        return bm
+
+    def test_trace_batch_id_cleared_on_exception(self):
+        """trace_batch_id must be None when the API call raises an exception."""
+        bm = self._make_batch_manager()
+        assert bm.trace_batch_id is not None
+
+        with (
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
+                return_value=True,
+            ),
+            patch.object(
+                bm.plus_api,
+                "initialize_ephemeral_trace_batch",
+                side_effect=ConnectionError("network down"),
+            ),
+        ):
+            bm._initialize_backend_batch(
+                user_context={"privacy_level": "standard"},
+                execution_metadata={"execution_type": "crew"},
+                use_ephemeral=True,
+            )
+
+        assert bm.trace_batch_id is None
+
+    def test_trace_batch_id_set_on_success(self):
+        """trace_batch_id must be set from the server response on success."""
+        bm = self._make_batch_manager()
+        server_id = "server-ephemeral-trace-id-999"
+
+        mock_response = MagicMock(
+            status_code=201,
+            json=MagicMock(return_value={"ephemeral_trace_id": server_id}),
+        )
+
+        with (
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
+                return_value=True,
+            ),
+            patch.object(
+                bm.plus_api,
+                "initialize_ephemeral_trace_batch",
+                return_value=mock_response,
+            ),
+        ):
+            bm._initialize_backend_batch(
+                user_context={"privacy_level": "standard"},
+                execution_metadata={"execution_type": "crew"},
+                use_ephemeral=True,
+            )
+
+        assert bm.trace_batch_id == server_id
+
+    def test_send_events_skipped_when_trace_batch_id_none(self):
+        """_send_events_to_backend must return early when trace_batch_id is None."""
+        bm = self._make_batch_manager()
+        bm.trace_batch_id = None
+        bm.event_buffer = [MagicMock()]  # has events
+
+        with patch.object(
+            bm.plus_api, "send_ephemeral_trace_events"
+        ) as mock_send:
+            result = bm._send_events_to_backend()
+
+        assert result == 500
+        mock_send.assert_not_called()
+
+
+class TestInitializeBackendBatchRetry:
+    """Tests for retry logic in _initialize_backend_batch."""
+
+    def _make_batch_manager(self):
+        """Create a TraceBatchManager with a pre-set trace_batch_id."""
+        with patch(
+            "crewai.events.listeners.tracing.trace_batch_manager.get_auth_token",
+            return_value="mock_token",
+        ):
+            bm = TraceBatchManager()
+        bm.current_batch = TraceBatch(
+            user_context={"privacy_level": "standard"},
+            execution_metadata={"execution_type": "crew", "crew_name": "test"},
+        )
+        bm.trace_batch_id = bm.current_batch.batch_id
+        bm.is_current_batch_ephemeral = True
+        return bm
+
+    def test_retries_on_none_response_then_succeeds(self):
+        """Retries when API returns None, succeeds on second attempt."""
+        bm = self._make_batch_manager()
+        server_id = "server-id-after-retry"
+
+        success_response = MagicMock(
+            status_code=201,
+            json=MagicMock(return_value={"ephemeral_trace_id": server_id}),
+        )
+
+        with (
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
+                return_value=True,
+            ),
+            patch.object(
+                bm.plus_api,
+                "initialize_ephemeral_trace_batch",
+                side_effect=[None, success_response],
+            ) as mock_init,
+            patch("crewai.events.listeners.tracing.trace_batch_manager.time.sleep") as mock_sleep,
+        ):
+            bm._initialize_backend_batch(
+                user_context={"privacy_level": "standard"},
+                execution_metadata={"execution_type": "crew"},
+                use_ephemeral=True,
+            )
+
+        assert bm.trace_batch_id == server_id
+        assert mock_init.call_count == 2
+        mock_sleep.assert_called_once_with(0.2)
+
+    def test_retries_on_5xx_then_succeeds(self):
+        """Retries on 500 server error, succeeds on second attempt."""
+        bm = self._make_batch_manager()
+        server_id = "server-id-after-5xx"
+
+        error_response = MagicMock(status_code=500, text="Internal Server Error")
+        success_response = MagicMock(
+            status_code=201,
+            json=MagicMock(return_value={"ephemeral_trace_id": server_id}),
+        )
+
+        with (
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
+                return_value=True,
+            ),
+            patch.object(
+                bm.plus_api,
+                "initialize_ephemeral_trace_batch",
+                side_effect=[error_response, success_response],
+            ) as mock_init,
+            patch("crewai.events.listeners.tracing.trace_batch_manager.time.sleep"),
+        ):
+            bm._initialize_backend_batch(
+                user_context={"privacy_level": "standard"},
+                execution_metadata={"execution_type": "crew"},
+                use_ephemeral=True,
+            )
+
+        assert bm.trace_batch_id == server_id
+        assert mock_init.call_count == 2
+
+    def test_no_retry_on_exception(self):
+        """Exceptions (e.g. timeout, connection error) abort immediately without retry."""
+        bm = self._make_batch_manager()
+
+        with (
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
+                return_value=True,
+            ),
+            patch.object(
+                bm.plus_api,
+                "initialize_ephemeral_trace_batch",
+                side_effect=ConnectionError("network down"),
+            ) as mock_init,
+            patch("crewai.events.listeners.tracing.trace_batch_manager.time.sleep") as mock_sleep,
+        ):
+            bm._initialize_backend_batch(
+                user_context={"privacy_level": "standard"},
+                execution_metadata={"execution_type": "crew"},
+                use_ephemeral=True,
+            )
+
+        assert bm.trace_batch_id is None
+        assert mock_init.call_count == 1
+        mock_sleep.assert_not_called()
+
+    def test_no_retry_on_4xx(self):
+        """Does NOT retry on 422 — client error is not transient."""
+        bm = self._make_batch_manager()
+
+        error_response = MagicMock(status_code=422, text="Unprocessable Entity")
+
+        with (
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
+                return_value=True,
+            ),
+            patch.object(
+                bm.plus_api,
+                "initialize_ephemeral_trace_batch",
+                return_value=error_response,
+            ) as mock_init,
+            patch("crewai.events.listeners.tracing.trace_batch_manager.time.sleep") as mock_sleep,
+        ):
+            bm._initialize_backend_batch(
+                user_context={"privacy_level": "standard"},
+                execution_metadata={"execution_type": "crew"},
+                use_ephemeral=True,
+            )
+
+        assert bm.trace_batch_id is None
+        assert mock_init.call_count == 1
+        mock_sleep.assert_not_called()
+
+    def test_exhausts_retries_then_clears_batch_id(self):
+        """After all retries fail, trace_batch_id is None."""
+        bm = self._make_batch_manager()
+
+        with (
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
+                return_value=True,
+            ),
+            patch.object(
+                bm.plus_api,
+                "initialize_ephemeral_trace_batch",
+                return_value=None,
+            ) as mock_init,
+            patch("crewai.events.listeners.tracing.trace_batch_manager.time.sleep"),
+        ):
+            bm._initialize_backend_batch(
+                user_context={"privacy_level": "standard"},
+                execution_metadata={"execution_type": "crew"},
+                use_ephemeral=True,
+            )
+
+        assert bm.trace_batch_id is None
+        assert mock_init.call_count == 2  # initial + 1 retry
+
+
+class TestFirstTimeHandlerBackendInitGuard:
+    """Tests: backend_initialized gated on actual batch creation success."""
+
+    def _make_handler_with_manager(self):
+        """Create a FirstTimeTraceHandler wired to a TraceBatchManager."""
+        with patch(
+            "crewai.events.listeners.tracing.trace_batch_manager.get_auth_token",
+            return_value="mock_token",
+        ):
+            bm = TraceBatchManager()
+        bm.current_batch = TraceBatch(
+            user_context={"privacy_level": "standard"},
+            execution_metadata={"execution_type": "crew", "crew_name": "test"},
+        )
+        bm.trace_batch_id = bm.current_batch.batch_id
+        bm.is_current_batch_ephemeral = True
+
+        handler = FirstTimeTraceHandler()
+        handler.is_first_time = True
+        handler.collected_events = True
+        handler.batch_manager = bm
+        return handler, bm
+
+    def test_backend_initialized_true_on_success(self):
+        """Events are sent when batch creation succeeds, then state is cleaned up."""
+        handler, bm = self._make_handler_with_manager()
+        server_id = "server-id-abc"
+
+        mock_init_response = MagicMock(
+            status_code=201,
+            json=MagicMock(return_value={"ephemeral_trace_id": server_id}),
+        )
+        mock_send_response = MagicMock(status_code=200)
+
+        trace_batch_id_during_send = None
+
+        def capture_send(*args, **kwargs):
+            nonlocal trace_batch_id_during_send
+            trace_batch_id_during_send = bm.trace_batch_id
+            return mock_send_response
+
+        with (
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
+                return_value=True,
+            ),
+            patch.object(
+                bm.plus_api,
+                "initialize_ephemeral_trace_batch",
+                return_value=mock_init_response,
+            ),
+            patch.object(
+                bm.plus_api,
+                "send_ephemeral_trace_events",
+                side_effect=capture_send,
+            ),
+            patch.object(bm, "_finalize_backend_batch"),
+        ):
+            bm.event_buffer = [MagicMock(to_dict=MagicMock(return_value={}))]
+            handler._initialize_backend_and_send_events()
+
+        # trace_batch_id was set correctly during send
+        assert trace_batch_id_during_send == server_id
+        # State cleaned up after completion (singleton reuse)
+        assert bm.backend_initialized is False
+        assert bm.trace_batch_id is None
+        assert bm.current_batch is None
+
+    def test_backend_initialized_false_on_failure(self):
+        """backend_initialized stays False and events are NOT sent when batch creation fails."""
+        handler, bm = self._make_handler_with_manager()
+
+        with (
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
+                return_value=True,
+            ),
+            patch.object(
+                bm.plus_api,
+                "initialize_ephemeral_trace_batch",
+                return_value=None,  # server call fails
+            ),
+            patch.object(bm, "_send_events_to_backend") as mock_send,
+            patch.object(bm, "_finalize_backend_batch") as mock_finalize,
+            patch.object(handler, "_gracefully_fail") as mock_fail,
+        ):
+            bm.event_buffer = [MagicMock()]
+            handler._initialize_backend_and_send_events()
+
+        assert bm.backend_initialized is False
+        assert bm.trace_batch_id is None
+        mock_send.assert_not_called()
+        mock_finalize.assert_not_called()
+        mock_fail.assert_called_once()
+
+    def test_backend_initialized_false_on_non_2xx(self):
+        """backend_initialized stays False when server returns non-2xx."""
+        handler, bm = self._make_handler_with_manager()
+
+        mock_response = MagicMock(status_code=500, text="Internal Server Error")
+
+        with (
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
+                return_value=True,
+            ),
+            patch.object(
+                bm.plus_api,
+                "initialize_ephemeral_trace_batch",
+                return_value=mock_response,
+            ),
+            patch.object(bm, "_send_events_to_backend") as mock_send,
+            patch.object(bm, "_finalize_backend_batch") as mock_finalize,
+            patch.object(handler, "_gracefully_fail") as mock_fail,
+        ):
+            bm.event_buffer = [MagicMock()]
+            handler._initialize_backend_and_send_events()
+
+        assert bm.backend_initialized is False
+        assert bm.trace_batch_id is None
+        mock_send.assert_not_called()
+        mock_finalize.assert_not_called()
+        mock_fail.assert_called_once()
+
+
+class TestFirstTimeHandlerAlwaysEphemeral:
+    """Tests that first-time handler always uses ephemeral with skip_context_check."""
+
+    def _make_handler_with_manager(self):
+        with patch(
+            "crewai.events.listeners.tracing.trace_batch_manager.get_auth_token",
+            return_value="mock_token",
+        ):
+            bm = TraceBatchManager()
+        bm.current_batch = TraceBatch(
+            user_context={"privacy_level": "standard"},
+            execution_metadata={"execution_type": "crew", "crew_name": "test"},
+        )
+        bm.trace_batch_id = bm.current_batch.batch_id
+        bm.is_current_batch_ephemeral = True
+
+        handler = FirstTimeTraceHandler()
+        handler.is_first_time = True
+        handler.collected_events = True
+        handler.batch_manager = bm
+        return handler, bm
+
+    def test_deferred_init_uses_ephemeral_and_skip_context_check(self):
+        """Deferred backend init always uses ephemeral=True and skip_context_check=True."""
+        handler, bm = self._make_handler_with_manager()
+
+        with (
+            patch.object(bm, "_initialize_backend_batch") as mock_init,
+            patch.object(bm, "_send_events_to_backend"),
+            patch.object(bm, "_finalize_backend_batch"),
+        ):
+            mock_init.side_effect = lambda **kwargs: None
+            bm.event_buffer = [MagicMock()]
+            handler._initialize_backend_and_send_events()
+
+            mock_init.assert_called_once()
+            assert mock_init.call_args.kwargs["use_ephemeral"] is True
+            assert mock_init.call_args.kwargs["skip_context_check"] is True
+
+
+class TestAuthFailbackToEphemeral:
+    """Tests for ephemeral fallback when server rejects auth (401/403)."""
+
+    def _make_batch_manager(self):
+        """Create a TraceBatchManager with a pre-set trace_batch_id."""
+        with patch(
+            "crewai.events.listeners.tracing.trace_batch_manager.get_auth_token",
+            return_value="mock_token",
+        ):
+            bm = TraceBatchManager()
+        bm.current_batch = TraceBatch(
+            user_context={"privacy_level": "standard"},
+            execution_metadata={"execution_type": "crew", "crew_name": "test"},
+        )
+        bm.trace_batch_id = bm.current_batch.batch_id
+        bm.is_current_batch_ephemeral = False  # authenticated path
+        return bm
+
+    def test_401_non_ephemeral_falls_back_to_ephemeral(self):
+        """A 401 on the non-ephemeral endpoint should retry as ephemeral."""
+        bm = self._make_batch_manager()
+        server_id = "ephemeral-fallback-id"
+
+        auth_rejected = MagicMock(status_code=401, text="Bad credentials")
+        ephemeral_success = MagicMock(
+            status_code=201,
+            json=MagicMock(return_value={"ephemeral_trace_id": server_id}),
+        )
+
+        with (
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
+                return_value=True,
+            ),
+            patch.object(
+                bm.plus_api,
+                "initialize_trace_batch",
+                return_value=auth_rejected,
+            ),
+            patch.object(
+                bm.plus_api,
+                "initialize_ephemeral_trace_batch",
+                return_value=ephemeral_success,
+            ) as mock_ephemeral,
+            patch("crewai.events.listeners.tracing.trace_batch_manager.time.sleep"),
+        ):
+            bm._initialize_backend_batch(
+                user_context={"privacy_level": "standard"},
+                execution_metadata={"execution_type": "crew"},
+                use_ephemeral=False,
+            )
+
+        assert bm.trace_batch_id == server_id
+        assert bm.is_current_batch_ephemeral is True
+        mock_ephemeral.assert_called_once()
+
+    def test_403_non_ephemeral_falls_back_to_ephemeral(self):
+        """A 403 on the non-ephemeral endpoint should also fall back."""
+        bm = self._make_batch_manager()
+        server_id = "ephemeral-fallback-403"
+
+        forbidden = MagicMock(status_code=403, text="Forbidden")
+        ephemeral_success = MagicMock(
+            status_code=201,
+            json=MagicMock(return_value={"ephemeral_trace_id": server_id}),
+        )
+
+        with (
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
+                return_value=True,
+            ),
+            patch.object(
+                bm.plus_api,
+                "initialize_trace_batch",
+                return_value=forbidden,
+            ),
+            patch.object(
+                bm.plus_api,
+                "initialize_ephemeral_trace_batch",
+                return_value=ephemeral_success,
+            ),
+            patch("crewai.events.listeners.tracing.trace_batch_manager.time.sleep"),
+        ):
+            bm._initialize_backend_batch(
+                user_context={"privacy_level": "standard"},
+                execution_metadata={"execution_type": "crew"},
+                use_ephemeral=False,
+            )
+
+        assert bm.trace_batch_id == server_id
+        assert bm.is_current_batch_ephemeral is True
+
+    def test_401_on_ephemeral_does_not_recurse(self):
+        """A 401 on the ephemeral endpoint should NOT try to fall back again."""
+        bm = self._make_batch_manager()
+        bm.is_current_batch_ephemeral = True
+
+        auth_rejected = MagicMock(status_code=401, text="Bad credentials")
+
+        with (
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
+                return_value=True,
+            ),
+            patch.object(
+                bm.plus_api,
+                "initialize_ephemeral_trace_batch",
+                return_value=auth_rejected,
+            ) as mock_ephemeral,
+            patch("crewai.events.listeners.tracing.trace_batch_manager.time.sleep"),
+        ):
+            bm._initialize_backend_batch(
+                user_context={"privacy_level": "standard"},
+                execution_metadata={"execution_type": "crew"},
+                use_ephemeral=True,
+            )
+
+        assert bm.trace_batch_id is None
+        # Called only once — no recursive fallback
+        mock_ephemeral.assert_called()
+
+    def test_401_fallback_ephemeral_also_fails(self):
+        """If ephemeral fallback also fails, trace_batch_id is cleared."""
+        bm = self._make_batch_manager()
+
+        auth_rejected = MagicMock(status_code=401, text="Bad credentials")
+        ephemeral_fail = MagicMock(status_code=422, text="Validation failed")
+
+        with (
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
+                return_value=True,
+            ),
+            patch.object(
+                bm.plus_api,
+                "initialize_trace_batch",
+                return_value=auth_rejected,
+            ),
+            patch.object(
+                bm.plus_api,
+                "initialize_ephemeral_trace_batch",
+                return_value=ephemeral_fail,
+            ),
+            patch("crewai.events.listeners.tracing.trace_batch_manager.time.sleep"),
+        ):
+            bm._initialize_backend_batch(
+                user_context={"privacy_level": "standard"},
+                execution_metadata={"execution_type": "crew"},
+                use_ephemeral=False,
+            )
+
+        assert bm.trace_batch_id is None
+
+
+class TestMarkBatchAsFailedRouting:
+    """Tests: _mark_batch_as_failed routes to the correct endpoint."""
+
+    def _make_batch_manager(self, ephemeral: bool = False):
+        with patch(
+            "crewai.events.listeners.tracing.trace_batch_manager.get_auth_token",
+            return_value="mock_token",
+        ):
+            bm = TraceBatchManager()
+        bm.is_current_batch_ephemeral = ephemeral
+        return bm
+
+    def test_routes_to_ephemeral_endpoint_when_ephemeral(self):
+        """Ephemeral batches must use mark_ephemeral_trace_batch_as_failed."""
+        bm = self._make_batch_manager(ephemeral=True)
+
+        with patch.object(
+            bm.plus_api, "mark_ephemeral_trace_batch_as_failed"
+        ) as mock_ephemeral, patch.object(
+            bm.plus_api, "mark_trace_batch_as_failed"
+        ) as mock_non_ephemeral:
+            bm._mark_batch_as_failed("batch-123", "some error")
+
+        mock_ephemeral.assert_called_once_with("batch-123", "some error")
+        mock_non_ephemeral.assert_not_called()
+
+    def test_routes_to_non_ephemeral_endpoint_when_not_ephemeral(self):
+        """Non-ephemeral batches must use mark_trace_batch_as_failed."""
+        bm = self._make_batch_manager(ephemeral=False)
+
+        with patch.object(
+            bm.plus_api, "mark_ephemeral_trace_batch_as_failed"
+        ) as mock_ephemeral, patch.object(
+            bm.plus_api, "mark_trace_batch_as_failed"
+        ) as mock_non_ephemeral:
+            bm._mark_batch_as_failed("batch-456", "another error")
+
+        mock_non_ephemeral.assert_called_once_with("batch-456", "another error")
+        mock_ephemeral.assert_not_called()
+
+
+class TestBackendInitializedGatedOnSuccess:
+    """Tests: backend_initialized reflects actual init success on non-first-time path."""
+
+    def test_backend_initialized_true_on_success(self):
+        """backend_initialized is True when _initialize_backend_batch succeeds."""
+        with (
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
+                return_value=True,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.should_auto_collect_first_time_traces",
+                return_value=False,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.get_auth_token",
+                return_value="mock_token",
+            ),
+        ):
+            bm = TraceBatchManager()
+            mock_response = MagicMock(
+                status_code=201,
+                json=MagicMock(return_value={"trace_id": "server-id"}),
+            )
+            with patch.object(
+                bm.plus_api, "initialize_trace_batch", return_value=mock_response
+            ):
+                bm.initialize_batch(
+                    user_context={"privacy_level": "standard"},
+                    execution_metadata={"execution_type": "crew"},
+                )
+
+        assert bm.backend_initialized is True
+        assert bm.trace_batch_id == "server-id"
+
+    def test_backend_initialized_false_on_failure(self):
+        """backend_initialized is False when _initialize_backend_batch fails."""
+        with (
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
+                return_value=True,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.should_auto_collect_first_time_traces",
+                return_value=False,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.get_auth_token",
+                return_value="mock_token",
+            ),
+        ):
+            bm = TraceBatchManager()
+            with patch.object(
+                bm.plus_api, "initialize_trace_batch", return_value=None
+            ):
+                bm.initialize_batch(
+                    user_context={"privacy_level": "standard"},
+                    execution_metadata={"execution_type": "crew"},
+                )
+
+        assert bm.backend_initialized is False
+        assert bm.trace_batch_id is None
+
+
+class TestTraceBatchManagerDuplicateInitMerge:
+    """Second initialize_batch call merges execution_metadata (flow after lazy action)."""
+
+    def test_duplicate_initialize_merges_execution_metadata(self):
+        with (
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.should_auto_collect_first_time_traces",
+                return_value=True,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
+                return_value=True,
+            ),
+        ):
+            bm = TraceBatchManager()
+            bm.initialize_batch(
+                user_context={"privacy_level": "standard"},
+                execution_metadata={
+                    "crew_name": "Unknown Crew",
+                    "crewai_version": "9.9.9",
+                },
+            )
+            first_batch_id = bm.current_batch.batch_id
+            bm.initialize_batch(
+                user_context={"privacy_level": "standard"},
+                execution_metadata={
+                    "flow_name": "ResearchFlow",
+                    "execution_type": "flow",
+                    "crewai_version": "9.9.9",
+                    "execution_start": "2026-01-01T00:00:00+00:00",
+                },
+            )
+
+        assert bm.current_batch.batch_id == first_batch_id
+        meta = bm.current_batch.execution_metadata
+        assert meta.get("execution_type") == "flow"
+        assert meta.get("flow_name") == "ResearchFlow"
+        assert meta.get("crew_name") == "Unknown Crew"

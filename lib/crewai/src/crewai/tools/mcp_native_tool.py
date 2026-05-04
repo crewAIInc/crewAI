@@ -70,7 +70,7 @@ class MCPNativeTool(BaseTool):
         """Get the server name."""
         return self._server_name
 
-    def _run(self, **kwargs) -> str:
+    def _run(self, **kwargs: Any) -> str:
         """Execute tool using the MCP client session.
 
         Args:
@@ -98,7 +98,7 @@ class MCPNativeTool(BaseTool):
                 f"Error executing MCP tool {self.original_tool_name}: {e!s}"
             ) from e
 
-    async def _run_async(self, **kwargs) -> str:
+    async def _run_async(self, **kwargs: Any) -> str:
         """Async implementation of tool execution.
 
         A fresh ``MCPClient`` is created for every invocation so that

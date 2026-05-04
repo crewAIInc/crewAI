@@ -45,6 +45,26 @@ class MockTool(BaseTool):
     )
 
 
+# --- Intermediate base class (like RagTool, BraveSearchToolBase) ---
+class MockIntermediateBase(BaseTool):
+    """Simulates an intermediate tool base class (e.g. RagTool, BraveSearchToolBase)."""
+
+    name: str = "Intermediate Base"
+    description: str = "An intermediate tool base"
+    shared_config: str = Field("default_config", description="Config from intermediate base")
+
+    def _run(self, query: str) -> str:
+        return query
+
+
+class MockDerivedTool(MockIntermediateBase):
+    """A tool inheriting from an intermediate base, like CodeDocsSearchTool(RagTool)."""
+
+    name: str = "Derived Tool"
+    description: str = "A tool that inherits from intermediate base"
+    derived_param: str = Field("derived_default", description="Param specific to derived tool")
+
+
 @pytest.fixture
 def extractor():
     ext = ToolSpecExtractor()
@@ -97,6 +117,7 @@ def test_extract_init_params_schema(mock_tool_extractor):
     assert init_params_schema.keys() == {
         "$defs",
         "properties",
+        "required",
         "title",
         "type",
     }
@@ -166,6 +187,87 @@ def test_extract_package_dependencies(mock_tool_extractor):
         "this-is-a-required-package",
         "another-required-package",
     ]
+
+
+def test_base_tool_fields_excluded_from_init_params(mock_tool_extractor):
+    """BaseTool internal fields (including computed_field like tool_type) must
+    never appear in init_params_schema. Studio reads this schema to render
+    the tool config UI — internal fields confuse users."""
+    init_schema = mock_tool_extractor["init_params_schema"]
+    props = set(init_schema.get("properties", {}).keys())
+    required = set(init_schema.get("required", []))
+
+    # These are all BaseTool's own fields — none should leak
+    base_fields = {"name", "description", "env_vars", "args_schema",
+                   "description_updated", "cache_function", "result_as_answer",
+                   "max_usage_count", "current_usage_count", "tool_type",
+                   "package_dependencies"}
+
+    leaked_props = base_fields & props
+    assert not leaked_props, (
+        f"BaseTool fields leaked into init_params_schema properties: {leaked_props}"
+    )
+    leaked_required = base_fields & required
+    assert not leaked_required, (
+        f"BaseTool fields leaked into init_params_schema required: {leaked_required}"
+    )
+
+
+def test_intermediate_base_fields_preserved_for_derived_tool(extractor):
+    """When a tool inherits from an intermediate base (e.g. RagTool),
+    the intermediate's fields should be included — only BaseTool's own
+    fields are excluded."""
+    with (
+        mock.patch(
+            "crewai_tools.generate_tool_specs.dir",
+            return_value=["MockDerivedTool"],
+        ),
+        mock.patch(
+            "crewai_tools.generate_tool_specs.getattr",
+            return_value=MockDerivedTool,
+        ),
+    ):
+        extractor.extract_all_tools()
+        assert len(extractor.tools_spec) == 1
+        tool_info = extractor.tools_spec[0]
+
+    props = set(tool_info["init_params_schema"].get("properties", {}).keys())
+
+    # Intermediate base's field should be preserved
+    assert "shared_config" in props, (
+        "Intermediate base class fields should be preserved in init_params_schema"
+    )
+    # Derived tool's own field should be preserved
+    assert "derived_param" in props, (
+        "Derived tool's own fields should be preserved in init_params_schema"
+    )
+    # BaseTool internals should still be excluded
+    assert "tool_type" not in props
+    assert "cache_function" not in props
+    assert "result_as_answer" not in props
+
+
+def test_future_base_tool_field_auto_excluded(extractor):
+    """If a new field is added to BaseTool in the future, it should be
+    automatically excluded from spec generation without needing to update
+    the ignored list. This test verifies the allowlist approach works
+    by checking that ONLY non-BaseTool fields appear."""
+    with (
+        mock.patch("crewai_tools.generate_tool_specs.dir", return_value=["MockTool"]),
+        mock.patch("crewai_tools.generate_tool_specs.getattr", return_value=MockTool),
+    ):
+        extractor.extract_all_tools()
+        tool_info = extractor.tools_spec[0]
+
+    props = set(tool_info["init_params_schema"].get("properties", {}).keys())
+    base_all = set(BaseTool.model_fields) | set(BaseTool.model_computed_fields)
+
+    leaked = base_all & props
+    assert not leaked, (
+        f"BaseTool fields should be auto-excluded but found: {leaked}. "
+        "The spec generator should dynamically compute BaseTool's fields "
+        "instead of using a hardcoded denylist."
+    )
 
 
 def test_save_to_json(extractor, tmp_path):

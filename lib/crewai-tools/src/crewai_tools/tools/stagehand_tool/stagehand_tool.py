@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import contextvars
 import json
@@ -13,13 +15,13 @@ from pydantic import BaseModel, Field
 _HAS_STAGEHAND = False
 
 try:
-    from stagehand import (  # type: ignore[import-untyped]
+    from stagehand import (  # type: ignore[attr-defined]
         Stagehand,
         StagehandConfig,
         StagehandPage,
         configure_logging,
     )
-    from stagehand.schemas import (  # type: ignore[import-untyped]
+    from stagehand.schemas import (  # type: ignore[import-not-found]
         ActOptions,
         AvailableModel,
         ExtractOptions,
@@ -28,8 +30,7 @@ try:
 
     _HAS_STAGEHAND = True
 except ImportError:
-    # Define type stubs for when stagehand is not installed
-    Stagehand = Any
+    Stagehand = Any  # type: ignore[assignment, misc]
     StagehandPage = Any
     StagehandConfig = Any
     ActOptions = Any
@@ -37,7 +38,11 @@ except ImportError:
     ObserveOptions = Any
 
     # Mock configure_logging function
-    def configure_logging(level=None, remove_logger_name=None, quiet_dependencies=None):
+    def configure_logging(
+        level: str | None = None,
+        remove_logger_name: bool | None = None,
+        quiet_dependencies: bool | None = None,
+    ) -> None:
         pass
 
     # Define only what's needed for class defaults
@@ -57,7 +62,7 @@ class StagehandResult(BaseModel):
     success: bool = Field(
         ..., description="Whether the operation completed successfully"
     )
-    data: str | dict | list = Field(
+    data: str | dict[str, Any] | list[Any] = Field(
         ..., description="The result data from the operation"
     )
     error: str | None = Field(
@@ -160,7 +165,7 @@ class StagehandTool(BaseTool):
     api_key: str | None = None
     project_id: str | None = None
     model_api_key: str | None = None
-    model_name: AvailableModel | None = AvailableModel.CLAUDE_3_7_SONNET_LATEST
+    model_name: Any = AvailableModel.CLAUDE_3_7_SONNET_LATEST
     server_url: str | None = "https://api.stagehand.browserbase.com/v1"
     headless: bool = False
     dom_settle_timeout_ms: int = 3000
@@ -173,8 +178,8 @@ class StagehandTool(BaseTool):
     use_simplified_dom: bool = True
 
     # Instance variables
-    _stagehand: Stagehand | None = None
-    _page: StagehandPage | None = None
+    _stagehand: Any = None
+    _page: Any = None
     _session_id: str | None = None
     _testing: bool = False
 
@@ -192,8 +197,8 @@ class StagehandTool(BaseTool):
         wait_for_captcha_solves: bool | None = None,
         verbose: int | None = None,
         _testing: bool = False,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         # Set testing flag early so that other init logic can rely on it
         self._testing = _testing
         super().__init__(**kwargs)
@@ -235,7 +240,7 @@ class StagehandTool(BaseTool):
 
         self._check_required_credentials()
 
-    def _check_required_credentials(self):
+    def _check_required_credentials(self) -> None:
         """Validate that required credentials are present."""
         if not self._testing and not _HAS_STAGEHAND:
             raise ImportError(
@@ -249,14 +254,14 @@ class StagehandTool(BaseTool):
                 "project_id is required (or set BROWSERBASE_PROJECT_ID in env)."
             )
 
-    def __del__(self):
+    def __del__(self) -> None:
         """Ensure cleanup on deletion."""
         try:
             self.close()
         except Exception:  # noqa: S110
             pass
 
-    def _get_model_api_key(self):
+    def _get_model_api_key(self) -> str | None:
         """Get the appropriate API key based on the model being used."""
         # Check model type and get appropriate key
         model_str = str(self.model_name)
@@ -273,29 +278,29 @@ class StagehandTool(BaseTool):
             or os.getenv("ANTHROPIC_API_KEY")
         )
 
-    async def _setup_stagehand(self, session_id: str | None = None):
+    async def _setup_stagehand(self, session_id: str | None = None) -> tuple[Any, Any]:
         """Initialize Stagehand if not already set up."""
         # If we're in testing mode, return mock objects
         if self._testing:
             if not self._stagehand:
                 # Create mock objects for testing
                 class MockPage:
-                    async def act(self, options):
+                    async def act(self, options: Any) -> Any:
                         mock_result = type("MockResult", (), {})()
                         mock_result.model_dump = lambda: {
                             "message": "Action completed successfully"
                         }
                         return mock_result
 
-                    async def goto(self, url):
+                    async def goto(self, url: str) -> None:
                         return None
 
-                    async def extract(self, options):
+                    async def extract(self, options: Any) -> Any:
                         mock_result = type("MockResult", (), {})()
                         mock_result.model_dump = lambda: {"data": "Extracted content"}
                         return mock_result
 
-                    async def observe(self, options):
+                    async def observe(self, options: Any) -> list[Any]:
                         mock_result1 = type(
                             "MockResult",
                             (),
@@ -303,18 +308,18 @@ class StagehandTool(BaseTool):
                         )()
                         return [mock_result1]
 
-                    async def wait_for_load_state(self, state):
+                    async def wait_for_load_state(self, state: str) -> None:
                         return None
 
                 class MockStagehand:
-                    def __init__(self):
+                    def __init__(self) -> None:
                         self.page = MockPage()
                         self.session_id = "test-session-id"
 
-                    async def init(self):
+                    async def init(self) -> None:
                         return None
 
-                    async def close(self):
+                    async def close(self) -> None:
                         return None
 
                 self._stagehand = MockStagehand()
@@ -352,7 +357,7 @@ class StagehandTool(BaseTool):
             )
 
             # Initialize Stagehand with config
-            self._stagehand = Stagehand(config=config)
+            self._stagehand = Stagehand(config=config)  # type: ignore[call-arg]
 
             # Initialize the Stagehand instance
             await self._stagehand.init()
@@ -404,7 +409,7 @@ class StagehandTool(BaseTool):
         instruction: str | None = None,
         url: str | None = None,
         command_type: str = "act",
-    ):
+    ) -> StagehandResult:
         """Override _async_run with improved atomic action handling."""
         # Handle missing instruction based on command type
         if not instruction:
@@ -419,7 +424,7 @@ class StagehandTool(BaseTool):
 
         # For testing mode, return mock result directly without calling parent
         if self._testing:
-            mock_data = {
+            mock_data: dict[str, str] = {
                 "message": f"Mock {command_type} completed successfully",
                 "instruction": instruction,
             }
@@ -436,7 +441,7 @@ class StagehandTool(BaseTool):
 
             # Get the API key to pass to model operations
             model_api_key = self._get_model_api_key()
-            model_client_options = {"apiKey": model_api_key}
+            model_client_options: dict[str, Any] = {"apiKey": model_api_key}
 
             # Always navigate first if URL is provided and we're doing actions
             if url and command_type.lower() == "act":
@@ -452,7 +457,7 @@ class StagehandTool(BaseTool):
                 steps = self._extract_steps(instruction)
                 self._logger.info(f"Extracted {len(steps)} steps: {steps}")
 
-                results = []
+                results: list[dict[str, Any]] = []
                 for i, step in enumerate(steps):
                     self._logger.info(f"Executing step {i + 1}/{len(steps)}: {step}")
 
@@ -559,16 +564,16 @@ class StagehandTool(BaseTool):
                     modelClientOptions=model_client_options,  # Add API key here
                 )
 
-                results = await page.observe(observe_options)
+                observe_results = await page.observe(observe_options)
 
                 # Format the observation results
-                formatted_results = []
-                for i, result in enumerate(results):
+                formatted_results: list[dict[str, Any]] = []
+                for i, obs_result in enumerate(observe_results):
                     formatted_results.append(
                         {
                             "index": i + 1,
-                            "description": result.description,
-                            "method": result.method,
+                            "description": obs_result.description,
+                            "method": obs_result.method,
                         }
                     )
 
@@ -586,7 +591,12 @@ class StagehandTool(BaseTool):
             self._logger.error(f"Operation failed: {error_msg}")
             return self._format_result(False, {}, error_msg)
 
-    def _format_result(self, success, data, error=None):
+    def _format_result(
+        self,
+        success: bool,
+        data: str | dict[str, Any] | list[Any],
+        error: str | None = None,
+    ) -> StagehandResult:
         """Helper to format results consistently."""
         return StagehandResult(success=success, data=data, error=error)
 
@@ -653,10 +663,14 @@ class StagehandTool(BaseTool):
                                     f"Step {i + 1}: {step.get('message', 'Completed')}"
                                 )
                         return "\n".join(step_messages)
-                    return f"Action result: {result.data.get('message', 'Completed')}"
+                    if isinstance(result.data, dict):
+                        return (
+                            f"Action result: {result.data.get('message', 'Completed')}"
+                        )
+                    return f"Action result: {result.data}"
                 if command_type.lower() == "extract":
                     return f"Extracted data: {json.dumps(result.data, indent=2)}"
-                if command_type.lower() == "observe":
+                if command_type.lower() == "observe" and isinstance(result.data, list):
                     formatted_results = []
                     for element in result.data:
                         formatted_results.append(
@@ -680,7 +694,7 @@ class StagehandTool(BaseTool):
                 return str(result.data)
             return f"Error: {result.error}"
 
-    async def _async_close(self):
+    async def _async_close(self) -> None:
         """Asynchronously clean up Stagehand resources."""
         # Skip for test mode
         if self._testing:
@@ -694,7 +708,7 @@ class StagehandTool(BaseTool):
         if self._page:
             self._page = None
 
-    def close(self):
+    def close(self) -> None:
         """Clean up Stagehand resources."""
         # Skip actual closing for testing mode
         if self._testing:
@@ -704,9 +718,9 @@ class StagehandTool(BaseTool):
 
         if self._stagehand:
             try:
-                # Handle both synchronous and asynchronous cases
-                if hasattr(self._stagehand, "close"):
-                    if asyncio.iscoroutinefunction(self._stagehand.close):
+                close_method: Any = getattr(self._stagehand, "close", None)
+                if close_method is not None:
+                    if asyncio.iscoroutinefunction(close_method):
                         try:
                             loop = asyncio.get_event_loop()
                             if loop.is_running():
@@ -725,8 +739,7 @@ class StagehandTool(BaseTool):
                         except RuntimeError:
                             asyncio.run(self._async_close())
                     else:
-                        # Handle non-async close method (for mocks)
-                        self._stagehand.close()
+                        close_method()
             except Exception:  # noqa: S110
                 # Log but don't raise - we're cleaning up
                 pass
@@ -736,10 +749,15 @@ class StagehandTool(BaseTool):
         if self._page:
             self._page = None
 
-    def __enter__(self):
+    def __enter__(self) -> StagehandTool:
         """Enter the context manager."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: Any,
+    ) -> None:
         """Exit the context manager and clean up resources."""
         self.close()

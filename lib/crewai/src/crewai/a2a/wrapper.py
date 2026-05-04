@@ -1272,6 +1272,15 @@ def _delegate_to_a2a(
         for turn_num in range(ctx.max_turns):
             agent_branch, accepted_output_modes = _get_turn_context(ctx.agent_config)
 
+            merged_metadata = dict(ctx.metadata) if ctx.metadata else {}
+            if _extension_registry and conversation_history:
+                _ext_states = _extension_registry.extract_all_states(
+                    conversation_history
+                )
+                merged_metadata.update(
+                    _extension_registry.prepare_all_metadata(_ext_states)
+                )
+
             a2a_result = execute_a2a_delegation(
                 endpoint=ctx.agent_config.endpoint,
                 auth=ctx.agent_config.auth,
@@ -1280,7 +1289,7 @@ def _delegate_to_a2a(
                 context_id=context_id,
                 task_id=task_id,
                 reference_task_ids=reference_task_ids,
-                metadata=ctx.metadata,
+                metadata=merged_metadata or None,
                 extensions=ctx.extensions,
                 conversation_history=conversation_history,
                 agent_id=ctx.agent_id,
@@ -1617,6 +1626,15 @@ async def _adelegate_to_a2a(
         for turn_num in range(ctx.max_turns):
             agent_branch, accepted_output_modes = _get_turn_context(ctx.agent_config)
 
+            merged_metadata = dict(ctx.metadata) if ctx.metadata else {}
+            if _extension_registry and conversation_history:
+                _ext_states = _extension_registry.extract_all_states(
+                    conversation_history
+                )
+                merged_metadata.update(
+                    _extension_registry.prepare_all_metadata(_ext_states)
+                )
+
             a2a_result = await aexecute_a2a_delegation(
                 endpoint=ctx.agent_config.endpoint,
                 auth=ctx.agent_config.auth,
@@ -1625,7 +1643,7 @@ async def _adelegate_to_a2a(
                 context_id=context_id,
                 task_id=task_id,
                 reference_task_ids=reference_task_ids,
-                metadata=ctx.metadata,
+                metadata=merged_metadata or None,
                 extensions=ctx.extensions,
                 conversation_history=conversation_history,
                 agent_id=ctx.agent_id,

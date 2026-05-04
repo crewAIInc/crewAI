@@ -10,6 +10,10 @@ mode: "wide"
 CrewAI 도구는 에이전트에게 웹 검색, 데이터 분석부터 동료 간 협업 및 작업 위임에 이르기까지 다양한 기능을 제공합니다.  
 이 문서에서는 CrewAI 프레임워크 내에서 이러한 도구를 생성, 통합 및 활용하는 방법과, 협업 도구에 초점을 맞춘 새로운 기능에 대해 설명합니다.
 
+<Note type="info" title="도구는 다섯 가지 에이전트 기능 유형 중 하나입니다">
+  도구는 에이전트에게 행동을 취할 수 있는 **호출 가능한 함수**를 제공합니다. [MCP](/ko/mcp/overview) (원격 도구 서버), [앱](/ko/concepts/agent-capabilities) (플랫폼 통합), [스킬](/ko/concepts/skills) (도메인 전문성), [지식](/ko/concepts/knowledge) (검색된 사실)과 함께 작동합니다. 각 유형을 언제 사용해야 하는지 알아보려면 [에이전트 기능](/ko/concepts/agent-capabilities) 개요를 참조하세요.
+</Note>
+
 ## Tool이란 무엇인가?
 
 CrewAI에서 tool은 에이전트가 다양한 작업을 수행하기 위해 활용할 수 있는 기술 또는 기능입니다.
@@ -128,7 +132,7 @@ crew.kickoff()
 | **DirectorySearchTool**           | 디렉터리 내에서 검색하는 RAG 도구로, 파일 시스템을 탐색할 때 유용합니다.                              |
 | **DOCXSearchTool**                | DOCX 문서 내에서 검색하는 데 특화된 RAG 도구로, Word 파일을 처리할 때 이상적입니다.                   |
 | **DirectoryReadTool**             | 디렉터리 구조와 그 내용을 읽고 처리하도록 지원하는 도구입니다.                                        |
-| **EXASearchTool**                 | 다양한 데이터 소스를 폭넓게 검색하기 위해 설계된 도구입니다.                                          |
+| **ExaSearchTool**                 | 다양한 데이터 소스를 폭넓게 검색하기 위해 설계된 도구입니다.                                          |
 | **FileReadTool**                  | 다양한 파일 형식을 지원하며 파일에서 데이터를 읽고 추출할 수 있는 도구입니다.                         |
 | **FirecrawlSearchTool**           | Firecrawl을 이용해 웹페이지를 검색하고 결과를 반환하는 도구입니다.                                    |
 | **FirecrawlCrawlWebsiteTool**     | Firecrawl을 사용해 웹페이지를 크롤링하는 도구입니다.                                                  |

@@ -1,22 +1,21 @@
 """MCP client with session management for CrewAI agents."""
 
 import asyncio
-from collections.abc import Callable
+from collections.abc import Callable, Coroutine
 from contextlib import AsyncExitStack
 from datetime import datetime
 import logging
+import sys
 import time
-from typing import Any, NamedTuple
+from typing import Any, NamedTuple, TypeVar
 
 from typing_extensions import Self
 
 
-# BaseExceptionGroup is available in Python 3.11+
-try:
+if sys.version_info >= (3, 11):
     from builtins import BaseExceptionGroup
-except ImportError:
-    # Fallback for Python < 3.11 (shouldn't happen in practice)
-    BaseExceptionGroup = Exception
+else:
+    from exceptiongroup import BaseExceptionGroup
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.mcp_events import (
@@ -47,8 +46,10 @@ MCP_TOOL_EXECUTION_TIMEOUT = 30
 MCP_DISCOVERY_TIMEOUT = 30  # Increased for slow servers
 MCP_MAX_RETRIES = 3
 
+_T = TypeVar("_T")
+
 # Simple in-memory cache for MCP tool schemas (duration: 5 minutes)
-_mcp_schema_cache: dict[str, tuple[dict[str, Any], float]] = {}
+_mcp_schema_cache: dict[str, tuple[list[dict[str, Any]], float]] = {}
 _cache_ttl = 300  # 5 minutes
 
 
@@ -134,11 +135,7 @@ class MCPClient:
         else:
             server_name = "Unknown MCP Server"
             server_url = None
-            transport_type = (
-                self.transport.transport_type.value
-                if hasattr(self.transport, "transport_type")
-                else None
-            )
+            transport_type = self.transport.transport_type.value
 
         return server_name, server_url, transport_type
 
@@ -542,7 +539,7 @@ class MCPClient:
         Returns:
             Cleaned arguments ready for MCP server.
         """
-        cleaned = {}
+        cleaned: dict[str, Any] = {}
 
         for key, value in arguments.items():
             # Skip None values
@@ -686,9 +683,9 @@ class MCPClient:
 
     async def _retry_operation(
         self,
-        operation: Callable[[], Any],
+        operation: Callable[[], Coroutine[Any, Any, _T]],
         timeout: int | None = None,
-    ) -> Any:
+    ) -> _T:
         """Retry an operation with exponential backoff.
 
         Args:

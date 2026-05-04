@@ -21,7 +21,7 @@ class BaseLoader(ABC):
         self.config = config or {}
 
     @abstractmethod
-    def load(self, content: SourceContent, **kwargs) -> LoaderResult: ...
+    def load(self, content: SourceContent, **kwargs: Any) -> LoaderResult: ...
 
     @staticmethod
     def generate_doc_id(

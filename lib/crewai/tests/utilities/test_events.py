@@ -880,6 +880,35 @@ def test_llm_emits_call_started_event():
 
 
 @pytest.mark.vcr()
+def test_llm_completed_event_includes_usage():
+    completed_events: list[LLMCallCompletedEvent] = []
+    condition = threading.Condition()
+
+    @crewai_event_bus.on(LLMCallCompletedEvent)
+    def handle_llm_call_completed(source, event):
+        with condition:
+            completed_events.append(event)
+            condition.notify()
+
+    llm = LLM(model="gpt-4o-mini")
+    llm.call("Say hello")
+
+    with condition:
+        success = condition.wait_for(
+            lambda: len(completed_events) >= 1,
+            timeout=10,
+        )
+    assert success, "Timeout waiting for LLMCallCompletedEvent"
+
+    event = completed_events[0]
+    assert event.usage is not None
+    assert isinstance(event.usage, dict)
+    assert event.usage.get("prompt_tokens", 0) > 0
+    assert event.usage.get("completion_tokens", 0) > 0
+    assert event.usage.get("total_tokens", 0) > 0
+
+
+@pytest.mark.vcr()
 def test_llm_emits_call_failed_event():
     received_events = []
     event_received = threading.Event()

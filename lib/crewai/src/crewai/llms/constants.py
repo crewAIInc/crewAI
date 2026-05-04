@@ -423,6 +423,34 @@ AZURE_MODELS: list[AzureModels] = [
 
 
 BedrockModels: TypeAlias = Literal[
+    # Inference profiles (regional) - Claude 4
+    "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    "us.anthropic.claude-sonnet-4-20250514-v1:0",
+    "us.anthropic.claude-opus-4-5-20251101-v1:0",
+    "us.anthropic.claude-opus-4-20250514-v1:0",
+    "us.anthropic.claude-opus-4-1-20250805-v1:0",
+    "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+    "us.anthropic.claude-sonnet-4-6",
+    "us.anthropic.claude-opus-4-6-v1",
+    # Inference profiles - shorter versions
+    "us.anthropic.claude-sonnet-4-5-v1:0",
+    "us.anthropic.claude-opus-4-5-v1:0",
+    "us.anthropic.claude-opus-4-6-v1:0",
+    "us.anthropic.claude-haiku-4-5-v1:0",
+    "eu.anthropic.claude-sonnet-4-5-v1:0",
+    "eu.anthropic.claude-opus-4-5-v1:0",
+    "eu.anthropic.claude-haiku-4-5-v1:0",
+    "apac.anthropic.claude-sonnet-4-5-v1:0",
+    "apac.anthropic.claude-opus-4-5-v1:0",
+    "apac.anthropic.claude-haiku-4-5-v1:0",
+    # Global inference profiles
+    "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    "global.anthropic.claude-sonnet-4-20250514-v1:0",
+    "global.anthropic.claude-opus-4-5-20251101-v1:0",
+    "global.anthropic.claude-opus-4-6-v1",
+    "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+    "global.anthropic.claude-sonnet-4-6",
+    # Direct model IDs
     "ai21.jamba-1-5-large-v1:0",
     "ai21.jamba-1-5-mini-v1:0",
     "amazon.nova-lite-v1:0",
@@ -496,6 +524,34 @@ BedrockModels: TypeAlias = Literal[
     "twelvelabs.pegasus-1-2-v1:0",
 ]
 BEDROCK_MODELS: list[BedrockModels] = [
+    # Inference profiles (regional) - Claude 4
+    "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    "us.anthropic.claude-sonnet-4-20250514-v1:0",
+    "us.anthropic.claude-opus-4-5-20251101-v1:0",
+    "us.anthropic.claude-opus-4-20250514-v1:0",
+    "us.anthropic.claude-opus-4-1-20250805-v1:0",
+    "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+    "us.anthropic.claude-sonnet-4-6",
+    "us.anthropic.claude-opus-4-6-v1",
+    # Inference profiles - shorter versions
+    "us.anthropic.claude-sonnet-4-5-v1:0",
+    "us.anthropic.claude-opus-4-5-v1:0",
+    "us.anthropic.claude-opus-4-6-v1:0",
+    "us.anthropic.claude-haiku-4-5-v1:0",
+    "eu.anthropic.claude-sonnet-4-5-v1:0",
+    "eu.anthropic.claude-opus-4-5-v1:0",
+    "eu.anthropic.claude-haiku-4-5-v1:0",
+    "apac.anthropic.claude-sonnet-4-5-v1:0",
+    "apac.anthropic.claude-opus-4-5-v1:0",
+    "apac.anthropic.claude-haiku-4-5-v1:0",
+    # Global inference profiles
+    "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    "global.anthropic.claude-sonnet-4-20250514-v1:0",
+    "global.anthropic.claude-opus-4-5-20251101-v1:0",
+    "global.anthropic.claude-opus-4-6-v1",
+    "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+    "global.anthropic.claude-sonnet-4-6",
+    # Direct model IDs
     "ai21.jamba-1-5-large-v1:0",
     "ai21.jamba-1-5-mini-v1:0",
     "amazon.nova-lite-v1:0",

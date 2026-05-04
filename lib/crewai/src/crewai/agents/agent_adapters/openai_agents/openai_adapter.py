@@ -4,6 +4,7 @@ This module contains the OpenAIAgentAdapter class that integrates OpenAI Assista
 with CrewAI's agent system, providing tool integration and structured output support.
 """
 
+from collections.abc import Sequence
 from typing import Any, cast
 
 from pydantic import ConfigDict, Field, PrivateAttr
@@ -31,6 +32,7 @@ from crewai.events.types.agent_events import (
 from crewai.tools import BaseTool
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.utilities import Logger
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.import_utils import require
 
 
@@ -132,7 +134,7 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
         try:
             task_prompt: str = task.prompt()
             if context:
-                task_prompt = self.i18n.slice("task_with_context").format(
+                task_prompt = I18N_DEFAULT.slice("task_with_context").format(
                     task=task_prompt, context=context
                 )
             crewai_event_bus.emit(
@@ -188,14 +190,14 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
         self._openai_agent = OpenAIAgent(
             name=self.role,
             instructions=instructions,
-            model=self.llm,
+            model=str(self.llm),
             **self._agent_config or {},
         )
 
         if all_tools:
             self.configure_tools(all_tools)
 
-        self.agent_executor = Runner
+        self.agent_executor = Runner  # type: ignore[assignment]
 
     def configure_tools(self, tools: list[BaseTool] | None = None) -> None:
         """Configure tools for the OpenAI Assistant.
@@ -221,7 +223,7 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
         """
         return self._converter_adapter.post_process_result(result.final_output)
 
-    def get_delegation_tools(self, agents: list[BaseAgent]) -> list[BaseTool]:
+    def get_delegation_tools(self, agents: Sequence[BaseAgent]) -> list[BaseTool]:
         """Implement delegation tools support.
 
         Creates delegation tools that allow this agent to delegate tasks to other agents.

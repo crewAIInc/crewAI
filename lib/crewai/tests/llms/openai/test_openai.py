@@ -371,11 +371,11 @@ def test_openai_client_setup_with_extra_arguments():
     assert llm.top_p == 0.5
 
     # Check that client parameters are properly configured
-    assert llm.client.max_retries == 3
-    assert llm.client.timeout == 30
+    assert llm._client.max_retries == 3
+    assert llm._client.timeout == 30
 
     # Test that parameters are properly used in API calls
-    with patch.object(llm.client.chat.completions, 'create') as mock_create:
+    with patch.object(llm._client.chat.completions, 'create') as mock_create:
         mock_create.return_value = MagicMock(
             choices=[MagicMock(message=MagicMock(content="test response", tool_calls=None))],
             usage=MagicMock(prompt_tokens=10, completion_tokens=20, total_tokens=30)
@@ -396,7 +396,7 @@ def test_extra_arguments_are_passed_to_openai_completion():
     """
     llm = LLM(model="gpt-4o", temperature=0.7, max_tokens=1000, top_p=0.5, max_retries=3)
 
-    with patch.object(llm.client.chat.completions, 'create') as mock_create:
+    with patch.object(llm._client.chat.completions, 'create') as mock_create:
         mock_create.return_value = MagicMock(
             choices=[MagicMock(message=MagicMock(content="test response", tool_calls=None))],
             usage=MagicMock(prompt_tokens=10, completion_tokens=20, total_tokens=30)
@@ -507,7 +507,7 @@ def test_openai_streaming_with_response_model():
 
     llm = LLM(model="openai/gpt-4o", stream=True)
 
-    with patch.object(llm.client.beta.chat.completions, "stream") as mock_stream:
+    with patch.object(llm._client.beta.chat.completions, "stream") as mock_stream:
         # Create mock chunks with content.delta event structure
         mock_chunk1 = MagicMock()
         mock_chunk1.type = "content.delta"
@@ -1523,6 +1523,69 @@ def test_openai_stop_words_not_applied_to_structured_output():
     assert "Observation:" in result.observation
 
 
+def test_openai_gpt5_models_do_not_support_stop_words():
+    """
+    Test that GPT-5 family models do not support stop words via the API.
+    GPT-5 models reject the 'stop' parameter, so stop words must be
+    applied client-side only.
+    """
+    gpt5_models = [
+        "gpt-5",
+        "gpt-5-mini",
+        "gpt-5-nano",
+        "gpt-5-pro",
+        "gpt-5.1",
+        "gpt-5.1-chat",
+        "gpt-5.2",
+        "gpt-5.2-chat",
+    ]
+
+    for model_name in gpt5_models:
+        llm = OpenAICompletion(model=model_name)
+        assert llm.supports_stop_words() == False, (
+            f"Expected {model_name} to NOT support stop words"
+        )
+
+
+def test_openai_non_gpt5_models_support_stop_words():
+    """
+    Test that non-GPT-5 models still support stop words normally.
+    """
+    supported_models = [
+        "gpt-4o",
+        "gpt-4o-mini",
+        "gpt-4.1",
+        "gpt-4.1-mini",
+        "gpt-4-turbo",
+    ]
+
+    for model_name in supported_models:
+        llm = OpenAICompletion(model=model_name)
+        assert llm.supports_stop_words() == True, (
+            f"Expected {model_name} to support stop words"
+        )
+
+
+def test_openai_gpt5_still_applies_stop_words_client_side():
+    """
+    Test that GPT-5 models still truncate responses at stop words client-side
+    via _apply_stop_words(), even though they don't send 'stop' to the API.
+    """
+    llm = OpenAICompletion(
+        model="gpt-5.2",
+        stop=["Observation:", "Final Answer:"],
+    )
+
+    assert llm.supports_stop_words() == False
+
+    response = "I need to search.\n\nAction: search\nObservation: Found results"
+    result = llm._apply_stop_words(response)
+
+    assert "Observation:" not in result
+    assert "Found results" not in result
+    assert "I need to search" in result
+
+
 def test_openai_stop_words_still_applied_to_regular_responses():
     """
     Test that stop words ARE still applied for regular (non-structured) responses.
@@ -1767,7 +1830,7 @@ def test_openai_responses_api_cached_prompt_tokens_with_tools():
         }
     ]
 
-    llm = OpenAICompletion(model="gpt-4.1", api='response')
+    llm = OpenAICompletion(model="gpt-4.1", api='responses')
 
     # First call with tool
     llm.call(
@@ -1843,7 +1906,7 @@ def test_openai_streaming_returns_tool_calls_without_available_functions():
     mock_chunk_3.id = "chatcmpl-1"
 
     with patch.object(
-        llm.client.chat.completions, "create", return_value=iter([mock_chunk_1, mock_chunk_2, mock_chunk_3])
+        llm._client.chat.completions, "create", return_value=iter([mock_chunk_1, mock_chunk_2, mock_chunk_3])
     ):
         result = llm.call(
             messages=[{"role": "user", "content": "Calculate 1+1"}],
@@ -1864,6 +1927,47 @@ def test_openai_streaming_returns_tool_calls_without_available_functions():
     assert result[0]["function"]["arguments"] == '{"expression": "1+1"}'
     assert result[0]["id"] == "call_abc123"
     assert result[0]["type"] == "function"
+
+
+def test_openai_responses_api_reasoning_tokens_extraction():
+    """Test that reasoning_tokens are extracted from Responses API responses."""
+    llm = LLM(model="openai/gpt-4o")
+
+    mock_response = MagicMock()
+    mock_response.usage = MagicMock(
+        input_tokens=100,
+        output_tokens=200,
+        total_tokens=300,
+    )
+    mock_response.usage.input_tokens_details = MagicMock(cached_tokens=25)
+    mock_response.usage.output_tokens_details = MagicMock(reasoning_tokens=80)
+
+    usage = llm._extract_responses_token_usage(mock_response)
+    assert usage["prompt_tokens"] == 100
+    assert usage["completion_tokens"] == 200
+    assert usage["total_tokens"] == 300
+    assert usage["cached_prompt_tokens"] == 25
+    assert usage["reasoning_tokens"] == 80
+
+
+def test_openai_responses_api_no_detail_fields_omitted():
+    """Test that reasoning/cached fields are omitted when Responses API details are absent."""
+    llm = LLM(model="openai/gpt-4o")
+
+    mock_response = MagicMock()
+    mock_response.usage = MagicMock(
+        input_tokens=50,
+        output_tokens=30,
+        total_tokens=80,
+    )
+    mock_response.usage.input_tokens_details = None
+    mock_response.usage.output_tokens_details = None
+
+    usage = llm._extract_responses_token_usage(mock_response)
+    assert usage["prompt_tokens"] == 50
+    assert usage["completion_tokens"] == 30
+    assert "cached_prompt_tokens" not in usage
+    assert "reasoning_tokens" not in usage
 
 
 @pytest.mark.asyncio
@@ -1934,7 +2038,7 @@ async def test_openai_async_streaming_returns_tool_calls_without_available_funct
         return MockAsyncStream([mock_chunk_1, mock_chunk_2, mock_chunk_3])
 
     with patch.object(
-        llm.async_client.chat.completions, "create", side_effect=mock_create
+        llm._async_client.chat.completions, "create", side_effect=mock_create
     ):
         result = await llm.acall(
             messages=[{"role": "user", "content": "Calculate 1+1"}],
@@ -1955,3 +2059,44 @@ async def test_openai_async_streaming_returns_tool_calls_without_available_funct
     assert result[0]["function"]["arguments"] == '{"expression": "1+1"}'
     assert result[0]["id"] == "call_abc123"
     assert result[0]["type"] == "function"
+
+
+def test_openai_reasoning_tokens_extraction():
+    """Test that reasoning_tokens are extracted from OpenAI o-series responses."""
+    llm = LLM(model="openai/gpt-4o")
+
+    mock_response = MagicMock()
+    mock_response.usage = MagicMock(
+        prompt_tokens=100,
+        completion_tokens=200,
+        total_tokens=300,
+    )
+    mock_response.usage.prompt_tokens_details = MagicMock(cached_tokens=25)
+    mock_response.usage.completion_tokens_details = MagicMock(reasoning_tokens=80)
+
+    usage = llm._extract_openai_token_usage(mock_response)
+    assert usage["prompt_tokens"] == 100
+    assert usage["completion_tokens"] == 200
+    assert usage["total_tokens"] == 300
+    assert usage["cached_prompt_tokens"] == 25
+    assert usage["reasoning_tokens"] == 80
+
+
+def test_openai_no_detail_fields_omitted():
+    """Test that reasoning/cached fields are omitted when details are absent."""
+    llm = LLM(model="openai/gpt-4o")
+
+    mock_response = MagicMock()
+    mock_response.usage = MagicMock(
+        prompt_tokens=50,
+        completion_tokens=30,
+        total_tokens=80,
+    )
+    mock_response.usage.prompt_tokens_details = None
+    mock_response.usage.completion_tokens_details = None
+
+    usage = llm._extract_openai_token_usage(mock_response)
+    assert usage["prompt_tokens"] == 50
+    assert usage["completion_tokens"] == 30
+    assert "cached_prompt_tokens" not in usage
+    assert "reasoning_tokens" not in usage

@@ -196,12 +196,19 @@ CrewAI provides a wide range of events that you can listen for:
 - **CrewTrainStartedEvent**: Emitted when a Crew starts training
 - **CrewTrainCompletedEvent**: Emitted when a Crew completes training
 - **CrewTrainFailedEvent**: Emitted when a Crew fails to complete training
+- **CrewTestResultEvent**: Emitted when a Crew test result is available. Contains the quality score, execution duration, and model used.
 
 ### Agent Events
 
 - **AgentExecutionStartedEvent**: Emitted when an Agent starts executing a task
 - **AgentExecutionCompletedEvent**: Emitted when an Agent completes executing a task
 - **AgentExecutionErrorEvent**: Emitted when an Agent encounters an error during execution
+- **LiteAgentExecutionStartedEvent**: Emitted when a LiteAgent starts executing. Contains the agent info, tools, and messages.
+- **LiteAgentExecutionCompletedEvent**: Emitted when a LiteAgent completes execution. Contains the agent info and output.
+- **LiteAgentExecutionErrorEvent**: Emitted when a LiteAgent encounters an error during execution. Contains the agent info and error message.
+- **AgentEvaluationStartedEvent**: Emitted when an agent evaluation starts. Contains the agent ID, agent role, optional task ID, and iteration number.
+- **AgentEvaluationCompletedEvent**: Emitted when an agent evaluation completes. Contains the agent ID, agent role, optional task ID, iteration number, metric category, and score.
+- **AgentEvaluationFailedEvent**: Emitted when an agent evaluation fails. Contains the agent ID, agent role, optional task ID, iteration number, and error message.
 
 ### Task Events
 
@@ -242,16 +249,26 @@ CrewAI provides a wide range of events that you can listen for:
 
 - **LLMGuardrailStartedEvent**: Emitted when a guardrail validation starts. Contains details about the guardrail being applied and retry count.
 - **LLMGuardrailCompletedEvent**: Emitted when a guardrail validation completes. Contains details about validation success/failure, results, and error messages if any.
+- **LLMGuardrailFailedEvent**: Emitted when a guardrail validation fails. Contains the error message and retry count.
 
 ### Flow Events
 
 - **FlowCreatedEvent**: Emitted when a Flow is created
 - **FlowStartedEvent**: Emitted when a Flow starts execution
 - **FlowFinishedEvent**: Emitted when a Flow completes execution
+- **FlowPausedEvent**: Emitted when a Flow is paused waiting for human feedback. Contains the flow name, flow ID, method name, current state, message shown when requesting feedback, and optional list of possible outcomes for routing.
 - **FlowPlotEvent**: Emitted when a Flow is plotted
 - **MethodExecutionStartedEvent**: Emitted when a Flow method starts execution
 - **MethodExecutionFinishedEvent**: Emitted when a Flow method completes execution
 - **MethodExecutionFailedEvent**: Emitted when a Flow method fails to complete execution
+- **MethodExecutionPausedEvent**: Emitted when a Flow method is paused waiting for human feedback. Contains the flow name, method name, current state, flow ID, message shown when requesting feedback, and optional list of possible outcomes for routing.
+
+### Human In The Loop Events
+
+- **FlowInputRequestedEvent**: Emitted when a Flow requests user input via `Flow.ask()`. Contains the flow name, method name, the question or prompt being shown to the user, and optional metadata (e.g., user ID, channel, session context).
+- **FlowInputReceivedEvent**: Emitted when user input is received after `Flow.ask()`. Contains the flow name, method name, the original question, the user's response (or `None` if timed out), optional request metadata, and optional response metadata from the provider (e.g., who responded, thread ID, timestamps).
+- **HumanFeedbackRequestedEvent**: Emitted when a `@human_feedback` decorated method requires input from a human reviewer. Contains the flow name, method name, the method output shown to the human for review, the message displayed when requesting feedback, and optional list of possible outcomes for routing.
+- **HumanFeedbackReceivedEvent**: Emitted when a human provides feedback in response to a `@human_feedback` decorated method. Contains the flow name, method name, the raw text feedback provided by the human, and the collapsed outcome string (if emit was specified).
 
 ### LLM Events
 
@@ -259,6 +276,7 @@ CrewAI provides a wide range of events that you can listen for:
 - **LLMCallCompletedEvent**: Emitted when an LLM call completes
 - **LLMCallFailedEvent**: Emitted when an LLM call fails
 - **LLMStreamChunkEvent**: Emitted for each chunk received during streaming LLM responses
+- **LLMThinkingChunkEvent**: Emitted when a thinking/reasoning chunk is received from a thinking model. Contains the chunk text and optional response ID.
 
 ### Memory Events
 
@@ -270,6 +288,79 @@ CrewAI provides a wide range of events that you can listen for:
 - **MemorySaveFailedEvent**: Emitted when a memory save operation fails. Contains the value, metadata, agent role, and error message.
 - **MemoryRetrievalStartedEvent**: Emitted when memory retrieval for a task prompt starts. Contains the optional task ID.
 - **MemoryRetrievalCompletedEvent**: Emitted when memory retrieval for a task prompt completes successfully. Contains the task ID, memory content, and retrieval execution time.
+- **MemoryRetrievalFailedEvent**: Emitted when memory retrieval for a task prompt fails. Contains the optional task ID and error message.
+
+### Reasoning Events
+
+- **AgentReasoningStartedEvent**: Emitted when an agent starts reasoning about a task. Contains the agent role, task ID, and attempt number.
+- **AgentReasoningCompletedEvent**: Emitted when an agent finishes its reasoning process. Contains the agent role, task ID, the plan produced, and whether the agent is ready to proceed.
+- **AgentReasoningFailedEvent**: Emitted when the reasoning process fails. Contains the agent role, task ID, and error message.
+
+### Observation Events
+
+- **StepObservationStartedEvent**: Emitted when the Planner begins observing a step's result. Fires after every step execution, before the observation LLM call. Contains the agent role, step number, and step description.
+- **StepObservationCompletedEvent**: Emitted when the Planner finishes observing a step's result. Contains whether the step completed successfully, key information learned, whether the remaining plan is still valid, whether a full replan is needed, and suggested refinements.
+- **StepObservationFailedEvent**: Emitted when the observation LLM call itself fails. The system defaults to continuing the plan. Contains the error message.
+- **PlanRefinementEvent**: Emitted when the Planner refines upcoming step descriptions without a full replan. Contains the number of refined steps and the refinements applied.
+- **PlanReplanTriggeredEvent**: Emitted when the Planner triggers a full replan because the remaining plan was deemed fundamentally wrong. Contains the replan reason, replan count, and number of completed steps preserved.
+- **GoalAchievedEarlyEvent**: Emitted when the Planner detects the goal was achieved early and remaining steps will be skipped. Contains the number of steps remaining and steps completed.
+
+### A2A (Agent-to-Agent) Events
+
+#### Delegation Events
+
+- **A2ADelegationStartedEvent**: Emitted when A2A delegation starts. Contains the endpoint URL, task description, agent ID, context ID, whether it's multiturn, turn number, agent card metadata, protocol version, provider info, and optional skill ID.
+- **A2ADelegationCompletedEvent**: Emitted when A2A delegation completes. Contains the completion status (`completed`, `input_required`, `failed`, etc.), result, error message, context ID, and agent card metadata.
+- **A2AParallelDelegationStartedEvent**: Emitted when parallel delegation to multiple A2A agents begins. Contains the list of endpoints and the task description.
+- **A2AParallelDelegationCompletedEvent**: Emitted when parallel delegation to multiple A2A agents completes. Contains the list of endpoints, success count, failure count, and results summary.
+
+#### Conversation Events
+
+- **A2AConversationStartedEvent**: Emitted once at the beginning of a multiturn A2A conversation, before the first message exchange. Contains the agent ID, endpoint, context ID, agent card metadata, protocol version, and provider info.
+- **A2AMessageSentEvent**: Emitted when a message is sent to the A2A agent. Contains the message content, turn number, context ID, message ID, and whether it's multiturn.
+- **A2AResponseReceivedEvent**: Emitted when a response is received from the A2A agent. Contains the response content, turn number, context ID, message ID, status, and whether it's the final response.
+- **A2AConversationCompletedEvent**: Emitted once at the end of a multiturn A2A conversation. Contains the final status (`completed` or `failed`), final result, error message, context ID, and total number of turns.
+
+#### Streaming Events
+
+- **A2AStreamingStartedEvent**: Emitted when streaming mode begins for A2A delegation. Contains the task ID, context ID, endpoint, turn number, and whether it's multiturn.
+- **A2AStreamingChunkEvent**: Emitted when a streaming chunk is received. Contains the chunk text, chunk index, whether it's the final chunk, task ID, context ID, and turn number.
+
+#### Polling & Push Notification Events
+
+- **A2APollingStartedEvent**: Emitted when polling mode begins for A2A delegation. Contains the task ID, context ID, polling interval in seconds, and endpoint.
+- **A2APollingStatusEvent**: Emitted on each polling iteration. Contains the task ID, context ID, current task state, elapsed seconds, and poll count.
+- **A2APushNotificationRegisteredEvent**: Emitted when a push notification callback is registered. Contains the task ID, context ID, callback URL, and endpoint.
+- **A2APushNotificationReceivedEvent**: Emitted when a push notification is received from the remote A2A agent. Contains the task ID, context ID, and current state.
+- **A2APushNotificationSentEvent**: Emitted when a push notification is sent to a callback URL. Contains the task ID, context ID, callback URL, state, whether delivery succeeded, and optional error message.
+- **A2APushNotificationTimeoutEvent**: Emitted when push notification wait times out. Contains the task ID, context ID, and timeout duration in seconds.
+
+#### Connection & Authentication Events
+
+- **A2AAgentCardFetchedEvent**: Emitted when an agent card is successfully fetched. Contains the endpoint, agent name, agent card metadata, protocol version, provider info, whether it was cached, and fetch time in milliseconds.
+- **A2AAuthenticationFailedEvent**: Emitted when authentication to an A2A agent fails. Contains the endpoint, auth type attempted (e.g., `bearer`, `oauth2`, `api_key`), error message, and HTTP status code.
+- **A2AConnectionErrorEvent**: Emitted when a connection error occurs during A2A communication. Contains the endpoint, error message, error type (e.g., `timeout`, `connection_refused`, `dns_error`), HTTP status code, and the operation being attempted.
+- **A2ATransportNegotiatedEvent**: Emitted when transport protocol is negotiated with an A2A agent. Contains the negotiated transport, negotiated URL, selection source (`client_preferred`, `server_preferred`, `fallback`), and client/server supported transports.
+- **A2AContentTypeNegotiatedEvent**: Emitted when content types are negotiated with an A2A agent. Contains the client/server input/output modes, negotiated input/output modes, and whether negotiation succeeded.
+
+#### Artifact Events
+
+- **A2AArtifactReceivedEvent**: Emitted when an artifact is received from a remote A2A agent. Contains the task ID, artifact ID, artifact name, description, MIME type, size in bytes, and whether content should be appended.
+
+#### Server Task Events
+
+- **A2AServerTaskStartedEvent**: Emitted when an A2A server task execution starts. Contains the task ID and context ID.
+- **A2AServerTaskCompletedEvent**: Emitted when an A2A server task execution completes. Contains the task ID, context ID, and result.
+- **A2AServerTaskCanceledEvent**: Emitted when an A2A server task execution is canceled. Contains the task ID and context ID.
+- **A2AServerTaskFailedEvent**: Emitted when an A2A server task execution fails. Contains the task ID, context ID, and error message.
+
+#### Context Lifecycle Events
+
+- **A2AContextCreatedEvent**: Emitted when an A2A context is created. Contexts group related tasks in a conversation or workflow. Contains the context ID and creation timestamp.
+- **A2AContextExpiredEvent**: Emitted when an A2A context expires due to TTL. Contains the context ID, creation timestamp, age in seconds, and task count.
+- **A2AContextIdleEvent**: Emitted when an A2A context becomes idle (no activity for the configured threshold). Contains the context ID, idle time in seconds, and task count.
+- **A2AContextCompletedEvent**: Emitted when all tasks in an A2A context complete. Contains the context ID, total tasks, and duration in seconds.
+- **A2AContextPrunedEvent**: Emitted when an A2A context is pruned (deleted). Contains the context ID, task count, and age in seconds.
 
 ## Event Handler Structure
 

@@ -12,16 +12,16 @@ from uuid import UUID
 
 
 if TYPE_CHECKING:
-    from aiocache import Cache
+    from aiocache import Cache  # type: ignore[import-untyped]
     from crewai_files import FileInput
 
 logger = logging.getLogger(__name__)
 
-_file_store: Cache | None = None
+_file_store: Cache | None = None  # type: ignore[no-any-unimported]
 
 try:
     from aiocache import Cache
-    from aiocache.serializers import PickleSerializer
+    from aiocache.serializers import PickleSerializer  # type: ignore[import-untyped]
 
     _file_store = Cache(Cache.MEMORY, serializer=PickleSerializer())
 except ImportError:

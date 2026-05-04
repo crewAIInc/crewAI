@@ -40,6 +40,41 @@ def test_memory_match() -> None:
     assert m.match_reasons == ["semantic"]
 
 
+def test_memory_record_embedding_excluded_from_serialization() -> None:
+    """Embedding vectors should not appear in serialized output to save tokens."""
+    r = MemoryRecord(content="hello", embedding=[0.1, 0.2, 0.3])
+
+    # Direct access still works
+    assert r.embedding == [0.1, 0.2, 0.3]
+
+    # model_dump excludes embedding by default
+    dumped = r.model_dump()
+    assert "embedding" not in dumped
+    assert dumped["content"] == "hello"
+    json_str = r.model_dump_json()
+    assert "embedding" not in json_str
+    rehydrated = MemoryRecord.model_validate_json(json_str)
+    assert rehydrated.embedding is None
+
+    # repr excludes embedding
+    assert "embedding=" not in repr(r)
+
+    # Direct attribute access still works for storage layer
+    assert r.embedding is not None
+    assert len(r.embedding) == 3
+
+
+def test_memory_match_embedding_excluded_from_serialization() -> None:
+    """MemoryMatch serialization should not leak embedding vectors."""
+    r = MemoryRecord(content="x", embedding=[0.5] * 1536)
+    m = MemoryMatch(record=r, score=0.9, match_reasons=["semantic"])
+
+    dumped = m.model_dump()
+    assert "embedding" not in dumped["record"]
+    assert dumped["record"]["content"] == "x"
+    assert dumped["score"] == 0.9
+
+
 def test_scope_info() -> None:
     i = ScopeInfo(path="/", record_count=5, categories=["c1"], child_scopes=["/a"])
     assert i.path == "/"
@@ -315,7 +350,7 @@ def test_memory_extract_memories_empty_content_returns_empty_list(tmp_path: Path
 
 def test_executor_save_to_memory_calls_extract_then_remember_per_item() -> None:
     """_save_to_memory calls memory.extract_memories(raw) then memory.remember(m) for each."""
-    from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
+    from crewai.agents.agent_builder.base_agent_executor import BaseAgentExecutor
     from crewai.agents.parser import AgentFinish
 
     mock_memory = MagicMock()
@@ -331,17 +366,9 @@ def test_executor_save_to_memory_calls_extract_then_remember_per_item() -> None:
     mock_task.description = "Do research"
     mock_task.expected_output = "A report"
 
-    class MinimalExecutor(CrewAgentExecutorMixin):
-        crew = None
-        agent = mock_agent
-        task = mock_task
-        iterations = 0
-        max_iter = 1
-        messages = []
-        _i18n = MagicMock()
-        _printer = Printer()
-
-    executor = MinimalExecutor()
+    executor = BaseAgentExecutor()
+    executor.agent = mock_agent
+    executor.task = mock_task
     executor._save_to_memory(
         AgentFinish(thought="", output="We found X and Y.", text="We found X and Y.")
     )
@@ -355,7 +382,7 @@ def test_executor_save_to_memory_calls_extract_then_remember_per_item() -> None:
 
 def test_executor_save_to_memory_skips_delegation_output() -> None:
     """_save_to_memory does nothing when output contains delegate action."""
-    from crewai.agents.agent_builder.base_agent_executor_mixin import CrewAgentExecutorMixin
+    from crewai.agents.agent_builder.base_agent_executor import BaseAgentExecutor
     from crewai.agents.parser import AgentFinish
     from crewai.utilities.string_utils import sanitize_tool_name
 
@@ -364,21 +391,15 @@ def test_executor_save_to_memory_skips_delegation_output() -> None:
     mock_agent = MagicMock()
     mock_agent.memory = mock_memory
     mock_agent._logger = MagicMock()
-    mock_task = MagicMock(description="Task", expected_output="Out")
-
-    class MinimalExecutor(CrewAgentExecutorMixin):
-        crew = None
-        agent = mock_agent
-        task = mock_task
-        iterations = 0
-        max_iter = 1
-        messages = []
-        _i18n = MagicMock()
-        _printer = Printer()
+    mock_task = MagicMock()
+    mock_task.description = "Task"
+    mock_task.expected_output = "Out"
 
     delegate_text = f"Action: {sanitize_tool_name('Delegate work to coworker')}"
     full_text = delegate_text + " rest"
-    executor = MinimalExecutor()
+    executor = BaseAgentExecutor()
+    executor.agent = mock_agent
+    executor.task = mock_task
     executor._save_to_memory(
         AgentFinish(thought="", output=full_text, text=full_text)
     )

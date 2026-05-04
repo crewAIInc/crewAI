@@ -3,17 +3,14 @@ from pathlib import Path
 import click
 
 from crewai.cli.utils import copy_template
-from crewai.utilities.printer import Printer
-
-
-_printer = Printer()
+from crewai.utilities.printer import PRINTER
 
 
 def add_crew_to_flow(crew_name: str) -> None:
     """Add a new crew to the current flow."""
     # Check if pyproject.toml exists in the current directory
     if not Path("pyproject.toml").exists():
-        _printer.print(
+        PRINTER.print(
             "This command must be run from the root of a flow project.", color="red"
         )
         raise click.ClickException(
@@ -25,7 +22,7 @@ def add_crew_to_flow(crew_name: str) -> None:
     crews_folder = flow_folder / "src" / flow_folder.name / "crews"
 
     if not crews_folder.exists():
-        _printer.print("Crews folder does not exist in the current flow.", color="red")
+        PRINTER.print("Crews folder does not exist in the current flow.", color="red")
         raise click.ClickException("Crews folder does not exist in the current flow.")
 
     # Create the crew within the flow's crews directory
