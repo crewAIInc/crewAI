@@ -10,6 +10,7 @@ via ``RuntimeState.model_rebuild()``.
 from __future__ import annotations
 
 import logging
+import time
 from typing import TYPE_CHECKING, Any
 import uuid
 
@@ -23,6 +24,17 @@ from pydantic import (
 )
 
 from crewai.context import capture_execution_context
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.checkpoint_events import (
+    CheckpointCompletedEvent,
+    CheckpointFailedEvent,
+    CheckpointForkCompletedEvent,
+    CheckpointForkStartedEvent,
+    CheckpointRestoreCompletedEvent,
+    CheckpointRestoreFailedEvent,
+    CheckpointRestoreStartedEvent,
+    CheckpointStartedEvent,
+)
 from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.state.event_record import EventRecord
 from crewai.state.provider.core import BaseProvider
@@ -44,9 +56,12 @@ def _sync_checkpoint_fields(entity: object) -> None:
         entity: The entity whose private runtime attributes will be
             copied into its public checkpoint fields.
     """
+    from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.crew import Crew
     from crewai.flow.flow import Flow
 
+    if isinstance(entity, BaseAgent):
+        entity.checkpoint_kickoff_event_id = entity._kickoff_event_id
     if isinstance(entity, Flow):
         entity.checkpoint_completed_methods = (
             set(entity._completed_methods) if entity._completed_methods else None
@@ -86,7 +101,7 @@ def _migrate(data: dict[str, Any]) -> dict[str, Any]:
     """
     raw = data.get("crewai_version")
     current = Version(get_crewai_version())
-    stored = Version(raw) if raw else Version("0.0.0")
+    stored = Version(raw) if isinstance(raw, str) and raw else Version("0.0.0")
 
     if raw is None:
         logger.warning("Checkpoint has no crewai_version — treating as 0.0.0")
@@ -156,6 +171,63 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
         self._checkpoint_id = provider.extract_id(location)
         self._parent_id = self._checkpoint_id
 
+    def _begin_checkpoint(self, location: str) -> tuple[str, str | None, str, float]:
+        """Emit the start event and return the invariant context for a checkpoint."""
+        provider_name: str = type(self._provider).__name__
+        parent_id_snapshot: str | None = self._parent_id
+        branch_snapshot: str = self._branch
+        crewai_event_bus.emit(
+            self,
+            CheckpointStartedEvent(
+                location=location,
+                provider=provider_name,
+                branch=branch_snapshot,
+                parent_id=parent_id_snapshot,
+            ),
+        )
+        return provider_name, parent_id_snapshot, branch_snapshot, time.perf_counter()
+
+    def _emit_checkpoint_failed(
+        self,
+        location: str,
+        provider_name: str,
+        branch_snapshot: str,
+        parent_id_snapshot: str | None,
+        exc: Exception,
+    ) -> None:
+        """Emit the failure event for a checkpoint write."""
+        crewai_event_bus.emit(
+            self,
+            CheckpointFailedEvent(
+                location=location,
+                provider=provider_name,
+                branch=branch_snapshot,
+                parent_id=parent_id_snapshot,
+                error=str(exc),
+            ),
+        )
+
+    def _emit_checkpoint_completed(
+        self,
+        result: str,
+        provider_name: str,
+        branch_snapshot: str,
+        parent_id_snapshot: str | None,
+        start: float,
+    ) -> None:
+        """Emit the completion event for a successful checkpoint write."""
+        crewai_event_bus.emit(
+            self,
+            CheckpointCompletedEvent(
+                location=result,
+                provider=provider_name,
+                branch=branch_snapshot,
+                parent_id=parent_id_snapshot,
+                checkpoint_id=self._provider.extract_id(result),
+                duration_ms=(time.perf_counter() - start) * 1000.0,
+            ),
+        )
+
     def checkpoint(self, location: str) -> str:
         """Write a checkpoint.
 
@@ -166,14 +238,27 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
         Returns:
             A location identifier for the saved checkpoint.
         """
-        _prepare_entities(self.root)
-        result = self._provider.checkpoint(
-            self.model_dump_json(),
-            location,
-            parent_id=self._parent_id,
-            branch=self._branch,
+        provider_name, parent_id_snapshot, branch_snapshot, start = (
+            self._begin_checkpoint(location)
         )
-        self._chain_lineage(self._provider, result)
+        try:
+            _prepare_entities(self.root)
+            result = self._provider.checkpoint(
+                self.model_dump_json(),
+                location,
+                parent_id=parent_id_snapshot,
+                branch=branch_snapshot,
+            )
+            self._chain_lineage(self._provider, result)
+        except Exception as exc:
+            self._emit_checkpoint_failed(
+                location, provider_name, branch_snapshot, parent_id_snapshot, exc
+            )
+            raise
+
+        self._emit_checkpoint_completed(
+            result, provider_name, branch_snapshot, parent_id_snapshot, start
+        )
         return result
 
     async def acheckpoint(self, location: str) -> str:
@@ -186,14 +271,27 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
         Returns:
             A location identifier for the saved checkpoint.
         """
-        _prepare_entities(self.root)
-        result = await self._provider.acheckpoint(
-            self.model_dump_json(),
-            location,
-            parent_id=self._parent_id,
-            branch=self._branch,
+        provider_name, parent_id_snapshot, branch_snapshot, start = (
+            self._begin_checkpoint(location)
         )
-        self._chain_lineage(self._provider, result)
+        try:
+            _prepare_entities(self.root)
+            result = await self._provider.acheckpoint(
+                self.model_dump_json(),
+                location,
+                parent_id=parent_id_snapshot,
+                branch=branch_snapshot,
+            )
+            self._chain_lineage(self._provider, result)
+        except Exception as exc:
+            self._emit_checkpoint_failed(
+                location, provider_name, branch_snapshot, parent_id_snapshot, exc
+            )
+            raise
+
+        self._emit_checkpoint_completed(
+            result, provider_name, branch_snapshot, parent_id_snapshot, start
+        )
         return result
 
     def fork(self, branch: str | None = None) -> None:
@@ -208,11 +306,32 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
                 times without collisions.
         """
         if branch:
-            self._branch = branch
+            new_branch = branch
         elif self._checkpoint_id:
-            self._branch = f"fork/{self._checkpoint_id}_{uuid.uuid4().hex[:6]}"
+            new_branch = f"fork/{self._checkpoint_id}_{uuid.uuid4().hex[:6]}"
         else:
-            self._branch = f"fork/{uuid.uuid4().hex[:8]}"
+            new_branch = f"fork/{uuid.uuid4().hex[:8]}"
+
+        parent_branch: str | None = self._branch
+        parent_checkpoint_id: str | None = self._checkpoint_id
+
+        crewai_event_bus.emit(
+            self,
+            CheckpointForkStartedEvent(
+                branch=new_branch,
+                parent_branch=parent_branch,
+                parent_checkpoint_id=parent_checkpoint_id,
+            ),
+        )
+        self._branch = new_branch
+        crewai_event_bus.emit(
+            self,
+            CheckpointForkCompletedEvent(
+                branch=new_branch,
+                parent_branch=parent_branch,
+                parent_checkpoint_id=parent_checkpoint_id,
+            ),
+        )
 
     @classmethod
     def from_checkpoint(cls, config: CheckpointConfig, **kwargs: Any) -> RuntimeState:
@@ -230,13 +349,41 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
         if config.restore_from is None:
             raise ValueError("CheckpointConfig.restore_from must be set")
         location = str(config.restore_from)
-        provider = detect_provider(location)
-        raw = provider.from_checkpoint(location)
-        state = cls.model_validate_json(raw, **kwargs)
-        state._provider = provider
-        checkpoint_id = provider.extract_id(location)
-        state._checkpoint_id = checkpoint_id
-        state._parent_id = checkpoint_id
+
+        crewai_event_bus.emit(config, CheckpointRestoreStartedEvent(location=location))
+        start: float = time.perf_counter()
+        provider_name: str | None = None
+        try:
+            provider = detect_provider(location)
+            provider_name = type(provider).__name__
+            raw = provider.from_checkpoint(location)
+            state = cls.model_validate_json(raw, **kwargs)
+            state._provider = provider
+            checkpoint_id = provider.extract_id(location)
+            state._checkpoint_id = checkpoint_id
+            state._parent_id = checkpoint_id
+        except Exception as exc:
+            crewai_event_bus.emit(
+                config,
+                CheckpointRestoreFailedEvent(
+                    location=location,
+                    provider=provider_name,
+                    error=str(exc),
+                ),
+            )
+            raise
+
+        crewai_event_bus.emit(
+            config,
+            CheckpointRestoreCompletedEvent(
+                location=location,
+                provider=provider_name,
+                checkpoint_id=checkpoint_id,
+                branch=state._branch,
+                parent_id=state._parent_id,
+                duration_ms=(time.perf_counter() - start) * 1000.0,
+            ),
+        )
         return state
 
     @classmethod
@@ -257,13 +404,41 @@ class RuntimeState(RootModel):  # type: ignore[type-arg]
         if config.restore_from is None:
             raise ValueError("CheckpointConfig.restore_from must be set")
         location = str(config.restore_from)
-        provider = detect_provider(location)
-        raw = await provider.afrom_checkpoint(location)
-        state = cls.model_validate_json(raw, **kwargs)
-        state._provider = provider
-        checkpoint_id = provider.extract_id(location)
-        state._checkpoint_id = checkpoint_id
-        state._parent_id = checkpoint_id
+
+        crewai_event_bus.emit(config, CheckpointRestoreStartedEvent(location=location))
+        start: float = time.perf_counter()
+        provider_name: str | None = None
+        try:
+            provider = detect_provider(location)
+            provider_name = type(provider).__name__
+            raw = await provider.afrom_checkpoint(location)
+            state = cls.model_validate_json(raw, **kwargs)
+            state._provider = provider
+            checkpoint_id = provider.extract_id(location)
+            state._checkpoint_id = checkpoint_id
+            state._parent_id = checkpoint_id
+        except Exception as exc:
+            crewai_event_bus.emit(
+                config,
+                CheckpointRestoreFailedEvent(
+                    location=location,
+                    provider=provider_name,
+                    error=str(exc),
+                ),
+            )
+            raise
+
+        crewai_event_bus.emit(
+            config,
+            CheckpointRestoreCompletedEvent(
+                location=location,
+                provider=provider_name,
+                checkpoint_id=checkpoint_id,
+                branch=state._branch,
+                parent_id=state._parent_id,
+                duration_ms=(time.perf_counter() - start) * 1000.0,
+            ),
+        )
         return state
 
 

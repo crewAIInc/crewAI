@@ -39,7 +39,8 @@ def _build_event_type_map() -> None:
     """Populate _event_type_map from all BaseEvent subclasses."""
 
     def _collect(cls: type[BaseEvent]) -> None:
-        for sub in cls.__subclasses__():
+        subclasses: list[type[BaseEvent]] = cls.__subclasses__()
+        for sub in subclasses:
             type_field = sub.model_fields.get("type")
             if type_field and type_field.default:
                 _event_type_map[type_field.default] = sub
@@ -195,6 +196,21 @@ class EventRecord(BaseModel):
             return [
                 node for node in self.nodes.values() if not node.neighbors("parent")
             ]
+
+    def all_nodes(self) -> list[EventNode]:
+        """Return a snapshot of every node under the read lock.
+
+        Returns:
+            A list copy of the current nodes, safe to iterate without holding
+            the lock.
+        """
+        with self._lock.r_locked():
+            return list(self.nodes.values())
+
+    def clear(self) -> None:
+        """Remove all nodes from the record under the write lock."""
+        with self._lock.w_locked():
+            self.nodes.clear()
 
     def __len__(self) -> int:
         with self._lock.r_locked():

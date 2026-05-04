@@ -1640,3 +1640,43 @@ class TestBackendInitializedGatedOnSuccess:
 
         assert bm.backend_initialized is False
         assert bm.trace_batch_id is None
+
+
+class TestTraceBatchManagerDuplicateInitMerge:
+    """Second initialize_batch call merges execution_metadata (flow after lazy action)."""
+
+    def test_duplicate_initialize_merges_execution_metadata(self):
+        with (
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.should_auto_collect_first_time_traces",
+                return_value=True,
+            ),
+            patch(
+                "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
+                return_value=True,
+            ),
+        ):
+            bm = TraceBatchManager()
+            bm.initialize_batch(
+                user_context={"privacy_level": "standard"},
+                execution_metadata={
+                    "crew_name": "Unknown Crew",
+                    "crewai_version": "9.9.9",
+                },
+            )
+            first_batch_id = bm.current_batch.batch_id
+            bm.initialize_batch(
+                user_context={"privacy_level": "standard"},
+                execution_metadata={
+                    "flow_name": "ResearchFlow",
+                    "execution_type": "flow",
+                    "crewai_version": "9.9.9",
+                    "execution_start": "2026-01-01T00:00:00+00:00",
+                },
+            )
+
+        assert bm.current_batch.batch_id == first_batch_id
+        meta = bm.current_batch.execution_metadata
+        assert meta.get("execution_type") == "flow"
+        assert meta.get("flow_name") == "ResearchFlow"
+        assert meta.get("crew_name") == "Unknown Crew"

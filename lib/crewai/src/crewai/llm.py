@@ -175,6 +175,16 @@ LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "us.amazon.nova-pro-v1:0": 300000,
     "us.amazon.nova-micro-v1:0": 128000,
     "us.amazon.nova-lite-v1:0": 300000,
+    # Claude 4 models
+    "us.anthropic.claude-opus-4-7": 1000000,
+    "us.anthropic.claude-sonnet-4-6": 1000000,
+    "us.anthropic.claude-opus-4-6-v1": 1000000,
+    "us.anthropic.claude-opus-4-5-20251101-v1:0": 200000,
+    "us.anthropic.claude-haiku-4-5-20251001-v1:0": 200000,
+    "us.anthropic.claude-sonnet-4-5-20250929-v1:0": 200000,
+    "us.anthropic.claude-opus-4-1-20250805-v1:0": 200000,
+    "us.anthropic.claude-opus-4-20250514-v1:0": 200000,
+    "us.anthropic.claude-sonnet-4-20250514-v1:0": 200000,
     "us.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
     "us.anthropic.claude-3-5-haiku-20241022-v1:0": 200000,
     "us.anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
@@ -193,15 +203,44 @@ LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "eu.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
     "eu.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
     "eu.anthropic.claude-3-haiku-20240307-v1:0": 200000,
+    # Claude 4 EU
+    "eu.anthropic.claude-opus-4-7": 1000000,
+    "eu.anthropic.claude-sonnet-4-6": 1000000,
+    "eu.anthropic.claude-opus-4-6-v1": 1000000,
+    "eu.anthropic.claude-opus-4-5-20251101-v1:0": 200000,
+    "eu.anthropic.claude-haiku-4-5-20251001-v1:0": 200000,
+    "eu.anthropic.claude-sonnet-4-5-20250929-v1:0": 200000,
+    "eu.anthropic.claude-opus-4-1-20250805-v1:0": 200000,
+    "eu.anthropic.claude-opus-4-20250514-v1:0": 200000,
+    "eu.anthropic.claude-sonnet-4-20250514-v1:0": 200000,
     "eu.meta.llama3-2-3b-instruct-v1:0": 131000,
     "eu.meta.llama3-2-1b-instruct-v1:0": 131000,
     "apac.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
     "apac.anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
     "apac.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
     "apac.anthropic.claude-3-haiku-20240307-v1:0": 200000,
+    # Claude 4 APAC
+    "apac.anthropic.claude-opus-4-7": 1000000,
+    "apac.anthropic.claude-sonnet-4-6": 1000000,
+    "apac.anthropic.claude-opus-4-6-v1": 1000000,
+    "apac.anthropic.claude-opus-4-5-20251101-v1:0": 200000,
+    "apac.anthropic.claude-haiku-4-5-20251001-v1:0": 200000,
+    "apac.anthropic.claude-sonnet-4-5-20250929-v1:0": 200000,
+    "apac.anthropic.claude-opus-4-1-20250805-v1:0": 200000,
+    "apac.anthropic.claude-opus-4-20250514-v1:0": 200000,
+    "apac.anthropic.claude-sonnet-4-20250514-v1:0": 200000,
     "amazon.nova-pro-v1:0": 300000,
     "amazon.nova-micro-v1:0": 128000,
     "amazon.nova-lite-v1:0": 300000,
+    "anthropic.claude-opus-4-7": 1000000,
+    "anthropic.claude-sonnet-4-6": 1000000,
+    "anthropic.claude-opus-4-6-v1": 1000000,
+    "anthropic.claude-opus-4-5-20251101-v1:0": 200000,
+    "anthropic.claude-haiku-4-5-20251001-v1:0": 200000,
+    "anthropic.claude-sonnet-4-5-20250929-v1:0": 200000,
+    "anthropic.claude-opus-4-1-20250805-v1:0": 200000,
+    "anthropic.claude-opus-4-20250514-v1:0": 200000,
+    "anthropic.claude-sonnet-4-20250514-v1:0": 200000,
     "anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
     "anthropic.claude-3-5-haiku-20241022-v1:0": 200000,
     "anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
@@ -649,7 +688,9 @@ class LLM(BaseLLM):
             "temperature": self.temperature,
             "top_p": self.top_p,
             "n": self.n,
-            "stop": (self.stop or None) if self.supports_stop_words() else None,
+            "stop": (self.stop_sequences or None)
+            if self.supports_stop_words()
+            else None,
             "max_tokens": self.max_tokens or self.max_completion_tokens,
             "presence_penalty": self.presence_penalty,
             "frequency_penalty": self.frequency_penalty,
@@ -1121,7 +1162,7 @@ class LLM(BaseLLM):
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
-                messages=params["messages"],
+                messages=messages,
                 usage=None,
             )
             return structured_response
@@ -1196,8 +1237,12 @@ class LLM(BaseLLM):
         # --- 4) Check for tool calls
         tool_calls = response_message.tool_calls or []
 
-        # --- 5) If no tool calls or no available functions, return the text response directly as long as there is a text response
-        if (not tool_calls or not available_functions) and text_response:
+        # --- 5) If there are tool calls but no available functions, return the tool calls
+        if tool_calls and not available_functions:
+            return tool_calls
+
+        # --- 6) If there are no tool calls to execute, return the text response directly
+        if not tool_calls and text_response:
             self._handle_emit_call_events(
                 response=text_response,
                 call_type=LLMCallType.LLM_CALL,
@@ -1207,11 +1252,6 @@ class LLM(BaseLLM):
                 usage=response_usage,
             )
             return text_response
-
-        # --- 6) If there are tool calls but no available functions, return the tool calls
-        # This allows the caller (e.g., executor) to handle tool execution
-        if tool_calls and not available_functions:
-            return tool_calls
 
         # --- 7) Handle tool calls if present (execute when available_functions provided)
         if tool_calls and available_functions:
@@ -1277,7 +1317,7 @@ class LLM(BaseLLM):
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
-                messages=params["messages"],
+                messages=messages,
                 usage=None,
             )
             return structured_response
@@ -1345,7 +1385,10 @@ class LLM(BaseLLM):
 
         tool_calls = response_message.tool_calls or []
 
-        if (not tool_calls or not available_functions) and text_response:
+        if tool_calls and not available_functions:
+            return tool_calls
+
+        if not tool_calls and text_response:
             self._handle_emit_call_events(
                 response=text_response,
                 call_type=LLMCallType.LLM_CALL,
@@ -1355,11 +1398,6 @@ class LLM(BaseLLM):
                 usage=response_usage,
             )
             return text_response
-
-        # If there are tool calls but no available functions, return the tool calls
-        # This allows the caller (e.g., executor) to handle tool execution
-        if tool_calls and not available_functions:
-            return tool_calls
 
         # Handle tool calls if present (execute when available_functions provided)
         if tool_calls and available_functions:

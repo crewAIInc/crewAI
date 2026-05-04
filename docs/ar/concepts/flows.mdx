@@ -380,6 +380,42 @@ class AnotherFlow(Flow[dict]):
         print("Method-level persisted runs:", self.state["runs"])
 ```
 
+### تفرع الحالة المستمرة
+
+يدعم `@persist` نمطين متميزين للترطيب في `kickoff` / `kickoff_async`:
+
+- `kickoff(inputs={"id": <uuid>})` — **استئناف**: يحمّل أحدث لقطة لـ UUID المقدم ويستمر في الكتابة تحت نفس `flow_uuid`. يمتد التاريخ.
+- `kickoff(restore_from_state_id=<uuid>)` — **تفرع**: يحمّل أحدث لقطة لـ UUID المقدم، يرطّب حالة التشغيل الجديد منها، ثم يعيّن `state.id` جديدًا (مولّدًا تلقائيًا، أو `inputs["id"]` إذا تم تثبيته). تذهب كتابات `@persist` للتشغيل الجديد تحت `state.id` الجديد؛ يتم الحفاظ على تاريخ تدفق المصدر.
+
+```python
+from crewai.flow.flow import Flow, start
+from crewai.flow.persistence import persist
+from pydantic import BaseModel
+
+class CounterState(BaseModel):
+    id: str = ""
+    counter: int = 0
+
+@persist
+class CounterFlow(Flow[CounterState]):
+    @start()
+    def step(self):
+        self.state.counter += 1
+        print(f"[id={self.state.id}] counter={self.state.counter}")
+
+# التشغيل 1: حالة جديدة، العداد 0 -> 1، محفوظ تحت flow_1.state.id
+flow_1 = CounterFlow()
+flow_1.kickoff()
+
+# التفرع: ترطيب من أحدث لقطة لـ flow_1، لكن باستخدام state.id جديد
+flow_2 = CounterFlow()
+flow_2.kickoff(restore_from_state_id=flow_1.state.id)
+# يبدأ flow_2.state.counter بـ 1 (مرطّب)، ثم تزيده step() إلى 2.
+# flow_2.state.id != flow_1.state.id؛ تاريخ flow_1 لم يتغيّر.
+```
+
+إذا لم يطابق `restore_from_state_id` المقدم أي حالة مستمرة، يعود kickoff بصمت إلى السلوك الافتراضي — نفس سلوك `inputs["id"]` عند عدم العثور عليه. الجمع بين `restore_from_state_id` و `from_checkpoint` يطلق `ValueError`؛ اختر مصدر ترطيب واحدًا. تثبيت `inputs["id"]` أثناء التفرع يشارك مفتاح الاستمرارية مع تدفق آخر — عادةً ما تريد استخدام `restore_from_state_id` فقط.
+
 ### كيف تعمل
 
 1. **تعريف الحالة الفريد**

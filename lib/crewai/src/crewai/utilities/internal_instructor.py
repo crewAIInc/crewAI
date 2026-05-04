@@ -98,7 +98,14 @@ class InternalInstructor(Generic[T]):
         else:
             provider = "openai"  # Default fallback
 
-        return instructor.from_provider(f"{provider}/{model_string}")
+        extra_kwargs: dict[str, Any] = {}
+        if self.llm is not None and not isinstance(self.llm, str):
+            for attr in ("base_url", "api_key"):
+                value = getattr(self.llm, attr, None)
+                if value is not None:
+                    extra_kwargs[attr] = value
+
+        return instructor.from_provider(f"{provider}/{model_string}", **extra_kwargs)
 
     def _extract_provider(self) -> str:
         """Extract provider from LLM model name.

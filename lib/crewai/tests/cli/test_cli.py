@@ -307,7 +307,7 @@ def test_version_command_with_tools(runner):
 def test_test_default_iterations(evaluate_crew, runner):
     result = runner.invoke(test)
 
-    evaluate_crew.assert_called_once_with(3, "gpt-4o-mini")
+    evaluate_crew.assert_called_once_with(3, "gpt-4o-mini", trained_agents_file=None)
     assert result.exit_code == 0
     assert "Testing the crew for 3 iterations with model gpt-4o-mini" in result.output
 
@@ -316,7 +316,7 @@ def test_test_default_iterations(evaluate_crew, runner):
 def test_test_custom_iterations(evaluate_crew, runner):
     result = runner.invoke(test, ["--n_iterations", "5", "--model", "gpt-4o"])
 
-    evaluate_crew.assert_called_once_with(5, "gpt-4o")
+    evaluate_crew.assert_called_once_with(5, "gpt-4o", trained_agents_file=None)
     assert result.exit_code == 0
     assert "Testing the crew for 5 iterations with model gpt-4o" in result.output
 

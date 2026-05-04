@@ -27,6 +27,7 @@ def test_crew_success(mock_subprocess_run, n_iterations, model):
         capture_output=False,
         text=True,
         check=True,
+        env=mock.ANY,
     )
     assert result is None
 
@@ -66,6 +67,7 @@ def test_test_crew_called_process_error(mock_subprocess_run, click):
         capture_output=False,
         text=True,
         check=True,
+        env=mock.ANY,
     )
     click.echo.assert_has_calls(
         [
@@ -91,7 +93,30 @@ def test_test_crew_unexpected_exception(mock_subprocess_run, click):
         capture_output=False,
         text=True,
         check=True,
+        env=mock.ANY,
     )
     click.echo.assert_called_once_with(
         "An unexpected error occurred: Unexpected error", err=True
     )
+
+
+@mock.patch("crewai.cli.evaluate_crew.subprocess.run")
+def test_evaluate_crew_sets_trained_agents_env_var(mock_subprocess_run):
+    mock_subprocess_run.return_value = subprocess.CompletedProcess(
+        args=["uv", "run", "test", "1", "gpt-4o"], returncode=0
+    )
+    evaluate_crew.evaluate_crew(1, "gpt-4o", trained_agents_file="my_custom.pkl")
+
+    _, kwargs = mock_subprocess_run.call_args
+    assert kwargs["env"]["CREWAI_TRAINED_AGENTS_FILE"] == "my_custom.pkl"
+
+
+@mock.patch("crewai.cli.evaluate_crew.subprocess.run")
+def test_evaluate_crew_omits_env_var_without_filename(mock_subprocess_run):
+    mock_subprocess_run.return_value = subprocess.CompletedProcess(
+        args=["uv", "run", "test", "1", "gpt-4o"], returncode=0
+    )
+    evaluate_crew.evaluate_crew(1, "gpt-4o")
+
+    _, kwargs = mock_subprocess_run.call_args
+    assert "CREWAI_TRAINED_AGENTS_FILE" not in kwargs["env"]

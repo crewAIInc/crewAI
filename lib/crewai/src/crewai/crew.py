@@ -419,10 +419,32 @@ class Crew(FlowTrackable, BaseModel):
 
     def _restore_runtime(self) -> None:
         """Re-create runtime objects after restoring from a checkpoint."""
+        from crewai.events.event_bus import crewai_event_bus
+
+        started_task_ids: set[str] = set()
+        state = crewai_event_bus._runtime_state
+        if state is not None:
+            for node in state.event_record.nodes.values():
+                if node.event.type == "task_started" and node.event.task_id:
+                    started_task_ids.add(node.event.task_id)
+
+        resuming_task_agent_roles: set[str] = set()
+        for task in self.tasks:
+            if (
+                task.output is None
+                and task.agent is not None
+                and str(task.id) in started_task_ids
+            ):
+                resuming_task_agent_roles.add(task.agent.role)
+
         for agent in self.agents:
             agent.crew = self
             executor = agent.agent_executor
-            if executor and executor.messages:
+            if (
+                executor
+                and executor.messages
+                and agent.role in resuming_task_agent_roles
+            ):
                 executor.crew = self
                 executor.agent = agent
                 executor._resuming = True
@@ -1261,8 +1283,8 @@ class Crew(FlowTrackable, BaseModel):
                 pending_tasks.append((task, async_task, task_index))
             else:
                 if pending_tasks:
-                    task_outputs = await self._aprocess_async_tasks(
-                        pending_tasks, was_replayed
+                    task_outputs.extend(
+                        await self._aprocess_async_tasks(pending_tasks, was_replayed)
                     )
                     pending_tasks.clear()
 
@@ -1277,7 +1299,9 @@ class Crew(FlowTrackable, BaseModel):
                 self._store_execution_log(task, task_output, task_index, was_replayed)
 
         if pending_tasks:
-            task_outputs = await self._aprocess_async_tasks(pending_tasks, was_replayed)
+            task_outputs.extend(
+                await self._aprocess_async_tasks(pending_tasks, was_replayed)
+            )
 
         return self._create_crew_output(task_outputs)
 
@@ -1291,7 +1315,9 @@ class Crew(FlowTrackable, BaseModel):
     ) -> TaskOutput | None:
         """Handle conditional task evaluation using native async."""
         if pending_tasks:
-            task_outputs = await self._aprocess_async_tasks(pending_tasks, was_replayed)
+            task_outputs.extend(
+                await self._aprocess_async_tasks(pending_tasks, was_replayed)
+            )
             pending_tasks.clear()
 
         return check_conditional_skip(
@@ -1467,7 +1493,9 @@ class Crew(FlowTrackable, BaseModel):
                 futures.append((task, future, task_index))
             else:
                 if futures:
-                    task_outputs = self._process_async_tasks(futures, was_replayed)
+                    task_outputs.extend(
+                        self._process_async_tasks(futures, was_replayed)
+                    )
                     futures.clear()
 
                 context = self._get_context(task, task_outputs)
@@ -1481,7 +1509,7 @@ class Crew(FlowTrackable, BaseModel):
                 self._store_execution_log(task, task_output, task_index, was_replayed)
 
         if futures:
-            task_outputs = self._process_async_tasks(futures, was_replayed)
+            task_outputs.extend(self._process_async_tasks(futures, was_replayed))
 
         return self._create_crew_output(task_outputs)
 
@@ -1494,7 +1522,7 @@ class Crew(FlowTrackable, BaseModel):
         was_replayed: bool,
     ) -> TaskOutput | None:
         if futures:
-            task_outputs = self._process_async_tasks(futures, was_replayed)
+            task_outputs.extend(self._process_async_tasks(futures, was_replayed))
             futures.clear()
 
         return check_conditional_skip(

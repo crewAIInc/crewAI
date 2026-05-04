@@ -292,7 +292,7 @@ class TestPruneJson:
                 d, name="20250101T000000_old01111_p-none.json"
             )
             os.utime(old_path, (0, 0))
-            _write_json_checkpoint(d, name="20260417T000000_new01111_p-none.json")
+            _write_json_checkpoint(d, name="20990101T000000_new01111_p-none.json")
             deleted = _prune_json(d, keep=None, older_than=timedelta(days=1))
             assert deleted == 1
 
@@ -330,7 +330,7 @@ class TestPruneSqlite:
         with tempfile.TemporaryDirectory() as d:
             db_path = os.path.join(d, "test.db")
             _create_sqlite_checkpoint(db_path, "20200101T000000_old01111")
-            _create_sqlite_checkpoint(db_path, "20260417T000000_new01111")
+            _create_sqlite_checkpoint(db_path, "20990101T000000_new01111")
             deleted = _prune_sqlite(db_path, keep=None, older_than=timedelta(days=1))
             assert deleted >= 1
             with sqlite3.connect(db_path) as conn:

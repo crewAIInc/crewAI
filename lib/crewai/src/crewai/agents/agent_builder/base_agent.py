@@ -28,6 +28,9 @@ from crewai.agents.agent_builder.base_agent_executor import BaseAgentExecutor
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.tools_handler import ToolsHandler
+from crewai.events.base_events import set_emission_counter
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.event_context import restore_event_scope, set_last_event_id
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
@@ -51,6 +54,7 @@ from crewai.utilities.string_utils import interpolate_only
 if TYPE_CHECKING:
     from crewai.context import ExecutionContext
     from crewai.crew import Crew
+    from crewai.state.runtime import RuntimeState
 
 
 def _validate_crew_ref(value: Any) -> Any:
@@ -219,6 +223,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     _original_goal: str | None = PrivateAttr(default=None)
     _original_backstory: str | None = PrivateAttr(default=None)
     _token_process: TokenProcess = PrivateAttr(default_factory=TokenProcess)
+    _kickoff_event_id: str | None = PrivateAttr(default=None)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Objective of the agent")
@@ -335,29 +340,89 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         min_length=1,
     )
     execution_context: ExecutionContext | None = Field(default=None)
+    checkpoint_kickoff_event_id: str | None = Field(default=None)
 
     @classmethod
     def from_checkpoint(cls, config: CheckpointConfig) -> Self:
-        """Restore an Agent from a checkpoint.
+        """Restore an Agent from a checkpoint, ready to resume via kickoff().
 
         Args:
-            config: Checkpoint configuration with ``restore_from`` set.
+            config: Checkpoint configuration with ``restore_from`` set to
+                the path of the checkpoint to load.
+
+        Returns:
+            An Agent instance. Call kickoff() to resume execution.
         """
         from crewai.context import apply_execution_context
         from crewai.state.runtime import RuntimeState
 
         state = RuntimeState.from_checkpoint(config, context={"from_checkpoint": True})
+        crewai_event_bus.set_runtime_state(state)
         for entity in state.root:
             if isinstance(entity, cls):
                 if entity.execution_context is not None:
                     apply_execution_context(entity.execution_context)
-                if entity.agent_executor is not None:
-                    entity.agent_executor.agent = entity
-                    entity.agent_executor._resuming = True
+                entity._restore_runtime(state)
                 return entity
         raise ValueError(
             f"No {cls.__name__} found in checkpoint: {config.restore_from}"
         )
+
+    @classmethod
+    def fork(cls, config: CheckpointConfig, branch: str | None = None) -> Self:
+        """Fork an Agent from a checkpoint, creating a new execution branch.
+
+        Args:
+            config: Checkpoint configuration with ``restore_from`` set.
+            branch: Branch label for the fork. Auto-generated if not provided.
+
+        Returns:
+            An Agent instance on the new branch. Call kickoff() to run.
+        """
+        agent = cls.from_checkpoint(config)
+        state = crewai_event_bus._runtime_state
+        if state is None:
+            raise RuntimeError("Cannot fork: no runtime state on the event bus.")
+        state.fork(branch)
+        return agent
+
+    def _restore_runtime(self, state: RuntimeState) -> None:
+        """Re-create runtime objects after restoring from a checkpoint.
+
+        Args:
+            state: The RuntimeState containing the event record.
+        """
+        if self.agent_executor is not None:
+            self.agent_executor.agent = self
+            self.agent_executor._resuming = True
+        if self.checkpoint_kickoff_event_id is not None:
+            self._kickoff_event_id = self.checkpoint_kickoff_event_id
+        self._restore_event_scope(state)
+
+    def _restore_event_scope(self, state: RuntimeState) -> None:
+        """Rebuild the event scope stack from the checkpoint's event record.
+
+        Args:
+            state: The RuntimeState containing the event record.
+        """
+        stack: list[tuple[str, str]] = []
+        kickoff_id = self._kickoff_event_id
+        if kickoff_id:
+            stack.append((kickoff_id, "lite_agent_execution_started"))
+
+        restore_event_scope(tuple(stack))
+
+        last_event_id: str | None = None
+        max_seq = 0
+        for node in state.event_record.nodes.values():
+            seq = node.event.emission_sequence or 0
+            if seq > max_seq:
+                max_seq = seq
+                last_event_id = node.event.event_id
+        if last_event_id is not None:
+            set_last_event_id(last_event_id)
+        if max_seq > 0:
+            set_emission_counter(max_seq)
 
     @model_validator(mode="before")
     @classmethod
