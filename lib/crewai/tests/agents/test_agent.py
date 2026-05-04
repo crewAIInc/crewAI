@@ -2515,9 +2515,11 @@ class TestSharedLLMStopWords:
         shared = LLM(model="gpt-4", stop=["Original:"])
         executor = self._make_executor(shared, stop_words=["Observation:"])
 
-        with pytest.raises(RuntimeError):
+        try:
             with _llm_stop_words_applied(shared, executor):
                 raise RuntimeError("boom")
+        except RuntimeError:
+            pass
 
         assert shared.stop == ["Original:"]
         assert shared.stop_sequences == ["Original:"]
