@@ -1102,16 +1102,6 @@ class Agent(BaseAgent):
         self.agent_executor.tools_handler = self.tools_handler
         self.agent_executor.request_within_rpm_limit = rpm_limit_fn
 
-        if isinstance(self.agent_executor.llm, BaseLLM):
-            existing_stop = getattr(self.agent_executor.llm, "stop", [])
-            self.agent_executor.llm.stop = list(
-                set(
-                    existing_stop + stop_words
-                    if isinstance(existing_stop, list)
-                    else stop_words
-                )
-            )
-
     def get_delegation_tools(self, agents: Sequence[BaseAgent]) -> list[BaseTool]:
         agent_tools = AgentTools(agents=agents)
         return agent_tools.tools()

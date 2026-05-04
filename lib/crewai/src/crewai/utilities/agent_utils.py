@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 import concurrent.futures
+import contextlib
 import contextvars
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -238,6 +239,45 @@ def extract_task_section(text: str) -> str:
     return text
 
 
+def _executor_stop_words(
+    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
+) -> list[str]:
+    """Return the executor's stop words, regardless of which field name it uses."""
+    if executor_context is None:
+        return []
+    stops = getattr(executor_context, "stop", None)
+    if stops is None:
+        stops = getattr(executor_context, "stop_words", None)
+    return list(stops) if stops else []
+
+
+@contextlib.contextmanager
+def _llm_stop_words_applied(
+    llm: LLM | BaseLLM,
+    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
+) -> Iterator[None]:
+    """Temporarily merge the executor's stop words into the LLM's ``stop`` list.
+
+    Restores the original list on exit so the user's LLM instance is never
+    permanently mutated and stop words don't leak across agents or kickoffs.
+    """
+    extra = _executor_stop_words(executor_context)
+    if (
+        not extra
+        or not isinstance(llm, BaseLLM)
+        or not llm.supports_stop_words()
+        or set(extra).issubset(llm.stop)
+    ):
+        yield
+        return
+    saved = llm.stop
+    llm.stop = list(set(saved + extra))
+    try:
+        yield
+    finally:
+        llm.stop = saved
+
+
 def has_reached_max_iterations(iterations: int, max_iterations: int) -> bool:
     """Check if the maximum number of iterations has been reached.
 
@@ -459,7 +499,7 @@ def get_llm_response(
     """
     messages = _prepare_llm_call(executor_context, messages, printer, verbose=verbose)
 
-    try:
+    with _llm_stop_words_applied(llm, executor_context):
         answer = llm.call(
             messages,
             tools=tools,
@@ -469,8 +509,6 @@ def get_llm_response(
             from_agent=from_agent,
             response_model=response_model,
         )
-    except Exception as e:
-        raise e
 
     return _validate_and_finalize_llm_response(
         answer, executor_context, printer, verbose=verbose
@@ -515,7 +553,7 @@ async def aget_llm_response(
     """
     messages = _prepare_llm_call(executor_context, messages, printer, verbose=verbose)
 
-    try:
+    with _llm_stop_words_applied(llm, executor_context):
         answer = await llm.acall(
             messages,
             tools=tools,
@@ -525,8 +563,6 @@ async def aget_llm_response(
             from_agent=from_agent,
             response_model=response_model,
         )
-    except Exception as e:
-        raise e
 
     return _validate_and_finalize_llm_response(
         answer, executor_context, printer, verbose=verbose

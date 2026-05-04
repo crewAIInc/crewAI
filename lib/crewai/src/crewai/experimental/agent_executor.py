@@ -5,7 +5,6 @@ import asyncio
 from collections.abc import Callable, Coroutine
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import contextvars
-import copy
 from datetime import datetime
 import inspect
 import json
@@ -215,14 +214,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         """Configure executor after Pydantic field initialization."""
         self.before_llm_call_hooks.extend(get_before_llm_call_hooks())
         self.after_llm_call_hooks.extend(get_after_llm_call_hooks())
-
-        if (
-            self.llm
-            and self.llm.supports_stop_words()
-            and not set(self.stop_words).issubset(self.llm.stop)
-        ):
-            self.llm = copy.copy(self.llm)
-            self.llm.stop = list(set(self.llm.stop + self.stop_words))
 
         self._state = AgentExecutorState()
         self.max_method_calls = self.max_iter * 10

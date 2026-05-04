@@ -2454,8 +2454,12 @@ def test_agent_mcps_accepts_legacy_prefix_with_tool():
     assert agent.mcps == ["crewai-amp:notion#get_page"]
 
 
-class TestCrewAgentExecutorSharedLLMStopWords:
-    """Regression tests for shared LLM stop words mutation (issue #5141)."""
+class TestSharedLLMStopWords:
+    """Regression tests for shared LLM stop words mutation (issue #5141).
+
+    Stop words from one executor must not leak into the shared LLM permanently
+    or pollute other agents sharing that LLM.
+    """
 
     @staticmethod
     def _make_executor(llm: LLM, stop_words: list[str]) -> CrewAgentExecutor:
@@ -2478,17 +2482,8 @@ class TestCrewAgentExecutorSharedLLMStopWords:
             tools_handler=ToolsHandler(),
         )
 
-    def test_shared_llm_stop_not_mutated(self) -> None:
-        """Constructing an executor must not mutate the shared LLM's stop list."""
-        shared = LLM(model="gpt-4", stop=["Original:"])
-        original = list(shared.stop)
-
-        self._make_executor(shared, stop_words=["Observation:"])
-
-        assert shared.stop == original
-
-    def test_multiple_executors_isolate_stop_words(self) -> None:
-        """Each executor sharing an LLM gets its own merged stop list."""
+    def test_executor_init_does_not_mutate_shared_llm(self) -> None:
+        """Constructing executors must not touch the shared LLM's stop list."""
         shared = LLM(model="gpt-4", stop=["Original:"])
         original = list(shared.stop)
 
@@ -2496,26 +2491,57 @@ class TestCrewAgentExecutorSharedLLMStopWords:
         b = self._make_executor(shared, stop_words=["StopB:"])
 
         assert shared.stop == original
-        assert a.llm is not shared
-        assert b.llm is not shared
-        assert a.llm is not b.llm
-        assert set(a.llm.stop) == {"Original:", "StopA:"}
-        assert set(b.llm.stop) == {"Original:", "StopB:"}
+        assert a.llm is shared
+        assert b.llm is shared
 
-    def test_no_copy_when_stop_words_already_present(self) -> None:
-        """When the executor adds nothing new, the shared LLM is reused as-is."""
+    def test_stop_words_restored_after_llm_call(self) -> None:
+        """The merge applied around llm.call must be reverted afterwards."""
+        from crewai.utilities.agent_utils import _llm_stop_words_applied
+
         shared = LLM(model="gpt-4", stop=["Original:"])
+        executor = self._make_executor(shared, stop_words=["Observation:"])
 
-        executor = self._make_executor(shared, stop_words=["Original:"])
+        with _llm_stop_words_applied(shared, executor):
+            assert set(shared.stop) == {"Original:", "Observation:"}
 
-        assert executor.llm is shared
+        assert shared.stop == ["Original:"]
 
-    def test_stop_words_do_not_accumulate_across_kickoffs(self) -> None:
-        """Repeated executor construction must not grow the shared LLM's stop list."""
+    def test_stop_words_restored_when_call_raises(self) -> None:
+        """A failed call must still restore the LLM's stop list."""
+        from crewai.utilities.agent_utils import _llm_stop_words_applied
+
         shared = LLM(model="gpt-4", stop=["Original:"])
-        original = list(shared.stop)
+        executor = self._make_executor(shared, stop_words=["Observation:"])
+
+        with pytest.raises(RuntimeError):
+            with _llm_stop_words_applied(shared, executor):
+                raise RuntimeError("boom")
+
+        assert shared.stop == ["Original:"]
+
+    def test_no_merge_when_llm_does_not_support_stop_words(self) -> None:
+        """LLMs that ignore stop words must not have their stop list touched."""
+        from unittest.mock import patch
+        from crewai.utilities.agent_utils import _llm_stop_words_applied
+
+        shared = LLM(model="gpt-4", stop=["Original:"])
+        executor = self._make_executor(shared, stop_words=["Observation:"])
+
+        with patch.object(shared, "supports_stop_words", return_value=False):
+            with _llm_stop_words_applied(shared, executor):
+                assert shared.stop == ["Original:"]
+
+        assert shared.stop == ["Original:"]
+
+    def test_no_accumulation_across_repeated_calls(self) -> None:
+        """Repeated entries into the helper must not grow the shared LLM's stop list."""
+        from crewai.utilities.agent_utils import _llm_stop_words_applied
+
+        shared = LLM(model="gpt-4", stop=["Original:"])
+        executor = self._make_executor(shared, stop_words=["Observation:"])
 
         for _ in range(5):
-            self._make_executor(shared, stop_words=["Observation:"])
+            with _llm_stop_words_applied(shared, executor):
+                pass
 
-        assert shared.stop == original
+        assert shared.stop == ["Original:"]
