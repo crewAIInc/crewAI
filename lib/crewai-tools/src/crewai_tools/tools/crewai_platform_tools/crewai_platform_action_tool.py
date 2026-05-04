@@ -26,6 +26,8 @@ class CrewAIPlatformActionTool(BaseTool):
         description: str,
         action_name: str,
         action_schema: dict[str, Any],
+        provider: str | None = None,
+        provider_id: str | None = None,
     ):
         parameters = action_schema.get("function", {}).get("parameters", {})
 
@@ -48,6 +50,12 @@ class CrewAIPlatformActionTool(BaseTool):
         )
         self.action_name = action_name
         self.action_schema = action_schema
+        # Private metadata used by enterprise tooling to recover the canonical
+        # tool_id (e.g. "crewai_oauth:google_drive" or "paragon:<uuid>") for
+        # ACP rule evaluation. Set by CrewaiPlatformToolBuilder; remains None
+        # for direct construction.
+        self._provider = provider
+        self._provider_id = provider_id
 
     def _run(self, **kwargs: Any) -> str:
         try:

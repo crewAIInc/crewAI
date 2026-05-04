@@ -75,6 +75,7 @@ class CrewaiPlatformToolBuilder:
                                 ),
                                 "parameters": action.get("parameters", {}),
                                 "app": app,
+                                "provider": action.get("provider"),
                             }
                         }
                         self._actions_schema[action_name] = action_schema
@@ -91,6 +92,8 @@ class CrewaiPlatformToolBuilder:
                 description=description,
                 action_name=action_name,
                 action_schema=action_schema,
+                provider=function_details.get("provider"),
+                provider_id=function_details.get("app"),
             )
 
             tools.append(tool)
