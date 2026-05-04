@@ -268,6 +268,8 @@ override-dependencies = [
     "h2>=4.4.1",
     "torch>=2.13.0",
     "snowflake-connector-python>=4.7.1",
+    # scrapegraph-py 2.x removed Client class; pin until upstream fixes type ignores
+    "scrapegraph-py>=1.46.0,<2",
 ]
 
 [tool.uv.workspace]
