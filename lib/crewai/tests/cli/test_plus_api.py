@@ -210,7 +210,7 @@ class TestPlusAPI(unittest.TestCase):
         )
         self.assertEqual(response, mock_response)
 
-    @patch("crewai_cli.plus_api.PlusAPI._make_request")
+    @patch("crewai.plus_api.PlusAPI._make_request")
     def test_publish_tool_with_tools_metadata(self, mock_make_request):
         mock_response = MagicMock()
         mock_make_request.return_value = mock_response
