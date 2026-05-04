@@ -7,6 +7,8 @@ when available (for the litellm fallback path).
 
 from typing import Any
 
+from pydantic import BaseModel, Field
+
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.utilities.logger_utils import suppress_warnings
 
@@ -21,35 +23,26 @@ except ImportError:
     LITELLM_AVAILABLE = False
 
 
-# Create a base class that conditionally inherits from litellm's CustomLogger
-# when available, or from object when not available
-if LITELLM_AVAILABLE and LiteLLMCustomLogger is not None:
-    _BaseClass: type = LiteLLMCustomLogger
-else:
-    _BaseClass = object
-
-
-class TokenCalcHandler(_BaseClass):  # type: ignore[misc]
+class TokenCalcHandler(BaseModel):
     """Handler for calculating and tracking token usage in LLM calls.
 
     This handler tracks prompt tokens, completion tokens, and cached tokens
     across requests. It works standalone and also integrates with litellm's
     logging system when litellm is installed (for the fallback path).
-
-    Attributes:
-        token_cost_process: The token process tracker to accumulate usage metrics.
     """
 
-    def __init__(self, token_cost_process: TokenProcess | None, **kwargs: Any) -> None:
-        """Initialize the token calculation handler.
+    model_config = {"arbitrary_types_allowed": True}
 
-        Args:
-            token_cost_process: Optional token process tracker for accumulating metrics.
-        """
-        # Only call super().__init__ if we have a real parent class with __init__
-        if LITELLM_AVAILABLE and LiteLLMCustomLogger is not None:
-            super().__init__(**kwargs)
-        self.token_cost_process = token_cost_process
+    __hash__ = object.__hash__
+
+    token_cost_process: TokenProcess | None = Field(default=None)
+
+    def __init__(
+        self, token_cost_process: TokenProcess | None = None, /, **kwargs: Any
+    ) -> None:
+        if token_cost_process is not None:
+            kwargs["token_cost_process"] = token_cost_process
+        super().__init__(**kwargs)
 
     def log_success_event(
         self,
@@ -58,18 +51,7 @@ class TokenCalcHandler(_BaseClass):  # type: ignore[misc]
         start_time: float,
         end_time: float,
     ) -> None:
-        """Log successful LLM API call and track token usage.
-
-        This method has the same interface as litellm's CustomLogger.log_success_event()
-        so it can be used as a litellm callback when litellm is installed, or called
-        directly when litellm is not installed.
-
-        Args:
-            kwargs: The arguments passed to the LLM call.
-            response_obj: The response object from the LLM API.
-            start_time: The timestamp when the call started.
-            end_time: The timestamp when the call completed.
-        """
+        """Log successful LLM API call and track token usage."""
         if self.token_cost_process is None:
             return
 

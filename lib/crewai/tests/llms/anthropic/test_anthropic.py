@@ -1463,3 +1463,45 @@ def test_tool_search_saves_input_tokens():
         f"Expected tool_search ({usage_search.prompt_tokens}) to use fewer input tokens "
         f"than no search ({usage_no_search.prompt_tokens})"
     )
+
+
+def test_anthropic_cache_creation_tokens_extraction():
+    """Test that cache_creation_input_tokens are extracted from Anthropic responses."""
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    mock_response = MagicMock()
+    mock_response.content = [MagicMock(text="test response")]
+    mock_response.usage = MagicMock(
+        input_tokens=100,
+        output_tokens=50,
+        cache_read_input_tokens=30,
+        cache_creation_input_tokens=20,
+    )
+    mock_response.stop_reason = None
+    mock_response.model = None
+
+    usage = llm._extract_anthropic_token_usage(mock_response)
+    assert usage["input_tokens"] == 100
+    assert usage["output_tokens"] == 50
+    assert usage["total_tokens"] == 150
+    assert usage["cached_prompt_tokens"] == 30
+    assert usage["cache_creation_tokens"] == 20
+
+
+def test_anthropic_missing_cache_fields_default_to_zero():
+    """Test that missing cache fields default to zero."""
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    mock_response = MagicMock()
+    mock_response.content = [MagicMock(text="test response")]
+    mock_response.usage = MagicMock(
+        input_tokens=40,
+        output_tokens=20,
+        spec=["input_tokens", "output_tokens"],
+    )
+    mock_response.usage.cache_read_input_tokens = None
+    mock_response.usage.cache_creation_input_tokens = None
+
+    usage = llm._extract_anthropic_token_usage(mock_response)
+    assert usage["cached_prompt_tokens"] == 0
+    assert usage["cache_creation_tokens"] == 0

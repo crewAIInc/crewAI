@@ -709,6 +709,158 @@ class TestStreamingEdgeCases:
         assert streaming.is_completed
 
 
+class TestStreamingCancellation:
+    """Tests for streaming cancellation and resource cleanup."""
+
+    @pytest.mark.asyncio
+    async def test_aclose_cancels_async_streaming(self) -> None:
+        """Test that aclose() stops iteration and marks as cancelled."""
+        chunks_yielded: list[str] = []
+
+        async def slow_gen() -> AsyncIterator[StreamChunk]:
+            for i in range(100):
+                await asyncio.sleep(0.01)
+                chunks_yielded.append(f"chunk-{i}")
+                yield StreamChunk(content=f"chunk-{i}")
+
+        streaming = CrewStreamingOutput(async_iterator=slow_gen())
+        collected: list[StreamChunk] = []
+
+        async for chunk in streaming:
+            collected.append(chunk)
+            if len(collected) >= 3:
+                break
+
+        await streaming.aclose()
+
+        assert streaming.is_cancelled
+        assert streaming.is_completed
+        assert len(collected) == 3
+
+    @pytest.mark.asyncio
+    async def test_aclose_idempotent(self) -> None:
+        """Test that calling aclose() multiple times is safe."""
+        async def gen() -> AsyncIterator[StreamChunk]:
+            yield StreamChunk(content="test")
+
+        streaming = CrewStreamingOutput(async_iterator=gen())
+        async for _ in streaming:
+            pass
+
+        await streaming.aclose()
+        await streaming.aclose()
+        assert not streaming.is_cancelled
+        assert streaming.is_completed
+
+    @pytest.mark.asyncio
+    async def test_async_context_manager(self) -> None:
+        """Test using streaming output as async context manager."""
+        async def gen() -> AsyncIterator[StreamChunk]:
+            yield StreamChunk(content="hello")
+            yield StreamChunk(content="world")
+
+        streaming = CrewStreamingOutput(async_iterator=gen())
+        collected: list[StreamChunk] = []
+
+        async with streaming:
+            async for chunk in streaming:
+                collected.append(chunk)
+
+        assert not streaming.is_cancelled
+        assert streaming.is_completed
+        assert len(collected) == 2
+
+    @pytest.mark.asyncio
+    async def test_async_context_manager_early_exit(self) -> None:
+        """Test context manager cleans up on early exit."""
+        async def gen() -> AsyncIterator[StreamChunk]:
+            for i in range(100):
+                await asyncio.sleep(0.01)
+                yield StreamChunk(content=f"chunk-{i}")
+
+        streaming = CrewStreamingOutput(async_iterator=gen())
+
+        async with streaming:
+            async for chunk in streaming:
+                if chunk.content == "chunk-2":
+                    break
+
+        assert streaming.is_cancelled
+        assert streaming.is_completed
+
+    def test_close_cancels_sync_streaming(self) -> None:
+        """Test that close() stops sync streaming and marks as cancelled."""
+        def gen() -> Generator[StreamChunk, None, None]:
+            for i in range(100):
+                yield StreamChunk(content=f"chunk-{i}")
+
+        streaming = CrewStreamingOutput(sync_iterator=gen())
+        collected: list[StreamChunk] = []
+
+        for chunk in streaming:
+            collected.append(chunk)
+            if len(collected) >= 3:
+                break
+
+        streaming.close()
+
+        assert streaming.is_cancelled
+        assert streaming.is_completed
+
+    def test_close_idempotent(self) -> None:
+        """Test that calling close() multiple times is safe."""
+        def gen() -> Generator[StreamChunk, None, None]:
+            yield StreamChunk(content="test")
+
+        streaming = CrewStreamingOutput(sync_iterator=gen())
+        list(streaming)
+
+        streaming.close()
+        streaming.close()
+        assert not streaming.is_cancelled
+        assert streaming.is_completed
+
+    @pytest.mark.asyncio
+    async def test_flow_aclose(self) -> None:
+        """Test that FlowStreamingOutput aclose() is no-op after normal completion."""
+        async def gen() -> AsyncIterator[StreamChunk]:
+            yield StreamChunk(content="flow-chunk")
+
+        streaming = FlowStreamingOutput(async_iterator=gen())
+        async for _ in streaming:
+            pass
+
+        await streaming.aclose()
+        assert not streaming.is_cancelled
+        assert streaming.is_completed
+
+    @pytest.mark.asyncio
+    async def test_flow_async_context_manager(self) -> None:
+        """Test FlowStreamingOutput as async context manager with full consumption."""
+        async def gen() -> AsyncIterator[StreamChunk]:
+            yield StreamChunk(content="flow-chunk")
+
+        streaming = FlowStreamingOutput(async_iterator=gen())
+
+        async with streaming:
+            async for _ in streaming:
+                pass
+
+        assert not streaming.is_cancelled
+        assert streaming.is_completed
+
+    def test_flow_close(self) -> None:
+        """Test that FlowStreamingOutput close() is no-op after normal completion."""
+        def gen() -> Generator[StreamChunk, None, None]:
+            yield StreamChunk(content="flow-chunk")
+
+        streaming = FlowStreamingOutput(sync_iterator=gen())
+        list(streaming)
+
+        streaming.close()
+        assert not streaming.is_cancelled
+
+
 class TestStreamingImports:
     """Tests for correct imports of streaming types."""
 
@@ -727,3 +879,91 @@ class TestStreamingImports:
         assert StreamChunk is not None
         assert StreamChunkType is not None
         assert ToolCallChunk is not None
+
+
+class TestConcurrentStreamIsolation:
+    """Regression tests for concurrent streaming isolation (issue #5376)."""
+
+    def test_concurrent_streams_do_not_cross_contaminate(self) -> None:
+        """Two concurrent streaming runs must each receive only their own chunks.
+
+        Mirrors the real production path: create_streaming_state in the caller,
+        then temporarily push the stream_id into the ContextVar, copy_context,
+        and reset — exactly as create_chunk_generator does.
+        """
+        import contextvars
+        import threading
+
+        from crewai.utilities.streaming import (
+            TaskInfo,
+            _current_stream_ids,
+            _unregister_handler,
+            create_streaming_state,
+        )
+
+        task_info_a: TaskInfo = {
+            "index": 0,
+            "name": "task_a",
+            "id": "a",
+            "agent_role": "A",
+            "agent_id": "a",
+        }
+        task_info_b: TaskInfo = {
+            "index": 1,
+            "name": "task_b",
+            "id": "b",
+            "agent_role": "B",
+            "agent_id": "b",
+        }
+
+        state_a = create_streaming_state(task_info_a, [])
+        state_b = create_streaming_state(task_info_b, [])
+
+        def make_emitter_ctx(state: Any) -> contextvars.Context:
+            token = _current_stream_ids.set(
+                (*_current_stream_ids.get(), state.stream_id)
+            )
+            ctx = contextvars.copy_context()
+            _current_stream_ids.reset(token)
+            return ctx
+
+        ctx_a = make_emitter_ctx(state_a)
+        ctx_b = make_emitter_ctx(state_b)
+
+        def emit_chunks(prefix: str, call_id: str) -> None:
+            for text in [f"{prefix}1", f"{prefix}2", f"{prefix}3"]:
+                crewai_event_bus.emit(
+                    None,
+                    event=LLMStreamChunkEvent(
+                        chunk=text, call_id=call_id, response_id="r"
+                    ),
+                )
+
+        t_a = threading.Thread(target=ctx_a.run, args=(lambda: emit_chunks("A", "ca"),))
+        t_b = threading.Thread(target=ctx_b.run, args=(lambda: emit_chunks("B", "cb"),))
+        t_a.start()
+        t_b.start()
+        t_a.join()
+        t_b.join()
+
+        chunks_a: list[str] = []
+        while not state_a.sync_queue.empty():
+            item = state_a.sync_queue.get_nowait()
+            if isinstance(item, StreamChunk):
+                chunks_a.append(item.content)
+
+        chunks_b: list[str] = []
+        while not state_b.sync_queue.empty():
+            item = state_b.sync_queue.get_nowait()
+            if isinstance(item, StreamChunk):
+                chunks_b.append(item.content)
+
+        assert set(chunks_a) == {"A1", "A2", "A3"}, (
+            f"Stream A received unexpected chunks: {chunks_a}"
+        )
+        assert set(chunks_b) == {"B1", "B2", "B3"}, (
+            f"Stream B received unexpected chunks: {chunks_b}"
+        )
+
+        _unregister_handler(state_a.handler)
+        _unregister_handler(state_b.handler)

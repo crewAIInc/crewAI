@@ -1051,7 +1051,7 @@ def test_lite_agent_verbose_false_suppresses_printer_output():
         successful_requests=1,
     )
 
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(FutureWarning):
         agent = LiteAgent(
             role="Test Agent",
             goal="Test goal",
@@ -1060,27 +1060,13 @@ def test_lite_agent_verbose_false_suppresses_printer_output():
             verbose=False,
         )
 
-    result = agent.kickoff("Say hello")
+    mock_printer = Mock()
+    with patch("crewai.lite_agent.PRINTER", mock_printer):
+        result = agent.kickoff("Say hello")
 
     assert result is not None
     assert isinstance(result, LiteAgentOutput)
-    # Verify the printer was never called
-    agent._printer.print = Mock()
-    # For a clean verification, patch printer before execution
-    with pytest.warns(DeprecationWarning):
-        agent2 = LiteAgent(
-            role="Test Agent",
-            goal="Test goal",
-            backstory="Test backstory",
-            llm=mock_llm,
-            verbose=False,
-        )
-
-    mock_printer = Mock()
-    agent2._printer = mock_printer
-
-    agent2.kickoff("Say hello")
-
+    # Verify the printer was never called when verbose=False
     mock_printer.print.assert_not_called()
 
 

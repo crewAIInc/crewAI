@@ -161,7 +161,8 @@ def test_install_api_error(mock_get, capsys, tool_command):
 
 
 @patch("crewai.cli.tools.main.git.Repository.is_synced", return_value=False)
-def test_publish_when_not_in_sync(mock_is_synced, capsys, tool_command):
+@patch("crewai.cli.tools.main.git.Repository.__init__", return_value=None)
+def test_publish_when_not_in_sync(mock_init, mock_is_synced, capsys, tool_command):
     with raises(SystemExit):
         tool_command.publish(is_public=True)
 
@@ -218,6 +219,7 @@ def test_publish_when_not_in_sync_and_force(
         ["uv", "build", "--sdist", "--out-dir", unittest.mock.ANY],
         check=True,
         capture_output=False,
+        env=unittest.mock.ANY,
     )
     mock_open.assert_called_with(unittest.mock.ANY, "rb")
     mock_publish.assert_called_with(
@@ -279,6 +281,7 @@ def test_publish_success(
         ["uv", "build", "--sdist", "--out-dir", unittest.mock.ANY],
         check=True,
         capture_output=False,
+        env=unittest.mock.ANY,
     )
     mock_open.assert_called_with(unittest.mock.ANY, "rb")
     mock_publish.assert_called_with(

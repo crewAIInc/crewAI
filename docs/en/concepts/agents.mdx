@@ -308,16 +308,12 @@ multimodal_agent = Agent(
 
 #### Code Execution
 
-- `allow_code_execution`: Must be True to run code
-- `code_execution_mode`:
-  - `"safe"`: Uses Docker (recommended for production)
-  - `"unsafe"`: Direct execution (use only in trusted environments)
+<Warning>
+  `allow_code_execution` and `code_execution_mode` are deprecated. `CodeInterpreterTool` has been removed from `crewai-tools`. Use a dedicated sandbox service such as [E2B](https://e2b.dev) or [Modal](https://modal.com) for secure code execution.
+</Warning>
 
-<Note>
-  This runs a default Docker image. If you want to configure the docker image,
-  the checkout the Code Interpreter Tool in the tools section. Add the code
-  interpreter tool as a tool in the agent as a tool parameter.
-</Note>
+- `allow_code_execution` _(deprecated)_: Previously enabled built-in code execution via `CodeInterpreterTool`.
+- `code_execution_mode` _(deprecated)_: Previously controlled execution mode (`"safe"` for Docker, `"unsafe"` for direct execution).
 
 #### Advanced Features
 
@@ -667,9 +663,9 @@ asyncio.run(main())
 
 ### Security and Code Execution
 
-- When using `allow_code_execution`, be cautious with user input and always validate it
-- Use `code_execution_mode: "safe"` (Docker) in production environments
-- Consider setting appropriate `max_execution_time` limits to prevent infinite loops
+<Warning>
+  `allow_code_execution` and `code_execution_mode` are deprecated and `CodeInterpreterTool` has been removed. Use a dedicated sandbox service such as [E2B](https://e2b.dev) or [Modal](https://modal.com) for secure code execution.
+</Warning>
 
 ### Performance Optimization
 

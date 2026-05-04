@@ -53,7 +53,7 @@ except ImportError:
 
 
 if TYPE_CHECKING:
-    from crewai.agent.core import Agent
+    from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
     from crewai.utilities.types import LLMMessage
@@ -72,6 +72,9 @@ _JSON_EXTRACTION_PATTERN: Final[re.Pattern[str]] = re.compile(r"\{.*}", re.DOTAL
 _current_call_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "_current_call_id", default=None
 )
+_call_stop_override_var: contextvars.ContextVar[dict[int, list[str]] | None] = (
+    contextvars.ContextVar("_call_stop_override_var", default=None)
+)
 
 
 @contextmanager
@@ -83,6 +86,31 @@ def llm_call_context() -> Generator[str, None, None]:
         yield call_id
     finally:
         _current_call_id.reset(token)
+
+
+@contextmanager
+def call_stop_override(
+    llm: BaseLLM, stop: list[str] | None
+) -> Generator[None, None, None]:
+    """Override the stop list for ``llm`` within the current call scope.
+
+    Only ``llm``'s reads via :attr:`BaseLLM.stop_sequences` see ``stop``;
+    other LLM instances (e.g. an agent's ``function_calling_llm``) keep their
+    own ``stop`` field. Passing ``None`` clears any prior override for ``llm``
+    in the same scope. The instance-level ``stop`` field is never mutated,
+    so the override is safe under concurrent execution.
+    """
+    current = _call_stop_override_var.get()
+    new_overrides: dict[int, list[str]] = dict(current) if current else {}
+    if stop is None:
+        new_overrides.pop(id(llm), None)
+    else:
+        new_overrides[id(llm)] = stop
+    token = _call_stop_override_var.set(new_overrides)
+    try:
+        yield
+    finally:
+        _call_stop_override_var.reset(token)
 
 
 def get_current_call_id() -> str:
@@ -117,6 +145,7 @@ class BaseLLM(BaseModel, ABC):
 
     model_config = ConfigDict(arbitrary_types_allowed=True, populate_by_name=True)
 
+    llm_type: str = "base"
     model: str
     temperature: float | None = None
     api_key: str | None = None
@@ -157,11 +186,18 @@ class BaseLLM(BaseModel, ABC):
 
     @property
     def stop_sequences(self) -> list[str]:
-        """Alias for ``stop`` — kept for backward compatibility with provider APIs.
+        """Stop list active for the current call.
 
-        Writes are handled by ``__setattr__``, which normalizes and redirects
-        ``stop_sequences`` assignments to the ``stop`` field.
+        Returns the per-instance override set via :func:`call_stop_override`
+        when one is in effect for this LLM; otherwise the instance-level
+        ``stop`` field. Kept under this name for backward compatibility with
+        provider APIs that already read ``stop_sequences``.
         """
+        overrides = _call_stop_override_var.get()
+        if overrides is not None:
+            override = overrides.get(id(self))
+            if override is not None:
+                return override
         return self.stop
 
     _token_usage: dict[str, int] = PrivateAttr(
@@ -171,6 +207,8 @@ class BaseLLM(BaseModel, ABC):
             "completion_tokens": 0,
             "successful_requests": 0,
             "cached_prompt_tokens": 0,
+            "reasoning_tokens": 0,
+            "cache_creation_tokens": 0,
         }
     )
 
@@ -240,7 +278,7 @@ class BaseLLM(BaseModel, ABC):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Call the LLM with the given messages.
@@ -277,7 +315,7 @@ class BaseLLM(BaseModel, ABC):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Call the LLM with the given messages.
@@ -338,7 +376,7 @@ class BaseLLM(BaseModel, ABC):
         Returns:
             True if stop words are configured and can be applied
         """
-        return bool(self.stop)
+        return bool(self.stop_sequences)
 
     def _apply_stop_words(self, content: str) -> str:
         """Apply stop words to truncate response content.
@@ -360,14 +398,14 @@ class BaseLLM(BaseModel, ABC):
             >>> llm._apply_stop_words(response)
             "I need to search.\\n\\nAction: search"
         """
-        if not self.stop or not content:
+        stops = self.stop_sequences
+        if not stops or not content:
             return content
 
-        # Find the earliest occurrence of any stop word
         earliest_stop_pos = len(content)
         found_stop_word = None
 
-        for stop_word in self.stop:
+        for stop_word in stops:
             stop_pos = content.find(stop_word)
             if stop_pos != -1 and stop_pos < earliest_stop_pos:
                 earliest_stop_pos = stop_pos
@@ -434,7 +472,7 @@ class BaseLLM(BaseModel, ABC):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
     ) -> None:
         """Emit LLM call started event."""
         from crewai.utilities.serialization import to_serializable
@@ -458,8 +496,9 @@ class BaseLLM(BaseModel, ABC):
         response: Any,
         call_type: LLMCallType,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         messages: str | list[LLMMessage] | None = None,
+        usage: dict[str, Any] | None = None,
     ) -> None:
         """Emit LLM call completed event."""
         from crewai.utilities.serialization import to_serializable
@@ -474,6 +513,7 @@ class BaseLLM(BaseModel, ABC):
                 from_agent=from_agent,
                 model=self.model,
                 call_id=get_current_call_id(),
+                usage=usage,
             ),
         )
 
@@ -481,7 +521,7 @@ class BaseLLM(BaseModel, ABC):
         self,
         error: str,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
     ) -> None:
         """Emit LLM call failed event."""
         crewai_event_bus.emit(
@@ -499,7 +539,7 @@ class BaseLLM(BaseModel, ABC):
         self,
         chunk: str,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         tool_call: dict[str, Any] | None = None,
         call_type: LLMCallType | None = None,
         response_id: str | None = None,
@@ -531,7 +571,7 @@ class BaseLLM(BaseModel, ABC):
         self,
         chunk: str,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_id: str | None = None,
     ) -> None:
         """Emit thinking/reasoning chunk event from a thinking model.
@@ -559,7 +599,7 @@ class BaseLLM(BaseModel, ABC):
         function_args: dict[str, Any],
         available_functions: dict[str, Any],
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
     ) -> str | None:
         """Handle tool execution with proper event emission.
 
@@ -805,14 +845,24 @@ class BaseLLM(BaseModel, ABC):
         cached_tokens = (
             usage_data.get("cached_tokens")
             or usage_data.get("cached_prompt_tokens")
+            or usage_data.get("cache_read_input_tokens")
             or 0
         )
+        if not cached_tokens:
+            prompt_details = usage_data.get("prompt_tokens_details")
+            if isinstance(prompt_details, dict):
+                cached_tokens = prompt_details.get("cached_tokens", 0) or 0
+
+        reasoning_tokens = usage_data.get("reasoning_tokens", 0) or 0
+        cache_creation_tokens = usage_data.get("cache_creation_tokens", 0) or 0
 
         self._token_usage["prompt_tokens"] += prompt_tokens
         self._token_usage["completion_tokens"] += completion_tokens
         self._token_usage["total_tokens"] += prompt_tokens + completion_tokens
         self._token_usage["successful_requests"] += 1
         self._token_usage["cached_prompt_tokens"] += cached_tokens
+        self._token_usage["reasoning_tokens"] += reasoning_tokens
+        self._token_usage["cache_creation_tokens"] += cache_creation_tokens
 
     def get_token_usage_summary(self) -> UsageMetrics:
         """Get summary of token usage for this LLM instance.
@@ -825,7 +875,7 @@ class BaseLLM(BaseModel, ABC):
     def _invoke_before_llm_call_hooks(
         self,
         messages: list[LLMMessage],
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
     ) -> bool:
         """Invoke before_llm_call hooks for direct LLM calls (no agent context).
 
@@ -854,7 +904,7 @@ class BaseLLM(BaseModel, ABC):
             LLMCallHookContext,
             get_before_llm_call_hooks,
         )
-        from crewai.utilities.printer import Printer
+        from crewai.utilities.printer import PRINTER
 
         before_hooks = get_before_llm_call_hooks()
         if not before_hooks:
@@ -869,21 +919,20 @@ class BaseLLM(BaseModel, ABC):
             crew=None,
         )
         verbose = getattr(from_agent, "verbose", True) if from_agent else True
-        printer = Printer()
 
         try:
             for hook in before_hooks:
                 result = hook(hook_context)
                 if result is False:
                     if verbose:
-                        printer.print(
+                        PRINTER.print(
                             content="LLM call blocked by before_llm_call hook",
                             color="yellow",
                         )
                     return False
         except Exception as e:
             if verbose:
-                printer.print(
+                PRINTER.print(
                     content=f"Error in before_llm_call hook: {e}",
                     color="yellow",
                 )
@@ -894,7 +943,7 @@ class BaseLLM(BaseModel, ABC):
         self,
         messages: list[LLMMessage],
         response: str,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
     ) -> str:
         """Invoke after_llm_call hooks for direct LLM calls (no agent context).
 
@@ -924,7 +973,7 @@ class BaseLLM(BaseModel, ABC):
             LLMCallHookContext,
             get_after_llm_call_hooks,
         )
-        from crewai.utilities.printer import Printer
+        from crewai.utilities.printer import PRINTER
 
         after_hooks = get_after_llm_call_hooks()
         if not after_hooks:
@@ -940,7 +989,6 @@ class BaseLLM(BaseModel, ABC):
             response=response,
         )
         verbose = getattr(from_agent, "verbose", True) if from_agent else True
-        printer = Printer()
         modified_response = response
 
         try:
@@ -951,7 +999,7 @@ class BaseLLM(BaseModel, ABC):
                     hook_context.response = modified_response
         except Exception as e:
             if verbose:
-                printer.print(
+                PRINTER.print(
                     content=f"Error in after_llm_call hook: {e}",
                     color="yellow",
                 )

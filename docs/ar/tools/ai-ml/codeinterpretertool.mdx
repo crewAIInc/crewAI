@@ -7,6 +7,10 @@ mode: "wide"
 
 # `CodeInterpreterTool`
 
+<Warning>
+  **مهجور:** تمت إزالة `CodeInterpreterTool` من `crewai-tools`. كما أن معاملَي `allow_code_execution` و`code_execution_mode` على `Agent` أصبحا مهجورَين. استخدم خدمة بيئة معزولة مخصصة — [E2B](https://e2b.dev) أو [Modal](https://modal.com) — لتنفيذ الكود بشكل آمن ومعزول.
+</Warning>
+
 ## الوصف
 
 تمكّن `CodeInterpreterTool` وكلاء CrewAI من تنفيذ كود Python 3 الذي يولّدونه بشكل مستقل. هذه الوظيفة ذات قيمة خاصة لأنها تتيح للوكلاء إنشاء الكود وتنفيذه والحصول على النتائج واستخدام تلك المعلومات لاتخاذ القرارات والإجراءات اللاحقة.

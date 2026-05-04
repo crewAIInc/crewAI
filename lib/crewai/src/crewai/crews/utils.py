@@ -11,6 +11,7 @@ from opentelemetry import baggage
 
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crews.crew_output import CrewOutput
+from crewai.llms.base_llm import BaseLLM
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.skills.loader import activate_skill, discover_skills
 from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
@@ -50,7 +51,7 @@ def enable_agent_streaming(agents: Iterable[BaseAgent]) -> None:
         agents: Iterable of agents to enable streaming on.
     """
     for agent in agents:
-        if agent.llm is not None:
+        if isinstance(agent.llm, BaseLLM):
             agent.llm.stream = True
 
 
@@ -104,6 +105,9 @@ def setup_agents(
             agent.function_calling_llm = function_calling_llm  # type: ignore[attr-defined]
         if not agent.step_callback:  # type: ignore[attr-defined]
             agent.step_callback = step_callback  # type: ignore[attr-defined]
+        executor = getattr(agent, "agent_executor", None)
+        if executor and getattr(executor, "_resuming", False):
+            continue
         agent.create_agent_executor()
 
 
@@ -156,10 +160,8 @@ def prepare_task_execution(
     # Handle replay skip
     if start_index is not None and task_index < start_index:
         if task.output:
-            if task.async_execution:
-                task_outputs.append(task.output)
-            else:
-                task_outputs = [task.output]
+            task_outputs.append(task.output)
+            if not task.async_execution:
                 last_sync_output = task.output
         return (
             TaskExecutionData(agent=None, tools=[], should_skip=True),
@@ -182,7 +184,9 @@ def prepare_task_execution(
         tools_for_task,
     )
 
-    crew._log_task_start(task, agent_to_use.role)
+    executor = agent_to_use.agent_executor
+    if not (executor and executor._resuming):
+        crew._log_task_start(task, agent_to_use.role)
 
     return (
         TaskExecutionData(agent=agent_to_use, tools=tools_for_task),
@@ -274,10 +278,15 @@ def prepare_kickoff(
     """
     from crewai.events.base_events import reset_emission_counter
     from crewai.events.event_bus import crewai_event_bus
-    from crewai.events.event_context import get_current_parent_id, reset_last_event_id
+    from crewai.events.event_context import (
+        get_current_parent_id,
+        reset_last_event_id,
+    )
     from crewai.events.types.crew_events import CrewKickoffStartedEvent
 
-    if get_current_parent_id() is None:
+    resuming = crew.checkpoint_kickoff_event_id is not None
+
+    if not resuming and get_current_parent_id() is None:
         reset_emission_counter()
         reset_last_event_id()
 
@@ -295,14 +304,29 @@ def prepare_kickoff(
             normalized = {}
         normalized = before_callback(normalized)
 
-    started_event = CrewKickoffStartedEvent(crew_name=crew.name, inputs=normalized)
-    crew._kickoff_event_id = started_event.event_id
-    future = crewai_event_bus.emit(crew, started_event)
-    if future is not None:
-        try:
-            future.result()
-        except Exception:  # noqa: S110
-            pass
+    if resuming and crew._kickoff_event_id:
+        if crew.verbose:
+            from crewai.events.utils.console_formatter import ConsoleFormatter
+
+            fmt = ConsoleFormatter(verbose=True)
+            content = fmt.create_status_content(
+                "Resuming from Checkpoint",
+                crew.name or "Crew",
+                "bright_magenta",
+                ID=str(crew.id),
+            )
+            fmt.print_panel(
+                content, "\U0001f504 Resuming from Checkpoint", "bright_magenta"
+            )
+    else:
+        started_event = CrewKickoffStartedEvent(crew_name=crew.name, inputs=normalized)
+        crew._kickoff_event_id = started_event.event_id
+        future = crewai_event_bus.emit(crew, started_event)
+        if future is not None:
+            try:
+                future.result()
+            except Exception:  # noqa: S110
+                pass
 
     crew._task_output_handler.reset()
     crew._logging_color = "bold_purple"
@@ -330,9 +354,16 @@ def prepare_kickoff(
     crew._set_tasks_callbacks()
     crew._set_allow_crewai_trigger_context_for_first_task()
 
+    agents_to_setup: list[BaseAgent] = list(crew.agents)
+    seen_agent_ids: set[int] = {id(agent) for agent in agents_to_setup}
+    for task in crew.tasks:
+        if task.agent is not None and id(task.agent) not in seen_agent_ids:
+            agents_to_setup.append(task.agent)
+            seen_agent_ids.add(id(task.agent))
+
     setup_agents(
         crew,
-        crew.agents,
+        agents_to_setup,
         crew.embedder,
         crew.function_calling_llm,
         crew.step_callback,
@@ -407,6 +438,7 @@ async def run_for_each_async(
     from crewai.types.usage_metrics import UsageMetrics
     from crewai.utilities.streaming import (
         create_async_chunk_generator,
+        register_cleanup,
         signal_end,
         signal_error,
     )
@@ -456,6 +488,7 @@ async def run_for_each_async(
             streaming_output._set_results(result)
 
         streaming_output._set_result = set_results_wrapper  # type: ignore[method-assign]
+        register_cleanup(streaming_output, ctx.state)
         ctx.output_holder.append(streaming_output)
 
         return streaming_output

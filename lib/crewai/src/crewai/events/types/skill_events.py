@@ -6,7 +6,7 @@ Events emitted during skill discovery, loading, and activation.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from crewai.events.base_events import BaseEvent
 
@@ -28,14 +28,14 @@ class SkillEvent(BaseEvent):
 class SkillDiscoveryStartedEvent(SkillEvent):
     """Event emitted when skill discovery begins."""
 
-    type: str = "skill_discovery_started"
+    type: Literal["skill_discovery_started"] = "skill_discovery_started"
     search_path: Path
 
 
 class SkillDiscoveryCompletedEvent(SkillEvent):
     """Event emitted when skill discovery completes."""
 
-    type: str = "skill_discovery_completed"
+    type: Literal["skill_discovery_completed"] = "skill_discovery_completed"
     search_path: Path
     skills_found: int
     skill_names: list[str]
@@ -44,19 +44,19 @@ class SkillDiscoveryCompletedEvent(SkillEvent):
 class SkillLoadedEvent(SkillEvent):
     """Event emitted when a skill is loaded at metadata level."""
 
-    type: str = "skill_loaded"
+    type: Literal["skill_loaded"] = "skill_loaded"
     disclosure_level: int = 1
 
 
 class SkillActivatedEvent(SkillEvent):
     """Event emitted when a skill is activated (promoted to instructions level)."""
 
-    type: str = "skill_activated"
+    type: Literal["skill_activated"] = "skill_activated"
     disclosure_level: int = 2
 
 
 class SkillLoadFailedEvent(SkillEvent):
     """Event emitted when skill loading fails."""
 
-    type: str = "skill_load_failed"
+    type: Literal["skill_load_failed"] = "skill_load_failed"
     error: str

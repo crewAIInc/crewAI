@@ -8,12 +8,12 @@ import concurrent.futures
 import contextvars
 from datetime import datetime
 import json
+import os
 from pathlib import Path
-import shutil
-import subprocess
 import time
 from typing import (
     TYPE_CHECKING,
+    Annotated,
     Any,
     Literal,
     NoReturn,
@@ -23,12 +23,14 @@ import warnings
 
 from pydantic import (
     BaseModel,
+    BeforeValidator,
     ConfigDict,
     Field,
     PrivateAttr,
     model_validator,
 )
-from typing_extensions import Self
+from pydantic.functional_serializers import PlainSerializer
+from typing_extensions import Self, TypeIs
 
 from crewai.agent.planning_config import PlanningConfig
 from crewai.agent.utils import (
@@ -45,7 +47,11 @@ from crewai.agent.utils import (
     save_last_messages,
     validate_max_execution_time,
 )
-from crewai.agents.agent_builder.base_agent import BaseAgent
+from crewai.agents.agent_builder.base_agent import (
+    BaseAgent,
+    _serialize_llm_ref,
+    _validate_llm_ref,
+)
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.events.event_bus import crewai_event_bus
@@ -73,12 +79,12 @@ from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.lite_agent_output import LiteAgentOutput
 from crewai.llms.base_llm import BaseLLM
-from crewai.mcp import MCPServerConfig
-from crewai.mcp.tool_resolver import MCPToolResolver
+from crewai.mcp.config import MCPServerConfig
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.fingerprint import Fingerprint
 from crewai.skills.loader import activate_skill, discover_skills
 from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
+from crewai.state.checkpoint_config import CheckpointConfig, apply_checkpoint
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.agent_utils import (
@@ -88,11 +94,16 @@ from crewai.utilities.agent_utils import (
     parse_tools,
     render_text_description_and_args,
 )
-from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
+from crewai.utilities.constants import (
+    CREWAI_TRAINED_AGENTS_FILE_ENV,
+    TRAINED_AGENTS_DATA_FILE,
+    TRAINING_DATA_FILE,
+)
 from crewai.utilities.converter import Converter, ConverterError
 from crewai.utilities.env import get_env_context
-from crewai.utilities.guardrail import process_guardrail
+from crewai.utilities.guardrail import process_guardrail, serialize_guardrail_for_json
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.prompts import Prompts, StandardPromptResult, SystemPromptResult
 from crewai.utilities.pydantic_schema_utils import generate_model_description
@@ -109,10 +120,10 @@ except ImportError:
 
 if TYPE_CHECKING:
     from crewai_files import FileInput
-    from crewai_tools import CodeInterpreterTool
 
     from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
     from crewai.agents.agent_builder.base_agent import PlatformAppOrAction
+    from crewai.mcp.tool_resolver import MCPToolResolver
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
     from crewai.tools.structured_tool import CrewStructuredTool
@@ -120,6 +131,31 @@ if TYPE_CHECKING:
 
 
 _passthrough_exceptions: tuple[type[Exception], ...] = ()
+
+_EXECUTOR_CLASS_MAP: dict[str, type] = {
+    "CrewAgentExecutor": CrewAgentExecutor,
+    "AgentExecutor": AgentExecutor,
+}
+
+
+def _is_resuming_agent_executor(
+    executor: CrewAgentExecutor | AgentExecutor | None,
+) -> TypeIs[AgentExecutor]:
+    """Type guard: True when the executor is resuming from a checkpoint."""
+    return isinstance(executor, AgentExecutor) and executor._resuming
+
+
+def _validate_executor_class(value: Any) -> Any:
+    if isinstance(value, str):
+        cls = _EXECUTOR_CLASS_MAP.get(value)
+        if cls is None:
+            raise ValueError(f"Unknown executor class: {value}")
+        return cls
+    return value
+
+
+def _serialize_executor_class(value: Any) -> str:
+    return value.__name__ if isinstance(value, type) else str(value)
 
 
 class Agent(BaseAgent):
@@ -166,12 +202,16 @@ class Agent(BaseAgent):
         default=True,
         description="Use system prompt for the agent.",
     )
-    llm: str | BaseLLM | None = Field(
-        description="Language model that will run the agent.", default=None
-    )
-    function_calling_llm: str | BaseLLM | None = Field(
-        description="Language model that will run the agent.", default=None
-    )
+    llm: Annotated[
+        str | BaseLLM | None,
+        BeforeValidator(_validate_llm_ref),
+        PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
+    ] = Field(description="Language model that will run the agent.", default=None)
+    function_calling_llm: Annotated[
+        str | BaseLLM | None,
+        BeforeValidator(_validate_llm_ref),
+        PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
+    ] = Field(description="Language model that will run the agent.", default=None)
     system_template: str | None = Field(
         default=None, description="System format for the agent."
     )
@@ -182,7 +222,9 @@ class Agent(BaseAgent):
         default=None, description="Response format for the agent."
     )
     allow_code_execution: bool | None = Field(
-        default=False, description="Enable code execution for the agent."
+        default=False,
+        deprecated=True,
+        description="Deprecated. CodeInterpreterTool is no longer available. Use dedicated sandbox services instead.",
     )
     respect_context_window: bool = Field(
         default=True,
@@ -207,7 +249,8 @@ class Agent(BaseAgent):
     )
     code_execution_mode: Literal["safe", "unsafe"] = Field(
         default="safe",
-        description="Mode for code execution: 'safe' (using Docker) or 'unsafe' (direct execution).",
+        deprecated=True,
+        description="Deprecated. CodeInterpreterTool is no longer available. Use dedicated sandbox services instead.",
     )
     planning_config: PlanningConfig | None = Field(
         default=None,
@@ -247,7 +290,14 @@ class Agent(BaseAgent):
         default=None,
         description="The Agent's role to be used from your repository.",
     )
-    guardrail: GuardrailType | None = Field(
+    guardrail: Annotated[
+        GuardrailType | None,
+        PlainSerializer(
+            serialize_guardrail_for_json,
+            return_type=str | None,
+            when_used="json",
+        ),
+    ] = Field(
         default=None,
         description="Function or string description of a guardrail to validate agent output",
     )
@@ -267,7 +317,14 @@ class Agent(BaseAgent):
         Can be a single A2AConfig/A2AClientConfig/A2AServerConfig, or a list of any number of A2AConfig/A2AClientConfig with a single A2AServerConfig.
         """,
     )
-    executor_class: type[CrewAgentExecutor] | type[AgentExecutor] = Field(
+    agent_executor: CrewAgentExecutor | AgentExecutor | None = Field(
+        default=None, description="An instance of the CrewAgentExecutor class."
+    )
+    executor_class: Annotated[
+        type[CrewAgentExecutor] | type[AgentExecutor],
+        BeforeValidator(_validate_executor_class),
+        PlainSerializer(_serialize_executor_class, return_type=str, when_used="json"),
+    ] = Field(
         default=CrewAgentExecutor,
         description="Class to use for the agent executor. Defaults to CrewAgentExecutor, can optionally use AgentExecutor.",
     )
@@ -293,7 +350,13 @@ class Agent(BaseAgent):
             self._setup_agent_executor()
 
         if self.allow_code_execution:
-            self._validate_docker_installation()
+            warnings.warn(
+                "allow_code_execution is deprecated and will be removed in v2.0. "
+                "CodeInterpreterTool is no longer available. "
+                "Use dedicated sandbox services like E2B or Modal.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
 
         self.set_skills()
 
@@ -343,15 +406,17 @@ class Agent(BaseAgent):
         self,
         resolved_crew_skills: list[SkillModel] | None = None,
     ) -> None:
-        """Resolve skill paths and activate skills to INSTRUCTIONS level.
+        """Resolve skill paths while preserving explicit disclosure levels.
 
-        Path entries trigger discovery and activation. Pre-loaded Skill objects
-        below INSTRUCTIONS level are activated. Crew-level skills are merged in
-        with event emission so observability is consistent regardless of origin.
+        Path entries trigger discovery and activation because directory-based
+        skills opt into eager loading. Pre-loaded Skill objects keep their
+        current disclosure level so callers can attach METADATA-only skills and
+        progressively activate them later. Crew-level skills are merged in with
+        event emission so observability is consistent regardless of origin.
 
         Args:
-            resolved_crew_skills: Pre-resolved crew skills (already discovered
-                and activated). When provided, avoids redundant discovery per agent.
+            resolved_crew_skills: Pre-resolved crew skills. When provided,
+                avoids redundant discovery per agent.
         """
         from crewai.crew import Crew
 
@@ -392,8 +457,7 @@ class Agent(BaseAgent):
             elif isinstance(item, SkillModel):
                 if item.name not in seen:
                     seen.add(item.name)
-                    activated = activate_skill(item, source=self)
-                    if activated is item and item.disclosure_level >= INSTRUCTIONS:
+                    if item.disclosure_level >= INSTRUCTIONS:
                         crewai_event_bus.emit(
                             self,
                             event=SkillActivatedEvent(
@@ -403,7 +467,7 @@ class Agent(BaseAgent):
                                 disclosure_level=item.disclosure_level,
                             ),
                         )
-                    resolved.append(activated)
+                    resolved.append(item)
 
         self.skills = resolved if resolved else None
 
@@ -457,8 +521,8 @@ class Agent(BaseAgent):
             self.tools_handler.last_used_tool = None
 
         task_prompt = task.prompt()
-        task_prompt = build_task_prompt_with_schema(task, task_prompt, self.i18n)
-        task_prompt = format_task_with_context(task_prompt, context, self.i18n)
+        task_prompt = build_task_prompt_with_schema(task, task_prompt)
+        task_prompt = format_task_with_context(task_prompt, context)
         return self._retrieve_memory_context(task, task_prompt)
 
     def _finalize_task_prompt(
@@ -520,7 +584,7 @@ class Agent(BaseAgent):
                         m.format() for m in matches
                     )
             if memory.strip() != "":
-                task_prompt += self.i18n.slice("memory").format(memory=memory)
+                task_prompt += I18N_DEFAULT.slice("memory").format(memory=memory)
 
             crewai_event_bus.emit(
                 self,
@@ -690,7 +754,9 @@ class Agent(BaseAgent):
             task_prompt,
             knowledge_config,
             self.knowledge.query if self.knowledge else lambda *a, **k: None,
-            self.crew.query_knowledge if self.crew else lambda *a, **k: None,
+            self.crew.query_knowledge
+            if self.crew and not isinstance(self.crew, str)
+            else lambda *a, **k: None,
         )
 
         task_prompt = self._finalize_task_prompt(task_prompt, tools, task)
@@ -777,14 +843,18 @@ class Agent(BaseAgent):
         if not self.agent_executor:
             raise RuntimeError("Agent executor is not initialized.")
 
-        return self.agent_executor.invoke(
-            {
-                "input": task_prompt,
-                "tool_names": self.agent_executor.tools_names,
-                "tools": self.agent_executor.tools_description,
-                "ask_for_human_input": task.human_input,
-            }
-        )["output"]
+        result = cast(
+            dict[str, Any],
+            self.agent_executor.invoke(
+                {
+                    "input": task_prompt,
+                    "tool_names": self.agent_executor.tools_names,
+                    "tools": self.agent_executor.tools_description,
+                    "ask_for_human_input": task.human_input,
+                }
+            ),
+        )
+        return result["output"]
 
     async def aexecute_task(
         self,
@@ -920,14 +990,13 @@ class Agent(BaseAgent):
             agent=self,
             has_tools=len(raw_tools) > 0,
             use_native_tool_calling=use_native_tool_calling,
-            i18n=self.i18n,
             use_system_prompt=self.use_system_prompt,
             system_template=self.system_template,
             prompt_template=self.prompt_template,
             response_template=self.response_template,
         ).task_execution()
 
-        stop_words = [self.i18n.slice("observation")]
+        stop_words = [I18N_DEFAULT.slice("observation")]
         if self.response_template:
             stop_words.append(
                 self.response_template.split("{{ .Response }}")[1].strip()
@@ -955,17 +1024,20 @@ class Agent(BaseAgent):
         if self.agent_executor is not None:
             self._update_executor_parameters(
                 task=task,
-                tools=parsed_tools,  # type: ignore[arg-type]
+                tools=parsed_tools,
                 raw_tools=raw_tools,
                 prompt=prompt,
                 stop_words=stop_words,
                 rpm_limit_fn=rpm_limit_fn,
             )
         else:
+            if not isinstance(self.llm, BaseLLM):
+                raise RuntimeError(
+                    "LLM must be resolved before creating agent executor."
+                )
             self.agent_executor = self.executor_class(
-                llm=cast(BaseLLM, self.llm),
-                task=task,  # type: ignore[arg-type]
-                i18n=self.i18n,
+                llm=self.llm,
+                task=task,
                 agent=self,
                 crew=self.crew,
                 tools=parsed_tools,
@@ -991,7 +1063,7 @@ class Agent(BaseAgent):
     def _update_executor_parameters(
         self,
         task: Task | None,
-        tools: list[BaseTool],
+        tools: list[CrewStructuredTool],
         raw_tools: list[BaseTool],
         prompt: SystemPromptResult | StandardPromptResult,
         stop_words: list[str],
@@ -1007,11 +1079,18 @@ class Agent(BaseAgent):
             stop_words: Stop words list.
             rpm_limit_fn: RPM limit callback function.
         """
-        self.agent_executor.task = task
+        if self.agent_executor is None:
+            raise RuntimeError("Agent executor is not initialized.")
+
+        if task is not None:
+            self.agent_executor.task = task
         self.agent_executor.tools = tools
         self.agent_executor.original_tools = raw_tools
         self.agent_executor.prompt = prompt
-        self.agent_executor.stop = stop_words
+        if isinstance(self.agent_executor, AgentExecutor):
+            self.agent_executor.stop_words = stop_words
+        else:
+            self.agent_executor.stop = stop_words
         self.agent_executor.tools_names = get_tool_names(tools)
         self.agent_executor.tools_description = render_text_description_and_args(tools)
         self.agent_executor.response_model = (
@@ -1023,17 +1102,7 @@ class Agent(BaseAgent):
         self.agent_executor.tools_handler = self.tools_handler
         self.agent_executor.request_within_rpm_limit = rpm_limit_fn
 
-        if self.agent_executor.llm:
-            existing_stop = getattr(self.agent_executor.llm, "stop", [])
-            self.agent_executor.llm.stop = list(
-                set(
-                    existing_stop + stop_words
-                    if isinstance(existing_stop, list)
-                    else stop_words
-                )
-            )
-
-    def get_delegation_tools(self, agents: list[BaseAgent]) -> list[BaseTool]:
+    def get_delegation_tools(self, agents: Sequence[BaseAgent]) -> list[BaseTool]:
         agent_tools = AgentTools(agents=agents)
         return agent_tools.tools()
 
@@ -1054,6 +1123,8 @@ class Agent(BaseAgent):
         Delegates to :class:`~crewai.mcp.tool_resolver.MCPToolResolver`.
         """
         self._cleanup_mcp_clients()
+        from crewai.mcp.tool_resolver import MCPToolResolver
+
         self._mcp_resolver = MCPToolResolver(agent=self, logger=self._logger)
         return self._mcp_resolver.resolve(mcps)
 
@@ -1070,20 +1141,15 @@ class Agent(BaseAgent):
 
         return [AddImageTool()]
 
-    def get_code_execution_tools(self) -> list[CodeInterpreterTool]:
-        """Return code interpreter tools based on the agent's execution mode."""
-        try:
-            from crewai_tools import (
-                CodeInterpreterTool,
-            )
-
-            unsafe_mode = self.code_execution_mode == "unsafe"
-            return [CodeInterpreterTool(unsafe_mode=unsafe_mode)]
-        except ModuleNotFoundError:
-            self._logger.log(
-                "info", "Coding tools not available. Install crewai_tools. "
-            )
-            return []
+    def get_code_execution_tools(self) -> list[Any]:
+        """Deprecated: CodeInterpreterTool is no longer available."""
+        warnings.warn(
+            "CodeInterpreterTool is no longer available. "
+            "Use dedicated sandbox services like E2B or Modal.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return []
 
     @staticmethod
     def get_output_converter(
@@ -1110,7 +1176,10 @@ class Agent(BaseAgent):
 
     def _use_trained_data(self, task_prompt: str) -> str:
         """Use trained data for the agent task prompt to improve output."""
-        if data := CrewTrainingHandler(TRAINED_AGENTS_DATA_FILE).load():
+        trained_file = os.getenv(
+            CREWAI_TRAINED_AGENTS_FILE_ENV, TRAINED_AGENTS_DATA_FILE
+        )
+        if data := CrewTrainingHandler(trained_file).load():
             if trained_data_output := data.get(self.role):
                 task_prompt += (
                     "\n\nYou MUST follow these instructions: \n - "
@@ -1163,28 +1232,14 @@ class Agent(BaseAgent):
                 self._logger.log("warning", f"Failed to inject date: {e!s}")
 
     def _validate_docker_installation(self) -> None:
-        """Check if Docker is installed and running."""
-        docker_path = shutil.which("docker")
-        if not docker_path:
-            raise RuntimeError(
-                f"Docker is not installed. Please install Docker to use code execution with agent: {self.role}"
-            )
-
-        try:
-            subprocess.run(  # noqa: S603
-                [str(docker_path), "info"],
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-        except subprocess.CalledProcessError as e:
-            raise RuntimeError(
-                f"Docker is not running. Please start Docker to use code execution with agent: {self.role}"
-            ) from e
-        except subprocess.TimeoutExpired as e:
-            raise RuntimeError(
-                f"Docker command timed out. Please check your Docker installation for agent: {self.role}"
-            ) from e
+        """Deprecated: No-op. CodeInterpreterTool is no longer available."""
+        warnings.warn(
+            "CodeInterpreterTool is no longer available. "
+            "Use dedicated sandbox services like E2B or Modal.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return
 
     def __repr__(self) -> str:
         return f"Agent(role={self.role}, goal={self.goal}, backstory={self.backstory})"
@@ -1222,10 +1277,10 @@ class Agent(BaseAgent):
                 from_agent=self,
             ),
         )
-        query = self.i18n.slice("knowledge_search_query").format(
+        query = I18N_DEFAULT.slice("knowledge_search_query").format(
             task_prompt=task_prompt
         )
-        rewriter_prompt = self.i18n.slice("knowledge_search_query_system_prompt")
+        rewriter_prompt = I18N_DEFAULT.slice("knowledge_search_query_system_prompt")
         if not isinstance(self.llm, BaseLLM):
             self._logger.log(
                 "warning",
@@ -1302,7 +1357,6 @@ class Agent(BaseAgent):
 
         raw_tools: list[BaseTool] = self.tools or []
 
-        # Inject memory tools for standalone kickoff (crew path handles its own)
         agent_memory = getattr(self, "memory", None)
         if agent_memory is not None:
             from crewai.tools.memory_tools import create_memory_tools
@@ -1327,25 +1381,42 @@ class Agent(BaseAgent):
 
         prompt, stop_words, rpm_limit_fn = self._build_execution_prompt(raw_tools)
 
-        executor = AgentExecutor(
-            llm=cast(BaseLLM, self.llm),
-            agent=self,
-            prompt=prompt,
-            max_iter=self.max_iter,
-            tools=parsed_tools,
-            tools_names=get_tool_names(parsed_tools),
-            stop_words=stop_words,
-            tools_description=render_text_description_and_args(parsed_tools),
-            tools_handler=self.tools_handler,
-            original_tools=raw_tools,
-            step_callback=self.step_callback,
-            function_calling_llm=self.function_calling_llm,
-            respect_context_window=self.respect_context_window,
-            request_within_rpm_limit=rpm_limit_fn,
-            callbacks=[TokenCalcHandler(self._token_process)],
-            response_model=response_format,
-            i18n=self.i18n,
-        )
+        if _is_resuming_agent_executor(self.agent_executor):
+            executor = self.agent_executor
+            executor.tools = parsed_tools
+            executor.tools_names = get_tool_names(parsed_tools)
+            executor.tools_description = render_text_description_and_args(parsed_tools)
+            executor.original_tools = raw_tools
+            executor.prompt = prompt
+            executor.response_model = response_format
+            executor.stop_words = stop_words
+            executor.tools_handler = self.tools_handler
+            executor.step_callback = self.step_callback
+            executor.function_calling_llm = cast(
+                BaseLLM | None, self.function_calling_llm
+            )
+            executor.respect_context_window = self.respect_context_window
+            executor.request_within_rpm_limit = rpm_limit_fn
+            executor.callbacks = [TokenCalcHandler(self._token_process)]
+        else:
+            executor = AgentExecutor(
+                llm=cast(BaseLLM, self.llm),
+                agent=self,
+                prompt=prompt,
+                max_iter=self.max_iter,
+                tools=parsed_tools,
+                tools_names=get_tool_names(parsed_tools),
+                stop_words=stop_words,
+                tools_description=render_text_description_and_args(parsed_tools),
+                tools_handler=self.tools_handler,
+                original_tools=raw_tools,
+                step_callback=self.step_callback,
+                function_calling_llm=self.function_calling_llm,
+                respect_context_window=self.respect_context_window,
+                request_within_rpm_limit=rpm_limit_fn,
+                callbacks=[TokenCalcHandler(self._token_process)],
+                response_model=response_format,
+            )
 
         all_files: dict[str, Any] = {}
         if isinstance(messages, str):
@@ -1361,7 +1432,6 @@ class Agent(BaseAgent):
         if input_files:
             all_files.update(input_files)
 
-        # Inject memory context for standalone kickoff (recall before execution)
         if agent_memory is not None:
             try:
                 crewai_event_bus.emit(
@@ -1380,7 +1450,7 @@ class Agent(BaseAgent):
                         m.format() for m in matches
                     )
                 if memory_block:
-                    formatted_messages += "\n\n" + self.i18n.slice("memory").format(
+                    formatted_messages += "\n\n" + I18N_DEFAULT.slice("memory").format(
                         memory=memory_block
                     )
                 crewai_event_bus.emit(
@@ -1421,6 +1491,7 @@ class Agent(BaseAgent):
         messages: str | list[LLMMessage],
         response_format: type[Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
+        from_checkpoint: CheckpointConfig | None = None,
     ) -> LiteAgentOutput | Coroutine[Any, Any, LiteAgentOutput]:
         """Execute the agent with the given messages using the AgentExecutor.
 
@@ -1439,6 +1510,9 @@ class Agent(BaseAgent):
             response_format: Optional Pydantic model for structured output.
             input_files: Optional dict of named files to attach to the message.
                    Files can be paths, bytes, or File objects from crewai_files.
+            from_checkpoint: Optional checkpoint config. If ``restore_from``
+                is set, the agent resumes from that checkpoint. Remaining
+                config fields enable checkpointing for the run.
 
         Returns:
             LiteAgentOutput: The result of the agent execution.
@@ -1447,8 +1521,14 @@ class Agent(BaseAgent):
         Note:
             For explicit async usage outside of Flow, use kickoff_async() directly.
         """
-        # Magic auto-async: if inside event loop (e.g., inside a Flow),
-        # return coroutine for Flow to await
+        restored = apply_checkpoint(self, from_checkpoint)
+        if restored is not None:
+            return restored.kickoff(  # type: ignore[no-any-return]
+                messages=messages,
+                response_format=response_format,
+                input_files=input_files,
+            )
+
         if is_inside_event_loop():
             return self.kickoff_async(messages, response_format, input_files)
 
@@ -1457,14 +1537,17 @@ class Agent(BaseAgent):
         )
 
         try:
-            crewai_event_bus.emit(
-                self,
-                event=LiteAgentExecutionStartedEvent(
+            if self.checkpoint_kickoff_event_id is not None:
+                self._kickoff_event_id = self.checkpoint_kickoff_event_id
+                self.checkpoint_kickoff_event_id = None
+            else:
+                started_event = LiteAgentExecutionStartedEvent(
                     agent_info=agent_info,
                     tools=parsed_tools,
                     messages=messages,
-                ),
-            )
+                )
+                crewai_event_bus.emit(self, event=started_event)
+                self._kickoff_event_id = started_event.event_id
 
             output = self._execute_and_build_output(executor, inputs, response_format)
             return self._finalize_kickoff(
@@ -1584,7 +1667,7 @@ class Agent(BaseAgent):
             try:
                 model_schema = generate_model_description(response_format)
                 schema = json.dumps(model_schema, indent=2)
-                instructions = self.i18n.slice("formatted_task_instructions").format(
+                instructions = I18N_DEFAULT.slice("formatted_task_instructions").format(
                     output_format=schema
                 )
 
@@ -1599,7 +1682,7 @@ class Agent(BaseAgent):
                 if isinstance(conversion_result, BaseModel):
                     formatted_result = conversion_result
             except ConverterError:
-                pass  # Keep raw output if conversion fails
+                pass
         else:
             raw_output = str(output) if not isinstance(output, str) else output
 
@@ -1681,7 +1764,6 @@ class Agent(BaseAgent):
         elif callable(self.guardrail):
             guardrail_callable = self.guardrail
         else:
-            # Should not happen if called from kickoff with guardrail check
             return output
 
         guardrail_result = process_guardrail(
@@ -1727,6 +1809,7 @@ class Agent(BaseAgent):
         messages: str | list[LLMMessage],
         response_format: type[Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
+        from_checkpoint: CheckpointConfig | None = None,
     ) -> LiteAgentOutput:
         """Execute the agent asynchronously with the given messages.
 
@@ -1742,23 +1825,36 @@ class Agent(BaseAgent):
             response_format: Optional Pydantic model for structured output.
             input_files: Optional dict of named files to attach to the message.
                    Files can be paths, bytes, or File objects from crewai_files.
+            from_checkpoint: Optional checkpoint config. If ``restore_from``
+                is set, the agent resumes from that checkpoint.
 
         Returns:
             LiteAgentOutput: The result of the agent execution.
         """
+        restored = apply_checkpoint(self, from_checkpoint)
+        if restored is not None:
+            return await restored.kickoff_async(  # type: ignore[no-any-return]
+                messages=messages,
+                response_format=response_format,
+                input_files=input_files,
+            )
+
         executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
             messages, response_format, input_files
         )
 
         try:
-            crewai_event_bus.emit(
-                self,
-                event=LiteAgentExecutionStartedEvent(
+            if self.checkpoint_kickoff_event_id is not None:
+                self._kickoff_event_id = self.checkpoint_kickoff_event_id
+                self.checkpoint_kickoff_event_id = None
+            else:
+                started_event = LiteAgentExecutionStartedEvent(
                     agent_info=agent_info,
                     tools=parsed_tools,
                     messages=messages,
-                ),
-            )
+                )
+                crewai_event_bus.emit(self, event=started_event)
+                self._kickoff_event_id = started_event.event_id
 
             output = await self._execute_and_build_output_async(
                 executor, inputs, response_format
@@ -1775,6 +1871,7 @@ class Agent(BaseAgent):
         messages: str | list[LLMMessage],
         response_format: type[Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
+        from_checkpoint: CheckpointConfig | None = None,
     ) -> LiteAgentOutput:
         """Async version of kickoff. Alias for kickoff_async.
 
@@ -1782,26 +1879,12 @@ class Agent(BaseAgent):
             messages: Either a string query or a list of message dictionaries.
             response_format: Optional Pydantic model for structured output.
             input_files: Optional dict of named files to attach to the message.
+            from_checkpoint: Optional checkpoint config. If ``restore_from``
+                is set, the agent resumes from that checkpoint.
 
         Returns:
             LiteAgentOutput: The result of the agent execution.
         """
-        return await self.kickoff_async(messages, response_format, input_files)
-
-
-try:
-    from crewai.a2a.config import (
-        A2AClientConfig as _A2AClientConfig,
-        A2AConfig as _A2AConfig,
-        A2AServerConfig as _A2AServerConfig,
-    )
-
-    Agent.model_rebuild(
-        _types_namespace={
-            "A2AConfig": _A2AConfig,
-            "A2AClientConfig": _A2AClientConfig,
-            "A2AServerConfig": _A2AServerConfig,
-        }
-    )
-except ImportError:
-    pass
+        return await self.kickoff_async(
+            messages, response_format, input_files, from_checkpoint
+        )

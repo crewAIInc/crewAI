@@ -46,7 +46,7 @@ def create_flow(name: str) -> None:
     tools_template_files = ["tools/__init__.py", "tools/custom_tool.py"]
 
     crew_folders = [
-        "poem_crew",
+        "content_crew",
     ]
 
     def process_file(src_file: Path, dst_file: Path) -> None:

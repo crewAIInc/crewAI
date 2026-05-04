@@ -40,7 +40,9 @@ class LiteAgentOutput(BaseModel):
     usage_metrics: dict[str, Any] | None = Field(
         description="Token usage metrics for this execution", default=None
     )
-    messages: list[LLMMessage] = Field(description="Messages of the agent", default=[])
+    messages: list[LLMMessage] = Field(
+        description="Messages of the agent", default_factory=list
+    )
 
     plan: str | None = Field(
         default=None, description="The execution plan that was generated, if any"

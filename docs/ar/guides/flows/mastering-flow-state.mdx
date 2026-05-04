@@ -116,6 +116,48 @@ class PersistentCounterFlow(Flow[CounterState]):
         return self.state.value
 ```
 
+#### تفرع الحالة المستمرة
+
+يدعم `@persist` نمطين متميزين للترطيب في `kickoff` / `kickoff_async`. استخدم **استئناف** (`inputs["id"]`) لمواصلة نفس النسب؛ استخدم **تفرع** (`restore_from_state_id`) لبدء نسبٍ جديد من لقطة:
+
+| | `state.id` بعد kickoff | كتابات `@persist` تذهب إلى |
+|---|---|---|
+| `inputs["id"]` (استئناف) | المعرّف المقدم | المعرّف المقدم (يمد التاريخ) |
+| `restore_from_state_id` (تفرع) | معرّف جديد، أو `inputs["id"]` إذا ثُبّت | المعرّف الجديد (المصدر محفوظ) |
+
+```python
+from crewai.flow.flow import Flow, start
+from crewai.flow.persistence import persist
+from pydantic import BaseModel
+
+class CounterState(BaseModel):
+    id: str = ""
+    counter: int = 0
+
+@persist
+class CounterFlow(Flow[CounterState]):
+    @start()
+    def step(self):
+        self.state.counter += 1
+
+# التشغيل 1: حالة جديدة، العداد 0 -> 1
+flow_1 = CounterFlow()
+flow_1.kickoff()
+
+# التفرع: الترطيب من أحدث لقطة لـ flow_1، لكن الكتابة تحت state.id جديد
+flow_2 = CounterFlow()
+flow_2.kickoff(restore_from_state_id=flow_1.state.id)
+# يبدأ flow_2 بـ counter=1 (مرطّب)، ثم تزيده step() إلى 2.
+# تاريخ flow_uuid لـ flow_1 لم يتغيّر.
+```
+
+ملاحظات السلوك:
+
+- `restore_from_state_id` غير موجود في الاستمرارية → يعود kickoff بصمت إلى السلوك الافتراضي (يعكس سلوك `inputs["id"]` عند عدم العثور عليه). لا يُطلق أي استثناء.
+- الجمع بين `restore_from_state_id` و `from_checkpoint` يطلق `ValueError` — يستهدفان نظامي حالة مختلفين (`@persist` مقابل Checkpointing) ولا يمكن الجمع بينهما.
+- `restore_from_state_id=None` (افتراضي) متطابق بايت ببايت مع kickoff بدون المعامل.
+- تثبيت `inputs["id"]` أثناء التفرع يعني أن التشغيل الجديد يشارك مفتاح الاستمرارية مع تدفق آخر — عادةً ما تريد فقط `restore_from_state_id`.
+
 ## أنماط حالة متقدمة
 
 ### المنطق الشرطي المبني على الحالة

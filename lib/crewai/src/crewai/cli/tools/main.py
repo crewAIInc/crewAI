@@ -21,6 +21,7 @@ from crewai.cli.utils import (
     get_project_description,
     get_project_name,
     get_project_version,
+    read_toml,
     tree_copy,
     tree_find_and_replace,
 )
@@ -116,11 +117,26 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         self._print_tools_preview(tools_metadata)
         self._print_current_organization()
 
+        build_env = os.environ.copy()
+        try:
+            pyproject_data = read_toml()
+            sources = pyproject_data.get("tool", {}).get("uv", {}).get("sources", {})
+
+            for source_config in sources.values():
+                if isinstance(source_config, dict):
+                    index = source_config.get("index")
+                    if index:
+                        index_env = build_env_with_tool_repository_credentials(index)
+                        build_env.update(index_env)
+        except Exception:  # noqa: S110
+            pass
+
         with tempfile.TemporaryDirectory() as temp_build_dir:
             subprocess.run(  # noqa: S603
                 ["uv", "build", "--sdist", "--out-dir", temp_build_dir],  # noqa: S607
                 check=True,
                 capture_output=False,
+                env=build_env,
             )
 
             tarball_filename = next(

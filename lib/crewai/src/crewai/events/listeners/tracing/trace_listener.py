@@ -7,7 +7,6 @@ import uuid
 from typing_extensions import Self
 
 from crewai.cli.authentication.token import AuthError, get_auth_token
-from crewai.cli.version import get_crewai_version
 from crewai.events.base_event_listener import BaseEventListener
 from crewai.events.base_events import BaseEvent
 from crewai.events.event_bus import CrewAIEventsBus
@@ -17,7 +16,10 @@ from crewai.events.listeners.tracing.first_time_trace_handler import (
 from crewai.events.listeners.tracing.trace_batch_manager import TraceBatchManager
 from crewai.events.listeners.tracing.types import TraceEvent
 from crewai.events.listeners.tracing.utils import (
+    is_tracing_enabled_in_context,
     safe_serialize_to_dict,
+    should_auto_collect_first_time_traces,
+    should_enable_tracing,
 )
 from crewai.events.types.a2a_events import (
     A2AAgentCardFetchedEvent,
@@ -57,12 +59,6 @@ from crewai.events.types.crew_events import (
     CrewKickoffCompletedEvent,
     CrewKickoffFailedEvent,
     CrewKickoffStartedEvent,
-)
-from crewai.events.types.env_events import (
-    CCEnvEvent,
-    CodexEnvEvent,
-    CursorEnvEvent,
-    DefaultEnvEvent,
 )
 from crewai.events.types.flow_events import (
     FlowCreatedEvent,
@@ -112,6 +108,13 @@ from crewai.events.types.reasoning_events import (
     AgentReasoningFailedEvent,
     AgentReasoningStartedEvent,
 )
+from crewai.events.types.skill_events import (
+    SkillActivatedEvent,
+    SkillDiscoveryCompletedEvent,
+    SkillDiscoveryStartedEvent,
+    SkillLoadFailedEvent,
+    SkillLoadedEvent,
+)
 from crewai.events.types.system_events import SignalEvent, on_signal
 from crewai.events.types.task_events import (
     TaskCompletedEvent,
@@ -124,6 +127,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageStartedEvent,
 )
 from crewai.events.utils.console_formatter import ConsoleFormatter
+from crewai.utilities.version import get_crewai_version
 
 
 class TraceCollectionListener(BaseEventListener):
@@ -198,7 +202,17 @@ class TraceCollectionListener(BaseEventListener):
         if self._listeners_setup:
             return
 
-        self._register_env_event_handlers(crewai_event_bus)
+        # Skip registration entirely if tracing is disabled and not first-time user
+        # This avoids overhead of 50+ handler registrations when tracing won't be used
+        # Also check is_tracing_enabled_in_context() so per-run overrides (Crew(tracing=True)) still work
+        if (
+            not should_enable_tracing()
+            and not is_tracing_enabled_in_context()
+            and not should_auto_collect_first_time_traces()
+        ):
+            self._listeners_setup = True
+            return
+
         self._register_flow_event_handlers(crewai_event_bus)
         self._register_context_event_handlers(crewai_event_bus)
         self._register_action_event_handlers(crewai_event_bus)
@@ -206,25 +220,6 @@ class TraceCollectionListener(BaseEventListener):
         self._register_system_event_handlers(crewai_event_bus)
 
         self._listeners_setup = True
-
-    def _register_env_event_handlers(self, event_bus: CrewAIEventsBus) -> None:
-        """Register handlers for environment context events."""
-
-        @event_bus.on(CCEnvEvent)
-        def on_cc_env(source: Any, event: CCEnvEvent) -> None:
-            self._handle_action_event("cc_env", source, event)
-
-        @event_bus.on(CodexEnvEvent)
-        def on_codex_env(source: Any, event: CodexEnvEvent) -> None:
-            self._handle_action_event("codex_env", source, event)
-
-        @event_bus.on(CursorEnvEvent)
-        def on_cursor_env(source: Any, event: CursorEnvEvent) -> None:
-            self._handle_action_event("cursor_env", source, event)
-
-        @event_bus.on(DefaultEnvEvent)
-        def on_default_env(source: Any, event: DefaultEnvEvent) -> None:
-            self._handle_action_event("default_env", source, event)
 
     def _register_flow_event_handlers(self, event_bus: CrewAIEventsBus) -> None:
         """Register handlers for flow events."""
@@ -272,8 +267,8 @@ class TraceCollectionListener(BaseEventListener):
             if self.batch_manager.batch_owner_type != "flow":
                 # Always call _initialize_crew_batch to claim ownership.
                 # If batch was already initialized by a concurrent action event
-                # (race condition with DefaultEnvEvent), initialize_batch() returns
-                # early but batch_owner_type is still correctly set to "crew".
+                # (e.g. LLM/tool before crew_kickoff_started), initialize_batch()
+                # returns early but batch_owner_type is still correctly set to "crew".
                 # Skip only when a parent flow already owns the batch.
                 self._initialize_crew_batch(source, event)
             self._handle_trace_event("crew_kickoff_started", source, event)
@@ -541,6 +536,30 @@ class TraceCollectionListener(BaseEventListener):
             source: Any, event: KnowledgeQueryFailedEvent
         ) -> None:
             self._handle_action_event("knowledge_query_failed", source, event)
+
+        @event_bus.on(SkillDiscoveryStartedEvent)
+        def on_skill_discovery_started(
+            source: Any, event: SkillDiscoveryStartedEvent
+        ) -> None:
+            self._handle_action_event("skill_discovery_started", source, event)
+
+        @event_bus.on(SkillDiscoveryCompletedEvent)
+        def on_skill_discovery_completed(
+            source: Any, event: SkillDiscoveryCompletedEvent
+        ) -> None:
+            self._handle_action_event("skill_discovery_completed", source, event)
+
+        @event_bus.on(SkillLoadedEvent)
+        def on_skill_loaded(source: Any, event: SkillLoadedEvent) -> None:
+            self._handle_action_event("skill_loaded", source, event)
+
+        @event_bus.on(SkillActivatedEvent)
+        def on_skill_activated(source: Any, event: SkillActivatedEvent) -> None:
+            self._handle_action_event("skill_activated", source, event)
+
+        @event_bus.on(SkillLoadFailedEvent)
+        def on_skill_load_failed(source: Any, event: SkillLoadFailedEvent) -> None:
+            self._handle_action_event("skill_load_failed", source, event)
 
     def _register_a2a_event_handlers(self, event_bus: CrewAIEventsBus) -> None:
         """Register handlers for A2A (Agent-to-Agent) events."""

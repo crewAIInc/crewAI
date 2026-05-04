@@ -13,7 +13,7 @@ This tool is used to convert natural language to SQL queries. When passed to the
 This enables multiple workflows like having an Agent to access the database fetch information based on the goal and then use the information to generate a response, report or any other output. 
 Along with that provides the ability for the Agent to update the database based on its goal.
 
-**Attention**: Make sure that the Agent has access to a Read-Replica or that is okay for the Agent to run insert/update queries on the database.
+**Attention**: By default the tool is read-only (SELECT/SHOW/DESCRIBE/EXPLAIN only). Write operations require `allow_dml=True` or the `CREWAI_NL2SQL_ALLOW_DML=true` environment variable. When write access is enabled, make sure the Agent uses a scoped database user or a read replica where possible.
 
 ## Security Model
 
@@ -37,6 +37,74 @@ Use all of the following in production:
 - Apply database-side resource limits (statement timeout, lock timeout, cost/row limits)
 - Add `before_tool_call` hooks to enforce allowed query patterns
 - Enable query logging and alerting for destructive statements
+
+## Read-Only Mode & DML Configuration
+
+`NL2SQLTool` operates in **read-only mode by default**. Only the following statement types are permitted without additional configuration:
+
+- `SELECT`
+- `SHOW`
+- `DESCRIBE`
+- `EXPLAIN`
+
+Any attempt to execute a write operation (`INSERT`, `UPDATE`, `DELETE`, `DROP`, `CREATE`, `ALTER`, `TRUNCATE`, etc.) will raise an error unless DML is explicitly enabled.
+
+Multi-statement queries containing semicolons (e.g. `SELECT 1; DROP TABLE users`) are also blocked in read-only mode to prevent injection attacks.
+
+### Enabling Write Operations
+
+You can enable DML (Data Manipulation Language) in two ways:
+
+**Option 1 — constructor parameter:**
+
+```python
+from crewai_tools import NL2SQLTool
+
+nl2sql = NL2SQLTool(
+    db_uri="postgresql://example@localhost:5432/test_db",
+    allow_dml=True,
+)
+```
+
+**Option 2 — environment variable:**
+
+```bash
+CREWAI_NL2SQL_ALLOW_DML=true
+```
+
+```python
+from crewai_tools import NL2SQLTool
+
+# DML enabled via environment variable
+nl2sql = NL2SQLTool(db_uri="postgresql://example@localhost:5432/test_db")
+```
+
+### Usage Examples
+
+**Read-only (default) — safe for analytics and reporting:**
+
+```python
+from crewai_tools import NL2SQLTool
+
+# Only SELECT/SHOW/DESCRIBE/EXPLAIN are permitted
+nl2sql = NL2SQLTool(db_uri="postgresql://example@localhost:5432/test_db")
+```
+
+**DML enabled — required for write workloads:**
+
+```python
+from crewai_tools import NL2SQLTool
+
+# INSERT, UPDATE, DELETE, DROP, etc. are permitted
+nl2sql = NL2SQLTool(
+    db_uri="postgresql://example@localhost:5432/test_db",
+    allow_dml=True,
+)
+```
+
+<Warning>
+Enabling DML gives the agent the ability to modify or destroy data. Only enable this when your use case explicitly requires write access, and ensure the database credentials are scoped to the minimum required privileges.
+</Warning>
 
 ## Requirements
 

@@ -380,6 +380,42 @@ class AnotherFlow(Flow[dict]):
         print("Method-level persisted runs:", self.state["runs"])
 ```
 
+### Forking Persisted State
+
+`@persist` supports two distinct hydration modes on `kickoff` / `kickoff_async`:
+
+- `kickoff(inputs={"id": <uuid>})` — **resume**: load the latest snapshot for the supplied UUID and continue writing under the same `flow_uuid`. The history extends.
+- `kickoff(restore_from_state_id=<uuid>)` — **fork**: load the latest snapshot for the supplied UUID, hydrate the new run's state from it, and assign a fresh `state.id` (auto-generated, or `inputs["id"]` if pinned). The new run's `@persist` writes land under the new `state.id`; the source flow's history is preserved.
+
+```python
+from crewai.flow.flow import Flow, start
+from crewai.flow.persistence import persist
+from pydantic import BaseModel
+
+class CounterState(BaseModel):
+    id: str = ""
+    counter: int = 0
+
+@persist
+class CounterFlow(Flow[CounterState]):
+    @start()
+    def step(self):
+        self.state.counter += 1
+        print(f"[id={self.state.id}] counter={self.state.counter}")
+
+# Run 1: fresh state, counter 0 -> 1, persisted under flow_1.state.id
+flow_1 = CounterFlow()
+flow_1.kickoff()
+
+# Fork: hydrate from flow_1's latest snapshot, but use a NEW state.id
+flow_2 = CounterFlow()
+flow_2.kickoff(restore_from_state_id=flow_1.state.id)
+# flow_2.state.counter starts at 1 (hydrated), then step() bumps it to 2.
+# flow_2.state.id != flow_1.state.id; flow_1's history is unchanged.
+```
+
+If the supplied `restore_from_state_id` does not match any persisted state, the kickoff falls back silently — same as the existing `inputs["id"]` resume not-found behavior. Combining `restore_from_state_id` with `from_checkpoint` raises a `ValueError`; pick one hydration source. Pinning `inputs["id"]` while forking shares a persistence key with another flow — usually you want only `restore_from_state_id`.
+
 ### How It Works
 
 1. **Unique State Identification**

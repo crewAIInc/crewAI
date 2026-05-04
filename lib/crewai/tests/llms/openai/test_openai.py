@@ -1929,6 +1929,47 @@ def test_openai_streaming_returns_tool_calls_without_available_functions():
     assert result[0]["type"] == "function"
 
 
+def test_openai_responses_api_reasoning_tokens_extraction():
+    """Test that reasoning_tokens are extracted from Responses API responses."""
+    llm = LLM(model="openai/gpt-4o")
+
+    mock_response = MagicMock()
+    mock_response.usage = MagicMock(
+        input_tokens=100,
+        output_tokens=200,
+        total_tokens=300,
+    )
+    mock_response.usage.input_tokens_details = MagicMock(cached_tokens=25)
+    mock_response.usage.output_tokens_details = MagicMock(reasoning_tokens=80)
+
+    usage = llm._extract_responses_token_usage(mock_response)
+    assert usage["prompt_tokens"] == 100
+    assert usage["completion_tokens"] == 200
+    assert usage["total_tokens"] == 300
+    assert usage["cached_prompt_tokens"] == 25
+    assert usage["reasoning_tokens"] == 80
+
+
+def test_openai_responses_api_no_detail_fields_omitted():
+    """Test that reasoning/cached fields are omitted when Responses API details are absent."""
+    llm = LLM(model="openai/gpt-4o")
+
+    mock_response = MagicMock()
+    mock_response.usage = MagicMock(
+        input_tokens=50,
+        output_tokens=30,
+        total_tokens=80,
+    )
+    mock_response.usage.input_tokens_details = None
+    mock_response.usage.output_tokens_details = None
+
+    usage = llm._extract_responses_token_usage(mock_response)
+    assert usage["prompt_tokens"] == 50
+    assert usage["completion_tokens"] == 30
+    assert "cached_prompt_tokens" not in usage
+    assert "reasoning_tokens" not in usage
+
+
 @pytest.mark.asyncio
 async def test_openai_async_streaming_returns_tool_calls_without_available_functions():
     """Test that async streaming returns tool calls list when available_functions is None.
@@ -2018,3 +2059,44 @@ async def test_openai_async_streaming_returns_tool_calls_without_available_funct
     assert result[0]["function"]["arguments"] == '{"expression": "1+1"}'
     assert result[0]["id"] == "call_abc123"
     assert result[0]["type"] == "function"
+
+
+def test_openai_reasoning_tokens_extraction():
+    """Test that reasoning_tokens are extracted from OpenAI o-series responses."""
+    llm = LLM(model="openai/gpt-4o")
+
+    mock_response = MagicMock()
+    mock_response.usage = MagicMock(
+        prompt_tokens=100,
+        completion_tokens=200,
+        total_tokens=300,
+    )
+    mock_response.usage.prompt_tokens_details = MagicMock(cached_tokens=25)
+    mock_response.usage.completion_tokens_details = MagicMock(reasoning_tokens=80)
+
+    usage = llm._extract_openai_token_usage(mock_response)
+    assert usage["prompt_tokens"] == 100
+    assert usage["completion_tokens"] == 200
+    assert usage["total_tokens"] == 300
+    assert usage["cached_prompt_tokens"] == 25
+    assert usage["reasoning_tokens"] == 80
+
+
+def test_openai_no_detail_fields_omitted():
+    """Test that reasoning/cached fields are omitted when details are absent."""
+    llm = LLM(model="openai/gpt-4o")
+
+    mock_response = MagicMock()
+    mock_response.usage = MagicMock(
+        prompt_tokens=50,
+        completion_tokens=30,
+        total_tokens=80,
+    )
+    mock_response.usage.prompt_tokens_details = None
+    mock_response.usage.completion_tokens_details = None
+
+    usage = llm._extract_openai_token_usage(mock_response)
+    assert usage["prompt_tokens"] == 50
+    assert usage["completion_tokens"] == 30
+    assert "cached_prompt_tokens" not in usage
+    assert "reasoning_tokens" not in usage

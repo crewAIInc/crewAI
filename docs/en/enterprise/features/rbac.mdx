@@ -46,7 +46,7 @@ You can configure users and roles in Settings → Roles.
 | Role       | Description                                                                 |
 | :--------- | :-------------------------------------------------------------------------- |
 | **Owner**  | Full access to all features and settings. Cannot be restricted.             |
-| **Member** | Read access to most features, manage access to Studio projects. Cannot modify organization or default settings. |
+| **Member** | Read access to most features, manage access to environment variables, LLM connections, and Studio projects. Cannot modify organization or default settings. |
 
 ### Configuration summary
 
@@ -65,22 +65,22 @@ Every role has a permission level for each feature area. The three levels are:
 - **Read** — view-only access
 - **No access** — feature is hidden/inaccessible
 
-| Feature                   | Owner   | Member (default) | Description                                                     |
-| :------------------------ | :------ | :--------------- | :-------------------------------------------------------------- |
-| `usage_dashboards`        | Manage  | Read             | View usage metrics and analytics                                |
-| `crews_dashboards`        | Manage  | Read             | View deployment dashboards, access automation details           |
-| `invitations`             | Manage  | Read             | Invite new members to the organization                          |
-| `training_ui`             | Manage  | Read             | Access training/fine-tuning interfaces                          |
-| `tools`                   | Manage  | Read             | Create and manage tools                                         |
-| `agents`                  | Manage  | Read             | Create and manage agents                                        |
-| `environment_variables`   | Manage  | Read             | Create and manage environment variables                         |
-| `llm_connections`         | Manage  | Read             | Configure LLM provider connections                              |
-| `default_settings`        | Manage  | No access        | Modify organization-wide default settings                       |
-| `organization_settings`   | Manage  | No access        | Manage billing, plans, and organization configuration           |
-| `studio_projects`         | Manage  | Manage           | Create and edit projects in Studio                              |
+| Feature                   | Owner   | Member (default) | Available levels          | Description                                                     |
+| :------------------------ | :------ | :--------------- | :------------------------ | :-------------------------------------------------------------- |
+| `usage_dashboards`        | Manage  | Read             | Manage / Read / No access | View usage metrics and analytics                                |
+| `crews_dashboards`        | Manage  | Read             | Manage / Read / No access | View deployment dashboards, access automation details           |
+| `invitations`             | Manage  | Read             | Manage / Read / No access | Invite new members to the organization                          |
+| `training_ui`             | Manage  | Read             | Manage / Read / No access | Access training/fine-tuning interfaces                          |
+| `tools`                   | Manage  | Read             | Manage / Read / No access | Create and manage tools                                         |
+| `agents`                  | Manage  | Read             | Manage / Read / No access | Create and manage agents                                        |
+| `environment_variables`   | Manage  | Manage           | Manage / No access        | Create and manage environment variables                         |
+| `llm_connections`         | Manage  | Manage           | Manage / No access        | Configure LLM provider connections                              |
+| `default_settings`        | Manage  | No access        | Manage / No access        | Modify organization-wide default settings                       |
+| `organization_settings`   | Manage  | No access        | Manage / No access        | Manage billing, plans, and organization configuration           |
+| `studio_projects`         | Manage  | Manage           | Manage / No access        | Create and edit projects in Studio                              |
 
 <Tip>
-  When creating a custom role, you can set each feature independently to **Manage**, **Read**, or **No access** to match your team's needs.
+  When creating a custom role, most features can be set to **Manage**, **Read**, or **No access**. However, `environment_variables`, `llm_connections`, `default_settings`, `organization_settings`, and `studio_projects` only support **Manage** or **No access** — there is no read-only option for these features.
 </Tip>
 
 ---
@@ -208,7 +208,7 @@ A role for team members who build and deploy automations but don't manage organi
 | `tools`                   | Manage     |
 | `agents`                  | Manage     |
 | `environment_variables`   | Manage     |
-| `llm_connections`         | Read       |
+| `llm_connections`         | Manage     |
 | `default_settings`        | No access  |
 | `organization_settings`   | No access  |
 | `studio_projects`         | Manage     |
@@ -229,7 +229,7 @@ A role for non-technical stakeholders who need to monitor automations and view r
 | `llm_connections`         | No access  |
 | `default_settings`        | No access  |
 | `organization_settings`   | No access  |
-| `studio_projects`         | Read       |
+| `studio_projects`         | No access  |
 
 ### Ops / Platform Admin Role
 
@@ -247,7 +247,7 @@ A role for platform operators who manage infrastructure settings but may not bui
 | `llm_connections`         | Manage     |
 | `default_settings`        | Manage     |
 | `organization_settings`   | Read       |
-| `studio_projects`         | Read       |
+| `studio_projects`         | No access  |
 
 ---
 

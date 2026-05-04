@@ -18,6 +18,7 @@ from crewai.cli.install_crew import install_crew
 from crewai.cli.kickoff_flow import kickoff_flow
 from crewai.cli.organization.main import OrganizationCommand
 from crewai.cli.plot_flow import plot_flow
+from crewai.cli.remote_template.main import TemplateCommand
 from crewai.cli.replay_from_task import replay_task_command
 from crewai.cli.reset_memories_command import reset_memories_command
 from crewai.cli.run_crew import run_crew
@@ -27,7 +28,7 @@ from crewai.cli.tools.main import ToolCommand
 from crewai.cli.train_crew import train_crew
 from crewai.cli.triggers.main import TriggersCommand
 from crewai.cli.update_crew import update_crew
-from crewai.cli.utils import build_env_with_tool_repository_credentials, read_toml
+from crewai.cli.utils import build_env_with_all_tool_credentials, read_toml
 from crewai.memory.storage.kickoff_task_outputs_storage import (
     KickoffTaskOutputsSQLiteStorage,
 )
@@ -48,23 +49,17 @@ def crewai() -> None:
 @click.argument("uv_args", nargs=-1, type=click.UNPROCESSED)
 def uv(uv_args: tuple[str, ...]) -> None:
     """A wrapper around uv commands that adds custom tool authentication through env vars."""
-    env = os.environ.copy()
     try:
-        pyproject_data = read_toml()
-        sources = pyproject_data.get("tool", {}).get("uv", {}).get("sources", {})
-
-        for source_config in sources.values():
-            if isinstance(source_config, dict):
-                index = source_config.get("index")
-                if index:
-                    index_env = build_env_with_tool_repository_credentials(index)
-                    env.update(index_env)
-    except (FileNotFoundError, KeyError) as e:
+        # Verify pyproject.toml exists first
+        read_toml()
+    except FileNotFoundError as e:
         raise SystemExit(
             "Error. A valid pyproject.toml file is required. Check that a valid pyproject.toml file exists in the current directory."
         ) from e
     except Exception as e:
         raise SystemExit(f"Error: {e}") from e
+
+    env = build_env_with_all_tool_credentials()
 
     try:
         subprocess.run(  # noqa: S603
@@ -144,16 +139,29 @@ def train(n_iterations: int, filename: str) -> None:
     type=str,
     help="Replay the crew from this task ID, including all subsequent tasks.",
 )
-def replay(task_id: str) -> None:
-    """
-    Replay the crew execution from a specific task.
+@click.option(
+    "-f",
+    "--filename",
+    "trained_agents_file",
+    type=str,
+    default=None,
+    help=(
+        "Path to a trained-agents pickle (produced by `crewai train -f`). "
+        "When set, agents load suggestions from this file instead of the "
+        "default trained_agents_data.pkl. Equivalent to setting "
+        "CREWAI_TRAINED_AGENTS_FILE."
+    ),
+)
+def replay(task_id: str, trained_agents_file: str | None) -> None:
+    """Replay the crew execution from a specific task.
 
     Args:
-        task_id (str): The ID of the task to replay from.
+        task_id: The ID of the task to replay from.
+        trained_agents_file: Optional trained-agents pickle path.
     """
     try:
         click.echo(f"Replaying the crew from task {task_id}")
-        replay_task_command(task_id)
+        replay_task_command(task_id, trained_agents_file=trained_agents_file)
     except Exception as e:
         click.echo(f"An error occurred while replaying: {e}", err=True)
 
@@ -337,10 +345,23 @@ def memory(
     default="gpt-4o-mini",
     help="LLM Model to run the tests on the Crew. For now only accepting only OpenAI models.",
 )
-def test(n_iterations: int, model: str) -> None:
+@click.option(
+    "-f",
+    "--filename",
+    "trained_agents_file",
+    type=str,
+    default=None,
+    help=(
+        "Path to a trained-agents pickle (produced by `crewai train -f`). "
+        "When set, agents load suggestions from this file instead of the "
+        "default trained_agents_data.pkl. Equivalent to setting "
+        "CREWAI_TRAINED_AGENTS_FILE."
+    ),
+)
+def test(n_iterations: int, model: str, trained_agents_file: str | None) -> None:
     """Test the crew and evaluate the results."""
     click.echo(f"Testing the crew for {n_iterations} iterations with model {model}")
-    evaluate_crew(n_iterations, model)
+    evaluate_crew(n_iterations, model, trained_agents_file=trained_agents_file)
 
 
 @crewai.command(
@@ -356,9 +377,22 @@ def install(context: click.Context) -> None:
 
 
 @crewai.command()
-def run() -> None:
+@click.option(
+    "-f",
+    "--filename",
+    "trained_agents_file",
+    type=str,
+    default=None,
+    help=(
+        "Path to a trained-agents pickle (produced by `crewai train -f`). "
+        "When set, agents load suggestions from this file instead of the "
+        "default trained_agents_data.pkl. Equivalent to setting "
+        "CREWAI_TRAINED_AGENTS_FILE."
+    ),
+)
+def run(trained_agents_file: str | None) -> None:
     """Run the Crew."""
-    run_crew()
+    run_crew(trained_agents_file=trained_agents_file)
 
 
 @crewai.command()
@@ -398,10 +432,15 @@ def deploy() -> None:
 
 @deploy.command(name="create")
 @click.option("-y", "--yes", is_flag=True, help="Skip the confirmation prompt")
-def deploy_create(yes: bool) -> None:
+@click.option(
+    "--skip-validate",
+    is_flag=True,
+    help="Skip the pre-deploy validation checks.",
+)
+def deploy_create(yes: bool, skip_validate: bool) -> None:
     """Create a Crew deployment."""
     deploy_cmd = DeployCommand()
-    deploy_cmd.create_crew(yes)
+    deploy_cmd.create_crew(yes, skip_validate=skip_validate)
 
 
 @deploy.command(name="list")
@@ -413,10 +452,28 @@ def deploy_list() -> None:
 
 @deploy.command(name="push")
 @click.option("-u", "--uuid", type=str, help="Crew UUID parameter")
-def deploy_push(uuid: str | None) -> None:
+@click.option(
+    "--skip-validate",
+    is_flag=True,
+    help="Skip the pre-deploy validation checks.",
+)
+def deploy_push(uuid: str | None, skip_validate: bool) -> None:
     """Deploy the Crew."""
     deploy_cmd = DeployCommand()
-    deploy_cmd.deploy(uuid=uuid)
+    deploy_cmd.deploy(uuid=uuid, skip_validate=skip_validate)
+
+
+@deploy.command(name="validate")
+def deploy_validate() -> None:
+    """Validate the current project against common deployment failures.
+
+    Runs the same pre-deploy checks that `crewai deploy create` and
+    `crewai deploy push` run automatically, without contacting the platform.
+    Exits non-zero if any blocking issues are found.
+    """
+    from crewai.cli.deploy.validate import run_validate_command
+
+    run_validate_command()
 
 
 @deploy.command(name="status")
@@ -477,6 +534,33 @@ def tool_publish(is_public: bool, force: bool) -> None:
     tool_cmd = ToolCommand()
     tool_cmd.login()
     tool_cmd.publish(is_public, force)
+
+
+@crewai.group()
+def template() -> None:
+    """Browse and install project templates."""
+
+
+@template.command(name="list")
+def template_list() -> None:
+    """List available templates and select one to install."""
+    template_cmd = TemplateCommand()
+    template_cmd.list_templates()
+
+
+@template.command(name="add")
+@click.argument("name")
+@click.option(
+    "-o",
+    "--output-dir",
+    type=str,
+    default=None,
+    help="Directory name for the template (defaults to template name)",
+)
+def template_add(name: str, output_dir: str | None) -> None:
+    """Add a template to the current directory."""
+    template_cmd = TemplateCommand()
+    template_cmd.add_template(name, output_dir)
 
 
 @crewai.group()
@@ -615,7 +699,6 @@ def env() -> None:
 @env.command("view")
 def env_view() -> None:
     """View tracing-related environment variables."""
-    import os
     from pathlib import Path
 
     from rich.console import Console
@@ -744,7 +827,6 @@ def traces_disable() -> None:
 @traces.command("status")
 def traces_status() -> None:
     """Show current trace collection status."""
-    import os
 
     from rich.console import Console
     from rich.panel import Panel
@@ -792,6 +874,85 @@ def traces_status() -> None:
         padding=(1, 2),
     )
     console.print(panel)
+
+
+@crewai.group(invoke_without_command=True)
+@click.option(
+    "--location", default="./.checkpoints", help="Checkpoint directory or SQLite file."
+)
+@click.pass_context
+def checkpoint(ctx: click.Context, location: str) -> None:
+    """Browse and inspect checkpoints. Launches a TUI when called without a subcommand."""
+    from crewai.cli.checkpoint_cli import _detect_location
+
+    location = _detect_location(location)
+    ctx.ensure_object(dict)
+    ctx.obj["location"] = location
+    if ctx.invoked_subcommand is None:
+        from crewai.cli.checkpoint_tui import run_checkpoint_tui
+
+        run_checkpoint_tui(location)
+
+
+@checkpoint.command("list")
+@click.argument("location", default="./.checkpoints")
+def checkpoint_list(location: str) -> None:
+    """List checkpoints in a directory."""
+    from crewai.cli.checkpoint_cli import _detect_location, list_checkpoints
+
+    list_checkpoints(_detect_location(location))
+
+
+@checkpoint.command("info")
+@click.argument("path", default="./.checkpoints")
+def checkpoint_info(path: str) -> None:
+    """Show details of a checkpoint. Pass a file or directory for latest."""
+    from crewai.cli.checkpoint_cli import _detect_location, info_checkpoint
+
+    info_checkpoint(_detect_location(path))
+
+
+@checkpoint.command("resume")
+@click.argument("checkpoint_id", required=False, default=None)
+@click.pass_context
+def checkpoint_resume(ctx: click.Context, checkpoint_id: str | None) -> None:
+    """Resume from a checkpoint. Defaults to the most recent."""
+    from crewai.cli.checkpoint_cli import resume_checkpoint
+
+    resume_checkpoint(ctx.obj["location"], checkpoint_id)
+
+
+@checkpoint.command("diff")
+@click.argument("id1")
+@click.argument("id2")
+@click.pass_context
+def checkpoint_diff(ctx: click.Context, id1: str, id2: str) -> None:
+    """Compare two checkpoints side-by-side."""
+    from crewai.cli.checkpoint_cli import diff_checkpoints
+
+    diff_checkpoints(ctx.obj["location"], id1, id2)
+
+
+@checkpoint.command("prune")
+@click.option(
+    "--keep", type=int, default=None, help="Keep the N most recent checkpoints."
+)
+@click.option(
+    "--older-than",
+    default=None,
+    help="Remove checkpoints older than duration (e.g. 7d, 24h, 30m).",
+)
+@click.option(
+    "--dry-run", is_flag=True, help="Show what would be pruned without deleting."
+)
+@click.pass_context
+def checkpoint_prune(
+    ctx: click.Context, keep: int | None, older_than: str | None, dry_run: bool
+) -> None:
+    """Remove old checkpoints."""
+    from crewai.cli.checkpoint_cli import prune_checkpoints
+
+    prune_checkpoints(ctx.obj["location"], keep, older_than, dry_run)
 
 
 if __name__ == "__main__":

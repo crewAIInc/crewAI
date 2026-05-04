@@ -5,13 +5,14 @@ from contextlib import AsyncExitStack
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Literal, TypedDict, cast
 
 from pydantic import BaseModel, PrivateAttr, model_validator
 from typing_extensions import Required
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM, llm_call_context
+from crewai.llms.providers.utils.common import safe_tool_conversion
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
@@ -228,6 +229,7 @@ class BedrockCompletion(BaseLLM):
     - Model-specific conversation format handling (e.g., Cohere requirements)
     """
 
+    llm_type: Literal["bedrock"] = "bedrock"
     model: str = "anthropic.claude-3-5-sonnet-20241022-v2:0"
     aws_access_key_id: str | None = None
     aws_secret_access_key: str | None = None
@@ -301,6 +303,22 @@ class BedrockCompletion(BaseLLM):
 
     @model_validator(mode="after")
     def _init_clients(self) -> BedrockCompletion:
+        """Eagerly build the sync client when AWS credentials resolve,
+        otherwise defer so ``LLM(model="bedrock/...")`` can be constructed
+        at module import time even before deployment env vars are set.
+
+        Only credential/SDK errors are caught — programming errors like
+        ``TypeError`` or ``AttributeError`` propagate so real bugs aren't
+        silently swallowed.
+        """
+        try:
+            self._client = self._build_sync_client()
+        except (BotoCoreError, ClientError, ValueError) as e:
+            logging.debug("Deferring Bedrock client construction: %s", e)
+        self._async_exit_stack = AsyncExitStack() if AIOBOTOCORE_AVAILABLE else None
+        return self
+
+    def _build_sync_client(self) -> Any:
         config = Config(
             read_timeout=300,
             retries={"max_attempts": 3, "mode": "adaptive"},
@@ -312,9 +330,17 @@ class BedrockCompletion(BaseLLM):
             aws_session_token=self.aws_session_token,
             region_name=self.region_name,
         )
-        self._client = session.client("bedrock-runtime", config=config)
-        self._async_exit_stack = AsyncExitStack() if AIOBOTOCORE_AVAILABLE else None
-        return self
+        return session.client("bedrock-runtime", config=config)
+
+    def _get_sync_client(self) -> Any:
+        if self._client is None:
+            self._client = self._build_sync_client()
+        return self._client
+
+    def _get_async_client(self) -> Any:
+        """Async client is set up separately by ``_ensure_async_client``
+        using ``aiobotocore`` inside an exit stack."""
+        return self._async_client
 
     def to_config_dict(self) -> dict[str, Any]:
         """Extend base config with Bedrock-specific fields."""
@@ -654,7 +680,7 @@ class BedrockCompletion(BaseLLM):
                     raise ValueError(f"Invalid message format at index {i}")
 
             # Call Bedrock Converse API with proper error handling
-            response = self._client.converse(
+            response = self._get_sync_client().converse(
                 modelId=self.model_id,
                 messages=cast(
                     "Sequence[MessageTypeDef | MessageOutputTypeDef]",
@@ -664,8 +690,9 @@ class BedrockCompletion(BaseLLM):
             )
 
             # Track token usage according to AWS response format
-            if "usage" in response:
-                self._track_token_usage_internal(response["usage"])
+            usage = response.get("usage")
+            if usage:
+                self._track_token_usage_internal(usage)
 
             stop_reason = response.get("stopReason")
             if stop_reason:
@@ -705,6 +732,7 @@ class BedrockCompletion(BaseLLM):
                                 from_task=from_task,
                                 from_agent=from_agent,
                                 messages=messages,
+                                usage=usage,
                             )
                             return result
                         except Exception as e:
@@ -727,6 +755,7 @@ class BedrockCompletion(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=messages,
+                    usage=usage,
                 )
                 return non_structured_output_tool_uses
 
@@ -806,6 +835,7 @@ class BedrockCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=messages,
+                usage=usage,
             )
 
             return self._invoke_after_llm_call_hooks(
@@ -936,9 +966,10 @@ class BedrockCompletion(BaseLLM):
         tool_use_id: str | None = None
         tool_use_index = 0
         accumulated_tool_input = ""
+        usage_data: dict[str, Any] | None = None
 
         try:
-            response = self._client.converse_stream(
+            response = self._get_sync_client().converse_stream(
                 modelId=self.model_id,
                 messages=cast(
                     "Sequence[MessageTypeDef | MessageOutputTypeDef]",
@@ -1045,6 +1076,7 @@ class BedrockCompletion(BaseLLM):
                                         from_task=from_task,
                                         from_agent=from_agent,
                                         messages=messages,
+                                        usage=usage_data,
                                     )
                                     return result  # type: ignore[return-value]
                                 except Exception as e:
@@ -1112,6 +1144,7 @@ class BedrockCompletion(BaseLLM):
                         metadata = event["metadata"]
                         if "usage" in metadata:
                             usage_metrics = metadata["usage"]
+                            usage_data = usage_metrics
                             self._track_token_usage_internal(usage_metrics)
                             logging.debug(f"Token usage: {usage_metrics}")
                             if "trace" in metadata:
@@ -1141,6 +1174,7 @@ class BedrockCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=messages,
+            usage=usage_data,
         )
 
         return full_response
@@ -1252,8 +1286,9 @@ class BedrockCompletion(BaseLLM):
                 **body,
             )
 
-            if "usage" in response:
-                self._track_token_usage_internal(response["usage"])
+            usage = response.get("usage")
+            if usage:
+                self._track_token_usage_internal(usage)
 
             stop_reason = response.get("stopReason")
             if stop_reason:
@@ -1292,6 +1327,7 @@ class BedrockCompletion(BaseLLM):
                                 from_task=from_task,
                                 from_agent=from_agent,
                                 messages=messages,
+                                usage=usage,
                             )
                             return result
                         except Exception as e:
@@ -1314,6 +1350,7 @@ class BedrockCompletion(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=messages,
+                    usage=usage,
                 )
                 return non_structured_output_tool_uses
 
@@ -1388,6 +1425,7 @@ class BedrockCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=messages,
+                usage=usage,
             )
 
             return text_content
@@ -1508,6 +1546,7 @@ class BedrockCompletion(BaseLLM):
         tool_use_id: str | None = None
         tool_use_index = 0
         accumulated_tool_input = ""
+        usage_data: dict[str, Any] | None = None
 
         try:
             async_client = await self._ensure_async_client()
@@ -1619,6 +1658,7 @@ class BedrockCompletion(BaseLLM):
                                         from_task=from_task,
                                         from_agent=from_agent,
                                         messages=messages,
+                                        usage=usage_data,
                                     )
                                     return result  # type: ignore[return-value]
                                 except Exception as e:
@@ -1691,6 +1731,7 @@ class BedrockCompletion(BaseLLM):
                         metadata = event["metadata"]
                         if "usage" in metadata:
                             usage_metrics = metadata["usage"]
+                            usage_data = usage_metrics
                             self._track_token_usage_internal(usage_metrics)
                             logging.debug(f"Token usage: {usage_metrics}")
                         if "trace" in metadata:
@@ -1720,6 +1761,7 @@ class BedrockCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=messages,
+            usage=usage_data,
         )
 
         return self._invoke_after_llm_call_hooks(
@@ -1931,8 +1973,6 @@ class BedrockCompletion(BaseLLM):
         tools: list[dict[str, Any]],
     ) -> list[ConverseToolTypeDef]:
         """Convert CrewAI tools to Converse API format following AWS specification."""
-        from crewai.llms.providers.utils.common import safe_tool_conversion
-
         converse_tools: list[ConverseToolTypeDef] = []
 
         for tool in tools:
@@ -2008,11 +2048,18 @@ class BedrockCompletion(BaseLLM):
         input_tokens = usage.get("inputTokens", 0)
         output_tokens = usage.get("outputTokens", 0)
         total_tokens = usage.get("totalTokens", input_tokens + output_tokens)
+        raw_cached = (
+            usage.get("cacheReadInputTokenCount")
+            or usage.get("cacheReadInputTokens")
+            or 0
+        )
+        cached_tokens = raw_cached if isinstance(raw_cached, int) else 0
 
         self._token_usage["prompt_tokens"] += input_tokens
         self._token_usage["completion_tokens"] += output_tokens
         self._token_usage["total_tokens"] += total_tokens
         self._token_usage["successful_requests"] += 1
+        self._token_usage["cached_prompt_tokens"] += cached_tokens
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""
@@ -2028,6 +2075,9 @@ class BedrockCompletion(BaseLLM):
 
         # Context window sizes for common Bedrock models
         context_windows = {
+            "anthropic.claude-sonnet-4": 200000,
+            "anthropic.claude-opus-4": 200000,
+            "anthropic.claude-haiku-4": 200000,
             "anthropic.claude-3-5-sonnet": 200000,
             "anthropic.claude-3-5-haiku": 200000,
             "anthropic.claude-3-opus": 200000,

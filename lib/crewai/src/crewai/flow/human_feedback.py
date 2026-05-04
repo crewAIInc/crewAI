@@ -350,9 +350,9 @@ def human_feedback(
 
         def _get_hitl_prompt(key: str) -> str:
             """Read a HITL prompt from the i18n translations."""
-            from crewai.utilities.i18n import get_i18n
+            from crewai.utilities.i18n import I18N_DEFAULT
 
-            return get_i18n().slice(key)
+            return I18N_DEFAULT.slice(key)
 
         def _resolve_llm_instance() -> Any:
             """Resolve the ``llm`` parameter to a BaseLLM instance.

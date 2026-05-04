@@ -3,18 +3,14 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Callable
 from datetime import datetime
-import io
 import json
 import logging
 import os
-import sys
-import threading
 from typing import (
     TYPE_CHECKING,
     Any,
     Final,
     Literal,
-    TextIO,
     TypedDict,
     cast,
 )
@@ -55,6 +51,7 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
 )
 from crewai.utilities.logger_utils import suppress_warnings
 from crewai.utilities.string_utils import sanitize_tool_name
+from crewai.utilities.token_counter_callback import TokenCalcHandler
 
 
 try:
@@ -66,7 +63,7 @@ except ImportError:
 
 
 if TYPE_CHECKING:
-    from crewai.agent.core import Agent
+    from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
     from crewai.utilities.types import LLMMessage
@@ -79,8 +76,13 @@ try:
     from litellm.types.utils import (
         ChatCompletionDeltaToolCall,
         Choices,
+        Delta as LiteLLMDelta,
         Function,
+        Message,
         ModelResponse,
+        ModelResponseBase,
+        ModelResponseStream,
+        StreamingChoices as LiteLLMStreamingChoices,
     )
     from litellm.utils import supports_response_schema
 
@@ -89,6 +91,11 @@ except ImportError:
     LITELLM_AVAILABLE = False
     litellm = None  # type: ignore[assignment]
     Choices = None  # type: ignore[assignment, misc]
+    LiteLLMDelta = None  # type: ignore[assignment, misc]
+    Message = None  # type: ignore[assignment, misc]
+    ModelResponseBase = None  # type: ignore[assignment, misc]
+    ModelResponseStream = None  # type: ignore[assignment, misc]
+    LiteLLMStreamingChoices = None  # type: ignore[assignment, misc]
     get_supported_openai_params = None  # type: ignore[assignment]
     ChatCompletionDeltaToolCall = None  # type: ignore[assignment, misc]
     Function = None  # type: ignore[assignment, misc]
@@ -100,72 +107,6 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 if LITELLM_AVAILABLE:
     litellm.suppress_debug_info = True
-
-
-class FilteredStream(io.TextIOBase):
-    _lock = None
-
-    def __init__(self, original_stream: TextIO):
-        self._original_stream = original_stream
-        self._lock = threading.Lock()
-
-    def write(self, s: str) -> int:
-        if not self._lock:
-            self._lock = threading.Lock()
-
-        with self._lock:
-            lower_s = s.lower()
-
-            # Skip common noisy LiteLLM banners and any other lines that contain "litellm"
-            if (
-                "litellm.info:" in lower_s
-                or "Consider using a smaller input or implementing a text splitting strategy"
-                in lower_s
-            ):
-                return 0
-
-            return self._original_stream.write(s)
-
-    def flush(self) -> None:
-        if self._lock:
-            with self._lock:
-                return self._original_stream.flush()
-        return None
-
-    def __getattr__(self, name: str) -> Any:
-        """Delegate attribute access to the wrapped original stream.
-
-        This ensures compatibility with libraries (e.g., Rich) that rely on
-        attributes such as `encoding`, `isatty`, `buffer`, etc., which may not
-        be explicitly defined on this proxy class.
-        """
-        return getattr(self._original_stream, name)
-
-    # Delegate common properties/methods explicitly so they aren't shadowed by
-    # the TextIOBase defaults (e.g., .encoding returns None by default, which
-    # confuses Rich). These explicit pass-throughs ensure the wrapped Console
-    # still sees a fully-featured stream.
-    @property
-    def encoding(self) -> str | Any:  # type: ignore[override]
-        return getattr(self._original_stream, "encoding", "utf-8")
-
-    def isatty(self) -> bool:
-        return self._original_stream.isatty()
-
-    def fileno(self) -> int:
-        return self._original_stream.fileno()
-
-    def writable(self) -> bool:
-        return True
-
-
-# Apply the filtered stream globally so that any subsequent writes containing the filtered
-# keywords (e.g., "litellm") are hidden from terminal output. We guard against double
-# wrapping to ensure idempotency in environments where this module might be reloaded.
-if not isinstance(sys.stdout, FilteredStream):
-    sys.stdout = FilteredStream(sys.stdout)
-if not isinstance(sys.stderr, FilteredStream):
-    sys.stderr = FilteredStream(sys.stderr)
 
 
 MIN_CONTEXT: Final[int] = 1024
@@ -234,6 +175,16 @@ LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "us.amazon.nova-pro-v1:0": 300000,
     "us.amazon.nova-micro-v1:0": 128000,
     "us.amazon.nova-lite-v1:0": 300000,
+    # Claude 4 models
+    "us.anthropic.claude-opus-4-7": 1000000,
+    "us.anthropic.claude-sonnet-4-6": 1000000,
+    "us.anthropic.claude-opus-4-6-v1": 1000000,
+    "us.anthropic.claude-opus-4-5-20251101-v1:0": 200000,
+    "us.anthropic.claude-haiku-4-5-20251001-v1:0": 200000,
+    "us.anthropic.claude-sonnet-4-5-20250929-v1:0": 200000,
+    "us.anthropic.claude-opus-4-1-20250805-v1:0": 200000,
+    "us.anthropic.claude-opus-4-20250514-v1:0": 200000,
+    "us.anthropic.claude-sonnet-4-20250514-v1:0": 200000,
     "us.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
     "us.anthropic.claude-3-5-haiku-20241022-v1:0": 200000,
     "us.anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
@@ -252,15 +203,44 @@ LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "eu.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
     "eu.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
     "eu.anthropic.claude-3-haiku-20240307-v1:0": 200000,
+    # Claude 4 EU
+    "eu.anthropic.claude-opus-4-7": 1000000,
+    "eu.anthropic.claude-sonnet-4-6": 1000000,
+    "eu.anthropic.claude-opus-4-6-v1": 1000000,
+    "eu.anthropic.claude-opus-4-5-20251101-v1:0": 200000,
+    "eu.anthropic.claude-haiku-4-5-20251001-v1:0": 200000,
+    "eu.anthropic.claude-sonnet-4-5-20250929-v1:0": 200000,
+    "eu.anthropic.claude-opus-4-1-20250805-v1:0": 200000,
+    "eu.anthropic.claude-opus-4-20250514-v1:0": 200000,
+    "eu.anthropic.claude-sonnet-4-20250514-v1:0": 200000,
     "eu.meta.llama3-2-3b-instruct-v1:0": 131000,
     "eu.meta.llama3-2-1b-instruct-v1:0": 131000,
     "apac.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
     "apac.anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
     "apac.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
     "apac.anthropic.claude-3-haiku-20240307-v1:0": 200000,
+    # Claude 4 APAC
+    "apac.anthropic.claude-opus-4-7": 1000000,
+    "apac.anthropic.claude-sonnet-4-6": 1000000,
+    "apac.anthropic.claude-opus-4-6-v1": 1000000,
+    "apac.anthropic.claude-opus-4-5-20251101-v1:0": 200000,
+    "apac.anthropic.claude-haiku-4-5-20251001-v1:0": 200000,
+    "apac.anthropic.claude-sonnet-4-5-20250929-v1:0": 200000,
+    "apac.anthropic.claude-opus-4-1-20250805-v1:0": 200000,
+    "apac.anthropic.claude-opus-4-20250514-v1:0": 200000,
+    "apac.anthropic.claude-sonnet-4-20250514-v1:0": 200000,
     "amazon.nova-pro-v1:0": 300000,
     "amazon.nova-micro-v1:0": 128000,
     "amazon.nova-lite-v1:0": 300000,
+    "anthropic.claude-opus-4-7": 1000000,
+    "anthropic.claude-sonnet-4-6": 1000000,
+    "anthropic.claude-opus-4-6-v1": 1000000,
+    "anthropic.claude-opus-4-5-20251101-v1:0": 200000,
+    "anthropic.claude-haiku-4-5-20251001-v1:0": 200000,
+    "anthropic.claude-sonnet-4-5-20250929-v1:0": 200000,
+    "anthropic.claude-opus-4-1-20250805-v1:0": 200000,
+    "anthropic.claude-opus-4-20250514-v1:0": 200000,
+    "anthropic.claude-sonnet-4-20250514-v1:0": 200000,
     "anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
     "anthropic.claude-3-5-haiku-20241022-v1:0": 200000,
     "anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
@@ -343,6 +323,7 @@ class AccumulatedToolArgs(BaseModel):
 
 
 class LLM(BaseLLM):
+    llm_type: Literal["litellm"] = "litellm"
     completion_cost: float | None = None
     timeout: float | int | None = None
     top_p: float | None = None
@@ -707,7 +688,9 @@ class LLM(BaseLLM):
             "temperature": self.temperature,
             "top_p": self.top_p,
             "n": self.n,
-            "stop": (self.stop or None) if self.supports_stop_words() else None,
+            "stop": (self.stop_sequences or None)
+            if self.supports_stop_words()
+            else None,
             "max_tokens": self.max_tokens or self.max_completion_tokens,
             "presence_penalty": self.presence_penalty,
             "frequency_penalty": self.frequency_penalty,
@@ -735,7 +718,7 @@ class LLM(BaseLLM):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> Any:
         """Handle a streaming response from the LLM.
@@ -778,7 +761,7 @@ class LLM(BaseLLM):
                 chunk_content = None
                 response_id = None
 
-                if hasattr(chunk, "id"):
+                if isinstance(chunk, ModelResponseBase):
                     response_id = chunk.id
 
                 # Safely extract content from various chunk formats
@@ -787,18 +770,16 @@ class LLM(BaseLLM):
                     choices = None
                     if isinstance(chunk, dict) and "choices" in chunk:
                         choices = chunk["choices"]
-                    elif hasattr(chunk, "choices"):
-                        # Check if choices is not a type but an actual attribute with value
-                        if not isinstance(chunk.choices, type):
-                            choices = chunk.choices
+                    elif isinstance(chunk, ModelResponseStream):
+                        choices = chunk.choices
 
                     # Try to extract usage information if available
+                    # NOTE: usage is a pydantic extra field on ModelResponseBase,
+                    # so it must be accessed via model_extra.
                     if isinstance(chunk, dict) and "usage" in chunk:
                         usage_info = chunk["usage"]
-                    elif hasattr(chunk, "usage"):
-                        # Check if usage is not a type but an actual attribute with value
-                        if not isinstance(chunk.usage, type):
-                            usage_info = chunk.usage
+                    elif isinstance(chunk, ModelResponseBase) and chunk.model_extra:
+                        usage_info = chunk.model_extra.get("usage") or usage_info
 
                     if choices and len(choices) > 0:
                         choice = choices[0]
@@ -807,7 +788,7 @@ class LLM(BaseLLM):
                         delta = None
                         if isinstance(choice, dict) and "delta" in choice:
                             delta = choice["delta"]
-                        elif hasattr(choice, "delta"):
+                        elif isinstance(choice, LiteLLMStreamingChoices):
                             delta = choice.delta
 
                         # Extract content from delta
@@ -817,7 +798,7 @@ class LLM(BaseLLM):
                                 if "content" in delta and delta["content"] is not None:
                                     chunk_content = delta["content"]
                             # Handle object format
-                            elif hasattr(delta, "content"):
+                            elif isinstance(delta, LiteLLMDelta):
                                 chunk_content = delta.content
 
                             # Handle case where content might be None or empty
@@ -890,9 +871,8 @@ class LLM(BaseLLM):
                         choices = None
                         if isinstance(last_chunk, dict) and "choices" in last_chunk:
                             choices = last_chunk["choices"]
-                        elif hasattr(last_chunk, "choices"):
-                            if not isinstance(last_chunk.choices, type):
-                                choices = last_chunk.choices
+                        elif isinstance(last_chunk, ModelResponseStream):
+                            choices = last_chunk.choices
 
                         if choices and len(choices) > 0:
                             choice = choices[0]
@@ -901,14 +881,14 @@ class LLM(BaseLLM):
                             message = None
                             if isinstance(choice, dict) and "message" in choice:
                                 message = choice["message"]
-                            elif hasattr(choice, "message"):
+                            elif isinstance(choice, Choices):
                                 message = choice.message
 
                             if message:
                                 content = None
                                 if isinstance(message, dict) and "content" in message:
                                     content = message["content"]
-                                elif hasattr(message, "content"):
+                                elif isinstance(message, Message):
                                     content = message.content
 
                                 if content:
@@ -935,24 +915,23 @@ class LLM(BaseLLM):
                     choices = None
                     if isinstance(last_chunk, dict) and "choices" in last_chunk:
                         choices = last_chunk["choices"]
-                    elif hasattr(last_chunk, "choices"):
-                        if not isinstance(last_chunk.choices, type):
-                            choices = last_chunk.choices
+                    elif isinstance(last_chunk, ModelResponseStream):
+                        choices = last_chunk.choices
 
                     if choices and len(choices) > 0:
                         choice = choices[0]
 
-                        message = None
-                        if isinstance(choice, dict) and "message" in choice:
-                            message = choice["message"]
-                        elif hasattr(choice, "message"):
-                            message = choice.message
+                        delta = None
+                        if isinstance(choice, dict) and "delta" in choice:
+                            delta = choice["delta"]
+                        elif isinstance(choice, LiteLLMStreamingChoices):
+                            delta = choice.delta
 
-                        if message:
-                            if isinstance(message, dict) and "tool_calls" in message:
-                                tool_calls = message["tool_calls"]
-                            elif hasattr(message, "tool_calls"):
-                                tool_calls = message.tool_calls
+                        if delta:
+                            if isinstance(delta, dict) and "tool_calls" in delta:
+                                tool_calls = delta["tool_calls"]
+                            elif isinstance(delta, LiteLLMDelta):
+                                tool_calls = delta.tool_calls
             except Exception as e:
                 logging.debug(f"Error checking for tool calls: {e}")
 
@@ -970,21 +949,25 @@ class LLM(BaseLLM):
                     )
                     result = instructor_instance.to_pydantic()
                     structured_response = result.model_dump_json()
+                    usage_dict = self._usage_to_dict(usage_info)
                     self._handle_emit_call_events(
                         response=structured_response,
                         call_type=LLMCallType.LLM_CALL,
                         from_task=from_task,
                         from_agent=from_agent,
                         messages=params["messages"],
+                        usage=usage_dict,
                     )
                     return structured_response
 
+                usage_dict = self._usage_to_dict(usage_info)
                 self._handle_emit_call_events(
                     response=full_response,
                     call_type=LLMCallType.LLM_CALL,
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
+                    usage=usage_dict,
                 )
                 return full_response
 
@@ -994,12 +977,14 @@ class LLM(BaseLLM):
                 return tool_result
 
             # --- 10) Emit completion event and return response
+            usage_dict = self._usage_to_dict(usage_info)
             self._handle_emit_call_events(
                 response=full_response,
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=usage_dict,
             )
             return full_response
 
@@ -1021,6 +1006,7 @@ class LLM(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
+                    usage=self._usage_to_dict(usage_info),
                 )
                 return full_response
 
@@ -1041,7 +1027,7 @@ class LLM(BaseLLM):
         accumulated_tool_args: defaultdict[int, AccumulatedToolArgs],
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_id: str | None = None,
     ) -> Any:
         for tool_call in tool_calls:
@@ -1099,7 +1085,7 @@ class LLM(BaseLLM):
         """
         if callbacks and len(callbacks) > 0:
             for callback in callbacks:
-                if hasattr(callback, "log_success_event"):
+                if isinstance(callback, TokenCalcHandler):
                     # Use the usage_info we've been tracking
                     if not usage_info:
                         # Try to get usage from the last chunk if we haven't already
@@ -1110,9 +1096,14 @@ class LLM(BaseLLM):
                                     and "usage" in last_chunk
                                 ):
                                     usage_info = last_chunk["usage"]
-                                elif hasattr(last_chunk, "usage"):
-                                    if not isinstance(last_chunk.usage, type):
-                                        usage_info = last_chunk.usage
+                                elif (
+                                    isinstance(last_chunk, ModelResponseBase)
+                                    and last_chunk.model_extra
+                                ):
+                                    usage_info = (
+                                        last_chunk.model_extra.get("usage")
+                                        or usage_info
+                                    )
                         except Exception as e:
                             logging.debug(f"Error extracting usage info: {e}")
 
@@ -1130,7 +1121,7 @@ class LLM(BaseLLM):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Handle a non-streaming response from the LLM.
@@ -1171,7 +1162,8 @@ class LLM(BaseLLM):
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
-                messages=params["messages"],
+                messages=messages,
+                usage=None,
             )
             return structured_response
 
@@ -1184,13 +1176,10 @@ class LLM(BaseLLM):
                 params["response_model"] = response_model
             response = litellm.completion(**params)
 
-            if (
-                hasattr(response, "usage")
-                and not isinstance(response.usage, type)
-                and response.usage
-            ):
-                usage_info = response.usage
-                self._track_token_usage_internal(usage_info)
+            if isinstance(response, ModelResponseBase) and response.model_extra:
+                usage_info = response.model_extra.get("usage")
+                if usage_info:
+                    self._track_token_usage_internal(usage_info)
 
         except LLMContextLengthExceededError:
             # Re-raise our own context length error
@@ -1201,6 +1190,12 @@ class LLM(BaseLLM):
             if LLMContextLengthExceededError._is_context_limit_error(error_msg):
                 raise LLMContextLengthExceededError(error_msg) from e
             raise
+
+        response_usage = self._usage_to_dict(
+            response.model_extra.get("usage")
+            if isinstance(response, ModelResponseBase) and response.model_extra
+            else None
+        )
 
         # --- 2) Handle structured output response (when response_model is provided)
         if response_model is not None:
@@ -1213,6 +1208,7 @@ class LLM(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
+                    usage=response_usage,
                 )
                 return structured_response
 
@@ -1224,8 +1220,13 @@ class LLM(BaseLLM):
         # --- 3) Handle callbacks with usage info
         if callbacks and len(callbacks) > 0:
             for callback in callbacks:
-                if hasattr(callback, "log_success_event"):
-                    usage_info = getattr(response, "usage", None)
+                if isinstance(callback, TokenCalcHandler):
+                    usage_info = (
+                        response.model_extra.get("usage")
+                        if isinstance(response, ModelResponseBase)
+                        and response.model_extra
+                        else None
+                    )
                     if usage_info:
                         callback.log_success_event(
                             kwargs=params,
@@ -1234,23 +1235,23 @@ class LLM(BaseLLM):
                             end_time=0,
                         )
         # --- 4) Check for tool calls
-        tool_calls = getattr(response_message, "tool_calls", [])
+        tool_calls = response_message.tool_calls or []
 
-        # --- 5) If no tool calls or no available functions, return the text response directly as long as there is a text response
-        if (not tool_calls or not available_functions) and text_response:
+        # --- 5) If there are tool calls but no available functions, return the tool calls
+        if tool_calls and not available_functions:
+            return tool_calls
+
+        # --- 6) If there are no tool calls to execute, return the text response directly
+        if not tool_calls and text_response:
             self._handle_emit_call_events(
                 response=text_response,
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=response_usage,
             )
             return text_response
-
-        # --- 6) If there are tool calls but no available functions, return the tool calls
-        # This allows the caller (e.g., executor) to handle tool execution
-        if tool_calls and not available_functions:
-            return tool_calls
 
         # --- 7) Handle tool calls if present (execute when available_functions provided)
         if tool_calls and available_functions:
@@ -1267,6 +1268,7 @@ class LLM(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params["messages"],
+            usage=response_usage,
         )
         return text_response
 
@@ -1276,7 +1278,7 @@ class LLM(BaseLLM):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Handle an async non-streaming response from the LLM.
@@ -1315,7 +1317,8 @@ class LLM(BaseLLM):
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
-                messages=params["messages"],
+                messages=messages,
+                usage=None,
             )
             return structured_response
 
@@ -1324,13 +1327,10 @@ class LLM(BaseLLM):
                 params["response_model"] = response_model
             response = await litellm.acompletion(**params)
 
-            if (
-                hasattr(response, "usage")
-                and not isinstance(response.usage, type)
-                and response.usage
-            ):
-                usage_info = response.usage
-                self._track_token_usage_internal(usage_info)
+            if isinstance(response, ModelResponseBase) and response.model_extra:
+                usage_info = response.model_extra.get("usage")
+                if usage_info:
+                    self._track_token_usage_internal(usage_info)
 
         except LLMContextLengthExceededError:
             # Re-raise our own context length error
@@ -1342,6 +1342,12 @@ class LLM(BaseLLM):
                 raise LLMContextLengthExceededError(error_msg) from e
             raise
 
+        response_usage = self._usage_to_dict(
+            response.model_extra.get("usage")
+            if isinstance(response, ModelResponseBase) and response.model_extra
+            else None
+        )
+
         if response_model is not None:
             if isinstance(response, BaseModel):
                 structured_response = response.model_dump_json()
@@ -1351,6 +1357,7 @@ class LLM(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params["messages"],
+                    usage=response_usage,
                 )
                 return structured_response
 
@@ -1361,8 +1368,13 @@ class LLM(BaseLLM):
 
         if callbacks and len(callbacks) > 0:
             for callback in callbacks:
-                if hasattr(callback, "log_success_event"):
-                    usage_info = getattr(response, "usage", None)
+                if isinstance(callback, TokenCalcHandler):
+                    usage_info = (
+                        response.model_extra.get("usage")
+                        if isinstance(response, ModelResponseBase)
+                        and response.model_extra
+                        else None
+                    )
                     if usage_info:
                         callback.log_success_event(
                             kwargs=params,
@@ -1371,22 +1383,21 @@ class LLM(BaseLLM):
                             end_time=0,
                         )
 
-        tool_calls = getattr(response_message, "tool_calls", [])
+        tool_calls = response_message.tool_calls or []
 
-        if (not tool_calls or not available_functions) and text_response:
+        if tool_calls and not available_functions:
+            return tool_calls
+
+        if not tool_calls and text_response:
             self._handle_emit_call_events(
                 response=text_response,
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params["messages"],
+                usage=response_usage,
             )
             return text_response
-
-        # If there are tool calls but no available functions, return the tool calls
-        # This allows the caller (e.g., executor) to handle tool execution
-        if tool_calls and not available_functions:
-            return tool_calls
 
         # Handle tool calls if present (execute when available_functions provided)
         if tool_calls and available_functions:
@@ -1402,6 +1413,7 @@ class LLM(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             messages=params["messages"],
+            usage=response_usage,
         )
         return text_response
 
@@ -1411,7 +1423,7 @@ class LLM(BaseLLM):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> Any:
         """Handle an async streaming response from the LLM.
@@ -1444,18 +1456,19 @@ class LLM(BaseLLM):
             async for chunk in await litellm.acompletion(**params):
                 chunk_count += 1
                 chunk_content = None
-                response_id = chunk.id if hasattr(chunk, "id") else None
+                response_id = chunk.id if isinstance(chunk, ModelResponseBase) else None
 
                 try:
                     choices = None
                     if isinstance(chunk, dict) and "choices" in chunk:
                         choices = chunk["choices"]
-                    elif hasattr(chunk, "choices"):
-                        if not isinstance(chunk.choices, type):
-                            choices = chunk.choices
+                    elif isinstance(chunk, ModelResponseStream):
+                        choices = chunk.choices
 
-                    if hasattr(chunk, "usage") and chunk.usage is not None:
-                        usage_info = chunk.usage
+                    if isinstance(chunk, ModelResponseBase) and chunk.model_extra:
+                        chunk_usage = chunk.model_extra.get("usage")
+                        if chunk_usage is not None:
+                            usage_info = chunk_usage
 
                     if choices and len(choices) > 0:
                         first_choice = choices[0]
@@ -1463,19 +1476,19 @@ class LLM(BaseLLM):
 
                         if isinstance(first_choice, dict):
                             delta = first_choice.get("delta", {})
-                        elif hasattr(first_choice, "delta"):
+                        elif isinstance(first_choice, LiteLLMStreamingChoices):
                             delta = first_choice.delta
 
                         if delta:
                             if isinstance(delta, dict):
                                 chunk_content = delta.get("content")
-                            elif hasattr(delta, "content"):
+                            elif isinstance(delta, LiteLLMDelta):
                                 chunk_content = delta.content
 
                             tool_calls: list[ChatCompletionDeltaToolCall] | None = None
                             if isinstance(delta, dict):
                                 tool_calls = delta.get("tool_calls")
-                            elif hasattr(delta, "tool_calls"):
+                            elif isinstance(delta, LiteLLMDelta):
                                 tool_calls = delta.tool_calls
 
                             if tool_calls:
@@ -1511,7 +1524,7 @@ class LLM(BaseLLM):
 
             if callbacks and len(callbacks) > 0 and usage_info:
                 for callback in callbacks:
-                    if hasattr(callback, "log_success_event"):
+                    if isinstance(callback, TokenCalcHandler):
                         callback.log_success_event(
                             kwargs=params,
                             response_obj={"usage": usage_info},
@@ -1548,12 +1561,14 @@ class LLM(BaseLLM):
                     if result is not None:
                         return result
 
+            usage_dict = self._usage_to_dict(usage_info)
             self._handle_emit_call_events(
                 response=full_response,
                 call_type=LLMCallType.LLM_CALL,
                 from_task=from_task,
                 from_agent=from_agent,
                 messages=params.get("messages"),
+                usage=usage_dict,
             )
             return full_response
 
@@ -1575,6 +1590,7 @@ class LLM(BaseLLM):
                     from_task=from_task,
                     from_agent=from_agent,
                     messages=params.get("messages"),
+                    usage=self._usage_to_dict(usage_info),
                 )
                 return full_response
             raise
@@ -1584,7 +1600,7 @@ class LLM(BaseLLM):
         tool_calls: list[Any],
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
     ) -> Any:
         """Handle a tool call from the LLM.
 
@@ -1680,7 +1696,7 @@ class LLM(BaseLLM):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """High-level LLM call method.
@@ -1830,7 +1846,7 @@ class LLM(BaseLLM):
         callbacks: list[Any] | None = None,
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
         """Async high-level LLM call method.
@@ -1961,13 +1977,27 @@ class LLM(BaseLLM):
                     )
                     raise
 
+    @staticmethod
+    def _usage_to_dict(usage: Any) -> dict[str, Any] | None:
+        if usage is None:
+            return None
+        if isinstance(usage, dict):
+            return usage
+        if isinstance(usage, BaseModel):
+            result: dict[str, Any] = usage.model_dump()
+            return result
+        if hasattr(usage, "__dict__"):
+            return {k: v for k, v in vars(usage).items() if not k.startswith("_")}
+        return None
+
     def _handle_emit_call_events(
         self,
         response: Any,
         call_type: LLMCallType,
         from_task: Task | None = None,
-        from_agent: Agent | None = None,
+        from_agent: BaseAgent | None = None,
         messages: str | list[LLMMessage] | None = None,
+        usage: dict[str, Any] | None = None,
     ) -> None:
         """Handle the events for the LLM call.
 
@@ -1977,6 +2007,7 @@ class LLM(BaseLLM):
             from_task: Optional task object
             from_agent: Optional agent object
             messages: Optional messages object
+            usage: Optional token usage data
         """
         crewai_event_bus.emit(
             self,
@@ -1988,6 +2019,7 @@ class LLM(BaseLLM):
                 from_agent=from_agent,
                 model=self.model,
                 call_id=get_current_call_id(),
+                usage=usage,
             ),
         )
 
@@ -2015,7 +2047,7 @@ class LLM(BaseLLM):
                 )
             return messages
 
-        provider = getattr(self, "provider", None) or self.model
+        provider = self.provider or self.model
 
         for msg in messages:
             files = msg.get("files")
@@ -2066,7 +2098,7 @@ class LLM(BaseLLM):
                 )
             return messages
 
-        provider = getattr(self, "provider", None) or self.model
+        provider = self.provider or self.model
 
         for msg in messages:
             files = msg.get("files")
@@ -2475,18 +2507,51 @@ class LLM(BaseLLM):
             True if the model likely supports images.
         """
         vision_prefixes = (
+            # OpenAI — GPT-4 vision models
             "gpt-4o",
             "gpt-4-turbo",
             "gpt-4-vision",
             "gpt-4.1",
+            # OpenAI — GPT-5 family (all variants support multimodal)
+            "gpt-5",
+            # OpenAI — o-series reasoning models with vision
+            # o1, o3, o4, o4-mini support multimodal
+            # o1-mini, o1-preview, o3-mini are text-only — handled via exclusion below
+            "o1",
+            "o3",
+            "o4-mini",
+            "o4",
+            # Anthropic — Claude 3+ models support vision
             "claude-3",
             "claude-4",
             "claude-sonnet-4",
             "claude-opus-4",
             "claude-haiku-4",
+            # Google — all Gemini models support multimodal
             "gemini",
+            # xAI — Grok models support vision
+            "grok",
+            # Mistral — Pixtral vision model
+            "pixtral",
+            # Open-source vision models
+            "llava",
+            # Alibaba — Qwen vision-language models
+            "qwen-vl",
+            "qwen2-vl",
+            "qwen3-vl",
         )
+        # Text-only models that would otherwise match vision prefixes
+        text_only_models = ("o3-mini", "o1-mini", "o1-preview")
+
         model_lower = self.model.lower()
+
+        # Check exclusion first
+        if any(
+            model_lower.startswith(m) or f"/{m}" in model_lower
+            for m in text_only_models
+        ):
+            return False
+
         return any(
             model_lower.startswith(p) or f"/{p}" in model_lower for p in vision_prefixes
         )

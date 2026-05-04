@@ -325,6 +325,34 @@ asyncio.run(interactive_research())
 - **تجربة المستخدم**: تقليل زمن الاستجابة المتصور بعرض نتائج تدريجية
 - **لوحات المعلومات الحية**: بناء واجهات مراقبة تعرض حالة تنفيذ الطاقم
 
+## الإلغاء وتنظيف الموارد
+
+يدعم `CrewStreamingOutput` الإلغاء السلس بحيث يتوقف العمل الجاري فوراً عند انقطاع اتصال المستهلك.
+
+### مدير السياق غير المتزامن
+
+```python Code
+streaming = await crew.akickoff(inputs={"topic": "AI"})
+
+async with streaming:
+    async for chunk in streaming:
+        print(chunk.content, end="", flush=True)
+```
+
+### الإلغاء الصريح
+
+```python Code
+streaming = await crew.akickoff(inputs={"topic": "AI"})
+try:
+    async for chunk in streaming:
+        print(chunk.content, end="", flush=True)
+finally:
+    await streaming.aclose()  # غير متزامن
+    # streaming.close()       # المكافئ المتزامن
+```
+
+بعد الإلغاء، يكون كل من `streaming.is_cancelled` و `streaming.is_completed` بقيمة `True`. كل من `aclose()` و `close()` متساويان القوة.
+
 ## ملاحظات مهمة
 
 - يفعّل البث تلقائياً بث LLM لجميع الوكلاء في الطاقم

@@ -25,6 +25,7 @@ import logging
 import threading
 from typing import (
     TYPE_CHECKING,
+    Annotated,
     Any,
     ClassVar,
     Generic,
@@ -39,7 +40,17 @@ from uuid import uuid4
 
 from opentelemetry import baggage
 from opentelemetry.context import attach, detach
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    PlainSerializer,
+    PrivateAttr,
+    SerializeAsAny,
+    ValidationError,
+)
+from pydantic._internal._model_construction import ModelMetaclass
 from rich.console import Console
 from rich.panel import Panel
 
@@ -48,6 +59,7 @@ from crewai.events.event_bus import crewai_event_bus
 from crewai.events.event_context import (
     get_current_parent_id,
     reset_last_event_id,
+    restore_event_scope,
     triggered_by_scope,
 )
 from crewai.events.listeners.tracing.trace_listener import (
@@ -81,6 +93,7 @@ from crewai.flow.flow_wrappers import (
     SimpleFlowCondition,
     StartMethod,
 )
+from crewai.flow.human_feedback import HumanFeedbackResult
 from crewai.flow.input_provider import InputProvider
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.types import (
@@ -102,13 +115,18 @@ from crewai.flow.utils import (
 )
 from crewai.memory.memory_scope import MemoryScope, MemorySlice
 from crewai.memory.unified_memory import Memory
+from crewai.state.checkpoint_config import (
+    CheckpointConfig,
+    _coerce_checkpoint,
+    apply_checkpoint,
+)
 
 
 if TYPE_CHECKING:
     from crewai_files import FileInput
 
+    from crewai.context import ExecutionContext
     from crewai.flow.async_feedback.types import PendingFeedbackContext
-    from crewai.flow.human_feedback import HumanFeedbackResult
     from crewai.llms.base_llm import BaseLLM
 
 from crewai.flow.visualization import build_flow_structure, render_interactive
@@ -119,12 +137,57 @@ from crewai.utilities.streaming import (
     create_async_chunk_generator,
     create_chunk_generator,
     create_streaming_state,
+    register_cleanup,
     signal_end,
     signal_error,
 )
 
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_persistence(value: Any) -> Any:
+    if value is None or isinstance(value, FlowPersistence):
+        return value
+    if isinstance(value, dict):
+        from crewai.flow.persistence.base import _persistence_registry
+
+        type_name = value.get("persistence_type", "SQLiteFlowPersistence")
+        cls = _persistence_registry.get(type_name)
+        if cls is not None:
+            return cls.model_validate(value)
+    return value
+
+
+_INITIAL_STATE_CLASS_MARKER = "__crewai_pydantic_class_schema__"
+
+
+def _serialize_initial_state(value: Any) -> Any:
+    """Make ``initial_state`` safe for JSON checkpoint serialization.
+
+    ``BaseModel`` class refs are emitted as their JSON schema under a sentinel
+    marker key so deserialization can round-trip them back to a class.
+    ``BaseModel`` instances are dumped to JSON (round-trip as plain dicts,
+    which ``_create_initial_state`` accepts). Bare ``type`` values that are
+    not ``BaseModel`` subclasses (e.g. ``dict``) are dropped since they
+    can't be represented in JSON.
+    """
+    if isinstance(value, type):
+        if issubclass(value, BaseModel):
+            return {_INITIAL_STATE_CLASS_MARKER: value.model_json_schema()}
+        return None
+    if isinstance(value, BaseModel):
+        return value.model_dump(mode="json")
+    return value
+
+
+def _deserialize_initial_state(value: Any) -> Any:
+    """Rehydrate a class ref serialized by :func:`_serialize_initial_state`."""
+    if isinstance(value, dict) and _INITIAL_STATE_CLASS_MARKER in value:
+        from crewai.utilities.pydantic_schema_utils import create_model_from_schema
+
+        return create_model_from_schema(value[_INITIAL_STATE_CLASS_MARKER])
+    return value
 
 
 class FlowState(BaseModel):
@@ -728,7 +791,7 @@ class StateProxy(Generic[T]):
         return result
 
 
-class FlowMeta(type):
+class FlowMeta(ModelMetaclass):
     def __new__(
         mcs,
         name: str,
@@ -736,6 +799,45 @@ class FlowMeta(type):
         namespace: dict[str, Any],
         **kwargs: Any,
     ) -> type:
+        parent_fields: set[str] = set()
+        for base in bases:
+            if hasattr(base, "model_fields"):
+                parent_fields.update(base.model_fields)
+
+        annotations = namespace.get("__annotations__", {})
+        _skip_types = (classmethod, staticmethod, property)
+
+        for base in bases:
+            if isinstance(base, ModelMetaclass):
+                continue
+            for attr_name in getattr(base, "__annotations__", {}):
+                if attr_name not in annotations and attr_name not in namespace:
+                    annotations[attr_name] = ClassVar
+
+        for attr_name, attr_value in namespace.items():
+            if isinstance(attr_value, property) and attr_name not in annotations:
+                for base in bases:
+                    base_ann = getattr(base, "__annotations__", {})
+                    if attr_name in base_ann:
+                        annotations[attr_name] = ClassVar
+
+        for attr_name, attr_value in list(namespace.items()):
+            if attr_name in annotations or attr_name.startswith("_"):
+                continue
+            if attr_name in parent_fields:
+                annotations[attr_name] = Any
+                if isinstance(attr_value, BaseModel):
+                    namespace[attr_name] = Field(
+                        default_factory=lambda v=attr_value: v, exclude=True
+                    )
+                continue
+            if callable(attr_value) or isinstance(
+                attr_value, (*_skip_types, FlowMethod)
+            ):
+                continue
+            annotations[attr_name] = ClassVar[type(attr_value)]
+        namespace["__annotations__"] = annotations
+
         cls = super().__new__(mcs, name, bases, namespace)
 
         start_methods = []
@@ -820,88 +922,191 @@ class FlowMeta(type):
         return cls
 
 
-class Flow(Generic[T], metaclass=FlowMeta):
+class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     """Base class for all flows.
 
     type parameter T must be either dict[str, Any] or a subclass of BaseModel."""
+
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        ignored_types=(StartMethod, ListenMethod, RouterMethod),
+        revalidate_instances="never",
+    )
+    __hash__ = object.__hash__
 
     _start_methods: ClassVar[list[FlowMethodName]] = []
     _listeners: ClassVar[dict[FlowMethodName, SimpleFlowCondition | FlowCondition]] = {}
     _routers: ClassVar[set[FlowMethodName]] = set()
     _router_paths: ClassVar[dict[FlowMethodName, list[FlowMethodName]]] = {}
-    initial_state: type[T] | T | None = None
-    name: str | None = None
-    tracing: bool | None = None
-    stream: bool = False
-    memory: Memory | MemoryScope | MemorySlice | None = None
-    input_provider: InputProvider | None = None
 
-    def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:
-        class _FlowGeneric(cls):  # type: ignore
-            _initial_state_t = item
+    entity_type: Literal["flow"] = "flow"
 
-        _FlowGeneric.__name__ = f"{cls.__name__}[{item.__name__}]"
-        return _FlowGeneric
+    initial_state: Annotated[  # type: ignore[type-arg]
+        type[BaseModel] | type[dict] | dict[str, Any] | BaseModel | None,
+        BeforeValidator(_deserialize_initial_state),
+        PlainSerializer(_serialize_initial_state, return_type=Any, when_used="json"),
+    ] = Field(default=None)
+    name: str | None = Field(default=None)
+    tracing: bool | None = Field(default=None)
+    stream: bool = Field(default=False)
+    memory: Memory | MemoryScope | MemorySlice | None = Field(default=None)
+    input_provider: InputProvider | None = Field(default=None)
+    suppress_flow_events: bool = Field(default=False)
+    human_feedback_history: list[HumanFeedbackResult] = Field(default_factory=list)
+    last_human_feedback: HumanFeedbackResult | None = Field(default=None)
 
-    def __init__(
-        self,
-        persistence: FlowPersistence | None = None,
-        tracing: bool | None = None,
-        suppress_flow_events: bool = False,
-        max_method_calls: int = 100,
-        **kwargs: Any,
-    ) -> None:
-        """Initialize a new Flow instance.
+    persistence: Annotated[
+        SerializeAsAny[FlowPersistence] | Any,
+        BeforeValidator(lambda v, _: _resolve_persistence(v)),
+    ] = Field(default=None)
+    max_method_calls: int = Field(default=100)
+
+    execution_context: ExecutionContext | None = Field(default=None)
+    checkpoint: Annotated[
+        CheckpointConfig | bool | None,
+        BeforeValidator(_coerce_checkpoint),
+    ] = Field(default=None)
+
+    @classmethod
+    def from_checkpoint(cls, config: CheckpointConfig) -> Flow:  # type: ignore[type-arg]
+        """Restore a Flow from a checkpoint.
 
         Args:
-            persistence: Optional persistence backend for storing flow states
-            tracing: Whether to enable tracing. True=always enable, False=always disable, None=check environment/user settings
-            suppress_flow_events: Whether to suppress flow event emissions (internal use)
-            max_method_calls: Maximum times a single method can be called per execution before raising RecursionError
-            **kwargs: Additional state values to initialize or override
+            config: Checkpoint configuration with ``restore_from`` set to
+                the path of the checkpoint to load.
+
+        Returns:
+            A Flow instance ready to resume.
         """
-        # Initialize basic instance attributes
-        self._methods: dict[FlowMethodName, FlowMethod[Any, Any]] = {}
-        self._method_execution_counts: dict[FlowMethodName, int] = {}
-        self._pending_and_listeners: dict[PendingListenerKey, set[FlowMethodName]] = {}
-        self._fired_or_listeners: set[FlowMethodName] = (
-            set()
-        )  # Track OR listeners that already fired
-        self._method_outputs: list[Any] = []  # list to store all method outputs
-        self._state_lock = threading.Lock()
-        self._or_listeners_lock = threading.Lock()
-        self._completed_methods: set[FlowMethodName] = (
-            set()
-        )  # Track completed methods for reload
-        self._method_call_counts: dict[FlowMethodName, int] = {}
-        self._max_method_calls = max_method_calls
-        self._persistence: FlowPersistence | None = persistence
-        self._is_execution_resuming: bool = False
-        self._event_futures: list[Future[None]] = []
+        from crewai.context import apply_execution_context
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.state.runtime import RuntimeState
 
-        # Human feedback storage
-        self.human_feedback_history: list[HumanFeedbackResult] = []
-        self.last_human_feedback: HumanFeedbackResult | None = None
-        self._pending_feedback_context: PendingFeedbackContext | None = None
-        # Per-method stash for real @human_feedback output (keyed by method name)
-        # Used to decouple routing outcome from method return value when emit is set
-        self._human_feedback_method_outputs: dict[str, Any] = {}
-        self.suppress_flow_events: bool = suppress_flow_events
+        state = RuntimeState.from_checkpoint(config, context={"from_checkpoint": True})
+        crewai_event_bus.set_runtime_state(state)
+        for entity in state.root:
+            if not isinstance(entity, Flow):
+                continue
+            if entity.execution_context is not None:
+                apply_execution_context(entity.execution_context)
+            if isinstance(entity, cls):
+                entity._restore_from_checkpoint()
+                return entity
+            instance = cls()
+            instance.checkpoint_completed_methods = entity.checkpoint_completed_methods
+            instance.checkpoint_method_outputs = entity.checkpoint_method_outputs
+            instance.checkpoint_method_counts = entity.checkpoint_method_counts
+            instance.checkpoint_state = entity.checkpoint_state
+            instance._restore_from_checkpoint()
+            return instance
+        raise ValueError(f"No Flow found in checkpoint: {config.restore_from}")
 
-        # User input history (for self.ask())
-        self._input_history: list[InputHistoryEntry] = []
+    @classmethod
+    def fork(
+        cls,
+        config: CheckpointConfig,
+        branch: str | None = None,
+    ) -> Flow:  # type: ignore[type-arg]
+        """Fork a Flow from a checkpoint, creating a new execution branch.
 
-        # Initialize state with initial values
-        self._state = self._create_initial_state()
-        self.tracing = tracing
+        Args:
+            config: Checkpoint configuration with ``restore_from`` set.
+            branch: Branch label for the fork. Auto-generated if not provided.
+
+        Returns:
+            A Flow instance on the new branch. Call kickoff() to run.
+        """
+        flow = cls.from_checkpoint(config)
+        state = crewai_event_bus.runtime_state
+        if state is None:
+            raise RuntimeError(
+                "Cannot fork: no runtime state on the event bus. "
+                "Ensure from_checkpoint() succeeded before calling fork()."
+            )
+        state.fork(branch)
+        new_id = str(uuid4())
+        if isinstance(flow._state, dict):
+            flow._state["id"] = new_id
+        else:
+            object.__setattr__(flow._state, "id", new_id)
+        return flow
+
+    checkpoint_completed_methods: set[str] | None = Field(default=None)
+    checkpoint_method_outputs: list[Any] | None = Field(default=None)
+    checkpoint_method_counts: dict[str, int] | None = Field(default=None)
+    checkpoint_state: dict[str, Any] | None = Field(default=None)
+
+    def _restore_from_checkpoint(self) -> None:
+        """Restore private execution state from checkpoint fields."""
+        if self.checkpoint_completed_methods is not None:
+            self._completed_methods = {
+                FlowMethodName(m) for m in self.checkpoint_completed_methods
+            }
+        if self.checkpoint_method_outputs is not None:
+            self._method_outputs = list(self.checkpoint_method_outputs)
+        if self.checkpoint_method_counts is not None:
+            self._method_execution_counts = {
+                FlowMethodName(k): v for k, v in self.checkpoint_method_counts.items()
+            }
+        if self.checkpoint_state is not None:
+            self._restore_state(self.checkpoint_state)
+        restore_event_scope(())
+        reset_last_event_id()
+
+    _methods: dict[FlowMethodName, FlowMethod[Any, Any]] = PrivateAttr(
+        default_factory=dict
+    )
+    _method_execution_counts: dict[FlowMethodName, int] = PrivateAttr(
+        default_factory=dict
+    )
+    _pending_and_listeners: dict[PendingListenerKey, set[FlowMethodName]] = PrivateAttr(
+        default_factory=dict
+    )
+    _fired_or_listeners: set[FlowMethodName] = PrivateAttr(default_factory=set)
+    _method_outputs: list[Any] = PrivateAttr(default_factory=list)
+    _state_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
+    _or_listeners_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
+    _completed_methods: set[FlowMethodName] = PrivateAttr(default_factory=set)
+    _method_call_counts: dict[FlowMethodName, int] = PrivateAttr(default_factory=dict)
+    _is_execution_resuming: bool = PrivateAttr(default=False)
+    _event_futures: list[Future[None]] = PrivateAttr(default_factory=list)
+    _pending_feedback_context: PendingFeedbackContext | None = PrivateAttr(default=None)
+    _human_feedback_method_outputs: dict[str, Any] = PrivateAttr(default_factory=dict)
+    _input_history: list[InputHistoryEntry] = PrivateAttr(default_factory=list)
+    _state: Any = PrivateAttr(default=None)
+
+    def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:  # type: ignore[override]
+        class _FlowGeneric(cls):  # type: ignore[valid-type,misc]
+            pass
+
+        _FlowGeneric.__name__ = f"{cls.__name__}[{item.__name__}]"
+        _FlowGeneric._initial_state_t = item
+        return _FlowGeneric
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        """Allow arbitrary attribute assignment for backward compat with plain class."""
+        if name in self.model_fields or name in self.__private_attributes__:
+            super().__setattr__(name, value)
+        else:
+            object.__setattr__(self, name, value)
+
+    def model_post_init(self, __context: Any) -> None:
+        self._flow_post_init()
+
+    def _flow_post_init(self) -> None:
+        """Heavy initialization: state creation, events, memory, method registration."""
+        if getattr(self, "_flow_post_init_done", False):
+            return
+        object.__setattr__(self, "_flow_post_init_done", True)
+
+        if self._state is None:
+            self._state = self._create_initial_state()
+
         tracing_enabled = should_enable_tracing(override=self.tracing)
         set_tracing_enabled(tracing_enabled)
 
         trace_listener = TraceCollectionListener()
         trace_listener.setup_listeners(crewai_event_bus)
-        # Apply any additional kwargs
-        if kwargs:
-            self._initialize_state(kwargs)
 
         if not self.suppress_flow_events:
             crewai_event_bus.emit(
@@ -1323,6 +1528,27 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 "No pending feedback context. Use from_pending() to restore a paused flow."
             )
 
+        if get_current_parent_id() is None:
+            reset_emission_counter()
+            reset_last_event_id()
+
+        if not self.suppress_flow_events:
+            future = crewai_event_bus.emit(
+                self,
+                FlowStartedEvent(
+                    type="flow_started",
+                    flow_name=self.name or self.__class__.__name__,
+                    inputs=None,
+                ),
+            )
+            if future and isinstance(future, Future):
+                try:
+                    await asyncio.wrap_future(future)
+                except Exception:
+                    logger.warning("FlowStartedEvent handler failed", exc_info=True)
+
+        get_env_context()
+
         context = self._pending_feedback_context
         emit = context.emit
         default_outcome = context.default_outcome
@@ -1385,8 +1611,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self._pending_feedback_context = None
 
         # Clear pending feedback from persistence
-        if self._persistence:
-            self._persistence.clear_pending_feedback(context.flow_id)
+        if self.persistence:
+            self.persistence.clear_pending_feedback(context.flow_id)
 
         # Emit feedback received event
         crewai_event_bus.emit(
@@ -1427,17 +1653,17 @@ class Flow(Generic[T], metaclass=FlowMeta):
             if isinstance(e, HumanFeedbackPending):
                 self._pending_feedback_context = e.context
 
-                if self._persistence is None:
+                if self.persistence is None:
                     from crewai.flow.persistence import SQLiteFlowPersistence
 
-                    self._persistence = SQLiteFlowPersistence()
+                    self.persistence = SQLiteFlowPersistence()
 
                 state_data = (
                     self._state
                     if isinstance(self._state, dict)
                     else self._state.model_dump()
                 )
-                self._persistence.save_pending_feedback(
+                self.persistence.save_pending_feedback(
                     flow_uuid=e.context.flow_id,
                     context=e.context,
                     state_data=state_data,
@@ -1462,16 +1688,39 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         final_result = self._method_outputs[-1] if self._method_outputs else result
 
-        # Emit flow finished
-        crewai_event_bus.emit(
-            self,
-            FlowFinishedEvent(
-                type="flow_finished",
-                flow_name=self.name or self.__class__.__name__,
-                result=final_result,
-                state=self._state,
-            ),
-        )
+        if self._event_futures:
+            await asyncio.gather(
+                *[
+                    asyncio.wrap_future(f)
+                    for f in self._event_futures
+                    if isinstance(f, Future)
+                ]
+            )
+            self._event_futures.clear()
+
+        if not self.suppress_flow_events:
+            future = crewai_event_bus.emit(
+                self,
+                FlowFinishedEvent(
+                    type="flow_finished",
+                    flow_name=self.name or self.__class__.__name__,
+                    result=final_result,
+                    state=self._copy_and_serialize_state(),
+                ),
+            )
+            if future and isinstance(future, Future):
+                try:
+                    await asyncio.wrap_future(future)
+                except Exception:
+                    logger.warning("FlowFinishedEvent handler failed", exc_info=True)
+
+            trace_listener = TraceCollectionListener()
+            if trace_listener.batch_manager.batch_owner_type == "flow":
+                if trace_listener.first_time_handler.is_first_time:
+                    trace_listener.first_time_handler.mark_events_collected()
+                    trace_listener.first_time_handler.handle_execution_completion()
+                else:
+                    trace_listener.batch_manager.finalize_batch()
 
         return final_result
 
@@ -1487,39 +1736,33 @@ class Flow(Generic[T], metaclass=FlowMeta):
         """
         init_state = self.initial_state
 
-        # Handle case where initial_state is None but we have a type parameter
         if init_state is None and hasattr(self, "_initial_state_t"):
             state_type = self._initial_state_t
             if isinstance(state_type, type):
                 if issubclass(state_type, FlowState):
-                    # Create instance - FlowState auto-generates id via default_factory
                     instance = state_type()
-                    # Ensure id is set - generate UUID if empty
                     if not getattr(instance, "id", None):
                         object.__setattr__(instance, "id", str(uuid4()))
                     return cast(T, instance)
                 if issubclass(state_type, BaseModel):
-                    # Create a new type with FlowState first for proper id default
+
                     class StateWithId(FlowState, state_type):  # type: ignore
                         pass
 
                     instance = StateWithId()
-                    # Ensure id is set - generate UUID if empty
                     if not getattr(instance, "id", None):
                         object.__setattr__(instance, "id", str(uuid4()))
                     return cast(T, instance)
                 if state_type is dict:
                     return cast(T, {"id": str(uuid4())})
 
-        # Handle case where no initial state is provided
         if init_state is None:
             return cast(T, {"id": str(uuid4())})
 
-        # Handle case where initial_state is a type (class)
         if isinstance(init_state, type):
             state_class = init_state
             if issubclass(state_class, FlowState):
-                return state_class()
+                return cast(T, state_class())
             if issubclass(state_class, BaseModel):
                 model_fields = getattr(state_class, "model_fields", None)
                 if not model_fields or "id" not in model_fields:
@@ -1527,7 +1770,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 model_instance = state_class()
                 if not getattr(model_instance, "id", None):
                     object.__setattr__(model_instance, "id", str(uuid4()))
-                return model_instance
+                return cast(T, model_instance)
             if init_state is dict:
                 return cast(T, {"id": str(uuid4())})
 
@@ -1538,32 +1781,21 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 new_state["id"] = str(uuid4())
             return cast(T, new_state)
 
-        # Handle BaseModel instance case
         if isinstance(init_state, BaseModel):
-            model = cast(BaseModel, init_state)
-            if not hasattr(model, "id"):
-                raise ValueError("Flow state model must have an 'id' field")
-
-            # Create new instance with same values to avoid mutations
-            if hasattr(model, "model_dump"):
-                # Pydantic v2
+            model = init_state
+            if hasattr(model, "id"):
                 state_dict = model.model_dump()
-            elif hasattr(model, "dict"):
-                # Pydantic v1
-                state_dict = model.dict()
-            else:
-                # Fallback for other BaseModel implementations
-                state_dict = {
-                    k: v for k, v in model.__dict__.items() if not k.startswith("_")
-                }
+                if not state_dict.get("id"):
+                    state_dict["id"] = str(uuid4())
+                model_class = type(model)
+                return cast(T, model_class(**state_dict))
 
-            # Ensure id is set - generate UUID if empty
-            if not state_dict.get("id"):
-                state_dict["id"] = str(uuid4())
+            class StateWithId(FlowState, type(model)):  # type: ignore
+                pass
 
-            # Create new instance of the same class
-            model_class = type(model)
-            return cast(T, model_class(**state_dict))
+            state_dict = model.model_dump()
+            state_dict["id"] = str(uuid4())
+            return cast(T, StateWithId(**state_dict))
         raise TypeError(
             f"Initial state must be dict or BaseModel, got {type(self.initial_state)}"
         )
@@ -1576,17 +1808,17 @@ class Flow(Generic[T], metaclass=FlowMeta):
         """
         if isinstance(self._state, BaseModel):
             try:
-                return self._state.model_copy(deep=True)
+                return cast(T, self._state.model_copy(deep=True))
             except (TypeError, AttributeError):
                 try:
                     state_dict = self._state.model_dump()
                     model_class = type(self._state)
-                    return model_class(**state_dict)
+                    return cast(T, model_class(**state_dict))
                 except Exception:
-                    return self._state.model_copy(deep=False)
+                    return cast(T, self._state.model_copy(deep=False))
         else:
             try:
-                return copy.deepcopy(self._state)
+                return cast(T, copy.deepcopy(self._state))
             except (TypeError, AttributeError):
                 return cast(T, self._state.copy())
 
@@ -1662,7 +1894,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
         elif isinstance(self._state, BaseModel):
             # For BaseModel states, preserve existing fields unless overridden
             try:
-                model = cast(BaseModel, self._state)
+                model = self._state
                 # Get current state as dict
                 if hasattr(model, "model_dump"):
                     current_state = model.model_dump()
@@ -1713,7 +1945,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
             self._state.update(stored_state)
         elif isinstance(self._state, BaseModel):
             # For BaseModel states, create new instance with stored values
-            model = cast(BaseModel, self._state)
+            model = self._state
             if hasattr(model, "model_validate"):
                 # Pydantic v2
                 self._state = cast(T, type(model).model_validate(stored_state))
@@ -1799,6 +2031,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self,
         inputs: dict[str, Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
+        from_checkpoint: CheckpointConfig | None = None,
+        restore_from_state_id: str | None = None,
     ) -> Any | FlowStreamingOutput:
         """Start the flow execution in a synchronous context.
 
@@ -1808,11 +2042,29 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Args:
             inputs: Optional dictionary containing input values and/or a state ID.
             input_files: Optional dict of named file inputs for the flow.
+            from_checkpoint: Optional checkpoint config. If ``restore_from``
+                is set, the flow resumes from that checkpoint.
+            restore_from_state_id: Optional UUID of a previously-persisted flow
+                whose latest snapshot should hydrate this run's state. The new
+                run is assigned a fresh ``state.id`` (or ``inputs["id"]`` if
+                pinned), so its ``@persist`` writes land under a separate
+                persistence key and the source flow's history is preserved.
+                If the referenced state is not found, the kickoff falls back
+                silently to baseline behavior. Cannot be combined with
+                ``from_checkpoint``; passing both raises ``ValueError``.
 
         Returns:
             The final output from the flow or FlowStreamingOutput if streaming.
         """
-        get_env_context()
+        if from_checkpoint is not None and restore_from_state_id is not None:
+            raise ValueError(
+                "Cannot combine `from_checkpoint` and `restore_from_state_id`. "
+                "These parameters target different state systems "
+                "(Checkpointing and @persist) and cannot be used together."
+            )
+        restored = apply_checkpoint(self, from_checkpoint)
+        if restored is not None:
+            return restored.kickoff(inputs=inputs, input_files=input_files)
         if self.stream:
             result_holder: list[Any] = []
             current_task_info: TaskInfo = {
@@ -1831,7 +2083,11 @@ class Flow(Generic[T], metaclass=FlowMeta):
             def run_flow() -> None:
                 try:
                     self.stream = False
-                    result = self.kickoff(inputs=inputs, input_files=input_files)
+                    result = self.kickoff(
+                        inputs=inputs,
+                        input_files=input_files,
+                        restore_from_state_id=restore_from_state_id,
+                    )
                     result_holder.append(result)
                 except Exception as e:
                     # HumanFeedbackPending is expected control flow, not an error
@@ -1848,12 +2104,17 @@ class Flow(Generic[T], metaclass=FlowMeta):
             streaming_output = FlowStreamingOutput(
                 sync_iterator=create_chunk_generator(state, run_flow, output_holder)
             )
+            register_cleanup(streaming_output, state)
             output_holder.append(streaming_output)
 
             return streaming_output
 
         async def _run_flow() -> Any:
-            return await self.kickoff_async(inputs, input_files)
+            return await self.kickoff_async(
+                inputs,
+                input_files,
+                restore_from_state_id=restore_from_state_id,
+            )
 
         try:
             asyncio.get_running_loop()
@@ -1867,6 +2128,8 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self,
         inputs: dict[str, Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
+        from_checkpoint: CheckpointConfig | None = None,
+        restore_from_state_id: str | None = None,
     ) -> Any | FlowStreamingOutput:
         """Start the flow execution asynchronously.
 
@@ -1878,10 +2141,28 @@ class Flow(Generic[T], metaclass=FlowMeta):
         Args:
             inputs: Optional dictionary containing input values and/or a state ID for restoration.
             input_files: Optional dict of named file inputs for the flow.
+            from_checkpoint: Optional checkpoint config. If ``restore_from``
+                is set, the flow resumes from that checkpoint.
+            restore_from_state_id: Optional UUID of a previously-persisted flow
+                whose latest snapshot should hydrate this run's state. The new
+                run is assigned a fresh ``state.id`` (or ``inputs["id"]`` if
+                pinned), so subsequent ``@persist`` writes land under a
+                separate persistence key. If the referenced state is not
+                found, falls back silently to baseline. Cannot be combined
+                with ``from_checkpoint``; passing both raises ``ValueError``.
 
         Returns:
             The final output from the flow, which is the result of the last executed method.
         """
+        if from_checkpoint is not None and restore_from_state_id is not None:
+            raise ValueError(
+                "Cannot combine `from_checkpoint` and `restore_from_state_id`. "
+                "These parameters target different state systems "
+                "(Checkpointing and @persist) and cannot be used together."
+            )
+        restored = apply_checkpoint(self, from_checkpoint)
+        if restored is not None:
+            return await restored.kickoff_async(inputs=inputs, input_files=input_files)
         if self.stream:
             result_holder: list[Any] = []
             current_task_info: TaskInfo = {
@@ -1901,7 +2182,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 try:
                     self.stream = False
                     result = await self.kickoff_async(
-                        inputs=inputs, input_files=input_files
+                        inputs=inputs,
+                        input_files=input_files,
+                        restore_from_state_id=restore_from_state_id,
                     )
                     result_holder.append(result)
                 except Exception as e:
@@ -1921,6 +2204,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     state, run_flow, output_holder
                 )
             )
+            register_cleanup(streaming_output, state)
             output_holder.append(streaming_output)
 
             return streaming_output
@@ -1938,7 +2222,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         try:
             # Reset flow state for fresh execution unless restoring from persistence
-            is_restoring = inputs and "id" in inputs and self._persistence is not None
+            is_restoring = (
+                inputs and "id" in inputs and self.persistence is not None
+            ) or self.checkpoint_completed_methods is not None
             if not is_restoring:
                 # Clear completed methods and outputs for a fresh start
                 self._completed_methods.clear()
@@ -1955,18 +2241,56 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 if self._completed_methods:
                     self._is_execution_resuming = True
 
+            # Fork hydration: when restore_from_state_id is set and persistence is
+            # available, hydrate self._state from the source UUID's latest snapshot
+            # and reassign state.id to a fresh value so subsequent @persist writes
+            # don't extend the source flow's history. If the source state is not
+            # found, fall through silently to the existing inputs handling.
+            fork_succeeded = False
+            if restore_from_state_id is not None and self.persistence is not None:
+                stored_state = self.persistence.load_state(restore_from_state_id)
+                if stored_state:
+                    self._log_flow_event(
+                        f"Forking flow state from UUID: {restore_from_state_id}"
+                    )
+                    self._restore_state(stored_state)
+                    # Pin to inputs["id"] when provided, otherwise mint a fresh
+                    # UUID. NOTE: pinning inputs.id while forking shares a
+                    # persistence key with another flow — usually you want only
+                    # restore_from_state_id.
+                    new_state_id = (inputs.get("id") if inputs else None) or str(
+                        uuid4()
+                    )
+                    if isinstance(self._state, dict):
+                        self._state["id"] = new_state_id
+                    elif isinstance(self._state, BaseModel):
+                        setattr(self._state, "id", new_state_id)  # noqa: B010
+                    fork_succeeded = True
+                else:
+                    self._log_flow_event(
+                        "No flow state found for restore_from_state_id: "
+                        f"{restore_from_state_id}; proceeding without hydration",
+                        color="yellow",
+                    )
+
             if inputs:
-                # Override the id in the state if it exists in inputs
-                if "id" in inputs:
+                # Override the id in the state if it exists in inputs.
+                # Skip when the fork already assigned state.id above.
+                if "id" in inputs and not fork_succeeded:
                     if isinstance(self._state, dict):
                         self._state["id"] = inputs["id"]
                     elif isinstance(self._state, BaseModel):
                         setattr(self._state, "id", inputs["id"])  # noqa: B010
 
                 # If persistence is enabled, attempt to restore the stored state using the provided id.
-                if "id" in inputs and self._persistence is not None:
+                # Skip when the fork already restored self._state above.
+                if (
+                    "id" in inputs
+                    and self.persistence is not None
+                    and not fork_succeeded
+                ):
                     restore_uuid = inputs["id"]
-                    stored_state = self._persistence.load_state(restore_uuid)
+                    stored_state = self.persistence.load_state(restore_uuid)
                     if stored_state:
                         self._log_flow_event(
                             f"Loading flow state from memory for UUID: {restore_uuid}"
@@ -2004,8 +2328,15 @@ class Flow(Generic[T], metaclass=FlowMeta):
                     f"Flow started with ID: {self.flow_id}", color="bold magenta"
                 )
 
+            # After FlowStarted (when not suppressed): env events must not pre-empt
+            # trace batch init with implicit "crew" execution_type.
+            get_env_context()
+
             if inputs is not None and "id" not in inputs:
                 self._initialize_state(inputs)
+
+            if self._is_execution_resuming:
+                await self._replay_recorded_events()
 
             try:
                 # Determine which start methods to execute at kickoff
@@ -2036,17 +2367,17 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
                 if isinstance(e, HumanFeedbackPending):
                     # Auto-save pending feedback (create default persistence if needed)
-                    if self._persistence is None:
+                    if self.persistence is None:
                         from crewai.flow.persistence import SQLiteFlowPersistence
 
-                        self._persistence = SQLiteFlowPersistence()
+                        self.persistence = SQLiteFlowPersistence()
 
                     state_data = (
                         self._state
                         if isinstance(self._state, dict)
                         else self._state.model_dump()
                     )
-                    self._persistence.save_pending_feedback(
+                    self.persistence.save_pending_feedback(
                         flow_uuid=e.context.flow_id,
                         context=e.context,
                         state_data=state_data,
@@ -2139,17 +2470,67 @@ class Flow(Generic[T], metaclass=FlowMeta):
         self,
         inputs: dict[str, Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
+        from_checkpoint: CheckpointConfig | None = None,
+        restore_from_state_id: str | None = None,
     ) -> Any | FlowStreamingOutput:
         """Native async method to start the flow execution. Alias for kickoff_async.
 
         Args:
             inputs: Optional dictionary containing input values and/or a state ID for restoration.
             input_files: Optional dict of named file inputs for the flow.
+            from_checkpoint: Optional checkpoint config. If ``restore_from``
+                is set, the flow resumes from that checkpoint.
+            restore_from_state_id: Optional UUID of a previously-persisted flow
+                whose latest snapshot should hydrate this run's state. See
+                ``kickoff_async`` for full semantics.
 
         Returns:
             The final output from the flow, which is the result of the last executed method.
         """
-        return await self.kickoff_async(inputs, input_files)
+        return await self.kickoff_async(
+            inputs,
+            input_files,
+            from_checkpoint,
+            restore_from_state_id=restore_from_state_id,
+        )
+
+    async def _replay_recorded_events(self) -> None:
+        """Dispatch recorded ``MethodExecution*`` events from the event record."""
+        state = crewai_event_bus.runtime_state
+        if state is None:
+            return
+        record = state.event_record
+        if len(record) == 0:
+            return
+
+        replayable = (
+            MethodExecutionStartedEvent,
+            MethodExecutionFinishedEvent,
+            MethodExecutionFailedEvent,
+        )
+        flow_name = self.name or self.__class__.__name__
+        nodes = sorted(
+            (
+                n
+                for n in record.all_nodes()
+                if isinstance(n.event, replayable)
+                and n.event.flow_name == flow_name
+                and n.event.method_name in self._completed_methods
+            ),
+            key=lambda n: n.event.emission_sequence or 0,
+        )
+
+        for node in nodes:
+            future = crewai_event_bus.replay(self, node.event)
+            if future is not None:
+                try:
+                    await asyncio.wrap_future(future)
+                except Exception:
+                    logger.warning(
+                        "Replayed event handler failed: %s",
+                        node.event.type,
+                        exc_info=True,
+                    )
 
     async def _execute_start_method(self, start_method_name: FlowMethodName) -> None:
         """Executes a flow's start method and its triggered listeners.
@@ -2332,10 +2713,10 @@ class Flow(Generic[T], metaclass=FlowMeta):
             if isinstance(e, HumanFeedbackPending):
                 e.context.method_name = method_name
 
-                if self._persistence is None:
+                if self.persistence is None:
                     from crewai.flow.persistence import SQLiteFlowPersistence
 
-                    self._persistence = SQLiteFlowPersistence()
+                    self.persistence = SQLiteFlowPersistence()
 
                 # Emit paused event (not failed)
                 if not self.suppress_flow_events:
@@ -2696,9 +3077,9 @@ class Flow(Generic[T], metaclass=FlowMeta):
             - Catches and logs any exceptions during execution, preventing individual listener failures from breaking the entire flow
         """
         count = self._method_call_counts.get(listener_name, 0) + 1
-        if count > self._max_method_calls:
+        if count > self.max_method_calls:
             raise RecursionError(
-                f"Method '{listener_name}' has been called {self._max_method_calls} times in "
+                f"Method '{listener_name}' has been called {self.max_method_calls} times in "
                 f"this flow execution, which indicates an infinite loop. "
                 f"This commonly happens when a @listen label matches the "
                 f"method's own name."
@@ -2805,7 +3186,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         This is best-effort: if persistence is not configured, this is a no-op.
         """
-        if self._persistence is None:
+        if self.persistence is None:
             return
         try:
             state_data = (
@@ -2813,7 +3194,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 if isinstance(self._state, dict)
                 else self._state.model_dump()
             )
-            self._persistence.save_state(
+            self.persistence.save_state(
                 flow_uuid=self.flow_id,
                 method_name="_ask_checkpoint",
                 state_data=state_data,
@@ -3077,7 +3458,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
 
         from crewai.llm import LLM
         from crewai.llms.base_llm import BaseLLM as BaseLLMClass
-        from crewai.utilities.i18n import get_i18n
+        from crewai.utilities.i18n import I18N_DEFAULT
 
         llm_instance: BaseLLMClass
         if isinstance(llm, str):
@@ -3097,9 +3478,7 @@ class Flow(Generic[T], metaclass=FlowMeta):
                 description=f"The outcome that best matches the feedback. Must be one of: {', '.join(outcomes)}"
             )
 
-        # Load prompt from translations (using cached instance)
-        i18n = get_i18n()
-        prompt_template = i18n.slice("human_feedback_collapse")
+        prompt_template = I18N_DEFAULT.slice("human_feedback_collapse")
 
         prompt = prompt_template.format(
             feedback=feedback,
