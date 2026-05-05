@@ -1281,6 +1281,7 @@ dependencies = [
     { name = "appdirs" },
     { name = "chromadb" },
     { name = "click" },
+    { name = "crewai-cli" },
     { name = "crewai-core" },
     { name = "httpx" },
     { name = "instructor" },
@@ -1306,7 +1307,6 @@ dependencies = [
     { name = "tokenizers" },
     { name = "tomli" },
     { name = "tomli-w" },
-    { name = "uv" },
 ]
 
 [package.optional-dependencies]
@@ -1329,9 +1329,6 @@ azure-ai-inference = [
 ]
 bedrock = [
     { name = "boto3" },
-]
-cli = [
-    { name = "crewai-cli" },
 ]
 docling = [
     { name = "docling" },
@@ -1388,7 +1385,7 @@ requires-dist = [
     { name = "boto3", marker = "extra == 'bedrock'", specifier = "~=1.42.79" },
     { name = "chromadb", specifier = "~=1.1.0" },
     { name = "click", specifier = "~=8.1.7" },
-    { name = "crewai-cli", marker = "extra == 'cli'", editable = "lib/cli" },
+    { name = "crewai-cli", editable = "lib/cli" },
     { name = "crewai-core", editable = "lib/crewai-core" },
     { name = "crewai-files", marker = "extra == 'file-processing'", editable = "lib/crewai-files" },
     { name = "crewai-tools", marker = "extra == 'tools'", editable = "lib/crewai-tools" },
@@ -1428,10 +1425,9 @@ requires-dist = [
     { name = "tokenizers", specifier = ">=0.21,<1" },
     { name = "tomli", specifier = "~=2.0.2" },
     { name = "tomli-w", specifier = "~=1.1.0" },
-    { name = "uv", specifier = "~=0.11.6" },
     { name = "voyageai", marker = "extra == 'voyageai'", specifier = "~=0.3.5" },
 ]
-provides-extras = ["a2a", "anthropic", "aws", "azure-ai-inference", "bedrock", "cli", "docling", "embeddings", "file-processing", "google-genai", "litellm", "mem0", "openpyxl", "pandas", "qdrant", "qdrant-edge", "tools", "voyageai", "watson"]
+provides-extras = ["a2a", "anthropic", "aws", "azure-ai-inference", "bedrock", "docling", "embeddings", "file-processing", "google-genai", "litellm", "mem0", "openpyxl", "pandas", "qdrant", "qdrant-edge", "tools", "voyageai", "watson"]
 
 [[package]]
 name = "crewai-cli"
@@ -1468,7 +1464,7 @@ requires-dist = [
     { name = "rich", specifier = ">=13.7.1" },
     { name = "tomli", specifier = "~=2.0.2" },
     { name = "tomli-w", specifier = "~=1.1.0" },
-    { name = "uv", specifier = "~=0.9.13" },
+    { name = "uv", specifier = "~=0.11.6" },
 ]
 
 [[package]]
