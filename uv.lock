@@ -1432,7 +1432,6 @@ provides-extras = ["a2a", "anthropic", "aws", "azure-ai-inference", "bedrock", "
 
 [[package]]
 name = "crewai-cli"
-version = "1.10.0"
 source = { editable = "lib/cli" }
 dependencies = [
     { name = "appdirs" },

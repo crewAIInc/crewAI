@@ -1,6 +1,6 @@
 [project]
 name = "crewai-cli"
-version = "1.10.0"
+dynamic = ["version"]
 description = "CLI for CrewAI - scaffold, run, deploy and manage AI agent crews without installing the full framework."
 readme = "README.md"
 authors = [
@@ -35,6 +35,9 @@ crewai = "crewai_cli.cli:crewai"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/crewai_cli/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/crewai_cli"]
