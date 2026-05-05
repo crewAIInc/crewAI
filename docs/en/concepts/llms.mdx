@@ -1144,10 +1144,23 @@ In this section, you'll find detailed examples that help you select, configure, 
 
     Example usage in your CrewAI project:
     ```python Code
+    from crewai import LLM
+
     llm = LLM(
         model="openrouter/deepseek/deepseek-r1",
-        base_url="https://openrouter.ai/api/v1",
-        api_key=OPENROUTER_API_KEY
+        # api_key defaults to OPENROUTER_API_KEY env var
+        # base_url defaults to https://openrouter.ai/api/v1
+    )
+    ```
+
+    Extended thinking is supported for Anthropic models routed via OpenRouter:
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="openrouter/anthropic/claude-sonnet-4-5",
+        thinking={"type": "enabled", "budget_tokens": 5000},
+        max_tokens=10000,
     )
     ```
 
@@ -1155,6 +1168,8 @@ In this section, you'll find detailed examples that help you select, configure, 
       Open Router models:
       - openrouter/deepseek/deepseek-r1
       - openrouter/deepseek/deepseek-chat
+      - openrouter/anthropic/claude-sonnet-4-5
+      - openrouter/anthropic/claude-opus-4-5
     </Info>
 
     **Note:** This provider uses LiteLLM. Add it as a dependency to your project:

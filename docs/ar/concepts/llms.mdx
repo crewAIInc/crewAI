@@ -1080,10 +1080,12 @@ mode: "wide"
 
     مثال الاستخدام في مشروع CrewAI:
     ```python Code
+    from crewai import LLM
+
     llm = LLM(
         model="openrouter/deepseek/deepseek-r1",
-        base_url="https://openrouter.ai/api/v1",
-        api_key=OPENROUTER_API_KEY
+        # api_key defaults to OPENROUTER_API_KEY env var
+        # base_url defaults to https://openrouter.ai/api/v1
     )
     ```
 
@@ -1091,6 +1093,7 @@ mode: "wide"
       نماذج Open Router:
       - openrouter/deepseek/deepseek-r1
       - openrouter/deepseek/deepseek-chat
+      - openrouter/anthropic/claude-sonnet-4-5
     </Info>
 
     **ملاحظة:** يستخدم هذا المزود LiteLLM. أضفه كتبعية لمشروعك:

@@ -816,10 +816,12 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
 
     Exemplo de uso em seu projeto CrewAI:
     ```python Code
+    from crewai import LLM
+
     llm = LLM(
         model="openrouter/deepseek/deepseek-r1",
-        base_url="https://openrouter.ai/api/v1",
-        api_key=OPENROUTER_API_KEY
+        # api_key defaults to OPENROUTER_API_KEY env var
+        # base_url defaults to https://openrouter.ai/api/v1
     )
     ```
 
@@ -827,6 +829,7 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
       Modelos do Open Router:
       - openrouter/deepseek/deepseek-r1
       - openrouter/deepseek/deepseek-chat
+      - openrouter/anthropic/claude-sonnet-4-5
     </Info>
 
     **Nota:** Este provedor usa o LiteLLM. Adicione-o como dependência ao seu projeto:
