@@ -70,6 +70,30 @@ class TestSkillProposal:
         assert prop.proposal_kind == "new"
         assert prop.id.startswith("prop_")
 
+    def test_name_is_slugified(self) -> None:
+        # The reviewer LLM sometimes emits Title Case with spaces; we force
+        # kebab-case so the existing skill loader's name validator passes.
+        prop = SkillProposal(
+            agent_role="r",
+            name="Provide Direct Answer with Supporting Historical Context",
+            description="d",
+            body="b",
+            rationale="r",
+            confidence=0.7,
+        )
+        assert prop.name == "provide-direct-answer-with-supporting-historical-context"
+
+    def test_name_strips_punctuation_and_underscores(self) -> None:
+        prop = SkillProposal(
+            agent_role="r",
+            name="My Skill: V2 (the_good_one!)",
+            description="d",
+            body="b",
+            rationale="r",
+            confidence=0.7,
+        )
+        assert prop.name == "my-skill-v2-the-good-one"
+
     def test_confidence_must_be_in_range(self) -> None:
         with pytest.raises(ValidationError):
             SkillProposal(

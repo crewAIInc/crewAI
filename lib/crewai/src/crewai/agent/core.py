@@ -378,14 +378,6 @@ class Agent(BaseAgent):
             collector.attach(crewai_event_bus)
             self._self_improve_collector = collector
 
-    def _self_improve_config(self) -> SelfImprovementConfig | None:
-        """Return the active SelfImprovementConfig, or None when disabled."""
-        if not self.self_improve:
-            return None
-        if isinstance(self.self_improve, SelfImprovementConfig):
-            return self.self_improve
-        return SelfImprovementConfig()
-
         if self.reasoning and self.planning_config is None:
             warnings.warn(
                 "The 'reasoning' parameter is deprecated. Use 'planning_config=PlanningConfig()' instead.",
@@ -397,6 +389,14 @@ class Agent(BaseAgent):
             )
 
         return self
+
+    def _self_improve_config(self) -> SelfImprovementConfig | None:
+        """Return the active SelfImprovementConfig, or None when disabled."""
+        if not self.self_improve:
+            return None
+        if isinstance(self.self_improve, SelfImprovementConfig):
+            return self.self_improve
+        return SelfImprovementConfig()
 
     @property
     def planning_enabled(self) -> bool:
@@ -464,9 +464,7 @@ class Agent(BaseAgent):
             else:
                 candidate = SkillStore().role_dir(self.role)
             if candidate.is_dir() and any(
-                (c / "SKILL.md").is_file()
-                for c in candidate.iterdir()
-                if c.is_dir()
+                (c / "SKILL.md").is_file() for c in candidate.iterdir() if c.is_dir()
             ):
                 self_improve_dir = candidate
 

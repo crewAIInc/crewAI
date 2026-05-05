@@ -10,6 +10,7 @@ from __future__ import annotations
 import atexit
 from datetime import UTC, datetime
 import logging
+from pathlib import Path
 import threading
 from typing import TYPE_CHECKING, Any
 
@@ -127,6 +128,7 @@ class TraceCollector:
                     agent_id=str(getattr(self._agent, "id", "") or ""),
                     agent_role=self._agent.role,
                     agent_goal=getattr(self._agent, "goal", "") or "",
+                    agent_skills_dir=self._agent_skills_dir(),
                     task_id=str(getattr(task, "id", "") or "") or None,
                     task_description=getattr(task, "description", None),
                     loaded_skills=self._collect_loaded_skills(),
@@ -187,9 +189,7 @@ class TraceCollector:
             with self._lock:
                 if self._current is None:
                     return
-                self._current.output_summary = _truncate(
-                    event.output, _OUTPUT_TRUNCATE
-                )
+                self._current.output_summary = _truncate(event.output, _OUTPUT_TRUNCATE)
                 self._finalize_locked()
 
         @bus.on(AgentExecutionErrorEvent)
@@ -224,6 +224,7 @@ class TraceCollector:
                     agent_id=str(getattr(self._agent, "id", "") or ""),
                     agent_role=self._agent.role,
                     agent_goal=getattr(self._agent, "goal", "") or "",
+                    agent_skills_dir=self._agent_skills_dir(),
                     task_description=_truncate(task_desc, _OUTPUT_TRUNCATE),
                     loaded_skills=self._collect_loaded_skills(),
                 )
@@ -237,15 +238,11 @@ class TraceCollector:
             with self._lock:
                 if self._current is None:
                     return
-                self._current.output_summary = _truncate(
-                    event.output, _OUTPUT_TRUNCATE
-                )
+                self._current.output_summary = _truncate(event.output, _OUTPUT_TRUNCATE)
                 self._finalize_locked()
 
         @bus.on(LiteAgentExecutionErrorEvent)
-        def _on_lite_error(
-            _source: Any, event: LiteAgentExecutionErrorEvent
-        ) -> None:
+        def _on_lite_error(_source: Any, event: LiteAgentExecutionErrorEvent) -> None:
             if not self._is_my_id(event.agent_info.get("id")):
                 return
             with self._lock:
@@ -259,6 +256,21 @@ class TraceCollector:
         if started is None:
             return None
         return max(0, int((finished_at - started).total_seconds() * 1000))
+
+    def _agent_skills_dir(self) -> Path | None:
+        """Read skills_dir from the agent's SelfImprovementConfig if set.
+
+        We use ``getattr`` + duck typing instead of importing Agent so the
+        collector stays usable in tests with stub agents.
+        """
+        config_getter = getattr(self._agent, "_self_improve_config", None)
+        if not callable(config_getter):
+            return None
+        try:
+            config = config_getter()
+        except Exception:
+            return None
+        return getattr(config, "skills_dir", None) if config is not None else None
 
     def _collect_loaded_skills(self) -> list[str]:
         skills = getattr(self._agent, "skills", None) or []

@@ -199,9 +199,21 @@ class SkillReviewer:
             return []
 
         run_ids = [t.id for t in traces]
+        # Carry the agent's skills_dir from the latest trace forward so the
+        # accept step writes to the same path the agent reads from. We pick
+        # the *last* trace's value because configuration drift (a user
+        # changing skills_dir between runs) should land at the most recent.
+        skills_dir = next(
+            (t.agent_skills_dir for t in reversed(traces) if t.agent_skills_dir),
+            None,
+        )
         return [
             p.model_copy(
-                update={"agent_role": self.agent_role, "derived_from_runs": run_ids}
+                update={
+                    "agent_role": self.agent_role,
+                    "derived_from_runs": run_ids,
+                    "skills_dir": skills_dir,
+                }
             )
             for p in result.proposals
             if p.confidence >= self.confidence_floor

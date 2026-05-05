@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import click
 
@@ -16,18 +17,16 @@ from crewai.skills.self_improve import (
 )
 
 
+if TYPE_CHECKING:
+    from crewai.skills.self_improve.models import RunTrace, SkillProposal
+
+
 _DEFAULT_REVIEW_MODEL = "anthropic/claude-haiku-4-5"
 
 
-def _print_proposal_summary(p) -> None:
-    kind = (
-        f"PATCH→{p.target_skill}"
-        if p.proposal_kind == "patch_existing"
-        else "NEW"
-    )
-    click.echo(
-        f"  {p.id}  {kind:<28} conf={p.confidence:.2f}  role={p.agent_role}"
-    )
+def _print_proposal_summary(p: SkillProposal) -> None:
+    kind = f"PATCH→{p.target_skill}" if p.proposal_kind == "patch_existing" else "NEW"
+    click.echo(f"  {p.id}  {kind:<28} conf={p.confidence:.2f}  role={p.agent_role}")
     click.echo(f"    {p.name}: {p.description}")
 
 
@@ -76,7 +75,7 @@ def skills_review(role: str | None, model: str, min_traces: int, floor: float) -
         raise SystemExit(1)
 
     # Group traces by role from disk; the role-slug dirs come from the store.
-    by_role: dict[str, list] = defaultdict(list)
+    by_role: dict[str, list[RunTrace]] = defaultdict(list)
     role_dirs = (
         [trace_store.role_dir(role)] if role else sorted(trace_store.root.iterdir())
     )
@@ -88,7 +87,9 @@ def skills_review(role: str | None, model: str, min_traces: int, floor: float) -
             by_role[t.agent_role].append(t)
 
     if not by_role:
-        click.echo("No traces found." if role is None else f"No traces for role={role!r}.")
+        click.echo(
+            "No traces found." if role is None else f"No traces for role={role!r}."
+        )
         return
 
     reviewer_llm = LLM(model=model)
@@ -97,8 +98,7 @@ def skills_review(role: str | None, model: str, min_traces: int, floor: float) -
     for agent_role, traces in by_role.items():
         if len(traces) < min_traces:
             click.echo(
-                f"Skipping {agent_role!r}: {len(traces)} trace(s), "
-                f"need {min_traces}."
+                f"Skipping {agent_role!r}: {len(traces)} trace(s), need {min_traces}."
             )
             continue
 
@@ -147,8 +147,6 @@ def proposals() -> None:
 def proposals_list(role: str | None) -> None:
     """List pending proposals across all roles."""
     store = ProposalStore()
-    items = store.list_for_role(role) if role else None
-
     if role:
         records = [store.load(p) for p in store.list_for_role(role)]
     else:
@@ -190,7 +188,9 @@ def proposals_show(proposal_id: str) -> None:
 
 @proposals.command(name="accept")
 @click.argument("proposal_id")
-@click.option("--force", is_flag=True, help="Overwrite an existing skill of the same name.")
+@click.option(
+    "--force", is_flag=True, help="Overwrite an existing skill of the same name."
+)
 @click.option(
     "--skills-dir",
     type=click.Path(file_okay=False, path_type=Path),

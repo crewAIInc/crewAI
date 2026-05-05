@@ -47,10 +47,18 @@ def accept_proposal(
 ) -> Path:
     """Write the proposal as a SKILL.md and remove it from the queue.
 
+    When ``skill_store`` is not provided, the destination is selected in
+    this order:
+
+    1. ``proposal.skills_dir`` — set by the reviewer from the agent's
+       ``SelfImprovementConfig.skills_dir``. This is the common case; it
+       keeps accept aligned with where the agent reads from.
+    2. Platform default — ``<db_storage_path>/self_improve/skills/``.
+
     Args:
         proposal: The proposal to materialize.
         force: When True, overwrite an existing SKILL.md at the target path.
-        skill_store: Override for the live-skills store (test injection).
+        skill_store: Explicit override; bypasses the proposal hint.
         proposal_store: Override for the proposals store (test injection).
 
     Returns:
@@ -60,7 +68,12 @@ def accept_proposal(
         FileExistsError: When a SKILL.md already exists at the target and
             ``force=False``.
     """
-    skill_store = skill_store or SkillStore()
+    if skill_store is None:
+        skill_store = (
+            SkillStore(skills_root=proposal.skills_dir)
+            if proposal.skills_dir is not None
+            else SkillStore()
+        )
     proposal_store = proposal_store or ProposalStore()
 
     target_dir = skill_store.skill_dir(proposal.agent_role, proposal.name)

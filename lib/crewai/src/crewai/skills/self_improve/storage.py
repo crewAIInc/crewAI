@@ -132,8 +132,7 @@ class ProposalStore:
         for role_dir in sorted(self.root.iterdir()):
             if not role_dir.is_dir():
                 continue
-            for path in sorted(role_dir.glob("*.json")):
-                out.append(self.load(path))
+            out.extend(self.load(path) for path in sorted(role_dir.glob("*.json")))
         return out
 
 
@@ -160,9 +159,7 @@ class SkillStore:
         skills_root: Path | None = None,
     ) -> None:
         self.root = (
-            skills_root
-            if skills_root is not None
-            else _resolve_root(root) / "skills"
+            skills_root if skills_root is not None else _resolve_root(root) / "skills"
         )
 
     def role_dir(self, role: str) -> Path:
@@ -175,4 +172,6 @@ class SkillStore:
         d = self.role_dir(role)
         if not d.exists():
             return False
-        return any((child / "SKILL.md").is_file() for child in d.iterdir() if child.is_dir())
+        return any(
+            (child / "SKILL.md").is_file() for child in d.iterdir() if child.is_dir()
+        )

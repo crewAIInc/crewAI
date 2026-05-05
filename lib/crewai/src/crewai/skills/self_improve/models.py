@@ -4,10 +4,29 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from pathlib import Path
+import re
 from typing import Literal
 import uuid
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+
+_SLUG_NON_ALNUM = re.compile(r"[^a-z0-9-]+")
+_SLUG_DASHES = re.compile(r"-+")
+
+
+def _slugify(value: str) -> str:
+    """Force a string into the kebab-case shape the skill loader requires.
+
+    The reviewer LLM is told to emit kebab-case names, but doesn't always
+    comply (e.g. it emits Title Case with spaces). Without this normalization
+    the accepted SKILL.md fails the loader's name pattern and is silently
+    skipped, breaking the closed loop.
+    """
+    s = value.strip().lower().replace("_", "-").replace(" ", "-")
+    s = _SLUG_NON_ALNUM.sub("", s)
+    s = _SLUG_DASHES.sub("-", s).strip("-")
+    return s[:64] or "skill"
 
 
 def _now() -> datetime:
@@ -72,6 +91,14 @@ class RunTrace(BaseModel):
     agent_id: str | None = None
     agent_role: str
     agent_goal: str = ""
+    agent_skills_dir: Path | None = Field(
+        default=None,
+        description=(
+            "Resolved skills_dir from the agent's SelfImprovementConfig at "
+            "trace time. Carried into proposals so accept writes back to "
+            "the same place the agent reads from."
+        ),
+    )
     task_id: str | None = None
     task_description: str | None = None
     started_at: datetime = Field(default_factory=_now)
@@ -113,4 +140,17 @@ class SkillProposal(BaseModel):
     proposal_kind: ProposalKind = "new"
     target_skill: str | None = None
     derived_from_runs: list[str] = Field(default_factory=list)
+    skills_dir: Path | None = Field(
+        default=None,
+        description=(
+            "Where to write the SKILL.md when this proposal is accepted, "
+            "carried over from the agent's SelfImprovementConfig at trace "
+            "time. Falls back to platform default when None."
+        ),
+    )
     created_at: datetime = Field(default_factory=_now)
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def _force_slug(cls, v: str | None) -> str | None:
+        return _slugify(v) if isinstance(v, str) else v

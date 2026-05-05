@@ -132,6 +132,22 @@ class TestSkillReviewer:
         out = reviewer.review([_trace(), _trace(), _trace()])
         assert out == []
 
+    def test_skills_dir_propagates_from_trace_to_proposal(
+        self, reviewer_factory, tmp_path
+    ) -> None:
+        from pathlib import Path
+
+        skills_dir = Path(tmp_path) / "project" / "skills" / "learned"
+        llm = _stub_llm(_ReviewerOutput(proposals=[_llm_proposal(name="cite")]))
+        reviewer = reviewer_factory(llm, min_traces=2)
+        traces = [
+            _trace(agent_skills_dir=skills_dir),
+            _trace(agent_skills_dir=skills_dir),
+            _trace(agent_skills_dir=skills_dir),
+        ]
+        [prop] = reviewer.review(traces)
+        assert prop.skills_dir == skills_dir
+
     def test_pending_proposals_appear_in_prompt(self, reviewer_factory) -> None:
         llm = _stub_llm(_ReviewerOutput(proposals=[]))
         reviewer = reviewer_factory(llm, min_traces=2)
