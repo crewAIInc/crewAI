@@ -433,6 +433,45 @@ If the supplied `restore_from_state_id` does not match any persisted state, the 
    - Automatic state validation during save and load
    - Clear feedback when persistence operations encounter issues
 
+### Where Is the State Stored?
+
+By default, `@persist` writes to a SQLite file named **`flow_states.db`** inside CrewAI's user data directory. The directory is resolved by [`appdirs.user_data_dir`](https://pypi.org/project/appdirs/), so the exact path depends on your OS and project name:
+
+| Platform | Default location |
+| --- | --- |
+| macOS | `~/Library/Application Support/PROJECT/flow_states.db` |
+| Linux | `~/.local/share/PROJECT/flow_states.db` (respects `$XDG_DATA_HOME`) |
+| Windows | `%LOCALAPPDATA%\CrewAI\PROJECT\flow_states.db` |
+
+`PROJECT` defaults to the **current working directory's basename** when the flow runs. That makes the path move when you `cd` into a different directory, which is rarely what you want for production deployments or CI. Pin it to a stable name with `CREWAI_STORAGE_DIR`:
+
+```bash
+export CREWAI_STORAGE_DIR="my-flows"
+# All persistence now lives under <data dir>/my-flows/flow_states.db
+```
+
+You can find the resolved directory at runtime:
+
+```python
+from crewai.utilities.paths import db_storage_path
+print(db_storage_path())  # absolute directory containing flow_states.db
+```
+
+#### Custom database path
+
+Pass a `db_path` to construct your own `SQLiteFlowPersistence` and inject it into `@persist`:
+
+```python
+from crewai.flow.persistence import persist
+from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
+
+@persist(SQLiteFlowPersistence(db_path="/data/my_flows.db"))
+class MyFlow(Flow[MyState]):
+    ...
+```
+
+The SQLite schema lives in a single table called `flow_states` keyed by `flow_uuid`; you can inspect it with any SQLite client (`sqlite3 flow_states.db ".schema"`).
+
 ### Important Considerations
 
 - **State Types**: Both structured (Pydantic BaseModel) and unstructured (dictionary) states are supported
