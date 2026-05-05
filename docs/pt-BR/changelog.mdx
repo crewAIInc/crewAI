@@ -4,6 +4,34 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="04 mai 2026">
+  ## v1.14.5a2
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.5a2)
+
+  ## O que Mudou
+
+  ### Correções de Bugs
+  - Corrigir a restauração da saída da tarefa no bloco finally
+  - Incluir `thoughts_token_count` nos tokens de conclusão
+  - Preservar as saídas das tarefas durante o descarregamento assíncrono em lote
+  - Encaminhar kwargs para chamadas de carregador em `CrewAIRagAdapter`
+  - Impedir que `result_as_answer` retorne mensagem de bloqueio de hook como resposta final
+  - Impedir que `result_as_answer` retorne erro como resposta final
+  - Usar `acall` para conversão de saída em caminhos assíncronos
+  - Prevenir a mutação de palavras de parada compartilhadas do LLM entre agentes
+  - Lidar com entrada `BaseModel` em `convert_to_model`
+
+  ### Documentação
+  - Documentar variáveis de ambiente adicionais
+  - Atualizar changelog e versão para v1.14.5a1
+
+  ## Contribuidores
+
+  @NIK-TIGER-BILL, @greysonlalonde, @lorenzejay, @minasami-pr, @theCyberTech, @wishhyt
+
+</Update>
+
 <Update label="01 mai 2026">
   ## v1.14.5a1
 

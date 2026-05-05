@@ -4,6 +4,34 @@ description: "CrewAI의 제품 업데이트, 개선 사항 및 버그 수정"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="2026년 5월 4일">
+  ## v1.14.5a2
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.5a2)
+
+  ## 변경 사항
+
+  ### 버그 수정
+  - finally 블록에서 작업 출력 복원 수정
+  - 완료 토큰에 `thoughts_token_count` 포함
+  - 비동기 배치 플러시 간 작업 출력 보존
+  - `CrewAIRagAdapter`의 로더 호출에 kwargs 전달
+  - `result_as_answer`가 후크 차단 메시지를 최종 답변으로 반환하지 않도록 방지
+  - `result_as_answer`가 오류를 최종 답변으로 반환하지 않도록 방지
+  - 비동기 경로에서 출력 변환을 위해 `acall` 사용
+  - 에이전트 간 공유 LLM 중지 단어 변형 방지
+  - `convert_to_model`에서 `BaseModel` 입력 처리
+
+  ### 문서화
+  - 추가 환경 변수 문서화
+  - v1.14.5a1에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @NIK-TIGER-BILL, @greysonlalonde, @lorenzejay, @minasami-pr, @theCyberTech, @wishhyt
+
+</Update>
+
 <Update label="2026년 5월 1일">
   ## v1.14.5a1
 

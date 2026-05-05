@@ -26,7 +26,7 @@ Bem-vindo à referência da API do CrewAI AMP. Esta API permite que você intera
 </Step>
 
   <Step title="Monitore o Progresso">
-    Use `GET /{kickoff_id}/status` para checar o status da execução e recuperar os resultados.
+    Use `GET /status/{kickoff_id}` para checar o status da execução e recuperar os resultados.
   </Step>
 </Steps>
 
@@ -65,7 +65,7 @@ Substitua `your-crew-name` pela URL real do seu crew no painel.
 
 1. **Descoberta**: Chame `GET /inputs` para entender o que seu crew precisa
 2. **Execução**: Envie os inputs via `POST /kickoff` para iniciar o processamento
-3. **Monitoramento**: Faça polling em `GET /{kickoff_id}/status` até a conclusão
+3. **Monitoramento**: Faça polling em `GET /status/{kickoff_id}` até a conclusão
 4. **Resultados**: Extraia o output final da resposta concluída
 
 ## Tratamento de Erros

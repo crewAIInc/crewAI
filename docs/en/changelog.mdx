@@ -4,6 +4,34 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="May 04, 2026">
+  ## v1.14.5a2
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.5a2)
+
+  ## What's Changed
+
+  ### Bug Fixes
+  - Fix task output restoration in finally block
+  - Include `thoughts_token_count` in completion tokens
+  - Preserve task outputs across async batch flush
+  - Forward kwargs to loader calls in `CrewAIRagAdapter`
+  - Prevent `result_as_answer` from returning hook-block message as final answer
+  - Prevent `result_as_answer` from returning error as final answer
+  - Use `acall` for output conversion in async paths
+  - Prevent shared LLM stop words mutation across agents
+  - Handle `BaseModel` input in `convert_to_model`
+
+  ### Documentation
+  - Document additional environment variables
+  - Update changelog and version for v1.14.5a1
+
+  ## Contributors
+
+  @NIK-TIGER-BILL, @greysonlalonde, @lorenzejay, @minasami-pr, @theCyberTech, @wishhyt
+
+</Update>
+
 <Update label="May 01, 2026">
   ## v1.14.5a1
 

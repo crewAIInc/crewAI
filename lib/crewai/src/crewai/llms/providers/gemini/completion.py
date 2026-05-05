@@ -1328,9 +1328,11 @@ class GeminiCompletion(BaseLLM):
             usage = response.usage_metadata
             cached_tokens = getattr(usage, "cached_content_token_count", 0) or 0
             thinking_tokens = getattr(usage, "thoughts_token_count", 0) or 0
+            candidates_tokens = getattr(usage, "candidates_token_count", 0) or 0
             result: dict[str, Any] = {
                 "prompt_token_count": getattr(usage, "prompt_token_count", 0),
-                "candidates_token_count": getattr(usage, "candidates_token_count", 0),
+                "candidates_token_count": candidates_tokens,
+                "completion_tokens": candidates_tokens + thinking_tokens,
                 "total_token_count": getattr(usage, "total_token_count", 0),
                 "total_tokens": getattr(usage, "total_token_count", 0),
                 "cached_prompt_tokens": cached_tokens,

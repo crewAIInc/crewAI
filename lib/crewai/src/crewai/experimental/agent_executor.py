@@ -71,6 +71,7 @@ from crewai.hooks.types import (
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.utilities.agent_utils import (
+    _llm_stop_words_applied,
     check_native_tool_support,
     enforce_rpm_limit,
     extract_tool_call_info,
@@ -214,12 +215,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         """Configure executor after Pydantic field initialization."""
         self.before_llm_call_hooks.extend(get_before_llm_call_hooks())
         self.after_llm_call_hooks.extend(get_after_llm_call_hooks())
-
-        if self.llm:
-            existing_stop = getattr(self.llm, "stop", [])
-            if not isinstance(existing_stop, list):
-                existing_stop = []
-            self.llm.stop = list(set(existing_stop + self.stop_words))
 
         self._state = AgentExecutorState()
         self.max_method_calls = self.max_iter * 10
@@ -2601,17 +2596,18 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 inputs.get("ask_for_human_input", False)
             )
 
-            self.kickoff()
+            with _llm_stop_words_applied(self.llm, self):
+                self.kickoff()
 
-            formatted_answer = self.state.current_answer
+                formatted_answer = self.state.current_answer
 
-            if not isinstance(formatted_answer, AgentFinish):
-                raise RuntimeError(
-                    "Agent execution ended without reaching a final answer."
-                )
+                if not isinstance(formatted_answer, AgentFinish):
+                    raise RuntimeError(
+                        "Agent execution ended without reaching a final answer."
+                    )
 
-            if self.state.ask_for_human_input:
-                formatted_answer = self._handle_human_feedback(formatted_answer)
+                if self.state.ask_for_human_input:
+                    formatted_answer = self._handle_human_feedback(formatted_answer)
 
             self._save_to_memory(formatted_answer)
 
@@ -2691,18 +2687,20 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 inputs.get("ask_for_human_input", False)
             )
 
-            # Use async kickoff directly since we're already in an async context
-            await self.kickoff_async()
+            with _llm_stop_words_applied(self.llm, self):
+                await self.kickoff_async()
 
-            formatted_answer = self.state.current_answer
+                formatted_answer = self.state.current_answer
 
-            if not isinstance(formatted_answer, AgentFinish):
-                raise RuntimeError(
-                    "Agent execution ended without reaching a final answer."
-                )
+                if not isinstance(formatted_answer, AgentFinish):
+                    raise RuntimeError(
+                        "Agent execution ended without reaching a final answer."
+                    )
 
-            if self.state.ask_for_human_input:
-                formatted_answer = await self._ahandle_human_feedback(formatted_answer)
+                if self.state.ask_for_human_input:
+                    formatted_answer = await self._ahandle_human_feedback(
+                        formatted_answer
+                    )
 
             self._save_to_memory(formatted_answer)
 

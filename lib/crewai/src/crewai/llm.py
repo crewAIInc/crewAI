@@ -688,7 +688,9 @@ class LLM(BaseLLM):
             "temperature": self.temperature,
             "top_p": self.top_p,
             "n": self.n,
-            "stop": (self.stop or None) if self.supports_stop_words() else None,
+            "stop": (self.stop_sequences or None)
+            if self.supports_stop_words()
+            else None,
             "max_tokens": self.max_tokens or self.max_completion_tokens,
             "presence_penalty": self.presence_penalty,
             "frequency_penalty": self.frequency_penalty,
