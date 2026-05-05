@@ -819,10 +819,12 @@ def traces_disable() -> None:
     update_user_data({"trace_consent": False, "first_execution_done": True})
 
     panel = Panel(
-        "❌ Trace collection has been disabled!\n\n"
-        "Your crew/flow executions will no longer send traces.\n"
-        "Use 'crewai traces enable' to turn trace collection back on.",
-        title="Traces Disabled",
+        "❌ Trace consent revoked.\n\n"
+        "Your crew/flow executions will no longer send traces, even when "
+        "[bold]CREWAI_TRACING_ENABLED=true[/bold] is set.\n"
+        "Use 'crewai traces enable' to grant consent again "
+        "(activation also requires CREWAI_TRACING_ENABLED=true).",
+        title="Trace Consent Revoked",
         border_style="red",
         padding=(1, 2),
     )
