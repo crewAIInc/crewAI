@@ -47,7 +47,7 @@ class AuthenticationCommand(_BaseAuthenticationCommand):
                 f"You are now authenticated to the tool repository for organization [bold cyan]'{settings.org_name if settings.org_name else settings.org_uuid}'[/bold cyan]",
                 style="green",
             )
-        except Exception:
+        except (Exception, SystemExit):
             console.print(
                 "\n[bold yellow]Warning:[/bold yellow] Authentication with the Tool Repository failed.",
                 style="yellow",
