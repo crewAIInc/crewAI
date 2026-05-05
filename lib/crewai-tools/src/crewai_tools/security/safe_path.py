@@ -14,6 +14,7 @@ import ipaddress
 import logging
 import os
 import socket
+from typing import Any
 from urllib.parse import urlparse
 
 import requests
@@ -218,7 +219,9 @@ class _SSRFSafeAdapter(HTTPAdapter):
     redirect hops — against the private/reserved blocklist before the
     connection is made."""
 
-    def send(self, request, **kwargs):
+    def send(  # type: ignore[override]
+        self, request: requests.PreparedRequest, **kwargs: Any
+    ) -> requests.Response:
         parsed = urlparse(request.url)
         if not _is_escape_hatch_enabled() and parsed.hostname:
             try:
@@ -252,7 +255,7 @@ def safe_request_session() -> requests.Session:
     return session
 
 
-def safe_get(url: str, **kwargs) -> requests.Response:
+def safe_get(url: str, **kwargs: Any) -> requests.Response:
     """Drop-in replacement for ``requests.get()`` with SSRF protection.
 
     Validates the initial URL via :func:`validate_url`, then executes the
