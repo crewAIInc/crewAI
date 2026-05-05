@@ -70,7 +70,9 @@ def test_user_data_round_trip(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
     assert user_data.is_tracing_enabled() is True
     monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
-    assert user_data.is_tracing_enabled() is False  # consent without env var = off
+    assert (
+        user_data.is_tracing_enabled() is True
+    )  # consent alone enables (matches runtime)
 
 
 def test_user_data_decline_blocks(
@@ -81,10 +83,12 @@ def test_user_data_decline_blocks(
         "crewai_core.paths.appdirs.user_data_dir",
         lambda app, author: str(tmp_path / app),
     )
-    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
     user_data.update_user_data({"trace_consent": False, "first_execution_done": True})
     assert user_data.has_user_declined_tracing() is True
+    monkeypatch.delenv("CREWAI_TRACING_ENABLED", raising=False)
     assert user_data.is_tracing_enabled() is False
+    monkeypatch.setenv("CREWAI_TRACING_ENABLED", "true")
+    assert user_data.is_tracing_enabled() is True  # env-var override (matches runtime)
 
 
 def test_unused_var_warning_silenced() -> None:

@@ -77,9 +77,15 @@ def has_user_declined_tracing() -> bool:
 def is_tracing_enabled() -> bool:
     """Return True if tracing should currently be active.
 
-    Consent only *blocks* tracing; activation requires
-    ``CREWAI_TRACING_ENABLED=true`` in the environment.
+    Mirrors the runtime gate (``crewai.events.listeners.tracing.utils.
+    should_enable_tracing``): ``CREWAI_TRACING_ENABLED=true`` always activates;
+    otherwise recorded consent activates; otherwise off. Used by
+    ``crewai traces status`` so the displayed state matches what crews and
+    flows actually do.
     """
+    if os.getenv("CREWAI_TRACING_ENABLED", "false").lower() in ("true", "1"):
+        return True
     if has_user_declined_tracing():
         return False
-    return os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "true"
+    data = _load_user_data()
+    return data.get("trace_consent", False) is not False

@@ -797,11 +797,10 @@ def traces_enable() -> None:
     update_user_data({"trace_consent": True, "first_execution_done": True})
 
     panel = Panel(
-        "✅ Trace consent recorded.\n\n"
-        "To activate trace collection, set [bold]CREWAI_TRACING_ENABLED=true[/bold] "
-        "in your environment or .env file.\n"
-        "Use 'crewai traces disable' to revoke consent.",
-        title="Trace Consent Recorded",
+        "✅ Trace collection enabled.\n\n"
+        "Your crew/flow executions will now send traces to CrewAI+.\n"
+        "Use 'crewai traces disable' to opt out.",
+        title="Traces Enabled",
         border_style="green",
         padding=(1, 2),
     )
@@ -819,12 +818,12 @@ def traces_disable() -> None:
     update_user_data({"trace_consent": False, "first_execution_done": True})
 
     panel = Panel(
-        "❌ Trace consent revoked.\n\n"
-        "Your crew/flow executions will no longer send traces, even when "
-        "[bold]CREWAI_TRACING_ENABLED=true[/bold] is set.\n"
-        "Use 'crewai traces enable' to grant consent again "
-        "(activation also requires CREWAI_TRACING_ENABLED=true).",
-        title="Trace Consent Revoked",
+        "❌ Trace collection disabled.\n\n"
+        "Your crew/flow executions will no longer send traces "
+        "(unless [bold]CREWAI_TRACING_ENABLED=true[/bold] is set in the environment, "
+        "which overrides the opt-out).\n"
+        "Use 'crewai traces enable' to opt back in.",
+        title="Traces Disabled",
         border_style="red",
         padding=(1, 2),
     )
