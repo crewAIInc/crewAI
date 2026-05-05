@@ -1505,3 +1505,105 @@ def test_anthropic_missing_cache_fields_default_to_zero():
     usage = llm._extract_anthropic_token_usage(mock_response)
     assert usage["cached_prompt_tokens"] == 0
     assert usage["cache_creation_tokens"] == 0
+
+
+def test_warn_on_max_tokens_truncation_emits_warning(caplog):
+    """The helper warns when stop_reason == 'max_tokens' (issue #5148)."""
+    import logging as stdlib_logging
+
+    from crewai.llms.providers.anthropic.completion import (
+        _warn_on_max_tokens_truncation,
+    )
+
+    response = MagicMock()
+    response.stop_reason = "max_tokens"
+
+    with caplog.at_level(stdlib_logging.WARNING):
+        _warn_on_max_tokens_truncation(response, max_tokens=4096)
+
+    assert any(
+        rec.levelno == stdlib_logging.WARNING
+        and "max_tokens" in rec.getMessage()
+        and "Truncated response" in rec.getMessage()
+        for rec in caplog.records
+    )
+
+
+def test_warn_on_max_tokens_truncation_silent_for_normal_stop(caplog):
+    """The helper stays silent when generation finished normally (issue #5148)."""
+    import logging as stdlib_logging
+
+    from crewai.llms.providers.anthropic.completion import (
+        _warn_on_max_tokens_truncation,
+    )
+
+    response = MagicMock()
+    response.stop_reason = "end_turn"
+
+    with caplog.at_level(stdlib_logging.WARNING):
+        _warn_on_max_tokens_truncation(response, max_tokens=4096)
+
+    assert not any(
+        rec.levelno == stdlib_logging.WARNING
+        and "Truncated response" in rec.getMessage()
+        for rec in caplog.records
+    )
+
+
+def test_warn_on_max_tokens_truncation_includes_agent_role(caplog):
+    """The helper surfaces the agent role when provided (issue #5148)."""
+    import logging as stdlib_logging
+
+    from crewai.llms.providers.anthropic.completion import (
+        _warn_on_max_tokens_truncation,
+    )
+
+    response = MagicMock()
+    response.stop_reason = "max_tokens"
+
+    fake_agent = MagicMock()
+    fake_agent.role = "Senior Researcher"
+
+    with caplog.at_level(stdlib_logging.WARNING):
+        _warn_on_max_tokens_truncation(
+            response, max_tokens=2048, from_agent=fake_agent, context="tool conversation"
+        )
+
+    matching = [
+        rec.getMessage()
+        for rec in caplog.records
+        if rec.levelno == stdlib_logging.WARNING and "Truncated response" in rec.getMessage()
+    ]
+    assert matching, "expected a truncation warning"
+    msg = matching[0]
+    assert "Senior Researcher" in msg
+    assert "tool conversation" in msg
+    assert "2048" in msg
+
+
+def test_handle_completion_logs_truncation_warning(caplog):
+    """`_handle_completion` surfaces stop_reason='max_tokens' as a warning."""
+    import logging as stdlib_logging
+
+    llm = LLM(model="anthropic/claude-3-5-sonnet-20241022")
+
+    mock_response = MagicMock()
+    text_block = MagicMock()
+    text_block.text = "Truncated answer"
+    text_block.__class__ = type(text_block)
+    mock_response.content = [text_block]
+    mock_response.usage = MagicMock(input_tokens=10, output_tokens=5)
+    mock_response.usage.cache_read_input_tokens = 0
+    mock_response.usage.cache_creation_input_tokens = 0
+    mock_response.stop_reason = "max_tokens"
+
+    with patch.object(llm._client.messages, "create", return_value=mock_response):
+        with caplog.at_level(stdlib_logging.WARNING):
+            llm.call("Hello")
+
+    assert any(
+        rec.levelno == stdlib_logging.WARNING
+        and "max_tokens" in rec.getMessage()
+        and "Truncated response" in rec.getMessage()
+        for rec in caplog.records
+    )

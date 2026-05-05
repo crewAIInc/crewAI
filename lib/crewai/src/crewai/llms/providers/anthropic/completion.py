@@ -124,6 +124,44 @@ def _contains_file_id_reference(messages: list[dict[str, Any]]) -> bool:
     return False
 
 
+def _warn_on_max_tokens_truncation(
+    response: Any,
+    max_tokens: int,
+    from_agent: Any | None = None,
+    *,
+    context: str = "",
+) -> None:
+    """Emit a warning if the Anthropic response was truncated by ``max_tokens``.
+
+    Anthropic returns a ``stop_reason`` field on every Message response
+    indicating why generation stopped. ``"max_tokens"`` means the output was
+    cut off before the model finished, which can corrupt downstream parsing
+    (especially for the final synthesis response after tool use).
+
+    The Anthropic SDK exposes this via ``response.stop_reason``. We surface
+    the signal as a ``logging.warning`` so users can detect truncation
+    without wiring up event subscribers.
+
+    Args:
+        response: The Anthropic Message-like response object.
+        max_tokens: The configured max_tokens value (for the actionable hint).
+        from_agent: Optional agent reference for log context.
+        context: Optional short label (e.g. ``"tool conversation"``) included
+            in the log message to disambiguate truncation sites.
+    """
+    if response is None:
+        return
+    if getattr(response, "stop_reason", None) != "max_tokens":
+        return
+    role = getattr(from_agent, "role", None)
+    agent_hint = f" [{role}]" if role else ""
+    location = f" ({context})" if context else ""
+    logging.warning(
+        f"Truncated response{agent_hint}{location}: stop_reason='max_tokens'. "
+        f"Consider increasing max_tokens (current: {max_tokens})."
+    )
+
+
 class AnthropicThinkingConfig(BaseModel):
     type: Literal["enabled", "disabled"]
     budget_tokens: int | None = None
@@ -844,6 +882,7 @@ class AnthropicCompletion(BaseLLM):
 
         usage = self._extract_anthropic_token_usage(response)
         self._track_token_usage_internal(usage)
+        _warn_on_max_tokens_truncation(response, self.max_tokens, from_agent)
 
         if _is_pydantic_model_class(response_model) and response.content:
             if use_native_structured_output:
@@ -1272,6 +1311,12 @@ class AnthropicCompletion(BaseLLM):
             # Track token usage for follow-up call
             follow_up_usage = self._extract_anthropic_token_usage(final_response)
             self._track_token_usage_internal(follow_up_usage)
+            _warn_on_max_tokens_truncation(
+                final_response,
+                self.max_tokens,
+                from_agent,
+                context="tool conversation",
+            )
 
             final_content = ""
             thinking_blocks: list[ThinkingBlock] = []
@@ -1377,6 +1422,7 @@ class AnthropicCompletion(BaseLLM):
 
         usage = self._extract_anthropic_token_usage(response)
         self._track_token_usage_internal(usage)
+        _warn_on_max_tokens_truncation(response, self.max_tokens, from_agent)
 
         if _is_pydantic_model_class(response_model) and response.content:
             if use_native_structured_output:
@@ -1676,6 +1722,12 @@ class AnthropicCompletion(BaseLLM):
 
             follow_up_usage = self._extract_anthropic_token_usage(final_response)
             self._track_token_usage_internal(follow_up_usage)
+            _warn_on_max_tokens_truncation(
+                final_response,
+                self.max_tokens,
+                from_agent,
+                context="tool conversation",
+            )
 
             final_content = ""
             if final_response.content:
