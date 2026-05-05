@@ -51,6 +51,7 @@ class EmbeddingService:
     - roboflow: Roboflow embeddings (roboflow-embeddings-v2-base-en, etc.)
     - voyageai: Voyage AI embeddings (voyage-2, voyage-large-2, etc.)
     - watsonx: Watson X embeddings (ibm/slate-125m-english-rtrvr, etc.)
+    - fastembed: FastEmbed embeddings (sentence-transformers/all-MiniLM-L6-v2, etc.)
     - custom: Custom embeddings (embedding_callable, etc.)
     - sentence-transformer: Sentence Transformers embeddings (all-MiniLM-L6-v2, etc.)
     - text2vec: Text2Vec embeddings (text2vec-base-en, etc.)
@@ -230,6 +231,11 @@ class EmbeddingService:
                 "model_name": self.config.model,
                 **self.config.extra_config,
             }
+        elif self.config.provider == "fastembed":
+            base_config["config"] = {
+                "model_name": self.config.model,
+                **self.config.extra_config,
+            }
         elif self.config.provider == "custom":
             # Custom provider requires embedding_callable in extra_config
             base_config["config"] = {
@@ -365,6 +371,7 @@ class EmbeddingService:
             "amazon-bedrock",
             "cohere",
             "custom",
+            "fastembed",
             "google-generativeai",
             "google-vertex",
             "huggingface",
@@ -496,6 +503,15 @@ class EmbeddingService:
     ) -> EmbeddingService:
         """Create a Watson X embedding service."""
         return cls(provider="watsonx", model=model, api_key=api_key, **kwargs)
+
+    @classmethod
+    def create_fastembed_service(
+        cls,
+        model: str = "sentence-transformers/all-MiniLM-L6-v2",
+        **kwargs: Any,
+    ) -> EmbeddingService:
+        """Create a FastEmbed embedding service (local, fast inference)."""
+        return cls(provider="fastembed", model=model, **kwargs)
 
     @classmethod
     def create_custom_service(
