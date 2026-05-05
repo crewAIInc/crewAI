@@ -1,6 +1,8 @@
 # crewai-cli
 
-CLI for CrewAI - scaffold, run, deploy and manage AI agent crews without installing the full framework.
+CLI for CrewAI — scaffold, run, deploy and manage AI agent crews.
+
+The CLI depends on the `crewai` framework and pulls it in automatically.
 
 ## Installation
 
@@ -8,7 +10,7 @@ CLI for CrewAI - scaffold, run, deploy and manage AI agent crews without install
 pip install crewai-cli
 ```
 
-Or install alongside the full framework:
+Or install via the framework's extra:
 
 ```bash
 pip install crewai[cli]

@@ -1436,6 +1436,7 @@ source = { editable = "lib/cli" }
 dependencies = [
     { name = "appdirs" },
     { name = "click" },
+    { name = "crewai" },
     { name = "cryptography" },
     { name = "httpx" },
     { name = "packaging" },
@@ -1454,6 +1455,7 @@ dependencies = [
 requires-dist = [
     { name = "appdirs", specifier = "~=1.4.4" },
     { name = "click", specifier = "~=8.1.7" },
+    { name = "crewai", editable = "lib/crewai" },
     { name = "cryptography", specifier = ">=42.0" },
     { name = "httpx", specifier = "~=0.28.1" },
     { name = "packaging", specifier = ">=23.0" },
