@@ -1196,3 +1196,28 @@ async def test_non_streaming_async_returns_tool_calls_when_text_also_present():
     assert isinstance(result, list)
     assert len(result) == 1
     assert result[0].function.name == "search"
+
+
+def test_thinking_param_included_in_completion_params():
+    """Verify that the `thinking` field is forwarded to litellm completion params.
+
+    Regression test for: https://github.com/crewAIInc/crewAI/issues/5537
+    The `thinking` field was defined on LLM but never added to the params dict
+    built by _prepare_completion_params, causing it to be silently dropped for
+    OpenRouter (and other non-Anthropic) providers.
+    """
+    thinking_config = {"type": "enabled", "budget_tokens": 5000}
+    llm = LLM(
+        model="openrouter/anthropic/claude-sonnet-4-5",
+        thinking=thinking_config,
+        is_litellm=True,
+    )
+
+    params = llm._prepare_completion_params(
+        messages=[{"role": "user", "content": "Hello"}]
+    )
+
+    assert params.get("thinking") == thinking_config, (
+        "The 'thinking' field must be forwarded to the LiteLLM completion params "
+        "so that OpenRouter and other compatible providers can enable extended thinking."
+    )

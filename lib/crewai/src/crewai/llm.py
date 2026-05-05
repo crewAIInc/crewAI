@@ -706,6 +706,7 @@ class LLM(BaseLLM):
             "stream": self.stream,
             "tools": tools,
             "reasoning_effort": self.reasoning_effort,
+            "thinking": self.thinking,
             **self.additional_params,
         }
 
