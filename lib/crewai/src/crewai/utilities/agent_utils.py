@@ -13,6 +13,7 @@ import re
 from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict
 
 from crewai_core.printer import PRINTER, ColoredText, Printer
+from crewai_core.settings import Settings
 from pydantic import BaseModel
 from rich.console import Console
 
@@ -24,7 +25,6 @@ from crewai.agents.parser import (
     parse,
 )
 from crewai.llms.base_llm import BaseLLM, call_stop_override
-from crewai.settings import Settings
 from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool

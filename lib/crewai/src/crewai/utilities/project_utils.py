@@ -22,11 +22,14 @@ from crewai_core.project import (
     parse_toml as parse_toml,
     read_toml as read_toml,
 )
+from crewai_core.tool_credentials import (
+    build_env_with_all_tool_credentials as build_env_with_all_tool_credentials,
+    build_env_with_tool_repository_credentials as build_env_with_tool_repository_credentials,
+)
 from rich.console import Console
 
 from crewai.crew import Crew
 from crewai.flow import Flow
-from crewai.settings import Settings
 
 
 console = Console()
@@ -287,49 +290,6 @@ def extract_available_exports(dir_path: str = "src") -> list[dict[str, Any]]:
             "Please ensure your project contains valid tools (classes inheriting from BaseTool or functions with @tool decorator)."
         )
         raise SystemExit(1) from e
-
-
-def build_env_with_tool_repository_credentials(
-    repository_handle: str,
-) -> dict[str, Any]:
-    """Build environment variables with tool repository credentials."""
-    repository_handle = repository_handle.upper().replace("-", "_")
-    settings = Settings()
-
-    env = os.environ.copy()
-    env[f"UV_INDEX_{repository_handle}_USERNAME"] = str(
-        settings.tool_repository_username or ""
-    )
-    env[f"UV_INDEX_{repository_handle}_PASSWORD"] = str(
-        settings.tool_repository_password or ""
-    )
-
-    return env
-
-
-def build_env_with_all_tool_credentials() -> dict[str, Any]:
-    """
-    Build environment dict with credentials for all tool repository indexes
-    found in pyproject.toml's [tool.uv.sources] section.
-
-    Returns:
-        dict: Environment variables with credentials for all private indexes.
-    """
-    env = os.environ.copy()
-    try:
-        pyproject_data = read_toml()
-        sources = pyproject_data.get("tool", {}).get("uv", {}).get("sources", {})
-
-        for source_config in sources.values():
-            if isinstance(source_config, dict):
-                index = source_config.get("index")
-                if index:
-                    index_env = build_env_with_tool_repository_credentials(index)
-                    env.update(index_env)
-    except Exception:  # noqa: S110
-        pass
-
-    return env
 
 
 @contextmanager

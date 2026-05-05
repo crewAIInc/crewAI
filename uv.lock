@@ -1476,21 +1476,27 @@ name = "crewai-core"
 source = { editable = "lib/crewai-core" }
 dependencies = [
     { name = "appdirs" },
+    { name = "cryptography" },
     { name = "opentelemetry-api" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
     { name = "opentelemetry-sdk" },
     { name = "portalocker" },
+    { name = "pydantic" },
     { name = "rich" },
+    { name = "tomli" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "appdirs", specifier = "~=1.4.4" },
+    { name = "cryptography", specifier = ">=42.0" },
     { name = "opentelemetry-api", specifier = "~=1.34.0" },
     { name = "opentelemetry-exporter-otlp-proto-http", specifier = "~=1.34.0" },
     { name = "opentelemetry-sdk", specifier = "~=1.34.0" },
     { name = "portalocker", specifier = "~=2.7.0" },
+    { name = "pydantic", specifier = ">=2.11.9,<2.13" },
     { name = "rich", specifier = ">=13.7.1" },
+    { name = "tomli", specifier = "~=2.0.2" },
 ]
 
 [[package]]

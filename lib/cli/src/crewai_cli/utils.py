@@ -15,9 +15,12 @@ from crewai_core.project import (
     parse_toml as parse_toml,
     read_toml as read_toml,
 )
+from crewai_core.tool_credentials import (
+    build_env_with_all_tool_credentials as build_env_with_all_tool_credentials,
+    build_env_with_tool_repository_credentials as build_env_with_tool_repository_credentials,
+)
 from rich.console import Console
 
-from crewai_cli.config import Settings
 from crewai_cli.constants import ENV_VARS
 
 
@@ -154,46 +157,3 @@ def write_env_file(folder_path: Path, env_vars: dict[str, Any]) -> None:
     with open(env_file_path, "w") as file:
         for key, value in env_vars.items():
             file.write(f"{key.upper()}={value}\n")
-
-
-def build_env_with_tool_repository_credentials(
-    repository_handle: str,
-) -> dict[str, Any]:
-    repository_handle = repository_handle.upper().replace("-", "_")
-    settings = Settings()
-
-    env = os.environ.copy()
-    env[f"UV_INDEX_{repository_handle}_USERNAME"] = str(
-        settings.tool_repository_username or ""
-    )
-    env[f"UV_INDEX_{repository_handle}_PASSWORD"] = str(
-        settings.tool_repository_password or ""
-    )
-
-    return env
-
-
-def build_env_with_all_tool_credentials() -> dict[str, Any]:
-    """Build environment dict with credentials for all tool repository indexes.
-
-    Reads ``[tool.uv.sources]`` from ``pyproject.toml`` and merges credentials
-    for each private index into a copy of the current environment.
-
-    Returns:
-        Environment variables with credentials for all private indexes.
-    """
-    env = os.environ.copy()
-    try:
-        pyproject_data = read_toml()
-        sources = pyproject_data.get("tool", {}).get("uv", {}).get("sources", {})
-
-        for source_config in sources.values():
-            if isinstance(source_config, dict):
-                index = source_config.get("index")
-                if index:
-                    index_env = build_env_with_tool_repository_credentials(index)
-                    env.update(index_env)
-    except Exception:  # noqa: S110
-        pass
-
-    return env

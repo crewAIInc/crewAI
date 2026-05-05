@@ -6,6 +6,7 @@ import time
 from typing import Any
 import uuid
 
+from crewai_core.settings import Settings
 from rich.console import Console
 from rich.panel import Panel
 
@@ -18,7 +19,6 @@ from crewai.events.listeners.tracing.utils import (
     should_auto_collect_first_time_traces,
 )
 from crewai.plus_api import PlusAPI
-from crewai.settings import Settings
 from crewai.version import get_crewai_version
 
 

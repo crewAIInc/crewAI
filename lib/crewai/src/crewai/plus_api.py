@@ -4,10 +4,10 @@ import os
 from typing import Any
 from urllib.parse import urljoin
 
+from crewai_core.settings import Settings
 import httpx
 
 from crewai.constants import DEFAULT_CREWAI_ENTERPRISE_URL
-from crewai.settings import Settings
 from crewai.version import get_crewai_version
 
 

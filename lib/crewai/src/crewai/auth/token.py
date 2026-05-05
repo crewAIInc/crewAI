@@ -1,6 +1,6 @@
 """Authentication token retrieval."""
 
-from crewai.auth.token_manager import TokenManager
+from crewai_core.token_manager import TokenManager
 
 
 class AuthError(Exception):
