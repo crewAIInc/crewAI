@@ -1,4 +1,4 @@
-"""Backward-compat shim — re-export ``crewai_cli`` as ``crewai.cli``.
+"""Deprecated: use ``crewai_cli`` instead.
 
 The CLI was extracted into the standalone ``crewai-cli`` package. Legacy
 ``from crewai.cli.X import Y`` imports are intercepted here and resolved to
@@ -13,10 +13,18 @@ import importlib.abc
 import importlib.machinery
 import sys
 from types import ModuleType
+import warnings
 
 
 _PREFIX = "crewai.cli"
 _TARGET = "crewai_cli"
+
+
+warnings.warn(
+    "crewai.cli is deprecated; import from crewai_cli instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 
 class _ShimLoader(importlib.abc.Loader):
