@@ -24,6 +24,7 @@ from crewai.cli.reset_memories_command import reset_memories_command
 from crewai.cli.run_crew import run_crew
 from crewai.cli.settings.main import SettingsCommand
 from crewai.cli.shared.token_manager import TokenManager
+from crewai.cli.skills_proposals import skills as skills_group
 from crewai.cli.tools.main import ToolCommand
 from crewai.cli.train_crew import train_crew
 from crewai.cli.triggers.main import TriggersCommand
@@ -953,6 +954,9 @@ def checkpoint_prune(
     from crewai.cli.checkpoint_cli import prune_checkpoints
 
     prune_checkpoints(ctx.obj["location"], keep, older_than, dry_run)
+
+
+crewai.add_command(skills_group)
 
 
 if __name__ == "__main__":

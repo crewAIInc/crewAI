@@ -84,6 +84,7 @@ from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.fingerprint import Fingerprint
 from crewai.skills.loader import activate_skill, discover_skills
 from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
+from crewai.skills.self_improve.models import SelfImprovementConfig
 from crewai.state.checkpoint_config import CheckpointConfig, apply_checkpoint
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.types.callback import SerializableCallable
@@ -190,6 +191,7 @@ class Agent(BaseAgent):
     _times_executed: int = PrivateAttr(default=0)
     _mcp_resolver: MCPToolResolver | None = PrivateAttr(default=None)
     _last_messages: list[LLMMessage] = PrivateAttr(default_factory=list)
+    _self_improve_collector: Any = PrivateAttr(default=None)
     max_execution_time: int | None = Field(
         default=None,
         description="Maximum execution time for an agent to execute a task",
@@ -320,6 +322,15 @@ class Agent(BaseAgent):
     agent_executor: CrewAgentExecutor | AgentExecutor | None = Field(
         default=None, description="An instance of the CrewAgentExecutor class."
     )
+    self_improve: bool | SelfImprovementConfig = Field(
+        default=False,
+        description=(
+            "Enable the self-improvement loop. ``True`` uses defaults; pass a "
+            "``SelfImprovementConfig`` to override (e.g. point ``skills_dir`` at "
+            "a project-relative path so accepted skills get committed alongside "
+            "the code). See ``crewai.skills.self_improve``."
+        ),
+    )
     executor_class: Annotated[
         type[CrewAgentExecutor] | type[AgentExecutor],
         BeforeValidator(_validate_executor_class),
@@ -359,6 +370,21 @@ class Agent(BaseAgent):
             )
 
         self.set_skills()
+
+        if self.self_improve and self._self_improve_collector is None:
+            from crewai.skills.self_improve.collector import TraceCollector
+
+            collector = TraceCollector(self)
+            collector.attach(crewai_event_bus)
+            self._self_improve_collector = collector
+
+    def _self_improve_config(self) -> SelfImprovementConfig | None:
+        """Return the active SelfImprovementConfig, or None when disabled."""
+        if not self.self_improve:
+            return None
+        if isinstance(self.self_improve, SelfImprovementConfig):
+            return self.self_improve
+        return SelfImprovementConfig()
 
         if self.reasoning and self.planning_config is None:
             warnings.warn(
@@ -429,7 +455,22 @@ class Agent(BaseAgent):
         else:
             crew_skills = list(resolved_crew_skills)
 
-        if not self.skills and not crew_skills:
+        self_improve_dir: Path | None = None
+        if (config := self._self_improve_config()) is not None:
+            from crewai.skills.self_improve.storage import SkillStore, _slug
+
+            if config.skills_dir is not None:
+                candidate = config.skills_dir / _slug(self.role)
+            else:
+                candidate = SkillStore().role_dir(self.role)
+            if candidate.is_dir() and any(
+                (c / "SKILL.md").is_file()
+                for c in candidate.iterdir()
+                if c.is_dir()
+            ):
+                self_improve_dir = candidate
+
+        if not self.skills and not crew_skills and self_improve_dir is None:
             return
 
         needs_work = self.skills and any(
@@ -437,7 +478,7 @@ class Agent(BaseAgent):
             or (isinstance(s, SkillModel) and s.disclosure_level < INSTRUCTIONS)
             for s in self.skills
         )
-        if not needs_work and not crew_skills:
+        if not needs_work and not crew_skills and self_improve_dir is None:
             return
 
         seen: set[str] = set()
@@ -446,6 +487,9 @@ class Agent(BaseAgent):
 
         if crew_skills:
             items.extend(crew_skills)
+
+        if self_improve_dir is not None:
+            items.append(self_improve_dir)
 
         for item in items:
             if isinstance(item, Path):
