@@ -1,5 +1,5 @@
 from enum import Enum
-import subprocess
+import asyncio
 
 import click
 from packaging import version
@@ -69,16 +69,18 @@ def execute_command(
         env[CREWAI_TRAINED_AGENTS_FILE_ENV] = trained_agents_file
 
     try:
-        subprocess.run(command, capture_output=False, text=True, check=True, env=env)  # noqa: S603
+        subprocess_run(
+            command, capture_output=False, text=True, check=True, env=env, shell=False
+        )
 
-    except subprocess.CalledProcessError as e:
+    except CalledProcessError as e:
         handle_error(e, crew_type)
 
     except Exception as e:
         click.echo(f"An unexpected error occurred: {e}", err=True)
 
 
-def handle_error(error: subprocess.CalledProcessError, crew_type: CrewType) -> None:
+def handle_error(error: CalledProcessError, crew_type: CrewType) -> None:
     """
     Handle subprocess errors with appropriate messaging.
 
