@@ -29,26 +29,39 @@ def load_task_outputs(db_path: str | None = None) -> list[dict[str, Any]]:
 
     try:
         with sqlite3.connect(db_path) as conn:
+            conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT *
+                SELECT task_id, expected_output, output, task_index,
+                       inputs, was_replayed, timestamp
                 FROM latest_kickoff_task_outputs
                 ORDER BY task_index
             """)
             rows = cursor.fetchall()
-            results: list[dict[str, Any]] = [
-                {
-                    "task_id": row[0],
-                    "expected_output": row[1],
-                    "output": json.loads(row[2]),
-                    "task_index": row[3],
-                    "inputs": json.loads(row[4]),
-                    "was_replayed": row[5],
-                    "timestamp": row[6],
-                }
-                for row in rows
-            ]
-            return results
     except sqlite3.Error as e:
         logger.error("Failed to load task outputs: %s", e)
         return []
+
+    return [
+        {
+            "task_id": row["task_id"],
+            "expected_output": row["expected_output"],
+            "output": _safe_json_loads(row["output"]),
+            "task_index": row["task_index"],
+            "inputs": _safe_json_loads(row["inputs"]),
+            "was_replayed": row["was_replayed"],
+            "timestamp": row["timestamp"],
+        }
+        for row in rows
+    ]
+
+
+def _safe_json_loads(value: str | None) -> Any:
+    """Decode a JSON column tolerantly: NULL/blank/corrupt → None."""
+    if not value:
+        return None
+    try:
+        return json.loads(value)
+    except (json.JSONDecodeError, TypeError) as e:
+        logger.warning("Failed to decode JSON column: %s", e)
+        return None
