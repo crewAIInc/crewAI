@@ -205,18 +205,13 @@ def create_crew(
     folder_path, folder_name, class_name = create_folder_structure(name, parent_folder)
     env_vars = load_env_vars(folder_path)
     if not skip_provider:
-        if not provider:
-            provider_models = get_provider_data()
-            if not provider_models:
-                return
-
         existing_provider = None
-        for provider, env_keys in ENV_VARS.items():
+        for env_provider, env_keys in ENV_VARS.items():
             if any(
                 "key_name" in details and details["key_name"] in env_vars
                 for details in env_keys
             ):
-                existing_provider = provider
+                existing_provider = env_provider
                 break
 
         if existing_provider:
@@ -230,18 +225,23 @@ def create_crew(
         if not provider_models:
             return
 
-        while True:
-            selected_provider = select_provider(provider_models)
-            if selected_provider is None:  # User typed 'q'
-                click.secho("Exiting...", fg="yellow")
-                sys.exit(0)
-            if selected_provider and isinstance(
-                selected_provider, str
-            ):  # Valid selection
-                break
-            click.secho(
-                "No provider selected. Please try again or press 'q' to exit.", fg="red"
-            )
+        if provider:
+            # --provider was passed on the CLI; use it directly without prompting.
+            selected_provider = provider.lower()
+        else:
+            while True:
+                selected_provider = select_provider(provider_models)
+                if selected_provider is None:  # User typed 'q'
+                    click.secho("Exiting...", fg="yellow")
+                    sys.exit(0)
+                if selected_provider and isinstance(
+                    selected_provider, str
+                ):  # Valid selection
+                    break
+                click.secho(
+                    "No provider selected. Please try again or press 'q' to exit.",
+                    fg="red",
+                )
 
         # Check if the selected provider has predefined models
         if MODELS.get(selected_provider):

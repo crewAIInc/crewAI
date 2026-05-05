@@ -345,3 +345,41 @@ def test_env_vars_are_uppercased_in_env_file(
     env_file_path = crew_path / ".env"
     content = env_file_path.read_text()
     assert "MODEL=" in content
+
+
+@mock.patch("crewai.cli.create_crew.create_folder_structure")
+@mock.patch("crewai.cli.create_crew.copy_template")
+@mock.patch("crewai.cli.create_crew.load_env_vars")
+@mock.patch("crewai.cli.create_crew.get_provider_data")
+@mock.patch("crewai.cli.create_crew.select_provider")
+@mock.patch("click.prompt")
+def test_provider_param_skips_interactive_selection(
+    mock_prompt,
+    mock_select_provider,
+    mock_get_provider_data,
+    mock_load_env_vars,
+    mock_copy_template,
+    mock_create_folder_structure,
+    tmp_path,
+):
+    """Verify that passing --provider skips the interactive provider prompt.
+
+    Regression test for: https://github.com/crewAIInc/crewAI/issues/5270
+
+    The `create_crew()` `provider` parameter was shadowed by a loop variable
+    (`for provider, env_keys in ENV_VARS.items()`), so the interactive
+    `select_provider()` prompt was *always* shown even when `--provider` was
+    explicitly passed on the CLI.
+    """
+    crew_path = tmp_path / "test_crew"
+    crew_path.mkdir()
+    mock_create_folder_structure.return_value = (crew_path, "test_crew", "TestCrew")
+
+    mock_load_env_vars.return_value = {}
+    mock_get_provider_data.return_value = {"openai": ["gpt-4o"], "anthropic": []}
+    mock_prompt.return_value = "fake-api-key"
+
+    create_crew("Test Crew", provider="openai")
+
+    # select_provider() must NOT have been called — the CLI flag pre-selects it.
+    mock_select_provider.assert_not_called()
