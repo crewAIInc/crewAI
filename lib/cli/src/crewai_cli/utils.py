@@ -7,8 +7,6 @@ from typing import Any
 
 import click
 from crewai_core.project import (
-    _get_nested_value as _get_nested_value,
-    _get_project_attribute as _get_project_attribute,
     get_project_description as get_project_description,
     get_project_name as get_project_name,
     get_project_version as get_project_version,

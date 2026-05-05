@@ -33,8 +33,8 @@ from crewai_cli.triggers.main import TriggersCommand
 from crewai_cli.update_crew import update_crew
 from crewai_cli.user_data import (
     _load_user_data,
-    _save_user_data,
     is_tracing_enabled,
+    update_user_data,
 )
 from crewai_cli.utils import build_env_with_all_tool_credentials, read_toml
 
@@ -794,11 +794,7 @@ def traces_enable() -> None:
 
     console = Console()
 
-    # Update user data to enable traces
-    user_data = _load_user_data()
-    user_data["trace_consent"] = True
-    user_data["first_execution_done"] = True
-    _save_user_data(user_data)
+    update_user_data({"trace_consent": True, "first_execution_done": True})
 
     panel = Panel(
         "✅ Trace consent recorded.\n\n"
@@ -820,11 +816,7 @@ def traces_disable() -> None:
 
     console = Console()
 
-    # Update user data to disable traces
-    user_data = _load_user_data()
-    user_data["trace_consent"] = False
-    user_data["first_execution_done"] = True
-    _save_user_data(user_data)
+    update_user_data({"trace_consent": False, "first_execution_done": True})
 
     panel = Panel(
         "❌ Trace collection has been disabled!\n\n"

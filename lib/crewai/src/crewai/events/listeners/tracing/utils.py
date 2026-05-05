@@ -32,6 +32,32 @@ from rich.text import Text
 from crewai.utilities.serialization import to_serializable
 
 
+__all__ = [
+    "_load_user_data",
+    "_save_user_data",
+    "_user_data_file",
+    "_user_data_lock_name",
+    "get_user_id",
+    "has_user_declined_tracing",
+    "is_first_execution",
+    "is_tracing_enabled",
+    "is_tracing_enabled_in_context",
+    "mark_first_execution_completed",
+    "mark_first_execution_done",
+    "on_first_execution_tracing_confirmation",
+    "prompt_user_for_trace_viewing",
+    "reset_tracing_enabled",
+    "safe_serialize_to_dict",
+    "set_suppress_tracing_messages",
+    "set_tracing_enabled",
+    "should_auto_collect_first_time_traces",
+    "should_enable_tracing",
+    "should_suppress_tracing_messages",
+    "truncate_messages",
+    "update_user_data",
+]
+
+
 logger = logging.getLogger(__name__)
 
 
