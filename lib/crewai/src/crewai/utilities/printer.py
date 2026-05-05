@@ -12,6 +12,9 @@ from crewai_core.printer import (
 )
 
 
+__all__ = ["PRINTER", "ColoredText", "Printer", "PrinterColor"]
+
+
 warnings.warn(
     "crewai.utilities.printer is deprecated; import from crewai_core.printer.",
     DeprecationWarning,

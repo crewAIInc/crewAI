@@ -1,4 +1,4 @@
-from crewai_cli.shared.token_manager import TokenManager
+from crewai_core.token_manager import TokenManager
 
 
 class AuthError(Exception):

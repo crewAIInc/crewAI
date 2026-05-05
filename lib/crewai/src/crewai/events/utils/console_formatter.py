@@ -15,6 +15,13 @@ from rich.text import Text
 from crewai.version import is_current_version_yanked, is_newer_version_available
 
 
+__all__ = [
+    "ConsoleFormatter",
+    "set_suppress_console_output",
+    "should_suppress_console_output",
+]
+
+
 _disable_version_check: ContextVar[bool] = ContextVar(
     "_disable_version_check", default=False
 )

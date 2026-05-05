@@ -10,6 +10,9 @@ from crewai_core.paths import (
 )
 
 
+__all__ = ["db_storage_path", "get_project_directory_name"]
+
+
 warnings.warn(
     "crewai.utilities.paths is deprecated; import from crewai_core.paths.",
     DeprecationWarning,

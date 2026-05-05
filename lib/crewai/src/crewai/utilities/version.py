@@ -7,6 +7,9 @@ import warnings
 from crewai_core.version import get_crewai_version as get_crewai_version
 
 
+__all__ = ["get_crewai_version"]
+
+
 warnings.warn(
     "crewai.utilities.version is deprecated; import from crewai_core.version.",
     DeprecationWarning,

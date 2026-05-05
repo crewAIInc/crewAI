@@ -6,6 +6,7 @@ import subprocess
 from typing import Any
 
 import click
+from crewai_core.token_manager import TokenManager
 
 from crewai_cli.add_crew_to_flow import add_crew_to_flow
 from crewai_cli.authentication.main import AuthenticationCommand
@@ -25,7 +26,6 @@ from crewai_cli.replay_from_task import replay_task_command
 from crewai_cli.reset_memories_command import reset_memories_command
 from crewai_cli.run_crew import run_crew
 from crewai_cli.settings.main import SettingsCommand
-from crewai_cli.shared.token_manager import TokenManager
 from crewai_cli.task_outputs import load_task_outputs
 from crewai_cli.tools.main import ToolCommand
 from crewai_cli.train_crew import train_crew

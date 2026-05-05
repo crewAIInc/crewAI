@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 import shutil
-from typing import Any, cast
+from typing import Any
 
 import click
 from crewai_core.project import (
@@ -21,7 +21,22 @@ from crewai_core.tool_credentials import (
 )
 from rich.console import Console
 
-from crewai_cli.constants import ENV_VARS
+
+__all__ = [
+    "build_env_with_all_tool_credentials",
+    "build_env_with_tool_repository_credentials",
+    "copy_template",
+    "fetch_and_json_env_file",
+    "get_project_description",
+    "get_project_name",
+    "get_project_version",
+    "load_env_vars",
+    "parse_toml",
+    "read_toml",
+    "tree_copy",
+    "tree_find_and_replace",
+    "write_env_file",
+]
 
 
 console = Console()
@@ -113,41 +128,6 @@ def load_env_vars(folder_path: Path) -> dict[str, Any]:
                 key, _, value = line.strip().partition("=")
                 if key and value:
                     env_vars[key] = value
-    return env_vars
-
-
-def update_env_vars(
-    env_vars: dict[str, Any], provider: str, model: str
-) -> dict[str, Any] | None:
-    """Updates environment variables with the API key for the selected provider and model."""
-    provider_config = cast(
-        list[str],
-        ENV_VARS.get(
-            provider,
-            [
-                click.prompt(
-                    f"Enter the environment variable name for your {provider.capitalize()} API key",
-                    type=str,
-                )
-            ],
-        ),
-    )
-
-    api_key_var = provider_config[0]
-
-    if api_key_var not in env_vars:
-        try:
-            env_vars[api_key_var] = click.prompt(
-                f"Enter your {provider.capitalize()} API key", type=str, hide_input=True
-            )
-        except click.exceptions.Abort:
-            click.secho("Operation aborted by the user.", fg="red")
-            return None
-    else:
-        click.secho(f"API key already exists for {provider.capitalize()}.", fg="yellow")
-
-    env_vars["MODEL"] = model
-    click.secho(f"Selected model: {model}", fg="green")
     return env_vars
 
 

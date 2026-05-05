@@ -2,13 +2,13 @@ import time
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 import webbrowser
 
+from crewai_core.token_manager import TokenManager
 import httpx
 from pydantic import BaseModel, Field
 from rich.console import Console
 
 from crewai_cli.authentication.utils import validate_jwt_token
 from crewai_cli.config import Settings
-from crewai_cli.shared.token_manager import TokenManager
 
 
 console = Console()

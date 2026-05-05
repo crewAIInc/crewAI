@@ -159,6 +159,7 @@ class Telemetry:
     def _safe_telemetry_operation(
         self, operation: Callable[[], Span | None]
     ) -> Span | None:
+        """Run a span-returning telemetry operation, swallowing failures."""
         if not self._should_execute_telemetry():
             return None
         try:
@@ -167,14 +168,23 @@ class Telemetry:
             logger.debug("Telemetry operation failed: %s", e)
             return None
 
+    def _safe_telemetry_procedure(self, operation: Callable[[], None]) -> None:
+        """Run a void telemetry procedure, swallowing failures."""
+        if not self._should_execute_telemetry():
+            return
+        try:
+            operation()
+        except Exception as e:
+            logger.debug("Telemetry operation failed: %s", e)
+
     def _add_attribute(self, span: Span | None, key: str, value: Any) -> None:
         if span is None:
             return
 
         def _operation() -> None:
-            return span.set_attribute(key, value)
+            span.set_attribute(key, value)
 
-        self._safe_telemetry_operation(_operation)
+        self._safe_telemetry_procedure(_operation)
 
     # --- CLI-facing spans ---------------------------------------------------
 
@@ -186,7 +196,7 @@ class Telemetry:
             span = tracer.start_span("Deploy Signup Error")
             close_span(span)
 
-        self._safe_telemetry_operation(_operation)
+        self._safe_telemetry_procedure(_operation)
 
     def start_deployment_span(self, uuid: str | None = None) -> None:
         """Records the start of a deployment process."""
@@ -198,7 +208,7 @@ class Telemetry:
                 self._add_attribute(span, "uuid", uuid)
             close_span(span)
 
-        self._safe_telemetry_operation(_operation)
+        self._safe_telemetry_procedure(_operation)
 
     def create_crew_deployment_span(self) -> None:
         """Records the creation of a new crew deployment."""
@@ -208,7 +218,7 @@ class Telemetry:
             span = tracer.start_span("Create Crew Deployment")
             close_span(span)
 
-        self._safe_telemetry_operation(_operation)
+        self._safe_telemetry_procedure(_operation)
 
     def get_crew_logs_span(
         self, uuid: str | None, log_type: str = "deployment"
@@ -223,7 +233,7 @@ class Telemetry:
                 self._add_attribute(span, "uuid", uuid)
             close_span(span)
 
-        self._safe_telemetry_operation(_operation)
+        self._safe_telemetry_procedure(_operation)
 
     def remove_crew_span(self, uuid: str | None = None) -> None:
         """Records the removal of a crew."""
@@ -235,7 +245,7 @@ class Telemetry:
                 self._add_attribute(span, "uuid", uuid)
             close_span(span)
 
-        self._safe_telemetry_operation(_operation)
+        self._safe_telemetry_procedure(_operation)
 
     def flow_creation_span(self, flow_name: str) -> None:
         """Records the creation of a new flow."""
@@ -246,7 +256,7 @@ class Telemetry:
             self._add_attribute(span, "flow_name", flow_name)
             close_span(span)
 
-        self._safe_telemetry_operation(_operation)
+        self._safe_telemetry_procedure(_operation)
 
     def template_installed_span(self, template_name: str) -> None:
         """Records when a template is downloaded and installed."""
@@ -259,4 +269,4 @@ class Telemetry:
             self._add_attribute(span, "template_name", template_name)
             close_span(span)
 
-        self._safe_telemetry_operation(_operation)
+        self._safe_telemetry_procedure(_operation)
