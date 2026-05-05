@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import click
-from crewai.utilities.printer import PRINTER
+from crewai_core.printer import PRINTER
 
 from crewai_cli.utils import copy_template
 

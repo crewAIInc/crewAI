@@ -2,7 +2,7 @@ from pathlib import Path
 import shutil
 
 import click
-from crewai.telemetry import Telemetry
+from crewai_core.telemetry import Telemetry
 
 
 def create_flow(name: str) -> None:

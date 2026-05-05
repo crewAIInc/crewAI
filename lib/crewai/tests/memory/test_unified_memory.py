@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from crewai.utilities.printer import Printer
+from crewai_core.printer import Printer
 from crewai.memory.types import (
     MemoryConfig,
     MemoryMatch,

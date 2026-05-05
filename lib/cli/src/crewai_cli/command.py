@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from crewai.telemetry.telemetry import Telemetry
+from crewai_core.telemetry import Telemetry
 import httpx
 from rich.console import Console
 

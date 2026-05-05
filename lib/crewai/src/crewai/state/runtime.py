@@ -14,6 +14,7 @@ import time
 from typing import TYPE_CHECKING, Any
 import uuid
 
+from crewai_core.version import get_crewai_version
 from packaging.version import Version
 from pydantic import (
     ModelWrapValidatorHandler,
@@ -39,7 +40,6 @@ from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.state.event_record import EventRecord
 from crewai.state.provider.core import BaseProvider
 from crewai.state.provider.json_provider import JsonProvider
-from crewai.utilities.version import get_crewai_version
 
 
 logger = logging.getLogger(__name__)

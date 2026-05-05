@@ -19,6 +19,7 @@ exclude-newer = "2026-04-27T16:00:00Z"
 members = [
     "crewai",
     "crewai-cli",
+    "crewai-core",
     "crewai-devtools",
     "crewai-files",
     "crewai-tools",
@@ -1280,6 +1281,7 @@ dependencies = [
     { name = "appdirs" },
     { name = "chromadb" },
     { name = "click" },
+    { name = "crewai-core" },
     { name = "httpx" },
     { name = "instructor" },
     { name = "json-repair" },
@@ -1387,6 +1389,7 @@ requires-dist = [
     { name = "chromadb", specifier = "~=1.1.0" },
     { name = "click", specifier = "~=8.1.7" },
     { name = "crewai-cli", marker = "extra == 'cli'", editable = "lib/cli" },
+    { name = "crewai-core", editable = "lib/crewai-core" },
     { name = "crewai-files", marker = "extra == 'file-processing'", editable = "lib/crewai-files" },
     { name = "crewai-tools", marker = "extra == 'tools'", editable = "lib/crewai-tools" },
     { name = "docling", marker = "extra == 'docling'", specifier = "~=2.84.0" },
@@ -1436,11 +1439,10 @@ source = { editable = "lib/cli" }
 dependencies = [
     { name = "appdirs" },
     { name = "click" },
-    { name = "crewai" },
+    { name = "crewai-core" },
     { name = "cryptography" },
     { name = "httpx" },
     { name = "packaging" },
-    { name = "portalocker" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "pyjwt" },
@@ -1455,11 +1457,10 @@ dependencies = [
 requires-dist = [
     { name = "appdirs", specifier = "~=1.4.4" },
     { name = "click", specifier = "~=8.1.7" },
-    { name = "crewai", editable = "lib/crewai" },
+    { name = "crewai-core", editable = "lib/crewai-core" },
     { name = "cryptography", specifier = ">=42.0" },
     { name = "httpx", specifier = "~=0.28.1" },
     { name = "packaging", specifier = ">=23.0" },
-    { name = "portalocker", specifier = "~=2.7.0" },
     { name = "pydantic", specifier = ">=2.11.9,<2.13" },
     { name = "pydantic-settings", specifier = "~=2.10.1" },
     { name = "pyjwt", specifier = ">=2.9.0,<3" },
@@ -1468,6 +1469,28 @@ requires-dist = [
     { name = "tomli", specifier = "~=2.0.2" },
     { name = "tomli-w", specifier = "~=1.1.0" },
     { name = "uv", specifier = "~=0.9.13" },
+]
+
+[[package]]
+name = "crewai-core"
+source = { editable = "lib/crewai-core" }
+dependencies = [
+    { name = "appdirs" },
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-exporter-otlp-proto-http" },
+    { name = "opentelemetry-sdk" },
+    { name = "portalocker" },
+    { name = "rich" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "appdirs", specifier = "~=1.4.4" },
+    { name = "opentelemetry-api", specifier = "~=1.34.0" },
+    { name = "opentelemetry-exporter-otlp-proto-http", specifier = "~=1.34.0" },
+    { name = "opentelemetry-sdk", specifier = "~=1.34.0" },
+    { name = "portalocker", specifier = "~=2.7.0" },
+    { name = "rich", specifier = ">=13.7.1" },
 ]
 
 [[package]]

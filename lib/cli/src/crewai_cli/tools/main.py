@@ -8,11 +8,6 @@ import tempfile
 from typing import Any
 
 import click
-from crewai.events.listeners.tracing.utils import get_user_id
-from crewai.utilities.project_utils import (
-    extract_available_exports,
-    extract_tools_metadata,
-)
 from rich.console import Console
 
 from crewai_cli import git
@@ -31,6 +26,32 @@ from crewai_cli.utils import (
 
 
 console = Console()
+
+
+_REQUIRES_CREWAI_MSG = (
+    "[red]This subcommand requires the full crewai package.\n"
+    "Install it with: pip install crewai[/red]"
+)
+
+
+def _require_project_utils() -> Any:
+    try:
+        from crewai.utilities import project_utils
+
+        return project_utils
+    except ImportError:
+        console.print(_REQUIRES_CREWAI_MSG)
+        raise SystemExit(1) from None
+
+
+def _require_get_user_id() -> Any:
+    try:
+        from crewai.events.listeners.tracing.utils import get_user_id
+
+        return get_user_id
+    except ImportError:
+        console.print(_REQUIRES_CREWAI_MSG)
+        raise SystemExit(1) from None
 
 
 class ToolCommand(BaseCommand, PlusAPIMixin):
@@ -99,7 +120,8 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         encoded_tarball = None
 
         console.print("[bold blue]Discovering tools from your project...[/bold blue]")
-        available_exports = extract_available_exports()
+        project_utils = _require_project_utils()
+        available_exports = project_utils.extract_available_exports()
 
         if available_exports:
             console.print(
@@ -108,7 +130,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
 
         console.print("[bold blue]Extracting tool metadata...[/bold blue]")
         try:
-            tools_metadata = extract_tools_metadata()
+            tools_metadata = project_utils.extract_tools_metadata()
         except Exception as e:
             console.print(
                 f"[yellow]Warning: Could not extract tool metadata: {e}[/yellow]\n"
@@ -202,6 +224,7 @@ class ToolCommand(BaseCommand, PlusAPIMixin):
         console.print(f"Successfully installed {handle}", style="bold green")
 
     def login(self) -> None:
+        get_user_id = _require_get_user_id()
         login_response = self.plus_api_client.login_to_tool_repository(
             user_identifier=get_user_id()
         )

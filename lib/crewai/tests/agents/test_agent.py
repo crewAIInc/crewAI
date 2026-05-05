@@ -1225,7 +1225,7 @@ def test_llm_call_with_error():
 def test_handle_context_length_exceeds_limit():
     # Import necessary modules
     from crewai.utilities.agent_utils import handle_context_length
-    from crewai.utilities.printer import Printer
+    from crewai_core.printer import Printer
 
     # Create mocks for dependencies
     printer = Printer()

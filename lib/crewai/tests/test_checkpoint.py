@@ -206,7 +206,7 @@ class TestRuntimeStateLineage:
         assert state._branch == "main"
 
     def test_serialize_includes_version(self) -> None:
-        from crewai.utilities.version import get_crewai_version
+        from crewai_core.version import get_crewai_version
 
         state = self._make_state()
         dumped = json.loads(state.model_dump_json())

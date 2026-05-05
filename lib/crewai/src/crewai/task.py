@@ -77,6 +77,8 @@ except ImportError:
         return []
 
 
+from crewai_core.printer import PRINTER
+
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.guardrail import (
     process_guardrail,
@@ -89,7 +91,6 @@ from crewai.utilities.guardrail_types import (
     GuardrailsType,
 )
 from crewai.utilities.i18n import I18N_DEFAULT
-from crewai.utilities.printer import PRINTER
 from crewai.utilities.string_utils import interpolate_only
 
 

@@ -184,11 +184,11 @@ def test_publish_when_not_in_sync(mock_is_synced, mock_fetch, capsys, tool_comma
 @patch("crewai_cli.plus_api.PlusAPI.publish_tool")
 @patch("crewai_cli.tools.main.git.Repository.is_synced", return_value=False)
 @patch(
-    "crewai_cli.tools.main.extract_available_exports",
+    "crewai.utilities.project_utils.extract_available_exports",
     return_value=[{"name": "SampleTool"}],
 )
 @patch(
-    "crewai_cli.tools.main.extract_tools_metadata",
+    "crewai.utilities.project_utils.extract_tools_metadata",
     return_value=[{"name": "SampleTool", "humanized_name": "sample_tool", "description": "A sample tool", "run_params_schema": {}, "init_params_schema": {}, "env_vars": []}],
 )
 @patch("crewai_cli.tools.main.ToolCommand._print_current_organization")
@@ -250,11 +250,11 @@ def test_publish_when_not_in_sync_and_force(
 @patch("crewai_cli.plus_api.PlusAPI.publish_tool")
 @patch("crewai_cli.tools.main.git.Repository.is_synced", return_value=True)
 @patch(
-    "crewai_cli.tools.main.extract_available_exports",
+    "crewai.utilities.project_utils.extract_available_exports",
     return_value=[{"name": "SampleTool"}],
 )
 @patch(
-    "crewai_cli.tools.main.extract_tools_metadata",
+    "crewai.utilities.project_utils.extract_tools_metadata",
     return_value=[{"name": "SampleTool", "humanized_name": "sample_tool", "description": "A sample tool", "run_params_schema": {}, "init_params_schema": {}, "env_vars": []}],
 )
 def test_publish_success(
@@ -311,11 +311,11 @@ def test_publish_success(
 )
 @patch("crewai_cli.plus_api.PlusAPI.publish_tool")
 @patch(
-    "crewai_cli.tools.main.extract_available_exports",
+    "crewai.utilities.project_utils.extract_available_exports",
     return_value=[{"name": "SampleTool"}],
 )
 @patch(
-    "crewai_cli.tools.main.extract_tools_metadata",
+    "crewai.utilities.project_utils.extract_tools_metadata",
     return_value=[{"name": "SampleTool", "humanized_name": "sample_tool", "description": "A sample tool", "run_params_schema": {}, "init_params_schema": {}, "env_vars": []}],
 )
 def test_publish_failure(
@@ -357,11 +357,11 @@ def test_publish_failure(
 )
 @patch("crewai_cli.plus_api.PlusAPI.publish_tool")
 @patch(
-    "crewai_cli.tools.main.extract_available_exports",
+    "crewai.utilities.project_utils.extract_available_exports",
     return_value=[{"name": "SampleTool"}],
 )
 @patch(
-    "crewai_cli.tools.main.extract_tools_metadata",
+    "crewai.utilities.project_utils.extract_tools_metadata",
     return_value=[{"name": "SampleTool", "humanized_name": "sample_tool", "description": "A sample tool", "run_params_schema": {}, "init_params_schema": {}, "env_vars": []}],
 )
 def test_publish_api_error(
@@ -404,11 +404,11 @@ def test_publish_api_error(
 @patch("crewai_cli.plus_api.PlusAPI.publish_tool")
 @patch("crewai_cli.tools.main.git.Repository.is_synced", return_value=True)
 @patch(
-    "crewai_cli.tools.main.extract_available_exports",
+    "crewai.utilities.project_utils.extract_available_exports",
     return_value=[{"name": "SampleTool"}],
 )
 @patch(
-    "crewai_cli.tools.main.extract_tools_metadata",
+    "crewai.utilities.project_utils.extract_tools_metadata",
     side_effect=Exception("Failed to extract metadata"),
 )
 def test_publish_metadata_extraction_failure_continues_with_warning(

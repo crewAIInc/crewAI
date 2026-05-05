@@ -3,7 +3,7 @@
 import re
 from typing import Final
 
-from crewai.utilities.paths import db_storage_path
+from crewai_core.paths import db_storage_path
 
 
 DEFAULT_TENANT: Final[str] = "default_tenant"

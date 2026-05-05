@@ -12,6 +12,7 @@ import json
 import re
 from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict
 
+from crewai_core.printer import PRINTER, ColoredText, Printer
 from pydantic import BaseModel
 from rich.console import Console
 
@@ -33,7 +34,6 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
 from crewai.utilities.i18n import I18N_DEFAULT
-from crewai.utilities.printer import PRINTER, ColoredText, Printer
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler

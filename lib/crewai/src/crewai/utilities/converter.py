@@ -5,13 +5,13 @@ import json
 import re
 from typing import TYPE_CHECKING, Any, Final, TypedDict
 
+from crewai_core.printer import PRINTER
 from pydantic import BaseModel, ValidationError
 from typing_extensions import Unpack
 
 from crewai.agents.agent_builder.utilities.base_output_converter import OutputConverter
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.internal_instructor import InternalInstructor
-from crewai.utilities.printer import PRINTER
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 
 

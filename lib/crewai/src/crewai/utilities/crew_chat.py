@@ -11,6 +11,7 @@ import time
 from typing import Any, Final, Literal
 
 import click
+from crewai_core.printer import PRINTER
 from packaging import version
 import tomli
 
@@ -19,7 +20,6 @@ from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
 from crewai.types.crew_chat import ChatInputField, ChatInputs
 from crewai.utilities.llm_utils import create_llm
-from crewai.utilities.printer import PRINTER
 from crewai.utilities.project_utils import read_toml
 from crewai.utilities.types import LLMMessage
 from crewai.version import get_crewai_version

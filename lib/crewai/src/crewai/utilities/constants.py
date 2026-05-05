@@ -1,15 +1,16 @@
 from typing import Annotated, Final
 
+from crewai_core.constants import (
+    CREWAI_TRAINED_AGENTS_FILE_ENV as CREWAI_TRAINED_AGENTS_FILE_ENV,
+    KNOWLEDGE_DIRECTORY as KNOWLEDGE_DIRECTORY,
+    MAX_FILE_NAME_LENGTH as MAX_FILE_NAME_LENGTH,
+    TRAINED_AGENTS_DATA_FILE as TRAINED_AGENTS_DATA_FILE,
+    TRAINING_DATA_FILE as TRAINING_DATA_FILE,
+)
+from crewai_core.printer import PrinterColor
 from pydantic_core import CoreSchema
 
-from crewai.utilities.printer import PrinterColor
 
-
-TRAINING_DATA_FILE: Final[str] = "training_data.pkl"
-TRAINED_AGENTS_DATA_FILE: Final[str] = "trained_agents_data.pkl"
-CREWAI_TRAINED_AGENTS_FILE_ENV: Final[str] = "CREWAI_TRAINED_AGENTS_FILE"
-KNOWLEDGE_DIRECTORY: Final[str] = "knowledge"
-MAX_FILE_NAME_LENGTH: Final[int] = 255
 EMITTER_COLOR: Final[PrinterColor] = "bold_blue"
 CC_ENV_VAR: Final[str] = "CLAUDECODE"
 CODEX_ENV_VARS: Final[tuple[str, ...]] = (

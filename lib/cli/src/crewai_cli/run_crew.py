@@ -2,7 +2,7 @@ from enum import Enum
 import subprocess
 
 import click
-from crewai.utilities.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
+from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
 from packaging import version
 
 from crewai_cli.utils import build_env_with_all_tool_credentials, read_toml

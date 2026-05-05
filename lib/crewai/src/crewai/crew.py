@@ -54,6 +54,8 @@ except ImportError:
         return []
 
 
+from crewai_core.printer import PrinterColor
+
 from crewai.agent import Agent
 from crewai.agents.agent_builder.base_agent import (
     BaseAgent,
@@ -132,7 +134,6 @@ from crewai.utilities.i18n import get_i18n
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.logger import Logger
 from crewai.utilities.planning_handler import CrewPlanner
-from crewai.utilities.printer import PrinterColor
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.streaming import (
     create_async_chunk_generator,
