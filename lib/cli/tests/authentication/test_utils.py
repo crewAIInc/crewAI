@@ -6,8 +6,8 @@ import jwt
 from crewai_cli.authentication.utils import validate_jwt_token
 
 
-@patch("crewai_cli.authentication.utils.PyJWKClient", return_value=MagicMock())
-@patch("crewai_cli.authentication.utils.jwt")
+@patch("crewai_core.auth.utils.PyJWKClient", return_value=MagicMock())
+@patch("crewai_core.auth.utils.jwt")
 class TestUtils(unittest.TestCase):
     def test_validate_jwt_token(self, mock_jwt, mock_pyjwkclient):
         mock_jwt.decode.return_value = {"exp": 1719859200}

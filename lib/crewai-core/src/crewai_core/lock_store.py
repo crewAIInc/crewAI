@@ -44,7 +44,7 @@ def _redis_available() -> bool:
 
 
 @lru_cache(maxsize=1)
-def _redis_connection() -> redis.Redis:
+def _redis_connection() -> redis.Redis[bytes]:
     """Return a cached Redis connection, creating one on first call."""
     from redis import Redis
 

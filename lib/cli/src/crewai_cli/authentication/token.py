@@ -1,13 +1,11 @@
-from crewai_core.token_manager import TokenManager
+"""Re-exports of authentication token helpers from ``crewai_core.auth.token``."""
+
+from __future__ import annotations
+
+from crewai_core.auth.token import (
+    AuthError as AuthError,
+    get_auth_token as get_auth_token,
+)
 
 
-class AuthError(Exception):
-    pass
-
-
-def get_auth_token() -> str:
-    """Get the authentication token."""
-    access_token = TokenManager().get_token()
-    if not access_token:
-        raise AuthError("No token found, make sure you are logged in")
-    return access_token
+__all__ = ["AuthError", "get_auth_token"]

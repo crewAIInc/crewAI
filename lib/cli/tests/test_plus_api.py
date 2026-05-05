@@ -20,7 +20,7 @@ class TestPlusAPI(unittest.TestCase):
         self.assertIn("CrewAI-CLI/", self.api.headers["User-Agent"])
         self.assertTrue(self.api.headers["X-Crewai-Version"])
 
-    @patch("crewai_cli.plus_api.PlusAPI._make_request")
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
     def test_login_to_tool_repository(self, mock_make_request):
         mock_response = MagicMock()
         mock_make_request.return_value = mock_response
@@ -48,8 +48,8 @@ class TestPlusAPI(unittest.TestCase):
             **kwargs,
         )
 
-    @patch("crewai_cli.plus_api.Settings")
-    @patch("crewai_cli.plus_api.httpx.Client")
+    @patch("crewai_core.plus_api.Settings")
+    @patch("crewai_core.plus_api.httpx.Client")
     def test_login_to_tool_repository_with_org_uuid(
         self, mock_client_class, mock_settings_class
     ):
@@ -71,7 +71,7 @@ class TestPlusAPI(unittest.TestCase):
         )
         self.assertEqual(response, mock_response)
 
-    @patch("crewai_cli.plus_api.PlusAPI._make_request")
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
     def test_get_tool(self, mock_make_request):
         mock_response = MagicMock()
         mock_make_request.return_value = mock_response
@@ -82,8 +82,8 @@ class TestPlusAPI(unittest.TestCase):
         )
         self.assertEqual(response, mock_response)
 
-    @patch("crewai_cli.plus_api.Settings")
-    @patch("crewai_cli.plus_api.httpx.Client")
+    @patch("crewai_core.plus_api.Settings")
+    @patch("crewai_core.plus_api.httpx.Client")
     def test_get_tool_with_org_uuid(self, mock_client_class, mock_settings_class):
         mock_settings = MagicMock()
         mock_settings.org_uuid = self.org_uuid
@@ -103,7 +103,7 @@ class TestPlusAPI(unittest.TestCase):
         )
         self.assertEqual(response, mock_response)
 
-    @patch("crewai_cli.plus_api.PlusAPI._make_request")
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
     def test_publish_tool(self, mock_make_request):
         mock_response = MagicMock()
         mock_make_request.return_value = mock_response
@@ -131,8 +131,8 @@ class TestPlusAPI(unittest.TestCase):
         )
         self.assertEqual(response, mock_response)
 
-    @patch("crewai_cli.plus_api.Settings")
-    @patch("crewai_cli.plus_api.httpx.Client")
+    @patch("crewai_core.plus_api.Settings")
+    @patch("crewai_core.plus_api.httpx.Client")
     def test_publish_tool_with_org_uuid(self, mock_client_class, mock_settings_class):
         mock_settings = MagicMock()
         mock_settings.org_uuid = self.org_uuid
@@ -170,7 +170,7 @@ class TestPlusAPI(unittest.TestCase):
         )
         self.assertEqual(response, mock_response)
 
-    @patch("crewai_cli.plus_api.PlusAPI._make_request")
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
     def test_publish_tool_without_description(self, mock_make_request):
         mock_response = MagicMock()
         mock_make_request.return_value = mock_response
@@ -198,7 +198,7 @@ class TestPlusAPI(unittest.TestCase):
         )
         self.assertEqual(response, mock_response)
 
-    @patch("crewai_cli.plus_api.httpx.Client")
+    @patch("crewai_core.plus_api.httpx.Client")
     def test_make_request(self, mock_client_class):
         mock_client_instance = MagicMock()
         mock_response = MagicMock()
@@ -213,35 +213,35 @@ class TestPlusAPI(unittest.TestCase):
         )
         self.assertEqual(response, mock_response)
 
-    @patch("crewai_cli.plus_api.PlusAPI._make_request")
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
     def test_deploy_by_name(self, mock_make_request):
         self.api.deploy_by_name("test_project")
         mock_make_request.assert_called_once_with(
             "POST", "/crewai_plus/api/v1/crews/by-name/test_project/deploy"
         )
 
-    @patch("crewai_cli.plus_api.PlusAPI._make_request")
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
     def test_deploy_by_uuid(self, mock_make_request):
         self.api.deploy_by_uuid("test_uuid")
         mock_make_request.assert_called_once_with(
             "POST", "/crewai_plus/api/v1/crews/test_uuid/deploy"
         )
 
-    @patch("crewai_cli.plus_api.PlusAPI._make_request")
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
     def test_crew_status_by_name(self, mock_make_request):
         self.api.crew_status_by_name("test_project")
         mock_make_request.assert_called_once_with(
             "GET", "/crewai_plus/api/v1/crews/by-name/test_project/status"
         )
 
-    @patch("crewai_cli.plus_api.PlusAPI._make_request")
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
     def test_crew_status_by_uuid(self, mock_make_request):
         self.api.crew_status_by_uuid("test_uuid")
         mock_make_request.assert_called_once_with(
             "GET", "/crewai_plus/api/v1/crews/test_uuid/status"
         )
 
-    @patch("crewai_cli.plus_api.PlusAPI._make_request")
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
     def test_crew_by_name(self, mock_make_request):
         self.api.crew_by_name("test_project")
         mock_make_request.assert_called_once_with(
@@ -253,7 +253,7 @@ class TestPlusAPI(unittest.TestCase):
             "GET", "/crewai_plus/api/v1/crews/by-name/test_project/logs/custom_log"
         )
 
-    @patch("crewai_cli.plus_api.PlusAPI._make_request")
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
     def test_crew_by_uuid(self, mock_make_request):
         self.api.crew_by_uuid("test_uuid")
         mock_make_request.assert_called_once_with(
@@ -265,26 +265,26 @@ class TestPlusAPI(unittest.TestCase):
             "GET", "/crewai_plus/api/v1/crews/test_uuid/logs/custom_log"
         )
 
-    @patch("crewai_cli.plus_api.PlusAPI._make_request")
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
     def test_delete_crew_by_name(self, mock_make_request):
         self.api.delete_crew_by_name("test_project")
         mock_make_request.assert_called_once_with(
             "DELETE", "/crewai_plus/api/v1/crews/by-name/test_project"
         )
 
-    @patch("crewai_cli.plus_api.PlusAPI._make_request")
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
     def test_delete_crew_by_uuid(self, mock_make_request):
         self.api.delete_crew_by_uuid("test_uuid")
         mock_make_request.assert_called_once_with(
             "DELETE", "/crewai_plus/api/v1/crews/test_uuid"
         )
 
-    @patch("crewai_cli.plus_api.PlusAPI._make_request")
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
     def test_list_crews(self, mock_make_request):
         self.api.list_crews()
         mock_make_request.assert_called_once_with("GET", "/crewai_plus/api/v1/crews")
 
-    @patch("crewai_cli.plus_api.PlusAPI._make_request")
+    @patch("crewai_core.plus_api.PlusAPI._make_request")
     def test_create_crew(self, mock_make_request):
         payload = {"name": "test_crew"}
         self.api.create_crew(payload)
@@ -292,7 +292,7 @@ class TestPlusAPI(unittest.TestCase):
             "POST", "/crewai_plus/api/v1/crews", json=payload
         )
 
-    @patch("crewai_cli.plus_api.Settings")
+    @patch("crewai_core.plus_api.Settings")
     @patch.dict(os.environ, {"CREWAI_PLUS_URL": ""})
     def test_custom_base_url(self, mock_settings_class):
         mock_settings = MagicMock()
@@ -333,7 +333,7 @@ async def test_get_agent(mock_async_client_class):
 
 @pytest.mark.asyncio
 @patch("httpx.AsyncClient")
-@patch("crewai_cli.plus_api.Settings")
+@patch("crewai_core.plus_api.Settings")
 async def test_get_agent_with_org_uuid(mock_settings_class, mock_async_client_class):
     org_uuid = "test-org-uuid"
     mock_settings = MagicMock()

@@ -1,44 +1,8 @@
-"""Base OAuth2 provider interface."""
+"""Re-export of ``BaseProvider`` from ``crewai_core.auth.providers.base_provider``."""
 
-from abc import ABC, abstractmethod
+from __future__ import annotations
 
-from crewai.auth.oauth2 import Oauth2Settings
+from crewai_core.auth.providers.base_provider import BaseProvider as BaseProvider
 
 
-class BaseProvider(ABC):
-    """Abstract base class for OAuth2 providers."""
-
-    def __init__(self, settings: Oauth2Settings):
-        self.settings = settings
-
-    @abstractmethod
-    def get_authorize_url(self) -> str:
-        """Return the authorization endpoint URL."""
-
-    @abstractmethod
-    def get_token_url(self) -> str:
-        """Return the token endpoint URL."""
-
-    @abstractmethod
-    def get_jwks_url(self) -> str:
-        """Return the JWKS endpoint URL."""
-
-    @abstractmethod
-    def get_issuer(self) -> str:
-        """Return the OAuth issuer identifier."""
-
-    @abstractmethod
-    def get_audience(self) -> str:
-        """Return the OAuth audience identifier."""
-
-    @abstractmethod
-    def get_client_id(self) -> str:
-        """Return the OAuth client identifier."""
-
-    def get_required_fields(self) -> list[str]:
-        """Returns which provider-specific fields inside the "extra" dict will be required."""
-        return []
-
-    def get_oauth_scopes(self) -> list[str]:
-        """Returns the OAuth scopes to request."""
-        return ["openid", "profile", "email"]
+__all__ = ["BaseProvider"]

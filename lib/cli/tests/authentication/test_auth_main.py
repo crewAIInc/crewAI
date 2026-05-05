@@ -43,7 +43,7 @@ class TestAuthenticationCommand:
         "crewai_cli.authentication.main.AuthenticationCommand._display_auth_instructions"
     )
     @patch("crewai_cli.authentication.main.AuthenticationCommand._poll_for_token")
-    @patch("crewai_cli.authentication.main.console.print")
+    @patch("crewai_core.auth.oauth2.console.print")
     def test_login(
         self,
         mock_console_print,
@@ -82,8 +82,8 @@ class TestAuthenticationCommand:
             self.auth_command.oauth2_provider._get_domain() == expected_urls["domain"]
         )
 
-    @patch("crewai_cli.authentication.main.webbrowser")
-    @patch("crewai_cli.authentication.main.console.print")
+    @patch("crewai_core.auth.oauth2.webbrowser")
+    @patch("crewai_core.auth.oauth2.console.print")
     def test_display_auth_instructions(self, mock_console_print, mock_webbrowser):
         device_code_data = {
             "verification_uri_complete": "https://example.com/auth",
@@ -113,8 +113,8 @@ class TestAuthenticationCommand:
         ],
     )
     @pytest.mark.parametrize("has_expiration", [True, False])
-    @patch("crewai_cli.authentication.main.validate_jwt_token")
-    @patch("crewai_cli.authentication.main.TokenManager.save_tokens")
+    @patch("crewai_core.auth.oauth2.validate_jwt_token")
+    @patch("crewai_core.auth.oauth2.TokenManager.save_tokens")
     def test_validate_and_save_token(
         self,
         mock_save_tokens,
@@ -164,7 +164,7 @@ class TestAuthenticationCommand:
 
     @patch("crewai_cli.tools.main.ToolCommand")
     @patch("crewai_cli.authentication.main.Settings")
-    @patch("crewai_cli.authentication.main.console.print")
+    @patch("crewai_core.auth.oauth2.console.print")
     def test_login_to_tool_repository_success(
         self, mock_console_print, mock_settings, mock_tool_command
     ):
@@ -196,7 +196,7 @@ class TestAuthenticationCommand:
         mock_console_print.assert_has_calls(expected_calls)
 
     @patch("crewai_cli.tools.main.ToolCommand")
-    @patch("crewai_cli.authentication.main.console.print")
+    @patch("crewai_core.auth.oauth2.console.print")
     def test_login_to_tool_repository_error(
         self, mock_console_print, mock_tool_command
     ):
@@ -226,7 +226,7 @@ class TestAuthenticationCommand:
         ]
         mock_console_print.assert_has_calls(expected_calls)
 
-    @patch("crewai_cli.authentication.main.httpx.post")
+    @patch("crewai_core.auth.oauth2.httpx.post")
     def test_get_device_code(self, mock_post):
         mock_response = MagicMock()
         mock_response.json.return_value = {
@@ -262,8 +262,8 @@ class TestAuthenticationCommand:
             "verification_uri_complete": "https://example.com/auth",
         }
 
-    @patch("crewai_cli.authentication.main.httpx.post")
-    @patch("crewai_cli.authentication.main.console.print")
+    @patch("crewai_core.auth.oauth2.httpx.post")
+    @patch("crewai_core.auth.oauth2.console.print")
     def test_poll_for_token_success(self, mock_console_print, mock_post):
         mock_response_success = MagicMock()
         mock_response_success.status_code = 200
@@ -311,8 +311,8 @@ class TestAuthenticationCommand:
             ]
             mock_console_print.assert_has_calls(expected_calls)
 
-    @patch("crewai_cli.authentication.main.httpx.post")
-    @patch("crewai_cli.authentication.main.console.print")
+    @patch("crewai_core.auth.oauth2.httpx.post")
+    @patch("crewai_core.auth.oauth2.console.print")
     def test_poll_for_token_timeout(self, mock_console_print, mock_post):
         mock_response_pending = MagicMock()
         mock_response_pending.status_code = 400
@@ -330,7 +330,7 @@ class TestAuthenticationCommand:
             "Timeout: Failed to get the token. Please try again.", style="bold red"
         )
 
-    @patch("crewai_cli.authentication.main.httpx.post")
+    @patch("crewai_core.auth.oauth2.httpx.post")
     def test_poll_for_token_error(self, mock_post):
         """Test the method to poll for token (error path)."""
         # Setup mock to return error

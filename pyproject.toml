@@ -29,6 +29,7 @@ dev = [
     "types-psycopg2==2.9.21.20251012",
     "types-pymysql==1.1.0.20250916",
     "types-aiofiles~=25.1.0",
+    "types-redis~=4.6",
     "commitizen>=4.13.9",
     "pip-audit==2.9.0",
 ]
