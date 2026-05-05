@@ -1437,6 +1437,7 @@ source = { editable = "lib/cli" }
 dependencies = [
     { name = "appdirs" },
     { name = "click" },
+    { name = "cryptography" },
     { name = "httpx" },
     { name = "packaging" },
     { name = "portalocker" },
@@ -1454,6 +1455,7 @@ dependencies = [
 requires-dist = [
     { name = "appdirs", specifier = "~=1.4.4" },
     { name = "click", specifier = "~=8.1.7" },
+    { name = "cryptography", specifier = ">=42.0" },
     { name = "httpx", specifier = "~=0.28.1" },
     { name = "packaging", specifier = ">=23.0" },
     { name = "portalocker", specifier = "~=2.7.0" },
