@@ -2,9 +2,8 @@ import re
 from typing import Any, Final
 
 from bs4 import BeautifulSoup
-import requests
-
 from crewai_tools.rag.base_loader import BaseLoader, LoaderResult
+from crewai_tools.security.safe_path import safe_get
 from crewai_tools.rag.source_content import SourceContent
 
 
@@ -25,7 +24,7 @@ class WebPageLoader(BaseLoader):
         )
 
         try:
-            response = requests.get(url, timeout=15, headers=headers)
+            response = safe_get(url, timeout=15, headers=headers)
             response.encoding = response.apparent_encoding
 
             soup = BeautifulSoup(response.text, "html.parser")

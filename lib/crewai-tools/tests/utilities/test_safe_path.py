@@ -6,7 +6,10 @@ import os
 
 import pytest
 
+from unittest.mock import MagicMock, patch
+
 from crewai_tools.security.safe_path import (
+    safe_get,
     validate_directory_path,
     validate_file_path,
     validate_url,
@@ -168,3 +171,62 @@ class TestValidateUrl:
         # file:// would normally be blocked
         result = validate_url("file:///etc/passwd")
         assert result == "file:///etc/passwd"
+
+
+# ---------------------------------------------------------------------------
+# safe_get — redirect-aware SSRF protection
+# ---------------------------------------------------------------------------
+
+
+def _fake_getaddrinfo_factory(ip: str):
+    """Return a getaddrinfo replacement that always resolves to *ip*."""
+    def _fake(host, port, *args, **kwargs):
+        return [(2, 1, 6, "", (ip, port or 80))]
+    return _fake
+
+
+class TestSafeGet:
+    """Tests for safe_get (validates IPs on every redirect hop)."""
+
+    @patch("crewai_tools.security.safe_path.socket.getaddrinfo",
+           side_effect=_fake_getaddrinfo_factory("93.184.216.34"))
+    @patch("requests.adapters.HTTPAdapter.send")
+    def test_allows_public_url(self, mock_send, mock_dns):
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.is_redirect = False
+        mock_response.headers = {}
+        mock_send.return_value = mock_response
+        resp = safe_get("https://example.com/page")
+        assert resp.status_code == 200
+
+    @patch("crewai_tools.security.safe_path.socket.getaddrinfo",
+           side_effect=_fake_getaddrinfo_factory("127.0.0.1"))
+    def test_blocks_redirect_to_localhost(self, mock_dns):
+        with pytest.raises(ValueError, match="private/reserved IP"):
+            safe_get("http://evil.com/redirect")
+
+    @patch("crewai_tools.security.safe_path.socket.getaddrinfo",
+           side_effect=_fake_getaddrinfo_factory("169.254.169.254"))
+    def test_blocks_redirect_to_metadata(self, mock_dns):
+        with pytest.raises(ValueError, match="private/reserved IP"):
+            safe_get("http://evil.com/metadata")
+
+    @patch("crewai_tools.security.safe_path.socket.getaddrinfo",
+           side_effect=_fake_getaddrinfo_factory("10.0.0.1"))
+    def test_blocks_redirect_to_private_range(self, mock_dns):
+        with pytest.raises(ValueError, match="private/reserved IP"):
+            safe_get("http://evil.com/internal")
+
+    @patch("crewai_tools.security.safe_path.socket.getaddrinfo",
+           side_effect=_fake_getaddrinfo_factory("169.254.169.254"))
+    @patch("requests.adapters.HTTPAdapter.send")
+    def test_escape_hatch_bypasses_redirect_check(self, mock_send, mock_dns, monkeypatch):
+        monkeypatch.setenv("CREWAI_TOOLS_ALLOW_UNSAFE_PATHS", "true")
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.is_redirect = False
+        mock_response.headers = {}
+        mock_send.return_value = mock_response
+        resp = safe_get("http://evil.com/metadata")
+        assert resp.status_code == 200

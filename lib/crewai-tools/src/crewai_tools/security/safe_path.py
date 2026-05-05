@@ -16,6 +16,9 @@ import os
 import socket
 from urllib.parse import urlparse
 
+import requests
+from requests.adapters import HTTPAdapter
+
 
 logger = logging.getLogger(__name__)
 
@@ -203,3 +206,70 @@ def validate_url(url: str) -> str:
             )
 
     return url
+
+
+# ---------------------------------------------------------------------------
+# SSRF-safe HTTP requests (validates IPs on every redirect hop)
+# ---------------------------------------------------------------------------
+
+
+class _SSRFSafeAdapter(HTTPAdapter):
+    """HTTPAdapter that validates the resolved IP of every request — including
+    redirect hops — against the private/reserved blocklist before the
+    connection is made."""
+
+    def send(self, request, **kwargs):
+        parsed = urlparse(request.url)
+        if not _is_escape_hatch_enabled() and parsed.hostname:
+            try:
+                port = parsed.port or (443 if parsed.scheme == "https" else 80)
+                addrinfos = socket.getaddrinfo(parsed.hostname, port)
+            except socket.gaierror as exc:
+                raise ValueError(
+                    f"Could not resolve hostname: '{parsed.hostname}'"
+                ) from exc
+
+            for _family, _, _, _, sockaddr in addrinfos:
+                ip_str = str(sockaddr[0])
+                if _is_private_or_reserved(ip_str):
+                    raise ValueError(
+                        f"Redirect to '{request.url}' blocked: resolves to "
+                        f"private/reserved IP {ip_str}. Access to internal "
+                        f"networks is not allowed. "
+                        f"Set {_UNSAFE_PATHS_ENV}=true to bypass."
+                    )
+
+        return super().send(request, **kwargs)
+
+
+def safe_request_session() -> requests.Session:
+    """Return a :class:`requests.Session` that validates every connection
+    target (including redirect destinations) against the SSRF blocklist."""
+    session = requests.Session()
+    adapter = _SSRFSafeAdapter()
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+    return session
+
+
+def safe_get(url: str, **kwargs) -> requests.Response:
+    """Drop-in replacement for ``requests.get()`` with SSRF protection.
+
+    Validates the initial URL via :func:`validate_url`, then executes the
+    request through a session whose adapter re-checks every redirect hop.
+
+    Args:
+        url: The URL to fetch.
+        **kwargs: Passed through to ``session.get()`` (headers, cookies,
+            timeout, etc.).
+
+    Returns:
+        The :class:`requests.Response`.
+
+    Raises:
+        ValueError: If the initial URL or any redirect target resolves to
+            a private/reserved IP.
+    """
+    validate_url(url)
+    session = safe_request_session()
+    return session.get(url, **kwargs)
