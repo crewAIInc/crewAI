@@ -801,7 +801,7 @@ def traces_enable() -> None:
         "To activate trace collection, set [bold]CREWAI_TRACING_ENABLED=true[/bold] "
         "in your environment or .env file.\n"
         "Use 'crewai traces disable' to revoke consent.",
-        title="Traces Enabled",
+        title="Trace Consent Recorded",
         border_style="green",
         padding=(1, 2),
     )
