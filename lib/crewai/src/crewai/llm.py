@@ -606,6 +606,13 @@ class LLM(BaseLLM):
 
             return BedrockCompletion
 
+        if provider == "cerebras":
+            from crewai.llms.providers.cerebras.completion import (
+                CerebrasCompletion,
+            )
+
+            return CerebrasCompletion
+
         # OpenAI-compatible providers
         openai_compatible_providers = {
             "openrouter",

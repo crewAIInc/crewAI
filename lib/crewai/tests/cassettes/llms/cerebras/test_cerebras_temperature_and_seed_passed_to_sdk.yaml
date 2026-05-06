@@ -1,0 +1,234 @@
+interactions:
+- request:
+    body: ''
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      host:
+      - api.cerebras.ai
+      user-agent:
+      - X-USER-AGENT-XXX
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.67.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: GET
+    uri: https://api.cerebras.ai/v1/tcp_warming
+  response:
+    body:
+      string: 'This request is being sent by the Cerebras Cloud SDK to warm up your
+        TCP connection so that your requests will have lower TTFT.
+
+        If you don''t want this, please set `"warmTCPConnection": false` (NodeJS)
+        or `warm_tcp_connection=False` (Python) in the SDK constructor.
+
+
+        For more assistance, contact us at support@cerebras.ai
+
+        '
+    headers:
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      cf-ray:
+      - CF-RAY-XXX
+      content-type:
+      - text/plain; charset=utf-8
+      date:
+      - Wed, 06 May 2026 22:33:51 GMT
+      referrer-policy:
+      - REFERRER-POLICY-XXX
+      server:
+      - cloudflare
+      set-cookie:
+      - SET-COOKIE-XXX
+      strict-transport-security:
+      - STS-XXX
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: ''
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      host:
+      - api.cerebras.ai
+      user-agent:
+      - X-USER-AGENT-XXX
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.67.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: GET
+    uri: https://api.cerebras.ai/v1/tcp_warming
+  response:
+    body:
+      string: 'This request is being sent by the Cerebras Cloud SDK to warm up your
+        TCP connection so that your requests will have lower TTFT.
+
+        If you don''t want this, please set `"warmTCPConnection": false` (NodeJS)
+        or `warm_tcp_connection=False` (Python) in the SDK constructor.
+
+
+        For more assistance, contact us at support@cerebras.ai
+
+        '
+    headers:
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      cf-ray:
+      - CF-RAY-XXX
+      content-type:
+      - text/plain; charset=utf-8
+      date:
+      - Wed, 06 May 2026 22:33:51 GMT
+      referrer-policy:
+      - REFERRER-POLICY-XXX
+      server:
+      - cloudflare
+      set-cookie:
+      - SET-COOKIE-XXX
+      strict-transport-security:
+      - STS-XXX
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"model":"llama3.1-8b","max_completion_tokens":64,"messages":[{"role":"user","content":"Say
+      hi."}],"seed":7,"temperature":0.0}'
+    headers:
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      connection:
+      - keep-alive
+      content-length:
+      - '126'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.cerebras.ai
+      user-agent:
+      - X-USER-AGENT-XXX
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 1.67.0
+      x-stainless-read-timeout:
+      - X-STAINLESS-READ-TIMEOUT-XXX
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+    method: POST
+    uri: https://api.cerebras.ai/v1/chat/completions
+  response:
+    body:
+      string: '{"id":"chatcmpl-5bf61f2f-c4a5-4122-b921-d8cba7d8ebc0","choices":[{"finish_reason":"stop","index":0,"message":{"content":"Hello.
+        How can I assist you today?","role":"assistant"}}],"created":1778106831,"model":"llama3.1-8b","system_fingerprint":"fp_96e7e4453bc38316a23a","object":"chat.completion","usage":{"total_tokens":48,"completion_tokens":10,"completion_tokens_details":{"accepted_prediction_tokens":0,"rejected_prediction_tokens":0,"reasoning_tokens":0},"prompt_tokens":38,"prompt_tokens_details":{"cached_tokens":0}},"time_info":{"created":1778106831.5465255,"queue_time":7.401e-05,"prompt_time":0.001719314,"completion_time":0.003982367,"total_time":0.0068645477294921875}}'
+    headers:
+      alt-svc:
+      - h3=":443"; ma=86400
+      cf-cache-status:
+      - DYNAMIC
+      cf-ray:
+      - CF-RAY-XXX
+      content-type:
+      - application/json
+      date:
+      - Wed, 06 May 2026 22:33:51 GMT
+      inference-id:
+      - chatcmpl-5bf61f2f-c4a5-4122-b921-d8cba7d8ebc0
+      referrer-policy:
+      - REFERRER-POLICY-XXX
+      server:
+      - cloudflare
+      strict-transport-security:
+      - STS-XXX
+      x-content-type-options:
+      - X-CONTENT-TYPE-XXX
+      x-ratelimit-limit-requests-day:
+      - '14400'
+      x-ratelimit-limit-requests-hour:
+      - '900'
+      x-ratelimit-limit-requests-minute:
+      - '30'
+      x-ratelimit-limit-tokens-day:
+      - '1000000'
+      x-ratelimit-limit-tokens-hour:
+      - '1000000'
+      x-ratelimit-limit-tokens-minute:
+      - '60000'
+      x-ratelimit-remaining-requests-day:
+      - '14397'
+      x-ratelimit-remaining-requests-hour:
+      - '898'
+      x-ratelimit-remaining-requests-minute:
+      - '28'
+      x-ratelimit-remaining-tokens-day:
+      - '999871'
+      x-ratelimit-remaining-tokens-hour:
+      - '999881'
+      x-ratelimit-remaining-tokens-minute:
+      - '59881'
+      x-request-id:
+      - X-REQUEST-ID-XXX
+    status:
+      code: 200
+      message: OK
+version: 1
