@@ -7,6 +7,7 @@ async support, and attribute preservation functionality.
 from __future__ import annotations
 
 import asyncio
+import logging
 from datetime import datetime
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -595,6 +596,277 @@ class TestHumanFeedbackLearn:
         assert config.learn is True
         # llm defaults to "gpt-4o-mini" at the function level
         assert config.llm == "gpt-4o-mini"
+
+
+class TestHumanFeedbackPreReviewFailure:
+    """Tests for HITL pre-review failure handling (issue #5725).
+
+    Pre-review must NOT silently swallow exceptions: failures should be
+    logged at WARNING level with full traceback, and an opt-in
+    ``learn_strict=True`` should propagate the exception instead of
+    falling back to raw output.
+    """
+
+    @staticmethod
+    def _seeded_memory() -> MagicMock:
+        """Return a mock memory object with one stored lesson so that
+        pre-review proceeds past the ``not matches`` short-circuit."""
+        from crewai.memory.types import MemoryMatch, MemoryRecord
+
+        mem = MagicMock()
+        mem.recall.return_value = [
+            MemoryMatch(
+                record=MemoryRecord(
+                    content="Always include source citations",
+                    embedding=[],
+                ),
+                score=0.9,
+                match_reasons=["semantic"],
+            )
+        ]
+        return mem
+
+    def test_pre_review_llm_failure_logs_warning_and_falls_back(self, caplog):
+        """When the pre-review LLM call raises, the failure is logged at
+        WARNING with exc_info, and the raw method_output is shown to the
+        human (default fail-open behavior, but now observable)."""
+
+        class LearnFlow(Flow):
+            @start()
+            @human_feedback(message="Review:", llm="gpt-4o-mini", learn=True)
+            def produce(self):
+                return "raw draft"
+
+        flow = LearnFlow()
+        flow.memory = self._seeded_memory()
+
+        captured: dict[str, Any] = {}
+
+        def capture_feedback(message, output, metadata=None, emit=None):
+            captured["shown_to_human"] = output
+            return "approved"
+
+        with (
+            patch.object(flow, "_request_human_feedback", side_effect=capture_feedback),
+            patch("crewai.llm.LLM") as MockLLM,
+            caplog.at_level(logging.WARNING, logger="crewai.flow.human_feedback"),
+        ):
+            mock_llm = MagicMock()
+            mock_llm.supports_function_calling.return_value = True
+            mock_llm.call.side_effect = RuntimeError(
+                "simulated pre-review failure"
+            )
+            MockLLM.return_value = mock_llm
+
+            flow.produce()
+
+        # The human still sees the raw output (fail-open by default).
+        assert captured["shown_to_human"] == "raw draft"
+
+        # ...but the failure is now observable via a WARNING log with traceback.
+        warning_records = [
+            r
+            for r in caplog.records
+            if r.name == "crewai.flow.human_feedback"
+            and r.levelno == logging.WARNING
+            and "HITL pre-review failed" in r.getMessage()
+        ]
+        assert len(warning_records) == 1, (
+            "Expected exactly one HITL pre-review failure warning, got: "
+            f"{[r.getMessage() for r in caplog.records]}"
+        )
+        # exc_info=True must be set so the traceback is captured.
+        assert warning_records[0].exc_info is not None
+        # The exception type/message should be visible in the captured exc_info.
+        exc_type, exc_value, _ = warning_records[0].exc_info
+        assert exc_type is RuntimeError
+        assert "simulated pre-review failure" in str(exc_value)
+
+    def test_pre_review_recall_failure_logs_warning_and_falls_back(self, caplog):
+        """A failure in ``memory.recall`` is also logged and falls back to
+        the raw output instead of being silently swallowed."""
+
+        class LearnFlow(Flow):
+            @start()
+            @human_feedback(message="Review:", llm="gpt-4o-mini", learn=True)
+            def produce(self):
+                return "raw draft"
+
+        flow = LearnFlow()
+        flow.memory = MagicMock()
+        flow.memory.recall.side_effect = RuntimeError("recall blew up")
+
+        captured: dict[str, Any] = {}
+
+        def capture_feedback(message, output, metadata=None, emit=None):
+            captured["shown_to_human"] = output
+            return ""
+
+        with (
+            patch.object(flow, "_request_human_feedback", side_effect=capture_feedback),
+            caplog.at_level(logging.WARNING, logger="crewai.flow.human_feedback"),
+        ):
+            flow.produce()
+
+        assert captured["shown_to_human"] == "raw draft"
+
+        warning_records = [
+            r
+            for r in caplog.records
+            if r.name == "crewai.flow.human_feedback"
+            and r.levelno == logging.WARNING
+            and "memory recall failed" in r.getMessage()
+        ]
+        assert len(warning_records) == 1
+        assert warning_records[0].exc_info is not None
+
+    def test_pre_review_failure_with_learn_strict_propagates(self):
+        """When ``learn_strict=True``, a pre-review LLM failure is re-raised
+        instead of silently falling back to raw output."""
+
+        class StrictFlow(Flow):
+            @start()
+            @human_feedback(
+                message="Review:",
+                llm="gpt-4o-mini",
+                learn=True,
+                learn_strict=True,
+            )
+            def produce(self):
+                return "raw draft"
+
+        flow = StrictFlow()
+        flow.memory = self._seeded_memory()
+
+        with (
+            patch.object(flow, "_request_human_feedback", return_value="approved"),
+            patch("crewai.llm.LLM") as MockLLM,
+        ):
+            mock_llm = MagicMock()
+            mock_llm.supports_function_calling.return_value = True
+            mock_llm.call.side_effect = RuntimeError(
+                "simulated pre-review failure"
+            )
+            MockLLM.return_value = mock_llm
+
+            with pytest.raises(RuntimeError, match="simulated pre-review failure"):
+                flow.produce()
+
+    def test_pre_review_recall_failure_with_learn_strict_propagates(self):
+        """When ``learn_strict=True``, a ``memory.recall`` failure is re-raised
+        instead of silently falling back to raw output."""
+
+        class StrictFlow(Flow):
+            @start()
+            @human_feedback(
+                message="Review:",
+                llm="gpt-4o-mini",
+                learn=True,
+                learn_strict=True,
+            )
+            def produce(self):
+                return "raw draft"
+
+        flow = StrictFlow()
+        flow.memory = MagicMock()
+        flow.memory.recall.side_effect = RuntimeError("recall blew up")
+
+        with patch.object(flow, "_request_human_feedback", return_value="approved"):
+            with pytest.raises(RuntimeError, match="recall blew up"):
+                flow.produce()
+
+    @pytest.mark.asyncio
+    async def test_async_pre_review_failure_logs_warning_and_falls_back(self, caplog):
+        """The async wrapper exhibits the same logging + fail-open behavior
+        as the sync wrapper on pre-review LLM failure."""
+
+        class AsyncLearnFlow(Flow):
+            @start()
+            @human_feedback(message="Review:", llm="gpt-4o-mini", learn=True)
+            async def produce(self):
+                return "raw draft"
+
+        flow = AsyncLearnFlow()
+        flow.memory = self._seeded_memory()
+
+        captured: dict[str, Any] = {}
+
+        def capture_feedback(message, output, metadata=None, emit=None):
+            captured["shown_to_human"] = output
+            return "approved"
+
+        with (
+            patch.object(flow, "_request_human_feedback", side_effect=capture_feedback),
+            patch("crewai.llm.LLM") as MockLLM,
+            caplog.at_level(logging.WARNING, logger="crewai.flow.human_feedback"),
+        ):
+            mock_llm = MagicMock()
+            mock_llm.supports_function_calling.return_value = True
+            mock_llm.call.side_effect = RuntimeError(
+                "simulated pre-review failure"
+            )
+            MockLLM.return_value = mock_llm
+
+            await flow.produce()
+
+        assert captured["shown_to_human"] == "raw draft"
+
+        warning_records = [
+            r
+            for r in caplog.records
+            if r.name == "crewai.flow.human_feedback"
+            and r.levelno == logging.WARNING
+            and "HITL pre-review failed" in r.getMessage()
+        ]
+        assert len(warning_records) == 1
+        assert warning_records[0].exc_info is not None
+
+    @pytest.mark.asyncio
+    async def test_async_pre_review_failure_with_learn_strict_propagates(self):
+        """The async wrapper also re-raises when ``learn_strict=True``."""
+
+        class AsyncStrictFlow(Flow):
+            @start()
+            @human_feedback(
+                message="Review:",
+                llm="gpt-4o-mini",
+                learn=True,
+                learn_strict=True,
+            )
+            async def produce(self):
+                return "raw draft"
+
+        flow = AsyncStrictFlow()
+        flow.memory = self._seeded_memory()
+
+        with (
+            patch.object(flow, "_request_human_feedback", return_value="approved"),
+            patch("crewai.llm.LLM") as MockLLM,
+        ):
+            mock_llm = MagicMock()
+            mock_llm.supports_function_calling.return_value = True
+            mock_llm.call.side_effect = RuntimeError(
+                "simulated pre-review failure"
+            )
+            MockLLM.return_value = mock_llm
+
+            with pytest.raises(RuntimeError, match="simulated pre-review failure"):
+                await flow.produce()
+
+    def test_learn_strict_default_is_false_and_propagates_to_config(self):
+        """``learn_strict`` defaults to False and is exposed on the
+        ``HumanFeedbackConfig`` for introspection."""
+
+        @human_feedback(message="Review:", learn=True)
+        def default_method(self):
+            return "output"
+
+        @human_feedback(message="Review:", learn=True, learn_strict=True)
+        def strict_method(self):
+            return "output"
+
+        assert default_method.__human_feedback_config__.learn_strict is False
+        assert strict_method.__human_feedback_config__.learn_strict is True
 
 
 class TestHumanFeedbackFinalOutputPreservation:
