@@ -188,6 +188,10 @@ from crewai_tools.tools.serply_api_tool.serply_webpage_to_markdown_tool import (
 from crewai_tools.tools.singlestore_search_tool.singlestore_search_tool import (
     SingleStoreSearchTool,
 )
+from crewai_tools.tools.snowflake_cortex_agent_tool.snowflake_cortex_agent_tool import (
+    SnowflakeCortexAgentTool,
+    SnowflakeCortexAgentToolInput,
+)
 from crewai_tools.tools.snowflake_search_tool.snowflake_search_tool import (
     SnowflakeConfig,
     SnowflakeSearchTool,
@@ -312,6 +316,8 @@ __all__ = [
     "SerplyWebpageToMarkdownTool",
     "SingleStoreSearchTool",
     "SnowflakeConfig",
+    "SnowflakeCortexAgentTool",
+    "SnowflakeCortexAgentToolInput",
     "SnowflakeSearchTool",
     "SpiderTool",
     "StagehandTool",
