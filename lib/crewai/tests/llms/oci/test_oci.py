@@ -6,7 +6,6 @@ from unittest.mock import MagicMock
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Provider routing
 # ---------------------------------------------------------------------------
@@ -45,7 +44,9 @@ def test_oci_completion_infers_provider_family(
 ):
     from crewai.llms.providers.oci.completion import OCICompletion
 
-    patch_oci_module.generative_ai_inference.GenerativeAiInferenceClient.return_value = MagicMock()
+    patch_oci_module.generative_ai_inference.GenerativeAiInferenceClient.return_value = (
+        MagicMock()
+    )
     llm = OCICompletion(
         model=model_id,
         compartment_id=oci_unit_values["compartment_id"],
@@ -61,7 +62,9 @@ def test_oci_completion_infers_provider_family(
 def test_oci_completion_initialization_parameters(patch_oci_module, oci_unit_values):
     from crewai.llms.providers.oci.completion import OCICompletion
 
-    patch_oci_module.generative_ai_inference.GenerativeAiInferenceClient.return_value = MagicMock()
+    patch_oci_module.generative_ai_inference.GenerativeAiInferenceClient.return_value = (
+        MagicMock()
+    )
     llm = OCICompletion(
         model=oci_unit_values["model"],
         compartment_id=oci_unit_values["compartment_id"],
@@ -77,12 +80,16 @@ def test_oci_completion_initialization_parameters(patch_oci_module, oci_unit_val
     assert llm.compartment_id == oci_unit_values["compartment_id"]
 
 
-def test_oci_completion_uses_region_to_build_endpoint(patch_oci_module, oci_unit_values, monkeypatch):
+def test_oci_completion_uses_region_to_build_endpoint(
+    patch_oci_module, oci_unit_values, monkeypatch
+):
     from crewai.llms.providers.oci.completion import OCICompletion
 
     monkeypatch.delenv("OCI_SERVICE_ENDPOINT", raising=False)
     monkeypatch.setenv("OCI_REGION", "us-ashburn-1")
-    patch_oci_module.generative_ai_inference.GenerativeAiInferenceClient.return_value = MagicMock()
+    patch_oci_module.generative_ai_inference.GenerativeAiInferenceClient.return_value = (
+        MagicMock()
+    )
 
     llm = OCICompletion(
         model=oci_unit_values["model"],
@@ -123,7 +130,9 @@ def test_oci_completion_cohere_call(
     from crewai.llms.providers.oci.completion import OCICompletion
 
     fake_client = MagicMock()
-    fake_client.chat.return_value = oci_response_factories["cohere_chat"]("cohere reply")
+    fake_client.chat.return_value = oci_response_factories["cohere_chat"](
+        "cohere reply"
+    )
     patch_oci_module.generative_ai_inference.GenerativeAiInferenceClient.return_value = (
         fake_client
     )
@@ -148,7 +157,9 @@ def test_oci_completion_treats_none_content_as_empty_text(
 ):
     from crewai.llms.providers.oci.completion import OCICompletion
 
-    patch_oci_module.generative_ai_inference.GenerativeAiInferenceClient.return_value = MagicMock()
+    patch_oci_module.generative_ai_inference.GenerativeAiInferenceClient.return_value = (
+        MagicMock()
+    )
     llm = OCICompletion(
         model=oci_unit_values["model"],
         compartment_id=oci_unit_values["compartment_id"],
@@ -192,9 +203,44 @@ def test_oci_completion_call_normalizes_messages_once(
 # ---------------------------------------------------------------------------
 
 
-def test_oci_openai_models_use_max_completion_tokens(
+def test_oci_gpt5_family_uses_max_completion_tokens(
     patch_oci_module, oci_response_factories, oci_unit_values
 ):
+    """GPT-5 family on OCI rejects `max_tokens` and requires `max_completion_tokens`.
+
+    Verified live against OCI us-chicago-1: passing `max_tokens` to
+    openai.gpt-5* returns HTTP 400 with the message
+    ``Invalid 'maxTokens': ... Use 'maxCompletionTokens' instead.``.
+    Other openai.* models (gpt-4o, gpt-4.1) and non-openai models
+    continue to use ``max_tokens``.
+    """
+    from crewai.llms.providers.oci.completion import OCICompletion
+
+    fake_client = MagicMock()
+    fake_client.chat.return_value = oci_response_factories["chat"]()
+    patch_oci_module.generative_ai_inference.GenerativeAiInferenceClient.return_value = (
+        fake_client
+    )
+
+    llm = OCICompletion(
+        model="openai.gpt-5.5",
+        compartment_id=oci_unit_values["compartment_id"],
+        max_tokens=1024,
+    )
+    llm._build_chat_request([{"role": "user", "content": "test"}])
+
+    models = patch_oci_module.generative_ai_inference.models
+    call_kwargs = models.GenericChatRequest.call_args
+    assert call_kwargs is not None
+    kwargs = call_kwargs[1] if call_kwargs[1] else {}
+    assert kwargs.get("max_completion_tokens") == 1024
+    assert "max_tokens" not in kwargs
+
+
+def test_oci_openai_gpt4o_keeps_max_tokens(
+    patch_oci_module, oci_response_factories, oci_unit_values
+):
+    """GPT-4o (and other non-GPT-5 OpenAI models) on OCI accept `max_tokens`."""
     from crewai.llms.providers.oci.completion import OCICompletion
 
     fake_client = MagicMock()
@@ -208,14 +254,14 @@ def test_oci_openai_models_use_max_completion_tokens(
         compartment_id=oci_unit_values["compartment_id"],
         max_tokens=1024,
     )
-    request = llm._build_chat_request([{"role": "user", "content": "test"}])
+    llm._build_chat_request([{"role": "user", "content": "test"}])
 
     models = patch_oci_module.generative_ai_inference.models
     call_kwargs = models.GenericChatRequest.call_args
     assert call_kwargs is not None
     kwargs = call_kwargs[1] if call_kwargs[1] else {}
-    assert kwargs.get("max_completion_tokens") == 1024
-    assert "max_tokens" not in kwargs
+    assert kwargs.get("max_tokens") == 1024
+    assert "max_completion_tokens" not in kwargs
 
 
 def test_oci_openai_gpt5_omits_unsupported_temperature_and_stop(

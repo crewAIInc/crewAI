@@ -14,7 +14,6 @@ from crewai.llms.base_llm import BaseLLM, llm_call_context
 from crewai.utilities.oci import create_oci_client_kwargs, get_oci_module
 from crewai.utilities.types import LLMMessage
 
-
 if TYPE_CHECKING:
     from crewai.agent.core import Agent
     from crewai.task import Task
@@ -44,13 +43,15 @@ class OCICompletion(BaseLLM):
         *,
         compartment_id: str | None = None,
         service_endpoint: str | None = None,
-        auth_type: Literal[
-            "API_KEY",
-            "SECURITY_TOKEN",
-            "INSTANCE_PRINCIPAL",
-            "RESOURCE_PRINCIPAL",
-        ]
-        | str = "API_KEY",
+        auth_type: (
+            Literal[
+                "API_KEY",
+                "SECURITY_TOKEN",
+                "INSTANCE_PRINCIPAL",
+                "RESOURCE_PRINCIPAL",
+            ]
+            | str
+        ) = "API_KEY",
         auth_profile: str | None = None,
         auth_file_location: str | None = None,
         temperature: float | None = None,
@@ -89,8 +90,7 @@ class OCICompletion(BaseLLM):
         )
         self.auth_file_location = cast(
             str,
-            auth_file_location
-            or os.getenv("OCI_AUTH_FILE_LOCATION", "~/.oci/config"),
+            auth_file_location or os.getenv("OCI_AUTH_FILE_LOCATION", "~/.oci/config"),
         )
         self.max_tokens = max_tokens
         self.top_p = top_p
@@ -139,9 +139,7 @@ class OCICompletion(BaseLLM):
     # Message helpers
     # ------------------------------------------------------------------
 
-    def _normalize_messages(
-        self, messages: str | list[LLMMessage]
-    ) -> list[LLMMessage]:
+    def _normalize_messages(self, messages: str | list[LLMMessage]) -> list[LLMMessage]:
         return self._format_messages(messages)
 
     def _coerce_text(self, content: Any) -> str:
@@ -265,7 +263,11 @@ class OCICompletion(BaseLLM):
         if self.temperature is not None and not self._is_openai_gpt5_family():
             request_kwargs["temperature"] = self.temperature
         if self.max_tokens is not None:
-            if self.oci_provider == "generic" and self.model.lower().startswith("openai."):
+            # OpenAI GPT-5 family on OCI rejects `max_tokens` and requires
+            # `max_completion_tokens` instead (verified live: HTTP 400
+            # `Invalid 'maxTokens': ... Use 'maxCompletionTokens' instead.`).
+            # GPT-4o / GPT-4.1 / Llama / Cohere keep using `max_tokens`.
+            if self._is_openai_gpt5_family():
                 request_kwargs["max_completion_tokens"] = self.max_tokens
             else:
                 request_kwargs["max_tokens"] = self.max_tokens
@@ -457,4 +459,3 @@ class OCICompletion(BaseLLM):
     def _chat(self, chat_details: Any) -> Any:
         with self._client_lock:
             return self.client.chat(chat_details)
-
