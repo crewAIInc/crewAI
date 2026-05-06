@@ -156,6 +156,36 @@ def _resolve_agents(value: Any, info: Any) -> Any:
     return [_resolve_agent(a, info) for a in value]
 
 
+def _mcp_label(mcp: Any) -> str:
+    if isinstance(mcp, str):
+        return mcp
+    url = getattr(mcp, "url", None)
+    if url:
+        return str(url)
+    command = getattr(mcp, "command", None)
+    if command:
+        return str(command)
+    return type(mcp).__name__
+
+
+def _app_placeholder(app: Any) -> str:
+    raw = app if isinstance(app, str) else str(app)
+    if "#" in raw:
+        base, action = raw.split("#", 1)
+        return f"app:{base}:{action}"
+    return f"app:{raw}:*"
+
+
+def _dedupe_preserve_order(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for v in values:
+        if v not in seen:
+            seen.add(v)
+            out.append(v)
+    return out
+
+
 class Crew(FlowTrackable, BaseModel):
     """
     Represents a group of agents, defining how they should collaborate and the
@@ -1926,6 +1956,81 @@ class Crew(FlowTrackable, BaseModel):
             required_inputs.update(placeholder_pattern.findall(text))
 
         return required_inputs
+
+    def list_tools(self) -> dict[str, list[str]]:
+        """Enumerate tool names available to each agent in this Crew.
+
+        Mirrors the runtime tool resolution in ``_prepare_tools`` without
+        performing any I/O: tools sourced from external services (MCP
+        servers, platform apps) are returned as ``"mcp:<id>:*"`` /
+        ``"app:<id>[:action]"`` placeholders since their concrete tool
+        names require live fetches.
+
+        Returns:
+            Mapping of agent role to a deduplicated list of tool names.
+            In hierarchical mode the manager agent is included as an
+            extra entry keyed by its role.
+        """
+        tasks_by_agent: dict[int, list[Task]] = {}
+        for task in self.tasks:
+            if task.agent is not None:
+                tasks_by_agent.setdefault(id(task.agent), []).append(task)
+
+        result: dict[str, list[str]] = {}
+
+        for agent in self.agents:
+            candidates: list[str] = [tool.name for tool in agent.tools or []]
+
+            for task in tasks_by_agent.get(id(agent), []):
+                candidates.extend(tool.name for tool in task.tools or [])
+
+            if (
+                self.process != Process.hierarchical
+                and getattr(agent, "allow_delegation", False)
+                and len(self.agents) > 1
+            ):
+                candidates.append("Delegate work to coworker")
+                candidates.append("Ask question to coworker")
+
+            if getattr(agent, "multimodal", False):
+                llm = getattr(agent, "llm", None)
+                if not (isinstance(llm, BaseLLM) and llm.supports_multimodal()):
+                    candidates.append("Add image to content")
+
+            if getattr(agent, "memory", None) is not None or self._memory is not None:
+                candidates.append("Search memory")
+                candidates.append("Save to memory")
+
+            candidates.extend(
+                f"mcp:{_mcp_label(mcp)}:*" for mcp in getattr(agent, "mcps", None) or []
+            )
+            candidates.extend(
+                _app_placeholder(app) for app in getattr(agent, "apps", None) or []
+            )
+
+            for task in tasks_by_agent.get(id(agent), []):
+                if get_all_files(self.id, task.id):
+                    candidates.append("read_file")
+                    break
+
+            result[agent.role] = _dedupe_preserve_order(candidates)
+
+        if self.process == Process.hierarchical:
+            if self.manager_agent is not None:
+                mgr_candidates: list[str] = [
+                    tool.name for tool in self.manager_agent.tools or []
+                ]
+                mgr_role = self.manager_agent.role
+            else:
+                mgr_candidates = []
+                mgr_role = get_i18n(prompt_file=self.prompt_file).retrieve(
+                    "hierarchical_manager_agent", "role"
+                )
+            mgr_candidates.append("Delegate work to coworker")
+            mgr_candidates.append("Ask question to coworker")
+            result[mgr_role] = _dedupe_preserve_order(mgr_candidates)
+
+        return result
 
     def copy(self) -> Crew:  # type: ignore[override]
         """

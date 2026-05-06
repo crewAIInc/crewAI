@@ -1864,6 +1864,34 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         except (AttributeError, TypeError):
             return ""  # Safely handle any unexpected attribute access issues
 
+    def list_tools(self) -> dict[str, dict[str, list[str]]]:
+        """Enumerate tools available across the Crews attached to this Flow.
+
+        Inspects public instance attributes for :class:`~crewai.crew.Crew`
+        instances and lists/tuples of Crews, delegating to
+        :meth:`Crew.list_tools` for each. Crews instantiated lazily inside
+        flow methods are not discovered — to opt them in, store them as
+        instance attributes (typically in ``__init__``).
+
+        Returns:
+            Mapping of crew identifier (the attribute name, with
+            ``[index]`` suffix when stored in a list/tuple) to that
+            Crew's ``list_tools()`` output.
+        """
+        from crewai.crew import Crew
+
+        result: dict[str, dict[str, list[str]]] = {}
+        for attr_name, value in vars(self).items():
+            if attr_name.startswith("_"):
+                continue
+            if isinstance(value, Crew):
+                result[attr_name] = value.list_tools()
+            elif isinstance(value, (list, tuple)):
+                for i, item in enumerate(value):
+                    if isinstance(item, Crew):
+                        result[f"{attr_name}[{i}]"] = item.list_tools()
+        return result
+
     def _initialize_state(self, inputs: dict[str, Any]) -> None:
         """Initialize or update flow state with new inputs.
 
