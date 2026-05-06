@@ -1304,7 +1304,6 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "pyyaml" },
     { name = "regex" },
-    { name = "textual" },
     { name = "tokenizers" },
     { name = "tomli" },
     { name = "tomli-w" },
@@ -1421,7 +1420,6 @@ requires-dist = [
     { name = "qdrant-client", extras = ["fastembed"], marker = "extra == 'qdrant'", specifier = "~=1.14.3" },
     { name = "qdrant-edge-py", marker = "extra == 'qdrant-edge'", specifier = ">=0.6.0" },
     { name = "regex", specifier = "~=2026.1.15" },
-    { name = "textual", specifier = ">=7.5.0" },
     { name = "tiktoken", marker = "extra == 'embeddings'", specifier = ">=0.8.0,<0.13" },
     { name = "tokenizers", specifier = ">=0.21,<1" },
     { name = "tomli", specifier = "~=2.0.2" },
@@ -1435,6 +1433,7 @@ name = "crewai-cli"
 source = { editable = "lib/cli" }
 dependencies = [
     { name = "appdirs" },
+    { name = "certifi" },
     { name = "click" },
     { name = "crewai-core" },
     { name = "cryptography" },
@@ -1445,6 +1444,7 @@ dependencies = [
     { name = "pyjwt" },
     { name = "python-dotenv" },
     { name = "rich" },
+    { name = "textual" },
     { name = "tomli" },
     { name = "tomli-w" },
     { name = "uv" },
@@ -1453,6 +1453,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "appdirs", specifier = "~=1.4.4" },
+    { name = "certifi" },
     { name = "click", specifier = "~=8.1.7" },
     { name = "crewai-core", editable = "lib/crewai-core" },
     { name = "cryptography", specifier = ">=42.0" },
@@ -1463,6 +1464,7 @@ requires-dist = [
     { name = "pyjwt", specifier = ">=2.9.0,<3" },
     { name = "python-dotenv", specifier = ">=1.2.2,<2" },
     { name = "rich", specifier = ">=13.7.1" },
+    { name = "textual", specifier = ">=7.5.0" },
     { name = "tomli", specifier = "~=2.0.2" },
     { name = "tomli-w", specifier = "~=1.1.0" },
     { name = "uv", specifier = "~=0.11.6" },

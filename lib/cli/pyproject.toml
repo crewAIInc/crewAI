@@ -22,6 +22,8 @@ dependencies = [
     "packaging>=23.0",
     "python-dotenv>=1.2.2,<2",
     "uv~=0.11.6",
+    "textual>=7.5.0",
+    "certifi",
 ]
 
 [project.urls]
