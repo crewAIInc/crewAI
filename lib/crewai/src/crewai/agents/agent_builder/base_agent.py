@@ -178,7 +178,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         allow_delegation (bool): Allow delegation of tasks to agents.
         tools (list[Any] | None): Tools at the agent's disposal.
         max_iter (int): Maximum iterations for an agent to execute a task.
-        agent_executor: An instance of the CrewAgentExecutor class.
+        agent_executor: An instance of the agent executor (defaults to AgentExecutor).
         llm (Any): Language model that will run the agent.
         crew (Any): Crew to which the agent belongs.
 
@@ -252,7 +252,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         default=25, description="Maximum iterations for an agent to execute a task"
     )
     agent_executor: SerializeAsAny[BaseAgentExecutor] | None = Field(
-        default=None, description="An instance of the CrewAgentExecutor class."
+        default=None, description="An instance of the agent executor."
     )
 
     @field_validator("agent_executor", mode="before")

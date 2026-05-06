@@ -165,7 +165,7 @@ class Agent(BaseAgent):
     The agent can also have memory, can operate in verbose mode, and can delegate tasks to other agents.
 
     Attributes:
-            agent_executor: An instance of the CrewAgentExecutor or AgentExecutor class.
+            agent_executor: An instance of the agent executor (defaults to AgentExecutor).
             role: The role of the agent.
             goal: The objective of the agent.
             backstory: The backstory of the agent.
@@ -318,15 +318,15 @@ class Agent(BaseAgent):
         """,
     )
     agent_executor: CrewAgentExecutor | AgentExecutor | None = Field(
-        default=None, description="An instance of the CrewAgentExecutor class."
+        default=None, description="An instance of the agent executor."
     )
     executor_class: Annotated[
         type[CrewAgentExecutor] | type[AgentExecutor],
         BeforeValidator(_validate_executor_class),
         PlainSerializer(_serialize_executor_class, return_type=str, when_used="json"),
     ] = Field(
-        default=CrewAgentExecutor,
-        description="Class to use for the agent executor. Defaults to CrewAgentExecutor, can optionally use AgentExecutor.",
+        default=AgentExecutor,
+        description="Class to use for the agent executor. Defaults to AgentExecutor (Flow-based). The legacy CrewAgentExecutor is deprecated and will be removed in a future release.",
     )
 
     @model_validator(mode="before")
@@ -1014,7 +1014,7 @@ class Agent(BaseAgent):
         """Create an agent executor for the agent.
 
         Returns:
-            An instance of the CrewAgentExecutor class.
+            An instance of the configured executor class (defaults to AgentExecutor).
         """
         raw_tools: list[BaseTool] = tools or self.tools or []
         parsed_tools = parse_tools(raw_tools)
