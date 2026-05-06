@@ -23441,6 +23441,261 @@
       }
     },
     {
+      "description": "Delegate a natural language data question to a Snowflake Cortex Agent. The agent reasons over structured data via Cortex Analyst (text-to-SQL with semantic models) and unstructured data via Cortex Search, then returns a final answer. Use this whenever a question is best answered with governed, retrieval-augmented analysis of Snowflake data instead of writing raw SQL.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "Snowflake account identifier used to build the Cortex Agent API hostname.",
+          "name": "SNOWFLAKE_ACCOUNT",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Bearer token (PAT, OAuth, or JWT) for the Cortex Agent REST API.",
+          "name": "SNOWFLAKE_CORTEX_AGENT_TOKEN",
+          "required": false
+        }
+      ],
+      "humanized_name": "Snowflake Cortex Agent",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Tool for delegating data questions to a Snowflake Cortex Agent.\n\nSnowflake Cortex Agents orchestrate across structured (Cortex Analyst) and\nunstructured (Cortex Search) data sources inside Snowflake's secure\nperimeter. Instead of having a CrewAI agent generate SQL or pick between\nretrieval and analytics, this tool sends the natural language question to a\nCortex Agent and returns its final answer for use in downstream steps.\n\nSee: https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents\n\nThere are two ways to configure the tool:\n\n1. Reference an existing **agent object** by passing ``database``,\n   ``snowflake_schema`` and ``agent_name``. The tool calls\n   ``POST /api/v2/databases/{database}/schemas/{schema}/agents/{name}:run``.\n2. Run **without an agent object** by passing ``tools`` (and optionally\n   ``tool_resources``, ``models``, ``instructions`` and ``orchestration``).\n   The tool calls ``POST /api/v2/cortex/agent:run``.\n\nAuthentication uses a bearer token (Snowflake Programmatic Access Token,\nJWT, or OAuth token). The token may be passed via ``auth_token`` or via\nthe ``SNOWFLAKE_CORTEX_AGENT_TOKEN`` environment variable. The Snowflake\naccount identifier may be passed via ``account`` or via the\n``SNOWFLAKE_ACCOUNT`` environment variable. To target a custom hostname\n(for example, a private link endpoint), set ``host`` directly.\n\nExample::\n\n    from crewai_tools import SnowflakeCortexAgentTool\n\n    tool = SnowflakeCortexAgentTool(\n        account=\"myorg-myaccount\",\n        auth_token=\"<programmatic-access-token>\",\n        database=\"MY_DB\",\n        snowflake_schema=\"MY_SCHEMA\",\n        agent_name=\"SALES_AGENT\",\n    )\n\n    answer = tool.run(query=\"What was total revenue last quarter?\")",
+        "properties": {
+          "account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Snowflake account identifier (e.g. 'myorg-myaccount'). Used to build the API hostname. Falls back to the SNOWFLAKE_ACCOUNT environment variable. Ignored when 'host' is set.",
+            "title": "Account"
+          },
+          "agent_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Name of the agent object to invoke.",
+            "title": "Agent Name"
+          },
+          "auth_token": {
+            "anyOf": [
+              {
+                "format": "password",
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Bearer token used for authentication (Programmatic Access Token, OAuth token, or JWT). Falls back to the SNOWFLAKE_CORTEX_AGENT_TOKEN environment variable.",
+            "title": "Auth Token"
+          },
+          "database": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Database containing the agent object.",
+            "title": "Database"
+          },
+          "host": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Override the API hostname (e.g. 'myorg-myaccount.snowflakecomputing.com' or a private link host). When provided, takes precedence over 'account'.",
+            "title": "Host"
+          },
+          "instructions": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Agent instructions (response, orchestration, system, sample_questions).",
+            "title": "Instructions"
+          },
+          "models": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Model configuration (e.g. {'orchestration': 'claude-4-sonnet'}).",
+            "title": "Models"
+          },
+          "orchestration": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Orchestration configuration such as budget constraints.",
+            "title": "Orchestration"
+          },
+          "snowflake_schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Schema containing the agent object.",
+            "title": "Snowflake Schema"
+          },
+          "timeout": {
+            "default": 600,
+            "description": "Per-request timeout in seconds (Cortex Agent server timeout is 15 minutes).",
+            "title": "Timeout",
+            "type": "integer"
+          },
+          "tool_choice": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Tool selection policy (e.g. {'type': 'auto'} or {'type': 'required', 'name': ['analyst_tool']}).",
+            "title": "Tool Choice"
+          },
+          "tool_resources": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Per-tool resource configuration keyed by tool name.",
+            "title": "Tool Resources"
+          },
+          "tools": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "List of tool specifications when calling the agent without an agent object. See the Cortex Agents Run API docs for the schema.",
+            "title": "Tools"
+          }
+        },
+        "required": [],
+        "title": "SnowflakeCortexAgentTool",
+        "type": "object"
+      },
+      "name": "SnowflakeCortexAgentTool",
+      "package_dependencies": [
+        "requests"
+      ],
+      "run_params_schema": {
+        "description": "Input schema for SnowflakeCortexAgentTool.",
+        "properties": {
+          "query": {
+            "description": "The natural language data question to ask the Cortex Agent. The agent will plan, route to Cortex Analyst (text-to-SQL on structured data) or Cortex Search (retrieval over unstructured data), execute, and return a final answer.",
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "SnowflakeCortexAgentToolInput",
+        "type": "object"
+      }
+    },
+    {
       "description": "Execute SQL queries or semantic search on Snowflake data warehouse. Supports both raw SQL and natural language queries.",
       "env_vars": [],
       "humanized_name": "Snowflake Database Search",
