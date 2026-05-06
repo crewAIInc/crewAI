@@ -160,9 +160,9 @@ def test_install_api_error(mock_get, capsys, tool_command):
     mock_get.assert_called_once_with("error-tool")
 
 
+@patch("crewai.cli.tools.main.git.Repository.fetch")
 @patch("crewai.cli.tools.main.git.Repository.is_synced", return_value=False)
-@patch("crewai.cli.tools.main.git.Repository.__init__", return_value=None)
-def test_publish_when_not_in_sync(mock_init, mock_is_synced, capsys, tool_command):
+def test_publish_when_not_in_sync(mock_is_synced, mock_fetch, capsys, tool_command):
     with raises(SystemExit):
         tool_command.publish(is_public=True)
 
@@ -181,6 +181,7 @@ def test_publish_when_not_in_sync(mock_init, mock_is_synced, capsys, tool_comman
     read_data=b"sample tarball content",
 )
 @patch("crewai.cli.plus_api.PlusAPI.publish_tool")
+@patch("crewai.cli.tools.main.git.Repository.fetch")
 @patch("crewai.cli.tools.main.git.Repository.is_synced", return_value=False)
 @patch(
     "crewai.cli.tools.main.extract_available_exports",
@@ -196,6 +197,7 @@ def test_publish_when_not_in_sync_and_force(
     mock_tools_metadata,
     mock_available_exports,
     mock_is_synced,
+    mock_fetch,
     mock_publish,
     mock_open,
     mock_listdir,
