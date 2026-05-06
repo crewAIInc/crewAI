@@ -523,6 +523,20 @@ BedrockModels: TypeAlias = Literal[
     "qwen.qwen3-coder-30b-a3b-v1:0",
     "twelvelabs.pegasus-1-2-v1:0",
 ]
+CerebrasModels: TypeAlias = Literal[
+    "llama3.1-8b",
+    "gpt-oss-120b",
+    "qwen-3-235b-a22b-instruct-2507",
+    "zai-glm-4.7",
+]
+CEREBRAS_MODELS: list[CerebrasModels] = [
+    "llama3.1-8b",
+    "gpt-oss-120b",
+    "qwen-3-235b-a22b-instruct-2507",
+    "zai-glm-4.7",
+]
+
+
 BEDROCK_MODELS: list[BedrockModels] = [
     # Inference profiles (regional) - Claude 4
     "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
