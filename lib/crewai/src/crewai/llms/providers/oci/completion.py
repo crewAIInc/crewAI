@@ -58,6 +58,7 @@ class OCICompletion(BaseLLM):
         max_tokens: int | None = None,
         top_p: float | None = None,
         top_k: int | None = None,
+        reasoning_effort: str | None = None,
         oci_provider: str | None = None,
         timeout: tuple[int, int] = DEFAULT_OCI_TIMEOUT,
         client: Any | None = None,
@@ -95,6 +96,10 @@ class OCICompletion(BaseLLM):
         self.max_tokens = max_tokens
         self.top_p = top_p
         self.top_k = top_k
+        # Reasoning-token budget: NONE / MINIMAL / LOW / MEDIUM / HIGH.
+        # Honoured by GPT-5 family, Gemini 2.5, Grok reasoning variants,
+        # Cohere Command-A-Reasoning. Ignored by non-reasoning models.
+        self.reasoning_effort = reasoning_effort
         self.oci_provider = oci_provider or self._infer_provider(model)
         self._oci = _get_oci_module()
 
@@ -275,6 +280,8 @@ class OCICompletion(BaseLLM):
             request_kwargs["top_p"] = self.top_p
         if self.top_k is not None:
             request_kwargs["top_k"] = self.top_k
+        if self.reasoning_effort is not None:
+            request_kwargs["reasoning_effort"] = self.reasoning_effort
 
         if self.stop and not self._is_openai_gpt5_family():
             stop_key = "stop_sequences" if self.oci_provider == "cohere" else "stop"
