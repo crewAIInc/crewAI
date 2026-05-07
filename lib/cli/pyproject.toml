@@ -8,7 +8,7 @@ authors = [
 ]
 requires-python = ">=3.10, <3.14"
 dependencies = [
-    "crewai-core>=1.14.5a2",
+    "crewai-core==1.14.5a3",
     "click~=8.1.7",
     "pydantic>=2.11.9,<2.13",
     "pydantic-settings~=2.10.1",
@@ -22,6 +22,8 @@ dependencies = [
     "packaging>=23.0",
     "python-dotenv>=1.2.2,<2",
     "uv~=0.11.6",
+    "textual>=7.5.0",
+    "certifi",
 ]
 
 [project.urls]
