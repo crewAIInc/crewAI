@@ -13,6 +13,9 @@ from crewai.agent import Agent
 from crewai.task import Task
 from crewai.cli.constants import DEFAULT_LLM_MODEL
 
+from openai.types.chat.chat_completion import ChatCompletion
+from openai.types.chat.chat_completion_message import ChatCompletionMessage
+
 def test_openai_completion_is_used_when_openai_provider():
     """
     Test that OpenAICompletion from completion.py is used when LLM uses provider 'openai'
@@ -22,6 +25,42 @@ def test_openai_completion_is_used_when_openai_provider():
     assert llm.__class__.__name__ == "OpenAICompletion"
     assert llm.provider == "openai"
     assert llm.model == "gpt-4o"
+
+
+def test_openai_completion_reasoning_content_fallback():
+    """Test that reasoning_content is used as fallback when content is empty."""
+    llm = OpenAICompletion(model="gpt-4o", stream=False)
+
+    message = ChatCompletionMessage.model_validate({
+        "role": "assistant",
+        "content": None,
+        "reasoning_content": "Chain of thought reasoning",
+    })
+
+    completion = ChatCompletion.model_validate({
+        "id": "test-id",
+        "object": "chat.completion",
+        "created": 1234567890,
+        "model": "gpt-4o",
+        "choices": [{
+            "index": 0,
+            "message": message.model_dump(),
+            "finish_reason": "stop",
+        }],
+        "usage": {
+            "prompt_tokens": 10,
+            "completion_tokens": 5,
+            "total_tokens": 15,
+        },
+    })
+
+    with patch.object(llm, "_get_sync_client") as mock_get_client:
+        mock_client = MagicMock()
+        mock_client.chat.completions.create.return_value = completion
+        mock_get_client.return_value = mock_client
+
+        result = llm.call(messages=[{"role": "user", "content": "Hello"}])
+        assert result == "Chain of thought reasoning"
 
 
 def test_openai_completion_is_used_when_no_provider_prefix():
