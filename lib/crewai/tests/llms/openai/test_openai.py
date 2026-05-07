@@ -11,7 +11,6 @@ from crewai.llms.providers.openai.completion import OpenAICompletion, ResponsesA
 from crewai.crew import Crew
 from crewai.agent import Agent
 from crewai.task import Task
-from crewai.cli.constants import DEFAULT_LLM_MODEL
 
 def test_openai_completion_is_used_when_openai_provider():
     """

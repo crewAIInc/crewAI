@@ -1,12 +1,17 @@
-"""Version utilities for crewAI."""
+"""Deprecated: use ``crewai_core.version`` instead."""
 
 from __future__ import annotations
 
-from functools import cache
-import importlib.metadata
+import warnings
+
+from crewai_core.version import get_crewai_version as get_crewai_version
 
 
-@cache
-def get_crewai_version() -> str:
-    """Get the installed crewAI version string."""
-    return importlib.metadata.version("crewai")
+__all__ = ["get_crewai_version"]
+
+
+warnings.warn(
+    "crewai.utilities.version is deprecated; import from crewai_core.version.",
+    DeprecationWarning,
+    stacklevel=2,
+)

@@ -111,11 +111,13 @@ class SqliteProvider(BaseProvider):
             await db.commit()
         return f"{location}#{checkpoint_id}"
 
-    def prune(self, location: str, max_keep: int, *, branch: str = "main") -> None:
+    def prune(self, location: str, max_keep: int, *, branch: str = "main") -> int:
         """Remove oldest checkpoint rows beyond *max_keep* on a branch."""
         with sqlite3.connect(location) as conn:
-            conn.execute(_PRUNE, (branch, branch, max_keep))
+            cursor = conn.execute(_PRUNE, (branch, branch, max_keep))
+            removed: int = cursor.rowcount
             conn.commit()
+        return max(removed, 0)
 
     def extract_id(self, location: str) -> str:
         """Extract the checkpoint ID from a ``db_path#id`` string."""

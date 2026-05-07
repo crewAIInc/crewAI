@@ -18,6 +18,7 @@ import json
 import time
 from typing import TYPE_CHECKING, Any, cast
 
+from crewai_core.printer import PRINTER
 from pydantic import BaseModel
 
 from crewai.agents.parser import AgentAction, AgentFinish
@@ -40,7 +41,6 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.planning_types import TodoItem
-from crewai.utilities.printer import PRINTER
 from crewai.utilities.step_execution_context import StepExecutionContext, StepResult
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.tool_utils import execute_tool_and_check_finality

@@ -104,7 +104,7 @@ class QdrantEdgeStorage:
             if storage_dir:
                 path = Path(storage_dir) / "memory" / "qdrant-edge"
             else:
-                from crewai.utilities.paths import db_storage_path
+                from crewai_core.paths import db_storage_path
 
                 path = Path(db_storage_path()) / "memory" / "qdrant-edge"
 
