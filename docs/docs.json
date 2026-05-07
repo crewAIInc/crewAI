@@ -144,7 +144,8 @@
                         "group": "Migration",
                         "icon": "shuffle",
                         "pages": [
-                          "en/guides/migration/migrating-from-langgraph"
+                          "en/guides/migration/migrating-from-langgraph",
+                          "en/guides/migration/upgrading-crewai"
                         ]
                       }
                     ]
@@ -620,7 +621,8 @@
                         "group": "Migration",
                         "icon": "shuffle",
                         "pages": [
-                          "en/guides/migration/migrating-from-langgraph"
+                          "en/guides/migration/migrating-from-langgraph",
+                          "en/guides/migration/upgrading-crewai"
                         ]
                       }
                     ]
@@ -1096,7 +1098,8 @@
                         "group": "Migration",
                         "icon": "shuffle",
                         "pages": [
-                          "en/guides/migration/migrating-from-langgraph"
+                          "en/guides/migration/migrating-from-langgraph",
+                          "en/guides/migration/upgrading-crewai"
                         ]
                       }
                     ]
@@ -1572,7 +1575,8 @@
                         "group": "Migration",
                         "icon": "shuffle",
                         "pages": [
-                          "en/guides/migration/migrating-from-langgraph"
+                          "en/guides/migration/migrating-from-langgraph",
+                          "en/guides/migration/upgrading-crewai"
                         ]
                       }
                     ]
@@ -2048,7 +2052,8 @@
                         "group": "Migration",
                         "icon": "shuffle",
                         "pages": [
-                          "en/guides/migration/migrating-from-langgraph"
+                          "en/guides/migration/migrating-from-langgraph",
+                          "en/guides/migration/upgrading-crewai"
                         ]
                       }
                     ]
@@ -2524,7 +2529,8 @@
                         "group": "Migration",
                         "icon": "shuffle",
                         "pages": [
-                          "en/guides/migration/migrating-from-langgraph"
+                          "en/guides/migration/migrating-from-langgraph",
+                          "en/guides/migration/upgrading-crewai"
                         ]
                       }
                     ]
@@ -2998,7 +3004,8 @@
                         "group": "Migration",
                         "icon": "shuffle",
                         "pages": [
-                          "en/guides/migration/migrating-from-langgraph"
+                          "en/guides/migration/migrating-from-langgraph",
+                          "en/guides/migration/upgrading-crewai"
                         ]
                       }
                     ]
@@ -3472,7 +3479,8 @@
                         "group": "Migration",
                         "icon": "shuffle",
                         "pages": [
-                          "en/guides/migration/migrating-from-langgraph"
+                          "en/guides/migration/migrating-from-langgraph",
+                          "en/guides/migration/upgrading-crewai"
                         ]
                       }
                     ]
@@ -3947,7 +3955,8 @@
                         "group": "Migration",
                         "icon": "shuffle",
                         "pages": [
-                          "en/guides/migration/migrating-from-langgraph"
+                          "en/guides/migration/migrating-from-langgraph",
+                          "en/guides/migration/upgrading-crewai"
                         ]
                       }
                     ]
@@ -4423,7 +4432,8 @@
                         "group": "Migration",
                         "icon": "shuffle",
                         "pages": [
-                          "en/guides/migration/migrating-from-langgraph"
+                          "en/guides/migration/migrating-from-langgraph",
+                          "en/guides/migration/upgrading-crewai"
                         ]
                       }
                     ]
@@ -4897,7 +4907,8 @@
                         "group": "Migration",
                         "icon": "shuffle",
                         "pages": [
-                          "en/guides/migration/migrating-from-langgraph"
+                          "en/guides/migration/migrating-from-langgraph",
+                          "en/guides/migration/upgrading-crewai"
                         ]
                       }
                     ]

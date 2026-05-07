@@ -1,0 +1,81 @@
+---
+title: "Upgrading CrewAI in Your Project"
+description: "How to upgrade the crewai version inside your project's virtual environment — and why crewai install alone won't do it."
+icon: "arrow-up-circle"
+---
+
+## The Two Things You Might Want to Upgrade
+
+CrewAI lives in two places on your machine, and they upgrade independently:
+
+| What | How it's installed | How to upgrade |
+|---|---|---|
+| The **global `crewai` CLI** | `uv tool install crewai` | `uv tool install crewai --upgrade` |
+| The **project venv** (what your code runs) | `crewai install` / `uv sync` | `uv add "crewai[...]>=X.Y.Z"` then `crewai install` |
+
+These can — and often do — get out of sync. Running `crewai --version` tells you the CLI version. Running `uv pip show crewai` inside your project tells you the venv version. If they differ, that's normal; what matters for your running code is the venv version.
+
+## Why `crewai install` Doesn't Upgrade
+
+`crewai install` is a thin wrapper around `uv sync`. It installs exactly what the current `uv.lock` file says — it does **not** bump any version constraints.
+
+If your `pyproject.toml` says `crewai>=1.11.1` and the lock file resolved to `1.11.1`, running `crewai install` will keep you on `1.11.1` forever, even if `1.14.4` is available.
+
+To actually upgrade, you need to:
+1. Update the version constraint in `pyproject.toml`
+2. Re-solve the lock file
+3. Sync the venv
+
+`uv add` does all three in one shot.
+
+## How to Upgrade Your Project
+
+```bash
+# Bump the constraint and re-lock in one command
+uv add "crewai[tools]>=1.14.4"
+
+# Sync the venv (crewai install calls uv sync under the hood)
+crewai install
+
+# Verify
+uv pip show crewai
+# → Version: 1.14.4
+```
+
+Replace `[tools]` with whatever extras your project uses (e.g. `[tools,anthropic]`). Check your `pyproject.toml` `dependencies` list if you're unsure.
+
+<Note>
+  `uv add` updates both `pyproject.toml` **and** `uv.lock` atomically. If you edit `pyproject.toml` manually, you still need to run `uv lock --upgrade-package crewai` to re-solve the lock file before `crewai install` will pick up the new version.
+</Note>
+
+## Verify Both Are in Sync
+
+```bash
+# Global CLI version
+crewai --version
+
+# Project venv version
+uv pip show crewai | grep Version
+```
+
+They don't need to match — but your project venv version is what matters for runtime behavior.
+
+## Common Gotchas
+
+**The constraint is a floor, not a pin.** `crewai>=1.11.1` means "any version at or above 1.11.1." uv will pick the highest compatible version when re-locking — but only if you explicitly re-lock with `uv add` or `uv lock --upgrade-package crewai`.
+
+**You have a `uv.lock` file.** If you commit `uv.lock`, your teammates get the exact same versions. After bumping with `uv add`, commit the updated `uv.lock` too.
+
+**Extras must be consistent.** If you run `uv add "crewai>=1.14.4"` without extras, uv may drop `[tools]` from the resolved set. Always include the extras you need: `uv add "crewai[tools]>=1.14.4"`.
+
+**Dependency conflicts.** If uv can't resolve the new version against your other dependencies, it will tell you which package conflicts. Pin or upgrade the conflicting package explicitly.
+
+## Upgrading the Global CLI
+
+The global CLI is separate from your project. Upgrade it with:
+
+```bash
+uv tool install crewai --upgrade
+```
+
+This does **not** touch your project's venv.
