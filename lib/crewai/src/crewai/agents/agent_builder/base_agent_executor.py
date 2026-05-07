@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from pydantic import BaseModel, Field, PrivateAttr
 
@@ -20,6 +20,25 @@ class BaseAgentExecutor(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
     executor_type: str = "base"
+
+    supports_internal_planning: ClassVar[bool] = False
+    """Whether this executor implements its own planning/replanning loop.
+
+    When True, ``Agent`` skips the external ``handle_reasoning()`` step before
+    task execution and lets the executor drive planning itself. This is a
+    class-level capability flag so callers can query it without instantiating
+    the executor (e.g. ``self.executor_class.supports_internal_planning``).
+    """
+
+    supports_kickoff: ClassVar[bool] = False
+    """Whether this executor supports the standalone ``Agent.kickoff()`` flow.
+
+    Executors that do not implement the Flow-based kickoff loop should leave
+    this ``False``; ``Agent.kickoff()`` will then refuse to silently fall back
+    to a different executor and instead emit a ``DeprecationWarning`` so the
+    silent override is visible to the caller.
+    """
+
     crew: Crew | None = Field(default=None, exclude=True)
     agent: BaseAgent | None = Field(default=None, exclude=True)
     task: Task | None = Field(default=None, exclude=True)

@@ -512,7 +512,7 @@ class Agent(BaseAgent):
             The task prompt after memory retrieval, ready for knowledge lookup.
         """
         get_env_context()
-        if self.executor_class is not AgentExecutor:
+        if not getattr(self.executor_class, "supports_internal_planning", False):
             handle_reasoning(self, task)
 
         self._inject_date_to_task(task)
@@ -1102,6 +1102,40 @@ class Agent(BaseAgent):
         self.agent_executor.tools_handler = self.tools_handler
         self.agent_executor.request_within_rpm_limit = rpm_limit_fn
 
+    def _resolve_kickoff_executor_class(self) -> type[AgentExecutor]:
+        """Resolve the executor class to use for ``Agent.kickoff()``.
+
+        ``Agent.kickoff()`` requires a Flow-based executor (one that sets
+        ``supports_kickoff = True`` on the class). When the configured
+        :attr:`executor_class` does not support the kickoff flow, this method
+        emits a :class:`DeprecationWarning` and falls back to
+        :class:`~crewai.experimental.agent_executor.AgentExecutor` so that
+        existing default-configured agents continue to work; the warning makes
+        the previously silent override visible to the caller.
+
+        Returns:
+            The :class:`AgentExecutor` subclass to instantiate for kickoff.
+        """
+        executor_cls = self.executor_class
+        supports_kickoff = getattr(executor_cls, "supports_kickoff", False)
+        if supports_kickoff and isinstance(executor_cls, type):
+            return cast("type[AgentExecutor]", executor_cls)
+
+        warnings.warn(
+            (
+                f"Agent.kickoff() requires a Flow-based AgentExecutor but "
+                f"executor_class={getattr(executor_cls, '__name__', executor_cls)!r} "
+                "does not advertise supports_kickoff=True. Falling back to "
+                "crewai.experimental.agent_executor.AgentExecutor for this "
+                "kickoff() call. Set executor_class=AgentExecutor explicitly "
+                "to silence this warning. The silent fallback will be removed "
+                "in a future release."
+            ),
+            DeprecationWarning,
+            stacklevel=3,
+        )
+        return AgentExecutor
+
     def get_delegation_tools(self, agents: Sequence[BaseAgent]) -> list[BaseTool]:
         agent_tools = AgentTools(agents=agents)
         return agent_tools.tools()
@@ -1399,7 +1433,8 @@ class Agent(BaseAgent):
             executor.request_within_rpm_limit = rpm_limit_fn
             executor.callbacks = [TokenCalcHandler(self._token_process)]
         else:
-            executor = AgentExecutor(
+            kickoff_executor_cls = self._resolve_kickoff_executor_class()
+            executor = kickoff_executor_cls(
                 llm=cast(BaseLLM, self.llm),
                 agent=self,
                 prompt=prompt,

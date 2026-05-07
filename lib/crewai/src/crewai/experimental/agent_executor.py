@@ -9,7 +9,7 @@ from datetime import datetime
 import inspect
 import json
 import threading
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeVar, cast
 from uuid import uuid4
 
 from crewai_core.printer import PRINTER
@@ -172,6 +172,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     _skip_auto_memory: bool = True
 
     executor_type: Literal["experimental"] = "experimental"
+
+    supports_internal_planning: ClassVar[bool] = True
+    supports_kickoff: ClassVar[bool] = True
+
     suppress_flow_events: bool = True  # always suppress for executor
     llm: BaseLLM = Field(exclude=True)
     prompt: SystemPromptResult | StandardPromptResult = Field(exclude=True)
