@@ -1,11 +1,11 @@
 ---
 title: "Exa Search Tool"
-description: "Search the web using the Exa Search API to find the most relevant results for any query, with options for full page content, highlights, and summaries."
+description: "Search the web with Exa, the fastest and most accurate web search API. Get token-efficient highlights and full page content."
 icon: "magnifying-glass"
 mode: "wide"
 ---
 
-The `EXASearchTool` lets CrewAI agents search the web using the [Exa](https://exa.ai/) search API. It returns the most relevant results for any query, with options for full page content and AI-generated summaries.
+The `ExaSearchTool` lets CrewAI agents search the web using [Exa](https://exa.ai/), the fastest and most accurate web search API. It returns the most relevant results for any query, with options for token-efficient highlights and full page content.
 
 ## Installation
 
@@ -27,15 +27,15 @@ Get an API key from the [Exa dashboard](https://dashboard.exa.ai/api-keys).
 
 ## Example Usage
 
-Here's how to use the `EXASearchTool` within a CrewAI agent:
+Here's how to use the `ExaSearchTool` within a CrewAI agent:
 
 ```python
 import os
 from crewai import Agent, Task, Crew
-from crewai_tools import EXASearchTool
+from crewai_tools import ExaSearchTool
 
 # Initialize the tool
-exa_tool = EXASearchTool()
+exa_tool = ExaSearchTool()
 
 # Create an agent that uses the tool
 researcher = Agent(
@@ -66,11 +66,11 @@ print(result)
 
 ## Configuration Options
 
-The `EXASearchTool` accepts the following parameters during initialization:
+The `ExaSearchTool` accepts the following parameters during initialization:
 
 - `type` (str, optional): The search type to use. Defaults to `"auto"`. Options: `"auto"`, `"instant"`, `"fast"`, `"deep"`.
+- `highlights` (bool or dict, optional): Return token-efficient excerpts most relevant to the query instead of the full page. Defaults to `True`. Pass a dict like `{"max_characters": 4000}` to configure, or `False` to disable.
 - `content` (bool, optional): Whether to include full page content in results. Defaults to `False`.
-- `summary` (bool, optional): Whether to include AI-generated summaries of each result. Requires `content=True`. Defaults to `False`.
 - `api_key` (str, optional): Your Exa API key. Falls back to the `EXA_API_KEY` environment variable if not provided.
 - `base_url` (str, optional): Custom API server URL. Falls back to the `EXA_BASE_URL` environment variable if not provided.
 
@@ -83,28 +83,70 @@ When calling the tool (or when an agent invokes it), the following search parame
 
 ## Advanced Usage
 
-You can configure the tool with custom parameters for richer results:
+For most agent workflows we recommend `highlights` — it returns the most relevant excerpts from each result and uses far fewer tokens than full page content:
 
 ```python
-# Get full page content with AI summaries
-exa_tool = EXASearchTool(
-    content=True,
-    summary=True,
-    type="deep"
+# Get token-efficient excerpts most relevant to the query
+exa_tool = ExaSearchTool(
+    highlights=True,
+    type="auto",
 )
 
 # Use it in an agent
 agent = Agent(
-    role="Deep Researcher",
-    goal="Conduct thorough research with full content and summaries",
+    role="Researcher",
+    goal="Answer questions with current web data",
     tools=[exa_tool]
 )
 ```
 
+For thorough, multi-step searches, use `type="deep"`:
+
+```python
+exa_tool = ExaSearchTool(
+    highlights=True,
+    type="deep",
+)
+```
+
+For more on choosing between highlights and full content, see the [Exa search best practices](https://exa.ai/docs/reference/search-best-practices).
+
+## Using Exa via MCP
+
+You can also connect your agent to Exa's hosted MCP server. Pass your API key with the `x-api-key` header:
+
+```python
+from crewai import Agent
+from crewai.mcp import MCPServerHTTP
+
+agent = Agent(
+    role="Research Analyst",
+    goal="Find and analyze information on the web",
+    backstory="Expert researcher with access to Exa's tools",
+    mcps=[
+        MCPServerHTTP(
+            url="https://mcp.exa.ai/mcp",
+            headers={"x-api-key": "YOUR_EXA_API_KEY"},
+        ),
+    ],
+)
+```
+
+Get your API key from the [Exa dashboard](https://dashboard.exa.ai/api-keys). For more on MCP in CrewAI, see the [MCP overview](/en/mcp/overview).
+
 ## Features
 
+- **Token-Efficient Highlights**: Get the most relevant excerpts from each result, ~10x fewer tokens than full text
 - **Semantic Search**: Find results based on meaning, not just keywords
 - **Full Content Retrieval**: Get the full text of web pages alongside search results
-- **AI Summaries**: Get concise, AI-generated summaries of each result
 - **Date Filtering**: Limit results to specific time periods with published date filters
 - **Domain Filtering**: Restrict searches to specific domains
+
+<Note>
+`EXASearchTool` is a deprecated alias for `ExaSearchTool`. Existing imports continue to work but will emit a deprecation warning; please migrate to `ExaSearchTool`.
+</Note>
+
+## Resources
+
+- [Exa documentation](https://exa.ai/docs)
+- [Exa dashboard — manage API keys and usage](https://dashboard.exa.ai)

@@ -8,6 +8,7 @@ import concurrent.futures
 import contextvars
 from datetime import datetime
 import json
+import os
 from pathlib import Path
 import time
 from typing import (
@@ -77,8 +78,7 @@ from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.lite_agent_output import LiteAgentOutput
 from crewai.llms.base_llm import BaseLLM
-from crewai.mcp import MCPServerConfig
-from crewai.mcp.tool_resolver import MCPToolResolver
+from crewai.mcp.config import MCPServerConfig
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.fingerprint import Fingerprint
 from crewai.skills.loader import activate_skill, discover_skills
@@ -93,10 +93,14 @@ from crewai.utilities.agent_utils import (
     parse_tools,
     render_text_description_and_args,
 )
-from crewai.utilities.constants import TRAINED_AGENTS_DATA_FILE, TRAINING_DATA_FILE
+from crewai.utilities.constants import (
+    CREWAI_TRAINED_AGENTS_FILE_ENV,
+    TRAINED_AGENTS_DATA_FILE,
+    TRAINING_DATA_FILE,
+)
 from crewai.utilities.converter import Converter, ConverterError
 from crewai.utilities.env import get_env_context
-from crewai.utilities.guardrail import process_guardrail
+from crewai.utilities.guardrail import process_guardrail, serialize_guardrail_for_json
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.llm_utils import create_llm
@@ -118,6 +122,7 @@ if TYPE_CHECKING:
 
     from crewai.a2a.config import A2AClientConfig, A2AConfig, A2AServerConfig
     from crewai.agents.agent_builder.base_agent import PlatformAppOrAction
+    from crewai.mcp.tool_resolver import MCPToolResolver
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
     from crewai.tools.structured_tool import CrewStructuredTool
@@ -294,7 +299,14 @@ class Agent(BaseAgent):
         default=None,
         description="The Agent's role to be used from your repository.",
     )
-    guardrail: GuardrailType | None = Field(
+    guardrail: Annotated[
+        GuardrailType | None,
+        PlainSerializer(
+            serialize_guardrail_for_json,
+            return_type=str | None,
+            when_used="json",
+        ),
+    ] = Field(
         default=None,
         description="Function or string description of a guardrail to validate agent output",
     )
@@ -403,15 +415,17 @@ class Agent(BaseAgent):
         self,
         resolved_crew_skills: list[SkillModel] | None = None,
     ) -> None:
-        """Resolve skill paths and activate skills to INSTRUCTIONS level.
+        """Resolve skill paths while preserving explicit disclosure levels.
 
-        Path entries trigger discovery and activation. Pre-loaded Skill objects
-        below INSTRUCTIONS level are activated. Crew-level skills are merged in
-        with event emission so observability is consistent regardless of origin.
+        Path entries trigger discovery and activation because directory-based
+        skills opt into eager loading. Pre-loaded Skill objects keep their
+        current disclosure level so callers can attach METADATA-only skills and
+        progressively activate them later. Crew-level skills are merged in with
+        event emission so observability is consistent regardless of origin.
 
         Args:
-            resolved_crew_skills: Pre-resolved crew skills (already discovered
-                and activated). When provided, avoids redundant discovery per agent.
+            resolved_crew_skills: Pre-resolved crew skills. When provided,
+                avoids redundant discovery per agent.
         """
         from crewai.crew import Crew
 
@@ -452,8 +466,7 @@ class Agent(BaseAgent):
             elif isinstance(item, SkillModel):
                 if item.name not in seen:
                     seen.add(item.name)
-                    activated = activate_skill(item, source=self)
-                    if activated is item and item.disclosure_level >= INSTRUCTIONS:
+                    if item.disclosure_level >= INSTRUCTIONS:
                         crewai_event_bus.emit(
                             self,
                             event=SkillActivatedEvent(
@@ -463,7 +476,7 @@ class Agent(BaseAgent):
                                 disclosure_level=item.disclosure_level,
                             ),
                         )
-                    resolved.append(activated)
+                    resolved.append(item)
 
         self.skills = resolved if resolved else None
 
@@ -1096,16 +1109,6 @@ class Agent(BaseAgent):
         self.agent_executor.tools_handler = self.tools_handler
         self.agent_executor.request_within_rpm_limit = rpm_limit_fn
 
-        if isinstance(self.agent_executor.llm, BaseLLM):
-            existing_stop = getattr(self.agent_executor.llm, "stop", [])
-            self.agent_executor.llm.stop = list(
-                set(
-                    existing_stop + stop_words
-                    if isinstance(existing_stop, list)
-                    else stop_words
-                )
-            )
-
     def get_delegation_tools(self, agents: Sequence[BaseAgent]) -> list[BaseTool]:
         agent_tools = AgentTools(agents=agents)
         return agent_tools.tools()
@@ -1127,6 +1130,8 @@ class Agent(BaseAgent):
         Delegates to :class:`~crewai.mcp.tool_resolver.MCPToolResolver`.
         """
         self._cleanup_mcp_clients()
+        from crewai.mcp.tool_resolver import MCPToolResolver
+
         self._mcp_resolver = MCPToolResolver(agent=self, logger=self._logger)
         return self._mcp_resolver.resolve(mcps)
 
@@ -1178,7 +1183,10 @@ class Agent(BaseAgent):
 
     def _use_trained_data(self, task_prompt: str) -> str:
         """Use trained data for the agent task prompt to improve output."""
-        if data := CrewTrainingHandler(TRAINED_AGENTS_DATA_FILE).load():
+        trained_file = os.getenv(
+            CREWAI_TRAINED_AGENTS_FILE_ENV, TRAINED_AGENTS_DATA_FILE
+        )
+        if data := CrewTrainingHandler(trained_file).load():
             if trained_data_output := data.get(self.role):
                 task_prompt += (
                     "\n\nYou MUST follow these instructions: \n - "

@@ -1,6 +1,6 @@
 import pytest
-from crewai.cli.authentication.main import Oauth2Settings
-from crewai.cli.authentication.providers.workos import WorkosProvider
+from crewai.auth.oauth2 import Oauth2Settings
+from crewai.auth.providers.workos import WorkosProvider
 
 
 class TestWorkosProvider:

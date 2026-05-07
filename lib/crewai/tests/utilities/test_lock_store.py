@@ -11,8 +11,8 @@ from unittest import mock
 
 import pytest
 
-import crewai.utilities.lock_store as lock_store
-from crewai.utilities.lock_store import lock
+import crewai_core.lock_store as lock_store
+from crewai_core.lock_store import lock
 
 
 @pytest.fixture(autouse=True)

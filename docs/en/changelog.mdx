@@ -4,6 +4,226 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="May 07, 2026">
+  ## v1.14.5a3
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.5a3)
+
+  ## What's Changed
+
+  ### Bug Fixes
+  - Fix status endpoint path from /{kickoff_id}/status to /status/{kickoff_id}
+  - Bump gitpython dependency to version >=3.1.47 for security compliance
+
+  ### Refactoring
+  - Extract CLI into standalone crewai-cli package
+
+  ### Documentation
+  - Update changelog and version for v1.14.5a2
+
+  ## Contributors
+
+  @greysonlalonde, @iris-clawd
+
+</Update>
+
+<Update label="May 04, 2026">
+  ## v1.14.5a2
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.5a2)
+
+  ## What's Changed
+
+  ### Bug Fixes
+  - Fix task output restoration in finally block
+  - Include `thoughts_token_count` in completion tokens
+  - Preserve task outputs across async batch flush
+  - Forward kwargs to loader calls in `CrewAIRagAdapter`
+  - Prevent `result_as_answer` from returning hook-block message as final answer
+  - Prevent `result_as_answer` from returning error as final answer
+  - Use `acall` for output conversion in async paths
+  - Prevent shared LLM stop words mutation across agents
+  - Handle `BaseModel` input in `convert_to_model`
+
+  ### Documentation
+  - Document additional environment variables
+  - Update changelog and version for v1.14.5a1
+
+  ## Contributors
+
+  @NIK-TIGER-BILL, @greysonlalonde, @lorenzejay, @minasami-pr, @theCyberTech, @wishhyt
+
+</Update>
+
+<Update label="May 01, 2026">
+  ## v1.14.5a1
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.5a1)
+
+  ## What's Changed
+
+  ### Features
+  - Add `restore_from_state_id` kickoff parameter
+  - Add highlights to ExaSearchTool and rename from EXASearchTool
+
+  ### Bug Fixes
+  - Fix missing crewai pin sites in release flow
+  - Ensure skills loading events for traces
+
+  ### Documentation
+  - Update changelog and version for v1.14.4
+
+  ## Contributors
+
+  @akaKuruma, @github-actions[bot], @greysonlalonde, @lorenzejay, @theishangoswami
+
+</Update>
+
+<Update label="May 01, 2026">
+  ## v1.14.4
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.4)
+
+  ## What's Changed
+
+  ### Features
+  - Add support for custom persistence key in @persist
+  - Add Responses API support for Azure OpenAI provider
+  - Forward credential_scopes to Azure AI Inference client
+  - Add Vertex AI workload identity setup guide
+  - Add Tavily Research and get Research
+  - Add You.com MCP tools for search, research, and content extraction
+
+  ### Bug Fixes
+  - Fix fall through when JSON regex match isn't valid JSON
+  - Fix to preserve tool_calls when response also contains text
+  - Fix to forward base_url and api_key to instructor.from_provider
+  - Fix to warn and return empty when native MCP server returns no tools
+  - Fix to use validated messages variable in non-streaming handlers
+  - Fix to guard crew chat description helpers against LLM failures
+  - Fix to reset messages and iterations between invocations
+  - Fix to forward trained-agents file through replay and test
+  - Fix to honor custom trained-agents file at inference
+  - Fix to bind task-only agents to crew for multimodal input_files
+  - Fix to serialize guardrail callables as null for JSON checkpointing
+  - Fix renaming of force_final_answer to avoid self-referential router
+  - Fix bump of litellm for SSTI fix; ignore unfixable pip CVE
+
+  ### Documentation
+  - Update changelog and version for v1.14.4a1
+  - Add E2B Sandbox Tools page
+  - Add Daytona sandbox tools documentation
+
+  ## Contributors
+
+  @EdwardIrby, @dependabot[bot], @factory-droid-oss, @factory-droid[bot], @greysonlalonde, @kunalk16, @lorenzejay, @lucasgomide, @manisrinivasan2k1, @mattatcha, @vinibrsl
+
+</Update>
+
+<Update label="Apr 29, 2026">
+  ## v1.14.4a1
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.4a1)
+
+  ## What's Changed
+
+  ### Bug Fixes
+  - Fix crew chat description helpers against LLM failures.
+  - Reset messages and iterations between invocations in executor.
+  - Forward trained-agents file through replay and test in CLI.
+  - Honor custom trained-agents file at inference in agent.
+  - Bind task-only agents to crew to ensure multimodal input_files reach the LLM.
+  - Serialize guardrail callables as null for JSON checkpointing.
+  - Rename `force_final_answer` in agent_executor to avoid self-referential router.
+  - Bump `litellm` for SSTI fix and ignore unfixable pip CVE.
+
+  ### Documentation
+  - Add E2B Sandbox Tools page.
+  - Add Daytona sandbox tools documentation.
+  - Add Vertex AI workload identity setup guide.
+  - Add You.com MCP tools for search, research, and content extraction.
+  - Update changelog and version for v1.14.3.
+
+  ## Contributors
+
+  @EdwardIrby, @dependabot[bot], @factory-droid-oss, @factory-droid[bot], @greysonlalonde, @lorenzejay, @manisrinivasan2k1, @mattatcha
+
+</Update>
+
+<Update label="Apr 25, 2026">
+  ## v1.14.3
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.3)
+
+  ## What's Changed
+
+  ### Features
+  - Add lifecycle events for checkpoint operations
+  - Add support for e2b
+  - Fall back to DefaultAzureCredential when no API key is provided in Azure integration
+  - Add Bedrock V4 support
+  - Add Daytona sandbox tools for enhanced functionality
+  - Add checkpoint and fork support to standalone agents
+
+  ### Bug Fixes
+  - Fix execution_id to be separate from state.id
+  - Resolve replay of recorded method events on checkpoint resume
+  - Fix serialization of initial_state class references as JSON schema
+  - Preserve metadata-only agent skills
+  - Propagate implicit @CrewBase names to crew events
+  - Merge execution metadata on duplicate batch initialization
+  - Fix serialization of Task class-reference fields for checkpointing
+  - Handle BaseModel result in guardrail retry loop
+  - Preserve thought_signature in Gemini streaming tool calls
+  - Emit task_started on fork resume and redesign checkpoint TUI
+  - Use future dates in checkpoint prune tests to prevent time-dependent failures
+  - Fix dry-run order and handle checked-out stale branch in devtools release
+  - Upgrade lxml to >=6.1.0 for security patch
+  - Bump python-dotenv to >=1.2.2 for security patch
+
+  ### Documentation
+  - Update changelog and version for v1.14.3
+  - Add 'Build with AI' page and update navigation for all languages
+  - Remove pricing FAQ from build-with-ai page across all locales
+
+  ### Performance
+  - Optimize MCP SDK and event types to reduce cold start by ~29%
+
+  ### Refactoring
+  - Refactor checkpoint helpers to eliminate duplication and tighten state type hints
+
+  ## Contributors
+
+  @MatthiasHowellYopp, @akaKuruma, @alex-clawd, @github-actions[bot], @github-advanced-security[bot], @greysonlalonde, @iris-clawd, @lorenzejay, @mattatcha, @renatonitta
+
+</Update>
+
+<Update label="Apr 23, 2026">
+  ## v1.14.3a3
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.3a3)
+
+  ## What's Changed
+
+  ### Features
+  - Add support for e2b
+  - Implement fallback to DefaultAzureCredential when no API key is provided
+
+  ### Bug Fixes
+  - Upgrade lxml to >=6.1.0 to address security issue GHSA-vfmq-68hx-4jfw
+
+  ### Documentation
+  - Remove pricing FAQ from build-with-ai page across all locales
+
+  ### Performance
+  - Improve cold start time by ~29% through lazy-loading of MCP SDK and event types
+
+  ## Contributors
+
+  @alex-clawd, @github-advanced-security[bot], @greysonlalonde, @iris-clawd, @lorenzejay, @mattatcha
+
+</Update>
+
 <Update label="Apr 22, 2026">
   ## v1.14.3a2
 

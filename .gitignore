@@ -30,3 +30,4 @@ chromadb-*.lock
 .crewai/memory
 blogs/*
 secrets/*
+UNKNOWN.egg-info/

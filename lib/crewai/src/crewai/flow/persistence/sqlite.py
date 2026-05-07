@@ -9,12 +9,12 @@ from pathlib import Path
 import sqlite3
 from typing import TYPE_CHECKING, Any
 
+from crewai_core.lock_store import lock as store_lock
+from crewai_core.paths import db_storage_path
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
 from typing_extensions import Self
 
 from crewai.flow.persistence.base import FlowPersistence
-from crewai.utilities.lock_store import lock as store_lock
-from crewai.utilities.paths import db_storage_path
 
 
 if TYPE_CHECKING:

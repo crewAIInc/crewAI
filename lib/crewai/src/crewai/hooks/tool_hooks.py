@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from crewai_core.printer import PRINTER
+
 from crewai.events.event_listener import event_listener
 from crewai.hooks.types import (
     AfterToolCallHookCallable,
@@ -9,7 +11,6 @@ from crewai.hooks.types import (
     BeforeToolCallHookCallable,
     BeforeToolCallHookType,
 )
-from crewai.utilities.printer import PRINTER
 
 
 if TYPE_CHECKING:
