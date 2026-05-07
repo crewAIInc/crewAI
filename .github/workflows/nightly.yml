@@ -5,6 +5,10 @@ on:
     - cron: '0 6 * * *' # daily at 6am UTC
   workflow_dispatch:
 
+concurrency:
+  group: nightly-publish
+  cancel-in-progress: false
+
 jobs:
   check:
     name: Check for new commits
@@ -94,13 +98,10 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/crewai
     permissions:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
-
       - name: Install uv
         uses: astral-sh/setup-uv@v6
         with:
@@ -125,7 +126,8 @@ jobs:
               continue
             fi
             echo "Publishing $package"
-            if ! uv publish "$package"; then
+            # --check-url skips files already on PyPI so manual re-runs on the same day are idempotent.
+            if ! uv publish --check-url https://pypi.org/simple/ "$package"; then
               echo "Failed to publish $package"
               failed=1
             fi
