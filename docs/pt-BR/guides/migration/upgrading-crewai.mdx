@@ -1,0 +1,359 @@
+---
+title: "Atualizando e Migrando o CrewAI"
+description: "Como atualizar o CrewAI, lidar com breaking changes e migrar Crews para Flows."
+icon: "arrow-up-circle"
+---
+
+## Visão Geral
+
+O CrewAI evolui rapidamente. Novas versões frequentemente ajustam caminhos de import, alteram defaults de `Agent`, `Crew` e `Task`, e introduzem novas primitivas de orquestração como `Flow` e checkpointing. Este guia reúne os passos práticos necessários para:
+
+- Atualizar a CLI global `crewai` e a dependência fixada do seu projeto
+- Adaptar-se a breaking changes em imports e parâmetros
+- Migrar uma `Crew` independente para um `Flow` tipado
+- Evitar as armadilhas que aparecem na primeira execução de um projeto atualizado
+
+Se você está começando do zero, veja [Instalação](/pt-BR/installation). Se está vindo de outro framework, veja [Migrando do LangGraph](/pt-BR/guides/migration/migrating-from-langgraph).
+
+---
+
+## As Duas Coisas Que Você Pode Querer Atualizar
+
+O CrewAI vive em dois lugares na sua máquina, e cada um se atualiza de forma independente:
+
+| O quê | Como é instalado | Como atualizar |
+|---|---|---|
+| A **CLI global `crewai`** | `uv tool install crewai` | `uv tool install crewai --upgrade` |
+| O **venv do projeto** (onde seu código roda) | `crewai install` / `uv sync` | `uv add "crewai[...]>=X.Y.Z"` e depois `crewai install` |
+
+Esses dois podem — e frequentemente ficam — fora de sincronia. Rodar `crewai --version` mostra a versão da CLI. Rodar `uv pip show crewai` dentro do seu projeto mostra a versão do venv. Se forem diferentes, isso é normal; o que importa para o código em execução é a versão do venv.
+
+## Por Que `crewai install` Sozinho Não Atualiza
+
+`crewai install` é um wrapper fino em torno de `uv sync`. Ele instala exatamente o que o arquivo `uv.lock` atual diz — ele **não** muda nenhuma restrição de versão.
+
+Se seu `pyproject.toml` diz `crewai>=1.11.1` e o lock file resolveu para `1.11.1`, executar `crewai install` vai te manter em `1.11.1` para sempre, mesmo que `1.14.4` esteja disponível.
+
+Para realmente atualizar, você precisa:
+
+1. Atualizar a restrição de versão em `pyproject.toml`
+2. Re-resolver o lock file
+3. Sincronizar o venv
+
+`uv add` faz os três de uma vez só.
+
+## Como Atualizar Seu Projeto
+
+```bash
+# Aumenta a restrição e re-resolve o lock em um único comando
+uv add "crewai[tools]>=1.14.4"
+
+# Sincroniza o venv (crewai install chama uv sync por baixo dos panos)
+crewai install
+
+# Verifica
+uv pip show crewai
+# → Version: 1.14.4
+```
+
+Substitua `[tools]` por quaisquer extras que seu projeto utilize (ex.: `[tools,anthropic]`). Verifique a lista de `dependencies` do seu `pyproject.toml` se estiver em dúvida.
+
+<Note>
+  `uv add` atualiza tanto `pyproject.toml` **quanto** `uv.lock` atomicamente. Se você editar `pyproject.toml` manualmente, ainda precisa rodar `uv lock --upgrade-package crewai` para re-resolver o lock file antes que `crewai install` pegue a nova versão.
+</Note>
+
+## Atualizando a CLI Global
+
+A CLI global é separada do seu projeto. Atualize com:
+
+```bash
+uv tool install crewai --upgrade
+```
+
+Se seu shell avisar sobre o `PATH` após a atualização, recarregue-o:
+
+```bash
+uv tool update-shell
+```
+
+Isso **não** mexe no venv do seu projeto — você ainda precisa de `uv add` + `crewai install` dentro do projeto.
+
+## Verifique Se Ambos Estão em Sincronia
+
+```bash
+# Versão da CLI global
+crewai --version
+
+# Versão do venv do projeto
+uv pip show crewai | grep Version
+```
+
+Eles não precisam coincidir — mas a versão do venv do projeto é o que importa para o comportamento em runtime.
+
+<Note>
+  CrewAI requer `Python >=3.10, <3.14`. Se o `uv` foi instalado contra um interpretador mais antigo, recrie o venv do projeto com uma versão suportada do Python antes de rodar `crewai install`.
+</Note>
+
+---
+
+## Breaking Changes e Notas de Migração
+
+A maioria das atualizações requer apenas pequenos ajustes. As áreas abaixo são as que quebram silenciosamente ou com tracebacks confusos.
+
+### Caminhos de import: tools e `BaseTool`
+
+O caminho canônico para tools é `crewai.tools`. Caminhos antigos ainda aparecem em tutoriais, mas devem ser atualizados.
+
+```python
+# Antes
+from crewai_tools import BaseTool
+from crewai.agents.tools import tool
+
+# Depois
+from crewai.tools import BaseTool, tool
+```
+
+O decorador `@tool` e a subclasse `BaseTool` ambos vivem em `crewai.tools`. `AgentFinish` e outros símbolos internos do agente não fazem mais parte da superfície pública — se você os estava importando, mude para event listeners ou callbacks de `Task`.
+
+### Mudanças de parâmetros em `Agent`
+
+```python
+from crewai import Agent
+
+agent = Agent(
+    role="Researcher",
+    goal="Find authoritative sources on {topic}",
+    backstory="You are a careful, source-driven researcher.",
+    llm="gpt-4o-mini",   # nome do modelo como string OU um objeto LLM
+    verbose=True,        # bool, não um nível inteiro
+    max_iter=15,         # default mudou entre versões — defina explicitamente
+    allow_delegation=False,
+)
+```
+
+- `llm` aceita tanto um nome de modelo como string (resolvido pelo provedor configurado) quanto um objeto `LLM` para controle granular.
+- `verbose` é um `bool` puro. Passar um inteiro não alterna mais níveis de log.
+- Os defaults de `max_iter` mudaram entre releases. Se seu agente para silenciosamente de iterar após a primeira chamada de tool, defina `max_iter` explicitamente.
+
+### Parâmetros de `Crew`
+
+```python
+from crewai import Crew, Process
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    process=Process.sequential,   # ou Process.hierarchical
+    memory=True,
+    cache=True,
+    embedder={"provider": "openai", "config": {"model": "text-embedding-3-small"}},
+)
+```
+
+- `process=Process.hierarchical` requer ou `manager_llm=` ou `manager_agent=`. Sem um deles, o kickoff lança erro na validação.
+- `memory=True` com um provedor de embedding não-default precisa de um dicionário `embedder` — veja [Configuração de memória e embedder](#memory-embedder-config) abaixo.
+
+### Saída estruturada de `Task`
+
+Use `output_pydantic`, `output_json` ou `output_file` para forçar o resultado de uma task em um formato tipado:
+
+```python
+from pydantic import BaseModel
+from crewai import Task
+
+class Article(BaseModel):
+    title: str
+    body: str
+
+write = Task(
+    description="Write an article about {topic}",
+    expected_output="A short article with a title and body",
+    agent=writer,
+    output_pydantic=Article,        # a classe, NÃO uma instância
+    output_file="output/article.md",
+)
+```
+
+`output_pydantic` recebe a **classe** em si. Passar `Article(title="", body="")` é um erro comum e falha com um erro de validação confuso.
+
+### Configuração de memória e embedder
+
+Se `memory=True` e você não está usando os embeddings padrão da OpenAI, é preciso passar um `embedder`:
+
+```python
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    memory=True,
+    embedder={
+        "provider": "ollama",
+        "config": {"model": "nomic-embed-text"},
+    },
+)
+```
+
+Defina as credenciais do provedor relevante (`OPENAI_API_KEY`, `OLLAMA_HOST`, etc.) no seu arquivo `.env`. Os caminhos de armazenamento de memória são locais ao projeto por default — apague o diretório de memória do projeto se trocar de embedder, já que dimensões diferentes não se misturam.
+
+---
+
+## Migrando uma Crew para um Flow
+
+`Crew` é a primitiva certa quando você tem um único time de agentes executando um workflow. Quando você precisa de branches, múltiplas crews ou estado persistente entre execuções, parta para `Flow`.
+
+### Quando usar Flows vs Crews independentes
+
+| Situação | Use |
+| --- | --- |
+| Time único, workflow linear/hierárquico | `Crew` |
+| Branches condicionais, retries, roteamento por resultado | `Flow` |
+| Múltiplas crews especializadas encadeadas | `Flow` |
+| Estado que precisa persistir entre etapas ou execuções | `Flow` (com checkpointing) |
+| Você quer estado tipado e amigável à IDE | `Flow[MyState]` com um modelo Pydantic |
+
+Se você precisa de qualquer um destes: branches, multi-crew ou estado persistente — comece com um `Flow`. O boilerplate é pequeno e você não precisará reescrever depois.
+
+### Migração passo a passo
+
+**Antes — crew independente:**
+
+```python
+from crewai import Crew
+
+crew = Crew(agents=[researcher, writer], tasks=[research_task, write_task])
+result = crew.kickoff(inputs={"topic": "vector databases"})
+print(result)
+```
+
+**Depois — crew dentro de um Flow tipado:**
+
+```python
+from crewai.flow.flow import Flow, start, listen
+from pydantic import BaseModel
+
+class MyState(BaseModel):
+    input_data: str = ""
+    result: str = ""
+
+class MyFlow(Flow[MyState]):
+    @start()
+    def run_crew(self):
+        result = MyCrew().crew().kickoff(inputs={"topic": self.state.input_data})
+        self.state.result = str(result)
+        return self.state.result
+
+flow = MyFlow()
+flow.kickoff(inputs={"input_data": "vector databases"})
+```
+
+O que mudou:
+
+1. A crew é construída dentro de um método, não no carregamento do módulo.
+2. Inputs fluem por `self.state` em vez de serem passados como kwargs.
+3. O ponto de entrada é marcado com `@start()`. Etapas seguintes usam `@listen(run_crew)` para encadear.
+
+### Configuração de estado estruturado
+
+Prefira estado tipado (`Flow[MyState]`) em vez da variante de dict não tipado. Você ganha autocompletar, validação na fronteira e estado serializável para checkpointing:
+
+```python
+from pydantic import BaseModel, Field
+
+class ResearchState(BaseModel):
+    topic: str = ""
+    sources: list[str] = Field(default_factory=list)
+    draft: str = ""
+    final: str = ""
+```
+
+Estado não tipado (`Flow()` sem genérico) ainda funciona, mas você perde checagens estáticas e fidelidade no checkpointing.
+
+### Padrão de Flow multi-crew
+
+Encadear duas crews — pesquisa, depois escrita — é o motivo canônico para adotar Flows:
+
+```python
+from crewai.flow.flow import Flow, start, listen, router
+from pydantic import BaseModel
+
+class PipelineState(BaseModel):
+    topic: str = ""
+    research: str = ""
+    article: str = ""
+
+class ContentPipeline(Flow[PipelineState]):
+    @start()
+    def research(self):
+        out = ResearchCrew().crew().kickoff(inputs={"topic": self.state.topic})
+        self.state.research = str(out)
+        return self.state.research
+
+    @router(research)
+    def gate(self):
+        return "write" if len(self.state.research) > 200 else "abort"
+
+    @listen("write")
+    def write(self):
+        out = WritingCrew().crew().kickoff(
+            inputs={"topic": self.state.topic, "notes": self.state.research}
+        )
+        self.state.article = str(out)
+        return self.state.article
+
+    @listen("abort")
+    def bail(self):
+        self.state.article = "Insufficient research."
+        return self.state.article
+
+ContentPipeline().kickoff(inputs={"topic": "vector databases"})
+```
+
+`@start()`, `@listen()` e `@router()` são os três decoradores que você usará 95% do tempo. Veja [Flows](/pt-BR/concepts/flows) para a referência completa.
+
+---
+
+## Armadilhas Comuns
+
+1. **Rodar `crewai install` esperando uma atualização.** `crewai install` sincroniza com base no `uv.lock` existente. Para subir versões, rode `uv add "crewai[tools]>=X.Y.Z"` primeiro e depois `crewai install`.
+2. **A restrição é um piso, não um pin.** `crewai>=1.11.1` significa "qualquer versão a partir de 1.11.1". O `uv` só re-resolve quando você executa explicitamente `uv add` ou `uv lock --upgrade-package crewai`.
+3. **Extras descartados durante o re-lock.** Se você rodar `uv add "crewai>=1.14.4"` sem extras, o `uv` pode descartar `[tools]` do conjunto resolvido. Sempre inclua os extras de que precisa: `uv add "crewai[tools]>=1.14.4"`.
+4. **Esquecer de commitar `uv.lock`.** Após subir a versão com `uv add`, commite o `uv.lock` atualizado para que seus colegas tenham as mesmas versões.
+5. **`pip install` em vez de `uv tool install`.** Misturar `crewai` instalado por pip e por uv leva a dois binários no `PATH` e divergência de versões confusa. Escolha um — o suportado é o `uv`.
+6. **Passar uma instância Pydantic para `output_pydantic`.** Ele espera a classe. `output_pydantic=Article`, não `output_pydantic=Article(...)`.
+7. **Processo hierárquico sem manager.** `process=Process.hierarchical` requer `manager_llm=` ou `manager_agent=`.
+8. **Memória ativada com o embedder errado.** Trocar de embedder sem limpar o diretório de memória em disco causa incompatibilidade de dimensões. Apague o store de memória do projeto após mudar de provedor.
+9. **Estado de dict quando você queria estado tipado.** `Flow()` sem genérico te dá um dict. Para checagem de tipos e checkpointing limpo, use `Flow[MyState]` com um `BaseModel`.
+10. **Imports antigos de tools.** `from crewai_tools import BaseTool` funciona em algumas versões, mas não é o caminho canônico. Padronize com `from crewai.tools import BaseTool, tool`.
+11. **Drift de versão do Python.** O CrewAI requer `>=3.10, <3.14`. O `uv` vai felizmente construir um venv contra 3.14+ se for o default; pin a versão do Python no `pyproject.toml`.
+12. **`verbose=2` e flags inteiras semelhantes.** `verbose` é um `bool`. Use event listeners para logging mais granular.
+13. **Chamar `crew.kickoff()` de dentro de um Flow sem encapsular em `inputs={}`.** Flows passam estado, não kwargs. A crew ainda espera `inputs={...}`.
+
+---
+
+## Checkpointing
+
+Checkpointing é uma adição mais recente que persiste o estado de agent, crew e flow entre execuções. Permite que workflows de longa duração retomem após um crash, uma parada manual ou um deploy.
+
+```python
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    checkpoint=True,
+)
+```
+
+A mesma flag é suportada em `Flow` e `Agent`. O estado é gravado no store local do projeto e reproduzido na próxima `kickoff()` com o mesmo identificador.
+
+<Note>
+  Checkpointing está em release inicial. APIs em torno de semântica de retomada, backends de storage e identificadores ainda podem mudar entre versões menores — pin sua versão do `crewai` se você depende disso em produção.
+</Note>
+
+Veja [Checkpointing](/pt-BR/concepts/checkpointing) para a referência completa do recurso.
+
+---
+
+## Obtendo Ajuda
+
+- **Changelog** — toda breaking change é registrada nas [release notes](/pt-BR/changelog).
+- **GitHub Issues** — abra uma em [github.com/crewAIInc/crewAI/issues](https://github.com/crewAIInc/crewAI/issues) com um repro mínimo e a saída de `crewai --version`.
+- **Discord** — o Discord da comunidade CrewAI é o caminho mais rápido para ajuda em debugging: [community.crewai.com](https://community.crewai.com).
+- **Guias de migração** — se você está vindo de outro framework, comece em [Migrando do LangGraph](/pt-BR/guides/migration/migrating-from-langgraph).
