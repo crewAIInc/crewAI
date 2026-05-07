@@ -40,7 +40,6 @@ from crewai.agent.utils import (
     format_task_with_context,
     get_knowledge_config,
     handle_knowledge_retrieval,
-    handle_reasoning,
     prepare_tools,
     process_tool_results,
     save_last_messages,
@@ -145,7 +144,17 @@ def _validate_executor_class(value: Any) -> Any:
         cls = _EXECUTOR_CLASS_MAP.get(value)
         if cls is None:
             raise ValueError(f"Unknown executor class: {value}")
-        return cls
+        value = cls
+    import warnings
+
+    if value is CrewAgentExecutor:
+        warnings.warn(
+            "CrewAgentExecutor is deprecated and will be removed in a future release. "
+            "Agents inside Crews now use AgentExecutor by default. "
+            "Switch to crewai.experimental.AgentExecutor.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
     return value
 
 
@@ -313,8 +322,8 @@ class Agent(BaseAgent):
         BeforeValidator(_validate_executor_class),
         PlainSerializer(_serialize_executor_class, return_type=str, when_used="json"),
     ] = Field(
-        default=CrewAgentExecutor,
-        description="Class to use for the agent executor. Defaults to CrewAgentExecutor, can optionally use AgentExecutor.",
+        default=AgentExecutor,
+        description="Class to use for the agent executor. Defaults to AgentExecutor, can optionally use CrewAgentExecutor.",
     )
 
     @model_validator(mode="before")
@@ -499,8 +508,6 @@ class Agent(BaseAgent):
             The task prompt after memory retrieval, ready for knowledge lookup.
         """
         get_env_context()
-        if self.executor_class is not AgentExecutor:
-            handle_reasoning(self, task)
 
         self._inject_date_to_task(task)
 
@@ -1022,7 +1029,7 @@ class Agent(BaseAgent):
                 raise RuntimeError(
                     "LLM must be resolved before creating agent executor."
                 )
-            self.agent_executor = self.executor_class(
+            self.agent_executor = AgentExecutor(
                 llm=self.llm,
                 task=task,
                 agent=self,
