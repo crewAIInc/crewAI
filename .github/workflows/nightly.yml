@@ -18,10 +18,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check for commits in last 24h
+      - name: Check for recent commits
         id: check
         run: |
-          RECENT=$(git log --since="24 hours ago" --oneline | head -1)
+          # 25h window absorbs cron-vs-commit timing skew at the boundary.
+          RECENT=$(git log --since="25 hours ago" --oneline | head -1)
           if [ -n "$RECENT" ]; then
             echo "has_changes=true" >> "$GITHUB_OUTPUT"
           else
@@ -38,34 +39,42 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.3"
+          python-version: "3.12"
+          enable-cache: false
 
       - name: Stamp nightly versions
         run: |
           DATE=$(date +%Y%m%d)
+
+          # All workspace packages share the same base version and are released together.
+          BASE=$(python -c "
+          import re
+          print(re.search(r'__version__\s*=\s*\"(.*?)\"', open('lib/crewai/src/crewai/__init__.py').read()).group(1))
+          ")
+          NIGHTLY="${BASE}.dev${DATE}"
+          echo "Nightly version: ${NIGHTLY}"
+
           for init_file in \
             lib/crewai/src/crewai/__init__.py \
+            lib/crewai-core/src/crewai_core/__init__.py \
             lib/crewai-tools/src/crewai_tools/__init__.py \
-            lib/crewai-files/src/crewai_files/__init__.py; do
-            CURRENT=$(python -c "
-          import re
-          text = open('$init_file').read()
-          print(re.search(r'__version__\s*=\s*\"(.*?)\"\s*$', text, re.MULTILINE).group(1))
-          ")
-            NIGHTLY="${CURRENT}.dev${DATE}"
+            lib/crewai-files/src/crewai_files/__init__.py \
+            lib/cli/src/crewai_cli/__init__.py; do
             sed -i "s/__version__ = .*/__version__ = \"${NIGHTLY}\"/" "$init_file"
-            echo "$init_file: $CURRENT -> $NIGHTLY"
+            echo "Stamped $init_file -> $NIGHTLY"
           done
 
-          # Update cross-package dependency pins to nightly versions
-          sed -i "s/\"crewai-tools==[^\"]*\"/\"crewai-tools==${NIGHTLY}\"/" lib/crewai/pyproject.toml
+          # Update all cross-package dependency pins to the nightly version.
           sed -i "s/\"crewai==[^\"]*\"/\"crewai==${NIGHTLY}\"/" lib/crewai-tools/pyproject.toml
+          sed -i "s/\"crewai-core==[^\"]*\"/\"crewai-core==${NIGHTLY}\"/" lib/crewai/pyproject.toml
+          sed -i "s/\"crewai-cli==[^\"]*\"/\"crewai-cli==${NIGHTLY}\"/" lib/crewai/pyproject.toml
+          sed -i "s/\"crewai-tools==[^\"]*\"/\"crewai-tools==${NIGHTLY}\"/" lib/crewai/pyproject.toml
+          sed -i "s/\"crewai-files==[^\"]*\"/\"crewai-files==${NIGHTLY}\"/" lib/crewai/pyproject.toml
+          sed -i "s/\"crewai-core==[^\"]*\"/\"crewai-core==${NIGHTLY}\"/" lib/cli/pyproject.toml
           echo "Updated cross-package dependency pins to ${NIGHTLY}"
 
       - name: Build packages
