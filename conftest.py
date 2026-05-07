@@ -54,12 +54,13 @@ _original_from_serialized_response = getattr(
 )
 
 if _original_from_serialized_response is not None:
+    _from_serialized: Any = _original_from_serialized_response
 
     def _patched_from_serialized_response(
         request: Any, serialized_response: Any, history: Any = None
     ) -> Any:
         """Patched version that ensures response._content is properly set."""
-        response = _original_from_serialized_response(request, serialized_response, history)
+        response = _from_serialized(request, serialized_response, history)
         # Explicitly set _content to avoid ResponseNotRead errors
         # The content was passed to the constructor but the mocked read() prevents
         # proper initialization of the internal state
@@ -255,7 +256,8 @@ def vcr_cassette_dir(request: Any) -> str:
 
     for parent in test_file.parents:
         if (
-            parent.name in ("crewai", "crewai-tools", "crewai-files")
+            parent.name
+            in ("crewai", "crewai-tools", "crewai-files", "cli", "crewai-core")
             and parent.parent.name == "lib"
         ):
             package_root = parent

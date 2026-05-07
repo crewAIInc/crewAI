@@ -6,13 +6,13 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from crewai.cli.config import (
+from crewai.settings import (
     CLI_SETTINGS_KEYS,
     DEFAULT_CLI_SETTINGS,
     USER_SETTINGS_KEYS,
     Settings,
 )
-from crewai.cli.shared.token_manager import TokenManager
+from crewai_core.token_manager import TokenManager
 
 
 class TestSettings(unittest.TestCase):
@@ -69,7 +69,7 @@ class TestSettings(unittest.TestCase):
         for key in user_settings.keys():
             self.assertEqual(getattr(settings, key), None)
 
-    @patch("crewai.cli.config.TokenManager")
+    @patch("crewai_core.settings.TokenManager")
     def test_reset_settings(self, mock_token_manager):
         user_settings = {key: f"value_for_{key}" for key in USER_SETTINGS_KEYS}
         cli_settings = {key: f"value_for_{key}" for key in CLI_SETTINGS_KEYS if key != "oauth2_extra"}

@@ -30,11 +30,11 @@ import functools
 import logging
 from typing import TYPE_CHECKING, Any, Final, TypeVar, cast
 
+from crewai_core.printer import PRINTER
 from pydantic import BaseModel
 
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
-from crewai.utilities.printer import PRINTER
 
 
 if TYPE_CHECKING:

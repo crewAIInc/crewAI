@@ -15,13 +15,47 @@ from typing import Any, cast
 import uuid
 
 import click
+from crewai_core.lock_store import lock as store_lock
+from crewai_core.user_data import (
+    _load_user_data as _load_user_data,
+    _save_user_data as _save_user_data,
+    _user_data_file as _user_data_file,
+    _user_data_lock_name as _user_data_lock_name,
+    has_user_declined_tracing as has_user_declined_tracing,
+    is_tracing_enabled as is_tracing_enabled,
+    update_user_data as update_user_data,
+)
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
-from crewai.utilities.lock_store import lock as store_lock
-from crewai.utilities.paths import db_storage_path
 from crewai.utilities.serialization import to_serializable
+
+
+__all__ = [
+    "_load_user_data",
+    "_save_user_data",
+    "_user_data_file",
+    "_user_data_lock_name",
+    "get_user_id",
+    "has_user_declined_tracing",
+    "is_first_execution",
+    "is_tracing_enabled",
+    "is_tracing_enabled_in_context",
+    "mark_first_execution_completed",
+    "mark_first_execution_done",
+    "on_first_execution_tracing_confirmation",
+    "prompt_user_for_trace_viewing",
+    "reset_tracing_enabled",
+    "safe_serialize_to_dict",
+    "set_suppress_tracing_messages",
+    "set_tracing_enabled",
+    "should_auto_collect_first_time_traces",
+    "should_enable_tracing",
+    "should_suppress_tracing_messages",
+    "truncate_messages",
+    "update_user_data",
+]
 
 
 logger = logging.getLogger(__name__)
@@ -121,69 +155,6 @@ def is_tracing_enabled_in_context() -> bool:
     """
     enabled = _tracing_enabled.get()
     return enabled if enabled is not None else False
-
-
-def _user_data_file() -> Path:
-    base = Path(db_storage_path())
-    base.mkdir(parents=True, exist_ok=True)
-    return base / ".crewai_user.json"
-
-
-def _load_user_data() -> dict[str, Any]:
-    p = _user_data_file()
-    if p.exists():
-        try:
-            return cast(dict[str, Any], json.loads(p.read_text()))
-        except (json.JSONDecodeError, OSError, PermissionError) as e:
-            logger.warning(f"Failed to load user data: {e}")
-    return {}
-
-
-def _user_data_lock_name() -> str:
-    """Return a stable lock name for the user data file."""
-    return f"file:{os.path.realpath(_user_data_file())}"
-
-
-def update_user_data(updates: dict[str, Any]) -> None:
-    """Atomically read-modify-write the user data file.
-
-    Args:
-        updates: Key-value pairs to merge into the existing user data.
-    """
-    try:
-        with store_lock(_user_data_lock_name()):
-            data = _load_user_data()
-            data.update(updates)
-            p = _user_data_file()
-            p.write_text(json.dumps(data, indent=2))
-    except (OSError, PermissionError) as e:
-        logger.warning(f"Failed to update user data: {e}")
-
-
-def has_user_declined_tracing() -> bool:
-    """Check if user has explicitly declined trace collection.
-
-    Returns:
-        True if user previously declined tracing, False otherwise.
-    """
-    data = _load_user_data()
-    if data.get("first_execution_done", False):
-        return data.get("trace_consent", False) is False
-    return False
-
-
-def is_tracing_enabled() -> bool:
-    """Check if tracing should be enabled.
-
-
-    Returns:
-        True if tracing is enabled and not disabled, False otherwise.
-    """
-    # If user has explicitly declined tracing, never enable it
-    if has_user_declined_tracing():
-        return False
-
-    return os.getenv("CREWAI_TRACING_ENABLED", "false").lower() == "true"
 
 
 def on_first_execution_tracing_confirmation() -> bool:

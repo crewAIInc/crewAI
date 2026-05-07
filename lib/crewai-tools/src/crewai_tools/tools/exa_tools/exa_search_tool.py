@@ -3,10 +3,17 @@ from __future__ import annotations
 from builtins import type as type_
 import os
 from typing import Any, TypedDict
+import warnings
 
 from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import Required
+
+
+try:
+    from exa_py import Exa
+except ImportError:
+    Exa = None  # type: ignore[assignment,misc]
 
 
 class SearchParams(TypedDict, total=False):
@@ -18,7 +25,7 @@ class SearchParams(TypedDict, total=False):
     include_domains: list[str]
 
 
-class EXABaseToolSchema(BaseModel):
+class ExaBaseToolSchema(BaseModel):
     search_query: str = Field(
         ..., description="Mandatory search query you want to use to search the internet"
     )
@@ -31,14 +38,20 @@ class EXABaseToolSchema(BaseModel):
     )
 
 
-class EXASearchTool(BaseTool):
+EXABaseToolSchema = ExaBaseToolSchema
+
+
+class ExaSearchTool(BaseTool):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    name: str = "EXASearchTool"
-    description: str = "Search the internet using Exa"
-    args_schema: type_[BaseModel] = EXABaseToolSchema
+    name: str = "ExaSearchTool"
+    description: str = (
+        "Search the web with Exa, the fastest and most accurate web search API."
+    )
+    args_schema: type_[BaseModel] = ExaBaseToolSchema
     client: Any | None = None
-    content: bool | None = False
-    summary: bool | None = False
+    content: bool | dict[str, Any] | None = False
+    summary: bool | dict[str, Any] | None = False
+    highlights: bool | dict[str, Any] | None = True
     type: str | None = "auto"
     package_dependencies: list[str] = Field(default_factory=lambda: ["exa_py"])
     api_key: str | None = Field(
@@ -68,17 +81,17 @@ class EXASearchTool(BaseTool):
 
     def __init__(
         self,
-        content: bool | None = False,
-        summary: bool | None = False,
+        content: bool | dict[str, Any] | None = False,
+        summary: bool | dict[str, Any] | None = False,
+        highlights: bool | dict[str, Any] | None = True,
         type: str | None = "auto",
         **kwargs: Any,
     ) -> None:
         super().__init__(
             **kwargs,
         )
-        try:
-            from exa_py import Exa
-        except ImportError as e:
+        global Exa
+        if Exa is None:
             import click
 
             if click.confirm(
@@ -88,12 +101,13 @@ class EXASearchTool(BaseTool):
 
                 subprocess.run(["uv", "add", "exa_py"], check=True)  # noqa: S607
 
-                # Re-import after installation
-                from exa_py import Exa
+                from exa_py import Exa as _Exa
+
+                Exa = _Exa  # type: ignore[misc]
             else:
                 raise ImportError(
-                    "You are missing the 'exa_py' package. Would you like to install it?"
-                ) from e
+                    "You are missing the 'exa_py' package. Please install it to use ExaSearchTool."
+                )
 
         client_kwargs: dict[str, str] = {}
         if self.api_key:
@@ -101,8 +115,10 @@ class EXASearchTool(BaseTool):
         if self.base_url:
             client_kwargs["base_url"] = self.base_url
         self.client = Exa(**client_kwargs)
+        self.client.headers["x-exa-integration"] = "crewai"
         self.content = content
         self.summary = summary
+        self.highlights = highlights
         self.type = type
 
     def _run(
@@ -126,10 +142,31 @@ class EXASearchTool(BaseTool):
         if include_domains:
             search_params["include_domains"] = include_domains
 
+        contents_kwargs: dict[str, Any] = {}
         if self.content:
-            results = self.client.search_and_contents(
-                search_query, summary=self.summary, **search_params
+            contents_kwargs["text"] = self.content
+        if self.highlights:
+            contents_kwargs["highlights"] = self.highlights
+        if self.summary:
+            contents_kwargs["summary"] = self.summary
+
+        if contents_kwargs:
+            return self.client.search_and_contents(
+                search_query, **contents_kwargs, **search_params
             )
-        else:
-            results = self.client.search(search_query, **search_params)
-        return results
+        return self.client.search(search_query, **search_params)
+
+
+class EXASearchTool(ExaSearchTool):
+    """Deprecated alias for :class:`ExaSearchTool`. Kept for backwards compatibility."""
+
+    name: str = "ExaSearchTool"
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        warnings.warn(
+            "EXASearchTool is deprecated and will be removed in a future release; "
+            "use ExaSearchTool instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        super().__init__(*args, **kwargs)

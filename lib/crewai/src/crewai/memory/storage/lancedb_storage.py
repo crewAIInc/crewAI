@@ -12,10 +12,10 @@ import threading
 import time
 from typing import Any
 
+from crewai_core.lock_store import lock as store_lock
 import lancedb  # type: ignore[import-untyped]
 
 from crewai.memory.types import MemoryRecord, ScopeInfo
-from crewai.utilities.lock_store import lock as store_lock
 
 
 _logger = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ class LanceDBStorage:
             if storage_dir:
                 path = Path(storage_dir) / "memory"
             else:
-                from crewai.utilities.paths import db_storage_path
+                from crewai_core.paths import db_storage_path
 
                 path = Path(db_storage_path()) / "memory"
         self._path = Path(path)

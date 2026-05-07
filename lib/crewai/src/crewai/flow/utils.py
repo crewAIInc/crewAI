@@ -22,6 +22,7 @@ import inspect
 import textwrap
 from typing import TYPE_CHECKING, Any
 
+from crewai_core.printer import PRINTER
 from typing_extensions import TypeIs
 
 from crewai.flow.constants import AND_CONDITION, OR_CONDITION
@@ -32,7 +33,6 @@ from crewai.flow.flow_wrappers import (
     SimpleFlowCondition,
 )
 from crewai.flow.types import FlowMethodCallable, FlowMethodName
-from crewai.utilities.printer import PRINTER
 
 
 if TYPE_CHECKING:
