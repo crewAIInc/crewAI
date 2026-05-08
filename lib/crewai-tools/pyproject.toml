@@ -140,7 +140,7 @@ contextual = [
     "nest-asyncio>=1.6.0",
 ]
 daytona = [
-    "daytona~=0.171",
+    "daytona~=0.140.0",
 ]
 
 e2b = [
