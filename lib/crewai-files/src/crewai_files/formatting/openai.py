@@ -122,18 +122,30 @@ class OpenAIFormatter:
     """Formats resolved files into OpenAI content blocks."""
 
     @staticmethod
-    def format_block(resolved: ResolvedFileType) -> dict[str, Any]:
+    def format_block(resolved: ResolvedFileType, content_type: str = "") -> dict[str, Any]:
         """Format a resolved file into an OpenAI content block.
 
         Args:
             resolved: Resolved file.
+            content_type: MIME type of the file content.
 
         Returns:
             Content block dict.
 
         Raises:
-            TypeError: If resolved type is not supported.
+            TypeError: If resolved type is not supported, or if the content
+                type (e.g. PDF) is not supported by the OpenAI Chat Completions
+                API.
         """
+        is_pdf = content_type == "application/pdf"
+
+        if is_pdf:
+            raise TypeError(
+                "OpenAI Chat Completions API does not support PDF attachments. "
+                "Use the Responses API (api='responses') or a different provider "
+                "that supports PDF content."
+            )
+
         if isinstance(resolved, FileReference):
             return {
                 "type": "file",
