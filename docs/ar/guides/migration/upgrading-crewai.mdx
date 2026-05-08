@@ -54,7 +54,7 @@ uv pip show crewai
 استبدل `[tools]` بأي إضافات يستخدمها مشروعك (مثلًا `[tools,anthropic]`). تحقّق من قائمة `dependencies` في `pyproject.toml` إن لم تكن متأكدًا.
 
 <Note>
-  يحدّث `uv add` كلا من `pyproject.toml` **و**`uv.lock` بشكل ذرّي. إذا قمت بتحرير `pyproject.toml` يدويًا، فإنك لا تزال بحاجة إلى تشغيل `uv lock --upgrade-package crewai` لإعادة حلّ ملف القفل قبل أن يلتقط `crewai install` الإصدار الجديد.
+  يحدّث `uv add` كلا من `pyproject.toml` **و** `uv.lock` بشكل ذرّي. إذا قمت بتحرير `pyproject.toml` يدويًا، فإنك لا تزال بحاجة إلى تشغيل `uv lock --upgrade-package crewai` لإعادة حلّ ملف القفل قبل أن يلتقط `crewai install` الإصدار الجديد.
 </Note>
 
 ## ترقية أداة سطر الأوامر العامة
@@ -171,7 +171,7 @@ write = Task(
 
 `output_pydantic` يأخذ **الفئة** نفسها. تمرير `Article(title="", body="")` خطأ شائع ويفشل بخطأ تحقّق مربك.
 
-### إعداد الذاكرة وembedder
+### إعداد الذاكرة وembedder {#memory-embedder-config}
 
 إذا كان `memory=True` وأنت لا تستخدم embeddings الافتراضية الخاصة بـ OpenAI، فيجب أن تمرّر `embedder`:
 
