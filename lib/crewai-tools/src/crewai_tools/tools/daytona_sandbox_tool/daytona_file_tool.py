@@ -197,34 +197,63 @@ class DaytonaFileTool(DaytonaBaseTool):
         sandbox, should_delete = self._acquire_sandbox()
         try:
             if action == "read":
+                if path is None:
+                    raise ValueError("action='read' requires 'path'")
                 return self._read(sandbox, path, binary=binary)
             if action == "write":
+                if path is None:
+                    raise ValueError("action='write' requires 'path'")
                 return self._write(sandbox, path, content or "", binary=binary)
             if action == "append":
+                if path is None:
+                    raise ValueError("action='append' requires 'path'")
                 return self._append(sandbox, path, content or "", binary=binary)
             if action == "list":
+                if path is None:
+                    raise ValueError("action='list' requires 'path'")
                 return self._list(sandbox, path)
             if action == "delete":
+                if path is None:
+                    raise ValueError("action='delete' requires 'path'")
                 sandbox.fs.delete_file(path, recursive=recursive)
                 return {"status": "deleted", "path": path}
             if action == "mkdir":
+                if path is None:
+                    raise ValueError("action='mkdir' requires 'path'")
                 mkdir_mode = mode or "0755"
                 sandbox.fs.create_folder(path, mkdir_mode)
                 return {"status": "created", "path": path, "mode": mkdir_mode}
             if action == "info":
+                if path is None:
+                    raise ValueError("action='info' requires 'path'")
                 return self._info(sandbox, path)
             if action == "exists":
+                if path is None:
+                    raise ValueError("action='exists' requires 'path'")
                 return self._exists(sandbox, path)
             if action == "move":
+                if path is None or destination is None:
+                    raise ValueError("action='move' requires 'path' and 'destination'")
                 sandbox.fs.move_files(path, destination)
                 return {"status": "moved", "from": path, "to": destination}
             if action == "find":
+                if path is None or pattern is None:
+                    raise ValueError("action='find' requires 'path' and 'pattern'")
                 return self._find(sandbox, path, pattern)
             if action == "search":
+                if path is None or pattern is None:
+                    raise ValueError("action='search' requires 'path' and 'pattern'")
                 return self._search(sandbox, path, pattern)
             if action == "chmod":
+                if path is None:
+                    raise ValueError("action='chmod' requires 'path'")
                 return self._chmod(sandbox, path, mode=mode, owner=owner, group=group)
             if action == "replace":
+                if paths is None or pattern is None or replacement is None:
+                    raise ValueError(
+                        "action='replace' requires 'paths', 'pattern', and "
+                        "'replacement'"
+                    )
                 return self._replace(sandbox, paths, pattern, replacement)
             raise ValueError(f"Unknown action: {action}")
         finally:
