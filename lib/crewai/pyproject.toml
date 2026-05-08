@@ -65,7 +65,7 @@ pandas = [
 openpyxl = [
     "openpyxl~=3.1.5",
 ]
-mem0 = ["mem0ai~=0.1.94"]
+mem0 = ["mem0ai>=2.0.0,<3"]
 docling = [
     "docling~=2.84.0",
 ]
