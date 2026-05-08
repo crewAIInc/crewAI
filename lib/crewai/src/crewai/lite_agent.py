@@ -121,11 +121,11 @@ def _kickoff_with_a2a_support(
     Returns:
         LiteAgentOutput from either local execution or A2A delegation.
     """
-    from crewai.a2a.utils.response_model import get_a2a_agents_and_response_model
+    from crewai.a2a.utils.response_model import extract_a2a_client_configs
     from crewai.a2a.wrapper import _execute_task_with_a2a
     from crewai.task import Task
 
-    a2a_agents, agent_response_model = get_a2a_agents_and_response_model(agent.a2a)
+    a2a_agents = extract_a2a_client_configs(agent.a2a)
 
     if not a2a_agents:
         return original_kickoff(messages, response_format, input_files)
@@ -160,7 +160,6 @@ def _kickoff_with_a2a_support(
         a2a_agents=a2a_agents,
         original_fn=task_to_kickoff_adapter,
         task=fake_task,
-        agent_response_model=agent_response_model,
         context=None,
         tools=None,
         extension_registry=extension_registry,
