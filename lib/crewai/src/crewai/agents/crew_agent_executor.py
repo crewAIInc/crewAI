@@ -937,6 +937,17 @@ class CrewAgentExecutor(BaseAgentExecutor):
             try:
                 raw_result = available_functions[func_name](**(args_dict or {}))
 
+                from crewai.utilities.tool_files import (
+                    extract_files_from_tool_result,
+                )
+
+                extracted_files, files_message = extract_files_from_tool_result(
+                    raw_result
+                )
+                if extracted_files is not None:
+                    self._attach_tool_files_to_messages(extracted_files)
+                    raw_result = files_message
+
                 if self.tools_handler and self.tools_handler.cache:
                     should_cache = True
                     if (
@@ -947,6 +958,8 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         should_cache = original_tool.cache_function(
                             args_dict or {}, raw_result
                         )
+                    if extracted_files is not None:
+                        should_cache = False
                     if should_cache:
                         self.tools_handler.cache.add(
                             tool=func_name, input=input_str, output=raw_result
@@ -1409,6 +1422,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
         Returns:
             Updated action or final answer.
         """
+        if tool_result.files:
+            self._attach_tool_files_to_messages(tool_result.files)
+
         add_image_tool = I18N_DEFAULT.tools("add_image")
         if (
             isinstance(add_image_tool, dict)
@@ -1425,6 +1441,30 @@ class CrewAgentExecutor(BaseAgentExecutor):
             step_callback=self.step_callback,
             show_logs=self._show_logs,
         )
+
+    def _attach_tool_files_to_messages(self, files: dict[str, Any]) -> None:
+        """Attach files returned by a tool to the most recent user message.
+
+        Tools may return ``crewai_files.FileInput`` instances (or lists/dicts
+        of them) to dynamically extend the agent's multimodal context. This
+        method merges those files into the existing ``files`` mapping on the
+        most recent user message so the next LLM call includes them.
+
+        Args:
+            files: Mapping of file names to ``FileInput`` instances.
+        """
+        if not files:
+            return
+
+        for i in range(len(self.messages) - 1, -1, -1):
+            msg = self.messages[i]
+            if msg.get("role") == "user":
+                existing = msg.get("files") or {}
+                merged = {**existing, **files}
+                msg["files"] = merged
+                return
+
+        self.messages.append({"role": "user", "content": "", "files": dict(files)})
 
     def _invoke_step_callback(
         self, formatted_answer: AgentAction | AgentFinish

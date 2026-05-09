@@ -31,6 +31,7 @@ from crewai.utilities.agent_utils import (
 from crewai.utilities.converter import Converter
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.string_utils import sanitize_tool_name
+from crewai.utilities.tool_files import extract_files_from_tool_result
 
 
 if TYPE_CHECKING:
@@ -106,6 +107,7 @@ class ToolUsage:
         self.action = action
         self.function_calling_llm = function_calling_llm
         self.fingerprint_context = fingerprint_context or {}
+        self._last_extracted_files: dict[str, Any] | None = None
 
         # Set the maximum parsing attempts for bigger models
         if (
@@ -339,6 +341,13 @@ class ToolUsage:
                     else:
                         result = await tool.ainvoke(input={}, config=fingerprint_config)
 
+                    extracted_files, files_message = extract_files_from_tool_result(
+                        result
+                    )
+                    if extracted_files is not None:
+                        result = files_message
+                        self._last_extracted_files = extracted_files
+
                     if self.tools_handler:
                         should_cache = True
                         # Check cache_function on original tool (for tools converted via to_structured_tool)
@@ -351,6 +360,9 @@ class ToolUsage:
 
                         if cache_func:
                             should_cache = cache_func(calling.arguments, result)
+
+                        if extracted_files is not None:
+                            should_cache = False
 
                         self.tools_handler.on_tool_use(
                             calling=calling, output=result, should_cache=should_cache
@@ -367,6 +379,8 @@ class ToolUsage:
                         "tool_name": sanitize_tool_name(tool.name),
                         "tool_args": calling.arguments,
                     }
+                    if extracted_files is not None:
+                        data["files"] = extracted_files
 
                     if (
                         hasattr(available_tool, "result_as_answer")
@@ -572,6 +586,13 @@ class ToolUsage:
                     else:
                         result = tool.invoke(input={}, config=fingerprint_config)
 
+                    extracted_files, files_message = extract_files_from_tool_result(
+                        result
+                    )
+                    if extracted_files is not None:
+                        result = files_message
+                        self._last_extracted_files = extracted_files
+
                     if self.tools_handler:
                         should_cache = True
                         # Check cache_function on original tool (for tools converted via to_structured_tool)
@@ -584,6 +605,9 @@ class ToolUsage:
 
                         if cache_func:
                             should_cache = cache_func(calling.arguments, result)
+
+                        if extracted_files is not None:
+                            should_cache = False
 
                         self.tools_handler.on_tool_use(
                             calling=calling, output=result, should_cache=should_cache
@@ -600,6 +624,8 @@ class ToolUsage:
                         "tool_name": sanitize_tool_name(tool.name),
                         "tool_args": calling.arguments,
                     }
+                    if extracted_files is not None:
+                        data["files"] = extracted_files
 
                     if (
                         hasattr(available_tool, "result_as_answer")
