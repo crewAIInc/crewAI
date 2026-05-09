@@ -82,7 +82,7 @@ def extract_files_from_tool_result(
         A ``(files, message)`` tuple. ``files`` is ``None`` when no files
         were detected.
     """
-    files: dict[str, BaseFile] = {}
+    files: dict[str, FileInput] = {}
 
     if _is_base_file(result):
         key = _file_key(result, used=set(), default_index=0)
