@@ -682,6 +682,7 @@ class ArticleReviewFlow(Flow):
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `learn` | `False` | Enable HITL learning |
+| `learn_strict` | `False` | If `True`, pre-review failures are re-raised instead of falling back to raw output |
 | `learn_limit` | `5` | Max past lessons to recall for pre-review |
 
 ### Key Design Decisions
@@ -689,7 +690,8 @@ class ArticleReviewFlow(Flow):
 - **Same LLM for everything**: The `llm` parameter on the decorator is shared by outcome collapsing, lesson distillation, and pre-review. No need to configure multiple models.
 - **Structured output**: Both distillation and pre-review use function calling with Pydantic models when the LLM supports it, falling back to text parsing otherwise.
 - **Non-blocking storage**: Lessons are stored via `remember_many()` which runs in a background thread -- the flow continues immediately.
-- **Graceful degradation**: If the LLM fails during distillation, nothing is stored. If it fails during pre-review, the raw output is shown. Neither failure blocks the flow.
+- **Observable graceful degradation**: If the LLM fails during distillation, nothing is stored. If it fails during pre-review, the raw output is shown to the human and the failure is logged at `WARNING` level with the full traceback (`exc_info=True`) under the `crewai.flow.human_feedback` logger -- so the silent fallback is detectable. Neither failure blocks the flow.
+- **Strict mode**: Pass `learn_strict=True` to make pre-review fail closed -- failures (LLM error, network/auth error, structured-output parse error, memory `recall` error) propagate out of the flow method instead of being swallowed. Use this when downstream code must be able to assume that pre-review actually executed.
 - **No scope/categories needed**: When storing lessons, only `source` is passed. The encoding pipeline infers scope, categories, and importance automatically.
 
 <Note>

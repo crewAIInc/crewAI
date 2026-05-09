@@ -60,6 +60,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from functools import wraps
+import logging
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from pydantic import BaseModel, Field
@@ -74,6 +75,8 @@ if TYPE_CHECKING:
 
 
 F = TypeVar("F", bound=Callable[..., Any])
+
+logger = logging.getLogger(__name__)
 
 
 def _serialize_llm_for_context(llm: Any) -> dict[str, Any] | str | None:
@@ -188,6 +191,7 @@ class HumanFeedbackConfig:
     provider: HumanFeedbackProvider | None = None
     learn: bool = False
     learn_source: str = "hitl"
+    learn_strict: bool = False
 
 
 class HumanFeedbackMethod(FlowMethod[Any, Any]):
@@ -237,6 +241,7 @@ def human_feedback(
     provider: HumanFeedbackProvider | None = None,
     learn: bool = False,
     learn_source: str = "hitl",
+    learn_strict: bool = False,
 ) -> Callable[[F], F]:
     """Decorator for Flow methods that require human feedback.
 
@@ -275,6 +280,20 @@ def human_feedback(
             external systems like Slack, Teams, or webhooks. When the
             provider raises HumanFeedbackPending, the flow pauses and
             can be resumed later with Flow.resume().
+        learn: When True, enables HITL learning. After feedback is
+            collected, the LLM distills generalizable lessons and stores
+            them in memory. Before the next review, past lessons are
+            recalled and applied via an LLM pre-review step so the human
+            sees a progressively improved output.
+        learn_source: The memory ``source`` tag used when storing and
+            recalling HITL lessons. Defaults to ``"hitl"``.
+        learn_strict: When True (default False), pre-review failures are
+            re-raised instead of falling back to the raw output. By
+            default, failures are logged at WARNING level with full
+            traceback (``exc_info=True``) and the raw method output is
+            shown to the human. Set this to True if downstream callers
+            must be able to assume that pre-review actually executed
+            successfully.
 
     Returns:
         A decorator function that wraps the method with human feedback
@@ -373,16 +392,40 @@ def human_feedback(
         def _pre_review_with_lessons(
             flow_instance: Flow[Any], method_output: Any
         ) -> Any:
-            """Recall past HITL lessons and use LLM to pre-review the output."""
-            try:
-                mem = flow_instance.memory
-                if mem is None:
-                    return method_output
-                query = f"human feedback lessons for {func.__name__}: {method_output!s}"
-                matches = mem.recall(query, source=learn_source)
-                if not matches:
-                    return method_output
+            """Recall past HITL lessons and use LLM to pre-review the output.
 
+            Returns the original ``method_output`` when memory is unavailable
+            or no lessons match — these are not error cases.
+
+            When the recall or LLM pre-review call raises an exception (for
+            example LLM/network/auth failure or structured-output parse
+            error), the failure is logged at WARNING level with full
+            traceback (``exc_info=True``) so callers can detect the silent
+            fallback. When ``learn_strict=True`` was passed to the decorator,
+            the exception is re-raised instead of being swallowed.
+            """
+            mem = flow_instance.memory
+            if mem is None:
+                return method_output
+
+            query = f"human feedback lessons for {func.__name__}: {method_output!s}"
+            try:
+                matches = mem.recall(query, source=learn_source)
+            except Exception:
+                logger.warning(
+                    "HITL pre-review: memory recall failed for %s; falling "
+                    "back to raw output.",
+                    func.__name__,
+                    exc_info=True,
+                )
+                if learn_strict:
+                    raise
+                return method_output
+
+            if not matches:
+                return method_output
+
+            try:
                 lessons = "\n".join(f"- {m.record.content}" for m in matches)
                 llm_inst = _resolve_llm_instance()
                 prompt = _get_hitl_prompt("hitl_pre_review_user").format(
@@ -404,7 +447,14 @@ def human_feedback(
                 reviewed = llm_inst.call(messages)
                 return reviewed if isinstance(reviewed, str) else str(reviewed)
             except Exception:
-                return method_output  # fallback to raw output on any failure
+                logger.warning(
+                    "HITL pre-review failed for %s; falling back to raw output.",
+                    func.__name__,
+                    exc_info=True,
+                )
+                if learn_strict:
+                    raise
+                return method_output
 
         def _distill_and_store_lessons(
             flow_instance: Flow[Any], method_output: Any, raw_feedback: str
@@ -654,6 +704,7 @@ def human_feedback(
             provider=provider,
             learn=learn,
             learn_source=learn_source,
+            learn_strict=learn_strict,
         )
         wrapper.__is_flow_method__ = True
 
