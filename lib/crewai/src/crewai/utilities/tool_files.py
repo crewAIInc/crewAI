@@ -13,15 +13,19 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeGuard
 
 
 if TYPE_CHECKING:
     from crewai_files import BaseFile, FileInput
 
 
-def _is_base_file(value: Any) -> bool:
-    """Return True if ``value`` is a ``crewai_files.BaseFile`` subclass instance."""
+def _is_base_file(value: Any) -> TypeGuard[FileInput]:
+    """Return True if ``value`` is a ``crewai_files.BaseFile`` subclass instance.
+
+    ``FileInput`` is the union of all concrete ``BaseFile`` subclasses, so any
+    ``BaseFile`` instance is by definition a ``FileInput``.
+    """
     try:
         from crewai_files import BaseFile
     except ImportError:
