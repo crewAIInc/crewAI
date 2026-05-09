@@ -1681,7 +1681,11 @@ class OpenAICompletion(BaseLLM):
                 if result is not None:
                     return result
 
-            content = message.content or getattr(message, "reasoning_content", "") or ""
+            try:
+                reasoning = message.reasoning_content or ""
+            except AttributeError:
+                reasoning = ""
+            content = message.content or reasoning or ""
 
             if self.response_format and isinstance(self.response_format, type):
                 try:
@@ -1919,10 +1923,14 @@ class OpenAICompletion(BaseLLM):
             choice = completion_chunk.choices[0]
             chunk_delta: ChoiceDelta = choice.delta
 
-            if chunk_delta.content or getattr(chunk_delta, "reasoning_content", None):
-                full_response += chunk_delta.content or getattr(chunk_delta, "reasoning_content", "")
+            try:
+                reasoning = chunk_delta.reasoning_content or ""
+            except AttributeError:
+                reasoning = ""
+            if chunk_delta.content or reasoning:
+                full_response += chunk_delta.content or reasoning
                 self._emit_stream_chunk_event(
-                    chunk=chunk_delta.content or getattr(chunk_delta, "reasoning_content", "") or "",
+                    chunk=chunk_delta.content or reasoning or "",
                     from_task=from_task,
                     from_agent=from_agent,
                     response_id=response_id_stream,
@@ -2074,7 +2082,11 @@ class OpenAICompletion(BaseLLM):
                 if result is not None:
                     return result
 
-            content = message.content or getattr(message, "reasoning_content", "") or ""
+            try:
+                reasoning = message.reasoning_content or ""
+            except AttributeError:
+                reasoning = ""
+            content = message.content or reasoning or ""
 
             if self.response_format and isinstance(self.response_format, type):
                 try:
@@ -2222,10 +2234,14 @@ class OpenAICompletion(BaseLLM):
             choice = chunk.choices[0]
             chunk_delta: ChoiceDelta = choice.delta
 
-            if chunk_delta.content or getattr(chunk_delta, "reasoning_content", None):
-                full_response += chunk_delta.content or getattr(chunk_delta, "reasoning_content", "")
+            try:
+                reasoning = chunk_delta.reasoning_content or ""
+            except AttributeError:
+                reasoning = ""
+            if chunk_delta.content or reasoning:
+                full_response += chunk_delta.content or reasoning
                 self._emit_stream_chunk_event(
-                    chunk=chunk_delta.content or getattr(chunk_delta, "reasoning_content", "") or "",
+                    chunk=chunk_delta.content or reasoning or "",
                     from_task=from_task,
                     from_agent=from_agent,
                     response_id=response_id_stream,
