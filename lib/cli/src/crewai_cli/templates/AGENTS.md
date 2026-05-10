@@ -770,6 +770,9 @@ from crewai.tools import tool
 import ast
 import operator
 
+_MAX_EXPONENT = 100  # cap exp magnitude to prevent DoS via huge powers
+
+
 def safe_eval(expr: str) -> float:
     """Safely evaluate arithmetic expressions using AST parsing."""
     allowed_operators = {
@@ -777,16 +780,26 @@ def safe_eval(expr: str) -> float:
         ast.Sub: operator.sub,
         ast.Mult: operator.mul,
         ast.Div: operator.truediv,
-        ast.Pow: operator.pow,
         ast.Mod: operator.mod,
         ast.USub: operator.neg,
     }
 
+    def _safe_pow(base, exp):
+        if abs(exp) > _MAX_EXPONENT:
+            raise ValueError(f"Exponent magnitude exceeds limit of {_MAX_EXPONENT}")
+        return operator.pow(base, exp)
+
     def _eval(node):
         if isinstance(node, ast.Expression):
             return _eval(node.body)
-        elif isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+        elif (
+            isinstance(node, ast.Constant)
+            and isinstance(node.value, (int, float))
+            and not isinstance(node.value, bool)
+        ):
             return node.value
+        elif isinstance(node, ast.BinOp) and isinstance(node.op, ast.Pow):
+            return _safe_pow(_eval(node.left), _eval(node.right))
         elif isinstance(node, ast.BinOp) and type(node.op) in allowed_operators:
             return allowed_operators[type(node.op)](_eval(node.left), _eval(node.right))
         elif isinstance(node, ast.UnaryOp) and type(node.op) in allowed_operators:
@@ -794,7 +807,10 @@ def safe_eval(expr: str) -> float:
         else:
             raise ValueError(f"Unsupported expression: {ast.dump(node)}")
 
-    tree = ast.parse(expr, mode='eval')
+    try:
+        tree = ast.parse(expr, mode='eval')
+    except SyntaxError as e:
+        raise ValueError(f"Invalid expression: {e}") from e
     return _eval(tree)
 
 @tool("Calculator")
