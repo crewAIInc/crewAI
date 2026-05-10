@@ -426,6 +426,11 @@ If the supplied `restore_from_state_id` does not match any persisted state, the 
 2. **Default SQLite Backend**
    - SQLiteFlowPersistence is the default storage backend
    - States are automatically saved to a local SQLite database
+   - The database file is named `flow_states.db` and stored in the platform-specific user data directory:
+     - **Linux:** `~/.local/share/CrewAI/<project_name>/flow_states.db`
+     - **macOS:** `~/Library/Application Support/CrewAI/<project_name>/flow_states.db`
+     - **Windows:** `%LOCALAPPDATA%\CrewAI\<project_name>\flow_states.db`
+   - The `<project_name>` defaults to the current working directory name, or the value of the `CREWAI_STORAGE_DIR` environment variable if set
    - Robust error handling ensures clear messages if database operations fail
 
 3. **Error Handling**
