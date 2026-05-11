@@ -13,7 +13,7 @@ The Daytona sandbox tools give CrewAI agents access to isolated, ephemeral compu
 
 - **`DaytonaExecTool`** — run any shell command inside a sandbox.
 - **`DaytonaPythonTool`** — execute a block of Python source code inside a sandbox.
-- **`DaytonaFileTool`** — read, write, append, list, delete, and inspect files inside a sandbox.
+- **`DaytonaFileTool`** — read, write, append, list, delete, and inspect files inside a sandbox; also supports `move`, `find` (content grep), `search` (filename glob), `chmod` (permissions), `replace` (bulk find-and-replace), and `exists`.
 
 All three tools share the same sandbox lifecycle controls, so you can mix and match them while keeping state in a single persistent sandbox.
 
@@ -55,7 +55,7 @@ from crewai_tools import DaytonaPythonTool
 tool = DaytonaPythonTool()
 result = tool.run(code="print(sum(range(10)))")
 print(result)
-# {"exit_code": 0, "result": "45\n", "artifacts": None}
+# {"exit_code": 0, "result": "45\n", "artifacts": ExecutionArtifacts(stdout="45\n", charts=[])}
 ```
 
 ### Multi-step shell session (persistent)
@@ -63,17 +63,22 @@ print(result)
 ```python Code
 from crewai_tools import DaytonaExecTool, DaytonaFileTool
 
+# Create the persistent sandbox via the first tool, then attach the second
+# tool to it so both share state (installed packages, files, env vars).
 exec_tool = DaytonaExecTool(persistent=True)
-file_tool = DaytonaFileTool(persistent=True)
-
-# Install a package, then write and run a script — all in the same sandbox
 exec_tool.run(command="pip install httpx -q")
-file_tool.run(action="write", path="/workspace/fetch.py", content="import httpx; print(httpx.get('https://httpbin.org/get').status_code)")
-exec_tool.run(command="python /workspace/fetch.py")
+file_tool = DaytonaFileTool(sandbox_id=exec_tool.active_sandbox_id)
+
+file_tool.run(
+    action="write",
+    path="workspace/script.py",
+    content="import httpx; print(f'httpx loaded, version {httpx.__version__}')",
+)
+exec_tool.run(command="python workspace/script.py")
 ```
 
 <Note>
-Each tool instance maintains its own persistent sandbox. To share **one** sandbox across two tools, create the first tool, grab its sandbox id via `tool._persistent_sandbox.id`, and pass it to the second tool via `sandbox_id=...`.
+By default, each tool with `persistent=True` lazily creates its **own** sandbox on first use. The pattern above shares a single sandbox across multiple tools by reading the first tool's `active_sandbox_id` after a `.run()` call and passing it to the others via `sandbox_id=...`. With `persistent=False` (the default), every `.run()` call gets a fresh sandbox that's deleted at the end of that call.
 </Note>
 
 ### Attach to an existing sandbox
@@ -82,7 +87,7 @@ Each tool instance maintains its own persistent sandbox. To share **one** sandbo
 from crewai_tools import DaytonaExecTool
 
 tool = DaytonaExecTool(sandbox_id="my-long-lived-sandbox")
-result = tool.run(command="ls /workspace")
+result = tool.run(command="ls workspace")
 ```
 
 ### Custom sandbox parameters
@@ -100,6 +105,41 @@ tool = DaytonaExecTool(
         "labels": {"owner": "crewai-agent"},
     },
 )
+```
+
+### Searching, moving, and modifying files
+
+```python Code
+from crewai_tools import DaytonaFileTool
+
+file_tool = DaytonaFileTool(persistent=True)
+
+# Find every TODO in the source tree (grep file contents recursively)
+file_tool.run(action="find", path="workspace/src", pattern="TODO:")
+
+# Find all Python files (glob match on filenames)
+file_tool.run(action="search", path="workspace", pattern="*.py")
+
+# Make a script executable
+file_tool.run(action="chmod", path="workspace/run.sh", mode="755")
+
+# Rename or move a file
+file_tool.run(
+    action="move",
+    path="workspace/draft.md",
+    destination="workspace/final.md",
+)
+
+# Bulk find-and-replace across multiple files
+file_tool.run(
+    action="replace",
+    paths=["workspace/src/a.py", "workspace/src/b.py"],
+    pattern="old_function",
+    replacement="new_function",
+)
+
+# Quick existence check before a destructive op
+file_tool.run(action="exists", path="workspace/cache.db")
 ```
 
 ### Agent integration
@@ -121,7 +161,7 @@ coder = Agent(
 )
 
 task = Task(
-    description="Write a Python script that prints the first 10 Fibonacci numbers, save it to /workspace/fib.py, and run it.",
+    description="Write a Python script that prints the first 10 Fibonacci numbers, save it to workspace/fib.py, and run it.",
     expected_output="The first 10 Fibonacci numbers printed to stdout.",
     agent=coder,
 )
@@ -168,12 +208,22 @@ All three tools accept these parameters at initialization:
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `action` | `str` | ✓ | One of: `read`, `write`, `append`, `list`, `delete`, `mkdir`, `info`. |
-| `path` | `str` | ✓ | Absolute path inside the sandbox. |
-| `content` | `str \| None` | | Content to write or append. Required for `append`. |
+| `action` | `str` | ✓ | One of: `read`, `write`, `append`, `list`, `delete`, `mkdir`, `info`, `exists`, `move`, `find`, `search`, `chmod`, `replace`. |
+| `path` | `str \| None` | ✓ for all actions except `replace` | Absolute path inside the sandbox. |
+| `content` | `str \| None` | ✓ for `append` | Content to write or append. |
 | `binary` | `bool` | | If `True`, `content` is base64 on write; returns base64 on read. |
 | `recursive` | `bool` | | For `delete`: remove directories recursively. |
-| `mode` | `str` | | For `mkdir`: octal permission string (default `"0755"`). |
+| `mode` | `str \| None` | | For `mkdir`: octal permissions for the new directory (defaults to `"0755"`). For `chmod`: octal permissions to apply to the target. |
+| `destination` | `str \| None` | ✓ for `move` | Destination path for `move`. |
+| `pattern` | `str \| None` | ✓ for `find`, `search`, `replace` | For `find`: substring matched against file CONTENTS. For `search`: glob matched against file NAMES (e.g. `*.py`). For `replace`: text to replace inside files. |
+| `replacement` | `str \| None` | ✓ for `replace` | Replacement text for `pattern`. |
+| `paths` | `list[str] \| None` | ✓ for `replace` | List of file paths in which to replace text. |
+| `owner` | `str \| None` | | For `chmod`: new file owner. |
+| `group` | `str \| None` | | For `chmod`: new file group. |
+
+<Note>
+For `chmod`, pass at least one of `mode`, `owner`, or `group` — any field left as `None` is left unchanged on the target.
+</Note>
 
 <Tip>
 For files larger than a few KB, create the file first with `action="write"` and empty content, then send the body via multiple `action="append"` calls of ~4 KB each to stay within tool-call payload limits.
