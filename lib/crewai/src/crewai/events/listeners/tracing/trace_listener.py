@@ -6,7 +6,7 @@ import uuid
 
 from typing_extensions import Self
 
-from crewai.cli.authentication.token import AuthError, get_auth_token
+from crewai.auth.token import AuthError, get_auth_token
 from crewai.events.base_event_listener import BaseEventListener
 from crewai.events.base_events import BaseEvent
 from crewai.events.event_bus import CrewAIEventsBus
@@ -108,6 +108,13 @@ from crewai.events.types.reasoning_events import (
     AgentReasoningFailedEvent,
     AgentReasoningStartedEvent,
 )
+from crewai.events.types.skill_events import (
+    SkillActivatedEvent,
+    SkillDiscoveryCompletedEvent,
+    SkillDiscoveryStartedEvent,
+    SkillLoadFailedEvent,
+    SkillLoadedEvent,
+)
 from crewai.events.types.system_events import SignalEvent, on_signal
 from crewai.events.types.task_events import (
     TaskCompletedEvent,
@@ -120,7 +127,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageStartedEvent,
 )
 from crewai.events.utils.console_formatter import ConsoleFormatter
-from crewai.utilities.version import get_crewai_version
+from crewai.version import get_crewai_version
 
 
 class TraceCollectionListener(BaseEventListener):
@@ -529,6 +536,30 @@ class TraceCollectionListener(BaseEventListener):
             source: Any, event: KnowledgeQueryFailedEvent
         ) -> None:
             self._handle_action_event("knowledge_query_failed", source, event)
+
+        @event_bus.on(SkillDiscoveryStartedEvent)
+        def on_skill_discovery_started(
+            source: Any, event: SkillDiscoveryStartedEvent
+        ) -> None:
+            self._handle_action_event("skill_discovery_started", source, event)
+
+        @event_bus.on(SkillDiscoveryCompletedEvent)
+        def on_skill_discovery_completed(
+            source: Any, event: SkillDiscoveryCompletedEvent
+        ) -> None:
+            self._handle_action_event("skill_discovery_completed", source, event)
+
+        @event_bus.on(SkillLoadedEvent)
+        def on_skill_loaded(source: Any, event: SkillLoadedEvent) -> None:
+            self._handle_action_event("skill_loaded", source, event)
+
+        @event_bus.on(SkillActivatedEvent)
+        def on_skill_activated(source: Any, event: SkillActivatedEvent) -> None:
+            self._handle_action_event("skill_activated", source, event)
+
+        @event_bus.on(SkillLoadFailedEvent)
+        def on_skill_load_failed(source: Any, event: SkillLoadFailedEvent) -> None:
+            self._handle_action_event("skill_load_failed", source, event)
 
     def _register_a2a_event_handlers(self, event_bus: CrewAIEventsBus) -> None:
         """Register handlers for A2A (Agent-to-Agent) events."""

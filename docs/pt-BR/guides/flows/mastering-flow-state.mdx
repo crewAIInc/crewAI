@@ -167,6 +167,48 @@ Para mais controle, você pode aplicar `@persist()` em métodos específicos:
 # código não traduzido
 ```
 
+#### Forking de Estado Persistido
+
+`@persist` suporta dois modos distintos de hidratação em `kickoff` / `kickoff_async`. Use **resume** (`inputs["id"]`) para continuar a mesma linhagem; use **fork** (`restore_from_state_id`) para iniciar uma nova linhagem a partir de um snapshot:
+
+| | `state.id` após o kickoff | Escritas do `@persist` vão para |
+|---|---|---|
+| `inputs["id"]` (resume) | id informado | id informado (estende o histórico) |
+| `restore_from_state_id` (fork) | id novo, ou `inputs["id"]` se fixado | id novo (origem preservada) |
+
+```python
+from crewai.flow.flow import Flow, start
+from crewai.flow.persistence import persist
+from pydantic import BaseModel
+
+class CounterState(BaseModel):
+    id: str = ""
+    counter: int = 0
+
+@persist
+class CounterFlow(Flow[CounterState]):
+    @start()
+    def step(self):
+        self.state.counter += 1
+
+# Execução 1: estado novo, counter 0 -> 1
+flow_1 = CounterFlow()
+flow_1.kickoff()
+
+# Fork: hidrata do snapshot mais recente de flow_1, mas escreve sob um state.id NOVO
+flow_2 = CounterFlow()
+flow_2.kickoff(restore_from_state_id=flow_1.state.id)
+# flow_2 começa com counter=1 (hidratado), e step() incrementa para 2.
+# O histórico do flow_uuid de flow_1 não é alterado.
+```
+
+Notas sobre o comportamento:
+
+- `restore_from_state_id` não encontrado na persistência → o kickoff retorna silenciosamente ao comportamento padrão (espelha o comportamento de `inputs["id"]` quando não encontrado). Nenhuma exceção é lançada.
+- Combinar `restore_from_state_id` com `from_checkpoint` lança um `ValueError` — eles miram sistemas de estado diferentes (`@persist` vs. Checkpointing) e não podem ser combinados.
+- `restore_from_state_id=None` (padrão) é byte-idêntico a um kickoff sem o parâmetro.
+- Fixar `inputs["id"]` durante o fork significa que a nova execução compartilha uma chave de persistência com outro flow — geralmente você quer apenas `restore_from_state_id`.
+
 ## Padrões Avançados de Estado
 
 ### Lógica Condicional Baseada no Estado

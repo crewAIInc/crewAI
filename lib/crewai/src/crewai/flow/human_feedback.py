@@ -60,6 +60,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from functools import wraps
+import logging
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from pydantic import BaseModel, Field
@@ -72,6 +73,8 @@ if TYPE_CHECKING:
     from crewai.flow.flow import Flow
     from crewai.llms.base_llm import BaseLLM
 
+
+logger = logging.getLogger(__name__)
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -188,6 +191,7 @@ class HumanFeedbackConfig:
     provider: HumanFeedbackProvider | None = None
     learn: bool = False
     learn_source: str = "hitl"
+    learn_strict: bool = False
 
 
 class HumanFeedbackMethod(FlowMethod[Any, Any]):
@@ -237,6 +241,7 @@ def human_feedback(
     provider: HumanFeedbackProvider | None = None,
     learn: bool = False,
     learn_source: str = "hitl",
+    learn_strict: bool = False,
 ) -> Callable[[F], F]:
     """Decorator for Flow methods that require human feedback.
 
@@ -275,6 +280,14 @@ def human_feedback(
             external systems like Slack, Teams, or webhooks. When the
             provider raises HumanFeedbackPending, the flow pauses and
             can be resumed later with Flow.resume().
+        learn: Enable HITL learning. Recall past lessons to pre-review
+            output before the human sees it, and distill new lessons
+            from feedback after.
+        learn_source: Memory source tag for stored/recalled lessons.
+        learn_strict: When True, re-raise exceptions from the pre-review
+            and distillation steps instead of falling back to raw output.
+            Default False preserves graceful degradation; failures are
+            always logged via ``logger.warning`` regardless of this flag.
 
     Returns:
         A decorator function that wraps the method with human feedback
@@ -404,7 +417,19 @@ def human_feedback(
                 reviewed = llm_inst.call(messages)
                 return reviewed if isinstance(reviewed, str) else str(reviewed)
             except Exception:
-                return method_output  # fallback to raw output on any failure
+                if learn_strict:
+                    logger.warning(
+                        "HITL pre-review failed for %s; re-raising (learn_strict=True)",
+                        func.__name__,
+                        exc_info=True,
+                    )
+                    raise
+                logger.warning(
+                    "HITL pre-review failed for %s; falling back to raw output",
+                    func.__name__,
+                    exc_info=True,
+                )
+                return method_output
 
         def _distill_and_store_lessons(
             flow_instance: Flow[Any], method_output: Any, raw_feedback: str
@@ -446,8 +471,19 @@ def human_feedback(
 
                 if lessons:
                     mem.remember_many(lessons, source=learn_source)  # type: ignore[union-attr]
-            except Exception:  # noqa: S110
-                pass  # non-critical: don't fail the flow because lesson storage failed
+            except Exception:
+                if learn_strict:
+                    logger.warning(
+                        "HITL lesson distillation failed for %s; re-raising (learn_strict=True)",
+                        func.__name__,
+                        exc_info=True,
+                    )
+                    raise
+                logger.warning(
+                    "HITL lesson distillation failed for %s; no lessons stored",
+                    func.__name__,
+                    exc_info=True,
+                )
 
         # -- Core feedback helpers ------------------------------------
 
@@ -654,6 +690,7 @@ def human_feedback(
             provider=provider,
             learn=learn,
             learn_source=learn_source,
+            learn_strict=learn_strict,
         )
         wrapper.__is_flow_method__ = True
 

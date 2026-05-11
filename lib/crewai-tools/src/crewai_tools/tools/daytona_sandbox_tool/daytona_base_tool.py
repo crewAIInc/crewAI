@@ -196,3 +196,27 @@ class DaytonaBaseTool(BaseTool):
                 "the sandbox may need manual deletion.",
                 exc_info=True,
             )
+
+    @property
+    def active_sandbox_id(self) -> str | None:
+        """The id of the sandbox this tool is currently bound to, if any.
+
+        Returns:
+          - the explicitly attached `sandbox_id`, if set at construction;
+          - the id of the lazily-created persistent sandbox, once a call has
+            triggered creation;
+          - None for ephemeral mode (where no sandbox lives between calls).
+
+        Use this to share one sandbox across multiple tool instances:
+
+            exec_tool = DaytonaExecTool(persistent=True)
+            exec_tool.run(command="pip install httpx")
+            file_tool = DaytonaFileTool(sandbox_id=exec_tool.active_sandbox_id)
+        """
+        if self.sandbox_id:
+            return self.sandbox_id
+        with self._lock:
+            sandbox = self._persistent_sandbox
+        if sandbox is None:
+            return None
+        return getattr(sandbox, "id", None)
