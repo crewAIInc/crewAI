@@ -15,6 +15,7 @@ import inspect
 import logging
 from typing import TYPE_CHECKING, Annotated, Any, Literal, cast
 
+from crewai_core.printer import PRINTER
 from pydantic import (
     AliasChoices,
     BaseModel,
@@ -69,7 +70,6 @@ from crewai.utilities.agent_utils import (
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.file_store import aget_all_files, get_all_files
 from crewai.utilities.i18n import I18N_DEFAULT
-from crewai.utilities.printer import PRINTER
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.tool_utils import (

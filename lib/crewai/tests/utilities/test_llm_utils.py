@@ -2,7 +2,7 @@ import os
 from typing import Any
 from unittest.mock import patch
 
-from crewai.cli.constants import DEFAULT_LLM_MODEL
+from crewai.constants import DEFAULT_LLM_MODEL
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
 from crewai.utilities.llm_utils import create_llm

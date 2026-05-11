@@ -900,11 +900,12 @@ class BaseLLM(BaseModel, ABC):
         if from_agent is not None:
             return True
 
+        from crewai_core.printer import PRINTER
+
         from crewai.hooks.llm_hooks import (
             LLMCallHookContext,
             get_before_llm_call_hooks,
         )
-        from crewai.utilities.printer import PRINTER
 
         before_hooks = get_before_llm_call_hooks()
         if not before_hooks:
@@ -969,11 +970,12 @@ class BaseLLM(BaseModel, ABC):
         if from_agent is not None or not isinstance(response, str):
             return response
 
+        from crewai_core.printer import PRINTER
+
         from crewai.hooks.llm_hooks import (
             LLMCallHookContext,
             get_after_llm_call_hooks,
         )
-        from crewai.utilities.printer import PRINTER
 
         after_hooks = get_after_llm_call_hooks()
         if not after_hooks:

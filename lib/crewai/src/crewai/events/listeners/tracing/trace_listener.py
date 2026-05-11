@@ -6,7 +6,7 @@ import uuid
 
 from typing_extensions import Self
 
-from crewai.cli.authentication.token import AuthError, get_auth_token
+from crewai.auth.token import AuthError, get_auth_token
 from crewai.events.base_event_listener import BaseEventListener
 from crewai.events.base_events import BaseEvent
 from crewai.events.event_bus import CrewAIEventsBus
@@ -127,7 +127,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageStartedEvent,
 )
 from crewai.events.utils.console_formatter import ConsoleFormatter
-from crewai.utilities.version import get_crewai_version
+from crewai.version import get_crewai_version
 
 
 class TraceCollectionListener(BaseEventListener):

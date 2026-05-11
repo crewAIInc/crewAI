@@ -12,6 +12,8 @@ import json
 import re
 from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict
 
+from crewai_core.printer import PRINTER, ColoredText, Printer
+from crewai_core.settings import Settings
 from pydantic import BaseModel
 from rich.console import Console
 
@@ -22,7 +24,6 @@ from crewai.agents.parser import (
     OutputParserError,
     parse,
 )
-from crewai.cli.config import Settings
 from crewai.llms.base_llm import BaseLLM, call_stop_override
 from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
@@ -33,7 +34,6 @@ from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
 from crewai.utilities.i18n import I18N_DEFAULT
-from crewai.utilities.printer import PRINTER, ColoredText, Printer
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
@@ -1131,8 +1131,8 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
         if callable(_create_plus_client_hook):
             client = _create_plus_client_hook()
         else:
-            from crewai.cli.authentication.token import get_auth_token
-            from crewai.cli.plus_api import PlusAPI
+            from crewai.auth.token import get_auth_token
+            from crewai.plus_api import PlusAPI
 
             client = PlusAPI(api_key=get_auth_token())
         _print_current_organization()

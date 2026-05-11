@@ -6,7 +6,7 @@ from unittest import mock
 from unittest.mock import MagicMock, patch
 
 from crewai.agents.crew_agent_executor import AgentFinish, CrewAgentExecutor
-from crewai.cli.constants import DEFAULT_LLM_MODEL
+from crewai.constants import DEFAULT_LLM_MODEL
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
 from crewai.knowledge.knowledge import Knowledge
@@ -1225,7 +1225,7 @@ def test_llm_call_with_error():
 def test_handle_context_length_exceeds_limit():
     # Import necessary modules
     from crewai.utilities.agent_utils import handle_context_length
-    from crewai.utilities.printer import Printer
+    from crewai_core.printer import Printer
 
     # Create mocks for dependencies
     printer = Printer()
@@ -2080,12 +2080,12 @@ def test_get_knowledge_search_query():
 @pytest.fixture
 def mock_get_auth_token():
     with patch(
-        "crewai.cli.authentication.token.get_auth_token", return_value="test_token"
+        "crewai.auth.token.get_auth_token", return_value="test_token"
     ):
         yield
 
 
-@patch("crewai.cli.plus_api.PlusAPI.get_agent")
+@patch("crewai.plus_api.PlusAPI.get_agent")
 def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
     from crewai_tools import (
         FileReadTool,
@@ -2126,7 +2126,7 @@ def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
     assert agent.tools[1].file_path == "test.txt"
 
 
-@patch("crewai.cli.plus_api.PlusAPI.get_agent")
+@patch("crewai.plus_api.PlusAPI.get_agent")
 def test_agent_from_repository_override_attributes(mock_get_agent, mock_get_auth_token):
     from crewai_tools import SerperDevTool
 
@@ -2150,7 +2150,7 @@ def test_agent_from_repository_override_attributes(mock_get_agent, mock_get_auth
     assert isinstance(agent.tools[0], SerperDevTool)
 
 
-@patch("crewai.cli.plus_api.PlusAPI.get_agent")
+@patch("crewai.plus_api.PlusAPI.get_agent")
 def test_agent_from_repository_with_invalid_tools(mock_get_agent, mock_get_auth_token):
     mock_get_response = MagicMock()
     mock_get_response.status_code = 200
@@ -2173,7 +2173,7 @@ def test_agent_from_repository_with_invalid_tools(mock_get_agent, mock_get_auth_
         Agent(from_repository="test_agent")
 
 
-@patch("crewai.cli.plus_api.PlusAPI.get_agent")
+@patch("crewai.plus_api.PlusAPI.get_agent")
 def test_agent_from_repository_internal_error(mock_get_agent, mock_get_auth_token):
     mock_get_response = MagicMock()
     mock_get_response.status_code = 500
@@ -2186,7 +2186,7 @@ def test_agent_from_repository_internal_error(mock_get_agent, mock_get_auth_toke
         Agent(from_repository="test_agent")
 
 
-@patch("crewai.cli.plus_api.PlusAPI.get_agent")
+@patch("crewai.plus_api.PlusAPI.get_agent")
 def test_agent_from_repository_agent_not_found(mock_get_agent, mock_get_auth_token):
     mock_get_response = MagicMock()
     mock_get_response.status_code = 404
@@ -2199,7 +2199,7 @@ def test_agent_from_repository_agent_not_found(mock_get_agent, mock_get_auth_tok
         Agent(from_repository="test_agent")
 
 
-@patch("crewai.cli.plus_api.PlusAPI.get_agent")
+@patch("crewai.plus_api.PlusAPI.get_agent")
 @patch("crewai.utilities.agent_utils.Settings")
 @patch("crewai.utilities.agent_utils.console")
 def test_agent_from_repository_displays_org_info(
@@ -2232,7 +2232,7 @@ def test_agent_from_repository_displays_org_info(
     assert agent.backstory == "test backstory"
 
 
-@patch("crewai.cli.plus_api.PlusAPI.get_agent")
+@patch("crewai.plus_api.PlusAPI.get_agent")
 @patch("crewai.utilities.agent_utils.Settings")
 @patch("crewai.utilities.agent_utils.console")
 def test_agent_from_repository_without_org_set(

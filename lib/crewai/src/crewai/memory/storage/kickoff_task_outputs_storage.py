@@ -5,11 +5,12 @@ from pathlib import Path
 import sqlite3
 from typing import Any
 
+from crewai_core.lock_store import lock as store_lock
+from crewai_core.paths import db_storage_path
+
 from crewai.task import Task
 from crewai.utilities.crew_json_encoder import CrewJSONEncoder
 from crewai.utilities.errors import DatabaseError, DatabaseOperationError
-from crewai.utilities.lock_store import lock as store_lock
-from crewai.utilities.paths import db_storage_path
 
 
 logger = logging.getLogger(__name__)

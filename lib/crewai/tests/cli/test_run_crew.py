@@ -5,8 +5,8 @@ from unittest import mock
 from click.testing import CliRunner
 import pytest
 
-from crewai.cli.cli import run
-from crewai.cli.run_crew import CrewType, execute_command
+from crewai_cli.cli import run
+from crewai_cli.run_crew import CrewType, execute_command
 
 
 @pytest.fixture
@@ -14,7 +14,7 @@ def runner() -> CliRunner:
     return CliRunner()
 
 
-@mock.patch("crewai.cli.cli.run_crew")
+@mock.patch("crewai_cli.cli.run_crew")
 def test_run_passes_filename_to_run_crew(run_crew_mock: mock.Mock, runner: CliRunner) -> None:
     result = runner.invoke(run, ["-f", "my_custom_trained.pkl"])
 
@@ -22,7 +22,7 @@ def test_run_passes_filename_to_run_crew(run_crew_mock: mock.Mock, runner: CliRu
     assert result.exit_code == 0
 
 
-@mock.patch("crewai.cli.cli.run_crew")
+@mock.patch("crewai_cli.cli.run_crew")
 def test_run_without_filename_passes_none(run_crew_mock: mock.Mock, runner: CliRunner) -> None:
     result = runner.invoke(run)
 
@@ -30,9 +30,9 @@ def test_run_without_filename_passes_none(run_crew_mock: mock.Mock, runner: CliR
     assert result.exit_code == 0
 
 
-@mock.patch("crewai.cli.run_crew.subprocess.run")
+@mock.patch("crewai_cli.run_crew.subprocess.run")
 @mock.patch(
-    "crewai.cli.run_crew.build_env_with_all_tool_credentials",
+    "crewai_cli.run_crew.build_env_with_all_tool_credentials",
     return_value={"EXISTING": "value"},
 )
 def test_execute_command_sets_env_var_when_filename_provided(
@@ -45,9 +45,9 @@ def test_execute_command_sets_env_var_when_filename_provided(
     assert kwargs["env"]["EXISTING"] == "value"
 
 
-@mock.patch("crewai.cli.run_crew.subprocess.run")
+@mock.patch("crewai_cli.run_crew.subprocess.run")
 @mock.patch(
-    "crewai.cli.run_crew.build_env_with_all_tool_credentials",
+    "crewai_cli.run_crew.build_env_with_all_tool_credentials",
     return_value={"EXISTING": "value"},
 )
 def test_execute_command_omits_env_var_when_filename_absent(

@@ -12,6 +12,7 @@ import threading
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, cast
 from uuid import uuid4
 
+from crewai_core.printer import PRINTER
 from pydantic import (
     BaseModel,
     Field,
@@ -99,7 +100,6 @@ from crewai.utilities.planning_types import (
     TodoItem,
     TodoList,
 )
-from crewai.utilities.printer import PRINTER
 from crewai.utilities.step_execution_context import StepExecutionContext, StepResult
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.tool_utils import execute_tool_and_check_finality

@@ -405,7 +405,7 @@ class TestAsyncLLMResponseHelper:
     async def test_aget_llm_response_calls_acall(self) -> None:
         """Test that aget_llm_response calls llm.acall."""
         from crewai.utilities.agent_utils import aget_llm_response
-        from crewai.utilities.printer import Printer
+        from crewai_core.printer import Printer
 
         mock_llm = MagicMock()
         mock_llm.acall = AsyncMock(return_value="LLM response")
@@ -424,7 +424,7 @@ class TestAsyncLLMResponseHelper:
     async def test_aget_llm_response_raises_on_empty_response(self) -> None:
         """Test that aget_llm_response raises ValueError on empty response."""
         from crewai.utilities.agent_utils import aget_llm_response
-        from crewai.utilities.printer import Printer
+        from crewai_core.printer import Printer
 
         mock_llm = MagicMock()
         mock_llm.acall = AsyncMock(return_value="")
@@ -441,7 +441,7 @@ class TestAsyncLLMResponseHelper:
     async def test_aget_llm_response_propagates_exceptions(self) -> None:
         """Test that aget_llm_response propagates LLM exceptions."""
         from crewai.utilities.agent_utils import aget_llm_response
-        from crewai.utilities.printer import Printer
+        from crewai_core.printer import Printer
 
         mock_llm = MagicMock()
         mock_llm.acall = AsyncMock(side_effect=RuntimeError("LLM error"))
