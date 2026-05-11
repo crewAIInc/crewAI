@@ -699,12 +699,30 @@ class AnthropicCompletion(BaseLLM):
             for m in messages:
                 if not (isinstance(m, dict) and m.get(CACHE_BREAKPOINT_KEY)):
                     continue
-                if m.get("role") == "system":
+                role = m.get("role")
+                if role == "system":
                     cache_system = True
-                elif m.get("role") in ("user", "assistant"):
-                    raw_content = m.get("content")
-                    if isinstance(raw_content, str) and raw_content:
-                        cache_match_contents.append(raw_content)
+                    continue
+                if role != "user":
+                    # Only user messages survive Anthropic's role-coalescing
+                    # in a stable, addressable position. Markers on assistant
+                    # or tool messages have no reliable stamp target after
+                    # tool_result expansion, so we ignore them.
+                    continue
+                raw_content = m.get("content")
+                if isinstance(raw_content, str) and raw_content:
+                    cache_match_contents.append(raw_content)
+                    continue
+                if isinstance(raw_content, list):
+                    # Pull text from a single-text-block list so callers that
+                    # pre-format content blocks still match cleanly.
+                    text_blocks = [
+                        b.get("text")
+                        for b in raw_content
+                        if isinstance(b, dict) and b.get("type") == "text"
+                    ]
+                    if len(text_blocks) == 1 and isinstance(text_blocks[0], str):
+                        cache_match_contents.append(text_blocks[0])
 
         # Use base class formatting first
         base_formatted = super()._format_messages(messages)
@@ -829,12 +847,12 @@ class AnthropicCompletion(BaseLLM):
                     self._stamp_cache_control_on_message(fm)
                     break
                 if isinstance(content, list):
-                    text_blocks = [
-                        b
+                    fm_texts: list[str] = [
+                        b.get("text", "")
                         for b in content
                         if isinstance(b, dict) and b.get("type") == "text"
                     ]
-                    if len(text_blocks) == 1 and text_blocks[0].get("text") == needle:
+                    if len(fm_texts) == 1 and fm_texts[0] == needle:
                         self._stamp_cache_control_on_message(fm)
                         break
 

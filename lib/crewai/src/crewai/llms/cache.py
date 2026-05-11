@@ -32,24 +32,6 @@ def mark_cache_breakpoint(message: dict[str, Any]) -> dict[str, Any]:
     return {**message, CACHE_BREAKPOINT_KEY: True}
 
 
-def extract_cache_breakpoint_indices(
-    messages: str | list[dict[str, Any]] | None,
-) -> set[int]:
-    """Return the indices of messages flagged as cache breakpoints.
-
-    Reads the flag without mutating the input. The base LLM formatter strips
-    the flag during validation, so providers that need to honor breakpoints
-    must read them from the raw input first.
-    """
-    if not messages or isinstance(messages, str):
-        return set()
-    return {
-        i
-        for i, m in enumerate(messages)
-        if isinstance(m, dict) and m.get(CACHE_BREAKPOINT_KEY)
-    }
-
-
 def strip_cache_breakpoint(message: dict[str, Any]) -> None:
     """Remove the breakpoint flag from a message in place."""
     message.pop(CACHE_BREAKPOINT_KEY, None)

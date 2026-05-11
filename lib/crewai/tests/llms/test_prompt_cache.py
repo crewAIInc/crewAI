@@ -121,6 +121,52 @@ class TestAnthropicCacheStamping:
         for block in tool_carrier["content"]:
             assert "cache_control" not in block
 
+    def test_assistant_marker_is_ignored(self) -> None:
+        """Markers on assistant messages have no stable stamp target after
+        Anthropic's role coalescing, so they should be silently ignored
+        rather than collected and then dropped on a mismatch.
+        """
+        llm = AnthropicCompletion(model="claude-sonnet-4-5")
+        messages = [
+            mark_cache_breakpoint({"role": "system", "content": "you are helpful"}),
+            mark_cache_breakpoint(
+                {"role": "assistant", "content": "I will help you out."}
+            ),
+            {"role": "user", "content": "ping"},
+        ]
+        formatted, system = llm._format_messages_for_anthropic(messages)
+        # System still cached
+        assert isinstance(system, list)
+        # No user message was marked → no user message should carry cache_control
+        for fm in formatted:
+            if fm.get("role") != "user":
+                continue
+            content = fm.get("content")
+            if isinstance(content, list):
+                for block in content:
+                    if isinstance(block, dict):
+                        assert "cache_control" not in block
+
+    def test_list_content_user_marker_matches(self) -> None:
+        """A pre-formatted user message with a single text block should still
+        match against the post-format user message.
+        """
+        llm = AnthropicCompletion(model="claude-sonnet-4-5")
+        messages = [
+            mark_cache_breakpoint(
+                {
+                    "role": "user",
+                    "content": [{"type": "text", "text": "stable list prompt"}],
+                }
+            ),
+        ]
+        formatted, _system = llm._format_messages_for_anthropic(messages)
+        user_msg = next(fm for fm in formatted if fm["role"] == "user")
+        content = user_msg["content"]
+        assert isinstance(content, list)
+        text_block = next(b for b in content if isinstance(b, dict) and b.get("type") == "text")
+        assert text_block.get("cache_control") == {"type": "ephemeral"}
+
     def test_unmarked_messages_get_no_cache_control(self) -> None:
         llm = AnthropicCompletion(model="claude-sonnet-4-5")
         messages = [
