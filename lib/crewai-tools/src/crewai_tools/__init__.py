@@ -76,6 +76,9 @@ from crewai_tools.tools.e2b_sandbox_tool import (
     E2BFileTool,
     E2BPythonTool,
 )
+from crewai_tools.tools.ejentum_reasoning_harness_tool.ejentum_reasoning_harness_tool import (
+    EjentumHarnessTool,
+)
 from crewai_tools.tools.exa_tools.exa_search_tool import EXASearchTool, ExaSearchTool
 from crewai_tools.tools.file_read_tool.file_read_tool import FileReadTool
 from crewai_tools.tools.file_writer_tool.file_writer_tool import FileWriterTool
@@ -256,6 +259,7 @@ __all__ = [
     "E2BExecTool",
     "E2BFileTool",
     "E2BPythonTool",
+    "EjentumHarnessTool",
     "EXASearchTool",
     "EnterpriseActionTool",
     "ExaSearchTool",
