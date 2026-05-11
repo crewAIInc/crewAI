@@ -7184,7 +7184,7 @@
       }
     },
     {
-      "description": "Perform filesystem operations inside a Daytona sandbox: read a file, write content to a path, append content to an existing file, list a directory, delete a path, make a directory, or fetch file metadata. For files larger than a few KB, create the file with action='write' and empty content, then send the body via multiple 'append' calls of ~4KB each to stay within tool-call payload limits.",
+      "description": "Perform filesystem operations inside a Daytona sandbox: read, write, append, list, delete, mkdir, info, exists, move, find (content grep), search (filename glob), chmod (permissions/owner/group), and replace (bulk find-and-replace across files). For files larger than a few KB, create the file with action='write' and empty content, then send the body via multiple 'append' calls of ~4KB each to stay within tool-call payload limits.",
       "env_vars": [
         {
           "default": null,
@@ -7336,7 +7336,7 @@
       "run_params_schema": {
         "properties": {
           "action": {
-            "description": "The filesystem action to perform: 'read' (returns file contents), 'write' (create or replace a file with content), 'append' (append content to an existing file \u2014 use this for writing large files in chunks to avoid hitting tool-call size limits), 'list' (lists a directory), 'delete' (removes a file/dir), 'mkdir' (creates a directory), 'info' (returns file metadata).",
+            "description": "The filesystem action to perform: 'read' (returns file contents); 'write' (create or replace a file with content); 'append' (append content to an existing file \u2014 use this for writing large files in chunks to avoid hitting tool-call size limits); 'list' (lists a directory); 'delete' (removes a file/dir); 'mkdir' (creates a directory); 'info' (returns file metadata); 'exists' (returns whether a path exists); 'move' (rename or relocate a file/dir; requires 'destination'); 'find' (grep file CONTENTS recursively; requires 'pattern'); 'search' (find files by NAME pattern; requires 'pattern'); 'chmod' (change permissions/owner/group; pass at least one of 'mode', 'owner', 'group'); 'replace' (find-and-replace text across files; requires 'paths', 'pattern', and 'replacement').",
             "enum": [
               "read",
               "write",
@@ -7344,7 +7344,13 @@
               "list",
               "delete",
               "mkdir",
-              "info"
+              "info",
+              "exists",
+              "move",
+              "find",
+              "search",
+              "chmod",
+              "replace"
             ],
             "title": "Action",
             "type": "string"
@@ -7368,27 +7374,122 @@
             "description": "Content to write or append. If omitted for 'write', an empty file is created. For files larger than a few KB, prefer one 'write' with empty content followed by multiple 'append' calls of ~4KB each to stay within tool-call payload limits.",
             "title": "Content"
           },
+          "destination": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "For action='move': absolute destination path.",
+            "title": "Destination"
+          },
+          "group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "For action='chmod': new file group.",
+            "title": "Group"
+          },
           "mode": {
-            "default": "0755",
-            "description": "For action='mkdir': octal permission string (default 0755).",
-            "title": "Mode",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Octal permission string. For 'mkdir' it sets the new directory permissions (defaults to '0755' if omitted). For 'chmod' it sets the target's mode (e.g. '755' to make a script executable). Ignored for other actions.",
+            "title": "Mode"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "For action='chmod': new file owner (user name).",
+            "title": "Owner"
           },
           "path": {
-            "description": "Absolute path inside the sandbox.",
-            "title": "Path",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Absolute path inside the sandbox. Required for all actions except 'replace' (which uses 'paths' instead).",
+            "title": "Path"
+          },
+          "paths": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "For action='replace': list of absolute file paths in which to replace 'pattern' with 'replacement'.",
+            "title": "Paths"
+          },
+          "pattern": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "For 'find': substring matched against file CONTENTS. For 'search': glob-style pattern matched against file NAMES (e.g. '*.py'). For 'replace': text to replace inside files.",
+            "title": "Pattern"
           },
           "recursive": {
             "default": false,
             "description": "For action='delete': remove directories recursively.",
             "title": "Recursive",
             "type": "boolean"
+          },
+          "replacement": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "For action='replace': replacement text for 'pattern'.",
+            "title": "Replacement"
           }
         },
         "required": [
-          "action",
-          "path"
+          "action"
         ],
         "title": "DaytonaFileToolSchema",
         "type": "object"
@@ -16096,6 +16197,565 @@
           "image_path_url"
         ],
         "title": "OCRToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Open Sandbox service",
+          "name": "OPEN_SANDBOX_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Open Sandbox management API domain (optional)",
+          "name": "OPEN_SANDBOX_DOMAIN",
+          "required": false
+        }
+      ],
+      "humanized_name": "OpenSandboxBaseTool",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Shared base for tools that act on an Open Sandbox sandbox.\n\nLifecycle modes:\n  - persistent=False (default): create a fresh sandbox per `_run` call and\n    kill it when the call returns. Safer and stateless \u2014 nothing leaks if\n    the agent forgets cleanup.\n  - persistent=True: lazily create a single sandbox on first use, cache it\n    on the instance, and register an atexit hook to kill it at process\n    exit. Cheaper across many calls and lets files/state carry over.\n  - sandbox_id=<existing>: attach to a sandbox the caller already owns.\n    Never killed by the tool.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Open Sandbox API key. Falls back to OPEN_SANDBOX_API_KEY env var.",
+            "required": false,
+            "title": "Api Key"
+          },
+          "create_params": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional kwargs forwarded to SandboxSync.create when creating a sandbox (e.g. image, env, resource, metadata, entrypoint).",
+            "title": "Create Params"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Open Sandbox management API domain (e.g. 'api.opensandbox.io'). Falls back to OPEN_SANDBOX_DOMAIN env var.",
+            "required": false,
+            "title": "Domain"
+          },
+          "persistent": {
+            "default": false,
+            "description": "If True, reuse one sandbox across all calls to this tool instance and kill it at process exit. Default False creates and kills a fresh sandbox per call.",
+            "title": "Persistent",
+            "type": "boolean"
+          },
+          "protocol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Protocol for the management API ('http' or 'https').",
+            "required": false,
+            "title": "Protocol"
+          },
+          "sandbox_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attach to an existing sandbox by id instead of creating a new one. The tool will never kill a sandbox it did not create.",
+            "title": "Sandbox Id"
+          },
+          "sandbox_timeout": {
+            "default": 60.0,
+            "description": "Timeout in seconds to wait for sandbox readiness on create/connect.",
+            "title": "Sandbox Timeout",
+            "type": "number"
+          }
+        },
+        "required": [],
+        "title": "OpenSandboxBaseTool",
+        "type": "object"
+      },
+      "name": "OpenSandboxBaseTool",
+      "package_dependencies": [
+        "opensandbox"
+      ],
+      "run_params_schema": {
+        "properties": {},
+        "title": "_ArgsSchemaPlaceholder",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Execute a shell command inside an Open Sandbox sandbox and return the exit code and combined output. Use this to run builds, package installs, git operations, or any one-off shell command.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Open Sandbox service",
+          "name": "OPEN_SANDBOX_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Open Sandbox management API domain (optional)",
+          "name": "OPEN_SANDBOX_DOMAIN",
+          "required": false
+        }
+      ],
+      "humanized_name": "Open Sandbox Exec",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Run a shell command inside an Open Sandbox sandbox.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Open Sandbox API key. Falls back to OPEN_SANDBOX_API_KEY env var.",
+            "required": false,
+            "title": "Api Key"
+          },
+          "create_params": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional kwargs forwarded to SandboxSync.create when creating a sandbox (e.g. image, env, resource, metadata, entrypoint).",
+            "title": "Create Params"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Open Sandbox management API domain (e.g. 'api.opensandbox.io'). Falls back to OPEN_SANDBOX_DOMAIN env var.",
+            "required": false,
+            "title": "Domain"
+          },
+          "persistent": {
+            "default": false,
+            "description": "If True, reuse one sandbox across all calls to this tool instance and kill it at process exit. Default False creates and kills a fresh sandbox per call.",
+            "title": "Persistent",
+            "type": "boolean"
+          },
+          "protocol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Protocol for the management API ('http' or 'https').",
+            "required": false,
+            "title": "Protocol"
+          },
+          "sandbox_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attach to an existing sandbox by id instead of creating a new one. The tool will never kill a sandbox it did not create.",
+            "title": "Sandbox Id"
+          },
+          "sandbox_timeout": {
+            "default": 60.0,
+            "description": "Timeout in seconds to wait for sandbox readiness on create/connect.",
+            "title": "Sandbox Timeout",
+            "type": "number"
+          }
+        },
+        "required": [],
+        "title": "OpenSandboxExecTool",
+        "type": "object"
+      },
+      "name": "OpenSandboxExecTool",
+      "package_dependencies": [
+        "opensandbox"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "command": {
+            "description": "Shell command to execute in the sandbox.",
+            "title": "Command",
+            "type": "string"
+          },
+          "cwd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Working directory to run the command in. Defaults to the sandbox work dir.",
+            "title": "Cwd"
+          },
+          "env": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional environment variables to set for this command.",
+            "title": "Env"
+          },
+          "timeout": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum seconds to wait for the command to finish.",
+            "title": "Timeout"
+          }
+        },
+        "required": [
+          "command"
+        ],
+        "title": "OpenSandboxExecToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Perform filesystem operations inside an Open Sandbox sandbox: read a file, write content to a path, append content to an existing file, list a directory, delete a path, make a directory, or fetch file metadata. For files larger than a few KB, create the file with action='write' and empty content, then send the body via multiple 'append' calls of ~4KB each to stay within tool-call payload limits.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Open Sandbox service",
+          "name": "OPEN_SANDBOX_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Open Sandbox management API domain (optional)",
+          "name": "OPEN_SANDBOX_DOMAIN",
+          "required": false
+        }
+      ],
+      "humanized_name": "Open Sandbox File",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Read, write, and manage files inside an Open Sandbox sandbox.\n\nNotes:\n  - Most useful with `persistent=True` or an explicit `sandbox_id`. With the\n    default ephemeral mode, files disappear when this tool call finishes.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Open Sandbox API key. Falls back to OPEN_SANDBOX_API_KEY env var.",
+            "required": false,
+            "title": "Api Key"
+          },
+          "create_params": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional kwargs forwarded to SandboxSync.create when creating a sandbox (e.g. image, env, resource, metadata, entrypoint).",
+            "title": "Create Params"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Open Sandbox management API domain (e.g. 'api.opensandbox.io'). Falls back to OPEN_SANDBOX_DOMAIN env var.",
+            "required": false,
+            "title": "Domain"
+          },
+          "persistent": {
+            "default": false,
+            "description": "If True, reuse one sandbox across all calls to this tool instance and kill it at process exit. Default False creates and kills a fresh sandbox per call.",
+            "title": "Persistent",
+            "type": "boolean"
+          },
+          "protocol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Protocol for the management API ('http' or 'https').",
+            "required": false,
+            "title": "Protocol"
+          },
+          "sandbox_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attach to an existing sandbox by id instead of creating a new one. The tool will never kill a sandbox it did not create.",
+            "title": "Sandbox Id"
+          },
+          "sandbox_timeout": {
+            "default": 60.0,
+            "description": "Timeout in seconds to wait for sandbox readiness on create/connect.",
+            "title": "Sandbox Timeout",
+            "type": "number"
+          }
+        },
+        "required": [],
+        "title": "OpenSandboxFileTool",
+        "type": "object"
+      },
+      "name": "OpenSandboxFileTool",
+      "package_dependencies": [
+        "opensandbox"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "action": {
+            "description": "The filesystem action to perform: 'read' (returns file contents), 'write' (create or replace a file with content), 'append' (append content to an existing file \u2014 use this for writing large files in chunks to avoid hitting tool-call size limits), 'list' (lists a directory), 'delete' (removes a file/dir), 'mkdir' (creates a directory), 'info' (returns file metadata).",
+            "enum": [
+              "read",
+              "write",
+              "append",
+              "list",
+              "delete",
+              "mkdir",
+              "info"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "binary": {
+            "default": false,
+            "description": "For 'write': treat content as base64 and upload raw bytes. For 'read': return contents as base64 instead of decoded utf-8.",
+            "title": "Binary",
+            "type": "boolean"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Content to write or append. If omitted for 'write', an empty file is created. For files larger than a few KB, prefer one 'write' with empty content followed by multiple 'append' calls of ~4KB each to stay within tool-call payload limits.",
+            "title": "Content"
+          },
+          "mode": {
+            "default": 755,
+            "description": "For action='mkdir': Unix file mode as an integer (default 755).",
+            "title": "Mode",
+            "type": "integer"
+          },
+          "path": {
+            "description": "Absolute path inside the sandbox.",
+            "title": "Path",
+            "type": "string"
+          },
+          "recursive": {
+            "default": false,
+            "description": "For action='delete': remove a directory recursively.",
+            "title": "Recursive",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "action",
+          "path"
+        ],
+        "title": "OpenSandboxFileToolSchema",
         "type": "object"
       }
     },
