@@ -7,6 +7,7 @@ from collections.abc import Callable, Coroutine, Sequence
 import concurrent.futures
 import contextvars
 from datetime import datetime
+import inspect
 import json
 import os
 from pathlib import Path
@@ -850,18 +851,22 @@ class Agent(BaseAgent):
         if not self.agent_executor:
             raise RuntimeError("Agent executor is not initialized.")
 
-        result = cast(
-            dict[str, Any],
-            self.agent_executor.invoke(
-                {
-                    "input": task_prompt,
-                    "tool_names": self.agent_executor.tools_names,
-                    "tools": self.agent_executor.tools_description,
-                    "ask_for_human_input": task.human_input,
-                }
-            ),
+        invoke_result = self.agent_executor.invoke(
+            {
+                "input": task_prompt,
+                "tool_names": self.agent_executor.tools_names,
+                "tools": self.agent_executor.tools_description,
+                "ask_for_human_input": task.human_input,
+            }
         )
-        return result["output"]
+        if inspect.isawaitable(invoke_result):
+            invoke_result.close()
+            raise RuntimeError(
+                "Agent execution was invoked synchronously from within a running "
+                "event loop. Use `agent.kickoff_async()` / `crew.kickoff_async()` "
+                "(or `await agent.aexecute_task(...)`) when calling from async code."
+            )
+        return invoke_result["output"]
 
     async def aexecute_task(
         self,
@@ -1042,7 +1047,7 @@ class Agent(BaseAgent):
                 raise RuntimeError(
                     "LLM must be resolved before creating agent executor."
                 )
-            self.agent_executor = AgentExecutor(
+            self.agent_executor = self.executor_class(
                 llm=self.llm,
                 task=task,
                 agent=self,

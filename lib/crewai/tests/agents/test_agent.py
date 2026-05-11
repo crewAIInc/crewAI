@@ -389,11 +389,9 @@ def test_agent_custom_max_iterations():
     assert result is not None
     assert isinstance(result, str)
     assert len(result) > 0
-    assert call_count > 0
-    # With max_iter=1, AgentExecutor (Flow-based) makes 3 calls:
-    # one inside the loop, one for the force-final-answer path, plus a routing call.
-    # The exact count is an implementation detail; what matters is the loop stops promptly.
-    assert call_count <= 3
+    # With max_iter=1, exactly two provider calls are expected:
+    # one inside the reasoning loop and one for the forced final answer.
+    assert call_count == 2
 
 
 @pytest.mark.vcr()
@@ -701,12 +699,8 @@ def test_agent_definition_based_on_dict():
 
 
 # test for human input
-@pytest.mark.skip(
-    reason="Tests CrewAgentExecutor._invoke_loop + ask_for_human_input attribute. "
-    "AgentExecutor is now the default and stores ask_for_human_input on state. "
-    "Re-enable when human_input provider is updated to use the new state proxy."
-)
 @pytest.mark.vcr()
+@pytest.mark.filterwarnings("ignore::DeprecationWarning")
 def test_agent_human_input():
     from crewai.core.providers.human_input import SyncHumanInputProvider
 
@@ -715,6 +709,7 @@ def test_agent_human_input():
         "role": "test role",
         "goal": "test goal",
         "backstory": "test backstory",
+        "executor_class": CrewAgentExecutor,
     }
 
     agent = Agent(**config)
