@@ -1336,6 +1336,8 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
+                # Suppress response_model while tools are active (mirrors sync fix).
+                # See _invoke_loop_native_tools for the full explanation.
                 answer = await aget_llm_response(
                     llm=cast("BaseLLM", self.llm),
                     messages=self.messages,
@@ -1345,7 +1347,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     available_functions=None,
                     from_task=self.task,
                     from_agent=self.agent,
-                    response_model=self.response_model,
+                    response_model=None,
                     executor_context=self,
                     verbose=self.agent.verbose,
                 )
@@ -1362,13 +1364,38 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     continue
 
                 if isinstance(answer, str):
+                    if self.response_model is not None:
+                        enforce_rpm_limit(self.request_within_rpm_limit)
+                        answer = await aget_llm_response(
+                            llm=cast("BaseLLM", self.llm),
+                            messages=self.messages,
+                            callbacks=self.callbacks,
+                            printer=PRINTER,
+                            from_task=self.task,
+                            from_agent=self.agent,
+                            response_model=self.response_model,
+                            executor_context=self,
+                            verbose=self.agent.verbose,
+                        )
+                    if isinstance(answer, BaseModel):
+                        output_json = answer.model_dump_json()
+                        formatted_answer = AgentFinish(
+                            thought="",
+                            output=answer,
+                            text=output_json,
+                        )
+                        await self._ainvoke_step_callback(formatted_answer)
+                        self._append_message(output_json)
+                        self._show_logs(formatted_answer)
+                        return formatted_answer
+                    answer_str = str(answer) if not isinstance(answer, str) else answer
                     formatted_answer = AgentFinish(
                         thought="",
-                        output=answer,
-                        text=answer,
+                        output=answer_str,
+                        text=answer_str,
                     )
                     await self._ainvoke_step_callback(formatted_answer)
-                    self._append_message(answer)
+                    self._append_message(answer_str)
                     self._show_logs(formatted_answer)
                     return formatted_answer
 
