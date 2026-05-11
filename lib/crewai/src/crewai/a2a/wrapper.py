@@ -386,8 +386,7 @@ def _execute_task_with_a2a(
         return raw_result
     finally:
         task.description = original_description
-        if task.output_pydantic is not None:
-            task.output_pydantic = original_output_pydantic
+        task.output_pydantic = original_output_pydantic
         task.response_model = original_response_model
 
 
@@ -1534,8 +1533,7 @@ async def _aexecute_task_with_a2a(
         return raw_result
     finally:
         task.description = original_description
-        if task.output_pydantic is not None:
-            task.output_pydantic = original_output_pydantic
+        task.output_pydantic = original_output_pydantic
         task.response_model = original_response_model
 
 

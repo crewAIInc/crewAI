@@ -6,20 +6,20 @@ import time
 from typing import Any
 import uuid
 
+from crewai_core.settings import Settings
 from rich.console import Console
 from rich.panel import Panel
 
-from crewai.cli.authentication.token import AuthError, get_auth_token
-from crewai.cli.config import Settings
-from crewai.cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
-from crewai.cli.plus_api import PlusAPI
+from crewai.auth.token import AuthError, get_auth_token
+from crewai.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 from crewai.events.listeners.tracing.types import TraceEvent
 from crewai.events.listeners.tracing.utils import (
     get_user_id,
     is_tracing_enabled_in_context,
     should_auto_collect_first_time_traces,
 )
-from crewai.utilities.version import get_crewai_version
+from crewai.plus_api import PlusAPI
+from crewai.version import get_crewai_version
 
 
 logger = getLogger(__name__)

@@ -146,6 +146,14 @@ class ProductionFlow(Flow[AppState]):
     # ...
 ```
 
+By default, `@persist` resumes a flow when `kickoff(inputs={"id": <uuid>})` is supplied, extending the same `flow_uuid` history. To **fork** a persisted flow into a new lineage — hydrate state from a previous run but write under a fresh `state.id` — pass `restore_from_state_id`:
+
+```python
+flow.kickoff(restore_from_state_id="<previous-run-state-id>")
+```
+
+The new run gets a fresh `state.id` (auto-generated, or `inputs["id"]` if pinned) so its `@persist` writes don't extend the source's history. Combining with `from_checkpoint` raises a `ValueError`; pick one hydration source.
+
 ## Summary
 
 - **Start with a Flow.**

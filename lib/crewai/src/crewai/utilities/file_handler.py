@@ -4,9 +4,8 @@ import os
 import pickle
 from typing import Any, TypedDict
 
+from crewai_core.lock_store import lock as store_lock
 from typing_extensions import Unpack
-
-from crewai.utilities.lock_store import lock as store_lock
 
 
 class LogEntry(TypedDict, total=False):

@@ -1518,3 +1518,120 @@ def test_azure_no_detail_fields():
     assert usage["completion_tokens"] == 30
     assert usage["cached_prompt_tokens"] == 0
     assert usage["reasoning_tokens"] == 0
+
+
+def test_azure_credential_scopes_passed_to_client():
+    """`credential_scopes` constructor arg flows through `_make_client_kwargs`
+    so the underlying ChatCompletionsClient requests tokens for the requested
+    audience (e.g. ``cognitiveservices.azure.com/.default``)."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    scopes = ["https://cognitiveservices.azure.com/.default"]
+    with patch.dict(os.environ, {}, clear=True):
+        llm = AzureCompletion(
+            model="gpt-4",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            credential_scopes=scopes,
+        )
+        kwargs = llm._make_client_kwargs()
+        assert kwargs["credential_scopes"] == scopes
+
+
+def test_azure_credential_scopes_omitted_by_default():
+    """Without explicit scopes or env var, the kwarg must not be set so the
+    Azure SDK chooses its own default audience."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch.dict(os.environ, {}, clear=True):
+        llm = AzureCompletion(
+            model="gpt-4",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+        )
+        kwargs = llm._make_client_kwargs()
+        assert "credential_scopes" not in kwargs
+
+
+def test_azure_credential_scopes_from_env_comma_separated():
+    """``AZURE_CREDENTIAL_SCOPES`` accepts a comma-separated list. Whitespace
+    around entries is stripped; empty entries are dropped."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch.dict(
+        os.environ,
+        {
+            "AZURE_API_KEY": "test-key",
+            "AZURE_ENDPOINT": "https://test.openai.azure.com",
+            "AZURE_CREDENTIAL_SCOPES": " https://cognitiveservices.azure.com/.default , https://other/.default ",
+        },
+        clear=True,
+    ):
+        llm = AzureCompletion(model="gpt-4")
+        assert llm.credential_scopes == [
+            "https://cognitiveservices.azure.com/.default",
+            "https://other/.default",
+        ]
+        kwargs = llm._make_client_kwargs()
+        assert kwargs["credential_scopes"] == llm.credential_scopes
+
+
+def test_azure_credential_scopes_constructor_overrides_env():
+    """A constructor-provided ``credential_scopes`` must win over the env var,
+    matching how endpoint/api_key precedence works elsewhere in this provider."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    explicit = ["https://explicit/.default"]
+    with patch.dict(
+        os.environ,
+        {
+            "AZURE_API_KEY": "test-key",
+            "AZURE_ENDPOINT": "https://test.openai.azure.com",
+            "AZURE_CREDENTIAL_SCOPES": "https://env/.default",
+        },
+        clear=True,
+    ):
+        llm = AzureCompletion(model="gpt-4", credential_scopes=explicit)
+        assert llm.credential_scopes == explicit
+
+
+def test_azure_credential_scopes_lazy_env_read():
+    """When the LLM is built before ``AZURE_CREDENTIAL_SCOPES`` is exported
+    (e.g. constructed at module import), the lazy client builder must still
+    pick up the env value — same pattern as the existing api_key/endpoint
+    lazy reads."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    with patch.dict(os.environ, {}, clear=True):
+        llm = AzureCompletion(
+            model="gpt-4",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+        )
+        assert llm.credential_scopes is None
+
+    with patch.dict(
+        os.environ,
+        {"AZURE_CREDENTIAL_SCOPES": "https://late/.default"},
+        clear=True,
+    ):
+        kwargs = llm._make_client_kwargs()
+        assert kwargs["credential_scopes"] == ["https://late/.default"]
+        assert llm.credential_scopes == ["https://late/.default"]
+
+
+def test_azure_credential_scopes_in_to_config_dict():
+    """Config round-trips the scopes so an LLM rebuilt from `to_config_dict`
+    keeps the same audience."""
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    scopes = ["https://cognitiveservices.azure.com/.default"]
+    with patch.dict(os.environ, {}, clear=True):
+        llm = AzureCompletion(
+            model="gpt-4",
+            api_key="test-key",
+            endpoint="https://test.openai.azure.com",
+            credential_scopes=scopes,
+        )
+        config = llm.to_config_dict()
+        assert config["credential_scopes"] == scopes

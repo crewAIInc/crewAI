@@ -1,0 +1,38 @@
+[project]
+name = "crewai-core"
+dynamic = ["version"]
+description = "Shared utilities for CrewAI — version, paths, user-data, telemetry, printer."
+readme = "README.md"
+authors = [
+    { name = "Greyson R. LaLonde", email = "greyson@crewai.com" }
+]
+requires-python = ">=3.10, <3.14"
+dependencies = [
+    "appdirs~=1.4.4",
+    "cryptography>=42.0",
+    "httpx~=0.28.1",
+    "packaging>=23.0",
+    "portalocker~=2.7.0",
+    "pyjwt>=2.9.0,<3",
+    "pydantic>=2.11.9,<2.13",
+    "rich>=13.7.1",
+    "opentelemetry-api~=1.34.0",
+    "opentelemetry-sdk~=1.34.0",
+    "opentelemetry-exporter-otlp-proto-http~=1.34.0",
+    "tomli~=2.0.2",
+]
+
+[project.urls]
+Homepage = "https://crewai.com"
+Documentation = "https://docs.crewai.com"
+Repository = "https://github.com/crewAIInc/crewAI"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/crewai_core/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/crewai_core"]

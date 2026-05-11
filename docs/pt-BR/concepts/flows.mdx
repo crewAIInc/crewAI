@@ -193,6 +193,42 @@ Para um controle mais granular, você pode aplicar @persist em métodos específ
 # (O código não é traduzido)
 ```
 
+### Forking de Estado Persistido
+
+`@persist` suporta dois modos distintos de hidratação em `kickoff` / `kickoff_async`:
+
+- `kickoff(inputs={"id": <uuid>})` — **resume**: carrega o snapshot mais recente do UUID informado e continua escrevendo sob o mesmo `flow_uuid`. O histórico se estende.
+- `kickoff(restore_from_state_id=<uuid>)` — **fork**: carrega o snapshot mais recente do UUID informado, hidrata o estado da nova execução a partir dele, e atribui um novo `state.id` (auto-gerado, ou `inputs["id"]` se fixado). As escritas do `@persist` da nova execução vão para o novo `state.id`; o histórico do flow de origem é preservado.
+
+```python
+from crewai.flow.flow import Flow, start
+from crewai.flow.persistence import persist
+from pydantic import BaseModel
+
+class CounterState(BaseModel):
+    id: str = ""
+    counter: int = 0
+
+@persist
+class CounterFlow(Flow[CounterState]):
+    @start()
+    def step(self):
+        self.state.counter += 1
+        print(f"[id={self.state.id}] counter={self.state.counter}")
+
+# Execução 1: estado novo, counter 0 -> 1, persistido sob flow_1.state.id
+flow_1 = CounterFlow()
+flow_1.kickoff()
+
+# Fork: hidrata do snapshot mais recente de flow_1, mas usa um state.id NOVO
+flow_2 = CounterFlow()
+flow_2.kickoff(restore_from_state_id=flow_1.state.id)
+# flow_2.state.counter começa em 1 (hidratado), e step() incrementa para 2.
+# flow_2.state.id != flow_1.state.id; o histórico de flow_1 não é alterado.
+```
+
+Se o `restore_from_state_id` informado não corresponder a nenhum estado persistido, o kickoff retorna silenciosamente ao comportamento padrão — o mesmo comportamento do `inputs["id"]` quando não encontrado. Combinar `restore_from_state_id` com `from_checkpoint` lança um `ValueError`; escolha uma única fonte de hidratação. Fixar `inputs["id"]` durante o fork compartilha uma chave de persistência com outro flow — geralmente você quer apenas `restore_from_state_id`.
+
 ### Como Funciona
 
 1. **Identificação Única do Estado**

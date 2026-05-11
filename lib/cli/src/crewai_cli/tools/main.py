@@ -1,0 +1,364 @@
+import base64
+from json import JSONDecodeError
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import tempfile
+from typing import Any
+
+import click
+from rich.console import Console
+
+from crewai_cli import git
+from crewai_cli.command import BaseCommand, PlusAPIMixin
+from crewai_cli.config import Settings
+from crewai_cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
+from crewai_cli.utils import (
+    build_env_with_tool_repository_credentials,
+    get_project_description,
+    get_project_name,
+    get_project_version,
+    read_toml,
+    tree_copy,
+    tree_find_and_replace,
+)
+
+
+console = Console()
+
+
+_REQUIRES_CREWAI_MSG = (
+    "[red]This subcommand requires the full crewai package.\n"
+    "Install it with: pip install crewai[/red]"
+)
+
+
+def _require_project_utils() -> Any:
+    try:
+        from crewai.utilities import project_utils
+
+        return project_utils
+    except ImportError:
+        console.print(_REQUIRES_CREWAI_MSG)
+        raise SystemExit(1) from None
+
+
+def _require_get_user_id() -> Any:
+    try:
+        from crewai.events.listeners.tracing.utils import get_user_id
+
+        return get_user_id
+    except ImportError:
+        console.print(_REQUIRES_CREWAI_MSG)
+        raise SystemExit(1) from None
+
+
+class ToolCommand(BaseCommand, PlusAPIMixin):
+    """
+    A class to handle tool repository related operations for CrewAI projects.
+    """
+
+    def __init__(self) -> None:
+        BaseCommand.__init__(self)
+        PlusAPIMixin.__init__(self, telemetry=self._telemetry)
+
+    def create(self, handle: str) -> None:
+        self._ensure_not_in_project()
+
+        folder_name = handle.replace(" ", "_").replace("-", "_").lower()
+        class_name = handle.replace("_", " ").replace("-", " ").title().replace(" ", "")
+
+        project_root = Path(folder_name)
+        if project_root.exists():
+            click.secho(f"Folder {folder_name} already exists.", fg="red")
+            raise SystemExit
+        os.makedirs(project_root)
+
+        click.secho(f"Creating custom tool {folder_name}...", fg="green", bold=True)
+
+        template_dir = Path(__file__).parent.parent / "templates" / "tool"
+        tree_copy(template_dir, project_root)
+        tree_find_and_replace(project_root, "{{folder_name}}", folder_name)
+        tree_find_and_replace(project_root, "{{class_name}}", class_name)
+
+        # Copy AGENTS.md to project root
+        agents_md_src = Path(__file__).parent.parent / "templates" / "AGENTS.md"
+        if agents_md_src.exists():
+            shutil.copy2(agents_md_src, project_root / "AGENTS.md")
+
+        old_directory = os.getcwd()
+        os.chdir(project_root)
+        try:
+            self.login()
+            subprocess.run(["git", "init"], check=True)  # noqa: S607
+            console.print(
+                f"[green]Created custom tool [bold]{folder_name}[/bold]. Run [bold]cd {project_root}[/bold] to start working.[/green]"
+            )
+        finally:
+            os.chdir(old_directory)
+
+    def publish(self, is_public: bool, force: bool = False) -> None:
+        if not git.Repository().is_synced() and not force:
+            console.print(
+                "[bold red]Failed to publish tool.[/bold red]\n"
+                "Local changes need to be resolved before publishing. Please do the following:\n"
+                "* [bold]Commit[/bold] your changes.\n"
+                "* [bold]Push[/bold] to sync with the remote.\n"
+                "* [bold]Pull[/bold] the latest changes from the remote.\n"
+                "\nOnce your repository is up-to-date, retry publishing the tool."
+            )
+            raise SystemExit()
+
+        project_name = get_project_name(require=True)
+        assert isinstance(project_name, str)  # noqa: S101
+
+        project_version = get_project_version(require=True)
+        assert isinstance(project_version, str)  # noqa: S101
+
+        project_description = get_project_description(require=False)
+        encoded_tarball = None
+
+        console.print("[bold blue]Discovering tools from your project...[/bold blue]")
+        project_utils = _require_project_utils()
+        available_exports = project_utils.extract_available_exports()
+
+        if available_exports:
+            console.print(
+                f"[green]Found these tools to publish: {', '.join([e['name'] for e in available_exports])}[/green]"
+            )
+
+        console.print("[bold blue]Extracting tool metadata...[/bold blue]")
+        try:
+            tools_metadata = project_utils.extract_tools_metadata()
+        except Exception as e:
+            console.print(
+                f"[yellow]Warning: Could not extract tool metadata: {e}[/yellow]\n"
+                f"Publishing will continue without detailed metadata."
+            )
+            tools_metadata = []
+
+        self._print_tools_preview(tools_metadata)
+        self._print_current_organization()
+
+        build_env = os.environ.copy()
+        try:
+            pyproject_data = read_toml()
+            sources = pyproject_data.get("tool", {}).get("uv", {}).get("sources", {})
+
+            for source_config in sources.values():
+                if isinstance(source_config, dict):
+                    index = source_config.get("index")
+                    if index:
+                        index_env = build_env_with_tool_repository_credentials(index)
+                        build_env.update(index_env)
+        except Exception:  # noqa: S110
+            pass
+
+        with tempfile.TemporaryDirectory() as temp_build_dir:
+            subprocess.run(  # noqa: S603
+                ["uv", "build", "--sdist", "--out-dir", temp_build_dir],  # noqa: S607
+                check=True,
+                capture_output=False,
+                env=build_env,
+            )
+
+            tarball_filename = next(
+                (f for f in os.listdir(temp_build_dir) if f.endswith(".tar.gz")), None
+            )
+            if not tarball_filename:
+                console.print(
+                    "Project build failed. Please ensure that the command `uv build --sdist` completes successfully.",
+                    style="bold red",
+                )
+                raise SystemExit(1)
+
+            tarball_path = os.path.join(temp_build_dir, tarball_filename)
+            with open(tarball_path, "rb") as file:
+                tarball_contents = file.read()
+
+            encoded_tarball = base64.b64encode(tarball_contents).decode("utf-8")
+
+        console.print("[bold blue]Publishing tool to repository...[/bold blue]")
+        publish_response = self.plus_api_client.publish_tool(
+            handle=project_name,
+            is_public=is_public,
+            version=project_version,
+            description=project_description,
+            encoded_file=f"data:application/x-gzip;base64,{encoded_tarball}",
+            available_exports=available_exports,
+            tools_metadata=tools_metadata,
+        )
+
+        self._validate_response(publish_response)
+
+        published_handle = publish_response.json()["handle"]
+        settings = Settings()
+        base_url = settings.enterprise_base_url or DEFAULT_CREWAI_ENTERPRISE_URL
+
+        console.print(
+            f"Successfully published `{published_handle}` ({project_version}).\n\n"
+            + "⚠️ Security checks are running in the background. Your tool will be available once these are complete.\n"
+            + f"You can monitor the status or access your tool here:\n{base_url}/crewai_plus/tools/{published_handle}",
+            style="bold green",
+        )
+
+    def install(self, handle: str) -> None:
+        self._print_current_organization()
+        get_response = self.plus_api_client.get_tool(handle)
+
+        if get_response.status_code == 404:
+            console.print(
+                "No tool found with this name. Please ensure the tool was published and you have access to it.",
+                style="bold red",
+            )
+            raise SystemExit
+        if get_response.status_code != 200:
+            console.print(
+                "Failed to get tool details. Please try again later.", style="bold red"
+            )
+            raise SystemExit
+
+        self._add_package(get_response.json())
+
+        console.print(f"Successfully installed {handle}", style="bold green")
+
+    def login(self) -> None:
+        get_user_id = _require_get_user_id()
+        login_response = self.plus_api_client.login_to_tool_repository(
+            user_identifier=get_user_id()
+        )
+
+        if login_response.status_code != 200:
+            console.print(
+                "Authentication failed. Verify if the currently active organization can access the tool repository, and run 'crewai login' again.",
+                style="bold red",
+            )
+            try:
+                console.print(
+                    f"[{login_response.status_code} error - {login_response.json().get('message', 'Unknown error')}]",
+                    style="bold red italic",
+                )
+            except JSONDecodeError:
+                console.print(
+                    f"[{login_response.status_code} error - Unknown error - Invalid JSON response]",
+                    style="bold red italic",
+                )
+            raise SystemExit
+
+        login_response_json = login_response.json()
+
+        settings = Settings()
+        settings.tool_repository_username = login_response_json["credential"][
+            "username"
+        ]
+        settings.tool_repository_password = login_response_json["credential"][
+            "password"
+        ]
+        settings.org_uuid = login_response_json["current_organization"]["uuid"]
+        settings.org_name = login_response_json["current_organization"]["name"]
+        settings.dump()
+
+    def _add_package(self, tool_details: dict[str, Any]) -> None:
+        is_from_pypi = tool_details.get("source", None) == "pypi"
+        tool_handle = tool_details["handle"]
+        repository_handle = tool_details["repository"]["handle"]
+        repository_url = tool_details["repository"]["url"]
+        index = f"{repository_handle}={repository_url}"
+
+        add_package_command = [
+            "uv",
+            "add",
+        ]
+
+        if is_from_pypi:
+            add_package_command.append(tool_handle)
+        else:
+            add_package_command.extend(["--index", index, tool_handle])
+
+        add_package_result = subprocess.run(  # noqa: S603
+            add_package_command,
+            capture_output=False,
+            env=build_env_with_tool_repository_credentials(repository_handle),
+            text=True,
+            check=True,
+        )
+
+        if add_package_result.stderr:
+            click.echo(add_package_result.stderr, err=True)
+            raise SystemExit
+
+    def _ensure_not_in_project(self) -> None:
+        if os.path.isfile("./pyproject.toml"):
+            console.print(
+                "[bold red]Oops! It looks like you're inside a project.[/bold red]"
+            )
+            console.print(
+                "You can't create a new tool while inside an existing project."
+            )
+            console.print(
+                "[bold yellow]Tip:[/bold yellow] Navigate to a different directory and try again."
+            )
+            raise SystemExit
+
+    def _print_tools_preview(self, tools_metadata: list[dict[str, Any]]) -> None:
+        if not tools_metadata:
+            console.print("[yellow]No tool metadata extracted.[/yellow]")
+            return
+
+        console.print(
+            f"\n[bold]Tools to be published ({len(tools_metadata)}):[/bold]\n"
+        )
+
+        for tool in tools_metadata:
+            console.print(f"  [bold cyan]{tool.get('name', 'Unknown')}[/bold cyan]")
+            if tool.get("module"):
+                console.print(f"    Module: {tool.get('module')}")
+            console.print(f"    Name: {tool.get('humanized_name', 'N/A')}")
+            console.print(
+                f"    Description: {tool.get('description', 'N/A')[:80]}{'...' if len(tool.get('description', '')) > 80 else ''}"
+            )
+
+            init_params = tool.get("init_params_schema", {}).get("properties", {})
+            if init_params:
+                required = tool.get("init_params_schema", {}).get("required", [])
+                console.print("    Init parameters:")
+                for param_name, param_info in init_params.items():
+                    param_type = param_info.get("type", "any")
+                    is_required = param_name in required
+                    req_marker = "[red]*[/red]" if is_required else ""
+                    default = (
+                        f" = {param_info['default']}" if "default" in param_info else ""
+                    )
+                    console.print(
+                        f"      - {param_name}: {param_type}{default} {req_marker}"
+                    )
+
+            env_vars = tool.get("env_vars", [])
+            if env_vars:
+                console.print("    Environment variables:")
+                for env_var in env_vars:
+                    req_marker = "[red]*[/red]" if env_var.get("required") else ""
+                    default = (
+                        f" (default: {env_var['default']})"
+                        if env_var.get("default")
+                        else ""
+                    )
+                    console.print(
+                        f"      - {env_var['name']}: {env_var.get('description', 'N/A')}{default} {req_marker}"
+                    )
+
+            console.print()
+
+    def _print_current_organization(self) -> None:
+        settings = Settings()
+        if settings.org_uuid:
+            console.print(
+                f"Current organization: {settings.org_name} ({settings.org_uuid})",
+                style="bold blue",
+            )
+        else:
+            console.print(
+                "No organization currently set. We recommend setting one before using: `crewai org switch <org_id>` command.",
+                style="yellow",
+            )

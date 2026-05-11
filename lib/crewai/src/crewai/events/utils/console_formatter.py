@@ -3,42 +3,28 @@ import os
 import threading
 from typing import Any, ClassVar, cast
 
+from crewai_core.printer import (
+    set_suppress_console_output as set_suppress_console_output,
+    should_suppress_console_output as should_suppress_console_output,
+)
 from rich.console import Console
 from rich.live import Live
 from rich.panel import Panel
 from rich.text import Text
 
-from crewai.cli.version import is_current_version_yanked, is_newer_version_available
+from crewai.version import is_current_version_yanked, is_newer_version_available
+
+
+__all__ = [
+    "ConsoleFormatter",
+    "set_suppress_console_output",
+    "should_suppress_console_output",
+]
 
 
 _disable_version_check: ContextVar[bool] = ContextVar(
     "_disable_version_check", default=False
 )
-
-_suppress_console_output: ContextVar[bool] = ContextVar(
-    "_suppress_console_output", default=False
-)
-
-
-def set_suppress_console_output(suppress: bool) -> object:
-    """Set whether to suppress all console output.
-
-    Args:
-        suppress: True to suppress output, False to show it.
-
-    Returns:
-        A token that can be used to restore the previous value.
-    """
-    return _suppress_console_output.set(suppress)
-
-
-def should_suppress_console_output() -> bool:
-    """Check if console output should be suppressed.
-
-    Returns:
-        True if output should be suppressed, False otherwise.
-    """
-    return _suppress_console_output.get()
 
 
 class ConsoleFormatter:

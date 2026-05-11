@@ -21,6 +21,7 @@ from crewai.events.depends import Depends
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.handler_graph import CircularDependencyError
 
+
 if TYPE_CHECKING:
     from crewai.events.types.agent_events import (
         AgentEvaluationCompletedEvent,
@@ -32,6 +33,20 @@ if TYPE_CHECKING:
         LiteAgentExecutionCompletedEvent,
         LiteAgentExecutionErrorEvent,
         LiteAgentExecutionStartedEvent,
+    )
+    from crewai.events.types.checkpoint_events import (
+        CheckpointBaseEvent,
+        CheckpointCompletedEvent,
+        CheckpointFailedEvent,
+        CheckpointForkBaseEvent,
+        CheckpointForkCompletedEvent,
+        CheckpointForkStartedEvent,
+        CheckpointPrunedEvent,
+        CheckpointRestoreBaseEvent,
+        CheckpointRestoreCompletedEvent,
+        CheckpointRestoreFailedEvent,
+        CheckpointRestoreStartedEvent,
+        CheckpointStartedEvent,
     )
     from crewai.events.types.crew_events import (
         CrewKickoffCompletedEvent,
@@ -141,6 +156,19 @@ _LAZY_EVENT_MAPPING: dict[str, str] = {
     "LiteAgentExecutionCompletedEvent": "crewai.events.types.agent_events",
     "LiteAgentExecutionErrorEvent": "crewai.events.types.agent_events",
     "LiteAgentExecutionStartedEvent": "crewai.events.types.agent_events",
+    # checkpoint_events
+    "CheckpointBaseEvent": "crewai.events.types.checkpoint_events",
+    "CheckpointCompletedEvent": "crewai.events.types.checkpoint_events",
+    "CheckpointFailedEvent": "crewai.events.types.checkpoint_events",
+    "CheckpointForkBaseEvent": "crewai.events.types.checkpoint_events",
+    "CheckpointForkCompletedEvent": "crewai.events.types.checkpoint_events",
+    "CheckpointForkStartedEvent": "crewai.events.types.checkpoint_events",
+    "CheckpointPrunedEvent": "crewai.events.types.checkpoint_events",
+    "CheckpointRestoreBaseEvent": "crewai.events.types.checkpoint_events",
+    "CheckpointRestoreCompletedEvent": "crewai.events.types.checkpoint_events",
+    "CheckpointRestoreFailedEvent": "crewai.events.types.checkpoint_events",
+    "CheckpointRestoreStartedEvent": "crewai.events.types.checkpoint_events",
+    "CheckpointStartedEvent": "crewai.events.types.checkpoint_events",
     # crew_events
     "CrewKickoffCompletedEvent": "crewai.events.types.crew_events",
     "CrewKickoffFailedEvent": "crewai.events.types.crew_events",
@@ -265,6 +293,18 @@ __all__ = [
     "AgentReasoningFailedEvent",
     "AgentReasoningStartedEvent",
     "BaseEventListener",
+    "CheckpointBaseEvent",
+    "CheckpointCompletedEvent",
+    "CheckpointFailedEvent",
+    "CheckpointForkBaseEvent",
+    "CheckpointForkCompletedEvent",
+    "CheckpointForkStartedEvent",
+    "CheckpointPrunedEvent",
+    "CheckpointRestoreBaseEvent",
+    "CheckpointRestoreCompletedEvent",
+    "CheckpointRestoreFailedEvent",
+    "CheckpointRestoreStartedEvent",
+    "CheckpointStartedEvent",
     "CircularDependencyError",
     "CrewKickoffCompletedEvent",
     "CrewKickoffFailedEvent",

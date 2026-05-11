@@ -36,7 +36,7 @@ class TestTraceListenerSetup:
         # Need to patch all the places where get_auth_token is imported/used
         with (
             patch(
-                "crewai.cli.authentication.token.get_auth_token",
+                "crewai.auth.token.get_auth_token",
                 return_value="mock_token_12345",
             ),
             patch(
