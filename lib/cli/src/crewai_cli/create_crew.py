@@ -31,7 +31,8 @@ def get_reserved_script_names() -> set[str]:
     template_content = template_content.replace("{{crew_name}}", "Placeholder")
 
     template_data = tomli.loads(template_content)
-    script_names = set(template_data.get("project", {}).get("scripts", {}).keys())
+    system_scripts = {"test", "run_crew", "train", "replay", "run_with_trigger"}
+    script_names = set(template_data.get("project", {}).get("scripts", {}).keys()) - system_scripts
     script_names.discard("_placeholder_")
     return script_names
 
