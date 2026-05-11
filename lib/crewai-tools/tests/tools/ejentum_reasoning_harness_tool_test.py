@@ -37,6 +37,14 @@ def test_missing_query_returns_validation_error():
     assert "query" in result
 
 
+def test_whitespace_only_query_returns_validation_error():
+    """Whitespace-only input must NOT trigger a paid external request."""
+    tool = EjentumHarnessTool()
+    result = tool._run(query="   \t\n  ", mode="reasoning")
+    assert "query" in result.lower()
+    assert "required" in result.lower()
+
+
 @patch(
     "crewai_tools.tools.ejentum_reasoning_harness_tool.ejentum_reasoning_harness_tool.requests.post"
 )

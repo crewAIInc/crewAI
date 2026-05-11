@@ -67,7 +67,8 @@ class EjentumHarnessTool(BaseTool):
     )
 
     def _run(self, **kwargs: Any) -> str:
-        query = kwargs.get("query")
+        raw_query = kwargs.get("query")
+        query = raw_query.strip() if isinstance(raw_query, str) else ""
         mode = kwargs.get("mode")
 
         if not query:
