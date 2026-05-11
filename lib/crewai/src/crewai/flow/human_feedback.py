@@ -417,13 +417,18 @@ def human_feedback(
                 reviewed = llm_inst.call(messages)
                 return reviewed if isinstance(reviewed, str) else str(reviewed)
             except Exception:
+                if learn_strict:
+                    logger.warning(
+                        "HITL pre-review failed for %s; re-raising (learn_strict=True)",
+                        func.__name__,
+                        exc_info=True,
+                    )
+                    raise
                 logger.warning(
                     "HITL pre-review failed for %s; falling back to raw output",
                     func.__name__,
                     exc_info=True,
                 )
-                if learn_strict:
-                    raise
                 return method_output
 
         def _distill_and_store_lessons(
@@ -467,13 +472,18 @@ def human_feedback(
                 if lessons:
                     mem.remember_many(lessons, source=learn_source)  # type: ignore[union-attr]
             except Exception:
+                if learn_strict:
+                    logger.warning(
+                        "HITL lesson distillation failed for %s; re-raising (learn_strict=True)",
+                        func.__name__,
+                        exc_info=True,
+                    )
+                    raise
                 logger.warning(
                     "HITL lesson distillation failed for %s; no lessons stored",
                     func.__name__,
                     exc_info=True,
                 )
-                if learn_strict:
-                    raise
 
         # -- Core feedback helpers ------------------------------------
 
