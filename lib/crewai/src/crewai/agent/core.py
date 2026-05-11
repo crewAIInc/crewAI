@@ -35,7 +35,6 @@ from typing_extensions import Self, TypeIs
 from crewai.agent.planning_config import PlanningConfig
 from crewai.agent.utils import (
     ahandle_knowledge_retrieval,
-    append_skill_context,
     apply_training_data,
     build_task_prompt_with_schema,
     format_task_with_context,
@@ -541,7 +540,6 @@ class Agent(BaseAgent):
         Returns:
             The fully prepared task prompt.
         """
-        task_prompt = append_skill_context(self, task_prompt)
         prepare_tools(self, tools, task)
 
         return apply_training_data(self, task_prompt)
@@ -1473,8 +1471,6 @@ class Agent(BaseAgent):
                         error=str(e),
                     ),
                 )
-
-        formatted_messages = append_skill_context(self, formatted_messages)
 
         inputs: dict[str, Any] = {
             "input": formatted_messages,

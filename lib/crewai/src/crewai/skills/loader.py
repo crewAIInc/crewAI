@@ -161,6 +161,9 @@ def format_skill_context(skill: Skill) -> str:
     At METADATA level: returns name and description only.
     At INSTRUCTIONS level or above: returns full SKILL.md body.
 
+    Output is wrapped in <skill name="..."> XML tags so the block can serve
+    as a stable cache anchor when injected into the system prompt.
+
     Args:
         skill: The skill to format.
 
@@ -169,7 +172,7 @@ def format_skill_context(skill: Skill) -> str:
     """
     if skill.disclosure_level >= INSTRUCTIONS and skill.instructions:
         parts = [
-            f"## Skill: {skill.name}",
+            f'<skill name="{skill.name}">',
             skill.description,
             "",
             skill.instructions,
@@ -180,5 +183,6 @@ def format_skill_context(skill: Skill) -> str:
             for dir_name, files in sorted(skill.resource_files.items()):
                 if files:
                     parts.append(f"- **{dir_name}/**: {', '.join(files)}")
+        parts.append("</skill>")
         return "\n".join(parts)
-    return f"## Skill: {skill.name}\n{skill.description}"
+    return f'<skill name="{skill.name}">\n{skill.description}\n</skill>'
