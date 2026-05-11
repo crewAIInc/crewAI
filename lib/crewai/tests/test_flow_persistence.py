@@ -363,6 +363,39 @@ def test_restore_from_state_id_none_is_no_op(tmp_path):
     assert flow.state.counter == 1
 
 
+def test_class_level_persistence_docs_example(tmp_path):
+    """Verify the corrected docs example for class-level @persist()."""
+    from pydantic import BaseModel
+    from crewai.flow.flow import Flow, listen, start
+    from crewai.flow.persistence import persist
+
+    db_path = os.path.join(tmp_path, "test_flows.db")
+    persistence = SQLiteFlowPersistence(db_path)
+
+    class CounterState(BaseModel):
+        value: int = 0
+
+    @persist(persistence)
+    class PersistentCounterFlow(Flow[CounterState]):
+        @start()
+        def increment(self):
+            self.state.value += 1
+            return self.state.value
+
+        @listen(increment)
+        def double(self, value):
+            self.state.value = value * 2
+            return self.state.value
+
+    flow1 = PersistentCounterFlow()
+    result1 = flow1.kickoff()
+    assert result1 == 2
+
+    flow2 = PersistentCounterFlow()
+    result2 = flow2.kickoff(inputs={"id": flow1.state.id})
+    assert result2 == 6  # resumed at 2, incremented to 3, doubled to 6
+
+
 def test_fork_conflict_with_from_checkpoint_raises():
     """Passing both from_checkpoint and restore_from_state_id raises ValueError, naming
     both parameters."""
