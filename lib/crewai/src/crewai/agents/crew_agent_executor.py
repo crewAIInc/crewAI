@@ -493,6 +493,11 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
+                # Suppress response_model while tools are active: providers such as
+                # Gemini and Anthropic treat response_format (structured output) as
+                # higher priority than tools, causing tool calls to be skipped when
+                # both are passed together. response_model is applied after the tool
+                # loop completes via a final extraction call below.
                 answer = get_llm_response(
                     llm=cast("BaseLLM", self.llm),
                     messages=self.messages,
@@ -502,7 +507,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     available_functions=None,
                     from_task=self.task,
                     from_agent=self.agent,
-                    response_model=self.response_model,
+                    response_model=None,
                     executor_context=self,
                     verbose=self.agent.verbose,
                 )
@@ -520,13 +525,39 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     continue
 
                 if isinstance(answer, str):
+                    # Tool loop is done. If structured output is required, make one
+                    # final call without tools so the provider can apply the schema.
+                    if self.response_model is not None:
+                        answer = get_llm_response(
+                            llm=cast("BaseLLM", self.llm),
+                            messages=self.messages,
+                            callbacks=self.callbacks,
+                            printer=PRINTER,
+                            from_task=self.task,
+                            from_agent=self.agent,
+                            response_model=self.response_model,
+                            executor_context=self,
+                            verbose=self.agent.verbose,
+                        )
+                    if isinstance(answer, BaseModel):
+                        output_json = answer.model_dump_json()
+                        formatted_answer = AgentFinish(
+                            thought="",
+                            output=answer,
+                            text=output_json,
+                        )
+                        self._invoke_step_callback(formatted_answer)
+                        self._append_message(output_json)
+                        self._show_logs(formatted_answer)
+                        return formatted_answer
+                    answer_str = str(answer) if not isinstance(answer, str) else answer
                     formatted_answer = AgentFinish(
                         thought="",
-                        output=answer,
-                        text=answer,
+                        output=answer_str,
+                        text=answer_str,
                     )
                     self._invoke_step_callback(formatted_answer)
-                    self._append_message(answer)
+                    self._append_message(answer_str)
                     self._show_logs(formatted_answer)
                     return formatted_answer
 
