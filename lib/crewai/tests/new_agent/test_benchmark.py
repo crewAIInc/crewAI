@@ -136,10 +136,50 @@ class TestLoadBenchmarkCases:
 
     def test_not_array(self, tmp_path: Path):
         f = tmp_path / "obj.json"
-        f.write_text('{"input": "test"}', encoding="utf-8")
+        f.write_text('"just a string"', encoding="utf-8")
 
         with pytest.raises(ValueError, match="must contain a JSON array"):
             load_benchmark_cases(f)
+
+    def test_object_without_cases_key(self, tmp_path: Path):
+        f = tmp_path / "obj.json"
+        f.write_text('{"input": "test"}', encoding="utf-8")
+
+        with pytest.raises(ValueError, match="must have a 'cases' array"):
+            load_benchmark_cases(f)
+
+    def test_object_wrapper_with_threshold(self, tmp_path: Path):
+        data = {
+            "threshold": 0.9,
+            "cases": [
+                {"input": "What is 2+2?", "expected": "4"},
+                {"input": "Hello", "criteria": "Must be polite"},
+            ],
+        }
+        f = tmp_path / "wrapped.json"
+        f.write_text(json.dumps(data), encoding="utf-8")
+
+        loaded = load_benchmark_cases(f)
+        assert len(loaded) == 2
+        assert loaded.threshold == 0.9
+        assert loaded.cases[0].input == "What is 2+2?"
+
+    def test_object_wrapper_without_threshold(self, tmp_path: Path):
+        data = {"cases": [{"input": "Hello"}]}
+        f = tmp_path / "wrapped_no_thresh.json"
+        f.write_text(json.dumps(data), encoding="utf-8")
+
+        loaded = load_benchmark_cases(f)
+        assert len(loaded) == 1
+        assert loaded.threshold is None
+
+    def test_bare_array_has_no_threshold(self, tmp_path: Path):
+        f = tmp_path / "bare.json"
+        f.write_text('[{"input": "Hello"}]', encoding="utf-8")
+
+        loaded = load_benchmark_cases(f)
+        assert len(loaded) == 1
+        assert loaded.threshold is None
 
     def test_missing_input_field(self, tmp_path: Path):
         f = tmp_path / "missing.json"

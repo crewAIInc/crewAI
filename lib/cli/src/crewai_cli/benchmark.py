@@ -36,32 +36,63 @@ class BenchmarkResult(BaseModel):
     cost: float | None = None
 
 
-def load_benchmark_cases(path: str | Path) -> list[BenchmarkCase]:
+class LoadedCases:
+    """Result of loading benchmark cases — includes optional per-file threshold."""
+
+    def __init__(self, cases: list[BenchmarkCase], threshold: float | None = None):
+        self.cases = cases
+        self.threshold = threshold
+
+    def __len__(self) -> int:
+        return len(self.cases)
+
+    def __iter__(self):
+        return iter(self.cases)
+
+    def __getitem__(self, index):
+        return self.cases[index]
+
+
+def load_benchmark_cases(path: str | Path) -> LoadedCases:
     """Load benchmark cases from a JSON or JSONC file.
 
+    Accepts either a bare JSON array or an object wrapper::
+
+        {"threshold": 0.9, "cases": [...]}
+
     Args:
-        path: Path to a JSON/JSONC file containing an array of test cases.
+        path: Path to a JSON/JSONC file.
 
     Returns:
-        List of BenchmarkCase instances.
+        LoadedCases with the case list and optional per-file threshold.
 
     Raises:
         FileNotFoundError: If the file does not exist.
-        ValueError: If the file content is not a valid JSON array of cases.
+        ValueError: If the file content is invalid.
     """
     p = Path(path)
     if not p.exists():
         raise FileNotFoundError(f"Benchmark cases file not found: {path}")
 
     raw = p.read_text(encoding="utf-8")
-
-    # Strip JSONC comments
     clean = _strip_jsonc_comments(raw)
 
     try:
         data = json.loads(clean)
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid JSON in benchmark cases file: {e}") from e
+
+    threshold: float | None = None
+
+    if isinstance(data, dict):
+        threshold = data.get("threshold")
+        if threshold is not None:
+            threshold = float(threshold)
+        if "cases" not in data:
+            raise ValueError(
+                "Object-format benchmark file must have a 'cases' array"
+            )
+        data = data["cases"]
 
     if not isinstance(data, list):
         raise ValueError("Benchmark cases file must contain a JSON array")
@@ -74,7 +105,7 @@ def load_benchmark_cases(path: str | Path) -> list[BenchmarkCase]:
             raise ValueError(f"Benchmark case at index {i} missing required 'input' field")
         cases.append(BenchmarkCase(**item))
 
-    return cases
+    return LoadedCases(cases, threshold)
 
 
 def _strip_jsonc_comments(text: str) -> str:
@@ -151,7 +182,7 @@ def _load_agent(source: Any) -> Any:
 
 async def run_benchmark(
     agent_def: dict[str, Any] | str | Path,
-    cases: list[BenchmarkCase],
+    cases: list[BenchmarkCase] | LoadedCases,
     models: list[str] | None = None,
     judge_model: str = "openai/gpt-4o-mini",
     on_progress: Callable[[dict[str, Any]], None] | None = None,
@@ -506,46 +537,62 @@ def print_comparison_chart(
         console = Console()
 
     if not results_by_model:
-        console.print("[dim]No results to compare.[/]")
+        console.print("[dim]No results to compare.[/dim]")
         return
 
     inner_w = max(console.width - 4, 60)
-    fixed_right = 1 + 4 + 2 + 5 + 2 + 6 + 4
-    models_data: list[tuple[str, int, int, float, float]] = []
-    best_model = ""
-    best_score = -1.0
+
+    models_data: list[dict[str, Any]] = []
+    max_time = 0.0
+    max_tokens = 0
 
     for model, results in results_by_model.items():
         n = len(results)
         passed = sum(1 for r in results if r.passed)
         avg = sum(r.score for r in results) / n if n else 0.0
         total_time = sum(r.response_time_ms for r in results) / 1000
-        models_data.append((model, passed, n, avg, total_time))
-        if avg > best_score:
-            best_score = avg
-            best_model = model
+        total_tokens = sum(r.input_tokens + r.output_tokens for r in results)
+        models_data.append({
+            "model": model, "passed": passed, "n": n,
+            "avg": avg, "time": total_time, "tokens": total_tokens,
+        })
+        max_time = max(max_time, total_time)
+        max_tokens = max(max_tokens, total_tokens)
 
-    max_name_len = min(max(len(m) for m, *_ in models_data), 28)
+    for md in models_data:
+        time_score = 1.0 - (md["time"] / max_time) if max_time > 0 else 0.0
+        token_score = 1.0 - (md["tokens"] / max_tokens) if max_tokens > 0 else 0.0
+        md["rank"] = md["avg"] * 0.6 + time_score * 0.25 + token_score * 0.15
+
+    best = max(models_data, key=lambda m: m["rank"]) if len(models_data) > 1 else None
+
+    max_name_len = min(max(len(m["model"]) for m in models_data), 28)
+    fixed_right = 1 + 4 + 2 + 5 + 2 + 6 + 2 + 8 + 4
     bar_width = max(12, inner_w - max_name_len - fixed_right - 4)
     bar_width = min(bar_width, 30)
 
     lines: list[str] = []
-    for model, passed, n, avg, total_time in models_data:
-        name = (model[:max_name_len - 1] + "…" if len(model) > max_name_len else model).ljust(max_name_len)
-        bar = _score_bar(avg, bar_width)
-        pass_color = _score_color(avg)
-        star = " [bold green]★[/]" if model == best_model and len(models_data) > 1 else ""
+    for md in models_data:
+        name_raw = md["model"]
+        name = (name_raw[:max_name_len - 1] + "…" if len(name_raw) > max_name_len else name_raw).ljust(max_name_len)
+        bar = _score_bar(md["avg"], bar_width)
+        pass_color = _score_color(md["avg"])
+        star = " [bold green]★[/bold green]" if best and md["model"] == best["model"] else ""
+        tokens_str = _fmt_tokens(md["tokens"])
         lines.append(
-            f"  {name}  {bar} {avg:.2f}  "
-            f"[{pass_color}]{passed}/{n}[/]  "
-            f"[dim]{total_time:>5.1f}s[/]"
+            f"  {name}  {bar} {md['avg']:.2f}  "
+            f"[{pass_color}]{md['passed']}/{md['n']}[/{pass_color}]  "
+            f"[dim]{md['time']:>5.1f}s[/dim]  "
+            f"[dim]{tokens_str:>6}[/dim]"
             f"{star}"
         )
 
     body = "\n".join(lines)
     panel = Panel(
         body,
-        title="[bold]Model Comparison[/]",
+        title="[bold]Model Comparison[/bold]",
+        subtitle="[dim]★ = best (60% score · 25% speed · 15% tokens)[/dim]",
+        subtitle_align="left",
         title_align="left",
         border_style="dim",
         padding=(1, 1),

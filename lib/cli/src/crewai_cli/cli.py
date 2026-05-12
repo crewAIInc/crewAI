@@ -500,8 +500,9 @@ def memory(
 @click.option(
     "--threshold",
     type=float,
-    default=0.7,
-    help="Minimum score to pass a test case (NewAgent only, 0.0-1.0).",
+    default=None,
+    help="Minimum score to pass a test case (NewAgent only, 0.0-1.0). "
+    "Defaults to test_threshold in config.json (0.7 if not set).",
 )
 @click.option(
     "--judge-model",
@@ -513,7 +514,7 @@ def test(
     n_iterations: int,
     model: str | None,
     trained_agents_file: str | None,
-    threshold: float,
+    threshold: float | None,
     judge_model: str,
 ) -> None:
     """Test the crew or agents and evaluate the results.
@@ -536,11 +537,35 @@ def test(
             if trained_agents_file:
                 uv_args.extend(["-f", trained_agents_file])
             _relaunch_via_uv(uv_args)
-        _test_new_agents(agent_files, n_iterations, model, threshold, judge_model)
+
+        project_threshold = _read_config_threshold()
+        effective_threshold = threshold or project_threshold or 0.7
+
+        _test_new_agents(agent_files, n_iterations, model, effective_threshold, judge_model)
     else:
         crew_model = model or "gpt-4o-mini"
         click.echo(f"Testing the crew for {n_iterations} iterations with model {crew_model}")
         evaluate_crew(n_iterations, crew_model, trained_agents_file=trained_agents_file)
+
+
+def _read_config_threshold() -> float | None:
+    """Read test_threshold from config.json if it exists."""
+    import json
+    from pathlib import Path
+
+    config_path = Path("config.json")
+    if not config_path.exists():
+        return None
+    try:
+        raw = config_path.read_text(encoding="utf-8")
+        import re
+        clean = re.sub(r"(?<!:)//.*?$", "", raw, flags=re.MULTILINE)
+        clean = re.sub(r"/\*.*?\*/", "", clean, flags=re.DOTALL)
+        data = json.loads(clean)
+        val = data.get("test_threshold")
+        return float(val) if val is not None else None
+    except Exception:
+        return None
 
 
 def _make_benchmark_progress():
@@ -642,22 +667,24 @@ def _test_new_agents(
             continue
 
         try:
-            cases = load_benchmark_cases(cases_path)
+            loaded = load_benchmark_cases(cases_path)
         except (FileNotFoundError, ValueError) as e:
             click.secho(f"  Error loading cases for {agent_name}: {e}", fg="red")
             all_passed = False
             continue
 
+        file_threshold = loaded.threshold if loaded.threshold is not None else threshold
+
         model_list = [model] if model else None
 
         click.echo()
-        click.secho(f"Testing {agent_name} ({len(cases)} cases)", fg="cyan", bold=True)
+        click.secho(f"Testing {agent_name} ({len(loaded)} cases, threshold={file_threshold})", fg="cyan", bold=True)
 
         try:
             results_by_model = asyncio.run(
                 run_benchmark(
                     agent_def=str(agent_path),
-                    cases=cases,
+                    cases=loaded.cases,
                     models=model_list,
                     judge_model=judge_model,
                     on_progress=_make_benchmark_progress(),
@@ -674,16 +701,16 @@ def _test_new_agents(
             _con.print()
             print_results_chart(results, console=_con)
 
-            failed = [r for r in results if r.score < threshold]
+            failed = [r for r in results if r.score < file_threshold]
             if failed:
                 all_passed = False
                 _con.print(
                     f"\n  [red bold]FAILED: {len(failed)}/{len(results)} "
-                    f"cases below threshold ({threshold})[/]"
+                    f"cases below threshold ({file_threshold})[/red bold]"
                 )
             else:
                 _con.print(
-                    f"\n  [green bold]PASSED: all {len(results)} cases >= {threshold}[/]"
+                    f"\n  [green bold]PASSED: all {len(results)} cases >= {file_threshold}[/green bold]"
                 )
 
     click.echo()

@@ -121,8 +121,12 @@ AGENT_TEMPLATE = """\
 PROJECT_CONFIG_TEMPLATE = """\
 {
   // Project configuration for crewai agents
-  // Rooms define how agents collaborate in the TUI
 
+  // Minimum score (0.0–1.0) for a test case to pass.
+  // Override per test file with: {"threshold": 0.9, "cases": [...]}
+  "test_threshold": 0.7,
+
+  // Rooms define how agents collaborate in the TUI
   "rooms": {
     "common": {
       // Which agents participate in this room
