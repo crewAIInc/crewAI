@@ -6,6 +6,7 @@ from crewai_tools.tools.coinbase_agentic_wallet_tool import CoinbaseAgenticWalle
 
 
 def test_coinbase_agentic_wallet_tool_defaults():
+    """Verify the wrapper defaults to the installed Coinbase MCP bundle."""
     tool = CoinbaseAgenticWalletTool()
 
     assert tool.command == "node"
@@ -15,6 +16,7 @@ def test_coinbase_agentic_wallet_tool_defaults():
 
 
 def test_coinbase_agentic_wallet_tool_starts_adapter_lazily(tmp_path):
+    """Verify the MCP adapter is created only when tools are first accessed."""
     adapted_tools = ["search_bazaar", "pay"]
     bundle_path = tmp_path / "bundle.js"
     bundle_path.write_text("")
@@ -41,6 +43,7 @@ def test_coinbase_agentic_wallet_tool_starts_adapter_lazily(tmp_path):
 
 
 def test_coinbase_agentic_wallet_tool_requires_installed_bundle(tmp_path):
+    """Verify users get an actionable error before adapter startup."""
     missing_bundle = tmp_path / "missing-bundle.js"
 
     with (
