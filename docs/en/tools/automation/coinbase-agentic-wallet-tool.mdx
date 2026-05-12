@@ -7,9 +7,9 @@ mode: "wide"
 
 # Coinbase Agentic Wallet Tool
 
-`CoinbaseAgenticWalletTool` connects CrewAI agents to the [Coinbase Agentic Wallet MCP server](https://docs.cdp.coinbase.com/agentic-wallet/mcp/welcome). Lets agents discover and pay for HTTP APIs autonomously via the x402 protocol, using a Coinbase-managed embedded wallet -- no API keys, no manual onramp, no seed phrases.
+`CoinbaseAgenticWalletTool` connects CrewAI agents to the [Coinbase Agentic Wallet MCP server](https://docs.cdp.coinbase.com/agentic-wallet/mcp/welcome). Agents can discover and pay for HTTP APIs autonomously via the x402 protocol, using a Coinbase-managed embedded wallet. Funding happens through the built-in Coinbase Onramp when needed, with no API keys or seed phrases to manage.
 
-The tool wraps CrewAI's `MCPServerAdapter` around the local MCP bundle installed by `npx @coinbase/payments-mcp` and returns the MCP tools as CrewAI-compatible tools.
+The tool wraps CrewAI's `MCPServerAdapter` around the local MCP bundle installed by `npx @coinbase/payments-mcp install --client other` and returns the MCP tools as CrewAI-compatible tools.
 
 ## Installation
 

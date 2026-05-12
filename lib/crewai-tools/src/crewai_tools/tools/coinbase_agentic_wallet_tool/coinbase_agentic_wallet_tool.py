@@ -25,11 +25,13 @@ class CoinbaseAgenticWalletTool:
         *tool_names: str,
         connect_timeout: int = 60,
     ) -> None:
+        """Create a wrapper for the installed Coinbase Agentic Wallet MCP bundle."""
         self.tool_names = tool_names
         self.connect_timeout = connect_timeout
         self._adapter: MCPServerAdapter | None = None
 
     def _server_params(self) -> Any:
+        """Build stdio parameters for the installed MCP bundle."""
         from mcp import StdioServerParameters
 
         return StdioServerParameters(
@@ -41,6 +43,12 @@ class CoinbaseAgenticWalletTool:
     def start(self) -> ToolCollection[BaseTool]:
         """Start the MCP server and return the adapted CrewAI tools."""
         if self._adapter is None:
+            if not self.bundle_path.is_file():
+                raise FileNotFoundError(
+                    "Coinbase Agentic Wallet MCP bundle not found at "
+                    f"{self.bundle_path}. Run: "
+                    "npx @coinbase/payments-mcp install --client other"
+                )
             self._adapter = MCPServerAdapter(
                 self._server_params(),
                 *self.tool_names,
@@ -62,13 +70,16 @@ class CoinbaseAgenticWalletTool:
     def stop(self) -> None:
         """Stop the MCP server if it has been started."""
         if self._adapter is not None:
-            self._adapter.stop()
+            adapter = self._adapter
             self._adapter = None
+            adapter.stop()
 
     def __enter__(self) -> ToolCollection[BaseTool]:
+        """Start the MCP server and return the adapted CrewAI tools."""
         return self.start()
 
     def __exit__(
         self, exc_type: type[BaseException] | None, exc: BaseException | None, tb: Any
     ) -> None:
+        """Stop the MCP server when leaving a context manager block."""
         self.stop()
