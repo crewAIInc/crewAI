@@ -7334,6 +7334,124 @@
         "daytona"
       ],
       "run_params_schema": {
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "enum": [
+                    "read",
+                    "write",
+                    "append",
+                    "list",
+                    "delete",
+                    "mkdir",
+                    "info",
+                    "exists",
+                    "move",
+                    "find",
+                    "search",
+                    "chmod"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "path"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "append"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "content"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "move"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "destination"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "enum": [
+                    "find",
+                    "search"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "pattern"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "replace"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "paths",
+                "pattern",
+                "replacement"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "chmod"
+                }
+              }
+            },
+            "then": {
+              "anyOf": [
+                {
+                  "required": [
+                    "mode"
+                  ]
+                },
+                {
+                  "required": [
+                    "owner"
+                  ]
+                },
+                {
+                  "required": [
+                    "group"
+                  ]
+                }
+              ]
+            }
+          }
+        ],
         "properties": {
           "action": {
             "description": "The filesystem action to perform: 'read' (returns file contents); 'write' (create or replace a file with content); 'append' (append content to an existing file \u2014 use this for writing large files in chunks to avoid hitting tool-call size limits); 'list' (lists a directory); 'delete' (removes a file/dir); 'mkdir' (creates a directory); 'info' (returns file metadata); 'exists' (returns whether a path exists); 'move' (rename or relocate a file/dir; requires 'destination'); 'find' (grep file CONTENTS recursively; requires 'pattern'); 'search' (find files by NAME pattern; requires 'pattern'); 'chmod' (change permissions/owner/group; pass at least one of 'mode', 'owner', 'group'); 'replace' (find-and-replace text across files; requires 'paths', 'pattern', and 'replacement').",
