@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CrewAI Agent Definition",
+  "description": "Declarative definition for a CrewAI NewAgent",
+  "type": "object",
+  "required": ["role", "goal"],
+  "properties": {
+    "name": { "type": "string", "description": "Agent identifier" },
+    "role": { "type": "string", "description": "What this agent does" },
+    "goal": { "type": "string", "description": "What the agent is trying to achieve" },
+    "backstory": { "type": "string", "description": "Context that shapes personality/approach", "default": "" },
+    "llm": { "type": "string", "description": "LLM model identifier (e.g., 'openai/gpt-4o')" },
+    "function_calling_llm": { "type": ["string", "null"], "description": "Separate LLM for tool calls (optional)" },
+    "tools": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Tool names from crewai-tools. Use 'custom:name' for project-local tools."
+    },
+    "mcps": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "type": "string" },
+          { "type": "object", "properties": { "url": { "type": "string" }, "name": { "type": "string" } } }
+        ]
+      },
+      "description": "MCP server connections"
+    },
+    "apps": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Platform app integrations"
+    },
+    "coworkers": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "type": "object", "properties": { "ref": { "type": "string" } }, "required": ["ref"] },
+          { "type": "object", "properties": { "amp": { "type": "string" }, "llm": { "type": "string" } }, "required": ["amp"] },
+          { "type": "object", "properties": { "a2a": { "type": "string" } }, "required": ["a2a"] }
+        ]
+      },
+      "description": "Coworkers: local refs, AMP handles, or A2A URLs"
+    },
+    "knowledge_sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": { "path": { "type": "string" } },
+        "required": ["path"]
+      }
+    },
+    "skills": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Paths to skill directories containing SKILL.md files"
+    },
+    "guardrail": {
+      "oneOf": [
+        { "type": "string", "description": "Guardrail instructions as a simple string (shorthand for LLM guardrail)" },
+        {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string", "enum": ["llm", "code"] },
+            "instructions": { "type": "string" },
+            "function": { "type": "string", "description": "Dotted path to a callable for code guardrails" },
+            "path": { "type": "string", "description": "Alias for function (dotted path to callable)" },
+            "llm": { "type": "string", "description": "LLM model for LLM guardrails" }
+          }
+        }
+      ]
+    },
+    "response_model": { "type": "string", "description": "Dotted path to a Pydantic BaseModel class" },
+    "settings": {
+      "type": "object",
+      "properties": {
+        "memory": { "type": "boolean", "default": true },
+        "memory_read_only": { "type": "boolean", "default": false, "description": "Allow memory recall but prevent saving new memories" },
+        "reasoning": { "type": "boolean", "default": true },
+        "self_improving": { "type": "boolean", "default": true },
+        "planning": { "type": "boolean", "default": true },
+        "auto_plan": { "type": "boolean", "default": true },
+        "can_spawn_copies": { "type": "boolean", "default": true },
+        "max_spawn_depth": { "type": "integer", "default": 1, "minimum": 0 },
+        "max_concurrent_spawns": { "type": "integer", "default": 4, "minimum": 1 },
+        "max_history_messages": { "type": ["integer", "null"], "default": null },
+        "narration_guard": { "type": "boolean", "default": false },
+        "dreaming_interval_hours": { "type": "integer", "default": 24, "minimum": 1 },
+        "dreaming_trigger_threshold": { "type": "integer", "default": 10, "minimum": 1 },
+        "dreaming_llm": { "type": ["string", "null"], "default": null, "description": "LLM for dreaming (defaults to agent's LLM)" },
+        "provenance_detail": { "type": "string", "enum": ["minimal", "standard", "detailed"], "default": "standard" },
+        "spawn_timeout": { "type": "integer", "default": 600, "minimum": 1 },
+        "can_create_knowledge": { "type": "boolean", "default": true },
+        "can_build_skills": { "type": "boolean", "default": true, "description": "Enable auto-generation and suggestion of SKILL.md files" },
+        "can_schedule": { "type": "boolean", "default": false, "description": "Enable the agent to schedule future tasks via ScheduleTaskTool" },
+        "narration_max_retries": { "type": "integer", "default": 2, "minimum": 0 },
+        "respect_context_window": { "type": "boolean", "default": true },
+        "cache_tool_results": { "type": "boolean", "default": true },
+        "max_retry_limit": { "type": "integer", "default": 2, "minimum": 0 },
+        "share_data": { "type": "boolean", "default": false, "description": "If true, include sensitive data (message content, tool inputs/outputs) in telemetry spans" }
+      },
+      "additionalProperties": false
+    },
+    "max_iter": { "type": "integer", "default": 25, "minimum": 1 },
+    "max_tokens": { "type": ["integer", "null"] },
+    "max_execution_time": { "type": ["integer", "null"] },
+    "verbose": { "type": "boolean", "default": false }
+  },
+  "additionalProperties": false
+}

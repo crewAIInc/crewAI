@@ -608,7 +608,18 @@ class Memory(BaseModel):
             # The encoding pipeline uses asyncio.run() -> to_thread() internally.
             # If the process is shutting down, the default executor is closed and
             # to_thread raises "cannot schedule new futures after shutdown".
-            # Silently abandon the save -- the process is exiting anyway.
+            # Emit MemorySaveFailedEvent to keep event bus scope stack balanced.
+            try:
+                crewai_event_bus.emit(
+                    self,
+                    MemorySaveFailedEvent(
+                        value=f"{len(contents)} memories (abandoned)",
+                        metadata=metadata,
+                        error="executor shutdown during encoding",
+                    ),
+                )
+            except Exception:
+                pass
             return []
 
         try:

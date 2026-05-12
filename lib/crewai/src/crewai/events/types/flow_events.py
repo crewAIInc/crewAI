@@ -166,6 +166,25 @@ class FlowInputReceivedEvent(FlowEvent):
     type: Literal["flow_input_received"] = "flow_input_received"
 
 
+class FlowMessageSentEvent(FlowEvent):
+    """Event emitted when a flow sends a message to the user via ``Flow.say()``.
+
+    This event is emitted when a flow sends an informational message
+    that does not require a response from the user.
+
+    Attributes:
+        flow_name: Name of the flow sending the message.
+        method_name: Name of the flow method that called ``say()``.
+        message: The message sent to the user.
+        metadata: Optional metadata sent with the message.
+    """
+
+    method_name: str
+    message: str
+    metadata: dict[str, Any] | None = None
+    type: Literal["flow_message_sent"] = "flow_message_sent"
+
+
 class HumanFeedbackRequestedEvent(FlowEvent):
     """Event emitted when human feedback is requested.
 

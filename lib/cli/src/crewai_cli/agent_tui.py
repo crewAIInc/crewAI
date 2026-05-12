@@ -1,0 +1,1411 @@
+"""Textual TUI for conversational multi-agent interaction.
+
+Launched by ``crewai run`` when agents/ directory contains agent definitions.
+Features: Common Room, @mention autocomplete, inline thinking animation,
+token/time metadata, conversation history persistence.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import os
+import re
+import sys
+from pathlib import Path
+from typing import Any
+
+from textual.app import App, ComposeResult
+from textual.binding import Binding
+from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.widgets import (
+    Button,
+    Footer,
+    Header,
+    Input,
+    OptionList,
+    Static,
+    TabbedContent,
+    TabPane,
+)
+
+try:
+    from textual.suggester import Suggester
+
+    class AgentSuggester(Suggester):
+        """Autocomplete @agent_name mentions in the input."""
+
+        def __init__(self, agent_names: list[str]) -> None:
+            super().__init__(use_cache=False)
+            self._names = agent_names
+
+        async def get_suggestion(self, value: str) -> str | None:
+            at_idx = value.rfind("@")
+            if at_idx == -1:
+                return None
+            after = value[at_idx + 1 :]
+            if not after or " " in after:
+                return None
+            lower = after.lower()
+            for name in self._names:
+                if name.lower().startswith(lower) and name.lower() != lower:
+                    return value[: at_idx + 1] + name + " "
+            return None
+
+except ImportError:
+    AgentSuggester = None  # type: ignore[assignment,misc]
+
+
+_CORAL = "#eb6658"
+_TEAL = "#1F7982"
+_BG = "#1a1a1a"
+_BG_PANEL = "#222222"
+_BG_MSG_USER = "#2a2a2a"
+_BG_MSG_AGENT = "#252525"
+_DIM = "#777777"
+_COMMON_ROOM = "__common__"
+_SPINNER = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+
+
+def _strip_jsonc(text: str) -> str:
+    text = re.sub(r"(?<!:)//.*?$", "", text, flags=re.MULTILINE)
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL)
+    return re.sub(r",\s*([}\]])", r"\1", text)
+
+
+def _load_agents(agents_dir: Path) -> list[dict[str, Any]]:
+    """Load all agent definitions from agents/ directory."""
+    agents: list[dict[str, Any]] = []
+    for ext in ("*.json", "*.jsonc"):
+        for path in sorted(agents_dir.glob(ext)):
+            try:
+                raw = path.read_text(encoding="utf-8")
+                defn = json.loads(_strip_jsonc(raw))
+                defn["_path"] = str(path)
+                agents.append(defn)
+            except Exception:
+                pass
+    return agents
+
+
+def _load_config(base: Path) -> dict[str, Any]:
+    """Load project config.json."""
+    config_path = base / "config.json"
+    if not config_path.exists():
+        return {"rooms": {"common": {"agents": [], "engagement": "organic"}}}
+    try:
+        raw = config_path.read_text(encoding="utf-8")
+        return json.loads(_strip_jsonc(raw))
+    except Exception:
+        return {"rooms": {"common": {"agents": [], "engagement": "organic"}}}
+
+
+def _history_dir() -> Path:
+    return Path.cwd() / ".crewai" / "tui_history"
+
+
+# ── Widgets ────────────────────────────────────────────────────
+
+
+class ChatBubble(Static):
+    """A styled chat message bubble."""
+    pass
+
+
+_STATE_ICONS = {
+    "recalling": "🧠",
+    "dreaming": "💭",
+    "planning": "📋",
+    "thinking": "💡",
+    "using_tool": "🔧",
+    "delegating": "🤝",
+}
+
+
+class ThinkingIndicator(Static):
+    """Animated thinking spinner with step-by-step progress log."""
+
+    _frame: int = 0
+
+    def __init__(self, agent_name: str) -> None:
+        super().__init__()
+        self._agent_name = agent_name
+        self._current_status = "starting…"
+        self._steps: list[str] = []
+        self._tokens = ""
+        self._prev_input: int = 0
+        self._prev_output: int = 0
+
+    def update_status(self, state: str, detail: str | None, input_tokens: int, output_tokens: int) -> None:
+        label = detail or state or "working…"
+        if self._current_status and self._current_status != "starting…":
+            step_in = input_tokens - self._prev_input
+            step_out = output_tokens - self._prev_output
+            tok = f" [{_DIM}]↑{step_in:,} ↓{step_out:,}[/]" if (step_in or step_out) else ""
+            done_line = f"  [{_DIM}]✓ {self._current_status}{tok}[/]"
+            if done_line not in self._steps:
+                self._steps.append(done_line)
+            if len(self._steps) > 6:
+                self._steps = self._steps[-6:]
+        self._current_status = label
+        self._prev_input = input_tokens
+        self._prev_output = output_tokens
+        if input_tokens or output_tokens:
+            self._tokens = f"[{_DIM}]↑{input_tokens:,} ↓{output_tokens:,}[/]"
+        self._render_frame()
+
+    @property
+    def status_text(self) -> str:
+        return self._current_status
+
+    @status_text.setter
+    def status_text(self, value: str) -> None:
+        self._current_status = value
+        self._render_frame()
+
+    def on_mount(self) -> None:
+        self._render_frame()
+        self.set_interval(0.12, self._tick)
+
+    def _tick(self) -> None:
+        self._frame = (self._frame + 1) % len(_SPINNER)
+        self._render_frame()
+
+    def _render_frame(self) -> None:
+        ch = _SPINNER[self._frame]
+        lines: list[str] = []
+        for step in self._steps:
+            lines.append(step)
+        current = f"[{_CORAL}]{ch}[/] [{_DIM}]{self._agent_name}[/] {self._current_status}"
+        if self._tokens:
+            current += f"  {self._tokens}"
+        lines.append(current)
+        self.update("\n".join(lines))
+
+
+# ── Main TUI ──────────────────────────────────────────────────
+
+
+class AgentTUI(App[None]):
+    """Multi-agent conversational TUI with Common Room support."""
+
+    TITLE = "CrewAI Agents"
+    SUB_TITLE = "Common Room"
+
+    BINDINGS = [
+        Binding("q", "quit", "Quit"),
+        Binding("ctrl+l", "clear_chat", "Clear"),
+    ]
+
+    CSS = f"""
+    Screen {{
+        background: {_BG};
+    }}
+    Header {{
+        background: {_CORAL};
+        color: white;
+    }}
+    Footer {{
+        background: {_BG_PANEL};
+        color: {_DIM};
+    }}
+    Footer > .footer-key--key {{
+        background: {_TEAL};
+        color: white;
+    }}
+
+    #main-layout {{
+        height: 1fr;
+    }}
+
+    #sidebar {{
+        width: 42;
+        min-width: 42;
+        background: {_BG_PANEL};
+        border-right: vkey #444444;
+        overflow-x: hidden;
+    }}
+    #sidebar-tabs {{
+        height: 1fr;
+    }}
+    #sidebar ContentSwitcher {{
+        background: {_BG_PANEL};
+        height: 1fr;
+    }}
+    #sidebar TabPane {{
+        padding: 0;
+    }}
+    #sidebar Tabs {{
+        background: {_BG};
+    }}
+    #sidebar Tab {{
+        background: {_BG};
+        color: {_DIM};
+        padding: 0 1;
+    }}
+    #sidebar Tab.-active {{
+        background: {_BG_PANEL};
+        color: {_CORAL};
+    }}
+    #sidebar Tab:hover {{
+        color: white;
+    }}
+    #sidebar Underline > .underline--bar {{
+        color: {_TEAL};
+        background: {_BG};
+    }}
+    #agent-list {{
+        height: 1fr;
+        padding: 0 1;
+        background: {_BG_PANEL};
+    }}
+    #agent-list > .option-list--option-highlighted {{
+        background: {_TEAL};
+        color: white;
+    }}
+    #agent-list > .option-list--option {{
+        padding: 0 1;
+    }}
+    #memory-scope-label {{
+        padding: 1 1 0 1;
+        color: {_DIM};
+        height: auto;
+    }}
+    #btn-memory {{
+        margin: 1;
+        width: 100%;
+        background: {_BG};
+        color: {_CORAL};
+        border: tall {_TEAL};
+    }}
+    #btn-memory:hover {{
+        background: {_TEAL};
+        color: white;
+    }}
+    #sidebar-actions {{
+        height: auto;
+        min-height: 5;
+        padding: 1;
+        background: {_BG_PANEL};
+        border-top: solid #333333;
+    }}
+    #btn-provenance {{
+        width: 100%;
+        min-width: 20;
+        background: {_BG};
+        color: {_CORAL};
+        border: tall {_TEAL};
+    }}
+    #btn-provenance:hover {{
+        background: {_TEAL};
+        color: white;
+    }}
+
+    #chat-area {{
+        width: 1fr;
+    }}
+    #chat-scroll {{
+        height: 1fr;
+        padding: 1 2;
+        overflow-y: auto;
+    }}
+    #input-row {{
+        height: 4;
+        padding: 0 1;
+        background: {_BG_PANEL};
+        border-top: solid #333333;
+    }}
+    #chat-input {{
+        width: 100%;
+    }}
+    #chat-input:focus {{
+        border: tall {_CORAL};
+    }}
+
+    .user-bubble {{
+        background: {_BG_MSG_USER};
+        padding: 1 2;
+        margin: 1 0 1 6;
+    }}
+    .agent-bubble {{
+        background: {_BG_MSG_AGENT};
+        padding: 1 2;
+        margin: 1 6 1 0;
+    }}
+    .system-bubble {{
+        color: {_DIM};
+        padding: 0 2;
+        margin: 1 0 1 0;
+        text-align: center;
+    }}
+
+    ThinkingIndicator {{
+        padding: 0 2;
+        margin: 0 0 0 0;
+        height: auto;
+    }}
+    """
+
+    def __init__(
+        self,
+        agents_dir: Path,
+        config: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(**kwargs)
+        self._agents_dir = agents_dir
+        self._config = config or {}
+        self._agent_defs: list[dict[str, Any]] = []
+        self._agent_names: list[str] = []
+        self._agent_instances: dict[str, Any] = {}
+        self._current_room: str = _COMMON_ROOM
+        # (sender, content, metadata) tuples keyed by room
+        self._chat_histories: dict[str, list[tuple[str, str, str]]] = {}
+        self._processing = False
+        self._last_active_agent: str | None = None
+        self._last_agent_error: str = ""
+        self._engagement_mode: str = "organic"
+        self._scheduler: Any = None
+
+    def compose(self) -> ComposeResult:
+        yield Header()
+        with Horizontal(id="main-layout"):
+            with Vertical(id="sidebar"):
+                with TabbedContent(id="sidebar-tabs"):
+                    with TabPane("Agents", id="tab-agents"):
+                        yield OptionList(id="agent-list")
+                    with TabPane("Memory", id="tab-memory"):
+                        yield Static("Click below to open the memory browser.", id="memory-scope-label")
+                        yield Button("Open Memory Browser", id="btn-memory", variant="default")
+                with Horizontal(id="sidebar-actions"):
+                    yield Button("Provenance", id="btn-provenance", variant="default")
+            with Vertical(id="chat-area"):
+                yield VerticalScroll(id="chat-scroll")
+                with Horizontal(id="input-row"):
+                    yield Input(
+                        placeholder="Type a message — agents will respond automatically",
+                        id="chat-input",
+                    )
+        yield Footer()
+
+    def on_mount(self) -> None:
+        self._agent_defs = _load_agents(self._agents_dir)
+        self._agent_names = [
+            d.get("name", d.get("role", "unnamed")) for d in self._agent_defs
+        ]
+
+        rooms = self._config.get("rooms", {})
+        common_room = rooms.get("common", {})
+        self._engagement_mode = common_room.get("engagement", "organic")
+
+        # Subscribe to status update events from the executor
+        self._status_listener = None
+        try:
+            from crewai.events.event_bus import CrewAIEventsBus
+            bus = CrewAIEventsBus()
+        except Exception:
+            bus = None
+
+        if bus is not None:
+            try:
+                from crewai.new_agent.events import NewAgentStatusUpdateEvent
+
+                @bus.on(NewAgentStatusUpdateEvent)
+                def _on_status_update(source: Any, event: Any) -> None:
+                    self.call_from_thread(
+                        self._handle_status_update, source, event
+                    )
+
+                self._status_listener = _on_status_update
+            except Exception:
+                pass
+
+        chat_input = self.query_one("#chat-input", Input)
+        if self._engagement_mode == "organic":
+            chat_input.placeholder = "Type a message — agents will respond automatically"
+
+        if AgentSuggester is not None and self._agent_names:
+            self.query_one("#chat-input", Input).suggester = AgentSuggester(
+                self._agent_names
+            )
+
+        agent_list = self.query_one("#agent-list", OptionList)
+
+        if not self._agent_defs:
+            self._mount_sys("No agents found. Run: crewai create agent <name>")
+            return
+
+        agent_list.add_option("◆ Common Room")
+        for defn in self._agent_defs:
+            name = defn.get("name", "unnamed")
+            role = defn.get("role", "")
+            label = f"  {name}"
+            if role:
+                trunc = role[:18] + "…" if len(role) > 18 else role
+                label += f" · {trunc}"
+            agent_list.add_option(label)
+
+        agent_list.highlighted = 0
+
+        self._load_history_from_disk()
+        self._render_chat()
+        self.query_one("#chat-input", Input).focus()
+
+        try:
+            from crewai.new_agent.scheduler import TaskScheduler
+            self._scheduler = TaskScheduler()
+            self._scheduler.set_callback(self._on_scheduled_task_due)
+            self._scheduler.start()
+        except Exception:
+            pass
+
+    def _on_scheduled_task_due(self, task: Any) -> str:
+        """Callback fired by the scheduler when a task comes due."""
+        agent_name = getattr(task, "agent_name", "")
+        description = getattr(task, "description", "")
+        if not agent_name or not description:
+            return "skipped — missing agent or description"
+
+        agent = self._get_or_create_agent(agent_name)
+        if agent is None:
+            return f"agent '{agent_name}' not found"
+
+        try:
+            resp = agent.message(f"[Scheduled task] {description}")
+            content = getattr(resp, "content", str(resp))
+            self.call_from_thread(
+                self._mount_bubble,
+                agent_name,
+                f"[Scheduled] {content}",
+                f"task: {getattr(task, 'id', '?')}",
+            )
+            return content[:200]
+        except Exception as e:
+            self.call_from_thread(
+                self._mount_sys,
+                f"Scheduled task '{getattr(task, 'id', '?')}' failed: {e}",
+            )
+            return str(e)
+
+    # ── Sidebar navigation ──
+
+    def on_option_list_option_highlighted(
+        self, event: OptionList.OptionHighlighted
+    ) -> None:
+        if event.option_list.id != "agent-list":
+            return
+        idx = event.option_index
+        if idx == 0:
+            self._current_room = _COMMON_ROOM
+            self.sub_title = "Common Room"
+        elif 1 <= idx <= len(self._agent_names):
+            name = self._agent_names[idx - 1]
+            self._current_room = name
+            self.sub_title = f"Chat with {name}"
+        self._render_chat()
+
+    # ── Message routing ──
+
+    async def on_input_submitted(self, event: Input.Submitted) -> None:
+        if event.input.id != "chat-input":
+            return
+        text = event.value.strip()
+        if not text or self._processing:
+            return
+
+        event.input.clear()
+
+        # ── Slash-command handling ──
+        if text.startswith("/"):
+            self._handle_slash_command(text)
+            return
+
+        targets, clean_text = self._resolve_targets(text)
+        if not clean_text:
+            return
+
+        room = self._current_room
+
+        self._append_msg(room, "You", text)
+        self._mount_bubble("You", text)
+
+        if not targets and self._current_room == _COMMON_ROOM:
+            # Route to agent with pending suggestion before organic scoring
+            pending_agent = self._find_agent_with_pending_suggestion()
+            if pending_agent:
+                targets = [pending_agent]
+            elif self._engagement_mode == "organic":
+                scored = await self._score_relevance_llm(clean_text, self._agent_defs)
+                if scored is None:
+                    scored = self._score_relevance(clean_text, self._agent_defs)
+                if scored:
+                    top_score = scored[0][1]
+                    best = [scored[0][0]]
+                    if (
+                        len(scored) > 1
+                        and scored[1][1] >= top_score * self._RELEVANCE_TIE_THRESHOLD
+                    ):
+                        best.append(scored[1][0])
+                    targets = [
+                        d.get("name", d.get("role", "unnamed")) for d in best
+                    ]
+                else:
+                    targets = [self._last_active_agent or self._agent_names[0]]
+            elif len(self._agent_names) == 1:
+                targets = [self._agent_names[0]]
+            else:
+                self._mount_sys(
+                    "Tip: use @agent_name to direct your message, "
+                    f"e.g. @{self._agent_names[0]}"
+                )
+                return
+
+        self._processing = True
+
+        if len(targets) == 1:
+            thinking = ThinkingIndicator(targets[0])
+            scroll = self.query_one("#chat-scroll", VerticalScroll)
+            near_bottom = self._is_near_bottom(scroll)
+            scroll.mount(thinking)
+            if near_bottom:
+                scroll.scroll_end(animate=False)
+            asyncio.ensure_future(
+                self._process(targets[0], clean_text, thinking, room)
+            )
+        else:
+            asyncio.ensure_future(
+                self._process_multi(targets, clean_text, room)
+            )
+
+    # ── Organic mode relevance check (GAP-28) ──
+
+    _RELEVANCE_LLM_MODEL: str = "anthropic/claude-haiku-4-5-20251001"
+
+    async def _score_relevance_llm(
+        self, message: str, agents: list[dict[str, Any]]
+    ) -> list[tuple[dict[str, Any], int]] | None:
+        """Score agents by relevance using a cheap LLM (Haiku-tier).
+
+        Returns scored list like _score_relevance(), or None on failure
+        so the caller can fall back to the heuristic.
+        """
+        if not agents:
+            return None
+        try:
+            from crewai.llm import LLM
+        except Exception:
+            return None
+
+        agent_descriptions = "\n".join(
+            f"- {d.get('name', d.get('role', 'unnamed'))}: "
+            f"role={d.get('role', '')}, goal={d.get('goal', '')}"
+            for d in agents
+        )
+        prompt = (
+            "Given the user message and the list of available agents, "
+            "return ONLY a JSON array of agent names that should respond, "
+            "ordered by relevance (most relevant first). "
+            "Include an agent only if the message is clearly relevant to its role/goal. "
+            "Return an empty array if no agent is relevant.\n\n"
+            f"Agents:\n{agent_descriptions}\n\n"
+            f"User message: {message}\n\n"
+            "Response (JSON array only):"
+        )
+        try:
+            llm = LLM(model=self._RELEVANCE_LLM_MODEL)
+            result = await asyncio.to_thread(
+                llm.call, [{"role": "user", "content": prompt}]
+            )
+            text = str(result).strip()
+            if text.startswith("```"):
+                lines = text.split("\n")
+                text = "\n".join(
+                    lines[1:-1] if lines[-1].strip() == "```" else lines[1:]
+                )
+            names = json.loads(text)
+            if not isinstance(names, list):
+                return None
+
+            name_to_def = {
+                d.get("name", d.get("role", "unnamed")): d for d in agents
+            }
+            scored: list[tuple[dict[str, Any], int]] = []
+            for rank, name in enumerate(names):
+                if name in name_to_def:
+                    scored.append((name_to_def[name], len(names) - rank))
+            return scored if scored else None
+        except Exception:
+            return None
+
+    @staticmethod
+    def _stem_words(words: set[str]) -> set[str]:
+        """Simple suffix-stripping stemmer (GAP-108).
+
+        Produces a superset: the original word plus a stemmed variant
+        when a common English suffix is found.
+        """
+        stems: set[str] = set()
+        for w in words:
+            stems.add(w)
+            if w.endswith("ing") and len(w) > 4:
+                stems.add(w[:-3])
+            elif w.endswith("ed") and len(w) > 3:
+                stems.add(w[:-2])
+            elif w.endswith("s") and len(w) > 2:
+                stems.add(w[:-1])
+        return stems
+
+    _STOP_WORDS: set[str] = {
+        "the", "a", "an", "is", "to", "and", "or", "of", "in", "it", "on",
+        "for", "i", "my", "me", "can", "you", "do", "what", "how", "please",
+        "help", "this", "that", "with", "are", "be", "was", "were", "has",
+        "have", "had", "will", "would", "could", "should", "about", "just",
+        "not", "but", "if", "they", "them", "their", "there", "here",
+    }
+
+    _RELEVANCE_TIE_THRESHOLD: float = 0.8
+
+    def _score_relevance(
+        self, message: str, agents: list[dict[str, Any]]
+    ) -> list[tuple[dict[str, Any], int]]:
+        """Score agents by relevance to the message.
+
+        Returns (agent_def, score) tuples sorted by score descending.
+        Score = count of overlapping stems between the message and the
+        agent's role, goal, and backstory fields.
+        """
+        msg_words = set(message.lower().split()) - self._STOP_WORDS
+        msg_stems = self._stem_words(msg_words)
+
+        scored: list[tuple[dict[str, Any], int]] = []
+        for agent in agents:
+            agent_text = " ".join([
+                agent.get("role", ""),
+                agent.get("goal", ""),
+                agent.get("backstory", ""),
+            ]).lower()
+            agent_words = set(agent_text.split()) - self._STOP_WORDS
+            agent_stems = self._stem_words(agent_words)
+
+            overlap = len(agent_stems & msg_stems)
+            if overlap > 0:
+                scored.append((agent, overlap))
+
+        scored.sort(key=lambda x: x[1], reverse=True)
+        return scored
+
+    # ── Slash-command routing ──
+
+    def _handle_slash_command(self, text: str) -> None:
+        """Route /commands to their handlers."""
+        parts = text.split(None, 2)
+        cmd = parts[0].lower()
+
+        if cmd == "/memory":
+            self._handle_memory_command(parts)
+        elif cmd == "/tasks":
+            self._handle_tasks_command(parts)
+        elif cmd == "/skills":
+            self._handle_skills_command()
+        else:
+            self._mount_sys(f"Unknown command: {cmd}")
+
+    def _handle_status_update(self, source: Any, event: Any) -> None:
+        """Update the active ThinkingIndicator with structured progress."""
+        state = getattr(event, "state", "")
+        detail = getattr(event, "detail", None)
+        input_tokens = getattr(event, "input_tokens", 0)
+        output_tokens = getattr(event, "output_tokens", 0)
+
+        try:
+            scroll = self.query_one("#chat-scroll", VerticalScroll)
+            for child in reversed(scroll.children):
+                if isinstance(child, ThinkingIndicator):
+                    child.update_status(state, detail, input_tokens, output_tokens)
+                    break
+        except Exception:
+            pass
+
+    def _handle_skills_command(self) -> None:
+        """List active skills for the current agent."""
+        agent = None
+        if self._current_room != _COMMON_ROOM:
+            agent = self._get_or_create_agent(self._current_room)
+        elif self._last_active_agent:
+            agent = self._get_or_create_agent(self._last_active_agent)
+
+        if agent is None:
+            self._mount_sys("No agent selected.")
+            return
+
+        sb = getattr(agent, "_skill_builder", None)
+        active = sb.get_active_skills() if sb else []
+
+        if not active:
+            self._mount_sys("No active skills for this agent.")
+            return
+
+        lines = [f"[bold]Active Skills[/] ({len(active)})"]
+        for s in active:
+            lines.append(f"  [{_CORAL}]{s.name}[/] — {s.description}")
+        self._mount_sys("\n".join(lines))
+
+    def _handle_tasks_command(self, parts: list[str]) -> None:
+        """Show or cancel scheduled tasks."""
+        try:
+            from crewai.new_agent.scheduler import TaskScheduler
+            scheduler = TaskScheduler()
+        except Exception:
+            self._mount_sys("Scheduler not available.")
+            return
+
+        if len(parts) > 1 and parts[1] == "cancel" and len(parts) > 2:
+            task_id = parts[2].strip()
+            if scheduler.cancel(task_id):
+                self._mount_sys(f"Task '{task_id}' cancelled.")
+            else:
+                self._mount_sys(f"No pending task with id '{task_id}'.")
+            return
+
+        show_all = len(parts) > 1 and parts[1] == "all"
+        tasks = scheduler.list_tasks(include_done=show_all)
+        if not tasks:
+            self._mount_sys("No scheduled tasks." if not show_all else "No tasks found.")
+            return
+
+        lines: list[str] = [f"[bold]Scheduled Tasks[/] ({len(tasks)})"]
+        for t in tasks:
+            status_icon = {
+                "pending": "◻", "running": "▶", "completed": "✓",
+                "failed": "✗", "cancelled": "—",
+            }.get(t.status, "?")
+            agent = t.agent_name or "unknown"
+            due = t.next_run_at[:16].replace("T", " ") if t.next_run_at else "—"
+            line = (
+                f"  {status_icon} [{_CORAL}]{t.id}[/] "
+                f"[{_DIM}]{agent}[/] — {t.description[:60]}"
+            )
+            if t.status == "pending":
+                line += f"  [dim]due {due}[/]"
+            if t.schedule_type == "recurring":
+                line += "  [dim](recurring)[/]"
+            lines.append(line)
+        lines.append(f"\n[{_DIM}]/tasks all — show completed  |  /tasks cancel <id>[/]")
+        self._mount_sys("\n".join(lines))
+
+    def _handle_memory_command(self, parts: list[str]) -> None:
+        """Route /memory sub-commands."""
+        if len(parts) == 1:
+            # /memory — show recent memories for current agent
+            self._show_memory_panel()
+        elif parts[1] == "search" and len(parts) > 2:
+            self._search_memory(parts[2])
+        elif parts[1] == "clear":
+            if len(parts) > 2 and parts[2].strip() == "confirm":
+                self._clear_memory()
+            else:
+                self._mount_sys(
+                    "Type [bold]/memory clear confirm[/] to delete all memories."
+                )
+        else:
+            self._mount_sys(
+                "Usage: /memory, /memory search <query>, /memory clear confirm"
+            )
+
+    def _get_focused_agent(self) -> Any:
+        """Return the currently focused agent instance, or None."""
+        if self._current_room != _COMMON_ROOM:
+            return self._get_or_create_agent(self._current_room)
+        if self._last_active_agent:
+            return self._get_or_create_agent(self._last_active_agent)
+        if self._agent_names:
+            return self._get_or_create_agent(self._agent_names[0])
+        return None
+
+    def _show_memory_panel(self) -> None:
+        """Show recent memories for the focused agent (GAP-92: rich formatting)."""
+        agent = self._get_focused_agent()
+        if agent is None:
+            self._mount_sys("No agent selected.")
+            return
+        if not hasattr(agent, "_memory_instance") or not agent._memory_instance:
+            self._mount_sys("No memories found for this agent.")
+            return
+
+        try:
+            memories = agent._memory_instance.list_records(limit=10)
+            if not memories:
+                self._mount_sys("No memories stored yet.")
+                return
+
+            agent_name = getattr(agent, "role", "agent")
+            lines = [f"[bold]Memory Inspector — {agent_name}[/]\n"]
+
+            for i, mem in enumerate(memories, 1):
+                record = getattr(mem, "record", mem)
+                content = getattr(record, "content", "") or str(mem)
+                if len(content) > 150:
+                    content = content[:150] + "..."
+
+                meta = getattr(record, "metadata", {}) or {}
+                mem_type = meta.get("type", "raw")
+                importance = getattr(record, "importance", "") or meta.get("importance", "")
+                scope = getattr(record, "scope", "") or meta.get("scope", "")
+                timestamp = getattr(record, "created_at", "")
+
+                type_tag = (
+                    f"[bold cyan]{mem_type}[/]"
+                    if mem_type == "canonical"
+                    else f"[dim]{mem_type}[/]"
+                )
+                importance_tag = f" [yellow]★{importance}[/]" if importance else ""
+                scope_tag = f" [{_DIM}]scope:{scope}[/]" if scope else ""
+                time_tag = f" [{_DIM}]{timestamp}[/]" if timestamp else ""
+
+                lines.append(
+                    f"  {i}. {type_tag}{importance_tag}{scope_tag}{time_tag}"
+                )
+                lines.append(f"     {content}")
+                lines.append("")
+
+            lines.append(f"[{_DIM}]Use /memory search <query> to filter[/]")
+            self._mount_sys("\n".join(lines))
+        except Exception as e:
+            self._mount_sys(f"Could not retrieve memories: {e}")
+
+    def _search_memory(self, query: str) -> None:
+        """Search agent memories by query (GAP-92: rich formatting)."""
+        agent = self._get_focused_agent()
+        if agent is None:
+            self._mount_sys("No agent selected.")
+            return
+        if not hasattr(agent, "_memory_instance") or not agent._memory_instance:
+            self._mount_sys("No memory available.")
+            return
+
+        try:
+            results = agent._memory_instance.recall(query, limit=10, depth="shallow")
+            if not results:
+                self._mount_sys(f"No memories matching '{query}'")
+                return
+
+            agent_name = getattr(agent, "role", "agent")
+            lines = [f"[bold]Memories matching '{query}' — {agent_name}[/]\n"]
+
+            for i, mem in enumerate(results, 1):
+                record = getattr(mem, "record", mem)
+                content = getattr(record, "content", "") or str(mem)
+                if len(content) > 150:
+                    content = content[:150] + "..."
+
+                meta = getattr(record, "metadata", {}) or {}
+                mem_type = meta.get("type", "raw")
+                importance = getattr(record, "importance", "") or meta.get("importance", "")
+                scope = getattr(record, "scope", "") or meta.get("scope", "")
+                timestamp = getattr(record, "created_at", "")
+
+                type_tag = (
+                    f"[bold cyan]{mem_type}[/]"
+                    if mem_type == "canonical"
+                    else f"[dim]{mem_type}[/]"
+                )
+                importance_tag = f" [yellow]★{importance}[/]" if importance else ""
+                scope_tag = f" [{_DIM}]scope:{scope}[/]" if scope else ""
+                time_tag = f" [{_DIM}]{timestamp}[/]" if timestamp else ""
+
+                lines.append(
+                    f"  {i}. {type_tag}{importance_tag}{scope_tag}{time_tag}"
+                )
+                lines.append(f"     {content}")
+                lines.append("")
+
+            lines.append(f"[{_DIM}]Use /memory search <query> to refine[/]")
+            self._mount_sys("\n".join(lines))
+        except Exception as e:
+            self._mount_sys(f"Memory search failed: {e}")
+
+    def _clear_memory(self) -> None:
+        """Clear all memories for the focused agent."""
+        agent = self._get_focused_agent()
+        if agent is None:
+            self._mount_sys("No agent selected.")
+            return
+        if not hasattr(agent, "_memory_instance") or not agent._memory_instance:
+            self._mount_sys("No memory to clear.")
+            return
+
+        try:
+            agent._memory_instance.reset()
+            agent_name = getattr(agent, "role", "agent")
+            self._mount_sys(f"All memories cleared for {agent_name}.")
+        except Exception as e:
+            self._mount_sys(f"Failed to clear memories: {e}")
+
+    # ── Message routing ──
+
+    def _resolve_targets(self, text: str) -> tuple[list[str], str]:
+        """Parse all @mentions in the message.
+
+        Returns ``([agent_names], clean_text)``.
+        In the Common Room, at least one @mention is required — untagged
+        messages return ``([], text)`` so the caller can prompt.
+        In a DM room, messages always route to that room's agent.
+        """
+        found: list[str] = []
+        clean = text
+        for name in self._agent_names:
+            pattern = re.compile(r"@" + re.escape(name) + r"\b", re.IGNORECASE)
+            if pattern.search(clean):
+                found.append(name)
+                clean = pattern.sub("", clean).strip()
+        if found:
+            return found, clean
+        if self._current_room != _COMMON_ROOM:
+            return [self._current_room], text
+        return [], text
+
+    async def _process_multi(
+        self,
+        targets: list[str],
+        text: str,
+        room: str,
+    ) -> None:
+        """Process a message directed at multiple agents in parallel."""
+        # Build room context once (shared snapshot before any replies)
+        room_context: str | None = None
+        if room == _COMMON_ROOM:
+            ctx = self._build_room_context(room)
+            if ctx:
+                room_context = (
+                    "[Conversation so far]\n"
+                    f"{ctx}\n\n"
+                    "[Your turn — respond to the latest message]\n"
+                    f"{text}"
+                )
+
+        # Mount a thinking indicator per agent
+        scroll = self.query_one("#chat-scroll", VerticalScroll)
+        near_bottom = self._is_near_bottom(scroll)
+        indicators: dict[str, ThinkingIndicator] = {}
+        for target in targets:
+            ind = ThinkingIndicator(target)
+            indicators[target] = ind
+            scroll.mount(ind)
+        if near_bottom:
+            scroll.scroll_end(animate=False)
+
+        async def _call_agent(target: str) -> tuple[str, Any, Exception | None]:
+            try:
+                agent = await asyncio.to_thread(
+                    self._get_or_create_agent, target
+                )
+                if agent is None:
+                    error_detail = getattr(self, "_last_agent_error", "")
+                    detail = f": {error_detail}" if error_detail else ""
+                    return target, None, ValueError(f"Could not load '{target}'{detail}")
+                msg = room_context if room_context else text
+                resp = await asyncio.to_thread(agent.message, msg)
+                return target, resp, None
+            except Exception as exc:
+                return target, None, exc
+
+        results = await asyncio.gather(
+            *[_call_agent(t) for t in targets]
+        )
+
+        for target, response, error in results:
+            await self._safe_remove(indicators.get(target))  # type: ignore[arg-type]
+            if error or response is None:
+                msg = f"Error from {target}: {error}" if error else f"Could not load agent '{target}'."
+                self._append_msg(room, "system", msg)
+                if self._current_room == room:
+                    self._mount_sys(msg)
+                continue
+
+            meta_parts: list[str] = []
+            if response.input_tokens or response.output_tokens:
+                meta_parts.append(
+                    f"↑ {response.input_tokens or 0:,}  "
+                    f"↓ {response.output_tokens or 0:,} tokens"
+                )
+            if response.response_time_ms:
+                meta_parts.append(f"{response.response_time_ms / 1000:.1f}s")
+            metadata = " · ".join(meta_parts)
+
+            self._last_active_agent = target
+            self._append_msg(room, target, response.content, metadata)
+            if self._current_room == room:
+                self._mount_bubble(target, response.content, metadata)
+
+        self._processing = False
+        self._save_history_to_disk()
+
+    def _build_room_context(self, room: str, limit: int = 20) -> str:
+        """Build a conversation transcript from the room history.
+
+        Returned as a multi-line string the target agent can use to
+        understand what was said before it was tagged.
+        """
+        history = self._chat_histories.get(room, [])
+        # Only include user and agent messages (skip system)
+        relevant = [
+            (sender, content)
+            for sender, content, _ in history
+            if sender != "system"
+        ]
+        if not relevant:
+            return ""
+        recent = relevant[-limit:]
+        lines: list[str] = []
+        for sender, content in recent:
+            prefix = "User" if sender == "You" else sender
+            lines.append(f"{prefix}: {content}")
+        return "\n".join(lines)
+
+    async def _process(
+        self,
+        target: str | None,
+        text: str,
+        thinking: ThinkingIndicator,
+        room: str,
+    ) -> None:
+        try:
+            if target is None:
+                await self._safe_remove(thinking)
+                self._append_msg(room, "system", "No agent available.")
+                if self._current_room == room:
+                    self._mount_sys("No agent available.")
+                return
+
+            agent = await asyncio.to_thread(self._get_or_create_agent, target)
+            if agent is None:
+                await self._safe_remove(thinking)
+                error_detail = getattr(self, "_last_agent_error", "")
+                if error_detail:
+                    msg = f"Could not load agent '{target}': {error_detail}"
+                else:
+                    msg = f"Could not load agent '{target}'."
+                self._append_msg(room, "system", msg)
+                if self._current_room == room:
+                    self._mount_sys(msg)
+                return
+
+            # In the Common Room, prepend conversation context so the
+            # tagged agent can see what was discussed before.
+            message_text = text
+            if room == _COMMON_ROOM:
+                ctx = self._build_room_context(room)
+                if ctx:
+                    message_text = (
+                        "[Conversation so far]\n"
+                        f"{ctx}\n\n"
+                        "[Your turn — respond to the latest message]\n"
+                        f"{text}"
+                    )
+
+            self._last_active_agent = target
+            response = await asyncio.to_thread(agent.message, message_text)
+
+            meta_parts: list[str] = []
+            if response.input_tokens or response.output_tokens:
+                meta_parts.append(
+                    f"↑ {response.input_tokens or 0:,}  "
+                    f"↓ {response.output_tokens or 0:,} tokens"
+                )
+            if response.response_time_ms:
+                meta_parts.append(f"{response.response_time_ms / 1000:.1f}s")
+            metadata = " · ".join(meta_parts)
+
+            await self._safe_remove(thinking)
+            self._append_msg(room, target, response.content, metadata)
+            if self._current_room == room:
+                self._mount_bubble(target, response.content, metadata)
+
+        except Exception as e:
+            await self._safe_remove(thinking)
+            msg = f"Error: {e}"
+            self._append_msg(room, "system", msg)
+            if self._current_room == room:
+                self._mount_sys(msg)
+        finally:
+            self._processing = False
+            self._save_history_to_disk()
+
+    async def _safe_remove(self, widget: Static) -> None:
+        try:
+            await widget.remove()
+        except Exception:
+            pass
+
+    # ── Agent management ──
+
+    def _get_or_create_agent(self, name: str) -> Any:
+        if name in self._agent_instances:
+            return self._agent_instances[name]
+
+        defn = next(
+            (
+                d
+                for d in self._agent_defs
+                if d.get("name", d.get("role", "")) == name
+            ),
+            None,
+        )
+        if defn is None:
+            return None
+
+        try:
+            from crewai.new_agent.definition_parser import load_agent_from_definition
+
+            clean = {k: v for k, v in defn.items() if not k.startswith("_")}
+            agent = load_agent_from_definition(clean, agents_dir=self._agents_dir)
+            if agent is not None:
+                self._agent_instances[name] = agent
+            return agent
+        except Exception as exc:
+            self._last_agent_error = str(exc)
+            return None
+
+    # ── Chat rendering ──
+
+    def _is_near_bottom(self, scroll: VerticalScroll) -> bool:
+        """True when the user is scrolled to (or near) the bottom."""
+        if scroll.max_scroll_y == 0:
+            return True
+        return scroll.scroll_y >= scroll.max_scroll_y - 80
+
+    def _mount_bubble(
+        self, sender: str, content: str, metadata: str = ""
+    ) -> None:
+        scroll = self.query_one("#chat-scroll", VerticalScroll)
+        near_bottom = self._is_near_bottom(scroll)
+        scroll.mount(self._make_bubble(sender, content, metadata))
+        if near_bottom:
+            scroll.scroll_end(animate=False)
+
+    def _mount_sys(self, text: str) -> None:
+        self._mount_bubble("system", text)
+
+    def _make_bubble(
+        self, sender: str, content: str, metadata: str = ""
+    ) -> ChatBubble:
+        if sender == "You":
+            rendered = re.sub(r'\*\*(.+?)\*\*', r'[bold]\1[/bold]', content)
+            markup = f"[bold #e8e8e8]You[/]\n{rendered}"
+            return ChatBubble(markup, classes="user-bubble")
+        if sender == "system":
+            markup = f"[dim italic]{content}[/]"
+            return ChatBubble(markup, classes="system-bubble")
+        rendered = re.sub(r'\*\*(.+?)\*\*', r'[bold]\1[/bold]', content)
+        markup = f"[bold {_CORAL}]{sender}[/]\n{rendered}"
+        if metadata:
+            markup += f"\n\n[{_DIM}]{metadata}[/]"
+        return ChatBubble(markup, classes="agent-bubble")
+
+    def _render_chat(self) -> None:
+        scroll = self.query_one("#chat-scroll", VerticalScroll)
+        scroll.remove_children()
+
+        history = self._chat_histories.get(self._current_room, [])
+
+        if not history:
+            if self._current_room == _COMMON_ROOM:
+                names = ", ".join(self._agent_names[:5])
+                if self._engagement_mode == "organic":
+                    self._mount_sys(
+                        f"Welcome to the Common Room. "
+                        f"Just type — relevant agents will respond. "
+                        f"Use @agent_name to direct a message. Available: {names}"
+                    )
+                else:
+                    self._mount_sys(
+                        f"Welcome to the Common Room. "
+                        f"Use @agent_name to chat. Available: {names}"
+                    )
+            else:
+                self._mount_sys(
+                    f"Chat with {self._current_room}. Type a message to begin."
+                )
+            return
+
+        for sender, content, metadata in history:
+            scroll.mount(self._make_bubble(sender, content, metadata))
+        scroll.scroll_end(animate=False)
+
+    # ── History persistence ──
+
+    def _append_msg(
+        self, room: str, sender: str, content: str, metadata: str = ""
+    ) -> None:
+        if room not in self._chat_histories:
+            self._chat_histories[room] = []
+        self._chat_histories[room].append((sender, content, metadata))
+
+    def _save_history_to_disk(self) -> None:
+        hdir = _history_dir()
+        hdir.mkdir(parents=True, exist_ok=True)
+        for room, msgs in self._chat_histories.items():
+            safe = room.replace("/", "_").replace("\\", "_")
+            path = hdir / f"{safe}.json"
+            data = [
+                {"sender": s, "content": c, "metadata": m} for s, c, m in msgs
+            ]
+            try:
+                path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+            except Exception:
+                pass
+
+    def _load_history_from_disk(self) -> None:
+        hdir = _history_dir()
+        if not hdir.exists():
+            return
+        for path in hdir.glob("*.json"):
+            room = path.stem
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                self._chat_histories[room] = [
+                    (d["sender"], d["content"], d.get("metadata", ""))
+                    for d in data
+                ]
+            except Exception:
+                pass
+
+    # ── Sidebar: Memory tab ──
+
+    def _launch_memory_browser(self) -> None:
+        """Suspend this TUI and launch the memory browser as a subprocess."""
+        import subprocess
+        with self.suspend():
+            subprocess.run(
+                [sys.executable, "-c", "from crewai_cli.memory_tui import MemoryTUI; MemoryTUI().run()"],
+            )
+
+    def _find_agent_with_pending_suggestion(self) -> str | None:
+        """Return the name of the first loaded agent that has a pending skill or knowledge suggestion."""
+        for name, agent in self._agent_instances.items():
+            sb = getattr(agent, "_skill_builder", None)
+            if sb and sb.pending_suggestions:
+                return name
+            kd = getattr(agent, "_knowledge_discovery", None)
+            if kd and getattr(kd, "pending_suggestions", None):
+                return name
+        return None
+
+    def _get_focused_agent_name(self) -> str | None:
+        """Return the agent name for the current room (DM only)."""
+        if self._current_room == _COMMON_ROOM:
+            return self._last_active_agent
+        if self._current_room in self._agent_names:
+            return self._current_room
+        return None
+
+    def on_tabbed_content_tab_activated(self, event: TabbedContent.TabActivated) -> None:
+        pass
+
+    # ── Sidebar: Provenance button ──
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "btn-memory":
+            self._launch_memory_browser()
+            return
+        if event.button.id != "btn-provenance":
+            return
+        agent_name = self._get_focused_agent_name()
+        if not agent_name:
+            self._mount_sys("Select an agent to view its decision trace.")
+            return
+
+        try:
+            from crewai.new_agent.cli_provider import _get_storage
+            entries = _get_storage(agent_name).load_provenance()
+        except Exception:
+            entries = []
+
+        if not entries:
+            self._mount_sys(f"No provenance data for {agent_name}.")
+            return
+
+        lines = [f"[bold {_CORAL}]Provenance — {agent_name}[/] ({len(entries)} entries)\n"]
+        for i, entry in enumerate(entries[-10:], 1):
+            action = getattr(entry, "action", "?")
+            reasoning = getattr(entry, "reasoning", "") or ""
+            outcome = getattr(entry, "outcome", "") or ""
+            ts = getattr(entry, "timestamp", "")
+            conf = getattr(entry, "confidence", None)
+
+            line = f"[bold {_TEAL}]Step {i}[/] [{_DIM}]{ts}[/]\n"
+            line += f"  Action: {action}\n"
+            if reasoning:
+                short = reasoning[:120] + "..." if len(reasoning) > 120 else reasoning
+                line += f"  Reasoning: {short}\n"
+            if outcome:
+                short = outcome[:120] + "..." if len(outcome) > 120 else outcome
+                line += f"  Outcome: {short}\n"
+            if conf is not None:
+                line += f"  Confidence: {conf:.2f}\n"
+            lines.append(line)
+        self._mount_sys("\n".join(lines))
+
+    # ── Actions ──
+
+    def action_quit(self) -> None:
+        """Graceful shutdown: stop scheduler, silence event bus, then exit."""
+        self._mount_sys("Shutting down...")
+        if self._scheduler:
+            try:
+                self._scheduler.stop()
+            except Exception:
+                pass
+        try:
+            from crewai.events.event_bus import crewai_event_bus
+            crewai_event_bus.shutdown(wait=False)
+        except Exception:
+            pass
+        self.exit()
+
+    def action_clear_chat(self) -> None:
+        self._chat_histories[self._current_room] = []
+        self._render_chat()
+        self._save_history_to_disk()
+
+
+def _load_dotenv(base: Path) -> None:
+    """Load .env file into os.environ if it exists."""
+    env_path = base / ".env"
+    if not env_path.exists():
+        return
+    try:
+        for line in env_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            key, _, value = line.partition("=")
+            key = key.strip()
+            value = value.strip()
+            if key and value and key not in os.environ:
+                os.environ[key] = value
+    except Exception:
+        pass
+
+
+def run_agent_tui(agents_dir: Path | None = None) -> None:
+    """Launch the agent TUI."""
+    base = Path.cwd()
+    if agents_dir is None:
+        agents_dir = base / "agents"
+
+    if not agents_dir.is_dir():
+        print(f"No agents/ directory found at {agents_dir}", file=sys.stderr)
+        print("Create agents first: crewai create agent <name>", file=sys.stderr)
+        raise SystemExit(1)
+
+    files = list(agents_dir.glob("*.json")) + list(agents_dir.glob("*.jsonc"))
+    if not files:
+        print("No agent definitions found in agents/", file=sys.stderr)
+        print("Create agents first: crewai create agent <name>", file=sys.stderr)
+        raise SystemExit(1)
+
+    _load_dotenv(base)
+    config = _load_config(base)
+    app = AgentTUI(agents_dir=agents_dir, config=config)
+    app.run()

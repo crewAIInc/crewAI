@@ -1,4 +1,5 @@
 from enum import Enum
+import os
 import subprocess
 
 import click
@@ -8,18 +9,60 @@ from packaging import version
 from crewai_cli.utils import build_env_with_all_tool_credentials, read_toml
 from crewai_cli.version import get_crewai_version
 
+_UV_CONTEXT_VAR = "_CREWAI_UV"
+
 
 class CrewType(Enum):
     STANDARD = "standard"
     FLOW = "flow"
 
 
-def run_crew(trained_agents_file: str | None = None) -> None:
-    """Run the crew or flow by running a command in the UV environment.
+def _has_agents_dir() -> bool:
+    """Check if current directory has an agents/ directory with definitions."""
+    from pathlib import Path
+    agents_dir = Path.cwd() / "agents"
+    if not agents_dir.is_dir():
+        return False
+    files = list(agents_dir.glob("*.json")) + list(agents_dir.glob("*.jsonc"))
+    return len(files) > 0
 
-    Starting from version 0.103.0, this command can be used to run both
-    standard crews and flows. For flows, it detects the type from pyproject.toml
-    and automatically runs the appropriate command.
+
+def _needs_uv_relaunch() -> bool:
+    """True when we should re-exec through ``uv run`` for the project venv."""
+    if os.environ.get(_UV_CONTEXT_VAR):
+        return False
+    from pathlib import Path
+    pyproject = Path.cwd() / "pyproject.toml"
+    if not pyproject.exists():
+        return False
+    try:
+        return 'type = "agent"' in pyproject.read_text(encoding="utf-8")
+    except Exception:
+        return False
+
+
+def _relaunch_via_uv(args: list[str]) -> None:
+    """Re-exec ``uv run crewai <args>`` inside the project venv, then exit."""
+    env = {**os.environ, _UV_CONTEXT_VAR: "1"}
+    cmd = ["uv", "run", "crewai", *args]
+    try:
+        result = subprocess.run(cmd, env=env)
+        raise SystemExit(result.returncode)
+    except FileNotFoundError:
+        click.secho(
+            "uv not found — running without project venv. "
+            "Install uv (https://docs.astral.sh/uv/) for full provider support.",
+            fg="yellow",
+        )
+
+
+def run_crew(trained_agents_file: str | None = None) -> None:
+    """Run the crew, flow, or agent TUI.
+
+    Detects the project type:
+    - If agents/ directory exists with definitions: launch agent TUI
+    - If pyproject.toml type is "flow": run the flow
+    - Otherwise: run the crew
 
     Args:
         trained_agents_file: Optional path to a trained-agents pickle produced
@@ -27,6 +70,18 @@ def run_crew(trained_agents_file: str | None = None) -> None:
             ``CREWAI_TRAINED_AGENTS_FILE`` so agents load suggestions from this
             file instead of the default ``trained_agents_data.pkl``.
     """
+    # Check for agents/ directory first — agent projects don't need pyproject.toml
+    if _has_agents_dir():
+        if _needs_uv_relaunch():
+            uv_args = ["run"]
+            if trained_agents_file:
+                uv_args.extend(["-f", trained_agents_file])
+            _relaunch_via_uv(uv_args)
+        click.echo("Launching agent TUI...")
+        from crewai_cli.agent_tui import run_agent_tui
+        run_agent_tui()
+        return
+
     crewai_version = get_crewai_version()
     min_required_version = "0.71.0"
     pyproject_data = read_toml()

@@ -951,7 +951,16 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     stream: bool = Field(default=False)
     memory: Memory | MemoryScope | MemorySlice | None = Field(default=None)
     input_provider: InputProvider | None = Field(default=None)
+    conversational_provider: Any = Field(default=None)
     suppress_flow_events: bool = Field(default=False)
+    pending_mode: bool = Field(
+        default=False,
+        description=(
+            "When True, ask() will serialize state and raise "
+            "HumanFeedbackPending instead of blocking for user input, "
+            "allowing the thread to be freed for server-side use cases."
+        ),
+    )
     human_feedback_history: list[HumanFeedbackResult] = Field(default_factory=list)
     last_human_feedback: HumanFeedbackResult | None = Field(default=None)
 
@@ -1072,6 +1081,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     _event_futures: list[Future[None]] = PrivateAttr(default_factory=list)
     _pending_feedback_context: PendingFeedbackContext | None = PrivateAttr(default=None)
     _human_feedback_method_outputs: dict[str, Any] = PrivateAttr(default_factory=dict)
+    _pending_response: str | None = PrivateAttr(default=None)
     _input_history: list[InputHistoryEntry] = PrivateAttr(default_factory=list)
     _state: Any = PrivateAttr(default=None)
 
@@ -1431,6 +1441,44 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         # Mark that we're resuming execution
         instance._is_execution_resuming = True
 
+        return instance
+
+    @classmethod
+    def from_ask_pending(
+        cls,
+        user_input: str,
+        state: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> Flow[Any]:
+        """Create a Flow ready to resume from a pending ask().
+
+        When ``pending_mode=True`` causes ``ask()`` to raise
+        ``HumanFeedbackPending``, use this classmethod to construct a
+        new flow that will return ``user_input`` on the next ``ask()``
+        call instead of blocking or raising again.
+
+        Args:
+            user_input: The answer to feed back into ``ask()``.
+            state: Optional state dict to restore (from ``HumanFeedbackPending.callback_info["state"]``).
+            **kwargs: Additional keyword arguments passed to the Flow constructor.
+
+        Returns:
+            A new Flow instance with ``_pending_response`` set.
+
+        Example:
+            ```python
+            try:
+                result = flow.kickoff()
+            except HumanFeedbackPending as e:
+                state = e.callback_info.get("state")
+                flow2 = MyFlow.from_ask_pending("user answer", state=state)
+                result = flow2.kickoff()
+            ```
+        """
+        instance = cls(**kwargs)
+        if state is not None:
+            instance._initialize_state(state)
+        instance._pending_response = user_input
         return instance
 
     @property
@@ -3202,6 +3250,15 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         except Exception:
             logger.debug("Failed to checkpoint state before ask()", exc_info=True)
 
+    def _serialize_state(self) -> dict[str, Any]:
+        """Serialize flow state for pending-mode persistence."""
+        state = self._state
+        if isinstance(state, dict):
+            return dict(state)
+        if hasattr(state, "model_dump"):
+            return state.model_dump()
+        return {}
+
     def ask(
         self,
         message: str,
@@ -3214,6 +3271,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         timeout expires. Works in both sync and async flow methods (the
         flow framework runs sync methods in a thread pool via
         ``asyncio.to_thread``, so the event loop stays free).
+
+        When ``pending_mode`` is enabled on the flow, instead of blocking
+        this method serializes the flow state and raises
+        ``HumanFeedbackPending``, allowing the calling thread to be freed.
+        Use ``from_ask_pending()`` to continue execution later.
+        If a ``_pending_response`` is set (from ``from_ask_pending()``), it is
+        returned immediately without blocking or raising.
 
         Timeout ensures flows always terminate. When timeout expires,
         ``None`` is returned, enabling the pattern::
@@ -3241,6 +3305,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             The user's input as a string, or ``None`` on timeout, disconnect,
             or provider error. Empty string ``""`` means the user pressed
             Enter without typing (intentional empty input).
+
+        Raises:
+            HumanFeedbackPending: When ``pending_mode`` is True and no
+                ``_pending_response`` is available.
 
         Example:
             ```python
@@ -3271,6 +3339,22 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         method_name = current_flow_method_name.get("unknown")
 
+        # GAP-34: If a pending response was set (from from_ask_pending()), return it
+        if self._pending_response is not None:
+            response = self._pending_response
+            self._pending_response = None
+            self._input_history.append(
+                {
+                    "message": message,
+                    "response": response,
+                    "method_name": method_name,
+                    "timestamp": datetime.now(),
+                    "metadata": metadata,
+                    "response_metadata": None,
+                }
+            )
+            return response
+
         # Emit input requested event
         crewai_event_bus.emit(
             self,
@@ -3286,6 +3370,37 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         # Auto-checkpoint state before waiting
         self._checkpoint_state_for_ask()
 
+        # GAP-34: pending mode — serialize state and raise instead of blocking
+        if self.pending_mode:
+            from crewai.flow.async_feedback.types import (
+                HumanFeedbackPending,
+                PendingFeedbackContext,
+            )
+
+            state = self._serialize_state()
+            context = PendingFeedbackContext(
+                flow_id=self.flow_id,
+                flow_class=f"{self.__class__.__module__}.{self.__class__.__qualname__}",
+                method_name=method_name,
+                method_output=state,
+                message=message,
+                metadata=metadata or {},
+            )
+            raise HumanFeedbackPending(
+                context=context,
+                callback_info={"state": state},
+            )
+
+        # ── ConversationalProvider path ──────────────────────────────
+        # When a conversational_provider is set (e.g. from NewAgent),
+        # use it for transport instead of the InputProvider protocol.
+        conv_provider = self.conversational_provider
+        if conv_provider is not None:
+            return self._ask_via_conversational_provider(
+                conv_provider, message, method_name, metadata, timeout,
+            )
+
+        # ── InputProvider path (existing behavior) ───────────────────
         provider = self._resolve_input_provider()
         raw: str | InputResponse | None = None
 
@@ -3355,6 +3470,195 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         )
 
         return response
+
+    def _ask_via_conversational_provider(
+        self,
+        conv_provider: Any,
+        message: str,
+        method_name: str,
+        metadata: dict[str, Any] | None,
+        timeout: float | None,
+    ) -> str | None:
+        """Route ask() through a ConversationalProvider.
+
+        Sends the question as an "agent" message, then waits for the user
+        reply via ``receive_message()``. Both calls are async on the
+        provider, so we run them in an event loop.
+
+        Args:
+            conv_provider: A ConversationalProvider instance.
+            message: The question to send.
+            method_name: Name of the calling flow method (for history).
+            metadata: Optional metadata from the caller.
+            timeout: Maximum seconds to wait for a reply (best-effort).
+
+        Returns:
+            The user's reply text, or None on timeout/error.
+        """
+        from concurrent.futures import (
+            ThreadPoolExecutor,
+            TimeoutError as FuturesTimeoutError,
+        )
+        from datetime import datetime
+
+        from crewai.events.types.flow_events import (
+            FlowInputReceivedEvent,
+        )
+        from crewai.new_agent.models import Message as AgentMessage
+
+        async def _round_trip() -> str | None:
+            # Send the question
+            outgoing = AgentMessage(
+                role="agent",
+                content=message,
+                metadata=metadata,
+            )
+            await conv_provider.send_message(outgoing)
+
+            # Wait for the user reply
+            reply = await conv_provider.receive_message()
+            return reply.content if reply else None
+
+        response: str | None = None
+        try:
+            if timeout is not None:
+                executor = ThreadPoolExecutor(max_workers=1)
+                ctx = contextvars.copy_context()
+                future = executor.submit(ctx.run, asyncio.run, _round_trip())
+                try:
+                    response = future.result(timeout=timeout)
+                except FuturesTimeoutError:
+                    future.cancel()
+                    response = None
+                finally:
+                    executor.shutdown(wait=False, cancel_futures=True)
+            else:
+                # Run the async round-trip synchronously. Use an existing
+                # loop if available, otherwise create one.
+                try:
+                    loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    loop = None
+
+                if loop and loop.is_running():
+                    # We're inside an async context (e.g. async flow method
+                    # run in a thread pool). Spin a new loop in this thread.
+                    response = asyncio.run(_round_trip())
+                else:
+                    response = asyncio.run(_round_trip())
+        except KeyboardInterrupt:
+            raise
+        except Exception:
+            logger.debug(
+                "ConversationalProvider error in ask()", exc_info=True
+            )
+            response = None
+
+        # Record in history
+        self._input_history.append(
+            {
+                "message": message,
+                "response": response,
+                "method_name": method_name,
+                "timestamp": datetime.now(),
+                "metadata": metadata,
+                "response_metadata": None,
+            }
+        )
+
+        # Emit input received event
+        crewai_event_bus.emit(
+            self,
+            FlowInputReceivedEvent(
+                type="flow_input_received",
+                flow_name=self.name or self.__class__.__name__,
+                method_name=method_name,
+                message=message,
+                response=response,
+                metadata=metadata,
+            ),
+        )
+
+        return response
+
+    def say(
+        self,
+        message: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """Send a message to the user without waiting for a response.
+
+        This is a one-way communication channel for status updates,
+        progress reports, or informational messages during flow execution.
+
+        When a ``conversational_provider`` is set (e.g. from NewAgent),
+        the message is sent through it. Otherwise, the message is printed
+        to the console via Rich and emitted as a ``FlowMessageSentEvent``.
+
+        Args:
+            message: The message to send to the user.
+            metadata: Optional metadata to attach to the message
+                (e.g., category, severity, context).
+
+        Example:
+            ```python
+            class MyFlow(Flow):
+                @start()
+                def process(self):
+                    self.say("Starting data analysis...")
+                    # ... do work ...
+                    self.say("Analysis complete, generating report.")
+                    return self.ask("Would you like the detailed or summary report?")
+            ```
+        """
+        from crewai.events.types.flow_events import FlowMessageSentEvent
+        from crewai.flow.flow_context import current_flow_method_name
+
+        method_name = current_flow_method_name.get("unknown")
+
+        # ── ConversationalProvider path ──────────────────────────────
+        conv_provider = self.conversational_provider
+        if conv_provider is not None:
+            from crewai.new_agent.models import Message as AgentMessage
+
+            outgoing = AgentMessage(
+                role="agent",
+                content=message,
+                metadata=metadata,
+            )
+            try:
+                try:
+                    loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    loop = None
+
+                if loop and loop.is_running():
+                    asyncio.run(conv_provider.send_message(outgoing))
+                else:
+                    asyncio.run(conv_provider.send_message(outgoing))
+            except Exception:
+                logger.debug(
+                    "ConversationalProvider error in say()", exc_info=True
+                )
+        else:
+            # ── Console fallback ─────────────────────────────────────
+            console = Console()
+            flow_name = self.name or self.__class__.__name__
+            console.print(
+                Panel(message, title=f"[bold]{flow_name}[/bold]", border_style="blue")
+            )
+
+        # Emit event regardless of provider
+        crewai_event_bus.emit(
+            self,
+            FlowMessageSentEvent(
+                type="flow_message_sent",
+                flow_name=self.name or self.__class__.__name__,
+                method_name=method_name,
+                message=message,
+                metadata=metadata,
+            ),
+        )
 
     def _request_human_feedback(
         self,

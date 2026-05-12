@@ -11,6 +11,7 @@ from crewai_core.token_manager import TokenManager
 from crewai_cli.add_crew_to_flow import add_crew_to_flow
 from crewai_cli.authentication.main import AuthenticationCommand
 from crewai_cli.config import Settings
+from crewai_cli.create_agent import create_agent
 from crewai_cli.create_crew import create_crew
 from crewai_cli.create_flow import create_flow
 from crewai_cli.crew_chat import run_chat
@@ -91,20 +92,31 @@ def uv(uv_args: tuple[str, ...]) -> None:
 
 
 @crewai.command()
-@click.argument("type", type=click.Choice(["crew", "flow"]))
-@click.argument("name")
+@click.argument("type", type=click.Choice(["crew", "flow", "agent"]))
+@click.argument("name", required=False, default=None)
 @click.option("--provider", type=str, help="The provider to use for the crew")
 @click.option("--skip_provider", is_flag=True, help="Skip provider validation")
 def create(
-    type: str, name: str, provider: str | None, skip_provider: bool = False
+    type: str, name: str | None, provider: str | None, skip_provider: bool = False
 ) -> None:
-    """Create a new crew, or flow."""
+    """Create a new crew, flow, or agent.
+
+    For agents, NAME is optional — omit it to enter interactive mode.
+    """
     if type == "crew":
+        if name is None:
+            click.secho("Error: name is required for crew creation.", fg="red")
+            raise SystemExit(1)
         create_crew(name, provider, skip_provider)
     elif type == "flow":
+        if name is None:
+            click.secho("Error: name is required for flow creation.", fg="red")
+            raise SystemExit(1)
         create_flow(name)
+    elif type == "agent":
+        create_agent(name)
     else:
-        click.secho("Error: Invalid type. Must be 'crew' or 'flow'.", fg="red")
+        click.secho("Error: Invalid type. Must be 'crew', 'flow', or 'agent'.", fg="red")
 
 
 @crewai.command()
@@ -133,19 +145,115 @@ def version(tools: bool) -> None:
     "--n_iterations",
     type=int,
     default=5,
-    help="Number of iterations to train the crew",
+    help="Number of iterations to run training feedback.",
 )
 @click.option(
     "-f",
     "--filename",
     type=str,
     default="trained_agents_data.pkl",
-    help="Path to a custom file for training",
+    help="Path to a trained-agents pickle (Crew projects only).",
 )
 def train(n_iterations: int, filename: str) -> None:
-    """Train the crew."""
-    click.echo(f"Training the Crew for {n_iterations} iterations")
-    train_crew(n_iterations, filename)
+    """Train the crew or agents.
+
+    Auto-detects project type: if agents/ directory exists, runs interactive
+    NewAgent training (feedback → canonical memories). Otherwise falls back to
+    legacy Crew training.
+    """
+    from pathlib import Path
+
+    from crewai_cli.run_crew import _needs_uv_relaunch, _relaunch_via_uv
+
+    agents_dir = Path("agents")
+    agent_files = (
+        sorted(agents_dir.glob("*.json")) + sorted(agents_dir.glob("*.jsonc"))
+        if agents_dir.is_dir()
+        else []
+    )
+
+    if agent_files:
+        if _needs_uv_relaunch():
+            _relaunch_via_uv(["train", "-n", str(n_iterations), "-f", filename])
+        _train_new_agents(agent_files, n_iterations)
+    else:
+        click.echo(f"Training the Crew for {n_iterations} iterations")
+        train_crew(n_iterations, filename)
+
+
+def _train_new_agents(agent_files: list, n_iterations: int) -> None:
+    """Run interactive training for NewAgent agents.
+
+    For each agent, loads benchmark cases, runs them, shows the response,
+    and asks the user for feedback. Feedback is saved as canonical memories.
+    """
+    import asyncio
+    from pathlib import Path
+
+    from crewai_cli.benchmark import load_benchmark_cases
+
+    benchmarks_dir = Path("benchmarks")
+    agents_trained = 0
+
+    for agent_path in agent_files:
+        agent_name = agent_path.stem
+        cases_path = benchmarks_dir / f"{agent_name}_cases.json"
+
+        if not cases_path.exists():
+            click.secho(f"  Skipping {agent_name} — no {cases_path}", fg="yellow")
+            continue
+
+        try:
+            cases = load_benchmark_cases(cases_path)
+        except (FileNotFoundError, ValueError) as e:
+            click.secho(f"  Error loading cases for {agent_name}: {e}", fg="red")
+            continue
+
+        click.echo()
+        click.secho(f"Training {agent_name} ({len(cases)} cases, {n_iterations} iterations)", fg="cyan", bold=True)
+
+        try:
+            from crewai.new_agent.definition_parser import load_agent_definition
+            agent = load_agent_definition(str(agent_path))
+        except Exception as e:
+            click.secho(f"  Error loading agent {agent_name}: {e}", fg="red")
+            continue
+
+        for iteration in range(n_iterations):
+            click.secho(f"\n  Iteration {iteration + 1}/{n_iterations}", fg="cyan")
+            for case in cases:
+                user_input = case.input
+                click.echo(f"\n  Input: {user_input}")
+
+                try:
+                    response = asyncio.run(agent.amessage(user_input))
+                    click.echo(f"  Response: {response.content[:500]}")
+                except Exception as e:
+                    click.secho(f"  Error: {e}", fg="red")
+                    continue
+
+                if case.criteria:
+                    click.echo(f"  Criteria: {case.criteria}")
+
+                feedback = click.prompt(
+                    "  Feedback (Enter to skip, or type feedback)",
+                    default="",
+                    show_default=False,
+                )
+                if feedback.strip():
+                    agent.train(
+                        feedback=feedback.strip(),
+                        task_context=f"Input: {user_input}\nResponse: {response.content[:300]}",
+                    )
+                    click.secho("  ✓ Feedback saved as canonical memory", fg="green")
+
+        agents_trained += 1
+
+    click.echo()
+    if agents_trained == 0:
+        click.secho("No agents with matching benchmark cases found.", fg="yellow")
+    else:
+        click.secho(f"Training complete ({agents_trained} agent(s)).", fg="green", bold=True)
 
 
 @crewai.command()
@@ -346,14 +454,14 @@ def memory(
     "--n_iterations",
     type=int,
     default=3,
-    help="Number of iterations to Test the crew",
+    help="Number of iterations to run (Crew) or repetitions per case (NewAgent).",
 )
 @click.option(
     "-m",
     "--model",
     type=str,
-    default="gpt-4o-mini",
-    help="LLM Model to run the tests on the Crew. For now only accepting only OpenAI models.",
+    default=None,
+    help="LLM model to test with. For NewAgent, defaults to each agent's configured model.",
 )
 @click.option(
     "-f",
@@ -361,17 +469,136 @@ def memory(
     "trained_agents_file",
     type=str,
     default=None,
-    help=(
-        "Path to a trained-agents pickle (produced by `crewai train -f`). "
-        "When set, agents load suggestions from this file instead of the "
-        "default trained_agents_data.pkl. Equivalent to setting "
-        "CREWAI_TRAINED_AGENTS_FILE."
-    ),
+    help="Path to a trained-agents pickle (Crew projects only).",
 )
-def test(n_iterations: int, model: str, trained_agents_file: str | None) -> None:
-    """Test the crew and evaluate the results."""
-    click.echo(f"Testing the crew for {n_iterations} iterations with model {model}")
-    evaluate_crew(n_iterations, model, trained_agents_file=trained_agents_file)
+@click.option(
+    "--threshold",
+    type=float,
+    default=0.7,
+    help="Minimum score to pass a test case (NewAgent only, 0.0-1.0).",
+)
+@click.option(
+    "--judge-model",
+    type=str,
+    default="openai/gpt-4o-mini",
+    help="LLM model for evaluation judging (NewAgent only).",
+)
+def test(
+    n_iterations: int,
+    model: str | None,
+    trained_agents_file: str | None,
+    threshold: float,
+    judge_model: str,
+) -> None:
+    """Test the crew or agents and evaluate the results.
+
+    Auto-detects project type: if agents/ directory exists with .json/.jsonc
+    files, runs NewAgent benchmarks. Otherwise falls back to legacy Crew testing.
+    """
+    from pathlib import Path
+
+    from crewai_cli.run_crew import _needs_uv_relaunch, _relaunch_via_uv
+
+    agents_dir = Path("agents")
+    agent_files = sorted(agents_dir.glob("*.json")) + sorted(agents_dir.glob("*.jsonc")) if agents_dir.is_dir() else []
+
+    if agent_files:
+        if _needs_uv_relaunch():
+            uv_args = ["test", "-n", str(n_iterations), "--threshold", str(threshold), "--judge-model", judge_model]
+            if model:
+                uv_args.extend(["-m", model])
+            if trained_agents_file:
+                uv_args.extend(["-f", trained_agents_file])
+            _relaunch_via_uv(uv_args)
+        _test_new_agents(agent_files, n_iterations, model, threshold, judge_model)
+    else:
+        crew_model = model or "gpt-4o-mini"
+        click.echo(f"Testing the crew for {n_iterations} iterations with model {crew_model}")
+        evaluate_crew(n_iterations, crew_model, trained_agents_file=trained_agents_file)
+
+
+def _test_new_agents(
+    agent_files: list,
+    n_iterations: int,
+    model: str | None,
+    threshold: float,
+    judge_model: str,
+) -> None:
+    """Run NewAgent test cases with pass/fail threshold."""
+    import asyncio
+    from pathlib import Path
+
+    from crewai_cli.benchmark import (
+        format_results_table,
+        load_benchmark_cases,
+        run_benchmark,
+    )
+
+    benchmarks_dir = Path("benchmarks")
+    all_passed = True
+    agents_tested = 0
+
+    for agent_path in agent_files:
+        agent_name = agent_path.stem
+        cases_path = benchmarks_dir / f"{agent_name}_cases.json"
+
+        if not cases_path.exists():
+            click.secho(f"  Skipping {agent_name} — no {cases_path} found", fg="yellow")
+            continue
+
+        try:
+            cases = load_benchmark_cases(cases_path)
+        except (FileNotFoundError, ValueError) as e:
+            click.secho(f"  Error loading cases for {agent_name}: {e}", fg="red")
+            all_passed = False
+            continue
+
+        model_list = [model] if model else None
+
+        click.echo()
+        click.secho(f"Testing {agent_name} ({len(cases)} cases)", fg="cyan", bold=True)
+
+        try:
+            results_by_model = asyncio.run(
+                run_benchmark(
+                    agent_def=str(agent_path),
+                    cases=cases,
+                    models=model_list,
+                    judge_model=judge_model,
+                )
+            )
+        except Exception as e:
+            click.secho(f"  Error running tests for {agent_name}: {e}", fg="red")
+            all_passed = False
+            continue
+
+        agents_tested += 1
+
+        for model_name, results in results_by_model.items():
+            click.echo(format_results_table(results))
+
+            failed = [r for r in results if r.score < threshold]
+            if failed:
+                all_passed = False
+                click.secho(
+                    f"  FAILED: {len(failed)}/{len(results)} cases below threshold ({threshold})",
+                    fg="red",
+                )
+            else:
+                click.secho(
+                    f"  PASSED: all {len(results)} cases >= {threshold}",
+                    fg="green",
+                )
+
+    click.echo()
+    if agents_tested == 0:
+        click.secho("No agents with matching benchmark cases found.", fg="yellow")
+        raise SystemExit(1)
+    elif all_passed:
+        click.secho(f"All tests passed ({agents_tested} agent(s)).", fg="green", bold=True)
+    else:
+        click.secho("Some tests failed.", fg="red", bold=True)
+        raise SystemExit(1)
 
 
 @crewai.command(
@@ -598,6 +825,145 @@ def flow_add_crew(crew_name: str) -> None:
     """Add a crew to an existing flow."""
     click.echo(f"Adding crew {crew_name} to the flow")
     add_crew_to_flow(crew_name)
+
+
+@crewai.group()
+def agent() -> None:
+    """Agent management commands."""
+
+
+@agent.command(name="reset-history")
+@click.argument("name")
+@click.option(
+    "--keep-provenance",
+    is_flag=True,
+    help="Keep the provenance (decision audit trail) when clearing history.",
+)
+def agent_reset_history(name: str, keep_provenance: bool) -> None:
+    """Clear conversation history for the named agent."""
+    from pathlib import Path
+
+    conversations_dir = Path.cwd() / ".crewai" / "conversations"
+    history_path = conversations_dir / f"{name}.json"
+    provenance_path = conversations_dir / f"{name}_provenance.json"
+
+    cleared: list[str] = []
+
+    if history_path.exists():
+        history_path.unlink()
+        cleared.append("conversation history")
+
+    if not keep_provenance and provenance_path.exists():
+        provenance_path.unlink()
+        cleared.append("provenance log")
+
+    if cleared:
+        click.secho(
+            f"Cleared {' and '.join(cleared)} for agent '{name}'.",
+            fg="green",
+        )
+    else:
+        click.secho(
+            f"No conversation history found for agent '{name}'.",
+            fg="yellow",
+        )
+
+
+@agent.command(name="memory")
+@click.argument("name")
+@click.option("--search", "-s", default=None, help="Search memories by keyword")
+@click.option("--clear", is_flag=True, help="Clear all memories")
+@click.option("--limit", "-n", "limit_", default=10, help="Number of memories to show")
+def agent_memory(name: str, search: str | None, clear: bool, limit_: int) -> None:
+    """Inspect or manage agent memories."""
+    from pathlib import Path
+
+    agents_dir = Path.cwd() / "agents"
+    agent_path = None
+    for ext in (".json", ".jsonc"):
+        p = agents_dir / f"{name}{ext}"
+        if p.exists():
+            agent_path = p
+            break
+
+    if not agent_path:
+        click.echo(f"Agent '{name}' not found in agents/ directory.")
+        return
+
+    try:
+        from crewai.new_agent.definition_parser import load_agent_from_definition
+
+        agent_instance = load_agent_from_definition(agent_path, agents_dir)
+    except Exception as e:
+        click.echo(f"Failed to load agent '{name}': {e}")
+        return
+
+    if agent_instance is None:
+        click.echo(f"Could not create agent '{name}'.")
+        return
+
+    if clear:
+        if click.confirm(f"Clear all memories for '{name}'?"):
+            if hasattr(agent_instance, "_memory_instance") and agent_instance._memory_instance:
+                try:
+                    agent_instance._memory_instance.reset()
+                    click.echo(f"Memories cleared for '{name}'.")
+                except Exception as e:
+                    click.echo(f"Failed to clear memories: {e}")
+            else:
+                click.echo(f"No memory configured for '{name}'.")
+        return
+
+    if not hasattr(agent_instance, "_memory_instance") or not agent_instance._memory_instance:
+        click.echo(f"No memory configured for '{name}'.")
+        return
+
+    # GAP-93: Rich formatted output for agent memory inspection
+    try:
+        from rich.console import Console
+        from rich.table import Table
+    except ImportError:
+        # Fall back to plain text if rich is not available
+        Console = None  # type: ignore[assignment,misc]
+
+    try:
+        if search:
+            results = agent_instance._memory_instance.recall(search, limit=limit_, depth="shallow")
+        else:
+            results = agent_instance._memory_instance.list_records(limit=limit_)
+
+        if not results:
+            msg = f"No memories matching '{search}'" if search else f"No memories stored for '{name}'."
+            click.echo(msg)
+            return
+
+        if Console is not None:
+            console = Console()
+            title = f"Memories matching '{search}' — {name}" if search else f"Memories — {name}"
+            table = Table(title=title, show_lines=True)
+            table.add_column("#", style="dim", width=4)
+            table.add_column("Content", min_width=40)
+            table.add_column("Type", width=10)
+            table.add_column("Scope", width=10)
+
+            for i, mem in enumerate(results, 1):
+                record = getattr(mem, "record", mem)
+                content = getattr(record, "content", "") or str(mem)
+                if len(content) > 200:
+                    content = content[:200] + "..."
+                meta = getattr(record, "metadata", {}) or {}
+                mem_type = meta.get("type", "raw")
+                scope = getattr(record, "scope", meta.get("scope", "—"))
+                table.add_row(str(i), content, mem_type, scope)
+
+            console.print(table)
+        else:
+            heading = f"Memories matching '{search}':" if search else f"Recent memories for '{name}':"
+            click.echo(heading)
+            for i, r in enumerate(results, 1):
+                click.echo(f"  {i}. {str(r)[:100]}")
+    except Exception as e:
+        click.echo(f"Memory operation failed: {e}")
 
 
 @crewai.group()
@@ -954,6 +1320,74 @@ def checkpoint_prune(
     from crewai_cli.checkpoint_cli import prune_checkpoints
 
     prune_checkpoints(ctx.obj["location"], keep, older_than, dry_run)
+
+
+@crewai.command()
+@click.argument("agent_path", type=click.Path(exists=True))
+@click.argument("cases_path", type=click.Path(exists=True))
+@click.option(
+    "--models",
+    "-m",
+    multiple=True,
+    help="Models to compare (e.g., openai/gpt-4o openai/gpt-4o-mini)",
+)
+@click.option(
+    "--judge-model",
+    default="openai/gpt-4o-mini",
+    help="Model for LLM judge evaluation",
+)
+def benchmark(
+    agent_path: str,
+    cases_path: str,
+    models: tuple[str, ...],
+    judge_model: str,
+) -> None:
+    """Run agent against test cases and report results."""
+    import asyncio
+
+    from crewai_cli.benchmark import (
+        format_comparison_table,
+        format_results_table,
+        load_benchmark_cases,
+        run_benchmark,
+    )
+
+    try:
+        cases = load_benchmark_cases(cases_path)
+    except (FileNotFoundError, ValueError) as e:
+        click.secho(f"Error loading benchmark cases: {e}", fg="red")
+        raise SystemExit(1) from e
+
+    click.echo(f"Loaded {len(cases)} benchmark case(s) from {cases_path}")
+    click.echo(f"Agent definition: {agent_path}")
+
+    model_list = list(models) if models else None
+    if model_list:
+        click.echo(f"Models to compare: {', '.join(model_list)}")
+    click.echo(f"Judge model: {judge_model}")
+    click.echo()
+
+    try:
+        results_by_model = asyncio.run(
+            run_benchmark(
+                agent_def=agent_path,
+                cases=cases,
+                models=model_list,
+                judge_model=judge_model,
+            )
+        )
+    except Exception as e:
+        click.secho(f"Error running benchmark: {e}", fg="red")
+        raise SystemExit(1) from e
+
+    # Print results for each model
+    for model, results in results_by_model.items():
+        click.echo(format_results_table(results))
+        click.echo()
+
+    # Print comparison if multiple models
+    if len(results_by_model) > 1:
+        click.echo(format_comparison_table(results_by_model))
 
 
 if __name__ == "__main__":

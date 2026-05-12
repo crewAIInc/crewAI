@@ -31,3 +31,5 @@ chromadb-*.lock
 blogs/*
 secrets/*
 UNKNOWN.egg-info/
+demos/
+.crewai/

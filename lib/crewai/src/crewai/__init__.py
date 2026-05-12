@@ -184,6 +184,8 @@ except (ImportError, PydanticUserError):
     )
     RuntimeState = None  # type: ignore[assignment,misc]
 
+from crewai.new_agent import NewAgent  # noqa: E402
+
 __all__ = [
     "LLM",
     "Agent",
@@ -196,6 +198,7 @@ __all__ = [
     "Knowledge",
     "LLMGuardrail",
     "Memory",
+    "NewAgent",
     "PlanningConfig",
     "Process",
     "RuntimeState",
