@@ -4,8 +4,10 @@ from pathlib import Path
 from textwrap import dedent
 
 from crewai_devtools.cli import (
+    _DEFAULT_WORKSPACE_PACKAGES,
     _pin_crewai_deps,
     _repin_crewai_install,
+    update_pyproject_dependencies,
     update_pyproject_version,
     update_template_dependencies,
 )
@@ -224,6 +226,79 @@ class TestRepinCrewaiInstall:
     def test_no_version_specifier_unchanged(self) -> None:
         cmd = 'pip install "crewai[tools]>=1.0"'
         assert _repin_crewai_install(cmd, "2.0.0") == cmd
+
+
+# --- update_pyproject_dependencies ---
+
+
+class TestUpdatePyprojectDependencies:
+    def test_default_packages_cover_all_workspace_members(self) -> None:
+        """Every workspace member must be in the default rewrite list.
+
+        Without this, a version bump silently leaves stale pins behind for any
+        workspace package missing from the list (see incident with 1.14.5a5).
+        """
+        import tomlkit
+
+        workspace_root = Path(__file__).resolve().parents[3]
+        root_pyproject = (workspace_root / "pyproject.toml").read_text()
+
+        members = tomlkit.parse(root_pyproject)["tool"]["uv"]["workspace"]["members"]
+        expected = {
+            tomlkit.parse((workspace_root / m / "pyproject.toml").read_text())[
+                "project"
+            ]["name"]
+            for m in members
+        }
+
+        assert expected.issubset(set(_DEFAULT_WORKSPACE_PACKAGES))
+
+    def test_rewrites_all_workspace_pins(self, tmp_path: Path) -> None:
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text(
+            dedent("""\
+            [project]
+            dependencies = [
+                "crewai-core==1.0.0",
+                "crewai-cli==1.0.0",
+                "requests>=2.0",
+            ]
+
+            [project.optional-dependencies]
+            tools = [
+                "crewai-tools==1.0.0",
+            ]
+            files = [
+                "crewai-files==1.0.0",
+            ]
+        """)
+        )
+
+        assert update_pyproject_dependencies(pyproject, "2.0.0") is True
+        result = pyproject.read_text()
+        assert '"crewai-core==2.0.0"' in result
+        assert '"crewai-cli==2.0.0"' in result
+        assert '"crewai-tools==2.0.0"' in result
+        assert '"crewai-files==2.0.0"' in result
+        assert '"requests>=2.0"' in result
+
+    def test_leaves_bare_crewai_pin_alone(self, tmp_path: Path) -> None:
+        """`crewai==` must not collide with `crewai-core==` etc."""
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text(
+            dedent("""\
+            [project]
+            dependencies = [
+                "crewai==1.0.0",
+                "crewai-core==1.0.0",
+            ]
+        """)
+        )
+
+        update_pyproject_dependencies(pyproject, "2.0.0")
+        result = pyproject.read_text()
+        assert '"crewai==2.0.0"' in result
+        assert '"crewai-core==2.0.0"' in result
 
 
 # --- update_template_dependencies ---

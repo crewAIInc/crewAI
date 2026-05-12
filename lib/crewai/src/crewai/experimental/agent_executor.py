@@ -1191,6 +1191,13 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     @router("force_final_answer")
     def ensure_force_final_answer(self) -> Literal["agent_finished"]:
         """Force agent to provide final answer when max iterations exceeded."""
+        # The flow framework can route here more than once per execution when the
+        # "initialized" label is emitted by both initialize_reasoning and
+        # increment_and_continue in the same listener pass. Skip the extra LLM
+        # round-trip once we've already produced a forced final answer.
+        if self.state.is_finished:
+            return "agent_finished"
+
         formatted_answer = handle_max_iterations_exceeded(
             formatted_answer=None,
             printer=PRINTER,
