@@ -238,14 +238,14 @@ class TestUpdatePyprojectDependencies:
         Without this, a version bump silently leaves stale pins behind for any
         workspace package missing from the list (see incident with 1.14.5a5).
         """
+        import tomlkit
+
         workspace_root = Path(__file__).resolve().parents[3]
         root_pyproject = (workspace_root / "pyproject.toml").read_text()
 
-        import tomllib
-
-        members = tomllib.loads(root_pyproject)["tool"]["uv"]["workspace"]["members"]
+        members = tomlkit.parse(root_pyproject)["tool"]["uv"]["workspace"]["members"]
         expected = {
-            tomllib.loads((workspace_root / m / "pyproject.toml").read_text())[
+            tomlkit.parse((workspace_root / m / "pyproject.toml").read_text())[
                 "project"
             ]["name"]
             for m in members
