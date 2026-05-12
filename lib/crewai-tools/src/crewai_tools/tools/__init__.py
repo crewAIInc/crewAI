@@ -204,7 +204,7 @@ from crewai_tools.tools.youtube_video_search_tool.youtube_video_search_tool impo
     YoutubeVideoSearchTool,
 )
 from crewai_tools.tools.zapier_action_tool.zapier_action_tool import ZapierActionTools
-
+from crewai_tools.tools.k8s_agent_sandbox.k8s_sandbox_exec_tool import K8sSandboxExecTool
 
 __all__ = [
     "AIMindTool",
@@ -312,4 +312,5 @@ __all__ = [
     "YoutubeChannelSearchTool",
     "YoutubeVideoSearchTool",
     "ZapierActionTools",
+    "K8sSandboxExecTool",
 ]
