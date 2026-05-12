@@ -346,12 +346,14 @@ def test_agent_emits_execution_error_event(base_agent, base_task):
         received_events.append(event)
         event_received.set()
 
+    from crewai.experimental.agent_executor import AgentExecutor
+
     error_message = "Error happening while sending prompt to model."
     base_agent.max_retry_limit = 0
 
     # Patch at the class level since agent_executor is created lazily
     with patch.object(
-        CrewAgentExecutor, "invoke", side_effect=Exception(error_message)
+        AgentExecutor, "invoke", side_effect=Exception(error_message)
     ):
         with pytest.raises(Exception):  # noqa: B017
             base_agent.execute_task(
