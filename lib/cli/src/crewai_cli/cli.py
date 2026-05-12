@@ -57,6 +57,20 @@ def _get_cli_version() -> str:
 @click.version_option(_get_cli_version())
 def crewai() -> None:
     """Top-level command group for crewai."""
+    from pathlib import Path
+    env_path = Path.cwd() / ".env"
+    if env_path.exists():
+        try:
+            for line in env_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                key, _, value = line.partition("=")
+                key, value = key.strip(), value.strip()
+                if key and value and key not in os.environ:
+                    os.environ[key] = value
+        except Exception:
+            pass
 
 
 @crewai.command(
@@ -193,6 +207,8 @@ def _train_new_agents(agent_files: list, n_iterations: int) -> None:
     from crewai_cli.benchmark import load_benchmark_cases
 
     tests_dir = Path("tests")
+    if not tests_dir.is_dir() and Path("benchmarks").is_dir():
+        tests_dir = Path("benchmarks")
     agents_trained = 0
 
     for agent_path in agent_files:
@@ -534,13 +550,16 @@ def _test_new_agents(
         run_benchmark,
     )
 
-    benchmarks_dir = Path("benchmarks")
+    tests_dir = Path("tests")
+    # Fallback for projects created before the rename
+    if not tests_dir.is_dir() and Path("benchmarks").is_dir():
+        tests_dir = Path("benchmarks")
     all_passed = True
     agents_tested = 0
 
     for agent_path in agent_files:
         agent_name = agent_path.stem
-        cases_path = benchmarks_dir / f"{agent_name}_cases.json"
+        cases_path = tests_dir / f"{agent_name}_cases.json"
 
         if not cases_path.exists():
             click.secho(f"  Skipping {agent_name} — no {cases_path} found", fg="yellow")
@@ -1344,6 +1363,14 @@ def benchmark(
 ) -> None:
     """Run agent against test cases and report results."""
     import asyncio
+
+    from crewai_cli.run_crew import _needs_uv_relaunch, _relaunch_via_uv
+
+    if _needs_uv_relaunch():
+        uv_args = ["benchmark", agent_path, cases_path, "--judge-model", judge_model]
+        for m in models:
+            uv_args.extend(["-m", m])
+        _relaunch_via_uv(uv_args)
 
     from crewai_cli.benchmark import (
         format_comparison_table,
