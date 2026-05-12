@@ -1254,6 +1254,119 @@ async def test_async_task_execution_call_count(researcher, writer):
         assert mock_execute_sync.call_count == 1
 
 
+def test_mixed_sync_async_task_outputs_not_dropped(researcher, writer):
+    """Sync outputs accumulated before a pending async batch must survive the flush."""
+    sync1_output = TaskOutput(description="sync1", raw="s1", agent="researcher")
+    async1_output = TaskOutput(description="async1", raw="a1", agent="researcher")
+    sync2_output = TaskOutput(description="sync2", raw="s2", agent="writer")
+
+    sync1 = Task(description="sync1", expected_output="x", agent=researcher)
+    async1 = Task(
+        description="async1",
+        expected_output="x",
+        agent=researcher,
+        async_execution=True,
+    )
+    sync2 = Task(description="sync2", expected_output="x", agent=writer)
+
+    sync1.output = sync1_output
+    async1.output = async1_output
+    sync2.output = sync2_output
+
+    crew = Crew(agents=[researcher, writer], tasks=[sync1, async1, sync2])
+
+    mock_future = MagicMock(spec=Future)
+    mock_future.result.return_value = async1_output
+
+    with (
+        patch.object(
+            Task, "execute_sync", side_effect=[sync1_output, sync2_output]
+        ),
+        patch.object(Task, "execute_async", return_value=mock_future),
+    ):
+        result = crew.kickoff()
+
+    assert [o.raw for o in result.tasks_output] == ["s1", "a1", "s2"]
+
+
+@pytest.mark.asyncio
+async def test_mixed_sync_async_task_outputs_not_dropped_native_async(
+    researcher, writer
+):
+    """Same regression as the sync path, exercised via akickoff (native async)."""
+    sync1_output = TaskOutput(description="sync1", raw="s1", agent="researcher")
+    async1_output = TaskOutput(description="async1", raw="a1", agent="researcher")
+    sync2_output = TaskOutput(description="sync2", raw="s2", agent="writer")
+
+    sync1 = Task(description="sync1", expected_output="x", agent=researcher)
+    async1 = Task(
+        description="async1",
+        expected_output="x",
+        agent=researcher,
+        async_execution=True,
+    )
+    sync2 = Task(description="sync2", expected_output="x", agent=writer)
+
+    sync1.output = sync1_output
+    async1.output = async1_output
+    sync2.output = sync2_output
+
+    crew = Crew(agents=[researcher, writer], tasks=[sync1, async1, sync2])
+
+    aexecute_outputs = iter([sync1_output, async1_output, sync2_output])
+
+    async def fake_aexecute_sync(*_args: Any, **_kwargs: Any) -> TaskOutput:
+        return next(aexecute_outputs)
+
+    with patch.object(Task, "aexecute_sync", side_effect=fake_aexecute_sync):
+        result = await crew.akickoff()
+
+    assert [o.raw for o in result.tasks_output] == ["s1", "a1", "s2"]
+
+
+def test_pending_async_outputs_preserved_through_conditional_task(researcher, writer):
+    """A conditional task encountered after a pending async batch must not silently drop the async output."""
+    sync1_output = TaskOutput(description="sync1", raw="s1", agent="researcher")
+    async1_output = TaskOutput(description="async1", raw="a1", agent="researcher")
+
+    def always_skip(_: TaskOutput) -> bool:
+        return False
+
+    sync1 = Task(description="sync1", expected_output="x", agent=researcher)
+    async1 = Task(
+        description="async1",
+        expected_output="x",
+        agent=researcher,
+        async_execution=True,
+    )
+    conditional = ConditionalTask(
+        description="conditional",
+        expected_output="x",
+        agent=writer,
+        condition=always_skip,
+    )
+
+    sync1.output = sync1_output
+    async1.output = async1_output
+
+    crew = Crew(
+        agents=[researcher, writer], tasks=[sync1, async1, conditional]
+    )
+
+    mock_future = MagicMock(spec=Future)
+    mock_future.result.return_value = async1_output
+
+    with (
+        patch.object(Task, "execute_sync", return_value=sync1_output),
+        patch.object(Task, "execute_async", return_value=mock_future),
+    ):
+        result = crew.kickoff()
+
+    raws = [o.raw for o in result.tasks_output]
+    assert raws[:2] == ["s1", "a1"]
+    assert len(result.tasks_output) == 3
+
+
 @pytest.mark.vcr()
 def test_kickoff_for_each_single_input():
     """Tests if kickoff_for_each works with a single input."""
@@ -4519,8 +4632,8 @@ def test_sets_flow_context_when_using_crewbase_pattern_inside_flow():
     flow.kickoff()
 
     assert captured_crew is not None
-    assert captured_crew._flow_id == flow.execution_id  # type: ignore[attr-defined]
-    assert captured_crew._request_id == flow.execution_id  # type: ignore[attr-defined]
+    assert captured_crew._flow_id == flow.flow_id  # type: ignore[attr-defined]
+    assert captured_crew._request_id == flow.flow_id  # type: ignore[attr-defined]
 
 
 def test_sets_flow_context_when_outside_flow(researcher, writer):
@@ -4554,8 +4667,8 @@ def test_sets_flow_context_when_inside_flow(researcher, writer):
 
     flow = MyFlow()
     result = flow.kickoff()
-    assert result._flow_id == flow.execution_id  # type: ignore[attr-defined]
-    assert result._request_id == flow.execution_id  # type: ignore[attr-defined]
+    assert result._flow_id == flow.flow_id  # type: ignore[attr-defined]
+    assert result._request_id == flow.flow_id  # type: ignore[attr-defined]
 
 
 def test_reset_knowledge_with_no_crew_knowledge(researcher, writer):
@@ -4796,6 +4909,37 @@ def test_crew_kickoff_started_emits_display_name(
         prepare_kickoff(cast(Any, automation_cls()).crew(), inputs=None)
 
     assert captured == [expected]
+
+
+def test_prepare_kickoff_binds_task_only_agent_to_crew():
+    """Agents referenced only via task.agent must get .crew set during prepare_kickoff.
+
+    Regression for crewAIInc/crewAI#5534: when Crew is built without
+    agents=[...], multimodal input_files were silently dropped because the
+    agent's .crew attribute was never assigned, gating file lookup off in
+    Task and CrewAgentExecutor.
+    """
+    from crewai.crews.utils import prepare_kickoff
+
+    task_only_agent = Agent(
+        role="Solo",
+        goal="Describe inputs",
+        backstory="Solo agent assigned only via task.agent",
+        allow_delegation=False,
+    )
+    task = Task(
+        description="Describe the input.",
+        expected_output="A description.",
+        agent=task_only_agent,
+    )
+    crew = Crew(tasks=[task])
+
+    assert task_only_agent.crew is None
+    assert crew.agents == []
+
+    prepare_kickoff(crew, inputs=None)
+
+    assert task_only_agent.crew is crew
 
 
 @pytest.mark.vcr()

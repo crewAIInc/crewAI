@@ -9397,7 +9397,7 @@
       }
     },
     {
-      "description": "Search the internet using Exa",
+      "description": "Search the web with Exa, the fastest and most accurate web search API.",
       "env_vars": [
         {
           "default": null,
@@ -9412,7 +9412,7 @@
           "required": false
         }
       ],
-      "humanized_name": "EXASearchTool",
+      "humanized_name": "ExaSearchTool",
       "init_params_schema": {
         "$defs": {
           "EnvVar": {
@@ -9451,6 +9451,7 @@
             "type": "object"
           }
         },
+        "description": "Deprecated alias for :class:`ExaSearchTool`. Kept for backwards compatibility.",
         "properties": {
           "api_key": {
             "anyOf": [
@@ -9494,16 +9495,40 @@
                 "type": "boolean"
               },
               {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
                 "type": "null"
               }
             ],
             "default": false,
             "title": "Content"
           },
+          "highlights": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": true,
+            "title": "Highlights"
+          },
           "summary": {
             "anyOf": [
               {
                 "type": "boolean"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
               },
               {
                 "type": "null"
@@ -9586,7 +9611,225 @@
         "required": [
           "search_query"
         ],
-        "title": "EXABaseToolSchema",
+        "title": "ExaBaseToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Search the web with Exa, the fastest and most accurate web search API.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Exa services",
+          "name": "EXA_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "API url for the Exa services",
+          "name": "EXA_BASE_URL",
+          "required": false
+        }
+      ],
+      "humanized_name": "ExaSearchTool",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "API key for Exa services",
+            "required": false,
+            "title": "Api Key"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "API server url",
+            "required": false,
+            "title": "Base Url"
+          },
+          "client": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Client"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": false,
+            "title": "Content"
+          },
+          "highlights": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": true,
+            "title": "Highlights"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": false,
+            "title": "Summary"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "auto",
+            "title": "Type"
+          }
+        },
+        "required": [],
+        "title": "ExaSearchTool",
+        "type": "object"
+      },
+      "name": "ExaSearchTool",
+      "package_dependencies": [
+        "exa_py"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "end_published_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "End date for the search",
+            "title": "End Published Date"
+          },
+          "include_domains": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "List of domains to include in the search",
+            "title": "Include Domains"
+          },
+          "search_query": {
+            "description": "Mandatory search query you want to use to search the internet",
+            "title": "Search Query",
+            "type": "string"
+          },
+          "start_published_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Start date for the search",
+            "title": "Start Published Date"
+          }
+        },
+        "required": [
+          "search_query"
+        ],
+        "title": "ExaBaseToolSchema",
         "type": "object"
       }
     },

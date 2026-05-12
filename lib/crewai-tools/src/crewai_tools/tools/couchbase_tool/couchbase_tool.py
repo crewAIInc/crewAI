@@ -93,7 +93,7 @@ class CouchbaseFTSVectorSearchTool(BaseTool):
                 scope_collection_map[scope.name].append(collection.name)
 
         # Check if the scope exists
-        if self.scope_name not in scope_collection_map.keys():
+        if self.scope_name not in scope_collection_map:
             raise ValueError(
                 f"Scope {self.scope_name} not found in Couchbase "
                 f"bucket {self.bucket_name}"

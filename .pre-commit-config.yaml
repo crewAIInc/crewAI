@@ -19,7 +19,7 @@ repos:
         language: system
         pass_filenames: true
         types: [python]
-        exclude: ^(lib/crewai/src/crewai/cli/templates/|lib/crewai/tests/|lib/crewai-tools/tests/|lib/crewai-files/tests/)
+        exclude: ^(lib/crewai/src/crewai/cli/templates/|lib/cli/src/crewai_cli/templates/|lib/cli/tests/|lib/crewai/tests/|lib/crewai-tools/tests/|lib/crewai-files/tests/|lib/devtools/tests/)
   - repo: https://github.com/astral-sh/uv-pre-commit
     rev: 0.11.3
     hooks:

@@ -346,6 +346,48 @@ class SelectivePersistFlow(Flow):
         return f"Complete with count {self.state['count']}"
 ```
 
+#### 영속 상태 포크하기
+
+`@persist`는 `kickoff` / `kickoff_async`에서 두 가지 별개의 하이드레이션 모드를 지원합니다. 동일한 계보를 계속하려면 **재개**(`inputs["id"]`)를 사용하고, 스냅샷에서 시작하는 새 계보를 시작하려면 **포크**(`restore_from_state_id`)를 사용하세요:
+
+| | kickoff 후 `state.id` | `@persist` 기록 위치 |
+|---|---|---|
+| `inputs["id"]` (재개) | 제공된 id | 제공된 id (기록 확장) |
+| `restore_from_state_id` (포크) | 새 id, 또는 고정 시 `inputs["id"]` | 새 id (원본 보존) |
+
+```python
+from crewai.flow.flow import Flow, start
+from crewai.flow.persistence import persist
+from pydantic import BaseModel
+
+class CounterState(BaseModel):
+    id: str = ""
+    counter: int = 0
+
+@persist
+class CounterFlow(Flow[CounterState]):
+    @start()
+    def step(self):
+        self.state.counter += 1
+
+# 실행 1: 새 상태, counter 0 -> 1
+flow_1 = CounterFlow()
+flow_1.kickoff()
+
+# 포크: flow_1의 최신 스냅샷에서 하이드레이트, 단 새 state.id에 기록
+flow_2 = CounterFlow()
+flow_2.kickoff(restore_from_state_id=flow_1.state.id)
+# flow_2는 counter=1(하이드레이트)로 시작하고, step()이 2로 증가시킵니다.
+# flow_1의 flow_uuid 기록은 변경되지 않습니다.
+```
+
+동작 노트:
+
+- `restore_from_state_id`가 영속에서 발견되지 않음 → kickoff는 조용히 기본 동작으로 폴백됩니다 (기존 `inputs["id"]`의 미발견 동작 미러링). 예외는 발생하지 않습니다.
+- `restore_from_state_id`를 `from_checkpoint`와 결합하면 `ValueError`가 발생합니다 — 서로 다른 상태 시스템(`@persist` 대 Checkpointing)을 대상으로 하므로 결합할 수 없습니다.
+- `restore_from_state_id=None`(기본값)은 매개변수 없는 kickoff와 바이트 단위로 동일합니다.
+- 포크 중 `inputs["id"]`를 고정하면 새 실행이 다른 플로우와 영속 키를 공유함을 의미합니다 — 일반적으로 `restore_from_state_id`만 사용하는 것이 좋습니다.
+
 ## 고급 상태 패턴
 
 ### 상태 기반 조건부 로직

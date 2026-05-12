@@ -9,6 +9,7 @@ from textwrap import dedent
 import time
 from typing import TYPE_CHECKING, Any, Literal
 
+from crewai_core.printer import PRINTER
 import json5
 from json_repair import repair_json  # type: ignore[import-untyped]
 
@@ -29,7 +30,6 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.converter import Converter
 from crewai.utilities.i18n import I18N_DEFAULT
-from crewai.utilities.printer import PRINTER
 from crewai.utilities.string_utils import sanitize_tool_name
 
 

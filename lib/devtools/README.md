@@ -11,6 +11,8 @@ Installed automatically via the workspace (`uv sync`). Requires:
 - `ENTERPRISE_REPO` env var — GitHub repo for enterprise releases
 - `ENTERPRISE_VERSION_DIRS` env var — comma-separated directories to bump in the enterprise repo
 - `ENTERPRISE_CREWAI_DEP_PATH` env var — path to the pyproject.toml with the `crewai[tools]` pin in the enterprise repo
+- `ENTERPRISE_WORKFLOW_PATHS` env var — comma-separated workflow file paths in the enterprise repo whose `crewai[extras]==<version>` pins should be rewritten on each release (e.g. `.github/workflows/tests.yml`)
+- `ENTERPRISE_EXTRA_PACKAGES` env var — comma-separated packages to also pin in enterprise pyproject files, in addition to `crewai` / `crewai[extras]`
 
 ## Commands
 
