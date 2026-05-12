@@ -313,9 +313,9 @@ flow1 = PersistentCounterFlow()
 result1 = flow1.kickoff()
 print(f"First run result: {result1}")
 
-# Segunda execução - o estado é carregado automaticamente
+# Segunda execução - passa o ID para carregar o estado persistido
 flow2 = PersistentCounterFlow()
-result2 = flow2.kickoff()
+result2 = flow2.kickoff(inputs={"id": flow1.state.id})
 print(f"Second run result: {result2}")  # Será maior devido ao estado persistido
 ```
 
