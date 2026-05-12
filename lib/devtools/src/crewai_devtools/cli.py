@@ -323,8 +323,11 @@ def update_pyproject_version(file_path: Path, new_version: str) -> bool:
 
 _DEFAULT_WORKSPACE_PACKAGES: Final[list[str]] = [
     "crewai",
-    "crewai-tools",
+    "crewai-cli",
+    "crewai-core",
     "crewai-devtools",
+    "crewai-files",
+    "crewai-tools",
 ]
 
 
