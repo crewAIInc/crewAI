@@ -7,7 +7,7 @@ import json
 import re
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from pydantic import BaseModel, Field
 
@@ -154,6 +154,7 @@ async def run_benchmark(
     cases: list[BenchmarkCase],
     models: list[str] | None = None,
     judge_model: str = "openai/gpt-4o-mini",
+    on_progress: Callable[[dict[str, Any]], None] | None = None,
 ) -> dict[str, list[BenchmarkResult]]:
     """Run benchmark cases against an agent definition, optionally across multiple models.
 
@@ -162,6 +163,7 @@ async def run_benchmark(
         cases: List of benchmark cases to run.
         models: Optional list of model identifiers to compare. If None, uses agent's default.
         judge_model: Model to use for LLM judge evaluation.
+        on_progress: Optional callback receiving progress dicts with a "type" key.
 
     Returns:
         Dict mapping model name to list of BenchmarkResult.
@@ -171,13 +173,19 @@ async def run_benchmark(
     if models is None or len(models) == 0:
         models = [defn.get("llm", "default")]
 
+    def _emit(event: dict[str, Any]) -> None:
+        if on_progress:
+            on_progress(event)
+
     results_by_model: dict[str, list[BenchmarkResult]] = {}
 
-    for model in models:
+    for mi, model in enumerate(models):
         model_results: list[BenchmarkResult] = []
+        _emit({"type": "model_start", "model": model, "model_index": mi, "total_models": len(models), "total_cases": len(cases)})
 
         for i, case in enumerate(cases):
-            # Override the model and disable memory for benchmark runs
+            _emit({"type": "case_start", "model": model, "case_index": i, "total_cases": len(cases), "input": case.input})
+
             bench_defn = dict(defn)
             if model != "default":
                 bench_defn["llm"] = model
@@ -187,17 +195,17 @@ async def run_benchmark(
             try:
                 agent = _load_agent(bench_defn)
             except Exception as e:
-                model_results.append(
-                    BenchmarkResult(
-                        case_index=i,
-                        input=case.input,
-                        expected=case.expected,
-                        actual=f"[Agent creation error: {e}]",
-                        model=model,
-                        passed=False,
-                        score=0.0,
-                    )
+                result = BenchmarkResult(
+                    case_index=i,
+                    input=case.input,
+                    expected=case.expected,
+                    actual=f"[Agent creation error: {e}]",
+                    model=model,
+                    passed=False,
+                    score=0.0,
                 )
+                model_results.append(result)
+                _emit({"type": "case_done", "model": model, "case_index": i, "total_cases": len(cases), "passed": False, "score": 0.0, "time_ms": 0, "error": str(e)})
                 continue
 
             start_ms = _current_time_ms()
@@ -212,55 +220,57 @@ async def run_benchmark(
 
             except Exception as e:
                 elapsed_ms = _current_time_ms() - start_ms
-                model_results.append(
-                    BenchmarkResult(
-                        case_index=i,
-                        input=case.input,
-                        expected=case.expected,
-                        actual=f"[Error: {e}]",
-                        model=model,
-                        passed=False,
-                        score=0.0,
-                        response_time_ms=elapsed_ms,
-                    )
+                result = BenchmarkResult(
+                    case_index=i,
+                    input=case.input,
+                    expected=case.expected,
+                    actual=f"[Error: {e}]",
+                    model=model,
+                    passed=False,
+                    score=0.0,
+                    response_time_ms=elapsed_ms,
                 )
+                model_results.append(result)
+                _emit({"type": "case_done", "model": model, "case_index": i, "total_cases": len(cases), "passed": False, "score": 0.0, "time_ms": elapsed_ms, "error": str(e)})
                 continue
 
-            # Evaluate
             passed = False
             score = 0.0
 
             if case.expected is not None:
                 passed, score = _check_expected(case.expected, actual)
             if case.criteria is not None:
+                _emit({"type": "judging", "model": model, "case_index": i, "total_cases": len(cases)})
                 criteria_passed, criteria_score = await _judge_with_llm(
                     case.criteria, case.input, actual, judge_model
                 )
                 if case.expected is not None:
-                    # Combine: both must pass, average scores
                     passed = passed and criteria_passed
                     score = (score + criteria_score) / 2.0
                 else:
                     passed = criteria_passed
                     score = criteria_score
 
-            model_results.append(
-                BenchmarkResult(
-                    case_index=i,
-                    input=case.input,
-                    expected=case.expected,
-                    actual=actual,
-                    model=model,
-                    passed=passed,
-                    score=score,
-                    input_tokens=input_tokens,
-                    output_tokens=output_tokens,
-                    response_time_ms=elapsed_ms,
-                    cost=cost,
-                )
+            result = BenchmarkResult(
+                case_index=i,
+                input=case.input,
+                expected=case.expected,
+                actual=actual,
+                model=model,
+                passed=passed,
+                score=score,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                response_time_ms=elapsed_ms,
+                cost=cost,
             )
+            model_results.append(result)
+            _emit({"type": "case_done", "model": model, "case_index": i, "total_cases": len(cases), "passed": passed, "score": score, "time_ms": elapsed_ms})
 
         results_by_model[model] = model_results
+        total_passed = sum(1 for r in model_results if r.passed)
+        avg_score = sum(r.score for r in model_results) / len(model_results) if model_results else 0.0
+        _emit({"type": "model_done", "model": model, "passed": total_passed, "total": len(model_results), "avg_score": avg_score})
 
     return results_by_model
 
@@ -378,3 +388,167 @@ def format_comparison_table(results_by_model: dict[str, list[BenchmarkResult]]) 
         lines.append(f"Best model: {best_model} (avg score: {best_score:.2f})")
 
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Rich-based terminal charts
+# ---------------------------------------------------------------------------
+
+def _score_color(score: float) -> str:
+    if score >= 0.7:
+        return "green"
+    if score >= 0.4:
+        return "yellow"
+    return "red"
+
+
+def _score_bar(score: float, width: int = 20) -> str:
+    clamped = max(0.0, min(1.0, score))
+    filled = round(clamped * width)
+    empty = width - filled
+    color = _score_color(score)
+    bar = f"[{color}]{'█' * filled}[/{color}]"
+    if empty:
+        bar += f"[dim]{'░' * empty}[/dim]"
+    return bar
+
+
+def _fmt_tokens(n: int) -> str:
+    if n >= 1_000_000:
+        return f"{n / 1_000_000:.1f}M"
+    if n >= 1_000:
+        return f"{n / 1_000:.1f}k"
+    return str(n)
+
+
+def _fmt_cost(cost: float | None) -> str:
+    if cost is None:
+        return ""
+    if cost < 0.01:
+        return f"${cost:.4f}"
+    return f"${cost:.2f}"
+
+
+def print_results_chart(
+    results: list[BenchmarkResult],
+    console: Any | None = None,
+) -> None:
+    from rich.console import Console
+    from rich.panel import Panel
+
+    if not console:
+        console = Console()
+
+    if not results:
+        console.print("[dim]No results to display.[/]")
+        return
+
+    model = results[0].model
+    has_cost = any(r.cost is not None for r in results)
+
+    inner_w = max(console.width - 4, 60)
+    bar_w = 12
+    overhead = 2 + 2 + 2 + 2 + bar_w + 1 + 4 + 2 + 4 + 2 + 6
+    if has_cost:
+        overhead += 2 + 7
+    input_w = max(15, inner_w - overhead)
+
+    rows: list[str] = []
+    for r in results:
+        inp = r.input[:input_w - 1] + "…" if len(r.input) >= input_w else r.input
+        inp_pad = inp + " " * max(0, input_w - len(inp))
+        bar = _score_bar(r.score, bar_w)
+        badge = "[green]PASS[/green]" if r.passed else "[red]FAIL[/red]"
+        time_s = f"{r.response_time_ms / 1000:>5.1f}s"
+        cost_part = f"  [dim]{_fmt_cost(r.cost):>7}[/dim]" if has_cost else ""
+        rows.append(
+            f"  [dim]{r.case_index:>2}[/dim]  {inp_pad}  {bar} {r.score:.2f}  {badge}  [dim]{time_s}[/dim]{cost_part}"
+        )
+
+    n = len(results)
+    passed = sum(1 for r in results if r.passed)
+    avg = sum(r.score for r in results) / n
+    total_time = sum(r.response_time_ms for r in results) / 1000
+    total_in = sum(r.input_tokens for r in results)
+    total_out = sum(r.output_tokens for r in results)
+    total_cost = sum(r.cost for r in results if r.cost is not None)
+
+    color = _score_color(avg)
+    summary_parts = [
+        f"[{color}]{passed}/{n} passed[/]",
+        f"avg [{color}]{avg:.2f}[/]",
+        f"[dim]{total_time:.1f}s[/]",
+        f"[dim]↑{_fmt_tokens(total_in)} ↓{_fmt_tokens(total_out)}[/]",
+    ]
+    if total_cost > 0:
+        summary_parts.append(f"[dim]{_fmt_cost(total_cost)}[/]")
+
+    body = "\n".join(rows) + "\n\n  " + "  ·  ".join(summary_parts)
+    panel = Panel(
+        body,
+        title=f"[bold cyan]{model}[/]",
+        title_align="left",
+        border_style="cyan",
+        padding=(1, 0),
+        expand=False,
+    )
+    console.print(panel)
+
+
+def print_comparison_chart(
+    results_by_model: dict[str, list[BenchmarkResult]],
+    console: Any | None = None,
+) -> None:
+    from rich.console import Console
+    from rich.panel import Panel
+
+    if not console:
+        console = Console()
+
+    if not results_by_model:
+        console.print("[dim]No results to compare.[/]")
+        return
+
+    inner_w = max(console.width - 4, 60)
+    fixed_right = 1 + 4 + 2 + 5 + 2 + 6 + 4
+    models_data: list[tuple[str, int, int, float, float]] = []
+    best_model = ""
+    best_score = -1.0
+
+    for model, results in results_by_model.items():
+        n = len(results)
+        passed = sum(1 for r in results if r.passed)
+        avg = sum(r.score for r in results) / n if n else 0.0
+        total_time = sum(r.response_time_ms for r in results) / 1000
+        models_data.append((model, passed, n, avg, total_time))
+        if avg > best_score:
+            best_score = avg
+            best_model = model
+
+    max_name_len = min(max(len(m) for m, *_ in models_data), 28)
+    bar_width = max(12, inner_w - max_name_len - fixed_right - 4)
+    bar_width = min(bar_width, 30)
+
+    lines: list[str] = []
+    for model, passed, n, avg, total_time in models_data:
+        name = (model[:max_name_len - 1] + "…" if len(model) > max_name_len else model).ljust(max_name_len)
+        bar = _score_bar(avg, bar_width)
+        pass_color = _score_color(avg)
+        star = " [bold green]★[/]" if model == best_model and len(models_data) > 1 else ""
+        lines.append(
+            f"  {name}  {bar} {avg:.2f}  "
+            f"[{pass_color}]{passed}/{n}[/]  "
+            f"[dim]{total_time:>5.1f}s[/]"
+            f"{star}"
+        )
+
+    body = "\n".join(lines)
+    panel = Panel(
+        body,
+        title="[bold]Model Comparison[/]",
+        title_align="left",
+        border_style="dim",
+        padding=(1, 1),
+        expand=False,
+    )
+    console.print(panel)

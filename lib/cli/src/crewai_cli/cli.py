@@ -235,17 +235,27 @@ def _train_new_agents(agent_files: list, n_iterations: int) -> None:
             click.secho(f"  Error loading agent {agent_name}: {e}", fg="red")
             continue
 
+        from rich.console import Console as _Console
+
+        _console = _Console()
+
         for iteration in range(n_iterations):
             click.secho(f"\n  Iteration {iteration + 1}/{n_iterations}", fg="cyan")
-            for case in cases:
+            for ci, case in enumerate(cases):
                 user_input = case.input
-                click.echo(f"\n  Input: {user_input}")
+                snippet = user_input[:60] + ("…" if len(user_input) > 60 else "")
+                _console.print(f"\n  \\[{ci + 1}/{len(cases)}] {snippet}")
 
                 try:
-                    response = asyncio.run(agent.amessage(user_input))
+                    import time as _time
+                    _t0 = _time.monotonic()
+                    with _console.status("[cyan]  Running…[/]", spinner="dots"):
+                        response = asyncio.run(agent.amessage(user_input))
+                    _elapsed = _time.monotonic() - _t0
+                    _console.print(f"  [green]✓[/] done ({_elapsed:.1f}s)")
                     click.echo(f"  Response: {response.content[:500]}")
                 except Exception as e:
-                    click.secho(f"  Error: {e}", fg="red")
+                    _console.print(f"  [red]✗[/] error: {e}")
                     continue
 
                 if case.criteria:
@@ -533,6 +543,70 @@ def test(
         evaluate_crew(n_iterations, crew_model, trained_agents_file=trained_agents_file)
 
 
+def _make_benchmark_progress():
+    """Create a progress callback with Rich spinner animation."""
+    import time
+
+    from rich.console import Console
+    from rich.spinner import Spinner
+    from rich.live import Live
+
+    console = Console()
+    state: dict = {"live": None}
+
+    def _stop_live():
+        if state["live"]:
+            state["live"].stop()
+            state["live"] = None
+
+    def progress(event: dict) -> None:
+        t = event["type"]
+
+        if t == "model_start":
+            _stop_live()
+            label = event["model"]
+            if event["total_models"] > 1:
+                label = f"\\[{event['model_index'] + 1}/{event['total_models']}] {label}"
+            console.print(f"\n[bold cyan]▶ {label}[/]  [dim]({event['total_cases']} cases)[/]")
+
+        elif t == "case_start":
+            _stop_live()
+            idx = event["case_index"] + 1
+            total = event["total_cases"]
+            snippet = event["input"][:60] + ("…" if len(event["input"]) > 60 else "")
+            console.print(f"  [dim]\\[{idx}/{total}][/] {snippet}")
+            state["live"] = Live(
+                Spinner("dots", text="  running…", style="cyan"),
+                console=console,
+                transient=True,
+            )
+            state["live"].start()
+
+        elif t == "judging":
+            if state["live"]:
+                state["live"].update(
+                    Spinner("dots", text="  judging…", style="cyan")
+                )
+
+        elif t == "case_done":
+            _stop_live()
+            elapsed_s = event["time_ms"] / 1000
+            if event.get("error"):
+                console.print(f"    [red]✗ ERROR[/red]  ({elapsed_s:.1f}s)")
+            elif event["passed"]:
+                console.print(f"    [green]✓ PASS[/green]  score={event['score']:.2f}  ({elapsed_s:.1f}s)")
+            else:
+                console.print(f"    [red]✗ FAIL[/red]  score={event['score']:.2f}  ({elapsed_s:.1f}s)")
+
+        elif t == "model_done":
+            _stop_live()
+            p, tot, avg = event["passed"], event["total"], event["avg_score"]
+            color = "green" if p == tot else ("yellow" if p > 0 else "red")
+            console.print(f"  [{color}]── {p}/{tot} passed · avg score {avg:.2f}[/{color}]")
+
+    return progress
+
+
 def _test_new_agents(
     agent_files: list,
     n_iterations: int,
@@ -544,14 +618,16 @@ def _test_new_agents(
     import asyncio
     from pathlib import Path
 
+    from rich.console import Console as _RichConsole
+
     from crewai_cli.benchmark import (
-        format_results_table,
         load_benchmark_cases,
+        print_results_chart,
         run_benchmark,
     )
 
+    _con = _RichConsole()
     tests_dir = Path("tests")
-    # Fallback for projects created before the rename
     if not tests_dir.is_dir() and Path("benchmarks").is_dir():
         tests_dir = Path("benchmarks")
     all_passed = True
@@ -584,6 +660,7 @@ def _test_new_agents(
                     cases=cases,
                     models=model_list,
                     judge_model=judge_model,
+                    on_progress=_make_benchmark_progress(),
                 )
             )
         except Exception as e:
@@ -594,19 +671,19 @@ def _test_new_agents(
         agents_tested += 1
 
         for model_name, results in results_by_model.items():
-            click.echo(format_results_table(results))
+            _con.print()
+            print_results_chart(results, console=_con)
 
             failed = [r for r in results if r.score < threshold]
             if failed:
                 all_passed = False
-                click.secho(
-                    f"  FAILED: {len(failed)}/{len(results)} cases below threshold ({threshold})",
-                    fg="red",
+                _con.print(
+                    f"\n  [red bold]FAILED: {len(failed)}/{len(results)} "
+                    f"cases below threshold ({threshold})[/]"
                 )
             else:
-                click.secho(
-                    f"  PASSED: all {len(results)} cases >= {threshold}",
-                    fg="green",
+                _con.print(
+                    f"\n  [green bold]PASSED: all {len(results)} cases >= {threshold}[/]"
                 )
 
     click.echo()
@@ -1372,12 +1449,16 @@ def benchmark(
             uv_args.extend(["-m", m])
         _relaunch_via_uv(uv_args)
 
+    from rich.console import Console as _RichConsole
+
     from crewai_cli.benchmark import (
-        format_comparison_table,
-        format_results_table,
         load_benchmark_cases,
+        print_comparison_chart,
+        print_results_chart,
         run_benchmark,
     )
+
+    _con = _RichConsole()
 
     try:
         cases = load_benchmark_cases(cases_path)
@@ -1401,20 +1482,20 @@ def benchmark(
                 cases=cases,
                 models=model_list,
                 judge_model=judge_model,
+                on_progress=_make_benchmark_progress(),
             )
         )
     except Exception as e:
         click.secho(f"Error running benchmark: {e}", fg="red")
         raise SystemExit(1) from e
 
-    # Print results for each model
     for model, results in results_by_model.items():
-        click.echo(format_results_table(results))
-        click.echo()
+        _con.print()
+        print_results_chart(results, console=_con)
 
-    # Print comparison if multiple models
     if len(results_by_model) > 1:
-        click.echo(format_comparison_table(results_by_model))
+        _con.print()
+        print_comparison_chart(results_by_model, console=_con)
 
 
 if __name__ == "__main__":
