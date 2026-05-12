@@ -28,10 +28,10 @@ def _validate_range(value: int, *, minimum: int, maximum: int, name: str) -> int
 
 
 def _normalize_path_identifier(value: str, *, name: str) -> str:
-    cleaned = value.strip()
+    cleaned = value.strip().lstrip("@")
     if not cleaned:
         raise ValueError(f"{name} is required")
-    return quote(cleaned.lstrip("@"), safe="")
+    return quote(cleaned, safe="")
 
 
 def _require_text(value: str, *, name: str) -> str:
@@ -182,6 +182,7 @@ class XquikGetTrendsToolSchema(BaseModel):
 
     woeid: int = Field(
         default=1,
+        ge=1,
         description="Region WOEID. Use 1 for worldwide, 23424977 for US, 23424975 for UK, or 23424969 for Turkey.",
     )
     count: int = Field(
@@ -295,6 +296,9 @@ class XquikGetTrendsTool(XquikToolBase):
     args_schema: type[BaseModel] = XquikGetTrendsToolSchema
 
     def _run(self, woeid: int = 1, count: int = 30) -> dict[str, Any]:
+        if woeid < 1:
+            raise ValueError("woeid must be greater than or equal to 1")
+
         return self._get(
             "/x/trends",
             {

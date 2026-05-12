@@ -86,23 +86,29 @@ def test_search_tweets_calls_xquik_api(mock_get):
 @patch("requests.get")
 def test_get_tweet_encodes_tweet_id(mock_get):
     tool = XquikGetTweetTool()
-    mock_get.return_value = _mock_response(json_data={"tweet": {"id": "123"}})
+    mock_get.return_value = _mock_response(json_data={"tweet": {"id": "12 /?%"}})
 
-    result = tool.run(tweet_id="123")
+    result = tool.run(tweet_id="12 /?%")
 
-    assert result["tweet"]["id"] == "123"
-    assert mock_get.call_args.args[0] == "https://xquik.com/api/v1/x/tweets/123"
+    assert result["tweet"]["id"] == "12 /?%"
+    assert mock_get.call_args.args[0] == (
+        "https://xquik.com/api/v1/x/tweets/12%20%2F%3F%25"
+    )
+    assert "12 /?%" not in mock_get.call_args.args[0]
 
 
 @patch("requests.get")
 def test_get_user_strips_leading_at_and_encodes_path(mock_get):
     tool = XquikGetUserTool()
-    mock_get.return_value = _mock_response(json_data={"username": "crew_ai"})
+    mock_get.return_value = _mock_response(json_data={"username": "crew ai/?"})
 
-    result = tool.run(user="@crew_ai")
+    result = tool.run(user="@crew ai/?")
 
-    assert result["username"] == "crew_ai"
-    assert mock_get.call_args.args[0] == "https://xquik.com/api/v1/x/users/crew_ai"
+    assert result["username"] == "crew ai/?"
+    assert mock_get.call_args.args[0] == (
+        "https://xquik.com/api/v1/x/users/crew%20ai%2F%3F"
+    )
+    assert "crew ai/?" not in mock_get.call_args.args[0]
 
 
 @patch("requests.get")
@@ -142,13 +148,24 @@ def test_get_trends_calls_region_endpoint(mock_get):
 
 def test_validation_rejects_empty_inputs_and_invalid_ranges():
     search_tool = XquikSearchTweetsTool()
+    tweet_tool = XquikGetTweetTool()
+    user_tool = XquikGetUserTool()
     trends_tool = XquikGetTrendsTool()
 
     with pytest.raises(ValueError, match="search_query is required"):
         search_tool.run(search_query=" ")
 
+    with pytest.raises(ValueError, match="tweet_id is required"):
+        tweet_tool.run(tweet_id="@")
+
+    with pytest.raises(ValueError, match="user is required"):
+        user_tool.run(user="@")
+
     with pytest.raises(ValueError, match="less than or equal to 200"):
         search_tool.run(search_query="AI", limit=201)
+
+    with pytest.raises(ValueError, match="greater than or equal to 1"):
+        trends_tool.run(woeid=0)
 
     with pytest.raises(ValueError, match="less than or equal to 50"):
         trends_tool.run(count=51)
