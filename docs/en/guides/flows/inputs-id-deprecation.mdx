@@ -1,12 +1,12 @@
 ---
-title: "Migrating from inputs.id to restoreFromStateId"
-description: "Move @persist flows off the deprecated inputs.id hydration onto the supported restoreFromStateId field"
+title: "Migrating from inputs.id to restore_from_state_id"
+description: "Move @persist flows off the deprecated inputs.id hydration onto the supported restore_from_state_id field"
 icon: "arrow-right-arrow-left"
 ---
 
 <Warning>
   Passing `id` inside `inputs` to hydrate a `@persist` flow is **deprecated** and
-  scheduled for removal in a future release. The replacement, `restoreFromStateId`,
+  scheduled for removal in a future release. The replacement, `restore_from_state_id`,
   is available in CrewAI **v1.14.5 and later** — the steps below apply once you
   upgrade.
 </Warning>
@@ -15,7 +15,7 @@ icon: "arrow-right-arrow-left"
 
 The documented way to hydrate a `@persist` flow from a previous execution is to pass
 that execution's UUID as `inputs.id`. CrewAI now exposes a dedicated field,
-`restoreFromStateId`, that performs the same hydration without overloading the
+`restore_from_state_id`, that performs the same hydration without overloading the
 `inputs` payload — and without coupling the hydration key to the new execution's
 identity.
 
@@ -69,7 +69,7 @@ record, and (on AMP) share a row in the executions list. There is no way to say
 "hydrate from this snapshot, but record this run separately" without splitting the
 two responsibilities.
 
-`restoreFromStateId` is that split. It tells `@persist` which snapshot to hydrate
+`restore_from_state_id` is that split. It tells `@persist` which snapshot to hydrate
 from, while leaving the new execution free to receive a fresh `state.id`. The
 hydration source and the recorded run are no longer the same UUID — which is what
 most production scenarios actually want.
@@ -78,7 +78,7 @@ most production scenarios actually want.
 
 `inputs.id` for `@persist` hydration is scheduled for removal in a future release of
 CrewAI. There is no immediate hard cut-off — existing flows continue to work — but
-once you upgrade to v1.14.5 or later, new code should use `restoreFromStateId`, and
+once you upgrade to v1.14.5 or later, new code should use `restore_from_state_id`, and
 existing flows should migrate at the next convenient opportunity.
 
 ## AMP

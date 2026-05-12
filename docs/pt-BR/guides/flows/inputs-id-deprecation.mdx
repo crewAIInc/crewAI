@@ -1,12 +1,12 @@
 ---
-title: "Migrando de inputs.id para restoreFromStateId"
-description: "Mover fluxos @persist da hidratação obsoleta inputs.id para o campo suportado restoreFromStateId"
+title: "Migrando de inputs.id para restore_from_state_id"
+description: "Mover fluxos @persist da hidratação obsoleta inputs.id para o campo suportado restore_from_state_id"
 icon: "arrow-right-arrow-left"
 ---
 
 <Warning>
   Passar `id` dentro de `inputs` para hidratar um fluxo `@persist` é **obsoleto** e
-  programado para remoção em uma versão futura. A substituição, `restoreFromStateId`,
+  programado para remoção em uma versão futura. A substituição, `restore_from_state_id`,
   está disponível no CrewAI **v1.14.5 e posterior** — os passos abaixo se aplicam uma vez que você
   faça a atualização.
 </Warning>
@@ -15,7 +15,7 @@ icon: "arrow-right-arrow-left"
 
 A maneira documentada de hidratar um fluxo `@persist` de uma execução anterior é passar
 o UUID dessa execução como `inputs.id`. O CrewAI agora expõe um campo dedicado,
-`restoreFromStateId`, que realiza a mesma hidratação sem sobrecarregar a
+`restore_from_state_id`, que realiza a mesma hidratação sem sobrecarregar a
 carga útil de `inputs` — e sem acoplar a chave de hidratação à identidade da nova execução.
 
 ## Migração
@@ -50,7 +50,7 @@ para o modelo mental completo.
 Se você iniciar seu fluxo pela API REST do CrewAI AMP, veja [AMP](#amp) abaixo para a
 migração equivalente da carga útil.
 
-## Por que estamos descontinuando `inputs.id` para `@persist`
+## Por que estamos descontinuando `inputs.id` para `@persist`?
 
 `inputs.id` é atualmente a maneira documentada de retomar um fluxo `@persist` de uma
 execução anterior. O problema é que o mesmo UUID faz duas funções ao mesmo tempo:
@@ -68,7 +68,7 @@ de persistência e (no AMP) compartilham uma linha na lista de execuções. Não
 "hidratar a partir deste snapshot, mas registrar esta execução separadamente" sem dividir as
 duas responsabilidades.
 
-`restoreFromStateId` é essa divisão. Ele informa ao `@persist` de qual snapshot hidratar,
+`restore_from_state_id` é essa divisão. Ele informa ao `@persist` de qual snapshot hidratar,
 enquanto deixa a nova execução livre para receber um novo `state.id`. A
 fonte de hidratação e a execução registrada não são mais o mesmo UUID — que é o que
 a maioria dos cenários de produção realmente deseja.
@@ -77,7 +77,7 @@ a maioria dos cenários de produção realmente deseja.
 
 `inputs.id` para hidratação `@persist` está programado para remoção em uma versão futura do
 CrewAI. Não há um corte imediato — fluxos existentes continuam a funcionar — mas
-uma vez que você atualize para v1.14.5 ou posterior, novo código deve usar `restoreFromStateId`, e
+uma vez que você atualize para v1.14.5 ou posterior, novo código deve usar `restore_from_state_id`, e
 fluxos existentes devem migrar na próxima oportunidade conveniente.
 
 ## AMP
