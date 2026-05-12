@@ -1,0 +1,163 @@
+---
+title: "Tavily Crawl Tool"
+description: "Crawl websites and extract content from multiple pages using the Tavily API"
+icon: "spider"
+mode: "wide"
+---
+
+The `TavilyCrawlTool` allows CrewAI agents to crawl websites starting from a base URL using the Tavily API. It intelligently traverses links and extracts structured content from multiple pages at scale.
+
+## Installation
+
+To use the `TavilyCrawlTool`, you need to install the `tavily-python` library:
+
+```shell
+pip install 'crewai[tools]' tavily-python
+```
+
+You also need to set your Tavily API key as an environment variable:
+
+```bash
+export TAVILY_API_KEY='your-tavily-api-key'
+```
+
+Get an API key at https://app.tavily.com/ (sign up, then create a key).
+
+## Example Usage
+
+Here's how to initialize and use the `TavilyCrawlTool` within a CrewAI agent:
+
+```python
+import os
+from crewai import Agent, Task, Crew
+from crewai_tools import TavilyCrawlTool
+
+# Ensure TAVILY_API_KEY is set in your environment
+# os.environ["TAVILY_API_KEY"] = "YOUR_API_KEY"
+
+# Initialize the tool
+crawl_tool = TavilyCrawlTool()
+
+# Create an agent that uses the tool
+crawler_agent = Agent(
+    role='Web Crawler',
+    goal='Crawl websites and extract comprehensive content',
+    backstory='You are an expert at crawling websites and extracting relevant content using the Tavily API.',
+    tools=[crawl_tool],
+    verbose=True
+)
+
+# Define a task for the agent
+crawl_task = Task(
+    description='Crawl the documentation at https://docs.example.com and extract all relevant content.',
+    expected_output='A JSON string containing the crawled content from the website.',
+    agent=crawler_agent
+)
+
+# Create and run the crew
+crew = Crew(
+    agents=[crawler_agent],
+    tasks=[crawl_task],
+    verbose=2
+)
+
+result = crew.kickoff()
+print(result)
+```
+
+## Configuration Options
+
+### Agent-Settable Parameters (Runtime)
+
+These parameters can be provided by the agent at runtime:
+
+- `url` (str): **Required**. The base URL to start crawling from.
+- `max_depth` (int, 1-5, optional): Maximum depth to crawl (number of link hops from the base URL).
+- `extract_depth` (Literal["basic", "advanced"], optional): Extraction depth for page content - 'basic' for main content, 'advanced' for comprehensive extraction.
+- `instructions` (str, optional): Natural language instructions to guide the crawler (e.g., 'only crawl blog posts', 'focus on product pages').
+- `allow_external` (bool, optional): Whether to allow crawling external domains.
+
+### User-Settable Parameters (Initialization)
+
+These parameters are configured when creating the tool:
+
+- `max_breadth` (int, optional): Maximum number of links to follow per page.
+- `limit` (int, optional): Total number of links to process before stopping.
+- `select_paths` (Sequence[str], optional): Regex patterns to select only URLs with specific path patterns (e.g., `/docs/.*`, `/api/.*`).
+- `select_domains` (Sequence[str], optional): Regex patterns to select crawling to specific domains or subdomains.
+- `exclude_paths` (Sequence[str], optional): Regex patterns to exclude URLs with specific path patterns (e.g., `/private/.*`, `/admin/.*`).
+- `exclude_domains` (Sequence[str], optional): Regex patterns to exclude specific domains or subdomains.
+- `include_images` (bool, optional): Whether to include images in the crawl results.
+- `format` (Literal["markdown", "text"], optional): The format of the extracted web page content.
+- `timeout` (float, optional): The timeout for the crawl request in seconds. Defaults to `150`.
+- `include_favicon` (bool, optional): Whether to include favicon URLs in the crawl results.
+- `include_usage` (bool, optional): Whether to include credit usage information in the response.
+- `chunks_per_source` (int, 1-5, optional): Maximum number of content chunks per source. Only used when instructions are provided.
+- `extra_kwargs` (dict, optional): Additional keyword arguments to pass to tavily-python.
+
+## Advanced Usage
+
+### Crawling with Path Filters
+
+```python
+# Configure the tool to crawl only documentation pages
+custom_crawler = TavilyCrawlTool(
+    max_breadth=10,
+    limit=100,
+    select_paths=[r'/docs/.*', r'/api/.*'],
+    exclude_paths=[r'/private/.*', r'/admin/.*'],
+    include_images=True,
+    format='markdown',
+    timeout=120
+)
+
+agent_with_custom_tool = Agent(
+    role="Documentation Crawler",
+    goal="Crawl and extract documentation content",
+    tools=[custom_crawler]
+)
+```
+
+### Using Natural Language Instructions
+
+The agent can provide instructions to guide the crawler:
+
+```python
+# Task with specific crawling instructions
+crawl_task = Task(
+    description='''Crawl https://example.com with instructions to focus on product pages 
+    and blog posts. Use max_depth of 3 and allow external links.''',
+    expected_output='A JSON string containing the crawled content.',
+    agent=crawler_agent
+)
+```
+
+## Features
+
+- **Intelligent Crawling**: Automatically traverses links starting from a base URL
+- **Depth Control**: Configure how deep the crawler should explore
+- **Breadth Control**: Limit the number of links followed per page
+- **Path Filtering**: Select or exclude URLs based on path patterns
+- **Domain Filtering**: Control which domains can be crawled
+- **Natural Language Instructions**: Guide the crawler with plain English instructions
+- **Content Extraction**: Extract structured content from each discovered page
+- **Configurable Output Format**: Get content in markdown or text format
+
+## Response Format
+
+The tool returns a JSON string containing the crawled data from the website. The response includes:
+- List of crawled pages with their URLs
+- Extracted content from each page
+- Images (when `include_images=True`)
+- Metadata for each page
+
+Refer to the [Tavily API documentation](https://docs.tavily.com/documentation/api-reference/endpoint/crawl) for detailed information about the response structure.
+
+## Use Cases
+
+- **Documentation Aggregation**: Crawl entire documentation sites for RAG pipelines
+- **Content Migration**: Extract content from multiple pages for migration
+- **Competitive Analysis**: Crawl competitor websites to analyze content
+- **Research**: Gather comprehensive information from websites
+- **Archiving**: Create structured backups of website content
+
