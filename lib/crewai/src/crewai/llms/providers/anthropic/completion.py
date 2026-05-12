@@ -125,7 +125,7 @@ def _contains_file_id_reference(messages: list[dict[str, Any]]) -> bool:
 
 
 class AnthropicThinkingConfig(BaseModel):
-    type: Literal["enabled", "disabled"]
+    type: Literal["enabled", "disabled", "adaptive"]
     budget_tokens: int | None = None
 
 
@@ -485,7 +485,7 @@ class AnthropicCompletion(BaseLLM):
 
         if self.thinking:
             if isinstance(self.thinking, AnthropicThinkingConfig):
-                params["thinking"] = self.thinking.model_dump()
+                params["thinking"] = self.thinking.model_dump(exclude_none=True)
             else:
                 params["thinking"] = self.thinking
 

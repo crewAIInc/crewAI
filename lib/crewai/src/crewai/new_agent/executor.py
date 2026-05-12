@@ -104,6 +104,7 @@ class ConversationalAgentExecutor(BaseModel):
     _last_checkpoint: dict[str, Any] = PrivateAttr(default_factory=dict)
     # GAP-67: Artifacts collected during tool execution
     _turn_artifacts: list[Artifact] = PrivateAttr(default_factory=list)
+    _last_stream_result: Any = PrivateAttr(default=None)
 
     def model_post_init(self, __context: Any) -> None:
         """Load persisted conversation history and provenance from provider on startup."""
@@ -1369,9 +1370,28 @@ class ConversationalAgentExecutor(BaseModel):
         _thinking_text = ""  # GAP-53: thinking output from LLM
         llm_model = getattr(llm, "model", "") or ""
 
-        # GAP-27: Enable reasoning/thinking on the LLM if supported
-        if self.agent.settings.reasoning_enabled and hasattr(llm, 'thinking'):
-            llm.thinking = True
+        # GAP-27: Enable reasoning/thinking on the LLM if supported (once per agent)
+        if self.agent.settings.reasoning_enabled and hasattr(llm, 'thinking') and not llm.thinking:
+            try:
+                from crewai.llms.providers.anthropic.completion import (
+                    AnthropicCompletion,
+                    AnthropicThinkingConfig,
+                )
+                if isinstance(llm, AnthropicCompletion):
+                    llm.thinking = AnthropicThinkingConfig(type="adaptive")
+                    try:
+                        model_info = await asyncio.to_thread(
+                            llm._get_sync_client().models.retrieve,
+                            getattr(llm, "model", ""),
+                        )
+                        if model_info.max_tokens:
+                            llm.max_tokens = model_info.max_tokens
+                    except Exception:
+                        pass
+                else:
+                    llm.thinking = True
+            except ImportError:
+                llm.thinking = True
 
         while True:
             if has_reached_max_iterations(iterations, self.max_iter):
@@ -2074,12 +2094,7 @@ class ConversationalAgentExecutor(BaseModel):
                     now = time.monotonic()
                     if now - _last_status_time >= 0.5:
                         _last_status_time = now
-                        est_output = self._turn_output_tokens or (_streamed_chars // 4)
-                        await self._emit_status(
-                            "streaming",
-                            input_tokens=self._turn_input_tokens,
-                            output_tokens=est_output,
-                        )
+                        await self._emit_status("streaming")
                 except asyncio.TimeoutError:
                     continue
 
@@ -2089,6 +2104,7 @@ class ConversationalAgentExecutor(BaseModel):
                 yield chunk
 
             result = invoke_task.result()
+            self._last_stream_result = result
             if _streamed_chars == 0 and result.content:
                 yield result.content
 

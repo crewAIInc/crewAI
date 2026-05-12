@@ -642,6 +642,8 @@ class NewAgent(BaseModel):
         """Stream a response token by token.
 
         GAP-31: Accepts optional conversation_id for concurrent conversations.
+        After the generator is exhausted, call ``last_stream_result`` to get
+        the full ``Message`` with token metadata.
         """
         cid = conversation_id or self._default_conversation_id
         executor = self._get_or_create_executor(cid)
@@ -652,6 +654,14 @@ class NewAgent(BaseModel):
         )
         async for chunk in executor.astream(user_msg):
             yield chunk
+
+    @property
+    def last_stream_result(self) -> Message | None:
+        """Return the Message from the most recent ``stream()`` call."""
+        executor = self._executors.get(self._default_conversation_id)
+        if executor:
+            return getattr(executor, "_last_stream_result", None)
+        return None
 
     def reset_conversation(self, conversation_id: str | None = None) -> None:
         """Clear conversation history and start fresh.

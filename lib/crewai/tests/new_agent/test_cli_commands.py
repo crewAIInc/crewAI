@@ -31,8 +31,8 @@ def strip_jsonc_comments(text: str) -> str:
 # ── Helpers ─────────────────────────────────────────────────────
 
 # Standard interactive input for agent creation:
-# role, goal, backstory, llm (1=default), tools (none), api key (skip)
-_DEFAULT_PROMPTS_INPUT = "Test Role\nTest Goal\n\n1\n\n\n"
+# role, goal, backstory, provider (1=OpenAI), model (1=first), tools (none), api key (skip)
+_DEFAULT_PROMPTS_INPUT = "Test Role\nTest Goal\n\n1\n1\n\n\n"
 
 
 # ── crewai create agent <name> ──────────────────────────────────
@@ -68,10 +68,10 @@ class TestCreateAgentCommand:
         """Interactive prompts should populate role, goal, backstory."""
         runner = CliRunner()
         with runner.isolated_filesystem(temp_dir=tmp_path):
-            # role, goal, backstory, model (1=gpt-4o), tools (none), api key (skip)
+            # role, goal, backstory, provider (1=OpenAI), model (1=first), tools (none), api key (skip)
             result = runner.invoke(
                 crewai, ["create", "agent", "analyst"],
-                input="Data Analyst\nAnalyze data\nExpert analyst\n1\n\n\n",
+                input="Data Analyst\nAnalyze data\nExpert analyst\n1\n1\n\n\n",
             )
             assert result.exit_code == 0, result.output
             raw = Path("agents/analyst.jsonc").read_text()
@@ -81,16 +81,16 @@ class TestCreateAgentCommand:
             assert data["role"] == "Data Analyst"
             assert data["goal"] == "Analyze data"
             assert data["backstory"] == "Expert analyst"
-            assert data["llm"] == "openai/gpt-4o"
+            assert data["llm"] == "openai/gpt-5.5"
 
     def test_tools_selection(self, tmp_path: Path) -> None:
         """Selecting tools should populate the tools array."""
         runner = CliRunner()
         with runner.isolated_filesystem(temp_dir=tmp_path):
-            # role, goal, backstory, model (1), tools (1 2 = SerperDevTool + ScrapeWebsiteTool), api key (skip)
+            # role, goal, backstory, provider (1), model (1), tools (1 2 = SerperDevTool + ScrapeWebsiteTool), api key (skip)
             result = runner.invoke(
                 crewai, ["create", "agent", "searcher"],
-                input="Web Searcher\nSearch things\n\n1\n1 2\n\n",
+                input="Web Searcher\nSearch things\n\n1\n1\n1 2\n\n",
             )
             assert result.exit_code == 0, result.output
             raw = Path("agents/searcher.jsonc").read_text()
@@ -211,7 +211,7 @@ class TestAgentTemplate:
     """Unit tests for the AGENT_TEMPLATE constant."""
 
     def _render(self, **kwargs) -> str:
-        defaults = {"name": "test", "role": "", "goal": "", "backstory": "", "llm": "openai/gpt-4o"}
+        defaults = {"name": "test", "role": "", "goal": "", "backstory": "", "llm": "openai/gpt-5.5"}
         defaults.update(kwargs)
         return AGENT_TEMPLATE.format(**defaults)
 

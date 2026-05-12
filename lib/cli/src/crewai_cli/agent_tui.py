@@ -12,6 +12,9 @@ import json
 import os
 import re
 import sys
+import time
+
+from rich.markup import escape as _rich_escape
 from pathlib import Path
 from typing import Any
 
@@ -65,6 +68,11 @@ _BG_MSG_AGENT = "#252525"
 _DIM = "#777777"
 _COMMON_ROOM = "__common__"
 _SPINNER = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+
+
+def _safe_render(text: str) -> str:
+    """Escape Rich markup in text so square brackets are displayed literally."""
+    return _rich_escape(text)
 
 
 def _strip_jsonc(text: str) -> str:
@@ -135,21 +143,32 @@ class ThinkingIndicator(Static):
         self._tokens = ""
         self._prev_input: int = 0
         self._prev_output: int = 0
+        self._step_start: float = time.monotonic()
 
     def update_status(self, state: str, detail: str | None, input_tokens: int, output_tokens: int) -> None:
         label = detail or state or "working…"
+        # Mark the previous step as done (skip the initial placeholder,
+        # but keep its creation timestamp so the first real step inherits it)
         if self._current_status and self._current_status != "starting…":
             step_in = input_tokens - self._prev_input
             step_out = output_tokens - self._prev_output
-            tok = f" [{_DIM}]↑{step_in:,} ↓{step_out:,}[/]" if (step_in or step_out) else ""
-            done_line = f"  [{_DIM}]✓ {self._current_status}{tok}[/]"
-            if done_line not in self._steps:
+            step_elapsed = time.monotonic() - self._step_start
+            meta_parts: list[str] = []
+            if step_in or step_out:
+                meta_parts.append(f"↑{step_in:,} ↓{step_out:,}")
+            if step_elapsed >= 0.1:
+                meta_parts.append(f"{step_elapsed:.1f}s")
+            meta = " · ".join(meta_parts)
+            suffix = f" ({meta})" if meta else ""
+            done_line = f"  [{_DIM}]✓ {self._current_status}{suffix}[/]"
+            if not any(self._current_status in s for s in self._steps):
                 self._steps.append(done_line)
             if len(self._steps) > 6:
                 self._steps = self._steps[-6:]
         self._current_status = label
         self._prev_input = input_tokens
         self._prev_output = output_tokens
+        self._step_start = time.monotonic()
         if input_tokens or output_tokens:
             self._tokens = f"[{_DIM}]↑{input_tokens:,} ↓{output_tokens:,}[/]"
         self._render_frame()
@@ -1104,22 +1123,66 @@ class AgentTUI(App[None]):
                     )
 
             self._last_active_agent = target
-            response = await asyncio.to_thread(agent.message, message_text)
 
+            # Stream response token-by-token
+            scroll = self.query_one("#chat-scroll", VerticalScroll)
+            follow_tail = self._is_near_bottom(scroll)
+            bubble: ChatBubble | None = None
+            accumulated = ""
+            stream_start = time.monotonic()
+            stream_chars = 0
+
+            def _stream_markup(text: str, final: bool = False, metadata: str = "") -> str:
+                rendered = _safe_render(text)
+                mk = f"[bold {_CORAL}]{target}[/]\n{rendered}"
+                if final:
+                    if metadata:
+                        mk += f"\n\n[{_DIM}]{metadata}[/]"
+                else:
+                    cursor = f"[{_CORAL}]▎[/]"
+                    elapsed = time.monotonic() - stream_start
+                    est_tokens = stream_chars // 4
+                    progress = f"[{_DIM}]~{est_tokens:,} tokens · {elapsed:.1f}s[/]"
+                    mk += f"{cursor}\n\n{progress}"
+                return mk
+
+            async for chunk in agent.stream(message_text):
+                accumulated += chunk
+                stream_chars += len(chunk)
+
+                if bubble is None and self._current_room == room:
+                    bubble = ChatBubble(
+                        _stream_markup(accumulated), classes="agent-bubble"
+                    )
+                    # Insert bubble before thinking so indicator stays at bottom
+                    scroll.mount(bubble, before=thinking)
+                    if follow_tail:
+                        scroll.scroll_end(animate=False)
+                elif bubble is not None:
+                    bubble.update(_stream_markup(accumulated))
+                    if follow_tail:
+                        scroll.scroll_end(animate=False)
+
+            # Remove cursor, add final metadata
+            await self._safe_remove(thinking)
+
+            response = getattr(agent, "last_stream_result", None)
             meta_parts: list[str] = []
-            if response.input_tokens or response.output_tokens:
-                meta_parts.append(
-                    f"↑ {response.input_tokens or 0:,}  "
-                    f"↓ {response.output_tokens or 0:,} tokens"
-                )
-            if response.response_time_ms:
-                meta_parts.append(f"{response.response_time_ms / 1000:.1f}s")
+            if response:
+                if getattr(response, "input_tokens", 0) or getattr(response, "output_tokens", 0):
+                    meta_parts.append(
+                        f"↑ {response.input_tokens or 0:,}  "
+                        f"↓ {response.output_tokens or 0:,} tokens"
+                    )
+                if getattr(response, "response_time_ms", 0):
+                    meta_parts.append(f"{response.response_time_ms / 1000:.1f}s")
             metadata = " · ".join(meta_parts)
 
-            await self._safe_remove(thinking)
-            self._append_msg(room, target, response.content, metadata)
-            if self._current_room == room:
-                self._mount_bubble(target, response.content, metadata)
+            if bubble is not None:
+                bubble.update(_stream_markup(accumulated, final=True, metadata=metadata))
+
+            content = accumulated or (response.content if response else "")
+            self._append_msg(room, target, content, metadata)
 
         except Exception as e:
             await self._safe_remove(thinking)
@@ -1190,14 +1253,12 @@ class AgentTUI(App[None]):
         self, sender: str, content: str, metadata: str = ""
     ) -> ChatBubble:
         if sender == "You":
-            rendered = re.sub(r'\*\*(.+?)\*\*', r'[bold]\1[/bold]', content)
-            markup = f"[bold #e8e8e8]You[/]\n{rendered}"
+            markup = f"[bold #e8e8e8]You[/]\n{_safe_render(content)}"
             return ChatBubble(markup, classes="user-bubble")
         if sender == "system":
-            markup = f"[dim italic]{content}[/]"
+            markup = f"[dim italic]{_rich_escape(content)}[/]"
             return ChatBubble(markup, classes="system-bubble")
-        rendered = re.sub(r'\*\*(.+?)\*\*', r'[bold]\1[/bold]', content)
-        markup = f"[bold {_CORAL}]{sender}[/]\n{rendered}"
+        markup = f"[bold {_CORAL}]{sender}[/]\n{_safe_render(content)}"
         if metadata:
             markup += f"\n\n[{_DIM}]{metadata}[/]"
         return ChatBubble(markup, classes="agent-bubble")

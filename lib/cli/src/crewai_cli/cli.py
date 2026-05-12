@@ -192,12 +192,12 @@ def _train_new_agents(agent_files: list, n_iterations: int) -> None:
 
     from crewai_cli.benchmark import load_benchmark_cases
 
-    benchmarks_dir = Path("benchmarks")
+    tests_dir = Path("tests")
     agents_trained = 0
 
     for agent_path in agent_files:
         agent_name = agent_path.stem
-        cases_path = benchmarks_dir / f"{agent_name}_cases.json"
+        cases_path = tests_dir / f"{agent_name}_cases.json"
 
         if not cases_path.exists():
             click.secho(f"  Skipping {agent_name} — no {cases_path}", fg="yellow")

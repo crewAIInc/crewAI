@@ -225,8 +225,8 @@ def _bootstrap_project(base: Path, llm_model: str = "") -> None:
     tools_dir = base / "tools"
     tools_dir.mkdir(parents=True, exist_ok=True)
 
-    benchmarks_dir = base / "benchmarks"
-    benchmarks_dir.mkdir(parents=True, exist_ok=True)
+    tests_dir = base / "tests"
+    tests_dir.mkdir(parents=True, exist_ok=True)
 
     config_path = base / "config.json"
     if not config_path.exists():
@@ -319,23 +319,58 @@ def _run_uv_sync(base: Path) -> None:
 
 def _create_benchmark_cases(base: Path, agent_name: str) -> None:
     """Create a starter benchmark cases file for the agent."""
-    cases_path = base / "benchmarks" / f"{agent_name}_cases.json"
+    cases_path = base / "tests" / f"{agent_name}_cases.json"
     if cases_path.exists():
         return
     cases_path.parent.mkdir(parents=True, exist_ok=True)
     cases_path.write_text(_STARTER_CASES, encoding="utf-8")
 
 
-_POPULAR_MODELS: list[tuple[str, str]] = [
-    ("openai/gpt-4o", "OpenAI GPT-4o"),
-    ("openai/gpt-4o-mini", "OpenAI GPT-4o Mini (cheaper)"),
-    ("openai/o3", "OpenAI o3 (reasoning)"),
-    ("anthropic/claude-sonnet-4-6", "Anthropic Claude Sonnet 4.6"),
-    ("anthropic/claude-haiku-4-5-20251001", "Anthropic Claude Haiku 4.5 (fast)"),
-    ("gemini/gemini-2.5-pro-exp-03-25", "Google Gemini 2.5 Pro"),
-    ("groq/llama-3.1-70b-versatile", "Groq Llama 3.1 70B (fast)"),
-    ("ollama/llama3.1", "Ollama Llama 3.1 (local)"),
+_PROVIDERS: list[tuple[str, str]] = [
+    ("openai", "OpenAI"),
+    ("anthropic", "Anthropic"),
+    ("gemini", "Google Gemini"),
+    ("groq", "Groq (fast inference)"),
+    ("ollama", "Ollama (local)"),
 ]
+
+_PROVIDER_MODELS: dict[str, list[tuple[str, str]]] = {
+    "openai": [
+        ("gpt-5.5", "GPT-5.5"),
+        ("gpt-5.5-pro", "GPT-5.5 Pro"),
+        ("o4-mini", "o4-mini (reasoning, fast)"),
+        ("o3", "o3 (reasoning)"),
+        ("gpt-4.1-mini", "GPT-4.1 Mini (budget)"),
+    ],
+    "anthropic": [
+        ("claude-opus-4-6", "Claude Opus 4.6"),
+        ("claude-sonnet-4-6", "Claude Sonnet 4.6"),
+        ("claude-haiku-4-5-20251001", "Claude Haiku 4.5 (fast)"),
+        ("claude-3-7-sonnet-20250219", "Claude 3.7 Sonnet"),
+        ("claude-3-5-sonnet-20241022", "Claude 3.5 Sonnet"),
+    ],
+    "gemini": [
+        ("gemini-3-pro-preview", "Gemini 3 Pro (preview)"),
+        ("gemini-2.5-pro-exp-03-25", "Gemini 2.5 Pro"),
+        ("gemini-2.5-flash-preview-04-17", "Gemini 2.5 Flash"),
+        ("gemini-2.0-flash-001", "Gemini 2.0 Flash"),
+        ("gemini-1.5-pro", "Gemini 1.5 Pro"),
+    ],
+    "groq": [
+        ("llama-3.3-70b-versatile", "Llama 3.3 70B"),
+        ("llama-3.1-70b-versatile", "Llama 3.1 70B"),
+        ("llama-3.1-8b-instant", "Llama 3.1 8B (fast)"),
+        ("deepseek-r1-distill-llama-70b", "DeepSeek R1 70B"),
+        ("mixtral-8x7b-32768", "Mixtral 8x7B"),
+    ],
+    "ollama": [
+        ("llama3.3", "Llama 3.3"),
+        ("llama3.1", "Llama 3.1"),
+        ("deepseek-r1", "DeepSeek R1"),
+        ("qwen2.5", "Qwen 2.5"),
+        ("mistral", "Mistral"),
+    ],
+}
 
 
 _POPULAR_TOOLS: list[tuple[str, str]] = [
@@ -470,7 +505,7 @@ def create_agent(name: str | None = None) -> None:
 
     base = Path.cwd()
     # Directories are bootstrapped now, pyproject written after model selection
-    for d in ("agents", "tools", "benchmarks"):
+    for d in ("agents", "tools", "tests"):
         (base / d).mkdir(parents=True, exist_ok=True)
 
     dest = base / "agents" / f"{name}.jsonc"
@@ -517,51 +552,77 @@ def create_agent(name: str | None = None) -> None:
 
 
 def _select_model() -> str:
-    """Let the user pick an LLM model from popular options or type a custom one."""
-    labels = [f"{label}  ({model_id})" for model_id, label in _POPULAR_MODELS]
-    labels.append("Other (enter manually)")
+    """Two-step selection: provider first, then model."""
+    # Step 1: Pick provider
+    provider_labels = [label for _, label in _PROVIDERS]
+    provider_labels.append("Other (enter manually)")
 
     click.echo()
-    click.secho("  LLM Model:", fg="cyan")
+    click.secho("  LLM Provider:", fg="cyan")
+    p_idx = _arrow_or_fallback(provider_labels)
 
-    if _is_interactive():
-        try:
-            _draw_single(labels, 0)
-            cursor = 0
-            total = len(labels)
-            while True:
-                key = _read_key()
-                if key == "up" and cursor > 0:
-                    cursor -= 1
-                    _draw_single(labels, cursor, clear=True)
-                elif key == "down" and cursor < total - 1:
-                    cursor += 1
-                    _draw_single(labels, cursor, clear=True)
-                elif key == "enter":
-                    _clear_lines(total)
-                    idx = cursor
-                    break
-        except Exception:
-            idx = _select_model_fallback(labels)
-    else:
-        idx = _select_model_fallback(labels)
-
-    if idx == len(_POPULAR_MODELS):
+    if p_idx == len(_PROVIDERS):
         custom = click.prompt("  Enter model (provider/model)", type=str)
         return custom.strip()
 
-    selected = _POPULAR_MODELS[idx][0]
-    click.secho(f"  → {selected}", fg="green")
-    return selected
+    provider_key, provider_name = _PROVIDERS[p_idx]
+    click.secho(f"  → {provider_name}", fg="green")
+
+    # Step 2: Pick model from that provider
+    models = _PROVIDER_MODELS.get(provider_key, [])
+    model_labels = [f"{label}  ({model_id})" for model_id, label in models]
+    model_labels.append("Other (enter model name)")
+
+    click.echo()
+    click.secho(f"  {provider_name} Model:", fg="cyan")
+    m_idx = _arrow_or_fallback(model_labels)
+
+    if m_idx == len(models):
+        custom = click.prompt(f"  Enter model name for {provider_key}/", type=str)
+        result = f"{provider_key}/{custom.strip()}"
+    else:
+        model_id = models[m_idx][0]
+        result = f"{provider_key}/{model_id}"
+
+    click.secho(f"  → {result}", fg="green")
+    return result
 
 
-def _select_model_fallback(labels: list[str]) -> int:
+def _arrow_or_fallback(labels: list[str]) -> int:
+    """Arrow-key select if interactive, numbered fallback otherwise."""
+    if _is_interactive():
+        try:
+            return _arrow_select_one(labels)
+        except Exception:
+            pass
+    return _numbered_select(labels)
+
+
+def _arrow_select_one(labels: list[str]) -> int:
+    """Arrow-key single-select. Returns selected index."""
+    cursor = 0
+    total = len(labels)
+    _draw_single(labels, cursor)
+    while True:
+        key = _read_key()
+        if key == "up" and cursor > 0:
+            cursor -= 1
+            _draw_single(labels, cursor, clear=True)
+        elif key == "down" and cursor < total - 1:
+            cursor += 1
+            _draw_single(labels, cursor, clear=True)
+        elif key == "enter":
+            _clear_lines(total)
+            return cursor
+
+
+def _numbered_select(labels: list[str]) -> int:
     """Numbered fallback for non-TTY environments."""
     for idx, label in enumerate(labels, 1):
         click.echo(f"    {idx}. {label}")
     click.echo()
     while True:
-        choice = click.prompt("  Select a model", type=str, default="1")
+        choice = click.prompt("  Select", type=str, default="1")
         try:
             num = int(choice)
             if 1 <= num <= len(labels):
@@ -577,7 +638,7 @@ def _select_tools() -> list[str]:
     labels.append("Add custom tool class names")
 
     click.echo()
-    click.secho("  Tools (press Enter to skip):", fg="cyan")
+    click.secho("  Tools (space to select, enter to confirm):", fg="cyan")
 
     if _is_interactive():
         try:
