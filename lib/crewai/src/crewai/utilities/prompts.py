@@ -86,7 +86,7 @@ class Prompts(BaseModel):
                 slices.append("tools")
         else:
             slices.append("no_tools")
-        system: str = self._build_prompt(slices)
+        system: str = self._build_prompt(slices) + self._build_skill_block()
 
         # Determine which task slice to use:
         task_slice: COMPONENTS
@@ -106,7 +106,7 @@ class Prompts(BaseModel):
             return SystemPromptResult(
                 system=system,
                 user=self._build_prompt([task_slice]),
-                prompt=self._build_prompt(slices),
+                prompt=self._build_prompt(slices) + self._build_skill_block(),
             )
         return StandardPromptResult(
             prompt=self._build_prompt(
@@ -115,7 +115,26 @@ class Prompts(BaseModel):
                 self.prompt_template,
                 self.response_template,
             )
+            + self._build_skill_block()
         )
+
+    def _build_skill_block(self) -> str:
+        """Render the agent's activated skills as a stable XML block.
+
+        Skills are agent-scoped (do not change per task), so they live in the
+        system prompt where prompt-cache prefixes can survive across calls.
+        """
+        skills = getattr(self.agent, "skills", None)
+        if not skills:
+            return ""
+
+        from crewai.skills.loader import format_skill_context
+        from crewai.skills.models import Skill
+
+        sections = [format_skill_context(s) for s in skills if isinstance(s, Skill)]
+        if not sections:
+            return ""
+        return "\n\n<skills>\n" + "\n\n".join(sections) + "\n</skills>"
 
     def _build_prompt(
         self,
