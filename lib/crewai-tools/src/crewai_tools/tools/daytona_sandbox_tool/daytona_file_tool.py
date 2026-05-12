@@ -5,8 +5,8 @@ from builtins import type as type_
 import logging
 import posixpath
 import shlex
-import uuid
 from typing import Any, Literal
+import uuid
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -33,7 +33,63 @@ FileAction = Literal[
 ]
 
 
+def _daytona_file_schema_extra(schema: dict[str, Any]) -> None:
+    schema["allOf"] = [
+        {
+            "if": {
+                "properties": {
+                    "action": {
+                        "enum": [
+                            "read",
+                            "write",
+                            "append",
+                            "list",
+                            "delete",
+                            "mkdir",
+                            "info",
+                            "exists",
+                            "move",
+                            "find",
+                            "search",
+                            "chmod",
+                        ]
+                    }
+                }
+            },
+            "then": {"required": ["path"]},
+        },
+        {
+            "if": {"properties": {"action": {"const": "append"}}},
+            "then": {"required": ["content"]},
+        },
+        {
+            "if": {"properties": {"action": {"const": "move"}}},
+            "then": {"required": ["destination"]},
+        },
+        {
+            "if": {"properties": {"action": {"enum": ["find", "search"]}}},
+            "then": {"required": ["pattern"]},
+        },
+        {
+            "if": {"properties": {"action": {"const": "replace"}}},
+            "then": {"required": ["paths", "pattern", "replacement"]},
+        },
+        {
+            "if": {"properties": {"action": {"const": "chmod"}}},
+            "then": {
+                "anyOf": [
+                    {"required": ["mode"]},
+                    {"required": ["owner"]},
+                    {"required": ["group"]},
+                ]
+            },
+        },
+    ]
+
+
 class DaytonaFileToolSchema(BaseModel):
+    model_config = {"json_schema_extra": _daytona_file_schema_extra}
+
     action: FileAction = Field(
         ...,
         description=(
