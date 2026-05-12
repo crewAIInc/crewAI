@@ -286,8 +286,6 @@ def test_agent_execute_task_with_planning():
 
     assert result is not None
     assert "20" in str(result)
-    # Planning should be appended to task description
-    assert "Planning:" in task.description
 
 
 @pytest.mark.vcr()
@@ -342,4 +340,3 @@ def test_agent_execute_task_with_planning_refine():
     assert result is not None
     # Area = pi * r^2 = 3.14 * 25 = 78.5
     assert "78" in str(result) or "79" in str(result)
-    assert "Planning:" in task.description

@@ -14,6 +14,7 @@ import contextvars
 import inspect
 import logging
 from typing import TYPE_CHECKING, Annotated, Any, Literal, cast
+import warnings
 
 from crewai_core.printer import PRINTER
 from pydantic import (
@@ -138,6 +139,13 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
+        warnings.warn(
+            "CrewAgentExecutor is deprecated and will be removed in a future release.\n"
+            "Agents inside Crews now use AgentExecutor (crewai.experimental.AgentExecutor) by default.\n"
+            "To suppress this warning, migrate to AgentExecutor.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if not self.before_llm_call_hooks:
             self.before_llm_call_hooks.extend(get_before_llm_call_hooks())
         if not self.after_llm_call_hooks:

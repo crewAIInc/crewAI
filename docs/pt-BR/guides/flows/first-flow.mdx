@@ -266,7 +266,165 @@ Nosso flow irá:
 Vamos criar nosso flow no arquivo `main.py`:
 
 ```python
-# [CÓDIGO NÃO TRADUZIDO, MANTER COMO ESTÁ]
+#!/usr/bin/env python
+import json
+import os
+from typing import List, Dict
+from pydantic import BaseModel, Field
+from crewai import LLM
+from crewai.flow.flow import Flow, listen, start
+from guide_creator_flow.crews.content_crew.content_crew import ContentCrew
+
+# Definir nossos modelos para dados estruturados
+class Section(BaseModel):
+    title: str = Field(description="Title of the section")
+    description: str = Field(description="Brief description of what the section should cover")
+
+class GuideOutline(BaseModel):
+    title: str = Field(description="Title of the guide")
+    introduction: str = Field(description="Introduction to the topic")
+    target_audience: str = Field(description="Description of the target audience")
+    sections: List[Section] = Field(description="List of sections in the guide")
+    conclusion: str = Field(description="Conclusion or summary of the guide")
+
+# Definir o estado do nosso flow
+class GuideCreatorState(BaseModel):
+    topic: str = ""
+    audience_level: str = ""
+    guide_outline: GuideOutline = None
+    sections_content: Dict[str, str] = {}
+
+class GuideCreatorFlow(Flow[GuideCreatorState]):
+    """Flow para criar um guia abrangente sobre qualquer tópico"""
+
+    @start()
+    def get_user_input(self):
+        """Obter entrada do usuário sobre o tópico e público do guia"""
+        print("\n=== Create Your Comprehensive Guide ===\n")
+
+        # Obter entrada do usuário
+        self.state.topic = input("What topic would you like to create a guide for? ")
+
+        # Obter nível do público com validação
+        while True:
+            audience = input("Who is your target audience? (beginner/intermediate/advanced) ").lower()
+            if audience in ["beginner", "intermediate", "advanced"]:
+                self.state.audience_level = audience
+                break
+            print("Please enter 'beginner', 'intermediate', or 'advanced'")
+
+        print(f"\nCreating a guide on {self.state.topic} for {self.state.audience_level} audience...\n")
+        return self.state
+
+    @listen(get_user_input)
+    def create_guide_outline(self, state):
+        """Criar um esboço estruturado para o guia usando uma chamada direta ao LLM"""
+        print("Creating guide outline...")
+
+        # Inicializar o LLM
+        llm = LLM(model="openai/gpt-4o-mini", response_format=GuideOutline)
+
+        # Criar as mensagens para o esboço
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant designed to output JSON."},
+            {"role": "user", "content": f"""
+            Create a detailed outline for a comprehensive guide on "{state.topic}" for {state.audience_level} level learners.
+
+            The outline should include:
+            1. A compelling title for the guide
+            2. An introduction to the topic
+            3. 4-6 main sections that cover the most important aspects of the topic
+            4. A conclusion or summary
+
+            For each section, provide a clear title and a brief description of what it should cover.
+            """}
+        ]
+
+        # Fazer a chamada ao LLM com formato de resposta JSON
+        response = llm.call(messages=messages)
+
+        # Analisar a resposta JSON
+        outline_dict = json.loads(response)
+        self.state.guide_outline = GuideOutline(**outline_dict)
+
+        # Garantir que o diretório de saída exista antes de salvar
+        os.makedirs("output", exist_ok=True)
+
+        # Salvar o esboço em um arquivo
+        with open("output/guide_outline.json", "w") as f:
+            json.dump(outline_dict, f, indent=2)
+
+        print(f"Guide outline created with {len(self.state.guide_outline.sections)} sections")
+        return self.state.guide_outline
+
+    @listen(create_guide_outline)
+    def write_and_compile_guide(self, outline):
+        """Escrever todas as seções e compilar o guia"""
+        print("Writing guide sections and compiling...")
+        completed_sections = []
+
+        # Processar seções uma por uma para manter o fluxo de contexto
+        for section in outline.sections:
+            print(f"Processing section: {section.title}")
+
+            # Construir contexto a partir das seções anteriores
+            previous_sections_text = ""
+            if completed_sections:
+                previous_sections_text = "# Previously Written Sections\n\n"
+                for title in completed_sections:
+                    previous_sections_text += f"## {title}\n\n"
+                    previous_sections_text += self.state.sections_content.get(title, "") + "\n\n"
+            else:
+                previous_sections_text = "No previous sections written yet."
+
+            # Executar a crew de conteúdo para esta seção
+            result = ContentCrew().crew().kickoff(inputs={
+                "section_title": section.title,
+                "section_description": section.description,
+                "audience_level": self.state.audience_level,
+                "previous_sections": previous_sections_text,
+                "draft_content": ""
+            })
+
+            # Armazenar o conteúdo
+            self.state.sections_content[section.title] = result.raw
+            completed_sections.append(section.title)
+            print(f"Section completed: {section.title}")
+
+        # Compilar o guia final
+        guide_content = f"# {outline.title}\n\n"
+        guide_content += f"## Introduction\n\n{outline.introduction}\n\n"
+
+        # Adicionar cada seção em ordem
+        for section in outline.sections:
+            section_content = self.state.sections_content.get(section.title, "")
+            guide_content += f"\n\n{section_content}\n\n"
+
+        # Adicionar conclusão
+        guide_content += f"## Conclusion\n\n{outline.conclusion}\n\n"
+
+        # Salvar o guia
+        with open("output/complete_guide.md", "w") as f:
+            f.write(guide_content)
+
+        print("\nComplete guide compiled and saved to output/complete_guide.md")
+        return "Guide creation completed successfully"
+
+def kickoff():
+    """Executar o flow criador de guias"""
+    GuideCreatorFlow().kickoff()
+    print("\n=== Flow Complete ===")
+    print("Your comprehensive guide is ready in the output directory.")
+    print("Open output/complete_guide.md to view it.")
+
+def plot():
+    """Gerar uma visualização do flow"""
+    flow = GuideCreatorFlow()
+    flow.plot("guide_creator_flow")
+    print("Flow visualization saved to guide_creator_flow.html")
+
+if __name__ == "__main__":
+    kickoff()
 ```
 
 Vamos analisar o que está acontecendo neste flow:
