@@ -859,7 +859,7 @@ def _test_new_agents(
     )
 
     all_passed = True
-    agents_tested = 0
+    agents_tested: set[str] = set()
 
     for iteration in range(n_iterations):
         if n_iterations > 1:
@@ -892,7 +892,7 @@ def _test_new_agents(
                 all_passed = False
                 continue
 
-            agents_tested += 1
+            agents_tested.add(job["agent_name"])
             for results in result.values():
                 failed = [r for r in results if r.score < job["threshold"]]
                 if failed:
@@ -911,12 +911,12 @@ def _test_new_agents(
                         f"  [green bold]{job['agent_name']}: PASSED all {len(results)} cases >= {job['threshold']}[/green bold]"
                     )
 
-    if agents_tested == 0:
+    if len(agents_tested) == 0:
         click.secho("No agents completed successfully.", fg="yellow")
         raise SystemExit(1)
     if all_passed:
         click.secho(
-            f"All tests passed ({agents_tested} agent(s)).", fg="green", bold=True
+            f"All tests passed ({len(agents_tested)} agent(s)).", fg="green", bold=True
         )
     else:
         click.secho("Some tests failed.", fg="red", bold=True)
