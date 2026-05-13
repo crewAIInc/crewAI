@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 import json
 from pathlib import Path
 import re
@@ -49,10 +49,10 @@ class LoadedCases:
     def __len__(self) -> int:
         return len(self.cases)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[BenchmarkCase]:
         return iter(self.cases)
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> BenchmarkCase:
         return self.cases[index]
 
 
@@ -136,6 +136,7 @@ async def _judge_with_llm(
     from crewai.utilities.llm_utils import create_llm
 
     judge_llm = create_llm(judge_model)
+    assert judge_llm is not None
 
     prompt = (
         "You are an evaluation judge. Score the following response on a scale of 0.0 to 1.0.\n\n"
@@ -444,7 +445,7 @@ async def run_benchmark(
 class SuppressBenchmarkOutput:
     """Context manager that silences console formatter and noisy logging during benchmarks."""
 
-    def __enter__(self):
+    def __enter__(self) -> "SuppressBenchmarkOutput":
         import logging
 
         self._saved_formatter = None
@@ -453,7 +454,7 @@ class SuppressBenchmarkOutput:
                 TraceCollectionListener,
             )
 
-            listener = TraceCollectionListener._instance
+            listener = TraceCollectionListener._instance  # type: ignore[misc]
             if listener:
                 self._saved_formatter = listener.formatter
                 listener.formatter = None
@@ -471,7 +472,7 @@ class SuppressBenchmarkOutput:
             lg.setLevel(logging.CRITICAL)
         return self
 
-    def __exit__(self, *exc):
+    def __exit__(self, *exc: object) -> None:
         for lg, level in self._loggers:
             lg.setLevel(level)
         if self._saved_formatter is not None:
@@ -480,7 +481,7 @@ class SuppressBenchmarkOutput:
                     TraceCollectionListener,
                 )
 
-                listener = TraceCollectionListener._instance
+                listener = TraceCollectionListener._instance  # type: ignore[misc]
                 if listener:
                     listener.formatter = self._saved_formatter
             except Exception:
@@ -490,7 +491,7 @@ class SuppressBenchmarkOutput:
 class VerboseBenchmarkOutput:
     """Context manager that subscribes to NewAgent events and prints them for debugging."""
 
-    def __enter__(self):
+    def __enter__(self) -> "VerboseBenchmarkOutput":
         import logging
         import sys
 
@@ -513,7 +514,7 @@ class VerboseBenchmarkOutput:
                 TraceCollectionListener,
             )
 
-            listener = TraceCollectionListener._instance
+            listener = TraceCollectionListener._instance  # type: ignore[misc]
             if listener:
                 self._saved_formatter = listener.formatter
                 listener.formatter = None
@@ -537,38 +538,38 @@ class VerboseBenchmarkOutput:
         w = sys.stderr.write
         fl = sys.stderr.flush
 
-        def _on_llm_start(_src, ev: NewAgentLLMCallStartedEvent):
+        def _on_llm_start(_src: Any, ev: NewAgentLLMCallStartedEvent) -> None:
             w(f"\033[36m[llm] calling {ev.model}…\033[0m\n")
             fl()
 
-        def _on_llm_done(_src, ev: NewAgentLLMCallCompletedEvent):
+        def _on_llm_done(_src: Any, ev: NewAgentLLMCallCompletedEvent) -> None:
             w(
                 f"\033[36m[llm] {ev.model}  {ev.input_tokens}→{ev.output_tokens} tokens  {ev.response_time_ms}ms\033[0m\n"
             )
             fl()
 
-        def _on_llm_fail(_src, ev: NewAgentLLMCallFailedEvent):
+        def _on_llm_fail(_src: Any, ev: NewAgentLLMCallFailedEvent) -> None:
             w(f"\033[31m[llm] FAILED: {ev.error[:200]}\033[0m\n")
             fl()
 
-        def _on_tool_start(_src, ev: NewAgentToolUsageStartedEvent):
+        def _on_tool_start(_src: Any, ev: NewAgentToolUsageStartedEvent) -> None:
             w(f"\033[33m[tool] using {ev.tool_name}…\033[0m\n")
             fl()
 
-        def _on_tool_done(_src, ev: NewAgentToolUsageCompletedEvent):
+        def _on_tool_done(_src: Any, ev: NewAgentToolUsageCompletedEvent) -> None:
             w(f"\033[33m[tool] {ev.tool_name} done\033[0m\n")
             fl()
 
-        def _on_tool_fail(_src, ev: NewAgentToolUsageFailedEvent):
+        def _on_tool_fail(_src: Any, ev: NewAgentToolUsageFailedEvent) -> None:
             w(f"\033[31m[tool] {ev.tool_name} FAILED: {ev.error[:200]}\033[0m\n")
             fl()
 
-        def _on_status(_src, ev: NewAgentStatusUpdateEvent):
+        def _on_status(_src: Any, ev: NewAgentStatusUpdateEvent) -> None:
             if ev.detail:
                 w(f"\033[2m[status] {ev.state}: {ev.detail}\033[0m\n")
                 fl()
 
-        def _on_summarized(_src, ev: NewAgentContextSummarizedEvent):
+        def _on_summarized(_src: Any, ev: NewAgentContextSummarizedEvent) -> None:
             w("\033[35m[context] summarized — context was too large\033[0m\n")
             fl()
 
@@ -583,14 +584,14 @@ class VerboseBenchmarkOutput:
             (NewAgentContextSummarizedEvent, _on_summarized),
         ]
         for event_type, handler in pairs:
-            self._bus.on(event_type)(handler)
+            self._bus.on(event_type)(handler)  # type: ignore[arg-type]
             self._handlers.append((event_type, handler))
         return self
 
-    def __exit__(self, *exc):
+    def __exit__(self, *exc: object) -> None:
         for event_type, handler in self._handlers:
             try:
-                self._bus.off(event_type, handler)
+                self._bus.off(event_type, handler)  # type: ignore[arg-type]
             except Exception:
                 pass
         for lg, level in self._loggers:
@@ -601,7 +602,7 @@ class VerboseBenchmarkOutput:
                     TraceCollectionListener,
                 )
 
-                listener = TraceCollectionListener._instance
+                listener = TraceCollectionListener._instance  # type: ignore[misc]
                 if listener:
                     listener.formatter = self._saved_formatter
             except Exception:
@@ -619,7 +620,7 @@ class ArtifactsSandbox:
         self._base = Path(base)
         self._prev_cwd: str | None = None
 
-    def __enter__(self):
+    def __enter__(self) -> "ArtifactsSandbox":
         import os
 
         self._base.mkdir(parents=True, exist_ok=True)
@@ -630,7 +631,7 @@ class ArtifactsSandbox:
         os.chdir(self._base)
         return self
 
-    def __exit__(self, *exc):
+    def __exit__(self, *exc: object) -> None:
         import os
 
         if self._prev_cwd:

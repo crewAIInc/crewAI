@@ -139,7 +139,7 @@ def _load_config(base: Path) -> dict[str, Any]:
         return {"rooms": {"common": {"agents": [], "engagement": "organic"}}}
     try:
         raw = config_path.read_text(encoding="utf-8")
-        return json.loads(_strip_jsonc(raw))
+        return json.loads(_strip_jsonc(raw))  # type: ignore[no-any-return]
     except Exception:
         return {"rooms": {"common": {"agents": [], "engagement": "organic"}}}
 
@@ -559,12 +559,12 @@ class AgentTUI(App[None]):
 
     def _room_engagement(self, room_key: str) -> str:
         if room_key in self._rooms:
-            return self._rooms[room_key].get("engagement", "organic")
+            return str(self._rooms[room_key].get("engagement", "organic"))
         return "organic"
 
     def _room_agents(self, room_key: str) -> list[str]:
         if room_key in self._rooms:
-            return self._rooms[room_key].get("agents", self._agent_names[:])
+            return list(self._rooms[room_key].get("agents", self._agent_names[:]))
         return self._agent_names[:]
 
     def on_mount(self) -> None:
@@ -1679,7 +1679,7 @@ class AgentTUI(App[None]):
 
     # ── Actions ──
 
-    def action_quit(self) -> None:
+    async def action_quit(self) -> None:
         """Graceful shutdown: stop scheduler, silence event bus, then exit."""
         self._mount_sys("Shutting down...")
         if self._scheduler:

@@ -198,7 +198,7 @@ def train(n_iterations: int, filename: str) -> None:
         train_crew(n_iterations, filename)
 
 
-def _train_new_agents(agent_files: list, n_iterations: int) -> None:
+def _train_new_agents(agent_files: list[Any], n_iterations: int) -> None:
     """Run interactive training for NewAgent agents.
 
     For each agent, loads benchmark cases, runs them, shows the response,
@@ -631,14 +631,14 @@ def _read_config(*keys: str) -> Any:
 class _BenchmarkLiveProgress:
     """Live parallel progress display for benchmark runs."""
 
-    def __init__(self, console=None):
+    def __init__(self, console: Any = None) -> None:
         from rich.console import Console
 
         self._console = console or Console()
-        self._state: dict[str, dict] = {}
-        self._live = None
+        self._state: dict[str, dict[str, Any]] = {}
+        self._live: Any = None
 
-    def start(self):
+    def start(self) -> None:
         from rich.live import Live
 
         self._live = Live(
@@ -649,13 +649,13 @@ class _BenchmarkLiveProgress:
         )
         self._live.start()
 
-    def stop(self):
+    def stop(self) -> None:
         if self._live:
             self._live.update(self._render())
             self._live.stop()
             self._live = None
 
-    def on_progress(self, event: dict) -> None:
+    def on_progress(self, event: dict[str, Any]) -> None:
         t = event["type"]
         model = event.get("model", "")
 
@@ -695,7 +695,7 @@ class _BenchmarkLiveProgress:
         if self._live:
             self._live.update(self._render())
 
-    def _render(self):
+    def _render(self) -> Any:
         from rich import box
         from rich.spinner import Spinner
         from rich.table import Table
@@ -721,6 +721,7 @@ class _BenchmarkLiveProgress:
             table.add_column("", no_wrap=True, justify="right")  # cost
 
         for model, info in self._state.items():
+            icon: Any
             if info["status"] == "done":
                 icon = Text("✓", style="green")
                 color = _score_color(info["avg"])
@@ -758,7 +759,7 @@ class _BenchmarkLiveProgress:
 
 
 def _test_new_agents(
-    agent_files: list,
+    agent_files: list[Any],
     n_iterations: int,
     model: str | None,
     threshold: float,
@@ -782,7 +783,7 @@ def _test_new_agents(
         tests_dir = Path("benchmarks")
 
     # Collect valid agents + cases
-    jobs: list[dict] = []
+    jobs: list[dict[str, Any]] = []
     for agent_path in agent_files:
         agent_name = agent_path.stem
         cases_path = tests_dir / f"{agent_name}_cases.json"
@@ -816,8 +817,8 @@ def _test_new_agents(
     # Progress display — prefix model key with agent name
     progress = None if verbose else _BenchmarkLiveProgress(console=_con)
 
-    def _make_progress_cb(agent_name: str):
-        def _cb(event: dict) -> None:
+    def _make_progress_cb(agent_name: str) -> Any:
+        def _cb(event: dict[str, Any]) -> None:
             if progress is not None:
                 prefixed = dict(event)
                 if "model" in prefixed:
@@ -826,7 +827,7 @@ def _test_new_agents(
 
         return _cb
 
-    async def _run_all():
+    async def _run_all() -> Any:
         tasks = []
         for job in jobs:
             tasks.append(
@@ -858,6 +859,7 @@ def _test_new_agents(
     )
 
     if not verbose:
+        assert progress is not None
         progress.start()
     try:
         with ArtifactsSandbox():
@@ -869,6 +871,7 @@ def _test_new_agents(
                     all_results = asyncio.run(_run_all())
     finally:
         if not verbose:
+            assert progress is not None
             progress.stop()
 
     # Evaluate results
