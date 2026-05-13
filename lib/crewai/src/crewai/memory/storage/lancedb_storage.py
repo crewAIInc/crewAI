@@ -12,7 +12,11 @@ import threading
 import time
 from typing import Any
 
-import lancedb  # type: ignore[import-untyped]
+try:
+    import lancedb  # type: ignore[import-untyped]
+except ImportError as _lancedb_import_error:
+    lancedb = None  # type: ignore[assignment]
+    _LANCEDB_IMPORT_ERROR = _lancedb_import_error
 
 from crewai.memory.types import MemoryRecord, ScopeInfo
 from crewai.utilities.lock_store import lock as store_lock
@@ -48,6 +52,11 @@ class LanceDBStorage:
         vector_dim: int | None = None,
         compact_every: int = 100,
     ) -> None:
+        if lancedb is None:
+            raise ImportError(
+                "lancedb is required for LanceDBStorage. "
+                "Install it with: pip install crewai[memory]"
+            ) from _LANCEDB_IMPORT_ERROR
         """Initialize LanceDB storage.
 
         Args:

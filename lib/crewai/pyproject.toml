@@ -44,16 +44,12 @@ dependencies = [
     "aiosqlite~=0.21.0",
     "pyyaml~=6.0",
     "aiofiles~=24.1.0",
-    "lancedb>=0.29.2,<0.30.1",
 ]
 
-[project.urls]
-Homepage = "https://crewai.com"
-Documentation = "https://docs.crewai.com"
-Repository = "https://github.com/crewAIInc/crewAI"
-
-
 [project.optional-dependencies]
+memory = [
+    "lancedb>=0.29.2,<0.30.1",
+]
 tools = [
     "crewai-tools==1.14.5a1",
 ]
