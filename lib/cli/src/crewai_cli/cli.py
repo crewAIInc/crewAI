@@ -209,7 +209,7 @@ def _train_new_agents(agent_files: list[Any], n_iterations: int) -> None:
     tests_dir = Path("tests")
     if not tests_dir.is_dir() and Path("benchmarks").is_dir():
         tests_dir = Path("benchmarks")
-    agents_trained = 0
+    agents_trained: set[str] = set()
 
     for agent_path in agent_files:
         agent_name = agent_path.stem
@@ -282,14 +282,16 @@ def _train_new_agents(agent_files: list[Any], n_iterations: int) -> None:
                     click.secho("  ✓ Feedback saved as canonical memory", fg="green")
 
         _loop.close()
-        agents_trained += 1
+        agents_trained.add(agent_name)
 
     click.echo()
-    if agents_trained == 0:
+    if len(agents_trained) == 0:
         click.secho("No agents with matching benchmark cases found.", fg="yellow")
     else:
         click.secho(
-            f"Training complete ({agents_trained} agent(s)).", fg="green", bold=True
+            f"Training complete ({len(agents_trained)} agent(s)).",
+            fg="green",
+            bold=True,
         )
 
 
@@ -647,6 +649,7 @@ class _BenchmarkLiveProgress:
             refresh_per_second=10,
             transient=False,
         )
+        self._state.clear()
         self._live.start()
 
     def stop(self) -> None:
