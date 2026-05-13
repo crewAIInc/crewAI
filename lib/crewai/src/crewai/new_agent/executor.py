@@ -737,7 +737,9 @@ class ConversationalAgentExecutor(BaseModel):
             # Try to emit as an event
             try:
                 from crewai.events.event_bus import crewai_event_bus
-                from crewai.utilities.events.checkpoint_events import CheckpointEvent
+                from crewai.utilities.events.checkpoint_events import (  # type: ignore[import-not-found]
+                    CheckpointEvent,
+                )
 
                 crewai_event_bus.emit(self, CheckpointEvent(data=checkpoint_data))
             except (ImportError, Exception):
@@ -2242,7 +2244,7 @@ class ConversationalAgentExecutor(BaseModel):
                 except Exception:
                     pass
             else:
-                result_text = f"[Subtask {i + 1}] {r.content}"
+                result_text = f"[Subtask {i + 1}] {r.content if isinstance(r, Message) else str(r)}"
                 try:
                     from crewai.new_agent.events import NewAgentSpawnCompletedEvent
 

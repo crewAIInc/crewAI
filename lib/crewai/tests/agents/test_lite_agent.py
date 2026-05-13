@@ -836,18 +836,30 @@ def test_lite_agent_kickoff_async_inside_flow():
     assert isinstance(result, LiteAgentOutput)
 
 
-@pytest.mark.vcr()
 def test_lite_agent_standalone_still_works():
     """Test that LiteAgent.kickoff() still works normally outside of a Flow.
 
     This verifies that the magic auto-async pattern doesn't break standalone usage
     where there's no event loop running.
     """
+    from crewai.types.usage_metrics import UsageMetrics
+
+    mock_llm = Mock(spec=LLM)
+    mock_llm.call.return_value = "10"
+    mock_llm.stop = []
+    mock_llm.get_token_usage_summary.return_value = UsageMetrics(
+        total_tokens=10,
+        prompt_tokens=5,
+        completion_tokens=5,
+        cached_prompt_tokens=0,
+        successful_requests=1,
+    )
+
     agent = Agent(
         role="Standalone Agent",
         goal="Answer questions",
         backstory="A helpful assistant",
-        llm=LLM(model="gpt-4o-mini"),
+        llm=mock_llm,
         verbose=False,
     )
 

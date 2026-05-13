@@ -349,7 +349,7 @@ class DelegateToCoworkerTool(BaseTool):
     def _delegate_a2a(self, message: str) -> str:
         """Delegate to an A2A remote coworker."""
         try:
-            from crewai.a2a.client import A2AClient
+            from crewai.a2a.client import A2AClient  # type: ignore[import-not-found]
 
             url = getattr(self.coworker, "url", None) or str(self.coworker)
             client = A2AClient(url=url)
@@ -412,7 +412,8 @@ class MultiDelegateTool(BaseTool):
                     coros.append(_error_result(cw_name))
                 else:
                     coros.append(coworker.amessage(message))
-            return await asyncio.gather(*coros, return_exceptions=True)
+            raw_results = await asyncio.gather(*coros, return_exceptions=True)
+            return [r for r in raw_results if not isinstance(r, BaseException)]
 
         async def _error_result(name: str) -> str:
             return f"[Error] Coworker '{name}' not found."

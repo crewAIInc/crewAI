@@ -3256,7 +3256,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if isinstance(state, dict):
             return dict(state)
         if hasattr(state, "model_dump"):
-            return state.model_dump()
+            return cast(dict[str, Any], state.model_dump())
         return {}
 
     def ask(
@@ -3338,6 +3338,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         from crewai.flow.input_provider import InputResponse
 
         method_name = current_flow_method_name.get("unknown")
+        response: str | None = None
 
         # GAP-34: If a pending response was set (from from_ask_pending()), return it
         if self._pending_response is not None:
@@ -3436,7 +3437,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             raw = None
 
         # Normalize provider response: str, InputResponse, or None
-        response: str | None = None
+        response = None
         response_metadata: dict[str, Any] | None = None
 
         if isinstance(raw, InputResponse):
@@ -3549,10 +3550,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     # on the running loop and block until it completes.
                     import concurrent.futures
 
-                    future: concurrent.futures.Future[Any] = (
+                    coro_future: concurrent.futures.Future[Any] = (
                         asyncio.run_coroutine_threadsafe(_round_trip(), loop)
                     )
-                    response = future.result()
+                    response = coro_future.result()
                 else:
                     response = asyncio.run(_round_trip())
         except KeyboardInterrupt:
