@@ -125,6 +125,12 @@ def load_env_vars(folder_path: Path) -> dict[str, Any]:
             for line in file:
                 key, _, value = line.strip().partition("=")
                 if key and value:
+                    if (
+                        len(value) >= 2
+                        and value[0] == value[-1]
+                        and value[0] in ('"', "'")
+                    ):
+                        value = value[1:-1]
                     env_vars[key] = value
     return env_vars
 
@@ -134,4 +140,4 @@ def write_env_file(folder_path: Path, env_vars: dict[str, Any]) -> None:
     env_file_path = folder_path / ".env"
     with open(env_file_path, "w") as file:
         for key, value in env_vars.items():
-            file.write(f"{key.upper()}={value}\n")
+            file.write(f"{key}={value}\n")

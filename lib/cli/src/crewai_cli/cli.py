@@ -864,6 +864,9 @@ def _test_new_agents(
     all_passed = True
     agents_tested: set[str] = set()
 
+    _loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(_loop)
+
     for iteration in range(n_iterations):
         if n_iterations > 1:
             click.secho(f"\n  Iteration {iteration + 1}/{n_iterations}", fg="cyan")
@@ -876,10 +879,10 @@ def _test_new_agents(
             with ArtifactsSandbox():
                 if verbose:
                     with VerboseBenchmarkOutput():
-                        all_results = asyncio.run(_run_all())
+                        all_results = _loop.run_until_complete(_run_all())
                 else:
                     with SuppressBenchmarkOutput():
-                        all_results = asyncio.run(_run_all())
+                        all_results = _loop.run_until_complete(_run_all())
         finally:
             if not verbose:
                 if progress is None:
@@ -913,6 +916,8 @@ def _test_new_agents(
                     _con.print(
                         f"  [green bold]{job['agent_name']}: PASSED all {len(results)} cases >= {job['threshold']}[/green bold]"
                     )
+
+    _loop.close()
 
     if len(agents_tested) == 0:
         click.secho("No agents completed successfully.", fg="yellow")
