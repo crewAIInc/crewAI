@@ -243,6 +243,8 @@ def _train_new_agents(agent_files: list[Any], n_iterations: int) -> None:
         from rich.console import Console as _Console
 
         _console = _Console()
+        _loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(_loop)
 
         for iteration in range(n_iterations):
             click.secho(f"\n  Iteration {iteration + 1}/{n_iterations}", fg="cyan")
@@ -256,7 +258,7 @@ def _train_new_agents(agent_files: list[Any], n_iterations: int) -> None:
 
                     _t0 = _time.monotonic()
                     with _console.status("[cyan]  Running…[/]", spinner="dots"):
-                        response = asyncio.run(agent.amessage(user_input))
+                        response = _loop.run_until_complete(agent.amessage(user_input))
                     _elapsed = _time.monotonic() - _t0
                     _console.print(f"  [green]✓[/] done ({_elapsed:.1f}s)")
                     click.echo(f"  Response: {response.content[:500]}")
@@ -279,6 +281,7 @@ def _train_new_agents(agent_files: list[Any], n_iterations: int) -> None:
                     )
                     click.secho("  ✓ Feedback saved as canonical memory", fg="green")
 
+        _loop.close()
         agents_trained += 1
 
     click.echo()
@@ -1755,6 +1758,7 @@ def benchmark(
                             cases=cases,
                             models=model_list,
                             judge_model=judge_model,
+                            on_progress=progress.on_progress if progress else None,
                             verbose=verbose,
                         )
                     )

@@ -676,7 +676,7 @@ def format_results_table(results: list[BenchmarkResult]) -> str:
         status = "PASS" if r.passed else "FAIL"
         tokens = f"{r.input_tokens}/{r.output_tokens}"
         input_trunc = r.input[:40] + "..." if len(r.input) > 40 else r.input
-        line = f"{r.case_index:<4} {status:<6} {r.score:<7.2f} {tokens:<12} {r.response_time_ms:<10} {input_trunc}"
+        line = f"{r.case_index + 1:<4} {status:<6} {r.score:<7.2f} {tokens:<12} {r.response_time_ms:<10} {input_trunc}"
         lines.append(line)
 
         if r.passed:
