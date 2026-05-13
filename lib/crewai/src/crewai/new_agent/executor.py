@@ -3,47 +3,39 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import AsyncGenerator, Callable
 import contextvars
 import json
 import logging
 import re
 import time
-from collections.abc import AsyncGenerator, Callable
-from concurrent.futures import ThreadPoolExecutor
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field, PrivateAttr
 
-from crewai.agents.parser import AgentFinish
 from crewai.new_agent.models import (
     AgentStatus,
     Artifact,
     Message,
-    PromptLayer,
     PromptStack,
     ProvenanceEntry,
     TokenUsage,
 )
 from crewai.utilities.agent_utils import (
+    aget_llm_response,
     convert_tools_to_openai_schema,
     format_message_for_llm,
-    get_llm_response,
-    aget_llm_response,
     handle_context_length,
-    handle_max_iterations_exceeded,
     has_reached_max_iterations,
     is_context_length_exceeded,
     summarize_messages,
 )
-from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.types import LLMMessage
 
+
 if TYPE_CHECKING:
-    from crewai.llms.base_llm import BaseLLM
     from crewai.new_agent.new_agent import NewAgent
-    from crewai.new_agent.provider import ConversationalProvider
-    from crewai.tools.base_tool import BaseTool
 
 logger = logging.getLogger(__name__)
 
@@ -108,12 +100,12 @@ class ConversationalAgentExecutor(BaseModel):
 
     def model_post_init(self, __context: Any) -> None:
         """Load persisted conversation history and provenance from provider on startup."""
-        if self.provider and hasattr(self.provider, 'get_history'):
+        if self.provider and hasattr(self.provider, "get_history"):
             saved = self.provider.get_history()
             if saved:
                 self.conversation_history.extend(saved)
         # GAP-50: Load persisted provenance entries
-        if self.provider and hasattr(self.provider, 'load_provenance'):
+        if self.provider and hasattr(self.provider, "load_provenance"):
             try:
                 saved_provenance = self.provider.load_provenance()
                 if saved_provenance:
@@ -183,6 +175,7 @@ class ConversationalAgentExecutor(BaseModel):
             if active_skills:
                 try:
                     from crewai.skills.loader import format_skill_context
+
                     sections = [format_skill_context(s) for s in active_skills]
                     stack.add("skills", "\n\n".join(sections), source="agent.skills")
                 except Exception:
@@ -208,6 +201,7 @@ class ConversationalAgentExecutor(BaseModel):
 
         # 6. Temporal layer
         from datetime import datetime, timezone
+
         now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
         stack.add("temporal", f"Current date and time: {now}", source="system")
 
@@ -231,12 +225,20 @@ class ConversationalAgentExecutor(BaseModel):
             if not matches:
                 return ""
 
-            conv_id = self.conversation_history[0].conversation_id if self.conversation_history else ""
+            conv_id = (
+                self.conversation_history[0].conversation_id
+                if self.conversation_history
+                else ""
+            )
             scope = self._get_provider_scope()
             provider_user = scope.get("user_id", "")
             provider_channel = scope.get("channel_id", "")
             provider_team = scope.get("team_id", "")
-            if not provider_user and self.provider and hasattr(self.provider, "user_id"):
+            if (
+                not provider_user
+                and self.provider
+                and hasattr(self.provider, "user_id")
+            ):
                 provider_user = getattr(self.provider, "user_id", "") or ""
 
             filtered: list[Any] = []
@@ -265,15 +267,20 @@ class ConversationalAgentExecutor(BaseModel):
 
             lines = ["Relevant memories:"]
             for m in filtered:
-                content = getattr(m, "content", None) or getattr(getattr(m, "record", None), "content", "")
+                content = getattr(m, "content", None) or getattr(
+                    getattr(m, "record", None), "content", ""
+                )
                 if content:
                     lines.append(f"- {content}")
             try:
                 from crewai.new_agent.events import NewAgentMemoryRecallEvent
-                self._emit_event(NewAgentMemoryRecallEvent(
-                    new_agent_id=str(self.agent.id),
-                    results_count=len(filtered),
-                ))
+
+                self._emit_event(
+                    NewAgentMemoryRecallEvent(
+                        new_agent_id=str(self.agent.id),
+                        results_count=len(filtered),
+                    )
+                )
             except Exception:
                 pass
             return "\n".join(lines)
@@ -299,10 +306,15 @@ class ConversationalAgentExecutor(BaseModel):
                     knowledge_text = "\n".join(lines)
                     if len(lines) > 1:
                         try:
-                            from crewai.new_agent.events import NewAgentKnowledgeQueryEvent
-                            self._emit_event(NewAgentKnowledgeQueryEvent(
-                                new_agent_id=str(self.agent.id),
-                            ))
+                            from crewai.new_agent.events import (
+                                NewAgentKnowledgeQueryEvent,
+                            )
+
+                            self._emit_event(
+                                NewAgentKnowledgeQueryEvent(
+                                    new_agent_id=str(self.agent.id),
+                                )
+                            )
                         except Exception:
                             pass
                         return knowledge_text
@@ -321,7 +333,7 @@ class ConversationalAgentExecutor(BaseModel):
         settings = self.agent.settings
         history = self.conversation_history
         if settings.max_history_messages is not None:
-            history = history[-settings.max_history_messages:]
+            history = history[-settings.max_history_messages :]
 
         for msg in history:
             if msg.role == "user":
@@ -334,7 +346,9 @@ class ConversationalAgentExecutor(BaseModel):
         messages.append(format_message_for_llm(user_message.content, role="user"))
         return messages
 
-    async def _emit_status(self, state: str, detail: str | None = None, **kwargs: Any) -> None:
+    async def _emit_status(
+        self, state: str, detail: str | None = None, **kwargs: Any
+    ) -> None:
         """Emit a status update via the provider and event bus."""
         elapsed = int((time.monotonic() - self._turn_start_time) * 1000)
         status = AgentStatus(
@@ -352,14 +366,17 @@ class ConversationalAgentExecutor(BaseModel):
                 pass
         try:
             from crewai.new_agent.events import NewAgentStatusUpdateEvent
-            self._emit_event(NewAgentStatusUpdateEvent(
-                state=state,
-                detail=detail,
-                input_tokens=status.input_tokens,
-                output_tokens=status.output_tokens,
-                elapsed_ms=status.elapsed_ms,
-                new_agent_id=getattr(self.agent, "id", ""),
-            ))
+
+            self._emit_event(
+                NewAgentStatusUpdateEvent(
+                    state=state,
+                    detail=detail,
+                    input_tokens=status.input_tokens,
+                    output_tokens=status.output_tokens,
+                    elapsed_ms=status.elapsed_ms,
+                    new_agent_id=getattr(self.agent, "id", ""),
+                )
+            )
         except Exception:
             pass
 
@@ -373,8 +390,12 @@ class ConversationalAgentExecutor(BaseModel):
             return
         current_prompt = usage.get("prompt_tokens", 0)
         current_completion = usage.get("completion_tokens", 0)
-        self._turn_input_tokens += max(0, current_prompt - self._llm_prompt_tokens_before)
-        self._turn_output_tokens += max(0, current_completion - self._llm_completion_tokens_before)
+        self._turn_input_tokens += max(
+            0, current_prompt - self._llm_prompt_tokens_before
+        )
+        self._turn_output_tokens += max(
+            0, current_completion - self._llm_completion_tokens_before
+        )
         self._llm_prompt_tokens_before = current_prompt
         self._llm_completion_tokens_before = current_completion
 
@@ -385,6 +406,7 @@ class ConversationalAgentExecutor(BaseModel):
             return None
         if isinstance(fc_ref, str):
             from crewai.utilities.llm_utils import create_llm
+
             return create_llm(fc_ref)
         return fc_ref
 
@@ -396,6 +418,7 @@ class ConversationalAgentExecutor(BaseModel):
         Used by the 'standard' provenance tier when extended thinking is off.
         """
         import re
+
         # Look for explicit reasoning markers
         patterns = [
             r"(?:My reasoning|My rationale|Here's why|The reason)\s*(?:is|:)\s*(.+?)(?:\n\n|\Z)",
@@ -414,7 +437,9 @@ class ConversationalAgentExecutor(BaseModel):
             return first_sentence[:200]
         return ""
 
-    async def _maybe_generate_reasoning(self, action: str, inputs: dict[str, Any], outcome: str) -> str:
+    async def _maybe_generate_reasoning(
+        self, action: str, inputs: dict[str, Any], outcome: str
+    ) -> str:
         """Generate explicit reasoning for provenance if provenance_detail is 'detailed'.
 
         Returns '' for 'minimal' detail level.
@@ -445,12 +470,19 @@ class ConversationalAgentExecutor(BaseModel):
         ]
         callbacks: list[TokenCalcHandler] = [TokenCalcHandler()]
         try:
-            from crewai.new_agent.events import NewAgentLLMCallStartedEvent, NewAgentLLMCallCompletedEvent, NewAgentLLMCallFailedEvent
+            from crewai.new_agent.events import (
+                NewAgentLLMCallCompletedEvent,
+                NewAgentLLMCallFailedEvent,
+                NewAgentLLMCallStartedEvent,
+            )
+
             llm_model = getattr(llm, "model", "") or ""
-            self._emit_event(NewAgentLLMCallStartedEvent(
-                new_agent_id=str(self.agent.id),
-                model=llm_model,
-            ))
+            self._emit_event(
+                NewAgentLLMCallStartedEvent(
+                    new_agent_id=str(self.agent.id),
+                    model=llm_model,
+                )
+            )
             call_start = time.monotonic()
             answer = await aget_llm_response(
                 llm=llm,
@@ -461,26 +493,32 @@ class ConversationalAgentExecutor(BaseModel):
             )
             self._track_tokens_from_llm()
             call_elapsed = int((time.monotonic() - call_start) * 1000)
-            self._emit_event(NewAgentLLMCallCompletedEvent(
-                new_agent_id=str(self.agent.id),
-                model=llm_model,
-                input_tokens=self._turn_input_tokens,
-                output_tokens=self._turn_output_tokens,
-                response_time_ms=call_elapsed,
-            ))
+            self._emit_event(
+                NewAgentLLMCallCompletedEvent(
+                    new_agent_id=str(self.agent.id),
+                    model=llm_model,
+                    input_tokens=self._turn_input_tokens,
+                    output_tokens=self._turn_output_tokens,
+                    response_time_ms=call_elapsed,
+                )
+            )
             return str(answer).strip() if answer else ""
         except Exception as e:
             try:
-                self._emit_event(NewAgentLLMCallFailedEvent(
-                    new_agent_id=str(self.agent.id),
-                    error=str(e),
-                ))
+                self._emit_event(
+                    NewAgentLLMCallFailedEvent(
+                        new_agent_id=str(self.agent.id),
+                        error=str(e),
+                    )
+                )
             except Exception:
                 pass
             logger.debug(f"Reasoning generation failed: {e}")
             return ""
 
-    def _estimate_cost(self, model: str, input_tokens: int, output_tokens: int) -> float | None:
+    def _estimate_cost(
+        self, model: str, input_tokens: int, output_tokens: int
+    ) -> float | None:
         """Approximate cost in USD based on common model pricing per 1M tokens."""
         costs = {
             "gpt-4.1-nano": (0.10, 0.40),
@@ -507,7 +545,11 @@ class ConversationalAgentExecutor(BaseModel):
 
     def _record_token_usage(self, action: str, model: str, **kwargs: Any) -> None:
         agent_id = str(self.agent.id) if self.agent else ""
-        conv_id = self.conversation_history[0].conversation_id if self.conversation_history else ""
+        conv_id = (
+            self.conversation_history[0].conversation_id
+            if self.conversation_history
+            else ""
+        )
         self.usage_records.append(
             TokenUsage(
                 action=action,
@@ -522,23 +564,30 @@ class ConversationalAgentExecutor(BaseModel):
         # GAP-118: Emit token usage event for platform billing
         try:
             from crewai.new_agent.events import NewAgentTokenUsageEvent
-            self._emit_event(NewAgentTokenUsageEvent(
-                new_agent_id=agent_id,
-                conversation_id=conv_id,
-                action=action,
-                input_tokens=self._turn_input_tokens,
-                output_tokens=self._turn_output_tokens,
-                model=model,
-            ))
+
+            self._emit_event(
+                NewAgentTokenUsageEvent(
+                    new_agent_id=agent_id,
+                    conversation_id=conv_id,
+                    action=action,
+                    input_tokens=self._turn_input_tokens,
+                    output_tokens=self._turn_output_tokens,
+                    model=model,
+                )
+            )
         except Exception:
             pass
 
-    def _record_sub_action_token_usage(self, action: str, model: str, input_tokens: int = 0, output_tokens: int = 0) -> None:
+    def _record_sub_action_token_usage(
+        self, action: str, model: str, input_tokens: int = 0, output_tokens: int = 0
+    ) -> None:
         """GAP-49: Record token usage for a sub-action (planning, guardrail, reasoning, etc.)."""
         entry = TokenUsage(
             action=action,
             agent_id=str(self.agent.id) if self.agent else "",
-            conversation_id=self.conversation_history[0].conversation_id if self.conversation_history else "",
+            conversation_id=self.conversation_history[0].conversation_id
+            if self.conversation_history
+            else "",
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             model=model,
@@ -570,7 +619,9 @@ class ConversationalAgentExecutor(BaseModel):
                     if choices:
                         msg = getattr(choices[0], "message", None)
                         if msg:
-                            thinking = getattr(msg, "thinking", None) or getattr(msg, "reasoning_content", None)
+                            thinking = getattr(msg, "thinking", None) or getattr(
+                                msg, "reasoning_content", None
+                            )
                             if thinking:
                                 return str(thinking)
         except Exception:
@@ -596,11 +647,13 @@ class ConversationalAgentExecutor(BaseModel):
         url_pattern = re.compile(r'https?://[^\s<>"{}|\\^`\[\]]+')
         urls = url_pattern.findall(result_str)
         for url in urls:
-            artifacts.append(Artifact(
-                type="url",
-                name=f"{tool_name}_url",
-                content=url,
-            ))
+            artifacts.append(
+                Artifact(
+                    type="url",
+                    name=f"{tool_name}_url",
+                    content=url,
+                )
+            )
 
         # Check for file paths (lines that look like existing file paths)
         for line in result_str.split("\n"):
@@ -609,12 +662,16 @@ class ConversationalAgentExecutor(BaseModel):
                 # Try to extract a path-like string
                 potential_path = line.strip("'\"` ")
                 try:
-                    if os.path.exists(potential_path) and os.path.isfile(potential_path):
-                        artifacts.append(Artifact(
-                            type="file",
-                            name=os.path.basename(potential_path),
-                            content=potential_path,
-                        ))
+                    if os.path.exists(potential_path) and os.path.isfile(
+                        potential_path
+                    ):
+                        artifacts.append(
+                            Artifact(
+                                type="file",
+                                name=os.path.basename(potential_path),
+                                content=potential_path,
+                            )
+                        )
                 except (OSError, ValueError):
                     pass
 
@@ -624,21 +681,25 @@ class ConversationalAgentExecutor(BaseModel):
             if stripped.startswith(("{", "[")) and stripped.endswith(("}", "]")):
                 try:
                     json.loads(stripped)
-                    artifacts.append(Artifact(
-                        type="json",
-                        name=f"{tool_name}_result",
-                        content=stripped,
-                    ))
+                    artifacts.append(
+                        Artifact(
+                            type="json",
+                            name=f"{tool_name}_result",
+                            content=stripped,
+                        )
+                    )
                 except (json.JSONDecodeError, ValueError):
                     pass
 
         # Very long output heuristic
         if not artifacts and len(result_str) > 2000:
-            artifacts.append(Artifact(
-                type="code",
-                name=f"{tool_name}_output",
-                content=result_str,
-            ))
+            artifacts.append(
+                Artifact(
+                    type="code",
+                    name=f"{tool_name}_output",
+                    content=result_str,
+                )
+            )
 
         return artifacts
 
@@ -674,8 +735,9 @@ class ConversationalAgentExecutor(BaseModel):
 
             # Try to emit as an event
             try:
-                from crewai.utilities.events.checkpoint_events import CheckpointEvent
                 from crewai.events.event_bus import crewai_event_bus
+                from crewai.utilities.events.checkpoint_events import CheckpointEvent
+
                 crewai_event_bus.emit(self, CheckpointEvent(data=checkpoint_data))
             except (ImportError, Exception):
                 pass
@@ -696,6 +758,7 @@ class ConversationalAgentExecutor(BaseModel):
 
         if loop and loop.is_running():
             import concurrent.futures
+
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                 future = pool.submit(asyncio.run, self.ainvoke(user_message))
                 return future.result()
@@ -748,9 +811,12 @@ class ConversationalAgentExecutor(BaseModel):
     def _emit_event_context_summarized(self) -> None:
         try:
             from crewai.new_agent.events import NewAgentContextSummarizedEvent
-            self._emit_event(NewAgentContextSummarizedEvent(
-                new_agent_id=str(self.agent.id),
-            ))
+
+            self._emit_event(
+                NewAgentContextSummarizedEvent(
+                    new_agent_id=str(self.agent.id),
+                )
+            )
         except Exception:
             pass
 
@@ -758,6 +824,7 @@ class ConversationalAgentExecutor(BaseModel):
         """Emit an event on the CrewAI event bus."""
         try:
             from crewai.events.event_bus import crewai_event_bus
+
             crewai_event_bus.emit(self, event)
         except Exception:
             pass
@@ -774,19 +841,20 @@ class ConversationalAgentExecutor(BaseModel):
         for attempt in range(max_retries + 1):
             try:
                 if isinstance(guardrail, LLMGuardrail):
-                    passed, feedback = await self._run_llm_guardrail(response_text, guardrail)
+                    passed, feedback = await self._run_llm_guardrail(
+                        response_text, guardrail
+                    )
                     if passed:
                         self._emit_event_guardrail("llm", True, attempt)
                         return response_text
-                    else:
-                        self._emit_event_guardrail("llm", False, attempt)
-                        if attempt < max_retries:
-                            response_text = await self._regenerate_with_feedback(
-                                response_text, str(feedback)
-                            )
-                            continue
-                        return response_text
-                elif callable(guardrail) and not isinstance(guardrail, str):
+                    self._emit_event_guardrail("llm", False, attempt)
+                    if attempt < max_retries:
+                        response_text = await self._regenerate_with_feedback(
+                            response_text, str(feedback)
+                        )
+                        continue
+                    return response_text
+                if callable(guardrail) and not isinstance(guardrail, str):
                     result = guardrail(response_text)
                     if isinstance(result, tuple):
                         passed, feedback = result
@@ -798,24 +866,24 @@ class ConversationalAgentExecutor(BaseModel):
                     if passed:
                         self._emit_event_guardrail("code", True, attempt)
                         return response_text
-                    else:
-                        self._emit_event_guardrail("code", False, attempt)
-                        if attempt < max_retries:
-                            response_text = await self._regenerate_with_feedback(
-                                response_text, str(feedback)
-                            )
-                            continue
-                        return response_text
-                elif isinstance(guardrail, str):
+                    self._emit_event_guardrail("code", False, attempt)
+                    if attempt < max_retries:
+                        response_text = await self._regenerate_with_feedback(
+                            response_text, str(feedback)
+                        )
+                        continue
                     return response_text
-                else:
+                if isinstance(guardrail, str):
                     return response_text
+                return response_text
             except Exception as e:
                 logger.warning(f"Guardrail error: {e}")
                 return response_text
         return response_text
 
-    async def _run_llm_guardrail(self, response_text: str, guardrail: Any) -> tuple[bool, str]:
+    async def _run_llm_guardrail(
+        self, response_text: str, guardrail: Any
+    ) -> tuple[bool, str]:
         """Evaluate response against an LLM-based guardrail.
 
         Returns:
@@ -829,6 +897,7 @@ class ConversationalAgentExecutor(BaseModel):
         # If the guardrail stores the LLM as a string, resolve it.
         if isinstance(llm, str):
             from crewai.utilities.llm_utils import create_llm
+
             llm = create_llm(llm)
 
         instructions = getattr(guardrail, "description", "") or ""
@@ -848,10 +917,13 @@ class ConversationalAgentExecutor(BaseModel):
             # GAP-03: Emit LLM call started event for guardrail
             try:
                 from crewai.new_agent.events import NewAgentLLMCallStartedEvent
-                self._emit_event(NewAgentLLMCallStartedEvent(
-                    new_agent_id=str(self.agent.id),
-                    model=guardrail_model,
-                ))
+
+                self._emit_event(
+                    NewAgentLLMCallStartedEvent(
+                        new_agent_id=str(self.agent.id),
+                        model=guardrail_model,
+                    )
+                )
             except Exception:
                 pass
 
@@ -867,24 +939,31 @@ class ConversationalAgentExecutor(BaseModel):
                 verbose=False,
             )
             self._track_tokens_from_llm()
-            guardrail_call_elapsed = int((time.monotonic() - guardrail_call_start) * 1000)
+            guardrail_call_elapsed = int(
+                (time.monotonic() - guardrail_call_start) * 1000
+            )
 
             # GAP-49: Record sub-action tokens for guardrail
             _gr_in = self._turn_input_tokens - _guardrail_in_before
             _gr_out = self._turn_output_tokens - _guardrail_out_before
             if _gr_in > 0 or _gr_out > 0:
-                self._record_sub_action_token_usage("guardrail", guardrail_model, _gr_in, _gr_out)
+                self._record_sub_action_token_usage(
+                    "guardrail", guardrail_model, _gr_in, _gr_out
+                )
 
             # GAP-03: Emit LLM call completed event for guardrail
             try:
                 from crewai.new_agent.events import NewAgentLLMCallCompletedEvent
-                self._emit_event(NewAgentLLMCallCompletedEvent(
-                    new_agent_id=str(self.agent.id),
-                    model=guardrail_model,
-                    input_tokens=self._turn_input_tokens,
-                    output_tokens=self._turn_output_tokens,
-                    response_time_ms=guardrail_call_elapsed,
-                ))
+
+                self._emit_event(
+                    NewAgentLLMCallCompletedEvent(
+                        new_agent_id=str(self.agent.id),
+                        model=guardrail_model,
+                        input_tokens=self._turn_input_tokens,
+                        output_tokens=self._turn_output_tokens,
+                        response_time_ms=guardrail_call_elapsed,
+                    )
+                )
             except Exception:
                 pass
 
@@ -892,47 +971,56 @@ class ConversationalAgentExecutor(BaseModel):
 
             if answer_str.upper().startswith("PASS"):
                 return True, ""
-            elif answer_str.upper().startswith("FAIL"):
+            if answer_str.upper().startswith("FAIL"):
                 # Extract feedback after "FAIL:" or "FAIL "
                 feedback = answer_str
                 for prefix in ("FAIL:", "FAIL"):
                     if feedback.upper().startswith(prefix):
-                        feedback = feedback[len(prefix):].strip()
+                        feedback = feedback[len(prefix) :].strip()
                         break
                 return False, feedback
-            else:
-                # Ambiguous answer — treat as pass to avoid spurious retries
-                return True, ""
+            # Ambiguous answer — treat as pass to avoid spurious retries
+            return True, ""
         except Exception as e:
             # GAP-03: Emit LLM call failed event for guardrail
             try:
                 from crewai.new_agent.events import NewAgentLLMCallFailedEvent
-                self._emit_event(NewAgentLLMCallFailedEvent(
-                    new_agent_id=str(self.agent.id),
-                    error=str(e),
-                ))
+
+                self._emit_event(
+                    NewAgentLLMCallFailedEvent(
+                        new_agent_id=str(self.agent.id),
+                        error=str(e),
+                    )
+                )
             except Exception:
                 pass
             logger.warning(f"LLM guardrail evaluation failed: {e}")
             return True, ""
 
-    def _emit_event_guardrail(self, guardrail_type: str, passed: bool, retries: int) -> None:
+    def _emit_event_guardrail(
+        self, guardrail_type: str, passed: bool, retries: int
+    ) -> None:
         try:
             from crewai.new_agent.events import (
                 NewAgentGuardrailPassedEvent,
                 NewAgentGuardrailRejectedEvent,
             )
+
             if passed:
-                self._emit_event(NewAgentGuardrailPassedEvent(
-                    new_agent_id=str(self.agent.id),
-                    guardrail_type=guardrail_type,
-                ))
+                self._emit_event(
+                    NewAgentGuardrailPassedEvent(
+                        new_agent_id=str(self.agent.id),
+                        guardrail_type=guardrail_type,
+                    )
+                )
             else:
-                self._emit_event(NewAgentGuardrailRejectedEvent(
-                    new_agent_id=str(self.agent.id),
-                    guardrail_type=guardrail_type,
-                    retries=retries,
-                ))
+                self._emit_event(
+                    NewAgentGuardrailRejectedEvent(
+                        new_agent_id=str(self.agent.id),
+                        guardrail_type=guardrail_type,
+                        retries=retries,
+                    )
+                )
         except Exception:
             pass
 
@@ -957,10 +1045,13 @@ class ConversationalAgentExecutor(BaseModel):
             # GAP-03: Emit LLM call started event for regeneration
             try:
                 from crewai.new_agent.events import NewAgentLLMCallStartedEvent
-                self._emit_event(NewAgentLLMCallStartedEvent(
-                    new_agent_id=str(self.agent.id),
-                    model=regen_model,
-                ))
+
+                self._emit_event(
+                    NewAgentLLMCallStartedEvent(
+                        new_agent_id=str(self.agent.id),
+                        model=regen_model,
+                    )
+                )
             except Exception:
                 pass
 
@@ -978,13 +1069,16 @@ class ConversationalAgentExecutor(BaseModel):
             # GAP-03: Emit LLM call completed event for regeneration
             try:
                 from crewai.new_agent.events import NewAgentLLMCallCompletedEvent
-                self._emit_event(NewAgentLLMCallCompletedEvent(
-                    new_agent_id=str(self.agent.id),
-                    model=regen_model,
-                    input_tokens=self._turn_input_tokens,
-                    output_tokens=self._turn_output_tokens,
-                    response_time_ms=regen_call_elapsed,
-                ))
+
+                self._emit_event(
+                    NewAgentLLMCallCompletedEvent(
+                        new_agent_id=str(self.agent.id),
+                        model=regen_model,
+                        input_tokens=self._turn_input_tokens,
+                        output_tokens=self._turn_output_tokens,
+                        response_time_ms=regen_call_elapsed,
+                    )
+                )
             except Exception:
                 pass
 
@@ -993,10 +1087,13 @@ class ConversationalAgentExecutor(BaseModel):
             # GAP-03: Emit LLM call failed event for regeneration
             try:
                 from crewai.new_agent.events import NewAgentLLMCallFailedEvent
-                self._emit_event(NewAgentLLMCallFailedEvent(
-                    new_agent_id=str(self.agent.id),
-                    error=str(e),
-                ))
+
+                self._emit_event(
+                    NewAgentLLMCallFailedEvent(
+                        new_agent_id=str(self.agent.id),
+                        error=str(e),
+                    )
+                )
             except Exception:
                 pass
             return original
@@ -1011,7 +1108,7 @@ class ConversationalAgentExecutor(BaseModel):
 
         Returns the parsed Pydantic object, or ``None`` on failure.
         """
-        response_model: type[BaseModel] = self.agent.response_model  # type: ignore[assignment]
+        response_model: type[BaseModel] = self.agent.response_model
 
         # 1. Attempt direct JSON parse
         try:
@@ -1053,10 +1150,13 @@ class ConversationalAgentExecutor(BaseModel):
             # GAP-03: Emit LLM call started event for structured extraction
             try:
                 from crewai.new_agent.events import NewAgentLLMCallStartedEvent
-                self._emit_event(NewAgentLLMCallStartedEvent(
-                    new_agent_id=str(self.agent.id),
-                    model=extract_model,
-                ))
+
+                self._emit_event(
+                    NewAgentLLMCallStartedEvent(
+                        new_agent_id=str(self.agent.id),
+                        model=extract_model,
+                    )
+                )
             except Exception:
                 pass
 
@@ -1074,13 +1174,16 @@ class ConversationalAgentExecutor(BaseModel):
             # GAP-03: Emit LLM call completed event for structured extraction
             try:
                 from crewai.new_agent.events import NewAgentLLMCallCompletedEvent
-                self._emit_event(NewAgentLLMCallCompletedEvent(
-                    new_agent_id=str(self.agent.id),
-                    model=extract_model,
-                    input_tokens=self._turn_input_tokens,
-                    output_tokens=self._turn_output_tokens,
-                    response_time_ms=extract_call_elapsed,
-                ))
+
+                self._emit_event(
+                    NewAgentLLMCallCompletedEvent(
+                        new_agent_id=str(self.agent.id),
+                        model=extract_model,
+                        input_tokens=self._turn_input_tokens,
+                        output_tokens=self._turn_output_tokens,
+                        response_time_ms=extract_call_elapsed,
+                    )
+                )
             except Exception:
                 pass
 
@@ -1098,10 +1201,13 @@ class ConversationalAgentExecutor(BaseModel):
             # GAP-03: Emit LLM call failed event for structured extraction
             try:
                 from crewai.new_agent.events import NewAgentLLMCallFailedEvent
-                self._emit_event(NewAgentLLMCallFailedEvent(
-                    new_agent_id=str(self.agent.id),
-                    error=str(e),
-                ))
+
+                self._emit_event(
+                    NewAgentLLMCallFailedEvent(
+                        new_agent_id=str(self.agent.id),
+                        error=str(e),
+                    )
+                )
             except Exception:
                 pass
             logger.debug(f"Structured output parsing failed: {e}")
@@ -1114,7 +1220,11 @@ class ConversationalAgentExecutor(BaseModel):
             try:
                 result = provider.get_scope()
                 if isinstance(result, dict):
-                    return {k: v for k, v in result.items() if isinstance(k, str) and isinstance(v, str)}
+                    return {
+                        k: v
+                        for k, v in result.items()
+                        if isinstance(k, str) and isinstance(v, str)
+                    }
             except Exception:
                 pass
         return {}
@@ -1152,7 +1262,9 @@ class ConversationalAgentExecutor(BaseModel):
                 f"Agent ({agent.role}) responded: {agent_message.content}"
             )
             # GAP-24: Anaphora resolution before memory encoding
-            if hasattr(agent, '_resolve_anaphora') and callable(agent._resolve_anaphora):
+            if hasattr(agent, "_resolve_anaphora") and callable(
+                agent._resolve_anaphora
+            ):
                 try:
                     resolved = agent._resolve_anaphora(raw, self.conversation_history)
                     if resolved and resolved != raw:
@@ -1164,9 +1276,12 @@ class ConversationalAgentExecutor(BaseModel):
                 memory.remember_many(extracted, agent_role=agent.role)
                 try:
                     from crewai.new_agent.events import NewAgentMemorySaveEvent
-                    self._emit_event(NewAgentMemorySaveEvent(
-                        new_agent_id=str(self.agent.id),
-                    ))
+
+                    self._emit_event(
+                        NewAgentMemorySaveEvent(
+                            new_agent_id=str(self.agent.id),
+                        )
+                    )
                 except Exception:
                     pass
                 dreaming = getattr(agent, "_dreaming_engine", None)
@@ -1195,17 +1310,21 @@ class ConversationalAgentExecutor(BaseModel):
         # GAP-46: Telemetry execution_started span
         _telemetry_span = None
         try:
-            if hasattr(self.agent, '_telemetry') and self.agent._telemetry:
+            if hasattr(self.agent, "_telemetry") and self.agent._telemetry:
                 _telemetry_span = self.agent._telemetry.execution_started(
                     agent_id=str(self.agent.id),
-                    conversation_id=getattr(self.agent, '_conversation_id', ''),
-                    model=str(getattr(self.agent._llm_instance, 'model', 'unknown') if self.agent._llm_instance else 'unknown'),
+                    conversation_id=getattr(self.agent, "_conversation_id", ""),
+                    model=str(
+                        getattr(self.agent._llm_instance, "model", "unknown")
+                        if self.agent._llm_instance
+                        else "unknown"
+                    ),
                 )
         except Exception:
             pass
 
         # GAP-32: max_execution_time enforcement
-        max_time = getattr(self.agent, 'max_execution_time', None)
+        max_time = getattr(self.agent, "max_execution_time", None)
         deadline = (time.monotonic() + max_time) if max_time else None
 
         llm = self.agent._llm_instance
@@ -1220,7 +1339,11 @@ class ConversationalAgentExecutor(BaseModel):
         self.prompt_stack = self._build_prompt_stack(user_content=user_message.content)
 
         # Handle pending suggestion responses before new detection
-        conv_id = self.conversation_history[0].conversation_id if self.conversation_history else ""
+        conv_id = (
+            self.conversation_history[0].conversation_id
+            if self.conversation_history
+            else ""
+        )
         skill_builder = getattr(self.agent, "_skill_builder", None)
         kd = getattr(self.agent, "_knowledge_discovery", None)
 
@@ -1228,6 +1351,7 @@ class ConversationalAgentExecutor(BaseModel):
             result = skill_builder.handle_suggestion_response(user_message.content)
             if result and result.get("action") in ("confirmed", "rejected"):
                 from crewai.new_agent.models import Message as AgentMessage
+
                 if result["action"] == "confirmed":
                     active = skill_builder.get_active_skills()
                     skills_list = "\n".join(
@@ -1241,7 +1365,9 @@ class ConversationalAgentExecutor(BaseModel):
                 else:
                     reply = f"Skill suggestion **{result['name']}** dismissed."
                 reply_msg = AgentMessage(
-                    role="agent", content=reply, sender=self.agent.role,
+                    role="agent",
+                    content=reply,
+                    sender=self.agent.role,
                     conversation_id=conv_id,
                 )
                 self.conversation_history.append(user_message)
@@ -1254,12 +1380,15 @@ class ConversationalAgentExecutor(BaseModel):
             result = kd.handle_suggestion_response(user_message.content)
             if result and result.get("action") in ("confirmed", "rejected"):
                 from crewai.new_agent.models import Message as AgentMessage
+
                 if result["action"] == "confirmed":
                     reply = f"Knowledge **{result['title']}** saved."
                 else:
-                    reply = f"Knowledge suggestion dismissed."
+                    reply = "Knowledge suggestion dismissed."
                 reply_msg = AgentMessage(
-                    role="agent", content=reply, sender=self.agent.role,
+                    role="agent",
+                    content=reply,
+                    sender=self.agent.role,
                     conversation_id=conv_id,
                 )
                 self.conversation_history.append(user_message)
@@ -1283,17 +1412,36 @@ class ConversationalAgentExecutor(BaseModel):
                 or _match_skill_trigger(lower_content, "from now on")
                 or _match_skill_trigger(lower_content, "remember this procedure")
                 or _match_skill_trigger(lower_content, "remember this process")
-                or (_has_skill_word and any(
-                    _match_skill_trigger(lower_content, verb)
-                    for verb in ("create", "make", "save", "build", "encode", "turn", "convert")
-                ))
+                or (
+                    _has_skill_word
+                    and any(
+                        _match_skill_trigger(lower_content, verb)
+                        for verb in (
+                            "create",
+                            "make",
+                            "save",
+                            "build",
+                            "encode",
+                            "turn",
+                            "convert",
+                        )
+                    )
+                )
             )
             if _triggered:
                 try:
-                    suggestion = skill_builder.suggest_from_instruction(user_message.content)
+                    suggestion = skill_builder.suggest_from_instruction(
+                        user_message.content
+                    )
                     if suggestion and self.provider:
-                        from crewai.new_agent.models import Message as AgentMessage, MessageAction
-                        text, actions_data = skill_builder.build_suggestion_message(suggestion)
+                        from crewai.new_agent.models import (
+                            Message as AgentMessage,
+                            MessageAction,
+                        )
+
+                        text, actions_data = skill_builder.build_suggestion_message(
+                            suggestion
+                        )
                         actions = [MessageAction(**a) for a in actions_data]
                         hint_msg = AgentMessage(
                             role="agent",
@@ -1326,7 +1474,7 @@ class ConversationalAgentExecutor(BaseModel):
             plan = await planning.maybe_plan(user_message.content)
             if plan:
                 plan_text = "Follow this execution plan:\n" + "\n".join(
-                    f"{i+1}. {step}" for i, step in enumerate(plan)
+                    f"{i + 1}. {step}" for i, step in enumerate(plan)
                 )
                 self.prompt_stack.add("plan", plan_text, source="planning_engine")
             # GAP-49: Record sub-action tokens for planning
@@ -1335,18 +1483,26 @@ class ConversationalAgentExecutor(BaseModel):
             plan_out = self._turn_output_tokens - _plan_tokens_before_out
             if plan_in > 0 or plan_out > 0:
                 _plan_model = getattr(self.agent._llm_instance, "model", "") or ""
-                self._record_sub_action_token_usage("planning", _plan_model, plan_in, plan_out)
+                self._record_sub_action_token_usage(
+                    "planning", _plan_model, plan_in, plan_out
+                )
 
         llm_messages = self._build_llm_messages(user_message)
 
         callbacks: list[TokenCalcHandler] = [TokenCalcHandler()]
         self._proactive_summarize_messages(llm_messages, callbacks)
 
-        all_tools = list(self.agent._resolved_tools or []) + list(self.agent._coworker_tools or [])
+        all_tools = list(self.agent._resolved_tools or []) + list(
+            self.agent._coworker_tools or []
+        )
 
         # Add spawn tool if agent can spawn
-        if self.agent.settings.can_spawn_copies and self.agent.settings.max_spawn_depth >= 1:
+        if (
+            self.agent.settings.can_spawn_copies
+            and self.agent.settings.max_spawn_depth >= 1
+        ):
             from crewai.new_agent.spawn_tools import SpawnSubtaskTool
+
             spawn_tool = SpawnSubtaskTool(agent=self.agent)
             if not any(t.name == spawn_tool.name for t in all_tools):
                 all_tools.append(spawn_tool)
@@ -1381,12 +1537,17 @@ class ConversationalAgentExecutor(BaseModel):
         llm_model = getattr(llm, "model", "") or ""
 
         # GAP-27: Enable reasoning/thinking on the LLM if supported (once per agent)
-        if self.agent.settings.reasoning_enabled and hasattr(llm, 'thinking') and not llm.thinking:
+        if (
+            self.agent.settings.reasoning_enabled
+            and hasattr(llm, "thinking")
+            and not llm.thinking
+        ):
             try:
                 from crewai.llms.providers.anthropic.completion import (
                     AnthropicCompletion,
                     AnthropicThinkingConfig,
                 )
+
                 if isinstance(llm, AnthropicCompletion):
                     llm.thinking = AnthropicThinkingConfig(type="adaptive")
                     try:
@@ -1420,10 +1581,13 @@ class ConversationalAgentExecutor(BaseModel):
                 # GAP-03: Emit LLM call started event
                 try:
                     from crewai.new_agent.events import NewAgentLLMCallStartedEvent
-                    self._emit_event(NewAgentLLMCallStartedEvent(
-                        new_agent_id=str(self.agent.id),
-                        model=active_model,
-                    ))
+
+                    self._emit_event(
+                        NewAgentLLMCallStartedEvent(
+                            new_agent_id=str(self.agent.id),
+                            model=active_model,
+                        )
+                    )
                 except Exception:
                     pass
 
@@ -1443,13 +1607,16 @@ class ConversationalAgentExecutor(BaseModel):
                 # GAP-03: Emit LLM call completed event
                 try:
                     from crewai.new_agent.events import NewAgentLLMCallCompletedEvent
-                    self._emit_event(NewAgentLLMCallCompletedEvent(
-                        new_agent_id=str(self.agent.id),
-                        model=active_model,
-                        input_tokens=self._turn_input_tokens,
-                        output_tokens=self._turn_output_tokens,
-                        response_time_ms=llm_call_elapsed,
-                    ))
+
+                    self._emit_event(
+                        NewAgentLLMCallCompletedEvent(
+                            new_agent_id=str(self.agent.id),
+                            model=active_model,
+                            input_tokens=self._turn_input_tokens,
+                            output_tokens=self._turn_output_tokens,
+                            response_time_ms=llm_call_elapsed,
+                        )
+                    )
                 except Exception:
                     pass
 
@@ -1457,10 +1624,13 @@ class ConversationalAgentExecutor(BaseModel):
                 # GAP-03: Emit LLM call failed event
                 try:
                     from crewai.new_agent.events import NewAgentLLMCallFailedEvent
-                    self._emit_event(NewAgentLLMCallFailedEvent(
-                        new_agent_id=str(self.agent.id),
-                        error=str(e),
-                    ))
+
+                    self._emit_event(
+                        NewAgentLLMCallFailedEvent(
+                            new_agent_id=str(self.agent.id),
+                            error=str(e),
+                        )
+                    )
                 except Exception:
                     pass
 
@@ -1474,21 +1644,22 @@ class ConversationalAgentExecutor(BaseModel):
                         verbose=self.verbose,
                     )
                     try:
-                        from crewai.new_agent.events import NewAgentContextSummarizedEvent
-                        self._emit_event(NewAgentContextSummarizedEvent(
-                            new_agent_id=str(self.agent.id),
-                        ))
+                        from crewai.new_agent.events import (
+                            NewAgentContextSummarizedEvent,
+                        )
+
+                        self._emit_event(
+                            NewAgentContextSummarizedEvent(
+                                new_agent_id=str(self.agent.id),
+                            )
+                        )
                     except Exception:
                         pass
                     iterations += 1
                     continue
                 raise
 
-            if (
-                isinstance(answer, list)
-                and answer
-                and self._is_tool_call_list(answer)
-            ):
+            if isinstance(answer, list) and answer and self._is_tool_call_list(answer):
                 tool_result = await self._handle_tool_calls(
                     answer, available_functions, llm_messages
                 )
@@ -1500,7 +1671,9 @@ class ConversationalAgentExecutor(BaseModel):
 
                 # GAP-21: Call step_callback at each iteration boundary
                 if self.agent.step_callback:
-                    self.agent.step_callback(iterations, self._tools_used_this_turn, response_text)
+                    self.agent.step_callback(
+                        iterations, self._tools_used_this_turn, response_text
+                    )
 
                 iterations += 1
                 continue
@@ -1517,7 +1690,9 @@ class ConversationalAgentExecutor(BaseModel):
 
             # GAP-21: Call step_callback after LLM response
             if self.agent.step_callback:
-                self.agent.step_callback(iterations, self._tools_used_this_turn, response_text)
+                self.agent.step_callback(
+                    iterations, self._tools_used_this_turn, response_text
+                )
 
             break
 
@@ -1544,7 +1719,9 @@ class ConversationalAgentExecutor(BaseModel):
             ]
 
         # GAP-25: Estimate cost based on model and token usage
-        estimated_cost = self._estimate_cost(llm_model, self._turn_input_tokens, self._turn_output_tokens)
+        estimated_cost = self._estimate_cost(
+            llm_model, self._turn_input_tokens, self._turn_output_tokens
+        )
 
         agent_message = Message(
             conversation_id=user_message.conversation_id,
@@ -1578,22 +1755,28 @@ class ConversationalAgentExecutor(BaseModel):
                     response_text[:500],
                 )
             # GAP-49: Track sub-action tokens for the reasoning generation call
-            if self.agent.settings.provenance_detail == "detailed" and reasoning and not _thinking_text:
+            if (
+                self.agent.settings.provenance_detail == "detailed"
+                and reasoning
+                and not _thinking_text
+            ):
                 self._track_tokens_from_llm()
                 # The reasoning LLM call tokens are already tracked in _maybe_generate_reasoning
                 # via _track_tokens_from_llm, but record as sub-action for accounting
                 self._record_sub_action_token_usage("reasoning", llm_model, 0, 0)
 
             prov_entry = ProvenanceEntry(
-                    conversation_id=user_message.conversation_id,
-                    action="response",
-                    reasoning=reasoning,
-                    inputs={"user_message": user_message.content},
-                    outcome=response_text[:500],
-                    # GAP-102: Populate sources from tools used this turn
-                    sources=self._tools_used_this_turn[:] if self._tools_used_this_turn else None,
-                    confidence=1.0,
-                )
+                conversation_id=user_message.conversation_id,
+                action="response",
+                reasoning=reasoning,
+                inputs={"user_message": user_message.content},
+                outcome=response_text[:500],
+                # GAP-102: Populate sources from tools used this turn
+                sources=self._tools_used_this_turn[:]
+                if self._tools_used_this_turn
+                else None,
+                confidence=1.0,
+            )
             self.provenance_log.append(prov_entry)
             # GAP-89: Persist provenance to memory backend
             self._persist_provenance_to_memory(prov_entry)
@@ -1606,11 +1789,11 @@ class ConversationalAgentExecutor(BaseModel):
             await self.provider.send_message(agent_message)
 
         # GAP-13: Save history to provider after each turn
-        if self.provider and hasattr(self.provider, 'save_history'):
+        if self.provider and hasattr(self.provider, "save_history"):
             self.provider.save_history(self.conversation_history)
 
         # GAP-50: Save provenance to provider after each turn
-        if self.provider and hasattr(self.provider, 'save_provenance'):
+        if self.provider and hasattr(self.provider, "save_provenance"):
             try:
                 self.provider.save_provenance(self.provenance_log)
             except Exception:
@@ -1618,7 +1801,7 @@ class ConversationalAgentExecutor(BaseModel):
 
         # GAP-46: Telemetry execution_completed span
         try:
-            if hasattr(self.agent, '_telemetry') and self.agent._telemetry:
+            if hasattr(self.agent, "_telemetry") and self.agent._telemetry:
                 self.agent._telemetry.execution_completed(
                     span=_telemetry_span,
                     input_tokens=self._turn_input_tokens,
@@ -1636,26 +1819,32 @@ class ConversationalAgentExecutor(BaseModel):
     def _emit_event_message_received(self, msg: Message) -> None:
         try:
             from crewai.new_agent.events import NewAgentMessageReceivedEvent
-            self._emit_event(NewAgentMessageReceivedEvent(
-                conversation_id=msg.conversation_id,
-                new_agent_id=str(self.agent.id),
-                message_length=len(msg.content),
-            ))
+
+            self._emit_event(
+                NewAgentMessageReceivedEvent(
+                    conversation_id=msg.conversation_id,
+                    new_agent_id=str(self.agent.id),
+                    message_length=len(msg.content),
+                )
+            )
         except Exception:
             pass
 
     def _emit_event_message_sent(self, msg: Message) -> None:
         try:
             from crewai.new_agent.events import NewAgentMessageSentEvent
-            self._emit_event(NewAgentMessageSentEvent(
-                conversation_id=msg.conversation_id,
-                new_agent_id=str(self.agent.id),
-                new_agent_role=self.agent.role,
-                input_tokens=msg.input_tokens or 0,
-                output_tokens=msg.output_tokens or 0,
-                response_time_ms=msg.response_time_ms or 0,
-                model=msg.model or "",
-            ))
+
+            self._emit_event(
+                NewAgentMessageSentEvent(
+                    conversation_id=msg.conversation_id,
+                    new_agent_id=str(self.agent.id),
+                    new_agent_role=self.agent.role,
+                    input_tokens=msg.input_tokens or 0,
+                    output_tokens=msg.output_tokens or 0,
+                    response_time_ms=msg.response_time_ms or 0,
+                    model=msg.model or "",
+                )
+            )
         except Exception:
             pass
 
@@ -1663,7 +1852,9 @@ class ConversationalAgentExecutor(BaseModel):
         if not response:
             return False
         first = response[0]
-        if hasattr(first, "function") or (isinstance(first, dict) and "function" in first):
+        if hasattr(first, "function") or (
+            isinstance(first, dict) and "function" in first
+        ):
             return True
         if hasattr(first, "type") and getattr(first, "type", None) == "tool_use":
             return True
@@ -1693,17 +1884,24 @@ class ConversationalAgentExecutor(BaseModel):
             # GAP-117: Emit "delegating" status for coworker tools, "using_tool" for others
             if func_name.startswith("delegate_to_"):
                 coworker_label = func_name.replace("delegate_to_", "").replace("_", " ")
-                await self._emit_status("delegating", f"Asking @{coworker_label}…", coworker=coworker_label)
+                await self._emit_status(
+                    "delegating", f"Asking @{coworker_label}…", coworker=coworker_label
+                )
             else:
-                await self._emit_status("using_tool", f"Using {func_name}…", tool_name=func_name)
+                await self._emit_status(
+                    "using_tool", f"Using {func_name}…", tool_name=func_name
+                )
 
             # GAP-04: Emit tool usage started event
             try:
                 from crewai.new_agent.events import NewAgentToolUsageStartedEvent
-                self._emit_event(NewAgentToolUsageStartedEvent(
-                    new_agent_id=str(self.agent.id),
-                    tool_name=func_name,
-                ))
+
+                self._emit_event(
+                    NewAgentToolUsageStartedEvent(
+                        new_agent_id=str(self.agent.id),
+                        tool_name=func_name,
+                    )
+                )
             except Exception:
                 pass
 
@@ -1711,7 +1909,9 @@ class ConversationalAgentExecutor(BaseModel):
             cached = False
             result_str = ""
             if self.agent.settings.cache_tool_results:
-                cache_key = f"{func_name}:{json.dumps(func_args, sort_keys=True, default=str)}"
+                cache_key = (
+                    f"{func_name}:{json.dumps(func_args, sort_keys=True, default=str)}"
+                )
                 if cache_key in self._tool_cache:
                     result_str = self._tool_cache[cache_key]
                     cached = True
@@ -1723,24 +1923,41 @@ class ConversationalAgentExecutor(BaseModel):
                     )
                     parsed_args, parse_error = parsed_result
                     if parse_error is not None:
-                        result = parse_error.get("result", f"Error parsing args for {func_name}")
+                        result = parse_error.get(
+                            "result", f"Error parsing args for {func_name}"
+                        )
                     elif isinstance(parsed_args, dict):
-                        result = original_tool._run(**parsed_args) if original_tool else str(parsed_args)
+                        result = (
+                            original_tool._run(**parsed_args)
+                            if original_tool
+                            else str(parsed_args)
+                        )
                     else:
-                        result = original_tool._run(parsed_args) if original_tool else str(parsed_args)
+                        result = (
+                            original_tool._run(parsed_args)
+                            if original_tool
+                            else str(parsed_args)
+                        )
 
                     result_str = str(result) if result is not None else ""
 
                     # GAP-04: Emit tool usage completed event
                     try:
-                        from crewai.new_agent.events import NewAgentToolUsageCompletedEvent
-                        self._emit_event(NewAgentToolUsageCompletedEvent(
-                            new_agent_id=str(self.agent.id),
-                            tool_name=func_name,
-                        ))
+                        from crewai.new_agent.events import (
+                            NewAgentToolUsageCompletedEvent,
+                        )
+
+                        self._emit_event(
+                            NewAgentToolUsageCompletedEvent(
+                                new_agent_id=str(self.agent.id),
+                                tool_name=func_name,
+                            )
+                        )
                     except Exception:
                         pass
-                    await self._emit_status("thinking", f"Processing {func_name} result…")
+                    await self._emit_status(
+                        "thinking", f"Processing {func_name} result…"
+                    )
 
                     # GAP-26: Store result in cache
                     if self.agent.settings.cache_tool_results:
@@ -1753,11 +1970,14 @@ class ConversationalAgentExecutor(BaseModel):
                     # GAP-04: Emit tool usage failed event
                     try:
                         from crewai.new_agent.events import NewAgentToolUsageFailedEvent
-                        self._emit_event(NewAgentToolUsageFailedEvent(
-                            new_agent_id=str(self.agent.id),
-                            tool_name=func_name,
-                            error=str(e),
-                        ))
+
+                        self._emit_event(
+                            NewAgentToolUsageFailedEvent(
+                                new_agent_id=str(self.agent.id),
+                                tool_name=func_name,
+                                error=str(e),
+                            )
+                        )
                     except Exception:
                         pass
 
@@ -1774,15 +1994,17 @@ class ConversationalAgentExecutor(BaseModel):
                     except Exception:
                         pass
                 tool_prov_entry = ProvenanceEntry(
-                        conversation_id=self.conversation_history[0].conversation_id if self.conversation_history else "",
-                        action="tool_call",
-                        reasoning=tool_reasoning,
-                        inputs={"tool": func_name, "args": str(func_args)[:200]},
-                        outcome=result_str[:500],
-                        # GAP-102: Populate sources and confidence for tool call provenance
-                        sources=[func_name],
-                        confidence=1.0 if not result_str.startswith("Error") else 0.5,
-                    )
+                    conversation_id=self.conversation_history[0].conversation_id
+                    if self.conversation_history
+                    else "",
+                    action="tool_call",
+                    reasoning=tool_reasoning,
+                    inputs={"tool": func_name, "args": str(func_args)[:200]},
+                    outcome=result_str[:500],
+                    # GAP-102: Populate sources and confidence for tool call provenance
+                    sources=[func_name],
+                    confidence=1.0 if not result_str.startswith("Error") else 0.5,
+                )
                 self.provenance_log.append(tool_prov_entry)
                 # GAP-89: Persist tool call provenance to memory
                 self._persist_provenance_to_memory(tool_prov_entry)
@@ -1795,21 +2017,29 @@ class ConversationalAgentExecutor(BaseModel):
             except Exception:
                 pass
 
-            args_str = json.dumps(func_args) if isinstance(func_args, dict) else str(func_args)
-            llm_messages.append({
-                "role": "assistant",
-                "content": None,
-                "tool_calls": [{
-                    "id": call_id or func_name,
-                    "type": "function",
-                    "function": {"name": func_name, "arguments": args_str},
-                }],
-            })
-            llm_messages.append({
-                "role": "tool",
-                "tool_call_id": call_id or func_name,
-                "content": result_str,
-            })
+            args_str = (
+                json.dumps(func_args) if isinstance(func_args, dict) else str(func_args)
+            )
+            llm_messages.append(
+                {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": call_id or func_name,
+                            "type": "function",
+                            "function": {"name": func_name, "arguments": args_str},
+                        }
+                    ],
+                }
+            )
+            llm_messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": call_id or func_name,
+                    "content": result_str,
+                }
+            )
 
             # Evaluate tool result for knowledge discovery
             kd = getattr(self.agent, "_knowledge_discovery", None)
@@ -1817,7 +2047,11 @@ class ConversationalAgentExecutor(BaseModel):
                 suggestion = kd.evaluate_for_knowledge(func_name, result_str)
                 if suggestion and self.provider:
                     try:
-                        from crewai.new_agent.models import Message as AgentMessage, MessageAction
+                        from crewai.new_agent.models import (
+                            Message as AgentMessage,
+                            MessageAction,
+                        )
+
                         text, actions_data = kd.build_suggestion_message(suggestion)
                         actions = [MessageAction(**a) for a in actions_data]
                         hint_msg = AgentMessage(
@@ -1825,14 +2059,19 @@ class ConversationalAgentExecutor(BaseModel):
                             content=text,
                             actions=actions,
                             sender=self.agent.role,
-                            conversation_id=self.conversation_history[0].conversation_id if self.conversation_history else "",
+                            conversation_id=self.conversation_history[0].conversation_id
+                            if self.conversation_history
+                            else "",
                         )
                         import asyncio
+
                         loop = asyncio.get_event_loop()
                         if loop.is_running():
                             asyncio.ensure_future(self.provider.send_message(hint_msg))
                         else:
-                            loop.run_until_complete(self.provider.send_message(hint_msg))
+                            loop.run_until_complete(
+                                self.provider.send_message(hint_msg)
+                            )
                     except Exception:
                         pass
 
@@ -1855,10 +2094,14 @@ class ConversationalAgentExecutor(BaseModel):
                 fn = tool_call["function"]
                 return fn.get("name"), fn.get("arguments", "{}"), tool_call.get("id")
             if "name" in tool_call:
-                return tool_call["name"], tool_call.get("input", "{}"), tool_call.get("id")
+                return (
+                    tool_call["name"],
+                    tool_call.get("input", "{}"),
+                    tool_call.get("id"),
+                )
         if hasattr(tool_call, "name"):
             return (
-                getattr(tool_call, "name"),
+                tool_call.name,
                 getattr(tool_call, "input", "{}"),
                 getattr(tool_call, "id", None),
             )
@@ -1870,8 +2113,8 @@ class ConversationalAgentExecutor(BaseModel):
         Creates N stripped-down copies (no backstory, history, or memory) and
         runs them concurrently.  Copies cannot spawn further copies (depth guard).
         """
-        from crewai.new_agent.new_agent import NewAgent
         from crewai.new_agent.models import AgentSettings
+        from crewai.new_agent.new_agent import NewAgent
 
         settings = self.agent.settings
         max_spawns = settings.max_concurrent_spawns
@@ -1918,12 +2161,15 @@ class ConversationalAgentExecutor(BaseModel):
             spawn_ids.append(spawn_id)
             try:
                 from crewai.new_agent.events import NewAgentSpawnStartedEvent
-                self._emit_event(NewAgentSpawnStartedEvent(
-                    new_agent_id=str(self.agent.id),
-                    spawn_id=spawn_id,
-                    parent_id=str(self.agent.id),
-                    spawn_depth=1,
-                ))
+
+                self._emit_event(
+                    NewAgentSpawnStartedEvent(
+                        new_agent_id=str(self.agent.id),
+                        spawn_id=spawn_id,
+                        parent_id=str(self.agent.id),
+                        spawn_depth=1,
+                    )
+                )
             except Exception:
                 pass
 
@@ -1941,32 +2187,41 @@ class ConversationalAgentExecutor(BaseModel):
                 result_text = f"[Subtask {i + 1}] Timed out after {timeout}s"
                 try:
                     from crewai.new_agent.events import NewAgentSpawnFailedEvent
-                    self._emit_event(NewAgentSpawnFailedEvent(
-                        new_agent_id=str(self.agent.id),
-                        spawn_id=spawn_ids[i],
-                        error=f"Timed out after {timeout}s",
-                    ))
+
+                    self._emit_event(
+                        NewAgentSpawnFailedEvent(
+                            new_agent_id=str(self.agent.id),
+                            spawn_id=spawn_ids[i],
+                            error=f"Timed out after {timeout}s",
+                        )
+                    )
                 except Exception:
                     pass
             elif isinstance(r, Exception):
                 result_text = f"[Subtask {i + 1}] Error: {r}"
                 try:
                     from crewai.new_agent.events import NewAgentSpawnFailedEvent
-                    self._emit_event(NewAgentSpawnFailedEvent(
-                        new_agent_id=str(self.agent.id),
-                        spawn_id=spawn_ids[i],
-                        error=str(r),
-                    ))
+
+                    self._emit_event(
+                        NewAgentSpawnFailedEvent(
+                            new_agent_id=str(self.agent.id),
+                            spawn_id=spawn_ids[i],
+                            error=str(r),
+                        )
+                    )
                 except Exception:
                     pass
             else:
                 result_text = f"[Subtask {i + 1}] {r.content}"
                 try:
                     from crewai.new_agent.events import NewAgentSpawnCompletedEvent
-                    self._emit_event(NewAgentSpawnCompletedEvent(
-                        new_agent_id=str(self.agent.id),
-                        spawn_id=spawn_ids[i],
-                    ))
+
+                    self._emit_event(
+                        NewAgentSpawnCompletedEvent(
+                            new_agent_id=str(self.agent.id),
+                            spawn_id=spawn_ids[i],
+                        )
+                    )
                 except Exception:
                     pass
 
@@ -2030,10 +2285,13 @@ class ConversationalAgentExecutor(BaseModel):
             )
             try:
                 from crewai.new_agent.events import NewAgentNarrationGuardTriggeredEvent
-                self._emit_event(NewAgentNarrationGuardTriggeredEvent(
-                    new_agent_id=str(self.agent.id),
-                    retries=attempt + 1,
-                ))
+
+                self._emit_event(
+                    NewAgentNarrationGuardTriggeredEvent(
+                        new_agent_id=str(self.agent.id),
+                        retries=attempt + 1,
+                    )
+                )
             except Exception:
                 pass
 

@@ -186,6 +186,7 @@ except (ImportError, PydanticUserError):
 
 from crewai.new_agent import NewAgent  # noqa: E402
 
+
 __all__ = [
     "LLM",
     "Agent",

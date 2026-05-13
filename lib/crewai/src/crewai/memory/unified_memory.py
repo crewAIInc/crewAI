@@ -313,7 +313,7 @@ class Memory(BaseModel):
                         source_type="unified_memory",
                     ),
                 )
-        except Exception:  # noqa: S110
+        except Exception:
             pass  # swallow everything during shutdown
 
     def drain_writes(self) -> None:
@@ -763,7 +763,7 @@ class Memory(BaseModel):
                     touch = getattr(self._storage, "touch_records", None)
                     if touch is not None:
                         touch([m.record.id for m in results])
-                except Exception:  # noqa: S110
+                except Exception:
                     pass  # Non-critical: don't fail recall because of touch
 
             elapsed_ms = (time.perf_counter() - start) * 1000

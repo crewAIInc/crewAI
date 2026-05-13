@@ -3397,7 +3397,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         conv_provider = self.conversational_provider
         if conv_provider is not None:
             return self._ask_via_conversational_provider(
-                conv_provider, message, method_name, metadata, timeout,
+                conv_provider,
+                message,
+                method_name,
+                metadata,
+                timeout,
             )
 
         # ── InputProvider path (existing behavior) ───────────────────
@@ -3544,8 +3548,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     # We're inside an async context — schedule the coroutine
                     # on the running loop and block until it completes.
                     import concurrent.futures
-                    future: concurrent.futures.Future[Any] = asyncio.run_coroutine_threadsafe(
-                        _round_trip(), loop
+
+                    future: concurrent.futures.Future[Any] = (
+                        asyncio.run_coroutine_threadsafe(_round_trip(), loop)
                     )
                     response = future.result()
                 else:
@@ -3553,9 +3558,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         except KeyboardInterrupt:
             raise
         except Exception:
-            logger.debug(
-                "ConversationalProvider error in ask()", exc_info=True
-            )
+            logger.debug("ConversationalProvider error in ask()", exc_info=True)
             response = None
 
         # Record in history
@@ -3639,6 +3642,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 if loop and loop.is_running():
                     # We're inside an async context — schedule on the running loop.
                     import concurrent.futures as _cf
+
                     _send_future: _cf.Future[None] = asyncio.run_coroutine_threadsafe(
                         conv_provider.send_message(outgoing), loop
                     )
@@ -3646,9 +3650,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 else:
                     asyncio.run(conv_provider.send_message(outgoing))
             except Exception:
-                logger.debug(
-                    "ConversationalProvider error in say()", exc_info=True
-                )
+                logger.debug("ConversationalProvider error in say()", exc_info=True)
         else:
             # ── Console fallback ─────────────────────────────────────
             console = Console()

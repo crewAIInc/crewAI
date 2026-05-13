@@ -9,6 +9,7 @@ from packaging import version
 from crewai_cli.utils import build_env_with_all_tool_credentials, read_toml
 from crewai_cli.version import get_crewai_version
 
+
 _UV_CONTEXT_VAR = "_CREWAI_UV"
 
 
@@ -20,6 +21,7 @@ class CrewType(Enum):
 def _has_agents_dir() -> bool:
     """Check if current directory has an agents/ directory with definitions."""
     from pathlib import Path
+
     agents_dir = Path.cwd() / "agents"
     if not agents_dir.is_dir():
         return False
@@ -32,6 +34,7 @@ def _needs_uv_relaunch() -> bool:
     if os.environ.get(_UV_CONTEXT_VAR):
         return False
     from pathlib import Path
+
     pyproject = Path.cwd() / "pyproject.toml"
     if not pyproject.exists():
         return False
@@ -79,6 +82,7 @@ def run_crew(trained_agents_file: str | None = None) -> None:
             _relaunch_via_uv(uv_args)
         click.echo("Launching agent TUI...")
         from crewai_cli.agent_tui import run_agent_tui
+
         run_agent_tui()
         return
 
@@ -124,7 +128,7 @@ def execute_command(
         env[CREWAI_TRAINED_AGENTS_FILE_ENV] = trained_agents_file
 
     try:
-        subprocess.run(command, capture_output=False, text=True, check=True, env=env)  # noqa: S603
+        subprocess.run(command, capture_output=False, text=True, check=True, env=env)
 
     except subprocess.CalledProcessError as e:
         handle_error(e, crew_type)

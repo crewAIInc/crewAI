@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 from crewai.new_agent.models import AgentStatus, Message, ProvenanceEntry
 
+
 if TYPE_CHECKING:
     from crewai.new_agent.provider import SQLiteConversationStorage
 
@@ -141,6 +142,7 @@ def _storage_path(agent_name: str) -> Path:
 
 def _get_storage(agent_name: str) -> SQLiteConversationStorage:
     from crewai.new_agent.provider import SQLiteConversationStorage
+
     return SQLiteConversationStorage(_storage_path(agent_name))
 
 
@@ -169,7 +171,9 @@ class CLIProvider:
 
         prefix = ""
         if message.role == "agent":
-            prefix = f"\n{message.sender or 'Agent'}: " if message.sender else "\nAgent: "
+            prefix = (
+                f"\n{message.sender or 'Agent'}: " if message.sender else "\nAgent: "
+            )
         elif message.role == "system":
             prefix = "\n[system] "
 

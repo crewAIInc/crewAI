@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from crewai.events.base_events import BaseEvent
 
 
 class NewAgentCreatedEvent(BaseEvent):
     """Emitted when a NewAgent instance is constructed."""
+
     type: str = "new_agent_created"
     new_agent_id: str = ""
     new_agent_role: str = ""
@@ -278,6 +277,7 @@ class NewAgentSkillRejectedEvent(BaseEvent):
 
 class NewAgentTokenUsageEvent(BaseEvent):
     """Emitted when token usage is recorded, for platform billing."""
+
     type: str = "new_agent_token_usage"
     new_agent_id: str = ""
     conversation_id: str = ""

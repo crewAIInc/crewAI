@@ -7,9 +7,9 @@ GAP-55: Delegation provenance summary appended to results.
 from __future__ import annotations
 
 import asyncio
+from collections import Counter
 import logging
 import time
-from collections import Counter
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -17,18 +17,22 @@ from pydantic import BaseModel, Field
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.string_utils import sanitize_tool_name
 
+
 logger = logging.getLogger(__name__)
 
 
 def _emit_delegation_event(event_cls: type, **kwargs: Any) -> None:
     try:
         from crewai.events.event_bus import crewai_event_bus
+
         crewai_event_bus.emit(None, event_cls(**kwargs))
     except Exception:
         pass
 
 
-def _build_provenance_summary(coworker: Any, cw_role: str, elapsed_ms: int, in_tokens: int, out_tokens: int) -> str:
+def _build_provenance_summary(
+    coworker: Any, cw_role: str, elapsed_ms: int, in_tokens: int, out_tokens: int
+) -> str:
     """GAP-55: Build a brief summary of what the coworker did during delegation."""
     try:
         executor = getattr(coworker, "_executor", None)
@@ -75,7 +79,9 @@ def _build_provenance_summary(coworker: Any, cw_role: str, elapsed_ms: int, in_t
 class DelegateToCoworkerArgs(BaseModel):
     """Arguments for delegating work to a coworker."""
 
-    message: str = Field(description="The message/instruction to send to the coworker. Be specific about what you need.")
+    message: str = Field(
+        description="The message/instruction to send to the coworker. Be specific about what you need."
+    )
     fire_and_forget: bool = Field(
         default=False,
         description="MUST be false (default) to get the coworker's response. Only set true for background tasks where you don't need the result.",
@@ -92,7 +98,13 @@ class DelegateToCoworkerTool(BaseTool):
     coworker_source: str = "local"
     parent_agent: Any = None
 
-    def __init__(self, coworker: Any, source: str = "local", parent_agent: Any = None, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        coworker: Any,
+        source: str = "local",
+        parent_agent: Any = None,
+        **kwargs: Any,
+    ) -> None:
         cw_role = getattr(coworker, "role", "coworker")
         tool_name = sanitize_tool_name(f"delegate_to_{cw_role}")
         cw_goal = getattr(coworker, "goal", "")
@@ -112,14 +124,14 @@ class DelegateToCoworkerTool(BaseTool):
 
     def _run(self, message: str, fire_and_forget: bool = False, **kwargs: Any) -> str:
         """Execute delegation to the coworker."""
-        from crewai.new_agent.new_agent import NewAgent
         from crewai.new_agent.events import (
-            NewAgentDelegationStartedEvent,
             NewAgentDelegationCompletedEvent,
             NewAgentDelegationFailedEvent,
-            NewAgentFireAndForgetDispatchedEvent,
+            NewAgentDelegationStartedEvent,
             NewAgentFireAndForgetCompletedEvent,
+            NewAgentFireAndForgetDispatchedEvent,
         )
+        from crewai.new_agent.new_agent import NewAgent
 
         cw_role = getattr(self.coworker, "role", "unknown")
         parent_id = getattr(self.parent_agent, "id", "") if self.parent_agent else ""
@@ -133,7 +145,8 @@ class DelegateToCoworkerTool(BaseTool):
         if fire_and_forget:
             _emit_delegation_event(
                 NewAgentFireAndForgetDispatchedEvent,
-                new_agent_id=parent_id, coworker_role=cw_role,
+                new_agent_id=parent_id,
+                coworker_role=cw_role,
             )
             try:
                 loop = asyncio.get_running_loop()
@@ -146,28 +159,35 @@ class DelegateToCoworkerTool(BaseTool):
                 finally:
                     _emit_delegation_event(
                         NewAgentFireAndForgetCompletedEvent,
-                        new_agent_id=parent_id, coworker_role=cw_role,
+                        new_agent_id=parent_id,
+                        coworker_role=cw_role,
                     )
 
             if loop and loop.is_running():
+
                 async def _async_ff() -> None:
                     try:
                         await self.coworker.amessage(message)
                     finally:
                         _emit_delegation_event(
                             NewAgentFireAndForgetCompletedEvent,
-                            new_agent_id=parent_id, coworker_role=cw_role,
+                            new_agent_id=parent_id,
+                            coworker_role=cw_role,
                         )
+
                 loop.create_task(_async_ff())
             else:
                 import threading
+
                 threading.Thread(target=_bg_fire_and_forget, daemon=True).start()
             return f"Work delegated to {cw_role}. They are working on it in the background."
 
         _emit_delegation_event(
             NewAgentDelegationStartedEvent,
-            new_agent_id=parent_id, coworker_role=cw_role,
-            delegation_mode="sync", coworker_source=self.coworker_source,
+            new_agent_id=parent_id,
+            coworker_role=cw_role,
+            delegation_mode="sync",
+            coworker_source=self.coworker_source,
         )
 
         start = time.monotonic()
@@ -179,31 +199,38 @@ class DelegateToCoworkerTool(BaseTool):
             tokens = in_tokens + out_tokens
             _emit_delegation_event(
                 NewAgentDelegationCompletedEvent,
-                new_agent_id=parent_id, coworker_role=cw_role,
-                tokens_consumed=tokens, response_time_ms=elapsed_ms,
+                new_agent_id=parent_id,
+                coworker_role=cw_role,
+                tokens_consumed=tokens,
+                response_time_ms=elapsed_ms,
             )
 
             # GAP-49: Record token usage on the parent agent if available
             if self.parent_agent and tokens > 0:
                 try:
                     from crewai.new_agent.models import TokenUsage
+
                     executor = getattr(self.parent_agent, "_executor", None)
                     if executor is not None:
-                        executor._sub_action_tokens.append(TokenUsage(
-                            action="delegation",
-                            agent_id=str(parent_id),
-                            input_tokens=in_tokens,
-                            output_tokens=out_tokens,
-                            model=getattr(response, "model", "") or "",
-                            delegation_target=cw_role,
-                            coworker_source=self.coworker_source,
-                        ))
+                        executor._sub_action_tokens.append(
+                            TokenUsage(
+                                action="delegation",
+                                agent_id=str(parent_id),
+                                input_tokens=in_tokens,
+                                output_tokens=out_tokens,
+                                model=getattr(response, "model", "") or "",
+                                delegation_target=cw_role,
+                                coworker_source=self.coworker_source,
+                            )
+                        )
                 except Exception:
                     pass
 
             # GAP-55: Build and append provenance summary
             result_content = response.content
-            summary = _build_provenance_summary(self.coworker, cw_role, elapsed_ms, in_tokens, out_tokens)
+            summary = _build_provenance_summary(
+                self.coworker, cw_role, elapsed_ms, in_tokens, out_tokens
+            )
             if summary:
                 result_content += summary
 
@@ -211,7 +238,9 @@ class DelegateToCoworkerTool(BaseTool):
         except Exception as e:
             _emit_delegation_event(
                 NewAgentDelegationFailedEvent,
-                new_agent_id=parent_id, coworker_role=cw_role, error=str(e),
+                new_agent_id=parent_id,
+                coworker_role=cw_role,
+                error=str(e),
             )
             raise
 
@@ -219,6 +248,7 @@ class DelegateToCoworkerTool(BaseTool):
         """Delegate to an A2A remote coworker."""
         try:
             from crewai.a2a.client import A2AClient
+
             url = getattr(self.coworker, "url", None) or str(self.coworker)
             client = A2AClient(url=url)
             result = client.send_message(message)
@@ -292,6 +322,7 @@ class MultiDelegateTool(BaseTool):
 
         if loop and loop.is_running():
             import concurrent.futures
+
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                 raw = pool.submit(asyncio.run, _run_all()).result()
         else:
@@ -305,12 +336,14 @@ class MultiDelegateTool(BaseTool):
                 results.append(f"[{cw_name}] {r}")
             else:
                 content = getattr(r, "content", str(r))
-                role = cw_name or f"Coworker {i+1}"
+                role = cw_name or f"Coworker {i + 1}"
                 # GAP-55: Append provenance summary for each coworker
                 in_tokens = getattr(r, "input_tokens", 0) or 0
                 out_tokens = getattr(r, "output_tokens", 0) or 0
                 if coworker is not None:
-                    summary = _build_provenance_summary(coworker, role, 0, in_tokens, out_tokens)
+                    summary = _build_provenance_summary(
+                        coworker, role, 0, in_tokens, out_tokens
+                    )
                     if summary:
                         content += summary
                 results.append(f"[{role}] {content}")
@@ -335,18 +368,28 @@ def build_coworker_tools(
 
         if isinstance(cw, NewAgent):
             source = "amp" if getattr(cw, "_amp_resolved", False) else "local"
-            tools.append(DelegateToCoworkerTool(
-                coworker=cw, source=source, parent_agent=parent_agent,
-            ))
+            tools.append(
+                DelegateToCoworkerTool(
+                    coworker=cw,
+                    source=source,
+                    parent_agent=parent_agent,
+                )
+            )
             coworker_map[cw.role] = cw
         else:
             source = "a2a"
             cw_url = getattr(cw, "url", None)
             if cw_url:
-                tool_name = sanitize_tool_name(f"delegate_to_a2a_{cw_url.split('/')[-1]}")
-                tools.append(DelegateToCoworkerTool(
-                    coworker=cw, source=source, parent_agent=parent_agent,
-                ))
+                tool_name = sanitize_tool_name(
+                    f"delegate_to_a2a_{cw_url.split('/')[-1]}"
+                )
+                tools.append(
+                    DelegateToCoworkerTool(
+                        coworker=cw,
+                        source=source,
+                        parent_agent=parent_agent,
+                    )
+                )
 
     if len(coworker_map) > 1:
         tools.append(MultiDelegateTool(coworker_map=coworker_map))

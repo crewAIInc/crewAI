@@ -270,17 +270,23 @@ def _maybe_add_provider_extra(pyproject_path: Path, provider: str) -> None:
     try:
         content = pyproject_path.read_text(encoding="utf-8")
         missing = [
-            e for e in all_extras
-            if f"[{e}]" not in content and f",{e}]" not in content and f",{e}," not in content
+            e
+            for e in all_extras
+            if f"[{e}]" not in content
+            and f",{e}]" not in content
+            and f",{e}," not in content
         ]
         if not missing:
             return
         import re as _re
+
         suffix = "," + ",".join(missing)
+
         def _add_extras(m: _re.Match[str]) -> str:
             bracket: str = m.group(0)
             return bracket[:-1] + suffix + "]"
-        updated = _re.sub(r'crewai\[[^\]]+\]', _add_extras, content, count=1)
+
+        updated = _re.sub(r"crewai\[[^\]]+\]", _add_extras, content, count=1)
         if updated != content:
             pyproject_path.write_text(updated, encoding="utf-8")
     except Exception:
@@ -291,6 +297,7 @@ def _get_crewai_version() -> str:
     """Get the installed crewai version for the dependency pin."""
     try:
         from crewai_cli.version import get_crewai_version
+
         return get_crewai_version()
     except Exception:
         return "1.14.5"
@@ -428,6 +435,7 @@ def _read_key() -> str:
     """Read a single keypress. Returns 'up', 'down', 'enter', 'space', or the char."""
     if sys.platform == "win32":
         import msvcrt
+
         ch = msvcrt.getwch()
         if ch in ("\x00", "\xe0"):
             ch2 = msvcrt.getwch()
@@ -442,6 +450,7 @@ def _read_key() -> str:
 
     import termios
     import tty
+
     fd = sys.stdin.fileno()
     old = termios.tcgetattr(fd)
     try:
@@ -478,7 +487,9 @@ def _draw_single(labels: list[str], cursor: int, *, clear: bool = False) -> None
     sys.stdout.flush()
 
 
-def _draw_multi(labels: list[str], cursor: int, selected: set[int], *, clear: bool = False) -> None:
+def _draw_multi(
+    labels: list[str], cursor: int, selected: set[int], *, clear: bool = False
+) -> None:
     """Draw multi-select menu with checkboxes."""
     hint = f"  {_DIM}↑↓ navigate, space toggle, enter confirm{_RESET}"
     total = len(labels) + 1  # +1 for hint line
@@ -530,7 +541,9 @@ def create_agent(name: str | None = None) -> None:
     goal = click.prompt("  Goal (the agent's objective)", type=str)
     backstory = click.prompt(
         "  Backstory (context that shapes personality, optional)",
-        type=str, default="", show_default=False,
+        type=str,
+        default="",
+        show_default=False,
     )
 
     llm = _select_model()
@@ -671,7 +684,9 @@ def _select_tools() -> list[str]:
     if has_custom:
         custom = click.prompt(
             "  Custom tool class names (comma-separated)",
-            type=str, default="", show_default=False,
+            type=str,
+            default="",
+            show_default=False,
         )
         for name in custom.split(","):
             name = name.strip()
@@ -717,7 +732,10 @@ def _select_tools_fallback(labels: list[str]) -> list[int]:
     click.echo()
 
     raw = click.prompt(
-        "  Select tools (e.g. 1 3 5)", type=str, default="", show_default=False,
+        "  Select tools (e.g. 1 3 5)",
+        type=str,
+        default="",
+        show_default=False,
     )
     if not raw.strip():
         return []
@@ -762,7 +780,8 @@ def _setup_env(base: Path, llm_model: str) -> None:
                 continue
             value = click.prompt(
                 f"  {details.get('prompt', f'Enter {key_name}')}",
-                default="", show_default=False,
+                default="",
+                show_default=False,
             )
             if value.strip():
                 env_vars[key_name] = value.strip()
@@ -795,9 +814,9 @@ def _prompt_agent_name() -> str:
 
 def _strip_comments(text: str) -> str:
     """Strip // and /* */ comments from JSONC text, then fix trailing commas."""
-    result = re.sub(r'(?<!:)//.*?$', '', text, flags=re.MULTILINE)
-    result = re.sub(r'/\*.*?\*/', '', result, flags=re.DOTALL)
-    result = re.sub(r',\s*([}\]])', r'\1', result)
+    result = re.sub(r"(?<!:)//.*?$", "", text, flags=re.MULTILINE)
+    result = re.sub(r"/\*.*?\*/", "", result, flags=re.DOTALL)
+    result = re.sub(r",\s*([}\]])", r"\1", result)
     return result
 
 

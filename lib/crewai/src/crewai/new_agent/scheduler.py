@@ -33,9 +33,12 @@ _RELATIVE_RE = re.compile(
 )
 
 _UNIT_SECONDS = {
-    "second": 1, "sec": 1,
-    "minute": 60, "min": 60,
-    "hour": 3600, "hr": 3600,
+    "second": 1,
+    "sec": 1,
+    "minute": 60,
+    "min": 60,
+    "hour": 3600,
+    "hr": 3600,
     "day": 86400,
 }
 
@@ -72,14 +75,15 @@ def parse_schedule_time(text: str) -> datetime | None:
 
 # ── ScheduledTask model ─────────────────────────────────────────
 
+
 class ScheduledTask(BaseModel):
     id: str = Field(default_factory=lambda: f"task-{uuid4().hex[:8]}")
     agent_name: str = ""
     description: str = ""
     schedule_type: str = "once"  # "once" or "recurring"
-    next_run_at: str = ""       # ISO 8601 UTC
+    next_run_at: str = ""  # ISO 8601 UTC
     interval_seconds: int | None = None  # for recurring
-    status: str = "pending"     # pending, running, completed, failed, cancelled
+    status: str = "pending"  # pending, running, completed, failed, cancelled
     last_result: str = ""
     created_at: str = Field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
@@ -87,6 +91,7 @@ class ScheduledTask(BaseModel):
 
 
 # ── TaskScheduler ───────────────────────────────────────────────
+
 
 class TaskScheduler:
     """Singleton scheduler that checks for due tasks every 30 seconds."""
@@ -224,10 +229,9 @@ class TaskScheduler:
 
 # ── ScheduleTaskTool ────────────────────────────────────────────
 
+
 class ScheduleTaskArgs(BaseModel):
-    description: str = Field(
-        description="What the agent should do when the task fires"
-    )
+    description: str = Field(description="What the agent should do when the task fires")
     when: str = Field(
         description=(
             "When to run. Accepts relative ('in 5 minutes', '2 hours') "

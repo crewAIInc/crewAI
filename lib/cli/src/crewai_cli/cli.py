@@ -45,7 +45,7 @@ def _get_cli_version() -> str:
     # Prefer crewai version if installed (keeps existing UX)
     try:
         return get_version("crewai")
-    except Exception:  # noqa: S110
+    except Exception:
         pass
     try:
         return get_version("crewai-cli")
@@ -58,6 +58,7 @@ def _get_cli_version() -> str:
 def crewai() -> None:
     """Top-level command group for crewai."""
     from pathlib import Path
+
     env_path = Path.cwd() / ".env"
     if env_path.exists():
         try:
@@ -130,7 +131,9 @@ def create(
     elif type == "agent":
         create_agent(name)
     else:
-        click.secho("Error: Invalid type. Must be 'crew', 'flow', or 'agent'.", fg="red")
+        click.secho(
+            "Error: Invalid type. Must be 'crew', 'flow', or 'agent'.", fg="red"
+        )
 
 
 @crewai.command()
@@ -226,10 +229,15 @@ def _train_new_agents(agent_files: list, n_iterations: int) -> None:
             continue
 
         click.echo()
-        click.secho(f"Training {agent_name} ({len(cases)} cases, {n_iterations} iterations)", fg="cyan", bold=True)
+        click.secho(
+            f"Training {agent_name} ({len(cases)} cases, {n_iterations} iterations)",
+            fg="cyan",
+            bold=True,
+        )
 
         try:
             from crewai.new_agent.definition_parser import load_agent_from_definition
+
             agent = load_agent_from_definition(str(agent_path))
         except Exception as e:
             click.secho(f"  Error loading agent {agent_name}: {e}", fg="red")
@@ -248,6 +256,7 @@ def _train_new_agents(agent_files: list, n_iterations: int) -> None:
 
                 try:
                     import time as _time
+
                     _t0 = _time.monotonic()
                     with _console.status("[cyan]  Running…[/]", spinner="dots"):
                         response = asyncio.run(agent.amessage(user_input))
@@ -279,7 +288,9 @@ def _train_new_agents(agent_files: list, n_iterations: int) -> None:
     if agents_trained == 0:
         click.secho("No agents with matching benchmark cases found.", fg="yellow")
     else:
-        click.secho(f"Training complete ({agents_trained} agent(s)).", fg="green", bold=True)
+        click.secho(
+            f"Training complete ({agents_trained} agent(s)).", fg="green", bold=True
+        )
 
 
 @crewai.command()
@@ -512,7 +523,8 @@ def memory(
     "Defaults to test.judge_model in config.json (openai/gpt-4o-mini if not set).",
 )
 @click.option(
-    "-v", "--verbose",
+    "-v",
+    "--verbose",
     is_flag=True,
     help="Show agent execution details (tool calls, LLM responses, errors).",
 )
@@ -534,13 +546,25 @@ def test(
     from crewai_cli.run_crew import _needs_uv_relaunch, _relaunch_via_uv
 
     agents_dir = Path("agents")
-    agent_files = sorted(agents_dir.glob("*.json")) + sorted(agents_dir.glob("*.jsonc")) if agents_dir.is_dir() else []
+    agent_files = (
+        sorted(agents_dir.glob("*.json")) + sorted(agents_dir.glob("*.jsonc"))
+        if agents_dir.is_dir()
+        else []
+    )
 
     if agent_files:
-        effective_judge = judge_model or _read_config("test", "judge_model") or "openai/gpt-4o-mini"
+        effective_judge = (
+            judge_model or _read_config("test", "judge_model") or "openai/gpt-4o-mini"
+        )
 
         if _needs_uv_relaunch():
-            uv_args = ["test", "-n", str(n_iterations), "--judge-model", effective_judge]
+            uv_args = [
+                "test",
+                "-n",
+                str(n_iterations),
+                "--judge-model",
+                effective_judge,
+            ]
             if threshold is not None:
                 uv_args.extend(["--threshold", str(threshold)])
             if model:
@@ -554,12 +578,25 @@ def test(
         config_threshold = _read_config("test", "threshold")
         if config_threshold is None:
             config_threshold = _read_config("test_threshold")
-        effective_threshold = threshold if threshold is not None else (float(config_threshold) if config_threshold is not None else 0.7)
+        effective_threshold = (
+            threshold
+            if threshold is not None
+            else (float(config_threshold) if config_threshold is not None else 0.7)
+        )
 
-        _test_new_agents(agent_files, n_iterations, model, effective_threshold, effective_judge, verbose=verbose)
+        _test_new_agents(
+            agent_files,
+            n_iterations,
+            model,
+            effective_threshold,
+            effective_judge,
+            verbose=verbose,
+        )
     else:
         crew_model = model or "gpt-4o-mini"
-        click.echo(f"Testing the crew for {n_iterations} iterations with model {crew_model}")
+        click.echo(
+            f"Testing the crew for {n_iterations} iterations with model {crew_model}"
+        )
         evaluate_crew(n_iterations, crew_model, trained_agents_file=trained_agents_file)
 
 
@@ -577,6 +614,7 @@ def _read_config(*keys: str) -> Any:
     try:
         raw = config_path.read_text(encoding="utf-8")
         import re
+
         clean = re.sub(r"(?<!:)//.*?$", "", raw, flags=re.MULTILINE)
         clean = re.sub(r"/\*.*?\*/", "", clean, flags=re.DOTALL)
         data = json.loads(clean)
@@ -596,12 +634,14 @@ class _BenchmarkLiveProgress:
 
     def __init__(self, console=None):
         from rich.console import Console
+
         self._console = console or Console()
         self._state: dict[str, dict] = {}
         self._live = None
 
     def start(self):
         from rich.live import Live
+
         self._live = Live(
             self._render(),
             console=self._console,
@@ -622,10 +662,15 @@ class _BenchmarkLiveProgress:
 
         if t == "model_start":
             self._state[model] = {
-                "done": 0, "total": event["total_cases"],
-                "status": "starting", "passed": 0,
-                "avg": 0.0, "time": 0.0,
-                "in_tokens": 0, "out_tokens": 0, "cost": None,
+                "done": 0,
+                "total": event["total_cases"],
+                "status": "starting",
+                "passed": 0,
+                "avg": 0.0,
+                "time": 0.0,
+                "in_tokens": 0,
+                "out_tokens": 0,
+                "cost": None,
             }
         elif t == "case_start":
             self._state[model]["status"] = "running"
@@ -667,14 +712,14 @@ class _BenchmarkLiveProgress:
         n_cols = 7 if has_cost else 6
 
         table = Table(box=box.SIMPLE, show_header=False, padding=(0, 1), expand=False)
-        table.add_column("", width=1)                              # icon
-        table.add_column("", no_wrap=True)                         # model
-        table.add_column("", no_wrap=True, justify="right")        # passed or bar
-        table.add_column("", no_wrap=True, justify="right")        # score
-        table.add_column("", no_wrap=True, justify="right")        # time
-        table.add_column("", no_wrap=True, justify="right")        # tokens
+        table.add_column("", width=1)  # icon
+        table.add_column("", no_wrap=True)  # model
+        table.add_column("", no_wrap=True, justify="right")  # passed or bar
+        table.add_column("", no_wrap=True, justify="right")  # score
+        table.add_column("", no_wrap=True, justify="right")  # time
+        table.add_column("", no_wrap=True, justify="right")  # tokens
         if has_cost:
-            table.add_column("", no_wrap=True, justify="right")    # cost
+            table.add_column("", no_wrap=True, justify="right")  # cost
 
         for model, info in self._state.items():
             if info["status"] == "done":
@@ -683,10 +728,15 @@ class _BenchmarkLiveProgress:
                 cols = [
                     icon,
                     model,
-                    Text.from_markup(f"[{color}]{info['passed']}/{info['total']}[/{color}]"),
+                    Text.from_markup(
+                        f"[{color}]{info['passed']}/{info['total']}[/{color}]"
+                    ),
                     Text.from_markup(f"[{color}]{info['avg']:.2f}[/{color}]"),
                     Text(f"{info['time']:.1f}s", style="dim"),
-                    Text(f"↑{_fmt_tokens(info['in_tokens'])} ↓{_fmt_tokens(info['out_tokens'])}", style="dim"),
+                    Text(
+                        f"↑{_fmt_tokens(info['in_tokens'])} ↓{_fmt_tokens(info['out_tokens'])}",
+                        style="dim",
+                    ),
                 ]
                 if has_cost:
                     if info["cost"] is not None:
@@ -749,12 +799,14 @@ def _test_new_agents(
             continue
 
         file_threshold = loaded.threshold if loaded.threshold is not None else threshold
-        jobs.append({
-            "agent_name": agent_name,
-            "agent_path": str(agent_path.resolve()),
-            "cases": loaded.cases,
-            "threshold": file_threshold,
-        })
+        jobs.append(
+            {
+                "agent_name": agent_name,
+                "agent_path": str(agent_path.resolve()),
+                "cases": loaded.cases,
+                "threshold": file_threshold,
+            }
+        )
 
     if not jobs:
         click.secho("No agents with matching benchmark cases found.", fg="yellow")
@@ -771,6 +823,7 @@ def _test_new_agents(
             if "model" in prefixed:
                 prefixed["model"] = f"{agent_name}/{prefixed['model']}"
             progress.on_progress(prefixed)
+
         return _cb
 
     async def _run_all():
@@ -782,7 +835,9 @@ def _test_new_agents(
                     cases=job["cases"],
                     models=model_list,
                     judge_model=judge_model,
-                    on_progress=None if verbose else _make_progress_cb(job["agent_name"]),
+                    on_progress=None
+                    if verbose
+                    else _make_progress_cb(job["agent_name"]),
                     verbose=verbose,
                 )
             )
@@ -792,10 +847,15 @@ def _test_new_agents(
     click.echo()
     click.secho(
         f"Testing {len(jobs)} agent(s), {case_count} cases (threshold={threshold})",
-        fg="cyan", bold=True,
+        fg="cyan",
+        bold=True,
     )
 
-    from crewai_cli.benchmark import ArtifactsSandbox, SuppressBenchmarkOutput, VerboseBenchmarkOutput
+    from crewai_cli.benchmark import (
+        ArtifactsSandbox,
+        SuppressBenchmarkOutput,
+        VerboseBenchmarkOutput,
+    )
 
     if not verbose:
         progress.start()
@@ -816,7 +876,9 @@ def _test_new_agents(
     agents_tested = 0
     for job, result in zip(jobs, all_results):
         if isinstance(result, Exception):
-            click.secho(f"  Error running tests for {job['agent_name']}: {result}", fg="red")
+            click.secho(
+                f"  Error running tests for {job['agent_name']}: {result}", fg="red"
+            )
             all_passed = False
             continue
 
@@ -831,7 +893,9 @@ def _test_new_agents(
                 )
                 for r in failed:
                     inp = r.input[:60] + ("…" if len(r.input) > 60 else "")
-                    _con.print(f"    [red]#{r.case_index + 1}[/red] [dim]{inp}[/dim]  [red]{r.score:.2f}[/red]")
+                    _con.print(
+                        f"    [red]#{r.case_index + 1}[/red] [dim]{inp}[/dim]  [red]{r.score:.2f}[/red]"
+                    )
             else:
                 _con.print(
                     f"  [green bold]{job['agent_name']}: PASSED all {len(results)} cases >= {job['threshold']}[/green bold]"
@@ -840,7 +904,9 @@ def _test_new_agents(
         click.secho("No agents completed successfully.", fg="yellow")
         raise SystemExit(1)
     if all_passed:
-        click.secho(f"All tests passed ({agents_tested} agent(s)).", fg="green", bold=True)
+        click.secho(
+            f"All tests passed ({agents_tested} agent(s)).", fg="green", bold=True
+        )
     else:
         click.secho("Some tests failed.", fg="red", bold=True)
         raise SystemExit(1)
@@ -1149,7 +1215,10 @@ def agent_memory(name: str, search: str | None, clear: bool, limit_: int) -> Non
 
     if clear:
         if click.confirm(f"Clear all memories for '{name}'?"):
-            if hasattr(agent_instance, "_memory_instance") and agent_instance._memory_instance:
+            if (
+                hasattr(agent_instance, "_memory_instance")
+                and agent_instance._memory_instance
+            ):
                 try:
                     agent_instance._memory_instance.reset()
                     click.echo(f"Memories cleared for '{name}'.")
@@ -1159,7 +1228,10 @@ def agent_memory(name: str, search: str | None, clear: bool, limit_: int) -> Non
                 click.echo(f"No memory configured for '{name}'.")
         return
 
-    if not hasattr(agent_instance, "_memory_instance") or not agent_instance._memory_instance:
+    if (
+        not hasattr(agent_instance, "_memory_instance")
+        or not agent_instance._memory_instance
+    ):
         click.echo(f"No memory configured for '{name}'.")
         return
 
@@ -1173,18 +1245,28 @@ def agent_memory(name: str, search: str | None, clear: bool, limit_: int) -> Non
 
     try:
         if search:
-            results = agent_instance._memory_instance.recall(search, limit=limit_, depth="shallow")
+            results = agent_instance._memory_instance.recall(
+                search, limit=limit_, depth="shallow"
+            )
         else:
             results = agent_instance._memory_instance.list_records(limit=limit_)
 
         if not results:
-            msg = f"No memories matching '{search}'" if search else f"No memories stored for '{name}'."
+            msg = (
+                f"No memories matching '{search}'"
+                if search
+                else f"No memories stored for '{name}'."
+            )
             click.echo(msg)
             return
 
         if Console is not None:
             console = Console()
-            title = f"Memories matching '{search}' — {name}" if search else f"Memories — {name}"
+            title = (
+                f"Memories matching '{search}' — {name}"
+                if search
+                else f"Memories — {name}"
+            )
             table = Table(title=title, show_lines=True)
             table.add_column("#", style="dim", width=4)
             table.add_column("Content", min_width=40)
@@ -1203,7 +1285,11 @@ def agent_memory(name: str, search: str | None, clear: bool, limit_: int) -> Non
 
             console.print(table)
         else:
-            heading = f"Memories matching '{search}':" if search else f"Recent memories for '{name}':"
+            heading = (
+                f"Memories matching '{search}':"
+                if search
+                else f"Recent memories for '{name}':"
+            )
             click.echo(heading)
             for i, r in enumerate(results, 1):
                 click.echo(f"  {i}. {str(r)[:100]}")
@@ -1583,7 +1669,8 @@ def checkpoint_prune(
     "Defaults to test.judge_model in config.json (openai/gpt-4o-mini if not set).",
 )
 @click.option(
-    "-v", "--verbose",
+    "-v",
+    "--verbose",
     is_flag=True,
     help="Show agent execution details (tool calls, LLM responses, errors).",
 )
@@ -1599,7 +1686,9 @@ def benchmark(
 
     from crewai_cli.run_crew import _needs_uv_relaunch, _relaunch_via_uv
 
-    judge_model = judge_model or _read_config("test", "judge_model") or "openai/gpt-4o-mini"
+    judge_model = (
+        judge_model or _read_config("test", "judge_model") or "openai/gpt-4o-mini"
+    )
 
     if _needs_uv_relaunch():
         uv_args = ["benchmark", agent_path, cases_path, "--judge-model", judge_model]
@@ -1620,6 +1709,7 @@ def benchmark(
     _con = _RichConsole()
 
     from pathlib import Path as _P
+
     agent_path = str(_P(agent_path).resolve())
     cases_path = str(_P(cases_path).resolve())
 
@@ -1638,7 +1728,11 @@ def benchmark(
     click.echo(f"Judge model: {judge_model}")
     click.echo()
 
-    from crewai_cli.benchmark import ArtifactsSandbox, SuppressBenchmarkOutput, VerboseBenchmarkOutput
+    from crewai_cli.benchmark import (
+        ArtifactsSandbox,
+        SuppressBenchmarkOutput,
+        VerboseBenchmarkOutput,
+    )
 
     progress = None if verbose else _BenchmarkLiveProgress(console=_con)
     if progress:

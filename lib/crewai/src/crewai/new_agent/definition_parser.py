@@ -4,18 +4,19 @@ from __future__ import annotations
 
 import json
 import logging
-import re
 from pathlib import Path
+import re
 from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
 
 def strip_jsonc_comments(text: str) -> str:
     """Strip // and /* */ comments from JSONC text, then fix trailing commas."""
-    result = re.sub(r'(?<!:)//.*?$', '', text, flags=re.MULTILINE)
-    result = re.sub(r'/\*.*?\*/', '', result, flags=re.DOTALL)
-    result = re.sub(r',\s*([}\]])', r'\1', result)
+    result = re.sub(r"(?<!:)//.*?$", "", text, flags=re.MULTILINE)
+    result = re.sub(r"/\*.*?\*/", "", result, flags=re.DOTALL)
+    result = re.sub(r",\s*([}\]])", r"\1", result)
     return result
 
 
@@ -56,7 +57,9 @@ def parse_agent_definition(source: str | Path | dict) -> dict[str, Any]:
     """
     if isinstance(source, dict):
         defn = source
-    elif isinstance(source, Path) or (isinstance(source, str) and (source.endswith('.json') or source.endswith('.jsonc'))):
+    elif isinstance(source, Path) or (
+        isinstance(source, str) and source.endswith((".json", ".jsonc"))
+    ):
         path = Path(source)
         raw = path.read_text(encoding="utf-8")
         clean = strip_jsonc_comments(raw)
@@ -88,8 +91,8 @@ def load_agent_from_definition(
     Returns:
         A configured NewAgent instance.
     """
-    from crewai.new_agent.new_agent import NewAgent
     from crewai.new_agent.models import AgentSettings
+    from crewai.new_agent.new_agent import NewAgent
 
     if _loading_chain is None:
         _loading_chain = set()
@@ -144,13 +147,17 @@ def load_agent_from_definition(
 
     try:
         # Resolve coworkers (pass loading chain to detect circular refs)
-        coworkers = _resolve_coworkers(defn.get("coworkers", []), agents_dir, _loading_chain)
+        coworkers = _resolve_coworkers(
+            defn.get("coworkers", []), agents_dir, _loading_chain
+        )
 
         # Resolve guardrail
         guardrail = _resolve_guardrail(defn.get("guardrail"))
 
         # Resolve knowledge sources
-        knowledge_sources = _resolve_knowledge_sources(defn.get("knowledge_sources", []))
+        knowledge_sources = _resolve_knowledge_sources(
+            defn.get("knowledge_sources", [])
+        )
 
         # Build agent
         agent_kwargs: dict[str, Any] = {
@@ -186,6 +193,7 @@ def load_agent_from_definition(
 
         if "skills" in defn:
             from pathlib import Path as _Path
+
             agent_kwargs["skills"] = [_Path(p) for p in defn["skills"]]
 
         if "response_model" in defn:
@@ -224,6 +232,7 @@ def _find_tool_class(name: str) -> type | None:
     """Look up a tool class by name from the crewai_tools package."""
     try:
         import crewai_tools
+
         # Convert snake_case name to PascalCase + Tool suffix
         class_name = "".join(word.capitalize() for word in name.split("_")) + "Tool"
         cls = getattr(crewai_tools, class_name, None)
@@ -259,15 +268,21 @@ def _resolve_coworkers(
                     ref_path = agents_dir / f"{ref_name}{ext}"
                     if ref_path.exists():
                         result = load_agent_from_definition(
-                            ref_path, agents_dir, set(_loading_chain) if _loading_chain else None
+                            ref_path,
+                            agents_dir,
+                            set(_loading_chain) if _loading_chain else None,
                         )
                         if result is not None:
                             coworkers.append(result)
                         break
                 else:
-                    logger.warning(f"Coworker ref '{ref_name}' not found in {agents_dir}")
+                    logger.warning(
+                        f"Coworker ref '{ref_name}' not found in {agents_dir}"
+                    )
             else:
-                logger.warning(f"Cannot resolve coworker ref '{ref_name}' — no agents_dir specified")
+                logger.warning(
+                    f"Cannot resolve coworker ref '{ref_name}' — no agents_dir specified"
+                )
         elif "amp" in cw:
             # AMP handle — pass as string for resolution at construction time
             # Support overrides: {"amp": "handle", "llm": "...", "settings": {...}}
@@ -281,6 +296,7 @@ def _resolve_coworkers(
             # A2A remote — would need A2AClientConfig
             try:
                 from crewai.a2a.config import A2AClientConfig
+
                 coworkers.append(A2AClientConfig(url=cw["a2a"]))
             except ImportError:
                 logger.warning(f"A2A support not available for coworker {cw['a2a']}")
@@ -346,16 +362,24 @@ def _resolve_custom_tool(tool_name: str) -> Any:
         return None
     try:
         import importlib.util
-        spec = importlib.util.spec_from_file_location(f"custom_tools.{tool_name}", tool_file)
+
+        spec = importlib.util.spec_from_file_location(
+            f"custom_tools.{tool_name}", tool_file
+        )
         if spec is None or spec.loader is None:
             return None
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
 
         from crewai.tools.base_tool import BaseTool
+
         for attr_name in dir(module):
             attr = getattr(module, attr_name)
-            if isinstance(attr, type) and issubclass(attr, BaseTool) and attr is not BaseTool:
+            if (
+                isinstance(attr, type)
+                and issubclass(attr, BaseTool)
+                and attr is not BaseTool
+            ):
                 return attr()
         logger.warning(f"No BaseTool subclass found in {tool_file}")
         return None
@@ -374,25 +398,46 @@ def _resolve_knowledge_sources(sources: list[dict[str, Any]]) -> list[Any]:
         path = Path(path_str)
         try:
             if path.is_dir():
-                from crewai.knowledge.source.directory_knowledge_source import DirectoryKnowledgeSource
+                from crewai.knowledge.source.directory_knowledge_source import (
+                    DirectoryKnowledgeSource,
+                )
+
                 resolved.append(DirectoryKnowledgeSource(path=path_str))
             elif path.suffix.lower() == ".csv":
-                from crewai.knowledge.source.csv_knowledge_source import CSVKnowledgeSource
+                from crewai.knowledge.source.csv_knowledge_source import (
+                    CSVKnowledgeSource,
+                )
+
                 resolved.append(CSVKnowledgeSource(file_paths=[path_str]))
             elif path.suffix.lower() == ".pdf":
-                from crewai.knowledge.source.pdf_knowledge_source import PDFKnowledgeSource
+                from crewai.knowledge.source.pdf_knowledge_source import (
+                    PDFKnowledgeSource,
+                )
+
                 resolved.append(PDFKnowledgeSource(file_paths=[path_str]))
             elif path.suffix.lower() in (".xls", ".xlsx"):
-                from crewai.knowledge.source.excel_knowledge_source import ExcelKnowledgeSource
+                from crewai.knowledge.source.excel_knowledge_source import (
+                    ExcelKnowledgeSource,
+                )
+
                 resolved.append(ExcelKnowledgeSource(file_paths=[path_str]))
             elif path.suffix.lower() == ".json":
-                from crewai.knowledge.source.json_knowledge_source import JSONKnowledgeSource
+                from crewai.knowledge.source.json_knowledge_source import (
+                    JSONKnowledgeSource,
+                )
+
                 resolved.append(JSONKnowledgeSource(file_paths=[path_str]))
             elif path.suffix.lower() == ".txt":
-                from crewai.knowledge.source.text_file_knowledge_source import TextFileKnowledgeSource
+                from crewai.knowledge.source.text_file_knowledge_source import (
+                    TextFileKnowledgeSource,
+                )
+
                 resolved.append(TextFileKnowledgeSource(file_paths=[path_str]))
             else:
-                from crewai.knowledge.source.text_file_knowledge_source import TextFileKnowledgeSource
+                from crewai.knowledge.source.text_file_knowledge_source import (
+                    TextFileKnowledgeSource,
+                )
+
                 resolved.append(TextFileKnowledgeSource(file_paths=[path_str]))
         except Exception as e:
             logger.warning(f"Failed to resolve knowledge source '{path_str}': {e}")
@@ -403,10 +448,12 @@ def _resolve_response_model(dotted_path: str) -> type | None:
     """Resolve a dotted path string to a Pydantic BaseModel class."""
     try:
         import importlib
+
         module_path, class_name = dotted_path.rsplit(".", 1)
         module = importlib.import_module(module_path)
         cls = getattr(module, class_name)
         from pydantic import BaseModel
+
         if isinstance(cls, type) and issubclass(cls, BaseModel):
             return cls
         logger.warning(f"response_model '{dotted_path}' is not a BaseModel subclass")
@@ -427,6 +474,7 @@ def _resolve_mcps(mcp_defs: list[Any]) -> list[Any]:
             if url:
                 try:
                     from crewai.mcp import MCPServerConfig
+
                     resolved.append(MCPServerConfig(url=url, name=mcp.get("name", "")))
                 except ImportError:
                     resolved.append(url)

@@ -4,8 +4,10 @@ GAP-49: Tracks token usage from plan creation and reasoning reconstruction LLM c
 """
 
 from __future__ import annotations
+
 import logging
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
 
 if TYPE_CHECKING:
     from crewai.new_agent.new_agent import NewAgent
@@ -52,11 +54,22 @@ class PlanningEngine:
         complexity_indicators = [
             len(message) > 500,
             message.count("?") > 2,
-            any(kw in message.lower() for kw in [
-                "step by step", "plan", "multiple", "compare",
-                "analyze", "research", "comprehensive", "detailed",
-                "all of", "each of", "every",
-            ]),
+            any(
+                kw in message.lower()
+                for kw in [
+                    "step by step",
+                    "plan",
+                    "multiple",
+                    "compare",
+                    "analyze",
+                    "research",
+                    "comprehensive",
+                    "detailed",
+                    "all of",
+                    "each of",
+                    "every",
+                ]
+            ),
             message.count(",") > 4,
             message.count(" and ") > 3,
         ]
@@ -68,12 +81,17 @@ class PlanningEngine:
         if llm is None:
             return []
 
-        from crewai.utilities.agent_utils import aget_llm_response, format_message_for_llm
+        from crewai.utilities.agent_utils import (
+            aget_llm_response,
+            format_message_for_llm,
+        )
         from crewai.utilities.types import LLMMessage
 
         tools_desc = ""
         if self.agent._resolved_tools:
-            tools_desc = "Available tools: " + ", ".join(t.name for t in self.agent._resolved_tools)
+            tools_desc = "Available tools: " + ", ".join(
+                t.name for t in self.agent._resolved_tools
+            )
 
         coworkers_desc = ""
         if self.agent._resolved_coworkers:
@@ -94,6 +112,7 @@ class PlanningEngine:
 
         try:
             from crewai.new_agent.executor import _NullPrinter
+
             response = await aget_llm_response(
                 llm=llm,
                 messages=messages,
@@ -105,6 +124,7 @@ class PlanningEngine:
             # GAP-49: Record token usage from the planning LLM call
             try:
                 from crewai.new_agent.models import TokenUsage
+
                 usage = getattr(llm, "_token_usage", None) or {}
                 in_tokens = usage.get("prompt_tokens", 0)
                 out_tokens = usage.get("completion_tokens", 0)
@@ -143,7 +163,10 @@ class PlanningEngine:
         if llm is None:
             return provenance_log
 
-        from crewai.utilities.agent_utils import aget_llm_response, format_message_for_llm
+        from crewai.utilities.agent_utils import (
+            aget_llm_response,
+            format_message_for_llm,
+        )
         from crewai.utilities.types import LLMMessage
 
         log_text = "\n".join(
@@ -163,13 +186,19 @@ class PlanningEngine:
 
         try:
             from crewai.new_agent.executor import _NullPrinter
+
             response = await aget_llm_response(
-                llm=llm, messages=messages, callbacks=[], printer=_NullPrinter(), verbose=False,
+                llm=llm,
+                messages=messages,
+                callbacks=[],
+                printer=_NullPrinter(),
+                verbose=False,
             )
 
             # GAP-49: Record token usage from the reasoning reconstruction call
             try:
                 from crewai.new_agent.models import TokenUsage
+
                 usage = getattr(llm, "_token_usage", None) or {}
                 in_tokens = usage.get("prompt_tokens", 0)
                 out_tokens = usage.get("completion_tokens", 0)
@@ -204,9 +233,10 @@ class PlanningEngine:
         try:
             from crewai.events.event_bus import crewai_event_bus
             from crewai.new_agent.events import (
-                NewAgentPlanningStartedEvent,
                 NewAgentPlanningCompletedEvent,
+                NewAgentPlanningStartedEvent,
             )
+
             crewai_event_bus.emit(
                 self.agent,
                 NewAgentPlanningStartedEvent(new_agent_id=str(self.agent.id)),

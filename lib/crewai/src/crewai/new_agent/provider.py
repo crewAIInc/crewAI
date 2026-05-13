@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import json
 import logging
-import sqlite3
 from pathlib import Path
-from typing import Any, Protocol, runtime_checkable
+import sqlite3
+from typing import Protocol, runtime_checkable
 
 from crewai.new_agent.models import AgentStatus, Message, ProvenanceEntry
+
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +74,10 @@ class SQLiteConversationStorage:
                 conn.execute("DELETE FROM messages")
                 conn.executemany(
                     "INSERT INTO messages (data_json) VALUES (?)",
-                    [(json.dumps(m.model_dump(mode="json"), default=str),) for m in messages],
+                    [
+                        (json.dumps(m.model_dump(mode="json"), default=str),)
+                        for m in messages
+                    ],
                 )
         except Exception as e:
             logger.debug(f"Failed to save messages: {e}")
@@ -102,7 +106,10 @@ class SQLiteConversationStorage:
                 conn.execute("DELETE FROM provenance")
                 conn.executemany(
                     "INSERT INTO provenance (data_json) VALUES (?)",
-                    [(json.dumps(e.model_dump(mode="json"), default=str),) for e in entries],
+                    [
+                        (json.dumps(e.model_dump(mode="json"), default=str),)
+                        for e in entries
+                    ],
                 )
         except Exception as e:
             logger.debug(f"Failed to save provenance: {e}")

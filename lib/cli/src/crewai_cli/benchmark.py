@@ -90,9 +90,7 @@ def load_benchmark_cases(path: str | Path) -> LoadedCases:
         if threshold is not None:
             threshold = float(threshold)
         if "cases" not in data:
-            raise ValueError(
-                "Object-format benchmark file must have a 'cases' array"
-            )
+            raise ValueError("Object-format benchmark file must have a 'cases' array")
         data = data["cases"]
 
     if not isinstance(data, list):
@@ -103,16 +101,19 @@ def load_benchmark_cases(path: str | Path) -> LoadedCases:
         if not isinstance(item, dict):
             raise ValueError(f"Benchmark case at index {i} must be a JSON object")
         if "input" not in item:
-            raise ValueError(f"Benchmark case at index {i} missing required 'input' field")
+            raise ValueError(
+                f"Benchmark case at index {i} missing required 'input' field"
+            )
         cases.append(BenchmarkCase(**item))
 
     return LoadedCases(cases, threshold)
 
 
 def _strip_jsonc_comments(text: str) -> str:
-    """Strip // and /* */ comments from JSONC text."""
+    """Strip // and /* */ comments and trailing commas from JSONC text."""
     result = re.sub(r"(?<!:)//.*?$", "", text, flags=re.MULTILINE)
     result = re.sub(r"/\*.*?\*/", "", result, flags=re.DOTALL)
+    result = re.sub(r",\s*([}\]])", r"\1", result)
     return result
 
 
@@ -172,12 +173,14 @@ async def _judge_with_llm(
 def _parse_definition(source: Any) -> dict[str, Any]:
     """Parse an agent definition — delegates to crewai's parser."""
     from crewai.new_agent.definition_parser import parse_agent_definition
+
     return parse_agent_definition(source)
 
 
 def _load_agent(source: Any, agents_dir: Path | None = None) -> Any:
     """Load a NewAgent from a definition — delegates to crewai's loader."""
     from crewai.new_agent.definition_parser import load_agent_from_definition
+
     return load_agent_from_definition(source, agents_dir=agents_dir)
 
 
@@ -202,7 +205,15 @@ async def _run_model_benchmark(
 
     async def _run_case(i: int, case: BenchmarkCase) -> BenchmarkResult:
         async with sem:
-            emit({"type": "case_start", "model": model, "case_index": i, "total_cases": total, "input": case.input})
+            emit(
+                {
+                    "type": "case_start",
+                    "model": model,
+                    "case_index": i,
+                    "total_cases": total,
+                    "input": case.input,
+                }
+            )
 
             bench_defn = dict(defn)
             bench_defn["settings"] = dict(defn.get("settings", {}))
@@ -216,10 +227,26 @@ async def _run_model_benchmark(
             try:
                 agent = _load_agent(bench_defn, agents_dir=agents_dir)
             except Exception as e:
-                emit({"type": "case_done", "model": model, "case_index": i, "total_cases": total, "passed": False, "score": 0.0, "time_ms": 0, "error": str(e)})
+                emit(
+                    {
+                        "type": "case_done",
+                        "model": model,
+                        "case_index": i,
+                        "total_cases": total,
+                        "passed": False,
+                        "score": 0.0,
+                        "time_ms": 0,
+                        "error": str(e),
+                    }
+                )
                 return BenchmarkResult(
-                    case_index=i, input=case.input, expected=case.expected,
-                    actual=f"[Agent creation error: {e}]", model=model, passed=False, score=0.0,
+                    case_index=i,
+                    input=case.input,
+                    expected=case.expected,
+                    actual=f"[Agent creation error: {e}]",
+                    model=model,
+                    passed=False,
+                    score=0.0,
                 )
 
             start_ms = _current_time_ms()
@@ -235,18 +262,50 @@ async def _run_model_benchmark(
                 cost = response.cost
             except asyncio.TimeoutError:
                 elapsed_ms = _current_time_ms() - start_ms
-                emit({"type": "case_done", "model": model, "case_index": i, "total_cases": total, "passed": False, "score": 0.0, "time_ms": elapsed_ms, "error": "timeout"})
+                emit(
+                    {
+                        "type": "case_done",
+                        "model": model,
+                        "case_index": i,
+                        "total_cases": total,
+                        "passed": False,
+                        "score": 0.0,
+                        "time_ms": elapsed_ms,
+                        "error": "timeout",
+                    }
+                )
                 return BenchmarkResult(
-                    case_index=i, input=case.input, expected=case.expected,
-                    actual=f"[Timeout after {_CASE_TIMEOUT_SECONDS}s]", model=model, passed=False, score=0.0,
+                    case_index=i,
+                    input=case.input,
+                    expected=case.expected,
+                    actual=f"[Timeout after {_CASE_TIMEOUT_SECONDS}s]",
+                    model=model,
+                    passed=False,
+                    score=0.0,
                     response_time_ms=elapsed_ms,
                 )
             except Exception as e:
                 elapsed_ms = _current_time_ms() - start_ms
-                emit({"type": "case_done", "model": model, "case_index": i, "total_cases": total, "passed": False, "score": 0.0, "time_ms": elapsed_ms, "error": str(e)})
+                emit(
+                    {
+                        "type": "case_done",
+                        "model": model,
+                        "case_index": i,
+                        "total_cases": total,
+                        "passed": False,
+                        "score": 0.0,
+                        "time_ms": elapsed_ms,
+                        "error": str(e),
+                    }
+                )
                 return BenchmarkResult(
-                    case_index=i, input=case.input, expected=case.expected,
-                    actual=f"[Error: {e}]", model=model, passed=False, score=0.0,
+                    case_index=i,
+                    input=case.input,
+                    expected=case.expected,
+                    actual=f"[Error: {e}]",
+                    model=model,
+                    passed=False,
+                    score=0.0,
                     response_time_ms=elapsed_ms,
                 )
 
@@ -254,7 +313,14 @@ async def _run_model_benchmark(
             if case.expected is not None:
                 passed, score = _check_expected(case.expected, actual)
             if case.criteria is not None:
-                emit({"type": "judging", "model": model, "case_index": i, "total_cases": total})
+                emit(
+                    {
+                        "type": "judging",
+                        "model": model,
+                        "case_index": i,
+                        "total_cases": total,
+                    }
+                )
                 try:
                     criteria_passed, criteria_score = await asyncio.wait_for(
                         _judge_with_llm(case.criteria, case.input, actual, judge_model),
@@ -268,29 +334,60 @@ async def _run_model_benchmark(
                 else:
                     passed, score = criteria_passed, criteria_score
 
-            emit({"type": "case_done", "model": model, "case_index": i, "total_cases": total, "passed": passed, "score": score, "time_ms": elapsed_ms})
+            emit(
+                {
+                    "type": "case_done",
+                    "model": model,
+                    "case_index": i,
+                    "total_cases": total,
+                    "passed": passed,
+                    "score": score,
+                    "time_ms": elapsed_ms,
+                }
+            )
             return BenchmarkResult(
-                case_index=i, input=case.input, expected=case.expected, actual=actual,
-                model=model, passed=passed, score=score,
-                input_tokens=input_tokens, output_tokens=output_tokens,
-                response_time_ms=elapsed_ms, cost=cost,
+                case_index=i,
+                input=case.input,
+                expected=case.expected,
+                actual=actual,
+                model=model,
+                passed=passed,
+                score=score,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                response_time_ms=elapsed_ms,
+                cost=cost,
             )
 
-    model_results = await asyncio.gather(*[_run_case(i, case) for i, case in enumerate(cases)])
+    model_results = await asyncio.gather(
+        *[_run_case(i, case) for i, case in enumerate(cases)]
+    )
 
     total_passed = sum(1 for r in model_results if r.passed)
-    avg_score = sum(r.score for r in model_results) / len(model_results) if model_results else 0.0
-    total_time = max(r.response_time_ms for r in model_results) / 1000 if model_results else 0.0
+    avg_score = (
+        sum(r.score for r in model_results) / len(model_results)
+        if model_results
+        else 0.0
+    )
+    total_time = (
+        max(r.response_time_ms for r in model_results) / 1000 if model_results else 0.0
+    )
     total_in = sum(r.input_tokens for r in model_results)
     total_out = sum(r.output_tokens for r in model_results)
     total_cost = sum(r.cost for r in model_results if r.cost is not None)
-    emit({
-        "type": "model_done", "model": model,
-        "passed": total_passed, "total": len(model_results),
-        "avg_score": avg_score, "total_time": total_time,
-        "input_tokens": total_in, "output_tokens": total_out,
-        "total_cost": total_cost if total_cost > 0 else None,
-    })
+    emit(
+        {
+            "type": "model_done",
+            "model": model,
+            "passed": total_passed,
+            "total": len(model_results),
+            "avg_score": avg_score,
+            "total_time": total_time,
+            "input_tokens": total_in,
+            "output_tokens": total_out,
+            "total_cost": total_cost if total_cost > 0 else None,
+        }
+    )
 
     return model_results
 
@@ -332,7 +429,15 @@ async def run_benchmark(
             on_progress(event)
 
     tasks = [
-        _run_model_benchmark(defn, model, cases, judge_model, _emit, agents_dir=agents_dir, verbose=verbose)
+        _run_model_benchmark(
+            defn,
+            model,
+            cases,
+            judge_model,
+            _emit,
+            agents_dir=agents_dir,
+            verbose=verbose,
+        )
         for model in models
     ]
     all_results = await asyncio.gather(*tasks)
@@ -345,11 +450,13 @@ class SuppressBenchmarkOutput:
 
     def __enter__(self):
         import logging
+
         self._saved_formatter = None
         try:
             from crewai.events.listeners.tracing.trace_listener import (
                 TraceCollectionListener,
             )
+
             listener = TraceCollectionListener._instance
             if listener:
                 self._saved_formatter = listener.formatter
@@ -357,7 +464,12 @@ class SuppressBenchmarkOutput:
         except Exception:
             pass
         self._loggers = []
-        for name in (None, "crewai.new_agent.event_listener", "crewai.new_agent.executor", "crewai"):
+        for name in (
+            None,
+            "crewai.new_agent.event_listener",
+            "crewai.new_agent.executor",
+            "crewai",
+        ):
             lg = logging.getLogger(name)
             self._loggers.append((lg, lg.level))
             lg.setLevel(logging.CRITICAL)
@@ -371,6 +483,7 @@ class SuppressBenchmarkOutput:
                 from crewai.events.listeners.tracing.trace_listener import (
                     TraceCollectionListener,
                 )
+
                 listener = TraceCollectionListener._instance
                 if listener:
                     listener.formatter = self._saved_formatter
@@ -384,22 +497,26 @@ class VerboseBenchmarkOutput:
     def __enter__(self):
         import logging
         import sys
+
         from crewai.events.event_bus import crewai_event_bus
         from crewai.new_agent.events import (
-            NewAgentLLMCallStartedEvent,
+            NewAgentContextSummarizedEvent,
             NewAgentLLMCallCompletedEvent,
             NewAgentLLMCallFailedEvent,
-            NewAgentToolUsageStartedEvent,
+            NewAgentLLMCallStartedEvent,
+            NewAgentStatusUpdateEvent,
             NewAgentToolUsageCompletedEvent,
             NewAgentToolUsageFailedEvent,
-            NewAgentStatusUpdateEvent,
-            NewAgentContextSummarizedEvent,
+            NewAgentToolUsageStartedEvent,
         )
 
         # Suppress Rich formatter panels — we print our own structured output
         self._saved_formatter = None
         try:
-            from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
+            from crewai.events.listeners.tracing.trace_listener import (
+                TraceCollectionListener,
+            )
+
             listener = TraceCollectionListener._instance
             if listener:
                 self._saved_formatter = listener.formatter
@@ -409,7 +526,12 @@ class VerboseBenchmarkOutput:
 
         # Quiet loggers to WARNING — keep warnings visible, suppress debug/info spam
         self._loggers = []
-        for name in (None, "crewai.new_agent.event_listener", "crewai.new_agent.executor", "crewai"):
+        for name in (
+            None,
+            "crewai.new_agent.event_listener",
+            "crewai.new_agent.executor",
+            "crewai",
+        ):
             lg = logging.getLogger(name)
             self._loggers.append((lg, lg.level))
             lg.setLevel(logging.WARNING)
@@ -420,29 +542,39 @@ class VerboseBenchmarkOutput:
         fl = sys.stderr.flush
 
         def _on_llm_start(_src, ev: NewAgentLLMCallStartedEvent):
-            w(f"\033[36m[llm] calling {ev.model}…\033[0m\n"); fl()
+            w(f"\033[36m[llm] calling {ev.model}…\033[0m\n")
+            fl()
 
         def _on_llm_done(_src, ev: NewAgentLLMCallCompletedEvent):
-            w(f"\033[36m[llm] {ev.model}  {ev.input_tokens}→{ev.output_tokens} tokens  {ev.response_time_ms}ms\033[0m\n"); fl()
+            w(
+                f"\033[36m[llm] {ev.model}  {ev.input_tokens}→{ev.output_tokens} tokens  {ev.response_time_ms}ms\033[0m\n"
+            )
+            fl()
 
         def _on_llm_fail(_src, ev: NewAgentLLMCallFailedEvent):
-            w(f"\033[31m[llm] FAILED: {ev.error[:200]}\033[0m\n"); fl()
+            w(f"\033[31m[llm] FAILED: {ev.error[:200]}\033[0m\n")
+            fl()
 
         def _on_tool_start(_src, ev: NewAgentToolUsageStartedEvent):
-            w(f"\033[33m[tool] using {ev.tool_name}…\033[0m\n"); fl()
+            w(f"\033[33m[tool] using {ev.tool_name}…\033[0m\n")
+            fl()
 
         def _on_tool_done(_src, ev: NewAgentToolUsageCompletedEvent):
-            w(f"\033[33m[tool] {ev.tool_name} done\033[0m\n"); fl()
+            w(f"\033[33m[tool] {ev.tool_name} done\033[0m\n")
+            fl()
 
         def _on_tool_fail(_src, ev: NewAgentToolUsageFailedEvent):
-            w(f"\033[31m[tool] {ev.tool_name} FAILED: {ev.error[:200]}\033[0m\n"); fl()
+            w(f"\033[31m[tool] {ev.tool_name} FAILED: {ev.error[:200]}\033[0m\n")
+            fl()
 
         def _on_status(_src, ev: NewAgentStatusUpdateEvent):
             if ev.detail:
-                w(f"\033[2m[status] {ev.state}: {ev.detail}\033[0m\n"); fl()
+                w(f"\033[2m[status] {ev.state}: {ev.detail}\033[0m\n")
+                fl()
 
         def _on_summarized(_src, ev: NewAgentContextSummarizedEvent):
-            w(f"\033[35m[context] summarized — context was too large\033[0m\n"); fl()
+            w("\033[35m[context] summarized — context was too large\033[0m\n")
+            fl()
 
         pairs = [
             (NewAgentLLMCallStartedEvent, _on_llm_start),
@@ -469,7 +601,10 @@ class VerboseBenchmarkOutput:
             lg.setLevel(level)
         if self._saved_formatter is not None:
             try:
-                from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
+                from crewai.events.listeners.tracing.trace_listener import (
+                    TraceCollectionListener,
+                )
+
                 listener = TraceCollectionListener._instance
                 if listener:
                     listener.formatter = self._saved_formatter
@@ -490,6 +625,7 @@ class ArtifactsSandbox:
 
     def __enter__(self):
         import os
+
         self._base.mkdir(parents=True, exist_ok=True)
         gitignore = self._base / ".gitignore"
         if not gitignore.exists():
@@ -500,6 +636,7 @@ class ArtifactsSandbox:
 
     def __exit__(self, *exc):
         import os
+
         if self._prev_cwd:
             os.chdir(self._prev_cwd)
 
@@ -554,9 +691,11 @@ def format_results_table(results: list[BenchmarkResult]) -> str:
     lines.append("-" * 80)
     n = len(results)
     avg_score = total_score / n if n > 0 else 0.0
-    lines.append(f"Total: {total_passed}/{n} passed | Avg score: {avg_score:.2f} | "
-                 f"Tokens: {total_input_tokens}/{total_output_tokens} | "
-                 f"Total time: {total_time_ms}ms")
+    lines.append(
+        f"Total: {total_passed}/{n} passed | Avg score: {avg_score:.2f} | "
+        f"Tokens: {total_input_tokens}/{total_output_tokens} | "
+        f"Total time: {total_time_ms}ms"
+    )
 
     return "\n".join(lines)
 
@@ -623,6 +762,7 @@ def format_comparison_table(results_by_model: dict[str, list[BenchmarkResult]]) 
 # Rich-based terminal charts
 # ---------------------------------------------------------------------------
 
+
 def _score_color(score: float) -> str:
     if score >= 0.7:
         return "green"
@@ -680,7 +820,7 @@ def print_results_chart(
 
     rows: list[str] = []
     for r in results:
-        inp = r.input[:input_w - 1] + "…" if len(r.input) >= input_w else r.input
+        inp = r.input[: input_w - 1] + "…" if len(r.input) >= input_w else r.input
         inp_pad = inp + " " * max(0, input_w - len(inp))
         bar = _score_bar(r.score, bar_w)
         badge = "[green]PASS[/green]" if r.passed else "[red]FAIL[/red]"
@@ -746,10 +886,16 @@ def print_comparison_chart(
         avg = sum(r.score for r in results) / n if n else 0.0
         total_time = max((r.response_time_ms for r in results), default=0) / 1000
         total_tokens = sum(r.input_tokens + r.output_tokens for r in results)
-        models_data.append({
-            "model": model, "passed": passed, "n": n,
-            "avg": avg, "time": total_time, "tokens": total_tokens,
-        })
+        models_data.append(
+            {
+                "model": model,
+                "passed": passed,
+                "n": n,
+                "avg": avg,
+                "time": total_time,
+                "tokens": total_tokens,
+            }
+        )
         max_time = max(max_time, total_time)
         max_tokens = max(max_tokens, total_tokens)
 
@@ -768,10 +914,18 @@ def print_comparison_chart(
     lines: list[str] = []
     for md in models_data:
         name_raw = md["model"]
-        name = (name_raw[:max_name_len - 1] + "…" if len(name_raw) > max_name_len else name_raw).ljust(max_name_len)
+        name = (
+            name_raw[: max_name_len - 1] + "…"
+            if len(name_raw) > max_name_len
+            else name_raw
+        ).ljust(max_name_len)
         bar = _score_bar(md["avg"], bar_width)
         pass_color = _score_color(md["avg"])
-        star = " [bold green]★[/bold green]" if best and md["model"] == best["model"] else ""
+        star = (
+            " [bold green]★[/bold green]"
+            if best and md["model"] == best["model"]
+            else ""
+        )
         tokens_str = _fmt_tokens(md["tokens"])
         lines.append(
             f"  {name}  {bar} {md['avg']:.2f}  "

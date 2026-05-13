@@ -14,13 +14,14 @@ GAP-113: Workflow detection threshold raised from 3 to 5.
 """
 
 from __future__ import annotations
-import asyncio
+
+from datetime import datetime, timezone
 import json
 import logging
 import os
 import re
-from datetime import datetime, timezone, timedelta
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
 
 if TYPE_CHECKING:
     from crewai.new_agent.new_agent import NewAgent
@@ -114,10 +115,13 @@ class DreamingEngine:
             path = self._processed_ids_path()
             os.makedirs(os.path.dirname(path), exist_ok=True)
             with open(path, "w") as f:
-                json.dump({
-                    "ids": list(self._processed_memory_ids),
-                    "cycle_count": self._cycle_count,
-                }, f)
+                json.dump(
+                    {
+                        "ids": list(self._processed_memory_ids),
+                        "cycle_count": self._cycle_count,
+                    },
+                    f,
+                )
         except Exception as e:
             logger.debug(f"Failed to persist processed memory IDs: {e}")
 
@@ -176,12 +180,14 @@ class DreamingEngine:
 
             # Avoid duplicate entries
             if not any(entry.get("name") == recipe_name for entry in manifest):
-                manifest.append({
-                    "name": recipe_name,
-                    "path": recipe_path,
-                    "tools": tools,
-                    "created_at": recipe["created_at"],
-                })
+                manifest.append(
+                    {
+                        "name": recipe_name,
+                        "path": recipe_path,
+                        "tools": tools,
+                        "created_at": recipe["created_at"],
+                    }
+                )
                 with open(manifest_path, "w") as f:
                     json.dump(manifest, f, indent=2)
 
@@ -206,9 +212,10 @@ class DreamingEngine:
             recipe_name = "_".join(tools[:5]).replace(" ", "_").lower()
             recipe_name = re.sub(r"[^a-zA-Z0-9_]", "", recipe_name)[:64]
 
-            class_name = "".join(
-                word.capitalize() for word in recipe_name.split("_") if word
-            ) or "DetectedWorkflow"
+            class_name = (
+                "".join(word.capitalize() for word in recipe_name.split("_") if word)
+                or "DetectedWorkflow"
+            )
 
             # Build step methods
             steps: list[str] = []
@@ -219,19 +226,19 @@ class DreamingEngine:
                     decorator = "    @start()"
                 else:
                     prev_safe = re.sub(r"[^a-zA-Z0-9_]", "_", tools[i - 1])
-                    decorator = f"    @listen(\"step_{i}_{prev_safe}\")"
+                    decorator = f'    @listen("step_{i}_{prev_safe}")'
                 method = (
                     f"{decorator}\n"
                     f"    def step_{step_num}_{safe_name}(self):\n"
-                    f"        \"\"\"Calls {tool_name} tool.\"\"\"\n"
-                    f"        agent = self.state.get(\"agent\")\n"
-                    f"        if agent and \"{tool_name}\" in (agent.tools or {{}}):\n"
-                    f"            result = agent.tools[\"{tool_name}\"].run(\n"
-                    f"                self.state.get(\"step_{step_num}_input\", self.state.get(\"input\", \"\"))\n"
+                    f'        """Calls {tool_name} tool."""\n'
+                    f'        agent = self.state.get("agent")\n'
+                    f'        if agent and "{tool_name}" in (agent.tools or {{}}):\n'
+                    f'            result = agent.tools["{tool_name}"].run(\n'
+                    f'                self.state.get("step_{step_num}_input", self.state.get("input", ""))\n'
                     f"            )\n"
                     f"        else:\n"
                     f"            result = None\n"
-                    f"        self.state[\"step_{step_num}_result\"] = result\n"
+                    f'        self.state["step_{step_num}_result"] = result\n'
                     f"        return result"
                 )
                 steps.append(method)
@@ -249,7 +256,7 @@ class DreamingEngine:
                 f"\n"
                 f"\n"
                 f"class {class_name}(Flow):\n"
-                f"    \"\"\"Workflow: {' -> '.join(tools)}\"\"\"\n"
+                f'    """Workflow: {" -> ".join(tools)}"""\n'
                 f"\n"
                 f"{steps_code}\n"
             )
@@ -276,7 +283,20 @@ class DreamingEngine:
         """
         if not self._discovered_flows:
             return None
-        stop_words = {"the", "a", "an", "is", "to", "and", "or", "of", "in", "for", "it", "on"}
+        stop_words = {
+            "the",
+            "a",
+            "an",
+            "is",
+            "to",
+            "and",
+            "or",
+            "of",
+            "in",
+            "for",
+            "it",
+            "on",
+        }
         msg_lower = user_message.lower()
         msg_words = set(msg_lower.split()) - stop_words
         for flow in self._discovered_flows:
@@ -319,11 +339,13 @@ class DreamingEngine:
         Stored entries are injected into the consolidation prompt with higher
         weight so the agent learns from explicit user corrections faster.
         """
-        self._training_feedback.append({
-            "feedback": feedback,
-            "task_context": task_context,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        })
+        self._training_feedback.append(
+            {
+                "feedback": feedback,
+                "task_context": task_context,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+        )
         self.increment_memory_count()
         logger.debug("Training feedback received for agent '%s'", self.agent.role)
 
@@ -408,8 +430,7 @@ class DreamingEngine:
 
                     # GAP-54: Only share global-scoped memories with coworkers
                     global_memories = [
-                        c for c in consolidated
-                        if _classify_scope(c) == SCOPE_GLOBAL
+                        c for c in consolidated if _classify_scope(c) == SCOPE_GLOBAL
                     ]
                     self._share_with_coworkers(global_memories)
 
@@ -449,14 +470,15 @@ class DreamingEngine:
             contents: list[str] = []
             ids: list[str] = []
 
-            for m in (results or []):
+            for m in results or []:
                 # Try to extract a unique ID for this memory
-                mem_id = getattr(m, "id", None) or getattr(getattr(m, "record", None), "id", None)
+                mem_id = getattr(m, "id", None) or getattr(
+                    getattr(m, "record", None), "id", None
+                )
                 if mem_id is None:
                     # Use content hash as fallback ID
-                    content = (
-                        getattr(m, "content", "") or
-                        getattr(getattr(m, "record", None), "content", "")
+                    content = getattr(m, "content", "") or getattr(
+                        getattr(m, "record", None), "content", ""
                     )
                     if content:
                         mem_id = str(hash(content))
@@ -470,15 +492,16 @@ class DreamingEngine:
                     continue
 
                 # GAP-101: Skip read-only shared memories during consolidation
-                mem_metadata = getattr(m, "metadata", None) or getattr(
-                    getattr(m, "record", None), "metadata", None
-                ) or {}
+                mem_metadata = (
+                    getattr(m, "metadata", None)
+                    or getattr(getattr(m, "record", None), "metadata", None)
+                    or {}
+                )
                 if isinstance(mem_metadata, dict) and mem_metadata.get("read_only"):
                     continue
 
-                content = (
-                    getattr(m, "content", "") or
-                    getattr(getattr(m, "record", None), "content", "")
+                content = getattr(m, "content", "") or getattr(
+                    getattr(m, "record", None), "content", ""
                 )
                 # GAP-101: Also skip by tag prefix
                 if content and content.startswith("[shared:read-only]"):
@@ -496,6 +519,7 @@ class DreamingEngine:
         dreaming_llm_ref = self.agent.settings.dreaming_llm
         if dreaming_llm_ref is not None:
             from crewai.utilities.llm_utils import create_llm
+
             return create_llm(dreaming_llm_ref)
         return self.agent._llm_instance
 
@@ -505,9 +529,11 @@ class DreamingEngine:
         if llm is None:
             return []
 
-        from crewai.utilities.agent_utils import aget_llm_response
+        from crewai.utilities.agent_utils import (
+            aget_llm_response,
+            format_message_for_llm,
+        )
         from crewai.utilities.types import LLMMessage
-        from crewai.utilities.agent_utils import format_message_for_llm
 
         memory_text = "\n".join(f"- {m}" for m in memories)
 
@@ -551,6 +577,7 @@ class DreamingEngine:
 
         try:
             from crewai.new_agent.executor import _NullPrinter
+
             response = await aget_llm_response(
                 llm=llm,
                 messages=messages,
@@ -562,6 +589,7 @@ class DreamingEngine:
             # GAP-49: Record token usage from the consolidation LLM call
             try:
                 from crewai.new_agent.models import TokenUsage
+
                 usage = getattr(llm, "_token_usage", None) or {}
                 in_tokens = usage.get("prompt_tokens", 0)
                 out_tokens = usage.get("completion_tokens", 0)
@@ -614,6 +642,7 @@ class DreamingEngine:
 
         # Find repeated sequences (simplified — look for exact matches)
         from collections import Counter
+
         seq_counter = Counter(tuple(s) for s in tool_sequences)
         workflows = [
             {"tools": list(seq), "count": count}
@@ -683,6 +712,7 @@ class DreamingEngine:
         try:
             from crewai.events.event_bus import crewai_event_bus
             from crewai.new_agent.events import NewAgentWorkflowProposedEvent
+
             crewai_event_bus.emit(
                 self.agent,
                 NewAgentWorkflowProposedEvent(
@@ -713,6 +743,7 @@ class DreamingEngine:
         try:
             from crewai.events.event_bus import crewai_event_bus
             from crewai.new_agent.events import NewAgentWorkflowConfirmedEvent
+
             crewai_event_bus.emit(
                 self.agent,
                 NewAgentWorkflowConfirmedEvent(new_agent_id=str(self.agent.id)),
@@ -734,6 +765,7 @@ class DreamingEngine:
         try:
             from crewai.events.event_bus import crewai_event_bus
             from crewai.new_agent.events import NewAgentDreamingStartedEvent
+
             crewai_event_bus.emit(
                 self.agent,
                 NewAgentDreamingStartedEvent(new_agent_id=str(self.agent.id)),
@@ -745,6 +777,7 @@ class DreamingEngine:
         try:
             from crewai.events.event_bus import crewai_event_bus
             from crewai.new_agent.events import NewAgentWorkflowDetectedEvent
+
             crewai_event_bus.emit(
                 self.agent,
                 NewAgentWorkflowDetectedEvent(
@@ -760,6 +793,7 @@ class DreamingEngine:
         try:
             from crewai.events.event_bus import crewai_event_bus
             from crewai.new_agent.events import NewAgentDreamingCompletedEvent
+
             crewai_event_bus.emit(
                 self.agent,
                 NewAgentDreamingCompletedEvent(

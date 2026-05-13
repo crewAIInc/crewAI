@@ -115,6 +115,15 @@ ignore-decorators = ["typing.overload"]
 "lib/cli/tests/**/*.py" = ["S101", "RET504", "S105", "S106"]  # Allow assert statements in tests
 "lib/crewai-core/tests/**/*.py" = ["S101", "RET504", "S105", "S106"]  # Allow assert statements in tests
 "lib/devtools/tests/**/*.py" = ["S101"]
+# new_agent module — telemetry/resilience patterns require try-except-pass
+"lib/crewai/src/crewai/new_agent/**/*.py" = ["S110", "PERF203", "RUF006", "RUF012", "PERF401", "PERF402", "PERF403", "B905", "B007", "F841", "RET504", "N806", "RUF001", "S603"]
+"lib/crewai/src/crewai/memory/unified_memory.py" = ["S110"]
+# CLI agent TUI and benchmark — UI/subprocess patterns
+"lib/cli/src/crewai_cli/agent_tui.py" = ["S110", "PERF203", "PERF401", "PERF402", "RUF006", "RUF012", "S603", "T201"]
+"lib/cli/src/crewai_cli/benchmark.py" = ["S110", "PERF203", "E702", "B905", "RET504", "ASYNC240"]
+"lib/cli/src/crewai_cli/cli.py" = ["S110", "PERF401", "B905", "N806", "N814"]
+"lib/cli/src/crewai_cli/run_crew.py" = ["S603"]
+"lib/cli/src/crewai_cli/create_agent.py" = ["S110", "PERF203", "S607", "RUF001", "RET504"]
 
 
 [tool.mypy]

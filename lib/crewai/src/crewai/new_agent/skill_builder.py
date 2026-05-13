@@ -8,9 +8,10 @@ from __future__ import annotations
 
 import json
 import logging
-import re
 from pathlib import Path
-from typing import Any, TYPE_CHECKING
+import re
+from typing import TYPE_CHECKING, Any
+
 
 if TYPE_CHECKING:
     from crewai.new_agent.new_agent import NewAgent
@@ -44,8 +45,14 @@ def _slugify(text: str, max_len: int = 64) -> str:
 
 
 _CONFIRM_WORDS = {
-    "yes", "yep", "yeah", "sure", "approve",
-    "confirmed", "accept", "lgtm",
+    "yes",
+    "yep",
+    "yeah",
+    "sure",
+    "approve",
+    "confirmed",
+    "accept",
+    "lgtm",
 }
 _CONFIRM_PHRASES = {"go ahead", "save it", "sounds good", "looks good"}
 _REJECT_WORDS = {"no", "nah", "nope", "reject", "decline"}
@@ -145,7 +152,9 @@ class SkillBuilder:
         self._emit_suggested_event(suggestion)
         return suggestion
 
-    def build_suggestion_message(self, suggestion: dict[str, Any]) -> tuple[str, list[dict[str, Any]]]:
+    def build_suggestion_message(
+        self, suggestion: dict[str, Any]
+    ) -> tuple[str, list[dict[str, Any]]]:
         """Return (conversational_text, actions) for a pending suggestion.
 
         Plain-text providers show just the text and let the user respond
@@ -166,6 +175,7 @@ class SkillBuilder:
         )
 
         from crewai.new_agent.models import MessageAction
+
         actions = [
             MessageAction(
                 action_id=f"skill-confirm-{name}",
@@ -224,9 +234,7 @@ class SkillBuilder:
 
     def suggest_from_instruction(self, user_text: str) -> dict[str, Any]:
         """Generate a skill suggestion from an explicit user instruction."""
-        generated = self._generate_skill_content(
-            user_text, "explicit-instruction"
-        )
+        generated = self._generate_skill_content(user_text, "explicit-instruction")
         if not generated:
             return self.suggest_skill(
                 name=_slugify(user_text[:60]),
@@ -247,12 +255,10 @@ class SkillBuilder:
         count = workflow.get("count", 0)
         source_text = (
             f"Repeated tool sequence ({count}x): {' -> '.join(tools)}\n"
-            + "\n".join(f"  Step {i+1}: {t}" for i, t in enumerate(tools))
+            + "\n".join(f"  Step {i + 1}: {t}" for i, t in enumerate(tools))
         )
 
-        generated = self._generate_skill_content(
-            source_text, "workflow-detection"
-        )
+        generated = self._generate_skill_content(source_text, "workflow-detection")
         if not generated:
             name = _slugify("-".join(tools[:4]))
             return self.suggest_skill(
@@ -261,8 +267,7 @@ class SkillBuilder:
                 instructions=(
                     f"## Workflow (detected {count} times)\n\n"
                     + "\n".join(
-                        f"{i+1}. Use the **{t}** tool"
-                        for i, t in enumerate(tools)
+                        f"{i + 1}. Use the **{t}** tool" for i, t in enumerate(tools)
                     )
                 ),
                 source="workflow-detection",
@@ -299,7 +304,10 @@ class SkillBuilder:
             return False
 
         try:
-            from crewai.skills.parser import load_skill_metadata, load_skill_instructions
+            from crewai.skills.parser import (
+                load_skill_instructions,
+                load_skill_metadata,
+            )
 
             skill = load_skill_metadata(skill_path)
             skill = load_skill_instructions(skill)
@@ -336,6 +344,7 @@ class SkillBuilder:
             return ""
         try:
             from crewai.skills.loader import format_skill_context
+
             sections = [format_skill_context(s) for s in self._active_skills]
             return "\n\n".join(sections)
         except Exception as e:
@@ -357,12 +366,12 @@ class SkillBuilder:
         frontmatter_lines = [
             "---",
             f"name: {name}",
-            f"description: \"{description}\"",
+            f'description: "{description}"',
         ]
         if metadata:
             frontmatter_lines.append("metadata:")
             for k, v in metadata.items():
-                frontmatter_lines.append(f"  {k}: \"{v}\"")
+                frontmatter_lines.append(f'  {k}: "{v}"')
         frontmatter_lines.append("---")
         frontmatter_lines.append("")
 
@@ -374,7 +383,7 @@ class SkillBuilder:
         if not self._skills_dir.is_dir():
             return
         try:
-            from crewai.skills.loader import discover_skills, activate_skill
+            from crewai.skills.loader import activate_skill, discover_skills
 
             discovered = discover_skills(self._skills_dir)
             for skill in discovered:
@@ -401,9 +410,11 @@ class SkillBuilder:
         )
 
         try:
-            from crewai.utilities.agent_utils import get_llm_response
-            from crewai.utilities.agent_utils import format_message_for_llm
             from crewai.new_agent.executor import _NullPrinter
+            from crewai.utilities.agent_utils import (
+                format_message_for_llm,
+                get_llm_response,
+            )
 
             messages = [format_message_for_llm(prompt, role="user")]
             response = get_llm_response(

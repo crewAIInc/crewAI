@@ -120,9 +120,7 @@ class PromptStack(BaseModel):
     layers: list[PromptLayer] = Field(default_factory=list)
 
     def assemble(self) -> str:
-        return "\n\n".join(
-            layer.content for layer in self.layers if layer.content
-        )
+        return "\n\n".join(layer.content for layer in self.layers if layer.content)
 
     def add(self, name: str, content: str, source: str = "") -> None:
         self.layers.append(PromptLayer(name=name, content=content, source=source))

@@ -10,14 +10,13 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+from pathlib import Path
 import re
 import sys
 import time
-
-from rich.markup import escape as _rich_escape
-from pathlib import Path
 from typing import Any
 
+from rich.markup import escape as _rich_escape
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
@@ -33,9 +32,10 @@ from textual.widgets import (
     RadioButton,
     RadioSet,
     Static,
-    TabbedContent,
     TabPane,
+    TabbedContent,
 )
+
 
 try:
     from textual.suggester import Suggester
@@ -122,7 +122,6 @@ def _history_dir() -> Path:
 
 class ChatBubble(Static):
     """A styled chat message bubble."""
-    pass
 
 
 _STATE_ICONS = {
@@ -150,7 +149,9 @@ class ThinkingIndicator(Static):
         self._prev_output: int = 0
         self._step_start: float = time.monotonic()
 
-    def update_status(self, state: str, detail: str | None, input_tokens: int, output_tokens: int) -> None:
+    def update_status(
+        self, state: str, detail: str | None, input_tokens: int, output_tokens: int
+    ) -> None:
         label = detail or state or "working…"
         # Mark the previous step as done (skip the initial placeholder,
         # but keep its creation timestamp so the first real step inherits it)
@@ -200,7 +201,9 @@ class ThinkingIndicator(Static):
         lines: list[str] = []
         for step in self._steps:
             lines.append(step)
-        current = f"[{_CORAL}]{ch}[/] [{_DIM}]{self._agent_name}[/] {self._current_status}"
+        current = (
+            f"[{_CORAL}]{ch}[/] [{_DIM}]{self._agent_name}[/] {self._current_status}"
+        )
         if self._tokens:
             current += f"  {self._tokens}"
         lines.append(current)
@@ -255,7 +258,9 @@ class CreateRoomScreen(ModalScreen[dict[str, Any] | None]):
                     yield Checkbox(name, value=True, id=f"cb-{name}")
             yield Label("Engagement")
             with RadioSet(id="engagement-radio"):
-                yield RadioButton("Organic — agents auto-respond", value=True, id="radio-organic")
+                yield RadioButton(
+                    "Organic — agents auto-respond", value=True, id="radio-organic"
+                )
                 yield RadioButton("Tagged — @mention required", id="radio-tagged")
             with Horizontal():
                 yield Button("Create", variant="primary", id="btn-create-room")
@@ -272,7 +277,8 @@ class CreateRoomScreen(ModalScreen[dict[str, Any] | None]):
                 name_input.focus()
                 return
             agents = [
-                n for n in self._agent_names
+                n
+                for n in self._agent_names
                 if self.query_one(f"#cb-{n}", Checkbox).value
             ]
             radio = self.query_one("#engagement-radio", RadioSet)
@@ -510,8 +516,13 @@ class AgentTUI(App[None]):
                         yield Static("AGENTS", classes="sidebar-label")
                         yield OptionList(id="agent-list")
                     with TabPane("Memory", id="tab-memory"):
-                        yield Static("Click below to open the memory browser.", id="memory-scope-label")
-                        yield Button("Open Memory Browser", id="btn-memory", variant="default")
+                        yield Static(
+                            "Click below to open the memory browser.",
+                            id="memory-scope-label",
+                        )
+                        yield Button(
+                            "Open Memory Browser", id="btn-memory", variant="default"
+                        )
                 with Horizontal(id="sidebar-actions"):
                     yield Button("Provenance", id="btn-provenance", variant="default")
             with Vertical(id="chat-area"):
@@ -571,6 +582,7 @@ class AgentTUI(App[None]):
         self._status_listener = None
         try:
             from crewai.events.event_bus import CrewAIEventsBus
+
             bus = CrewAIEventsBus()
         except Exception:
             bus = None
@@ -581,9 +593,7 @@ class AgentTUI(App[None]):
 
                 @bus.on(NewAgentStatusUpdateEvent)
                 def _on_status_update(source: Any, event: Any) -> None:
-                    self.call_from_thread(
-                        self._handle_status_update, source, event
-                    )
+                    self.call_from_thread(self._handle_status_update, source, event)
 
                 self._status_listener = _on_status_update
             except Exception:
@@ -626,6 +636,7 @@ class AgentTUI(App[None]):
 
         try:
             from crewai.new_agent.scheduler import TaskScheduler
+
             self._scheduler = TaskScheduler()
             self._scheduler.set_callback(self._on_scheduled_task_due)
             self._scheduler.start()
@@ -645,7 +656,9 @@ class AgentTUI(App[None]):
         if self._is_room(self._current_room):
             engagement = self._room_engagement(self._current_room)
             if engagement == "organic":
-                chat_input.placeholder = "Type a message — agents will respond automatically"
+                chat_input.placeholder = (
+                    "Type a message — agents will respond automatically"
+                )
             else:
                 chat_input.placeholder = "Use @agent_name to direct your message"
         else:
@@ -738,7 +751,8 @@ class AgentTUI(App[None]):
         if not targets and self._is_room(self._current_room):
             room_agent_names = self._room_agents(self._current_room)
             room_agent_defs = [
-                d for d in self._agent_defs
+                d
+                for d in self._agent_defs
                 if d.get("name", d.get("role", "unnamed")) in room_agent_names
             ]
             engagement = self._room_engagement(self._current_room)
@@ -758,9 +772,7 @@ class AgentTUI(App[None]):
                         and scored[1][1] >= top_score * self._RELEVANCE_TIE_THRESHOLD
                     ):
                         best.append(scored[1][0])
-                    targets = [
-                        d.get("name", d.get("role", "unnamed")) for d in best
-                    ]
+                    targets = [d.get("name", d.get("role", "unnamed")) for d in best]
                 else:
                     targets = [self._last_active_agent or room_agent_names[0]]
             elif len(room_agent_names) == 1:
@@ -768,8 +780,7 @@ class AgentTUI(App[None]):
             else:
                 first = room_agent_names[0] if room_agent_names else "agent"
                 self._mount_sys(
-                    "Tip: use @agent_name to direct your message, "
-                    f"e.g. @{first}"
+                    f"Tip: use @agent_name to direct your message, e.g. @{first}"
                 )
                 return
 
@@ -782,13 +793,9 @@ class AgentTUI(App[None]):
             scroll.mount(thinking)
             if near_bottom:
                 scroll.scroll_end(animate=False)
-            asyncio.ensure_future(
-                self._process(targets[0], clean_text, thinking, room)
-            )
+            asyncio.ensure_future(self._process(targets[0], clean_text, thinking, room))
         else:
-            asyncio.ensure_future(
-                self._process_multi(targets, clean_text, room)
-            )
+            asyncio.ensure_future(self._process_multi(targets, clean_text, room))
 
     # ── Organic mode relevance check (GAP-28) ──
 
@@ -839,9 +846,7 @@ class AgentTUI(App[None]):
             if not isinstance(names, list):
                 return None
 
-            name_to_def = {
-                d.get("name", d.get("role", "unnamed")): d for d in agents
-            }
+            name_to_def = {d.get("name", d.get("role", "unnamed")): d for d in agents}
             scored: list[tuple[dict[str, Any], int]] = []
             for rank, name in enumerate(names):
                 if name in name_to_def:
@@ -869,11 +874,52 @@ class AgentTUI(App[None]):
         return stems
 
     _STOP_WORDS: set[str] = {
-        "the", "a", "an", "is", "to", "and", "or", "of", "in", "it", "on",
-        "for", "i", "my", "me", "can", "you", "do", "what", "how", "please",
-        "help", "this", "that", "with", "are", "be", "was", "were", "has",
-        "have", "had", "will", "would", "could", "should", "about", "just",
-        "not", "but", "if", "they", "them", "their", "there", "here",
+        "the",
+        "a",
+        "an",
+        "is",
+        "to",
+        "and",
+        "or",
+        "of",
+        "in",
+        "it",
+        "on",
+        "for",
+        "i",
+        "my",
+        "me",
+        "can",
+        "you",
+        "do",
+        "what",
+        "how",
+        "please",
+        "help",
+        "this",
+        "that",
+        "with",
+        "are",
+        "be",
+        "was",
+        "were",
+        "has",
+        "have",
+        "had",
+        "will",
+        "would",
+        "could",
+        "should",
+        "about",
+        "just",
+        "not",
+        "but",
+        "if",
+        "they",
+        "them",
+        "their",
+        "there",
+        "here",
     }
 
     _RELEVANCE_TIE_THRESHOLD: float = 0.8
@@ -892,11 +938,13 @@ class AgentTUI(App[None]):
 
         scored: list[tuple[dict[str, Any], int]] = []
         for agent in agents:
-            agent_text = " ".join([
-                agent.get("role", ""),
-                agent.get("goal", ""),
-                agent.get("backstory", ""),
-            ]).lower()
+            agent_text = " ".join(
+                [
+                    agent.get("role", ""),
+                    agent.get("goal", ""),
+                    agent.get("backstory", ""),
+                ]
+            ).lower()
             agent_words = set(agent_text.split()) - self._STOP_WORDS
             agent_stems = self._stem_words(agent_words)
 
@@ -967,6 +1015,7 @@ class AgentTUI(App[None]):
         """Show or cancel scheduled tasks."""
         try:
             from crewai.new_agent.scheduler import TaskScheduler
+
             scheduler = TaskScheduler()
         except Exception:
             self._mount_sys("Scheduler not available.")
@@ -983,14 +1032,19 @@ class AgentTUI(App[None]):
         show_all = len(parts) > 1 and parts[1] == "all"
         tasks = scheduler.list_tasks(include_done=show_all)
         if not tasks:
-            self._mount_sys("No scheduled tasks." if not show_all else "No tasks found.")
+            self._mount_sys(
+                "No scheduled tasks." if not show_all else "No tasks found."
+            )
             return
 
         lines: list[str] = [f"[bold]Scheduled Tasks[/] ({len(tasks)})"]
         for t in tasks:
             status_icon = {
-                "pending": "◻", "running": "▶", "completed": "✓",
-                "failed": "✗", "cancelled": "—",
+                "pending": "◻",
+                "running": "▶",
+                "completed": "✓",
+                "failed": "✗",
+                "cancelled": "—",
             }.get(t.status, "?")
             agent = t.agent_name or "unknown"
             due = t.next_run_at[:16].replace("T", " ") if t.next_run_at else "—"
@@ -1189,27 +1243,31 @@ class AgentTUI(App[None]):
 
         async def _call_agent(target: str) -> tuple[str, Any, Exception | None]:
             try:
-                agent = await asyncio.to_thread(
-                    self._get_or_create_agent, target
-                )
+                agent = await asyncio.to_thread(self._get_or_create_agent, target)
                 if agent is None:
                     error_detail = getattr(self, "_last_agent_error", "")
                     detail = f": {error_detail}" if error_detail else ""
-                    return target, None, ValueError(f"Could not load '{target}'{detail}")
+                    return (
+                        target,
+                        None,
+                        ValueError(f"Could not load '{target}'{detail}"),
+                    )
                 msg = room_context if room_context else text
                 resp = await asyncio.to_thread(agent.message, msg)
                 return target, resp, None
             except Exception as exc:
                 return target, None, exc
 
-        results = await asyncio.gather(
-            *[_call_agent(t) for t in targets]
-        )
+        results = await asyncio.gather(*[_call_agent(t) for t in targets])
 
         for target, response, error in results:
             await self._safe_remove(indicators.get(target))  # type: ignore[arg-type]
             if error or response is None:
-                msg = f"Error from {target}: {error}" if error else f"Could not load agent '{target}'."
+                msg = (
+                    f"Error from {target}: {error}"
+                    if error
+                    else f"Could not load agent '{target}'."
+                )
                 self._append_msg(room, "system", msg)
                 if self._current_room == room:
                     self._mount_sys(msg)
@@ -1242,9 +1300,7 @@ class AgentTUI(App[None]):
         history = self._chat_histories.get(room, [])
         # Only include user and agent messages (skip system)
         relevant = [
-            (sender, content)
-            for sender, content, _ in history
-            if sender != "system"
+            (sender, content) for sender, content, _ in history if sender != "system"
         ]
         if not relevant:
             return ""
@@ -1304,7 +1360,9 @@ class AgentTUI(App[None]):
             stream_start = time.monotonic()
             stream_chars = 0
 
-            def _stream_markup(text: str, final: bool = False, metadata: str = "") -> str:
+            def _stream_markup(
+                text: str, final: bool = False, metadata: str = ""
+            ) -> str:
                 rendered = _safe_render(text)
                 mk = f"[bold {_CORAL}]{target}[/]\n{rendered}"
                 if final:
@@ -1341,7 +1399,9 @@ class AgentTUI(App[None]):
             response = getattr(agent, "last_stream_result", None)
             meta_parts: list[str] = []
             if response:
-                if getattr(response, "input_tokens", 0) or getattr(response, "output_tokens", 0):
+                if getattr(response, "input_tokens", 0) or getattr(
+                    response, "output_tokens", 0
+                ):
                     meta_parts.append(
                         f"↑ {response.input_tokens or 0:,}  "
                         f"↓ {response.output_tokens or 0:,} tokens"
@@ -1351,7 +1411,9 @@ class AgentTUI(App[None]):
             metadata = " · ".join(meta_parts)
 
             if bubble is not None:
-                bubble.update(_stream_markup(accumulated, final=True, metadata=metadata))
+                bubble.update(
+                    _stream_markup(accumulated, final=True, metadata=metadata)
+                )
 
             content = accumulated or (response.content if response else "")
             self._append_msg(room, target, content, metadata)
@@ -1379,11 +1441,7 @@ class AgentTUI(App[None]):
             return self._agent_instances[name]
 
         defn = next(
-            (
-                d
-                for d in self._agent_defs
-                if d.get("name", d.get("role", "")) == name
-            ),
+            (d for d in self._agent_defs if d.get("name", d.get("role", "")) == name),
             None,
         )
         if defn is None:
@@ -1409,9 +1467,7 @@ class AgentTUI(App[None]):
             return True
         return scroll.scroll_y >= scroll.max_scroll_y - 80
 
-    def _mount_bubble(
-        self, sender: str, content: str, metadata: str = ""
-    ) -> None:
+    def _mount_bubble(self, sender: str, content: str, metadata: str = "") -> None:
         scroll = self.query_one("#chat-scroll", VerticalScroll)
         near_bottom = self._is_near_bottom(scroll)
         scroll.mount(self._make_bubble(sender, content, metadata))
@@ -1421,9 +1477,7 @@ class AgentTUI(App[None]):
     def _mount_sys(self, text: str) -> None:
         self._mount_bubble("system", text)
 
-    def _make_bubble(
-        self, sender: str, content: str, metadata: str = ""
-    ) -> ChatBubble:
+    def _make_bubble(self, sender: str, content: str, metadata: str = "") -> ChatBubble:
         if sender == "You":
             markup = f"[bold #e8e8e8]You[/]\n{_safe_render(content)}"
             return ChatBubble(markup, classes="user-bubble")
@@ -1484,9 +1538,7 @@ class AgentTUI(App[None]):
         for room, msgs in self._chat_histories.items():
             safe = room.replace("/", "_").replace("\\", "_")
             path = hdir / f"{safe}.json"
-            data = [
-                {"sender": s, "content": c, "metadata": m} for s, c, m in msgs
-            ]
+            data = [{"sender": s, "content": c, "metadata": m} for s, c, m in msgs]
             try:
                 path.write_text(json.dumps(data, indent=2), encoding="utf-8")
             except Exception:
@@ -1504,8 +1556,7 @@ class AgentTUI(App[None]):
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))
                 self._chat_histories[room] = [
-                    (d["sender"], d["content"], d.get("metadata", ""))
-                    for d in data
+                    (d["sender"], d["content"], d.get("metadata", "")) for d in data
                 ]
             except Exception:
                 pass
@@ -1515,9 +1566,14 @@ class AgentTUI(App[None]):
     def _launch_memory_browser(self) -> None:
         """Suspend this TUI and launch the memory browser as a subprocess."""
         import subprocess
+
         with self.suspend():
             subprocess.run(
-                [sys.executable, "-c", "from crewai_cli.memory_tui import MemoryTUI; MemoryTUI().run()"],
+                [
+                    sys.executable,
+                    "-c",
+                    "from crewai_cli.memory_tui import MemoryTUI; MemoryTUI().run()",
+                ],
             )
 
     def _find_agent_with_pending_suggestion(self) -> str | None:
@@ -1539,7 +1595,9 @@ class AgentTUI(App[None]):
             return self._current_room
         return None
 
-    def on_tabbed_content_tab_activated(self, event: TabbedContent.TabActivated) -> None:
+    def on_tabbed_content_tab_activated(
+        self, event: TabbedContent.TabActivated
+    ) -> None:
         pass
 
     # ── Sidebar buttons ──
@@ -1563,6 +1621,7 @@ class AgentTUI(App[None]):
 
         try:
             from crewai.new_agent.cli_provider import _get_storage
+
             entries = _get_storage(agent_name).load_provenance()
         except Exception:
             entries = []
@@ -1571,7 +1630,9 @@ class AgentTUI(App[None]):
             self._mount_sys(f"No provenance data for {agent_name}.")
             return
 
-        lines = [f"[bold {_CORAL}]Provenance — {agent_name}[/] ({len(entries)} entries)\n"]
+        lines = [
+            f"[bold {_CORAL}]Provenance — {agent_name}[/] ({len(entries)} entries)\n"
+        ]
         for i, entry in enumerate(entries[-10:], 1):
             action = getattr(entry, "action", "?")
             reasoning = getattr(entry, "reasoning", "") or ""
@@ -1629,7 +1690,9 @@ class AgentTUI(App[None]):
         self._render_chat()
         self._mount_sys(f"Room '{display}' created with {n_agents} agent(s).")
 
-    def _save_room_to_config(self, name: str, agents: list[str], engagement: str) -> None:
+    def _save_room_to_config(
+        self, name: str, agents: list[str], engagement: str
+    ) -> None:
         try:
             if self._config_path.exists():
                 raw = self._config_path.read_text(encoding="utf-8")
@@ -1656,6 +1719,7 @@ class AgentTUI(App[None]):
                 pass
         try:
             from crewai.events.event_bus import crewai_event_bus
+
             crewai_event_bus.shutdown(wait=False)
         except Exception:
             pass

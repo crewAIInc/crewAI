@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 
 from crewai.tools.base_tool import BaseTool
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -23,6 +24,7 @@ def _emit_spawn_event(event_cls: type, **kwargs: Any) -> None:
     """Emit a spawn event on the event bus, swallowing errors."""
     try:
         from crewai.events.event_bus import crewai_event_bus
+
         crewai_event_bus.emit(None, event_cls(**kwargs))
     except Exception:
         pass
@@ -44,9 +46,8 @@ def _query_parent_memory(agent: Any, subtask: str, limit: int = 10) -> str:
 
         lines: list[str] = []
         for m in results:
-            content = (
-                getattr(m, "content", "") or
-                getattr(getattr(m, "record", None), "content", "")
+            content = getattr(m, "content", "") or getattr(
+                getattr(m, "record", None), "content", ""
             )
             if content:
                 lines.append(f"- {content}")
@@ -87,7 +88,9 @@ class SpawnSubtaskTool(BaseTool):
     args_schema: type[BaseModel] = SpawnSubtaskArgs
     agent: Any = Field(default=None, exclude=True)
 
-    def _run(self, subtasks: list[str], fire_and_forget: bool = False, **kwargs: Any) -> str:
+    def _run(
+        self, subtasks: list[str], fire_and_forget: bool = False, **kwargs: Any
+    ) -> str:
         """Execute parallel spawns synchronously."""
         from crewai.new_agent.new_agent import NewAgent
 
@@ -116,6 +119,7 @@ class SpawnSubtaskTool(BaseTool):
             spawn_ids.append(spawn_id)
             try:
                 from crewai.new_agent.events import NewAgentSpawnStartedEvent
+
                 _emit_spawn_event(
                     NewAgentSpawnStartedEvent,
                     new_agent_id=parent_id,
@@ -175,6 +179,7 @@ class SpawnSubtaskTool(BaseTool):
                     copy.message(msg)
                     try:
                         from crewai.new_agent.events import NewAgentSpawnCompletedEvent
+
                         _emit_spawn_event(
                             NewAgentSpawnCompletedEvent,
                             new_agent_id=parent_id,
@@ -185,6 +190,7 @@ class SpawnSubtaskTool(BaseTool):
                 except Exception as e:
                     try:
                         from crewai.new_agent.events import NewAgentSpawnFailedEvent
+
                         _emit_spawn_event(
                             NewAgentSpawnFailedEvent,
                             new_agent_id=parent_id,
@@ -195,7 +201,9 @@ class SpawnSubtaskTool(BaseTool):
                         pass
 
             for copy, msg, sid in zip(copies, enriched_messages, spawn_ids):
-                threading.Thread(target=_bg_spawn, args=(copy, msg, sid), daemon=True).start()
+                threading.Thread(
+                    target=_bg_spawn, args=(copy, msg, sid), daemon=True
+                ).start()
 
             return f"Dispatched {len(copies)} subtask(s) in the background (fire-and-forget)."
 
@@ -216,6 +224,7 @@ class SpawnSubtaskTool(BaseTool):
                     # GAP-57: Emit spawn failed event
                     try:
                         from crewai.new_agent.events import NewAgentSpawnFailedEvent
+
                         _emit_spawn_event(
                             NewAgentSpawnFailedEvent,
                             new_agent_id=parent_id,
@@ -229,6 +238,7 @@ class SpawnSubtaskTool(BaseTool):
                     # GAP-57: Emit spawn failed event
                     try:
                         from crewai.new_agent.events import NewAgentSpawnFailedEvent
+
                         _emit_spawn_event(
                             NewAgentSpawnFailedEvent,
                             new_agent_id=parent_id,
@@ -242,6 +252,7 @@ class SpawnSubtaskTool(BaseTool):
                     # GAP-57: Emit spawn completed event
                     try:
                         from crewai.new_agent.events import NewAgentSpawnCompletedEvent
+
                         _emit_spawn_event(
                             NewAgentSpawnCompletedEvent,
                             new_agent_id=parent_id,

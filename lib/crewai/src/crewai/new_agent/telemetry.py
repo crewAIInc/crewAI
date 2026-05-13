@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -12,10 +13,10 @@ logger = logging.getLogger(__name__)
 # Event handlers can look up the correct telemetry instance by agent ID.
 # ---------------------------------------------------------------------------
 
-_active_agents: dict[str, "NewAgentTelemetry"] = {}
+_active_agents: dict[str, NewAgentTelemetry] = {}
 
 
-def register_agent(agent_id: str, telemetry: "NewAgentTelemetry") -> None:
+def register_agent(agent_id: str, telemetry: NewAgentTelemetry) -> None:
     """Register an agent's telemetry instance for event-handler lookup."""
     _active_agents[agent_id] = telemetry
 
@@ -25,7 +26,7 @@ def unregister_agent(agent_id: str) -> None:
     _active_agents.pop(agent_id, None)
 
 
-def get_telemetry_for_agent(agent_id: str) -> "NewAgentTelemetry | None":
+def get_telemetry_for_agent(agent_id: str) -> NewAgentTelemetry | None:
     """Look up the telemetry instance for a given agent ID."""
     return _active_agents.get(agent_id)
 
@@ -42,6 +43,7 @@ class NewAgentTelemetry:
         self._agent_fingerprint: str = ""
         try:
             from crewai.telemetry.telemetry import Telemetry
+
             self._telemetry = Telemetry()
         except Exception:
             pass
@@ -99,13 +101,17 @@ class NewAgentTelemetry:
             return
         try:
             import sys
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Created")
             if span:
                 # GAP-107: Include crewai_version and python_version
                 try:
                     import crewai as _crewai_mod
-                    span.set_attribute("crewai_version", getattr(_crewai_mod, "__version__", "unknown"))
+
+                    span.set_attribute(
+                        "crewai_version", getattr(_crewai_mod, "__version__", "unknown")
+                    )
                 except Exception:
                     span.set_attribute("crewai_version", "unknown")
                 span.set_attribute("python_version", sys.version.split()[0])
@@ -127,7 +133,9 @@ class NewAgentTelemetry:
                 span.set_attribute("new_agent_coworker_amp_count", coworker_amp_count)
                 span.set_attribute("new_agent_mcp_count", mcp_count)
                 span.set_attribute("new_agent_apps_count", apps_count)
-                span.set_attribute("new_agent_knowledge_source_count", knowledge_source_count)
+                span.set_attribute(
+                    "new_agent_knowledge_source_count", knowledge_source_count
+                )
                 span.set_attribute("new_agent_tool_count", tool_count)
                 # GAP-107: Forward extra keyword args as span attributes
                 for key, val in extra.items():
@@ -136,11 +144,13 @@ class NewAgentTelemetry:
         except Exception:
             pass
 
-    def execution_started(self, agent_id: str, conversation_id: str, model: str = "") -> Any:
+    def execution_started(
+        self, agent_id: str, conversation_id: str, model: str = ""
+    ) -> Any:
         if self._telemetry is None:
             return None
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Execution")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -152,11 +162,17 @@ class NewAgentTelemetry:
         except Exception:
             return None
 
-    def execution_completed(self, span: Any, input_tokens: int = 0, output_tokens: int = 0, response_time_ms: int = 0) -> None:
+    def execution_completed(
+        self,
+        span: Any,
+        input_tokens: int = 0,
+        output_tokens: int = 0,
+        response_time_ms: int = 0,
+    ) -> None:
         if span is None or self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span.set_attribute("input_tokens", input_tokens)
             span.set_attribute("output_tokens", output_tokens)
             span.set_attribute("response_time_ms", response_time_ms)
@@ -168,7 +184,7 @@ class NewAgentTelemetry:
         if self._telemetry is None:
             return None
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Tool Usage")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -181,7 +197,7 @@ class NewAgentTelemetry:
         if span is None or self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span.set_attribute("error", error)
             tracer.end_span(span)
         except Exception:
@@ -191,16 +207,22 @@ class NewAgentTelemetry:
         if span is None or self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             tracer.end_span(span)
         except Exception:
             pass
 
-    def delegation(self, agent_id: str, coworker_role: str, mode: str = "sync", source: str = "local") -> Any:
+    def delegation(
+        self,
+        agent_id: str,
+        coworker_role: str,
+        mode: str = "sync",
+        source: str = "local",
+    ) -> Any:
         if self._telemetry is None:
             return None
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Delegation")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -211,11 +233,13 @@ class NewAgentTelemetry:
         except Exception:
             return None
 
-    def delegation_completed(self, span: Any, tokens_consumed: int = 0, response_time_ms: int = 0) -> None:
+    def delegation_completed(
+        self, span: Any, tokens_consumed: int = 0, response_time_ms: int = 0
+    ) -> None:
         if span is None or self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span.set_attribute("tokens_consumed", tokens_consumed)
             span.set_attribute("response_time_ms", response_time_ms)
             tracer.end_span(span)
@@ -226,7 +250,7 @@ class NewAgentTelemetry:
         if self._telemetry is None:
             return None
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Spawn")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -240,7 +264,7 @@ class NewAgentTelemetry:
         if span is None or self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             tracer.end_span(span)
         except Exception:
             pass
@@ -250,7 +274,7 @@ class NewAgentTelemetry:
         if self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Spawn Completed")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -263,7 +287,7 @@ class NewAgentTelemetry:
         if self._telemetry is None:
             return None
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Dreaming")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -271,11 +295,13 @@ class NewAgentTelemetry:
         except Exception:
             return None
 
-    def dreaming_completed(self, span: Any, memories_processed: int = 0, canonical_created: int = 0) -> None:
+    def dreaming_completed(
+        self, span: Any, memories_processed: int = 0, canonical_created: int = 0
+    ) -> None:
         if span is None or self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span.set_attribute("memories_processed", memories_processed)
             span.set_attribute("canonical_created", canonical_created)
             tracer.end_span(span)
@@ -286,7 +312,7 @@ class NewAgentTelemetry:
         if self._telemetry is None:
             return None
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Planning")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -298,7 +324,7 @@ class NewAgentTelemetry:
         if span is None or self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span.set_attribute("plan_steps_count", steps_count)
             tracer.end_span(span)
         except Exception:
@@ -308,7 +334,7 @@ class NewAgentTelemetry:
         if self._telemetry is None:
             return None
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Guardrail")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -321,7 +347,7 @@ class NewAgentTelemetry:
         if span is None or self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span.set_attribute("guardrail_passed", passed)
             tracer.end_span(span)
         except Exception:
@@ -331,7 +357,7 @@ class NewAgentTelemetry:
         if self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Memory Save")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -343,7 +369,7 @@ class NewAgentTelemetry:
         if self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Memory Recall")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -356,7 +382,7 @@ class NewAgentTelemetry:
         if self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Knowledge Suggested")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -371,7 +397,7 @@ class NewAgentTelemetry:
         if self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Conversation Reset")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -383,7 +409,7 @@ class NewAgentTelemetry:
         if self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Message Received")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -392,11 +418,17 @@ class NewAgentTelemetry:
         except Exception:
             pass
 
-    def message_sent(self, agent_id: str, input_tokens: int = 0, output_tokens: int = 0, response_time_ms: int = 0) -> None:
+    def message_sent(
+        self,
+        agent_id: str,
+        input_tokens: int = 0,
+        output_tokens: int = 0,
+        response_time_ms: int = 0,
+    ) -> None:
         if self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Message Sent")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -411,7 +443,7 @@ class NewAgentTelemetry:
         if self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent LLM Call Started")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -420,11 +452,18 @@ class NewAgentTelemetry:
         except Exception:
             pass
 
-    def llm_call_completed(self, agent_id: str, model: str = "", input_tokens: int = 0, output_tokens: int = 0, response_time_ms: int = 0) -> None:
+    def llm_call_completed(
+        self,
+        agent_id: str,
+        model: str = "",
+        input_tokens: int = 0,
+        output_tokens: int = 0,
+        response_time_ms: int = 0,
+    ) -> None:
         if self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent LLM Call Completed")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -440,7 +479,7 @@ class NewAgentTelemetry:
         if self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent LLM Call Failed")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -453,7 +492,7 @@ class NewAgentTelemetry:
         if self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Tool Usage Started")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -467,7 +506,7 @@ class NewAgentTelemetry:
         if self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Tool Usage Completed")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -478,11 +517,13 @@ class NewAgentTelemetry:
         except Exception:
             pass
 
-    def tool_usage_failed(self, agent_id: str, tool_name: str = "", error: str = "") -> None:
+    def tool_usage_failed(
+        self, agent_id: str, tool_name: str = "", error: str = ""
+    ) -> None:
         if self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Tool Usage Failed")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -492,11 +533,13 @@ class NewAgentTelemetry:
         except Exception:
             pass
 
-    def delegation_failed(self, agent_id: str, coworker_role: str = "", error: str = "") -> None:
+    def delegation_failed(
+        self, agent_id: str, coworker_role: str = "", error: str = ""
+    ) -> None:
         if self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Delegation Failed")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -506,11 +549,13 @@ class NewAgentTelemetry:
         except Exception:
             pass
 
-    def fire_and_forget_dispatched(self, agent_id: str, coworker_role: str = "") -> None:
+    def fire_and_forget_dispatched(
+        self, agent_id: str, coworker_role: str = ""
+    ) -> None:
         if self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Fire And Forget Dispatched")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -523,7 +568,7 @@ class NewAgentTelemetry:
         if self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Fire And Forget Completed")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -536,7 +581,7 @@ class NewAgentTelemetry:
         if self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Spawn Failed")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -550,7 +595,7 @@ class NewAgentTelemetry:
         if self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Context Summarized")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -562,7 +607,7 @@ class NewAgentTelemetry:
         if self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Narration Guard Triggered")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -571,11 +616,13 @@ class NewAgentTelemetry:
         except Exception:
             pass
 
-    def workflow_detected(self, agent_id: str, tools: list[str] | None = None, count: int = 0) -> None:
+    def workflow_detected(
+        self, agent_id: str, tools: list[str] | None = None, count: int = 0
+    ) -> None:
         if self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Workflow Detected")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -589,7 +636,7 @@ class NewAgentTelemetry:
         if self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Workflow Proposed")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -602,7 +649,7 @@ class NewAgentTelemetry:
         if self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Workflow Confirmed")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -614,7 +661,7 @@ class NewAgentTelemetry:
         if self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Knowledge Query")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -626,7 +673,7 @@ class NewAgentTelemetry:
         if self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Knowledge Confirmed")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -639,7 +686,7 @@ class NewAgentTelemetry:
         if self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Knowledge Rejected")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -651,7 +698,7 @@ class NewAgentTelemetry:
         if self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Explain Requested")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -663,7 +710,7 @@ class NewAgentTelemetry:
         if self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Guardrail Passed")
             if span:
                 span.set_attribute("new_agent_id", agent_id)
@@ -676,7 +723,7 @@ class NewAgentTelemetry:
         if self._telemetry is None:
             return
         try:
-            tracer = self._telemetry._tracer  # type: ignore[union-attr]
+            tracer = self._telemetry._tracer
             span = tracer.start_span("NewAgent Status Update")
             if span:
                 span.set_attribute("state", state)

@@ -1,8 +1,10 @@
 """Knowledge Discovery — detect and suggest reusable knowledge for NewAgent."""
 
 from __future__ import annotations
+
 import logging
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
 
 if TYPE_CHECKING:
     from crewai.new_agent.new_agent import NewAgent
@@ -22,7 +24,9 @@ class KnowledgeDiscovery:
     def pending_suggestions(self) -> list[dict[str, Any]]:
         return list(self._pending_suggestions)
 
-    def evaluate_for_knowledge(self, tool_name: str, tool_result: str) -> dict[str, Any] | None:
+    def evaluate_for_knowledge(
+        self, tool_name: str, tool_result: str
+    ) -> dict[str, Any] | None:
         """Evaluate a tool result for knowledge-worthiness.
 
         Returns a suggestion dict if the result is worth saving, None otherwise.
@@ -36,9 +40,17 @@ class KnowledgeDiscovery:
             return None
 
         knowledge_tools = {
-            "search_web", "scrape_url", "read_file", "search", "web_search",
-            "read_website", "scrape", "fetch_url", "search_knowledge",
-            "query_database", "read_document",
+            "search_web",
+            "scrape_url",
+            "read_file",
+            "search",
+            "web_search",
+            "read_website",
+            "scrape",
+            "fetch_url",
+            "search_knowledge",
+            "query_database",
+            "read_document",
         }
         if tool_name.lower() not in knowledge_tools:
             return None
@@ -51,7 +63,7 @@ class KnowledgeDiscovery:
         if len(first_line) > 120:
             dot_pos = first_line.find(".")
             if dot_pos > 0:
-                first_line = first_line[:dot_pos + 1]
+                first_line = first_line[: dot_pos + 1]
             else:
                 first_line = first_line[:100] + "..."
         title = f"{tool_name}: {first_line}" if first_line else tool_name
@@ -67,7 +79,9 @@ class KnowledgeDiscovery:
         self._emit_suggestion_event(suggestion)
         return suggestion
 
-    def build_suggestion_message(self, suggestion: dict[str, Any]) -> tuple[str, list[dict[str, Any]]]:
+    def build_suggestion_message(
+        self, suggestion: dict[str, Any]
+    ) -> tuple[str, list[dict[str, Any]]]:
         """Return (conversational_text, actions) for a pending suggestion."""
         title = suggestion.get("title", "Untitled")
         content = suggestion.get("content", "")
@@ -81,6 +95,7 @@ class KnowledgeDiscovery:
         )
 
         from crewai.new_agent.models import MessageAction
+
         actions = [
             MessageAction(
                 action_id=f"knowledge-confirm-{title[:40]}",
@@ -132,7 +147,10 @@ class KnowledgeDiscovery:
         suggestion["status"] = "confirmed"
 
         try:
-            from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSource
+            from crewai.knowledge.source.string_knowledge_source import (
+                StringKnowledgeSource,
+            )
+
             source = StringKnowledgeSource(content=suggestion["content"])
 
             if self.agent.knowledge is not None:
@@ -156,6 +174,7 @@ class KnowledgeDiscovery:
         try:
             from crewai.events.event_bus import crewai_event_bus
             from crewai.new_agent.events import NewAgentKnowledgeSuggestedEvent
+
             crewai_event_bus.emit(
                 self.agent,
                 NewAgentKnowledgeSuggestedEvent(
@@ -170,6 +189,7 @@ class KnowledgeDiscovery:
         try:
             from crewai.events.event_bus import crewai_event_bus
             from crewai.new_agent.events import NewAgentKnowledgeConfirmedEvent
+
             crewai_event_bus.emit(
                 self.agent,
                 NewAgentKnowledgeConfirmedEvent(new_agent_id=str(self.agent.id)),
@@ -181,6 +201,7 @@ class KnowledgeDiscovery:
         try:
             from crewai.events.event_bus import crewai_event_bus
             from crewai.new_agent.events import NewAgentKnowledgeRejectedEvent
+
             crewai_event_bus.emit(
                 self.agent,
                 NewAgentKnowledgeRejectedEvent(new_agent_id=str(self.agent.id)),

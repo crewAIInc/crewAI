@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import asyncio
+from collections.abc import AsyncGenerator, Callable
 import importlib.util
 import logging
+from pathlib import Path
 import re
 import threading
-from collections.abc import AsyncGenerator, Callable
-from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 from uuid import uuid4
 
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
@@ -17,15 +16,14 @@ from typing_extensions import Self
 
 from crewai.new_agent.models import (
     AgentSettings,
-    AgentStatus,
     MemoryScope,
     MemorySlice,
     Message,
     PromptStack,
     ProvenanceEntry,
-    TokenUsage,
 )
-from crewai.new_agent.provider import ConversationalProvider, DirectProvider
+from crewai.new_agent.provider import DirectProvider
+
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +50,8 @@ def clear_amp_cache() -> None:
 
 # ── GAP-24: Pronouns that trigger anaphora resolution ───────────
 _ANAPHORA_PRONOUNS = re.compile(
-    r"\b(he|she|it|they|this|that|these|those)\b", re.IGNORECASE,
+    r"\b(he|she|it|they|this|that|these|those)\b",
+    re.IGNORECASE,
 )
 
 
@@ -140,7 +139,9 @@ class NewAgent(BaseModel):
     _active_skills: list[Any] = PrivateAttr(default_factory=list)
     _telemetry: Any = PrivateAttr(default=None)
     _conversation_id: str = PrivateAttr(default_factory=lambda: uuid4().hex)
-    _logger: logging.Logger = PrivateAttr(default_factory=lambda: logging.getLogger("crewai.new_agent"))
+    _logger: logging.Logger = PrivateAttr(
+        default_factory=lambda: logging.getLogger("crewai.new_agent")
+    )
     # GAP-41/45: Memory namespace and filter from MemoryScope/MemorySlice
     _memory_namespace: str | None = PrivateAttr(default=None)
     _memory_shared: bool = PrivateAttr(default=False)
@@ -159,6 +160,7 @@ class NewAgent(BaseModel):
             handle = data["from_repository"]
             try:
                 from crewai.utilities.agent_utils import load_agent_from_repository
+
                 attrs = load_agent_from_repository(handle)
                 for key, val in attrs.items():
                     if key not in data or data[key] is None:
@@ -270,6 +272,7 @@ class NewAgent(BaseModel):
         try:
             from crewai.memory.unified_memory import Memory
             from crewai.memory.utils import sanitize_scope_name
+
             agent_name = sanitize_scope_name(self.role or str(self.id))
             self._memory_instance = Memory(root_scope=f"/agent/{agent_name}")
         except Exception as e:
@@ -298,6 +301,7 @@ class NewAgent(BaseModel):
         if getattr(self.settings, "can_schedule", False):
             try:
                 from crewai.new_agent.scheduler import ScheduleTaskTool
+
                 agent_name = getattr(self, "role", "") or str(self.id)
                 self._resolved_tools.append(ScheduleTaskTool(agent_name=agent_name))
             except Exception:
@@ -314,14 +318,17 @@ class NewAgent(BaseModel):
                 skill_path = Path(skill)
                 if skill_path.is_dir() and (skill_path / "SKILL.md").exists():
                     try:
-                        from crewai.skills.loader import discover_skills, activate_skill
+                        from crewai.skills.loader import activate_skill, discover_skills
+
                         discovered = discover_skills(skill_path.parent)
                         for s in discovered:
                             if s.name == skill_path.name:
                                 activated = activate_skill(s)
                                 self._active_skills.append(activated)
                     except Exception as e:
-                        self._logger.warning(f"Failed to load SKILL.md from {skill_path}: {e}")
+                        self._logger.warning(
+                            f"Failed to load SKILL.md from {skill_path}: {e}"
+                        )
                 else:
                     self._load_python_skill(skill_path)
             elif hasattr(skill, "run") or hasattr(skill, "_run"):
@@ -329,6 +336,7 @@ class NewAgent(BaseModel):
             else:
                 try:
                     from crewai.skills.models import Skill as SkillModel
+
                     if isinstance(skill, SkillModel):
                         self._active_skills.append(skill)
                 except Exception:
@@ -338,13 +346,14 @@ class NewAgent(BaseModel):
         """Load a Python module as tool instances (backward compatibility)."""
         try:
             spec = importlib.util.spec_from_file_location(
-                f"skill_{skill_path.stem}", str(skill_path),
+                f"skill_{skill_path.stem}",
+                str(skill_path),
             )
             if spec is None or spec.loader is None:
                 self._logger.warning(f"Cannot load skill from {skill_path}")
                 return
             module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)  # type: ignore[union-attr]
+            spec.loader.exec_module(module)
             for attr_name in dir(module):
                 attr = getattr(module, attr_name)
                 if (
@@ -402,16 +411,23 @@ class NewAgent(BaseModel):
                 # GAP-86: Support both plan format {"amp": "handle"} and legacy {"handle": "handle"}
                 handle = cw.get("amp") or cw.get("handle")
                 if handle:
-                    overrides = {k: v for k, v in cw.items() if k not in ("amp", "handle", "overrides")}
+                    overrides = {
+                        k: v
+                        for k, v in cw.items()
+                        if k not in ("amp", "handle", "overrides")
+                    }
                     overrides.update(cw.get("overrides", {}))
                     try:
                         resolved = self._resolve_amp_coworker(
-                            handle, overrides=overrides or None,
+                            handle,
+                            overrides=overrides or None,
                         )
                         resolved._amp_resolved = True
                         self._resolved_coworkers.append(resolved)
                     except Exception as e:
-                        self._logger.warning(f"Failed to resolve AMP coworker '{handle}': {e}")
+                        self._logger.warning(
+                            f"Failed to resolve AMP coworker '{handle}': {e}"
+                        )
                 else:
                     self._resolved_coworkers.append(cw)
             else:
@@ -419,14 +435,16 @@ class NewAgent(BaseModel):
 
         if self._resolved_coworkers:
             self._coworker_tools = build_coworker_tools(
-                self._resolved_coworkers, parent_role=self.role, parent_agent=self,
+                self._resolved_coworkers,
+                parent_role=self.role,
+                parent_agent=self,
             )
 
     def _init_engines(self) -> None:
         """Initialize dreaming, planning, knowledge discovery, and skill builder."""
         from crewai.new_agent.dreaming import DreamingEngine
-        from crewai.new_agent.planning import PlanningEngine
         from crewai.new_agent.knowledge_discovery import KnowledgeDiscovery
+        from crewai.new_agent.planning import PlanningEngine
 
         if self.settings.self_improving:
             self._dreaming_engine = DreamingEngine(self)
@@ -437,12 +455,15 @@ class NewAgent(BaseModel):
         if self.settings.can_build_skills:
             try:
                 from crewai.new_agent.skill_builder import SkillBuilder
+
                 self._skill_builder = SkillBuilder(self)
             except Exception:
                 pass
 
     def _resolve_amp_coworker(
-        self, handle: str, overrides: dict[str, Any] | None = None,
+        self,
+        handle: str,
+        overrides: dict[str, Any] | None = None,
     ) -> NewAgent:
         """Resolve an AMP repository handle into a NewAgent instance.
 
@@ -472,6 +493,7 @@ class NewAgent(BaseModel):
     def _init_telemetry(self) -> None:
         try:
             from crewai.new_agent.telemetry import NewAgentTelemetry, register_agent
+
             self._telemetry = NewAgentTelemetry(
                 share_data=getattr(self.settings, "share_data", False),
             )
@@ -485,6 +507,7 @@ class NewAgent(BaseModel):
     def _compute_fingerprint(self) -> str:
         """GAP-124: Stable hash of agent config for telemetry correlation."""
         import hashlib
+
         tool_names = sorted(
             getattr(t, "name", "") or getattr(t, "__name__", str(t))
             for t in self._resolved_tools
@@ -521,7 +544,8 @@ class NewAgent(BaseModel):
 
         if self._telemetry:
             amp_count = sum(
-                1 for cw in self._resolved_coworkers
+                1
+                for cw in self._resolved_coworkers
                 if getattr(cw, "_amp_resolved", False)
             )
             self._telemetry.agent_created(
@@ -592,7 +616,9 @@ class NewAgent(BaseModel):
 
     # ── Public API ──────────────────────────────────────────────
 
-    def message(self, content: str, *, conversation_id: str | None = None, **kwargs: Any) -> Message:
+    def message(
+        self, content: str, *, conversation_id: str | None = None, **kwargs: Any
+    ) -> Message:
         """Send a message and get a response (sync).
 
         GAP-31: Accepts optional conversation_id for concurrent conversations.
@@ -615,7 +641,9 @@ class NewAgent(BaseModel):
 
         return response
 
-    async def amessage(self, content: str, *, conversation_id: str | None = None, **kwargs: Any) -> Message:
+    async def amessage(
+        self, content: str, *, conversation_id: str | None = None, **kwargs: Any
+    ) -> Message:
         """Send a message and get a response (async).
 
         GAP-31: Accepts optional conversation_id for concurrent conversations.
@@ -638,7 +666,9 @@ class NewAgent(BaseModel):
 
         return response
 
-    async def stream(self, content: str, *, conversation_id: str | None = None, **kwargs: Any) -> AsyncGenerator[str, None]:
+    async def stream(
+        self, content: str, *, conversation_id: str | None = None, **kwargs: Any
+    ) -> AsyncGenerator[str, None]:
         """Stream a response token by token.
 
         GAP-31: Accepts optional conversation_id for concurrent conversations.
@@ -676,12 +706,12 @@ class NewAgent(BaseModel):
         old_conversation_id = cid
 
         # GAP-79: Persist provenance before clearing — audit trail survives reset
-        if self.provider and hasattr(self.provider, 'save_provenance'):
+        if self.provider and hasattr(self.provider, "save_provenance"):
             try:
                 self.provider.save_provenance(executor.provenance_log)
             except Exception:
                 pass
-        elif self._provider and hasattr(self._provider, 'save_provenance'):
+        elif self._provider and hasattr(self._provider, "save_provenance"):
             try:
                 self._provider.save_provenance(executor.provenance_log)
             except Exception:
@@ -693,8 +723,8 @@ class NewAgent(BaseModel):
         # persists independently of conversation history per plan.
 
         # Reset the per-conversation provider (not the agent's global provider)
-        conv_provider = getattr(executor, 'provider', None)
-        if conv_provider and hasattr(conv_provider, 'reset_history'):
+        conv_provider = getattr(executor, "provider", None)
+        if conv_provider and hasattr(conv_provider, "reset_history"):
             conv_provider.reset_history()
 
         if cid == self._default_conversation_id:
@@ -709,6 +739,7 @@ class NewAgent(BaseModel):
         try:
             from crewai.events.event_bus import crewai_event_bus
             from crewai.new_agent.events import NewAgentConversationResetEvent
+
             crewai_event_bus.emit(
                 self,
                 NewAgentConversationResetEvent(
@@ -727,6 +758,7 @@ class NewAgent(BaseModel):
         try:
             from crewai.events.event_bus import crewai_event_bus
             from crewai.new_agent.events import NewAgentExplainRequestedEvent
+
             crewai_event_bus.emit(
                 self,
                 NewAgentExplainRequestedEvent(new_agent_id=self.id),
@@ -746,11 +778,14 @@ class NewAgent(BaseModel):
         needs_reasoning = any(not e.reasoning for e in entries)
         if needs_reasoning and self._llm_instance:
             try:
-                from crewai.utilities.agent_utils import get_llm_response, format_message_for_llm
+                from crewai.utilities.agent_utils import (
+                    format_message_for_llm,
+                    get_llm_response,
+                )
                 from crewai.utilities.types import LLMMessage
 
                 log_text = "\n".join(
-                    f"Step {i+1}: {e.action} - inputs={e.inputs}, outcome={e.outcome}"
+                    f"Step {i + 1}: {e.action} - inputs={e.inputs}, outcome={e.outcome}"
                     for i, e in enumerate(entries)
                 )
                 prompt = (
@@ -758,7 +793,9 @@ class NewAgent(BaseModel):
                     f"{log_text}\n\n"
                     f"For each step, provide a brief explanation of WHY the agent chose that action."
                 )
-                messages: list[LLMMessage] = [format_message_for_llm(prompt, role="user")]
+                messages: list[LLMMessage] = [
+                    format_message_for_llm(prompt, role="user")
+                ]
                 reasoning_text = get_llm_response(
                     llm=self._llm_instance,
                     messages=messages,
@@ -804,7 +841,10 @@ class NewAgent(BaseModel):
                 filtered = []
                 for r in results:
                     r_str = str(r).lower() if r else ""
-                    if self._memory_filter.user_id and self._memory_filter.user_id.lower() not in r_str:
+                    if (
+                        self._memory_filter.user_id
+                        and self._memory_filter.user_id.lower() not in r_str
+                    ):
                         continue
                     filtered.append(r)
                 return filtered
@@ -871,7 +911,9 @@ class NewAgent(BaseModel):
 
         try:
             self._memory_instance.remember(
-                canonical, agent_role=self.role, importance=0.95,
+                canonical,
+                agent_role=self.role,
+                importance=0.95,
             )
         except Exception:
             pass
@@ -890,10 +932,10 @@ class NewAgent(BaseModel):
         GAP-24: Returns an enhanced prompt that the executor can use
         to resolve pronouns before saving to memory.
         """
-        last_messages = self.conversation_history[-5:] if self.conversation_history else []
-        context = "\n".join(
-            f"{m.role}: {m.content}" for m in last_messages
+        last_messages = (
+            self.conversation_history[-5:] if self.conversation_history else []
         )
+        context = "\n".join(f"{m.role}: {m.content}" for m in last_messages)
         return (
             f"Given this conversation context:\n{context}\n\n"
             f"Resolve all pronouns and references in the following text to their "
@@ -914,9 +956,7 @@ class NewAgent(BaseModel):
         if llm is None:
             return text
 
-        context_str = "\n".join(
-            f"{m.role}: {m.content}" for m in context[-5:]
-        )
+        context_str = "\n".join(f"{m.role}: {m.content}" for m in context[-5:])
         prompt = (
             f"Given this conversation context:\n{context_str}\n\n"
             f"Resolve all pronouns and references in the following text to their "
@@ -925,7 +965,10 @@ class NewAgent(BaseModel):
         )
 
         try:
-            from crewai.utilities.agent_utils import get_llm_response, format_message_for_llm
+            from crewai.utilities.agent_utils import (
+                format_message_for_llm,
+                get_llm_response,
+            )
             from crewai.utilities.types import LLMMessage
 
             messages: list[LLMMessage] = [format_message_for_llm(prompt, role="user")]
