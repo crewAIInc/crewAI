@@ -16,6 +16,7 @@ import sys
 import time
 from typing import Any
 
+from rich.markup import escape as _rich_escape
 from textual import events
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -34,6 +35,7 @@ from textual.widgets import (
     RadioSet,
     Static,
     TabPane,
+    TabbedContent,
     TextArea,
 )
 
@@ -75,7 +77,7 @@ class ChatTextArea(TextArea):
     class Submitted(Message):
         """Posted when the user presses Enter to submit."""
 
-        def __init__(self, text_area: "ChatTextArea", value: str) -> None:
+        def __init__(self, text_area: ChatTextArea, value: str) -> None:
             super().__init__()
             self.text_area = text_area
             self.value = value
