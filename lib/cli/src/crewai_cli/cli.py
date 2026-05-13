@@ -11,7 +11,7 @@ from crewai_core.token_manager import TokenManager
 from crewai_cli.add_crew_to_flow import add_crew_to_flow
 from crewai_cli.authentication.main import AuthenticationCommand
 from crewai_cli.config import Settings
-from crewai_cli.create_agent import create_agent
+from crewai_cli.create_agent import _strip_jsonc, create_agent
 from crewai_cli.create_crew import create_crew
 from crewai_cli.create_flow import create_flow
 from crewai_cli.crew_chat import run_chat
@@ -613,10 +613,7 @@ def _read_config(*keys: str) -> Any:
         return None
     try:
         raw = config_path.read_text(encoding="utf-8")
-        import re
-
-        clean = re.sub(r"(?<!:)//.*?$", "", raw, flags=re.MULTILINE)
-        clean = re.sub(r"/\*.*?\*/", "", clean, flags=re.DOTALL)
+        clean = _strip_jsonc(raw)
         data = json.loads(clean)
         for k in keys:
             if not isinstance(data, dict):
@@ -819,10 +816,11 @@ def _test_new_agents(
 
     def _make_progress_cb(agent_name: str):
         def _cb(event: dict) -> None:
-            prefixed = dict(event)
-            if "model" in prefixed:
-                prefixed["model"] = f"{agent_name}/{prefixed['model']}"
-            progress.on_progress(prefixed)
+            if progress is not None:
+                prefixed = dict(event)
+                if "model" in prefixed:
+                    prefixed["model"] = f"{agent_name}/{prefixed['model']}"
+                progress.on_progress(prefixed)
 
         return _cb
 

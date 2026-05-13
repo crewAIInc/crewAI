@@ -812,7 +812,7 @@ def _prompt_agent_name() -> str:
         )
 
 
-def _strip_comments(text: str) -> str:
+def _strip_jsonc(text: str) -> str:
     """Strip // and /* */ comments from JSONC text, then fix trailing commas."""
     result = re.sub(r"(?<!:)//.*?$", "", text, flags=re.MULTILINE)
     result = re.sub(r"/\*.*?\*/", "", result, flags=re.DOTALL)
@@ -828,7 +828,7 @@ def _add_agent_to_config(base: Path, agent_name: str) -> None:
 
     try:
         raw = config_path.read_text(encoding="utf-8")
-        clean = _strip_comments(raw)
+        clean = _strip_jsonc(raw)
         config = json.loads(clean)
 
         rooms = config.get("rooms", {})

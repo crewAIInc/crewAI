@@ -39,6 +39,8 @@ from textual.widgets import (
     TextArea,
 )
 
+from crewai_cli.create_agent import _strip_jsonc
+
 
 try:
     from textual.suggester import Suggester
@@ -113,12 +115,6 @@ _SPINNER = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 def _safe_render(text: str) -> str:
     """Escape Rich markup in text so square brackets are displayed literally."""
     return _rich_escape(text)
-
-
-def _strip_jsonc(text: str) -> str:
-    text = re.sub(r"(?<!:)//.*?$", "", text, flags=re.MULTILINE)
-    text = re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL)
-    return re.sub(r",\s*([}\]])", r"\1", text)
 
 
 def _load_agents(agents_dir: Path) -> list[dict[str, Any]]:

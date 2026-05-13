@@ -12,6 +12,8 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from crewai_cli.create_agent import _strip_jsonc as _strip_jsonc_comments
+
 
 class BenchmarkCase(BaseModel):
     """A single benchmark test case."""
@@ -108,13 +110,6 @@ def load_benchmark_cases(path: str | Path) -> LoadedCases:
 
     return LoadedCases(cases, threshold)
 
-
-def _strip_jsonc_comments(text: str) -> str:
-    """Strip // and /* */ comments and trailing commas from JSONC text."""
-    result = re.sub(r"(?<!:)//.*?$", "", text, flags=re.MULTILINE)
-    result = re.sub(r"/\*.*?\*/", "", result, flags=re.DOTALL)
-    result = re.sub(r",\s*([}\]])", r"\1", result)
-    return result
 
 
 def _check_expected(expected: str, actual: str) -> tuple[bool, float]:
