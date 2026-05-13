@@ -232,28 +232,25 @@ class NewAgent(BaseModel):
             self._memory_namespace = self.memory.namespace
             self._memory_shared = self.memory.shared
             self._init_memory_instance()
-            return
-
-        if isinstance(self.memory, MemorySlice):
+        elif isinstance(self.memory, MemorySlice):
             self._memory_namespace = self.memory.scope or None
             self._memory_filter = self.memory
             self._init_memory_instance()
-            return
+        else:
+            try:
+                from crewai.memory.unified_memory import Memory
+                from crewai.memory.utils import sanitize_scope_name
 
-        try:
-            from crewai.memory.unified_memory import Memory
-            from crewai.memory.utils import sanitize_scope_name
-
-            if isinstance(self.memory, Memory):
-                self._memory_instance = self.memory
-            elif self.memory is True or self.memory is None:
-                agent_name = sanitize_scope_name(self.role or str(self.id))
-                self._memory_instance = Memory(root_scope=f"/agent/{agent_name}")
-            else:
-                self._memory_instance = self.memory
-        except Exception as e:
-            self._logger.debug(f"Memory initialization failed: {e}")
-            self._memory_instance = None
+                if isinstance(self.memory, Memory):
+                    self._memory_instance = self.memory
+                elif self.memory is True or self.memory is None:
+                    agent_name = sanitize_scope_name(self.role or str(self.id))
+                    self._memory_instance = Memory(root_scope=f"/agent/{agent_name}")
+                else:
+                    self._memory_instance = self.memory
+            except Exception as e:
+                self._logger.warning(f"Memory initialization failed: {e}")
+                self._memory_instance = None
 
         if self._memory_instance and self.settings.memory_read_only:
             self._memory_instance.read_only = True
@@ -276,7 +273,7 @@ class NewAgent(BaseModel):
             agent_name = sanitize_scope_name(self.role or str(self.id))
             self._memory_instance = Memory(root_scope=f"/agent/{agent_name}")
         except Exception as e:
-            self._logger.debug(f"Memory initialization failed: {e}")
+            self._logger.warning(f"Memory initialization failed: {e}")
             self._memory_instance = None
 
     def _init_tools(self) -> None:

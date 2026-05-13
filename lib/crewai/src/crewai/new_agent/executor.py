@@ -1233,6 +1233,8 @@ class ConversationalAgentExecutor(BaseModel):
         """Save provenance entry to memory backend for long-term auditing."""
         if not self.agent._memory_instance:
             return
+        if self.agent.settings.memory_read_only:
+            return
         try:
             value = f"[provenance] {entry.action}: {entry.outcome or ''}"
             metadata: dict[str, Any] = {
@@ -1252,6 +1254,8 @@ class ConversationalAgentExecutor(BaseModel):
         """Save conversation turn to memory for future recall."""
         agent = self.agent
         if not agent.settings.memory_enabled:
+            return
+        if agent.settings.memory_read_only:
             return
         memory = getattr(agent, "_memory_instance", None)
         if memory is None:
@@ -1273,7 +1277,11 @@ class ConversationalAgentExecutor(BaseModel):
                     pass
             extracted = memory.extract_memories(raw)
             if extracted:
-                memory.remember_many(extracted, agent_role=agent.role)
+                scope = self._get_provider_scope()
+                kwargs: dict[str, Any] = {"agent_role": agent.role}
+                if scope:
+                    kwargs["metadata"] = scope
+                memory.remember_many(extracted, **kwargs)
                 try:
                     from crewai.new_agent.events import NewAgentMemorySaveEvent
 
@@ -1288,7 +1296,7 @@ class ConversationalAgentExecutor(BaseModel):
                 if dreaming:
                     dreaming.increment_memory_count()
         except Exception as e:
-            logger.debug(f"Memory save failed: {e}")
+            logger.warning(f"Memory save failed: {e}")
 
     async def ainvoke(self, user_message: Message) -> Message:
         """Process a single conversational turn (async)."""
