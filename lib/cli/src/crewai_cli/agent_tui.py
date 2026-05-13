@@ -21,12 +21,17 @@ from typing import Any
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.screen import ModalScreen
 from textual.widgets import (
     Button,
+    Checkbox,
     Footer,
     Header,
     Input,
+    Label,
     OptionList,
+    RadioButton,
+    RadioSet,
     Static,
     TabbedContent,
     TabPane,
@@ -66,7 +71,7 @@ _BG_PANEL = "#222222"
 _BG_MSG_USER = "#2a2a2a"
 _BG_MSG_AGENT = "#252525"
 _DIM = "#777777"
-_COMMON_ROOM = "__common__"
+_ROOM_PREFIX = "__room__"
 _SPINNER = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 
 
@@ -202,6 +207,79 @@ class ThinkingIndicator(Static):
         self.update("\n".join(lines))
 
 
+class CreateRoomScreen(ModalScreen[dict[str, Any] | None]):
+    """Modal form for creating a new room."""
+
+    CSS = f"""
+    CreateRoomScreen {{
+        align: center middle;
+    }}
+    #room-form {{
+        width: 56;
+        max-height: 80%;
+        background: {_BG_PANEL};
+        border: tall {_TEAL};
+        padding: 1 2;
+    }}
+    #room-form Label {{
+        margin: 1 0 0 0;
+        color: {_DIM};
+    }}
+    #room-form Input {{
+        margin: 0 0 1 0;
+    }}
+    #room-form .form-section {{
+        height: auto;
+        margin: 0 0 1 0;
+    }}
+    #room-form RadioSet {{
+        margin: 0;
+    }}
+    #room-form Button {{
+        margin: 1 1 0 0;
+    }}
+    """
+
+    def __init__(self, agent_names: list[str], **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self._agent_names = agent_names
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="room-form"):
+            yield Label(f"[bold {_CORAL}]Create Room[/]")
+            yield Label("Name")
+            yield Input(placeholder="e.g. engineering", id="room-name-input")
+            yield Label("Agents")
+            with Vertical(classes="form-section"):
+                for name in self._agent_names:
+                    yield Checkbox(name, value=True, id=f"cb-{name}")
+            yield Label("Engagement")
+            with RadioSet(id="engagement-radio"):
+                yield RadioButton("Organic — agents auto-respond", value=True, id="radio-organic")
+                yield RadioButton("Tagged — @mention required", id="radio-tagged")
+            with Horizontal():
+                yield Button("Create", variant="primary", id="btn-create-room")
+                yield Button("Cancel", id="btn-cancel-room")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "btn-cancel-room":
+            self.dismiss(None)
+            return
+        if event.button.id == "btn-create-room":
+            name_input = self.query_one("#room-name-input", Input)
+            name = name_input.value.strip().lower().replace(" ", "-")
+            if not name:
+                name_input.focus()
+                return
+            agents = [
+                n for n in self._agent_names
+                if self.query_one(f"#cb-{n}", Checkbox).value
+            ]
+            radio = self.query_one("#engagement-radio", RadioSet)
+            engagement = "organic" if radio.pressed_index == 0 else "tagged"
+            self.dismiss({"name": name, "agents": agents, "engagement": engagement})
+
+
 # ── Main TUI ──────────────────────────────────────────────────
 
 
@@ -272,6 +350,38 @@ class AgentTUI(App[None]):
     #sidebar Underline > .underline--bar {{
         color: {_TEAL};
         background: {_BG};
+    }}
+    .sidebar-label {{
+        padding: 1 1 0 1;
+        color: {_DIM};
+        text-style: bold;
+        height: auto;
+    }}
+    #room-list {{
+        height: auto;
+        max-height: 40%;
+        padding: 0 1;
+        background: {_BG_PANEL};
+    }}
+    #room-list > .option-list--option-highlighted {{
+        background: {_TEAL};
+        color: white;
+    }}
+    #room-list > .option-list--option {{
+        padding: 0 1;
+    }}
+    #btn-new-room {{
+        margin: 0 1 1 1;
+        width: 100%;
+        background: {_BG};
+        color: {_TEAL};
+        border: tall #333333;
+        min-height: 1;
+        height: 3;
+    }}
+    #btn-new-room:hover {{
+        background: {_TEAL};
+        color: white;
     }}
     #agent-list {{
         height: 1fr;
@@ -374,16 +484,18 @@ class AgentTUI(App[None]):
         super().__init__(**kwargs)
         self._agents_dir = agents_dir
         self._config = config or {}
+        self._config_path = Path.cwd() / "config.json"
         self._agent_defs: list[dict[str, Any]] = []
         self._agent_names: list[str] = []
         self._agent_instances: dict[str, Any] = {}
-        self._current_room: str = _COMMON_ROOM
+        # Rooms: {room_key: {"name": display_name, "agents": [...], "engagement": "organic"|"tagged"}}
+        self._rooms: dict[str, dict[str, Any]] = {}
+        self._current_room: str = ""
         # (sender, content, metadata) tuples keyed by room
         self._chat_histories: dict[str, list[tuple[str, str, str]]] = {}
         self._processing = False
         self._last_active_agent: str | None = None
         self._last_agent_error: str = ""
-        self._engagement_mode: str = "organic"
         self._scheduler: Any = None
 
     def compose(self) -> ComposeResult:
@@ -391,7 +503,11 @@ class AgentTUI(App[None]):
         with Horizontal(id="main-layout"):
             with Vertical(id="sidebar"):
                 with TabbedContent(id="sidebar-tabs"):
-                    with TabPane("Agents", id="tab-agents"):
+                    with TabPane("Chat", id="tab-agents"):
+                        yield Static("ROOMS", classes="sidebar-label")
+                        yield OptionList(id="room-list")
+                        yield Button("+ New Room", id="btn-new-room", variant="default")
+                        yield Static("AGENTS", classes="sidebar-label")
                         yield OptionList(id="agent-list")
                     with TabPane("Memory", id="tab-memory"):
                         yield Static("Click below to open the memory browser.", id="memory-scope-label")
@@ -407,15 +523,49 @@ class AgentTUI(App[None]):
                     )
         yield Footer()
 
+    def _room_key(self, name: str) -> str:
+        return f"{_ROOM_PREFIX}{name}"
+
+    def _is_room(self, key: str) -> bool:
+        return key.startswith(_ROOM_PREFIX)
+
+    def _room_engagement(self, room_key: str) -> str:
+        if room_key in self._rooms:
+            return self._rooms[room_key].get("engagement", "organic")
+        return "organic"
+
+    def _room_agents(self, room_key: str) -> list[str]:
+        if room_key in self._rooms:
+            return self._rooms[room_key].get("agents", self._agent_names[:])
+        return self._agent_names[:]
+
     def on_mount(self) -> None:
         self._agent_defs = _load_agents(self._agents_dir)
         self._agent_names = [
             d.get("name", d.get("role", "unnamed")) for d in self._agent_defs
         ]
 
-        rooms = self._config.get("rooms", {})
-        common_room = rooms.get("common", {})
-        self._engagement_mode = common_room.get("engagement", "organic")
+        # Load rooms from config
+        rooms_cfg = self._config.get("rooms", {})
+        for room_name, room_data in rooms_cfg.items():
+            key = self._room_key(room_name)
+            cfg_agents = room_data.get("agents", [])
+            self._rooms[key] = {
+                "name": room_name,
+                "agents": cfg_agents if cfg_agents else self._agent_names[:],
+                "engagement": room_data.get("engagement", "organic"),
+            }
+
+        # Ensure at least "common" room exists
+        common_key = self._room_key("common")
+        if common_key not in self._rooms:
+            self._rooms[common_key] = {
+                "name": "common",
+                "agents": self._agent_names[:],
+                "engagement": "organic",
+            }
+
+        self._current_room = common_key
 
         # Subscribe to status update events from the executor
         self._status_listener = None
@@ -439,22 +589,26 @@ class AgentTUI(App[None]):
             except Exception:
                 pass
 
-        chat_input = self.query_one("#chat-input", Input)
-        if self._engagement_mode == "organic":
-            chat_input.placeholder = "Type a message — agents will respond automatically"
-
         if AgentSuggester is not None and self._agent_names:
             self.query_one("#chat-input", Input).suggester = AgentSuggester(
                 self._agent_names
             )
 
-        agent_list = self.query_one("#agent-list", OptionList)
-
         if not self._agent_defs:
             self._mount_sys("No agents found. Run: crewai create agent <name>")
             return
 
-        agent_list.add_option("◆ Common Room")
+        # Populate rooms list
+        room_list = self.query_one("#room-list", OptionList)
+        for key in self._rooms:
+            display = self._rooms[key]["name"].replace("-", " ").title()
+            engagement = self._rooms[key]["engagement"]
+            n_agents = len(self._rooms[key]["agents"])
+            room_list.add_option(f"◆ {display}  [{_DIM}]{engagement} · {n_agents}[/]")
+        room_list.highlighted = 0
+
+        # Populate agents list (DM entries)
+        agent_list = self.query_one("#agent-list", OptionList)
         for defn in self._agent_defs:
             name = defn.get("name", "unnamed")
             role = defn.get("role", "")
@@ -464,8 +618,8 @@ class AgentTUI(App[None]):
                 label += f" · {trunc}"
             agent_list.add_option(label)
 
-        agent_list.highlighted = 0
-
+        self._update_subtitle()
+        self._update_placeholder()
         self._load_history_from_disk()
         self._render_chat()
         self.query_one("#chat-input", Input).focus()
@@ -477,6 +631,25 @@ class AgentTUI(App[None]):
             self._scheduler.start()
         except Exception:
             pass
+
+    def _update_subtitle(self) -> None:
+        if self._is_room(self._current_room):
+            info = self._rooms.get(self._current_room, {})
+            display = info.get("name", "room").replace("-", " ").title()
+            self.sub_title = display
+        else:
+            self.sub_title = f"Chat with {self._current_room}"
+
+    def _update_placeholder(self) -> None:
+        chat_input = self.query_one("#chat-input", Input)
+        if self._is_room(self._current_room):
+            engagement = self._room_engagement(self._current_room)
+            if engagement == "organic":
+                chat_input.placeholder = "Type a message — agents will respond automatically"
+            else:
+                chat_input.placeholder = "Use @agent_name to direct your message"
+        else:
+            chat_input.placeholder = f"Message {self._current_room}"
 
     def _on_scheduled_task_due(self, task: Any) -> str:
         """Callback fired by the scheduler when a task comes due."""
@@ -511,17 +684,31 @@ class AgentTUI(App[None]):
     def on_option_list_option_highlighted(
         self, event: OptionList.OptionHighlighted
     ) -> None:
-        if event.option_list.id != "agent-list":
-            return
-        idx = event.option_index
-        if idx == 0:
-            self._current_room = _COMMON_ROOM
-            self.sub_title = "Common Room"
-        elif 1 <= idx <= len(self._agent_names):
-            name = self._agent_names[idx - 1]
-            self._current_room = name
-            self.sub_title = f"Chat with {name}"
-        self._render_chat()
+        if event.option_list.id == "room-list":
+            room_keys = list(self._rooms.keys())
+            idx = event.option_index
+            if 0 <= idx < len(room_keys):
+                self._current_room = room_keys[idx]
+                # Deselect agent list
+                try:
+                    self.query_one("#agent-list", OptionList).highlighted = None
+                except Exception:
+                    pass
+                self._update_subtitle()
+                self._update_placeholder()
+                self._render_chat()
+        elif event.option_list.id == "agent-list":
+            idx = event.option_index
+            if 0 <= idx < len(self._agent_names):
+                self._current_room = self._agent_names[idx]
+                # Deselect room list
+                try:
+                    self.query_one("#room-list", OptionList).highlighted = None
+                except Exception:
+                    pass
+                self._update_subtitle()
+                self._update_placeholder()
+                self._render_chat()
 
     # ── Message routing ──
 
@@ -548,15 +735,21 @@ class AgentTUI(App[None]):
         self._append_msg(room, "You", text)
         self._mount_bubble("You", text)
 
-        if not targets and self._current_room == _COMMON_ROOM:
-            # Route to agent with pending suggestion before organic scoring
+        if not targets and self._is_room(self._current_room):
+            room_agent_names = self._room_agents(self._current_room)
+            room_agent_defs = [
+                d for d in self._agent_defs
+                if d.get("name", d.get("role", "unnamed")) in room_agent_names
+            ]
+            engagement = self._room_engagement(self._current_room)
+
             pending_agent = self._find_agent_with_pending_suggestion()
-            if pending_agent:
+            if pending_agent and pending_agent in room_agent_names:
                 targets = [pending_agent]
-            elif self._engagement_mode == "organic":
-                scored = await self._score_relevance_llm(clean_text, self._agent_defs)
+            elif engagement == "organic":
+                scored = await self._score_relevance_llm(clean_text, room_agent_defs)
                 if scored is None:
-                    scored = self._score_relevance(clean_text, self._agent_defs)
+                    scored = self._score_relevance(clean_text, room_agent_defs)
                 if scored:
                     top_score = scored[0][1]
                     best = [scored[0][0]]
@@ -569,13 +762,14 @@ class AgentTUI(App[None]):
                         d.get("name", d.get("role", "unnamed")) for d in best
                     ]
                 else:
-                    targets = [self._last_active_agent or self._agent_names[0]]
-            elif len(self._agent_names) == 1:
-                targets = [self._agent_names[0]]
+                    targets = [self._last_active_agent or room_agent_names[0]]
+            elif len(room_agent_names) == 1:
+                targets = [room_agent_names[0]]
             else:
+                first = room_agent_names[0] if room_agent_names else "agent"
                 self._mount_sys(
                     "Tip: use @agent_name to direct your message, "
-                    f"e.g. @{self._agent_names[0]}"
+                    f"e.g. @{first}"
                 )
                 return
 
@@ -748,7 +942,7 @@ class AgentTUI(App[None]):
     def _handle_skills_command(self) -> None:
         """List active skills for the current agent."""
         agent = None
-        if self._current_room != _COMMON_ROOM:
+        if not self._is_room(self._current_room):
             agent = self._get_or_create_agent(self._current_room)
         elif self._last_active_agent:
             agent = self._get_or_create_agent(self._last_active_agent)
@@ -833,7 +1027,7 @@ class AgentTUI(App[None]):
 
     def _get_focused_agent(self) -> Any:
         """Return the currently focused agent instance, or None."""
-        if self._current_room != _COMMON_ROOM:
+        if not self._is_room(self._current_room):
             return self._get_or_create_agent(self._current_room)
         if self._last_active_agent:
             return self._get_or_create_agent(self._last_active_agent)
@@ -966,9 +1160,9 @@ class AgentTUI(App[None]):
         """Parse all @mentions in the message.
 
         Returns ``([agent_names], clean_text)``.
-        In the Common Room, at least one @mention is required — untagged
-        messages return ``([], text)`` so the caller can prompt.
-        In a DM room, messages always route to that room's agent.
+        In a room, at least one @mention is required for tagged mode —
+        untagged messages return ``([], text)`` so the caller can handle routing.
+        In a DM (agent name), messages always route to that agent.
         """
         found: list[str] = []
         clean = text
@@ -979,7 +1173,7 @@ class AgentTUI(App[None]):
                 clean = pattern.sub("", clean).strip()
         if found:
             return found, clean
-        if self._current_room != _COMMON_ROOM:
+        if not self._is_room(self._current_room):
             return [self._current_room], text
         return [], text
 
@@ -992,7 +1186,7 @@ class AgentTUI(App[None]):
         """Process a message directed at multiple agents in parallel."""
         # Build room context once (shared snapshot before any replies)
         room_context: str | None = None
-        if room == _COMMON_ROOM:
+        if self._is_room(room):
             ctx = self._build_room_context(room)
             if ctx:
                 room_context = (
@@ -1109,10 +1303,8 @@ class AgentTUI(App[None]):
                     self._mount_sys(msg)
                 return
 
-            # In the Common Room, prepend conversation context so the
-            # tagged agent can see what was discussed before.
             message_text = text
-            if room == _COMMON_ROOM:
+            if self._is_room(room):
                 ctx = self._build_room_context(room)
                 if ctx:
                     message_text = (
@@ -1270,17 +1462,21 @@ class AgentTUI(App[None]):
         history = self._chat_histories.get(self._current_room, [])
 
         if not history:
-            if self._current_room == _COMMON_ROOM:
-                names = ", ".join(self._agent_names[:5])
-                if self._engagement_mode == "organic":
+            if self._is_room(self._current_room):
+                room_info = self._rooms.get(self._current_room, {})
+                display = room_info.get("name", "room").replace("-", " ").title()
+                room_agents = self._room_agents(self._current_room)
+                names = ", ".join(room_agents[:5])
+                engagement = self._room_engagement(self._current_room)
+                if engagement == "organic":
                     self._mount_sys(
-                        f"Welcome to the Common Room. "
+                        f"Welcome to {display}. "
                         f"Just type — relevant agents will respond. "
                         f"Use @agent_name to direct a message. Available: {names}"
                     )
                 else:
                     self._mount_sys(
-                        f"Welcome to the Common Room. "
+                        f"Welcome to {display}. "
                         f"Use @agent_name to chat. Available: {names}"
                     )
             else:
@@ -1322,6 +1518,9 @@ class AgentTUI(App[None]):
             return
         for path in hdir.glob("*.json"):
             room = path.stem
+            # Migrate old __common__ history to new __room__common key
+            if room == "__common__":
+                room = self._room_key("common")
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))
                 self._chat_histories[room] = [
@@ -1354,7 +1553,7 @@ class AgentTUI(App[None]):
 
     def _get_focused_agent_name(self) -> str | None:
         """Return the agent name for the current room (DM only)."""
-        if self._current_room == _COMMON_ROOM:
+        if self._is_room(self._current_room):
             return self._last_active_agent
         if self._current_room in self._agent_names:
             return self._current_room
@@ -1363,11 +1562,17 @@ class AgentTUI(App[None]):
     def on_tabbed_content_tab_activated(self, event: TabbedContent.TabActivated) -> None:
         pass
 
-    # ── Sidebar: Provenance button ──
+    # ── Sidebar buttons ──
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-memory":
             self._launch_memory_browser()
+            return
+        if event.button.id == "btn-new-room":
+            self.push_screen(
+                CreateRoomScreen(self._agent_names),
+                callback=self._on_room_created,
+            )
             return
         if event.button.id != "btn-provenance":
             return
@@ -1406,6 +1611,58 @@ class AgentTUI(App[None]):
                 line += f"  Confidence: {conf:.2f}\n"
             lines.append(line)
         self._mount_sys("\n".join(lines))
+
+    # ── Room creation ──
+
+    def _on_room_created(self, result: dict[str, Any] | None) -> None:
+        if result is None:
+            return
+        name = result["name"]
+        key = self._room_key(name)
+        if key in self._rooms:
+            self._mount_sys(f"Room '{name}' already exists.")
+            return
+
+        self._rooms[key] = {
+            "name": name,
+            "agents": result["agents"],
+            "engagement": result["engagement"],
+        }
+
+        # Add to sidebar
+        room_list = self.query_one("#room-list", OptionList)
+        display = name.replace("-", " ").title()
+        engagement = result["engagement"]
+        n_agents = len(result["agents"])
+        room_list.add_option(f"◆ {display}  [{_DIM}]{engagement} · {n_agents}[/]")
+
+        # Save to config.json
+        self._save_room_to_config(name, result["agents"], result["engagement"])
+
+        # Switch to the new room
+        room_keys = list(self._rooms.keys())
+        idx = room_keys.index(key)
+        room_list.highlighted = idx
+        self._current_room = key
+        self._update_subtitle()
+        self._update_placeholder()
+        self._render_chat()
+        self._mount_sys(f"Room '{display}' created with {n_agents} agent(s).")
+
+    def _save_room_to_config(self, name: str, agents: list[str], engagement: str) -> None:
+        try:
+            if self._config_path.exists():
+                raw = self._config_path.read_text(encoding="utf-8")
+                config = json.loads(_strip_jsonc(raw))
+            else:
+                config = {}
+            rooms = config.setdefault("rooms", {})
+            rooms[name] = {"agents": agents, "engagement": engagement}
+            self._config_path.write_text(
+                json.dumps(config, indent=2) + "\n", encoding="utf-8"
+            )
+        except Exception:
+            pass
 
     # ── Actions ──
 

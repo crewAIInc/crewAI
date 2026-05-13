@@ -502,20 +502,21 @@ def memory(
     type=float,
     default=None,
     help="Minimum score to pass a test case (NewAgent only, 0.0-1.0). "
-    "Defaults to test_threshold in config.json (0.7 if not set).",
+    "Defaults to test.threshold in config.json (0.7 if not set).",
 )
 @click.option(
     "--judge-model",
     type=str,
-    default="openai/gpt-4o-mini",
-    help="LLM model for evaluation judging (NewAgent only).",
+    default=None,
+    help="LLM model for evaluation judging (NewAgent only). "
+    "Defaults to test.judge_model in config.json (openai/gpt-4o-mini if not set).",
 )
 def test(
     n_iterations: int,
     model: str | None,
     trained_agents_file: str | None,
     threshold: float | None,
-    judge_model: str,
+    judge_model: str | None,
 ) -> None:
     """Test the crew or agents and evaluate the results.
 
@@ -530,26 +531,33 @@ def test(
     agent_files = sorted(agents_dir.glob("*.json")) + sorted(agents_dir.glob("*.jsonc")) if agents_dir.is_dir() else []
 
     if agent_files:
+        effective_judge = judge_model or _read_config("test", "judge_model") or "openai/gpt-4o-mini"
+
         if _needs_uv_relaunch():
-            uv_args = ["test", "-n", str(n_iterations), "--threshold", str(threshold), "--judge-model", judge_model]
+            uv_args = ["test", "-n", str(n_iterations), "--judge-model", effective_judge]
+            if threshold is not None:
+                uv_args.extend(["--threshold", str(threshold)])
             if model:
                 uv_args.extend(["-m", model])
             if trained_agents_file:
                 uv_args.extend(["-f", trained_agents_file])
             _relaunch_via_uv(uv_args)
 
-        project_threshold = _read_config_threshold()
-        effective_threshold = threshold or project_threshold or 0.7
+        config_threshold = _read_config("test", "threshold") or _read_config("test_threshold")
+        effective_threshold = threshold or (float(config_threshold) if config_threshold is not None else None) or 0.7
 
-        _test_new_agents(agent_files, n_iterations, model, effective_threshold, judge_model)
+        _test_new_agents(agent_files, n_iterations, model, effective_threshold, effective_judge)
     else:
         crew_model = model or "gpt-4o-mini"
         click.echo(f"Testing the crew for {n_iterations} iterations with model {crew_model}")
         evaluate_crew(n_iterations, crew_model, trained_agents_file=trained_agents_file)
 
 
-def _read_config_threshold() -> float | None:
-    """Read test_threshold from config.json if it exists."""
+def _read_config(*keys: str) -> Any:
+    """Read a nested value from config.json (JSONC-safe).
+
+    Example: _read_config("test", "threshold") reads config["test"]["threshold"].
+    """
     import json
     from pathlib import Path
 
@@ -562,74 +570,132 @@ def _read_config_threshold() -> float | None:
         clean = re.sub(r"(?<!:)//.*?$", "", raw, flags=re.MULTILINE)
         clean = re.sub(r"/\*.*?\*/", "", clean, flags=re.DOTALL)
         data = json.loads(clean)
-        val = data.get("test_threshold")
-        return float(val) if val is not None else None
+        for k in keys:
+            if not isinstance(data, dict):
+                return None
+            data = data.get(k)
+            if data is None:
+                return None
+        return data
     except Exception:
         return None
 
 
-def _make_benchmark_progress():
-    """Create a progress callback with Rich spinner animation."""
-    import time
+class _BenchmarkLiveProgress:
+    """Live parallel progress display for benchmark runs."""
 
-    from rich.console import Console
-    from rich.spinner import Spinner
-    from rich.live import Live
+    def __init__(self, console=None):
+        from rich.console import Console
+        self._console = console or Console()
+        self._state: dict[str, dict] = {}
+        self._live = None
 
-    console = Console()
-    state: dict = {"live": None}
+    def start(self):
+        from rich.live import Live
+        self._live = Live(
+            self._render(),
+            console=self._console,
+            refresh_per_second=10,
+            transient=False,
+        )
+        self._live.start()
 
-    def _stop_live():
-        if state["live"]:
-            state["live"].stop()
-            state["live"] = None
+    def stop(self):
+        if self._live:
+            self._live.update(self._render())
+            self._live.stop()
+            self._live = None
 
-    def progress(event: dict) -> None:
+    def on_progress(self, event: dict) -> None:
         t = event["type"]
+        model = event.get("model", "")
 
         if t == "model_start":
-            _stop_live()
-            label = event["model"]
-            if event["total_models"] > 1:
-                label = f"\\[{event['model_index'] + 1}/{event['total_models']}] {label}"
-            console.print(f"\n[bold cyan]▶ {label}[/]  [dim]({event['total_cases']} cases)[/]")
-
+            self._state[model] = {
+                "done": 0, "total": event["total_cases"],
+                "status": "starting", "passed": 0,
+                "avg": 0.0, "time": 0.0,
+                "in_tokens": 0, "out_tokens": 0, "cost": None,
+            }
         elif t == "case_start":
-            _stop_live()
-            idx = event["case_index"] + 1
-            total = event["total_cases"]
-            snippet = event["input"][:60] + ("…" if len(event["input"]) > 60 else "")
-            console.print(f"  [dim]\\[{idx}/{total}][/] {snippet}")
-            state["live"] = Live(
-                Spinner("dots", text="  running…", style="cyan"),
-                console=console,
-                transient=True,
-            )
-            state["live"].start()
-
+            self._state[model]["status"] = "running"
         elif t == "judging":
-            if state["live"]:
-                state["live"].update(
-                    Spinner("dots", text="  judging…", style="cyan")
-                )
-
+            self._state[model]["status"] = "judging"
         elif t == "case_done":
-            _stop_live()
-            elapsed_s = event["time_ms"] / 1000
-            if event.get("error"):
-                console.print(f"    [red]✗ ERROR[/red]  ({elapsed_s:.1f}s)")
-            elif event["passed"]:
-                console.print(f"    [green]✓ PASS[/green]  score={event['score']:.2f}  ({elapsed_s:.1f}s)")
-            else:
-                console.print(f"    [red]✗ FAIL[/red]  score={event['score']:.2f}  ({elapsed_s:.1f}s)")
-
+            s = self._state[model]
+            s["done"] = max(s["done"], event["case_index"])
+            if event.get("passed"):
+                s["passed"] += 1
+            s["status"] = "running"
         elif t == "model_done":
-            _stop_live()
-            p, tot, avg = event["passed"], event["total"], event["avg_score"]
-            color = "green" if p == tot else ("yellow" if p > 0 else "red")
-            console.print(f"  [{color}]── {p}/{tot} passed · avg score {avg:.2f}[/{color}]")
+            s = self._state[model]
+            s["status"] = "done"
+            s["passed"] = event.get("passed", s["passed"])
+            s["done"] = event.get("total", s["done"])
+            s["avg"] = event["avg_score"]
+            s["time"] = event.get("total_time", 0.0)
+            s["in_tokens"] = event.get("input_tokens", 0)
+            s["out_tokens"] = event.get("output_tokens", 0)
+            s["cost"] = event.get("total_cost")
 
-    return progress
+        if self._live:
+            self._live.update(self._render())
+
+    def _render(self):
+        from rich.table import Table
+        from rich.spinner import Spinner
+        from rich.text import Text
+        from rich import box
+
+        from crewai_cli.benchmark import _score_color, _fmt_tokens, _fmt_cost
+
+        has_cost = any(
+            info.get("cost") is not None
+            for info in self._state.values()
+            if info["status"] == "done"
+        )
+        n_cols = 7 if has_cost else 6
+
+        table = Table(box=box.SIMPLE, show_header=False, padding=(0, 1), expand=False)
+        table.add_column("", width=1)                              # icon
+        table.add_column("", no_wrap=True)                         # model
+        table.add_column("", no_wrap=True, justify="right")        # passed or bar
+        table.add_column("", no_wrap=True, justify="right")        # score
+        table.add_column("", no_wrap=True, justify="right")        # time
+        table.add_column("", no_wrap=True, justify="right")        # tokens
+        if has_cost:
+            table.add_column("", no_wrap=True, justify="right")    # cost
+
+        for model, info in self._state.items():
+            if info["status"] == "done":
+                icon = Text("✓", style="green")
+                color = _score_color(info["avg"])
+                cols = [
+                    icon,
+                    model,
+                    Text.from_markup(f"[{color}]{info['passed']}/{info['total']}[/{color}]"),
+                    Text.from_markup(f"[{color}]{info['avg']:.2f}[/{color}]"),
+                    Text(f"{info['time']:.1f}s", style="dim"),
+                    Text(f"↑{_fmt_tokens(info['in_tokens'])} ↓{_fmt_tokens(info['out_tokens'])}", style="dim"),
+                ]
+                if has_cost:
+                    if info["cost"] is not None:
+                        cols.append(Text(_fmt_cost(info["cost"]), style="dim"))
+                    else:
+                        cols.append(Text(""))
+            else:
+                bar_w = 10
+                pct = info["done"] / info["total"] if info["total"] > 0 else 0
+                filled = round(pct * bar_w)
+                icon = Spinner("dots", style="cyan")
+                progress = Text.from_markup(
+                    f"[cyan]{'█' * filled}{'░' * (bar_w - filled)}[/cyan] {info['done']}/{info['total']}"
+                )
+                cols = [icon, model, progress] + [Text("")] * (n_cols - 3)
+
+            table.add_row(*cols)
+
+        return table
 
 
 def _test_new_agents(
@@ -639,7 +705,7 @@ def _test_new_agents(
     threshold: float,
     judge_model: str,
 ) -> None:
-    """Run NewAgent test cases with pass/fail threshold."""
+    """Run NewAgent test cases with pass/fail threshold (all agents in parallel)."""
     import asyncio
     from pathlib import Path
 
@@ -647,7 +713,6 @@ def _test_new_agents(
 
     from crewai_cli.benchmark import (
         load_benchmark_cases,
-        print_results_chart,
         run_benchmark,
     )
 
@@ -655,9 +720,9 @@ def _test_new_agents(
     tests_dir = Path("tests")
     if not tests_dir.is_dir() and Path("benchmarks").is_dir():
         tests_dir = Path("benchmarks")
-    all_passed = True
-    agents_tested = 0
 
+    # Collect valid agents + cases
+    jobs: list[dict] = []
     for agent_path in agent_files:
         agent_name = agent_path.stem
         cases_path = tests_dir / f"{agent_name}_cases.json"
@@ -670,52 +735,91 @@ def _test_new_agents(
             loaded = load_benchmark_cases(cases_path)
         except (FileNotFoundError, ValueError) as e:
             click.secho(f"  Error loading cases for {agent_name}: {e}", fg="red")
-            all_passed = False
             continue
 
         file_threshold = loaded.threshold if loaded.threshold is not None else threshold
+        jobs.append({
+            "agent_name": agent_name,
+            "agent_path": str(agent_path.resolve()),
+            "cases": loaded.cases,
+            "threshold": file_threshold,
+        })
 
-        model_list = [model] if model else None
+    if not jobs:
+        click.secho("No agents with matching benchmark cases found.", fg="yellow")
+        raise SystemExit(1)
 
-        click.echo()
-        click.secho(f"Testing {agent_name} ({len(loaded)} cases, threshold={file_threshold})", fg="cyan", bold=True)
+    model_list = [model] if model else None
 
-        try:
-            results_by_model = asyncio.run(
+    # Progress display — prefix model key with agent name
+    progress = _BenchmarkLiveProgress(console=_con)
+
+    def _make_progress_cb(agent_name: str):
+        def _cb(event: dict) -> None:
+            prefixed = dict(event)
+            if "model" in prefixed:
+                prefixed["model"] = f"{agent_name}/{prefixed['model']}"
+            progress.on_progress(prefixed)
+        return _cb
+
+    async def _run_all():
+        tasks = []
+        for job in jobs:
+            tasks.append(
                 run_benchmark(
-                    agent_def=str(agent_path),
-                    cases=loaded.cases,
+                    agent_def=job["agent_path"],
+                    cases=job["cases"],
                     models=model_list,
                     judge_model=judge_model,
-                    on_progress=_make_benchmark_progress(),
+                    on_progress=_make_progress_cb(job["agent_name"]),
                 )
             )
-        except Exception as e:
-            click.secho(f"  Error running tests for {agent_name}: {e}", fg="red")
+        return await asyncio.gather(*tasks, return_exceptions=True)
+
+    agent_count = sum(1 for j in jobs for _ in (model_list or [None]))
+    case_count = sum(len(j["cases"]) for j in jobs)
+    click.echo()
+    click.secho(
+        f"Testing {len(jobs)} agent(s), {case_count} cases (threshold={threshold})",
+        fg="cyan", bold=True,
+    )
+
+    from crewai_cli.benchmark import artifacts_sandbox, suppress_benchmark_output
+
+    progress.start()
+    try:
+        with artifacts_sandbox(), suppress_benchmark_output():
+            all_results = asyncio.run(_run_all())
+    finally:
+        progress.stop()
+
+    # Evaluate results
+    all_passed = True
+    agents_tested = 0
+    for job, result in zip(jobs, all_results):
+        if isinstance(result, Exception):
+            click.secho(f"  Error running tests for {job['agent_name']}: {result}", fg="red")
             all_passed = False
             continue
 
         agents_tested += 1
-
-        for model_name, results in results_by_model.items():
-            _con.print()
-            print_results_chart(results, console=_con)
-
-            failed = [r for r in results if r.score < file_threshold]
+        for model_name, results in result.items():
+            failed = [r for r in results if r.score < job["threshold"]]
             if failed:
                 all_passed = False
                 _con.print(
-                    f"\n  [red bold]FAILED: {len(failed)}/{len(results)} "
-                    f"cases below threshold ({file_threshold})[/red bold]"
+                    f"  [red bold]{job['agent_name']}: FAILED {len(failed)}/{len(results)} "
+                    f"cases below threshold ({job['threshold']})[/red bold]"
                 )
+                for r in failed:
+                    inp = r.input[:60] + ("…" if len(r.input) > 60 else "")
+                    _con.print(f"    [red]#{r.case_index + 1}[/red] [dim]{inp}[/dim]  [red]{r.score:.2f}[/red]")
             else:
                 _con.print(
-                    f"\n  [green bold]PASSED: all {len(results)} cases >= {file_threshold}[/green bold]"
+                    f"  [green bold]{job['agent_name']}: PASSED all {len(results)} cases >= {job['threshold']}[/green bold]"
                 )
-
-    click.echo()
     if agents_tested == 0:
-        click.secho("No agents with matching benchmark cases found.", fg="yellow")
+        click.secho("No agents completed successfully.", fg="yellow")
         raise SystemExit(1)
     elif all_passed:
         click.secho(f"All tests passed ({agents_tested} agent(s)).", fg="green", bold=True)
@@ -1456,19 +1560,22 @@ def checkpoint_prune(
 )
 @click.option(
     "--judge-model",
-    default="openai/gpt-4o-mini",
-    help="Model for LLM judge evaluation",
+    default=None,
+    help="Model for LLM judge evaluation. "
+    "Defaults to test.judge_model in config.json (openai/gpt-4o-mini if not set).",
 )
 def benchmark(
     agent_path: str,
     cases_path: str,
     models: tuple[str, ...],
-    judge_model: str,
+    judge_model: str | None,
 ) -> None:
     """Run agent against test cases and report results."""
     import asyncio
 
     from crewai_cli.run_crew import _needs_uv_relaunch, _relaunch_via_uv
+
+    judge_model = judge_model or _read_config("test", "judge_model") or "openai/gpt-4o-mini"
 
     if _needs_uv_relaunch():
         uv_args = ["benchmark", agent_path, cases_path, "--judge-model", judge_model]
@@ -1481,11 +1588,14 @@ def benchmark(
     from crewai_cli.benchmark import (
         load_benchmark_cases,
         print_comparison_chart,
-        print_results_chart,
         run_benchmark,
     )
 
     _con = _RichConsole()
+
+    from pathlib import Path as _P
+    agent_path = str(_P(agent_path).resolve())
+    cases_path = str(_P(cases_path).resolve())
 
     try:
         cases = load_benchmark_cases(cases_path)
@@ -1502,23 +1612,26 @@ def benchmark(
     click.echo(f"Judge model: {judge_model}")
     click.echo()
 
+    from crewai_cli.benchmark import artifacts_sandbox, suppress_benchmark_output
+
+    progress = _BenchmarkLiveProgress(console=_con)
+    progress.start()
     try:
-        results_by_model = asyncio.run(
-            run_benchmark(
-                agent_def=agent_path,
-                cases=cases,
-                models=model_list,
-                judge_model=judge_model,
-                on_progress=_make_benchmark_progress(),
+        with artifacts_sandbox(), suppress_benchmark_output():
+            results_by_model = asyncio.run(
+                run_benchmark(
+                    agent_def=agent_path,
+                    cases=cases,
+                    models=model_list,
+                    judge_model=judge_model,
+                    on_progress=progress.on_progress,
+                )
             )
-        )
     except Exception as e:
         click.secho(f"Error running benchmark: {e}", fg="red")
         raise SystemExit(1) from e
-
-    for model, results in results_by_model.items():
-        _con.print()
-        print_results_chart(results, console=_con)
+    finally:
+        progress.stop()
 
     if len(results_by_model) > 1:
         _con.print()

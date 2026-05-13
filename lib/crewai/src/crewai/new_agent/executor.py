@@ -483,12 +483,22 @@ class ConversationalAgentExecutor(BaseModel):
     def _estimate_cost(self, model: str, input_tokens: int, output_tokens: int) -> float | None:
         """Approximate cost in USD based on common model pricing per 1M tokens."""
         costs = {
-            "gpt-4o": (2.50, 10.00),
+            "gpt-4.1-nano": (0.10, 0.40),
+            "gpt-4.1-mini": (0.40, 1.60),
+            "gpt-4.1": (2.00, 8.00),
             "gpt-4o-mini": (0.15, 0.60),
+            "gpt-4o": (2.50, 10.00),
             "gpt-4": (30.00, 60.00),
+            "gpt-5-mini": (0.25, 2.00),
+            "gpt-5.5": (5.00, 30.00),
+            "gpt-5.4": (2.50, 15.00),
+            "gpt-5": (1.25, 10.00),
+            "o4-mini": (1.10, 4.40),
+            "o3-mini": (1.10, 4.40),
+            "o3": (2.00, 8.00),
+            "claude-opus": (5.00, 25.00),
             "claude-sonnet": (3.00, 15.00),
-            "claude-haiku": (0.25, 1.25),
-            "claude-opus": (15.00, 75.00),
+            "claude-haiku": (1.00, 5.00),
         }
         for key, (inp_cost, out_cost) in costs.items():
             if key in model.lower():
@@ -719,9 +729,9 @@ class ConversationalAgentExecutor(BaseModel):
 
         ctx_size = llm.get_context_window_size()
         total_chars = sum(len(str(m.get("content", ""))) for m in llm_messages)
-        est_tokens = total_chars // 4
+        est_tokens = total_chars // 3
 
-        if est_tokens < int(ctx_size * 0.75):
+        if est_tokens < int(ctx_size * 0.60):
             return
 
         try:
@@ -1485,6 +1495,8 @@ class ConversationalAgentExecutor(BaseModel):
                 if tool_result is not None:
                     response_text = tool_result
                     break
+
+                self._proactive_summarize_messages(llm_messages, callbacks)
 
                 # GAP-21: Call step_callback at each iteration boundary
                 if self.agent.step_callback:

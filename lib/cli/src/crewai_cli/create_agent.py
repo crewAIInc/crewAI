@@ -122,9 +122,15 @@ PROJECT_CONFIG_TEMPLATE = """\
 {
   // Project configuration for crewai agents
 
-  // Minimum score (0.0–1.0) for a test case to pass.
-  // Override per test file with: {"threshold": 0.9, "cases": [...]}
-  "test_threshold": 0.7,
+  // Test / benchmark settings
+  "test": {
+    // Minimum score (0.0–1.0) for a test case to pass.
+    // Override per test file with: {"threshold": 0.9, "cases": [...]}
+    "threshold": 0.7,
+
+    // LLM used to judge test responses (provider/model format)
+    "judge_model": "openai/gpt-4o-mini"
+  },
 
   // Rooms define how agents collaborate in the TUI
   "rooms": {
@@ -133,10 +139,10 @@ PROJECT_CONFIG_TEMPLATE = """\
       "agents": [],
 
       // Engagement mode:
-      //   "dm" — chat with one agent at a time (default)
+      //   "organic" — all agents see messages, respond if relevant (default)
+      //   "dm" — chat with one agent at a time
       //   "tagged" — @mention to direct messages
-      //   "organic" — all agents see messages, respond if relevant
-      "engagement": "dm"
+      "engagement": "organic"
     }
   }
 }
@@ -182,6 +188,7 @@ _GITIGNORE_TEMPLATE = """\
 __pycache__/
 .DS_Store
 .crewai/
+tests/artifacts/
 """
 
 
@@ -807,7 +814,7 @@ def _add_agent_to_config(base: Path, agent_name: str) -> None:
         config = json.loads(clean)
 
         rooms = config.get("rooms", {})
-        common = rooms.get("common", {"agents": [], "engagement": "dm"})
+        common = rooms.get("common", {"agents": [], "engagement": "organic"})
         agents = common.get("agents", [])
         if agent_name not in agents:
             agents.append(agent_name)

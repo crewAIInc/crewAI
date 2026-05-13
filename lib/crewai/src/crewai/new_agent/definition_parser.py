@@ -98,8 +98,8 @@ def load_agent_from_definition(
 
     agent_name = defn.get("name", "")
     if agent_name and agent_name in _loading_chain:
-        logger.warning(
-            "Circular coworker reference for '%s' — skipping to prevent infinite recursion",
+        logger.debug(
+            "Skipping coworker back-reference '%s' (already in loading chain)",
             agent_name,
         )
         return None
@@ -249,8 +249,8 @@ def _resolve_coworkers(
         elif "ref" in cw:
             ref_name = cw["ref"]
             if _loading_chain and ref_name in _loading_chain:
-                logger.warning(
-                    "Circular coworker ref '%s' — skipping to prevent infinite recursion",
+                logger.debug(
+                    "Skipping coworker back-reference '%s' (already in loading chain)",
                     ref_name,
                 )
                 continue
@@ -258,7 +258,9 @@ def _resolve_coworkers(
                 for ext in (".json", ".jsonc"):
                     ref_path = agents_dir / f"{ref_name}{ext}"
                     if ref_path.exists():
-                        result = load_agent_from_definition(ref_path, agents_dir, _loading_chain)
+                        result = load_agent_from_definition(
+                            ref_path, agents_dir, set(_loading_chain) if _loading_chain else None
+                        )
                         if result is not None:
                             coworkers.append(result)
                         break
