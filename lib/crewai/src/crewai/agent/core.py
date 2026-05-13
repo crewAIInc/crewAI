@@ -7,6 +7,7 @@ from collections.abc import Callable, Coroutine, Sequence
 import concurrent.futures
 import contextvars
 from datetime import datetime
+import inspect
 import json
 import os
 from pathlib import Path
@@ -35,13 +36,11 @@ from typing_extensions import Self, TypeIs
 from crewai.agent.planning_config import PlanningConfig
 from crewai.agent.utils import (
     ahandle_knowledge_retrieval,
-    append_skill_context,
     apply_training_data,
     build_task_prompt_with_schema,
     format_task_with_context,
     get_knowledge_config,
     handle_knowledge_retrieval,
-    handle_reasoning,
     prepare_tools,
     process_tool_results,
     save_last_messages,
@@ -150,7 +149,17 @@ def _validate_executor_class(value: Any) -> Any:
         cls = _EXECUTOR_CLASS_MAP.get(value)
         if cls is None:
             raise ValueError(f"Unknown executor class: {value}")
-        return cls
+        value = cls
+    import warnings
+
+    if value is CrewAgentExecutor:
+        warnings.warn(
+            "CrewAgentExecutor is deprecated and will be removed in a future release. "
+            "Agents inside Crews now use AgentExecutor by default. "
+            "Switch to crewai.experimental.AgentExecutor.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
     return value
 
 
@@ -325,8 +334,8 @@ class Agent(BaseAgent):
         BeforeValidator(_validate_executor_class),
         PlainSerializer(_serialize_executor_class, return_type=str, when_used="json"),
     ] = Field(
-        default=CrewAgentExecutor,
-        description="Class to use for the agent executor. Defaults to CrewAgentExecutor, can optionally use AgentExecutor.",
+        default=AgentExecutor,
+        description="Class to use for the agent executor. Defaults to AgentExecutor, can optionally use CrewAgentExecutor.",
     )
 
     @model_validator(mode="before")
@@ -512,8 +521,6 @@ class Agent(BaseAgent):
             The task prompt after memory retrieval, ready for knowledge lookup.
         """
         get_env_context()
-        if self.executor_class is not AgentExecutor:
-            handle_reasoning(self, task)
 
         self._inject_date_to_task(task)
 
@@ -541,7 +548,6 @@ class Agent(BaseAgent):
         Returns:
             The fully prepared task prompt.
         """
-        task_prompt = append_skill_context(self, task_prompt)
         prepare_tools(self, tools, task)
 
         return apply_training_data(self, task_prompt)
@@ -843,18 +849,22 @@ class Agent(BaseAgent):
         if not self.agent_executor:
             raise RuntimeError("Agent executor is not initialized.")
 
-        result = cast(
-            dict[str, Any],
-            self.agent_executor.invoke(
-                {
-                    "input": task_prompt,
-                    "tool_names": self.agent_executor.tools_names,
-                    "tools": self.agent_executor.tools_description,
-                    "ask_for_human_input": task.human_input,
-                }
-            ),
+        invoke_result = self.agent_executor.invoke(
+            {
+                "input": task_prompt,
+                "tool_names": self.agent_executor.tools_names,
+                "tools": self.agent_executor.tools_description,
+                "ask_for_human_input": task.human_input,
+            }
         )
-        return result["output"]
+        if inspect.isawaitable(invoke_result):
+            invoke_result.close()
+            raise RuntimeError(
+                "Agent execution was invoked synchronously from within a running "
+                "event loop. Use `agent.kickoff_async()` / `crew.kickoff_async()` "
+                "(or `await agent.aexecute_task(...)`) when calling from async code."
+            )
+        return invoke_result["output"]
 
     async def aexecute_task(
         self,
@@ -1473,8 +1483,6 @@ class Agent(BaseAgent):
                         error=str(e),
                     ),
                 )
-
-        formatted_messages = append_skill_context(self, formatted_messages)
 
         inputs: dict[str, Any] = {
             "input": formatted_messages,

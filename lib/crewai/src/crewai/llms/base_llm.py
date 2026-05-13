@@ -14,7 +14,7 @@ from datetime import datetime
 import json
 import logging
 import re
-from typing import TYPE_CHECKING, Any, Final, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal, cast
 import uuid
 
 from pydantic import (
@@ -703,10 +703,19 @@ class BaseLLM(BaseModel, ABC):
         Raises:
             ValueError: If message format is invalid
         """
+        from crewai.llms.cache import CACHE_BREAKPOINT_KEY
+        from crewai.utilities.types import LLMMessage as _LLMMessage
+
         if isinstance(messages, str):
             return [{"role": "user", "content": messages}]
 
-        # Validate message format
+        # Validate then copy each message, dropping the cache-breakpoint
+        # flag in the copy only. The caller (e.g. CrewAgentExecutor,
+        # experimental.AgentExecutor) reuses its messages buffer across
+        # many LLM calls in the tool-use loop; mutating their dicts
+        # in place would erase the markers after the first call and
+        # break prompt caching for every subsequent iteration.
+        cleaned: list[LLMMessage] = []
         for i, msg in enumerate(messages):
             if not isinstance(msg, dict):
                 raise ValueError(f"Message at index {i} must be a dictionary")
@@ -714,8 +723,12 @@ class BaseLLM(BaseModel, ABC):
                 raise ValueError(
                     f"Message at index {i} must have 'role' and 'content' keys"
                 )
+            copy: dict[str, Any] = {
+                k: v for k, v in msg.items() if k != CACHE_BREAKPOINT_KEY
+            }
+            cleaned.append(cast(_LLMMessage, copy))
 
-        return self._process_message_files(messages)
+        return self._process_message_files(cleaned)
 
     def _process_message_files(self, messages: list[LLMMessage]) -> list[LLMMessage]:
         """Process files attached to messages and format for the provider.

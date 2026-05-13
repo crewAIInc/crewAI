@@ -425,7 +425,7 @@ class AnthropicCompletion(BaseLLM):
     def _prepare_completion_params(
         self,
         messages: list[LLMMessage],
-        system_message: str | None = None,
+        system_message: str | list[dict[str, Any]] | None = None,
         tools: list[dict[str, Any]] | None = None,
         available_functions: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
@@ -665,7 +665,7 @@ class AnthropicCompletion(BaseLLM):
 
     def _format_messages_for_anthropic(
         self, messages: str | list[LLMMessage]
-    ) -> tuple[list[LLMMessage], str | None]:
+    ) -> tuple[list[LLMMessage], str | list[dict[str, Any]] | None]:
         """Format messages for Anthropic API.
 
         Anthropic has specific requirements:
@@ -679,8 +679,51 @@ class AnthropicCompletion(BaseLLM):
             messages: Input messages
 
         Returns:
-            Tuple of (formatted_messages, system_message)
+            Tuple of (formatted_messages, system_message). `system_message` is
+            a list of content blocks (with cache_control stamped) when any
+            system message in the input carried a cache_breakpoint flag;
+            otherwise a plain string for backwards compatibility.
         """
+        from crewai.llms.cache import CACHE_BREAKPOINT_KEY
+
+        # Read cache_breakpoint flags from raw input BEFORE super strips them.
+        # We track the CONTENT of marked user/assistant messages so we can
+        # locate the corresponding block in formatted_messages — Anthropic
+        # rewrites tool results into user messages, so positional indices
+        # do not survive the conversion. We must stamp the original stable
+        # message (typically the initial task prompt), not whatever happens
+        # to be the trailing user-role block after tool_result expansion.
+        cache_system = False
+        cache_match_contents: list[str] = []
+        if not isinstance(messages, str):
+            for m in messages:
+                if not (isinstance(m, dict) and m.get(CACHE_BREAKPOINT_KEY)):
+                    continue
+                role = m.get("role")
+                if role == "system":
+                    cache_system = True
+                    continue
+                if role != "user":
+                    # Only user messages survive Anthropic's role-coalescing
+                    # in a stable, addressable position. Markers on assistant
+                    # or tool messages have no reliable stamp target after
+                    # tool_result expansion, so we ignore them.
+                    continue
+                raw_content = m.get("content")
+                if isinstance(raw_content, str) and raw_content:
+                    cache_match_contents.append(raw_content)
+                    continue
+                if isinstance(raw_content, list):
+                    # Pull text from a single-text-block list so callers that
+                    # pre-format content blocks still match cleanly.
+                    text_blocks = [
+                        b.get("text")
+                        for b in raw_content
+                        if isinstance(b, dict) and b.get("type") == "text"
+                    ]
+                    if len(text_blocks) == 1 and isinstance(text_blocks[0], str):
+                        cache_match_contents.append(text_blocks[0])
+
         # Use base class formatting first
         base_formatted = super()._format_messages(messages)
 
@@ -788,7 +831,62 @@ class AnthropicCompletion(BaseLLM):
             # If first message is not from user, insert a user message at the beginning
             formatted_messages.insert(0, {"role": "user", "content": "Hello"})
 
-        return formatted_messages, system_message
+        # Stamp cache_control on the message(s) whose original content was
+        # marked. We scan formatted_messages in order and stamp the first
+        # match per marked content — Anthropic permits up to 4 cache
+        # breakpoints per request, which is more than enough for our usage.
+        # Matching by content (rather than position) handles the ReAct
+        # case where tool_result blocks get expanded into trailing user
+        # messages: the stable initial-task prompt still maps cleanly.
+        for needle in cache_match_contents:
+            for fm in formatted_messages:
+                if fm.get("role") != "user":
+                    continue
+                content = fm.get("content")
+                if isinstance(content, str) and content == needle:
+                    self._stamp_cache_control_on_message(fm)
+                    break
+                if isinstance(content, list):
+                    fm_texts: list[str] = [
+                        b.get("text", "")
+                        for b in content
+                        if isinstance(b, dict) and b.get("type") == "text"
+                    ]
+                    if len(fm_texts) == 1 and fm_texts[0] == needle:
+                        self._stamp_cache_control_on_message(fm)
+                        break
+
+        # Convert system to content-block form when caching is requested.
+        system_payload: str | list[dict[str, Any]] | None = system_message
+        if system_message and cache_system:
+            system_payload = [
+                {
+                    "type": "text",
+                    "text": system_message,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ]
+
+        return formatted_messages, system_payload
+
+    @staticmethod
+    def _stamp_cache_control_on_message(message: LLMMessage) -> None:
+        """Stamp cache_control on the last content block of an Anthropic message."""
+        msg = cast(dict[str, Any], message)
+        content = msg.get("content")
+        if isinstance(content, str):
+            msg["content"] = [
+                {
+                    "type": "text",
+                    "text": content,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ]
+            return
+        if isinstance(content, list) and content:
+            last = content[-1]
+            if isinstance(last, dict):
+                last["cache_control"] = {"type": "ephemeral"}
 
     def _handle_completion(
         self,

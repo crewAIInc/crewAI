@@ -1191,6 +1191,13 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     @router("force_final_answer")
     def ensure_force_final_answer(self) -> Literal["agent_finished"]:
         """Force agent to provide final answer when max iterations exceeded."""
+        # The flow framework can route here more than once per execution when the
+        # "initialized" label is emitted by both initialize_reasoning and
+        # increment_and_continue in the same listener pass. Skip the extra LLM
+        # round-trip once we've already produced a forced final answer.
+        if self.state.is_finished:
+            return "agent_finished"
+
         formatted_answer = handle_max_iterations_exceeded(
             formatted_answer=None,
             printer=PRINTER,
@@ -2579,16 +2586,26 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             self._kickoff_input = inputs.get("input", "")
 
             if "system" in self.prompt:
+                from crewai.llms.cache import mark_cache_breakpoint
+
                 prompt = cast("SystemPromptResult", self.prompt)
                 system_prompt = self._format_prompt(prompt["system"], inputs)
                 user_prompt = self._format_prompt(prompt["user"], inputs)
                 self.state.messages.append(
-                    format_message_for_llm(system_prompt, role="system")
+                    mark_cache_breakpoint(
+                        format_message_for_llm(system_prompt, role="system")
+                    )
                 )
-                self.state.messages.append(format_message_for_llm(user_prompt))
+                self.state.messages.append(
+                    mark_cache_breakpoint(format_message_for_llm(user_prompt))
+                )
             else:
+                from crewai.llms.cache import mark_cache_breakpoint
+
                 user_prompt = self._format_prompt(self.prompt["prompt"], inputs)
-                self.state.messages.append(format_message_for_llm(user_prompt))
+                self.state.messages.append(
+                    mark_cache_breakpoint(format_message_for_llm(user_prompt))
+                )
 
             self._inject_files_from_inputs(inputs)
 
@@ -2670,16 +2687,26 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             self._kickoff_input = inputs.get("input", "")
 
             if "system" in self.prompt:
+                from crewai.llms.cache import mark_cache_breakpoint
+
                 prompt = cast("SystemPromptResult", self.prompt)
                 system_prompt = self._format_prompt(prompt["system"], inputs)
                 user_prompt = self._format_prompt(prompt["user"], inputs)
                 self.state.messages.append(
-                    format_message_for_llm(system_prompt, role="system")
+                    mark_cache_breakpoint(
+                        format_message_for_llm(system_prompt, role="system")
+                    )
                 )
-                self.state.messages.append(format_message_for_llm(user_prompt))
+                self.state.messages.append(
+                    mark_cache_breakpoint(format_message_for_llm(user_prompt))
+                )
             else:
+                from crewai.llms.cache import mark_cache_breakpoint
+
                 user_prompt = self._format_prompt(self.prompt["prompt"], inputs)
-                self.state.messages.append(format_message_for_llm(user_prompt))
+                self.state.messages.append(
+                    mark_cache_breakpoint(format_message_for_llm(user_prompt))
+                )
 
             self._inject_files_from_inputs(inputs)
 
