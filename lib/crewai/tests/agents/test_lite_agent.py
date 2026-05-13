@@ -836,6 +836,7 @@ def test_lite_agent_kickoff_async_inside_flow():
     assert isinstance(result, LiteAgentOutput)
 
 
+@pytest.mark.vcr(record_mode="none")
 def test_lite_agent_standalone_still_works():
     """Test that LiteAgent.kickoff() still works normally outside of a Flow.
 
@@ -860,6 +861,7 @@ def test_lite_agent_standalone_still_works():
         goal="Answer questions",
         backstory="A helpful assistant",
         llm=mock_llm,
+        memory=False,
         verbose=False,
     )
 
