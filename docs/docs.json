@@ -114,7 +114,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "en/guides/flows/first-flow",
-                          "en/guides/flows/mastering-flow-state"
+                          "en/guides/flows/mastering-flow-state",
+                          "en/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -597,7 +598,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "en/guides/flows/first-flow",
-                          "en/guides/flows/mastering-flow-state"
+                          "en/guides/flows/mastering-flow-state",
+                          "en/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -1079,7 +1081,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "en/guides/flows/first-flow",
-                          "en/guides/flows/mastering-flow-state"
+                          "en/guides/flows/mastering-flow-state",
+                          "en/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -1213,6 +1216,8 @@
                           "en/tools/search-research/youtubevideosearchtool",
                           "en/tools/search-research/tavilysearchtool",
                           "en/tools/search-research/tavilyextractortool",
+                          "en/tools/search-research/tavilyresearchtool",
+                          "en/tools/search-research/tavilygetresearchtool",
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
@@ -1558,7 +1563,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "en/guides/flows/first-flow",
-                          "en/guides/flows/mastering-flow-state"
+                          "en/guides/flows/mastering-flow-state",
+                          "en/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -1694,6 +1700,7 @@
                           "en/tools/search-research/tavilysearchtool",
                           "en/tools/search-research/tavilyextractortool",
                           "en/tools/search-research/tavilyresearchtool",
+                          "en/tools/search-research/tavilygetresearchtool",
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
@@ -2040,7 +2047,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "en/guides/flows/first-flow",
-                          "en/guides/flows/mastering-flow-state"
+                          "en/guides/flows/mastering-flow-state",
+                          "en/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -2176,6 +2184,7 @@
                           "en/tools/search-research/tavilysearchtool",
                           "en/tools/search-research/tavilyextractortool",
                           "en/tools/search-research/tavilyresearchtool",
+                          "en/tools/search-research/tavilygetresearchtool",
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
@@ -2522,7 +2531,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "en/guides/flows/first-flow",
-                          "en/guides/flows/mastering-flow-state"
+                          "en/guides/flows/mastering-flow-state",
+                          "en/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -2658,6 +2668,7 @@
                           "en/tools/search-research/tavilysearchtool",
                           "en/tools/search-research/tavilyextractortool",
                           "en/tools/search-research/tavilyresearchtool",
+                          "en/tools/search-research/tavilygetresearchtool",
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
@@ -3004,7 +3015,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "en/guides/flows/first-flow",
-                          "en/guides/flows/mastering-flow-state"
+                          "en/guides/flows/mastering-flow-state",
+                          "en/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -3140,6 +3152,7 @@
                           "en/tools/search-research/tavilysearchtool",
                           "en/tools/search-research/tavilyextractortool",
                           "en/tools/search-research/tavilyresearchtool",
+                          "en/tools/search-research/tavilygetresearchtool",
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
@@ -3486,7 +3499,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "en/guides/flows/first-flow",
-                          "en/guides/flows/mastering-flow-state"
+                          "en/guides/flows/mastering-flow-state",
+                          "en/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -3621,6 +3635,7 @@
                           "en/tools/search-research/tavilysearchtool",
                           "en/tools/search-research/tavilyextractortool",
                           "en/tools/search-research/tavilyresearchtool",
+                          "en/tools/search-research/tavilygetresearchtool",
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
@@ -3966,7 +3981,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "en/guides/flows/first-flow",
-                          "en/guides/flows/mastering-flow-state"
+                          "en/guides/flows/mastering-flow-state",
+                          "en/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -4101,6 +4117,7 @@
                           "en/tools/search-research/tavilysearchtool",
                           "en/tools/search-research/tavilyextractortool",
                           "en/tools/search-research/tavilyresearchtool",
+                          "en/tools/search-research/tavilygetresearchtool",
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
@@ -4446,7 +4463,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "en/guides/flows/first-flow",
-                          "en/guides/flows/mastering-flow-state"
+                          "en/guides/flows/mastering-flow-state",
+                          "en/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -4581,6 +4599,7 @@
                           "en/tools/search-research/tavilysearchtool",
                           "en/tools/search-research/tavilyextractortool",
                           "en/tools/search-research/tavilyresearchtool",
+                          "en/tools/search-research/tavilygetresearchtool",
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
@@ -4927,7 +4946,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "en/guides/flows/first-flow",
-                          "en/guides/flows/mastering-flow-state"
+                          "en/guides/flows/mastering-flow-state",
+                          "en/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -5061,6 +5081,7 @@
                           "en/tools/search-research/tavilysearchtool",
                           "en/tools/search-research/tavilyextractortool",
                           "en/tools/search-research/tavilyresearchtool",
+                          "en/tools/search-research/tavilygetresearchtool",
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
@@ -5409,7 +5430,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "en/guides/flows/first-flow",
-                          "en/guides/flows/mastering-flow-state"
+                          "en/guides/flows/mastering-flow-state",
+                          "en/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -5543,6 +5565,7 @@
                           "en/tools/search-research/tavilysearchtool",
                           "en/tools/search-research/tavilyextractortool",
                           "en/tools/search-research/tavilyresearchtool",
+                          "en/tools/search-research/tavilygetresearchtool",
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
@@ -5889,7 +5912,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "en/guides/flows/first-flow",
-                          "en/guides/flows/mastering-flow-state"
+                          "en/guides/flows/mastering-flow-state",
+                          "en/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -6024,6 +6048,7 @@
                           "en/tools/search-research/tavilysearchtool",
                           "en/tools/search-research/tavilyextractortool",
                           "en/tools/search-research/tavilyresearchtool",
+                          "en/tools/search-research/tavilygetresearchtool",
                           "en/tools/search-research/arxivpapertool",
                           "en/tools/search-research/serpapi-googlesearchtool",
                           "en/tools/search-research/serpapi-googleshoppingtool",
@@ -6402,7 +6427,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "pt-BR/guides/flows/first-flow",
-                          "pt-BR/guides/flows/mastering-flow-state"
+                          "pt-BR/guides/flows/mastering-flow-state",
+                          "pt-BR/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -6862,7 +6888,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "pt-BR/guides/flows/first-flow",
-                          "pt-BR/guides/flows/mastering-flow-state"
+                          "pt-BR/guides/flows/mastering-flow-state",
+                          "pt-BR/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -7322,7 +7349,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "pt-BR/guides/flows/first-flow",
-                          "pt-BR/guides/flows/mastering-flow-state"
+                          "pt-BR/guides/flows/mastering-flow-state",
+                          "pt-BR/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -7781,7 +7809,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "pt-BR/guides/flows/first-flow",
-                          "pt-BR/guides/flows/mastering-flow-state"
+                          "pt-BR/guides/flows/mastering-flow-state",
+                          "pt-BR/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -8241,7 +8270,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "pt-BR/guides/flows/first-flow",
-                          "pt-BR/guides/flows/mastering-flow-state"
+                          "pt-BR/guides/flows/mastering-flow-state",
+                          "pt-BR/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -8701,7 +8731,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "pt-BR/guides/flows/first-flow",
-                          "pt-BR/guides/flows/mastering-flow-state"
+                          "pt-BR/guides/flows/mastering-flow-state",
+                          "pt-BR/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -9161,7 +9192,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "pt-BR/guides/flows/first-flow",
-                          "pt-BR/guides/flows/mastering-flow-state"
+                          "pt-BR/guides/flows/mastering-flow-state",
+                          "pt-BR/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -9621,7 +9653,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "pt-BR/guides/flows/first-flow",
-                          "pt-BR/guides/flows/mastering-flow-state"
+                          "pt-BR/guides/flows/mastering-flow-state",
+                          "pt-BR/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -10080,7 +10113,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "pt-BR/guides/flows/first-flow",
-                          "pt-BR/guides/flows/mastering-flow-state"
+                          "pt-BR/guides/flows/mastering-flow-state",
+                          "pt-BR/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -10539,7 +10573,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "pt-BR/guides/flows/first-flow",
-                          "pt-BR/guides/flows/mastering-flow-state"
+                          "pt-BR/guides/flows/mastering-flow-state",
+                          "pt-BR/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -10998,7 +11033,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "pt-BR/guides/flows/first-flow",
-                          "pt-BR/guides/flows/mastering-flow-state"
+                          "pt-BR/guides/flows/mastering-flow-state",
+                          "pt-BR/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -11456,7 +11492,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "pt-BR/guides/flows/first-flow",
-                          "pt-BR/guides/flows/mastering-flow-state"
+                          "pt-BR/guides/flows/mastering-flow-state",
+                          "pt-BR/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -11914,7 +11951,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "pt-BR/guides/flows/first-flow",
-                          "pt-BR/guides/flows/mastering-flow-state"
+                          "pt-BR/guides/flows/mastering-flow-state",
+                          "pt-BR/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -12403,7 +12441,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "ko/guides/flows/first-flow",
-                          "ko/guides/flows/mastering-flow-state"
+                          "ko/guides/flows/mastering-flow-state",
+                          "ko/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -12875,7 +12914,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "ko/guides/flows/first-flow",
-                          "ko/guides/flows/mastering-flow-state"
+                          "ko/guides/flows/mastering-flow-state",
+                          "ko/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -13347,7 +13387,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "ko/guides/flows/first-flow",
-                          "ko/guides/flows/mastering-flow-state"
+                          "ko/guides/flows/mastering-flow-state",
+                          "ko/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -13819,7 +13860,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "ko/guides/flows/first-flow",
-                          "ko/guides/flows/mastering-flow-state"
+                          "ko/guides/flows/mastering-flow-state",
+                          "ko/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -14292,7 +14334,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "ko/guides/flows/first-flow",
-                          "ko/guides/flows/mastering-flow-state"
+                          "ko/guides/flows/mastering-flow-state",
+                          "ko/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -14765,7 +14808,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "ko/guides/flows/first-flow",
-                          "ko/guides/flows/mastering-flow-state"
+                          "ko/guides/flows/mastering-flow-state",
+                          "ko/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -15238,7 +15282,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "ko/guides/flows/first-flow",
-                          "ko/guides/flows/mastering-flow-state"
+                          "ko/guides/flows/mastering-flow-state",
+                          "ko/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -15711,7 +15756,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "ko/guides/flows/first-flow",
-                          "ko/guides/flows/mastering-flow-state"
+                          "ko/guides/flows/mastering-flow-state",
+                          "ko/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -16183,7 +16229,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "ko/guides/flows/first-flow",
-                          "ko/guides/flows/mastering-flow-state"
+                          "ko/guides/flows/mastering-flow-state",
+                          "ko/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -16655,7 +16702,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "ko/guides/flows/first-flow",
-                          "ko/guides/flows/mastering-flow-state"
+                          "ko/guides/flows/mastering-flow-state",
+                          "ko/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -17127,7 +17175,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "ko/guides/flows/first-flow",
-                          "ko/guides/flows/mastering-flow-state"
+                          "ko/guides/flows/mastering-flow-state",
+                          "ko/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -17598,7 +17647,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "ko/guides/flows/first-flow",
-                          "ko/guides/flows/mastering-flow-state"
+                          "ko/guides/flows/mastering-flow-state",
+                          "ko/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -18069,7 +18119,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "ko/guides/flows/first-flow",
-                          "ko/guides/flows/mastering-flow-state"
+                          "ko/guides/flows/mastering-flow-state",
+                          "ko/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -18571,7 +18622,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "ar/guides/flows/first-flow",
-                          "ar/guides/flows/mastering-flow-state"
+                          "ar/guides/flows/mastering-flow-state",
+                          "ar/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -19043,7 +19095,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "ar/guides/flows/first-flow",
-                          "ar/guides/flows/mastering-flow-state"
+                          "ar/guides/flows/mastering-flow-state",
+                          "ar/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -19515,7 +19568,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "ar/guides/flows/first-flow",
-                          "ar/guides/flows/mastering-flow-state"
+                          "ar/guides/flows/mastering-flow-state",
+                          "ar/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -19987,7 +20041,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "ar/guides/flows/first-flow",
-                          "ar/guides/flows/mastering-flow-state"
+                          "ar/guides/flows/mastering-flow-state",
+                          "ar/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -20460,7 +20515,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "ar/guides/flows/first-flow",
-                          "ar/guides/flows/mastering-flow-state"
+                          "ar/guides/flows/mastering-flow-state",
+                          "ar/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -20933,7 +20989,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "ar/guides/flows/first-flow",
-                          "ar/guides/flows/mastering-flow-state"
+                          "ar/guides/flows/mastering-flow-state",
+                          "ar/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -21406,7 +21463,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "ar/guides/flows/first-flow",
-                          "ar/guides/flows/mastering-flow-state"
+                          "ar/guides/flows/mastering-flow-state",
+                          "ar/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -21879,7 +21937,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "ar/guides/flows/first-flow",
-                          "ar/guides/flows/mastering-flow-state"
+                          "ar/guides/flows/mastering-flow-state",
+                          "ar/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -22351,7 +22410,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "ar/guides/flows/first-flow",
-                          "ar/guides/flows/mastering-flow-state"
+                          "ar/guides/flows/mastering-flow-state",
+                          "ar/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -22823,7 +22883,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "ar/guides/flows/first-flow",
-                          "ar/guides/flows/mastering-flow-state"
+                          "ar/guides/flows/mastering-flow-state",
+                          "ar/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -23295,7 +23356,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "ar/guides/flows/first-flow",
-                          "ar/guides/flows/mastering-flow-state"
+                          "ar/guides/flows/mastering-flow-state",
+                          "ar/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -23766,7 +23828,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "ar/guides/flows/first-flow",
-                          "ar/guides/flows/mastering-flow-state"
+                          "ar/guides/flows/mastering-flow-state",
+                          "ar/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
@@ -24237,7 +24300,8 @@
                         "icon": "code-branch",
                         "pages": [
                           "ar/guides/flows/first-flow",
-                          "ar/guides/flows/mastering-flow-state"
+                          "ar/guides/flows/mastering-flow-state",
+                          "ar/guides/flows/inputs-id-deprecation"
                         ]
                       },
                       {
