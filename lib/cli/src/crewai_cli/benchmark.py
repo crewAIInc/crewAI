@@ -424,6 +424,8 @@ async def run_benchmark(
     if models is None or len(models) == 0:
         models = [defn.get("llm", "default")]
 
+    models = list(dict.fromkeys(models))
+
     def _emit(event: dict[str, Any]) -> None:
         if on_progress:
             on_progress(event)

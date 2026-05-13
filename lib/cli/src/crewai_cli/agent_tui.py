@@ -16,10 +16,11 @@ import sys
 import time
 from typing import Any
 
-from rich.markup import escape as _rich_escape
+from textual import events
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.message import Message
 from textual.screen import ModalScreen
 from textual.widgets import (
     Button,
@@ -33,7 +34,7 @@ from textual.widgets import (
     RadioSet,
     Static,
     TabPane,
-    TabbedContent,
+    TextArea,
 )
 
 
@@ -62,6 +63,38 @@ try:
 
 except ImportError:
     AgentSuggester = None  # type: ignore[assignment,misc]
+
+
+class ChatTextArea(TextArea):
+    """Multiline chat input: Enter submits, Shift+Enter inserts a newline."""
+
+    BINDINGS = [
+        Binding("enter", "submit", "Send", show=False),
+    ]
+
+    class Submitted(Message):
+        """Posted when the user presses Enter to submit."""
+
+        def __init__(self, text_area: "ChatTextArea", value: str) -> None:
+            super().__init__()
+            self.text_area = text_area
+            self.value = value
+
+    def action_submit(self) -> None:
+        text = self.text
+        self.clear()
+        self.post_message(self.Submitted(self, text))
+
+    async def _on_key(self, event: events.Key) -> None:
+        if event.key == "shift+enter":
+            event.prevent_default()
+            self.insert("\n")
+            return
+        if event.key == "enter":
+            event.prevent_default()
+            self.action_submit()
+            return
+        await super()._on_key(event)
 
 
 _CORAL = "#eb6658"
@@ -417,25 +450,6 @@ class AgentTUI(App[None]):
         background: {_TEAL};
         color: white;
     }}
-    #sidebar-actions {{
-        height: auto;
-        min-height: 5;
-        padding: 1;
-        background: {_BG_PANEL};
-        border-top: solid #333333;
-    }}
-    #btn-provenance {{
-        width: 100%;
-        min-width: 20;
-        background: {_BG};
-        color: {_CORAL};
-        border: tall {_TEAL};
-    }}
-    #btn-provenance:hover {{
-        background: {_TEAL};
-        color: white;
-    }}
-
     #chat-area {{
         width: 1fr;
     }}
@@ -445,13 +459,18 @@ class AgentTUI(App[None]):
         overflow-y: auto;
     }}
     #input-row {{
-        height: 4;
+        height: auto;
+        max-height: 10;
+        min-height: 4;
         padding: 0 1;
         background: {_BG_PANEL};
         border-top: solid #333333;
     }}
     #chat-input {{
         width: 100%;
+        min-height: 3;
+        max-height: 8;
+        border: tall #333333;
     }}
     #chat-input:focus {{
         border: tall {_CORAL};
@@ -516,21 +535,16 @@ class AgentTUI(App[None]):
                         yield Static("AGENTS", classes="sidebar-label")
                         yield OptionList(id="agent-list")
                     with TabPane("Memory", id="tab-memory"):
-                        yield Static(
-                            "Click below to open the memory browser.",
-                            id="memory-scope-label",
-                        )
-                        yield Button(
-                            "Open Memory Browser", id="btn-memory", variant="default"
-                        )
-                with Horizontal(id="sidebar-actions"):
-                    yield Button("Provenance", id="btn-provenance", variant="default")
+                        yield Static("Click below to open the memory browser.", id="memory-scope-label")
+                        yield Button("Open Memory Browser", id="btn-memory", variant="default")
             with Vertical(id="chat-area"):
                 yield VerticalScroll(id="chat-scroll")
                 with Horizontal(id="input-row"):
-                    yield Input(
-                        placeholder="Type a message — agents will respond automatically",
+                    yield ChatTextArea(
                         id="chat-input",
+                        show_line_numbers=False,
+                        theme="css",
+                        soft_wrap=True,
                     )
         yield Footer()
 
@@ -599,11 +613,6 @@ class AgentTUI(App[None]):
             except Exception:
                 pass
 
-        if AgentSuggester is not None and self._agent_names:
-            self.query_one("#chat-input", Input).suggester = AgentSuggester(
-                self._agent_names
-            )
-
         if not self._agent_defs:
             self._mount_sys("No agents found. Run: crewai create agent <name>")
             return
@@ -632,7 +641,7 @@ class AgentTUI(App[None]):
         self._update_placeholder()
         self._load_history_from_disk()
         self._render_chat()
-        self.query_one("#chat-input", Input).focus()
+        self.query_one("#chat-input", ChatTextArea).focus()
 
         try:
             from crewai.new_agent.scheduler import TaskScheduler
@@ -652,7 +661,7 @@ class AgentTUI(App[None]):
             self.sub_title = f"Chat with {self._current_room}"
 
     def _update_placeholder(self) -> None:
-        chat_input = self.query_one("#chat-input", Input)
+        chat_input = self.query_one("#chat-input", ChatTextArea)
         if self._is_room(self._current_room):
             engagement = self._room_engagement(self._current_room)
             if engagement == "organic":
@@ -725,14 +734,12 @@ class AgentTUI(App[None]):
 
     # ── Message routing ──
 
-    async def on_input_submitted(self, event: Input.Submitted) -> None:
-        if event.input.id != "chat-input":
+    async def on_chat_text_area_submitted(self, event: ChatTextArea.Submitted) -> None:
+        if event.text_area.id != "chat-input":
             return
         text = event.value.strip()
         if not text or self._processing:
             return
-
-        event.input.clear()
 
         # ── Slash-command handling ──
         if text.startswith("/"):
@@ -1612,47 +1619,6 @@ class AgentTUI(App[None]):
                 callback=self._on_room_created,
             )
             return
-        if event.button.id != "btn-provenance":
-            return
-        agent_name = self._get_focused_agent_name()
-        if not agent_name:
-            self._mount_sys("Select an agent to view its decision trace.")
-            return
-
-        try:
-            from crewai.new_agent.cli_provider import _get_storage
-
-            entries = _get_storage(agent_name).load_provenance()
-        except Exception:
-            entries = []
-
-        if not entries:
-            self._mount_sys(f"No provenance data for {agent_name}.")
-            return
-
-        lines = [
-            f"[bold {_CORAL}]Provenance — {agent_name}[/] ({len(entries)} entries)\n"
-        ]
-        for i, entry in enumerate(entries[-10:], 1):
-            action = getattr(entry, "action", "?")
-            reasoning = getattr(entry, "reasoning", "") or ""
-            outcome = getattr(entry, "outcome", "") or ""
-            ts = getattr(entry, "timestamp", "")
-            conf = getattr(entry, "confidence", None)
-
-            line = f"[bold {_TEAL}]Step {i}[/] [{_DIM}]{ts}[/]\n"
-            line += f"  Action: {action}\n"
-            if reasoning:
-                short = reasoning[:120] + "..." if len(reasoning) > 120 else reasoning
-                line += f"  Reasoning: {short}\n"
-            if outcome:
-                short = outcome[:120] + "..." if len(outcome) > 120 else outcome
-                line += f"  Outcome: {short}\n"
-            if conf is not None:
-                line += f"  Confidence: {conf:.2f}\n"
-            lines.append(line)
-        self._mount_sys("\n".join(lines))
-
     # ── Room creation ──
 
     def _on_room_created(self, result: dict[str, Any] | None) -> None:
