@@ -1,0 +1,139 @@
+---
+title: Platform Tools CLI
+description: Create, publish, and install custom tools on the CrewAI platform using the CLI.
+icon: terminal
+mode: "wide"
+---
+
+## Overview
+
+The CrewAI CLI provides commands to manage custom tools on the **CrewAI platform** — a hosted tool registry that lets you share tools within your organization and across the community without publishing to PyPI.
+
+| Command | Purpose |
+|---------|---------|
+| `crewai tool create <handle>` | Scaffold a new tool project |
+| `crewai tool publish` | Publish the tool to the CrewAI platform |
+| `crewai tool install <handle>` | Install a platform tool into your crew project |
+
+<Note type="info" title="Platform vs PyPI">
+  These commands manage tools on the **CrewAI platform registry**. If you want to publish a standalone Python package to PyPI instead, see the [Publish Custom Tools to PyPI](/en/guides/tools/publish-custom-tools) guide.
+</Note>
+
+## Prerequisites
+
+- **CrewAI CLI** installed (`pip install crewai`)
+- **Authenticated** with the platform — run `crewai login` first
+
+---
+
+## Step 1: Create a Tool Project
+
+Scaffold a new tool project:
+
+```bash
+crewai tool create my_custom_tool
+```
+
+This generates a project structure with the boilerplate you need to start building your tool.
+
+<Tip>
+  The `handle` is the unique identifier for your tool on the platform. Choose something descriptive and specific to what the tool does.
+</Tip>
+
+### Implement Your Tool
+
+Edit the generated tool file to add your logic. The tool follows the standard CrewAI tools contract — you can subclass `BaseTool` or use the `@tool` decorator:
+
+```python
+from crewai.tools import BaseTool
+
+class MyCustomTool(BaseTool):
+    name: str = "My Custom Tool"
+    description: str = "Description of what this tool does — be specific so agents know when to use it."
+
+    def _run(self, argument: str) -> str:
+        # Your tool logic here
+        return "result"
+```
+
+For the full tools API reference (input schemas, caching, async support, error handling), see the [Create Custom Tools](/en/learn/create-custom-tools) guide.
+
+---
+
+## Step 2: Publish to the Platform
+
+From your tool project directory, publish it to the CrewAI platform:
+
+```bash
+crewai tool publish
+```
+
+### Visibility Options
+
+| Flag | Description |
+|------|-------------|
+| `--public` | Make the tool available to all platform users |
+| `--private` | Restrict visibility to your organization |
+| `--force` | Bypass Git remote validations |
+
+```bash
+# Publish as a public tool
+crewai tool publish --public
+
+# Publish privately (organization only)
+crewai tool publish --private
+```
+
+---
+
+## Step 3: Install a Platform Tool
+
+To install a tool that's been published to the platform:
+
+```bash
+crewai tool install my_custom_tool
+```
+
+Once installed, you can use the tool in your crew like any other tool — assign it to an agent via the `tools` parameter.
+
+---
+
+## Full Lifecycle Example
+
+```bash
+# 1. Authenticate with the platform
+crewai login
+
+# 2. Scaffold a new tool
+crewai tool create weather_lookup
+
+# 3. Implement your logic in the generated project
+cd weather_lookup
+# ... edit the tool file ...
+
+# 4. Publish to the platform
+crewai tool publish --public
+
+# 5. In another project, install and use it
+crewai tool install weather_lookup
+```
+
+---
+
+## Platform Tools vs PyPI Packages
+
+| | Platform Tools | PyPI Packages |
+|---|---|---|
+| **Publish** | `crewai tool publish` | `uv build` + `uv publish` |
+| **Registry** | CrewAI platform | PyPI |
+| **Install** | `crewai tool install <handle>` | `pip install <package>` |
+| **Auth** | `crewai login` | PyPI account + token |
+| **Visibility** | `--public` / `--private` flags | Always public |
+| **Guide** | This page | [Publish Custom Tools](/en/guides/tools/publish-custom-tools) |
+
+---
+
+## Related
+
+- [Create Custom Tools](/en/learn/create-custom-tools) — Python API reference for building tools (BaseTool, @tool decorator)
+- [Publish Custom Tools to PyPI](/en/guides/tools/publish-custom-tools) — package and distribute tools as standalone Python libraries
