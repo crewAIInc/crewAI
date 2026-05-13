@@ -1222,6 +1222,39 @@ class ValkeyStorage:
 
         return records_data
 
+    # Overfetch factor applied when ``metadata_filter`` is supplied so the
+    # Python post-filter has enough candidates to still return ``limit`` hits
+    # after dropping records whose metadata does not match. Capped at
+    # :pyattr:`_METADATA_POSTFILTER_MAX_FETCH` to avoid pathological queries.
+    _METADATA_POSTFILTER_OVERFETCH = 10
+    _METADATA_POSTFILTER_MAX_FETCH = 1000
+
+    @staticmethod
+    def _matches_metadata_filter(
+        record_metadata: dict[str, Any],
+        metadata_filter: dict[str, Any],
+    ) -> bool:
+        """Return ``True`` iff every key in ``metadata_filter`` matches the record.
+
+        Comparisons are performed on string representations so that callers can
+        pass numeric, boolean, or string filter values interchangeably (mirroring
+        how the values were originally stringified for the legacy FT query).
+
+        Args:
+            record_metadata: The record's metadata dict (may be empty).
+            metadata_filter: Required key/value pairs (AND logic).
+
+        Returns:
+            ``True`` when every filter key is present in ``record_metadata`` and
+            its string representation equals the filter's string representation.
+        """
+        for key, expected in metadata_filter.items():
+            if key not in record_metadata:
+                return False
+            if str(record_metadata[key]) != str(expected):
+                return False
+        return True
+
     async def _vector_search(
         self,
         query_embedding: list[float],
@@ -1234,13 +1267,24 @@ class ValkeyStorage:
         """Perform server-side vector search using Valkey Search.
 
         Uses FT.SEARCH command with KNN query for vector similarity.
-        Applies filters for scope, categories, and metadata in the same query.
+        Applies scope and category filters in the FT.SEARCH query directly,
+        and applies ``metadata_filter`` as a Python post-filter over the
+        results. Metadata is stored as an opaque JSON blob in the hash and
+        is not part of the ``memory_index`` FT schema, so it cannot be
+        narrowed inside FT.SEARCH; doing so would either error out or
+        silently return wrong results.
+
+        When ``metadata_filter`` is supplied, the underlying KNN limit is
+        scaled by :pyattr:`_METADATA_POSTFILTER_OVERFETCH` (capped at
+        :pyattr:`_METADATA_POSTFILTER_MAX_FETCH`) so the post-filter still
+        has enough candidates to return ``limit`` hits in the common case.
 
         Args:
             query_embedding: Embedding vector for the query.
             scope_prefix: Optional scope path prefix to filter results.
             categories: Optional list of categories (OR logic).
-            metadata_filter: Optional metadata key-value pairs (AND logic).
+            metadata_filter: Optional metadata key-value pairs (AND logic),
+                applied as a Python post-filter.
             limit: Maximum number of results to return.
             min_score: Minimum similarity score threshold (0.0 to 1.0).
 
@@ -1255,7 +1299,14 @@ class ValkeyStorage:
         # Ensure vector index exists
         await self._ensure_vector_index()
 
-        # Build query components
+        # Treat an empty metadata_filter dict the same as None so callers can
+        # pass ``{}`` without triggering overfetch or post-filter work.
+        metadata_filter = metadata_filter or None
+
+        # Build query components for the FT.SEARCH query. Note that
+        # ``metadata_filter`` is intentionally NOT included here because
+        # arbitrary metadata keys are not present in the ``memory_index``
+        # FT schema (only scope, categories, created_at, importance).
         query_parts: list[str] = []
 
         # Scope prefix filter
@@ -1277,25 +1328,26 @@ class ValkeyStorage:
             cat_query = "|".join(escaped_categories)
             query_parts.append(f"@categories:{{{cat_query}}}")
 
-        # Metadata filters (AND logic)
-        # Format: @{key}:{value}
-        if metadata_filter:
-            for key, value in metadata_filter.items():
-                # Escape key and value
-                escaped_key = self._escape_search_query(key)
-                escaped_value = self._escape_search_query(str(value))
-                query_parts.append(f"@{escaped_key}:{{{escaped_value}}}")
-
         # Combine filters
         filter_query = " ".join(query_parts) if query_parts else "*"
+
+        # When metadata_filter is supplied, overfetch candidates from KNN so
+        # the Python post-filter can still satisfy ``limit`` results.
+        if metadata_filter:
+            fetch_limit = min(
+                max(limit * self._METADATA_POSTFILTER_OVERFETCH, limit),
+                self._METADATA_POSTFILTER_MAX_FETCH,
+            )
+        else:
+            fetch_limit = limit
 
         # Build KNN query with filters
         # Format: (filter)=>[KNN limit @field $BLOB AS score]
         # Note: Don't wrap single "*" in parentheses
         if filter_query == "*":
-            query = f"{filter_query}=>[KNN {limit} @embedding $BLOB AS score]"
+            query = f"{filter_query}=>[KNN {fetch_limit} @embedding $BLOB AS score]"
         else:
-            query = f"({filter_query})=>[KNN {limit} @embedding $BLOB AS score]"
+            query = f"({filter_query})=>[KNN {fetch_limit} @embedding $BLOB AS score]"
 
         # Prepare embedding blob for PARAMS
         embedding_blob = self._embedding_to_bytes(query_embedding)
@@ -1320,7 +1372,7 @@ class ValkeyStorage:
         search_options = FtSearchOptions(
             return_fields=return_fields,
             params={"BLOB": embedding_blob},
-            limit=FtSearchLimit(0, limit),
+            limit=FtSearchLimit(0, fetch_limit),
         )
 
         try:
@@ -1364,6 +1416,20 @@ class ValkeyStorage:
                     for rec, score in records
                     if rec.scope == normalized or rec.scope.startswith(f"{normalized}/")
                 ]
+
+            # Apply metadata_filter as a Python post-filter. The FT index does
+            # not materialize arbitrary metadata keys, so this is the only
+            # correct place to enforce metadata predicates.
+            if metadata_filter:
+                records = [
+                    (rec, score)
+                    for rec, score in records
+                    if self._matches_metadata_filter(rec.metadata, metadata_filter)
+                ]
+
+            # Truncate to the caller-requested limit after post-filtering.
+            if len(records) > limit:
+                records = records[:limit]
 
             return records
 
@@ -1463,13 +1529,17 @@ class ValkeyStorage:
         """Search for memories by vector similarity (async).
 
         Uses Valkey Search module for server-side vector similarity computation.
-        Applies filters for scope, categories, and metadata in the same query.
+        Scope and category predicates are pushed down into FT.SEARCH; the
+        ``metadata_filter`` predicate is applied as a Python post-filter
+        because arbitrary metadata keys are not indexed in the
+        ``memory_index`` FT schema.
 
         Args:
             query_embedding: Embedding vector for the query.
             scope_prefix: Optional scope path prefix to filter results.
             categories: Optional list of categories (OR logic).
-            metadata_filter: Optional metadata key-value pairs (AND logic).
+            metadata_filter: Optional metadata key-value pairs (AND logic),
+                applied as a Python post-filter over the FT.SEARCH results.
             limit: Maximum number of results to return.
             min_score: Minimum similarity score threshold (0.0 to 1.0).
 
@@ -1500,13 +1570,17 @@ class ValkeyStorage:
         """Search for memories by vector similarity (sync wrapper).
 
         Uses Valkey Search module for server-side vector similarity computation.
-        Applies filters for scope, categories, and metadata in the same query.
+        Scope and category predicates are pushed down into FT.SEARCH; the
+        ``metadata_filter`` predicate is applied as a Python post-filter
+        because arbitrary metadata keys are not indexed in the
+        ``memory_index`` FT schema.
 
         Args:
             query_embedding: Embedding vector for the query.
             scope_prefix: Optional scope path prefix to filter results.
             categories: Optional list of categories (OR logic).
-            metadata_filter: Optional metadata key-value pairs (AND logic).
+            metadata_filter: Optional metadata key-value pairs (AND logic),
+                applied as a Python post-filter over the FT.SEARCH results.
             limit: Maximum number of results to return.
             min_score: Minimum similarity score threshold (0.0 to 1.0).
 
