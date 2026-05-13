@@ -22,4 +22,7 @@ class K8sSandboxExecTool(BaseTool):
         client = k8s_agent_sandbox.SandboxClient()
         sandbox = client.create_sandbox("simple-sandbox-template")
         response = sandbox.commands.run(command)
-        return response.stdout
+        if response.exit_code == 0:
+            return response.stdout
+        else:
+            return f"Python execution failed (Exit Code {response.exit_code}):\n{response.stderr}"
