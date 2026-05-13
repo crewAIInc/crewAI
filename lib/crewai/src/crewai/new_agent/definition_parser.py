@@ -6,7 +6,7 @@ import json
 import logging
 from pathlib import Path
 import re
-from typing import Any
+from typing import Any, cast
 
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,7 @@ def _validate_against_schema(definition: dict[str, Any]) -> None:
     existing definitions continue to work (graceful degradation).
     """
     try:
-        import jsonschema
+        import jsonschema  # type: ignore[import-untyped]
     except ImportError:
         logger.debug("jsonschema not installed, skipping validation")
         return
@@ -46,7 +46,7 @@ def _validate_against_schema(definition: dict[str, Any]) -> None:
         logger.debug("Schema validation skipped: %s", e)
 
 
-def parse_agent_definition(source: str | Path | dict) -> dict[str, Any]:
+def parse_agent_definition(source: str | Path | dict[str, Any]) -> dict[str, Any]:
     """Parse an agent definition from a file path, JSON string, or dict.
 
     Args:
@@ -76,7 +76,7 @@ def parse_agent_definition(source: str | Path | dict) -> dict[str, Any]:
 
 
 def load_agent_from_definition(
-    source: str | Path | dict,
+    source: str | Path | dict[str, Any],
     agents_dir: Path | None = None,
     _loading_chain: set[str] | None = None,
 ) -> Any:
@@ -237,10 +237,10 @@ def _find_tool_class(name: str) -> type | None:
         class_name = "".join(word.capitalize() for word in name.split("_")) + "Tool"
         cls = getattr(crewai_tools, class_name, None)
         if cls is not None:
-            return cls
+            return cast(type, cls)
         # Try direct attribute lookup
         cls = getattr(crewai_tools, name, None)
-        return cls
+        return cast(type, cls) if cls is not None else None
     except ImportError:
         return None
 
@@ -297,7 +297,7 @@ def _resolve_coworkers(
             try:
                 from crewai.a2a.config import A2AClientConfig
 
-                coworkers.append(A2AClientConfig(url=cw["a2a"]))
+                coworkers.append(A2AClientConfig(endpoint=cw["a2a"]))
             except ImportError:
                 logger.warning(f"A2A support not available for coworker {cw['a2a']}")
         else:
@@ -325,6 +325,7 @@ def _resolve_guardrail(guardrail_def: dict[str, Any] | str | None) -> Any:
 
     guard_type = guardrail_def.get("type", "")
     if guard_type == "llm":
+        from crewai.llms.base_llm import BaseLLM
         from crewai.tasks.llm_guardrail import LLMGuardrail
         from crewai.utilities.llm_utils import create_llm
 
@@ -332,7 +333,7 @@ def _resolve_guardrail(guardrail_def: dict[str, Any] | str | None) -> Any:
         llm = create_llm(llm_ref) if isinstance(llm_ref, str) else llm_ref
         return LLMGuardrail(
             description=guardrail_def.get("instructions", ""),
-            llm=llm,
+            llm=cast(BaseLLM, llm),
         )
 
     # GAP-106: Code guardrail — resolve dotted function path
@@ -380,7 +381,8 @@ def _resolve_custom_tool(tool_name: str) -> Any:
                 and issubclass(attr, BaseTool)
                 and attr is not BaseTool
             ):
-                return attr()
+                tool_cls = cast(type[Any], attr)
+                return tool_cls()
         logger.warning(f"No BaseTool subclass found in {tool_file}")
         return None
     except Exception as e:
@@ -398,7 +400,7 @@ def _resolve_knowledge_sources(sources: list[dict[str, Any]]) -> list[Any]:
         path = Path(path_str)
         try:
             if path.is_dir():
-                from crewai.knowledge.source.directory_knowledge_source import (
+                from crewai.knowledge.source.directory_knowledge_source import (  # type: ignore[import-not-found]
                     DirectoryKnowledgeSource,
                 )
 
@@ -465,7 +467,7 @@ def _resolve_response_model(dotted_path: str) -> type | None:
 
 def _resolve_mcps(mcp_defs: list[Any]) -> list[Any]:
     """Resolve MCP definitions into proper config objects."""
-    resolved = []
+    resolved: list[Any] = []
     for mcp in mcp_defs:
         if isinstance(mcp, str):
             resolved.append(mcp)
@@ -473,9 +475,9 @@ def _resolve_mcps(mcp_defs: list[Any]) -> list[Any]:
             url = mcp.get("url", "")
             if url:
                 try:
-                    from crewai.mcp import MCPServerConfig
+                    from crewai.mcp import MCPServerHTTP
 
-                    resolved.append(MCPServerConfig(url=url, name=mcp.get("name", "")))
+                    resolved.append(MCPServerHTTP(url=url))
                 except ImportError:
                     resolved.append(url)
             else:
