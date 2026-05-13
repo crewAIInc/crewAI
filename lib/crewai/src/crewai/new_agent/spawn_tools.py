@@ -277,7 +277,174 @@ class SpawnSubtaskTool(BaseTool):
         else:
             results = asyncio.run(_run_all())
 
-        # Log provenance for each spawn
+        self._log_spawn_provenance(subtasks, results, spawn_ids)
+        return "\n\n".join(results)
+
+    async def _arun(
+        self, subtasks: list[str], fire_and_forget: bool = False, **kwargs: Any
+    ) -> str:
+        """Async spawn — avoids blocking the event loop."""
+        from crewai.new_agent.new_agent import NewAgent
+
+        if not isinstance(self.agent, NewAgent):
+            return "Error: spawn tool requires a NewAgent instance."
+
+        if not self.agent.settings.can_spawn_copies:
+            return "Error: this agent is not allowed to spawn copies (can_spawn_copies=False)."
+
+        if self.agent.settings.max_spawn_depth < 1:
+            return "Error: spawn depth exceeded — copies cannot spawn further copies."
+
+        settings = self.agent.settings
+        max_spawns = settings.max_concurrent_spawns
+        timeout = settings.spawn_timeout
+        parent_id = str(self.agent.id)
+
+        if len(subtasks) > max_spawns:
+            subtasks = subtasks[:max_spawns]
+
+        spawn_ids: list[str] = []
+        for i, subtask in enumerate(subtasks):
+            spawn_id = f"spawn-{uuid4().hex[:8]}-{i + 1}"
+            spawn_ids.append(spawn_id)
+            try:
+                from crewai.new_agent.events import NewAgentSpawnStartedEvent
+
+                _emit_spawn_event(
+                    NewAgentSpawnStartedEvent,
+                    new_agent_id=parent_id,
+                    spawn_id=spawn_id,
+                    parent_id=parent_id,
+                    spawn_depth=1,
+                )
+            except Exception:
+                pass
+
+        from crewai.new_agent.models import AgentSettings as SpawnSettings
+
+        spawn_settings = SpawnSettings(
+            can_spawn_copies=False,
+            max_spawn_depth=0,
+            memory_enabled=True,
+            provenance_enabled=settings.provenance_enabled,
+            respect_context_window=settings.respect_context_window,
+            cache_tool_results=settings.cache_tool_results,
+            narration_guard=settings.narration_guard,
+            narration_max_retries=settings.narration_max_retries,
+        )
+
+        enriched_messages: list[str] = []
+        for subtask in subtasks:
+            context = _query_parent_memory(self.agent, subtask)
+            if context:
+                enriched_messages.append(f"{context}\n\nTask: {subtask}")
+            else:
+                enriched_messages.append(subtask)
+
+        copies: list[NewAgent] = []
+        for subtask in subtasks:
+            copy = NewAgent(
+                role=self.agent.role,
+                goal=subtask,
+                backstory="",
+                llm=self.agent.llm,
+                tools=list(self.agent.tools),
+                memory=True,
+                memory_scope=f"spawn-{parent_id}",
+                settings=spawn_settings,
+                verbose=self.agent.verbose,
+            )
+            copies.append(copy)
+
+        if fire_and_forget:
+            for copy, msg, sid in zip(copies, enriched_messages, spawn_ids):
+
+                async def _bg(c: NewAgent = copy, m: str = msg, s: str = sid) -> None:
+                    try:
+                        await c.amessage(m)
+                        try:
+                            from crewai.new_agent.events import (
+                                NewAgentSpawnCompletedEvent,
+                            )
+
+                            _emit_spawn_event(
+                                NewAgentSpawnCompletedEvent,
+                                new_agent_id=parent_id,
+                                spawn_id=s,
+                            )
+                        except Exception:
+                            pass
+                    except Exception as e:
+                        try:
+                            from crewai.new_agent.events import (
+                                NewAgentSpawnFailedEvent,
+                            )
+
+                            _emit_spawn_event(
+                                NewAgentSpawnFailedEvent,
+                                new_agent_id=parent_id,
+                                spawn_id=s,
+                                error=str(e),
+                            )
+                        except Exception:
+                            pass
+
+                asyncio.get_running_loop().create_task(_bg())
+
+            return f"Dispatched {len(copies)} subtask(s) in the background (fire-and-forget)."
+
+        tasks = [
+            asyncio.wait_for(copy.amessage(msg), timeout=timeout)
+            for copy, msg in zip(copies, enriched_messages)
+        ]
+        raw_results = await asyncio.gather(*tasks, return_exceptions=True)
+        results: list[str] = []
+        for i, r in enumerate(raw_results):
+            if isinstance(r, asyncio.TimeoutError):
+                results.append(f"[Subtask {i + 1}] Timed out after {timeout}s")
+                try:
+                    from crewai.new_agent.events import NewAgentSpawnFailedEvent
+
+                    _emit_spawn_event(
+                        NewAgentSpawnFailedEvent,
+                        new_agent_id=parent_id,
+                        spawn_id=spawn_ids[i],
+                        error=f"Timed out after {timeout}s",
+                    )
+                except Exception:
+                    pass
+            elif isinstance(r, Exception):
+                results.append(f"[Subtask {i + 1}] Error: {r}")
+                try:
+                    from crewai.new_agent.events import NewAgentSpawnFailedEvent
+
+                    _emit_spawn_event(
+                        NewAgentSpawnFailedEvent,
+                        new_agent_id=parent_id,
+                        spawn_id=spawn_ids[i],
+                        error=str(r),
+                    )
+                except Exception:
+                    pass
+            else:
+                results.append(f"[Subtask {i + 1}] {r.content}")
+                try:
+                    from crewai.new_agent.events import NewAgentSpawnCompletedEvent
+
+                    _emit_spawn_event(
+                        NewAgentSpawnCompletedEvent,
+                        new_agent_id=parent_id,
+                        spawn_id=spawn_ids[i],
+                    )
+                except Exception:
+                    pass
+
+        self._log_spawn_provenance(subtasks, results, spawn_ids)
+        return "\n\n".join(results)
+
+    def _log_spawn_provenance(
+        self, subtasks: list[str], results: list[str], spawn_ids: list[str]
+    ) -> None:
         if self.agent.settings.provenance_enabled and hasattr(self.agent, "_executor"):
             from crewai.new_agent.models import ProvenanceEntry
 
@@ -297,5 +464,3 @@ class SpawnSubtaskTool(BaseTool):
                         outcome=result[:500],
                     )
                 )
-
-        return "\n\n".join(results)

@@ -244,6 +244,106 @@ class DelegateToCoworkerTool(BaseTool):
             )
             raise
 
+    async def _arun(self, message: str, fire_and_forget: bool = False, **kwargs: Any) -> str:
+        """Async delegation — avoids blocking the event loop."""
+        from crewai.new_agent.events import (
+            NewAgentDelegationCompletedEvent,
+            NewAgentDelegationFailedEvent,
+            NewAgentDelegationStartedEvent,
+            NewAgentFireAndForgetCompletedEvent,
+            NewAgentFireAndForgetDispatchedEvent,
+        )
+        from crewai.new_agent.new_agent import NewAgent
+
+        cw_role = getattr(self.coworker, "role", "unknown")
+        parent_id = getattr(self.parent_agent, "id", "") if self.parent_agent else ""
+
+        if self.parent_agent and getattr(self.parent_agent, "on_delegate", None):
+            self.parent_agent.on_delegate(self.coworker, message)
+
+        if not isinstance(self.coworker, NewAgent):
+            return self._delegate_a2a(message)
+
+        if fire_and_forget:
+            _emit_delegation_event(
+                NewAgentFireAndForgetDispatchedEvent,
+                new_agent_id=parent_id,
+                coworker_role=cw_role,
+            )
+
+            async def _async_ff() -> None:
+                try:
+                    await self.coworker.amessage(message)
+                finally:
+                    _emit_delegation_event(
+                        NewAgentFireAndForgetCompletedEvent,
+                        new_agent_id=parent_id,
+                        coworker_role=cw_role,
+                    )
+
+            asyncio.get_running_loop().create_task(_async_ff())
+            return f"Work delegated to {cw_role}. They are working on it in the background."
+
+        _emit_delegation_event(
+            NewAgentDelegationStartedEvent,
+            new_agent_id=parent_id,
+            coworker_role=cw_role,
+            delegation_mode="sync",
+            coworker_source=self.coworker_source,
+        )
+
+        start = time.monotonic()
+        try:
+            response = await self.coworker.amessage(message)
+            elapsed_ms = int((time.monotonic() - start) * 1000)
+            in_tokens = getattr(response, "input_tokens", 0) or 0
+            out_tokens = getattr(response, "output_tokens", 0) or 0
+            tokens = in_tokens + out_tokens
+            _emit_delegation_event(
+                NewAgentDelegationCompletedEvent,
+                new_agent_id=parent_id,
+                coworker_role=cw_role,
+                tokens_consumed=tokens,
+                response_time_ms=elapsed_ms,
+            )
+
+            if self.parent_agent and tokens > 0:
+                try:
+                    from crewai.new_agent.models import TokenUsage
+
+                    executor = getattr(self.parent_agent, "_executor", None)
+                    if executor is not None:
+                        executor._sub_action_tokens.append(
+                            TokenUsage(
+                                action="delegation",
+                                agent_id=str(parent_id),
+                                input_tokens=in_tokens,
+                                output_tokens=out_tokens,
+                                model=getattr(response, "model", "") or "",
+                                delegation_target=cw_role,
+                                coworker_source=self.coworker_source,
+                            )
+                        )
+                except Exception:
+                    pass
+
+            result_content = response.content
+            summary = _build_provenance_summary(
+                self.coworker, cw_role, elapsed_ms, in_tokens, out_tokens
+            )
+            if summary:
+                result_content += summary
+
+            return result_content
+        except Exception as e:
+            _emit_delegation_event(
+                NewAgentDelegationFailedEvent,
+                new_agent_id=parent_id,
+                coworker_role=cw_role,
+                error=str(e),
+            )
+            raise
+
     def _delegate_a2a(self, message: str) -> str:
         """Delegate to an A2A remote coworker."""
         try:
@@ -338,6 +438,58 @@ class MultiDelegateTool(BaseTool):
                 content = getattr(r, "content", str(r))
                 role = cw_name or f"Coworker {i + 1}"
                 # GAP-55: Append provenance summary for each coworker
+                in_tokens = getattr(r, "input_tokens", 0) or 0
+                out_tokens = getattr(r, "output_tokens", 0) or 0
+                if coworker is not None:
+                    summary = _build_provenance_summary(
+                        coworker, role, 0, in_tokens, out_tokens
+                    )
+                    if summary:
+                        content += summary
+                results.append(f"[{role}] {content}")
+
+        return "\n\n".join(results)
+
+    async def _arun(self, delegations: list[dict[str, str]], **kwargs: Any) -> str:
+        """Async parallel delegation — avoids blocking the event loop."""
+        from crewai.new_agent.new_agent import NewAgent
+
+        tasks_to_run = []
+        for d in delegations:
+            cw_name = d.get("coworker", "")
+            message = d.get("message", "")
+            coworker = self.coworker_map.get(cw_name)
+            if coworker is None:
+                for role, cw in self.coworker_map.items():
+                    if cw_name.lower() in role.lower():
+                        coworker = cw
+                        break
+            if coworker is None or not isinstance(coworker, NewAgent):
+                tasks_to_run.append((cw_name, message, None))
+            else:
+                tasks_to_run.append((cw_name, message, coworker))
+
+        async def _error_result(name: str) -> str:
+            return f"[Error] Coworker '{name}' not found."
+
+        coros = []
+        for cw_name, message, coworker in tasks_to_run:
+            if coworker is None:
+                coros.append(_error_result(cw_name))
+            else:
+                coros.append(coworker.amessage(message))
+        raw = await asyncio.gather(*coros, return_exceptions=True)
+
+        results: list[str] = []
+        for i, (cw_name, message, coworker) in enumerate(tasks_to_run):
+            r = raw[i]
+            if isinstance(r, Exception):
+                results.append(f"[{cw_name}] Error: {r}")
+            elif isinstance(r, str):
+                results.append(f"[{cw_name}] {r}")
+            else:
+                content = getattr(r, "content", str(r))
+                role = cw_name or f"Coworker {i + 1}"
                 in_tokens = getattr(r, "input_tokens", 0) or 0
                 out_tokens = getattr(r, "output_tokens", 0) or 0
                 if coworker is not None:

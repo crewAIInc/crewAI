@@ -1926,6 +1926,11 @@ class ConversationalAgentExecutor(BaseModel):
                         result = parse_error.get(
                             "result", f"Error parsing args for {func_name}"
                         )
+                    elif original_tool and self._tool_has_arun(original_tool):
+                        if isinstance(parsed_args, dict):
+                            result = await original_tool._arun(**parsed_args)
+                        else:
+                            result = await original_tool._arun(parsed_args)
                     elif isinstance(parsed_args, dict):
                         result = (
                             original_tool._run(**parsed_args)
@@ -2079,6 +2084,19 @@ class ConversationalAgentExecutor(BaseModel):
                 return result_str
 
         return None
+
+    @staticmethod
+    def _tool_has_arun(tool: Any) -> bool:
+        """Check if a tool has a real async _arun (not the default NotImplementedError stub)."""
+        arun = getattr(tool, "_arun", None)
+        if arun is None:
+            return False
+        # BaseTool's default _arun raises NotImplementedError — skip it
+        for cls in type(tool).__mro__:
+            if "_arun" in cls.__dict__:
+                return cls.__name__ != "BaseTool" and cls.__name__ != "StructuredTool"
+
+        return False
 
     def _parse_tool_call(self, tool_call: Any) -> tuple[str | None, Any, str | None]:
         """Parse a tool call into (func_name, args, call_id)."""
