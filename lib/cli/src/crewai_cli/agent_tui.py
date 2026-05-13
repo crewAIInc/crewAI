@@ -1493,7 +1493,7 @@ class AgentTUI(App[None]):
             markup = f"[bold #e8e8e8]You[/]\n{_safe_render(content)}"
             return ChatBubble(markup, classes="user-bubble")
         if sender == "system":
-            markup = f"[dim italic]{_rich_escape(content)}[/]"
+            markup = f"[dim italic]{_safe_render(content)}[/]"
             return ChatBubble(markup, classes="system-bubble")
         markup = f"[bold {_CORAL}]{sender}[/]\n{_safe_render(content)}"
         if metadata:
