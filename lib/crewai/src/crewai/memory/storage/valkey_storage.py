@@ -1277,25 +1277,28 @@ class ValkeyStorage:
             cat_query = "|".join(escaped_categories)
             query_parts.append(f"@categories:{{{cat_query}}}")
 
-        # Metadata filters (AND logic)
-        # Format: @{key}:{value}
-        if metadata_filter:
-            for key, value in metadata_filter.items():
-                # Escape key and value
-                escaped_key = self._escape_search_query(key)
-                escaped_value = self._escape_search_query(str(value))
-                query_parts.append(f"@{escaped_key}:{{{escaped_value}}}")
+        # Metadata filters are NOT included in the FT.SEARCH query because the
+        # `memory_index` schema only defines a fixed set of fields
+        # (embedding/scope/categories/created_at/importance). Referencing
+        # arbitrary metadata keys via @{key}:{value} would cause FT.SEARCH to
+        # error or silently return wrong results. They are applied as a
+        # post-filter on the deserialized records below.
 
         # Combine filters
         filter_query = " ".join(query_parts) if query_parts else "*"
+
+        # When a post-filter (metadata) will be applied, oversample the KNN
+        # results so we don't under-return after filtering. Mirrors the
+        # approach used by `LanceDBStorage`.
+        knn_limit = limit * 3 if metadata_filter else limit
 
         # Build KNN query with filters
         # Format: (filter)=>[KNN limit @field $BLOB AS score]
         # Note: Don't wrap single "*" in parentheses
         if filter_query == "*":
-            query = f"{filter_query}=>[KNN {limit} @embedding $BLOB AS score]"
+            query = f"{filter_query}=>[KNN {knn_limit} @embedding $BLOB AS score]"
         else:
-            query = f"({filter_query})=>[KNN {limit} @embedding $BLOB AS score]"
+            query = f"({filter_query})=>[KNN {knn_limit} @embedding $BLOB AS score]"
 
         # Prepare embedding blob for PARAMS
         embedding_blob = self._embedding_to_bytes(query_embedding)
@@ -1320,7 +1323,7 @@ class ValkeyStorage:
         search_options = FtSearchOptions(
             return_fields=return_fields,
             params={"BLOB": embedding_blob},
-            limit=FtSearchLimit(0, limit),
+            limit=FtSearchLimit(0, knn_limit),
         )
 
         try:
@@ -1364,6 +1367,22 @@ class ValkeyStorage:
                     for rec, score in records
                     if rec.scope == normalized or rec.scope.startswith(f"{normalized}/")
                 ]
+
+            # Post-filter on metadata. The FT index does not materialize
+            # arbitrary metadata fields, so we apply the filter in Python
+            # against the deserialized records. Compare directly first, then
+            # fall back to a string comparison so callers can pass either the
+            # native value (e.g. 42) or its string form ("42").
+            if metadata_filter:
+                records = [
+                    (rec, score)
+                    for rec, score in records
+                    if self._metadata_matches(rec.metadata, metadata_filter)
+                ]
+
+            # Trim to the originally requested limit after post-filtering.
+            if len(records) > limit:
+                records = records[:limit]
 
             return records
 
@@ -1431,6 +1450,37 @@ class ValkeyStorage:
         if record is None:
             return None
         return (record, score)
+
+    @staticmethod
+    def _metadata_matches(
+        record_metadata: dict[str, Any],
+        metadata_filter: dict[str, Any],
+    ) -> bool:
+        """Check whether a record's metadata satisfies all filter pairs.
+
+        Performs an equality check on each key; values are compared directly
+        first, then as strings to allow callers to pass either the native
+        value or its string form (matching the behaviour of the metadata
+        index used by ``_find_records_by_metadata``).
+
+        Args:
+            record_metadata: Metadata dict from the stored record.
+            metadata_filter: Key-value pairs that must all match (AND logic).
+
+        Returns:
+            True if every key in ``metadata_filter`` is present in
+            ``record_metadata`` with an equal value, False otherwise.
+        """
+        for key, expected in metadata_filter.items():
+            if key not in record_metadata:
+                return False
+            actual = record_metadata[key]
+            if actual == expected:
+                continue
+            if str(actual) == str(expected):
+                continue
+            return False
+        return True
 
     def _escape_search_query(self, text: str) -> str:
         """Escape special characters in Valkey Search query.
