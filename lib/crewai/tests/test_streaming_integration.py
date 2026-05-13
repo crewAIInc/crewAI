@@ -89,7 +89,7 @@ class TestStreamingCrewIntegration:
         result = streaming.result
         assert result is not None
 
-    @pytest.mark.vcr()
+    @pytest.mark.vcr(record_mode="none")
     def test_streaming_properties_from_docs(
         self, researcher: Agent, simple_task: Task
     ) -> None:
