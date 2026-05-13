@@ -55,6 +55,7 @@ ENV_VARS: dict[str, list[dict[str, Any]]] = {
     "ollama": [
         {
             "default": True,
+            "key_name": "OPENAI_API_BASE",
             "API_BASE": "http://localhost:11434",
         }
     ],

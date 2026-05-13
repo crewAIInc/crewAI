@@ -543,7 +543,9 @@ def test(
                 uv_args.extend(["-f", trained_agents_file])
             _relaunch_via_uv(uv_args)
 
-        config_threshold = _read_config("test", "threshold") or _read_config("test_threshold")
+        config_threshold = _read_config("test", "threshold")
+        if config_threshold is None:
+            config_threshold = _read_config("test_threshold")
         effective_threshold = threshold if threshold is not None else (float(config_threshold) if config_threshold is not None else 0.7)
 
         _test_new_agents(agent_files, n_iterations, model, effective_threshold, effective_judge)
@@ -623,7 +625,7 @@ class _BenchmarkLiveProgress:
             self._state[model]["status"] = "judging"
         elif t == "case_done":
             s = self._state[model]
-            s["done"] = max(s["done"], event["case_index"])
+            s["done"] = s.get("done", 0) + 1
             if event.get("passed"):
                 s["passed"] += 1
             s["status"] = "running"
@@ -776,7 +778,6 @@ def _test_new_agents(
             )
         return await asyncio.gather(*tasks, return_exceptions=True)
 
-    agent_count = sum(1 for j in jobs for _ in (model_list or [None]))
     case_count = sum(len(j["cases"]) for j in jobs)
     click.echo()
     click.secho(
