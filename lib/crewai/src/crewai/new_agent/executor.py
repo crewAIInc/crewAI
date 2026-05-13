@@ -2088,14 +2088,17 @@ class ConversationalAgentExecutor(BaseModel):
     @staticmethod
     def _tool_has_arun(tool: Any) -> bool:
         """Check if a tool has a real async _arun (not the default NotImplementedError stub)."""
+        if tool is None:
+            return False
         arun = getattr(tool, "_arun", None)
         if arun is None:
             return False
-        # BaseTool's default _arun raises NotImplementedError — skip it
         for cls in type(tool).__mro__:
             if "_arun" in cls.__dict__:
-                return cls.__name__ != "BaseTool" and cls.__name__ != "StructuredTool"
-
+                mod = getattr(cls, "__module__", "") or ""
+                if "crewai.tools.base_tool" in mod:
+                    return False
+                return True
         return False
 
     def _parse_tool_call(self, tool_call: Any) -> tuple[str | None, Any, str | None]:
