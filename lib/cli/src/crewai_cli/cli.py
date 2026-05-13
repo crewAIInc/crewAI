@@ -1754,13 +1754,15 @@ def benchmark(
     )
 
     progress = None if verbose else _BenchmarkLiveProgress(console=_con)
-    if progress:
-        progress.start()
+    _loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(_loop)
     try:
+        if progress:
+            progress.start()
         with ArtifactsSandbox():
             if verbose:
                 with VerboseBenchmarkOutput():
-                    results_by_model = asyncio.run(
+                    results_by_model = _loop.run_until_complete(
                         run_benchmark(
                             agent_def=agent_path,
                             cases=cases,
@@ -1772,7 +1774,7 @@ def benchmark(
                     )
             else:
                 with SuppressBenchmarkOutput():
-                    results_by_model = asyncio.run(
+                    results_by_model = _loop.run_until_complete(
                         run_benchmark(
                             agent_def=agent_path,
                             cases=cases,
@@ -1788,6 +1790,7 @@ def benchmark(
     finally:
         if progress:
             progress.stop()
+        _loop.close()
 
     if len(results_by_model) > 1:
         _con.print()
