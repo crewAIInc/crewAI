@@ -430,7 +430,8 @@ If the supplied `restore_from_state_id` does not match any persisted state, the 
      - **Linux:** `~/.local/share/CrewAI/<project_name>/flow_states.db`
      - **macOS:** `~/Library/Application Support/CrewAI/<project_name>/flow_states.db`
      - **Windows:** `%LOCALAPPDATA%\CrewAI\<project_name>\flow_states.db`
-   - The `<project_name>` defaults to the current working directory name, or the value of the `CREWAI_STORAGE_DIR` environment variable if set
+   - `<project_name>` defaults to the current working directory name
+   - Set `CREWAI_STORAGE_DIR` to override the storage directory location used for persistence
    - Robust error handling ensures clear messages if database operations fail
 
 3. **Error Handling**
