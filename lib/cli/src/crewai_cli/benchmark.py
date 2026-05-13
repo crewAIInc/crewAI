@@ -192,6 +192,7 @@ async def _run_model_benchmark(
     judge_model: str,
     emit: Callable[[dict[str, Any]], None],
     agents_dir: Path | None = None,
+    verbose: bool = False,
 ) -> list[BenchmarkResult]:
     """Run all benchmark cases for a single model, parallelising up to _MAX_CASES_PARALLEL."""
     total = len(cases)
@@ -209,12 +210,8 @@ async def _run_model_benchmark(
                 bench_defn["llm"] = model
             bench_defn["settings"]["memory"] = False
             bench_defn["settings"]["self_improving"] = False
-            bench_defn["settings"]["planning"] = False
-            bench_defn["verbose"] = False
-            bench_defn["max_iter"] = min(bench_defn.get("max_iter", 25), 5)
-            bench_defn["max_execution_time"] = min(bench_defn.get("max_execution_time", 60), 60)
+            bench_defn["verbose"] = verbose
             bench_defn.pop("coworkers", None)
-            bench_defn.pop("tools", None)
 
             try:
                 agent = _load_agent(bench_defn, agents_dir=agents_dir)
@@ -304,6 +301,7 @@ async def run_benchmark(
     models: list[str] | None = None,
     judge_model: str = "openai/gpt-4o-mini",
     on_progress: Callable[[dict[str, Any]], None] | None = None,
+    verbose: bool = False,
 ) -> dict[str, list[BenchmarkResult]]:
     """Run benchmark cases against an agent definition across models in parallel.
 
@@ -313,6 +311,7 @@ async def run_benchmark(
         models: Optional list of model identifiers to compare. If None, uses agent's default.
         judge_model: Model to use for LLM judge evaluation.
         on_progress: Optional callback receiving progress dicts with a "type" key.
+        verbose: When True, enable agent verbose output for debugging.
 
     Returns:
         Dict mapping model name to list of BenchmarkResult.
@@ -333,7 +332,7 @@ async def run_benchmark(
             on_progress(event)
 
     tasks = [
-        _run_model_benchmark(defn, model, cases, judge_model, _emit, agents_dir=agents_dir)
+        _run_model_benchmark(defn, model, cases, judge_model, _emit, agents_dir=agents_dir, verbose=verbose)
         for model in models
     ]
     all_results = await asyncio.gather(*tasks)
@@ -372,6 +371,105 @@ class SuppressBenchmarkOutput:
                 from crewai.events.listeners.tracing.trace_listener import (
                     TraceCollectionListener,
                 )
+                listener = TraceCollectionListener._instance
+                if listener:
+                    listener.formatter = self._saved_formatter
+            except Exception:
+                pass
+
+
+class VerboseBenchmarkOutput:
+    """Context manager that subscribes to NewAgent events and prints them for debugging."""
+
+    def __enter__(self):
+        import logging
+        import sys
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.new_agent.events import (
+            NewAgentLLMCallStartedEvent,
+            NewAgentLLMCallCompletedEvent,
+            NewAgentLLMCallFailedEvent,
+            NewAgentToolUsageStartedEvent,
+            NewAgentToolUsageCompletedEvent,
+            NewAgentToolUsageFailedEvent,
+            NewAgentStatusUpdateEvent,
+            NewAgentContextSummarizedEvent,
+        )
+
+        # Suppress Rich formatter panels — we print our own structured output
+        self._saved_formatter = None
+        try:
+            from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
+            listener = TraceCollectionListener._instance
+            if listener:
+                self._saved_formatter = listener.formatter
+                listener.formatter = None
+        except Exception:
+            pass
+
+        # Quiet loggers to WARNING — keep warnings visible, suppress debug/info spam
+        self._loggers = []
+        for name in (None, "crewai.new_agent.event_listener", "crewai.new_agent.executor", "crewai"):
+            lg = logging.getLogger(name)
+            self._loggers.append((lg, lg.level))
+            lg.setLevel(logging.WARNING)
+
+        self._bus = crewai_event_bus
+        self._handlers = []
+        w = sys.stderr.write
+        fl = sys.stderr.flush
+
+        def _on_llm_start(_src, ev: NewAgentLLMCallStartedEvent):
+            w(f"\033[36m[llm] calling {ev.model}…\033[0m\n"); fl()
+
+        def _on_llm_done(_src, ev: NewAgentLLMCallCompletedEvent):
+            w(f"\033[36m[llm] {ev.model}  {ev.input_tokens}→{ev.output_tokens} tokens  {ev.response_time_ms}ms\033[0m\n"); fl()
+
+        def _on_llm_fail(_src, ev: NewAgentLLMCallFailedEvent):
+            w(f"\033[31m[llm] FAILED: {ev.error[:200]}\033[0m\n"); fl()
+
+        def _on_tool_start(_src, ev: NewAgentToolUsageStartedEvent):
+            w(f"\033[33m[tool] using {ev.tool_name}…\033[0m\n"); fl()
+
+        def _on_tool_done(_src, ev: NewAgentToolUsageCompletedEvent):
+            w(f"\033[33m[tool] {ev.tool_name} done\033[0m\n"); fl()
+
+        def _on_tool_fail(_src, ev: NewAgentToolUsageFailedEvent):
+            w(f"\033[31m[tool] {ev.tool_name} FAILED: {ev.error[:200]}\033[0m\n"); fl()
+
+        def _on_status(_src, ev: NewAgentStatusUpdateEvent):
+            if ev.detail:
+                w(f"\033[2m[status] {ev.state}: {ev.detail}\033[0m\n"); fl()
+
+        def _on_summarized(_src, ev: NewAgentContextSummarizedEvent):
+            w(f"\033[35m[context] summarized — context was too large\033[0m\n"); fl()
+
+        pairs = [
+            (NewAgentLLMCallStartedEvent, _on_llm_start),
+            (NewAgentLLMCallCompletedEvent, _on_llm_done),
+            (NewAgentLLMCallFailedEvent, _on_llm_fail),
+            (NewAgentToolUsageStartedEvent, _on_tool_start),
+            (NewAgentToolUsageCompletedEvent, _on_tool_done),
+            (NewAgentToolUsageFailedEvent, _on_tool_fail),
+            (NewAgentStatusUpdateEvent, _on_status),
+            (NewAgentContextSummarizedEvent, _on_summarized),
+        ]
+        for event_type, handler in pairs:
+            self._bus.on(event_type)(handler)
+            self._handlers.append((event_type, handler))
+        return self
+
+    def __exit__(self, *exc):
+        for event_type, handler in self._handlers:
+            try:
+                self._bus.off(event_type, handler)
+            except Exception:
+                pass
+        for lg, level in self._loggers:
+            lg.setLevel(level)
+        if self._saved_formatter is not None:
+            try:
+                from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
                 listener = TraceCollectionListener._instance
                 if listener:
                     listener.formatter = self._saved_formatter

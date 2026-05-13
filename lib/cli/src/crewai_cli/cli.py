@@ -511,12 +511,18 @@ def memory(
     help="LLM model for evaluation judging (NewAgent only). "
     "Defaults to test.judge_model in config.json (openai/gpt-4o-mini if not set).",
 )
+@click.option(
+    "-v", "--verbose",
+    is_flag=True,
+    help="Show agent execution details (tool calls, LLM responses, errors).",
+)
 def test(
     n_iterations: int,
     model: str | None,
     trained_agents_file: str | None,
     threshold: float | None,
     judge_model: str | None,
+    verbose: bool,
 ) -> None:
     """Test the crew or agents and evaluate the results.
 
@@ -541,6 +547,8 @@ def test(
                 uv_args.extend(["-m", model])
             if trained_agents_file:
                 uv_args.extend(["-f", trained_agents_file])
+            if verbose:
+                uv_args.append("-v")
             _relaunch_via_uv(uv_args)
 
         config_threshold = _read_config("test", "threshold")
@@ -548,7 +556,7 @@ def test(
             config_threshold = _read_config("test_threshold")
         effective_threshold = threshold if threshold is not None else (float(config_threshold) if config_threshold is not None else 0.7)
 
-        _test_new_agents(agent_files, n_iterations, model, effective_threshold, effective_judge)
+        _test_new_agents(agent_files, n_iterations, model, effective_threshold, effective_judge, verbose=verbose)
     else:
         crew_model = model or "gpt-4o-mini"
         click.echo(f"Testing the crew for {n_iterations} iterations with model {crew_model}")
@@ -706,6 +714,7 @@ def _test_new_agents(
     model: str | None,
     threshold: float,
     judge_model: str,
+    verbose: bool = False,
 ) -> None:
     """Run NewAgent test cases with pass/fail threshold (all agents in parallel)."""
     import asyncio
@@ -754,7 +763,7 @@ def _test_new_agents(
     model_list = [model] if model else None
 
     # Progress display — prefix model key with agent name
-    progress = _BenchmarkLiveProgress(console=_con)
+    progress = None if verbose else _BenchmarkLiveProgress(console=_con)
 
     def _make_progress_cb(agent_name: str):
         def _cb(event: dict) -> None:
@@ -773,7 +782,8 @@ def _test_new_agents(
                     cases=job["cases"],
                     models=model_list,
                     judge_model=judge_model,
-                    on_progress=_make_progress_cb(job["agent_name"]),
+                    on_progress=None if verbose else _make_progress_cb(job["agent_name"]),
+                    verbose=verbose,
                 )
             )
         return await asyncio.gather(*tasks, return_exceptions=True)
@@ -785,14 +795,21 @@ def _test_new_agents(
         fg="cyan", bold=True,
     )
 
-    from crewai_cli.benchmark import ArtifactsSandbox, SuppressBenchmarkOutput
+    from crewai_cli.benchmark import ArtifactsSandbox, SuppressBenchmarkOutput, VerboseBenchmarkOutput
 
-    progress.start()
+    if not verbose:
+        progress.start()
     try:
-        with ArtifactsSandbox(), SuppressBenchmarkOutput():
-            all_results = asyncio.run(_run_all())
+        with ArtifactsSandbox():
+            if verbose:
+                with VerboseBenchmarkOutput():
+                    all_results = asyncio.run(_run_all())
+            else:
+                with SuppressBenchmarkOutput():
+                    all_results = asyncio.run(_run_all())
     finally:
-        progress.stop()
+        if not verbose:
+            progress.stop()
 
     # Evaluate results
     all_passed = True
@@ -1565,11 +1582,17 @@ def checkpoint_prune(
     help="Model for LLM judge evaluation. "
     "Defaults to test.judge_model in config.json (openai/gpt-4o-mini if not set).",
 )
+@click.option(
+    "-v", "--verbose",
+    is_flag=True,
+    help="Show agent execution details (tool calls, LLM responses, errors).",
+)
 def benchmark(
     agent_path: str,
     cases_path: str,
     models: tuple[str, ...],
     judge_model: str | None,
+    verbose: bool,
 ) -> None:
     """Run agent against test cases and report results."""
     import asyncio
@@ -1582,6 +1605,8 @@ def benchmark(
         uv_args = ["benchmark", agent_path, cases_path, "--judge-model", judge_model]
         for m in models:
             uv_args.extend(["-m", m])
+        if verbose:
+            uv_args.append("-v")
         _relaunch_via_uv(uv_args)
 
     from rich.console import Console as _RichConsole
@@ -1613,26 +1638,42 @@ def benchmark(
     click.echo(f"Judge model: {judge_model}")
     click.echo()
 
-    from crewai_cli.benchmark import ArtifactsSandbox, SuppressBenchmarkOutput
+    from crewai_cli.benchmark import ArtifactsSandbox, SuppressBenchmarkOutput, VerboseBenchmarkOutput
 
-    progress = _BenchmarkLiveProgress(console=_con)
-    progress.start()
+    progress = None if verbose else _BenchmarkLiveProgress(console=_con)
+    if progress:
+        progress.start()
     try:
-        with ArtifactsSandbox(), SuppressBenchmarkOutput():
-            results_by_model = asyncio.run(
-                run_benchmark(
-                    agent_def=agent_path,
-                    cases=cases,
-                    models=model_list,
-                    judge_model=judge_model,
-                    on_progress=progress.on_progress,
-                )
-            )
+        with ArtifactsSandbox():
+            if verbose:
+                with VerboseBenchmarkOutput():
+                    results_by_model = asyncio.run(
+                        run_benchmark(
+                            agent_def=agent_path,
+                            cases=cases,
+                            models=model_list,
+                            judge_model=judge_model,
+                            verbose=verbose,
+                        )
+                    )
+            else:
+                with SuppressBenchmarkOutput():
+                    results_by_model = asyncio.run(
+                        run_benchmark(
+                            agent_def=agent_path,
+                            cases=cases,
+                            models=model_list,
+                            judge_model=judge_model,
+                            on_progress=progress.on_progress if progress else None,
+                            verbose=verbose,
+                        )
+                    )
     except Exception as e:
         click.secho(f"Error running benchmark: {e}", fg="red")
         raise SystemExit(1) from e
     finally:
-        progress.stop()
+        if progress:
+            progress.stop()
 
     if len(results_by_model) > 1:
         _con.print()
