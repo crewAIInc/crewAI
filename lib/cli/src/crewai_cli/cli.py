@@ -229,8 +229,8 @@ def _train_new_agents(agent_files: list, n_iterations: int) -> None:
         click.secho(f"Training {agent_name} ({len(cases)} cases, {n_iterations} iterations)", fg="cyan", bold=True)
 
         try:
-            from crewai.new_agent.definition_parser import load_agent_definition
-            agent = load_agent_definition(str(agent_path))
+            from crewai.new_agent.definition_parser import load_agent_from_definition
+            agent = load_agent_from_definition(str(agent_path))
         except Exception as e:
             click.secho(f"  Error loading agent {agent_name}: {e}", fg="red")
             continue

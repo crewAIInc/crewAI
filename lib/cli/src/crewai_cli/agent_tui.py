@@ -1035,6 +1035,34 @@ class AgentTUI(App[None]):
             return self._get_or_create_agent(self._agent_names[0])
         return None
 
+    def _format_memory_record(self, i: int, mem: object) -> list[str]:
+        """Format a single memory record into Rich markup lines."""
+        record = getattr(mem, "record", mem)
+        content = getattr(record, "content", "") or str(mem)
+        if len(content) > 150:
+            content = content[:150] + "..."
+
+        meta = getattr(record, "metadata", {}) or {}
+        mem_type = meta.get("type", "raw")
+        importance = getattr(record, "importance", "") or meta.get("importance", "")
+        scope = getattr(record, "scope", "") or meta.get("scope", "")
+        timestamp = getattr(record, "created_at", "")
+
+        type_tag = (
+            f"[bold cyan]{mem_type}[/]"
+            if mem_type == "canonical"
+            else f"[dim]{mem_type}[/]"
+        )
+        importance_tag = f" [yellow]★{importance}[/]" if importance else ""
+        scope_tag = f" [{_DIM}]scope:{scope}[/]" if scope else ""
+        time_tag = f" [{_DIM}]{timestamp}[/]" if timestamp else ""
+
+        return [
+            f"  {i}. {type_tag}{importance_tag}{scope_tag}{time_tag}",
+            f"     {content}",
+            "",
+        ]
+
     def _show_memory_panel(self) -> None:
         """Show recent memories for the focused agent (GAP-92: rich formatting)."""
         agent = self._get_focused_agent()
@@ -1055,31 +1083,7 @@ class AgentTUI(App[None]):
             lines = [f"[bold]Memory Inspector — {agent_name}[/]\n"]
 
             for i, mem in enumerate(memories, 1):
-                record = getattr(mem, "record", mem)
-                content = getattr(record, "content", "") or str(mem)
-                if len(content) > 150:
-                    content = content[:150] + "..."
-
-                meta = getattr(record, "metadata", {}) or {}
-                mem_type = meta.get("type", "raw")
-                importance = getattr(record, "importance", "") or meta.get("importance", "")
-                scope = getattr(record, "scope", "") or meta.get("scope", "")
-                timestamp = getattr(record, "created_at", "")
-
-                type_tag = (
-                    f"[bold cyan]{mem_type}[/]"
-                    if mem_type == "canonical"
-                    else f"[dim]{mem_type}[/]"
-                )
-                importance_tag = f" [yellow]★{importance}[/]" if importance else ""
-                scope_tag = f" [{_DIM}]scope:{scope}[/]" if scope else ""
-                time_tag = f" [{_DIM}]{timestamp}[/]" if timestamp else ""
-
-                lines.append(
-                    f"  {i}. {type_tag}{importance_tag}{scope_tag}{time_tag}"
-                )
-                lines.append(f"     {content}")
-                lines.append("")
+                lines.extend(self._format_memory_record(i, mem))
 
             lines.append(f"[{_DIM}]Use /memory search <query> to filter[/]")
             self._mount_sys("\n".join(lines))
@@ -1106,31 +1110,7 @@ class AgentTUI(App[None]):
             lines = [f"[bold]Memories matching '{query}' — {agent_name}[/]\n"]
 
             for i, mem in enumerate(results, 1):
-                record = getattr(mem, "record", mem)
-                content = getattr(record, "content", "") or str(mem)
-                if len(content) > 150:
-                    content = content[:150] + "..."
-
-                meta = getattr(record, "metadata", {}) or {}
-                mem_type = meta.get("type", "raw")
-                importance = getattr(record, "importance", "") or meta.get("importance", "")
-                scope = getattr(record, "scope", "") or meta.get("scope", "")
-                timestamp = getattr(record, "created_at", "")
-
-                type_tag = (
-                    f"[bold cyan]{mem_type}[/]"
-                    if mem_type == "canonical"
-                    else f"[dim]{mem_type}[/]"
-                )
-                importance_tag = f" [yellow]★{importance}[/]" if importance else ""
-                scope_tag = f" [{_DIM}]scope:{scope}[/]" if scope else ""
-                time_tag = f" [{_DIM}]{timestamp}[/]" if timestamp else ""
-
-                lines.append(
-                    f"  {i}. {type_tag}{importance_tag}{scope_tag}{time_tag}"
-                )
-                lines.append(f"     {content}")
-                lines.append("")
+                lines.extend(self._format_memory_record(i, mem))
 
             lines.append(f"[{_DIM}]Use /memory search <query> to refine[/]")
             self._mount_sys("\n".join(lines))

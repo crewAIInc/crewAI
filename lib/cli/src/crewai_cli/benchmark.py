@@ -197,10 +197,8 @@ async def _run_model_benchmark(
     emit({"type": "model_start", "model": model, "total_cases": total})
 
     sem = asyncio.Semaphore(_MAX_CASES_PARALLEL)
-    done_count = 0
 
     async def _run_case(i: int, case: BenchmarkCase) -> BenchmarkResult:
-        nonlocal done_count
         async with sem:
             emit({"type": "case_start", "model": model, "case_index": i, "total_cases": total, "input": case.input})
 
@@ -220,8 +218,7 @@ async def _run_model_benchmark(
             try:
                 agent = _load_agent(bench_defn, agents_dir=agents_dir)
             except Exception as e:
-                done_count += 1
-                emit({"type": "case_done", "model": model, "case_index": done_count, "total_cases": total, "passed": False, "score": 0.0, "time_ms": 0, "error": str(e)})
+                emit({"type": "case_done", "model": model, "case_index": i, "total_cases": total, "passed": False, "score": 0.0, "time_ms": 0, "error": str(e)})
                 return BenchmarkResult(
                     case_index=i, input=case.input, expected=case.expected,
                     actual=f"[Agent creation error: {e}]", model=model, passed=False, score=0.0,
@@ -240,8 +237,7 @@ async def _run_model_benchmark(
                 cost = response.cost
             except asyncio.TimeoutError:
                 elapsed_ms = _current_time_ms() - start_ms
-                done_count += 1
-                emit({"type": "case_done", "model": model, "case_index": done_count, "total_cases": total, "passed": False, "score": 0.0, "time_ms": elapsed_ms, "error": "timeout"})
+                emit({"type": "case_done", "model": model, "case_index": i, "total_cases": total, "passed": False, "score": 0.0, "time_ms": elapsed_ms, "error": "timeout"})
                 return BenchmarkResult(
                     case_index=i, input=case.input, expected=case.expected,
                     actual=f"[Timeout after {_CASE_TIMEOUT_SECONDS}s]", model=model, passed=False, score=0.0,
@@ -249,8 +245,7 @@ async def _run_model_benchmark(
                 )
             except Exception as e:
                 elapsed_ms = _current_time_ms() - start_ms
-                done_count += 1
-                emit({"type": "case_done", "model": model, "case_index": done_count, "total_cases": total, "passed": False, "score": 0.0, "time_ms": elapsed_ms, "error": str(e)})
+                emit({"type": "case_done", "model": model, "case_index": i, "total_cases": total, "passed": False, "score": 0.0, "time_ms": elapsed_ms, "error": str(e)})
                 return BenchmarkResult(
                     case_index=i, input=case.input, expected=case.expected,
                     actual=f"[Error: {e}]", model=model, passed=False, score=0.0,
@@ -261,7 +256,7 @@ async def _run_model_benchmark(
             if case.expected is not None:
                 passed, score = _check_expected(case.expected, actual)
             if case.criteria is not None:
-                emit({"type": "judging", "model": model, "case_index": done_count + 1, "total_cases": total})
+                emit({"type": "judging", "model": model, "case_index": i, "total_cases": total})
                 try:
                     criteria_passed, criteria_score = await asyncio.wait_for(
                         _judge_with_llm(case.criteria, case.input, actual, judge_model),
@@ -275,8 +270,7 @@ async def _run_model_benchmark(
                 else:
                     passed, score = criteria_passed, criteria_score
 
-            done_count += 1
-            emit({"type": "case_done", "model": model, "case_index": done_count, "total_cases": total, "passed": passed, "score": score, "time_ms": elapsed_ms})
+            emit({"type": "case_done", "model": model, "case_index": i, "total_cases": total, "passed": passed, "score": score, "time_ms": elapsed_ms})
             return BenchmarkResult(
                 case_index=i, input=case.input, expected=case.expected, actual=actual,
                 model=model, passed=passed, score=score,
