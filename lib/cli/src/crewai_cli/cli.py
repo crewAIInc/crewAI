@@ -784,11 +784,11 @@ def _test_new_agents(
         fg="cyan", bold=True,
     )
 
-    from crewai_cli.benchmark import artifacts_sandbox, suppress_benchmark_output
+    from crewai_cli.benchmark import ArtifactsSandbox, SuppressBenchmarkOutput
 
     progress.start()
     try:
-        with artifacts_sandbox(), suppress_benchmark_output():
+        with ArtifactsSandbox(), SuppressBenchmarkOutput():
             all_results = asyncio.run(_run_all())
     finally:
         progress.stop()
@@ -803,7 +803,7 @@ def _test_new_agents(
             continue
 
         agents_tested += 1
-        for model_name, results in result.items():
+        for results in result.values():
             failed = [r for r in results if r.score < job["threshold"]]
             if failed:
                 all_passed = False
@@ -1612,12 +1612,12 @@ def benchmark(
     click.echo(f"Judge model: {judge_model}")
     click.echo()
 
-    from crewai_cli.benchmark import artifacts_sandbox, suppress_benchmark_output
+    from crewai_cli.benchmark import ArtifactsSandbox, SuppressBenchmarkOutput
 
     progress = _BenchmarkLiveProgress(console=_con)
     progress.start()
     try:
-        with artifacts_sandbox(), suppress_benchmark_output():
+        with ArtifactsSandbox(), SuppressBenchmarkOutput():
             results_by_model = asyncio.run(
                 run_benchmark(
                     agent_def=agent_path,

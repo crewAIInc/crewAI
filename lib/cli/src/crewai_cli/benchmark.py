@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 import json
+from pathlib import Path
 import re
 import time
-from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class BenchmarkCase(BaseModel):
@@ -340,14 +341,16 @@ async def run_benchmark(
     return dict(zip(models, all_results))
 
 
-class suppress_benchmark_output:
+class SuppressBenchmarkOutput:
     """Context manager that silences console formatter and noisy logging during benchmarks."""
 
     def __enter__(self):
         import logging
         self._saved_formatter = None
         try:
-            from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
+            from crewai.events.listeners.tracing.trace_listener import (
+                TraceCollectionListener,
+            )
             listener = TraceCollectionListener._instance
             if listener:
                 self._saved_formatter = listener.formatter
@@ -366,7 +369,9 @@ class suppress_benchmark_output:
             lg.setLevel(level)
         if self._saved_formatter is not None:
             try:
-                from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
+                from crewai.events.listeners.tracing.trace_listener import (
+                    TraceCollectionListener,
+                )
                 listener = TraceCollectionListener._instance
                 if listener:
                     listener.formatter = self._saved_formatter
@@ -374,7 +379,7 @@ class suppress_benchmark_output:
                 pass
 
 
-class artifacts_sandbox:
+class ArtifactsSandbox:
     """Context manager that chdirs into tests/artifacts/ for the benchmark run.
 
     Any files created by agent tools land in the artifacts directory instead of
