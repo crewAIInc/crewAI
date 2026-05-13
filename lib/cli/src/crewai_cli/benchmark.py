@@ -825,7 +825,7 @@ def print_results_chart(
         time_s = f"{r.response_time_ms / 1000:>5.1f}s"
         cost_part = f"  [dim]{_fmt_cost(r.cost):>7}[/dim]" if has_cost else ""
         rows.append(
-            f"  [dim]{r.case_index:>2}[/dim]  {inp_pad}  {bar} {r.score:.2f}  {badge}  [dim]{time_s}[/dim]{cost_part}"
+            f"  [dim]{r.case_index + 1:>2}[/dim]  {inp_pad}  {bar} {r.score:.2f}  {badge}  [dim]{time_s}[/dim]{cost_part}"
         )
 
     n = len(results)
