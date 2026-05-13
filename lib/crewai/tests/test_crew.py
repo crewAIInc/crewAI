@@ -3901,7 +3901,7 @@ def test_crew_testing_function(researcher):
     assert isinstance(received_events[1], CrewTestCompletedEvent)
 
 
-@pytest.mark.vcr()
+@pytest.mark.vcr(record_mode="none")
 def test_hierarchical_verbose_manager_agent(researcher, writer):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
