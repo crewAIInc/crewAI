@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 import sys
 import threading
-from pathlib import Path
-from typing import Any, Iterator
+from typing import TYPE_CHECKING, Any
 
 from crewai.new_agent.models import AgentStatus, Message, ProvenanceEntry
+
+if TYPE_CHECKING:
+    from crewai.new_agent.provider import SQLiteConversationStorage
 
 
 # ── Spinner frames ───────────────────────────────────────────
@@ -136,7 +139,7 @@ def _storage_path(agent_name: str) -> Path:
     return Path.cwd() / ".crewai" / "conversations" / f"{agent_name}.db"
 
 
-def _get_storage(agent_name: str) -> "SQLiteConversationStorage":
+def _get_storage(agent_name: str) -> SQLiteConversationStorage:
     from crewai.new_agent.provider import SQLiteConversationStorage
     return SQLiteConversationStorage(_storage_path(agent_name))
 
@@ -181,8 +184,8 @@ class CLIProvider:
         try:
             loop = asyncio.get_running_loop()
             text = await loop.run_in_executor(None, self._read_input)
-        except EOFError:
-            raise KeyboardInterrupt("End of input")
+        except EOFError as err:
+            raise KeyboardInterrupt("End of input") from err
 
         return Message(role="user", content=text)
 

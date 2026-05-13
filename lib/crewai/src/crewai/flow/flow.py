@@ -3541,9 +3541,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     loop = None
 
                 if loop and loop.is_running():
-                    # We're inside an async context (e.g. async flow method
-                    # run in a thread pool). Spin a new loop in this thread.
-                    response = asyncio.run(_round_trip())
+                    # We're inside an async context — schedule the coroutine
+                    # on the running loop and block until it completes.
+                    import concurrent.futures
+                    future: concurrent.futures.Future[Any] = asyncio.run_coroutine_threadsafe(
+                        _round_trip(), loop
+                    )
+                    response = future.result()
                 else:
                     response = asyncio.run(_round_trip())
         except KeyboardInterrupt:
@@ -3633,7 +3637,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     loop = None
 
                 if loop and loop.is_running():
-                    asyncio.run(conv_provider.send_message(outgoing))
+                    # We're inside an async context — schedule on the running loop.
+                    import concurrent.futures as _cf
+                    _send_future: _cf.Future[None] = asyncio.run_coroutine_threadsafe(
+                        conv_provider.send_message(outgoing), loop
+                    )
+                    _send_future.result()
                 else:
                     asyncio.run(conv_provider.send_message(outgoing))
             except Exception:

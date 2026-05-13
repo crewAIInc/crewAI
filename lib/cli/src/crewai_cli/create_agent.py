@@ -3,15 +3,14 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 import re
 import subprocess
 import sys
-from pathlib import Path
-from typing import Any
 
 import click
 
-from crewai_cli.constants import ENV_VARS, MODELS
+from crewai_cli.constants import ENV_VARS
 from crewai_cli.utils import load_env_vars, write_env_file
 
 
@@ -278,8 +277,8 @@ def _maybe_add_provider_extra(pyproject_path: Path, provider: str) -> None:
             return
         import re as _re
         suffix = "," + ",".join(missing)
-        def _add_extras(m: _re.Match) -> str:
-            bracket = m.group(0)
+        def _add_extras(m: _re.Match[str]) -> str:
+            bracket: str = m.group(0)
             return bracket[:-1] + suffix + "]"
         updated = _re.sub(r'crewai\[[^\]]+\]', _add_extras, content, count=1)
         if updated != content:
@@ -573,7 +572,7 @@ def _select_model() -> str:
     p_idx = _arrow_or_fallback(provider_labels)
 
     if p_idx == len(_PROVIDERS):
-        custom = click.prompt("  Enter model (provider/model)", type=str)
+        custom: str = click.prompt("  Enter model (provider/model)", type=str)
         return custom.strip()
 
     provider_key, provider_name = _PROVIDERS[p_idx]
@@ -781,11 +780,11 @@ def _setup_env(base: Path, llm_model: str) -> None:
 def _prompt_agent_name() -> str:
     """Prompt for a valid agent identifier."""
     while True:
-        name = click.prompt(
+        raw: str = click.prompt(
             "  Agent identifier (lowercase, hyphens/underscores, no spaces)",
             type=str,
         )
-        name = name.strip().lower()
+        name = raw.strip().lower()
         if _AGENT_NAME_RE.match(name):
             return name
         click.secho(

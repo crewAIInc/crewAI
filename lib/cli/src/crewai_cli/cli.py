@@ -544,7 +544,7 @@ def test(
             _relaunch_via_uv(uv_args)
 
         config_threshold = _read_config("test", "threshold") or _read_config("test_threshold")
-        effective_threshold = threshold or (float(config_threshold) if config_threshold is not None else None) or 0.7
+        effective_threshold = threshold if threshold is not None else (float(config_threshold) if config_threshold is not None else 0.7)
 
         _test_new_agents(agent_files, n_iterations, model, effective_threshold, effective_judge)
     else:
@@ -642,12 +642,12 @@ class _BenchmarkLiveProgress:
             self._live.update(self._render())
 
     def _render(self):
-        from rich.table import Table
-        from rich.spinner import Spinner
-        from rich.text import Text
         from rich import box
+        from rich.spinner import Spinner
+        from rich.table import Table
+        from rich.text import Text
 
-        from crewai_cli.benchmark import _score_color, _fmt_tokens, _fmt_cost
+        from crewai_cli.benchmark import _fmt_cost, _fmt_tokens, _score_color
 
         has_cost = any(
             info.get("cost") is not None
@@ -821,7 +821,7 @@ def _test_new_agents(
     if agents_tested == 0:
         click.secho("No agents completed successfully.", fg="yellow")
         raise SystemExit(1)
-    elif all_passed:
+    if all_passed:
         click.secho(f"All tests passed ({agents_tested} agent(s)).", fg="green", bold=True)
     else:
         click.secho("Some tests failed.", fg="red", bold=True)

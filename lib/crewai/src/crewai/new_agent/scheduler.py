@@ -7,18 +7,19 @@ background loop that fires due tasks.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
+from datetime import datetime, timedelta, timezone
 import json
 import logging
-import re
-import time
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Callable
+import re
+from typing import Any
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
 from crewai.tools.base_tool import BaseTool
+
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +92,7 @@ class TaskScheduler:
     """Singleton scheduler that checks for due tasks every 30 seconds."""
 
     _instance: TaskScheduler | None = None
+    _initialized: bool
 
     def __new__(cls) -> TaskScheduler:
         if cls._instance is None:
