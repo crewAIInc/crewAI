@@ -77,16 +77,16 @@ def test_create_llm_from_env_with_unaccepted_attributes() -> None:
     with patch.dict(
         os.environ,
         {
-            "OPENAI_MODEL_NAME": "gpt-3.5-turbo",
             "OPENAI_API_KEY": "fake-key",
             "AWS_ACCESS_KEY_ID": "fake-access-key",
             "AWS_SECRET_ACCESS_KEY": "fake-secret-key",
             "AWS_DEFAULT_REGION": "us-west-2",
         },
+        clear=True,
     ):
         llm = create_llm(llm_value=None)
         assert isinstance(llm, BaseLLM)
-        assert llm.model == "gpt-3.5-turbo"
+        assert llm.model == DEFAULT_LLM_MODEL
         assert not hasattr(llm, "AWS_ACCESS_KEY_ID")
         assert not hasattr(llm, "AWS_SECRET_ACCESS_KEY")
         assert not hasattr(llm, "AWS_DEFAULT_REGION")

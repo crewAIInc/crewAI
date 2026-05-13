@@ -136,7 +136,8 @@ async def _judge_with_llm(
     from crewai.utilities.llm_utils import create_llm
 
     judge_llm = create_llm(judge_model)
-    assert judge_llm is not None
+    if judge_llm is None:
+        raise RuntimeError(f"Failed to create LLM from judge model: {judge_model!r}")
 
     prompt = (
         "You are an evaluation judge. Score the following response on a scale of 0.0 to 1.0.\n\n"
@@ -445,7 +446,7 @@ async def run_benchmark(
 class SuppressBenchmarkOutput:
     """Context manager that silences console formatter and noisy logging during benchmarks."""
 
-    def __enter__(self) -> "SuppressBenchmarkOutput":
+    def __enter__(self) -> SuppressBenchmarkOutput:
         import logging
 
         self._saved_formatter = None
@@ -491,7 +492,7 @@ class SuppressBenchmarkOutput:
 class VerboseBenchmarkOutput:
     """Context manager that subscribes to NewAgent events and prints them for debugging."""
 
-    def __enter__(self) -> "VerboseBenchmarkOutput":
+    def __enter__(self) -> VerboseBenchmarkOutput:
         import logging
         import sys
 
@@ -620,7 +621,7 @@ class ArtifactsSandbox:
         self._base = Path(base)
         self._prev_cwd: str | None = None
 
-    def __enter__(self) -> "ArtifactsSandbox":
+    def __enter__(self) -> ArtifactsSandbox:
         import os
 
         self._base.mkdir(parents=True, exist_ok=True)

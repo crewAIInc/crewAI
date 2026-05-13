@@ -40,6 +40,7 @@ from textual.widgets import (
 )
 
 from crewai_cli.create_agent import _strip_jsonc
+from crewai_cli.utils import load_env_vars
 
 
 try:
@@ -1703,18 +1704,9 @@ class AgentTUI(App[None]):
 
 def _load_dotenv(base: Path) -> None:
     """Load .env file into os.environ if it exists."""
-    env_path = base / ".env"
-    if not env_path.exists():
-        return
     try:
-        for line in env_path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            key, _, value = line.partition("=")
-            key = key.strip()
-            value = value.strip()
-            if key and value and key not in os.environ:
+        for key, value in load_env_vars(base).items():
+            if key not in os.environ:
                 os.environ[key] = value
     except Exception:
         pass

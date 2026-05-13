@@ -37,7 +37,11 @@ from crewai_cli.user_data import (
     is_tracing_enabled,
     update_user_data,
 )
-from crewai_cli.utils import build_env_with_all_tool_credentials, read_toml
+from crewai_cli.utils import (
+    build_env_with_all_tool_credentials,
+    load_env_vars,
+    read_toml,
+)
 
 
 def _get_cli_version() -> str:
@@ -59,19 +63,12 @@ def crewai() -> None:
     """Top-level command group for crewai."""
     from pathlib import Path
 
-    env_path = Path.cwd() / ".env"
-    if env_path.exists():
-        try:
-            for line in env_path.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                key, _, value = line.partition("=")
-                key, value = key.strip(), value.strip()
-                if key and value and key not in os.environ:
-                    os.environ[key] = value
-        except Exception:
-            pass
+    try:
+        for key, value in load_env_vars(Path.cwd()).items():
+            if key not in os.environ:
+                os.environ[key] = value
+    except Exception:
+        pass
 
 
 @crewai.command(
@@ -847,7 +844,7 @@ def _test_new_agents(
     case_count = sum(len(j["cases"]) for j in jobs)
     click.echo()
     click.secho(
-        f"Testing {len(jobs)} agent(s), {case_count} cases (threshold={threshold})",
+        f"Testing {len(jobs)} agent(s), {case_count} cases, {n_iterations} iteration(s) (threshold={threshold})",
         fg="cyan",
         bold=True,
     )
@@ -858,51 +855,59 @@ def _test_new_agents(
         VerboseBenchmarkOutput,
     )
 
-    if not verbose:
-        assert progress is not None
-        progress.start()
-    try:
-        with ArtifactsSandbox():
-            if verbose:
-                with VerboseBenchmarkOutput():
-                    all_results = asyncio.run(_run_all())
-            else:
-                with SuppressBenchmarkOutput():
-                    all_results = asyncio.run(_run_all())
-    finally:
-        if not verbose:
-            assert progress is not None
-            progress.stop()
-
-    # Evaluate results
     all_passed = True
     agents_tested = 0
-    for job, result in zip(jobs, all_results):
-        if isinstance(result, Exception):
-            click.secho(
-                f"  Error running tests for {job['agent_name']}: {result}", fg="red"
-            )
-            all_passed = False
-            continue
 
-        agents_tested += 1
-        for results in result.values():
-            failed = [r for r in results if r.score < job["threshold"]]
-            if failed:
+    for iteration in range(n_iterations):
+        if n_iterations > 1:
+            click.secho(f"\n  Iteration {iteration + 1}/{n_iterations}", fg="cyan")
+
+        if not verbose:
+            if progress is None:
+                raise RuntimeError("progress must not be None in non-verbose mode")
+            progress.start()
+        try:
+            with ArtifactsSandbox():
+                if verbose:
+                    with VerboseBenchmarkOutput():
+                        all_results = asyncio.run(_run_all())
+                else:
+                    with SuppressBenchmarkOutput():
+                        all_results = asyncio.run(_run_all())
+        finally:
+            if not verbose:
+                if progress is None:
+                    raise RuntimeError("progress must not be None in non-verbose mode")
+                progress.stop()
+
+        # Evaluate results for this iteration
+        for job, result in zip(jobs, all_results):
+            if isinstance(result, Exception):
+                click.secho(
+                    f"  Error running tests for {job['agent_name']}: {result}", fg="red"
+                )
                 all_passed = False
-                _con.print(
-                    f"  [red bold]{job['agent_name']}: FAILED {len(failed)}/{len(results)} "
-                    f"cases below threshold ({job['threshold']})[/red bold]"
-                )
-                for r in failed:
-                    inp = r.input[:60] + ("…" if len(r.input) > 60 else "")
+                continue
+
+            agents_tested += 1
+            for results in result.values():
+                failed = [r for r in results if r.score < job["threshold"]]
+                if failed:
+                    all_passed = False
                     _con.print(
-                        f"    [red]#{r.case_index + 1}[/red] [dim]{inp}[/dim]  [red]{r.score:.2f}[/red]"
+                        f"  [red bold]{job['agent_name']}: FAILED {len(failed)}/{len(results)} "
+                        f"cases below threshold ({job['threshold']})[/red bold]"
                     )
-            else:
-                _con.print(
-                    f"  [green bold]{job['agent_name']}: PASSED all {len(results)} cases >= {job['threshold']}[/green bold]"
-                )
+                    for r in failed:
+                        inp = r.input[:60] + ("…" if len(r.input) > 60 else "")
+                        _con.print(
+                            f"    [red]#{r.case_index + 1}[/red] [dim]{inp}[/dim]  [red]{r.score:.2f}[/red]"
+                        )
+                else:
+                    _con.print(
+                        f"  [green bold]{job['agent_name']}: PASSED all {len(results)} cases >= {job['threshold']}[/green bold]"
+                    )
+
     if agents_tested == 0:
         click.secho("No agents completed successfully.", fg="yellow")
         raise SystemExit(1)
