@@ -596,6 +596,134 @@ class TestHumanFeedbackLearn:
         # llm defaults to "gpt-4o-mini" at the function level
         assert config.llm == "gpt-4o-mini"
 
+    def test_pre_review_failure_logs_and_returns_raw_output(self, caplog):
+        """Pre-review LLM failure falls back to raw output AND logs a warning."""
+        from crewai.memory.types import MemoryMatch, MemoryRecord
+
+        class LearnFlow(Flow):
+            @start()
+            @human_feedback(message="Review:", llm="gpt-4o-mini", learn=True)
+            def produce(self):
+                return "raw draft"
+
+        flow = LearnFlow()
+        flow.memory = MagicMock()
+        flow.memory.recall.return_value = [
+            MemoryMatch(
+                record=MemoryRecord(content="some lesson", embedding=[]),
+                score=0.9,
+                match_reasons=["semantic"],
+            )
+        ]
+
+        captured: dict[str, Any] = {}
+
+        def capture_feedback(message, output, metadata=None, emit=None):
+            captured["shown_to_human"] = output
+            return ""  # empty -> no distillation path
+
+        with (
+            patch.object(flow, "_request_human_feedback", side_effect=capture_feedback),
+            patch("crewai.llm.LLM") as MockLLM,
+            caplog.at_level("WARNING", logger="crewai.flow.human_feedback"),
+        ):
+            mock_llm = MagicMock()
+            mock_llm.supports_function_calling.return_value = True
+            mock_llm.call.side_effect = RuntimeError("simulated pre-review failure")
+            MockLLM.return_value = mock_llm
+
+            flow.produce()
+
+        assert captured["shown_to_human"] == "raw draft"
+        assert any(
+            "HITL pre-review failed" in rec.message
+            and rec.levelname == "WARNING"
+            and rec.exc_info is not None
+            for rec in caplog.records
+        )
+
+    def test_pre_review_failure_strict_reraises(self):
+        """When learn_strict=True, pre-review failures propagate instead of falling back."""
+        from crewai.memory.types import MemoryMatch, MemoryRecord
+
+        class LearnFlow(Flow):
+            @start()
+            @human_feedback(
+                message="Review:",
+                llm="gpt-4o-mini",
+                learn=True,
+                learn_strict=True,
+            )
+            def produce(self):
+                return "raw draft"
+
+        flow = LearnFlow()
+        flow.memory = MagicMock()
+        flow.memory.recall.return_value = [
+            MemoryMatch(
+                record=MemoryRecord(content="some lesson", embedding=[]),
+                score=0.9,
+                match_reasons=["semantic"],
+            )
+        ]
+
+        with (
+            patch.object(flow, "_request_human_feedback", return_value=""),
+            patch("crewai.llm.LLM") as MockLLM,
+        ):
+            mock_llm = MagicMock()
+            mock_llm.supports_function_calling.return_value = True
+            mock_llm.call.side_effect = RuntimeError("simulated pre-review failure")
+            MockLLM.return_value = mock_llm
+
+            with pytest.raises(RuntimeError, match="simulated pre-review failure"):
+                flow.produce()
+
+    def test_distillation_failure_logs_and_does_not_block_flow(self, caplog):
+        """Distillation LLM failure logs a warning but does not break the flow."""
+
+        class LearnFlow(Flow):
+            @start()
+            @human_feedback(message="Review:", llm="gpt-4o-mini", learn=True)
+            def produce(self):
+                return "raw draft"
+
+        flow = LearnFlow()
+        flow.memory = MagicMock()
+        flow.memory.recall.return_value = []  # no pre-review path
+
+        with (
+            patch.object(
+                flow, "_request_human_feedback", return_value="please add citations"
+            ),
+            patch("crewai.llm.LLM") as MockLLM,
+            caplog.at_level("WARNING", logger="crewai.flow.human_feedback"),
+        ):
+            mock_llm = MagicMock()
+            mock_llm.supports_function_calling.return_value = True
+            mock_llm.call.side_effect = RuntimeError("simulated distill failure")
+            MockLLM.return_value = mock_llm
+
+            flow.produce()  # must not raise
+
+        flow.memory.remember_many.assert_not_called()
+        assert any(
+            "HITL lesson distillation failed" in rec.message
+            and rec.levelname == "WARNING"
+            for rec in caplog.records
+        )
+
+    def test_learn_strict_config_propagates(self):
+        """learn_strict is captured on the decorator config."""
+
+        @human_feedback(message="Review:", learn=True, learn_strict=True)
+        def test_method(self):
+            return "output"
+
+        config = test_method.__human_feedback_config__
+        assert config is not None
+        assert config.learn_strict is True
+
 
 class TestHumanFeedbackFinalOutputPreservation:
     """Tests for preserving method return value as flow's final output when @human_feedback with emit is terminal.

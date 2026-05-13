@@ -105,7 +105,7 @@ class TestFormatSkillContext:
             frontmatter=fm, path=tmp_path, disclosure_level=METADATA
         )
         ctx = format_skill_context(skill)
-        assert "## Skill: test-skill" in ctx
+        assert '<skill name="test-skill">' in ctx
         assert "A skill" in ctx
 
     def test_instructions_level(self, tmp_path: Path) -> None:
@@ -117,7 +117,7 @@ class TestFormatSkillContext:
             instructions="Do these things.",
         )
         ctx = format_skill_context(skill)
-        assert "## Skill: test-skill" in ctx
+        assert '<skill name="test-skill">' in ctx
         assert "Do these things." in ctx
 
     def test_no_instructions_at_instructions_level(self, tmp_path: Path) -> None:
@@ -129,7 +129,7 @@ class TestFormatSkillContext:
             instructions=None,
         )
         ctx = format_skill_context(skill)
-        assert ctx == "## Skill: test-skill\nA skill"
+        assert ctx == '<skill name="test-skill">\nA skill\n</skill>'
 
     def test_resources_level(self, tmp_path: Path) -> None:
         fm = SkillFrontmatter(name="test-skill", description="A skill")

@@ -323,8 +323,11 @@ def update_pyproject_version(file_path: Path, new_version: str) -> bool:
 
 _DEFAULT_WORKSPACE_PACKAGES: Final[list[str]] = [
     "crewai",
-    "crewai-tools",
+    "crewai-cli",
+    "crewai-core",
     "crewai-devtools",
+    "crewai-files",
+    "crewai-tools",
 ]
 
 
@@ -1351,6 +1354,14 @@ def _repin_crewai_install(run_value: str, version: str) -> str:
 
 _DEPLOYMENT_TEST_REPO: Final[str] = "crewAIInc/crew_deployment_test"
 
+_PUBLISHED_WORKSPACE_PACKAGES: Final[tuple[str, ...]] = (
+    "crewai",
+    "crewai-cli",
+    "crewai-core",
+    "crewai-files",
+    "crewai-tools",
+)
+
 _PYPI_POLL_INTERVAL: Final[int] = 15
 _PYPI_POLL_TIMEOUT: Final[int] = 600
 
@@ -1403,14 +1414,9 @@ def _update_deployment_test_repo(version: str, is_prerelease: bool) -> None:
         ]
 
         if pyproject_changed:
-            lock_cmd = [
-                "uv",
-                "lock",
-                "--refresh-package",
-                "crewai",
-                "--refresh-package",
-                "crewai-tools",
-            ]
+            lock_cmd = ["uv", "lock"]
+            for pkg in _PUBLISHED_WORKSPACE_PACKAGES:
+                lock_cmd.extend(["--refresh-package", pkg])
             if is_prerelease:
                 lock_cmd.append("--prerelease=allow")
 
@@ -1615,16 +1621,9 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
         _wait_for_pypi("crewai", version)
 
         console.print("\nSyncing workspace...")
-        sync_cmd = [
-            "uv",
-            "sync",
-            "--refresh-package",
-            "crewai",
-            "--refresh-package",
-            "crewai-tools",
-            "--refresh-package",
-            "crewai-files",
-        ]
+        sync_cmd = ["uv", "sync"]
+        for pkg in _PUBLISHED_WORKSPACE_PACKAGES:
+            sync_cmd.extend(["--refresh-package", pkg])
         if is_prerelease:
             sync_cmd.append("--prerelease=allow")
 
