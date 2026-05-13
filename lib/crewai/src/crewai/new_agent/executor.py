@@ -11,6 +11,7 @@ import re
 import time
 from typing import TYPE_CHECKING, Any
 
+from crewai_core.printer import Printer
 from pydantic import BaseModel, Field, PrivateAttr
 
 from crewai.new_agent.models import (
@@ -2419,8 +2420,8 @@ class ConversationalAgentExecutor(BaseModel):
                     pass
 
 
-class _NullPrinter:
-    """Minimal printer that swallows output."""
+class _NullPrinter(Printer):
+    """Minimal printer that subclasses Printer but swallows all output."""
 
-    def print(self, *args: Any, **kwargs: Any) -> None:
+    def print(self, *args: Any, **kwargs: Any) -> None:  # type: ignore[override]
         pass

@@ -244,7 +244,9 @@ class DelegateToCoworkerTool(BaseTool):
             )
             raise
 
-    async def _arun(self, message: str, fire_and_forget: bool = False, **kwargs: Any) -> str:
+    async def _arun(
+        self, message: str, fire_and_forget: bool = False, **kwargs: Any
+    ) -> str:
         """Async delegation — avoids blocking the event loop."""
         from crewai.new_agent.events import (
             NewAgentDelegationCompletedEvent,

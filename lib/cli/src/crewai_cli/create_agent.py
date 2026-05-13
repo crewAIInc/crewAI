@@ -812,10 +812,30 @@ def _prompt_agent_name() -> str:
         )
 
 
+_JSONC_TOKEN_RE = re.compile(
+    r'"(?:[^"\\]|\\.)*"'  # double-quoted string
+    r"|'(?:[^'\\]|\\.)*'"  # single-quoted string (not standard JSON, but safe)
+    r"|/\*.*?\*/"  # /* block comment */
+    r"|//[^\n]*"  # // line comment
+    r"|.",  # any other character
+    re.DOTALL,
+)
+
+
 def _strip_jsonc(text: str) -> str:
-    """Strip // and /* */ comments from JSONC text, then fix trailing commas."""
-    result = re.sub(r"(?<!:)//.*?$", "", text, flags=re.MULTILINE)
-    result = re.sub(r"/\*.*?\*/", "", result, flags=re.DOTALL)
+    """Strip // and /* */ comments from JSONC text, then fix trailing commas.
+
+    Only strips comments that appear outside of quoted strings, so double
+    slashes inside string values (e.g. URLs) are preserved correctly.
+    """
+
+    def _replacer(match: re.Match[str]) -> str:
+        token = match.group(0)
+        if token.startswith(("//", "/*")):
+            return ""
+        return token
+
+    result = _JSONC_TOKEN_RE.sub(_replacer, text)
     result = re.sub(r",\s*([}\]])", r"\1", result)
     return result
 

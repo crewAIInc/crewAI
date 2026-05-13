@@ -111,7 +111,6 @@ def load_benchmark_cases(path: str | Path) -> LoadedCases:
     return LoadedCases(cases, threshold)
 
 
-
 def _check_expected(expected: str, actual: str) -> tuple[bool, float]:
     """Check if expected output is found in actual (case-insensitive substring match).
 

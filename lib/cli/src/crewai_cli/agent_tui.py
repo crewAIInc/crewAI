@@ -533,8 +533,13 @@ class AgentTUI(App[None]):
                         yield Static("AGENTS", classes="sidebar-label")
                         yield OptionList(id="agent-list")
                     with TabPane("Memory", id="tab-memory"):
-                        yield Static("Click below to open the memory browser.", id="memory-scope-label")
-                        yield Button("Open Memory Browser", id="btn-memory", variant="default")
+                        yield Static(
+                            "Click below to open the memory browser.",
+                            id="memory-scope-label",
+                        )
+                        yield Button(
+                            "Open Memory Browser", id="btn-memory", variant="default"
+                        )
             with Vertical(id="chat-area"):
                 yield VerticalScroll(id="chat-scroll")
                 with Horizontal(id="input-row"):
@@ -1617,6 +1622,7 @@ class AgentTUI(App[None]):
                 callback=self._on_room_created,
             )
             return
+
     # ── Room creation ──
 
     def _on_room_created(self, result: dict[str, Any] | None) -> None:

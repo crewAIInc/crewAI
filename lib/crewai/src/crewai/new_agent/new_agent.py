@@ -36,11 +36,11 @@ def _get_init_chain() -> set[str]:
     """Return the thread-local set of agent IDs currently being initialized."""
     if not hasattr(_init_chain, "agent_ids"):
         _init_chain.agent_ids = set()
-    return _init_chain.agent_ids
+    return _init_chain.agent_ids  # type: ignore[no-any-return]
 
 
 # ── GAP-63: Process-level AMP definition cache ──────────────────
-_amp_cache: dict[str, dict] = {}
+_amp_cache: dict[str, dict[str, Any]] = {}
 
 
 def clear_amp_cache() -> None:
@@ -286,8 +286,10 @@ class NewAgent(BaseModel):
         if self.mcps:
             try:
                 from crewai.mcp.tool_resolver import MCPToolResolver
+                from crewai.utilities.logger import Logger as _CrewLogger
 
-                resolver = MCPToolResolver(agent=self, logger=self._logger)
+                _mcp_logger = _CrewLogger(verbose=self.verbose)
+                resolver = MCPToolResolver(agent=self, logger=_mcp_logger)
                 mcp_tools = resolver.resolve(self.mcps)
                 resolved.extend(mcp_tools)
             except Exception as e:
@@ -631,7 +633,7 @@ class NewAgent(BaseModel):
         if self.on_message:
             self.on_message(user_msg)
 
-        response = executor.invoke(user_msg)
+        response: Message = executor.invoke(user_msg)
 
         if self.on_complete:
             self.on_complete(response)
@@ -656,7 +658,7 @@ class NewAgent(BaseModel):
         if self.on_message:
             self.on_message(user_msg)
 
-        response = await executor.ainvoke(user_msg)
+        response: Message = await executor.ainvoke(user_msg)
 
         if self.on_complete:
             self.on_complete(response)
@@ -793,10 +795,13 @@ class NewAgent(BaseModel):
                 messages: list[LLMMessage] = [
                     format_message_for_llm(prompt, role="user")
                 ]
+                from crewai.new_agent.executor import _NullPrinter
+
                 reasoning_text = get_llm_response(
                     llm=self._llm_instance,
                     messages=messages,
                     callbacks=[],
+                    printer=_NullPrinter(),
                 )
                 if reasoning_text:
                     reasoning_str = str(reasoning_text).strip()
@@ -855,7 +860,7 @@ class NewAgent(BaseModel):
         executor = self._executors.get(conversation_id)
         if executor is None:
             return []
-        return executor.conversation_history
+        return list(executor.conversation_history)
 
     @property
     def conversation_history(self) -> list[Message]:
@@ -863,14 +868,15 @@ class NewAgent(BaseModel):
         executor = self._executors.get(self._default_conversation_id)
         if executor is None:
             return []
-        return executor.conversation_history
+        return list(executor.conversation_history)
 
     @property
     def last_prompt_stack(self) -> PromptStack | None:
         executor = self._executors.get(self._default_conversation_id)
         if executor is None:
             return None
-        return executor.prompt_stack
+        result: PromptStack | None = executor.prompt_stack
+        return result
 
     @property
     def usage_metrics(self) -> dict[str, int]:
@@ -962,6 +968,7 @@ class NewAgent(BaseModel):
         )
 
         try:
+            from crewai.new_agent.executor import _NullPrinter
             from crewai.utilities.agent_utils import (
                 format_message_for_llm,
                 get_llm_response,
@@ -973,6 +980,7 @@ class NewAgent(BaseModel):
                 llm=llm,
                 messages=messages,
                 callbacks=[],
+                printer=_NullPrinter(),
             )
             resolved = str(result).strip()
             return resolved if resolved else text

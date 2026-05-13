@@ -604,10 +604,12 @@ def _read_config(*keys: str) -> Any:
     """Read a nested value from config.json (JSONC-safe).
 
     Example: _read_config("test", "threshold") reads config["test"]["threshold"].
+    Returns None only when the key is missing, not when the value is falsy.
     """
     import json
     from pathlib import Path
 
+    _MISSING = object()
     config_path = Path("config.json")
     if not config_path.exists():
         return None
@@ -618,8 +620,8 @@ def _read_config(*keys: str) -> Any:
         for k in keys:
             if not isinstance(data, dict):
                 return None
-            data = data.get(k)
-            if data is None:
+            data = data.get(k, _MISSING)
+            if data is _MISSING:
                 return None
         return data
     except Exception:

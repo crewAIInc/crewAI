@@ -14,6 +14,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
+from crewai.new_agent.models import Message
 from crewai.tools.base_tool import BaseTool
 
 
@@ -248,7 +249,8 @@ class SpawnSubtaskTool(BaseTool):
                     except Exception:
                         pass
                 else:
-                    output.append(f"[Subtask {i + 1}] {r.content}")
+                    content = r.content if isinstance(r, Message) else str(r)
+                    output.append(f"[Subtask {i + 1}] {content}")
                     # GAP-57: Emit spawn completed event
                     try:
                         from crewai.new_agent.events import NewAgentSpawnCompletedEvent
@@ -427,7 +429,8 @@ class SpawnSubtaskTool(BaseTool):
                 except Exception:
                     pass
             else:
-                results.append(f"[Subtask {i + 1}] {r.content}")
+                content = r.content if isinstance(r, Message) else str(r)
+                results.append(f"[Subtask {i + 1}] {content}")
                 try:
                     from crewai.new_agent.events import NewAgentSpawnCompletedEvent
 
