@@ -179,7 +179,7 @@ class TestFormatResult:
         assert tu._result_files == {}
 
     def test_result_files_cleared_on_plain_result(self):
-        """_result_files should reflect the MOST RECENT call."""
+        """A plain _format_result call must clear files set by a prior multimodal call."""
         tu = _make_tool_usage()
         tu.task.used_tools = 0
         img = ImageFile(source=_PNG_BYTES)
@@ -189,10 +189,7 @@ class TestFormatResult:
 
         tu.task.used_tools = 1
         tu._format_result("plain follow-up")
-        # _extract_multimodal_files returns None; _result_files not touched by _format_result itself
-        # (it preserves whatever _extract set). This test documents current behaviour:
-        # a second plain call does NOT wipe files — callers create a fresh ToolUsage per invocation.
-        # This is fine because execute_tool_and_check_finality reads _result_files once then discards.
+        assert tu._result_files == {}
 
 
 # ---------------------------------------------------------------------------
