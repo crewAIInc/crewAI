@@ -70,17 +70,35 @@ print(result)
 The simple task routes to the **low** tier, the complex one to **high** — automatically, in <15ms.
 </Step>
 
-<Step title="Optional — persist routing decisions">
+<Step title="Optional — enable telemetry">
 
-```python
-from classifier import Router, StdoutLoggerBackend
-from classifier.integrations.crewai import DynamicLLM
+By default, the router emits one INFO line per decision via Python `logging`. For full structured events (one JSON event per decision and per outcome, including model, tier, latency, cost, success), set the `DMR_TELEMETRY` env var before importing:
 
-router = Router(decision_logger=StdoutLoggerBackend())
-llm = DynamicLLM()
+```bash
+export DMR_TELEMETRY=1
 ```
 
-Swap `StdoutLoggerBackend()` for `SQLiteBackend`, `PostgresBackend`, etc. — see the [backends examples](https://github.com/manthan9891994/agents-multi-model-support/tree/master/examples/custom_backends).
+```python
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+from classifier.integrations.crewai import DynamicLLM
+llm = DynamicLLM()
+# every call now emits a structured DEBUG line you can pipe to any log collector
+```
+
+To persist events into a queryable store (SQLite / Postgres / BigQuery / DynamoDB / GCS), construct a `Router` with a pluggable backend and use it directly:
+
+```python
+from classifier import Router
+from classifier.logger_backends import StdoutLoggerBackend
+
+router = Router(decision_logger=StdoutLoggerBackend())
+decision = router.classify("summarize this contract clause")
+# pass decision.model_name to your CrewAI LLM construction
+```
+
+See the [backends examples](https://github.com/manthan9891994/agents-multi-model-support/tree/master/examples/custom_backends) for SQLite / Postgres / BigQuery / DynamoDB / GCS templates.
 </Step>
 </Steps>
 
