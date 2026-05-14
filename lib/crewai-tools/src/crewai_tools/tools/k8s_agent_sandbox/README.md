@@ -119,3 +119,61 @@ if __name__ == "__main__":
     print("================================================")
     print(result)
 ```
+
+## Example how to use FileTool
+
+```python
+import os
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import K8sSandboxFileTool
+
+# Instantiate your tool
+k8s_file_tool = K8sSandboxFileTool(namespace="default")
+
+# Define the Agent
+sys_agent = Agent(
+    role='Kubernetes Systems Engineer',
+    goal='Create, modify, and read configuration files securely within pod sandboxes.',
+    backstory=(
+        "You are a systems engineer who manages configuration files in containerized "
+        "environments. You use the K8s sandbox file tool to accurately write necessary "
+        "files to the filesystem and read them back to verify their integrity."
+    ),
+    verbose=True,
+    allow_delegation=False,
+    tools=[k8s_file_tool]
+)
+
+# Define the Task
+file_task = Task(
+    description=(
+        "Perform the following two steps using your K8s sandbox file tool:\n"
+        "1. Write a file at the path './crewai_test.txt' with the content: "
+        "'Hello from CrewAI! The sandbox file tool is working perfectly.'\n"
+        "2. Read the file you just created at './crewai_test.txt' to verify its contents.\n"
+        "Summarize your actions and output the exact text you read from the file."
+    ),
+    expected_output="Confirmation that the file was written, along with the exact text read back from the file.",
+    agent=sys_agent,
+)
+
+# Assemble the Crew
+file_crew = Crew(
+    agents=[sys_agent],
+    tasks=[file_task],
+    process=Process.sequential
+)
+
+# Run the Crew
+if __name__ == "__main__":
+    if not os.environ.get("OPENAI_API_KEY"):
+        print("WARNING: OPENAI_API_KEY environment variable is not set.")
+
+    print("Starting the CrewAI execution for File Tool...")
+    result = file_crew.kickoff()
+
+    print("\n================================================")
+    print("FINAL RESULT FROM THE AGENT:")
+    print("================================================")
+    print(result)
+```
