@@ -121,26 +121,32 @@ PROJECT_CONFIG_TEMPLATE = """\
 {
   // Project configuration for crewai agents
 
-  // Test / benchmark settings
+  // Test / benchmark settings — used by `crewai test`
   "test": {
+    // How many times to repeat each test run. Higher = more confidence.
+    // Override with: crewai test -n 5
+    "iterations": 3,
+
     // Minimum score (0.0–1.0) for a test case to pass.
     // Override per test file with: {"threshold": 0.9, "cases": [...]}
+    // Override with: crewai test --threshold 0.8
     "threshold": 0.7,
 
-    // LLM used to judge test responses (provider/model format)
+    // LLM used to judge test responses (provider/model format).
+    // Override with: crewai test --judge-model openai/gpt-4o
     "judge_model": "openai/gpt-4o-mini"
   },
 
-  // Rooms define how agents collaborate in the TUI
+  // Rooms define how agents collaborate in the TUI (`crewai run`)
   "rooms": {
     "common": {
-      // Which agents participate in this room
+      // Which agents participate in this room (agent names from agents/ dir)
       "agents": [],
 
       // Engagement mode:
       //   "organic" — all agents see messages, respond if relevant (default)
-      //   "dm" — chat with one agent at a time
       //   "tagged" — @mention to direct messages
+      //   "dm" — chat with one agent at a time
       "engagement": "organic"
     }
   }

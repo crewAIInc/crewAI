@@ -122,6 +122,48 @@ def _check_expected(expected: str, actual: str) -> tuple[bool, float]:
     return False, 0.0
 
 
+_JUDGE_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "submit_evaluation",
+        "description": "Submit the evaluation score for a response.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "score": {
+                    "type": "number",
+                    "description": "Score between 0.0 and 1.0",
+                },
+                "passed": {
+                    "type": "boolean",
+                    "description": "Whether the response meets the criteria (score >= 0.7)",
+                },
+            },
+            "required": ["score", "passed"],
+        },
+    },
+}
+
+
+def _parse_judge_result(response: Any) -> tuple[bool, float] | None:
+    """Extract score/passed from a function-call dict or text response."""
+    # Function calling path: available_functions auto-executes the lambda,
+    # returning the dict directly, e.g. {"score": 0.85, "passed": True}
+    if isinstance(response, dict) and "score" in response:
+        score = max(0.0, min(1.0, float(response["score"])))
+        return bool(response.get("passed", score >= 0.7)), score
+
+    # Text fallback: extract JSON from response string
+    text = str(response) if not isinstance(response, str) else response
+    match = re.search(r"\{[^}]+\}", text)
+    if match:
+        result = json.loads(match.group())
+        score = max(0.0, min(1.0, float(result.get("score", 0.0))))
+        return bool(result.get("passed", score >= 0.7)), score
+
+    return None
+
+
 async def _judge_with_llm(
     criteria: str,
     input_text: str,
@@ -144,22 +186,34 @@ async def _judge_with_llm(
         f"Input: {input_text}\n\n"
         f"Response: {actual}\n\n"
         f"Evaluation criteria: {criteria}\n\n"
-        "Respond with ONLY a JSON object in this exact format:\n"
-        '{"score": <float between 0.0 and 1.0>, "passed": <true or false>}\n'
-        "A score >= 0.7 should be considered passed."
+        "Call submit_evaluation with the score and whether it passed (score >= 0.7)."
     )
 
     try:
-        response = judge_llm.call(messages=[{"role": "user", "content": prompt}])
-        text = str(response) if not isinstance(response, str) else response
-        # Extract JSON from response
-        match = re.search(r"\{[^}]+\}", text)
-        if match:
-            result = json.loads(match.group())
-            score = float(result.get("score", 0.0))
-            score = max(0.0, min(1.0, score))
-            passed = bool(result.get("passed", score >= 0.7))
-            return passed, score
+        response = judge_llm.call(
+            messages=[{"role": "user", "content": prompt}],
+            tools=[_JUDGE_TOOL],
+            available_functions={"submit_evaluation": lambda **kw: kw},
+        )
+        result = _parse_judge_result(response)
+        if result is not None:
+            return result
+    except Exception:
+        pass
+
+    # Fallback: plain text without tools
+    try:
+        fallback_prompt = (
+            "You are an evaluation judge. Score the following response on a scale of 0.0 to 1.0.\n\n"
+            f"Input: {input_text}\n\n"
+            f"Response: {actual}\n\n"
+            f"Evaluation criteria: {criteria}\n\n"
+            "Respond with ONLY a JSON object: {\"score\": <float>, \"passed\": <bool>}"
+        )
+        response = judge_llm.call(messages=[{"role": "user", "content": fallback_prompt}])
+        result = _parse_judge_result(response)
+        if result is not None:
+            return result
     except Exception:
         pass
 
@@ -449,6 +503,10 @@ class SuppressBenchmarkOutput:
     def __enter__(self) -> SuppressBenchmarkOutput:
         import logging
 
+        from crewai_core.printer import set_suppress_console_output
+
+        self._suppress_token = set_suppress_console_output(True)
+
         self._saved_formatter = None
         try:
             from crewai.events.listeners.tracing.trace_listener import (
@@ -474,6 +532,10 @@ class SuppressBenchmarkOutput:
         return self
 
     def __exit__(self, *exc: object) -> None:
+        from crewai_core.printer import set_suppress_console_output
+
+        set_suppress_console_output(False)
+
         for lg, level in self._loggers:
             lg.setLevel(level)
         if self._saved_formatter is not None:
