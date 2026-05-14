@@ -978,9 +978,20 @@ class Crew(BaseModel):
         result = self._execute_tasks(self.tasks, start_index, True)
         return result
 
-    def query_knowledge(self, query: List[str]) -> Union[List[Dict[str, Any]], None]:
+    def query_knowledge(
+        self,
+        query: List[str],
+        limit: int = 3,
+        filter: Optional[dict] = None,
+        score_threshold: float = 0.35,
+    ) -> Union[List[Dict[str, Any]], None]:
         if self._knowledge:
-            return self._knowledge.query(query)
+            return self._knowledge.query(
+                query,
+                limit=limit,
+                filter=filter,
+                score_threshold=score_threshold,
+            )
         return None
 
     def copy(self):

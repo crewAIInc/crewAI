@@ -10,6 +10,7 @@ from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 from crewai.cli.constants import ENV_VARS, LITELLM_PARAMS
 from crewai.knowledge.knowledge import Knowledge
+from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.utils.knowledge_utils import extract_knowledge_context
 from crewai.llm import LLM
@@ -130,6 +131,10 @@ class Agent(BaseAgent):
     knowledge_sources: Optional[List[BaseKnowledgeSource]] = Field(
         default=None,
         description="Knowledge sources for the agent.",
+    )
+    knowledge_config: Optional[KnowledgeConfig] = Field(
+        default=None,
+        description="Configuration for knowledge querying (results_limit, score_threshold, metadata_filter).",
     )
     _knowledge: Optional[Knowledge] = PrivateAttr(
         default=None,
@@ -306,7 +311,16 @@ class Agent(BaseAgent):
                 task_prompt += self.i18n.slice("memory").format(memory=memory)
 
         if self._knowledge:
-            agent_knowledge_snippets = self._knowledge.query([task.prompt()])
+            kc = self.knowledge_config
+            query_kwargs: Dict[str, Any] = {}
+            if kc:
+                query_kwargs["limit"] = kc.results_limit
+                query_kwargs["score_threshold"] = kc.score_threshold
+                if kc.metadata_filter:
+                    query_kwargs["filter"] = kc.metadata_filter
+            agent_knowledge_snippets = self._knowledge.query(
+                [task.prompt()], **query_kwargs
+            )
             if agent_knowledge_snippets:
                 agent_knowledge_context = extract_knowledge_context(
                     agent_knowledge_snippets
@@ -315,7 +329,16 @@ class Agent(BaseAgent):
                     task_prompt += agent_knowledge_context
 
         if self.crew:
-            knowledge_snippets = self.crew.query_knowledge([task.prompt()])
+            kc = self.knowledge_config
+            query_kwargs = {}
+            if kc:
+                query_kwargs["limit"] = kc.results_limit
+                query_kwargs["score_threshold"] = kc.score_threshold
+                if kc.metadata_filter:
+                    query_kwargs["filter"] = kc.metadata_filter
+            knowledge_snippets = self.crew.query_knowledge(
+                [task.prompt()], **query_kwargs
+            )
             if knowledge_snippets:
                 crew_knowledge_context = extract_knowledge_context(knowledge_snippets)
                 if crew_knowledge_context:

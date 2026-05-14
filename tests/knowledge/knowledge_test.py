@@ -1,11 +1,13 @@
 """Test Knowledge creation and querying functionality."""
 
 from pathlib import Path
-from typing import List, Union
-from unittest.mock import patch
+from typing import Any, Dict, List, Optional, Union
+from unittest.mock import MagicMock, call, patch
 
 import pytest
 
+from crewai.knowledge.knowledge import Knowledge
+from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.crew_docling_source import CrewDoclingSource
 from crewai.knowledge.source.csv_knowledge_source import CSVKnowledgeSource
 from crewai.knowledge.source.excel_knowledge_source import ExcelKnowledgeSource
@@ -584,3 +586,171 @@ def test_docling_source_with_local_file():
     docling_source = CrewDoclingSource(file_paths=[pdf_path])
     assert docling_source.file_paths == [pdf_path]
     assert docling_source.content is not None
+
+
+# --- Tests for KnowledgeConfig and metadata_filter support ---
+
+
+class TestKnowledgeConfig:
+    """Tests for the KnowledgeConfig model."""
+
+    def test_default_values(self):
+        config = KnowledgeConfig()
+        assert config.results_limit == 3
+        assert config.score_threshold == 0.35
+        assert config.metadata_filter is None
+
+    def test_custom_values(self):
+        config = KnowledgeConfig(
+            results_limit=10,
+            score_threshold=0.5,
+            metadata_filter={"task": "translation"},
+        )
+        assert config.results_limit == 10
+        assert config.score_threshold == 0.5
+        assert config.metadata_filter == {"task": "translation"}
+
+    def test_partial_override(self):
+        config = KnowledgeConfig(metadata_filter={"source": "docs"})
+        assert config.results_limit == 3
+        assert config.score_threshold == 0.35
+        assert config.metadata_filter == {"source": "docs"}
+
+
+class TestKnowledgeQueryForwardsParams:
+    """Tests that Knowledge.query() forwards filter and score_threshold to storage."""
+
+    def test_query_forwards_metadata_filter(self):
+        mock_storage = MagicMock()
+        mock_storage.search.return_value = []
+        mock_storage.initialize_knowledge_storage.return_value = None
+
+        with patch(
+            "crewai.knowledge.knowledge.KnowledgeStorage",
+            return_value=mock_storage,
+        ):
+            knowledge = Knowledge(
+                collection_name="test",
+                sources=[],
+                storage=mock_storage,
+            )
+
+        knowledge.query(
+            ["test query"],
+            limit=5,
+            filter={"task": "translation"},
+            score_threshold=0.6,
+        )
+
+        mock_storage.search.assert_called_once_with(
+            ["test query"],
+            5,
+            filter={"task": "translation"},
+            score_threshold=0.6,
+        )
+
+    def test_query_defaults_without_filter(self):
+        mock_storage = MagicMock()
+        mock_storage.search.return_value = []
+        mock_storage.initialize_knowledge_storage.return_value = None
+
+        with patch(
+            "crewai.knowledge.knowledge.KnowledgeStorage",
+            return_value=mock_storage,
+        ):
+            knowledge = Knowledge(
+                collection_name="test",
+                sources=[],
+                storage=mock_storage,
+            )
+
+        knowledge.query(["test query"])
+
+        mock_storage.search.assert_called_once_with(
+            ["test query"],
+            3,
+            filter=None,
+            score_threshold=0.35,
+        )
+
+
+class TestBaseKnowledgeSourceSavesMetadata:
+    """Tests that _save_documents passes self.metadata to storage.save()."""
+
+    def test_save_documents_passes_metadata(self):
+        source = StringKnowledgeSource(
+            content="Hello world",
+            metadata={"task": "translation"},
+        )
+        source.storage = MagicMock()
+        source.chunks = ["Hello world"]
+        source._save_documents()
+
+        source.storage.save.assert_called_once_with(
+            ["Hello world"],
+            metadata={"task": "translation"},
+        )
+
+    def test_save_documents_no_metadata(self):
+        source = StringKnowledgeSource(content="Hello world")
+        source.storage = MagicMock()
+        source.chunks = ["Hello world"]
+        source._save_documents()
+
+        source.storage.save.assert_called_once_with(
+            ["Hello world"],
+            metadata=None,
+        )
+
+
+class TestCrewQueryKnowledgeForwardsParams:
+    """Tests that Crew.query_knowledge() forwards filter and score_threshold."""
+
+    def _make_crew_stub(self, knowledge=None):
+        """Create a minimal stub that satisfies Crew.query_knowledge."""
+        stub = MagicMock()
+        stub._knowledge = knowledge
+        # Bind the real method to the stub
+        from crewai.crew import Crew
+
+        stub.query_knowledge = Crew.query_knowledge.__get__(stub, type(stub))
+        return stub
+
+    def test_crew_query_knowledge_with_filter(self):
+        mock_knowledge = MagicMock()
+        mock_knowledge.query.return_value = [{"context": "test", "score": 0.9}]
+        crew = self._make_crew_stub(knowledge=mock_knowledge)
+
+        crew.query_knowledge(
+            ["test query"],
+            limit=5,
+            filter={"task": "translation"},
+            score_threshold=0.6,
+        )
+
+        mock_knowledge.query.assert_called_once_with(
+            ["test query"],
+            limit=5,
+            filter={"task": "translation"},
+            score_threshold=0.6,
+        )
+
+    def test_crew_query_knowledge_defaults(self):
+        mock_knowledge = MagicMock()
+        mock_knowledge.query.return_value = [{"context": "test", "score": 0.9}]
+        crew = self._make_crew_stub(knowledge=mock_knowledge)
+
+        crew.query_knowledge(["test query"])
+
+        mock_knowledge.query.assert_called_once_with(
+            ["test query"],
+            limit=3,
+            filter=None,
+            score_threshold=0.35,
+        )
+
+    def test_crew_query_knowledge_no_knowledge(self):
+        crew = self._make_crew_stub(knowledge=None)
+
+        result = crew.query_knowledge(["test query"])
+        assert result is None
