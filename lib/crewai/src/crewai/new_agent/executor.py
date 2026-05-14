@@ -118,19 +118,19 @@ class ConversationalAgentExecutor(BaseModel):
         """Assemble the PromptStack from agent attributes.
 
         GAP-66: Layer order follows the plan specification:
-        Soul -> Tools -> Memory -> Knowledge -> Coworkers -> Temporal
+        Soul -> Tools -> Memory -> Knowledge -> Skills -> Coworkers -> Temporal
         """
+        from crewai.utilities.i18n import I18N_DEFAULT
+
         stack = PromptStack()
         agent = self.agent
+        i18n = I18N_DEFAULT.new_agent
 
         # 1. Soul layer
-        soul = (
-            f"You are {agent.role}.\n"
-            f"Your goal: {agent.goal}\n"
-            f"Background: {agent.backstory}\n\n"
-            "When you use tools, act on the results directly. "
-            "Never repeat raw tool output (file contents, command output, etc.) "
-            "in your response — summarize findings or state what you did instead."
+        soul = i18n("soul").format(
+            role=agent.role,
+            goal=agent.goal,
+            backstory=agent.backstory,
         )
         stack.add("soul", soul, source="agent.role/goal/backstory")
 
@@ -144,7 +144,7 @@ class ConversationalAgentExecutor(BaseModel):
                 tool_descs.append(f"- {t.name}: {desc}")
             stack.add(
                 "tools",
-                "You have access to the following tools:\n" + "\n".join(tool_descs),
+                i18n("tools_header").format(tool_descriptions="\n".join(tool_descs)),
                 source="agent.tools",
             )
 
@@ -166,12 +166,7 @@ class ConversationalAgentExecutor(BaseModel):
             if skills_context:
                 parts.append(skills_context)
             if agent.settings.can_build_skills:
-                parts.append(
-                    "You can learn new skills from instructions the user gives you. "
-                    "When the user asks you to remember a process, encode a workflow, "
-                    "or create a skill, a skill suggestion will be generated automatically — "
-                    "do NOT use file-writing tools to create skill files yourself."
-                )
+                parts.append(i18n("skills_self_build"))
             if parts:
                 stack.add("skills", "\n\n".join(parts), source="agent.skills")
         else:
@@ -195,11 +190,9 @@ class ConversationalAgentExecutor(BaseModel):
                 cw_descs.append(f"- {t.name}: {desc}")
             stack.add(
                 "coworkers",
-                "You have coworkers with specialized expertise. "
-                "When a request involves work outside your core specialty, "
-                "delegate to the appropriate coworker using their tool. "
-                "Delegation is preferred over attempting work you're not specialized in.\n\n"
-                "Available coworkers:\n" + "\n".join(cw_descs),
+                i18n("coworkers_header").format(
+                    coworker_descriptions="\n".join(cw_descs)
+                ),
                 source="agent.coworkers",
             )
 
@@ -207,7 +200,7 @@ class ConversationalAgentExecutor(BaseModel):
         from datetime import datetime, timezone
 
         now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-        stack.add("temporal", f"Current date and time: {now}", source="system")
+        stack.add("temporal", i18n("temporal").format(now=now), source="system")
 
         return stack
 
@@ -2078,10 +2071,13 @@ class ConversationalAgentExecutor(BaseModel):
             _MAX_TOOL_RESULT_CHARS = 4000
             display_result = result_str
             if len(result_str) > _MAX_TOOL_RESULT_CHARS:
+                from crewai.utilities.i18n import I18N_DEFAULT
+
                 display_result = (
                     result_str[:_MAX_TOOL_RESULT_CHARS]
-                    + f"\n\n[Truncated — {len(result_str)} chars total. "
-                    "Use the result directly; do not repeat it in your response.]"
+                    + I18N_DEFAULT.new_agent("tool_result_truncated").format(
+                        char_count=len(result_str)
+                    )
                 )
             llm_messages.append(
                 {

@@ -97,5 +97,13 @@
     "synthesis_user_prompt": "## Original Task\n{task_description}\n\n## Results from each step\n{combined_steps}\n\nSynthesize these results into a single, coherent final answer.",
     "replan_enhancement_prompt": "\n\nIMPORTANT: Previous execution attempt did not fully succeed. Please create a revised plan that accounts for the following context from the previous attempt:\n\n{previous_context}\n\nConsider:\n1. What steps succeeded and can be built upon\n2. What steps failed and why they might have failed\n3. Alternative approaches that might work better\n4. Whether dependencies need to be restructured",
     "step_executor_task_context": "## Task Context\nThe following is the full task you are helping complete. Keep this in mind — especially any required output files, exact filenames, and expected formats.\n\n{task_context}\n\n---\n"
+  },
+  "new_agent": {
+    "soul": "You are {role}.\nYour goal: {goal}\nBackground: {backstory}\n\nWhen you use tools, act on the results directly. Never repeat raw tool output (file contents, command output, etc.) in your response — summarize findings or state what you did instead.",
+    "tools_header": "You have access to the following tools:\n{tool_descriptions}",
+    "coworkers_header": "You have coworkers with specialized expertise. When a request involves work outside your core specialty, delegate to the appropriate coworker using their tool. Delegation is preferred over attempting work you're not specialized in.\n\nAvailable coworkers:\n{coworker_descriptions}",
+    "skills_self_build": "You can learn new skills from instructions the user gives you. When the user asks you to remember a process, encode a workflow, or create a skill, a skill suggestion will be generated automatically — do NOT use file-writing tools to create skill files yourself.",
+    "temporal": "Current date and time: {now}",
+    "tool_result_truncated": "\n\n[Truncated — {char_count} chars total. Use the result directly; do not repeat it in your response.]"
   }
 }

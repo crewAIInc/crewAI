@@ -97,6 +97,17 @@ class I18N(BaseModel):
         """
         return self.retrieve("memory", key)
 
+    def new_agent(self, key: str) -> str:
+        """Retrieve a NewAgent prompt by key.
+
+        Args:
+            key: The key of the new_agent prompt to retrieve.
+
+        Returns:
+            The prompt as a string.
+        """
+        return self.retrieve("new_agent", key)
+
     def retrieve(
         self,
         kind: Literal[
@@ -107,6 +118,7 @@ class I18N(BaseModel):
             "planning",
             "hierarchical_manager_agent",
             "memory",
+            "new_agent",
         ],
         key: str,
     ) -> str:
