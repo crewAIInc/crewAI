@@ -776,7 +776,7 @@ def _setup_env(base: Path, llm_model: str) -> None:
         for details in ENV_VARS.get(provider, [])
         if "key_name" in details
     )
-    if already_set and env_vars.get("MODEL"):
+    if already_set:
         return
 
     if provider in ENV_VARS:

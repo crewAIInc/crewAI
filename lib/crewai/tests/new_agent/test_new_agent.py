@@ -377,12 +377,13 @@ class TestDelegation:
     @patch("crewai.new_agent.executor.aget_llm_response")
     @pytest.mark.asyncio
     async def test_sync_delegation(self, mock_llm_response):
-        mock_llm_response.side_effect = [
-            "Draft article about AI.",  # writer's response
-            "Here is the summary based on the writer's output.",  # manager's response
-        ]
+        mock_llm_response.return_value = "Draft article about AI."
 
-        writer = NewAgent(role="Writer", goal="Write articles")
+        writer = NewAgent(
+            role="Writer",
+            goal="Write articles",
+            settings={"planning_enabled": False},
+        )
         tool = DelegateToCoworkerTool(coworker=writer)
 
         result = tool._run(message="Write an article about AI")
