@@ -656,6 +656,7 @@ class ToolUsage:
         if self.task:
             self.task.used_tools += 1
 
+        self._result_files = {}
         text = self._extract_multimodal_files(result)
         if text is not None:
             if self._should_remember_format():
