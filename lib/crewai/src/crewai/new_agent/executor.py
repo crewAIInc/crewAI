@@ -625,9 +625,7 @@ class ConversationalAgentExecutor(BaseModel):
             pass
         return ""
 
-    _INTERNAL_TAG_RE = re.compile(
-        r"<summary>.*?</summary>", re.DOTALL
-    )
+    _INTERNAL_TAG_RE = re.compile(r"<summary>.*?</summary>", re.DOTALL)
 
     def _strip_internal_tags(self, text: str) -> str:
         """Strip <summary> blocks that leak from the summarization prompt."""
@@ -2034,7 +2032,9 @@ class ConversationalAgentExecutor(BaseModel):
                 )
                 self.provenance_log.append(tool_prov_entry)
                 # GAP-89: Persist tool call provenance to memory
-                await asyncio.to_thread(self._persist_provenance_to_memory, tool_prov_entry)
+                await asyncio.to_thread(
+                    self._persist_provenance_to_memory, tool_prov_entry
+                )
 
             # GAP-67: Detect artifacts from tool results
             try:
@@ -2065,11 +2065,10 @@ class ConversationalAgentExecutor(BaseModel):
             if len(result_str) > _MAX_TOOL_RESULT_CHARS:
                 from crewai.utilities.i18n import I18N_DEFAULT
 
-                display_result = (
-                    result_str[:_MAX_TOOL_RESULT_CHARS]
-                    + I18N_DEFAULT.new_agent("tool_result_truncated").format(
-                        char_count=len(result_str)
-                    )
+                display_result = result_str[
+                    :_MAX_TOOL_RESULT_CHARS
+                ] + I18N_DEFAULT.new_agent("tool_result_truncated").format(
+                    char_count=len(result_str)
                 )
             llm_messages.append(
                 {

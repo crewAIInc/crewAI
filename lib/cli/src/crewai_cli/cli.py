@@ -236,7 +236,7 @@ def _train_new_agents(agent_files: list[Any], n_iterations: int) -> None:
             from crewai.new_agent.definition_parser import load_agent_from_definition
 
             agent = load_agent_from_definition(
-                str(agent_path), agents_dir=str(agent_path.parent)
+                str(agent_path), agents_dir=agent_path.parent
             )
         except Exception as e:
             click.secho(f"  Error loading agent {agent_name}: {e}", fg="red")
@@ -992,7 +992,9 @@ def _test_new_agents(
                 if progress is None:
                     raise RuntimeError("progress must not be None in non-verbose mode")
                 progress.start(iteration=iteration)
-            output_ctx = VerboseBenchmarkOutput() if verbose else SuppressBenchmarkOutput()
+            output_ctx = (
+                VerboseBenchmarkOutput() if verbose else SuppressBenchmarkOutput()
+            )
             with ArtifactsSandbox(), output_ctx:
                 all_results = _loop.run_until_complete(_run_all())
         finally:
