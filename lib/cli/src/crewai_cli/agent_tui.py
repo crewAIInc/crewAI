@@ -1120,7 +1120,7 @@ class AgentTUI(App[None]):
 
         lines = [f"[bold]Active Skills[/] ({len(active)})"]
         for s in active:
-            lines.append(f"  [{_CORAL}]{s.name}[/] — {s.description}")
+            lines.append(f"  [{_CORAL}]{_safe_render(s.name)}[/] — {_safe_render(s.description)}")
         self._mount_sys("\n".join(lines))
 
     def _handle_tasks_command(self, parts: list[str]) -> None:
@@ -1219,13 +1219,13 @@ class AgentTUI(App[None]):
             if mem_type == "canonical"
             else f"[dim]{mem_type}[/]"
         )
-        importance_tag = f" [yellow]★{importance}[/]" if importance else ""
-        scope_tag = f" [{_DIM}]scope:{scope}[/]" if scope else ""
+        importance_tag = f" [yellow]★{_safe_render(str(importance))}[/]" if importance else ""
+        scope_tag = f" [{_DIM}]scope:{_safe_render(str(scope))}[/]" if scope else ""
         time_tag = f" [{_DIM}]{timestamp}[/]" if timestamp else ""
 
         return [
             f"  {i}. {type_tag}{importance_tag}{scope_tag}{time_tag}",
-            f"     {content}",
+            f"     {_safe_render(content)}",
             "",
         ]
 

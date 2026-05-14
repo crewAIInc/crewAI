@@ -304,6 +304,29 @@ async def _run_model_benchmark(
                     score=0.0,
                 )
 
+            if agent is None:
+                emit(
+                    {
+                        "type": "case_done",
+                        "model": model,
+                        "case_index": i,
+                        "total_cases": total,
+                        "passed": False,
+                        "score": 0.0,
+                        "time_ms": 0,
+                        "error": "agent loader returned None",
+                    }
+                )
+                return BenchmarkResult(
+                    case_index=i,
+                    input=case.input,
+                    expected=case.expected,
+                    actual="[Agent loader returned None]",
+                    model=model,
+                    passed=False,
+                    score=0.0,
+                )
+
             start_ms = _current_time_ms()
             try:
                 response = await asyncio.wait_for(
@@ -365,6 +388,8 @@ async def _run_model_benchmark(
                 )
 
             passed, score = False, 0.0
+            if case.expected is None and case.criteria is None:
+                passed, score = True, 1.0
             if case.expected is not None:
                 passed, score = _check_expected(case.expected, actual)
             if case.criteria is not None:
