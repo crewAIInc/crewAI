@@ -7,7 +7,7 @@ mode: "wide"
 
 ## Overview
 
-The CrewAI CLI provides commands to manage custom tools on the **CrewAI platform** — a hosted tool registry that lets you share tools within your organization and across the community without publishing to PyPI.
+The CrewAI CLI provides commands to manage custom tools on the **CrewAI platform** — a hosted tool registry that lets you share tools within your organization without publishing to PyPI.
 
 | Command | Purpose |
 |---------|---------|
@@ -68,21 +68,13 @@ From your tool project directory, publish it to the CrewAI platform:
 crewai tool publish
 ```
 
-### Visibility Options
+### Options
 
 | Flag | Description |
 |------|-------------|
-| `--public` | Make the tool available to all platform users |
-| `--private` | Restrict visibility to your organization |
 | `--force` | Bypass Git remote validations |
 
-```bash
-# Publish as a public tool
-crewai tool publish --public
-
-# Publish privately (organization only)
-crewai tool publish --private
-```
+Tools are published privately to your organization by default.
 
 ---
 
@@ -112,7 +104,7 @@ cd weather_lookup
 # ... edit the tool file ...
 
 # 4. Publish to the platform
-crewai tool publish --public
+crewai tool publish
 
 # 5. In another project, install and use it
 crewai tool install weather_lookup
@@ -128,7 +120,7 @@ crewai tool install weather_lookup
 | **Registry** | CrewAI platform | PyPI |
 | **Install** | `crewai tool install <handle>` | `pip install <package>` |
 | **Auth** | `crewai login` | PyPI account + token |
-| **Visibility** | `--public` / `--private` flags | Always public |
+| **Visibility** | Organization-scoped (private) | Always public |
 | **Guide** | This page | [Publish Custom Tools](/en/guides/tools/publish-custom-tools) |
 
 ---
