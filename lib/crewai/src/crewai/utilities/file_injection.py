@@ -33,8 +33,9 @@ def get_auto_injected_files(
     return {
         name: file_input
         for name, file_input in files.items()
-        if any(
-            getattr(file_input, "content_type", "").startswith(content_type)
+        if isinstance((file_content_type := getattr(file_input, "content_type", None)), str)
+        and any(
+            file_content_type.startswith(content_type)
             for content_type in supported_types
         )
     }

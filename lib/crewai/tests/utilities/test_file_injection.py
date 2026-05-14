@@ -35,7 +35,10 @@ def test_text_files_are_not_injected_for_non_multimodal_llm() -> None:
 
 
 def test_unsupported_file_values_are_skipped() -> None:
-    files = {"bad": object()}
+    class BadFile:
+        content_type = None
+
+    files = {"bad": object(), "also_bad": BadFile()}
     llm = DummyLLM(model="openai/gpt-4o", multimodal=True)
 
     assert get_auto_injected_files(files, llm) == {}
