@@ -106,6 +106,9 @@ class ToolUsage:
         self.action = action
         self.function_calling_llm = function_calling_llm
         self.fingerprint_context = fingerprint_context or {}
+        # Populated by _format_result when a MultimodalToolResult or FileInput is returned.
+        # Callers (execute_tool_and_check_finality) read this to build ToolResult.files.
+        self._result_files: dict[str, Any] = {}
 
         # Set the maximum parsing attempts for bigger models
         if (
@@ -142,23 +145,7 @@ class ToolUsage:
                 PRINTER.print(content=f"\n\n{error}\n", color="red")
             return error
 
-        if (
-            isinstance(tool, CrewStructuredTool)
-            and sanitize_tool_name(tool.name)
-            == sanitize_tool_name(I18N_DEFAULT.tools("add_image")["name"])  # type: ignore
-        ):
-            try:
-                return self._use(tool_string=tool_string, tool=tool, calling=calling)
-
-            except Exception as e:
-                error = getattr(e, "message", str(e))
-                if self.task:
-                    self.task.increment_tools_errors()
-                if self.agent and self.agent.verbose:
-                    PRINTER.print(content=f"\n\n{error}\n", color="red")
-                return error
-
-        return f"{self._use(tool_string=tool_string, tool=tool, calling=calling)}"
+        return self._use(tool_string=tool_string, tool=tool, calling=calling)
 
     async def ause(
         self, calling: ToolCalling | InstructorToolCalling, tool_string: str
@@ -190,26 +177,7 @@ class ToolUsage:
                 PRINTER.print(content=f"\n\n{error}\n", color="red")
             return error
 
-        if (
-            isinstance(tool, CrewStructuredTool)
-            and sanitize_tool_name(tool.name)
-            == sanitize_tool_name(I18N_DEFAULT.tools("add_image")["name"])  # type: ignore
-        ):
-            try:
-                return await self._ause(
-                    tool_string=tool_string, tool=tool, calling=calling
-                )
-            except Exception as e:
-                error = getattr(e, "message", str(e))
-                if self.task:
-                    self.task.increment_tools_errors()
-                if self.agent and self.agent.verbose:
-                    PRINTER.print(content=f"\n\n{error}\n", color="red")
-                return error
-
-        return (
-            f"{await self._ause(tool_string=tool_string, tool=tool, calling=calling)}"
-        )
+        return await self._ause(tool_string=tool_string, tool=tool, calling=calling)
 
     async def _ause(
         self,
@@ -687,9 +655,39 @@ class ToolUsage:
     def _format_result(self, result: Any) -> str:
         if self.task:
             self.task.used_tools += 1
+
+        text = self._extract_multimodal_files(result)
+        if text is not None:
+            if self._should_remember_format():
+                text = self._remember_format(result=text)
+            return text
+
         if self._should_remember_format():
             result = self._remember_format(result=result)
         return str(result)
+
+    def _extract_multimodal_files(self, result: Any) -> str | None:
+        """If result is MultimodalToolResult or a FileInput, extract files into
+        ``self._result_files`` and return the text portion.  Returns None when
+        result is neither so normal str() conversion applies."""
+        try:
+            from crewai.tools.tool_types import MultimodalToolResult
+            from crewai_files.core.types import BaseFile
+        except ImportError:
+            return None
+
+        if isinstance(result, MultimodalToolResult):
+            self._result_files = dict(result.files)
+            return result.text
+
+        if isinstance(result, BaseFile):
+            from pathlib import PurePosixPath
+            raw_name = result.filename or "file"
+            key = PurePosixPath(raw_name).stem or "file"
+            self._result_files = {key: result}
+            return f"[{type(result).__name__}: {raw_name}]"
+
+        return None
 
     def _should_remember_format(self) -> bool:
         if self.task:
