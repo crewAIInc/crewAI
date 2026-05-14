@@ -239,11 +239,11 @@ class PlanningEngine:
 
             crewai_event_bus.emit(
                 self.agent,
-                NewAgentPlanningStartedEvent(new_agent_id=str(self.agent.id)),
+                event=NewAgentPlanningStartedEvent(new_agent_id=str(self.agent.id)),
             )
             crewai_event_bus.emit(
                 self.agent,
-                NewAgentPlanningCompletedEvent(
+                event=NewAgentPlanningCompletedEvent(
                     new_agent_id=str(self.agent.id),
                     plan_steps_count=len(plan),
                 ),

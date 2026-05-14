@@ -629,6 +629,15 @@ class ConversationalAgentExecutor(BaseModel):
             pass
         return ""
 
+    _INTERNAL_TAG_RE = re.compile(
+        r"<summary>.*?</summary>", re.DOTALL
+    )
+
+    def _strip_internal_tags(self, text: str) -> str:
+        """Strip <summary> blocks that leak from the summarization prompt."""
+        cleaned = self._INTERNAL_TAG_RE.sub("", text).strip()
+        return cleaned if cleaned else text
+
     def _detect_artifacts(self, tool_name: str, result_str: str) -> list[Artifact]:
         """GAP-67: Detect artifacts from tool results.
 
@@ -741,7 +750,7 @@ class ConversationalAgentExecutor(BaseModel):
                     CheckpointEvent,
                 )
 
-                crewai_event_bus.emit(self, CheckpointEvent(data=checkpoint_data))
+                crewai_event_bus.emit(self, event=CheckpointEvent(data=checkpoint_data))
             except (ImportError, Exception):
                 pass
         except Exception:
@@ -828,7 +837,7 @@ class ConversationalAgentExecutor(BaseModel):
         try:
             from crewai.events.event_bus import crewai_event_bus
 
-            crewai_event_bus.emit(self, event)
+            crewai_event_bus.emit(self, event=event)
         except Exception:
             pass
 
@@ -1711,6 +1720,8 @@ class ConversationalAgentExecutor(BaseModel):
 
             break
 
+        response_text = self._strip_internal_tags(response_text)
+
         response_text = await self._run_guardrail(response_text)
 
         if self.agent.settings.narration_guard:
@@ -2389,13 +2400,47 @@ class ConversationalAgentExecutor(BaseModel):
         invoke_task = asyncio.create_task(self.ainvoke(user_message))
         _streamed_chars = 0
         _last_status_time = time.monotonic()
+        _tag_buf = ""
+        _suppressing = False
+
+        def _filter_chunk(raw: str) -> str:
+            """Filter <summary>...</summary> blocks from streamed chunks."""
+            nonlocal _tag_buf, _suppressing
+            out = []
+            for ch in raw:
+                if _suppressing:
+                    _tag_buf += ch
+                    if _tag_buf.endswith("</summary>"):
+                        _suppressing = False
+                        _tag_buf = ""
+                    continue
+                if _tag_buf:
+                    _tag_buf += ch
+                    if len(_tag_buf) <= len("<summary>"):
+                        if "<summary>"[: len(_tag_buf)] == _tag_buf:
+                            if _tag_buf == "<summary>":
+                                _suppressing = True
+                            continue
+                        else:
+                            out.append(_tag_buf)
+                            _tag_buf = ""
+                    else:
+                        out.append(_tag_buf)
+                        _tag_buf = ""
+                elif ch == "<":
+                    _tag_buf = ch
+                else:
+                    out.append(ch)
+            return "".join(out)
 
         try:
             while not invoke_task.done():
                 try:
                     chunk = await asyncio.wait_for(chunk_queue.get(), timeout=0.05)
-                    _streamed_chars += len(chunk)
-                    yield chunk
+                    filtered = _filter_chunk(chunk)
+                    if filtered:
+                        _streamed_chars += len(filtered)
+                        yield filtered
 
                     now = time.monotonic()
                     if now - _last_status_time >= 0.5:
@@ -2406,8 +2451,13 @@ class ConversationalAgentExecutor(BaseModel):
 
             while not chunk_queue.empty():
                 chunk = chunk_queue.get_nowait()
-                _streamed_chars += len(chunk)
-                yield chunk
+                filtered = _filter_chunk(chunk)
+                if filtered:
+                    _streamed_chars += len(filtered)
+                    yield filtered
+
+            if _tag_buf and not _suppressing:
+                yield _tag_buf
 
             result = invoke_task.result()
             self._last_stream_result = result

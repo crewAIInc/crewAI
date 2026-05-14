@@ -715,7 +715,7 @@ class DreamingEngine:
 
             crewai_event_bus.emit(
                 self.agent,
-                NewAgentWorkflowProposedEvent(
+                event=NewAgentWorkflowProposedEvent(
                     new_agent_id=str(self.agent.id),
                     workflow_description=description,
                 ),
@@ -746,7 +746,7 @@ class DreamingEngine:
 
             crewai_event_bus.emit(
                 self.agent,
-                NewAgentWorkflowConfirmedEvent(new_agent_id=str(self.agent.id)),
+                event=NewAgentWorkflowConfirmedEvent(new_agent_id=str(self.agent.id)),
             )
         except Exception:
             pass
@@ -768,7 +768,7 @@ class DreamingEngine:
 
             crewai_event_bus.emit(
                 self.agent,
-                NewAgentDreamingStartedEvent(new_agent_id=str(self.agent.id)),
+                event=NewAgentDreamingStartedEvent(new_agent_id=str(self.agent.id)),
             )
         except Exception:
             pass
@@ -780,7 +780,7 @@ class DreamingEngine:
 
             crewai_event_bus.emit(
                 self.agent,
-                NewAgentWorkflowDetectedEvent(
+                event=NewAgentWorkflowDetectedEvent(
                     new_agent_id=str(self.agent.id),
                     tools=workflow.get("tools", []),
                     count=workflow.get("count", 0),
@@ -796,7 +796,7 @@ class DreamingEngine:
 
             crewai_event_bus.emit(
                 self.agent,
-                NewAgentDreamingCompletedEvent(
+                event=NewAgentDreamingCompletedEvent(
                     new_agent_id=str(self.agent.id),
                     memories_processed=result.get("memories_processed", 0),
                     canonical_created=result.get("canonical_created", 0),

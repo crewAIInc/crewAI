@@ -458,7 +458,7 @@ class SkillBuilder:
 
             crewai_event_bus.emit(
                 self.agent,
-                NewAgentSkillSuggestedEvent(
+                event=NewAgentSkillSuggestedEvent(
                     new_agent_id=str(self.agent.id),
                     skill_name=suggestion.get("name", ""),
                     source_type=suggestion.get("source", ""),
@@ -474,7 +474,7 @@ class SkillBuilder:
 
             crewai_event_bus.emit(
                 self.agent,
-                NewAgentSkillConfirmedEvent(
+                event=NewAgentSkillConfirmedEvent(
                     new_agent_id=str(self.agent.id),
                     skill_name=skill_name,
                 ),
@@ -489,7 +489,7 @@ class SkillBuilder:
 
             crewai_event_bus.emit(
                 self.agent,
-                NewAgentSkillRejectedEvent(
+                event=NewAgentSkillRejectedEvent(
                     new_agent_id=str(self.agent.id),
                     skill_name=skill_name,
                 ),

@@ -177,7 +177,7 @@ class KnowledgeDiscovery:
 
             crewai_event_bus.emit(
                 self.agent,
-                NewAgentKnowledgeSuggestedEvent(
+                event=NewAgentKnowledgeSuggestedEvent(
                     new_agent_id=str(self.agent.id),
                     source_type=suggestion.get("source_tool", ""),
                 ),
@@ -192,7 +192,7 @@ class KnowledgeDiscovery:
 
             crewai_event_bus.emit(
                 self.agent,
-                NewAgentKnowledgeConfirmedEvent(new_agent_id=str(self.agent.id)),
+                event=NewAgentKnowledgeConfirmedEvent(new_agent_id=str(self.agent.id)),
             )
         except Exception:
             pass
@@ -204,7 +204,7 @@ class KnowledgeDiscovery:
 
             crewai_event_bus.emit(
                 self.agent,
-                NewAgentKnowledgeRejectedEvent(new_agent_id=str(self.agent.id)),
+                event=NewAgentKnowledgeRejectedEvent(new_agent_id=str(self.agent.id)),
             )
         except Exception:
             pass

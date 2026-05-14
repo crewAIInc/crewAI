@@ -26,7 +26,7 @@ def _emit_spawn_event(event_cls: type, **kwargs: Any) -> None:
     try:
         from crewai.events.event_bus import crewai_event_bus
 
-        crewai_event_bus.emit(None, event_cls(**kwargs))
+        crewai_event_bus.emit(None, event=event_cls(**kwargs))
     except Exception:
         pass
 

@@ -533,7 +533,7 @@ class NewAgent(BaseModel):
 
             crewai_event_bus.emit(
                 self,
-                NewAgentCreatedEvent(
+                event=NewAgentCreatedEvent(
                     new_agent_id=self.id,
                     new_agent_role=self.role,
                 ),
@@ -597,7 +597,7 @@ class NewAgent(BaseModel):
 
             crewai_event_bus.emit(
                 self,
-                NewAgentConversationStartedEvent(
+                event=NewAgentConversationStartedEvent(
                     conversation_id=conversation_id,
                     new_agent_id=self.id,
                     new_agent_role=self.role,
@@ -741,7 +741,7 @@ class NewAgent(BaseModel):
 
             crewai_event_bus.emit(
                 self,
-                NewAgentConversationResetEvent(
+                event=NewAgentConversationResetEvent(
                     conversation_id=old_conversation_id,
                     new_agent_id=self.id,
                 ),
@@ -760,7 +760,7 @@ class NewAgent(BaseModel):
 
             crewai_event_bus.emit(
                 self,
-                NewAgentExplainRequestedEvent(new_agent_id=self.id),
+                event=NewAgentExplainRequestedEvent(new_agent_id=self.id),
             )
         except Exception:
             pass

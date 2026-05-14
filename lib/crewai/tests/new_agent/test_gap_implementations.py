@@ -276,33 +276,26 @@ class TestSpawnEvents:
         tool = SpawnSubtaskTool(agent=agent)
 
         emitted_events: list[Any] = []
+        from crewai.events.event_bus import crewai_event_bus
 
-        original_emit = None
-        try:
-            from crewai.events.event_bus import crewai_event_bus
-            original_emit = crewai_event_bus.emit
+        original_emit = crewai_event_bus.emit
 
-            def capture_emit(source: Any, event: Any) -> None:
+        def capture_emit(source: Any, event: Any = None, **kw: Any) -> Any:
+            if event is not None:
                 emitted_events.append(event)
-                if original_emit:
-                    original_emit(source, event)
+            return original_emit(source, event=event)
 
-            crewai_event_bus.emit = capture_emit
+        with patch.object(crewai_event_bus, "emit", side_effect=capture_emit):
             result = tool._run(subtasks=["Task A"])
 
-            # Check that spawn events were emitted
-            from crewai.new_agent.events import (
-                NewAgentSpawnStartedEvent,
-                NewAgentSpawnCompletedEvent,
-            )
-            spawn_started = [e for e in emitted_events if isinstance(e, NewAgentSpawnStartedEvent)]
-            spawn_completed = [e for e in emitted_events if isinstance(e, NewAgentSpawnCompletedEvent)]
+        from crewai.new_agent.events import (
+            NewAgentSpawnStartedEvent,
+            NewAgentSpawnCompletedEvent,
+        )
+        spawn_started = [e for e in emitted_events if isinstance(e, NewAgentSpawnStartedEvent)]
 
-            assert len(spawn_started) >= 1
-            assert spawn_started[0].spawn_depth == 1
-        finally:
-            if original_emit:
-                crewai_event_bus.emit = original_emit
+        assert len(spawn_started) >= 1
+        assert spawn_started[0].spawn_depth == 1
 
     def test_spawn_provenance_includes_spawn_id(self):
         """Verify the spawn ID is included in provenance entries."""
