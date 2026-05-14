@@ -314,6 +314,8 @@ class StepExecutor:
                 tool_result = self._execute_text_tool_with_events(formatted)
                 last_tool_result = tool_result.result
                 messages.append({"role": "assistant", "content": answer_str})
+                if tool_result.result_as_answer:
+                    return tool_result.result
                 obs_msg = self._build_observation_message(tool_result.result)
                 if tool_result.files:
                     obs_msg["files"] = tool_result.files
