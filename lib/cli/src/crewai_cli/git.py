@@ -6,10 +6,10 @@ class Repository:
     def __init__(self, path: str = ".") -> None:
         self.path = path
 
-        if not self.is_git_installed:
+        if not self.is_git_installed():
             raise ValueError("Git is not installed or not found in your PATH.")
 
-        if not self.is_git_repo():
+        if not self.is_git_repo:
             raise ValueError(f"{self.path} is not a Git repository.")
 
         self.fetch()
