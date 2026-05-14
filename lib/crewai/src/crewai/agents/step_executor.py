@@ -43,6 +43,7 @@ from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.planning_types import TodoItem
 from crewai.utilities.step_execution_context import StepExecutionContext, StepResult
 from crewai.utilities.string_utils import sanitize_tool_name
+from crewai.tools.tool_types import ToolResult
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from crewai.utilities.types import LLMMessage
 
@@ -311,16 +312,19 @@ class StepExecutor:
             if isinstance(formatted, AgentAction):
                 tool_calls_made.append(formatted.tool)
                 tool_result = self._execute_text_tool_with_events(formatted)
-                last_tool_result = tool_result
+                last_tool_result = tool_result.result
                 messages.append({"role": "assistant", "content": answer_str})
-                messages.append(self._build_observation_message(tool_result))
+                obs_msg = self._build_observation_message(tool_result.result)
+                if tool_result.files:
+                    obs_msg["files"] = tool_result.files  # type: ignore[typeddict-unknown-key]
+                messages.append(obs_msg)
                 continue
 
             return answer_str
 
         return last_tool_result
 
-    def _execute_text_tool_with_events(self, formatted: AgentAction) -> str:
+    def _execute_text_tool_with_events(self, formatted: AgentAction) -> ToolResult:
         """Execute text-parsed tool calls with tool usage events."""
         args_dict = self._parse_tool_args(formatted.tool_input)
         agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
@@ -386,7 +390,7 @@ class StepExecutor:
                 finished_at=datetime.now(),
             ),
         )
-        return str(tool_result.result)
+        return tool_result
 
     def _parse_tool_args(self, tool_input: Any) -> dict[str, Any]:
         """Parse tool args from the parser output into a dict payload for events."""
