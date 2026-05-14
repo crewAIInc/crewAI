@@ -33,7 +33,7 @@ class AddImageTool(BaseTool):
 
             return MultimodalToolResult(
                 text=action_text,
-                files={"image": ImageFile(image_url)},
+                files={"image": ImageFile(source=image_url)},
             )
         except ImportError:
             # crewai-files not installed: fall back to text-only observation.
