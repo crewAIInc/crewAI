@@ -1347,7 +1347,9 @@ class ConversationalAgentExecutor(BaseModel):
         self._emit_event_message_received(user_message)
 
         await self._emit_status("recalling", "Searching memory for relevant context")
-        self.prompt_stack = self._build_prompt_stack(user_content=user_message.content)
+        self.prompt_stack = await asyncio.to_thread(
+            self._build_prompt_stack, user_content=user_message.content
+        )
 
         # Handle pending suggestion responses before new detection
         conv_id = (
@@ -1501,7 +1503,9 @@ class ConversationalAgentExecutor(BaseModel):
         llm_messages = self._build_llm_messages(user_message)
 
         callbacks: list[TokenCalcHandler] = [TokenCalcHandler()]
-        self._proactive_summarize_messages(llm_messages, callbacks)
+        await asyncio.to_thread(
+            self._proactive_summarize_messages, llm_messages, callbacks
+        )
 
         all_tools = list(self.agent._resolved_tools or []) + list(
             self.agent._coworker_tools or []
@@ -1790,10 +1794,10 @@ class ConversationalAgentExecutor(BaseModel):
             )
             self.provenance_log.append(prov_entry)
             # GAP-89: Persist provenance to memory backend
-            self._persist_provenance_to_memory(prov_entry)
+            await asyncio.to_thread(self._persist_provenance_to_memory, prov_entry)
 
         self._record_token_usage("message", llm_model)
-        self._save_to_memory(user_message, agent_message)
+        await asyncio.to_thread(self._save_to_memory, user_message, agent_message)
         self._emit_event_message_sent(agent_message)
 
         if self.provider:
@@ -1944,13 +1948,13 @@ class ConversationalAgentExecutor(BaseModel):
                             result = await original_tool._arun(parsed_args)
                     elif isinstance(parsed_args, dict):
                         result = (
-                            original_tool._run(**parsed_args)
+                            await asyncio.to_thread(original_tool._run, **parsed_args)
                             if original_tool
                             else str(parsed_args)
                         )
                     else:
                         result = (
-                            original_tool._run(parsed_args)
+                            await asyncio.to_thread(original_tool._run, parsed_args)
                             if original_tool
                             else str(parsed_args)
                         )
@@ -2023,7 +2027,7 @@ class ConversationalAgentExecutor(BaseModel):
                 )
                 self.provenance_log.append(tool_prov_entry)
                 # GAP-89: Persist tool call provenance to memory
-                self._persist_provenance_to_memory(tool_prov_entry)
+                await asyncio.to_thread(self._persist_provenance_to_memory, tool_prov_entry)
 
             # GAP-67: Detect artifacts from tool results
             try:
