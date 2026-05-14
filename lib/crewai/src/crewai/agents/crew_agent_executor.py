@@ -402,6 +402,8 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
                 self._invoke_step_callback(formatted_answer)
                 self._append_message(formatted_answer.text)
+                if isinstance(formatted_answer, AgentAction) and tool_result.files:
+                    self._inject_files_into_last_user_message(tool_result.files)
 
             except OutputParserError as e:
                 formatted_answer = handle_output_parser_exception(  # type: ignore[assignment]
@@ -865,6 +867,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
         from_cache = False
         result: str = "Tool not found"
+        result_files: dict[str, Any] = {}
         input_str = json.dumps(args_dict) if args_dict else ""
         if self.tools_handler and self.tools_handler.cache:
             cached_result = self.tools_handler.cache.read(
@@ -952,9 +955,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                             tool=func_name, input=input_str, output=raw_result
                         )
 
-                result = (
-                    str(raw_result) if not isinstance(raw_result, str) else raw_result
-                )
+                result, result_files = self._extract_native_tool_result(raw_result)
             except Exception as e:
                 result = f"Error executing tool: {e}"
                 if self.task:
@@ -1016,6 +1017,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
             "result": result,
             "from_cache": from_cache,
             "original_tool": original_tool,
+            "files": result_files,
         }
 
     def _append_tool_result_and_check_finality(
@@ -1026,6 +1028,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
         result = cast(str, execution_result["result"])
         from_cache = cast(bool, execution_result["from_cache"])
         original_tool = execution_result["original_tool"]
+        files: dict[str, Any] = execution_result.get("files", {})
 
         tool_message: LLMMessage = {
             "role": "tool",
@@ -1033,6 +1036,8 @@ class CrewAgentExecutor(BaseAgentExecutor):
             "name": func_name,
             "content": result,
         }
+        if files:
+            tool_message["files"] = files  # type: ignore[typeddict-unknown-key]
         self.messages.append(tool_message)
 
         if self.agent and self.agent.verbose:
@@ -1214,6 +1219,8 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
                 await self._ainvoke_step_callback(formatted_answer)
                 self._append_message(formatted_answer.text)
+                if isinstance(formatted_answer, AgentAction) and tool_result.files:
+                    self._inject_files_into_last_user_message(tool_result.files)
 
             except OutputParserError as e:
                 formatted_answer = handle_output_parser_exception(  # type: ignore[assignment]
@@ -1409,15 +1416,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
         Returns:
             Updated action or final answer.
         """
-        add_image_tool = I18N_DEFAULT.tools("add_image")
-        if (
-            isinstance(add_image_tool, dict)
-            and formatted_answer.tool.casefold().strip()
-            == add_image_tool.get("name", "").casefold().strip()
-        ):
-            self.messages.append({"role": "assistant", "content": tool_result.result})
-            return formatted_answer
-
         return handle_agent_action_core(
             formatted_answer=formatted_answer,
             tool_result=tool_result,
@@ -1425,6 +1423,45 @@ class CrewAgentExecutor(BaseAgentExecutor):
             step_callback=self.step_callback,
             show_logs=self._show_logs,
         )
+
+    def _inject_files_into_last_user_message(self, files: dict[str, Any]) -> None:
+        """Attach files to the most-recent role='user' message.
+
+        Called after _append_message() so that the observation message produced
+        by a tool carrying a MultimodalToolResult receives the file payload,
+        which _process_message_files() will convert to provider content blocks.
+        """
+        for i in range(len(self.messages) - 1, -1, -1):
+            msg = self.messages[i]
+            if msg.get("role") == "user":
+                existing: dict[str, Any] = msg.get("files", {})  # type: ignore[assignment]
+                existing.update(files)
+                msg["files"] = existing
+                break
+
+    @staticmethod
+    def _extract_native_tool_result(raw: Any) -> tuple[str, dict[str, Any]]:
+        """Convert a raw tool return value into (text, files).
+
+        Handles MultimodalToolResult and FileInput (BaseFile) transparently;
+        falls back to str() for all other types.
+        """
+        try:
+            from crewai.tools.tool_types import MultimodalToolResult
+            from crewai_files.core.types import BaseFile
+        except ImportError:
+            return (raw if isinstance(raw, str) else str(raw), {})
+
+        if isinstance(raw, MultimodalToolResult):
+            return raw.text, dict(raw.files)
+
+        if isinstance(raw, BaseFile):
+            from pathlib import PurePosixPath
+            raw_name = raw.filename or "file"
+            key = PurePosixPath(raw_name).stem or "file"
+            return f"[{type(raw).__name__}: {raw_name}]", {key: raw}
+
+        return (raw if isinstance(raw, str) else str(raw), {})
 
     def _invoke_step_callback(
         self, formatted_answer: AgentAction | AgentFinish
