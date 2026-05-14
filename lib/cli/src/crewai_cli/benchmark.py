@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 import re
 import time
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel
 
@@ -190,9 +190,11 @@ async def _judge_with_llm(
     )
 
     try:
+        from crewai.tools import BaseTool as _BaseTool
+
         response = judge_llm.call(
             messages=[{"role": "user", "content": prompt}],
-            tools=[_JUDGE_TOOL],
+            tools=cast("list[dict[str, _BaseTool]]", [_JUDGE_TOOL]),
             available_functions={"submit_evaluation": lambda **kw: kw},
         )
         result = _parse_judge_result(response)
@@ -208,9 +210,11 @@ async def _judge_with_llm(
             f"Input: {input_text}\n\n"
             f"Response: {actual}\n\n"
             f"Evaluation criteria: {criteria}\n\n"
-            "Respond with ONLY a JSON object: {\"score\": <float>, \"passed\": <bool>}"
+            'Respond with ONLY a JSON object: {"score": <float>, "passed": <bool>}'
         )
-        response = judge_llm.call(messages=[{"role": "user", "content": fallback_prompt}])
+        response = judge_llm.call(
+            messages=[{"role": "user", "content": fallback_prompt}]
+        )
         result = _parse_judge_result(response)
         if result is not None:
             return result

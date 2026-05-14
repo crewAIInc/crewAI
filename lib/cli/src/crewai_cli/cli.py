@@ -532,7 +532,7 @@ def memory(
     help="Show agent execution details (tool calls, LLM responses, errors).",
 )
 def test(
-    n_iterations: int,
+    n_iterations: int | None,
     model: str | None,
     trained_agents_file: str | None,
     threshold: float | None,
@@ -612,7 +612,9 @@ def test(
         click.echo(
             f"Testing the crew for {legacy_iterations} iterations with model {crew_model}"
         )
-        evaluate_crew(legacy_iterations, crew_model, trained_agents_file=trained_agents_file)
+        evaluate_crew(
+            legacy_iterations, crew_model, trained_agents_file=trained_agents_file
+        )
 
 
 def _read_config(*keys: str) -> Any:
@@ -802,7 +804,10 @@ class _BenchmarkLiveProgress:
         parts: list[Any] = []
         if self._n_iterations > 1:
             parts.append(
-                Text(f"  Iteration {self._current_iteration + 1}/{self._n_iterations}", style="cyan")
+                Text(
+                    f"  Iteration {self._current_iteration + 1}/{self._n_iterations}",
+                    style="cyan",
+                )
             )
 
         table = Table(box=box.SIMPLE, show_header=False, padding=(0, 1), expand=False)
@@ -914,7 +919,11 @@ def _test_new_agents(
     model_list = [model] if model else None
 
     # Progress display — prefix model key with agent name
-    progress = None if verbose else _BenchmarkLiveProgress(console=_con, n_iterations=n_iterations)
+    progress = (
+        None
+        if verbose
+        else _BenchmarkLiveProgress(console=_con, n_iterations=n_iterations)
+    )
 
     def _make_progress_cb(agent_name: str) -> Any:
         def _cb(event: dict[str, Any]) -> None:
@@ -973,11 +982,11 @@ def _test_new_agents(
     iter_marks: list[str] = []
 
     for iteration in range(n_iterations):
-        if not verbose:
-            if progress is None:
-                raise RuntimeError("progress must not be None in non-verbose mode")
-            progress.start(iteration=iteration)
         try:
+            if not verbose:
+                if progress is None:
+                    raise RuntimeError("progress must not be None in non-verbose mode")
+                progress.start(iteration=iteration)
             with ArtifactsSandbox():
                 if verbose:
                     with VerboseBenchmarkOutput():
@@ -1029,15 +1038,17 @@ def _test_new_agents(
         avg_time = sum(r.response_time_ms for r in results) / 1000 / n_iter
         avg_cost = sum(r.cost or 0.0 for r in results) / n_iter
 
-        rows.append({
-            "label": f"{agent_name}/{model_key}",
-            "passed": passed_count == total,
-            "ratio": f"{pass_per_iter}/{cases_per_iter}",
-            "score": avg_score,
-            "time": f"{avg_time:.1f}s",
-            "tokens": f"↑{_fmt_tokens(int(sum(r.input_tokens for r in results) / n_iter))} ↓{_fmt_tokens(int(sum(r.output_tokens for r in results) / n_iter))}",
-            "cost": _fmt_cost(avg_cost) if avg_cost > 0 else "",
-        })
+        rows.append(
+            {
+                "label": f"{agent_name}/{model_key}",
+                "passed": passed_count == total,
+                "ratio": f"{pass_per_iter}/{cases_per_iter}",
+                "score": avg_score,
+                "time": f"{avg_time:.1f}s",
+                "tokens": f"↑{_fmt_tokens(int(sum(r.input_tokens for r in results) / n_iter))} ↓{_fmt_tokens(int(sum(r.output_tokens for r in results) / n_iter))}",
+                "cost": _fmt_cost(avg_cost) if avg_cost > 0 else "",
+            }
+        )
 
     w_label = max((len(r["label"]) for r in rows), default=0)
     w_ratio = max((len(r["ratio"]) for r in rows), default=0)
@@ -1907,6 +1918,7 @@ def benchmark(
     from crewai_cli.benchmark import (
         load_benchmark_cases,
         print_comparison_chart,
+        print_results_chart,
         run_benchmark,
     )
 
@@ -1980,7 +1992,10 @@ def benchmark(
             progress.stop()
         _loop.close()
 
-    if len(results_by_model) > 1:
+    if len(results_by_model) == 1:
+        _single_results = next(iter(results_by_model.values()))
+        print_results_chart(_single_results, console=_con)
+    elif len(results_by_model) > 1:
         _con.print()
         print_comparison_chart(results_by_model, console=_con)
 

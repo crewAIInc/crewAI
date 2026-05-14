@@ -304,9 +304,7 @@ class ThinkingIndicator(Static):
         for step in self._steps:
             lines.append(step)
         status_esc = _safe_render(self._current_status)
-        current = (
-            f"[{_CORAL}]{ch}[/] [{_DIM}]{self._agent_name}[/] {status_esc}"
-        )
+        current = f"[{_CORAL}]{ch}[/] [{_DIM}]{self._agent_name}[/] {status_esc}"
         if self._tokens:
             current += f"  {self._tokens}"
         lines.append(current)
@@ -1507,9 +1505,7 @@ class AgentTUI(App[None]):
             while True:
                 try:
                     timeout = 180.0 if first_chunk else 120.0
-                    chunk = await asyncio.wait_for(
-                        anext(stream), timeout=timeout  # type: ignore[arg-type]
-                    )
+                    chunk = await asyncio.wait_for(anext(stream), timeout=timeout)
                     first_chunk = False
                 except StopAsyncIteration:
                     break
@@ -1552,9 +1548,7 @@ class AgentTUI(App[None]):
                 if getattr(response, "input_tokens", 0) or getattr(
                     response, "output_tokens", 0
                 ):
-                    meta_parts.append(
-                        f"~{response.output_tokens or 0:,} tokens"
-                    )
+                    meta_parts.append(f"~{response.output_tokens or 0:,} tokens")
                 if getattr(response, "response_time_ms", 0):
                     meta_parts.append(f"{response.response_time_ms / 1000:.1f}s")
             metadata = " · ".join(meta_parts)
