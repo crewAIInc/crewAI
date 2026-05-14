@@ -671,8 +671,9 @@ class ToolUsage:
         ``self._result_files`` and return the text portion.  Returns None when
         result is neither so normal str() conversion applies."""
         try:
-            from crewai.tools.tool_types import MultimodalToolResult
             from crewai_files.core.types import BaseFile
+
+            from crewai.tools.tool_types import MultimodalToolResult
         except ImportError:
             return None
 
@@ -682,6 +683,7 @@ class ToolUsage:
 
         if isinstance(result, BaseFile):
             from pathlib import PurePosixPath
+
             raw_name = result.filename or "file"
             key = PurePosixPath(raw_name).stem or "file"
             self._result_files = {key: result}

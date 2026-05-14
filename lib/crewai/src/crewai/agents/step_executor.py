@@ -28,6 +28,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.tools.tool_types import ToolResult
 from crewai.utilities.agent_utils import (
     build_tool_calls_assistant_message,
     check_native_tool_support,
@@ -43,7 +44,6 @@ from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.planning_types import TodoItem
 from crewai.utilities.step_execution_context import StepExecutionContext, StepResult
 from crewai.utilities.string_utils import sanitize_tool_name
-from crewai.tools.tool_types import ToolResult
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from crewai.utilities.types import LLMMessage
 
@@ -316,7 +316,7 @@ class StepExecutor:
                 messages.append({"role": "assistant", "content": answer_str})
                 obs_msg = self._build_observation_message(tool_result.result)
                 if tool_result.files:
-                    obs_msg["files"] = tool_result.files  # type: ignore[typeddict-unknown-key]
+                    obs_msg["files"] = tool_result.files
                 messages.append(obs_msg)
                 continue
 

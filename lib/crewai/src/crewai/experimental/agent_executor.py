@@ -2752,7 +2752,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         for i in range(len(self.state.messages) - 1, -1, -1):
             msg = self.state.messages[i]
             if msg.get("role") == "user":
-                existing: dict[str, Any] = msg.get("files", {})  # type: ignore[assignment]
+                existing: dict[str, Any] = msg.get("files", {})
                 existing.update(files)
                 msg["files"] = existing
                 break

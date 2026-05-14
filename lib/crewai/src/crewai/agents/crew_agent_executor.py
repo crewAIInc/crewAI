@@ -1037,7 +1037,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
             "content": result,
         }
         if files:
-            tool_message["files"] = files  # type: ignore[typeddict-unknown-key]
+            tool_message["files"] = files
         self.messages.append(tool_message)
 
         if self.agent and self.agent.verbose:
@@ -1434,7 +1434,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
         for i in range(len(self.messages) - 1, -1, -1):
             msg = self.messages[i]
             if msg.get("role") == "user":
-                existing: dict[str, Any] = msg.get("files", {})  # type: ignore[assignment]
+                existing: dict[str, Any] = msg.get("files", {})
                 existing.update(files)
                 msg["files"] = existing
                 break
@@ -1447,8 +1447,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
         falls back to str() for all other types.
         """
         try:
-            from crewai.tools.tool_types import MultimodalToolResult
             from crewai_files.core.types import BaseFile
+
+            from crewai.tools.tool_types import MultimodalToolResult
         except ImportError:
             return (raw if isinstance(raw, str) else str(raw), {})
 
@@ -1457,6 +1458,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
         if isinstance(raw, BaseFile):
             from pathlib import PurePosixPath
+
             raw_name = raw.filename or "file"
             key = PurePosixPath(raw_name).stem or "file"
             return f"[{type(raw).__name__}: {raw_name}]", {key: raw}

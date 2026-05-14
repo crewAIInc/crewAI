@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
     from crewai_files import FileInput
 
@@ -20,6 +21,7 @@ class MultimodalToolResult:
 
         from crewai.tools import BaseTool, MultimodalToolResult
         from crewai_files import ImageFile
+
 
         class ScreenshotTool(BaseTool):
             name = "take_screenshot"
