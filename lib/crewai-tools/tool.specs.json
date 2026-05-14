@@ -25988,6 +25988,343 @@
       }
     },
     {
+      "description": "Automate any website using natural language. Provide a URL and a goal describing what to accomplish \u2014 extract data, fill forms, click buttons, navigate pages, and more. Waits for completion and returns the structured JSON result, including status, run_id, and any extracted data.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "TinyFish Web Agent API key. Get one at https://agent.tinyfish.ai/api-keys",
+          "name": "TINYFISH_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Tinyfish Agent",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Run a TinyFish browser automation synchronously and return the result.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "TinyFish API key (overrides env var if provided).",
+            "required": false,
+            "title": "Api Key"
+          }
+        },
+        "required": [],
+        "title": "TinyfishAgentTool",
+        "type": "object"
+      },
+      "name": "TinyfishAgentTool",
+      "package_dependencies": [
+        "tinyfish"
+      ],
+      "run_params_schema": {
+        "description": "Input schema for a synchronous TinyFish browser automation.",
+        "properties": {
+          "browser_profile": {
+            "default": "lite",
+            "description": "Browser execution mode. \"lite\" is fast for standard sites; \"stealth\" enables anti-detection for sites with bot protection.",
+            "enum": [
+              "lite",
+              "stealth"
+            ],
+            "title": "Browser Profile",
+            "type": "string"
+          },
+          "goal": {
+            "description": "Natural language description of what to accomplish on the website (e.g., 'extract product names and prices', 'fill the contact form').",
+            "title": "Goal",
+            "type": "string"
+          },
+          "url": {
+            "description": "Target website URL to automate.",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "goal"
+        ],
+        "title": "TinyfishAgentParams",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Fetch clean readable content from one to ten URLs using TinyFish. Use when the target URL is known and the agent needs page text, metadata, links, or image links without controlling a browser.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "TinyFish Web Agent API key. Get one at https://agent.tinyfish.ai/api-keys",
+          "name": "TINYFISH_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Tinyfish Fetch",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Fetch clean readable content from URLs using TinyFish.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "TinyFish API key (overrides env var if provided).",
+            "required": false,
+            "title": "Api Key"
+          }
+        },
+        "required": [],
+        "title": "TinyfishFetchTool",
+        "type": "object"
+      },
+      "name": "TinyfishFetchTool",
+      "package_dependencies": [
+        "tinyfish"
+      ],
+      "run_params_schema": {
+        "description": "Input schema for the fetch endpoint.",
+        "properties": {
+          "format": {
+            "default": "markdown",
+            "description": "Output format for extracted content.",
+            "enum": [
+              "markdown",
+              "html",
+              "json"
+            ],
+            "title": "Format",
+            "type": "string"
+          },
+          "image_links": {
+            "default": false,
+            "description": "Whether to include image links.",
+            "title": "Image Links",
+            "type": "boolean"
+          },
+          "links": {
+            "default": false,
+            "description": "Whether to include page links.",
+            "title": "Links",
+            "type": "boolean"
+          },
+          "urls": {
+            "description": "One to ten URLs to fetch and extract clean content from.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "minItems": 1,
+            "title": "Urls",
+            "type": "array"
+          }
+        },
+        "required": [
+          "urls"
+        ],
+        "title": "TinyfishFetchParams",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Search the web using TinyFish and return structured search results (title, url, snippet, site name). Use to discover relevant URLs or current information before fetching content or running an automation.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "TinyFish Web Agent API key. Get one at https://agent.tinyfish.ai/api-keys",
+          "name": "TINYFISH_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Tinyfish Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Search the web using TinyFish.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "TinyFish API key (overrides env var if provided).",
+            "required": false,
+            "title": "Api Key"
+          }
+        },
+        "required": [],
+        "title": "TinyfishSearchTool",
+        "type": "object"
+      },
+      "name": "TinyfishSearchTool",
+      "package_dependencies": [
+        "tinyfish"
+      ],
+      "run_params_schema": {
+        "description": "Input schema for the search endpoint.",
+        "properties": {
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional language code, e.g. 'en'.",
+            "title": "Language"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional location to scope results, e.g. 'United States'.",
+            "title": "Location"
+          },
+          "query": {
+            "description": "Search query string.",
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "TinyfishSearchParams",
+        "type": "object"
+      }
+    },
+    {
       "description": "This tool uses OpenAI's Vision API to describe the contents of an image.",
       "env_vars": [
         {

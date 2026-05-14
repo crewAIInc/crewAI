@@ -86,6 +86,9 @@ singlestore = [
 exa-py = [
     "exa-py>=1.8.7",
 ]
+tinyfish = [
+    'tinyfish>=0.2.5; python_version >= "3.11"',
+]
 qdrant-client = [
     "qdrant-client>=1.12.1",
 ]

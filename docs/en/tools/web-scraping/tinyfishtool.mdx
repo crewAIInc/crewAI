@@ -1,0 +1,152 @@
+---
+title: TinyFish
+description: Use the TinyFish Web Agent API to automate any website, search the web, and fetch clean page content through three CrewAI tools.
+icon: fish
+mode: "wide"
+---
+
+# TinyFish Tools
+
+## Description
+
+[TinyFish](https://agent.tinyfish.ai) is an AI-powered web-automation API that
+turns natural-language goals into real browser actions on any website —
+including authenticated, JavaScript-heavy, and bot-protected pages. This
+integration exposes three tools backed by the official `tinyfish` Python SDK:
+
+| Tool | What it does |
+|---|---|
+| `TinyfishAgentTool` | Run a browser automation synchronously and return the structured result. |
+| `TinyfishSearchTool` | Search the web and return structured results (title, URL, snippet, site name). |
+| `TinyfishFetchTool` | Fetch clean readable content from one to ten URLs (markdown, HTML, or JSON). |
+
+## Installation
+
+Get an API key from [agent.tinyfish.ai/api-keys](https://agent.tinyfish.ai/api-keys)
+and set it as the `TINYFISH_API_KEY` environment variable, then install the
+optional `tinyfish` extra:
+
+```shell
+pip install 'crewai-tools[tinyfish]'
+```
+
+or with uv:
+
+```shell
+uv add crewai-tools --extra tinyfish
+```
+
+## TinyfishAgentTool
+
+Automate any website using natural language. Provide a target URL and describe
+what to accomplish; the tool waits for completion and returns structured JSON
+results, including the run status, run ID, and any extracted data.
+
+```python Code
+from crewai_tools import TinyfishAgentTool
+
+tool = TinyfishAgentTool()
+
+result = tool.run(
+    url="https://news.ycombinator.com",
+    goal="Return the title and points of the top 5 stories.",
+    browser_profile="lite",
+)
+```
+
+### Arguments
+
+- `url` *(required)*: Target website URL (must start with `http://` or `https://`).
+- `goal` *(required)*: Natural language description of what to accomplish.
+- `browser_profile`: `"lite"` (default, fast) or `"stealth"` (anti-detection for protected sites).
+
+### Init parameters
+
+- `api_key`: Optional. Defaults to the `TINYFISH_API_KEY` environment variable.
+
+## TinyfishSearchTool
+
+Search the web through TinyFish's search endpoint.
+
+```python Code
+from crewai_tools import TinyfishSearchTool
+
+tool = TinyfishSearchTool()
+
+results = tool.run(
+    query="best Italian restaurants in San Francisco",
+    location="United States",
+    language="en",
+)
+```
+
+### Arguments
+
+- `query` *(required)*: Search query string.
+- `location`: Optional location scope, e.g. `"United States"`.
+- `language`: Optional language code, e.g. `"en"`.
+
+## TinyfishFetchTool
+
+Fetch clean readable content from one to ten URLs.
+
+```python Code
+from crewai_tools import TinyfishFetchTool
+
+tool = TinyfishFetchTool()
+
+results = tool.run(
+    urls=["https://example.com", "https://crewai.com"],
+    format="markdown",
+    links=False,
+    image_links=False,
+)
+```
+
+### Arguments
+
+- `urls` *(required)*: One to ten URLs to fetch.
+- `format`: `"markdown"` (default), `"html"`, or `"json"`.
+- `links`: Include page links (default `false`).
+- `image_links`: Include image links (default `false`).
+
+## Using With an Agent
+
+```python Code
+from crewai import Agent, Crew, Task
+from crewai_tools import (
+    TinyfishAgentTool,
+    TinyfishFetchTool,
+    TinyfishSearchTool,
+)
+
+researcher = Agent(
+    role="Web Researcher",
+    goal="Find current information on the web and extract clean page content.",
+    backstory="Expert at using browser-automation tools to read websites.",
+    tools=[TinyfishSearchTool(), TinyfishFetchTool(), TinyfishAgentTool()],
+    verbose=True,
+)
+
+task = Task(
+    description="Search for recent CrewAI news and summarise the top three results.",
+    expected_output="A short summary of the three most relevant articles.",
+    agent=researcher,
+)
+
+crew = Crew(agents=[researcher], tasks=[task])
+result = crew.kickoff()
+```
+
+## Browser Profiles
+
+| Profile | Use case | Typical latency |
+|---|---|---|
+| `lite` | Standard sites, no bot protection | 3–10 s |
+| `stealth` | Cloudflare, DataDome, CAPTCHAs | 10–30 s |
+
+## Links
+
+- TinyFish documentation: [docs.tinyfish.ai](https://docs.tinyfish.ai)
+- TinyFish Python SDK: [PyPI](https://pypi.org/project/tinyfish/)
+- API keys: [agent.tinyfish.ai/api-keys](https://agent.tinyfish.ai/api-keys)
