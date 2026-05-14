@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from typing import Any, Final, Literal, TypeGuard, cast
 
 from pydantic import BaseModel, PrivateAttr, model_validator
@@ -453,7 +454,8 @@ class AnthropicCompletion(BaseLLM):
             params["system"] = system_message
 
         # Add optional parameters if set
-        if self.temperature is not None:
+        # Claude 4.6+ models reject the temperature parameter
+        if self.temperature is not None and not self._is_no_prefill_model():
             params["temperature"] = self.temperature
         if self.top_p is not None:
             params["top_p"] = self.top_p
@@ -1820,6 +1822,28 @@ class AnthropicCompletion(BaseLLM):
     def supports_stop_words(self) -> bool:
         """Check if the model supports stop words."""
         return True  # All Claude models support stop sequences
+
+    def supports_assistant_prefill(self) -> bool:
+        """Check if the model supports assistant message prefill.
+
+        Claude 4.6+ models reject requests where the last message has
+        the assistant role.
+        """
+        return not self._is_no_prefill_model()
+
+    def _is_no_prefill_model(self) -> bool:
+        """Return True when the model rejects assistant message prefill.
+
+        Claude 4.6+ models (Opus 4.7, Sonnet 4.6, etc.) do not support
+        assistant prefill.
+        """
+        model_lower = self.model.lower()
+        match = re.search(r"claude.*?(\d+)[.-](\d+)", model_lower)
+        if match:
+            major, minor = int(match.group(1)), int(match.group(2))
+            if (major == 4 and minor >= 6) or major >= 5:
+                return True
+        return False
 
     def get_context_window_size(self) -> int:
         """Get the context window size for the model."""
