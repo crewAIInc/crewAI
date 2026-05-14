@@ -246,6 +246,7 @@ async def _run_model_benchmark(
     emit: Callable[[dict[str, Any]], None],
     agents_dir: Path | None = None,
     verbose: bool = False,
+    case_timeout: int = _CASE_TIMEOUT_SECONDS,
 ) -> list[BenchmarkResult]:
     """Run all benchmark cases for a single model, parallelising up to _MAX_CASES_PARALLEL."""
     total = len(cases)
@@ -303,7 +304,7 @@ async def _run_model_benchmark(
             try:
                 response = await asyncio.wait_for(
                     agent.amessage(case.input),
-                    timeout=_CASE_TIMEOUT_SECONDS,
+                    timeout=case_timeout,
                 )
                 elapsed_ms = _current_time_ms() - start_ms
                 actual = response.content
@@ -328,7 +329,7 @@ async def _run_model_benchmark(
                     case_index=i,
                     input=case.input,
                     expected=case.expected,
-                    actual=f"[Timeout after {_CASE_TIMEOUT_SECONDS}s]",
+                    actual=f"[Timeout after {case_timeout}s]",
                     model=model,
                     passed=False,
                     score=0.0,
@@ -449,6 +450,7 @@ async def run_benchmark(
     judge_model: str = "openai/gpt-4o-mini",
     on_progress: Callable[[dict[str, Any]], None] | None = None,
     verbose: bool = False,
+    case_timeout: int = _CASE_TIMEOUT_SECONDS,
 ) -> dict[str, list[BenchmarkResult]]:
     """Run benchmark cases against an agent definition across models in parallel.
 
@@ -489,6 +491,7 @@ async def run_benchmark(
             _emit,
             agents_dir=agents_dir,
             verbose=verbose,
+            case_timeout=case_timeout,
         )
         for model in models
     ]

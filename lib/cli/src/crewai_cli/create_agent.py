@@ -134,7 +134,11 @@ PROJECT_CONFIG_TEMPLATE = """\
 
     // LLM used to judge test responses (provider/model format).
     // Override with: crewai test --judge-model openai/gpt-4o
-    "judge_model": "openai/gpt-4o-mini"
+    "judge_model": "openai/gpt-4o-mini",
+
+    // Max seconds to wait for an agent response per test case.
+    // Increase for agents that use tools or multi-step reasoning.
+    "case_timeout": 90
   },
 
   // Rooms define how agents collaborate in the TUI (`crewai run`)

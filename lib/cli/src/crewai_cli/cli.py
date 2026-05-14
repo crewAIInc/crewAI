@@ -594,6 +594,9 @@ def test(
             else (float(config_threshold) if config_threshold is not None else 0.7)
         )
 
+        config_timeout = _read_config("test", "case_timeout")
+        effective_timeout = int(config_timeout) if config_timeout is not None else 90
+
         _test_new_agents(
             agent_files,
             effective_iterations,
@@ -601,6 +604,7 @@ def test(
             effective_threshold,
             effective_judge,
             verbose=verbose,
+            case_timeout=effective_timeout,
         )
     else:
         legacy_iterations = n_iterations if n_iterations is not None else 3
@@ -859,6 +863,7 @@ def _test_new_agents(
     threshold: float,
     judge_model: str,
     verbose: bool = False,
+    case_timeout: int = 90,
 ) -> None:
     """Run NewAgent test cases with pass/fail threshold (all agents in parallel)."""
     import asyncio
@@ -934,6 +939,7 @@ def _test_new_agents(
                     if verbose
                     else _make_progress_cb(job["agent_name"]),
                     verbose=verbose,
+                    case_timeout=case_timeout,
                 )
             )
         return await asyncio.gather(*tasks, return_exceptions=True)
@@ -1885,6 +1891,8 @@ def benchmark(
     judge_model = (
         judge_model or _read_config("test", "judge_model") or "openai/gpt-4o-mini"
     )
+    config_timeout = _read_config("test", "case_timeout")
+    effective_timeout = int(config_timeout) if config_timeout is not None else 90
 
     if _needs_uv_relaunch():
         uv_args = ["benchmark", agent_path, cases_path, "--judge-model", judge_model]
@@ -1948,6 +1956,7 @@ def benchmark(
                             judge_model=judge_model,
                             on_progress=progress.on_progress if progress else None,
                             verbose=verbose,
+                            case_timeout=effective_timeout,
                         )
                     )
             else:
@@ -1960,6 +1969,7 @@ def benchmark(
                             judge_model=judge_model,
                             on_progress=progress.on_progress if progress else None,
                             verbose=verbose,
+                            case_timeout=effective_timeout,
                         )
                     )
     except Exception as e:
