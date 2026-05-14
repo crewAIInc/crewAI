@@ -1,4 +1,4 @@
-from functools import lru_cache
+from functools import cached_property
 import subprocess
 
 
@@ -40,12 +40,12 @@ class Repository:
             encoding="utf-8",
         ).strip()
 
-    @lru_cache(maxsize=None)  # noqa: B019
+    @cached_property  # noqa: B019
     def is_git_repo(self) -> bool:
         """Check if the current directory is a git repository.
 
-        Notes:
-          - TODO: This method is cached to avoid redundant checks, but using lru_cache on methods can lead to memory leaks
+        Notes: This method uses cached_property to avoid redundant checks while being memory-safe.
+        
         """
         try:
             subprocess.check_output(
