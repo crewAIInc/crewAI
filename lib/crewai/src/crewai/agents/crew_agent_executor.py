@@ -1503,9 +1503,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 pre_obs, obs_content = text.split(obs_marker, 1)
                 self.messages.append(format_message_for_llm(pre_obs, role="assistant"))
                 self.messages.append(
-                    format_message_for_llm(
-                        f"Observation:{obs_content}", role="user"
-                    )
+                    format_message_for_llm(f"Observation:{obs_content}", role="user")
                 )
             else:
                 self.messages.append(format_message_for_llm(text, role="assistant"))
