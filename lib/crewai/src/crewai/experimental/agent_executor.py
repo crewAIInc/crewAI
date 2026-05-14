@@ -1309,7 +1309,11 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
             enforce_rpm_limit(self.request_within_rpm_limit)
 
-            # Call LLM with native tools
+            # Call LLM with native tools. Suppress response_model here so that
+            # providers like Gemini and Anthropic don't skip tool calls in favour
+            # of returning structured output immediately. response_model is applied
+            # in a separate extraction call once the tool loop produces a text answer,
+            # consistent with how the Plan-and-Execute path handles it (synthesis step).
             answer = get_llm_response(
                 llm=self.llm,
                 messages=list(self.state.messages),
@@ -1319,7 +1323,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 available_functions=None,
                 from_task=self.task,
                 from_agent=self.agent,
-                response_model=self.response_model,
+                response_model=None,
                 executor_context=self,
                 verbose=self.agent.verbose,
             )
@@ -1340,16 +1344,38 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 self._append_message_to_state(answer.model_dump_json())
                 return self._route_finish_with_todos("native_finished")
 
-            # Text response - this is the final answer
+            # Text response - tool loop is done. Apply response_model now if set.
             if isinstance(answer, str):
+                if self.response_model is not None:
+                    enforce_rpm_limit(self.request_within_rpm_limit)
+                    answer = get_llm_response(
+                        llm=self.llm,
+                        messages=list(self.state.messages),
+                        callbacks=self.callbacks,
+                        printer=PRINTER,
+                        from_task=self.task,
+                        from_agent=self.agent,
+                        response_model=self.response_model,
+                        executor_context=self,
+                        verbose=self.agent.verbose,
+                    )
+                if isinstance(answer, BaseModel):
+                    self.state.current_answer = AgentFinish(
+                        thought="",
+                        output=answer,
+                        text=answer.model_dump_json(),
+                    )
+                    self._invoke_step_callback(self.state.current_answer)
+                    self._append_message_to_state(answer.model_dump_json())
+                    return self._route_finish_with_todos("native_finished")
+                answer_str = str(answer) if not isinstance(answer, str) else answer
                 self.state.current_answer = AgentFinish(
                     thought="",
-                    output=answer,
-                    text=answer,
+                    output=answer_str,
+                    text=answer_str,
                 )
                 self._invoke_step_callback(self.state.current_answer)
-                self._append_message_to_state(answer)
-
+                self._append_message_to_state(answer_str)
                 return self._route_finish_with_todos("native_finished")
 
             # Unexpected response type, treat as final answer
