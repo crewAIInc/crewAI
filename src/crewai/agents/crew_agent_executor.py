@@ -69,6 +69,7 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
         self.original_tools = original_tools
         self.step_callback = step_callback
         self.use_stop_words = self.llm.supports_stop_words()
+        self.supports_prefill = self.llm.supports_assistant_prefill()
         self.tools_description = tools_description
         self.function_calling_llm = function_calling_llm
         self.respect_context_window = respect_context_window
@@ -183,8 +184,8 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                                 f'\n{self._i18n.errors("force_final_answer")}'
                             )
                             self.have_forced_answer = True
-                    self.messages.append(
-                        self._format_msg(formatted_answer.text, role="assistant")
+                    self._append_assistant_response(
+                        formatted_answer.text
                     )
 
         except OutputParserException as e:
@@ -405,6 +406,34 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
 
     def _format_answer(self, answer: str) -> Union[AgentAction, AgentFinish]:
         return CrewAgentParser(agent=self.agent).parse(answer)
+
+    def _append_assistant_response(self, text: str) -> None:
+        """Append the agent's response to messages.
+
+        For models that do not support assistant message prefill (e.g.
+        Claude 4.6+), the observation portion of the response is moved
+        into a separate user-role message so the conversation never ends
+        with an assistant turn.
+        """
+        if self.supports_prefill:
+            self.messages.append(self._format_msg(text, role="assistant"))
+            return
+
+        obs_marker = "\nObservation:"
+        if obs_marker in text:
+            pre_obs, obs_content = text.split(obs_marker, 1)
+            self.messages.append(self._format_msg(pre_obs, role="assistant"))
+            self.messages.append(
+                self._format_msg(f"Observation:{obs_content}", role="user")
+            )
+        else:
+            self.messages.append(self._format_msg(text, role="assistant"))
+            self.messages.append(
+                self._format_msg(
+                    "Please continue based on the information above.",
+                    role="user",
+                )
+            )
 
     def _format_msg(self, prompt: str, role: str = "user") -> Dict[str, str]:
         prompt = prompt.rstrip()
