@@ -71,7 +71,7 @@ except ImportError:
 
 
 class ChatTextArea(TextArea):
-    """Multiline chat input: Enter submits, Shift+Enter inserts newline, Tab completes @mentions."""
+    """Multiline chat input: Enter submits, Shift+Enter inserts newline, Right-arrow completes @mentions."""
 
     BINDINGS = [
         Binding("enter", "submit", "Send", show=False),
@@ -161,10 +161,14 @@ class ChatTextArea(TextArea):
             event.prevent_default()
             self.action_submit()
             return
-        if event.key == "tab":
-            event.prevent_default()
-            self.action_complete()
-            return
+        if event.key == "right":
+            ctx = self._get_mention_context()
+            if ctx is not None:
+                _, _, prefix = ctx
+                if self._get_matches(prefix):
+                    event.prevent_default()
+                    self.action_complete()
+                    return
         if event.key == "escape":
             self._last_mention_prefix = None
             self.post_message(self.MentionChanged("", []))
@@ -834,7 +838,7 @@ class AgentTUI(App[None]):
             hint.display = False
             return
         names = "  ".join(f"@{n}" for n in event.matches[:6])
-        hint.update(f"Tab to complete:  {names}")
+        hint.update(f"→ to complete:  {names}")
         hint.display = True
 
     # ── Message routing ──

@@ -127,7 +127,10 @@ class ConversationalAgentExecutor(BaseModel):
         soul = (
             f"You are {agent.role}.\n"
             f"Your goal: {agent.goal}\n"
-            f"Background: {agent.backstory}"
+            f"Background: {agent.backstory}\n\n"
+            "When you use tools, act on the results directly. "
+            "Never repeat raw tool output (file contents, command output, etc.) "
+            "in your response — summarize findings or state what you did instead."
         )
         stack.add("soul", soul, source="agent.role/goal/backstory")
 
@@ -629,14 +632,22 @@ class ConversationalAgentExecutor(BaseModel):
             pass
         return ""
 
-    _INTERNAL_TAG_RE = re.compile(
-        r"<summary>.*?</summary>", re.DOTALL
+    _SUMMARY_EXTRACT_RE = re.compile(
+        r"<summary>\s*(.*?)\s*</summary>", re.DOTALL
     )
 
     def _strip_internal_tags(self, text: str) -> str:
-        """Strip <summary> blocks that leak from the summarization prompt."""
-        cleaned = self._INTERNAL_TAG_RE.sub("", text).strip()
-        return cleaned if cleaned else text
+        """Handle <summary> tags leaked from the summarization prompt.
+
+        Some models (e.g. gpt-4.1) wrap their actual response in <summary>
+        tags, treating the preceding text as chain-of-thought. When summary
+        tags are present we extract the inner content as the real answer.
+        """
+        match = self._SUMMARY_EXTRACT_RE.search(text)
+        if match:
+            inner = match.group(1).strip()
+            return inner if inner else text
+        return text
 
     def _detect_artifacts(self, tool_name: str, result_str: str) -> list[Artifact]:
         """GAP-67: Detect artifacts from tool results.
@@ -2064,11 +2075,19 @@ class ConversationalAgentExecutor(BaseModel):
                     ],
                 }
             )
+            _MAX_TOOL_RESULT_CHARS = 4000
+            display_result = result_str
+            if len(result_str) > _MAX_TOOL_RESULT_CHARS:
+                display_result = (
+                    result_str[:_MAX_TOOL_RESULT_CHARS]
+                    + f"\n\n[Truncated — {len(result_str)} chars total. "
+                    "Use the result directly; do not repeat it in your response.]"
+                )
             llm_messages.append(
                 {
                     "role": "tool",
                     "tool_call_id": call_id or func_name,
-                    "content": result_str,
+                    "content": display_result,
                 }
             )
 
@@ -2400,38 +2419,76 @@ class ConversationalAgentExecutor(BaseModel):
         invoke_task = asyncio.create_task(self.ainvoke(user_message))
         _streamed_chars = 0
         _last_status_time = time.monotonic()
+
+        # States: "preflight" (buffering, no <summary> seen yet),
+        #         "inside"   (<summary> found, yielding inner content),
+        #         "done"     (</summary> seen, suppress the rest),
+        #         "passthrough" (no summary tags — yield everything)
+        _state = "preflight"
+        _preflight_buf: list[str] = []
         _tag_buf = ""
-        _suppressing = False
 
         def _filter_chunk(raw: str) -> str:
-            """Filter <summary>...</summary> blocks from streamed chunks."""
-            nonlocal _tag_buf, _suppressing
-            out = []
+            nonlocal _state, _tag_buf
+            out: list[str] = []
             for ch in raw:
-                if _suppressing:
-                    _tag_buf += ch
-                    if _tag_buf.endswith("</summary>"):
-                        _suppressing = False
-                        _tag_buf = ""
+                if _state == "done":
+                    break
+
+                if _state == "passthrough":
+                    out.append(ch)
                     continue
+
+                # Accumulate into tag buffer when we might be mid-tag
                 if _tag_buf:
                     _tag_buf += ch
-                    if len(_tag_buf) <= len("<summary>"):
-                        if "<summary>"[: len(_tag_buf)] == _tag_buf:
-                            if _tag_buf == "<summary>":
-                                _suppressing = True
+
+                    if _state == "preflight":
+                        target = "<summary>"
+                        if target[: len(_tag_buf)] == _tag_buf:
+                            if _tag_buf == target:
+                                _state = "inside"
+                                _preflight_buf.clear()
+                                _tag_buf = ""
                             continue
-                        else:
-                            out.append(_tag_buf)
-                            _tag_buf = ""
-                    else:
+                        # Not a match — dump tag_buf to preflight buffer
+                        _preflight_buf.append(_tag_buf)
+                        _tag_buf = ""
+
+                    elif _state == "inside":
+                        target = "</summary>"
+                        if target[: len(_tag_buf)] == _tag_buf:
+                            if _tag_buf == target:
+                                _state = "done"
+                                _tag_buf = ""
+                            continue
+                        # Not a closing tag — flush buffered chars
                         out.append(_tag_buf)
                         _tag_buf = ""
-                elif ch == "<":
+                    continue
+
+                if ch == "<":
                     _tag_buf = ch
-                else:
+                    continue
+
+                if _state == "preflight":
+                    _preflight_buf.append(ch)
+                elif _state == "inside":
                     out.append(ch)
+
             return "".join(out)
+
+        def _flush_preflight() -> str:
+            """If we never saw <summary>, flush buffered text."""
+            nonlocal _state
+            if _state == "preflight":
+                _state = "passthrough"
+                result = "".join(_preflight_buf)
+                _preflight_buf.clear()
+                if _tag_buf:
+                    result += _tag_buf
+                return result
+            return ""
 
         try:
             while not invoke_task.done():
@@ -2456,8 +2513,10 @@ class ConversationalAgentExecutor(BaseModel):
                     _streamed_chars += len(filtered)
                     yield filtered
 
-            if _tag_buf and not _suppressing:
-                yield _tag_buf
+            leftover = _flush_preflight()
+            if leftover:
+                _streamed_chars += len(leftover)
+                yield leftover
 
             result = invoke_task.result()
             self._last_stream_result = result
