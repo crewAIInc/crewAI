@@ -1838,7 +1838,7 @@ class AnthropicCompletion(BaseLLM):
         assistant prefill.
         """
         model_lower = self.model.lower()
-        match = re.search(r"claude.*?(\d+)[.-](\d+)", model_lower)
+        match = re.search(r"claude.*?(\d+)[.-](\d{1,2})(?!\d)", model_lower)
         if match:
             major, minor = int(match.group(1)), int(match.group(2))
             if (major == 4 and minor >= 6) or major >= 5:

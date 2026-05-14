@@ -73,6 +73,17 @@ class TestAnthropicPrefillDetection:
         llm = self._make_anthropic_llm("claude-5-0-opus")
         assert llm.supports_assistant_prefill() is False
 
+    def test_date_stamped_claude_4_not_falsely_flagged(self):
+        """claude-opus-4-20250514 should NOT be treated as 4.20250514."""
+        llm = self._make_anthropic_llm("claude-opus-4-20250514")
+        assert llm.supports_assistant_prefill() is True
+
+    def test_bedrock_date_stamped_model(self):
+        """Bedrock-style IDs like claude-opus-4-20250514-v1:0 must not
+        be misclassified."""
+        llm = self._make_anthropic_llm("claude-opus-4-20250514-v1:0")
+        assert llm.supports_assistant_prefill() is True
+
 
 # ---------------------------------------------------------------------------
 # AnthropicCompletion temperature dropping
