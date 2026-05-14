@@ -34,7 +34,7 @@ def get_auto_injected_files(
         name: file_input
         for name, file_input in files.items()
         if any(
-            file_input.content_type.startswith(content_type)
+            getattr(file_input, "content_type", "").startswith(content_type)
             for content_type in supported_types
         )
     }

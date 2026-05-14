@@ -34,6 +34,13 @@ def test_text_files_are_not_injected_for_non_multimodal_llm() -> None:
     assert get_auto_injected_files(files, llm) == {}
 
 
+def test_unsupported_file_values_are_skipped() -> None:
+    files = {"bad": object()}
+    llm = DummyLLM(model="openai/gpt-4o", multimodal=True)
+
+    assert get_auto_injected_files(files, llm) == {}
+
+
 def test_only_supported_files_are_injected_for_multimodal_llm() -> None:
     image = ImageFile(source=FileBytes(data=b"\x89PNG\r\n\x1a\n", filename="chart.png"))
     text = TextFile(source=FileBytes(data=b"hello", filename="readme.md"))
