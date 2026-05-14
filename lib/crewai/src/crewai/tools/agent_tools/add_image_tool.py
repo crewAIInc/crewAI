@@ -1,8 +1,7 @@
-from typing import Any
-
 from pydantic import BaseModel, Field
 
 from crewai.tools.base_tool import BaseTool
+from crewai.tools.tool_types import MultimodalToolResult
 from crewai.utilities.i18n import I18N_DEFAULT
 
 
@@ -14,7 +13,7 @@ class AddImageToolSchema(BaseModel):
 
 
 class AddImageTool(BaseTool):
-    """Tool for adding images to the content"""
+    """Tool for adding images to the conversation."""
 
     name: str = Field(default_factory=lambda: I18N_DEFAULT.tools("add_image")["name"])  # type: ignore[index]
     description: str = Field(
@@ -26,17 +25,16 @@ class AddImageTool(BaseTool):
         self,
         image_url: str,
         action: str | None = None,
-        **kwargs: Any,
-    ) -> dict[str, Any]:
-        action = action or I18N_DEFAULT.tools("add_image")["default_action"]  # type: ignore
-        content = [
-            {"type": "text", "text": action},
-            {
-                "type": "image_url",
-                "image_url": {
-                    "url": image_url,
-                },
-            },
-        ]
+    ) -> MultimodalToolResult | str:
+        action_text: str = action or I18N_DEFAULT.tools("add_image")["default_action"]  # type: ignore[index]
 
-        return {"role": "user", "content": content}
+        try:
+            from crewai_files import ImageFile
+
+            return MultimodalToolResult(
+                text=action_text,
+                files={"image": ImageFile(image_url)},
+            )
+        except ImportError:
+            # crewai-files not installed: fall back to text-only observation.
+            return action_text
