@@ -2109,8 +2109,6 @@ class ConversationalAgentExecutor(BaseModel):
                             if self.conversation_history
                             else "",
                         )
-                        import asyncio
-
                         loop = asyncio.get_event_loop()
                         if loop.is_running():
                             asyncio.ensure_future(self.provider.send_message(hint_msg))

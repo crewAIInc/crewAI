@@ -235,7 +235,9 @@ def _train_new_agents(agent_files: list[Any], n_iterations: int) -> None:
         try:
             from crewai.new_agent.definition_parser import load_agent_from_definition
 
-            agent = load_agent_from_definition(str(agent_path))
+            agent = load_agent_from_definition(
+                str(agent_path), agents_dir=str(agent_path.parent)
+            )
         except Exception as e:
             click.secho(f"  Error loading agent {agent_name}: {e}", fg="red")
             continue
@@ -681,12 +683,15 @@ def _save_run_results(
 
         cases: list[dict[str, Any]] = []
         for r in result_list:
+            effective_passed = (
+                r.score >= threshold if threshold is not None else r.passed
+            )
             case: dict[str, Any] = {
                 "case": r.case_index + 1,
                 "input": r.input,
                 "output": r.actual,
                 "score": r.score,
-                "passed": r.passed,
+                "passed": effective_passed,
                 "time_ms": r.response_time_ms,
                 "input_tokens": r.input_tokens,
                 "output_tokens": r.output_tokens,
@@ -730,13 +735,13 @@ class _BenchmarkLiveProgress:
         from rich.live import Live
 
         self._current_iteration = iteration
+        self._state.clear()
         self._live = Live(
             self._render(),
             console=self._console,
             refresh_per_second=10,
             transient=True,
         )
-        self._state.clear()
         self._live.start()
 
     def stop(self) -> None:
@@ -987,13 +992,9 @@ def _test_new_agents(
                 if progress is None:
                     raise RuntimeError("progress must not be None in non-verbose mode")
                 progress.start(iteration=iteration)
-            with ArtifactsSandbox():
-                if verbose:
-                    with VerboseBenchmarkOutput():
-                        all_results = _loop.run_until_complete(_run_all())
-                else:
-                    with SuppressBenchmarkOutput():
-                        all_results = _loop.run_until_complete(_run_all())
+            output_ctx = VerboseBenchmarkOutput() if verbose else SuppressBenchmarkOutput()
+            with ArtifactsSandbox(), output_ctx:
+                all_results = _loop.run_until_complete(_run_all())
         finally:
             if not verbose:
                 if progress is None:
@@ -1957,33 +1958,19 @@ def benchmark(
     try:
         if progress:
             progress.start()
-        with ArtifactsSandbox():
-            if verbose:
-                with VerboseBenchmarkOutput():
-                    results_by_model = _loop.run_until_complete(
-                        run_benchmark(
-                            agent_def=agent_path,
-                            cases=cases,
-                            models=model_list,
-                            judge_model=judge_model,
-                            on_progress=progress.on_progress if progress else None,
-                            verbose=verbose,
-                            case_timeout=effective_timeout,
-                        )
-                    )
-            else:
-                with SuppressBenchmarkOutput():
-                    results_by_model = _loop.run_until_complete(
-                        run_benchmark(
-                            agent_def=agent_path,
-                            cases=cases,
-                            models=model_list,
-                            judge_model=judge_model,
-                            on_progress=progress.on_progress if progress else None,
-                            verbose=verbose,
-                            case_timeout=effective_timeout,
-                        )
-                    )
+        output_ctx = VerboseBenchmarkOutput() if verbose else SuppressBenchmarkOutput()
+        with ArtifactsSandbox(), output_ctx:
+            results_by_model = _loop.run_until_complete(
+                run_benchmark(
+                    agent_def=agent_path,
+                    cases=cases,
+                    models=model_list,
+                    judge_model=judge_model,
+                    on_progress=progress.on_progress if progress else None,
+                    verbose=verbose,
+                    case_timeout=effective_timeout,
+                )
+            )
     except Exception as e:
         click.secho(f"Error running benchmark: {e}", fg="red")
         raise SystemExit(1) from e
