@@ -60,7 +60,10 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
     _openai_agent: OpenAIAgentProtocol = PrivateAttr()
     _logger: Logger = PrivateAttr(default_factory=Logger)
     _active_thread: str | None = PrivateAttr(default=None)
-    function_calling_llm: Any = Field(default=None)
+    function_calling_llm: Any = Field(
+        default=None,
+        deprecated="function_calling_llm is deprecated and will be removed in a future release.",
+    )
     step_callback: Any = Field(default=None)
     _tool_adapter: OpenAIAgentToolAdapter = PrivateAttr()
     _converter_adapter: OpenAIConverterAdapter = PrivateAttr()
