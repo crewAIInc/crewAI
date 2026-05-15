@@ -1804,6 +1804,16 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             result = "Tool not found"
             if func_name in self._available_functions:
                 try:
+                    is_idempotent = original_tool and getattr(original_tool, "idempotent", False)
+                    if is_idempotent and self.tools_handler and self.tools_handler.cache:
+                        from crewai.tools.base_tool import IDEMPOTENT_EXECUTION_SENTINEL
+
+                        self.tools_handler.cache.add(
+                            tool=func_name,
+                            input=input_str,
+                            output=IDEMPOTENT_EXECUTION_SENTINEL,
+                        )
+
                     tool_func = self._available_functions[func_name]
                     raw_result = tool_func(**args_dict)
 

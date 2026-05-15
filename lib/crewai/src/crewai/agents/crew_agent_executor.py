@@ -956,6 +956,16 @@ class CrewAgentExecutor(BaseAgentExecutor):
             result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
         elif not from_cache and func_name in available_functions:
             try:
+                is_idempotent = original_tool and getattr(original_tool, "idempotent", False)
+                if is_idempotent and self.tools_handler and self.tools_handler.cache:
+                    from crewai.tools.base_tool import IDEMPOTENT_EXECUTION_SENTINEL
+
+                    self.tools_handler.cache.add(
+                        tool=func_name,
+                        input=input_str,
+                        output=IDEMPOTENT_EXECUTION_SENTINEL,
+                    )
+
                 raw_result = available_functions[func_name](**(args_dict or {}))
 
                 if self.tools_handler and self.tools_handler.cache:

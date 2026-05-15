@@ -82,6 +82,12 @@ def _default_cache_function(_args: Any = None, _result: Any = None) -> bool:
     return True
 
 
+IDEMPOTENT_EXECUTION_SENTINEL = (
+    "This tool was already executed with these arguments. "
+    "The original result was not captured due to an interruption."
+)
+
+
 def _is_async_callable(func: Callable[..., Any]) -> bool:
     """Check if a callable is async."""
     return asyncio.iscoroutinefunction(func)
@@ -173,6 +179,10 @@ class BaseTool(BaseModel, ABC):
     current_usage_count: int = Field(
         default=0,
         description="Current number of times this tool has been used.",
+    )
+    idempotent: bool = Field(
+        default=False,
+        description="When True, identical calls return cached results on retry instead of re-executing.",
     )
     _usage_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
 
@@ -621,6 +631,7 @@ def tool(
     *,
     result_as_answer: bool = ...,
     max_usage_count: int | None = ...,
+    idempotent: bool = ...,
 ) -> Callable[[Callable[P2, R2]], Tool[P2, R2]]: ...
 
 
@@ -629,6 +640,7 @@ def tool(
     *,
     result_as_answer: bool = ...,
     max_usage_count: int | None = ...,
+    idempotent: bool = ...,
 ) -> Callable[[Callable[P2, R2]], Tool[P2, R2]]: ...
 
 
@@ -636,6 +648,7 @@ def tool(
     *args: Callable[P2, R2] | str,
     result_as_answer: bool = False,
     max_usage_count: int | None = None,
+    idempotent: bool = False,
 ) -> Tool[P2, R2] | Callable[[Callable[P2, R2]], Tool[P2, R2]]:
     """Decorator to create a Tool from a function.
 
@@ -697,6 +710,7 @@ def tool(
                 result_as_answer=result_as_answer,
                 max_usage_count=max_usage_count,
                 current_usage_count=0,
+                idempotent=idempotent,
             )
 
         return _make_tool

@@ -447,3 +447,44 @@ class TestToolDecoratorArunValidation:
 
         with pytest.raises(ValueError, match="validation failed"):
             await async_execute.arun(wrong_arg="value")
+
+
+def test_idempotent_field_defaults_to_false():
+    class MyTool(BaseTool):
+        name: str = "my_tool"
+        description: str = "A tool"
+
+        def _run(self, question: str) -> str:
+            return question
+
+    assert MyTool().idempotent is False
+
+
+def test_idempotent_field_can_be_set_true():
+    class MyTool(BaseTool):
+        name: str = "my_tool"
+        description: str = "A tool"
+        idempotent: bool = True
+
+        def _run(self, question: str) -> str:
+            return question
+
+    assert MyTool().idempotent is True
+
+
+def test_idempotent_on_tool_decorator():
+    @tool("my_tool", idempotent=True)
+    def my_tool(question: str) -> str:
+        """A tool."""
+        return question
+
+    assert my_tool.idempotent is True
+
+
+def test_idempotent_defaults_false_on_tool_decorator():
+    @tool("my_tool")
+    def my_tool(question: str) -> str:
+        """A tool."""
+        return question
+
+    assert my_tool.idempotent is False

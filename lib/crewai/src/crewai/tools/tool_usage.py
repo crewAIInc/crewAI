@@ -318,6 +318,23 @@ class ToolUsage:
 
                     fingerprint_config = self._build_fingerprint_config()
 
+                    original_tool = getattr(available_tool, "_original_tool", None)
+                    is_idempotent = original_tool and getattr(original_tool, "idempotent", False)
+                    if is_idempotent and self.tools_handler and self.tools_handler.cache:
+                        from crewai.tools.base_tool import IDEMPOTENT_EXECUTION_SENTINEL
+
+                        idempotent_input = ""
+                        if calling.arguments:
+                            if isinstance(calling.arguments, dict):
+                                idempotent_input = json.dumps(calling.arguments)
+                            else:
+                                idempotent_input = str(calling.arguments)
+                        self.tools_handler.cache.add(
+                            tool=sanitize_tool_name(calling.tool_name),
+                            input=idempotent_input,
+                            output=IDEMPOTENT_EXECUTION_SENTINEL,
+                        )
+
                     if calling.arguments:
                         try:
                             acceptable_args = tool.args_schema.model_json_schema()[
@@ -550,6 +567,23 @@ class ToolUsage:
                             self.task.increment_delegations(coworker)
 
                     fingerprint_config = self._build_fingerprint_config()
+
+                    original_tool = getattr(available_tool, "_original_tool", None)
+                    is_idempotent = original_tool and getattr(original_tool, "idempotent", False)
+                    if is_idempotent and self.tools_handler and self.tools_handler.cache:
+                        from crewai.tools.base_tool import IDEMPOTENT_EXECUTION_SENTINEL
+
+                        idempotent_input = ""
+                        if calling.arguments:
+                            if isinstance(calling.arguments, dict):
+                                idempotent_input = json.dumps(calling.arguments)
+                            else:
+                                idempotent_input = str(calling.arguments)
+                        self.tools_handler.cache.add(
+                            tool=sanitize_tool_name(calling.tool_name),
+                            input=idempotent_input,
+                            output=IDEMPOTENT_EXECUTION_SENTINEL,
+                        )
 
                     if calling.arguments:
                         try:

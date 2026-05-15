@@ -1272,3 +1272,129 @@ class TestNativeToolCallingJsonParseError:
 
         assert "Error" in result["result"]
         assert "validation failed" in result["result"].lower() or "missing" in result["result"].lower()
+
+
+class TestIdempotentToolPreClaim:
+    """Tests that idempotent tools write a sentinel to cache before execution."""
+
+    def _make_executor(self, tools: list[BaseTool]) -> "CrewAgentExecutor":
+        from crewai.agents.crew_agent_executor import CrewAgentExecutor
+        from crewai.agents.cache import CacheHandler
+        from crewai.agents.tools_handler import ToolsHandler
+        from crewai.tools.base_tool import to_langchain
+
+        structured_tools = to_langchain(tools)
+        mock_agent = Mock()
+        mock_agent.key = "test_agent"
+        mock_agent.role = "tester"
+        mock_agent.verbose = False
+        mock_agent.fingerprint = None
+        mock_agent.tools_results = []
+
+        mock_task = Mock()
+        mock_task.name = "test"
+        mock_task.description = "test"
+        mock_task.id = "test-id"
+
+        cache = CacheHandler()
+        tools_handler = ToolsHandler(cache=cache)
+
+        executor = CrewAgentExecutor(
+            tools=structured_tools,
+            original_tools=tools,
+            tools_handler=tools_handler,
+        )
+        executor.agent = mock_agent
+        executor.task = mock_task
+        return executor
+
+    def test_idempotent_tool_preclaims_cache(self) -> None:
+        """Idempotent tool should write sentinel to cache before execution."""
+        from crewai.tools.base_tool import IDEMPOTENT_EXECUTION_SENTINEL
+
+        class SendEmailTool(BaseTool):
+            name: str = "send_email"
+            description: str = "Send an email"
+            idempotent: bool = True
+
+            def _run(self, to: str, body: str) -> str:
+                return f"sent to {to}"
+
+        tool_instance = SendEmailTool()
+        executor = self._make_executor([tool_instance])
+
+        from crewai.utilities.agent_utils import convert_tools_to_openai_schema
+        _, available_functions, _ = convert_tools_to_openai_schema([tool_instance])
+
+        result = executor._execute_single_native_tool_call(
+            call_id="call_1",
+            func_name="send_email",
+            func_args={"to": "bob@test.com", "body": "hello"},
+            available_functions=available_functions,
+        )
+
+        assert result["result"] == "sent to bob@test.com"
+        cached = executor.tools_handler.cache.read(
+            tool="send_email", input='{"to": "bob@test.com", "body": "hello"}'
+        )
+        assert cached == "sent to bob@test.com"
+
+    def test_idempotent_tool_sentinel_survives_failure(self) -> None:
+        """If an idempotent tool raises after side effect, sentinel remains in cache."""
+        from crewai.tools.base_tool import IDEMPOTENT_EXECUTION_SENTINEL
+
+        class FailingTool(BaseTool):
+            name: str = "failing_tool"
+            description: str = "Fails after side effect"
+            idempotent: bool = True
+
+            def _run(self, data: str) -> str:
+                raise RuntimeError("connection lost")
+
+        tool_instance = FailingTool()
+        executor = self._make_executor([tool_instance])
+
+        from crewai.utilities.agent_utils import convert_tools_to_openai_schema
+        _, available_functions, _ = convert_tools_to_openai_schema([tool_instance])
+
+        result = executor._execute_single_native_tool_call(
+            call_id="call_2",
+            func_name="failing_tool",
+            func_args={"data": "payload"},
+            available_functions=available_functions,
+        )
+
+        assert "Error executing tool" in result["result"]
+        cached = executor.tools_handler.cache.read(
+            tool="failing_tool", input='{"data": "payload"}'
+        )
+        assert cached == IDEMPOTENT_EXECUTION_SENTINEL
+
+    def test_non_idempotent_tool_no_preclaim(self) -> None:
+        """Non-idempotent tools should not write sentinel before execution."""
+
+        class NormalTool(BaseTool):
+            name: str = "normal_tool"
+            description: str = "Normal tool"
+
+            def _run(self, x: str) -> str:
+                raise RuntimeError("fail")
+
+        tool_instance = NormalTool()
+        executor = self._make_executor([tool_instance])
+
+        from crewai.utilities.agent_utils import convert_tools_to_openai_schema
+        _, available_functions, _ = convert_tools_to_openai_schema([tool_instance])
+
+        result = executor._execute_single_native_tool_call(
+            call_id="call_3",
+            func_name="normal_tool",
+            func_args={"x": "val"},
+            available_functions=available_functions,
+        )
+
+        assert "Error executing tool" in result["result"]
+        cached = executor.tools_handler.cache.read(
+            tool="normal_tool", input='{"x": "val"}'
+        )
+        assert cached is None
