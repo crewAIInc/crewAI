@@ -147,6 +147,9 @@ e2b = [
     "e2b~=2.20.0",
     "e2b-code-interpreter~=2.6.0",
 ]
+wikipedia = [
+    "wikipedia>=1.4.0",
+]
 
 
 [tool.uv]
