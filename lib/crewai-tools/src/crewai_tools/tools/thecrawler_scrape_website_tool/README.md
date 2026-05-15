@@ -23,7 +23,7 @@ so agents can branch on the failure mode instead of regex-matching strings.
   to the tool constructor.
 - Install `crewai[tools]`:
 
-```
+```bash
 pip install 'crewai[tools]'
 ```
 

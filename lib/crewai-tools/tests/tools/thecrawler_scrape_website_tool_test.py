@@ -83,8 +83,10 @@ def test_thecrawler_scrape_tool_run_posts_to_crawl_endpoint() -> None:
 
 
 def test_thecrawler_scrape_tool_custom_config_merged() -> None:
+    # The default config has `extractMarkdown: True`. A caller passing a custom
+    # config should ADD their fields to the defaults, not REPLACE the whole map.
     tool = TheCrawlerScrapeWebsiteTool(
-        config={"extractMarkdown": True, "usePlaywright": True, "retries": 5},
+        config={"usePlaywright": True, "retries": 5},
     )
     mock_resp = _mock_response(
         status_code=200, json_data={"ok": True, "items": []}
@@ -98,8 +100,32 @@ def test_thecrawler_scrape_tool_custom_config_merged() -> None:
 
     sent = mock_post.call_args.kwargs["json"]
     assert sent["urls"] == ["https://example.com"]
+    # Default field survives the merge.
+    assert sent["extractMarkdown"] is True
+    # Caller-supplied fields are applied.
     assert sent["usePlaywright"] is True
     assert sent["retries"] == 5
+
+
+def test_thecrawler_scrape_tool_config_urls_cannot_override_runtime_url() -> None:
+    # Security: if a caller (or a downstream config source) sneaks a `urls` key
+    # into config, the runtime-validated `url` arg must still win. Otherwise
+    # validate_url() would be bypassed.
+    tool = TheCrawlerScrapeWebsiteTool(
+        config={"urls": ["https://malicious.test"]},
+    )
+    mock_resp = _mock_response(
+        status_code=200, json_data={"ok": True, "items": []}
+    )
+
+    with patch(
+        "crewai_tools.tools.thecrawler_scrape_website_tool.thecrawler_scrape_website_tool.requests.post",
+        return_value=mock_resp,
+    ) as mock_post:
+        tool.run(url="https://example.com")
+
+    sent = mock_post.call_args.kwargs["json"]
+    assert sent["urls"] == ["https://example.com"]
 
 
 def test_thecrawler_scrape_tool_missing_key_raises() -> None:

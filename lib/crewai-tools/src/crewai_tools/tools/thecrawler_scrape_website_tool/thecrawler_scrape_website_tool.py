@@ -92,7 +92,9 @@ class TheCrawlerScrapeWebsiteTool(BaseTool):
         super().__init__(**kwargs)
         self.api_key = api_key or os.environ.get("THECRAWLER_API_KEY")
         if config is not None:
-            self.config = config
+            # Merge into defaults so caller can override individual fields
+            # without dropping the rest (e.g. retries, timeoutSecs).
+            self.config = {**self.config, **config}
         if api_base is not None:
             self.api_base = api_base
         if timeout is not None:
@@ -106,7 +108,8 @@ class TheCrawlerScrapeWebsiteTool(BaseTool):
             )
 
         url = validate_url(url)
-        payload: dict[str, Any] = {"urls": [url], **self.config}
+        # `urls` is set last so it cannot be overridden by `self.config`.
+        payload: dict[str, Any] = {**self.config, "urls": [url]}
 
         response = requests.post(
             f"{self.api_base}/crawl",
