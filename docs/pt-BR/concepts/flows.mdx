@@ -24,7 +24,63 @@ Os flows permitem que você crie fluxos de trabalho estruturados e orientados po
 Vamos criar um Flow simples no qual você usará a OpenAI para gerar uma cidade aleatória em uma tarefa e, em seguida, usará essa cidade para gerar uma curiosidade em outra tarefa.
 
 ```python Code
-# (O código não é traduzido)
+
+from crewai.flow.flow import Flow, listen, start
+from dotenv import load_dotenv
+from litellm import completion
+
+load_dotenv()
+
+class ExampleFlow(Flow):
+    model = "gpt-4o-mini"
+
+    @start()
+    def generate_city(self):
+        print("Starting flow")
+        # Cada estado do flow recebe automaticamente um ID único
+        print(f"Flow State ID: {self.state['id']}")
+
+        response = completion(
+            model=self.model,
+            messages=[
+                {
+                    "role": "user",
+                    "content": "Return the name of a random city in the world.",
+                },
+            ],
+        )
+
+        random_city = response["choices"][0]["message"]["content"]
+        # Armazena a cidade no nosso estado
+        self.state["city"] = random_city
+        print(f"Random City: {random_city}")
+
+        return random_city
+
+    @listen(generate_city)
+    def generate_fun_fact(self, random_city):
+        response = completion(
+            model=self.model,
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"Tell me a fun fact about {random_city}",
+                },
+            ],
+        )
+
+        fun_fact = response["choices"][0]["message"]["content"]
+        # Armazena a curiosidade no nosso estado
+        self.state["fun_fact"] = fun_fact
+        return fun_fact
+
+
+
+flow = ExampleFlow()
+flow.plot()
+result = flow.kickoff()
+
+print(f"Generated fun fact: {result}")
 ```
 
 Na ilustração acima, criamos um Flow simples que gera uma cidade aleatória usando a OpenAI e depois cria uma curiosidade sobre essa cidade. O Flow consiste em duas tarefas: `generate_city` e `generate_fun_fact`. A tarefa `generate_city` é o ponto de início do Flow, enquanto a tarefa `generate_fun_fact` fica escutando o resultado da tarefa `generate_city`.
@@ -56,12 +112,16 @@ O decorador `@listen()` pode ser usado de várias formas:
 1. **Escutando um Método pelo Nome**: Você pode passar o nome do método ao qual deseja escutar como string. Quando esse método concluir, o método ouvinte será chamado.
 
    ```python Code
-   # (O código não é traduzido)
+   @listen("generate_city")
+   def generate_fun_fact(self, random_city):
+       # Implementação
    ```
 
 2. **Escutando um Método Diretamente**: Você pode passar o próprio método. Quando esse método concluir, o método ouvinte será chamado.
    ```python Code
-   # (O código não é traduzido)
+   @listen(generate_city)
+   def generate_fun_fact(self, random_city):
+       # Implementação
    ```
 
 ### Saída de um Flow
@@ -76,7 +136,24 @@ Veja como acessar a saída final:
 
 <CodeGroup>
 ```python Code
-# (O código não é traduzido)
+from crewai.flow.flow import Flow, listen, start
+
+class OutputExampleFlow(Flow):
+    @start()
+    def first_method(self):
+        return "Output from first_method"
+
+    @listen(first_method)
+    def second_method(self, first_output):
+        return f"Second method received: {first_output}"
+
+
+flow = OutputExampleFlow()
+flow.plot("my_flow_plot")
+final_output = flow.kickoff()
+
+print("---- Final Output ----")
+print(final_output)
 ```
 
 ```text Output
@@ -97,8 +174,34 @@ Além de recuperar a saída final, você pode acessar e atualizar o estado dentr
 Veja um exemplo de como atualizar e acessar o estado:
 
 <CodeGroup>
+
 ```python Code
-# (O código não é traduzido)
+from crewai.flow.flow import Flow, listen, start
+from pydantic import BaseModel
+
+class ExampleState(BaseModel):
+    counter: int = 0
+    message: str = ""
+
+class StateExampleFlow(Flow[ExampleState]):
+
+    @start()
+    def first_method(self):
+        self.state.message = "Hello from first_method"
+        self.state.counter += 1
+
+    @listen(first_method)
+    def second_method(self):
+        self.state.message += " - updated by second_method"
+        self.state.counter += 1
+        return self.state.message
+
+flow = StateExampleFlow()
+flow.plot("my_flow_plot")
+final_output = flow.kickoff()
+print(f"Final Output: {final_output}")
+print("Final State:")
+print(flow.state)
 ```
 
 ```text Output
@@ -128,7 +231,33 @@ Essa abordagem oferece flexibilidade, permitindo que o desenvolvedor adicione ou
 Mesmo com estados não estruturados, os flows do CrewAI geram e mantêm automaticamente um identificador único (UUID) para cada instância de estado.
 
 ```python Code
-# (O código não é traduzido)
+from crewai.flow.flow import Flow, listen, start
+
+class UnstructuredExampleFlow(Flow):
+
+    @start()
+    def first_method(self):
+        # O estado inclui automaticamente um campo 'id'
+        print(f"State ID: {self.state['id']}")
+        self.state['counter'] = 0
+        self.state['message'] = "Hello from structured flow"
+
+    @listen(first_method)
+    def second_method(self):
+        self.state['counter'] += 1
+        self.state['message'] += " - updated"
+
+    @listen(second_method)
+    def third_method(self):
+        self.state['counter'] += 1
+        self.state['message'] += " - updated again"
+
+        print(f"State after third_method: {self.state}")
+
+
+flow = UnstructuredExampleFlow()
+flow.plot("my_flow_plot")
+flow.kickoff()
 ```
 
 ![Flow Visual image](/images/crewai-flow-3.png)
@@ -148,7 +277,39 @@ Ao usar modelos como o `BaseModel` da Pydantic, os desenvolvedores podem definir
 Cada estado nos flows do CrewAI recebe automaticamente um identificador único (UUID) para ajudar no rastreamento e gerenciamento. Esse ID é gerado e mantido automaticamente pelo sistema de flows.
 
 ```python Code
-# (O código não é traduzido)
+from crewai.flow.flow import Flow, listen, start
+from pydantic import BaseModel
+
+
+class ExampleState(BaseModel):
+    # Nota: o campo 'id' é adicionado automaticamente a todos os estados
+    counter: int = 0
+    message: str = ""
+
+
+class StructuredExampleFlow(Flow[ExampleState]):
+
+    @start()
+    def first_method(self):
+        # Acesse o ID gerado automaticamente, se necessário
+        print(f"State ID: {self.state.id}")
+        self.state.message = "Hello from structured flow"
+
+    @listen(first_method)
+    def second_method(self):
+        self.state.counter += 1
+        self.state.message += " - updated"
+
+    @listen(second_method)
+    def third_method(self):
+        self.state.counter += 1
+        self.state.message += " - updated again"
+
+        print(f"State after third_method: {self.state}")
+
+
+flow = StructuredExampleFlow()
+flow.kickoff()
 ```
 
 ![Flow Visual image](/images/crewai-flow-3.png)
@@ -182,7 +343,19 @@ O decorador @persist permite a persistência automática do estado nos flows do 
 Quando aplicado no nível da classe, o decorador @persist garante a persistência automática de todos os estados dos métodos do flow:
 
 ```python
-# (O código não é traduzido)
+@persist  # Usa SQLiteFlowPersistence por padrão
+class MyFlow(Flow[MyState]):
+    @start()
+    def initialize_flow(self):
+        # Este método terá seu estado persistido automaticamente
+        self.state.counter = 1
+        print("Initialized flow. State ID:", self.state.id)
+
+    @listen(initialize_flow)
+    def next_step(self):
+        # O estado (incluindo self.state.id) é recarregado automaticamente
+        self.state.counter += 1
+        print("Flow state is persisted. Counter:", self.state.counter)
 ```
 
 ### Persistência no Nível de Método
@@ -190,7 +363,14 @@ Quando aplicado no nível da classe, o decorador @persist garante a persistênci
 Para um controle mais granular, você pode aplicar @persist em métodos específicos:
 
 ```python
-# (O código não é traduzido)
+class AnotherFlow(Flow[dict]):
+    @persist  # Persiste apenas o estado deste método
+    @start()
+    def begin(self):
+        if "runs" not in self.state:
+            self.state["runs"] = 0
+        self.state["runs"] += 1
+        print("Method-level persisted runs:", self.state["runs"])
 ```
 
 ### Forking de Estado Persistido
@@ -282,8 +462,29 @@ A arquitetura de persistência enfatiza precisão técnica e opções de persona
 A função `or_` nos flows permite escutar múltiplos métodos e acionar o método ouvinte quando qualquer um dos métodos especificados gerar uma saída.
 
 <CodeGroup>
+
 ```python Code
-# (O código não é traduzido)
+from crewai.flow.flow import Flow, listen, or_, start
+
+class OrExampleFlow(Flow):
+
+    @start()
+    def start_method(self):
+        return "Hello from the start method"
+
+    @listen(start_method)
+    def second_method(self):
+        return "Hello from the second method"
+
+    @listen(or_(start_method, second_method))
+    def logger(self, result):
+        print(f"Logger: {result}")
+
+
+
+flow = OrExampleFlow()
+flow.plot("my_flow_plot")
+flow.kickoff()
 ```
 
 ```text Output
@@ -302,8 +503,28 @@ A função `or_` serve para escutar vários métodos e disparar o método ouvint
 A função `and_` nos flows permite escutar múltiplos métodos e acionar o método ouvinte apenas quando todos os métodos especificados emitirem uma saída.
 
 <CodeGroup>
+
 ```python Code
-# (O código não é traduzido)
+from crewai.flow.flow import Flow, and_, listen, start
+
+class AndExampleFlow(Flow):
+
+    @start()
+    def start_method(self):
+        self.state["greeting"] = "Hello from the start method"
+
+    @listen(start_method)
+    def second_method(self):
+        self.state["joke"] = "What do computers eat? Microchips."
+
+    @listen(and_(start_method, second_method))
+    def logger(self):
+        print("---- Logger ----")
+        print(self.state)
+
+flow = AndExampleFlow()
+flow.plot()
+flow.kickoff()
 ```
 
 ```text Output
@@ -323,8 +544,42 @@ O decorador `@router()` nos flows permite definir lógica de roteamento condicio
 Você pode especificar diferentes rotas conforme a saída do método, permitindo controlar o fluxo de execução de forma dinâmica.
 
 <CodeGroup>
+
 ```python Code
-# (O código não é traduzido)
+import random
+from crewai.flow.flow import Flow, listen, router, start
+from pydantic import BaseModel
+
+class ExampleState(BaseModel):
+    success_flag: bool = False
+
+class RouterFlow(Flow[ExampleState]):
+
+    @start()
+    def start_method(self):
+        print("Starting the structured flow")
+        random_boolean = random.choice([True, False])
+        self.state.success_flag = random_boolean
+
+    @router(start_method)
+    def second_method(self):
+        if self.state.success_flag:
+            return "success"
+        else:
+            return "failed"
+
+    @listen("success")
+    def third_method(self):
+        print("Third method running")
+
+    @listen("failed")
+    def fourth_method(self):
+        print("Fourth method running")
+
+
+flow = RouterFlow()
+flow.plot("my_flow_plot")
+flow.kickoff()
 ```
 
 ```text Output
@@ -401,7 +656,105 @@ Para um guia completo sobre feedback humano em flows, incluindo feedback assínc
 Os agentes podem ser integrados facilmente aos seus flows, oferecendo uma alternativa leve às crews completas quando você precisar executar tarefas simples e focadas. Veja um exemplo de como utilizar um agente em um flow para realizar uma pesquisa de mercado:
 
 ```python
-# (O código não é traduzido)
+import asyncio
+from typing import Any, Dict, List
+
+from crewai_tools import SerperDevTool
+from pydantic import BaseModel, Field
+
+from crewai.agent import Agent
+from crewai.flow.flow import Flow, listen, start
+
+
+# Define um formato de saída estruturado
+class MarketAnalysis(BaseModel):
+    key_trends: List[str] = Field(description="List of identified market trends")
+    market_size: str = Field(description="Estimated market size")
+    competitors: List[str] = Field(description="Major competitors in the space")
+
+
+# Define o estado do flow
+class MarketResearchState(BaseModel):
+    product: str = ""
+    analysis: MarketAnalysis | None = None
+
+
+# Cria uma classe de flow
+class MarketResearchFlow(Flow[MarketResearchState]):
+    @start()
+    def initialize_research(self) -> Dict[str, Any]:
+        print(f"Starting market research for {self.state.product}")
+        return {"product": self.state.product}
+
+    @listen(initialize_research)
+    async def analyze_market(self) -> Dict[str, Any]:
+        # Cria um agente para pesquisa de mercado
+        analyst = Agent(
+            role="Market Research Analyst",
+            goal=f"Analyze the market for {self.state.product}",
+            backstory="You are an experienced market analyst with expertise in "
+            "identifying market trends and opportunities.",
+            tools=[SerperDevTool()],
+            verbose=True,
+        )
+
+        # Define a consulta de pesquisa
+        query = f"""
+        Research the market for {self.state.product}. Include:
+        1. Key market trends
+        2. Market size
+        3. Major competitors
+
+        Format your response according to the specified structure.
+        """
+
+        # Executa a análise com formato de saída estruturado
+        result = await analyst.kickoff_async(query, response_format=MarketAnalysis)
+        if result.pydantic:
+            print("result", result.pydantic)
+        else:
+            print("result", result)
+
+        # Retorna a análise para atualizar o estado
+        return {"analysis": result.pydantic}
+
+    @listen(analyze_market)
+    def present_results(self, analysis) -> None:
+        print("\nMarket Analysis Results")
+        print("=====================")
+
+        if isinstance(analysis, dict):
+            # Se recebemos um dict com a chave 'analysis', extrai o objeto de análise real
+            market_analysis = analysis.get("analysis")
+        else:
+            market_analysis = analysis
+
+        if market_analysis and isinstance(market_analysis, MarketAnalysis):
+            print("\nKey Market Trends:")
+            for trend in market_analysis.key_trends:
+                print(f"- {trend}")
+
+            print(f"\nMarket Size: {market_analysis.market_size}")
+
+            print("\nMajor Competitors:")
+            for competitor in market_analysis.competitors:
+                print(f"- {competitor}")
+        else:
+            print("No structured analysis data available.")
+            print("Raw analysis:", analysis)
+
+
+# Exemplo de uso
+async def run_flow():
+    flow = MarketResearchFlow()
+    flow.plot("MarketResearchFlowPlot")
+    result = await flow.kickoff_async(inputs={"product": "AI-powered chatbots"})
+    return result
+
+
+# Executa o flow
+if __name__ == "__main__":
+    asyncio.run(run_flow())
 ```
 
 ![Flow Visual image](/images/crewai-flow-7.png)
@@ -463,7 +816,50 @@ No arquivo `main.py`, você cria seu flow e conecta as crews. É possível defin
 Veja um exemplo de como conectar a `poem_crew` no arquivo `main.py`:
 
 ```python Code
-# (O código não é traduzido)
+#!/usr/bin/env python
+from random import randint
+
+from pydantic import BaseModel
+from crewai.flow.flow import Flow, listen, start
+from .crews.poem_crew.poem_crew import PoemCrew
+
+class PoemState(BaseModel):
+    sentence_count: int = 1
+    poem: str = ""
+
+class PoemFlow(Flow[PoemState]):
+
+    @start()
+    def generate_sentence_count(self):
+        print("Generating sentence count")
+        self.state.sentence_count = randint(1, 5)
+
+    @listen(generate_sentence_count)
+    def generate_poem(self):
+        print("Generating poem")
+        result = PoemCrew().crew().kickoff(inputs={"sentence_count": self.state.sentence_count})
+
+        print("Poem generated", result.raw)
+        self.state.poem = result.raw
+
+    @listen(generate_poem)
+    def save_poem(self):
+        print("Saving poem")
+        with open("poem.txt", "w") as f:
+            f.write(self.state.poem)
+
+def kickoff():
+    poem_flow = PoemFlow()
+    poem_flow.kickoff()
+
+
+def plot():
+    poem_flow = PoemFlow()
+    poem_flow.plot("PoemFlowPlot")
+
+if __name__ == "__main__":
+    kickoff()
+    plot()
 ```
 
 Neste exemplo, a classe `PoemFlow` define um fluxo que gera a quantidade de frases, usa a `PoemCrew` para gerar um poema e, depois, salva o poema em um arquivo. O flow inicia com o método `kickoff()`, e o gráfico é gerado pelo método `plot()`.
@@ -515,7 +911,8 @@ O CrewAI oferece duas formas práticas de gerar plots dos seus flows:
 Se estiver trabalhando diretamente com uma instância do flow, basta chamar o método `plot()` do objeto. Isso criará um arquivo HTML com o plot interativo do seu flow.
 
 ```python Code
-# (O código não é traduzido)
+# Considerando que você já tem uma instância do flow
+flow.plot("my_flow_plot")
 ```
 
 Esse comando gera um arquivo chamado `my_flow_plot.html` no diretório atual. Abra esse arquivo em um navegador para visualizar o plot interativo.
