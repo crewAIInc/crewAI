@@ -78,11 +78,7 @@ class WikipediaSearchTool(BaseTool):
         try:
             summary = wikipedia.summary(title, sentences=self.sentences)
             page = wikipedia.page(title, auto_suggest=False)
-            return (
-                f"Title: {page.title}\n"
-                f"URL: {page.url}\n"
-                f"Summary: {summary}"
-            )
+            return f"Title: {page.title}\nURL: {page.url}\nSummary: {summary}"
         except wikipedia.exceptions.DisambiguationError as e:
             options = ", ".join(e.options[:5])
             return (
@@ -92,13 +88,7 @@ class WikipediaSearchTool(BaseTool):
                 f"Please refine your search query."
             )
         except wikipedia.exceptions.PageError:
-            return (
-                f"Title: {title}\n"
-                f"Error: No Wikipedia page found for '{title}'."
-            )
+            return f"Title: {title}\nError: No Wikipedia page found for '{title}'."
         except Exception as e:
             logger.error(f"Error retrieving Wikipedia page '{title}': {e}")
-            return (
-                f"Title: {title}\n"
-                f"Error: Failed to retrieve page: {e}"
-            )
+            return f"Title: {title}\nError: Failed to retrieve page: {e}"
