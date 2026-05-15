@@ -42,7 +42,7 @@ class Repository:
 
     @cached_property  # noqa: B019
     def is_git_repo(self) -> bool:
-        """Check if the current directory is a git repository. """
+        """Check if the current directory is a git repository."""
         try:
             subprocess.check_output(
                 ["git", "rev-parse", "--is-inside-work-tree"],  # noqa: S607
