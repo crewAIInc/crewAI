@@ -516,6 +516,7 @@ class Crew(BaseModel):
 
         """Starts the crew to work on its assigned tasks."""
         self._execution_span = self._telemetry.crew_execution_span(self, inputs)
+        self._log_crew_start()
         self._task_output_handler.reset()
         self._logging_color = "bold_purple"
 
@@ -562,6 +563,7 @@ class Crew(BaseModel):
         for metric in metrics:
             self.usage_metrics.add_usage_metrics(metric)
 
+        self._log_crew_finish()
         return result
 
     def kickoff_for_each(self, inputs: List[Dict[str, Any]]) -> List[CrewOutput]:
@@ -707,6 +709,7 @@ class Crew(BaseModel):
         task_outputs: List[TaskOutput] = []
         futures: List[Tuple[Task, Future[TaskOutput], int]] = []
         last_sync_output: Optional[TaskOutput] = None
+        previous_agent_role: Optional[str] = None
 
         for task_index, task in enumerate(tasks):
             if start_index is not None and task_index < start_index:
@@ -716,12 +719,19 @@ class Crew(BaseModel):
                     else:
                         task_outputs = [task.output]
                         last_sync_output = task.output
+                    if task.agent is not None:
+                        previous_agent_role = task.agent.role
                 continue
 
             agent_to_use = self._get_agent_to_use(task)
             if agent_to_use is None:
                 raise ValueError(
                     f"No agent available for task: {task.description}. Ensure that either the task has an assigned agent or a manager agent is provided."
+                )
+
+            if previous_agent_role and previous_agent_role != agent_to_use.role:
+                self._log_context_received(
+                    agent_to_use.role, previous_agent_role
                 )
 
             # Determine which tools to use - task tools take precedence over agent tools
@@ -740,6 +750,8 @@ class Crew(BaseModel):
                 )
                 if skipped_task_output:
                     continue
+
+            next_agent_role = self._get_next_agent_role(tasks, task_index)
 
             if task.async_execution:
                 context = self._get_context(
@@ -765,6 +777,11 @@ class Crew(BaseModel):
                 task_outputs = [task_output]
                 self._process_task_result(task, task_output)
                 self._store_execution_log(task, task_output, task_index, was_replayed)
+                self._log_task_completion(
+                    agent_to_use.role, task, next_agent_role
+                )
+
+            previous_agent_role = agent_to_use.role
 
         if futures:
             task_outputs = self._process_async_tasks(futures, was_replayed)
@@ -859,11 +876,66 @@ class Crew(BaseModel):
             tools = self._inject_delegation_tools(tools, task.agent, agents_for_delegation)
         return tools
 
+    def _log_crew_start(self):
+        crew_name = self.name or "Crew"
+        self._logger.log(
+            "info",
+            f"[{crew_name}] Starting crew execution",
+            color="bold_purple",
+        )
+
+    def _log_crew_finish(self):
+        crew_name = self.name or "Crew"
+        self._logger.log(
+            "info",
+            f"[{crew_name}] Crew execution completed",
+            color="bold_purple",
+        )
+
     def _log_task_start(self, task: Task, role: str = "None"):
+        task_name = task.name or task.description
+        self._logger.log(
+            "info",
+            f"[Agent: {role}] Starting task: {task_name}",
+            color="bold_blue",
+        )
         if self.output_log_file:
             self._file_handler.log(
                 task_name=task.name, task=task.description, agent=role, status="started"
             )
+
+    def _log_task_completion(
+        self, role: str, task: Task, next_agent_role: Optional[str] = None
+    ):
+        task_name = task.name or task.description
+        if next_agent_role and next_agent_role != role:
+            self._logger.log(
+                "info",
+                f"[Agent: {role}] Task complete: {task_name}, passing to: {next_agent_role}",
+                color="bold_blue",
+            )
+        else:
+            self._logger.log(
+                "info",
+                f"[Agent: {role}] Task complete: {task_name}",
+                color="bold_blue",
+            )
+
+    def _log_context_received(self, role: str, from_role: str):
+        self._logger.log(
+            "info",
+            f"[Agent: {role}] Received context from {from_role}",
+            color="bold_blue",
+        )
+
+    def _get_next_agent_role(
+        self, tasks: List[Task], current_index: int
+    ) -> Optional[str]:
+        for i in range(current_index + 1, len(tasks)):
+            next_agent = self._get_agent_to_use(tasks[i])
+            if next_agent is not None:
+                return next_agent.role
+        return None
 
     def _update_manager_tools(self, task: Task, tools: List[Tool]):
         if self.manager_agent:
