@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 logger = logging.getLogger(__file__)
 
 try:
-    import wikipedia
+    import wikipedia  # type: ignore[import-untyped]
 except ImportError:
     wikipedia = None
 
