@@ -892,11 +892,16 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 tool=func_name, input=input_str
             )
             if cached_result is not None:
-                result = (
-                    str(cached_result)
-                    if not isinstance(cached_result, str)
-                    else cached_result
-                )
+                from crewai.tools.base_tool import is_idempotent_sentinel, IDEMPOTENT_SENTINEL_MESSAGE
+
+                if is_idempotent_sentinel(cached_result):
+                    result = IDEMPOTENT_SENTINEL_MESSAGE
+                else:
+                    result = (
+                        str(cached_result)
+                        if not isinstance(cached_result, str)
+                        else cached_result
+                    )
                 from_cache = True
 
         agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
@@ -969,19 +974,24 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 raw_result = available_functions[func_name](**(args_dict or {}))
 
                 if self.tools_handler and self.tools_handler.cache:
-                    should_cache = True
-                    if (
-                        original_tool
-                        and hasattr(original_tool, "cache_function")
-                        and callable(original_tool.cache_function)
-                    ):
-                        should_cache = original_tool.cache_function(
-                            args_dict or {}, raw_result
-                        )
-                    if should_cache:
+                    if is_idempotent:
                         self.tools_handler.cache.add(
                             tool=func_name, input=input_str, output=raw_result
                         )
+                    else:
+                        should_cache = True
+                        if (
+                            original_tool
+                            and hasattr(original_tool, "cache_function")
+                            and callable(original_tool.cache_function)
+                        ):
+                            should_cache = original_tool.cache_function(
+                                args_dict or {}, raw_result
+                            )
+                        if should_cache:
+                            self.tools_handler.cache.add(
+                                tool=func_name, input=input_str, output=raw_result
+                            )
 
                 result = (
                     str(raw_result) if not isinstance(raw_result, str) else raw_result

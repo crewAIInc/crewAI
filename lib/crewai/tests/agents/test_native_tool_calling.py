@@ -1341,7 +1341,7 @@ class TestIdempotentToolPreClaim:
 
     def test_idempotent_tool_sentinel_survives_failure(self) -> None:
         """If an idempotent tool raises after side effect, sentinel remains in cache."""
-        from crewai.tools.base_tool import IDEMPOTENT_EXECUTION_SENTINEL
+        from crewai.tools.base_tool import is_idempotent_sentinel
 
         class FailingTool(BaseTool):
             name: str = "failing_tool"
@@ -1368,7 +1368,48 @@ class TestIdempotentToolPreClaim:
         cached = executor.tools_handler.cache.read(
             tool="failing_tool", input='{"data": "payload"}'
         )
-        assert cached == IDEMPOTENT_EXECUTION_SENTINEL
+        assert is_idempotent_sentinel(cached)
+
+    def test_idempotent_tool_retry_reads_sentinel(self) -> None:
+        """Second call with same args reads sentinel from cache and returns a clear message."""
+        from crewai.tools.base_tool import IDEMPOTENT_SENTINEL_MESSAGE
+
+        call_count = 0
+
+        class FailingTool(BaseTool):
+            name: str = "failing_tool"
+            description: str = "Fails after side effect"
+            idempotent: bool = True
+
+            def _run(self, data: str) -> str:
+                nonlocal call_count
+                call_count += 1
+                raise RuntimeError("connection lost")
+
+        tool_instance = FailingTool()
+        executor = self._make_executor([tool_instance])
+
+        from crewai.utilities.agent_utils import convert_tools_to_openai_schema
+        _, available_functions, _ = convert_tools_to_openai_schema([tool_instance])
+
+        executor._execute_single_native_tool_call(
+            call_id="call_first",
+            func_name="failing_tool",
+            func_args={"data": "payload"},
+            available_functions=available_functions,
+        )
+        assert call_count == 1
+
+        result = executor._execute_single_native_tool_call(
+            call_id="call_retry",
+            func_name="failing_tool",
+            func_args={"data": "payload"},
+            available_functions=available_functions,
+        )
+
+        assert call_count == 1, "Tool should not be called again on retry"
+        assert result["from_cache"] is True
+        assert result["result"] == IDEMPOTENT_SENTINEL_MESSAGE
 
     def test_non_idempotent_tool_no_preclaim(self) -> None:
         """Non-idempotent tools should not write sentinel before execution."""

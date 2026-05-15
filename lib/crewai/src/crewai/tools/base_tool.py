@@ -82,10 +82,21 @@ def _default_cache_function(_args: Any = None, _result: Any = None) -> bool:
     return True
 
 
-IDEMPOTENT_EXECUTION_SENTINEL = (
-    "This tool was already executed with these arguments. "
-    "The original result was not captured due to an interruption."
-)
+IDEMPOTENT_EXECUTION_SENTINEL = {
+    "__crewai_idempotent_sentinel": True,
+    "status": "pending",
+    "message": (
+        "This tool was already executed with these arguments. "
+        "The original result was not captured due to an interruption."
+    ),
+}
+
+IDEMPOTENT_SENTINEL_MESSAGE = IDEMPOTENT_EXECUTION_SENTINEL["message"]
+
+
+def is_idempotent_sentinel(value: object) -> bool:
+    """Check whether a cached value is the idempotent pre-claim sentinel."""
+    return isinstance(value, dict) and value.get("__crewai_idempotent_sentinel") is True
 
 
 def _is_async_callable(func: Callable[..., Any]) -> bool:

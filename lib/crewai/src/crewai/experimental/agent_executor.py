@@ -1740,11 +1740,16 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 tool=func_name, input=input_str
             )
             if cached_result is not None:
-                result = (
-                    str(cached_result)
-                    if not isinstance(cached_result, str)
-                    else cached_result
-                )
+                from crewai.tools.base_tool import is_idempotent_sentinel, IDEMPOTENT_SENTINEL_MESSAGE
+
+                if is_idempotent_sentinel(cached_result):
+                    result = IDEMPOTENT_SENTINEL_MESSAGE
+                else:
+                    result = (
+                        str(cached_result)
+                        if not isinstance(cached_result, str)
+                        else cached_result
+                    )
                 from_cache = True
 
         # Emit tool usage started event
@@ -1817,17 +1822,22 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     tool_func = self._available_functions[func_name]
                     raw_result = tool_func(**args_dict)
 
-                    # Add to cache after successful execution (before string conversion)
+                    # Always overwrite sentinel for idempotent tools; respect cache_function for others
                     if self.tools_handler and self.tools_handler.cache:
-                        should_cache = True
-                        if original_tool:
-                            should_cache = original_tool.cache_function(
-                                args_dict, raw_result
-                            )
-                        if should_cache:
+                        if is_idempotent:
                             self.tools_handler.cache.add(
                                 tool=func_name, input=input_str, output=raw_result
                             )
+                        else:
+                            should_cache = True
+                            if original_tool:
+                                should_cache = original_tool.cache_function(
+                                    args_dict, raw_result
+                                )
+                            if should_cache:
+                                self.tools_handler.cache.add(
+                                    tool=func_name, input=input_str, output=raw_result
+                                )
 
                     # Convert to string for message
                     result = (

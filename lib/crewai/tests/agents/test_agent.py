@@ -1169,15 +1169,16 @@ def test_times_executed_resets_between_tasks():
         with pytest.raises(Exception):
             agent.execute_task(task=task1)
 
-        times_after_task1 = agent._times_executed
-        assert times_after_task1 > 0
+        calls_after_task1 = invoke_mock.call_count
+        assert calls_after_task1 == agent.max_retry_limit + 1
 
         agent.create_agent_executor(task=task2)
         with pytest.raises(Exception):
             agent.execute_task(task=task2)
 
-        assert agent._times_executed > 0, (
-            "_times_executed should be positive after second task errors"
+        calls_after_task2 = invoke_mock.call_count - calls_after_task1
+        assert calls_after_task2 == agent.max_retry_limit + 1, (
+            f"task2 should get its own full retry budget, got {calls_after_task2} calls"
         )
 
 

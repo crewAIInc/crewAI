@@ -282,7 +282,12 @@ class ToolUsage:
                 result = self.tools_handler.cache.read(
                     tool=sanitize_tool_name(calling.tool_name), input=input_str
                 )  # type: ignore
-                from_cache = result is not None
+                if result is not None:
+                    from crewai.tools.base_tool import is_idempotent_sentinel, IDEMPOTENT_SENTINEL_MESSAGE
+
+                    if is_idempotent_sentinel(result):
+                        result = IDEMPOTENT_SENTINEL_MESSAGE
+                    from_cache = True
 
             available_tool = next(
                 (
@@ -532,7 +537,12 @@ class ToolUsage:
                 result = self.tools_handler.cache.read(
                     tool=sanitize_tool_name(calling.tool_name), input=input_str
                 )  # type: ignore
-                from_cache = result is not None
+                if result is not None:
+                    from crewai.tools.base_tool import is_idempotent_sentinel, IDEMPOTENT_SENTINEL_MESSAGE
+
+                    if is_idempotent_sentinel(result):
+                        result = IDEMPOTENT_SENTINEL_MESSAGE
+                    from_cache = True
 
             available_tool = next(
                 (
