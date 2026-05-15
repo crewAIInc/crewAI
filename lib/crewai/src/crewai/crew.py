@@ -1504,9 +1504,7 @@ class Crew(FlowTrackable, BaseModel):
                     context=context,
                     tools=exec_data.tools,
                 )
-                futures.append(
-                    (task, future, task_index, agent_role, next_agent_role)
-                )
+                futures.append((task, future, task_index, agent_role, next_agent_role))
             else:
                 if futures:
                     task_outputs.extend(
@@ -1811,9 +1809,7 @@ class Crew(FlowTrackable, BaseModel):
             color="bold_blue",
         )
 
-    def _get_next_agent_role(
-        self, tasks: list[Task], current_index: int
-    ) -> str | None:
+    def _get_next_agent_role(self, tasks: list[Task], current_index: int) -> str | None:
         for i in range(current_index + 1, len(tasks)):
             next_agent = self._get_agent_to_use(tasks[i])
             if next_agent is not None:
