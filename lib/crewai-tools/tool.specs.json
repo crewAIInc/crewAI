@@ -27255,6 +27255,89 @@
       }
     },
     {
+      "description": "A tool that searches Wikipedia for a given topic and returns a concise summary. Useful for quick factual lookups and research.",
+      "env_vars": [],
+      "humanized_name": "Wikipedia Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "additionalProperties": true,
+        "description": "Tool for searching Wikipedia and retrieving article summaries.\n\nUses the `wikipedia` Python library to search for topics and return\nconcise summaries. Handles disambiguation and missing pages gracefully.",
+        "properties": {
+          "language": {
+            "default": "en",
+            "title": "Language",
+            "type": "string"
+          },
+          "sentences": {
+            "default": 5,
+            "title": "Sentences",
+            "type": "integer"
+          },
+          "top_k": {
+            "default": 1,
+            "title": "Top K",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "WikipediaSearchTool",
+        "type": "object"
+      },
+      "name": "WikipediaSearchTool",
+      "package_dependencies": [],
+      "run_params_schema": {
+        "description": "Input for WikipediaSearchTool.",
+        "properties": {
+          "search_query": {
+            "description": "The topic or query to search for on Wikipedia",
+            "title": "Search Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "search_query"
+        ],
+        "title": "WikipediaSearchToolInput",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that can be used to semantic search a query from a XML's content.",
       "env_vars": [],
       "humanized_name": "Search a XML's content",
