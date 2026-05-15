@@ -370,6 +370,72 @@ class TestNewAgentMessage:
         assert "Analyst" in assembled
         assert "Analyze data" in assembled
 
+    @patch("crewai.new_agent.executor.aget_llm_response")
+    @pytest.mark.asyncio
+    async def test_summarization_preserves_current_user_message(self, mock_llm_response):
+        """When proactive summarization fires, the current user message must
+        survive — otherwise the agent never sees what the user actually asked."""
+        mock_llm_response.return_value = "Done."
+
+        agent = NewAgent(
+            role="R",
+            goal="g",
+            settings=AgentSettings(respect_context_window=True),
+        )
+        executor = agent._executor
+
+        # Build messages that simulate: system + history + current user
+        from crewai.utilities.agent_utils import format_message_for_llm
+
+        llm_messages = [
+            format_message_for_llm("System prompt", role="system"),
+            format_message_for_llm("Old user msg", role="user"),
+            format_message_for_llm("Old assistant msg", role="assistant"),
+            format_message_for_llm("Another old msg", role="user"),
+            format_message_for_llm("Another reply", role="assistant"),
+            format_message_for_llm("What is the weather?", role="user"),  # current
+        ]
+
+        # Mock the LLM to have a tiny context window so summarization triggers
+        mock_llm = MagicMock()
+        mock_llm.get_context_window_size.return_value = 100
+        mock_llm.call.return_value = "<summary>Prior context summary</summary>"
+        agent._llm_instance = mock_llm
+
+        executor._proactive_summarize_messages(llm_messages, [])
+
+        # The last user message must still be present
+        user_messages = [m for m in llm_messages if m.get("role") == "user"]
+        last_user = user_messages[-1] if user_messages else None
+        assert last_user is not None
+        assert "What is the weather?" in str(last_user.get("content", ""))
+
+    @patch("crewai.new_agent.executor.aget_llm_response")
+    @pytest.mark.asyncio
+    async def test_plan_injection_has_anti_echo(self, mock_llm_response):
+        """Plan text added to prompt stack should instruct the LLM not to echo it."""
+        mock_llm_response.return_value = "Result of the work."
+
+        agent = NewAgent(role="Coder", goal="Write code", backstory="Expert.")
+
+        # Simulate what happens when planning returns steps
+        executor = agent._executor
+        executor.prompt_stack = executor._build_prompt_stack("Write a function")
+
+        # Manually add a plan layer like the planning engine would
+        steps = "\n".join(f"{i + 1}. Step {i + 1}" for i in range(3))
+        plan_text = (
+            f"Internal execution plan (do NOT include in your response):\n"
+            f"{steps}\n\n"
+            f"Execute these steps using your tools. "
+            f"Report results, not the plan itself."
+        )
+        executor.prompt_stack.add("plan", plan_text, source="planning_engine")
+
+        assembled = executor.prompt_stack.assemble()
+        assert "do NOT include in your response" in assembled
+        assert "Report results, not the plan itself" in assembled
+
 
 # ── Delegation tests ─────────────────────────────────────────
 

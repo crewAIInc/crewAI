@@ -788,6 +788,10 @@ class ConversationalAgentExecutor(BaseModel):
 
         Reuses the existing summarize_messages() from agent_utils which handles
         chunking, parallel summarization, and file attachment preservation.
+
+        Protects the current turn (from the last user message onward) so
+        that summarize_messages — which replaces all non-system messages —
+        never eats the user's actual request or in-progress tool calls.
         """
         if not self.agent.settings.respect_context_window:
             return
@@ -803,6 +807,28 @@ class ConversationalAgentExecutor(BaseModel):
         if est_tokens < int(ctx_size * 0.60):
             return
 
+        # Find the last user message — everything from there onward is the
+        # current turn and must survive summarization.
+        last_user_idx = -1
+        for i in range(len(llm_messages) - 1, -1, -1):
+            if llm_messages[i].get("role") == "user":
+                last_user_idx = i
+                break
+
+        if last_user_idx < 0:
+            return
+
+        # Need history messages before the current user message to summarize
+        history_non_system = [
+            m for m in llm_messages[:last_user_idx] if m.get("role") != "system"
+        ]
+        if len(history_non_system) < 2:
+            return
+
+        # Detach the current turn (user msg + any tool call/result messages)
+        current_turn = llm_messages[last_user_idx:]
+        del llm_messages[last_user_idx:]
+
         try:
             summarize_messages(
                 messages=llm_messages,
@@ -813,6 +839,9 @@ class ConversationalAgentExecutor(BaseModel):
             self._emit_event_context_summarized()
         except Exception as e:
             logger.debug(f"Proactive summarization failed: {e}")
+
+        # Re-append the protected current turn
+        llm_messages.extend(current_turn)
 
     def _emit_event_context_summarized(self) -> None:
         try:
@@ -1489,8 +1518,12 @@ class ConversationalAgentExecutor(BaseModel):
             _plan_tokens_before_out = self._turn_output_tokens
             plan = await planning.maybe_plan(user_message.content)
             if plan:
-                plan_text = "Follow this execution plan:\n" + "\n".join(
-                    f"{i + 1}. {step}" for i, step in enumerate(plan)
+                steps = "\n".join(f"{i + 1}. {step}" for i, step in enumerate(plan))
+                plan_text = (
+                    f"Internal execution plan (do NOT include in your response):\n"
+                    f"{steps}\n\n"
+                    f"Execute these steps using your tools. "
+                    f"Report results, not the plan itself."
                 )
                 self.prompt_stack.add("plan", plan_text, source="planning_engine")
             # GAP-49: Record sub-action tokens for planning
@@ -1653,6 +1686,17 @@ class ConversationalAgentExecutor(BaseModel):
                     pass
 
                 if is_context_length_exceeded(e):
+                    # Protect the current turn before summarization
+                    _ctx_last_user = -1
+                    for _ci in range(len(llm_messages) - 1, -1, -1):
+                        if llm_messages[_ci].get("role") == "user":
+                            _ctx_last_user = _ci
+                            break
+                    _ctx_tail: list[LLMMessage] = []
+                    if _ctx_last_user >= 0:
+                        _ctx_tail = llm_messages[_ctx_last_user:]
+                        del llm_messages[_ctx_last_user:]
+
                     handle_context_length(
                         respect_context_window=self.agent.settings.respect_context_window,
                         printer=_NullPrinter(),
@@ -1661,6 +1705,8 @@ class ConversationalAgentExecutor(BaseModel):
                         callbacks=callbacks,
                         verbose=self.verbose,
                     )
+                    if _ctx_tail:
+                        llm_messages.extend(_ctx_tail)
                     try:
                         from crewai.new_agent.events import (
                             NewAgentContextSummarizedEvent,
@@ -2387,6 +2433,9 @@ class ConversationalAgentExecutor(BaseModel):
         """
         from crewai.events.event_bus import crewai_event_bus
         from crewai.events.types.llm_events import LLMStreamChunkEvent
+        from crewai.new_agent.events import NewAgentToolUsageStartedEvent
+
+        _TOOL_RESET = "\x00TOOL_RESET\x00"
 
         chunk_queue: asyncio.Queue[str] = asyncio.Queue()
 
@@ -2394,7 +2443,11 @@ class ConversationalAgentExecutor(BaseModel):
             if event.chunk and not event.tool_call:
                 chunk_queue.put_nowait(event.chunk)
 
+        def _on_tool_started(source: Any, event: NewAgentToolUsageStartedEvent) -> None:
+            chunk_queue.put_nowait(_TOOL_RESET)
+
         crewai_event_bus.on(LLMStreamChunkEvent)(_on_stream_chunk)
+        crewai_event_bus.on(NewAgentToolUsageStartedEvent)(_on_tool_started)
 
         llm = self.agent._llm_instance
         _prev_stream = getattr(llm, "stream", False) if llm else False
@@ -2440,6 +2493,12 @@ class ConversationalAgentExecutor(BaseModel):
             while not invoke_task.done():
                 try:
                     chunk = await asyncio.wait_for(chunk_queue.get(), timeout=0.05)
+                    if chunk == _TOOL_RESET:
+                        yield _TOOL_RESET
+                        _streamed_chars = 0
+                        _tag_buf = ""
+                        _suppressing = False
+                        continue
                     filtered = _filter_chunk(chunk)
                     if filtered:
                         _streamed_chars += len(filtered)
@@ -2454,6 +2513,12 @@ class ConversationalAgentExecutor(BaseModel):
 
             while not chunk_queue.empty():
                 chunk = chunk_queue.get_nowait()
+                if chunk == _TOOL_RESET:
+                    yield _TOOL_RESET
+                    _streamed_chars = 0
+                    _tag_buf = ""
+                    _suppressing = False
+                    continue
                 filtered = _filter_chunk(chunk)
                 if filtered:
                     _streamed_chars += len(filtered)
@@ -2469,6 +2534,7 @@ class ConversationalAgentExecutor(BaseModel):
 
         finally:
             crewai_event_bus.off(LLMStreamChunkEvent, _on_stream_chunk)
+            crewai_event_bus.off(NewAgentToolUsageStartedEvent, _on_tool_started)
             if llm:
                 llm.stream = _prev_stream
             if not invoke_task.done():

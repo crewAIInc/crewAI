@@ -607,6 +607,7 @@ class AgentTUI(App[None]):
         self._last_active_agent: str | None = None
         self._last_agent_error: str = ""
         self._scheduler: Any = None
+        self._stream_auto_scroll: bool = True
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -1490,6 +1491,7 @@ class AgentTUI(App[None]):
             accumulated = ""
             stream_start = time.monotonic()
             stream_chars = 0
+            self._stream_auto_scroll = True
 
             def _stream_markup(
                 text: str, final: bool = False, metadata: str = ""
@@ -1508,6 +1510,8 @@ class AgentTUI(App[None]):
                 return mk
 
             # Timeout-protected streaming: prevents UI freeze if LLM stalls
+            _tool_reset = "\x00TOOL_RESET\x00"
+            _tools_used: list[str] = []
             stream = agent.stream(message_text)
             first_chunk = True
             while True:
@@ -1523,6 +1527,11 @@ class AgentTUI(App[None]):
                 except Exception:
                     break
 
+                if chunk == _tool_reset:
+                    accumulated = ""
+                    stream_chars = 0
+                    continue
+
                 accumulated += chunk
                 stream_chars += len(chunk)
 
@@ -1537,14 +1546,14 @@ class AgentTUI(App[None]):
                             _safe_render(accumulated), classes="agent-bubble"
                         )
                         scroll.mount(bubble, before=thinking)
-                    if self._is_near_bottom(scroll):
+                    if self._stream_auto_scroll:
                         scroll.scroll_end(animate=False)
                 elif bubble is not None:
                     try:
                         bubble.update(_stream_markup(accumulated))
                     except Exception:
                         bubble.update(_safe_render(accumulated))
-                    if self._is_near_bottom(scroll):
+                    if self._stream_auto_scroll:
                         scroll.scroll_end(animate=False)
 
             # Remove cursor, add final metadata
@@ -1559,17 +1568,29 @@ class AgentTUI(App[None]):
                     meta_parts.append(f"~{response.output_tokens or 0:,} tokens")
                 if getattr(response, "response_time_ms", 0):
                     meta_parts.append(f"{response.response_time_ms / 1000:.1f}s")
+                tools = getattr(response, "tools_used", None)
+                if tools:
+                    _tools_used = tools
+                    tool_summary = ", ".join(tools)
+                    meta_parts.append(f"tools: {tool_summary}")
             metadata = " · ".join(meta_parts)
+
+            # Use the clean final response from ainvoke when available —
+            # accumulated may contain intermediate plan/thinking text
+            # from LLM iterations before tool calls.
+            final_content = accumulated
+            if response and response.content:
+                final_content = response.content
 
             if bubble is not None:
                 try:
                     bubble.update(
-                        _stream_markup(accumulated, final=True, metadata=metadata)
+                        _stream_markup(final_content, final=True, metadata=metadata)
                     )
                 except Exception:
-                    bubble.update(_safe_render(accumulated))
+                    bubble.update(_safe_render(final_content))
 
-            content = accumulated or (response.content if response else "")
+            content = final_content
             self._append_msg(room, target, content, metadata)
 
         except Exception as e:
@@ -1620,6 +1641,21 @@ class AgentTUI(App[None]):
         if scroll.max_scroll_y == 0:
             return True
         return scroll.scroll_y >= scroll.max_scroll_y - 80
+
+    def on_mouse_scroll_up(self, event: events.MouseScrollUp) -> None:
+        """User scrolled up — pause auto-scroll while streaming."""
+        if self._processing:
+            self._stream_auto_scroll = False
+
+    def on_mouse_scroll_down(self, event: events.MouseScrollDown) -> None:
+        """User scrolled down — resume auto-scroll if back near bottom."""
+        if self._processing and not self._stream_auto_scroll:
+            try:
+                scroll = self.query_one("#chat-scroll", VerticalScroll)
+                if self._is_near_bottom(scroll):
+                    self._stream_auto_scroll = True
+            except Exception:
+                pass
 
     def _mount_bubble(self, sender: str, content: str, metadata: str = "") -> None:
         scroll = self.query_one("#chat-scroll", VerticalScroll)
