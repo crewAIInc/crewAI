@@ -68,6 +68,11 @@ class JsonResponseFormat(TypedDict):
 DEFAULT_CONTEXT_WINDOW_SIZE: Final[int] = 4096
 DEFAULT_SUPPORTS_STOP_WORDS: Final[bool] = True
 _JSON_EXTRACTION_PATTERN: Final[re.Pattern[str]] = re.compile(r"\{.*}", re.DOTALL)
+_TEXT_FILE_CONTENT_TYPES: Final[tuple[str, ...]] = (
+    "application/json",
+    "application/xml",
+    "application/x-yaml",
+)
 
 _current_call_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "_current_call_id", default=None
@@ -746,13 +751,7 @@ class BaseLLM(BaseModel, ABC):
             return messages
 
         if not self.supports_multimodal():
-            if any(msg.get("files") for msg in messages):
-                raise ValueError(
-                    f"Model '{self.model}' does not support multimodal input, "
-                    "but files were provided via 'input_files'. "
-                    "Use a vision-capable model or remove the file inputs."
-                )
-            return messages
+            return self._process_text_files_for_text_only_model(messages)
 
         provider = getattr(self, "provider", None) or getattr(self, "model", "openai")
         api = getattr(self, "api", None)
@@ -780,6 +779,59 @@ class BaseLLM(BaseModel, ABC):
             msg.pop("files", None)
 
         return messages
+
+    def _process_text_files_for_text_only_model(
+        self, messages: list[LLMMessage]
+    ) -> list[LLMMessage]:
+        """Inline text file attachments for models without multimodal support."""
+        for msg in messages:
+            files = msg.get("files")
+            if not files:
+                continue
+
+            if not isinstance(files, dict) or not all(
+                self._is_text_file(file_input) for file_input in files.values()
+            ):
+                raise ValueError(
+                    f"Model '{self.model}' does not support multimodal input, "
+                    "but files were provided via 'input_files'. "
+                    "Use a vision-capable model or remove the file inputs."
+                )
+
+            existing_content = msg.get("content", "")
+            if not isinstance(existing_content, str):
+                raise ValueError(
+                    f"Model '{self.model}' does not support multimodal input, "
+                    "but files were provided via 'input_files'. "
+                    "Use a vision-capable model or remove the file inputs."
+                )
+
+            file_blocks: list[str] = []
+            for name, file_input in files.items():
+                read_text = file_input.read_text
+                file_text = read_text()
+                file_blocks.append(f"Attached file: {name}\n{file_text}")
+
+            msg["content"] = "\n\n".join(
+                part for part in [existing_content, *file_blocks] if part
+            )
+            msg.pop("files", None)
+
+        return messages
+
+    @staticmethod
+    def _is_text_file(file_input: Any) -> bool:
+        """Return whether a file input can be safely represented as prompt text."""
+        content_type = getattr(file_input, "content_type", "")
+        normalized_content_type = (
+            content_type.split(";", 1)[0].strip().lower()
+            if isinstance(content_type, str)
+            else ""
+        )
+        return callable(getattr(file_input, "read_text", None)) and (
+            normalized_content_type.startswith("text/")
+            or normalized_content_type in _TEXT_FILE_CONTENT_TYPES
+        )
 
     @staticmethod
     def _validate_structured_output(

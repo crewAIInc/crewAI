@@ -173,6 +173,77 @@ class TestOpenAIMultimodal:
         llm = LLM(model="openai/gpt-3.5-turbo")
         assert llm.supports_multimodal() is False
 
+    def test_non_multimodal_model_accepts_text_files(self) -> None:
+        """Test text files are inlined for models without multimodal support."""
+        llm = LLM(model="openai/gpt-3.5-turbo")
+        messages = [
+            {
+                "role": "user",
+                "content": "Summarize the attached file.",
+                "files": {"readme": TextFile(source=b"hello from a text file")},
+            }
+        ]
+
+        result = llm._format_messages(messages)
+
+        assert result == [
+            {
+                "role": "user",
+                "content": (
+                    "Summarize the attached file.\n\n"
+                    "Attached file: readme\n"
+                    "hello from a text file"
+                ),
+            }
+        ]
+
+    def test_non_multimodal_model_accepts_text_files_with_mime_params(
+        self,
+    ) -> None:
+        """Test text MIME parameters do not trigger multimodal rejection."""
+        llm = LLM(model="openai/gpt-3.5-turbo")
+
+        class TextLikeFile:
+            content_type = "Application/JSON; charset=utf-8"
+
+            @staticmethod
+            def read_text() -> str:
+                return '{"topic":"agents"}'
+
+        messages = [
+            {
+                "role": "user",
+                "content": "Summarize the JSON file.",
+                "files": {"data": TextLikeFile()},
+            }
+        ]
+
+        result = llm._format_messages(messages)
+
+        assert result == [
+            {
+                "role": "user",
+                "content": (
+                    "Summarize the JSON file.\n\n"
+                    'Attached file: data\n{"topic":"agents"}'
+                ),
+            }
+        ]
+
+    def test_non_multimodal_model_still_rejects_image_files(self) -> None:
+        """Test binary files still require a multimodal model."""
+        llm = LLM(model="openai/gpt-3.5-turbo")
+        messages = [
+            {
+                "role": "user",
+                "content": "Describe the attached image.",
+                "files": {"chart": ImageFile(source=MINIMAL_PNG)},
+            }
+        ]
+
+        with pytest.raises(ValueError, match="does not support multimodal input"):
+            llm._format_messages(messages)
+
     def test_format_multimodal_content_image(self) -> None:
         """Test OpenAI uses image_url format."""
         llm = LLM(model="openai/gpt-4o")
