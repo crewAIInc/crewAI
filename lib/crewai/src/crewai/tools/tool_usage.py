@@ -275,7 +275,9 @@ class ToolUsage:
                 input_str = ""
                 if calling.arguments:
                     if isinstance(calling.arguments, dict):
-                        input_str = json.dumps(calling.arguments)
+                        input_str = json.dumps(
+                            calling.arguments, sort_keys=True, separators=(",", ":")
+                        )
                     else:
                         input_str = str(calling.arguments)
 
@@ -328,15 +330,9 @@ class ToolUsage:
                     if is_idempotent and self.tools_handler and self.tools_handler.cache:
                         from crewai.tools.base_tool import IDEMPOTENT_EXECUTION_SENTINEL
 
-                        idempotent_input = ""
-                        if calling.arguments:
-                            if isinstance(calling.arguments, dict):
-                                idempotent_input = json.dumps(calling.arguments)
-                            else:
-                                idempotent_input = str(calling.arguments)
                         self.tools_handler.cache.add(
                             tool=sanitize_tool_name(calling.tool_name),
-                            input=idempotent_input,
+                            input=input_str,
                             output=IDEMPOTENT_EXECUTION_SENTINEL,
                         )
 
@@ -530,7 +526,9 @@ class ToolUsage:
                 input_str = ""
                 if calling.arguments:
                     if isinstance(calling.arguments, dict):
-                        input_str = json.dumps(calling.arguments)
+                        input_str = json.dumps(
+                            calling.arguments, sort_keys=True, separators=(",", ":")
+                        )
                     else:
                         input_str = str(calling.arguments)
 
@@ -583,15 +581,9 @@ class ToolUsage:
                     if is_idempotent and self.tools_handler and self.tools_handler.cache:
                         from crewai.tools.base_tool import IDEMPOTENT_EXECUTION_SENTINEL
 
-                        idempotent_input = ""
-                        if calling.arguments:
-                            if isinstance(calling.arguments, dict):
-                                idempotent_input = json.dumps(calling.arguments)
-                            else:
-                                idempotent_input = str(calling.arguments)
                         self.tools_handler.cache.add(
                             tool=sanitize_tool_name(calling.tool_name),
-                            input=idempotent_input,
+                            input=input_str,
                             output=IDEMPOTENT_EXECUTION_SENTINEL,
                         )
 

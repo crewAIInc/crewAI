@@ -1734,7 +1734,11 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         # Check cache before executing
         from_cache = False
-        input_str = json.dumps(args_dict) if args_dict else ""
+        input_str = (
+            json.dumps(args_dict, sort_keys=True, separators=(",", ":"))
+            if args_dict
+            else ""
+        )
         if self.tools_handler and self.tools_handler.cache:
             cached_result = self.tools_handler.cache.read(
                 tool=func_name, input=input_str

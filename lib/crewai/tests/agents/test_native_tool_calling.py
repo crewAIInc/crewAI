@@ -1335,7 +1335,7 @@ class TestIdempotentToolPreClaim:
 
         assert result["result"] == "sent to bob@test.com"
         cached = executor.tools_handler.cache.read(
-            tool="send_email", input='{"to": "bob@test.com", "body": "hello"}'
+            tool="send_email", input='{"body":"hello","to":"bob@test.com"}'
         )
         assert cached == "sent to bob@test.com"
 
@@ -1366,7 +1366,7 @@ class TestIdempotentToolPreClaim:
 
         assert "Error executing tool" in result["result"]
         cached = executor.tools_handler.cache.read(
-            tool="failing_tool", input='{"data": "payload"}'
+            tool="failing_tool", input='{"data":"payload"}'
         )
         assert is_idempotent_sentinel(cached)
 
@@ -1436,6 +1436,6 @@ class TestIdempotentToolPreClaim:
 
         assert "Error executing tool" in result["result"]
         cached = executor.tools_handler.cache.read(
-            tool="normal_tool", input='{"x": "val"}'
+            tool="normal_tool", input='{"x":"val"}'
         )
         assert cached is None
