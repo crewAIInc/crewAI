@@ -1063,11 +1063,6 @@ class Agent(BaseAgent):
                 respect_context_window=self.respect_context_window,
                 request_within_rpm_limit=rpm_limit_fn,
                 callbacks=[TokenCalcHandler(self._token_process)],
-                response_model=(
-                    task.response_model or task.output_pydantic or task.output_json
-                )
-                if task
-                else None,
             )
 
     def _update_executor_parameters(
@@ -1103,12 +1098,6 @@ class Agent(BaseAgent):
             self.agent_executor.stop = stop_words
         self.agent_executor.tools_names = get_tool_names(tools)
         self.agent_executor.tools_description = render_text_description_and_args(tools)
-        self.agent_executor.response_model = (
-            (task.response_model or task.output_pydantic or task.output_json)
-            if task
-            else None
-        )
-
         self.agent_executor.tools_handler = self.tools_handler
         self.agent_executor.request_within_rpm_limit = rpm_limit_fn
 
