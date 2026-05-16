@@ -49,3 +49,18 @@ class CacheHandler(BaseModel):
         """
         with self._lock.r_locked():
             return self._cache.get(f"{tool}-{input}")
+
+    def claim_if_absent(self, tool: str, input: str, sentinel: Any) -> tuple[bool, Any | None]:
+        """Atomically read the cache and write a sentinel if absent.
+
+        Returns:
+            (True, None) if the sentinel was written (caller owns the claim).
+            (False, existing_value) if the key already existed.
+        """
+        key = f"{tool}-{input}"
+        with self._lock.w_locked():
+            existing = self._cache.get(key)
+            if existing is not None:
+                return False, existing
+            self._cache[key] = sentinel
+            return True, None

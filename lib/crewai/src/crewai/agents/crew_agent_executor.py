@@ -891,22 +891,37 @@ class CrewAgentExecutor(BaseAgentExecutor):
             if args_dict
             else ""
         )
-        if self.tools_handler and self.tools_handler.cache:
-            cached_result = self.tools_handler.cache.read(
-                tool=func_name, input=input_str
-            )
-            if cached_result is not None:
-                from crewai.tools.base_tool import is_idempotent_sentinel, IDEMPOTENT_SENTINEL_MESSAGE
+        is_idempotent = original_tool and getattr(original_tool, "idempotent", False)
 
-                if is_idempotent_sentinel(cached_result):
-                    result = IDEMPOTENT_SENTINEL_MESSAGE
-                else:
+        if self.tools_handler and self.tools_handler.cache:
+            if is_idempotent:
+                from crewai.tools.base_tool import (
+                    IDEMPOTENT_EXECUTION_SENTINEL,
+                    IDEMPOTENT_SENTINEL_MESSAGE,
+                    is_idempotent_sentinel,
+                )
+
+                claimed, existing = self.tools_handler.cache.claim_if_absent(
+                    tool=func_name, input=input_str, sentinel=IDEMPOTENT_EXECUTION_SENTINEL,
+                )
+                if not claimed:
+                    result = (
+                        IDEMPOTENT_SENTINEL_MESSAGE
+                        if is_idempotent_sentinel(existing)
+                        else str(existing) if not isinstance(existing, str) else existing
+                    )
+                    from_cache = True
+            else:
+                cached_result = self.tools_handler.cache.read(
+                    tool=func_name, input=input_str
+                )
+                if cached_result is not None:
                     result = (
                         str(cached_result)
                         if not isinstance(cached_result, str)
                         else cached_result
                     )
-                from_cache = True
+                    from_cache = True
 
         agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
         started_at = datetime.now()
@@ -965,16 +980,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
             result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
         elif not from_cache and func_name in available_functions:
             try:
-                is_idempotent = original_tool and getattr(original_tool, "idempotent", False)
-                if is_idempotent and self.tools_handler and self.tools_handler.cache:
-                    from crewai.tools.base_tool import IDEMPOTENT_EXECUTION_SENTINEL
-
-                    self.tools_handler.cache.add(
-                        tool=func_name,
-                        input=input_str,
-                        output=IDEMPOTENT_EXECUTION_SENTINEL,
-                    )
-
                 raw_result = available_functions[func_name](**(args_dict or {}))
 
                 if self.tools_handler and self.tools_handler.cache:
