@@ -18,7 +18,7 @@ class WikipediaSearchToolSchema(BaseModel):
 
     query: str = Field(..., description="Topic to search for on Wikipedia")
     sentences: int = Field(
-        3, description="Number of summary sentences to return"
+        3, ge=1, description="Number of summary sentences to return"
     )
 
 
