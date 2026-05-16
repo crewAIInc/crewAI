@@ -1,24 +1,36 @@
 """Cache handler for tool usage results."""
 
+from __future__ import annotations
+
 from typing import Any
 
 from pydantic import BaseModel, PrivateAttr
 
-from crewai.utilities.rw_lock import RWLock
+from crewai.agents.cache.cache_backend import CacheBackend
+from crewai.agents.cache.in_memory_backend import InMemoryCacheBackend
 
 
 class CacheHandler(BaseModel):
     """Handles caching of tool execution results.
 
-    Provides thread-safe in-memory caching for tool outputs based on tool name and input.
-    Uses a read-write lock to allow concurrent reads while ensuring exclusive write access.
+    Delegates all storage to a pluggable :class:`CacheBackend`.
+    The default backend is :class:`InMemoryCacheBackend` (single-process,
+    thread-safe).  For cross-process / distributed deduplication pass a
+    :class:`SQLiteCacheBackend` (or any other ``CacheBackend`` implementation).
+
+    Args:
+        backend: Optional cache backend.  When *None* an
+            :class:`InMemoryCacheBackend` is created automatically.
 
     Notes:
         - TODO: Rename 'input' parameter to avoid shadowing builtin.
     """
 
-    _cache: dict[str, Any] = PrivateAttr(default_factory=dict)
-    _lock: RWLock = PrivateAttr(default_factory=RWLock)
+    _backend: CacheBackend = PrivateAttr()
+
+    def __init__(self, backend: CacheBackend | None = None, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self._backend = backend if backend is not None else InMemoryCacheBackend()
 
     def add(self, tool: str, input: str, output: Any) -> None:
         """Add a tool result to the cache.
@@ -31,8 +43,7 @@ class CacheHandler(BaseModel):
         Notes:
             - TODO: Rename 'input' parameter to avoid shadowing builtin.
         """
-        with self._lock.w_locked():
-            self._cache[f"{tool}-{input}"] = output
+        self._backend.set(f"{tool}-{input}", output)
 
     def read(self, tool: str, input: str) -> Any | None:
         """Retrieve a cached tool result.
@@ -47,8 +58,7 @@ class CacheHandler(BaseModel):
         Notes:
             - TODO: Rename 'input' parameter to avoid shadowing builtin.
         """
-        with self._lock.r_locked():
-            return self._cache.get(f"{tool}-{input}")
+        return self._backend.get(f"{tool}-{input}")
 
     def claim_if_absent(self, tool: str, input: str, sentinel: Any) -> tuple[bool, Any | None]:
         """Atomically read the cache and write a sentinel if absent.
@@ -57,9 +67,4 @@ class CacheHandler(BaseModel):
             (True, None) if the sentinel was written (caller owns the claim).
             (False, existing_value) if the key already existed.
         """
-        key = f"{tool}-{input}"
-        with self._lock.w_locked():
-            if key in self._cache:
-                return False, self._cache[key]
-            self._cache[key] = sentinel
-            return True, None
+        return self._backend.claim_if_absent(f"{tool}-{input}", sentinel)
