@@ -910,7 +910,13 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         if is_idempotent_sentinel(existing)
                         else str(existing) if not isinstance(existing, str) else existing
                     )
-                    from_cache = True
+                    return {
+                        "call_id": call_id,
+                        "func_name": func_name,
+                        "result": result,
+                        "from_cache": True,
+                        "original_tool": original_tool,
+                    }
             else:
                 cached_result = self.tools_handler.cache.read(
                     tool=func_name, input=input_str

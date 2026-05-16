@@ -59,8 +59,7 @@ class CacheHandler(BaseModel):
         """
         key = f"{tool}-{input}"
         with self._lock.w_locked():
-            existing = self._cache.get(key)
-            if existing is not None:
-                return False, existing
+            if key in self._cache:
+                return False, self._cache[key]
             self._cache[key] = sentinel
             return True, None
