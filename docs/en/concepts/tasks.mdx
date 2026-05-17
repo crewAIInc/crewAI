@@ -1084,3 +1084,50 @@ Tasks are the driving force behind the actions of agents in CrewAI.
 By properly defining tasks and their outcomes, you set the stage for your AI agents to work effectively, either independently or as a collaborative unit.
 Equipping tasks with appropriate tools, understanding the execution process, and following robust validation practices are crucial for maximizing CrewAI's potential,
 ensuring agents are effectively prepared for their assignments and that tasks are executed as intended.
+
+## Auditable Task Output Receipts
+
+For safety-sensitive crews, treat a task's final answer as the agent's output, not as proof that every claim in the output is supported.
+
+A task result such as:
+
+```text
+Done. All tests passed. Ready to publish.
+```
+
+contains several different claims:
+
+- the task is complete
+- tests passed
+- the result is ready for an external action
+
+Those claims may need evidence from tool outputs, logs, file diffs, test output, human review, or task context.
+
+One practical pattern is to ask the task to return a small completion receipt alongside the user-facing answer:
+
+```yaml
+status_code: 412
+status_text: missing_evidence
+summary: "The task claimed completion and test success, but did not attach command output."
+claims:
+  - claim: "Task is complete."
+    support_status: unverified
+    evidence: []
+    required_fix: "Attach the relevant tool output, file diff, or log."
+  - claim: "All tests passed."
+    support_status: unsupported
+    evidence: []
+    required_fix: "Attach the test command and output, or downgrade the claim."
+next_owner: ProducingAgent
+human_decision_required: false
+```
+
+A receipt should make these boundaries explicit:
+
+- what the agent claimed
+- which evidence supports each claim
+- which claims are unsupported or need review
+- who owns the next step
+- whether human approval is required before publishing, deploying, saving memory, or taking another external action
+
+This pattern complements `expected_output`: the expected output describes what success should look like, while the receipt summarizes whether the final task output is actually supported by evidence.
