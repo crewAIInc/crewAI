@@ -1027,6 +1027,37 @@ def test_task_output_str_with_json_dict():
     assert str(task_output) == str(json_dict)
 
 
+def test_task_output_str_with_empty_json_dict():
+    from crewai.tasks.output_format import OutputFormat
+
+    task_output = TaskOutput(
+        description="Test task",
+        agent="Test Agent",
+        raw="Raw fallback",
+        json_dict={},
+        output_format=OutputFormat.JSON,
+    )
+
+    assert str(task_output) == "{}"
+
+
+def test_task_output_to_dict_prefers_empty_json_dict():
+    from crewai.tasks.output_format import OutputFormat
+
+    class ScoreOutput(BaseModel):
+        score: int
+
+    task_output = TaskOutput(
+        description="Test task",
+        agent="Test Agent",
+        pydantic=ScoreOutput(score=4),
+        json_dict={},
+        output_format=OutputFormat.JSON,
+    )
+
+    assert task_output.to_dict() == {}
+
+
 def test_task_output_str_with_raw():
     from crewai.tasks.output_format import OutputFormat
 
