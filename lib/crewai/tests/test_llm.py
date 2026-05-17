@@ -624,12 +624,15 @@ def test_handle_streaming_tool_calls_no_available_functions(
         ],
         tools=[get_weather_tool_schema],
     )
-    assert response == ""
+    assert isinstance(response, list)
+    assert len(response) == 1
+    assert response[0].function.name == "get_weather"
+    assert response[0].function.arguments == '{"location":"New York, NY"}'
 
     assert_event_count(
         mock_emit=mock_emit,
         expected_stream_chunk=9,
-        expected_completed_llm_call=1,
+        expected_completed_llm_call=0,
         expected_final_chunk_result='{"location":"New York, NY"}',
     )
 
