@@ -378,36 +378,6 @@ class ToolUsage:
                     if self.agent and hasattr(self.agent, "tools_results"):
                         self.agent.tools_results.append(data)
 
-                    if available_tool and hasattr(
-                        available_tool, "_increment_usage_count"
-                    ):
-                        # Use _increment_usage_count to sync count to original tool
-                        available_tool._increment_usage_count()
-                        if (
-                            hasattr(available_tool, "max_usage_count")
-                            and available_tool.max_usage_count is not None
-                            and self.agent
-                            and self.agent.verbose
-                        ):
-                            PRINTER.print(
-                                content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
-                                color="blue",
-                            )
-                    elif available_tool and hasattr(
-                        available_tool, "current_usage_count"
-                    ):
-                        available_tool.current_usage_count += 1
-                        if (
-                            hasattr(available_tool, "max_usage_count")
-                            and available_tool.max_usage_count is not None
-                            and self.agent
-                            and self.agent.verbose
-                        ):
-                            PRINTER.print(
-                                content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
-                                color="blue",
-                            )
-
                 except Exception as e:
                     self.on_tool_error(tool=tool, tool_calling=calling, e=e)
                     error_event_emitted = True
@@ -610,36 +580,6 @@ class ToolUsage:
 
                     if self.agent and hasattr(self.agent, "tools_results"):
                         self.agent.tools_results.append(data)
-
-                    if available_tool and hasattr(
-                        available_tool, "_increment_usage_count"
-                    ):
-                        # Use _increment_usage_count to sync count to original tool
-                        available_tool._increment_usage_count()
-                        if (
-                            hasattr(available_tool, "max_usage_count")
-                            and available_tool.max_usage_count is not None
-                            and self.agent
-                            and self.agent.verbose
-                        ):
-                            PRINTER.print(
-                                content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
-                                color="blue",
-                            )
-                    elif available_tool and hasattr(
-                        available_tool, "current_usage_count"
-                    ):
-                        available_tool.current_usage_count += 1
-                        if (
-                            hasattr(available_tool, "max_usage_count")
-                            and available_tool.max_usage_count is not None
-                            and self.agent
-                            and self.agent.verbose
-                        ):
-                            PRINTER.print(
-                                content=f"Tool '{sanitize_tool_name(available_tool.name)}' usage: {available_tool.current_usage_count}/{available_tool.max_usage_count}",
-                                color="blue",
-                            )
 
                 except Exception as e:
                     self.on_tool_error(tool=tool, tool_calling=calling, e=e)
