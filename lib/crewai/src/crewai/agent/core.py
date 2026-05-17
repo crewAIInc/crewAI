@@ -1294,7 +1294,7 @@ class Agent(BaseAgent):
             agent=self,
             has_tools=False,
             use_native_tool_calling=False,
-            use_system_prompt=bool(self.use_system_prompt),
+            use_system_prompt=self.use_system_prompt,
             system_template=self.system_template,
             prompt_template=self.prompt_template,
             response_template=self.response_template,
