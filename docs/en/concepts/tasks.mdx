@@ -1103,11 +1103,57 @@ contains several different claims:
 
 Those claims may need evidence from tool outputs, logs, file diffs, test output, human review, or task context.
 
-One practical pattern is to ask the task to return a small completion receipt alongside the user-facing answer:
+One practical pattern is to ask the task to return a small completion receipt as its structured output. The receipt can then be validated with `output_pydantic`, inspected in a `callback`, or checked by a task `guardrail` before the crew proceeds.
+
+```python Code
+from typing import Literal
+from pydantic import BaseModel, Field
+from crewai import Task
+
+
+class Claim(BaseModel):
+    claim: str
+    support_status: Literal["supported", "unverified", "unsupported"]
+    evidence: list[str] = Field(default_factory=list)
+    required_fix: str | None = None
+
+
+class TaskReceipt(BaseModel):
+    verification_status: Literal["completed", "missing_evidence", "blocked"]
+    summary: str
+    claims: list[Claim]
+    next_owner: str
+    human_decision_required: bool = False
+
+
+verification_task = Task(
+    description="Run the verification steps and return a receipt for the task output.",
+    expected_output="A TaskReceipt with claims, evidence, next_owner, and human_decision_required.",
+    agent=verification_agent,
+    output_pydantic=TaskReceipt,
+)
+```
+
+A receipt with evidence can look like this:
 
 ```yaml
-status_code: 412
-status_text: missing_evidence
+verification_status: completed
+summary: "The task completed and the test claim is supported by command output."
+claims:
+  - claim: "All tests passed."
+    support_status: supported
+    evidence:
+      - "pytest exit code: 0"
+      - "test_output.log: All 47 tests passed in 12.3s"
+    required_fix: null
+next_owner: verification_agent
+human_decision_required: false
+```
+
+A receipt with missing evidence can look like this:
+
+```yaml
+verification_status: missing_evidence
 summary: "The task claimed completion and test success, but did not attach command output."
 claims:
   - claim: "Task is complete."
@@ -1118,9 +1164,11 @@ claims:
     support_status: unsupported
     evidence: []
     required_fix: "Attach the test command and output, or downgrade the claim."
-next_owner: ProducingAgent
+next_owner: verification_agent
 human_decision_required: false
 ```
+
+The `next_owner` field should name the role or agent responsible for the next step, such as `verification_agent`, `reviewer`, or `human_approver`.
 
 A receipt should make these boundaries explicit:
 
