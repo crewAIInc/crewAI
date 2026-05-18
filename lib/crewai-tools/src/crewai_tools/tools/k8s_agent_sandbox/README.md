@@ -12,10 +12,10 @@ pip install -e "./lib/crewai-tools[k8s_agent_sandbox]" # from the root of this r
 ```python
 import os
 from crewai import Agent, Task, Crew, Process
-from crewai_tools import K8sSandboxExecTool
+from crewai_tools import K8sExecTool
 
 # Instantiate your tool
-k8s_exec_tool = K8sSandboxExecTool(namespace="default")
+k8s_exec_tool = K8sExecTool(template="simple-sandbox-template", namespace="default")
 
 # Define the Agent
 devops_agent = Agent(
@@ -69,10 +69,10 @@ if __name__ == "__main__":
 ```python
 import os
 from crewai import Agent, Task, Crew, Process
-from crewai_tools import K8sSandboxPythonTool
+from crewai_tools import K8sPythonTool
 
 # Instantiate your tool
-k8s_python_tool = K8sSandboxPythonTool(namespace="default")
+k8s_python_tool = K8sPythonTool(template="simple-sandbox-template", namespace="default")
 
 # Define the Agent
 data_agent = Agent(
@@ -125,10 +125,10 @@ if __name__ == "__main__":
 ```python
 import os
 from crewai import Agent, Task, Crew, Process
-from crewai_tools import K8sSandboxFileTool
+from crewai_tools import K8sFileTool
 
 # Instantiate your tool
-k8s_file_tool = K8sSandboxFileTool(namespace="default")
+k8s_file_tool = K8sFileTool(template="simple-sandbox-template", namespace="default")
 
 # Define the Agent
 sys_agent = Agent(
