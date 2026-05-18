@@ -160,6 +160,9 @@ import anthropic
 import os
 
 _judge = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+# Stable alias keeps the example working across minor model updates.
+# Set JUDGE_MODEL to pin a specific version (e.g. "claude-haiku-4-5-20251001") for reproducibility.
+_JUDGE_MODEL = os.getenv("JUDGE_MODEL", "claude-haiku-4-5")
 
 def llm_judge_metric(example: dspy.Example, prediction) -> float:
     """Score email quality 0.0–1.0 using Claude as a pairwise judge."""
@@ -173,7 +176,7 @@ def llm_judge_metric(example: dspy.Example, prediction) -> float:
             f"Reply with a single float between 0.0 (A much worse) and 1.0 (A much better). Nothing else."
         )
         resp = _judge.messages.create(
-            model="claude-haiku-4-5-20251001",
+            model=_JUDGE_MODEL,
             max_tokens=16,
             messages=[{"role": "user", "content": prompt}],
         )
