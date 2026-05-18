@@ -25,7 +25,7 @@ class TestIsPrivateOrReserved:
             "192.168.0.1",
             "192.168.1.100",
             "169.254.169.254",  # AWS metadata
-            "0.0.0.0",
+            "0.0.0.0",  # noqa: S104
         ],
     )
     def test_private_ipv4_addresses_blocked(self, ip):
