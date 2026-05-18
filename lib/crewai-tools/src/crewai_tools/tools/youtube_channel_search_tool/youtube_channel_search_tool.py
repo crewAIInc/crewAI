@@ -42,7 +42,10 @@ class YoutubeChannelSearchTool(RagTool):
         self,
         youtube_channel_handle: str,
     ) -> None:
-        if not youtube_channel_handle.startswith("@"):
+        if youtube_channel_handle.startswith(("http://", "https://")):
+            # Already a full URL, pass through as-is
+            pass
+        elif not youtube_channel_handle.startswith("@"):
             youtube_channel_handle = f"@{youtube_channel_handle}"
         super().add(youtube_channel_handle, data_type=DataType.YOUTUBE_CHANNEL)
 
