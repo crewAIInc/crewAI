@@ -449,9 +449,10 @@ class FileUrl(BaseModel):
 
     @model_validator(mode="after")
     def _validate_url(self) -> FileUrl:
-        """Validate URL format."""
-        if not self.url.startswith(("http://", "https://")):
-            raise ValueError(f"Invalid URL scheme: {self.url}")
+        """Validate URL format and ensure it does not target internal networks."""
+        from crewai_files.core.security import validate_url
+
+        validate_url(self.url)
         return self
 
     @property
@@ -475,7 +476,7 @@ class FileUrl(BaseModel):
         if self._content is None:
             import httpx
 
-            response = httpx.get(self.url, follow_redirects=True)
+            response = httpx.get(self.url, follow_redirects=False)
             response.raise_for_status()
             self._content = response.content
             if "content-type" in response.headers:
@@ -488,7 +489,7 @@ class FileUrl(BaseModel):
             import httpx
 
             async with httpx.AsyncClient() as client:
-                response = await client.get(self.url, follow_redirects=True)
+                response = await client.get(self.url, follow_redirects=False)
                 response.raise_for_status()
                 self._content = response.content
                 if "content-type" in response.headers:

@@ -95,7 +95,7 @@ class TestFileUrl:
             content = url.read()
 
             mock_get.assert_called_once_with(
-                "https://example.com/image.png", follow_redirects=True
+                "https://example.com/image.png", follow_redirects=False
             )
             assert content == b"fake image content"
 
