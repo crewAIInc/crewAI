@@ -380,6 +380,33 @@ def test_compile_raises_on_non_callable_metric(
         optimizer.compile(trainset=simple_trainset, num_trials=3)
 
 
+def test_compile_raises_on_duplicate_agent_roles(
+    mock_dspy_env: MagicMock, simple_trainset: list[Any]
+) -> None:
+    """compile() raises ValueError when two agents share the same role."""
+    from unittest.mock import MagicMock
+    from crewai.optimizers import DSPyOptimizer
+
+    # Build a crew where both agents have identical roles
+    agent_a = MagicMock()
+    agent_a.role = "researcher"
+    agent_a.goal = "find facts"
+    agent_a.backstory = "You research things."
+
+    agent_b = MagicMock()
+    agent_b.role = "researcher"  # duplicate!
+    agent_b.goal = "also find facts"
+    agent_b.backstory = "You also research things."
+
+    crew = MagicMock()
+    crew.agents = [agent_a, agent_b]
+    crew.name = "DuplicateCrew"
+
+    optimizer = DSPyOptimizer(crew=crew, metric=lambda e, p: 1.0)
+    with pytest.raises(ValueError, match="Duplicate roles found"):
+        optimizer.compile(trainset=simple_trainset, num_trials=2)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # TC-06: Hook cleanup — normal completion (AC-5)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -465,21 +492,27 @@ def test_optimization_started_event_emitted(
     from crewai.events.types import OptimizationStartedEvent
     from crewai.optimizers import DSPyOptimizer
 
-    received: list[OptimizationStartedEvent] = []
+    # Create optimizer before subscribing so its construction events don't leak in.
+    optimizer = DSPyOptimizer(crew=_make_mock_crew(), metric=lambda e, p: 1.0)
+
+    received: list[tuple[Any, OptimizationStartedEvent]] = []
 
     def _on_started(src: Any, event: OptimizationStartedEvent) -> None:
-        """Collect received OptimizationStartedEvent for assertion."""
-        received.append(event)
+        """Collect (source, event) pairs so assertions can be scoped to this optimizer."""
+        received.append((src, event))
 
+    crewai_event_bus.flush()  # clear any stale events from prior tests
     crewai_event_bus.on(OptimizationStartedEvent)(_on_started)
     try:
-        optimizer = DSPyOptimizer(crew=_make_mock_crew(), metric=lambda e, p: 1.0)
         optimizer.compile(trainset=simple_trainset, num_trials=3)
         crewai_event_bus.flush()  # wait for async event handlers
     finally:
         crewai_event_bus.off(OptimizationStartedEvent, _on_started)
 
-    event = next((e for e in received if e.algorithm == "MIPROv2"), None)
+    event = next(
+        (e for s, e in received if s is optimizer and e.algorithm == "MIPROv2"),
+        None,
+    )
     assert event is not None, "No OptimizationStartedEvent with algorithm='MIPROv2' received"
     assert event.trainset_size == len(simple_trainset)
 
@@ -492,22 +525,28 @@ def test_optimization_completed_event_emitted(
     from crewai.events.types import OptimizationCompletedEvent
     from crewai.optimizers import DSPyOptimizer
 
-    received: list[OptimizationCompletedEvent] = []
+    optimizer = DSPyOptimizer(crew=_make_mock_crew(), metric=lambda e, p: 1.0)
+
+    received: list[tuple[Any, OptimizationCompletedEvent]] = []
 
     def _on_completed(src: Any, event: OptimizationCompletedEvent) -> None:
-        """Collect received OptimizationCompletedEvent for assertion."""
-        received.append(event)
+        """Collect (source, event) pairs so assertions can be scoped to this optimizer."""
+        received.append((src, event))
 
+    crewai_event_bus.flush()
     crewai_event_bus.on(OptimizationCompletedEvent)(_on_completed)
     try:
-        optimizer = DSPyOptimizer(crew=_make_mock_crew(), metric=lambda e, p: 1.0)
         optimizer.compile(trainset=simple_trainset, num_trials=3)
         crewai_event_bus.flush()
     finally:
         crewai_event_bus.off(OptimizationCompletedEvent, _on_completed)
 
     event = next(
-        (e for e in received if e.algorithm == "MIPROv2" and e.num_trials == 3),
+        (
+            e
+            for s, e in received
+            if s is optimizer and e.algorithm == "MIPROv2" and e.num_trials == 3
+        ),
         None,
     )
     assert event is not None, "No OptimizationCompletedEvent with algorithm='MIPROv2' and num_trials=3 received"
@@ -524,22 +563,27 @@ def test_optimization_failed_event_emitted_on_exception(
     crew = _make_mock_crew()
     crew.kickoff.side_effect = RuntimeError("forced failure")
 
-    received: list[OptimizationFailedEvent] = []
+    optimizer = DSPyOptimizer(crew=crew, metric=lambda e, p: 1.0)
+
+    received: list[tuple[Any, OptimizationFailedEvent]] = []
 
     def _on_failed(src: Any, event: OptimizationFailedEvent) -> None:
-        """Collect received OptimizationFailedEvent for assertion."""
-        received.append(event)
+        """Collect (source, event) pairs so assertions can be scoped to this optimizer."""
+        received.append((src, event))
 
+    crewai_event_bus.flush()
     crewai_event_bus.on(OptimizationFailedEvent)(_on_failed)
     try:
-        optimizer = DSPyOptimizer(crew=crew, metric=lambda e, p: 1.0)
         with pytest.raises(RuntimeError):
             optimizer.compile(trainset=simple_trainset, num_trials=2)
         crewai_event_bus.flush()
     finally:
         crewai_event_bus.off(OptimizationFailedEvent, _on_failed)
 
-    event = next((e for e in received if "forced failure" in e.error), None)
+    event = next(
+        (e for s, e in received if s is optimizer and "forced failure" in e.error),
+        None,
+    )
     assert event is not None, "No OptimizationFailedEvent with expected error received"
 
 

@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 _dspy: Any = None
 
 try:
-    import dspy as _dspy  # type: ignore[import-not-found, no-redef]
+    import dspy as _dspy  # type: ignore[no-redef]
 
     _HAS_DSPY = True
     _ModuleBase: type = _dspy.Module
@@ -218,6 +218,18 @@ class DSPyOptimizer:
             )
         if not callable(self.metric):
             raise TypeError("metric must be callable")
+
+        # Duplicate roles would silently collide in agent_predictors (keyed by role),
+        # causing wrong demo injection and writeback. Fail early with a clear message.
+        role_counts: dict[str, int] = {}
+        for agent in self.crew.agents:
+            role_counts[agent.role] = role_counts.get(agent.role, 0) + 1
+        duplicate_roles = sorted(r for r, n in role_counts.items() if n > 1)
+        if duplicate_roles:
+            raise ValueError(
+                "DSPyOptimizer requires unique agent.role values. "
+                f"Duplicate roles found: {duplicate_roles}"
+            )
 
         # ── 4. REGISTER HOOKS (before try/finally so finally always runs cleanup) ─
         before_hook = self._make_before_hook()
