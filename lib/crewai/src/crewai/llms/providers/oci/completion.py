@@ -14,6 +14,7 @@ from crewai.llms.base_llm import BaseLLM, llm_call_context
 from crewai.utilities.oci import create_oci_client_kwargs, get_oci_module
 from crewai.utilities.types import LLMMessage
 
+
 if TYPE_CHECKING:
     from crewai.agent.core import Agent
     from crewai.task import Task
@@ -64,6 +65,14 @@ class OCICompletion(BaseLLM):
         client: Any | None = None,
         **kwargs: Any,
     ) -> None:
+        """Configure the OCI Generative AI client and chat parameters.
+
+        Resolves compartment, service endpoint, and auth from explicit args
+        or `OCI_*` environment variables, then builds a
+        ``GenerativeAiInferenceClient`` (unless ``client`` is provided for
+        testing). Infers the OCI provider family (cohere vs generic) from
+        the model id when ``oci_provider`` is not given.
+        """
         kwargs.pop("provider", None)
         super().__init__(
             model=model,
@@ -125,6 +134,7 @@ class OCICompletion(BaseLLM):
     # ------------------------------------------------------------------
 
     def _infer_provider(self, model: str) -> str:
+        """Infer the OCI request family (``cohere`` or ``generic``) from the model id."""
         if model.startswith(CUSTOM_ENDPOINT_PREFIX):
             return "generic"
         if model.lower().startswith("cohere."):
@@ -132,9 +142,11 @@ class OCICompletion(BaseLLM):
         return "generic"
 
     def _is_openai_gpt5_family(self) -> bool:
+        """Return True if the current model is in the OpenAI GPT-5 family."""
         return self.model.lower().startswith("openai.gpt-5")
 
     def _build_serving_mode(self) -> Any:
+        """Pick OCI serving mode: ``DedicatedServingMode`` for custom-endpoint OCIDs, ``OnDemandServingMode`` otherwise."""
         models = self._oci.generative_ai_inference.models
         if self.model.startswith(CUSTOM_ENDPOINT_PREFIX):
             return models.DedicatedServingMode(endpoint_id=self.model)
@@ -145,9 +157,11 @@ class OCICompletion(BaseLLM):
     # ------------------------------------------------------------------
 
     def _normalize_messages(self, messages: str | list[LLMMessage]) -> list[LLMMessage]:
+        """Coerce a string or message list into the canonical CrewAI message list shape."""
         return self._format_messages(messages)
 
     def _coerce_text(self, content: Any) -> str:
+        """Flatten mixed message content (str / list of parts / dicts with ``text``) into a plain string."""
         if content is None:
             return ""
         if isinstance(content, str):
@@ -296,6 +310,7 @@ class OCICompletion(BaseLLM):
     # ------------------------------------------------------------------
 
     def _extract_text(self, response: Any) -> str:
+        """Pull the assistant text out of an OCI chat response, handling both Cohere and generic shapes."""
         chat_response = response.data.chat_response
         if self.oci_provider == "cohere":
             if getattr(chat_response, "text", None):
@@ -318,6 +333,7 @@ class OCICompletion(BaseLLM):
         return "".join(part.text for part in content if getattr(part, "text", None))
 
     def _extract_usage(self, response: Any) -> dict[str, int]:
+        """Return ``{prompt_tokens, completion_tokens, total_tokens}`` from the OCI response, or an empty dict if unavailable."""
         chat_response = response.data.chat_response
         usage = getattr(chat_response, "usage", None)
         if usage is None:
@@ -329,6 +345,7 @@ class OCICompletion(BaseLLM):
         }
 
     def _extract_response_metadata(self, response: Any) -> dict[str, Any]:
+        """Collect ``finish_reason`` and ``usage`` into a metadata dict for ``last_response_metadata``."""
         chat_response = response.data.chat_response
         metadata: dict[str, Any] = {}
 
@@ -359,6 +376,7 @@ class OCICompletion(BaseLLM):
         from_task: Task | None,
         from_agent: Agent | None,
     ) -> str:
+        """Apply stop-word trimming and ``after_llm_call`` hooks, then emit the ``call_completed`` event."""
         content = self._apply_stop_words(content)
         content = self._invoke_after_llm_call_hooks(messages, content, from_agent)
         self._emit_call_completed_event(
@@ -377,6 +395,7 @@ class OCICompletion(BaseLLM):
         from_task: Task | None,
         from_agent: Agent | None,
     ) -> str:
+        """Build the OCI chat request, invoke the service, record metadata, and return the finalized text."""
         chat_request = self._build_chat_request(messages)
         chat_details = self._oci.generative_ai_inference.models.ChatDetails(
             compartment_id=self.compartment_id,
@@ -407,6 +426,14 @@ class OCICompletion(BaseLLM):
         from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | BaseModel | list[dict[str, Any]]:
+        """Run a synchronous chat completion against OCI Generative AI.
+
+        Emits ``call_started`` / ``call_completed`` / ``call_failed`` events
+        and runs the ``before_llm_call`` / ``after_llm_call`` hooks. Raises
+        ``ValueError`` if a ``before_llm_call`` hook blocks the call; any
+        other exception is wrapped with an ``OCI Generative AI call failed``
+        message and re-raised.
+        """
         with llm_call_context():
             try:
                 normalized_messages = self._normalize_messages(messages)
@@ -448,6 +475,7 @@ class OCICompletion(BaseLLM):
         from_agent: Agent | None = None,
         response_model: type[BaseModel] | None = None,
     ) -> str | Any:
+        """Async wrapper around :meth:`call` that runs the blocking OCI client in a worker thread."""
         return await asyncio.to_thread(
             self.call,
             messages,
@@ -464,5 +492,6 @@ class OCICompletion(BaseLLM):
     # ------------------------------------------------------------------
 
     def _chat(self, chat_details: Any) -> Any:
+        """Thread-safe wrapper around the underlying OCI ``client.chat`` call (the SDK client is not re-entrant)."""
         with self._client_lock:
             return self.client.chat(chat_details)
