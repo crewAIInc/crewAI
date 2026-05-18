@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import MutableMapping
+from collections.abc import MutableMapping, Sequence
 import concurrent.futures
 import contextvars
 from functools import lru_cache
@@ -25,6 +25,7 @@ from crewai.a2a.auth.utils import (
     retry_on_401,
 )
 from crewai.a2a.config import A2AServerConfig
+from crewai.a2a.utils.agent_card_signing import verify_agent_card_signature
 from crewai.crew import Crew
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.a2a_events import (
@@ -100,12 +101,36 @@ def _get_server_config(agent: Agent) -> A2AServerConfig | None:
     return None
 
 
+def _normalize_signature_algorithms(
+    signature_algorithms: Sequence[str] | None,
+) -> tuple[str, ...] | None:
+    return tuple(signature_algorithms) if signature_algorithms is not None else None
+
+
+def _verify_agent_card_signatures(
+    agent_card: AgentCard,
+    signature_public_key: str | bytes | None,
+    signature_algorithms: tuple[str, ...] | None,
+) -> None:
+    if signature_public_key is None:
+        return
+    signatures = agent_card.signatures or []
+    algorithms = list(signature_algorithms) if signature_algorithms is not None else None
+    if not signatures or not any(
+        verify_agent_card_signature(agent_card, sig, signature_public_key, algorithms)
+        for sig in signatures
+    ):
+        raise A2AClientHTTPError(422, "AgentCard signature verification failed")
+
+
 def fetch_agent_card(
     endpoint: str,
     auth: ClientAuthScheme | None = None,
     timeout: int = 30,
     use_cache: bool = True,
     cache_ttl: int = 300,
+    signature_public_key: str | bytes | None = None,
+    signature_algorithms: Sequence[str] | None = None,
 ) -> AgentCard:
     """Fetch AgentCard from an A2A endpoint with optional caching.
 
@@ -115,14 +140,20 @@ def fetch_agent_card(
         timeout: Request timeout in seconds.
         use_cache: Whether to use caching (default True).
         cache_ttl: Cache TTL in seconds (default 300 = 5 minutes).
+        signature_public_key: Optional public key for AgentCard signature
+            verification. When provided, at least one valid signature is
+            required on the card.
+        signature_algorithms: Allowed signature algorithms for verification
+            (defaults to all accepted algorithms).
 
     Returns:
         AgentCard object with agent capabilities and skills.
 
     Raises:
         httpx.HTTPStatusError: If the request fails.
-        A2AClientHTTPError: If authentication fails.
+        A2AClientHTTPError: If authentication or signature verification fails.
     """
+    signature_algorithms_key = _normalize_signature_algorithms(signature_algorithms)
     if use_cache:
         if auth:
             auth_data = auth.model_dump_json(
@@ -138,9 +169,27 @@ def fetch_agent_card(
             auth_hash = _auth_store.compute_key("none", "")
         _auth_store.set(auth_hash, auth)
         ttl_hash = int(time.time() // cache_ttl)
-        return _fetch_agent_card_cached(endpoint, auth_hash, timeout, ttl_hash)
+        agent_card = _fetch_agent_card_cached(
+            endpoint,
+            auth_hash,
+            timeout,
+            ttl_hash,
+            signature_public_key,
+            signature_algorithms_key,
+        )
+        _verify_agent_card_signatures(
+            agent_card, signature_public_key, signature_algorithms_key
+        )
+        return agent_card
 
-    coro = afetch_agent_card(endpoint=endpoint, auth=auth, timeout=timeout)
+    coro = afetch_agent_card(
+        endpoint=endpoint,
+        auth=auth,
+        timeout=timeout,
+        use_cache=False,
+        signature_public_key=signature_public_key,
+        signature_algorithms=signature_algorithms_key,
+    )
     try:
         asyncio.get_running_loop()
         has_running_loop = True
@@ -159,6 +208,8 @@ async def afetch_agent_card(
     auth: ClientAuthScheme | None = None,
     timeout: int = 30,
     use_cache: bool = True,
+    signature_public_key: str | bytes | None = None,
+    signature_algorithms: Sequence[str] | None = None,
 ) -> AgentCard:
     """Fetch AgentCard from an A2A endpoint asynchronously.
 
@@ -169,14 +220,20 @@ async def afetch_agent_card(
         auth: Optional ClientAuthScheme for authentication.
         timeout: Request timeout in seconds.
         use_cache: Whether to use caching (default True).
+        signature_public_key: Optional public key for AgentCard signature
+            verification. When provided, at least one valid signature is
+            required on the card.
+        signature_algorithms: Allowed signature algorithms for verification
+            (defaults to all accepted algorithms).
 
     Returns:
         AgentCard object with agent capabilities and skills.
 
     Raises:
         httpx.HTTPStatusError: If the request fails.
-        A2AClientHTTPError: If authentication fails.
+        A2AClientHTTPError: If authentication or signature verification fails.
     """
+    signature_algorithms_key = _normalize_signature_algorithms(signature_algorithms)
     if use_cache:
         if auth:
             auth_data = auth.model_dump_json(
@@ -192,11 +249,24 @@ async def afetch_agent_card(
             auth_hash = _auth_store.compute_key("none", "")
         _auth_store.set(auth_hash, auth)
         agent_card: AgentCard = await _afetch_agent_card_cached(
-            endpoint, auth_hash, timeout
+            endpoint,
+            auth_hash,
+            timeout,
+            signature_public_key,
+            signature_algorithms_key,
+        )
+        _verify_agent_card_signatures(
+            agent_card, signature_public_key, signature_algorithms_key
         )
         return agent_card
 
-    return await _afetch_agent_card_impl(endpoint=endpoint, auth=auth, timeout=timeout)
+    return await _afetch_agent_card_impl(
+        endpoint=endpoint,
+        auth=auth,
+        timeout=timeout,
+        signature_public_key=signature_public_key,
+        signature_algorithms=signature_algorithms_key,
+    )
 
 
 @lru_cache()
@@ -205,11 +275,19 @@ def _fetch_agent_card_cached(
     auth_hash: str,
     timeout: int,
     _ttl_hash: int,
+    signature_public_key: str | bytes | None,
+    signature_algorithms: tuple[str, ...] | None,
 ) -> AgentCard:
     """Cached sync version of fetch_agent_card."""
     auth = _auth_store.get(auth_hash)
 
-    coro = _afetch_agent_card_impl(endpoint=endpoint, auth=auth, timeout=timeout)
+    coro = _afetch_agent_card_impl(
+        endpoint=endpoint,
+        auth=auth,
+        timeout=timeout,
+        signature_public_key=signature_public_key,
+        signature_algorithms=signature_algorithms,
+    )
     try:
         asyncio.get_running_loop()
         has_running_loop = True
@@ -228,16 +306,26 @@ async def _afetch_agent_card_cached(
     endpoint: str,
     auth_hash: str,
     timeout: int,
+    signature_public_key: str | bytes | None,
+    signature_algorithms: tuple[str, ...] | None,
 ) -> AgentCard:
     """Cached async implementation of AgentCard fetching."""
     auth = _auth_store.get(auth_hash)
-    return await _afetch_agent_card_impl(endpoint=endpoint, auth=auth, timeout=timeout)
+    return await _afetch_agent_card_impl(
+        endpoint=endpoint,
+        auth=auth,
+        timeout=timeout,
+        signature_public_key=signature_public_key,
+        signature_algorithms=signature_algorithms,
+    )
 
 
 async def _afetch_agent_card_impl(
     endpoint: str,
     auth: ClientAuthScheme | None,
     timeout: int,
+    signature_public_key: str | bytes | None = None,
+    signature_algorithms: tuple[str, ...] | None = None,
 ) -> AgentCard:
     """Internal async implementation of AgentCard fetching."""
     start_time = time.perf_counter()
@@ -278,6 +366,9 @@ async def _afetch_agent_card_impl(
             response.raise_for_status()
 
             agent_card = AgentCard.model_validate(response.json())
+            _verify_agent_card_signatures(
+                agent_card, signature_public_key, signature_algorithms
+            )
             fetch_time_ms = (time.perf_counter() - start_time) * 1000
             agent_card_dict = agent_card.model_dump(exclude_none=True)
 
