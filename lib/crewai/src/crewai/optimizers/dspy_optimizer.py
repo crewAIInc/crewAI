@@ -31,11 +31,15 @@ except ImportError:
 
 
 def _build_signature_for_agent(agent: Any) -> Any:
-    """Build a dspy.Signature that encodes the agent's backstory and goal."""
-    instructions = f"{agent.backstory}\n\nGoal: {agent.goal}"
+    """Build a dspy.Signature whose instructions encode only the agent's backstory.
+
+    Only backstory is included so the optimized text writes back cleanly to
+    agent.backstory without duplicating agent.goal (which the crew's prompt
+    renderer already includes separately).
+    """
     return _dspy.Signature(
         "task_input: str -> agent_output: str",
-        instructions=instructions,
+        instructions=agent.backstory,
     )
 
 
@@ -198,6 +202,10 @@ class DSPyOptimizer:
             register_before_llm_call_hook,
             unregister_before_llm_call_hook,
         )
+
+        # Reset state so a second compile() call never reads stale demos from the
+        # previous run while the new baseline is being measured.
+        self._compiled_module = None
 
         # ── 1. VALIDATE ──────────────────────────────────────────────────────
         if not trainset:

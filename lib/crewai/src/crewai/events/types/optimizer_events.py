@@ -19,6 +19,8 @@ class OptimizationTrialCompletedEvent(BaseEvent):
     """Emitted after each optimization trial (only when the teleprompter exposes a callback)."""
 
     type: Literal["optimization_trial_completed"] = "optimization_trial_completed"
+    crew_name: str | None = None
+    algorithm: str
     trial_number: int
     trial_score: float
 

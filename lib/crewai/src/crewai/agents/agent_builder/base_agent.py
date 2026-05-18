@@ -236,13 +236,17 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     goal: str = Field(
         description=(
             "Objective of the agent. "
-            "Stable public API: safe to read and write after construction."
+            "Stable public API: safe to read and write after construction. "
+            "DSPy optimizers and other instrumentation may update this field "
+            "to apply optimized instructions."
         )
     )
     backstory: str = Field(
         description=(
             "Backstory of the agent. "
-            "Stable public API: safe to read and write after construction."
+            "Stable public API: safe to read and write after construction. "
+            "DSPy optimizers and other instrumentation may update this field "
+            "to apply optimized instructions."
         )
     )
     config: dict[str, Any] | None = Field(

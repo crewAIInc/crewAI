@@ -66,7 +66,7 @@ openpyxl = [
     "openpyxl~=3.1.5",
 ]
 mem0 = ["mem0ai>=2.0.0,<3"]
-dspy = ["dspy>=2.5"]
+dspy = ["dspy>=2.5,<4"]
 docling = [
     "docling~=2.84.0",
 ]

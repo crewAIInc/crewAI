@@ -150,8 +150,12 @@ def test_optimization_failed_event_type() -> None:
 def test_optimization_trial_completed_event_type() -> None:
     from crewai.events.types import OptimizationTrialCompletedEvent
 
-    event = OptimizationTrialCompletedEvent(trial_number=1, trial_score=0.75)
+    event = OptimizationTrialCompletedEvent(
+        algorithm="MIPROv2", trial_number=1, trial_score=0.75
+    )
     assert event.type == "optimization_trial_completed"
+    assert event.algorithm == "MIPROv2"
+    assert event.crew_name is None
 
 
 def test_all_optimizer_events_importable_from_types_package() -> None:

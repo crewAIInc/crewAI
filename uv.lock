@@ -1428,7 +1428,7 @@ requires-dist = [
     { name = "crewai-files", marker = "extra == 'file-processing'", editable = "lib/crewai-files" },
     { name = "crewai-tools", marker = "extra == 'tools'", editable = "lib/crewai-tools" },
     { name = "docling", marker = "extra == 'docling'", specifier = "~=2.84.0" },
-    { name = "dspy", marker = "extra == 'dspy'", specifier = ">=2.5" },
+    { name = "dspy", marker = "extra == 'dspy'", specifier = ">=2.5,<4" },
     { name = "google-genai", marker = "extra == 'google-genai'", specifier = "~=1.65.0" },
     { name = "httpx", specifier = "~=0.28.1" },
     { name = "httpx-auth", marker = "extra == 'a2a'", specifier = "~=0.23.1" },
