@@ -217,9 +217,9 @@ from crewai_tools.tools.youtube_video_search_tool.youtube_video_search_tool impo
     YoutubeVideoSearchTool,
 )
 from crewai_tools.tools.zapier_action_tool.zapier_action_tool import ZapierActionTools
-from crewai_tools.tools.k8s_agent_sandbox.k8s_sandbox_exec_tool import K8sSandboxExecTool
-from crewai_tools.tools.k8s_agent_sandbox.k8s_sandbox_python_tool import K8sSandboxPythonTool
-from crewai_tools.tools.k8s_agent_sandbox.k8s_sandbox_file_tool import K8sSandboxFileTool
+from crewai_tools.tools.k8s_agent_sandbox.exec_tool import K8sExecTool
+from crewai_tools.tools.k8s_agent_sandbox.python_tool import K8sPythonTool
+from crewai_tools.tools.k8s_agent_sandbox.file_tool import K8sFileTool
 
 
 __all__ = [
@@ -333,9 +333,9 @@ __all__ = [
     "YoutubeVideoSearchTool",
     "ZapierActionTool",
     "ZapierActionTools",
-    "K8sSandboxExecTool"
-    "K8sSandboxPythonTool",
-    "K8sSandboxFileTool",
+    "K8sExecTool"
+    "K8sPythonTool",
+    "K8sFileTool",
 ]
 
 __version__ = "1.15.8"
