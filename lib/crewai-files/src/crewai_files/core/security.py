@@ -85,9 +85,7 @@ def validate_url(url: str) -> str:
     parsed = urlparse(url)
 
     if parsed.scheme not in ("http", "https"):
-        raise ValueError(
-            f"Invalid URL scheme: {url}. Only http and https are allowed."
-        )
+        raise ValueError(f"Invalid URL scheme: {url}. Only http and https are allowed.")
 
     if not parsed.hostname:
         raise ValueError(f"URL has no hostname: '{url}'")
@@ -98,9 +96,7 @@ def validate_url(url: str) -> str:
             parsed.port or (443 if parsed.scheme == "https" else 80),
         )
     except socket.gaierror as exc:
-        raise ValueError(
-            f"Could not resolve hostname: '{parsed.hostname}'"
-        ) from exc
+        raise ValueError(f"Could not resolve hostname: '{parsed.hostname}'") from exc
 
     for _family, _, _, _, sockaddr in addrinfos:
         ip_str = str(sockaddr[0])
