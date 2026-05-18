@@ -15,6 +15,7 @@ import os
 import socket
 from urllib.parse import urlparse
 
+
 logger = logging.getLogger(__name__)
 
 _UNSAFE_URLS_ENV = "CREWAI_FILES_ALLOW_UNSAFE_URLS"
