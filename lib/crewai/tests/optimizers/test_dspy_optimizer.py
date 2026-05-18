@@ -502,7 +502,11 @@ def test_optimization_completed_event_emitted(
     finally:
         crewai_event_bus.off(OptimizationCompletedEvent, _on_completed)
 
-    assert any(isinstance(e, OptimizationCompletedEvent) for e in received)
+    event = next(
+        (e for e in received if e.algorithm == "MIPROv2" and e.num_trials == 3),
+        None,
+    )
+    assert event is not None, "No OptimizationCompletedEvent with algorithm='MIPROv2' and num_trials=3 received"
 
 
 def test_optimization_failed_event_emitted_on_exception(
