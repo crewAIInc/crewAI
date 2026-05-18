@@ -1,3 +1,5 @@
+"""Data types for optimizer inputs and outputs."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -31,4 +33,5 @@ class OptimizationResult:
 
     @property
     def score_delta(self) -> float:
+        """Difference between optimized and baseline score (positive = improvement)."""
         return self.optimized_score - self.baseline_score

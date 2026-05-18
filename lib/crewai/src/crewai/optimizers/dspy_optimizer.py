@@ -71,6 +71,7 @@ class _CrewDSPyModule(_ModuleBase):  # type: ignore[misc]
     """Wraps a CrewAI Crew as a DSPy Module so teleprompters can optimize it."""
 
     def __init__(self, crew: Any) -> None:
+        """Wrap crew and build one ChainOfThought predictor per agent."""
         super().__init__()
         self.crew = crew
         # One ChainOfThought predictor per agent; dict is found by dspy.Module.named_predictors()
@@ -81,6 +82,7 @@ class _CrewDSPyModule(_ModuleBase):  # type: ignore[misc]
         }
 
     def forward(self, **inputs: Any) -> Any:
+        """Run the crew and return a Prediction carrying the raw crew output."""
         crew_output = self.crew.kickoff(inputs=inputs)
         pred = _dspy.Prediction(final_output=str(crew_output))
         # Attach raw crew output so the metric adapter can forward it to the user metric
@@ -131,6 +133,7 @@ class DSPyOptimizer:
         algorithm: Literal["MIPROv2", "BootstrapFewShot", "GEPA"] = "MIPROv2",
         lm: Any | None = None,
     ) -> None:
+        """Configure the optimizer with a crew, scoring metric, and algorithm choice."""
         if not _HAS_DSPY:
             raise ImportError(
                 "crewai[dspy] is required. Install it with: pip install 'crewai[dspy]'"
@@ -147,6 +150,7 @@ class DSPyOptimizer:
         """Build a before-LLM-call hook that injects compiled few-shot demos."""
 
         def before_hook(context: Any) -> None:
+            """Inject compiled few-shot demos into the message list before each LLM call."""
             if self._compiled_module is None:
                 return  # no compiled demos yet — pass through
             agent_role = getattr(context.agent, "role", None)
@@ -225,6 +229,7 @@ class DSPyOptimizer:
         user_metric = self.metric
 
         def dspy_metric(example: Any, prediction: Any, trace: Any = None) -> float:
+            """Bridge DSPy's (example, prediction, trace) signature to user's (example, crew_output)."""
             crew_output = getattr(prediction, "_crew_output", prediction)
             return float(user_metric(example, crew_output))
 

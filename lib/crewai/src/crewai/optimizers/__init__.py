@@ -13,6 +13,7 @@ __all__ = ["AgentInstructions", "DSPyOptimizer", "OptimizationResult"]
 
 
 def __getattr__(name: str) -> Any:
+    """Lazily import DSPyOptimizer to avoid loading dspy at package import time."""
     if name == "DSPyOptimizer":
         from crewai.optimizers.dspy_optimizer import DSPyOptimizer
 

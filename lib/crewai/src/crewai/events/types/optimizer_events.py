@@ -1,3 +1,5 @@
+"""Pydantic event types emitted by DSPyOptimizer during the optimization lifecycle."""
+
 from __future__ import annotations
 
 from typing import Literal

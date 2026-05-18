@@ -28,10 +28,12 @@ def test_import_crewai_optimizers_module() -> None:
 
 
 def test_import_optimization_result_no_dspy() -> None:
+    """OptimizationResult is importable without dspy installed."""
     from crewai.optimizers import OptimizationResult  # noqa: F401
 
 
 def test_import_agent_instructions_no_dspy() -> None:
+    """AgentInstructions is importable without dspy installed."""
     from crewai.optimizers import AgentInstructions  # noqa: F401
 
 
@@ -59,6 +61,7 @@ def test_dspy_not_imported_at_module_load(monkeypatch: pytest.MonkeyPatch) -> No
 
 
 def test_agent_instructions_defaults() -> None:
+    """AgentInstructions fields default to None when no values are supplied."""
     from crewai.optimizers import AgentInstructions
 
     instr = AgentInstructions()
@@ -68,6 +71,7 @@ def test_agent_instructions_defaults() -> None:
 
 
 def test_agent_instructions_with_values() -> None:
+    """AgentInstructions stores role, goal, and backstory when provided."""
     from crewai.optimizers import AgentInstructions
 
     instr = AgentInstructions(role="analyst", goal="find patterns", backstory="expert")
@@ -77,6 +81,7 @@ def test_agent_instructions_with_values() -> None:
 
 
 def test_optimization_result_score_delta() -> None:
+    """score_delta equals optimized_score minus baseline_score."""
     from crewai.optimizers import AgentInstructions, OptimizationResult
 
     result = OptimizationResult(
@@ -90,6 +95,7 @@ def test_optimization_result_score_delta() -> None:
 
 
 def test_optimization_result_version_id_is_uuid() -> None:
+    """version_id is a 36-character UUID4 string."""
     from crewai.optimizers import OptimizationResult
 
     result = OptimizationResult(
@@ -104,6 +110,7 @@ def test_optimization_result_version_id_is_uuid() -> None:
 
 
 def test_optimization_result_version_ids_are_unique() -> None:
+    """Each OptimizationResult instance gets a distinct version_id."""
     from crewai.optimizers import OptimizationResult
 
     r1 = OptimizationResult(crew=MagicMock(), baseline_score=0.0, optimized_score=0.0, optimized_instructions={}, num_trials=1)
@@ -117,6 +124,7 @@ def test_optimization_result_version_ids_are_unique() -> None:
 
 
 def test_optimization_started_event_type() -> None:
+    """OptimizationStartedEvent has type='optimization_started' and carries algorithm."""
     from crewai.events.types import OptimizationStartedEvent
 
     event = OptimizationStartedEvent(algorithm="MIPROv2", num_trials=20, trainset_size=5)
@@ -125,6 +133,7 @@ def test_optimization_started_event_type() -> None:
 
 
 def test_optimization_completed_event_type() -> None:
+    """OptimizationCompletedEvent has type='optimization_completed' and carries score_delta."""
     from crewai.events.types import OptimizationCompletedEvent
 
     event = OptimizationCompletedEvent(
@@ -140,6 +149,7 @@ def test_optimization_completed_event_type() -> None:
 
 
 def test_optimization_failed_event_type() -> None:
+    """OptimizationFailedEvent has type='optimization_failed' and carries the error string."""
     from crewai.events.types import OptimizationFailedEvent
 
     event = OptimizationFailedEvent(error="something went wrong")
@@ -148,6 +158,7 @@ def test_optimization_failed_event_type() -> None:
 
 
 def test_optimization_trial_completed_event_type() -> None:
+    """OptimizationTrialCompletedEvent stores algorithm, trial_number, and optional crew_name."""
     # Import directly from optimizer_events — this class is intentionally excluded
     # from crewai.events.types.__all__ until DSPy exposes a per-trial callback.
     from crewai.events.types.optimizer_events import OptimizationTrialCompletedEvent
@@ -161,6 +172,7 @@ def test_optimization_trial_completed_event_type() -> None:
 
 
 def test_all_optimizer_events_importable_from_types_package() -> None:
+    """Started, completed, and failed events are importable from crewai.events.types."""
     # OptimizationTrialCompletedEvent is intentionally excluded from the public
     # package surface until DSPy adds per-trial callback support.
     from crewai.events.types import (
@@ -180,6 +192,7 @@ def test_all_optimizer_events_importable_from_types_package() -> None:
 
 
 def _make_mock_agent(role: str = "researcher") -> MagicMock:
+    """Return a MagicMock with role, goal, and backstory attributes set."""
     agent = MagicMock()
     agent.role = role
     agent.goal = "find facts"
@@ -188,6 +201,7 @@ def _make_mock_agent(role: str = "researcher") -> MagicMock:
 
 
 def _make_mock_crew(agents: list[Any] | None = None) -> MagicMock:
+    """Return a MagicMock crew with a name, agents list, and a kickoff stub."""
     crew = MagicMock()
     crew.name = "test_crew"
     crew.agents = agents or [_make_mock_agent()]
@@ -201,14 +215,19 @@ def _make_mock_dspy() -> MagicMock:
 
     # dspy.Module base class
     class _FakeModule:
-        def __init__(self):
-            pass
+        """Minimal stand-in for dspy.Module."""
+
+        def __init__(self) -> None:
+            """No-op initializer."""
 
     mock.Module = _FakeModule
 
     # dspy.Prediction
     class _FakePrediction:
-        def __init__(self, **kwargs: Any):
+        """Minimal stand-in for dspy.Prediction."""
+
+        def __init__(self, **kwargs: Any) -> None:
+            """Store all keyword arguments as instance attributes."""
             for k, v in kwargs.items():
                 setattr(self, k, v)
 
@@ -216,6 +235,7 @@ def _make_mock_dspy() -> MagicMock:
 
     # dspy.Signature — return an object with .instructions attribute
     def _fake_signature(spec_str: str, instructions: str = "") -> MagicMock:
+        """Return a MagicMock with an .instructions attribute set."""
         sig = MagicMock()
         sig.instructions = instructions
         return sig
@@ -224,7 +244,10 @@ def _make_mock_dspy() -> MagicMock:
 
     # dspy.ChainOfThought — stores a .predict sub-predictor
     class _FakeChainOfThought(_FakeModule):
+        """Minimal stand-in for dspy.ChainOfThought with a .predict sub-predictor."""
+
         def __init__(self, signature: Any) -> None:
+            """Attach a MagicMock predictor holding the given signature."""
             super().__init__()
             self.predict = MagicMock()
             self.predict.signature = signature
@@ -239,20 +262,28 @@ def _make_mock_dspy() -> MagicMock:
 
     # dspy.MIPROv2 — teleprompter that returns the student module unchanged
     class _FakeMIPROv2:
-        def __init__(self, metric: Any, num_candidates: int = 5, **kwargs: Any):
+        """Minimal MIPROv2 stub that returns the student module unchanged."""
+
+        def __init__(self, metric: Any, num_candidates: int = 5, **kwargs: Any) -> None:
+            """Store the metric; ignore other teleprompter config."""
             self.metric = metric
 
         def compile(self, student: Any, trainset: Any, **kwargs: Any) -> Any:
-            return student  # return unchanged student (no real optimization)
+            """Return the student unchanged (no real optimization)."""
+            return student
 
     mock.MIPROv2 = _FakeMIPROv2
 
     # dspy.BootstrapFewShot
     class _FakeBootstrapFewShot:
-        def __init__(self, metric: Any, **kwargs: Any):
+        """Minimal BootstrapFewShot stub that returns the student module unchanged."""
+
+        def __init__(self, metric: Any, **kwargs: Any) -> None:
+            """Store the metric; ignore other teleprompter config."""
             self.metric = metric
 
         def compile(self, student: Any, trainset: Any, **kwargs: Any) -> Any:
+            """Return the student unchanged (no real optimization)."""
             return student
 
     mock.BootstrapFewShot = _FakeBootstrapFewShot
@@ -290,6 +321,7 @@ def simple_trainset() -> list[MagicMock]:
 
 
 def test_dspy_optimizer_raises_import_error_without_dspy(monkeypatch: pytest.MonkeyPatch) -> None:
+    """DSPyOptimizer.__init__ raises ImportError when _HAS_DSPY is False."""
     import crewai.optimizers.dspy_optimizer as opt_mod
 
     monkeypatch.setattr(opt_mod, "_HAS_DSPY", False)
@@ -307,6 +339,7 @@ def test_dspy_optimizer_raises_import_error_without_dspy(monkeypatch: pytest.Mon
 def test_compile_returns_optimization_result(
     mock_dspy_env: MagicMock, simple_trainset: list[Any]
 ) -> None:
+    """compile() returns an OptimizationResult with the expected fields populated."""
     from crewai.optimizers import DSPyOptimizer, OptimizationResult
 
     crew = _make_mock_crew()
@@ -323,6 +356,7 @@ def test_compile_returns_optimization_result(
 def test_compile_raises_on_empty_trainset(
     mock_dspy_env: MagicMock,
 ) -> None:
+    """compile() raises ValueError when trainset is an empty list."""
     from crewai.optimizers import DSPyOptimizer
 
     optimizer = DSPyOptimizer(crew=_make_mock_crew(), metric=lambda e, p: 1.0)
@@ -333,6 +367,7 @@ def test_compile_raises_on_empty_trainset(
 def test_compile_raises_on_non_callable_metric(
     mock_dspy_env: MagicMock, simple_trainset: list[Any]
 ) -> None:
+    """compile() raises TypeError when metric is not callable."""
     from crewai.optimizers import DSPyOptimizer
 
     optimizer = DSPyOptimizer(crew=_make_mock_crew(), metric=lambda e, p: 1.0)
@@ -349,6 +384,7 @@ def test_compile_raises_on_non_callable_metric(
 def test_hooks_cleaned_up_after_normal_compile(
     mock_dspy_env: MagicMock, simple_trainset: list[Any]
 ) -> None:
+    """Before-LLM hooks registered during compile() are unregistered on success."""
     from crewai.hooks.llm_hooks import get_before_llm_call_hooks
     from crewai.optimizers import DSPyOptimizer
 
@@ -367,6 +403,7 @@ def test_hooks_cleaned_up_after_normal_compile(
 def test_hooks_cleaned_up_after_exception(
     mock_dspy_env: MagicMock, simple_trainset: list[Any]
 ) -> None:
+    """Before-LLM hooks are unregistered even when crew.kickoff() raises during baseline."""
     from crewai.hooks.llm_hooks import get_before_llm_call_hooks
     from crewai.optimizers import DSPyOptimizer
 
@@ -385,6 +422,7 @@ def test_hooks_cleaned_up_after_exception(
 def test_hooks_cleaned_up_when_teleprompter_raises(
     mock_dspy_env: MagicMock, simple_trainset: list[Any]
 ) -> None:
+    """Before-LLM hooks are unregistered even when the teleprompter raises during compile."""
     import crewai.optimizers.dspy_optimizer as opt_mod
     from crewai.hooks.llm_hooks import get_before_llm_call_hooks
     from crewai.optimizers import DSPyOptimizer
@@ -393,10 +431,13 @@ def test_hooks_cleaned_up_when_teleprompter_raises(
 
     # Make MIPROv2.compile raise after hooks are registered
     class _BrokenMIPROv2:
-        def __init__(self, metric: Any, **kwargs: Any):
-            pass
+        """MIPROv2 stub whose compile() always raises to test hook cleanup on failure."""
+
+        def __init__(self, metric: Any, **kwargs: Any) -> None:
+            """Accept but ignore all arguments."""
 
         def compile(self, student: Any, trainset: Any, **kwargs: Any) -> Any:
+            """Always raise to simulate a teleprompter failure."""
             raise RuntimeError("teleprompter exploded")
 
     mock_dspy_env.MIPROv2 = _BrokenMIPROv2
@@ -415,6 +456,7 @@ def test_hooks_cleaned_up_when_teleprompter_raises(
 def test_optimization_started_event_emitted(
     mock_dspy_env: MagicMock, simple_trainset: list[Any]
 ) -> None:
+    """compile() emits an OptimizationStartedEvent with algorithm and trainset_size."""
     from crewai.events.event_bus import crewai_event_bus
     from crewai.events.types import OptimizationStartedEvent
     from crewai.optimizers import DSPyOptimizer
@@ -422,6 +464,7 @@ def test_optimization_started_event_emitted(
     received: list[OptimizationStartedEvent] = []
 
     def _on_started(src: Any, event: OptimizationStartedEvent) -> None:
+        """Collect received OptimizationStartedEvent for assertion."""
         received.append(event)
 
     crewai_event_bus.on(OptimizationStartedEvent)(_on_started)
@@ -440,6 +483,7 @@ def test_optimization_started_event_emitted(
 def test_optimization_completed_event_emitted(
     mock_dspy_env: MagicMock, simple_trainset: list[Any]
 ) -> None:
+    """compile() emits an OptimizationCompletedEvent on success."""
     from crewai.events.event_bus import crewai_event_bus
     from crewai.events.types import OptimizationCompletedEvent
     from crewai.optimizers import DSPyOptimizer
@@ -447,6 +491,7 @@ def test_optimization_completed_event_emitted(
     received: list[OptimizationCompletedEvent] = []
 
     def _on_completed(src: Any, event: OptimizationCompletedEvent) -> None:
+        """Collect received OptimizationCompletedEvent for assertion."""
         received.append(event)
 
     crewai_event_bus.on(OptimizationCompletedEvent)(_on_completed)
@@ -463,6 +508,7 @@ def test_optimization_completed_event_emitted(
 def test_optimization_failed_event_emitted_on_exception(
     mock_dspy_env: MagicMock, simple_trainset: list[Any]
 ) -> None:
+    """compile() emits an OptimizationFailedEvent when crew.kickoff() raises."""
     from crewai.events.event_bus import crewai_event_bus
     from crewai.events.types import OptimizationFailedEvent
     from crewai.optimizers import DSPyOptimizer
@@ -473,6 +519,7 @@ def test_optimization_failed_event_emitted_on_exception(
     received: list[OptimizationFailedEvent] = []
 
     def _on_failed(src: Any, event: OptimizationFailedEvent) -> None:
+        """Collect received OptimizationFailedEvent for assertion."""
         received.append(event)
 
     crewai_event_bus.on(OptimizationFailedEvent)(_on_failed)
@@ -496,6 +543,7 @@ def test_optimization_failed_event_emitted_on_exception(
 def test_compile_with_bootstrap_few_shot(
     mock_dspy_env: MagicMock, simple_trainset: list[Any]
 ) -> None:
+    """compile() succeeds with algorithm='BootstrapFewShot' and returns OptimizationResult."""
     from crewai.optimizers import DSPyOptimizer, OptimizationResult
 
     optimizer = DSPyOptimizer(
@@ -510,6 +558,7 @@ def test_compile_with_bootstrap_few_shot(
 def test_unknown_algorithm_raises_value_error(
     mock_dspy_env: MagicMock, simple_trainset: list[Any]
 ) -> None:
+    """compile() raises ValueError when an unrecognized algorithm name is used."""
     from crewai.optimizers import DSPyOptimizer
 
     optimizer = DSPyOptimizer(
@@ -531,6 +580,7 @@ def test_unknown_algorithm_raises_value_error(
 def test_agent_backstory_written_back_when_instructions_found(
     mock_dspy_env: MagicMock, simple_trainset: list[Any]
 ) -> None:
+    """Optimized signature instructions are written back to agent.backstory after compile."""
     import crewai.optimizers.dspy_optimizer as opt_mod
     from crewai.optimizers import DSPyOptimizer
 
@@ -539,7 +589,10 @@ def test_agent_backstory_written_back_when_instructions_found(
 
     # Override ChainOfThought so its signature returns a new instruction
     class _ChainWithInstructions:
+        """ChainOfThought stub whose predictor carries a fixed optimized instruction string."""
+
         def __init__(self, signature: Any) -> None:
+            """Ignore the input signature; always install the hardcoded optimized instruction."""
             self.predict = MagicMock()
             self.predict.signature = MagicMock()
             self.predict.signature.instructions = "Optimized: be concise and accurate."
