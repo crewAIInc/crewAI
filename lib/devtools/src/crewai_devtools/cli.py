@@ -3,6 +3,7 @@
 from collections.abc import Mapping
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
@@ -355,8 +356,19 @@ def update_pyproject_dependencies(
 
     workspace_packages = _DEFAULT_WORKSPACE_PACKAGES + (extra_packages or [])
 
+    current_extra: str | None = None
+    extra_header = re.compile(r"^\s*([A-Za-z0-9_-]+)\s*=\s*\[")
+
     for i, line in enumerate(lines):
+        match = extra_header.match(line)
+        if match:
+            current_extra = match.group(1)
+        elif line.strip().startswith("]"):
+            current_extra = None
+
         for pkg in workspace_packages:
+            if pkg == "crewai-files" and current_extra == "file-processing":
+                continue
             if f"{pkg}==" in line:
                 stripped = line.lstrip()
                 indent = line[: len(line) - len(stripped)]
