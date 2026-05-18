@@ -148,7 +148,9 @@ def test_optimization_failed_event_type() -> None:
 
 
 def test_optimization_trial_completed_event_type() -> None:
-    from crewai.events.types import OptimizationTrialCompletedEvent
+    # Import directly from optimizer_events — this class is intentionally excluded
+    # from crewai.events.types.__all__ until DSPy exposes a per-trial callback.
+    from crewai.events.types.optimizer_events import OptimizationTrialCompletedEvent
 
     event = OptimizationTrialCompletedEvent(
         algorithm="MIPROv2", trial_number=1, trial_score=0.75
@@ -159,17 +161,17 @@ def test_optimization_trial_completed_event_type() -> None:
 
 
 def test_all_optimizer_events_importable_from_types_package() -> None:
+    # OptimizationTrialCompletedEvent is intentionally excluded from the public
+    # package surface until DSPy adds per-trial callback support.
     from crewai.events.types import (
         OptimizationCompletedEvent,
         OptimizationFailedEvent,
         OptimizationStartedEvent,
-        OptimizationTrialCompletedEvent,
     )
 
     assert OptimizationStartedEvent is not None
     assert OptimizationCompletedEvent is not None
     assert OptimizationFailedEvent is not None
-    assert OptimizationTrialCompletedEvent is not None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
