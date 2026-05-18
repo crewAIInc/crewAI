@@ -432,9 +432,9 @@ def test_optimization_started_event_emitted(
     finally:
         crewai_event_bus.off(OptimizationStartedEvent, _on_started)
 
-    assert any(isinstance(e, OptimizationStartedEvent) for e in received)
-    assert received[0].algorithm == "MIPROv2"
-    assert received[0].trainset_size == len(simple_trainset)
+    event = next((e for e in received if e.algorithm == "MIPROv2"), None)
+    assert event is not None, "No OptimizationStartedEvent with algorithm='MIPROv2' received"
+    assert event.trainset_size == len(simple_trainset)
 
 
 def test_optimization_completed_event_emitted(
@@ -484,8 +484,8 @@ def test_optimization_failed_event_emitted_on_exception(
     finally:
         crewai_event_bus.off(OptimizationFailedEvent, _on_failed)
 
-    assert any(isinstance(e, OptimizationFailedEvent) for e in received)
-    assert "forced failure" in received[0].error
+    event = next((e for e in received if "forced failure" in e.error), None)
+    assert event is not None, "No OptimizationFailedEvent with expected error received"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
