@@ -1,0 +1,385 @@
+---
+title: DSPy Prompt Optimization
+description: Algorithmically optimize your crew's prompts with DSPy's MIPROv2, BootstrapFewShot, and GEPA teleprompters.
+icon: wand-magic-sparkles
+mode: "wide"
+---
+
+## Overview
+
+DSPy prompt optimization automatically rewrites your agents' backstory instructions to maximize a metric you define — replacing trial-and-error prompt tweaking with a data-driven search over the prompt space. It is an **offline, developer-invoked** workflow: you run it once against a labeled dataset, inspect the result, and ship the improved crew.
+
+## When to Use This
+
+<CardGroup cols={2}>
+  <Card title="Good fit" icon="check">
+    - You have 10–50 labeled input/output examples
+    - Your crew's quality is measurable (correctness, fluency, task completion)
+    - You want consistent output across similar inputs
+    - You've hit diminishing returns on manual prompt tuning
+  </Card>
+  <Card title="Not a fit" icon="xmark">
+    - You have no labeled examples — optimization requires ground truth
+    - You need real-time adaptation at runtime — this is an offline step
+    - Your task has no quantifiable quality signal
+    - You need results in under a minute — optimization takes several minutes
+  </Card>
+</CardGroup>
+
+## Installation
+
+```bash
+pip install 'crewai[dspy]'
+```
+
+<Note>
+  The `dspy` package is an optional extra. Standard CrewAI imports are unaffected — `DSPyOptimizer` raises a clear `ImportError` at instantiation if `crewai[dspy]` is not installed.
+</Note>
+
+## Quickstart
+
+```python
+import os
+import dspy
+from crewai import Agent, Task, Crew
+from crewai.optimizers import DSPyOptimizer
+
+# 1. Build your crew as normal
+researcher = Agent(
+    role="researcher",
+    goal="Find factual information about the given topic",
+    backstory="You are a meticulous researcher who finds accurate facts.",
+)
+writer = Agent(
+    role="writer",
+    goal="Draft a professional email based on the research",
+    backstory="You craft clear, concise professional emails.",
+)
+research_task = Task(description="Research {topic}", expected_output="Key facts", agent=researcher)
+write_task = Task(description="Write an email about the research", expected_output="Email draft", agent=writer)
+crew = Crew(agents=[researcher, writer], tasks=[research_task, write_task])
+
+# 2. Define a labeled training set
+trainset = [
+    dspy.Example(inputs={"topic": "Q1 earnings"}, output="Subject: Q1 Results...").with_inputs("topic"),
+    dspy.Example(inputs={"topic": "product launch"}, output="Subject: Exciting News...").with_inputs("topic"),
+    # ... more examples
+]
+
+# 3. Define a metric function (0.0 → 1.0)
+def email_quality(example, prediction) -> float:
+    output = str(prediction)
+    has_subject = "Subject:" in output
+    has_greeting = any(g in output for g in ["Dear", "Hello", "Hi"])
+    return (has_subject + has_greeting) / 2.0
+
+# 4. Compile and inspect the result
+optimizer = DSPyOptimizer(crew=crew, metric=email_quality, algorithm="MIPROv2")
+result = optimizer.compile(trainset=trainset, num_trials=20)
+
+print(f"Score improved by {result.score_delta:+.2f}")
+print(f"Optimized backstory for 'writer': {result.optimized_instructions['writer'].backstory}")
+
+# 5. Run the optimized crew
+output = result.crew.kickoff(inputs={"topic": "office policy update"})
+```
+
+## How It Works
+
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant Opt as DSPyOptimizer
+    participant Hook as LLM Before-Hook
+    participant Crew as crew.kickoff()
+    participant DSPy as DSPy Teleprompter
+
+    Dev->>Opt: compile(trainset, num_trials=20)
+    Opt->>Crew: Measure baseline score (trainset × kickoff)
+    Opt->>DSPy: teleprompter.compile(crew_module, trainset)
+    loop Each optimization trial
+        DSPy->>Hook: Inject few-shot demos into context.messages
+        Hook->>Crew: crew.kickoff(inputs=example.inputs)
+        Crew-->>DSPy: crew output
+        DSPy->>DSPy: Score output, select best demos/instructions
+    end
+    DSPy-->>Opt: compiled_module (optimized predictors)
+    Opt->>Opt: Write optimized backstory → agent.backstory
+    Opt->>Crew: Measure optimized score
+    Opt-->>Dev: OptimizationResult(score_delta, optimized_instructions, crew)
+```
+
+The optimizer wraps each agent's `backstory` as a DSPy `Signature`. During each trial, DSPy's teleprompter explores different instruction rewrites and few-shot demonstrations via a registered LLM before-hook, measures the score, and selects the best. After compilation, the winning backstory is written back to each agent in-place — the returned `result.crew` is the same object with mutated instruction fields.
+
+## Choosing an Algorithm
+
+| Algorithm | Approach | Best for | Approx. cost |
+|:---|:---|:---|:---|
+| `MIPROv2` (default) | Bayesian search over instruction rewrites + few-shot demos | Most tasks; highest quality ceiling | High (LLM calls × num_trials) |
+| `BootstrapFewShot` | Bootstrap few-shot demonstrations from training data | Tasks where examples improve output more than instructions | Medium |
+| `GEPA` | Gradient-estimated prompt adaptation | Tasks with very short, precise outputs | High; requires `dspy>=2.6` |
+
+```python
+# Switch algorithm at construction time
+optimizer = DSPyOptimizer(crew=crew, metric=my_metric, algorithm="BootstrapFewShot")
+```
+
+<Tip>
+  Start with `MIPROv2` and `num_trials=20`. If it degrades quality on tasks with very short outputs (< 10 tokens), try `BootstrapFewShot`.
+</Tip>
+
+## Writing a Metric Function
+
+The metric function is the most important part of optimization — it defines what "better" means. It must have this signature:
+
+```python
+def my_metric(example: dspy.Example, prediction: Any) -> float:
+    ...
+    return score  # float in [0.0, 1.0]
+```
+
+`example` is the training example; `prediction` is the raw crew output from `crew.kickoff()`.
+
+### Simple keyword metric (no LLM needed)
+
+```python
+def keyword_metric(example: dspy.Example, prediction) -> float:
+    """Score 1.0 if the expected keywords appear in the output."""
+    output = str(prediction).lower()
+    expected_keywords = example.output.lower().split()[:5]  # first 5 words of expected output
+    hits = sum(kw in output for kw in expected_keywords)
+    return hits / max(len(expected_keywords), 1)
+```
+
+### LLM-judge metric (pairwise quality score)
+
+For open-ended tasks, an LLM judge is more reliable than keyword matching:
+
+```python
+import anthropic
+import os
+
+_judge = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+# Stable alias keeps the example working across minor model updates.
+# Set JUDGE_MODEL to pin a specific version (e.g. "claude-haiku-4-5-20251001") for reproducibility.
+_JUDGE_MODEL = os.getenv("JUDGE_MODEL", "claude-haiku-4-5")
+
+def llm_judge_metric(example: dspy.Example, prediction) -> float:
+    """Score email quality 0.0–1.0 using Claude as a pairwise judge."""
+    candidate = str(prediction)
+    reference = example.output
+
+    def _score(a: str, b: str) -> float:
+        prompt = (
+            f"Rate output A on clarity, professionalism, and concision compared to output B.\n"
+            f"Output A: {a}\nOutput B: {b}\n"
+            f"Reply with a single float between 0.0 (A much worse) and 1.0 (A much better). Nothing else."
+        )
+        resp = _judge.messages.create(
+            model=_JUDGE_MODEL,
+            max_tokens=16,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        try:
+            return float(resp.content[0].text.strip())
+        except (ValueError, IndexError):
+            return 0.5
+
+    # Swap order to mitigate position bias, average both directions
+    forward = _score(candidate, reference)
+    reverse = 1.0 - _score(reference, candidate)
+    return (forward + reverse) / 2.0
+```
+
+### Common mistakes
+
+<Warning>
+  - **Returning an integer** — `return 1` instead of `return 1.0` causes a type error inside the optimizer. Always cast: `return float(score)`.
+  - **Returning None** — if your metric hits an exception and falls through, DSPy treats `None` as 0.0 and silently discards the trial. Add explicit `return 0.0` fallbacks.
+  - **Always returning the same value** — if every trial scores identically, the optimizer cannot differentiate. Try a stronger LLM judge or a stricter keyword check.
+</Warning>
+
+## API Reference
+
+### `DSPyOptimizer`
+
+```python
+class DSPyOptimizer:
+    def __init__(
+        self,
+        crew: Crew,
+        metric: Callable[[Any, Any], float],
+        algorithm: Literal["MIPROv2", "BootstrapFewShot", "GEPA"] = "MIPROv2",
+        lm: Any | None = None,
+    ) -> None: ...
+
+    def compile(
+        self,
+        trainset: list[dspy.Example],
+        num_trials: int = 20,
+        **algorithm_kwargs: Any,
+    ) -> OptimizationResult: ...
+```
+
+| Parameter | Type | Description |
+|:---|:---|:---|
+| `crew` | `Crew` | The crew to optimize. Agents are mutated in-place after compilation. |
+| `metric` | `Callable[[Any, Any], float]` | Scoring function — receives `(example, crew_output)`, returns float in `[0, 1]`. |
+| `algorithm` | `str` | Teleprompter algorithm. One of `"MIPROv2"`, `"BootstrapFewShot"`, `"GEPA"`. |
+| `lm` | `dspy.LM \| None` | Override DSPy's globally configured LM for this optimizer. `None` uses the global LM. |
+
+`compile()` parameters:
+
+| Parameter | Type | Description |
+|:---|:---|:---|
+| `trainset` | `list[dspy.Example]` | Non-empty list of examples with `.with_inputs()` set. |
+| `num_trials` | `int` | Optimization budget. Maps to `MIPROv2.num_candidates`. Default: `20`. |
+| `**algorithm_kwargs` | `Any` | Extra kwargs forwarded to the teleprompter constructor. |
+
+### `OptimizationResult`
+
+```python
+@dataclass
+class OptimizationResult:
+    crew: Crew                                       # mutated in-place — same object as input
+    baseline_score: float                            # mean metric score before optimization
+    optimized_score: float                           # mean metric score after optimization
+    score_delta: float                               # optimized_score - baseline_score (property)
+    optimized_instructions: dict[str, AgentInstructions]  # keyed by agent.role
+    num_trials: int                                  # trials used during compilation
+    version_id: str                                  # UUID4 identifying this optimization run
+```
+
+### `AgentInstructions`
+
+```python
+@dataclass
+class AgentInstructions:
+    role: str | None = None        # optimized agent role (None if unchanged)
+    goal: str | None = None        # optimized agent goal (None if unchanged)
+    backstory: str | None = None   # optimized agent backstory (primary optimization target)
+```
+
+## Examples
+
+### Basic: single-agent crew with keyword metric
+
+See the [Quickstart](#quickstart) section above for a complete copy-pasteable example using a keyword metric — no LLM judge required.
+
+### Multi-agent with LLM-judge metric
+
+```python
+from crewai import Agent, Task, Crew
+from crewai.optimizers import DSPyOptimizer
+import dspy
+
+# Two-agent email crew
+researcher = Agent(role="researcher", goal="Research {topic}", backstory="You find accurate facts.")
+writer = Agent(role="writer", goal="Write professional emails", backstory="You draft clear emails.")
+
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[
+        Task(description="Research {topic}", expected_output="Facts", agent=researcher),
+        Task(description="Write email based on research", expected_output="Email", agent=writer),
+    ],
+)
+
+# LLM-judge metric (see Writing a Metric Function above)
+optimizer = DSPyOptimizer(crew=crew, metric=llm_judge_metric, algorithm="MIPROv2")
+result = optimizer.compile(trainset=trainset, num_trials=20)
+
+print(f"writer backstory improved: {result.optimized_instructions.get('writer')}")
+optimized_output = result.crew.kickoff(inputs={"topic": "Q2 planning"})
+```
+
+### Three-agent crew with BootstrapFewShot
+
+```python
+# BootstrapFewShot works well when demonstration examples improve output more than instruction rewrites
+optimizer = DSPyOptimizer(
+    crew=three_agent_crew,
+    metric=my_metric,
+    algorithm="BootstrapFewShot",
+)
+result = optimizer.compile(trainset=trainset, num_trials=10)
+```
+
+## Observability
+
+`DSPyOptimizer.compile()` emits three lifecycle events on CrewAI's event bus:
+
+```python
+from crewai.events.types import (
+    OptimizationStartedEvent,    # emitted before the optimization loop begins
+    OptimizationCompletedEvent,  # emitted on success, includes score_delta and version_id
+    OptimizationFailedEvent,     # emitted if compile() raises an exception
+)
+
+# Subscribe to track optimization progress
+from crewai.events.event_bus import crewai_event_bus
+
+@crewai_event_bus.on(OptimizationCompletedEvent)
+def on_complete(event: OptimizationCompletedEvent) -> None:
+    print(f"Optimization {event.version_id}: {event.score_delta:+.3f}")
+```
+
+## Limitations
+
+- **Requires labeled examples** — there is no unsupervised optimization. You must supply at least 5–10 `dspy.Example` instances with ground-truth outputs.
+- **Offline, developer-invoked** — optimization is a one-time compile step, not an automatic runtime feature. The resulting crew must be used explicitly.
+- **`BootstrapFewShot` may degrade on very short outputs** — tasks where the expected output is under ~10 tokens often score inconsistently when few-shot demos are injected.
+- **`GEPA` requires `dspy>=2.6`** — if `GEPA` is requested on an older DSPy version, `DSPyOptimizer` raises an `ImportError` at compile time.
+- **Optimization modifies `agent.backstory` in-place** — after `compile()`, the returned `result.crew` is the same Python object as the input crew with mutated agent fields. If you need to preserve the original crew, deep-copy it before calling `compile()`.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="ImportError: crewai[dspy] required">
+    ```
+    ImportError: crewai[dspy] is required. Install it with: pip install 'crewai[dspy]'
+    ```
+    Run `pip install 'crewai[dspy]'` and restart your Python process. The `dspy` package is not bundled with the base `crewai` install.
+  </Accordion>
+
+  <Accordion title="score_delta is 0 or negative">
+    The optimizer ran but did not improve the metric. Common causes:
+    - The metric always returns the same value — check that your metric differentiates good outputs from bad ones by calling it manually on a few examples.
+    - `num_trials` is too low — try increasing to 30–50.
+    - The trainset is too small or not representative — add more diverse examples.
+    - Try switching to an LLM-judge metric if you are using a keyword metric.
+  </Accordion>
+
+  <Accordion title="VCR cassette tests failing after dspy upgrade">
+    DSPy's request format changes between minor versions. Re-record cassettes after upgrading:
+    ```bash
+    VCR_RECORD_MODE=all uv run pytest tests/optimizers/ -k "test_compile_with_openai" --timeout=120
+    grep -rE '"(sk-|sk-ant-|Bearer )' tests/cassettes/TestDSPyOptimizer.*  # must return 0 matches
+    ```
+  </Accordion>
+
+  <Accordion title="Optimization takes too long">
+    Reduce `num_trials` (start with 5–10 for development, 20–50 for production). Each trial runs `crew.kickoff()` on every trainset example, so total LLM calls ≈ `num_trials × trainset_size`.
+  </Accordion>
+
+  <Accordion title="GEPA raises ImportError">
+    ```
+    ImportError: GEPA is not available in the installed version of dspy. Upgrade with: pip install 'dspy>=2.6'
+    ```
+    Run `pip install 'dspy>=2.6'` or switch to `algorithm="MIPROv2"`.
+  </Accordion>
+</AccordionGroup>
+
+## See Also
+
+<CardGroup cols={3}>
+  <Card title="Training" icon="dumbbell" href="/en/concepts/training">
+    `crew.train()` — human-feedback-driven training using CLI iterations.
+  </Card>
+  <Card title="Testing" icon="vial" href="/en/concepts/testing">
+    `crewai test` — evaluate crew output quality with built-in test metrics.
+  </Card>
+  <Card title="Memory" icon="database" href="/en/concepts/memory">
+    The `crewai[mem0]` optional extra — the same optional-extra pattern as `crewai[dspy]`.
+  </Card>
+</CardGroup>
