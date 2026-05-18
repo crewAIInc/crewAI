@@ -95,7 +95,9 @@ def test_optimization_result_score_delta() -> None:
 
 
 def test_optimization_result_version_id_is_uuid() -> None:
-    """version_id is a 36-character UUID4 string."""
+    """version_id is a valid UUID4 string."""
+    import uuid
+
     from crewai.optimizers import OptimizationResult
 
     result = OptimizationResult(
@@ -106,7 +108,9 @@ def test_optimization_result_version_id_is_uuid() -> None:
         num_trials=5,
     )
     assert isinstance(result.version_id, str)
-    assert len(result.version_id) == 36  # UUID4 format: 8-4-4-4-12
+    parsed = uuid.UUID(result.version_id)
+    assert str(parsed) == result.version_id
+    assert parsed.version == 4
 
 
 def test_optimization_result_version_ids_are_unique() -> None:
