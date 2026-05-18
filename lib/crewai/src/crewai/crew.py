@@ -251,7 +251,11 @@ class Crew(FlowTrackable, BaseModel):
         str | LLM | None,
         BeforeValidator(_validate_llm_ref),
         PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
-    ] = Field(description="Language model that will run the agent.", default=None)
+    ] = Field(
+        description="Language model that will run the agent.",
+        default=None,
+        deprecated="function_calling_llm is deprecated and will be removed in a future release.",
+    )
     config: Json[dict[str, Any]] | dict[str, Any] | None = Field(default=None)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
     share_crew: bool | None = Field(default=False)

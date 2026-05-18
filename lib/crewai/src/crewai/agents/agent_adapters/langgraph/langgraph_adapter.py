@@ -51,7 +51,10 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
     _graph: Any = PrivateAttr(default=None)
     _memory: Any = PrivateAttr(default=None)
     _max_iterations: int = PrivateAttr(default=10)
-    function_calling_llm: Any = Field(default=None)
+    function_calling_llm: Any = Field(
+        default=None,
+        deprecated="function_calling_llm is deprecated and will be removed in a future release.",
+    )
     step_callback: SerializableCallable | None = Field(default=None)
 
     model: str = Field(default="gpt-4o")

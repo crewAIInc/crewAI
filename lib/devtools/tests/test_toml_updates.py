@@ -282,6 +282,25 @@ class TestUpdatePyprojectDependencies:
         assert '"crewai-files==2.0.0"' in result
         assert '"requests>=2.0"' in result
 
+    def test_skips_crewai_files_in_file_processing_extra(self, tmp_path: Path) -> None:
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text(
+            dedent("""\
+            [project.optional-dependencies]
+            file-processing = [
+                "crewai-files==1.0.0",
+            ]
+            other = [
+                "crewai-files==1.0.0",
+            ]
+        """)
+        )
+
+        update_pyproject_dependencies(pyproject, "2.0.0")
+        result = pyproject.read_text()
+        assert '"crewai-files==1.0.0"' in result
+        assert '"crewai-files==2.0.0"' in result
+
     def test_leaves_bare_crewai_pin_alone(self, tmp_path: Path) -> None:
         """`crewai==` must not collide with `crewai-core==` etc."""
         pyproject = tmp_path / "pyproject.toml"

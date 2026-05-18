@@ -220,7 +220,11 @@ class Agent(BaseAgent):
         str | BaseLLM | None,
         BeforeValidator(_validate_llm_ref),
         PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
-    ] = Field(description="Language model that will run the agent.", default=None)
+    ] = Field(
+        description="Language model that will run the agent.",
+        default=None,
+        deprecated="function_calling_llm is deprecated and will be removed in a future release.",
+    )
     system_template: str | None = Field(
         default=None, description="System format for the agent."
     )
