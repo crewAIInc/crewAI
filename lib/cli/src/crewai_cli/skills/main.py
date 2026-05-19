@@ -92,16 +92,24 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
             raise SystemExit(1)
 
         without_at = ref[1:]
-        if "/" not in without_at:
+        if without_at.count("/") != 1:
             console.print(
                 "[red]Invalid skill reference. Use the format @org/name.[/red]"
             )
             raise SystemExit(1)
 
-        org, _, name = without_at.partition("/")
-        if not org or not name:
+        org, name = without_at.split("/", 1)
+        if (
+            not org
+            or not name
+            or org.startswith(".")
+            or name.startswith(".")
+            or len(Path(org).parts) != 1
+            or len(Path(name).parts) != 1
+        ):
             console.print(
-                "[red]Invalid skill reference: org and name must be non-empty.[/red]"
+                "[red]Invalid skill reference: org and name must be single, "
+                "non-empty path segments (no slashes, no '..').[/red]"
             )
             raise SystemExit(1)
 

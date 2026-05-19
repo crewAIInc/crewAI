@@ -48,14 +48,22 @@ def parse_registry_ref(ref: str) -> tuple[str, str]:
     if not ref.startswith("@"):
         raise ValueError(f"Registry reference must start with '@', got: {ref!r}")
     without_at = ref[1:]
-    if "/" not in without_at:
+    if without_at.count("/") != 1:
         raise ValueError(
             f"Registry reference must be in '@org/name' format, got: {ref!r}"
         )
-    org, _, name = without_at.partition("/")
-    if not org or not name:
+    org, name = without_at.split("/", 1)
+    if (
+        not org
+        or not name
+        or org.startswith(".")
+        or name.startswith(".")
+        or "/" in org
+        or "/" in name
+    ):
         raise ValueError(
-            f"Registry reference must have non-empty org and name, got: {ref!r}"
+            f"Registry reference org and name must be single, non-empty path "
+            f"segments (no '..' or leading dots), got: {ref!r}"
         )
     return org, name
 
