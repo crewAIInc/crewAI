@@ -95,6 +95,16 @@ class TestProviderRegistry:
         assert config.api_key_env == "DASHSCOPE_API_KEY"
         assert config.api_key_required is True
 
+    def test_orcarouter_config(self):
+        """Test OrcaRouter provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["orcarouter"]
+        assert config.base_url == "https://api.orcarouter.ai/v1"
+        assert config.api_key_env == "ORCAROUTER_API_KEY"
+        assert config.base_url_env == "ORCAROUTER_API_BASE_URL"
+        assert config.api_key_required is True
+        assert "HTTP-Referer" in config.default_headers
+        assert "X-Title" in config.default_headers
+
 
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
@@ -271,6 +281,48 @@ class TestLLMIntegration:
             llm = LLM(model="dashscope/qwen-turbo")
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.provider == "dashscope"
+
+    def test_llm_creates_openai_compatible_for_orcarouter(self):
+        """Test LLM factory creates OpenAICompatibleCompletion for OrcaRouter."""
+        with patch.dict(os.environ, {"ORCAROUTER_API_KEY": "test-key"}):
+            llm = LLM(model="orcarouter/openai/gpt-5")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "orcarouter"
+            # Model should include the full path after provider prefix
+            assert llm.model == "openai/gpt-5"
+            assert llm.base_url == "https://api.orcarouter.ai/v1"
+
+    def test_llm_creates_openai_compatible_for_orcarouter_auto(self):
+        """Test LLM factory creates OpenAICompatibleCompletion for orcarouter/auto router."""
+        with patch.dict(os.environ, {"ORCAROUTER_API_KEY": "test-key"}):
+            llm = LLM(model="orcarouter/auto")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "orcarouter"
+            assert llm.model == "auto"
+
+    def test_orcarouter_attribution_headers(self):
+        """Test OrcaRouter sends HTTP-Referer and X-Title attribution headers."""
+        with patch.dict(os.environ, {"ORCAROUTER_API_KEY": "test-key"}):
+            completion = OpenAICompatibleCompletion(
+                model="openai/gpt-5", provider="orcarouter"
+            )
+            assert completion.default_headers is not None
+            assert completion.default_headers.get("HTTP-Referer") == "https://crewai.com"
+            assert completion.default_headers.get("X-Title") == "crewai"
+
+    def test_orcarouter_base_url_env_override(self):
+        """Test ORCAROUTER_API_BASE_URL env var overrides default base URL."""
+        with patch.dict(
+            os.environ,
+            {
+                "ORCAROUTER_API_KEY": "test-key",
+                "ORCAROUTER_API_BASE_URL": "https://staging.orcarouter.ai/v1",
+            },
+        ):
+            completion = OpenAICompatibleCompletion(
+                model="openai/gpt-5", provider="orcarouter"
+            )
+            assert completion.base_url == "https://staging.orcarouter.ai/v1"
 
     def test_llm_with_explicit_provider(self):
         """Test LLM with explicit provider parameter."""
