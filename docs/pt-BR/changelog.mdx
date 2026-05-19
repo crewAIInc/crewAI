@@ -4,6 +4,64 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="19 mai 2026">
+  ## v1.14.5
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.5)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Deprecar `CrewAgentExecutor`, definir agentes Crew como `AgentExecutor`
+  - Melhorar ferramentas do sandbox Daytona
+  - Adicionar parâmetro de início `restore_from_state_id`
+  - Adicionar destaques ao `ExaSearchTool`, renomeando de `EXASearchTool`
+
+  ### Correções de Bugs
+  - Corrigir vazamento de memória em `git.py` usando `cached_property`
+  - Exibir chamadas de ferramentas transmitidas quando `available_functions` está ausente
+  - Garantir eventos de carregamento de `skills` para rastros
+  - Corrigir caminho do endpoint de status de `/{kickoff_id}/status` para `/status/{kickoff_id}`
+  - Restaurar bloco de código ausente no guia de primeiro fluxo em pt-BR
+  - Impedir que `result_as_answer` retorne mensagens de bloqueio de hook ou de erro como resposta final
+  - Preservar saídas de tarefas durante o descarregamento assíncrono em lote
+  - Sempre restaurar `task.output_pydantic` no bloco finally
+  - Lidar com entrada de `BaseModel` em `convert_to_model`
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.14.5
+  - Adicionar guia de migração de atualização OSS & crew-to-flow
+  - Documentar variáveis de ambiente adicionais para devtools
+  - Adicionar documentação para `TavilyGetResearch`
+
+  ### Refatoração
+  - Extrair CLI para o pacote autônomo `crewai-cli`
+
+  ## Contribuidores
+
+  @NIK-TIGER-BILL, @akaKuruma, @cgoeppinger, @github-actions[bot], @greysonlalonde, @heitorado, @irfaan101, @iris-clawd, @lorenzejay, @manisrinivasan2k1, @minasami-pr, @mislavivanda, @theCyberTech, @theishangoswami, @wishhyt
+
+</Update>
+
+<Update label="18 mai 2026">
+  ## v1.14.5a7
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.5a7)
+
+  ## O que Mudou
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.14.5a6
+
+  ### Mudanças Quebradoras
+  - Depreciar o campo function_calling_llm
+
+  ## Contributors
+
+  @greysonlalonde, @heitorado
+
+</Update>
+
 <Update label="15 mai 2026">
   ## v1.14.5a6
 
