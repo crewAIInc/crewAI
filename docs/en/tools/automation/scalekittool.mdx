@@ -1,0 +1,103 @@
+---
+title: Scalekit Tool
+description: Scalekit provides OAuth-based tool execution across 100+ connectors and 3,000+ tools for AI agents.
+icon: key
+mode: "wide"
+---
+
+# `ScalekitTool`
+
+## Description
+[Scalekit](https://scalekit.com) is an agent authentication platform that lets your AI agents call third-party APIs on behalf of authenticated users. Key features include:
+
+- **OAuth Lifecycle Management**: Handles token acquisition, refresh, and storage for 100+ connectors
+- **3,000+ Pre-built Tools**: Gmail, Slack, GitHub, Notion, Salesforce, and more
+- **User-scoped Execution**: Each tool call runs with the authenticated user's credentials
+
+## Installation
+
+To incorporate Scalekit tools into your project, follow the instructions below:
+
+```shell
+pip install scalekit-sdk-python
+pip install 'crewai[tools]'
+```
+
+After installation, set your Scalekit credentials as environment variables. Get these from [Scalekit Dashboard](https://app.scalekit.com) → **Developers** → **API Credentials**:
+
+```bash
+export SCALEKIT_ENV_URL="https://your-project.scalekit.cloud"
+export SCALEKIT_CLIENT_ID="skc_..."
+export SCALEKIT_CLIENT_SECRET="test_..."
+```
+
+## Example
+
+The following example demonstrates how to initialize the tool and execute Gmail actions:
+
+1. Create tools from a connection
+
+```python Code
+from crewai_tools import ScalekitTool
+from crewai import Agent, Task, Crew
+
+# Get all Gmail tools for a user
+tools = ScalekitTool.from_connection(
+    "gmail",
+    identifier="user@example.com",
+)
+```
+
+2. Or create a single specific tool
+
+```python Code
+draft_tool = ScalekitTool.from_tool(
+    tool_name="gmail_create_draft",
+    identifier="user@example.com",
+)
+```
+
+3. Define agent
+
+```python Code
+agent = Agent(
+    role="Email Assistant",
+    goal="Help manage emails and draft responses",
+    backstory=(
+        "You are an AI agent that helps users manage their email. "
+        "You can read, draft, and organize emails on behalf of users."
+    ),
+    verbose=True,
+    tools=tools,
+)
+```
+
+4. Execute task
+
+```python Code
+task = Task(
+    description="Draft a reply to the latest unread email",
+    agent=agent,
+    expected_output="Confirmation that the draft was created",
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+crew.kickoff()
+```
+
+### Multiple connections
+
+You can combine tools from multiple connections in a single call:
+
+```python Code
+tools = ScalekitTool.from_connection(
+    "gmail", "slack", "github-prod",
+    identifier="user@example.com",
+)
+```
+
+## Connected Accounts
+
+Before using ScalekitTool, ensure users have connected their accounts through Scalekit. Use the Scalekit Dashboard → **AgentKit** → **Connections** to set up OAuth connections for the providers your agents need.
+
+* More details at [Scalekit AgentKit Docs](https://docs.scalekit.com)
