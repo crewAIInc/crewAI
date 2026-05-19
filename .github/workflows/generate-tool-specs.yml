@@ -22,7 +22,7 @@ jobs:
     steps:
       - name: Generate GitHub App token
         id: app-token
-        uses: tibdex/github-app-token@v2
+        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2
         with:
           app_id: ${{ secrets.CREWAI_TOOL_SPECS_APP_ID }}
           private_key: ${{ secrets.CREWAI_TOOL_SPECS_PRIVATE_KEY }}
@@ -34,7 +34,7 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
         with:
           version: "0.11.3"
           python-version: "3.12"
