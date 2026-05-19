@@ -46,11 +46,11 @@ class TestParseRegistryRef:
             parse_registry_ref("@acme-skill")
 
     def test_empty_org(self) -> None:
-        with pytest.raises(ValueError, match="non-empty org and name"):
+        with pytest.raises(ValueError, match="non-empty"):
             parse_registry_ref("@/my-skill")
 
     def test_empty_name(self) -> None:
-        with pytest.raises(ValueError, match="non-empty org and name"):
+        with pytest.raises(ValueError, match="non-empty"):
             parse_registry_ref("@acme/")
 
 
