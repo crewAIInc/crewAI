@@ -144,6 +144,7 @@ from crewai_tools.tools.qdrant_vector_search_tool.qdrant_search_tool import (
     QdrantVectorSearchTool,
 )
 from crewai_tools.tools.rag.rag_tool import RagTool
+from crewai_tools.tools.scalekit_tool.scalekit_tool import ScalekitTool
 from crewai_tools.tools.scrape_element_from_website.scrape_element_from_website import (
     ScrapeElementFromWebsiteTool,
 )
@@ -295,6 +296,7 @@ __all__ = [
     "RagTool",
     "S3ReaderTool",
     "S3WriterTool",
+    "ScalekitTool",
     "ScrapeElementFromWebsiteTool",
     "ScrapeWebsiteTool",
     "ScrapegraphScrapeTool",
