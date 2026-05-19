@@ -8,8 +8,6 @@ import json
 import tarfile
 from pathlib import Path
 
-import pytest
-
 from crewai.skills.cache import SkillCacheManager
 
 

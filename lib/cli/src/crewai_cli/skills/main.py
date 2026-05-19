@@ -6,10 +6,10 @@ import base64
 import io
 import json
 import os
+import tarfile
 from pathlib import Path
 import zipfile
 
-import click
 from rich.console import Console
 from rich.table import Table
 
@@ -271,7 +271,7 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
                                 str(skill_dir),
                             )
                         except (json.JSONDecodeError, KeyError):
-                            pass
+                            console.print(f"[yellow]Warning: skipping malformed cache entry at {meta_file}[/yellow]")
 
         console.print(table)
 
@@ -281,12 +281,9 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
 
     def _unpack_archive(self, archive_bytes: bytes, dest: Path) -> None:
         """Unpack a .tar.gz or .zip archive into dest."""
-        import tarfile
-
         # Try tar first, then zip
         try:
-            import io as _io
-            with tarfile.open(fileobj=_io.BytesIO(archive_bytes), mode="r:gz") as tf:
+            with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode="r:gz") as tf:
                 try:
                     tf.extractall(dest, filter="data")
                 except TypeError:
@@ -297,7 +294,7 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
 
         # Fallback: zip
         with zipfile.ZipFile(io.BytesIO(archive_bytes)) as zf:
-            zf.extractall(dest)
+            _safe_extract_zip(zf, dest)
 
     def _build_skill_zip(self) -> bytes:
         """Build an in-memory ZIP of SKILL.md + scripts/ + references/ + assets/."""
@@ -319,7 +316,7 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
         if not match:
             raise ValueError("No YAML frontmatter block found")
         try:
-            import yaml  # type: ignore[import-untyped]
+            import yaml
             return yaml.safe_load(match.group(1)) or {}
         except ImportError:
             # Minimal fallback: parse key: value lines
@@ -339,12 +336,21 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
             return None
 
 
-def _safe_extractall(tf: "tarfile.TarFile", dest: Path) -> None:
+def _safe_extractall(tf: tarfile.TarFile, dest: Path) -> None:
     """Path-traversal-safe extraction for Python < 3.12."""
-    import tarfile
     dest_resolved = dest.resolve()
     for member in tf.getmembers():
         member_path = (dest / member.name).resolve()
-        if not str(member_path).startswith(str(dest_resolved)):
+        if not member_path.is_relative_to(dest_resolved):
             raise ValueError(f"Blocked path traversal attempt: {member.name!r}")
     tf.extractall(dest)  # noqa: S202
+
+
+def _safe_extract_zip(zf: zipfile.ZipFile, dest: Path) -> None:
+    """Path-traversal-safe ZIP extraction."""
+    dest_resolved = dest.resolve()
+    for member in zf.namelist():
+        member_path = (dest / member).resolve()
+        if not member_path.is_relative_to(dest_resolved):
+            raise ValueError(f"Blocked path traversal attempt: {member!r}")
+    zf.extractall(dest)  # noqa: S202

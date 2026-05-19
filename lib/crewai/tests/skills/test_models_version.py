@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
 from crewai.skills.models import SkillFrontmatter
 
@@ -27,5 +28,5 @@ class TestSkillFrontmatterVersion:
 
     def test_frontmatter_is_frozen(self) -> None:
         fm = SkillFrontmatter(name="my-skill", description="A skill.", version="1.0.0")
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             fm.version = "2.0.0"  # type: ignore[misc]

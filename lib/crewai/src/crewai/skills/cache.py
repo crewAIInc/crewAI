@@ -7,10 +7,13 @@ One version is stored per skill (last install wins).
 from __future__ import annotations
 
 import json
+import logging
 import tarfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TypedDict
+
+_logger = logging.getLogger(__name__)
 
 
 _CACHE_ROOT = Path.home() / ".crewai" / "skills"
@@ -93,7 +96,7 @@ class SkillCacheManager:
                     try:
                         results.append(json.loads(meta_file.read_text()))
                     except (json.JSONDecodeError, KeyError):
-                        pass
+                        _logger.debug("Skipping malformed cache entry: %s", meta_file, exc_info=True)
         return results
 
     def invalidate(self, org: str, name: str) -> bool:
@@ -115,6 +118,6 @@ def _safe_extractall(tf: tarfile.TarFile, dest: Path) -> None:
     dest_resolved = dest.resolve()
     for member in tf.getmembers():
         member_path = (dest / member.name).resolve()
-        if not str(member_path).startswith(str(dest_resolved)):
+        if not member_path.is_relative_to(dest_resolved):
             raise ValueError(f"Blocked path traversal attempt: {member.name!r}")
     tf.extractall(dest)  # noqa: S202

@@ -434,7 +434,7 @@ class Agent(BaseAgent):
         from crewai.crew import Crew
 
         if resolved_crew_skills is None:
-            crew_skills: list[Path | SkillModel] | None = (
+            crew_skills: list[Path | SkillModel | str] | None = (
                 self.crew.skills
                 if isinstance(self.crew, Crew) and isinstance(self.crew.skills, list)
                 else None
@@ -454,7 +454,7 @@ class Agent(BaseAgent):
             return
 
         seen: set[str] = set()
-        resolved: list[Path | SkillModel] = []
+        resolved: list[Path | SkillModel | str] = []
         items: list[Path | SkillModel | str] = list(self.skills) if self.skills else []
 
         if crew_skills:

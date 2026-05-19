@@ -6,11 +6,14 @@ via the CrewAI+ API with a global cache at ~/.crewai/skills/.
 
 from __future__ import annotations
 
+import logging
 import sys
 from pathlib import Path
 from typing import Any
 
 from crewai.skills.cache import SkillCacheManager
+
+_logger = logging.getLogger(__name__)
 
 
 class SkillNotCachedError(Exception):
@@ -19,7 +22,7 @@ class SkillNotCachedError(Exception):
     def __init__(self, ref: str) -> None:
         super().__init__(
             f"Skill {ref!r} is not cached locally. "
-            "Run `crewai skill install {ref}` to install it first."
+            f"Run `crewai skill install {ref}` to install it first."
         )
         self.ref = ref
 
@@ -99,7 +102,7 @@ def resolve_registry_ref(
             skill = load_skill_metadata(local_path)
             return activate_skill(skill, source=source)
         except Exception:
-            pass
+            _logger.debug("Failed to load local skill at %s", local_path, exc_info=True)
 
     # 2. Global cache
     cache = SkillCacheManager()
@@ -109,7 +112,7 @@ def resolve_registry_ref(
             skill = load_skill_metadata(cached_path)
             return activate_skill(skill, source=source)
         except Exception:
-            pass
+            _logger.debug("Failed to load cached skill at %s", cached_path, exc_info=True)
 
     # 3. Download
     if _is_noninteractive():
@@ -139,16 +142,16 @@ def download_skill(
     ref = f"@{org}/{name}"
 
     try:
-        from crewai.events.crewai_event_bus import crewai_event_bus
+        from crewai.events.event_bus import crewai_event_bus
         from crewai.events.types.skill_events import SkillDownloadStartedEvent, SkillDownloadCompletedEvent
         _has_events = True
     except ImportError:
         _has_events = False
 
     if _has_events:
-        crewai_event_bus.emit(  # type: ignore[possibly-undefined]
+        crewai_event_bus.emit(
             source,
-            event=SkillDownloadStartedEvent(  # type: ignore[possibly-undefined]
+            event=SkillDownloadStartedEvent(
                 registry_ref=ref,
             ),
         )
@@ -176,9 +179,9 @@ def download_skill(
     skill_dir = cache.store(org, name, version, archive_bytes)
 
     if _has_events:
-        crewai_event_bus.emit(  # type: ignore[possibly-undefined]
+        crewai_event_bus.emit(
             source,
-            event=SkillDownloadCompletedEvent(  # type: ignore[possibly-undefined]
+            event=SkillDownloadCompletedEvent(
                 registry_ref=ref,
                 version=version,
                 cache_path=skill_dir,
