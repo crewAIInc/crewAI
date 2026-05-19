@@ -218,6 +218,9 @@ class ScalekitTool(BaseTool):
                     )
                     result_data = resp.data if hasattr(resp, "data") else {}
                     result_dict = dict(result_data) if result_data else {}
+                    execution_id = getattr(resp, "execution_id", None)
+                    if execution_id:
+                        result_dict["execution_id"] = execution_id
                     return (
                         str(result_dict)
                         if result_dict
