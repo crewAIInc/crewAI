@@ -1,6 +1,6 @@
 from typing import Any
 
-from crewai_core.plus_api import CreateCrewPayload, LogType
+from crewai_core.plus_api import CreateCrewPayload
 from rich.console import Console
 
 from crewai_cli import git
@@ -173,7 +173,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         Returns:
             Dict[str, Any]: The payload for crew creation.
         """
-        if self.project_name is None:
+        if not self.project_name:
             raise ValueError("project_name is required to create a deployment payload")
         return {
             "deploy": {
@@ -261,7 +261,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         console.print(f"Name:\t {status_data['name']}")
         console.print(f"Status:\t {status_data['status']}")
 
-    def get_crew_logs(self, uuid: str | None, log_type: LogType = "deployment") -> None:
+    def get_crew_logs(self, uuid: str | None, log_type: str = "deployment") -> None:
         """
         Get logs for a crew.
 

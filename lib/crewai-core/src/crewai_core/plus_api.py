@@ -14,7 +14,6 @@ from crewai_core.settings import Settings
 from crewai_core.version import get_crewai_version
 
 
-LogType = Literal["deployment"]
 HttpMethod = Literal["GET", "POST", "PATCH", "DELETE"]
 
 
@@ -246,15 +245,13 @@ class PlusAPI:
         return self._make_request("GET", f"{self.CREWS_RESOURCE}/{uuid}/status")
 
     def crew_by_name(
-        self, project_name: str, log_type: LogType = "deployment"
+        self, project_name: str, log_type: str = "deployment"
     ) -> httpx.Response:
         return self._make_request(
             "GET", f"{self.CREWS_RESOURCE}/by-name/{project_name}/logs/{log_type}"
         )
 
-    def crew_by_uuid(
-        self, uuid: str, log_type: LogType = "deployment"
-    ) -> httpx.Response:
+    def crew_by_uuid(self, uuid: str, log_type: str = "deployment") -> httpx.Response:
         return self._make_request(
             "GET", f"{self.CREWS_RESOURCE}/{uuid}/logs/{log_type}"
         )
