@@ -23,7 +23,7 @@ def get_reserved_script_names() -> set[str]:
     package_dir = Path(__file__).parent
     template_path = package_dir / "templates" / "crew" / "pyproject.toml"
 
-    with open(template_path, "r") as f:
+    with open(template_path, "r", encoding="utf-8") as f:
         template_content = f.read()
 
     template_content = template_content.replace("{{folder_name}}", "_placeholder_")

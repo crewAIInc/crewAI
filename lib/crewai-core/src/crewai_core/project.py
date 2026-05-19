@@ -46,7 +46,7 @@ def _get_project_attribute(
     attribute = None
 
     try:
-        with open(pyproject_path, "r") as f:
+        with open(pyproject_path, "r", encoding="utf-8") as f:
             pyproject_content = parse_toml(f.read())
 
         dependencies = (
