@@ -136,23 +136,16 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
                 f"[green]Installed [bold]{ref}[/bold]{' (' + version + ')' if version else ''} to [bold]{dest}[/bold].[/green]"
             )
         else:
-            from crewai_core.plus_api import (
-                PlusAPI as _,  # noqa: F401 (ensure crewai_core present)
-            )
+            try:
+                from crewai.skills.cache import SkillCacheManager
 
-            cache_dir = Path.home() / ".crewai" / "skills" / org / name
-            cache_dir.mkdir(parents=True, exist_ok=True)
-            self._unpack_archive(archive_bytes, cache_dir)
-            from datetime import datetime, timezone
-            import json as _json
-
-            meta = {
-                "org": org,
-                "name": name,
-                "version": version,
-                "installed_at": datetime.now(tz=timezone.utc).isoformat(),
-            }
-            (cache_dir / ".crewai_meta.json").write_text(_json.dumps(meta, indent=2))
+                cache = SkillCacheManager()
+                cache.store(org, name, version, archive_bytes)
+            except ImportError:
+                # Fallback if SDK not installed — write directly
+                cache_dir = Path.home() / ".crewai" / "skills" / org / name
+                cache_dir.mkdir(parents=True, exist_ok=True)
+                self._unpack_archive(archive_bytes, cache_dir)
             console.print(
                 f"[green]Installed [bold]{ref}[/bold]{' (' + version + ')' if version else ''} to global cache.[/green]"
             )
@@ -315,7 +308,20 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
         return buf.getvalue()
 
     def _parse_frontmatter(self, content: str) -> dict[str, str]:
-        """Extract YAML frontmatter fields from a SKILL.md string."""
+        """Extract YAML frontmatter fields from a SKILL.md string.
+
+        Reuses crewai.skills.parser when available, with a minimal
+        fallback for environments where the full SDK isn't installed.
+        """
+        try:
+            from crewai.skills.parser import parse_frontmatter
+
+            fm_dict, _ = parse_frontmatter(content)
+            return fm_dict
+        except ImportError:
+            pass
+
+        # Fallback: minimal YAML parsing without SDK dependency
         import re
 
         match = re.match(r"^---\n(.*?)\n---", content, re.DOTALL)
@@ -326,7 +332,6 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
 
             return yaml.safe_load(match.group(1)) or {}
         except ImportError:
-            # Minimal fallback: parse key: value lines
             result: dict[str, str] = {}
             for line in match.group(1).splitlines():
                 if ":" in line:
