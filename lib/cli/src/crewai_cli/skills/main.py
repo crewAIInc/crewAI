@@ -145,8 +145,22 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
             except ImportError:
                 # Fallback if SDK not installed — write directly
                 cache_dir = Path.home() / ".crewai" / "skills" / org / name
+                if cache_dir.exists():
+                    import shutil
+
+                    shutil.rmtree(cache_dir)
                 cache_dir.mkdir(parents=True, exist_ok=True)
                 self._unpack_archive(archive_bytes, cache_dir)
+                # Write metadata so `crewai skill list` can discover it
+                from datetime import datetime, timezone
+
+                meta = {
+                    "org": org,
+                    "name": name,
+                    "version": version,
+                    "installed_at": datetime.now(tz=timezone.utc).isoformat(),
+                }
+                (cache_dir / ".crewai_meta.json").write_text(json.dumps(meta, indent=2))
             console.print(
                 f"[green]Installed [bold]{ref}[/bold]{' (' + version + ')' if version else ''} to global cache.[/green]"
             )
