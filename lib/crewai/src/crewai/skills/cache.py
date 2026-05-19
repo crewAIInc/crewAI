@@ -6,12 +6,13 @@ One version is stored per skill (last install wins).
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 import json
 import logging
-import tarfile
-from datetime import datetime, timezone
 from pathlib import Path
+import tarfile
 from typing import TypedDict
+
 
 _logger = logging.getLogger(__name__)
 
@@ -44,7 +45,9 @@ class SkillCacheManager:
             return skill_dir
         return None
 
-    def store(self, org: str, name: str, version: str | None, archive_bytes: bytes) -> Path:
+    def store(
+        self, org: str, name: str, version: str | None, archive_bytes: bytes
+    ) -> Path:
         """Unpack an archive into the cache and write metadata.
 
         Uses tarfile with filter='data' for path-traversal protection.
@@ -62,10 +65,12 @@ class SkillCacheManager:
         # Wipe any previous version
         if skill_dir.exists():
             import shutil
+
             shutil.rmtree(skill_dir)
         skill_dir.mkdir(parents=True, exist_ok=True)
 
         import io
+
         with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode="r:gz") as tf:
             try:
                 tf.extractall(skill_dir, filter="data")
@@ -96,7 +101,11 @@ class SkillCacheManager:
                     try:
                         results.append(json.loads(meta_file.read_text()))
                     except (json.JSONDecodeError, KeyError):
-                        _logger.debug("Skipping malformed cache entry: %s", meta_file, exc_info=True)
+                        _logger.debug(
+                            "Skipping malformed cache entry: %s",
+                            meta_file,
+                            exc_info=True,
+                        )
         return results
 
     def invalidate(self, org: str, name: str) -> bool:
@@ -108,6 +117,7 @@ class SkillCacheManager:
         skill_dir = self._skill_dir(org, name)
         if skill_dir.exists():
             import shutil
+
             shutil.rmtree(skill_dir)
             return True
         return False

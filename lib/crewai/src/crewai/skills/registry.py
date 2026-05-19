@@ -7,11 +7,12 @@ via the CrewAI+ API with a global cache at ~/.crewai/skills/.
 from __future__ import annotations
 
 import logging
-import sys
 from pathlib import Path
+import sys
 from typing import Any
 
 from crewai.skills.cache import SkillCacheManager
+
 
 _logger = logging.getLogger(__name__)
 
@@ -62,6 +63,7 @@ def parse_registry_ref(ref: str) -> tuple[str, str]:
 def _is_noninteractive() -> bool:
     """Return True in CI or explicitly non-interactive environments."""
     import os
+
     return (
         os.environ.get("CI") == "1"
         or os.environ.get("CREWAI_NONINTERACTIVE") == "1"
@@ -72,7 +74,7 @@ def _is_noninteractive() -> bool:
 def resolve_registry_ref(
     ref: str,
     source: Any = None,
-) -> "Skill":  # type: ignore[name-defined]  # noqa: F821
+) -> Skill:  # type: ignore[name-defined]  # noqa: F821
     """Resolve a registry reference to a Skill object.
 
     Resolution order:
@@ -112,7 +114,9 @@ def resolve_registry_ref(
             skill = load_skill_metadata(cached_path)
             return activate_skill(skill, source=source)
         except Exception:
-            _logger.debug("Failed to load cached skill at %s", cached_path, exc_info=True)
+            _logger.debug(
+                "Failed to load cached skill at %s", cached_path, exc_info=True
+            )
 
     # 3. Download
     if _is_noninteractive():
@@ -125,7 +129,7 @@ def download_skill(
     org: str,
     name: str,
     source: Any = None,
-) -> "Skill":  # type: ignore[name-defined]  # noqa: F821
+) -> Skill:  # type: ignore[name-defined]  # noqa: F821
     """Download a skill from the registry and store it in the cache.
 
     Args:
@@ -143,7 +147,11 @@ def download_skill(
 
     try:
         from crewai.events.event_bus import crewai_event_bus
-        from crewai.events.types.skill_events import SkillDownloadStartedEvent, SkillDownloadCompletedEvent
+        from crewai.events.types.skill_events import (
+            SkillDownloadCompletedEvent,
+            SkillDownloadStartedEvent,
+        )
+
         _has_events = True
     except ImportError:
         _has_events = False
@@ -158,6 +166,7 @@ def download_skill(
 
     try:
         from crewai_core.plus_api import PlusAPI
+
         api = PlusAPI()
         response = api.get_skill(org, name)
         response.raise_for_status()
@@ -168,6 +177,7 @@ def download_skill(
         ) from exc
 
     import base64
+
     encoded = data.get("file", "")
     # Strip data URI prefix if present
     if "," in encoded:

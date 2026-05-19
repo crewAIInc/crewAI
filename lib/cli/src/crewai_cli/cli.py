@@ -26,9 +26,9 @@ from crewai_cli.replay_from_task import replay_task_command
 from crewai_cli.reset_memories_command import reset_memories_command
 from crewai_cli.run_crew import run_crew
 from crewai_cli.settings.main import SettingsCommand
+from crewai_cli.skills.main import SkillCommand
 from crewai_cli.task_outputs import load_task_outputs
 from crewai_cli.tools.main import ToolCommand
-from crewai_cli.skills.main import SkillCommand
 from crewai_cli.train_crew import train_crew
 from crewai_cli.triggers.main import TriggersCommand
 from crewai_cli.update_crew import update_crew

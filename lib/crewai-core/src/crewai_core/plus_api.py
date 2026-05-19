@@ -229,7 +229,9 @@ class PlusAPI:
         }
         return self._make_request("POST", f"{self.TOOLS_RESOURCE}", json=params)
 
-    def get_skill(self, org: str, name: str, version: str | None = None) -> httpx.Response:
+    def get_skill(
+        self, org: str, name: str, version: str | None = None
+    ) -> httpx.Response:
         params: dict[str, str] = {}
         if version is not None:
             params["version"] = version

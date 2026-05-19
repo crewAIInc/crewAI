@@ -6,8 +6,8 @@ import base64
 import io
 import json
 import os
-import tarfile
 from pathlib import Path
+import tarfile
 import zipfile
 
 from rich.console import Console
@@ -71,9 +71,7 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
         console.print(
             f"[green]Created skill [bold]{name}[/bold] at [bold]{skill_dir}[/bold].[/green]"
         )
-        console.print(
-            f"Edit [bold]{skill_md}[/bold] to define the skill instructions."
-        )
+        console.print(f"Edit [bold]{skill_md}[/bold] to define the skill instructions.")
 
     # ------------------------------------------------------------------
     # install
@@ -138,12 +136,16 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
                 f"[green]Installed [bold]{ref}[/bold]{' (' + version + ')' if version else ''} to [bold]{dest}[/bold].[/green]"
             )
         else:
-            from crewai_core.plus_api import PlusAPI as _  # noqa: F401 (ensure crewai_core present)
+            from crewai_core.plus_api import (
+                PlusAPI as _,  # noqa: F401 (ensure crewai_core present)
+            )
+
             cache_dir = Path.home() / ".crewai" / "skills" / org / name
             cache_dir.mkdir(parents=True, exist_ok=True)
             self._unpack_archive(archive_bytes, cache_dir)
-            import json as _json
             from datetime import datetime, timezone
+            import json as _json
+
             meta = {
                 "org": org,
                 "name": name,
@@ -181,7 +183,9 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
         description = frontmatter.get("description")
 
         if not name:
-            console.print("[red]SKILL.md frontmatter must include a 'name' field.[/red]")
+            console.print(
+                "[red]SKILL.md frontmatter must include a 'name' field.[/red]"
+            )
             raise SystemExit(1)
 
         if not version:
@@ -204,10 +208,9 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
         )
 
         archive_bytes = self._build_skill_zip()
-        encoded_file = (
-            "data:application/zip;base64,"
-            + base64.b64encode(archive_bytes).decode("utf-8")
-        )
+        encoded_file = "data:application/zip;base64," + base64.b64encode(
+            archive_bytes
+        ).decode("utf-8")
 
         response = self.plus_api_client.publish_skill(
             org=effective_org,
@@ -271,7 +274,9 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
                                 str(skill_dir),
                             )
                         except (json.JSONDecodeError, KeyError):
-                            console.print(f"[yellow]Warning: skipping malformed cache entry at {meta_file}[/yellow]")
+                            console.print(
+                                f"[yellow]Warning: skipping malformed cache entry at {meta_file}[/yellow]"
+                            )
 
         console.print(table)
 
@@ -312,11 +317,13 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
     def _parse_frontmatter(self, content: str) -> dict[str, str]:
         """Extract YAML frontmatter fields from a SKILL.md string."""
         import re
+
         match = re.match(r"^---\n(.*?)\n---", content, re.DOTALL)
         if not match:
             raise ValueError("No YAML frontmatter block found")
         try:
             import yaml
+
             return yaml.safe_load(match.group(1)) or {}
         except ImportError:
             # Minimal fallback: parse key: value lines
