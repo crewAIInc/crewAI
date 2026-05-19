@@ -1,5 +1,6 @@
 from typing import Any
 
+from crewai_core.plus_api import CreateCrewPayload
 from rich.console import Console
 
 from crewai_cli import git
@@ -161,7 +162,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         self,
         env_vars: dict[str, str],
         remote_repo_url: str,
-    ) -> dict[str, Any]:
+    ) -> CreateCrewPayload:
         """
         Create the payload for crew creation.
 
@@ -172,6 +173,8 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         Returns:
             Dict[str, Any]: The payload for crew creation.
         """
+        if not self.project_name:
+            raise ValueError("project_name is required to create a deployment payload")
         return {
             "deploy": {
                 "name": self.project_name,

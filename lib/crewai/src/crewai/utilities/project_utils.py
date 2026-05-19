@@ -13,6 +13,7 @@ import sys
 import types
 from typing import Any, cast, get_type_hints
 
+from crewai_core.plus_api import AvailableExport, EnvVarEntry, ToolMetadata
 from crewai_core.project import (
     get_project_description as get_project_description,
     get_project_name as get_project_name,
@@ -279,7 +280,7 @@ def is_valid_tool(obj: Any) -> bool:
     return isinstance(obj, Tool)
 
 
-def extract_available_exports(dir_path: str = "src") -> list[dict[str, Any]]:
+def extract_available_exports(dir_path: str = "src") -> list[AvailableExport]:
     """Extract available tool classes from the project's __init__.py files.
 
     Only includes classes that inherit from BaseTool or functions decorated with @tool.
@@ -338,7 +339,7 @@ def _load_module_from_file(
         sys.modules.pop(module_name, None)
 
 
-def _load_tools_from_init(init_file: Path) -> list[dict[str, Any]]:
+def _load_tools_from_init(init_file: Path) -> list[AvailableExport]:
     """Load and validate tools from a given __init__.py file."""
     try:
         with _load_module_from_file(init_file) as module:
@@ -392,7 +393,7 @@ def _print_no_tools_warning() -> None:
     )
 
 
-def extract_tools_metadata(dir_path: str = "src") -> list[dict[str, Any]]:
+def extract_tools_metadata(dir_path: str = "src") -> list[ToolMetadata]:
     """
     Extract rich metadata from tool classes in the project.
 
@@ -404,7 +405,7 @@ def extract_tools_metadata(dir_path: str = "src") -> list[dict[str, Any]]:
     - init_params_schema: JSON Schema for __init__ params (filtered)
     - env_vars: List of environment variable dicts
     """
-    tools_metadata: list[dict[str, Any]] = []
+    tools_metadata: list[ToolMetadata] = []
 
     for init_file in Path(dir_path).glob("**/__init__.py"):
         tools = _extract_tool_metadata_from_init(init_file)
@@ -413,7 +414,7 @@ def extract_tools_metadata(dir_path: str = "src") -> list[dict[str, Any]]:
     return tools_metadata
 
 
-def _extract_tool_metadata_from_init(init_file: Path) -> list[dict[str, Any]]:
+def _extract_tool_metadata_from_init(init_file: Path) -> list[ToolMetadata]:
     """
     Load module from init file and extract metadata from valid tool classes.
     """
@@ -428,7 +429,7 @@ def _extract_tool_metadata_from_init(init_file: Path) -> list[dict[str, Any]]:
             if not exported_names:
                 return []
 
-            tools_metadata = []
+            tools_metadata: list[ToolMetadata] = []
             for name in exported_names:
                 obj = getattr(module, name, None)
                 if obj is None or not (
@@ -446,7 +447,7 @@ def _extract_tool_metadata_from_init(init_file: Path) -> list[dict[str, Any]]:
         return []
 
 
-def _extract_single_tool_metadata(tool_class: type) -> dict[str, Any] | None:
+def _extract_single_tool_metadata(tool_class: type) -> ToolMetadata | None:
     """
     Extract metadata from a single tool class.
     """
@@ -470,19 +471,17 @@ def _extract_single_tool_metadata(tool_class: type) -> dict[str, Any] | None:
         except (TypeError, ValueError):
             module = tool_class.__module__
 
-        return {
-            "name": tool_class.__name__,
-            "module": module,
-            "humanized_name": _extract_field_default(
-                fields.get("name"), fallback=tool_class.__name__
+        return ToolMetadata(
+            name=tool_class.__name__,
+            module=module,
+            humanized_name=str(
+                _extract_field_default(fields.get("name"), fallback=tool_class.__name__)
             ),
-            "description": str(
-                _extract_field_default(fields.get("description"))
-            ).strip(),
-            "run_params_schema": _extract_run_params_schema(fields.get("args_schema")),
-            "init_params_schema": _extract_init_params_schema(tool_class),
-            "env_vars": _extract_env_vars(fields.get("env_vars")),
-        }
+            description=str(_extract_field_default(fields.get("description"))).strip(),
+            run_params_schema=_extract_run_params_schema(fields.get("args_schema")),
+            init_params_schema=_extract_init_params_schema(tool_class),
+            env_vars=_extract_env_vars(fields.get("env_vars")),
+        )
 
     except Exception:
         return None
@@ -597,7 +596,7 @@ def _extract_init_params_schema(tool_class: type) -> dict[str, Any]:
         return {}
 
 
-def _extract_env_vars(env_vars_field: dict[str, Any] | None) -> list[dict[str, Any]]:
+def _extract_env_vars(env_vars_field: dict[str, Any] | None) -> list[EnvVarEntry]:
     """
     Extract environment variable definitions from env_vars field.
     """
