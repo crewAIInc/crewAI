@@ -105,6 +105,7 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
             )
             raise SystemExit(1)
 
+        self._print_current_organization()
         console.print(f"[bold blue]Downloading skill {ref}...[/bold blue]")
 
         get_response = self.plus_api_client.get_skill(org, name)
@@ -196,6 +197,7 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
             )
             raise SystemExit(1)
 
+        self._print_current_organization()
         console.print(
             f"[bold blue]Publishing skill [bold]{name}[/bold] v{version} to {effective_org}...[/bold blue]"
         )
@@ -276,6 +278,20 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
     # ------------------------------------------------------------------
     # internal helpers
     # ------------------------------------------------------------------
+
+    def _print_current_organization(self) -> None:
+        settings = Settings()
+        if settings.org_uuid:
+            console.print(
+                f"Current organization: {settings.org_name} ({settings.org_uuid})",
+                style="bold blue",
+            )
+        else:
+            console.print(
+                "No organization currently set. We recommend setting one before using: "
+                "`crewai org switch <org_id>` command.",
+                style="yellow",
+            )
 
     def _unpack_archive(self, archive_bytes: bytes, dest: Path) -> None:
         """Unpack a .tar.gz or .zip archive into dest."""
