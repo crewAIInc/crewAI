@@ -1,9 +1,9 @@
 """Scalekit AgentKit tools wrapper for CrewAI.
 
-Scalekit provides OAuth-based tool execution for 50+ providers (Gmail,
-Slack, GitHub, Notion, Salesforce, etc.). This wrapper converts Scalekit
-tools into CrewAI ``BaseTool`` instances so agents can call third-party
-APIs on behalf of authenticated users.
+Scalekit provides OAuth-based tool execution across 100+ connectors and
+3,000+ tools (Gmail, Slack, GitHub, Notion, Salesforce, etc.). This
+wrapper converts Scalekit tools into CrewAI ``BaseTool`` instances so
+agents can call third-party APIs on behalf of authenticated users.
 """
 
 import os
@@ -89,10 +89,16 @@ class ScalekitTool(BaseTool):
 
         client = cls._get_client()
 
-        result_tuple = client.tools.list_scoped_tools(
-            identifier,
-            filter=ScopedToolFilter(tool_names=[tool_name]),
-        )
+        try:
+            result_tuple = client.tools.list_scoped_tools(
+                identifier,
+                filter=ScopedToolFilter(tool_names=[tool_name]),
+            )
+        except Exception as exc:
+            raise ValueError(
+                f"Tool '{tool_name}' not found for identifier "
+                f"'{identifier}': {exc}"
+            ) from exc
         response = result_tuple[0]
 
         target_tool = None

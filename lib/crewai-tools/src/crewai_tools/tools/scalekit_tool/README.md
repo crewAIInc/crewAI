@@ -2,7 +2,7 @@
 
 ## Description
 
-This tool is a wrapper around the [Scalekit](https://scalekit.com) AgentKit SDK and gives your agent access to OAuth-authenticated tools across 50+ providers (Gmail, Slack, GitHub, Notion, Salesforce, and more).
+This tool is a wrapper around the [Scalekit](https://scalekit.com) AgentKit SDK and gives your agent access to OAuth-authenticated actions across 100+ connectors and 3,000+ tools (Gmail, Slack, GitHub, Notion, Salesforce, and more).
 
 Scalekit handles OAuth token management, refresh flows, and connected account lifecycle so your agents can focus on executing actions.
 
