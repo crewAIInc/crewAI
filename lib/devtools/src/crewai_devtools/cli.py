@@ -2086,7 +2086,7 @@ def tag(dry_run: bool, no_edit: bool) -> None:
             console.print("[green]✓[/green] main branch up to date")
 
         release_notes, openai_client, is_prerelease = _generate_release_notes(
-            version, tag_name, no_edit, bump_already_done=not dry_run
+            version, tag_name, no_edit, bump_already_done=True
         )
 
         docs_branch = _update_docs_and_create_pr(
