@@ -446,7 +446,7 @@ class Agent(BaseAgent):
             return
 
         needs_work = self.skills and any(
-            isinstance(s, Path)
+            isinstance(s, (Path, str))
             or (isinstance(s, SkillModel) and s.disclosure_level < INSTRUCTIONS)
             for s in self.skills
         )
@@ -455,13 +455,22 @@ class Agent(BaseAgent):
 
         seen: set[str] = set()
         resolved: list[Path | SkillModel] = []
-        items: list[Path | SkillModel] = list(self.skills) if self.skills else []
+        items: list[Path | SkillModel | str] = list(self.skills) if self.skills else []
 
         if crew_skills:
             items.extend(crew_skills)
 
         for item in items:
-            if isinstance(item, Path):
+            if isinstance(item, str):
+                from crewai.skills.registry import is_registry_ref, parse_registry_ref, resolve_registry_ref
+                if is_registry_ref(item):
+                    skill = resolve_registry_ref(item, source=self)
+                    org, _ = parse_registry_ref(item)
+                    dedup_key = f"{org}/{skill.name}"
+                    if dedup_key not in seen:
+                        seen.add(dedup_key)
+                        resolved.append(skill)
+            elif isinstance(item, Path):
                 discovered = discover_skills(item, source=self)
                 for skill in discovered:
                     if skill.name not in seen:

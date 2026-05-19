@@ -28,6 +28,7 @@ from crewai_cli.run_crew import run_crew
 from crewai_cli.settings.main import SettingsCommand
 from crewai_cli.task_outputs import load_task_outputs
 from crewai_cli.tools.main import ToolCommand
+from crewai_cli.skills.main import SkillCommand
 from crewai_cli.train_crew import train_crew
 from crewai_cli.triggers.main import TriggersCommand
 from crewai_cli.update_crew import update_crew
@@ -544,6 +545,56 @@ def tool_publish(is_public: bool, force: bool) -> None:
     tool_cmd = ToolCommand()
     tool_cmd.login()
     tool_cmd.publish(is_public, force)
+
+
+@crewai.group()
+def skill() -> None:
+    """Skill Repository related commands."""
+
+
+@skill.command(name="create")
+@click.argument("name")
+@click.option(
+    "--no-project",
+    "in_project",
+    is_flag=True,
+    default=True,
+    flag_value=False,
+    help="Create skill in current dir instead of ./skills/",
+)
+def skill_create(name: str, in_project: bool) -> None:
+    skill_cmd = SkillCommand()
+    skill_cmd.create(name, in_project=in_project)
+
+
+@skill.command(name="install")
+@click.argument("ref")
+def skill_install(ref: str) -> None:
+    skill_cmd = SkillCommand()
+    skill_cmd.install(ref)
+
+
+@skill.command(name="publish")
+@click.option(
+    "--force",
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help="Skip git-state validation.",
+)
+@click.option("--public", "is_public", flag_value=True, default=False)
+@click.option("--private", "is_public", flag_value=False)
+@click.option("--org", default=None, help="Organisation slug (overrides settings).")
+def skill_publish(is_public: bool, org: str | None, force: bool) -> None:
+    skill_cmd = SkillCommand()
+    skill_cmd.publish(is_public, org=org, force=force)
+
+
+@skill.command(name="list")
+def skill_list() -> None:
+    """List locally installed skills."""
+    skill_cmd = SkillCommand()
+    skill_cmd.list_cached()
 
 
 @crewai.group()
