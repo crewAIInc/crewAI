@@ -300,6 +300,21 @@ class TestLLMIntegration:
             assert llm.provider == "orcarouter"
             assert llm.model == "auto"
 
+    def test_llm_creates_openai_compatible_for_orcarouter_with_explicit_provider(self):
+        """Test LLM factory routes to OrcaRouter when `provider="orcarouter"` is
+        passed explicitly, even if the model string has no `orcarouter/` prefix.
+
+        Covers the explicit-provider branch in addition to the prefix-based
+        routing branch verified by `test_llm_creates_openai_compatible_for_orcarouter`.
+        """
+        with patch.dict(os.environ, {"ORCAROUTER_API_KEY": "test-key"}):
+            llm = LLM(model="openai/gpt-5", provider="orcarouter")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "orcarouter"
+            # Model passes through untouched — no prefix to strip.
+            assert llm.model == "openai/gpt-5"
+            assert llm.base_url == "https://api.orcarouter.ai/v1"
+
     def test_orcarouter_attribution_headers(self):
         """Test OrcaRouter sends HTTP-Referer and X-Title attribution headers."""
         with patch.dict(os.environ, {"ORCAROUTER_API_KEY": "test-key"}):
