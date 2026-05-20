@@ -27,7 +27,7 @@ def _reset_flow_memory(flow: Flow[Any]) -> None:
             mem.reset()
         elif hasattr(mem, "_memory") and mem._memory is not None:
             mem._memory.reset()
-    except (FileNotFoundError, OSError):
+    except (FileNotFoundError, OSError, RuntimeError):
         pass
 
 
