@@ -75,6 +75,21 @@ def _serialize_embedder_spec(value: Any) -> dict[str, Any] | None:
     )
 
 
+def _validate_embedder_spec(value: Any) -> Any:
+    """Resolve provider_class dotted-path dicts back to a class on restore."""
+    if isinstance(value, dict) and set(value.keys()) == {"provider_class"}:
+        from crewai.types.callback import _resolve_dotted_path
+
+        cls = _resolve_dotted_path(value["provider_class"])
+        if not isinstance(cls, type) or not issubclass(cls, BaseEmbeddingsProvider):
+            raise ValueError(
+                f"provider_class {value['provider_class']!r} did not resolve to a "
+                "BaseEmbeddingsProvider subclass."
+            )
+        return cls
+    return value
+
+
 class Knowledge(BaseModel):
     """
     Knowledge is a collection of sources and setup for the vector store to save and query relevant context.
@@ -92,6 +107,7 @@ class Knowledge(BaseModel):
     storage: KnowledgeStorage | None = Field(default=None)
     embedder: Annotated[
         EmbedderConfig | None,
+        BeforeValidator(_validate_embedder_spec),
         PlainSerializer(
             _serialize_embedder_spec, return_type=dict | None, when_used="json"
         ),

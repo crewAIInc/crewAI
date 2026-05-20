@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
+from typing_extensions import Self
 
 from crewai.memory.types import (
     _RECALL_OVERSAMPLE_FACTOR,
@@ -36,16 +37,24 @@ class MemoryScope(BaseModel):
             return data
         if not isinstance(data, dict):
             raise ValueError(f"Expected dict or MemoryScope, got {type(data).__name__}")
-        if "memory" not in data:
-            raise ValueError("MemoryScope requires a 'memory' key")
-        memory = data.pop("memory")
+        memory = data.pop("memory", None)
         instance: MemoryScope = handler(data)
-        instance._memory = memory
+        if memory is not None:
+            instance._memory = memory
         root = instance.root_path.rstrip("/") or ""
         if root and not root.startswith("/"):
             root = "/" + root
         instance._root = root
         return instance
+
+    def bind(self, memory: Memory) -> Self:
+        """Rebind the runtime ``Memory`` dependency after restore.
+
+        Required after deserializing from a checkpoint, since the live
+        ``Memory`` cannot be serialized.
+        """
+        self._memory = memory
+        return self
 
     @property
     def read_only(self) -> bool:
@@ -209,13 +218,17 @@ class MemorySlice(BaseModel):
             return data
         if not isinstance(data, dict):
             raise ValueError(f"Expected dict or MemorySlice, got {type(data).__name__}")
-        if "memory" not in data:
-            raise ValueError("MemorySlice requires a 'memory' key")
-        memory = data.pop("memory")
+        memory = data.pop("memory", None)
         data["scopes"] = [s.rstrip("/") or "/" for s in data.get("scopes", [])]
         instance: MemorySlice = handler(data)
-        instance._memory = memory
+        if memory is not None:
+            instance._memory = memory
         return instance
+
+    def bind(self, memory: Memory) -> Self:
+        """Rebind the runtime ``Memory`` dependency after restore."""
+        self._memory = memory
+        return self
 
     def remember(
         self,

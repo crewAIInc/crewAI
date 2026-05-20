@@ -188,6 +188,11 @@ def _dotted_path_to_instance(value: Any) -> Any:
             "Only enable this for trusted checkpoint data."
         )
     cls = _resolve_dotted_path(value)
+    if not inspect.isclass(cls):
+        raise ValueError(
+            f"Invalid provider path {value!r}: expected a class, got "
+            f"{type(cls).__name__}"
+        )
     return cls()
 
 
