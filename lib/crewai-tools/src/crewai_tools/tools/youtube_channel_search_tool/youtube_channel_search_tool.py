@@ -42,11 +42,15 @@ class YoutubeChannelSearchTool(RagTool):
         self,
         youtube_channel_handle: str,
     ) -> None:
-        if not youtube_channel_handle.startswith("@"):
-            youtube_channel_handle = f"@{youtube_channel_handle}"
-        # Convert handle to a full YouTube URL so downstream loaders receive
-        # a valid channel URL instead of a bare handle.
-        channel_url = f"https://www.youtube.com/{youtube_channel_handle}"
+        # Accept fully-qualified URLs as-is; only normalize bare handles.
+        if youtube_channel_handle.startswith(("http://", "https://")):
+            channel_url = youtube_channel_handle
+        else:
+            if not youtube_channel_handle.startswith("@"):
+                youtube_channel_handle = f"@{youtube_channel_handle}"
+            # Convert handle to a full YouTube URL so downstream loaders receive
+            # a valid channel URL instead of a bare handle.
+            channel_url = f"https://www.youtube.com/{youtube_channel_handle}"
         super().add(channel_url, data_type=DataType.YOUTUBE_CHANNEL)
 
     def _run(  # type: ignore[override]
