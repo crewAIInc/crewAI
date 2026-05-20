@@ -104,7 +104,11 @@ def _get_server_config(agent: Agent) -> A2AServerConfig | None:
 def _normalize_signature_algorithms(
     signature_algorithms: Sequence[str] | None,
 ) -> tuple[str, ...] | None:
-    return tuple(signature_algorithms) if signature_algorithms is not None else None
+    if signature_algorithms is None:
+        return None
+    if isinstance(signature_algorithms, str):
+        return (signature_algorithms,)
+    return tuple(signature_algorithms)
 
 
 def _verify_agent_card_signatures(
