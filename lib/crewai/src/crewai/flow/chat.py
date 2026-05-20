@@ -9,7 +9,10 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
-from crewai.flow.conversation import get_conversation_messages, get_conversational_config
+from crewai.flow.conversation import (
+    get_conversation_messages,
+    get_conversational_config,
+)
 from crewai.utilities.types import LLMMessage
 
 

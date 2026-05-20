@@ -132,7 +132,7 @@ def append_message(
             messages = getattr(state, "messages", None)
             if messages is None:
                 object.__setattr__(state, "messages", [])
-                messages = getattr(state, "messages")
+                messages = state.messages
             if isinstance(messages, list):
                 messages.append(message)
                 return

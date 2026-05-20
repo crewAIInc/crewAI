@@ -321,12 +321,8 @@ class EventListener(BaseEventListener):
                 event.flow_name, list(source._methods.keys())
             )
             if not getattr(source, "suppress_flow_events", False):
-                self.formatter.handle_flow_created(
-                    event.flow_name, str(source.flow_id)
-                )
-                self.formatter.handle_flow_started(
-                    event.flow_name, str(source.flow_id)
-                )
+                self.formatter.handle_flow_created(event.flow_name, str(source.flow_id))
+                self.formatter.handle_flow_started(event.flow_name, str(source.flow_id))
 
         @crewai_event_bus.on(FlowFinishedEvent)
         def on_flow_finished(source: Any, event: FlowFinishedEvent) -> None:

@@ -2320,13 +2320,20 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         restore_from_state_id: str | None,
     ) -> Any:
         config = get_conversational_config(self) or self.conversational_config
-        prompt = interactive_prompt or (config.interactive_prompt if config else "You: ")
+        prompt = interactive_prompt or (
+            config.interactive_prompt if config else "You: "
+        )
         timeout = (
             interactive_timeout
             if interactive_timeout is not None
             else (config.interactive_timeout if config else None)
         )
-        exits = {c.strip().lower() for c in (exit_commands or (config.exit_commands if config else ("exit", "quit")))}
+        exits = {
+            c.strip().lower()
+            for c in (
+                exit_commands or (config.exit_commands if config else ("exit", "quit"))
+            )
+        }
         sid = session_id
         if sid is None and inputs and "id" in inputs:
             sid = str(inputs["id"])
@@ -2585,9 +2592,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     try:
                         await asyncio.wrap_future(future)
                     except Exception:
-                        logger.warning(
-                            "FlowStartedEvent handler failed", exc_info=True
-                        )
+                        logger.warning("FlowStartedEvent handler failed", exc_info=True)
                 if self._should_defer_trace_finalization():
                     object.__setattr__(self, "_conversation_trace_started", True)
                     object.__setattr__(
@@ -2599,9 +2604,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         TraceCollectionListener,
                     )
 
-                    TraceCollectionListener().batch_manager.defer_session_finalization = (
-                        True
-                    )
+                    TraceCollectionListener().batch_manager.defer_session_finalization = True
             if not self.suppress_flow_events:
                 self._log_flow_event(
                     f"Flow started with ID: {self.flow_id}", color="bold magenta"
@@ -3890,9 +3893,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             return
 
         result = self._method_outputs[-1] if self._method_outputs else None
-        if (
-            self._should_defer_trace_finalization()
-            and getattr(self, "_conversation_trace_started", False)
+        if self._should_defer_trace_finalization() and getattr(
+            self, "_conversation_trace_started", False
         ):
             started_id = getattr(self, "_conversation_flow_started_event_id", None)
             if started_id:

@@ -736,9 +736,7 @@ class TraceCollectionListener(BaseEventListener):
 
     def _nested_in_flow_execution(self) -> bool:
         """True when a crew runs inside a flow session (context or batch ownership)."""
-        return (
-            self._is_inside_active_flow_context() or self._flow_owns_trace_batch()
-        )
+        return self._is_inside_active_flow_context() or self._flow_owns_trace_batch()
 
     def _initialize_crew_batch(self, source: Any, event: BaseEvent) -> None:
         """Initialize trace batch.
