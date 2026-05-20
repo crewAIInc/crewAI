@@ -58,6 +58,10 @@ Agent failures rarely throw exceptions. They produce wrong outputs, miss tool ca
 <Steps>
   <Step title="Sign up and get your API key">
     Go to [neatlogs.com](https://neatlogs.com/?utm_source=crewAI-docs), create a project, and copy the API key from your dashboard.
+
+    <Frame>
+      <img src="/images/neatlogs-setup-1.gif" alt="Create a project and copy your API key" />
+    </Frame>
   </Step>
   <Step title="Install the SDK">
     ```bash
@@ -65,6 +69,8 @@ Agent failures rarely throw exceptions. They produce wrong outputs, miss tool ca
     ```
   </Step>
   <Step title="Add this before your Crew runs">
+    Call `neatlogs.init()` before importing CrewAI so the auto-instrumentation patches land first.
+
     ```python
     import os
     import neatlogs
@@ -73,29 +79,44 @@ Agent failures rarely throw exceptions. They produce wrong outputs, miss tool ca
         api_key=os.environ["NEATLOGS_API_KEY"],
         endpoint=os.environ["NEATLOGS_ENDPOINT"],
         workflow_name="my-agent",
-        instrumentations=["openai"],
+        instrumentations=["crewai"],
     )
+
+    # Now import and run your crew as normal
+    from crewai import Crew, Agent, Task
     ```
 
-    That's it. Every agent run is now captured automatically with no changes to the rest of your code.
+    That's it — no changes to the rest of your code.
+  </Step>
+  <Step title="Traces logged directly in your dashboard">
+    Every tool call, agent run, and LLM call is captured and surfaced in your Neatlogs dashboard automatically. Tag teammates and leave comments directly on any trace step — no context switching, no Slack threads, no copy-pasting outputs.
+
+    <video autoPlay loop muted playsInline className="w-full rounded-xl">
+      <source src="/images/neatlogs-traces.mp4" type="video/mp4" />
+    </video>
+  </Step>
+  <Step title="Experiments — version control for your prompts">
+    Iterate on prompts without touching production. Neatlogs gives you version control for every prompt in your crew and a playground to test changes side by side — so you can improve agent behaviour safely before it goes anywhere near your live system.
+
+    <Frame>
+      <img src="/images/neatlogs-setup-3.gif" alt="Prompt versioning and playground in Neatlogs Experiments" />
+    </Frame>
+  </Step>
+  <Step title="Code fixes directly in your IDE">
+    Get agent improvement suggestions and code fixes surfaced straight into Cursor, Codex, Claude Code, and other AI-native editors. Debug and improve your crew without leaving the tools you already work in.
+
+    <Frame>
+      <img src="/images/neatlogs-setup-4.gif" alt="Code fix suggestions in Cursor and Claude Code" />
+    </Frame>
+  </Step>
+  <Step title="Human evaluations">
+    Bring your team in to review agent outputs, mark runs as correct or incorrect, and build evaluation datasets straight from production traces. Close the loop between what your agents produce and what they should produce.
+
+    <video autoPlay loop muted playsInline className="w-full rounded-xl">
+      <source src="/images/neatlogs-codefixes.mp4" type="video/mp4" />
+    </video>
   </Step>
 </Steps>
-
-## What you'll see
-
-Once instrumented, every CrewAI run appears as a structured trace in your Neatlogs dashboard.
-
-<Frame>
-  <img src="/images/neatlogs-4.png" alt="Traces list view" />
-</Frame>
-
-<Frame>
-  <img src="/images/neatlogs-2.png" alt="Trace detail with comments" />
-</Frame>
-
-<Frame>
-  <img src="/images/neatlogs-3.png" alt="Trace analytics dashboard" />
-</Frame>
 
 ## Resources
 
