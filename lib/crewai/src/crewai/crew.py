@@ -348,9 +348,9 @@ class Crew(FlowTrackable, BaseModel):
         default=None,
         description="Knowledge for the crew.",
     )
-    skills: list[Path | Skill] | None = Field(
+    skills: list[Path | Skill | str] | None = Field(
         default=None,
-        description="Skill search paths or pre-loaded Skill objects applied to all agents in the crew.",
+        description="Skill search paths, pre-loaded Skill objects, or '@org/name' registry refs applied to all agents in the crew.",
     )
 
     security_config: SecurityConfig = Field(
@@ -566,6 +566,20 @@ class Crew(FlowTrackable, BaseModel):
             set_last_event_id(last_event_id)
         if max_seq > 0:
             set_emission_counter(max_seq)
+
+    @field_validator("skills", mode="before")
+    @classmethod
+    def coerce_skill_strings(cls, skills: Any) -> Any:
+        """Coerce plain path strings to Path objects; keep @-prefixed refs as str."""
+        if not isinstance(skills, list):
+            return skills
+        result = []
+        for item in skills:
+            if isinstance(item, str) and not item.startswith("@"):
+                result.append(Path(item))
+            else:
+                result.append(item)
+        return result
 
     @field_validator("id", mode="before")
     @classmethod

@@ -140,6 +140,7 @@ class PlusAPI:
     """Client for working with the CrewAI+ API."""
 
     TOOLS_RESOURCE: Final = "/crewai_plus/api/v1/tools"
+    SKILLS_RESOURCE: Final = "/crewai_plus/api/v1/skills"
     ORGANIZATIONS_RESOURCE: Final = "/crewai_plus/api/v1/me/organizations"
     CREWS_RESOURCE: Final = "/crewai_plus/api/v1/crews"
     AGENTS_RESOURCE: Final = "/crewai_plus/api/v1/agents"
@@ -227,6 +228,47 @@ class PlusAPI:
             else None,
         }
         return self._make_request("POST", f"{self.TOOLS_RESOURCE}", json=params)
+
+    def get_skill(
+        self, org: str, name: str, version: str | None = None
+    ) -> httpx.Response:
+        params: dict[str, str] = {}
+        if version is not None:
+            params["version"] = version
+        return self._make_request(
+            "GET",
+            f"{self.SKILLS_RESOURCE}/{org}/{name}",
+            params=params or None,
+        )
+
+    def publish_skill(
+        self,
+        org: str,
+        name: str,
+        version: str,
+        is_public: bool,
+        description: str | None,
+        encoded_file: str,
+    ) -> httpx.Response:
+        payload = {
+            "org": org,
+            "name": name,
+            "version": version,
+            "public": is_public,
+            "description": description,
+            "file": encoded_file,
+        }
+        return self._make_request("POST", self.SKILLS_RESOURCE, json=payload)
+
+    def list_skills(self, org: str | None = None) -> httpx.Response:
+        params: dict[str, str] = {}
+        if org is not None:
+            params["org"] = org
+        return self._make_request(
+            "GET",
+            self.SKILLS_RESOURCE,
+            params=params or None,
+        )
 
     def deploy_by_name(self, project_name: str) -> httpx.Response:
         return self._make_request(

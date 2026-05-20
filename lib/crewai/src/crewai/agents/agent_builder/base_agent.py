@@ -347,9 +347,9 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             "If not set, falls back to crew memory."
         ),
     )
-    skills: list[Path | Skill] | None = Field(
+    skills: list[Path | Skill | str] | None = Field(
         default=None,
-        description="Agent Skills. Accepts paths for discovery or pre-loaded Skill objects.",
+        description="Agent Skills. Accepts paths for discovery, pre-loaded Skill objects, or '@org/name' registry refs.",
         min_length=1,
     )
     execution_context: ExecutionContext | None = Field(default=None)
@@ -454,6 +454,20 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     @classmethod
     def process_model_config(cls, values: Any) -> dict[str, Any]:
         return process_config(values, cls)
+
+    @field_validator("skills", mode="before")
+    @classmethod
+    def coerce_skill_strings(cls, skills: Any) -> Any:
+        """Coerce plain path strings to Path objects; keep @-prefixed refs as str."""
+        if not isinstance(skills, list):
+            return skills
+        result = []
+        for item in skills:
+            if isinstance(item, str) and not item.startswith("@"):
+                result.append(Path(item))
+            else:
+                result.append(item)
+        return result
 
     @field_validator("tools")
     @classmethod
