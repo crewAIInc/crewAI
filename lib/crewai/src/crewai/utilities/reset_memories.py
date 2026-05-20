@@ -27,8 +27,14 @@ def _reset_flow_memory(flow: Flow[Any]) -> None:
             mem.reset()
         elif hasattr(mem, "_memory") and mem._memory is not None:
             mem._memory.reset()
-    except (FileNotFoundError, OSError, RuntimeError):
+    except FileNotFoundError:
+        # Storage directory was never created — nothing to reset.
         pass
+    except OSError as exc:
+        click.echo(f"Memory reset skipped: storage I/O error ({exc}).", err=True)
+    except RuntimeError as exc:
+        # Restored MemoryScope/MemorySlice without a rebound Memory.
+        click.echo(f"Memory reset skipped: {exc}", err=True)
 
 
 def reset_memories_command(
