@@ -97,7 +97,7 @@ from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
-from crewai.memory.memory_scope import MemoryScope, MemorySlice
+from crewai.memory.memory_scope import MemoryScope, MemorySlice, _ensure_memory_kind
 from crewai.memory.unified_memory import Memory
 from crewai.process import Process
 from crewai.rag.embeddings.types import EmbedderConfig
@@ -223,13 +223,14 @@ class Crew(FlowTrackable, BaseModel):
     ] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
     verbose: bool = Field(default=False)
-    memory: (
+    memory: Annotated[
         bool
         | Annotated[
             Memory | MemoryScope | MemorySlice, Field(discriminator="memory_kind")
         ]
-        | None
-    ) = Field(
+        | None,
+        BeforeValidator(_ensure_memory_kind),
+    ] = Field(
         default=False,
         description=(
             "Enable crew memory. Pass True for default Memory(), "

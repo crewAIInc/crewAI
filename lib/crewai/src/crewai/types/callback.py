@@ -154,7 +154,16 @@ SerializableCallable = Annotated[
 
 def _instance_to_dotted_path(value: Any) -> str:
     """Serialize an instance to a dotted path naming its class."""
+    if inspect.isclass(value):
+        raise ValueError(
+            f"Expected an instance, got class {value.__module__}.{value.__qualname__}."
+        )
     cls = type(value)
+    if cls.__module__ == "builtins":
+        raise ValueError(
+            f"Cannot serialize {value!r}: builtin values are not "
+            "checkpointable instances."
+        )
     module = getattr(cls, "__module__", None)
     qualname = getattr(cls, "__qualname__", None)
     if module is None or qualname is None:
@@ -194,11 +203,3 @@ def _dotted_path_to_instance(value: Any) -> Any:
             f"{type(cls).__name__}"
         )
     return cls()
-
-
-SerializableInstance = Annotated[
-    Any,
-    BeforeValidator(_dotted_path_to_instance),
-    PlainSerializer(_instance_to_dotted_path, return_type=str, when_used="json"),
-    WithJsonSchema({"type": "string"}),
-]

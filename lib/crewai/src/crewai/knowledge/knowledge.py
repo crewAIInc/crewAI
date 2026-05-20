@@ -41,17 +41,22 @@ def _resolve_knowledge_sources(value: Any) -> Any:
     for idx, item in enumerate(value):
         if isinstance(item, dict):
             tag = item.get("source_type")
-            cls = _KNOWN_SOURCES.get(tag) if isinstance(tag, str) else None
-            if cls is None:
+            if not isinstance(tag, str):
                 resolved.append(item)
-            else:
-                try:
-                    resolved.append(cls.model_validate(item))
-                except Exception as exc:
-                    raise ValueError(
-                        f"Failed to validate knowledge source at index {idx} "
-                        f"with source_type={tag!r}: {exc}"
-                    ) from exc
+                continue
+            cls = _KNOWN_SOURCES.get(tag)
+            if cls is None:
+                raise ValueError(
+                    f"Unknown source_type={tag!r} at index {idx}: "
+                    f"expected one of {sorted(_KNOWN_SOURCES)}"
+                )
+            try:
+                resolved.append(cls.model_validate(item))
+            except Exception as exc:
+                raise ValueError(
+                    f"Failed to validate knowledge source at index {idx} "
+                    f"with source_type={tag!r}: {exc}"
+                ) from exc
         else:
             resolved.append(item)
     return resolved
@@ -78,6 +83,13 @@ def _serialize_embedder_spec(value: Any) -> dict[str, Any] | None:
 def _validate_embedder_spec(value: Any) -> Any:
     """Resolve provider_class dotted-path dicts back to a class on restore."""
     if isinstance(value, dict) and set(value.keys()) == {"provider_class"}:
+        if not os.environ.get("CREWAI_DESERIALIZE_CALLBACKS"):
+            raise ValueError(
+                f"Refusing to resolve embedder provider_class "
+                f"{value['provider_class']!r}: set "
+                "CREWAI_DESERIALIZE_CALLBACKS=1 to allow. Only enable this "
+                "for trusted checkpoint data."
+            )
         from crewai.types.callback import _resolve_dotted_path
 
         cls = _resolve_dotted_path(value["provider_class"])

@@ -113,7 +113,7 @@ from crewai.flow.utils import (
     is_flow_method_name,
     is_simple_flow_condition,
 )
-from crewai.memory.memory_scope import MemoryScope, MemorySlice
+from crewai.memory.memory_scope import MemoryScope, MemorySlice, _ensure_memory_kind
 from crewai.memory.unified_memory import Memory
 from crewai.state.checkpoint_config import (
     CheckpointConfig,
@@ -164,7 +164,10 @@ def _serialize_persistence(value: Any) -> dict[str, Any] | None:
         return None
     if isinstance(value, FlowPersistence):
         return value.model_dump(mode="json")
-    return None
+    raise TypeError(
+        f"Cannot serialize Flow.persistence of type {type(value).__name__}: "
+        "expected FlowPersistence or None."
+    )
 
 
 def _validate_input_provider(value: Any) -> Any:
@@ -979,12 +982,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     name: str | None = Field(default=None)
     tracing: bool | None = Field(default=None)
     stream: bool = Field(default=False)
-    memory: (
+    memory: Annotated[
         Annotated[
             Memory | MemoryScope | MemorySlice, Field(discriminator="memory_kind")
         ]
-        | None
-    ) = Field(default=None)
+        | None,
+        BeforeValidator(_ensure_memory_kind),
+    ] = Field(default=None)
     input_provider: Annotated[
         InputProvider | None,
         BeforeValidator(_validate_input_provider),

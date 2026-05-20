@@ -133,11 +133,22 @@ def _backfill_memory_kind(value: Any) -> None:
 
 
 def _backfill_source_type(source: Any) -> None:
-    """Infer ``source_type`` for legacy knowledge source dicts when possible."""
+    """Infer ``source_type`` for legacy knowledge source dicts when possible.
+
+    Only StringKnowledgeSource is reliably inferrable: it stores ``content``
+    as a plain string. File-based sources (CSV/PDF/Excel/JSON/docling) also
+    have a ``content`` field but populate it with dicts/lists, so we leave
+    those untagged and let downstream validation surface a clear error.
+    """
     if not isinstance(source, dict) or "source_type" in source:
         return
-    if "content" in source:
+    if isinstance(source.get("content"), str):
         source["source_type"] = "string"
+        return
+    raise ValueError(
+        "Legacy knowledge source is missing 'source_type' and could not be "
+        "inferred during migration. Re-checkpoint after upgrading to 1.14.6+."
+    )
 
 
 def _backfill_discriminators(entity: Any) -> None:
