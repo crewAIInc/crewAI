@@ -484,7 +484,35 @@ class Crew(FlowTrackable, BaseModel):
         if self.checkpoint_train is not None:
             self._train = self.checkpoint_train
 
+        self._rebind_memory_views()
         self._restore_event_scope()
+
+    def _rebind_memory_views(self) -> None:
+        """Reattach a live ``Memory`` to restored ``MemoryScope``/``MemorySlice`` views.
+
+        Checkpoint JSON omits the live ``Memory`` dependency on scope/slice
+        views, so after restore they raise ``RuntimeError`` on first use.
+        Build a fresh ``Memory`` and bind it to any unbound views on the
+        crew and its agents.
+        """
+        from crewai.memory.memory_scope import MemoryScope, MemorySlice
+        from crewai.memory.unified_memory import Memory
+
+        fresh: Memory | None = None
+
+        def _ensure(view: Any) -> None:
+            nonlocal fresh
+            if not isinstance(view, MemoryScope | MemorySlice):
+                return
+            if view._memory is not None:
+                return
+            if fresh is None:
+                fresh = Memory()
+            view.bind(fresh)
+
+        _ensure(self.memory)
+        for agent in self.agents:
+            _ensure(agent.memory)
 
     def _restore_event_scope(self) -> None:
         """Rebuild the event scope stack from the checkpoint's event record."""

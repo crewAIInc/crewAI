@@ -1098,6 +1098,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             }
         if self.checkpoint_state is not None:
             self._restore_state(self.checkpoint_state)
+        if (
+            isinstance(self.memory, MemoryScope | MemorySlice)
+            and self.memory._memory is None
+        ):
+            self.memory.bind(Memory())
         restore_event_scope(())
         reset_last_event_id()
 
