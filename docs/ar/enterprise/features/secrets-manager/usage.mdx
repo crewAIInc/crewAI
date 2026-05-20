@@ -1,0 +1,136 @@
+---
+title: استخدام مدير الأسرار
+description: إدارة الأذونات والإشارة إلى الأسرار المُدارة من متغيرات البيئة في CrewAI Platform
+sidebarTitle: الاستخدام والأذونات
+---
+
+## نظرة عامة
+
+هذا الدليل محايد تجاه المزود. يفترض أنك (أو مسؤول آخر) قد كوّنت بالفعل بيانات اعتماد واحدة على الأقل لمزود أسرار. اختر دليل الإعداد الخاص بك بناءً على المسار الذي تريده:
+
+- بيانات الاعتماد الثابتة: [AWS](/ar/enterprise/features/secrets-manager/aws) · [GCP](/ar/enterprise/features/secrets-manager/gcp)
+- Workload Identity (مراعٍ للتدوير): [AWS](/ar/enterprise/features/secrets-manager/aws-workload-identity) · [GCP](/ar/enterprise/features/secrets-manager/gcp-workload-identity)
+
+استخدم هذا الدليل من أجل:
+
+- منح الأذونات الصحيحة لأعضاء المؤسسة.
+- الإشارة إلى الأسرار من متغيرات البيئة على أتمتاتك.
+- التحقق من أن كل شيء يُحَلّ بشكل صحيح وقت التشغيل.
+
+## الأذونات (RBAC)
+
+ثلاث ميزات في CrewAI Platform ذات صلة عند العمل مع مدير الأسرار:
+
+- `secret_providers` — تتحكم بالوصول إلى صفحة **بيانات اعتماد مزود الأسرار**.
+- `workload_identity_configs` — تتحكم بالوصول إلى صفحة **Workload Identity** (ذات صلة فقط إذا كنت تستخدم مسار WI).
+- `environment_variables` — تتحكم بمن يستطيع إنشاء أو تحرير متغيرات البيئة.
+
+لكل ميزة مستويا إجراء: `read` و `manage`. منح `manage` يستلزم تلقائياً `read`.
+
+### ما يجب منحه
+
+| الهدف | `secret_providers` | `workload_identity_configs` | `environment_variables` |
+|---|---|---|---|
+| استخدام بيانات اعتماد ثابتة موجودة في متغيرات البيئة (بدون تعديل المزود) | `read` | — | `manage` |
+| إنشاء أو تحرير أو حذف بيانات الاعتماد الثابتة | `manage` | — | `manage` |
+| استخدام بيانات اعتماد مدعومة بـ Workload Identity موجودة في متغيرات البيئة | `read` | — | `manage` |
+| إنشاء أو تحرير أو حذف تكوينات Workload Identity (وبيانات الاعتماد التي تشير إليها) | `manage` | `manage` | `manage` |
+
+<Note>
+يتمتع **المالكون** تلقائياً بالوصول الكامل إلى كل ميزة. يستبعد دور **العضو** الافتراضي عمداً `secret_providers` و `workload_identity_configs` — يجب على المسؤولين تضمين الأعضاء صراحةً عبر دور مخصص.
+</Note>
+
+### كيفية التعيين
+
+1. في CrewAI Platform، انتقل إلى **Settings** ← **Roles**. من هذه الصفحة يمكنك إنشاء أدوار جديدة وتحرير أذونات كل دور وتعيين الأدوار للأعضاء الحاليين في المؤسسة.
+
+   {/* SCREENSHOT: Sidebar highlighting Settings → Roles → /images/secrets-manager/usage/06-amp-settings-roles-nav.png */}
+   {/* SCREENSHOT: Roles list page with "Create Role" button visible → /images/secrets-manager/usage/07-amp-roles-list.png */}
+
+2. انقر على **Create Role** لإنشاء دور جديد، أو افتح دوراً موجوداً لتحرير أذوناته.
+
+3. في محرر أذونات الدور، بدّل الميزات ذات الصلة وفق الجدول أعلاه:
+
+   - `secret_providers`: اختر **read** إذا كان هذا الدور يحتاج فقط إلى استخدام بيانات الاعتماد الموجودة، أو **manage** إذا كان ينبغي أن يكون قادراً أيضاً على إنشاء بيانات الاعتماد وتحريرها وحذفها.
+   - `environment_variables`: اختر **manage** ليتمكن الدور من إنشاء متغيرات بيئة تُشير إلى الأسرار.
+
+   {/* SCREENSHOT: Role editor showing the secret_providers feature with read/manage toggles → /images/secrets-manager/usage/08-amp-role-editor-secret-providers-toggles.png */}
+   {/* SCREENSHOT: Role editor showing environment_variables toggles → /images/secrets-manager/usage/09-amp-role-editor-env-vars-toggles.png */}
+
+4. احفظ الدور.
+
+5. عيّن الدور للأعضاء ذوي الصلة من نفس صفحة Roles (أو قائمة أعضاء المؤسسة).
+
+   {/* SCREENSHOT: Member assignment screen where the new role is applied to a user → /images/secrets-manager/usage/10-amp-assign-role-to-member.png */}
+
+## الإشارة إلى الأسرار في متغيرات البيئة
+
+بمجرد وجود بيانات اعتماد للمزود وامتلاك دورك للأذونات الصحيحة، يمكنك الإشارة إلى الأسرار المُدارة من أي متغير بيئة.
+
+في CrewAI Platform، انتقل إلى **Environment Variables** وانقر على **Add Environment Variables**.
+
+{/* SCREENSHOT: Environment Variables empty state with "Add" button → /images/secrets-manager/usage/11-amp-env-vars-empty.png */}
+
+املأ النموذج:
+
+- **Key** — اسم متغير البيئة. يجب أن يبدأ بحرف أو شرطة سفلية ويحتوي فقط على حروف وأرقام وشرطات سفلية. عادةً بأحرف كبيرة، مثل `OPENAI_API_KEY`.
+
+- **Value Source** — اختر من أين تأتي القيمة:
+  - **Direct Value** — قيمة نصية صريحة تكتبها. استخدم هذا عندما لا ترغب في إشراك مزود.
+  - **Use AWS default** (أو ما يعادله لمزوّدك) — تستخدم بيانات الاعتماد المُعلَّمة حالياً كافتراضية لذلك النوع من المزود.
+  - **بيانات اعتماد مُسمَّاة محددة** — اختر بيانات الاعتماد بالاسم. استخدم هذا إذا كانت لديك بيانات اعتماد متعددة لنفس المزود (مثلاً `aws-prod` و `aws-staging`) وتريد اختيار واحدة صراحةً.
+
+  {/* SCREENSHOT: Env var form with the "Value Source" dropdown open, showing "AWS default" + named credentials → /images/secrets-manager/usage/12-amp-env-var-form-source-selector.png */}
+
+- **Secret Name** — اسم السر في مزوّدك. بمجرد اختيار بيانات الاعتماد، يُقدّم هذا الحقل اقتراحاً تلقائياً: ابدأ بالكتابة، وتستعلم CrewAI Platform مزوّدك عن أسماء الأسرار المطابقة.
+
+  استخدم الصيغة `secret-name#json_key` لاستخراج حقل واحد من سر مهيكل (JSON). على سبيل المثال، عند وجود سر `database-credentials` بقيمة `{"username": "...", "password": "..."}`، أَشِر إلى `database-credentials#password` لحقن كلمة المرور فقط.
+
+  {/* SCREENSHOT: Env var form with the secret name autocomplete dropdown showing live results → /images/secrets-manager/usage/13-amp-env-var-form-secret-name-autocomplete.png */}
+
+  <Note>
+  **ملاحظة Azure Key Vault:** لا يمكن أن تحتوي أسماء أسرار Azure على شرطات سفلية. تُحوّل CrewAI Platform تلقائياً الشرطات السفلية في حقل **Secret Name** إلى شرطات عند استدعاء Azure (مثلاً، `db_password` تُرسل كـ `db-password`).
+  </Note>
+
+انقر على **Create** لحفظ المتغير.
+
+{/* SCREENSHOT: Env var list with the new variable showing masked value and a "secret" indicator → /images/secrets-manager/usage/14-amp-env-var-created.png */}
+
+<Tip>
+عند تحرير متغير بيئة موجود، يحافظ ترك حقل **Value** فارغاً على القيمة الحالية. هذا مقصود — فهو يتيح لك تغيير حقول أخرى (مثل اسم السر أو بيانات الاعتماد) دون إعادة إدخال القيمة.
+</Tip>
+
+## التحقق من العمل
+
+للتحقق من البداية إلى النهاية:
+
+1. أَشِر إلى متغير البيئة على أتمتة أو طاقم أو عملية نشر تماماً كما تفعل مع أي متغير بيئة آخر.
+2. انشر الأتمتة.
+3. أطلق تشغيلاً وتأكد من اكتماله بنجاح.
+
+### يعتمد سلوك التدوير على مسار بيانات الاعتماد
+
+| مسار بيانات الاعتماد | متى يُقرأ السر | ما يتطلبه التدوير |
+|---|---|---|
+| **بيانات الاعتماد الثابتة** (مفاتيح AWS، ملف JSON لحساب خدمة GCP) | **وقت النشر** — تُدمج القيمة في صورة النشر | إعادة نشر الأتمتة بعد تدوير السر |
+| **Workload Identity** (اتحاد OIDC، AWS أو GCP) | **في كل إطلاق أتمتة** — تُجلب القيمة طازجة من سحابتك | لا شيء — يرى الإطلاق التالي بعد التدوير القيمة الجديدة |
+
+<Note>
+**إذا كنت تحتاج أسراراً مراعية للتدوير** (بدون إعادة نشر عند التدوير)، استخدم مسار Workload Identity: [AWS WI](/ar/enterprise/features/secrets-manager/aws-workload-identity) أو [GCP WI](/ar/enterprise/features/secrets-manager/gcp-workload-identity). المقايضة هي مزيد من جهد الإعداد مقدماً (تسجيل CrewAI Platform كمزود OIDC في سحابتك) ولكن عمليات أبسط على المدى الطويل.
+</Note>
+
+إذا فشل النشر أو التشغيل بخطأ متعلق بسرك، تحقق من الأسباب الأكثر شيوعاً:
+
+| العَرَض | السبب المحتمل |
+|---|---|
+| `no credential found` | يُشير متغير البيئة إلى مزود ولكن لم تُحدَّد بيانات اعتماد بعينها، ولا توجد بيانات اعتماد افتراضية مُعيّنة لذلك النوع من المزود. إما اختر بيانات اعتماد صراحةً على المتغير، أو علِّم بيانات اعتماد كافتراضية على صفحة **Secret Provider Credentials**. |
+| `secret not found` | خطأ مطبعي في **Secret Name**، أو أن السر غير موجود في حساب/منطقة المزود التي تشير إليها بيانات الاعتماد. تحقق من كليهما. |
+| تعمل الأتمتة بالقيمة القديمة بعد التدوير (مسار بيانات الاعتماد الثابتة) | القيمة السابقة مدمجة في صورة حاوية النشر. أعد نشر الأتمتة لاستيعاب القيمة المُدوَّرة. لتجنّب ذلك تماماً، حوّل بيانات الاعتماد إلى مسار Workload Identity. |
+| تعمل الأتمتة بالقيمة القديمة بعد التدوير (مسار Workload Identity) | تأكد من أن متغير البيئة يُشير إلى بيانات اعتماد مدعومة بـ WI (وليس مفاتيح ثابتة). مع WI، ينبغي أن يرى الإطلاق التالي بعد التدوير القيمة الجديدة. إن لم يحدث ذلك، تحقق من أن السر قد تم تحديثه فعلاً في سحابتك (مثلاً، `aws secretsmanager get-secret-value`). |
+| `JSON key not found` | عند استخدام `secret-name#json_key`، يجب أن يكون السر الأساسي كائن JSON صالحاً يحتوي على ذلك المفتاح. تحقق بقراءة السر مباشرة في مزوّدك. |
+
+## الخطوات التالية
+
+- [العودة إلى نظرة عامة على مدير الأسرار](/ar/enterprise/features/secrets-manager/overview)
+- بيانات الاعتماد الثابتة: [AWS](/ar/enterprise/features/secrets-manager/aws) · [GCP](/ar/enterprise/features/secrets-manager/gcp)
+- Workload Identity (مراعٍ للتدوير): [AWS](/ar/enterprise/features/secrets-manager/aws-workload-identity) · [GCP](/ar/enterprise/features/secrets-manager/gcp-workload-identity)

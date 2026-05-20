@@ -1,0 +1,294 @@
+---
+title: AWS Secrets Manager (Credenciais Estáticas)
+description: Configure o AWS Secrets Manager como provedor de segredos para a CrewAI Platform usando chaves de acesso estáticas ou AssumeRole
+sidebarTitle: AWS
+---
+
+## Visão Geral
+
+Este guia o orienta na configuração do AWS Secrets Manager como provedor de segredos para sua organização na CrewAI Platform, usando **credenciais estáticas** (chaves de acesso, opcionalmente com AssumeRole). Ao final, a CrewAI Platform poderá ler segredos armazenados na sua conta AWS e injetá-los como valores de variáveis de ambiente em runtime.
+
+<Note>
+Este guia cobre o caminho de **credenciais estáticas** — segredos são resolvidos no momento do deploy e incorporados à imagem do deployment. Valores rotacionados exigem um novo deploy. Se você quiser segredos conscientes de rotação que se atualizam a cada kickoff de automação (sem novo deploy), veja [AWS Workload Identity (Federação OIDC)](/pt-BR/enterprise/features/secrets-manager/aws-workload-identity).
+</Note>
+
+<Note>
+Este guia cobre a configuração do lado da AWS e a configuração da credencial na CrewAI Platform. Para então referenciar um segredo a partir de uma variável de ambiente, veja [Usando o Secrets Manager](/pt-BR/enterprise/features/secrets-manager/usage).
+</Note>
+
+## Pré-requisitos
+
+<Note>
+Antes de começar, certifique-se de que você tem:
+
+- Uma conta AWS com permissão para criar usuários IAM, políticas gerenciadas pelo cliente e (opcionalmente) papéis IAM.
+- A região AWS onde seus segredos vivem (ou viverão), por exemplo `us-east-1`.
+- Uma organização na CrewAI Platform onde seu usuário tem a permissão `secret_providers: manage`. Veja [Permissões (RBAC)](/pt-BR/enterprise/features/secrets-manager/usage#permissions-rbac).
+</Note>
+
+## Escolha um Método de Autenticação
+
+A CrewAI Platform suporta duas formas para que a plataforma se autentique no AWS Secrets Manager. Escolha uma antes de começar — os passos abaixo diferem dependendo do que você escolher.
+
+| Método | Quando usar | Trade-offs |
+|---|---|---|
+| **Chaves de acesso estáticas** | Começar rápido, deployments single-account | Configuração mais simples; chaves de acesso devem ser rotacionadas manualmente |
+| **AssumeRole** | Cross-account, hardening de produção | Credenciais de curta duração; suporta External ID; requer papel IAM extra |
+
+O restante deste guia usa abas nos Passos 3–5 para que você possa seguir o caminho que corresponde à sua escolha.
+
+## Passo 1 — Criar um Usuário IAM
+
+Abra o [console IAM](https://console.aws.amazon.com/iam/), navegue até **Users**, depois clique em **Create user**.
+
+- Nome sugerido: `crewai-secrets-reader`.
+- Deixe **Provide user access to the AWS Management Console** desmarcado — este principal é usado programaticamente pela CrewAI Platform, não por humanos.
+- Clique em **Next**.
+
+Na página **Set permissions**, deixe a seleção padrão. Você anexará a política no Passo 3.
+
+Clique em **Next**, revise e clique em **Create user**.
+
+Para detalhes completos, veja a documentação da AWS: [Create an IAM user in your AWS account](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_users_create.html).
+
+{/* SCREENSHOT: AWS IAM "Create user" form filled with name "crewai-secrets-reader" → /images/secrets-manager/aws/01-create-iam-user.png */}
+
+## Passo 2 — Criar a Política IAM
+
+A CrewAI Platform precisa de acesso somente leitura ao AWS Secrets Manager e permissão para descriptografar segredos via KMS. Crie uma política gerenciada pelo cliente com o seguinte JSON.
+
+No console IAM, navegue até **Policies**, depois clique em **Create policy**.
+
+Escolha a aba **JSON** e substitua o conteúdo por:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "SecretsManagerRead",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:ListSecrets",
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "KMSDecrypt",
+      "Effect": "Allow",
+      "Action": [
+        "kms:DescribeKey",
+        "kms:Decrypt"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+Clique em **Next**, então na página **Review and create**:
+
+- **Policy name:** `CrewAISecretsManagerRead`
+- **Description (optional):** `Read-only access to AWS Secrets Manager for CrewAI Platform`
+
+Clique em **Create policy**.
+
+<Tip>
+A política acima concede `*` em `Resource` para simplicidade. Em produção, restrinja o `Resource` aos ARNs dos segredos específicos que a CrewAI Platform deve acessar e restrinja `kms:Decrypt` aos ARNs das chaves KMS específicas que criptografam esses segredos. Veja a [orientação da AWS sobre menor privilégio](https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_create-console.html).
+</Tip>
+
+{/* SCREENSHOT: AWS IAM "Create policy" → JSON tab with the policy above pasted → /images/secrets-manager/aws/02-create-policy-json-editor.png */}
+{/* SCREENSHOT: AWS IAM "Review and create policy" page with name "CrewAISecretsManagerRead" → /images/secrets-manager/aws/03-policy-review-and-create.png */}
+
+## Passo 3 — Anexar a Política
+
+<Tabs>
+  <Tab title="Chaves de acesso estáticas">
+    1. No console IAM, navegue até **Users** e clique no usuário que você criou no Passo 1.
+    2. Na aba **Permissions**, clique em **Add permissions** → **Attach policies directly**.
+    3. Procure por `CrewAISecretsManagerRead`, selecione-a e clique em **Next**.
+    4. Clique em **Add permissions**.
+
+    {/* SCREENSHOT: "Add permissions" → "Attach policies directly" with CrewAISecretsManagerRead selected → /images/secrets-manager/aws/04a-attach-policy-to-user.png */}
+  </Tab>
+
+  <Tab title="AssumeRole">
+    Com AssumeRole, a política é anexada a um **role** IAM separado (não diretamente ao usuário). O usuário do Passo 1 só precisa de permissão para chamar `sts:AssumeRole` nesse role.
+
+    **Criar o role:**
+
+    1. No console IAM, navegue até **Roles** e clique em **Create role**.
+    2. **Trusted entity type:** AWS account. Escolha **This account** (ou **Another AWS account** para setups cross-account, depois informe o ID da conta AWS que hospeda o usuário IAM do Passo 1).
+    3. (Recomendado) Marque **Require external ID** e digite um valor que você mesmo gera — este é um segredo compartilhado que você colará na CrewAI Platform no Passo 5.
+    4. Clique em **Next**.
+    5. Anexe a política `CrewAISecretsManagerRead`.
+    6. Clique em **Next**, nomeie o role como `CrewAISecretsManagerRole` e clique em **Create role**.
+
+    **Permitir que o usuário IAM assuma o role:**
+
+    1. Abra o role que você acabou de criar e copie seu **ARN**.
+    2. No console IAM, navegue até **Users**, clique no usuário do Passo 1 e na aba **Permissions** clique em **Add permissions** → **Create inline policy**.
+    3. Na aba **JSON**, cole o seguinte (substitua `ROLE_ARN_FROM_ABOVE`):
+
+    ```json
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Action": "sts:AssumeRole",
+          "Resource": "ROLE_ARN_FROM_ABOVE"
+        }
+      ]
+    }
+    ```
+
+    4. Nomeie a política como `CrewAIAssumeSecretsRole` e clique em **Create policy**.
+
+    {/* SCREENSHOT: IAM "Create role" trust policy step with External ID checkbox enabled → /images/secrets-manager/aws/04b-create-role-trust-policy.png */}
+    {/* SCREENSHOT: Inline sts:AssumeRole policy attached to the IAM user → /images/secrets-manager/aws/04c-attach-assumerole-on-user.png */}
+  </Tab>
+</Tabs>
+
+## Passo 4 — Obter Credenciais
+
+<Tabs>
+  <Tab title="Chaves de acesso estáticas">
+    1. No console IAM, abra o usuário do Passo 1.
+    2. Clique na aba **Security credentials**.
+    3. Em **Access keys**, clique em **Create access key**.
+    4. Selecione **Application running outside AWS** (ou **Other**) como caso de uso. Clique em **Next**.
+    5. (Opcional) Adicione uma tag de descrição. Clique em **Create access key**.
+    6. Clique em **Show** para revelar a secret access key, então copie tanto o **Access key ID** quanto a **Secret access key**, ou clique em **Download .csv file**.
+
+    <Warning>
+    A secret access key é mostrada apenas uma vez. Se você fechar esta página sem copiá-la, precisará excluir a chave e criar uma nova.
+    </Warning>
+
+    Para detalhes completos, veja a documentação da AWS: [Manage access keys for IAM users](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html).
+
+    {/* SCREENSHOT: Access key use-case selector ("Application running outside AWS") → /images/secrets-manager/aws/05a-create-access-key-use-case.png */}
+    {/* SCREENSHOT: "Retrieve access keys" page with Show/Download buttons → /images/secrets-manager/aws/06a-retrieve-access-keys.png */}
+  </Tab>
+
+  <Tab title="AssumeRole">
+    Mesmo com AssumeRole, a CrewAI Platform ainda precisa de uma chave de acesso para o usuário IAM — ela usa essas chaves como identidade chamadora para realizar a chamada `sts:AssumeRole`.
+
+    1. Crie uma access key para o usuário exatamente como descrito na aba **Chaves de acesso estáticas** acima.
+    2. Abra o role que você criou no Passo 3 e copie:
+       - O **Role ARN** (do resumo do role).
+       - O **External ID** que você configurou (se houver) — você definiu isso no Passo 3, então certifique-se de tê-lo à mão.
+
+    {/* SCREENSHOT: IAM role detail page showing Role ARN → /images/secrets-manager/aws/05b-role-arn-detail.png */}
+  </Tab>
+</Tabs>
+
+## Passo 5 — Adicionar a Credencial na CrewAI Platform
+
+Na CrewAI Platform, navegue até **Settings** → **Secret Provider Credentials** e clique em **Add Credential**.
+
+{/* SCREENSHOT: Sidebar/nav highlighting Settings → Secret Provider Credentials → /images/secrets-manager/usage/01-amp-settings-nav.png */}
+{/* SCREENSHOT: Empty state of Secret Provider Credentials page with "Add Credential" button → /images/secrets-manager/usage/02-amp-credentials-empty-state.png */}
+
+<Tabs>
+  <Tab title="Chaves de acesso estáticas">
+    Preencha o formulário:
+
+    - **Name:** Um nome descritivo, ex. `aws-prod`.
+    - **Provider:** `AWS Secrets Manager`.
+    - **Region:** A região AWS onde seus segredos vivem, ex. `us-east-1`. Deve corresponder à região dos segredos que você quer ler.
+    - **Access Key ID:** O valor do Passo 4.
+    - **Secret Access Key:** O valor do Passo 4.
+    - (Opcional) Marque **Set as default credential for this provider**. A credencial padrão é usada por variáveis de ambiente que referenciam segredos AWS sem especificar uma credencial explicitamente.
+
+    Deixe **Role ARN** e **External ID** em branco.
+
+    Clique em **Create**.
+
+    {/* SCREENSHOT: "Add Secret Provider Credential" form with AWS + static access keys filled in → /images/secrets-manager/usage/03a-amp-add-credential-form-aws-static.png */}
+  </Tab>
+
+  <Tab title="AssumeRole">
+    Preencha o formulário:
+
+    - **Name:** Um nome descritivo, ex. `aws-prod-assumerole`.
+    - **Provider:** `AWS Secrets Manager`.
+    - **Region:** A região AWS onde seus segredos vivem.
+    - **Access Key ID:** A access key do usuário IAM do Passo 4 (usada para chamar o STS).
+    - **Secret Access Key:** A secret access key do usuário IAM do Passo 4.
+    - **Role ARN:** O Role ARN que você copiou no Passo 4.
+    - **External ID:** O External ID que você definiu na trust policy do role (omita se não houver).
+    - (Opcional) Marque **Set as default credential for this provider**.
+
+    Clique em **Create**.
+
+    {/* SCREENSHOT: "Add Secret Provider Credential" form with AWS + AssumeRole fields filled in → /images/secrets-manager/usage/03b-amp-add-credential-form-aws-assumerole.png */}
+  </Tab>
+</Tabs>
+
+<Note>
+**Como os dois modos se comportam em runtime:**
+
+- Com apenas **chaves de acesso estáticas**, a CrewAI Platform chama o AWS Secrets Manager diretamente usando as chaves que você forneceu.
+- Quando um **Role ARN** está definido, a CrewAI Platform primeiro chama `sts:AssumeRole` com as chaves de acesso fornecidas (e External ID se configurado), depois usa as credenciais de curta duração retornadas pelo STS para ler seus segredos.
+</Note>
+
+{/* SCREENSHOT: Credentials list showing the new AWS row, with "(default)" badge if applicable → /images/secrets-manager/usage/04-amp-credential-created.png */}
+
+## Passo 6 — Criar Pelo Menos Um Segredo na AWS
+
+Se você ainda não tem segredos no AWS Secrets Manager, crie um agora para que possa verificar a conexão no Passo 7.
+
+No [console do AWS Secrets Manager](https://console.aws.amazon.com/secretsmanager/), clique em **Store a new secret**.
+
+- **Secret type:** Escolha **Other type of secret**.
+- **Key/value pairs** — ou:
+  - Informe um ou mais pares chave/valor (recomendado para segredos estruturados), ou
+  - Use a aba **Plaintext** para um único valor de string.
+- **Encryption key:** Use `aws/secretsmanager` (a chave gerenciada pela AWS) a menos que você tenha um requisito específico de chave KMS.
+
+Clique em **Next**, então informe:
+
+- **Secret name:** Um nome único, ex. `crewai/openai-api-key`.
+- **Description (optional):** Uma nota curta sobre o propósito do segredo.
+
+Clique em **Next** pelos passos de rotação e revisão, depois clique em **Store**.
+
+<Note>
+**Sintaxe de referência por chave JSON.** Se você armazenar um segredo com múltiplos pares chave/valor (um objeto JSON), a CrewAI Platform pode extrair um campo específico usando a sintaxe `secret-name#json_key` em referências de variáveis de ambiente. Por exemplo, um segredo chamado `database-credentials` com `{"username": "...", "password": "..."}` pode ser referenciado como `database-credentials#password`. Veja [Usando o Secrets Manager](/pt-BR/enterprise/features/secrets-manager/usage#referencing-secrets-in-environment-variables) para detalhes.
+</Note>
+
+Para detalhes completos, veja a documentação da AWS: [Create an AWS Secrets Manager secret](https://docs.aws.amazon.com/secretsmanager/latest/userguide/create_secret.html).
+
+{/* SCREENSHOT: AWS Secrets Manager "Choose secret type" page → /images/secrets-manager/aws/07-create-secret-store-type.png */}
+{/* SCREENSHOT: AWS Secrets Manager "Configure secret" page with name and description → /images/secrets-manager/aws/08-create-secret-name.png */}
+
+## Passo 7 — Testar a Conexão
+
+De volta à CrewAI Platform, na página **Secret Provider Credentials**, encontre a credencial que você acabou de criar e clique em **Test Connection**.
+
+Um toast de sucesso confirma que a CrewAI Platform consegue se autenticar na AWS e ler segredos da sua conta.
+
+{/* SCREENSHOT: Success toast after clicking "Test Connection" → /images/secrets-manager/usage/05-amp-test-connection-success.png */}
+
+Se o teste falhar, verifique as causas mais comuns:
+
+| Sintoma | Causa provável |
+|---|---|
+| `AccessDenied` em `secretsmanager:ListSecrets` | Política não anexada, ou usuário errado. Reconfira o Passo 3. |
+| `AccessDenied` em `kms:Decrypt` | Falta a declaração `KMSDecrypt`, ou seus segredos usam uma chave KMS gerenciada pelo cliente não coberta por `Resource: "*"`. |
+| `InvalidClientTokenId` / `SignatureDoesNotMatch` | Access key ID ou secret access key errados. Reconfira os Passos 4 e 5. |
+| `RegionDisabledException` / nenhum segredo encontrado | A **Region** da credencial não corresponde a onde seus segredos realmente vivem. |
+| `AccessDenied` em `sts:AssumeRole` (apenas AssumeRole) | Política inline `sts:AssumeRole` ausente no usuário IAM, ou a trust policy do role não permite este principal, ou o External ID não corresponde. |
+| Teste passa imediatamente após criar o usuário IAM, mas falha da próxima vez | Credenciais IAM às vezes levam um ou dois minutos para se propagar globalmente. Tente novamente. |
+
+## Próximos Passos
+
+Agora que a AWS está conectada, vá para [Usando o Secrets Manager](/pt-BR/enterprise/features/secrets-manager/usage) para:
+
+- Conceder aos membros da organização as permissões corretas para usar (ou gerenciar) o Secrets Manager.
+- Referenciar seus segredos AWS a partir de variáveis de ambiente da CrewAI Platform.
+
+Se você quiser segredos **conscientes de rotação** que se propagam sem novo deploy, mude para [AWS Workload Identity (Federação OIDC)](/pt-BR/enterprise/features/secrets-manager/aws-workload-identity) — mesmo cofre de segredos, sem credenciais estáticas, segredos buscados por kickoff.

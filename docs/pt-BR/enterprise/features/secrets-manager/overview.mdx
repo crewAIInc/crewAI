@@ -1,0 +1,81 @@
+---
+title: Visão Geral do Secrets Manager
+description: Conecte cofres de segredos externos à CrewAI Platform e referencie segredos gerenciados a partir de variáveis de ambiente
+sidebarTitle: Visão Geral
+---
+
+## Visão Geral
+
+O recurso Secrets Manager permite que sua organização conecte um cofre de segredos externo — AWS Secrets Manager, Google Cloud Secret Manager ou (em breve) Azure Key Vault — e referencie esses segredos diretamente a partir de variáveis de ambiente nas suas automações e crews. Em vez de colar valores em texto puro na plataforma, você armazena um conjunto de credenciais por provedor e se refere aos segredos pelo nome.
+
+Isso oferece a você:
+
+- **Armazenamento centralizado** — gerencie segredos no seu provedor em vez de editar a configuração da CrewAI Platform. A CrewAI Platform não mantém nenhuma cópia em texto puro do valor do segredo.
+- **Exposição reduzida** — valores sensíveis nunca ficam em texto puro na sua configuração da CrewAI Platform.
+- **Auditabilidade cloud-native** — o log de auditoria do seu provedor registra cada leitura de segredo.
+
+<Note>
+O Secrets Manager (tanto o caminho de credenciais estáticas quanto o de Workload Identity) requer o runtime da CrewAI versão `1.14.5` ou superior na imagem do pod de automação.
+</Note>
+
+## Dois Caminhos: Credenciais Estáticas vs Workload Identity
+
+Existem duas formas de conectar a CrewAI Platform ao cofre de segredos da sua nuvem. **Eles diferem significativamente no comportamento de rotação**, então escolha com base em quão frequentemente seus segredos são rotacionados e quão rigorosa é a sua postura de segurança.
+
+| Aspecto | Credenciais Estáticas | Workload Identity (Federação OIDC) |
+|---|---|---|
+| **Autenticação** | Chaves de acesso de longa duração / JSON de service account armazenados na CrewAI Platform | Tokens de curta duração emitidos por processo worker; nenhuma credencial estática armazenada em lugar algum |
+| **Propagação de rotação** | Resolvida no momento do deploy e **incorporada à imagem do contêiner do deployment** — valores rotacionados exigem um novo deploy | Resolvida no **momento da execução da automação** — valores rotacionados se propagam para o próximo kickoff sem novo deploy |
+| **Esforço de configuração** | Menor — cole chaves / faça upload do JSON da service account | Maior — registre a CrewAI Platform como um provedor OIDC na sua nuvem, configure políticas de confiança |
+| **Melhor para** | Começar rápido, segredos rotacionados raramente, deployments single-account | Produção, segredos rotacionados frequentemente, ambientes guiados por compliance que proíbem credenciais de longa duração |
+
+<Note>
+**Ambos os caminhos usam o mesmo fluxo de UI** para referenciar segredos em variáveis de ambiente (veja [Usando o Secrets Manager](/pt-BR/enterprise/features/secrets-manager/usage)). A diferença está inteiramente em como a plataforma se autentica na sua nuvem e em quando lê o valor do segredo.
+</Note>
+
+### Escolha seu guia de configuração
+
+| Provedor | Credenciais Estáticas | Workload Identity |
+|---|---|---|
+| AWS Secrets Manager | [AWS — chaves estáticas / AssumeRole](/pt-BR/enterprise/features/secrets-manager/aws) | [AWS — Workload Identity (OIDC)](/pt-BR/enterprise/features/secrets-manager/aws-workload-identity) |
+| Google Cloud Secret Manager | [GCP — chave de service account](/pt-BR/enterprise/features/secrets-manager/gcp) | [GCP — Workload Identity Federation](/pt-BR/enterprise/features/secrets-manager/gcp-workload-identity) |
+| Azure Key Vault | [Azure — client secret](/pt-BR/enterprise/features/secrets-manager/azure) | [Azure — Workload Identity Federation](/pt-BR/enterprise/features/secrets-manager/azure-workload-identity) |
+
+<Note>
+As interfaces de Secrets Manager e Workload Identity estão atualmente marcadas como **Beta** na CrewAI Platform.
+</Note>
+
+## Como Tudo se Encaixa
+
+Configurar o Secrets Manager é um fluxo de três passos que envolve tanto o seu provedor de nuvem quanto a CrewAI Platform:
+
+1. **Um admin configura uma credencial de provedor.** Este é o trabalho do lado da nuvem — e o trabalho difere dependendo de qual caminho (credenciais estáticas ou Workload Identity) você escolher. Os guias específicos por provedor cobrem isso de ponta a ponta.
+2. **Um admin (ou um membro autorizado) referencia um segredo em uma variável de ambiente.** Na página de Variáveis de Ambiente, o usuário escolhe uma credencial de provedor e seleciona o nome do segredo. Veja [Usando o Secrets Manager](/pt-BR/enterprise/features/secrets-manager/usage#referencing-secrets-in-environment-variables).
+3. **A automação recebe o valor resolvido em runtime.** Quando um crew ou automação executa, a CrewAI Platform busca o segredo do seu provedor e o injeta como o valor da variável de ambiente. Com Workload Identity, essa busca acontece a cada kickoff (consciente de rotação). Com credenciais estáticas, essa busca acontece no momento do deploy e o valor é incorporado à imagem do deployment.
+
+## Permissões
+
+Duas features da CrewAI Platform controlam o acesso ao Secrets Manager:
+
+- `secret_providers` — controla quem pode visualizar ou gerenciar credenciais de provedor.
+- `environment_variables` — controla quem pode criar e editar variáveis de ambiente (incluindo aquelas que referenciam segredos).
+
+Uma terceira feature controla a configuração do Workload Identity:
+
+- `workload_identity_configs` — controla quem pode visualizar ou gerenciar configurações de Workload Identity. Necessário apenas se você estiver usando o caminho Workload Identity.
+
+Owners sempre têm acesso total. Members **não** recebem acesso a `secret_providers` ou `workload_identity_configs` por padrão e precisam receber permissão por meio de um papel customizado. Veja [Permissões (RBAC)](/pt-BR/enterprise/features/secrets-manager/usage#permissions-rbac) para a matriz completa e instruções passo a passo.
+
+## Próximos Passos
+
+Escolha seu caminho:
+
+- **Credenciais estáticas** (mais simples, requer novo deploy na rotação):
+  - [Configurar AWS Secrets Manager](/pt-BR/enterprise/features/secrets-manager/aws)
+  - [Configurar Google Cloud Secret Manager](/pt-BR/enterprise/features/secrets-manager/gcp)
+  - [Configurar Azure Key Vault](/pt-BR/enterprise/features/secrets-manager/azure)
+- **Workload Identity** (consciente de rotação, sem novo deploy):
+  - [Configurar AWS Workload Identity](/pt-BR/enterprise/features/secrets-manager/aws-workload-identity)
+  - [Configurar GCP Workload Identity Federation](/pt-BR/enterprise/features/secrets-manager/gcp-workload-identity)
+  - [Configurar Azure Workload Identity Federation](/pt-BR/enterprise/features/secrets-manager/azure-workload-identity)
+- Em seguida: [Use segredos em variáveis de ambiente e gerencie permissões](/pt-BR/enterprise/features/secrets-manager/usage)

@@ -1,0 +1,188 @@
+---
+title: Google Cloud Secret Manager
+description: Google Cloud Secret Manager를 CrewAI Platform의 시크릿 공급자로 처음부터 끝까지 구성합니다
+sidebarTitle: GCP
+---
+
+## 개요
+
+이 가이드는 **서비스 계정 자격 증명**을 사용하여 Google Cloud Secret Manager를 CrewAI Platform 조직의 시크릿 공급자로 구성하는 방법을 안내합니다. 완료되면 CrewAI Platform이 Google Cloud 프로젝트에 저장된 시크릿을 읽고 런타임에 환경 변수 값으로 주입할 수 있습니다.
+
+<Note>
+이 가이드는 **정적 자격 증명** 경로를 다룹니다 — 시크릿은 배포 시점에 해석되고 배포 이미지에 박힙니다. 로테이션된 값은 재배포가 필요합니다. 매 자동화 kickoff마다 업데이트되는 로테이션 인식 시크릿을 원한다면 [GCP Workload Identity Federation](/ko/enterprise/features/secrets-manager/gcp-workload-identity)을 참조하세요.
+</Note>
+
+<Note>
+이 가이드는 GCP 측 구성과 CrewAI Platform의 자격 증명 설정을 다룹니다. 환경 변수에서 시크릿을 참조하려면 [Secrets Manager 사용하기](/ko/enterprise/features/secrets-manager/usage)를 참조하세요.
+</Note>
+
+## 사전 준비 사항
+
+<Note>
+시작하기 전에 다음을 준비하세요:
+
+- **Secret Manager API**가 활성화된 Google Cloud 프로젝트. [APIs & Services 콘솔](https://console.cloud.google.com/apis/library/secretmanager.googleapis.com)에서 또는 `gcloud`를 통해 활성화하세요:
+
+  ```bash
+  gcloud services enable secretmanager.googleapis.com --project=YOUR_PROJECT_ID
+  ```
+
+- 서비스 계정 생성, IAM 역할 부여, (필요한 경우) 시크릿 생성에 대한 프로젝트 권한.
+- 사용자가 `secret_providers: manage` 권한을 가진 CrewAI Platform 조직. [권한 (RBAC)](/ko/enterprise/features/secrets-manager/usage#permissions-rbac)을 참조하세요.
+</Note>
+
+## 1단계 — 서비스 계정 생성
+
+서비스 계정은 CrewAI Platform이 인증할 GCP 측 ID입니다.
+
+[IAM & Admin → Service Accounts 콘솔](https://console.cloud.google.com/iam-admin/serviceaccounts)에서 **Create Service Account**를 클릭합니다.
+
+- **Service account name:** `crewai-secrets-reader`
+- **Service account ID:** 이름에서 자동으로 채워짐(예: `crewai-secrets-reader@YOUR_PROJECT_ID.iam.gserviceaccount.com`)
+- **Description (optional):** "Read-only access to Secret Manager for CrewAI Platform"
+
+**Create and Continue**를 클릭합니다. 이 화면에서 선택적 권한 부여는 건너뜁니다 — 역할은 2단계에서 연결합니다. **Done**을 클릭합니다.
+
+자세한 내용은 GCP 문서를 참조하세요: [Create service accounts](https://cloud.google.com/iam/docs/service-accounts-create).
+
+{/* SCREENSHOT: GCP "Create service account" form with name "crewai-secrets-reader" → /images/secrets-manager/gcp/01-create-service-account.png */}
+
+## 2단계 — Secret Manager 액세스 부여
+
+CrewAI Platform은 프로젝트의 시크릿을 나열하고 읽을 수 있는 권한이 필요합니다. 두 가지 범위 중 하나를 사용하세요 — 간소화를 위한 **프로젝트 전체** 또는 최소 권한을 위한 **시크릿별**.
+
+<Tabs>
+  <Tab title="프로젝트 전체 (더 간단함)">
+    [IAM 콘솔](https://console.cloud.google.com/iam-admin/iam)에서 **Grant Access**를 클릭하고:
+
+    - **New principals:** 1단계 서비스 계정의 이메일.
+    - **Role:** **Secret Manager Secret Accessor** (`roles/secretmanager.secretAccessor`).
+
+    **Save**를 클릭합니다.
+
+    또는 `gcloud`를 통해:
+
+    ```bash
+    gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+      --member="serviceAccount:crewai-secrets-reader@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+      --role="roles/secretmanager.secretAccessor"
+    ```
+
+    {/* SCREENSHOT: GCP IAM "Grant access" panel with the service account and Secret Manager Secret Accessor role → /images/secrets-manager/gcp/02-iam-grant-access.png */}
+  </Tab>
+
+  <Tab title="시크릿별 (최소 권한)">
+    CrewAI Platform이 액세스해야 하는 특정 시크릿에만 역할을 부여합니다. 각 시크릿에 대해 반복합니다:
+
+    ```bash
+    gcloud secrets add-iam-policy-binding YOUR_SECRET_NAME \
+      --member="serviceAccount:crewai-secrets-reader@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+      --role="roles/secretmanager.secretAccessor" \
+      --project=YOUR_PROJECT_ID
+    ```
+
+    또는 콘솔에서: [Secret Manager](https://console.cloud.google.com/security/secret-manager)에서 각 시크릿을 열고, 오른쪽 패널의 **Permissions**를 클릭한 다음 서비스 계정에 **Secret Manager Secret Accessor**를 부여합니다.
+
+    {/* SCREENSHOT: Per-secret "Permissions" panel in Secret Manager with the service account granted accessor role → /images/secrets-manager/gcp/03-per-secret-permissions.png */}
+  </Tab>
+</Tabs>
+
+<Tip>
+`roles/secretmanager.secretAccessor` 역할은 시크릿 값에 대한 읽기 전용 액세스를 부여합니다. CrewAI Platform은 또한 환경 변수 폼의 자동 완성 경험을 위해 `secretmanager.secrets.list`를 호출합니다 — 해당 권한은 프로젝트 범위에서는 역할에 포함되지만, 시크릿별 범위에서는 **포함되지 않습니다**. 시크릿별 바인딩의 경우 자동 완성이 시크릿을 제안하지 않으므로 전체 시크릿 이름을 입력해야 합니다.
+</Tip>
+
+## 3단계 — 서비스 계정 키 생성
+
+[IAM & Admin → Service Accounts 콘솔](https://console.cloud.google.com/iam-admin/serviceaccounts)에서 1단계의 서비스 계정을 엽니다.
+
+- **Keys** 탭을 클릭합니다.
+- **Add Key** → **Create new key**를 클릭합니다.
+- **Key type:** JSON.
+- **Create**를 클릭합니다. 브라우저가 JSON 파일을 다운로드합니다 — 안전하게 보관하세요. 다시 다운로드할 수 없습니다.
+
+또는 `gcloud`를 통해:
+
+```bash
+gcloud iam service-accounts keys create ./crewai-secrets-reader.json \
+  --iam-account=crewai-secrets-reader@YOUR_PROJECT_ID.iam.gserviceaccount.com
+```
+
+<Warning>
+서비스 계정 키는 장기 정적 자격 증명입니다. 안전하게 저장하고(패스워드 매니저나 자체 시크릿 저장소에) 정기적으로 로테이션하세요. 정적 자격 증명을 완전히 제거하려면 대신 [GCP Workload Identity Federation](/ko/enterprise/features/secrets-manager/gcp-workload-identity)을 사용하세요.
+</Warning>
+
+{/* SCREENSHOT: Service account "Keys" tab with the "Create new key" → JSON option → /images/secrets-manager/gcp/04-create-service-account-key.png */}
+
+## 4단계 — CrewAI Platform에 자격 증명 추가
+
+CrewAI Platform에서 **Settings** → **Secret Provider Credentials**로 이동하여 **Add Credential**을 클릭합니다.
+
+{/* SCREENSHOT: Sidebar/nav highlighting Settings → Secret Provider Credentials → /images/secrets-manager/usage/01-amp-settings-nav.png */}
+
+폼을 작성합니다:
+
+- **Name:** 설명적인 이름(예: `gcp-prod`).
+- **Provider:** `Google Cloud Secret Manager`.
+- **Project ID:** GCP 프로젝트 ID(예: `my-crewai-prod`).
+- **Service Account JSON:** 3단계에서 다운로드한 JSON 파일의 전체 내용을 붙여 넣습니다.
+- (선택) **Set as default credential for this provider**를 체크합니다. 기본 자격 증명은 자격 증명을 명시적으로 지정하지 않고 GCP 시크릿을 참조하는 환경 변수에서 사용됩니다.
+
+**Create**를 클릭합니다.
+
+{/* SCREENSHOT: "Add Secret Provider Credential" form with GCP fields filled in → /images/secrets-manager/gcp/05-amp-add-credential-form-gcp.png */}
+
+## 5단계 — GCP에 최소 하나의 시크릿 생성
+
+GCP Secret Manager에 시크릿이 아직 없다면, 6단계에서 연결을 확인할 수 있도록 지금 하나 만드세요.
+
+[Secret Manager 콘솔](https://console.cloud.google.com/security/secret-manager)에서 **Create secret**을 클릭합니다.
+
+- **Name:** 고유한 이름(예: `openai-api-key`).
+- **Secret value:** 원시 값을 붙여 넣거나 파일을 업로드합니다.
+- 특정 요구 사항이 없으면 로테이션, 복제 및 기타 설정을 기본값으로 둡니다.
+
+**Create secret**을 클릭합니다.
+
+또는 `gcloud`를 통해:
+
+```bash
+echo -n "sk-your-actual-key" | gcloud secrets create openai-api-key \
+  --data-file=- \
+  --project=YOUR_PROJECT_ID \
+  --replication-policy=automatic
+```
+
+<Note>
+**JSON 키 참조 구문.** GCP Secret Manager는 시크릿 값을 불투명한 blob으로 취급합니다. 시크릿 값이 JSON 문자열인 경우, CrewAI Platform은 `secret-name#json_key` 구문(예: `database-credentials#password`)을 사용하여 단일 필드를 추출할 수 있습니다. 자세한 내용은 [Secrets Manager 사용하기](/ko/enterprise/features/secrets-manager/usage#referencing-secrets-in-environment-variables)를 참조하세요.
+</Note>
+
+자세한 내용은 GCP 문서를 참조하세요: [Create a secret](https://cloud.google.com/secret-manager/docs/create-secret-quickstart).
+
+{/* SCREENSHOT: GCP "Create secret" form with name and value → /images/secrets-manager/gcp/06-create-secret.png */}
+
+## 6단계 — 연결 테스트
+
+CrewAI Platform으로 돌아가 **Secret Provider Credentials** 페이지에서 방금 만든 자격 증명을 찾고 **Test Connection**을 클릭합니다.
+
+성공 토스트는 CrewAI Platform이 GCP에 인증하고 프로젝트의 시크릿을 읽을 수 있음을 확인합니다.
+
+{/* SCREENSHOT: Success toast after clicking "Test Connection" on the GCP credential → /images/secrets-manager/gcp/07-test-connection-success.png */}
+
+테스트가 실패하면 가장 일반적인 원인을 확인하세요:
+
+| 증상 | 가능한 원인 |
+|---|---|
+| 시크릿 나열 시 `PERMISSION_DENIED` | 서비스 계정에 `roles/secretmanager.secretAccessor`가 없거나, 시크릿별로 범위를 지정했습니다(`list`가 부여되지 않음). 2단계를 다시 확인하세요. |
+| `secretmanager.secrets.access`에서 `PERMISSION_DENIED` | 위와 동일하지만 특정 시크릿에 대한 것입니다. 해당 시크릿에 서비스 계정이 accessor 역할을 갖고 있는지 확인하세요. |
+| `unauthorized_client` / `invalid_grant` | 붙여 넣은 서비스 계정 JSON이 유효하지 않거나, 만료되었거나, 삭제된 서비스 계정용입니다. 키를 다시 만들고(3단계) 다시 붙여 넣으세요. |
+| `Project ID does not match` | CrewAI Platform의 Project ID 필드가 서비스 계정/시크릿을 소유한 프로젝트와 일치하지 않습니다. 4단계를 다시 확인하세요. |
+| `API not enabled` | 프로젝트에 Secret Manager API가 활성화되어 있지 않습니다. 사전 준비 사항을 참조하세요. |
+
+## 다음 단계
+
+이제 GCP가 연결되었으므로 [Secrets Manager 사용하기](/ko/enterprise/features/secrets-manager/usage)로 이동하여 다음을 수행하세요:
+
+- 조직 멤버에게 Secrets Manager를 사용(또는 관리)할 수 있는 적절한 권한을 부여합니다.
+- CrewAI Platform 환경 변수에서 GCP 시크릿을 참조합니다.
+
+재배포 없이 전파되는 **로테이션 인식** 시크릿을 원한다면 [GCP Workload Identity Federation](/ko/enterprise/features/secrets-manager/gcp-workload-identity)으로 전환하세요 — 동일한 시크릿 저장소, 정적 자격 증명 없음, kickoff마다 시크릿을 가져옵니다.

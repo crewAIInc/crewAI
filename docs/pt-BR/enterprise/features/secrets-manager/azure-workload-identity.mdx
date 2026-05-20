@@ -1,0 +1,274 @@
+---
+title: Azure Workload Identity Federation
+description: Configure o Azure Key Vault via Microsoft Entra Workload Identity Federation para acesso a segredos consciente de rotação e sem credenciais
+sidebarTitle: Azure — Workload Identity
+---
+
+## Visão Geral
+
+Este guia configura o Azure Key Vault como provedor de segredos usando **Microsoft Entra Workload Identity Federation**: a CrewAI Platform emite tokens OIDC de curta duração, os troca por um token de acesso do Entra via Microsoft identity platform e lê seus segredos — sem nenhum client secret armazenado em lugar algum.
+
+<Note>
+**Por que este caminho:** os segredos são resolvidos no momento de execução da automação, então **valores rotacionados se propagam para o próximo kickoff sem novo deploy**. Se você só precisa de credenciais estáticas, veja o guia mais simples [Azure Key Vault — client secret](/pt-BR/enterprise/features/secrets-manager/azure).
+</Note>
+
+### Como funciona em runtime
+
+1. O worker do deployment solicita um JWT OIDC fresco à CrewAI Platform.
+2. O worker apresenta o JWT ao Microsoft Entra em `https://login.microsoftonline.com/<tenant>/oauth2/v2.0/token` como um `client_assertion` (`urn:ietf:params:oauth:client-assertion-type:jwt-bearer`), referenciando o App Registration cujo **Federated Identity Credential** corresponde ao issuer + subject do JWT.
+3. O Entra valida o JWT contra o documento de discovery OIDC e JWKS da sua plataforma, então retorna um token de acesso de curta duração com escopo `https://vault.azure.net/.default`.
+4. O worker chama o Azure Key Vault para ler o segredo.
+5. O valor obtido é injetado como valor da variável de ambiente para aquele kickoff de automação.
+
+Tokens OIDC subject são cacheados por ~1 hora para evitar reemissão a cada kickoff. Valores de segredos são buscados frescos a cada kickoff independentemente do estado do cache OIDC, e é isso que torna este caminho consciente de rotação.
+
+## Pré-requisitos
+
+<Note>
+Antes de começar, certifique-se de que você tem:
+
+- A imagem do pod de automação deve incluir o runtime da CrewAI versão `1.14.5` ou superior.
+- Uma subscription Azure e um tenant Microsoft Entra que você possa gerenciar.
+- Permissão no tenant para criar App Registrations e adicionar Federated Identity Credentials.
+- Um Key Vault usando **Azure RBAC** para autorização (não o modelo legado de access-policy).
+- Uma organização na CrewAI Platform onde seu usuário tem as permissões `workload_identity_configs: manage` e `secret_providers: manage`. Veja [Permissões (RBAC)](/pt-BR/enterprise/features/secrets-manager/usage#permissions-rbac).
+- **Sua instalação da CrewAI Platform deve ser acessível a partir do Microsoft Entra via HTTPS** para que o Entra possa buscar o documento de discovery OIDC e o JWKS durante a validação do token. Confirme com o administrador da sua plataforma que o host é acessível pela internet.
+</Note>
+
+## Passo 1 — Encontre a URL do Issuer OIDC da Sua CrewAI Platform
+
+Sua instalação da CrewAI Platform publica um documento de discovery OpenID Connect em `https://<your-platform-host>/.well-known/openid-configuration`. O campo `issuer` ali é a URL que o Microsoft Entra registrará como issuer de federação confiável.
+
+Abra a URL em um navegador:
+
+```
+https://<your-platform-host>/.well-known/openid-configuration
+```
+
+Você deverá ver um JSON contendo:
+
+```json
+{
+  "issuer": "https://<your-platform-host>",
+  "jwks_uri": "https://<your-platform-host>/oauth2/jwks",
+  ...
+}
+```
+
+Anote o valor exato de `issuer` — você o usará no Passo 3.
+
+<Tip>
+Se a URL retornar 404 ou 503, contate o administrador da sua plataforma. O issuer OIDC requer uma chave de assinatura privada configurada no momento da instalação. Veja o guia de instalação da plataforma para as configurações `OIDC_PRIVATE_KEY` e `OIDC_ISSUER`.
+</Tip>
+
+## Passo 2 — Criar um App Registration
+
+No [portal Microsoft Entra](https://entra.microsoft.com), navegue até **App registrations** e clique em **New registration**.
+
+- **Name:** `crewai-secrets-reader`
+- **Supported account types:** `Accounts in this organizational directory only (Single tenant)`.
+- Deixe **Redirect URI** em branco.
+
+Clique em **Register**. Anote o **Application (client) ID** e o **Directory (tenant) ID** no blade de visão geral do App — você os usará no Passo 6.
+
+{/* SCREENSHOT: Azure portal "Register an application" form with name "crewai-secrets-reader" → /images/secrets-manager/azure-wi/01-register-app.png */}
+
+## Passo 3 — Adicionar um Federated Identity Credential
+
+O Federated Identity Credential diz ao Microsoft Entra: *confie em JWTs emitidos por este issuer, com este subject, quando forem apresentados como client assertion para este App Registration.*
+
+No App Registration, navegue até **Certificates & secrets** → **Federated credentials** → **Add credential**.
+
+- **Federated credential scenario:** `Other issuer`.
+- **Issuer:** a URL do issuer da CrewAI Platform do Passo 1, ex. `https://<your-platform-host>`.
+- **Subject identifier:** `organization:<YOUR_CREWAI_ORG_UUID>` — exatamente o valor da claim `sub` do JWT. Encontre o UUID da sua org nas configurações de organização da CrewAI Platform. Isso escopa a federação a uma organização CrewAI específica — apenas tokens emitidos para as automações dessa org são aceitos.
+- **Name:** qualquer label descritivo, ex. `crewai-org-prod`.
+- **Audience:** `api://AzureADTokenExchange`. Esta é a audience fixa que o Microsoft Entra requer para federated credentials e é o que a CrewAI Platform define na claim `aud` do JWT.
+
+Clique em **Add**.
+
+<Tip>
+**Isolamento por organização.** O subject identifier (`organization:<UUID>`) restringe o federated credential aos tokens de uma organização CrewAI específica. Se múltiplas organizações CrewAI devem compartilhar um App Registration, adicione um Federated Identity Credential por organização (cada um com o UUID da org).
+</Tip>
+
+Para detalhes completos, veja a documentação da Microsoft: [Configure a federated identity credential on an app](https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation-create-trust).
+
+{/* SCREENSHOT: "Add credential" panel with scenario = "Other issuer", issuer URL, subject "organization:<uuid>", audience "api://AzureADTokenExchange" → /images/secrets-manager/azure-wi/02-add-federated-credential.png */}
+
+## Passo 4 — Conceder ao App Registration Acesso ao Key Vault
+
+Conceda ao App Registration **Key Vault Secrets User** no vault de destino — o mesmo papel que você usaria para o caminho de credenciais estáticas. Use a nível de vault (mais simples) ou por segredo (menor privilégio).
+
+<Tabs>
+  <Tab title="A nível de vault (mais simples)">
+    ```bash
+    az role assignment create \
+      --assignee <APPLICATION_CLIENT_ID> \
+      --role "Key Vault Secrets User" \
+      --scope $(az keyvault show --name <VAULT_NAME> --query id -o tsv)
+    ```
+
+    O escopo a nível de vault concede a permissão `secrets/list` da qual o **autocomplete de Secret Name** no formulário de env-var da CrewAI Platform depende. Escolha esta aba se você quer que o autocomplete funcione.
+
+    {/* SCREENSHOT: Key Vault "Add role assignment" panel with "Key Vault Secrets User" and the App Registration selected → /images/secrets-manager/azure-wi/03-grant-vault-rbac.png */}
+  </Tab>
+
+  <Tab title="Por segredo (menor privilégio)">
+    ```bash
+    az role assignment create \
+      --assignee <APPLICATION_CLIENT_ID> \
+      --role "Key Vault Secrets User" \
+      --scope $(az keyvault secret show --vault-name <VAULT_NAME> --name <SECRET_NAME> --query id -o tsv)
+    ```
+
+    Vínculos por segredo desabilitam o **autocomplete de Secret Name** no formulário de env-var da CrewAI Platform (o autocomplete requer `secrets/list`, que é escopado apenas por vault). Digite o nome completo do segredo.
+
+    {/* SCREENSHOT: Per-secret IAM panel with the App Registration assigned **Key Vault Secrets User** at the secret resource scope → /images/secrets-manager/azure-wi/04-per-secret-rbac.png */}
+  </Tab>
+
+  <Tab title="Portal (UI)">
+    Para uma atribuição **a nível de vault**:
+
+    1. Abra seu Key Vault no portal Azure.
+    2. Clique em **Access control (IAM)** → **Add** → **Add role assignment**.
+    3. Selecione o papel **Key Vault Secrets User** → **Next**.
+    4. Clique em **Select members**, procure pelo App Registration `crewai-secrets-reader`, clique em **Select**.
+    5. Clique em **Review + assign**.
+
+    Para uma atribuição **por segredo**, use o mesmo fluxo, mas comece em **Objects** → **Secrets** → selecione o segredo → seu próprio painel **Access control (IAM)**. Vínculos por segredo desabilitam o autocomplete (veja a aba Por segredo acima).
+  </Tab>
+</Tabs>
+
+## Passo 5 — Criar Pelo Menos Um Segredo no Key Vault
+
+Se você ainda não tem um segredo para testar, crie um via Azure CLI:
+
+```bash
+az keyvault secret set \
+  --vault-name <VAULT_NAME> \
+  --name openai-api-key \
+  --value "sk-your-actual-key"
+```
+
+Ou via portal Azure:
+
+1. Abra seu Key Vault e navegue até **Objects** → **Secrets**.
+2. Clique em **Generate/Import**.
+3. **Upload options:** `Manual`. **Name:** o nome do segredo (ex. `openai-api-key`). **Secret value:** cole o valor.
+4. Clique em **Create**.
+
+<Note>
+**Convenções de nome de segredo.** Nomes de segredos do Azure Key Vault não podem conter underscores. A CrewAI Platform converte automaticamente underscores em hífens ao chamar o Azure (ex.: `db_password` é enviado como `db-password`), então você pode manter nomes de env-var no estilo underscore — mas o segredo subjacente no Key Vault deve usar hífens.
+</Note>
+
+## Passo 6 — Adicionar uma Configuração de Workload Identity na CrewAI Platform
+
+Na CrewAI Platform, navegue até **Settings** → **Workload Identity** e clique em **Add Workload Identity Config**.
+
+Preencha o formulário:
+
+- **Name:** Um nome descritivo, ex. `azure-prod`.
+- **Cloud Provider:** `Azure`.
+- **Tenant ID:** seu **Directory (tenant) ID** do Microsoft Entra do Passo 2.
+- **Client ID:** o **Application (client) ID** do seu App Registration do Passo 2.
+- (Opcional) Marque **Set as default for Azure** se você quiser que esta seja a config WI padrão selecionada ao criar uma credencial de segredo baseada em Azure.
+
+A **Audience** é fixa em `api://AzureADTokenExchange` — o Microsoft Entra requer exatamente essa audience para federated credentials, então nenhum campo Audience é mostrado no formulário.
+
+Clique em **Create**.
+
+{/* SCREENSHOT: "Add Workload Identity Config" form with Azure, tenant ID, client ID populated → /images/secrets-manager/azure-wi/05-amp-add-wi-config-azure.png */}
+{/* SCREENSHOT: Workload Identity list showing AWS, GCP, and Azure rows → /images/secrets-manager/azure-wi/06-amp-wi-list-with-azure.png */}
+
+## Passo 7 — Adicionar uma Credencial de Provedor de Segredos Vinculada à Config WI
+
+Navegue até **Settings** → **Secret Provider Credentials** e clique em **Add Credential**.
+
+Preencha o formulário:
+
+- **Name:** Um nome descritivo, ex. `azure-prod-wi`.
+- **Provider:** `Azure Key Vault`.
+- **Authentication Method:** `Workload Identity`.
+- **Workload Identity Configuration:** selecione a config que você criou no Passo 6.
+- **Key Vault URL:** o hostname DNS do vault, ex. `https://my-vault.vault.azure.net`.
+- (Opcional) Marque **Set as default credential for this provider**.
+
+O formulário pedirá apenas a **Key Vault URL** sob Workload Identity — os campos de credencial estática (Tenant ID, Client ID, Client Secret) estão intencionalmente ocultos porque não se aplicam a este caminho; tenant + client vêm da config WI vinculada.
+
+Clique em **Create**.
+
+<Tip>
+**Um App Registration, muitos vaults.** A Key Vault URL fica na credencial, não na config WI. Então um App Registration (e uma config WI) pode servir múltiplos Key Vaults — basta criar uma Secret Provider Credential por vault, todas vinculadas à mesma config WI.
+</Tip>
+
+{/* SCREENSHOT: "Add Secret Provider Credential" form with Azure + Workload Identity + WI config dropdown + vault URL → /images/secrets-manager/azure-wi/07-amp-add-credential-azure-wi.png */}
+
+## Passo 8 — Testar a Conexão
+
+Depois de salvar a credencial, clique em **Test Connection**. Para credenciais workload-identity isso verifica o handshake OIDC: a CrewAI Platform emite um JWT, apresenta-o ao Microsoft Entra como um `client_assertion` federado, e confirma que o Entra retorna um token de acesso escopado para o vault. Um resultado verde significa que o vínculo de federação está saudável.
+
+Um Test Connection bem-sucedido prova que o issuer, subject e audience do Federated Identity Credential correspondem todos, e que o App Registration é acessível. Ele **não** prova que o RBAC por segredo do Key Vault está correto — `getSecret` contra um segredo específico é exercitado separadamente quando uma variável de ambiente é resolvida no kickoff. Veja [Solução de Problemas](#troubleshooting) para modos de falha de handshake.
+
+## Passo 9 — Referenciar o Segredo em uma Variável de Ambiente
+
+Referencie o segredo em uma automação, exatamente como você faria para qualquer outra env var apoiada pelo Secrets Manager. Veja [Usando o Secrets Manager](/pt-BR/enterprise/features/secrets-manager/usage#referencing-secrets-in-environment-variables) para os campos do formulário e o comportamento.
+
+## Passo 10 — Verificar a Rotação
+
+Após o deployment estar rodando, rotacione o segredo no Key Vault:
+
+```bash
+az keyvault secret set \
+  --vault-name <VAULT_NAME> \
+  --name openai-api-key \
+  --value "rotated value"
+```
+
+Dispare um novo kickoff de automação. O ambiente do kickoff verá `"rotated value"` — sem novo deploy, sem reinício de worker, sem espera de TTL.
+
+Para confirmar nos logs do worker, procure por:
+
+```
+Workload identity config '<id>' (azure): N secret(s) resolved
+```
+
+Esta linha aparece para cada kickoff e indica uma chamada `getSecret` fresca contra o Azure Key Vault.
+
+Para uma verificação de ponta a ponta baseada em fingerprint, veja [Verificar Rotação de Ponta a Ponta](/pt-BR/enterprise/features/secrets-manager/verify-rotation).
+
+## Solução de Problemas
+
+| Sintoma | Causa provável |
+|---|---|
+| Test Connection falha com erro de handshake | O `client_assertion` federado foi rejeitado pelo Microsoft Entra. Verifique se o **Issuer** do Federated Identity Credential corresponde exatamente ao valor `issuer` da plataforma, se **Subject** é `organization:<your-org-uuid>` (correspondendo à claim `sub` do JWT), se **Audience** é `api://AzureADTokenExchange` e se a URL de discovery OIDC da plataforma é acessível a partir do Entra pela internet pública. |
+| `AADSTS70021: No matching federated identity record found for presented assertion` | O **Issuer** + **Subject** + **Audience** do Federated Identity Credential não correspondem todos exatamente ao JWT. Reconfira o Passo 3: subject deve ser `organization:<your-org-uuid>` (correspondendo à claim `sub` do JWT), audience deve ser `api://AzureADTokenExchange`. |
+| `AADSTS700024: Client assertion is not within its valid time range` | O relógio do host da CrewAI Platform está significativamente fora do tempo real. Verifique o NTP no host. |
+| `AADSTS50013: Assertion failed signature validation` | O Microsoft Entra não conseguiu verificar a assinatura do JWT. Confirme que `https://<your-platform-host>/oauth2/jwks` é acessível pela internet pública e serve um JWKS válido. |
+| Autocomplete de Secret Name mostra `Forbidden — does not have permission to perform action 'Microsoft.KeyVault/vaults/secrets/.../list'` | O papel **Key Vault Secrets User** do App Registration está escopado a um único segredo. Conceda o papel no escopo do vault para que a ação de plano de dados `list` seja permitida. Veja o Passo 4. |
+| Kickoff falha ao resolver um segredo mesmo que o Test Connection passe | O vínculo WI está saudável, mas o RBAC por segredo do Key Vault está ausente no segredo que falha. Audite **Key Vault Secrets User** naquele segredo específico (ou estenda a atribuição de papel ao escopo do vault). |
+| `Forbidden — request was not authorized` (vault usando access policies legadas) | O vault não foi alternado para Azure RBAC. Sob **Access configuration** do vault, defina o modelo de permissão para **Azure role-based access control** e reconceda o papel do Passo 4. |
+| `azure_vault_url is required for Azure secret resolution` (logs do worker) | A Secret Provider Credential está sem a **Key Vault URL**. Reconfira o Passo 7. |
+| Valor rotacionado não é pego no próximo kickoff | Confirme que a env var na automação está referenciando uma credencial baseada em Workload Identity (não uma credencial de chaves estáticas). O caminho estático incorpora valores à imagem do deploy. |
+
+### Links de Referência
+
+- Microsoft: [Microsoft Entra Workload Identity Federation overview](https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation)
+- Microsoft: [Configure a federated identity credential on an app](https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation-create-trust)
+- Microsoft: [Azure Key Vault RBAC guide](https://learn.microsoft.com/en-us/azure/key-vault/general/rbac-guide)
+
+## Próximos Passos
+
+- [Use segredos em variáveis de ambiente e gerencie permissões](/pt-BR/enterprise/features/secrets-manager/usage)
+- Para multi-cloud, a configuração equivalente para AWS está em [AWS Workload Identity (Federação OIDC)](/pt-BR/enterprise/features/secrets-manager/aws-workload-identity) e a equivalente para GCP em [GCP Workload Identity Federation](/pt-BR/enterprise/features/secrets-manager/gcp-workload-identity).
+
+## Referência de Screenshots
+
+Os placeholders acima mapeiam para:
+
+- `01-register-app.png` — formulário "Register an application" do portal Azure preenchido com `crewai-secrets-reader`.
+- `02-add-federated-credential.png` — App Registration → Certificates & secrets → Federated credentials → Add credential, com **Other issuer**, a URL do issuer da plataforma, subject `organization:<uuid>`, audience `api://AzureADTokenExchange`.
+- `03-grant-vault-rbac.png` — Key Vault → Access control (IAM) → Add role assignment, com **Key Vault Secrets User** e o App Registration selecionado.
+- `04-per-secret-rbac.png` — mesmo formulário, mas no escopo IAM de um único segredo (caminho alternativo de menor privilégio).
+- `05-amp-add-wi-config-azure.png` — formulário "Add Workload Identity Config" da CrewAI Platform com Cloud Provider = Azure, Tenant ID, Client ID preenchidos.
+- `06-amp-wi-list-with-azure.png` — página de listagem do Workload Identity após criação, mostrando linhas para AWS, GCP e a nova config Azure.
+- `07-amp-add-credential-azure-wi.png` — formulário "Add Secret Provider Credential" com Provider = Azure Key Vault, Auth = Workload Identity, a config WI escolhida e Key Vault URL preenchida.

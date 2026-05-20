@@ -1,0 +1,136 @@
+---
+title: Secrets Manager 사용하기
+description: CrewAI Platform에서 권한을 관리하고 환경 변수에서 관리되는 시크릿을 참조합니다
+sidebarTitle: 사용 및 권한
+---
+
+## 개요
+
+이 가이드는 공급자 중립적입니다. 사용자(또는 다른 관리자)가 이미 최소 하나의 Secret Provider Credential을 구성했다고 가정합니다. 원하는 경로에 따라 설정 가이드를 선택하세요:
+
+- 정적 자격 증명: [AWS](/ko/enterprise/features/secrets-manager/aws) · [GCP](/ko/enterprise/features/secrets-manager/gcp)
+- Workload Identity (로테이션 인식): [AWS](/ko/enterprise/features/secrets-manager/aws-workload-identity) · [GCP](/ko/enterprise/features/secrets-manager/gcp-workload-identity)
+
+이 가이드를 사용하여 다음을 수행하세요:
+
+- 조직 멤버에게 적절한 권한을 부여합니다.
+- 자동화의 환경 변수에서 시크릿을 참조합니다.
+- 런타임에서 모든 것이 올바르게 해석되는지 확인합니다.
+
+## 권한 (RBAC)
+
+Secrets Manager를 사용할 때 관련된 세 가지 CrewAI Platform 기능:
+
+- `secret_providers` — **Secret Provider Credentials** 페이지에 대한 접근을 제어합니다.
+- `workload_identity_configs` — **Workload Identity** 페이지에 대한 접근을 제어합니다(WI 경로를 사용하는 경우에만 관련됨).
+- `environment_variables` — 환경 변수를 생성하거나 편집할 수 있는 사람을 제어합니다.
+
+각 기능에는 두 가지 작업 수준이 있습니다: `read`와 `manage`. `manage`를 부여하면 자동으로 `read`를 포함합니다.
+
+### 부여할 권한
+
+| 목표 | `secret_providers` | `workload_identity_configs` | `environment_variables` |
+|---|---|---|---|
+| 환경 변수에서 기존 정적 자격 증명 사용 (공급자 편집 불가) | `read` | — | `manage` |
+| 정적 자격 증명 생성, 편집 또는 삭제 | `manage` | — | `manage` |
+| 환경 변수에서 기존 Workload Identity 기반 자격 증명 사용 | `read` | — | `manage` |
+| Workload Identity 구성(및 이를 참조하는 자격 증명) 생성, 편집 또는 삭제 | `manage` | `manage` | `manage` |
+
+<Note>
+**소유자(Owner)**는 모든 기능에 대해 자동으로 전체 접근 권한을 가집니다. 기본 **멤버(Member)** 역할은 의도적으로 `secret_providers` 및 `workload_identity_configs`를 제외합니다 — 관리자는 사용자 정의 역할을 통해 멤버에게 명시적으로 옵트인해야 합니다.
+</Note>
+
+### 할당 방법
+
+1. CrewAI Platform에서 **Settings** → **Roles**로 이동합니다. 이 페이지에서 새 역할을 생성하고, 각 역할의 권한을 편집하며, 조직의 기존 멤버에게 역할을 할당할 수 있습니다.
+
+   {/* SCREENSHOT: Sidebar highlighting Settings → Roles → /images/secrets-manager/usage/06-amp-settings-roles-nav.png */}
+   {/* SCREENSHOT: Roles list page with "Create Role" button visible → /images/secrets-manager/usage/07-amp-roles-list.png */}
+
+2. **Create Role**을 클릭하여 새 역할을 만들거나, 기존 역할을 열어 권한을 편집합니다.
+
+3. 역할의 권한 편집기에서 위 표에 따라 관련 기능을 토글합니다:
+
+   - `secret_providers`: 이 역할이 기존 자격 증명만 사용하면 되는 경우 **read**를 선택하고, 자격 증명을 생성, 편집, 삭제할 수도 있어야 하면 **manage**를 선택합니다.
+   - `environment_variables`: 역할이 시크릿을 참조하는 환경 변수를 생성할 수 있도록 **manage**를 선택합니다.
+
+   {/* SCREENSHOT: Role editor showing the secret_providers feature with read/manage toggles → /images/secrets-manager/usage/08-amp-role-editor-secret-providers-toggles.png */}
+   {/* SCREENSHOT: Role editor showing environment_variables toggles → /images/secrets-manager/usage/09-amp-role-editor-env-vars-toggles.png */}
+
+4. 역할을 저장합니다.
+
+5. 동일한 Roles 페이지(또는 조직 Members 목록)에서 해당 멤버에게 역할을 할당합니다.
+
+   {/* SCREENSHOT: Member assignment screen where the new role is applied to a user → /images/secrets-manager/usage/10-amp-assign-role-to-member.png */}
+
+## 환경 변수에서 시크릿 참조하기
+
+공급자 자격 증명이 존재하고 역할에 적절한 권한이 있으면, 모든 환경 변수에서 관리되는 시크릿을 참조할 수 있습니다.
+
+CrewAI Platform에서 **Environment Variables**로 이동하여 **Add Environment Variables**를 클릭합니다.
+
+{/* SCREENSHOT: Environment Variables empty state with "Add" button → /images/secrets-manager/usage/11-amp-env-vars-empty.png */}
+
+폼을 작성합니다:
+
+- **Key** — 환경 변수의 이름입니다. 문자나 밑줄로 시작해야 하며, 문자, 숫자, 밑줄만 포함해야 합니다. 관례적으로 대문자로 작성합니다(예: `OPENAI_API_KEY`).
+
+- **Value Source** — 값의 출처를 선택합니다:
+  - **Direct Value** — 직접 입력하는 평문 값입니다. 공급자를 사용하고 싶지 않을 때 사용합니다.
+  - **Use AWS default** (또는 공급자에 해당하는 항목) — 해당 공급자 유형에서 기본값으로 표시된 자격 증명을 사용합니다.
+  - **특정 명명된 자격 증명** — 이름으로 자격 증명을 선택합니다. 동일한 공급자에 대해 여러 자격 증명(예: `aws-prod`와 `aws-staging`)이 있고 하나를 명시적으로 선택하려는 경우에 사용합니다.
+
+  {/* SCREENSHOT: Env var form with the "Value Source" dropdown open, showing "AWS default" + named credentials → /images/secrets-manager/usage/12-amp-env-var-form-source-selector.png */}
+
+- **Secret Name** — 공급자의 시크릿 이름입니다. 자격 증명이 선택되면 이 필드에서 자동 완성을 제공합니다: 입력을 시작하면 CrewAI Platform이 일치하는 시크릿 이름을 공급자에 쿼리합니다.
+
+  구조화된(JSON) 시크릿에서 단일 필드를 추출하려면 `secret-name#json_key` 구문을 사용합니다. 예를 들어, `{"username": "...", "password": "..."}` 값을 가진 시크릿 `database-credentials`가 있다면, `database-credentials#password`로 참조하여 비밀번호만 주입할 수 있습니다.
+
+  {/* SCREENSHOT: Env var form with the secret name autocomplete dropdown showing live results → /images/secrets-manager/usage/13-amp-env-var-form-secret-name-autocomplete.png */}
+
+  <Note>
+  **Azure Key Vault 참고:** Azure 시크릿 이름에는 밑줄을 포함할 수 없습니다. CrewAI Platform은 Azure를 호출할 때 `Secret Name` 필드의 밑줄을 자동으로 하이픈으로 변환합니다(예: `db_password`는 `db-password`로 전송됨).
+  </Note>
+
+**Create**를 클릭하여 변수를 저장합니다.
+
+{/* SCREENSHOT: Env var list with the new variable showing masked value and a "secret" indicator → /images/secrets-manager/usage/14-amp-env-var-created.png */}
+
+<Tip>
+기존 환경 변수를 편집할 때 **Value** 필드를 비워두면 현재 값이 유지됩니다. 이는 의도된 동작이며 — 값을 다시 입력하지 않고도 다른 필드(시크릿 이름이나 자격 증명 등)를 변경할 수 있게 해줍니다.
+</Tip>
+
+## 작동 여부 검증
+
+엔드 투 엔드 검증 방법:
+
+1. 다른 환경 변수와 동일한 방식으로 자동화, Crew 또는 배포에서 환경 변수를 참조합니다.
+2. 자동화를 배포합니다.
+3. 실행을 트리거하고 성공적으로 완료되는지 확인합니다.
+
+### 로테이션 동작은 자격 증명 경로에 따라 다릅니다
+
+| 자격 증명 경로 | 시크릿이 읽히는 시점 | 로테이션 시 필요한 작업 |
+|---|---|---|
+| **정적 자격 증명** (AWS 액세스 키, GCP 서비스 계정 JSON) | **배포 시점** — 값이 배포 이미지에 박힘 | 시크릿 로테이션 후 자동화 재배포 |
+| **Workload Identity** (OIDC federation, AWS 또는 GCP) | **모든 자동화 kickoff 시점** — 값을 클라우드에서 새로 가져옴 | 없음 — 로테이션 후 다음 kickoff에서 새 값이 보임 |
+
+<Note>
+**로테이션 인식 시크릿이 필요한 경우**(로테이션 시 재배포 없이), Workload Identity 경로를 사용하세요: [AWS WI](/ko/enterprise/features/secrets-manager/aws-workload-identity) 또는 [GCP WI](/ko/enterprise/features/secrets-manager/gcp-workload-identity). 트레이드오프는 초기 설정 노력이 더 많지만(CrewAI Platform을 클라우드에 OIDC 공급자로 등록), 장기적으로는 운영이 더 단순해진다는 점입니다.
+</Note>
+
+배포 또는 실행이 시크릿 관련 오류로 실패하면 가장 일반적인 원인을 확인하세요:
+
+| 증상 | 가능한 원인 |
+|---|---|
+| `no credential found` | 환경 변수가 공급자를 참조하지만 특정 자격 증명이 선택되지 않았고, 해당 공급자 유형에 대한 기본 자격 증명이 설정되어 있지 않습니다. 변수에서 자격 증명을 명시적으로 선택하거나, **Secret Provider Credentials** 페이지에서 자격 증명을 기본값으로 표시하세요. |
+| `secret not found` | **Secret Name**의 오타, 또는 자격 증명이 가리키는 공급자 계정/리전에 시크릿이 존재하지 않습니다. 둘 다 다시 확인하세요. |
+| 로테이션 후에도 자동화가 이전 값으로 실행됨 (정적 자격 증명 경로) | 이전 값이 배포 컨테이너 이미지에 박혀 있습니다. 로테이션된 값을 가져오려면 자동화를 재배포하세요. 이를 완전히 피하려면 자격 증명을 Workload Identity 경로로 전환하세요. |
+| 로테이션 후에도 자동화가 이전 값으로 실행됨 (Workload Identity 경로) | 환경 변수가 WI 기반 자격 증명을 참조하는지 확인하세요(정적 키가 아님). WI를 사용하면 로테이션 후 다음 kickoff에서 새 값이 보여야 합니다. 그렇지 않으면 시크릿이 실제로 클라우드에서 업데이트되었는지 확인하세요(예: `aws secretsmanager get-secret-value`). |
+| `JSON key not found` | `secret-name#json_key`를 사용할 때 기본 시크릿은 해당 키를 포함하는 유효한 JSON 객체여야 합니다. 공급자에서 직접 시크릿을 읽어 확인하세요. |
+
+## 다음 단계
+
+- [Secrets Manager 개요로 돌아가기](/ko/enterprise/features/secrets-manager/overview)
+- 정적 자격 증명: [AWS](/ko/enterprise/features/secrets-manager/aws) · [GCP](/ko/enterprise/features/secrets-manager/gcp)
+- Workload Identity (로테이션 인식): [AWS](/ko/enterprise/features/secrets-manager/aws-workload-identity) · [GCP](/ko/enterprise/features/secrets-manager/gcp-workload-identity)

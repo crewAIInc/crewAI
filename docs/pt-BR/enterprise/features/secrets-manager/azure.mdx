@@ -1,0 +1,195 @@
+---
+title: Azure Key Vault
+description: Configure o Azure Key Vault como provedor de segredos para a CrewAI Platform, de ponta a ponta
+sidebarTitle: Azure
+---
+
+## Visão Geral
+
+Este guia o orienta na configuração do Azure Key Vault como provedor de segredos para sua organização na CrewAI Platform, usando um **Microsoft Entra App Registration com client secret**. Ao final, a CrewAI Platform poderá ler segredos armazenados no seu Azure Key Vault e injetá-los como valores de variáveis de ambiente em runtime.
+
+<Note>
+Este guia cobre o caminho de **credenciais estáticas** — segredos são resolvidos no momento do deploy e incorporados à imagem do deployment. Valores rotacionados exigem um novo deploy. Se você quiser segredos conscientes de rotação que se atualizam a cada kickoff de automação, veja [Azure Workload Identity Federation](/pt-BR/enterprise/features/secrets-manager/azure-workload-identity).
+</Note>
+
+<Note>
+Este guia cobre a configuração do lado Azure e a configuração da credencial na CrewAI Platform. Para então referenciar um segredo a partir de uma variável de ambiente, veja [Usando o Secrets Manager](/pt-BR/enterprise/features/secrets-manager/usage).
+</Note>
+
+## Pré-requisitos
+
+<Note>
+Antes de começar, certifique-se de que você tem:
+
+- Uma subscription Azure com permissão para criar App Registrations no Microsoft Entra e para conceder atribuições de papéis em recursos do Key Vault.
+- Um Key Vault usando **Azure RBAC** para autorização (não o modelo legado de access-policy). Se o seu vault ainda usa access policies, mude-o para RBAC sob o blade **Access configuration** do vault.
+- Uma organização na CrewAI Platform onde seu usuário tem a permissão `secret_providers: manage`. Veja [Permissões (RBAC)](/pt-BR/enterprise/features/secrets-manager/usage#permissions-rbac).
+</Note>
+
+## Passo 1 — Criar um App Registration
+
+O App Registration é a identidade do lado Microsoft Entra como a qual a CrewAI Platform irá se autenticar.
+
+No [portal Microsoft Entra](https://entra.microsoft.com), navegue até **App registrations** e clique em **New registration**.
+
+- **Name:** `crewai-secrets-reader`
+- **Supported account types:** `Accounts in this organizational directory only (Single tenant)`.
+- Deixe **Redirect URI** em branco.
+
+Clique em **Register**. Anote o **Application (client) ID** e o **Directory (tenant) ID** no blade de visão geral do App — você colará ambos na CrewAI Platform no Passo 4.
+
+Para detalhes completos, veja a documentação da Microsoft: [Register an application with the Microsoft identity platform](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app).
+
+{/* SCREENSHOT: Azure "Register an application" form with name "crewai-secrets-reader" → /images/secrets-manager/azure/01-register-app.png */}
+
+## Passo 2 — Criar um Client Secret
+
+No App Registration, navegue até **Certificates & secrets** → **Client secrets** → **New client secret**.
+
+- **Description:** `crewai-platform`
+- **Expires:** escolha uma duração que corresponda à sua política de rotação (a Microsoft limita isso em 24 meses).
+
+Clique em **Add**. Copie a coluna **Value** imediatamente — ela nunca pode ser re-exibida depois que você sair da página.
+
+<Warning>
+Client secrets são credenciais estáticas de longa duração. Armazene o valor com segurança (em um gerenciador de senhas ou no seu próprio cofre de segredos) e rotacione-o antes da expiração. Para eliminar credenciais estáticas completamente, use [Azure Workload Identity Federation](/pt-BR/enterprise/features/secrets-manager/azure-workload-identity).
+</Warning>
+
+{/* SCREENSHOT: "Client secrets" tab with the new secret row and the "Value" column highlighted → /images/secrets-manager/azure/02-create-client-secret.png */}
+
+## Passo 3 — Conceder ao App Registration Acesso ao Key Vault
+
+A CrewAI Platform precisa de acesso de leitura aos segredos no seu Key Vault. Use um de dois escopos — **a nível de vault** para simplicidade, ou **por segredo** para menor privilégio.
+
+<Tabs>
+  <Tab title="A nível de vault (mais simples)">
+    No [console do Key Vault](https://portal.azure.com/#view/HubsExtension/BrowseResource/resourceType/Microsoft.KeyVault%2Fvaults), abra o vault de destino, depois navegue até **Access control (IAM)** → **Add** → **Add role assignment**.
+
+    - **Role:** **Key Vault Secrets User**
+    - **Assign access to:** User, group, or service principal
+    - **Members:** procure e selecione seu App Registration (`crewai-secrets-reader`).
+
+    Clique em **Review + assign**.
+
+    Ou via Azure CLI:
+
+    ```bash
+    az role assignment create \
+      --assignee <APPLICATION_CLIENT_ID> \
+      --role "Key Vault Secrets User" \
+      --scope $(az keyvault show --name <VAULT_NAME> --query id -o tsv)
+    ```
+
+    {/* SCREENSHOT: Key Vault "Add role assignment" panel with "Key Vault Secrets User" and the App Registration selected → /images/secrets-manager/azure/03-grant-vault-rbac.png */}
+  </Tab>
+
+  <Tab title="Por segredo (menor privilégio)">
+    Conceda o papel a nível de um segredo individual. Repita para cada segredo que a CrewAI Platform deve acessar:
+
+    ```bash
+    az role assignment create \
+      --assignee <APPLICATION_CLIENT_ID> \
+      --role "Key Vault Secrets User" \
+      --scope $(az keyvault secret show --vault-name <VAULT_NAME> --name <SECRET_NAME> --query id -o tsv)
+    ```
+
+    {/* SCREENSHOT: Per-secret "Access control (IAM)" panel showing role assignment scoped to one secret → /images/secrets-manager/azure/04-per-secret-rbac.png */}
+  </Tab>
+</Tabs>
+
+<Tip>
+O papel **Key Vault Secrets User** permite ler valores de segredos, mas não listar todos os segredos no vault. O autocomplete de nome de segredo da CrewAI Platform também chama `list` — essa permissão está incluída no papel no escopo de vault, mas **não** no escopo por segredo. Com vínculos por segredo, o autocomplete não sugerirá segredos; digite o nome completo do segredo.
+</Tip>
+
+## Passo 4 — Adicionar a Credencial na CrewAI Platform
+
+Na CrewAI Platform, navegue até **Settings** → **Secret Provider Credentials** e clique em **Add Credential**.
+
+{/* SCREENSHOT: Sidebar/nav highlighting Settings → Secret Provider Credentials → /images/secrets-manager/usage/01-amp-settings-nav.png */}
+
+Preencha o formulário:
+
+- **Name:** Um nome descritivo, ex. `azure-prod`.
+- **Provider:** `Azure Key Vault`.
+- **Key Vault URL:** o hostname DNS do vault, ex. `https://my-vault.vault.azure.net`.
+- **Tenant ID:** seu **Directory (tenant) ID** do Microsoft Entra do Passo 1.
+- **Client ID:** o **Application (client) ID** do seu App Registration do Passo 1.
+- **Client Secret:** o **Value** que você copiou no Passo 2.
+- (Opcional) Marque **Set as default credential for this provider**. A credencial padrão é usada por variáveis de ambiente que referenciam segredos Azure sem especificar uma credencial explicitamente.
+
+Clique em **Create**.
+
+{/* SCREENSHOT: "Add Secret Provider Credential" form with Azure fields filled in → /images/secrets-manager/azure/05-amp-add-credential-form-azure.png */}
+
+## Passo 5 — Criar Pelo Menos Um Segredo no Azure Key Vault
+
+Se você ainda não tem segredos no Key Vault, crie um agora para que possa verificar a conexão no Passo 6.
+
+No console do Key Vault, navegue até **Objects** → **Secrets** → **Generate/Import**.
+
+- **Upload options:** `Manual`
+- **Name:** ex. `openai-api-key`
+- **Secret value:** cole o valor do seu segredo
+- Deixe o resto nos padrões.
+
+Clique em **Create**.
+
+Ou via Azure CLI:
+
+```bash
+az keyvault secret set \
+  --vault-name <VAULT_NAME> \
+  --name openai-api-key \
+  --value "sk-your-actual-key"
+```
+
+<Note>
+**Convenções de nome de segredo.** Nomes de segredos do Azure Key Vault não podem conter underscores. A CrewAI Platform converte automaticamente underscores em hífens ao chamar o Azure (ex.: `db_password` é enviado como `db-password`), então você pode manter nomes de env-var no estilo underscore — mas o segredo subjacente no Key Vault deve usar hífens.
+</Note>
+
+<Note>
+**Sintaxe de referência por chave JSON.** O Key Vault trata valores de segredos como strings opacas. Se o valor do seu segredo for um objeto JSON, a CrewAI Platform pode extrair um único campo usando a sintaxe `secret-name#json_key` (ex. `database-credentials#password`). Veja [Usando o Secrets Manager](/pt-BR/enterprise/features/secrets-manager/usage#referencing-secrets-in-environment-variables) para detalhes.
+</Note>
+
+Para detalhes completos, veja a documentação da Microsoft: [Set and retrieve a secret](https://learn.microsoft.com/en-us/azure/key-vault/secrets/quick-create-cli).
+
+{/* SCREENSHOT: Azure Key Vault "Create a secret" form with name and value → /images/secrets-manager/azure/06-create-secret.png */}
+
+## Passo 6 — Testar a Conexão
+
+De volta à CrewAI Platform, na página **Secret Provider Credentials**, encontre a credencial que você acabou de criar e clique em **Test Connection**.
+
+Um toast de sucesso confirma que a CrewAI Platform consegue se autenticar no Microsoft Entra e ler segredos do seu vault.
+
+{/* SCREENSHOT: Success toast after clicking "Test Connection" on the Azure credential → /images/secrets-manager/azure/07-test-connection-success.png */}
+
+Se o teste falhar, verifique as causas mais comuns:
+
+| Sintoma | Causa provável |
+|---|---|
+| `AADSTS7000215: Invalid client secret provided` | O **Client Secret** colado está errado ou expirado. Recrie o segredo (Passo 2) e atualize a credencial. |
+| `AADSTS700016: Application not found in the directory` | O **Tenant ID** ou **Client ID** não corresponde ao App Registration. Reconfira o Passo 4. |
+| `Forbidden — caller does not have permission` | O App Registration está sem o papel **Key Vault Secrets User** no vault (ou por segredo). Reconfira o Passo 3. |
+| `Vault not found` / erros de DNS | A **Key Vault URL** está errada, ou seu vault tem endpoints privados que bloqueiam acesso público. Confirme que o host responde a `curl https://<vault-name>.vault.azure.net/secrets?api-version=7.4`. |
+| `Forbidden — request was not authorized` (vault usando access policies legadas) | O vault não foi alternado para Azure RBAC. Sob **Access configuration** do vault, defina o modelo de permissão para **Azure role-based access control** e reconceda o papel do Passo 3. |
+
+## Próximos Passos
+
+Agora que o Azure Key Vault está conectado, vá para [Usando o Secrets Manager](/pt-BR/enterprise/features/secrets-manager/usage) para:
+
+- Conceder aos membros da organização as permissões corretas para usar (ou gerenciar) o Secrets Manager.
+- Referenciar seus segredos Azure a partir de variáveis de ambiente da CrewAI Platform.
+
+Se você quiser segredos **conscientes de rotação** que se propagam sem novo deploy, mude para [Azure Workload Identity Federation](/pt-BR/enterprise/features/secrets-manager/azure-workload-identity) — mesmo vault, sem client secret para rotacionar, segredos buscados por kickoff.
+
+## Referência de Screenshots
+
+Os placeholders acima mapeiam para:
+
+- `01-register-app.png` — formulário "Register an application" do portal Azure preenchido com `crewai-secrets-reader`.
+- `02-create-client-secret.png` — App Registration → Certificates & secrets → Client secrets, com a linha do segredo recém-criado visível (coluna Value destacada antes de ser mascarada).
+- `03-grant-vault-rbac.png` — Key Vault → Access control (IAM) → Add role assignment, com **Key Vault Secrets User** escolhido e o App Registration selecionado como membro.
+- `04-per-secret-rbac.png` — mesmo painel, mas escopado para um único recurso de segredo (caminho alternativo de menor privilégio).
+- `05-amp-add-credential-form-azure.png` — formulário "Add Secret Provider Credential" da CrewAI Platform: Provider = Azure Key Vault, todos os cinco campos preenchidos.
+- `06-create-secret.png` — painel "Create a secret" do Azure Key Vault com `openai-api-key` e um valor colado.
+- `07-test-connection-success.png` — toast de sucesso / estado da linha na CrewAI Platform após clicar em **Test Connection** na credencial.

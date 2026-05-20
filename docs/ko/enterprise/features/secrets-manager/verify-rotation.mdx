@@ -1,0 +1,260 @@
+---
+title: 로테이션 확인
+description: 클라우드 공급자에서 로테이션된 시크릿이 재배포 없이 실행 중인 배포에 전파됨을 증명하는 자체 포함된 예제 Crew입니다.
+sidebarTitle: 로테이션 확인
+---
+
+## 개요
+
+이 가이드는 **클라우드 공급자에서 로테이션된 시크릿이 바로 다음 자동화 kickoff에서 적용됨**을 검증하는 방법을 보여줍니다 — 재배포 없음, 워커 재시작 없음. Workload Identity 기반 자격 증명([AWS](/ko/enterprise/features/secrets-manager/aws-workload-identity), [GCP](/ko/enterprise/features/secrets-manager/gcp-workload-identity), [Azure](/ko/enterprise/features/secrets-manager/azure-workload-identity))을 구성한 경우에만 관련됩니다. 정적 자격 증명 배포는 로테이션 후 재배포가 필요합니다. 여기에서는 확인할 것이 없습니다.
+
+아래 레시피는 하나의 도구, 하나의 에이전트, 하나의 작업으로 구성된 작은 자체 포함된 Crew를 사용합니다. Crew 프롬프트는 시크릿 값을 절대 참조하지 않으며 — 대신 도구가 `os.environ`에서 이를 읽고 본 것의 SHA-256 fingerprint를 보고합니다. 클라우드 공급자에서 시크릿을 로테이션하고, 다시 kickoff하면 fingerprint가 변경됩니다.
+
+<Note>
+원시 값이 아닌 fingerprint를 사용하는 이유? 원시 시크릿을 LLM 출력과 트레이스 로그에 넣는 것은 유출 벡터입니다. fingerprint는 실제 값을 관찰 가능한 곳에 쓰지 않고도 "값이 변경되었다"는 것을 확인하기에 충분합니다.
+</Note>
+
+## 사전 준비 사항
+
+이 검증을 실행하기 전에:
+
+- WI 기반 Secret Provider Credential이 구성되어 있어야 합니다([AWS](/ko/enterprise/features/secrets-manager/aws-workload-identity), [GCP](/ko/enterprise/features/secrets-manager/gcp-workload-identity), [Azure](/ko/enterprise/features/secrets-manager/azure-workload-identity)).
+- `Secret = true`, 키 `API_KEY`(또는 원하는 이름 — 아래 도구를 일치시키도록 조정)로 클라우드 공급자의 시크릿을 참조하는 배포의 환경 변수.
+- 클라우드 공급자에서 시크릿 값을 업데이트할 방법(CLI 액세스 또는 클라우드 콘솔).
+- HTTP를 통해 배포를 kickoff할 방법(curl, Postman, 또는 CrewAI Platform의 **Run** 탭).
+
+## 1단계 — 검증 Crew 스캐폴딩
+
+새 Crew 프로젝트를 만듭니다. CrewAI CLI가 구조를 스캐폴딩합니다:
+
+```bash
+crewai create crew rotation_verifier --skip_provider
+cd rotation_verifier
+```
+
+## 2단계 — Credential Echo 도구 추가
+
+`src/rotation_verifier/tools/custom_tool.py`를 시크릿 기반 환경 변수를 읽고 fingerprint를 반환하는 도구로 교체합니다:
+
+```python src/rotation_verifier/tools/credential_echo_tool.py
+"""Tool that verifies a runtime-injected secret without leaking the value.
+
+Reads the secret-backed env var (populated by the workload-identity
+secrets manager at kickoff time) and returns a stable fingerprint. Never
+echo raw credential values into LLM output or logs in production code —
+the fingerprint alone is sufficient to confirm rotation worked.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import os
+
+from crewai.tools import BaseTool
+
+
+# Match the deployment environment variable's `key` field.
+ENV_VAR_NAME = "API_KEY"
+
+
+class CredentialEchoTool(BaseTool):
+    name: str = "credential_echo"
+    description: str = (
+        "Read the API credential from the worker's environment and return a "
+        "fingerprint summary. Use this exactly once when asked to verify the "
+        "current credential. Takes no arguments."
+    )
+
+    def _run(self) -> str:
+        value = os.environ.get(ENV_VAR_NAME)
+        if not value:
+            return (
+                f"ERROR: {ENV_VAR_NAME} env var is not set. The workload-"
+                "identity secret fetch did not run, or the deployment is "
+                "missing the secret-backed env var."
+            )
+        fingerprint = hashlib.sha256(value.encode()).hexdigest()[:12]
+        return f"Authenticated. credential.fingerprint=sha256:{fingerprint}"
+```
+
+## 3단계 — 기본 에이전트 및 작업 구성 교체
+
+Crew에는 하나의 에이전트와 하나의 작업이 있습니다 — 둘 다 시크릿 값을 **절대** 언급하지 않는 설명을 가지므로, 작업 키가 로테이션 전반에 걸쳐 안정적으로 유지됩니다.
+
+```yaml src/rotation_verifier/config/agents.yaml
+credential_checker:
+  role: >
+    Credential Verifier
+  goal: >
+    Confirm that the workload-identity-backed secret reached this worker
+    process and report a fingerprint of the current value.
+  backstory: >
+    You are a no-nonsense reliability engineer responsible for verifying
+    that secrets fetched at runtime via workload identity are present
+    and fresh. You always use the credential_echo tool exactly once and
+    report the result verbatim — you never make up values.
+```
+
+```yaml src/rotation_verifier/config/tasks.yaml
+verify_credential_task:
+  description: >
+    Use the credential_echo tool to read the runtime-injected credential
+    and produce a one-line confirmation. The current year is {current_year}
+    (use it only in the timestamp; do not transform the credential output).
+  expected_output: >
+    A single line in the form:
+    "[{current_year}] <credential_echo tool's exact output>"
+  agent: credential_checker
+```
+
+## 4단계 — Crew 클래스 연결
+
+```python src/rotation_verifier/crew.py
+from crewai import Agent, Crew, Process, Task
+from crewai.project import CrewBase, agent, crew, task
+from crewai.agents.agent_builder.base_agent import BaseAgent
+
+from rotation_verifier.tools.credential_echo_tool import CredentialEchoTool
+
+
+@CrewBase
+class RotationVerifierCrew():
+    """Single-task crew that verifies a workload-identity-backed secret
+    was successfully fetched at runtime.
+
+    Rotate the underlying secret in the cloud provider, kickoff again, and
+    the credential fingerprint in the agent's report changes — without any
+    re-deploy, worker restart, or input change. The crew prompt itself
+    never references the secret value.
+    """
+
+    agents: list[BaseAgent]
+    tasks: list[Task]
+
+    @agent
+    def credential_checker(self) -> Agent:
+        return Agent(
+            config=self.agents_config["credential_checker"],
+            tools=[CredentialEchoTool()],
+            verbose=True,
+        )
+
+    @task
+    def verify_credential_task(self) -> Task:
+        return Task(config=self.tasks_config["verify_credential_task"])
+
+    @crew
+    def crew(self) -> Crew:
+        return Crew(
+            agents=self.agents,
+            tasks=self.tasks,
+            process=Process.sequential,
+            verbose=True,
+        )
+```
+
+## 5단계 — 배포 및 시크릿 환경 변수 구성
+
+다른 Crew와 마찬가지로 이 Crew를 CrewAI Platform에 배포합니다. 그런 다음 배포의 **Environment Variables** 페이지에서:
+
+- **Key:** `API_KEY` (도구의 `ENV_VAR_NAME`과 일치해야 함)
+- **Value Source:** [AWS WI](/ko/enterprise/features/secrets-manager/aws-workload-identity) 또는 [GCP WI](/ko/enterprise/features/secrets-manager/gcp-workload-identity)에서 설정한 WI 기반 자격 증명
+- **Secret Name:** 클라우드 공급자의 Secret Manager에 있는 시크릿 이름
+
+{/* SCREENSHOT: Environment Variables form with key=API_KEY, secret-backed value source selected, secret name filled → /images/secrets-manager/verify-rotation/01-env-var-form.png */}
+
+## 6단계 — 첫 번째 Kickoff 실행
+
+`<DEPLOYMENT_AUTH_TOKEN>`과 `<DEPLOYMENT_HOST>`를 배포의 **Run** 탭에 있는 값으로 교체합니다.
+
+```bash
+curl -m 60 \
+  -H "Authorization: Bearer <DEPLOYMENT_AUTH_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -X POST https://<DEPLOYMENT_HOST>/kickoff \
+  -d '{"inputs":{"current_year":"2026"}}'
+```
+
+kickoff가 완료되면(몇 초), 에이전트의 출력을 확인합니다. 다음과 같이 표시됩니다:
+
+```
+[2026] Authenticated. credential.fingerprint=sha256:004421b993c9
+```
+
+fingerprint를 기록합니다. 그 해시는 클라우드 공급자에 현재 있는 어떤 시크릿 값과 고유하게 연결되어 있습니다.
+
+## 7단계 — 클라우드 공급자에서 시크릿 로테이션
+
+<Tabs>
+  <Tab title="AWS">
+    ```bash
+    aws secretsmanager update-secret \
+      --region <REGION> \
+      --secret-id <SECRET_NAME> \
+      --secret-string "rotated value"
+    ```
+  </Tab>
+
+  <Tab title="GCP">
+    새 버전을 추가합니다(Secret Manager는 항상 `latest`를 읽음):
+
+    ```bash
+    echo -n "rotated value" | gcloud secrets versions add <SECRET_NAME> \
+      --data-file=- \
+      --project=<YOUR_PROJECT_ID>
+    ```
+  </Tab>
+
+  <Tab title="Azure">
+    ```bash
+    az keyvault secret set \
+      --vault-name <VAULT_NAME> \
+      --name <SECRET_NAME> \
+      --value "rotated value"
+    ```
+  </Tab>
+</Tabs>
+
+## 8단계 — 두 번째 Kickoff 실행 및 비교
+
+```bash
+curl -m 60 \
+  -H "Authorization: Bearer <DEPLOYMENT_AUTH_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -X POST https://<DEPLOYMENT_HOST>/kickoff \
+  -d '{"inputs":{"current_year":"2026"}}'
+```
+
+이제 에이전트의 출력은 **다른 fingerprint**를 보여줍니다:
+
+```
+[2026] Authenticated. credential.fingerprint=sha256:e2fc89848f72
+```
+
+이는 재배포, 워커 재시작 또는 기타 운영자 작업 없이 실행 중인 배포에서 로테이션이 적용되었음을 증명합니다.
+
+## 이것이 검증하는 것 — 그리고 검증하지 않는 것
+
+**검증하는 것:**
+- CrewAI Platform에서 WI OIDC 토큰 발급이 작동합니다.
+- 클라우드 측 신뢰(AWS의 IAM OIDC 공급자, GCP의 Workload Identity Pool, Azure의 Federated Identity Credential)가 토큰을 수락합니다.
+- 클라우드 측 ID(IAM Role / GCP 서비스 계정 / Entra App Registration)가 시크릿을 읽을 수 있는 액세스 권한을 가집니다.
+- 시크릿 값이 kickoff 시점에 워커 프로세스의 `os.environ`에 도달합니다.
+- 후속 로테이션이 다음 kickoff에 전파됩니다.
+
+**검증하지 않는 것:**
+- 실제 프로덕션 Crew가 로테이션을 우아하게 처리하는지 — 예를 들어, 시작 시 환경 변수를 한 번만 읽는 장기 실행 작업은 작업이 끝날 때까지 이전 값을 계속 사용합니다. 적절히 계획하세요: 모듈 임포트 시가 아닌 사용 시점에 시크릿을 읽으세요.
+
+## 왜 프롬프트에서 직접 시크릿을 참조하지 않나요?
+
+더 간단해 보이는 데모는 시크릿 값을 작업 설명에 직접 넣고(예: "`{api_key}`에 대해 조사") 프롬프트를 검사하는 것입니다. **그렇게 하지 마세요.** 두 가지 이유:
+
+1. **LLM 호출 트레이스와 공급자 측 로그에 시크릿이 유출됩니다.** 트레이스 액세스가 있는 모든 사람이 읽을 수 있습니다.
+2. **모든 kickoff에서 작업 설명이 변경됩니다.** CrewAI Platform은 설명의 MD5 해시로 작업을 식별합니다. 로테이션되는 값은 kickoff마다 해시가 변경되어 배포 시간 → 런타임 작업 매핑이 깨집니다. 증상: 작업 레코드가 무한정 `pending_run`으로 표시되거나 다중 작업 Crew의 일부 작업만 등록됩니다.
+
+이 가이드의 도구 기반 패턴은 두 문제를 모두 회피합니다: 프롬프트는 정적이고, 도구가 런타임에 환경 변수를 읽으며, 값의 fingerprint만 LLM에 도달합니다.
+
+## 다음 단계
+
+- [Secrets Manager 개요로 돌아가기](/ko/enterprise/features/secrets-manager/overview)
+- 검증되면 검증 Crew를 삭제합니다. 실제 Crew는 동일한 패턴을 따라야 합니다: 시크릿은 도구 내부의 `os.environ`을 통해 액세스되며, 절대 프롬프트에 치환되지 않습니다.

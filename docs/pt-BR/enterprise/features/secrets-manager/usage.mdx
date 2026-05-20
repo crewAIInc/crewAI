@@ -1,0 +1,136 @@
+---
+title: Usando o Secrets Manager
+description: Gerencie permissões e referencie segredos gerenciados a partir de variáveis de ambiente na CrewAI Platform
+sidebarTitle: Uso e Permissões
+---
+
+## Visão Geral
+
+Este guia é agnóstico em relação ao provedor. Ele assume que você (ou outro admin) já configurou pelo menos uma Credencial de Provedor de Segredos. Escolha seu guia de configuração com base no caminho que deseja:
+
+- Credenciais estáticas: [AWS](/pt-BR/enterprise/features/secrets-manager/aws) · [GCP](/pt-BR/enterprise/features/secrets-manager/gcp)
+- Workload Identity (consciente de rotação): [AWS](/pt-BR/enterprise/features/secrets-manager/aws-workload-identity) · [GCP](/pt-BR/enterprise/features/secrets-manager/gcp-workload-identity)
+
+Use este guia para:
+
+- Conceder as permissões corretas aos membros da organização.
+- Referenciar segredos a partir de variáveis de ambiente nas suas automações.
+- Verificar se tudo é resolvido corretamente em runtime.
+
+## Permissões (RBAC)
+
+Três features da CrewAI Platform são relevantes ao trabalhar com o Secrets Manager:
+
+- `secret_providers` — controla o acesso à página **Secret Provider Credentials**.
+- `workload_identity_configs` — controla o acesso à página **Workload Identity** (relevante apenas se você usar o caminho WI).
+- `environment_variables` — controla quem pode criar ou editar variáveis de ambiente.
+
+Cada feature tem dois níveis de ação: `read` e `manage`. Conceder `manage` implica automaticamente em `read`.
+
+### O que Conceder
+
+| Objetivo | `secret_providers` | `workload_identity_configs` | `environment_variables` |
+|---|---|---|---|
+| Usar credenciais estáticas existentes em variáveis de ambiente (sem edição de provedor) | `read` | — | `manage` |
+| Criar, editar ou excluir credenciais estáticas | `manage` | — | `manage` |
+| Usar credenciais existentes baseadas em Workload Identity em env vars | `read` | — | `manage` |
+| Criar, editar ou excluir configs de Workload Identity (e credenciais que as referenciam) | `manage` | `manage` | `manage` |
+
+<Note>
+**Owners** automaticamente têm acesso total a todas as features. O papel padrão **Member** intencionalmente exclui `secret_providers` e `workload_identity_configs` — admins devem incluir explicitamente os membros por meio de um papel customizado.
+</Note>
+
+### Como Atribuir
+
+1. Na CrewAI Platform, navegue até **Settings** → **Roles**. Nesta página você pode criar novos papéis, editar as permissões de cada papel e atribuir papéis aos membros existentes da organização.
+
+   {/* SCREENSHOT: Sidebar highlighting Settings → Roles → /images/secrets-manager/usage/06-amp-settings-roles-nav.png */}
+   {/* SCREENSHOT: Roles list page with "Create Role" button visible → /images/secrets-manager/usage/07-amp-roles-list.png */}
+
+2. Clique em **Create Role** para criar um novo papel ou abra um papel existente para editar suas permissões.
+
+3. No editor de permissões do papel, alterne as features relevantes conforme a tabela acima:
+
+   - `secret_providers`: escolha **read** se este papel só precisa usar credenciais existentes, ou **manage** se também deve ser capaz de criar, editar e excluir credenciais.
+   - `environment_variables`: escolha **manage** para que o papel possa criar variáveis de ambiente que referenciam segredos.
+
+   {/* SCREENSHOT: Role editor showing the secret_providers feature with read/manage toggles → /images/secrets-manager/usage/08-amp-role-editor-secret-providers-toggles.png */}
+   {/* SCREENSHOT: Role editor showing environment_variables toggles → /images/secrets-manager/usage/09-amp-role-editor-env-vars-toggles.png */}
+
+4. Salve o papel.
+
+5. Atribua o papel aos membros relevantes pela mesma página de Roles (ou pela lista de Membros da organização).
+
+   {/* SCREENSHOT: Member assignment screen where the new role is applied to a user → /images/secrets-manager/usage/10-amp-assign-role-to-member.png */}
+
+## Referenciando Segredos em Variáveis de Ambiente
+
+Uma vez que uma credencial de provedor exista e seu papel tenha as permissões corretas, você pode referenciar segredos gerenciados a partir de qualquer variável de ambiente.
+
+Na CrewAI Platform, navegue até **Environment Variables** e clique em **Add Environment Variables**.
+
+{/* SCREENSHOT: Environment Variables empty state with "Add" button → /images/secrets-manager/usage/11-amp-env-vars-empty.png */}
+
+Preencha o formulário:
+
+- **Key** — o nome da variável de ambiente. Deve começar com uma letra ou underscore e conter apenas letras, números e underscores. Convencionalmente em maiúsculas, ex. `OPENAI_API_KEY`.
+
+- **Value Source** — escolha de onde vem o valor:
+  - **Direct Value** — um valor em texto puro que você digita. Use isto quando não quiser envolver um provedor.
+  - **Use AWS default** (ou o equivalente para o seu provedor) — usa a credencial atualmente marcada como padrão para aquele tipo de provedor.
+  - **A specific named credential** — selecione a credencial pelo nome. Use isto se você tiver múltiplas credenciais para o mesmo provedor (por exemplo, `aws-prod` e `aws-staging`) e quiser escolher uma explicitamente.
+
+  {/* SCREENSHOT: Env var form with the "Value Source" dropdown open, showing "AWS default" + named credentials → /images/secrets-manager/usage/12-amp-env-var-form-source-selector.png */}
+
+- **Secret Name** — o nome do segredo no seu provedor. Uma vez que uma credencial é selecionada, este campo oferece autocomplete: comece a digitar e a CrewAI Platform consulta seu provedor por nomes de segredos correspondentes.
+
+  Use a sintaxe `secret-name#json_key` para extrair um único campo de um segredo estruturado (JSON). Por exemplo, dado um segredo `database-credentials` com valor `{"username": "...", "password": "..."}`, referencie `database-credentials#password` para injetar apenas a senha.
+
+  {/* SCREENSHOT: Env var form with the secret name autocomplete dropdown showing live results → /images/secrets-manager/usage/13-amp-env-var-form-secret-name-autocomplete.png */}
+
+  <Note>
+  **Nota sobre Azure Key Vault:** Nomes de segredos do Azure não podem conter underscores. A CrewAI Platform converte automaticamente underscores no seu campo `Secret Name` para hífens ao chamar o Azure (ex.: `db_password` é enviado como `db-password`).
+  </Note>
+
+Clique em **Create** para salvar a variável.
+
+{/* SCREENSHOT: Env var list with the new variable showing masked value and a "secret" indicator → /images/secrets-manager/usage/14-amp-env-var-created.png */}
+
+<Tip>
+Ao editar uma variável de ambiente existente, deixar o campo **Value** em branco preserva o valor atual. Isto é intencional — permite que você altere outros campos (como o nome do segredo ou a credencial) sem precisar digitar o valor novamente.
+</Tip>
+
+## Verificando se Funciona
+
+Para verificar de ponta a ponta:
+
+1. Referencie a variável de ambiente em uma automação, crew ou deployment exatamente como você faria com qualquer outra variável de ambiente.
+2. Faça o deploy da automação.
+3. Dispare uma execução e confirme que ela é concluída com sucesso.
+
+### O comportamento de rotação depende do caminho da credencial
+
+| Caminho da credencial | Quando o segredo é lido | O que a rotação requer |
+|---|---|---|
+| **Credenciais estáticas** (chaves de acesso AWS, JSON de service account GCP) | No **momento do deploy** — o valor é incorporado à imagem do deployment | Fazer novo deploy da automação após rotacionar o segredo |
+| **Workload Identity** (federação OIDC, AWS ou GCP) | A **cada kickoff de automação** — o valor é buscado de forma fresca da sua nuvem | Nada — o próximo kickoff após a rotação verá o novo valor |
+
+<Note>
+**Se você precisa de segredos conscientes de rotação** (sem novo deploy na rotação), use o caminho Workload Identity: [AWS WI](/pt-BR/enterprise/features/secrets-manager/aws-workload-identity) ou [GCP WI](/pt-BR/enterprise/features/secrets-manager/gcp-workload-identity). O trade-off é mais esforço de configuração inicial (registrar a CrewAI Platform como provedor OIDC na sua nuvem), mas operações mais simples no longo prazo.
+</Note>
+
+Se o deploy ou a execução falhar com um erro relacionado ao seu segredo, verifique as causas mais comuns:
+
+| Sintoma | Causa provável |
+|---|---|
+| `no credential found` | A variável de ambiente referencia um provedor, mas nenhuma credencial específica foi selecionada e não há credencial padrão definida para aquele tipo de provedor. Selecione uma credencial explicitamente na variável, ou marque uma credencial como padrão na página **Secret Provider Credentials**. |
+| `secret not found` | Erro de digitação no **Secret Name**, ou o segredo não existe na conta/região do provedor para a qual a credencial aponta. Reconfira ambos. |
+| Automação executa com o valor antigo após rotação (caminho de credenciais estáticas) | O valor anterior está incorporado à imagem do contêiner do deployment. Faça novo deploy da automação para pegar o valor rotacionado. Para evitar isso completamente, mude a credencial para o caminho Workload Identity. |
+| Automação executa com o valor antigo após rotação (caminho Workload Identity) | Confirme que a env var referencia uma credencial baseada em WI (não uma de chaves estáticas). Com WI, o próximo kickoff após a rotação deve ver o novo valor. Se não vir, verifique se o segredo foi realmente atualizado na sua nuvem (ex.: `aws secretsmanager get-secret-value`). |
+| `JSON key not found` | Ao usar `secret-name#json_key`, o segredo subjacente deve ser um objeto JSON válido contendo essa chave. Verifique lendo o segredo diretamente no seu provedor. |
+
+## Próximos Passos
+
+- [Voltar à visão geral do Secrets Manager](/pt-BR/enterprise/features/secrets-manager/overview)
+- Credenciais estáticas: [AWS](/pt-BR/enterprise/features/secrets-manager/aws) · [GCP](/pt-BR/enterprise/features/secrets-manager/gcp)
+- Workload Identity (consciente de rotação): [AWS](/pt-BR/enterprise/features/secrets-manager/aws-workload-identity) · [GCP](/pt-BR/enterprise/features/secrets-manager/gcp-workload-identity)

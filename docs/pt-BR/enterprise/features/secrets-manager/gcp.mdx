@@ -1,0 +1,188 @@
+---
+title: Google Cloud Secret Manager
+description: Configure o Google Cloud Secret Manager como provedor de segredos para a CrewAI Platform, de ponta a ponta
+sidebarTitle: GCP
+---
+
+## Visão Geral
+
+Este guia o orienta na configuração do Google Cloud Secret Manager como provedor de segredos para sua organização na CrewAI Platform, usando **credenciais de service account**. Ao final, a CrewAI Platform poderá ler segredos armazenados no seu projeto Google Cloud e injetá-los como valores de variáveis de ambiente em runtime.
+
+<Note>
+Este guia cobre o caminho de **credenciais estáticas** — segredos são resolvidos no momento do deploy e incorporados à imagem do deployment. Valores rotacionados exigem um novo deploy. Se você quiser segredos conscientes de rotação que se atualizam a cada kickoff de automação, veja [GCP Workload Identity Federation](/pt-BR/enterprise/features/secrets-manager/gcp-workload-identity).
+</Note>
+
+<Note>
+Este guia cobre a configuração do lado GCP e a configuração da credencial na CrewAI Platform. Para então referenciar um segredo a partir de uma variável de ambiente, veja [Usando o Secrets Manager](/pt-BR/enterprise/features/secrets-manager/usage).
+</Note>
+
+## Pré-requisitos
+
+<Note>
+Antes de começar, certifique-se de que você tem:
+
+- Um projeto Google Cloud com a **Secret Manager API** habilitada. Habilite-a no [console APIs & Services](https://console.cloud.google.com/apis/library/secretmanager.googleapis.com) ou via `gcloud`:
+
+  ```bash
+  gcloud services enable secretmanager.googleapis.com --project=YOUR_PROJECT_ID
+  ```
+
+- Permissão no projeto para criar service accounts, conceder papéis IAM e (se necessário) criar segredos.
+- Uma organização na CrewAI Platform onde seu usuário tem a permissão `secret_providers: manage`. Veja [Permissões (RBAC)](/pt-BR/enterprise/features/secrets-manager/usage#permissions-rbac).
+</Note>
+
+## Passo 1 — Criar uma Service Account
+
+Uma service account é a identidade do lado GCP como a qual a CrewAI Platform irá se autenticar.
+
+No [console IAM & Admin → Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts), clique em **Create Service Account**.
+
+- **Service account name:** `crewai-secrets-reader`
+- **Service account ID:** preenchido automaticamente a partir do nome (ex. `crewai-secrets-reader@YOUR_PROJECT_ID.iam.gserviceaccount.com`)
+- **Description (optional):** "Read-only access to Secret Manager for CrewAI Platform"
+
+Clique em **Create and Continue**. Pule as concessões opcionais nesta tela — você anexará o papel no Passo 2. Clique em **Done**.
+
+Para detalhes completos, veja a documentação GCP: [Create service accounts](https://cloud.google.com/iam/docs/service-accounts-create).
+
+{/* SCREENSHOT: GCP "Create service account" form with name "crewai-secrets-reader" → /images/secrets-manager/gcp/01-create-service-account.png */}
+
+## Passo 2 — Conceder Acesso ao Secret Manager
+
+A CrewAI Platform precisa de permissão para listar e ler segredos no seu projeto. Use um de dois escopos — **a nível de projeto** para simplicidade ou **por segredo** para menor privilégio.
+
+<Tabs>
+  <Tab title="A nível de projeto (mais simples)">
+    No [console IAM](https://console.cloud.google.com/iam-admin/iam), clique em **Grant Access** e:
+
+    - **New principals:** o email da service account do Passo 1.
+    - **Role:** **Secret Manager Secret Accessor** (`roles/secretmanager.secretAccessor`).
+
+    Clique em **Save**.
+
+    Ou via `gcloud`:
+
+    ```bash
+    gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+      --member="serviceAccount:crewai-secrets-reader@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+      --role="roles/secretmanager.secretAccessor"
+    ```
+
+    {/* SCREENSHOT: GCP IAM "Grant access" panel with the service account and Secret Manager Secret Accessor role → /images/secrets-manager/gcp/02-iam-grant-access.png */}
+  </Tab>
+
+  <Tab title="Por segredo (menor privilégio)">
+    Conceda o papel apenas nos segredos específicos que a CrewAI Platform deve acessar. Repita para cada segredo:
+
+    ```bash
+    gcloud secrets add-iam-policy-binding YOUR_SECRET_NAME \
+      --member="serviceAccount:crewai-secrets-reader@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+      --role="roles/secretmanager.secretAccessor" \
+      --project=YOUR_PROJECT_ID
+    ```
+
+    Ou no console: abra cada segredo no [Secret Manager](https://console.cloud.google.com/security/secret-manager), clique em **Permissions** no painel à direita e conceda **Secret Manager Secret Accessor** à service account.
+
+    {/* SCREENSHOT: Per-secret "Permissions" panel in Secret Manager with the service account granted accessor role → /images/secrets-manager/gcp/03-per-secret-permissions.png */}
+  </Tab>
+</Tabs>
+
+<Tip>
+O papel `roles/secretmanager.secretAccessor` concede acesso somente leitura aos valores de segredos. A CrewAI Platform também chama `secretmanager.secrets.list` para a experiência de autocomplete no formulário de env-var — essa permissão está incluída no papel no escopo de projeto, mas **não** no escopo por segredo. Com vínculos por segredo, o autocomplete não sugerirá segredos; você precisará digitar o nome completo do segredo.
+</Tip>
+
+## Passo 3 — Criar uma Chave de Service Account
+
+Abra a service account do Passo 1 no [console IAM & Admin → Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts).
+
+- Clique na aba **Keys**.
+- Clique em **Add Key** → **Create new key**.
+- **Key type:** JSON.
+- Clique em **Create**. O navegador baixa um arquivo JSON — mantenha-o seguro; não pode ser baixado novamente.
+
+Ou via `gcloud`:
+
+```bash
+gcloud iam service-accounts keys create ./crewai-secrets-reader.json \
+  --iam-account=crewai-secrets-reader@YOUR_PROJECT_ID.iam.gserviceaccount.com
+```
+
+<Warning>
+A chave de service account é uma credencial estática de longa duração. Armazene-a com segurança (em um gerenciador de senhas ou no seu próprio cofre de segredos) e rotacione-a em uma cadência regular. Para eliminar credenciais estáticas completamente, use [GCP Workload Identity Federation](/pt-BR/enterprise/features/secrets-manager/gcp-workload-identity).
+</Warning>
+
+{/* SCREENSHOT: Service account "Keys" tab with the "Create new key" → JSON option → /images/secrets-manager/gcp/04-create-service-account-key.png */}
+
+## Passo 4 — Adicionar a Credencial na CrewAI Platform
+
+Na CrewAI Platform, navegue até **Settings** → **Secret Provider Credentials** e clique em **Add Credential**.
+
+{/* SCREENSHOT: Sidebar/nav highlighting Settings → Secret Provider Credentials → /images/secrets-manager/usage/01-amp-settings-nav.png */}
+
+Preencha o formulário:
+
+- **Name:** Um nome descritivo, ex. `gcp-prod`.
+- **Provider:** `Google Cloud Secret Manager`.
+- **Project ID:** O ID do seu projeto GCP (ex. `my-crewai-prod`).
+- **Service Account JSON:** Cole o conteúdo inteiro do arquivo JSON que você baixou no Passo 3.
+- (Opcional) Marque **Set as default credential for this provider**. A credencial padrão é usada por variáveis de ambiente que referenciam segredos GCP sem especificar uma credencial explicitamente.
+
+Clique em **Create**.
+
+{/* SCREENSHOT: "Add Secret Provider Credential" form with GCP fields filled in → /images/secrets-manager/gcp/05-amp-add-credential-form-gcp.png */}
+
+## Passo 5 — Criar Pelo Menos Um Segredo no GCP
+
+Se você ainda não tem segredos no GCP Secret Manager, crie um agora para que possa verificar a conexão no Passo 6.
+
+No [console Secret Manager](https://console.cloud.google.com/security/secret-manager), clique em **Create secret**.
+
+- **Name:** Um nome único, ex. `openai-api-key`.
+- **Secret value:** Cole um valor bruto ou faça upload de um arquivo.
+- Deixe as configurações de rotação, replicação e outras em seus padrões a menos que tenha um requisito específico.
+
+Clique em **Create secret**.
+
+Ou via `gcloud`:
+
+```bash
+echo -n "sk-your-actual-key" | gcloud secrets create openai-api-key \
+  --data-file=- \
+  --project=YOUR_PROJECT_ID \
+  --replication-policy=automatic
+```
+
+<Note>
+**Sintaxe de referência por chave JSON.** O GCP Secret Manager trata valores de segredos como blobs opacos. Se o valor do seu segredo for uma string JSON, a CrewAI Platform pode extrair um único campo usando a sintaxe `secret-name#json_key` (ex. `database-credentials#password`). Veja [Usando o Secrets Manager](/pt-BR/enterprise/features/secrets-manager/usage#referencing-secrets-in-environment-variables) para detalhes.
+</Note>
+
+Para detalhes completos, veja a documentação GCP: [Create a secret](https://cloud.google.com/secret-manager/docs/create-secret-quickstart).
+
+{/* SCREENSHOT: GCP "Create secret" form with name and value → /images/secrets-manager/gcp/06-create-secret.png */}
+
+## Passo 6 — Testar a Conexão
+
+De volta à CrewAI Platform, na página **Secret Provider Credentials**, encontre a credencial que você acabou de criar e clique em **Test Connection**.
+
+Um toast de sucesso confirma que a CrewAI Platform consegue se autenticar no GCP e ler segredos do seu projeto.
+
+{/* SCREENSHOT: Success toast after clicking "Test Connection" on the GCP credential → /images/secrets-manager/gcp/07-test-connection-success.png */}
+
+Se o teste falhar, verifique as causas mais comuns:
+
+| Sintoma | Causa provável |
+|---|---|
+| `PERMISSION_DENIED` ao listar segredos | A service account está sem `roles/secretmanager.secretAccessor`, ou você escopou por segredo (`list` não é concedido). Reconfira o Passo 2. |
+| `PERMISSION_DENIED` em `secretmanager.secrets.access` | Mesmo que acima, mas para um segredo específico. Confirme que a service account tem o papel accessor no segredo em questão. |
+| `unauthorized_client` / `invalid_grant` | O JSON de Service Account colado é inválido, expirado ou pertence a uma service account excluída. Recrie a chave (Passo 3) e cole novamente. |
+| `Project ID does not match` | O campo Project ID na CrewAI Platform não corresponde ao projeto dono da service account / segredos. Reconfira o Passo 4. |
+| `API not enabled` | Secret Manager API não está habilitada no projeto. Veja Pré-requisitos. |
+
+## Próximos Passos
+
+Agora que o GCP está conectado, vá para [Usando o Secrets Manager](/pt-BR/enterprise/features/secrets-manager/usage) para:
+
+- Conceder aos membros da organização as permissões corretas para usar (ou gerenciar) o Secrets Manager.
+- Referenciar seus segredos GCP a partir de variáveis de ambiente da CrewAI Platform.
+
+Se você quiser segredos **conscientes de rotação** que se propagam sem novo deploy, mude para [GCP Workload Identity Federation](/pt-BR/enterprise/features/secrets-manager/gcp-workload-identity) — mesmo cofre de segredos, sem credenciais estáticas, segredos buscados por kickoff.

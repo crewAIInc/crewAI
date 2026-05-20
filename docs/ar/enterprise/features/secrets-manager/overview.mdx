@@ -1,0 +1,81 @@
+---
+title: نظرة عامة على مدير الأسرار
+description: ربط مخازن الأسرار الخارجية بمنصة CrewAI Platform والإشارة إلى الأسرار المُدارة من متغيرات البيئة
+sidebarTitle: نظرة عامة
+---
+
+## نظرة عامة
+
+تُتيح ميزة مدير الأسرار لمؤسستك ربط مخزن أسرار خارجي — AWS Secrets Manager أو Google Cloud Secret Manager أو (قريباً) Azure Key Vault — والإشارة إلى تلك الأسرار مباشرةً من متغيرات البيئة على الأتمتات والطواقم لديك. بدلاً من لصق قيم نصية صريحة في المنصة، فإنك تخزّن مجموعة واحدة من بيانات الاعتماد لكل مزود وتُشير إلى الأسرار بالاسم.
+
+يمنحك هذا:
+
+- **تخزين مركزي** — إدارة الأسرار في مزوّدك بدلاً من تعديل إعدادات CrewAI Platform. لا تحتفظ CrewAI Platform بأي نسخة نصية صريحة من قيمة السر.
+- **تقليل التعرّض** — لا تظهر القيم الحساسة أبداً كنص صريح في إعدادات CrewAI Platform.
+- **قابلية تدقيق سحابية المنشأ** — يسجّل سجل التدقيق الخاص بمزوّدك كل قراءة لسر.
+
+<Note>
+يتطلب مدير الأسرار (مساران: بيانات الاعتماد الثابتة و Workload Identity) إصدار CrewAI runtime رقم `1.14.5` أو أحدث في صورة حاوية الأتمتة.
+</Note>
+
+## مساران: بيانات اعتماد ثابتة مقابل Workload Identity
+
+هناك طريقتان لربط CrewAI Platform بمخزن أسرار السحابة لديك. **يختلفان اختلافاً كبيراً في سلوك التدوير**، لذا اختر بناءً على مدى تكرار تدوير أسرارك ومدى صرامة وضعك الأمني.
+
+| الجانب | بيانات الاعتماد الثابتة | Workload Identity (اتحاد OIDC) |
+|---|---|---|
+| **المصادقة** | مفاتيح وصول / ملف JSON لحساب خدمة طويلة الأمد مخزّنة في CrewAI Platform | رموز قصيرة الأمد تُصدر لكل عملية عامل؛ لا تُخزَّن بيانات اعتماد ثابتة في أي مكان |
+| **انتشار التدوير** | تُحَلّ وقت النشر و**تُدمج في صورة حاوية النشر** — تتطلب القيم المُدوَّرة إعادة نشر | تُحَلّ **وقت تنفيذ الأتمتة** — تنتشر القيم المُدوَّرة إلى الإطلاق التالي بدون إعادة نشر |
+| **جهد الإعداد** | أقل — لصق المفاتيح / رفع ملف JSON لحساب الخدمة | أعلى — تسجيل CrewAI Platform كمزود OIDC في سحابتك وتكوين سياسات الثقة |
+| **الأنسب لـ** | البداية، الأسرار قليلة التدوير، عمليات نشر بحساب واحد | الإنتاج، الأسرار كثيرة التدوير، البيئات التي تحكمها الامتثال وتمنع بيانات الاعتماد طويلة الأمد |
+
+<Note>
+**يستخدم كلا المسارين نفس تدفق الواجهة** للإشارة إلى الأسرار في متغيرات البيئة (راجع [استخدام مدير الأسرار](/ar/enterprise/features/secrets-manager/usage)). الفرق بالكامل في كيفية مصادقة المنصة لسحابتك ومتى تقرأ قيمة السر.
+</Note>
+
+### اختر دليل الإعداد الخاص بك
+
+| المزود | بيانات الاعتماد الثابتة | Workload Identity |
+|---|---|---|
+| AWS Secrets Manager | [AWS — المفاتيح الثابتة / AssumeRole](/ar/enterprise/features/secrets-manager/aws) | [AWS — Workload Identity (OIDC)](/ar/enterprise/features/secrets-manager/aws-workload-identity) |
+| Google Cloud Secret Manager | [GCP — مفتاح حساب الخدمة](/ar/enterprise/features/secrets-manager/gcp) | [GCP — Workload Identity Federation](/ar/enterprise/features/secrets-manager/gcp-workload-identity) |
+| Azure Key Vault | [Azure — السر المُعرَّف للعميل](/ar/enterprise/features/secrets-manager/azure) | [Azure — Workload Identity Federation](/ar/enterprise/features/secrets-manager/azure-workload-identity) |
+
+<Note>
+واجهتا مدير الأسرار و Workload Identity مُوسومتان حالياً بـ **Beta** في CrewAI Platform.
+</Note>
+
+## كيف تتلاءم الأجزاء معاً
+
+إعداد مدير الأسرار هو تدفق من ثلاث خطوات يشمل كلاً من مزود السحابة و CrewAI Platform:
+
+1. **يُكوِّن المسؤول بيانات اعتماد المزود.** هذا هو العمل من جانب السحابة — ويختلف العمل اعتماداً على المسار (بيانات الاعتماد الثابتة أو Workload Identity) الذي تختاره. تغطي أدلة المزودين هذا من البداية إلى النهاية.
+2. **يُشير المسؤول (أو عضو مصرَّح له) إلى سر في متغير بيئة.** من صفحة متغيرات البيئة، يختار المستخدم بيانات اعتماد المزود ويُحدّد اسم السر. راجع [استخدام مدير الأسرار](/ar/enterprise/features/secrets-manager/usage#referencing-secrets-in-environment-variables).
+3. **تتلقى الأتمتة القيمة المحلولة وقت التشغيل.** عندما يعمل طاقم أو أتمتة، تجلب CrewAI Platform السر من مزوّدك وتحقنه كقيمة لمتغير البيئة. مع Workload Identity، يحدث هذا الجلب في كل إطلاق (مراعٍ للتدوير). مع بيانات الاعتماد الثابتة، يحدث الجلب وقت النشر وتُدمج القيمة في صورة النشر.
+
+## الأذونات
+
+تتحكم ميزتان في CrewAI Platform بالوصول إلى مدير الأسرار:
+
+- `secret_providers` — تتحكم بمن يستطيع عرض أو إدارة بيانات اعتماد المزودين.
+- `environment_variables` — تتحكم بمن يستطيع إنشاء وتحرير متغيرات البيئة (بما فيها تلك التي تُشير إلى أسرار).
+
+تتحكم ميزة ثالثة بإعداد Workload Identity:
+
+- `workload_identity_configs` — تتحكم بمن يستطيع عرض أو إدارة تكوينات Workload Identity. مطلوبة فقط إذا كنت تستخدم مسار Workload Identity.
+
+يتمتع المالكون دائماً بالوصول الكامل. لا يحصل الأعضاء على وصول إلى `secret_providers` أو `workload_identity_configs` افتراضياً ويجب منحهم الإذن عبر دور مخصص. راجع [الأذونات (RBAC)](/ar/enterprise/features/secrets-manager/usage#permissions-rbac) للحصول على المصفوفة الكاملة والتعليمات خطوة بخطوة.
+
+## الخطوات التالية
+
+اختر مسارك:
+
+- **بيانات الاعتماد الثابتة** (أبسط، تتطلب إعادة نشر عند التدوير):
+  - [تكوين AWS Secrets Manager](/ar/enterprise/features/secrets-manager/aws)
+  - [تكوين Google Cloud Secret Manager](/ar/enterprise/features/secrets-manager/gcp)
+  - [تكوين Azure Key Vault](/ar/enterprise/features/secrets-manager/azure)
+- **Workload Identity** (مراعٍ للتدوير، بدون إعادة نشر):
+  - [تكوين AWS Workload Identity](/ar/enterprise/features/secrets-manager/aws-workload-identity)
+  - [تكوين GCP Workload Identity Federation](/ar/enterprise/features/secrets-manager/gcp-workload-identity)
+  - [تكوين Azure Workload Identity Federation](/ar/enterprise/features/secrets-manager/azure-workload-identity)
+- ثم: [استخدام الأسرار في متغيرات البيئة وإدارة الأذونات](/ar/enterprise/features/secrets-manager/usage)

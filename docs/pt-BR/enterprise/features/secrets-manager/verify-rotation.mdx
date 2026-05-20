@@ -1,0 +1,260 @@
+---
+title: Verificar Rotação
+description: Um crew de exemplo autocontido que prova que a rotação de segredos se propaga para deployments em execução sem novo deploy.
+sidebarTitle: Verificar Rotação
+---
+
+## Visão Geral
+
+Este guia mostra como verificar que **um segredo rotacionado no seu provedor de nuvem é pego no próprio kickoff de automação seguinte** — sem novo deploy, sem reinício de worker. É relevante apenas quando você configurou uma credencial baseada em Workload Identity ([AWS](/pt-BR/enterprise/features/secrets-manager/aws-workload-identity), [GCP](/pt-BR/enterprise/features/secrets-manager/gcp-workload-identity), [Azure](/pt-BR/enterprise/features/secrets-manager/azure-workload-identity)). Deployments com credenciais estáticas exigem um novo deploy após a rotação; nada a verificar aqui.
+
+A receita abaixo usa um crew minúsculo e autocontido com uma ferramenta, um agente, uma tarefa. O prompt do crew nunca referencia o valor do segredo — em vez disso, uma ferramenta o lê de `os.environ` e reporta um fingerprint SHA-256 do que ela vê. Rotacione o segredo no seu provedor de nuvem, dispare novamente e o fingerprint muda.
+
+<Note>
+Por que um fingerprint, não o valor bruto? Colocar segredos brutos na saída do LLM e em trace logs é um vetor de vazamento. O fingerprint é suficiente para confirmar "o valor mudou" sem escrever o valor real em nenhum lugar observável.
+</Note>
+
+## Pré-requisitos
+
+Antes de executar esta verificação:
+
+- Uma Secret Provider Credential baseada em WI está configurada ([AWS](/pt-BR/enterprise/features/secrets-manager/aws-workload-identity), [GCP](/pt-BR/enterprise/features/secrets-manager/gcp-workload-identity), [Azure](/pt-BR/enterprise/features/secrets-manager/azure-workload-identity)).
+- Uma variável de ambiente no seu deployment com `Secret = true`, chave `API_KEY` (ou qualquer nome que preferir — ajuste a ferramenta abaixo para corresponder), referenciando um segredo no seu provedor de nuvem.
+- Uma forma de atualizar o valor do segredo no seu provedor de nuvem (acesso à CLI ou ao console da nuvem).
+- Uma forma de disparar o deployment via HTTP (curl, Postman ou a aba **Run** na CrewAI Platform).
+
+## Passo 1 — Estruturar um Crew de Verificação
+
+Crie um novo projeto de crew. O CrewAI CLI estrutura tudo:
+
+```bash
+crewai create crew rotation_verifier --skip_provider
+cd rotation_verifier
+```
+
+## Passo 2 — Adicionar a Ferramenta de Echo de Credencial
+
+Substitua `src/rotation_verifier/tools/custom_tool.py` por uma ferramenta que lê a env var apoiada pelo segredo e retorna um fingerprint:
+
+```python src/rotation_verifier/tools/credential_echo_tool.py
+"""Tool that verifies a runtime-injected secret without leaking the value.
+
+Reads the secret-backed env var (populated by the workload-identity
+secrets manager at kickoff time) and returns a stable fingerprint. Never
+echo raw credential values into LLM output or logs in production code —
+the fingerprint alone is sufficient to confirm rotation worked.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import os
+
+from crewai.tools import BaseTool
+
+
+# Match the deployment environment variable's `key` field.
+ENV_VAR_NAME = "API_KEY"
+
+
+class CredentialEchoTool(BaseTool):
+    name: str = "credential_echo"
+    description: str = (
+        "Read the API credential from the worker's environment and return a "
+        "fingerprint summary. Use this exactly once when asked to verify the "
+        "current credential. Takes no arguments."
+    )
+
+    def _run(self) -> str:
+        value = os.environ.get(ENV_VAR_NAME)
+        if not value:
+            return (
+                f"ERROR: {ENV_VAR_NAME} env var is not set. The workload-"
+                "identity secret fetch did not run, or the deployment is "
+                "missing the secret-backed env var."
+            )
+        fingerprint = hashlib.sha256(value.encode()).hexdigest()[:12]
+        return f"Authenticated. credential.fingerprint=sha256:{fingerprint}"
+```
+
+## Passo 3 — Substituir as Configs Padrão de Agente e Task
+
+O crew tem um agente e uma tarefa — ambos com descrições que **nunca** mencionam o valor do segredo, para que as chaves de tarefa permaneçam estáveis entre rotações.
+
+```yaml src/rotation_verifier/config/agents.yaml
+credential_checker:
+  role: >
+    Credential Verifier
+  goal: >
+    Confirm that the workload-identity-backed secret reached this worker
+    process and report a fingerprint of the current value.
+  backstory: >
+    You are a no-nonsense reliability engineer responsible for verifying
+    that secrets fetched at runtime via workload identity are present
+    and fresh. You always use the credential_echo tool exactly once and
+    report the result verbatim — you never make up values.
+```
+
+```yaml src/rotation_verifier/config/tasks.yaml
+verify_credential_task:
+  description: >
+    Use the credential_echo tool to read the runtime-injected credential
+    and produce a one-line confirmation. The current year is {current_year}
+    (use it only in the timestamp; do not transform the credential output).
+  expected_output: >
+    A single line in the form:
+    "[{current_year}] <credential_echo tool's exact output>"
+  agent: credential_checker
+```
+
+## Passo 4 — Conectar a Classe do Crew
+
+```python src/rotation_verifier/crew.py
+from crewai import Agent, Crew, Process, Task
+from crewai.project import CrewBase, agent, crew, task
+from crewai.agents.agent_builder.base_agent import BaseAgent
+
+from rotation_verifier.tools.credential_echo_tool import CredentialEchoTool
+
+
+@CrewBase
+class RotationVerifierCrew():
+    """Single-task crew that verifies a workload-identity-backed secret
+    was successfully fetched at runtime.
+
+    Rotate the underlying secret in the cloud provider, kickoff again, and
+    the credential fingerprint in the agent's report changes — without any
+    re-deploy, worker restart, or input change. The crew prompt itself
+    never references the secret value.
+    """
+
+    agents: list[BaseAgent]
+    tasks: list[Task]
+
+    @agent
+    def credential_checker(self) -> Agent:
+        return Agent(
+            config=self.agents_config["credential_checker"],
+            tools=[CredentialEchoTool()],
+            verbose=True,
+        )
+
+    @task
+    def verify_credential_task(self) -> Task:
+        return Task(config=self.tasks_config["verify_credential_task"])
+
+    @crew
+    def crew(self) -> Crew:
+        return Crew(
+            agents=self.agents,
+            tasks=self.tasks,
+            process=Process.sequential,
+            verbose=True,
+        )
+```
+
+## Passo 5 — Fazer Deploy e Configurar a Env Var do Segredo
+
+Faça deploy deste crew na CrewAI Platform exatamente como você faria com qualquer outro crew. Em seguida, na página **Environment Variables** do deployment:
+
+- **Key:** `API_KEY` (deve corresponder a `ENV_VAR_NAME` na ferramenta)
+- **Value Source:** a credencial baseada em WI que você configurou em [AWS WI](/pt-BR/enterprise/features/secrets-manager/aws-workload-identity) ou [GCP WI](/pt-BR/enterprise/features/secrets-manager/gcp-workload-identity)
+- **Secret Name:** o nome do segredo no Secret Manager do seu provedor de nuvem
+
+{/* SCREENSHOT: Environment Variables form with key=API_KEY, secret-backed value source selected, secret name filled → /images/secrets-manager/verify-rotation/01-env-var-form.png */}
+
+## Passo 6 — Executar o Primeiro Kickoff
+
+Substitua `<DEPLOYMENT_AUTH_TOKEN>` e `<DEPLOYMENT_HOST>` por valores da aba **Run** do seu deployment.
+
+```bash
+curl -m 60 \
+  -H "Authorization: Bearer <DEPLOYMENT_AUTH_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -X POST https://<DEPLOYMENT_HOST>/kickoff \
+  -d '{"inputs":{"current_year":"2026"}}'
+```
+
+Quando o kickoff for concluído (alguns segundos), verifique a saída do agente. Você verá:
+
+```
+[2026] Authenticated. credential.fingerprint=sha256:004421b993c9
+```
+
+Anote o fingerprint. Esse hash está unicamente vinculado a qualquer valor de segredo que esteja atualmente no seu provedor de nuvem.
+
+## Passo 7 — Rotacionar o Segredo no Seu Provedor de Nuvem
+
+<Tabs>
+  <Tab title="AWS">
+    ```bash
+    aws secretsmanager update-secret \
+      --region <REGION> \
+      --secret-id <SECRET_NAME> \
+      --secret-string "rotated value"
+    ```
+  </Tab>
+
+  <Tab title="GCP">
+    Adicione uma nova versão (o Secret Manager sempre lê `latest`):
+
+    ```bash
+    echo -n "rotated value" | gcloud secrets versions add <SECRET_NAME> \
+      --data-file=- \
+      --project=<YOUR_PROJECT_ID>
+    ```
+  </Tab>
+
+  <Tab title="Azure">
+    ```bash
+    az keyvault secret set \
+      --vault-name <VAULT_NAME> \
+      --name <SECRET_NAME> \
+      --value "rotated value"
+    ```
+  </Tab>
+</Tabs>
+
+## Passo 8 — Executar um Segundo Kickoff e Comparar
+
+```bash
+curl -m 60 \
+  -H "Authorization: Bearer <DEPLOYMENT_AUTH_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -X POST https://<DEPLOYMENT_HOST>/kickoff \
+  -d '{"inputs":{"current_year":"2026"}}'
+```
+
+A saída do agente agora mostra um **fingerprint diferente**:
+
+```
+[2026] Authenticated. credential.fingerprint=sha256:e2fc89848f72
+```
+
+Isso prova que a rotação foi pega pelo deployment em execução sem novo deploy, reinício de worker ou outra ação do operador.
+
+## O que Isso Verifica — e o que Não Verifica
+
+**Verifica:**
+- A emissão de tokens OIDC do WI a partir da CrewAI Platform funciona.
+- A confiança do lado da nuvem (provedor IAM OIDC para AWS, Workload Identity Pool para GCP, Federated Identity Credential para Azure) aceita o token.
+- A identidade do lado da nuvem (IAM Role / GCP service account / Entra App Registration) tem acesso para ler o segredo.
+- O valor do segredo chega ao `os.environ` do processo worker no momento do kickoff.
+- Rotações subsequentes se propagam para o próximo kickoff.
+
+**Não verifica:**
+- Que seus crews de produção reais lidam com a rotação graciosamente — ex., tarefas de longa duração que leem a env var uma vez na inicialização continuarão usando o valor antigo até que a tarefa termine. Planeje conforme: leia segredos no ponto de uso, não no momento do import do módulo.
+
+## Por que Não Referenciar o Segredo Diretamente no Prompt?
+
+Uma demonstração de aparência mais simples colocaria o valor do segredo diretamente em uma descrição de tarefa (ex.: "Research about `{api_key}`") e inspecionaria o prompt. **Não faça isso.** Duas razões:
+
+1. **Isso vaza o segredo para traces de chamadas LLM e logs do lado do provedor.** Qualquer um com acesso a traces pode lê-lo.
+2. **Isso muda a descrição da tarefa a cada kickoff.** A CrewAI Platform identifica tarefas por um hash MD5 da descrição; um valor rotativo significa que o hash muda por kickoff, o que quebra o mapeamento deploy-time → runtime das tarefas. Sintoma: os registros de tarefa aparecem como `pending_run` indefinidamente, ou apenas algumas das tarefas de um crew multi-task se registram.
+
+O padrão baseado em ferramenta neste guia contorna ambas as questões: o prompt é estático, a ferramenta lê a env var em runtime e apenas um fingerprint do valor chega ao LLM.
+
+## Próximos Passos
+
+- [Voltar à visão geral do Secrets Manager](/pt-BR/enterprise/features/secrets-manager/overview)
+- Uma vez verificado, descarte o crew de verificação. Crews reais devem seguir o mesmo padrão: segredos acessados via `os.environ` dentro de uma ferramenta, nunca substituídos em prompts.

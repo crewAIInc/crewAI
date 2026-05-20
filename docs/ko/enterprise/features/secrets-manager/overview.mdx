@@ -1,0 +1,81 @@
+---
+title: Secrets Manager 개요
+description: 외부 시크릿 저장소를 CrewAI Platform에 연결하고 환경 변수에서 관리되는 시크릿을 참조합니다
+sidebarTitle: 개요
+---
+
+## 개요
+
+Secrets Manager 기능은 조직에서 외부 시크릿 저장소(AWS Secrets Manager, Google Cloud Secret Manager 또는 곧 지원될 Azure Key Vault)를 연결하고, 자동화(Automation) 및 Crew의 환경 변수에서 해당 시크릿을 직접 참조할 수 있게 해줍니다. 플랫폼에 평문 값을 붙여 넣는 대신, 각 공급자별로 자격 증명 한 세트만 저장하고 시크릿을 이름으로 참조합니다.
+
+이를 통해 얻는 이점은 다음과 같습니다:
+
+- **중앙 집중식 저장** — CrewAI Platform 설정을 편집하는 대신 공급자에서 시크릿을 관리합니다. CrewAI Platform은 시크릿 값의 평문 사본을 보관하지 않습니다.
+- **노출 감소** — 민감한 값이 CrewAI Platform 설정에 평문으로 존재하지 않습니다.
+- **클라우드 네이티브 감사 가능성** — 공급자의 감사 로그에 모든 시크릿 읽기 작업이 기록됩니다.
+
+<Note>
+Secrets Manager(정적 자격 증명 및 Workload Identity 경로 모두)는 자동화 파드 이미지에 CrewAI 런타임 버전 `1.14.5` 이상이 필요합니다.
+</Note>
+
+## 두 가지 경로: 정적 자격 증명 vs Workload Identity
+
+CrewAI Platform을 클라우드의 시크릿 저장소에 연결하는 방법은 두 가지가 있습니다. **로테이션 동작 방식에서 큰 차이가 있으므로**, 시크릿이 얼마나 자주 로테이션되는지와 보안 정책의 엄격함에 따라 선택하세요.
+
+| 항목 | 정적 자격 증명 | Workload Identity (OIDC Federation) |
+|---|---|---|
+| **인증** | 장기 액세스 키 / 서비스 계정 JSON을 CrewAI Platform에 저장 | 워커 프로세스마다 발급되는 단기 토큰; 어디에도 정적 자격 증명을 저장하지 않음 |
+| **로테이션 전파** | 배포 시점에 해석되어 **배포 컨테이너 이미지에 박힘** — 로테이션된 값을 반영하려면 재배포 필요 | **자동화 실행 시점**에 해석됨 — 로테이션된 값이 재배포 없이 다음 kickoff에 전파됨 |
+| **설정 노력** | 더 적음 — 키 붙여 넣기 / 서비스 계정 JSON 업로드 | 더 많음 — CrewAI Platform을 클라우드에 OIDC 공급자로 등록하고 신뢰 정책 구성 |
+| **적합한 용도** | 시작 단계, 드물게 로테이션되는 시크릿, 단일 계정 배포 | 프로덕션, 자주 로테이션되는 시크릿, 장기 자격 증명을 금지하는 규정 준수 환경 |
+
+<Note>
+**두 경로 모두 환경 변수에서 시크릿을 참조하는 동일한 UI 흐름을 사용합니다**([Secrets Manager 사용하기](/ko/enterprise/features/secrets-manager/usage) 참조). 차이점은 전적으로 플랫폼이 클라우드에 어떻게 인증하고 언제 시크릿 값을 읽는지에 있습니다.
+</Note>
+
+### 설정 가이드 선택
+
+| 공급자 | 정적 자격 증명 | Workload Identity |
+|---|---|---|
+| AWS Secrets Manager | [AWS — 정적 키 / AssumeRole](/ko/enterprise/features/secrets-manager/aws) | [AWS — Workload Identity (OIDC)](/ko/enterprise/features/secrets-manager/aws-workload-identity) |
+| Google Cloud Secret Manager | [GCP — 서비스 계정 키](/ko/enterprise/features/secrets-manager/gcp) | [GCP — Workload Identity Federation](/ko/enterprise/features/secrets-manager/gcp-workload-identity) |
+| Azure Key Vault | [Azure — 클라이언트 시크릿](/ko/enterprise/features/secrets-manager/azure) | [Azure — Workload Identity Federation](/ko/enterprise/features/secrets-manager/azure-workload-identity) |
+
+<Note>
+Secrets Manager 및 Workload Identity UI는 현재 CrewAI Platform에서 **Beta**로 표시되어 있습니다.
+</Note>
+
+## 동작 방식
+
+Secrets Manager 설정은 클라우드 공급자와 CrewAI Platform 양쪽 모두에서 작업하는 3단계 흐름입니다:
+
+1. **관리자가 공급자 자격 증명을 구성합니다.** 이는 클라우드 측 작업이며 — 선택한 경로(정적 자격 증명 또는 Workload Identity)에 따라 작업이 다릅니다. 공급자별 가이드에서 처음부터 끝까지 다룹니다.
+2. **관리자(또는 권한이 부여된 멤버)가 환경 변수에서 시크릿을 참조합니다.** Environment Variables 페이지에서 공급자 자격 증명을 선택하고 시크릿 이름을 선택합니다. [Secrets Manager 사용하기](/ko/enterprise/features/secrets-manager/usage#referencing-secrets-in-environment-variables)를 참조하세요.
+3. **자동화가 런타임에 해석된 값을 받습니다.** Crew 또는 자동화가 실행될 때, CrewAI Platform이 공급자에서 시크릿을 가져와 환경 변수 값으로 주입합니다. Workload Identity의 경우 이 가져오기는 매 kickoff마다 수행됩니다(로테이션 인식). 정적 자격 증명의 경우 이 가져오기는 배포 시점에 수행되고 값이 배포 이미지에 박힙니다.
+
+## 권한
+
+Secrets Manager 접근을 제어하는 두 가지 CrewAI Platform 기능:
+
+- `secret_providers` — 공급자 자격 증명을 보거나 관리할 수 있는 사람을 제어합니다.
+- `environment_variables` — 시크릿을 참조하는 환경 변수를 포함하여 환경 변수를 생성하고 편집할 수 있는 사람을 제어합니다.
+
+세 번째 기능은 Workload Identity 설정을 제어합니다:
+
+- `workload_identity_configs` — Workload Identity 구성을 보거나 관리할 수 있는 사람을 제어합니다. Workload Identity 경로를 사용하는 경우에만 필요합니다.
+
+소유자(Owner)는 항상 전체 접근 권한을 가집니다. 멤버는 기본적으로 `secret_providers` 또는 `workload_identity_configs`에 대한 접근 권한을 **받지 않으며**, 사용자 정의 역할을 통해 권한을 명시적으로 부여받아야 합니다. 전체 매트릭스와 단계별 지침은 [권한 (RBAC)](/ko/enterprise/features/secrets-manager/usage#permissions-rbac)을 참조하세요.
+
+## 다음 단계
+
+원하는 경로를 선택하세요:
+
+- **정적 자격 증명** (더 간단함, 로테이션 시 재배포 필요):
+  - [AWS Secrets Manager 구성](/ko/enterprise/features/secrets-manager/aws)
+  - [Google Cloud Secret Manager 구성](/ko/enterprise/features/secrets-manager/gcp)
+  - [Azure Key Vault 구성](/ko/enterprise/features/secrets-manager/azure)
+- **Workload Identity** (로테이션 인식, 재배포 불필요):
+  - [AWS Workload Identity 구성](/ko/enterprise/features/secrets-manager/aws-workload-identity)
+  - [GCP Workload Identity Federation 구성](/ko/enterprise/features/secrets-manager/gcp-workload-identity)
+  - [Azure Workload Identity Federation 구성](/ko/enterprise/features/secrets-manager/azure-workload-identity)
+- 그리고: [환경 변수에서 시크릿을 사용하고 권한 관리하기](/ko/enterprise/features/secrets-manager/usage)

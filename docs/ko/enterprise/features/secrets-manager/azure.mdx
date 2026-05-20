@@ -1,0 +1,195 @@
+---
+title: Azure Key Vault
+description: Azure Key Vault를 CrewAI Platform의 시크릿 공급자로 처음부터 끝까지 구성합니다
+sidebarTitle: Azure
+---
+
+## 개요
+
+이 가이드는 **클라이언트 시크릿이 있는 Microsoft Entra App Registration**을 사용하여 Azure Key Vault를 CrewAI Platform 조직의 시크릿 공급자로 구성하는 방법을 안내합니다. 완료되면 CrewAI Platform이 Azure Key Vault에 저장된 시크릿을 읽고 런타임에 환경 변수 값으로 주입할 수 있습니다.
+
+<Note>
+이 가이드는 **정적 자격 증명** 경로를 다룹니다 — 시크릿은 배포 시점에 해석되고 배포 이미지에 박힙니다. 로테이션된 값은 재배포가 필요합니다. 매 자동화 kickoff마다 업데이트되는 로테이션 인식 시크릿을 원한다면 [Azure Workload Identity Federation](/ko/enterprise/features/secrets-manager/azure-workload-identity)을 참조하세요.
+</Note>
+
+<Note>
+이 가이드는 Azure 측 구성과 CrewAI Platform의 자격 증명 설정을 다룹니다. 환경 변수에서 시크릿을 참조하려면 [Secrets Manager 사용하기](/ko/enterprise/features/secrets-manager/usage)를 참조하세요.
+</Note>
+
+## 사전 준비 사항
+
+<Note>
+시작하기 전에 다음을 준비하세요:
+
+- Microsoft Entra에서 App Registration을 생성하고 Key Vault 리소스에 역할 할당을 부여할 권한이 있는 Azure 구독.
+- 권한 부여에 **Azure RBAC**를 사용하는 Key Vault(레거시 액세스 정책 모델이 아님). 볼트가 여전히 액세스 정책을 사용하는 경우, 볼트의 **Access configuration** 블레이드에서 RBAC로 전환하세요.
+- 사용자가 `secret_providers: manage` 권한을 가진 CrewAI Platform 조직. [권한 (RBAC)](/ko/enterprise/features/secrets-manager/usage#permissions-rbac)을 참조하세요.
+</Note>
+
+## 1단계 — App Registration 생성
+
+App Registration은 CrewAI Platform이 인증할 Microsoft Entra 측 ID입니다.
+
+[Microsoft Entra 포털](https://entra.microsoft.com)에서 **App registrations**로 이동하여 **New registration**을 클릭합니다.
+
+- **Name:** `crewai-secrets-reader`
+- **Supported account types:** `Accounts in this organizational directory only (Single tenant)`.
+- **Redirect URI**는 비워둡니다.
+
+**Register**를 클릭합니다. App의 개요 블레이드에서 **Application (client) ID**와 **Directory (tenant) ID**를 기록하세요 — 4단계에서 둘 다 CrewAI Platform에 붙여 넣습니다.
+
+자세한 내용은 Microsoft 문서를 참조하세요: [Register an application with the Microsoft identity platform](https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app).
+
+{/* SCREENSHOT: Azure "Register an application" form with name "crewai-secrets-reader" → /images/secrets-manager/azure/01-register-app.png */}
+
+## 2단계 — 클라이언트 시크릿 생성
+
+App Registration에서 **Certificates & secrets** → **Client secrets** → **New client secret**으로 이동합니다.
+
+- **Description:** `crewai-platform`
+- **Expires:** 로테이션 정책과 일치하는 기간을 선택합니다(Microsoft은 이를 24개월로 제한).
+
+**Add**를 클릭합니다. **Value** 열을 즉시 복사하세요 — 페이지를 떠난 후에는 다시 표시할 수 없습니다.
+
+<Warning>
+클라이언트 시크릿은 장기 정적 자격 증명입니다. 값을 안전하게 저장하고(패스워드 매니저나 자체 시크릿 저장소에) 만료 전에 로테이션하세요. 정적 자격 증명을 완전히 제거하려면 대신 [Azure Workload Identity Federation](/ko/enterprise/features/secrets-manager/azure-workload-identity)을 사용하세요.
+</Warning>
+
+{/* SCREENSHOT: "Client secrets" tab with the new secret row and the "Value" column highlighted → /images/secrets-manager/azure/02-create-client-secret.png */}
+
+## 3단계 — App Registration에 Key Vault 액세스 부여
+
+CrewAI Platform은 Key Vault의 시크릿에 대한 읽기 액세스가 필요합니다. 두 가지 범위 중 하나를 사용하세요 — 간소화를 위한 **볼트 전체** 또는 최소 권한을 위한 **시크릿별**.
+
+<Tabs>
+  <Tab title="볼트 전체 (더 간단함)">
+    [Key Vault 콘솔](https://portal.azure.com/#view/HubsExtension/BrowseResource/resourceType/Microsoft.KeyVault%2Fvaults)에서 대상 볼트를 열고 **Access control (IAM)** → **Add** → **Add role assignment**로 이동합니다.
+
+    - **Role:** **Key Vault Secrets User**
+    - **Assign access to:** User, group, or service principal
+    - **Members:** App Registration(`crewai-secrets-reader`)을 검색하고 선택합니다.
+
+    **Review + assign**을 클릭합니다.
+
+    또는 Azure CLI를 통해:
+
+    ```bash
+    az role assignment create \
+      --assignee <APPLICATION_CLIENT_ID> \
+      --role "Key Vault Secrets User" \
+      --scope $(az keyvault show --name <VAULT_NAME> --query id -o tsv)
+    ```
+
+    {/* SCREENSHOT: Key Vault "Add role assignment" panel with "Key Vault Secrets User" and the App Registration selected → /images/secrets-manager/azure/03-grant-vault-rbac.png */}
+  </Tab>
+
+  <Tab title="시크릿별 (최소 권한)">
+    개별 시크릿 수준에서 역할을 부여합니다. CrewAI Platform이 액세스해야 하는 각 시크릿에 대해 반복합니다:
+
+    ```bash
+    az role assignment create \
+      --assignee <APPLICATION_CLIENT_ID> \
+      --role "Key Vault Secrets User" \
+      --scope $(az keyvault secret show --vault-name <VAULT_NAME> --name <SECRET_NAME> --query id -o tsv)
+    ```
+
+    {/* SCREENSHOT: Per-secret "Access control (IAM)" panel showing role assignment scoped to one secret → /images/secrets-manager/azure/04-per-secret-rbac.png */}
+  </Tab>
+</Tabs>
+
+<Tip>
+**Key Vault Secrets User** 역할은 시크릿 값 읽기를 허용하지만 볼트의 모든 시크릿을 나열하는 것은 허용하지 않습니다. CrewAI Platform의 시크릿 이름 자동 완성도 `list`를 호출합니다 — 해당 권한은 볼트 범위에서는 역할에 포함되지만, 시크릿별 범위에서는 **포함되지 않습니다**. 시크릿별 바인딩의 경우 자동 완성이 시크릿을 제안하지 않으므로 대신 전체 시크릿 이름을 입력하세요.
+</Tip>
+
+## 4단계 — CrewAI Platform에 자격 증명 추가
+
+CrewAI Platform에서 **Settings** → **Secret Provider Credentials**로 이동하여 **Add Credential**을 클릭합니다.
+
+{/* SCREENSHOT: Sidebar/nav highlighting Settings → Secret Provider Credentials → /images/secrets-manager/usage/01-amp-settings-nav.png */}
+
+폼을 작성합니다:
+
+- **Name:** 설명적인 이름(예: `azure-prod`).
+- **Provider:** `Azure Key Vault`.
+- **Key Vault URL:** 볼트의 DNS 호스트 이름(예: `https://my-vault.vault.azure.net`).
+- **Tenant ID:** 1단계의 Microsoft Entra **Directory (tenant) ID**.
+- **Client ID:** 1단계의 App Registration **Application (client) ID**.
+- **Client Secret:** 2단계에서 복사한 **Value**.
+- (선택) **Set as default credential for this provider**를 체크합니다. 기본 자격 증명은 자격 증명을 명시적으로 지정하지 않고 Azure 시크릿을 참조하는 환경 변수에서 사용됩니다.
+
+**Create**를 클릭합니다.
+
+{/* SCREENSHOT: "Add Secret Provider Credential" form with Azure fields filled in → /images/secrets-manager/azure/05-amp-add-credential-form-azure.png */}
+
+## 5단계 — Azure Key Vault에 최소 하나의 시크릿 생성
+
+Key Vault에 시크릿이 아직 없다면, 6단계에서 연결을 확인할 수 있도록 지금 하나 만드세요.
+
+Key Vault 콘솔에서 **Objects** → **Secrets** → **Generate/Import**로 이동합니다.
+
+- **Upload options:** `Manual`
+- **Name:** 예: `openai-api-key`
+- **Secret value:** 시크릿 값을 붙여 넣습니다
+- 나머지는 기본값으로 둡니다.
+
+**Create**를 클릭합니다.
+
+또는 Azure CLI를 통해:
+
+```bash
+az keyvault secret set \
+  --vault-name <VAULT_NAME> \
+  --name openai-api-key \
+  --value "sk-your-actual-key"
+```
+
+<Note>
+**시크릿 이름 규칙.** Azure Key Vault 시크릿 이름에는 밑줄을 포함할 수 없습니다. CrewAI Platform은 Azure를 호출할 때 밑줄을 하이픈으로 자동으로 변환하므로(예: `db_password`는 `db-password`로 전송됨), 밑줄 스타일 환경 변수 이름을 유지할 수 있습니다 — 그러나 Key Vault의 기본 시크릿은 하이픈을 사용해야 합니다.
+</Note>
+
+<Note>
+**JSON 키 참조 구문.** Key Vault는 시크릿 값을 불투명한 문자열로 취급합니다. 시크릿 값이 JSON 객체인 경우, CrewAI Platform은 `secret-name#json_key` 구문(예: `database-credentials#password`)을 사용하여 단일 필드를 추출할 수 있습니다. 자세한 내용은 [Secrets Manager 사용하기](/ko/enterprise/features/secrets-manager/usage#referencing-secrets-in-environment-variables)를 참조하세요.
+</Note>
+
+자세한 내용은 Microsoft 문서를 참조하세요: [Set and retrieve a secret](https://learn.microsoft.com/en-us/azure/key-vault/secrets/quick-create-cli).
+
+{/* SCREENSHOT: Azure Key Vault "Create a secret" form with name and value → /images/secrets-manager/azure/06-create-secret.png */}
+
+## 6단계 — 연결 테스트
+
+CrewAI Platform으로 돌아가 **Secret Provider Credentials** 페이지에서 방금 만든 자격 증명을 찾고 **Test Connection**을 클릭합니다.
+
+성공 토스트는 CrewAI Platform이 Microsoft Entra에 인증하고 볼트의 시크릿을 읽을 수 있음을 확인합니다.
+
+{/* SCREENSHOT: Success toast after clicking "Test Connection" on the Azure credential → /images/secrets-manager/azure/07-test-connection-success.png */}
+
+테스트가 실패하면 가장 일반적인 원인을 확인하세요:
+
+| 증상 | 가능한 원인 |
+|---|---|
+| `AADSTS7000215: Invalid client secret provided` | 붙여 넣은 **Client Secret**이 잘못되었거나 만료되었습니다. 시크릿을 다시 생성하고(2단계) 자격 증명을 업데이트하세요. |
+| `AADSTS700016: Application not found in the directory` | **Tenant ID** 또는 **Client ID**가 App Registration과 일치하지 않습니다. 4단계를 다시 확인하세요. |
+| `Forbidden — caller does not have permission` | App Registration에 볼트(또는 시크릿별) **Key Vault Secrets User** 역할이 없습니다. 3단계를 다시 확인하세요. |
+| `Vault not found` / DNS 오류 | **Key Vault URL**이 잘못되었거나, 볼트에 공용 액세스를 차단하는 프라이빗 엔드포인트가 있습니다. 호스트가 `curl https://<vault-name>.vault.azure.net/secrets?api-version=7.4`에 응답하는지 확인하세요. |
+| `Forbidden — request was not authorized` (레거시 액세스 정책을 사용하는 볼트) | 볼트가 Azure RBAC로 전환되지 않았습니다. 볼트의 **Access configuration**에서 권한 모델을 **Azure role-based access control**로 설정하고 3단계의 역할을 다시 부여하세요. |
+
+## 다음 단계
+
+이제 Azure Key Vault가 연결되었으므로 [Secrets Manager 사용하기](/ko/enterprise/features/secrets-manager/usage)로 이동하여 다음을 수행하세요:
+
+- 조직 멤버에게 Secrets Manager를 사용(또는 관리)할 수 있는 적절한 권한을 부여합니다.
+- CrewAI Platform 환경 변수에서 Azure 시크릿을 참조합니다.
+
+재배포 없이 전파되는 **로테이션 인식** 시크릿을 원한다면 [Azure Workload Identity Federation](/ko/enterprise/features/secrets-manager/azure-workload-identity)으로 전환하세요 — 동일한 볼트, 로테이션할 클라이언트 시크릿 없음, kickoff마다 시크릿을 가져옵니다.
+
+## 스크린샷 참조
+
+위의 자리 표시자는 다음에 매핑됩니다:
+
+- `01-register-app.png` — `crewai-secrets-reader`로 채워진 Azure 포털 "Register an application" 폼.
+- `02-create-client-secret.png` — App Registration → Certificates & secrets → Client secrets, 새로 생성된 시크릿 행이 표시됨(마스킹되기 전 Value 열 강조).
+- `03-grant-vault-rbac.png` — Key Vault → Access control (IAM) → Add role assignment, **Key Vault Secrets User**가 선택되고 App Registration이 멤버로 선택됨.
+- `04-per-secret-rbac.png` — 동일한 패널이지만 단일 시크릿 리소스로 범위 지정됨(대체 최소 권한 경로).
+- `05-amp-add-credential-form-azure.png` — CrewAI Platform "Add Secret Provider Credential" 폼: Provider = Azure Key Vault, 다섯 필드 모두 채워짐.
+- `06-create-secret.png` — `openai-api-key`와 붙여 넣은 값이 있는 Azure Key Vault "Create a secret" 패널.
+- `07-test-connection-success.png` — 자격 증명에서 **Test Connection**을 클릭한 후의 CrewAI Platform 성공 토스트 / 행 상태.

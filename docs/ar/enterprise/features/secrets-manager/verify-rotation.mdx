@@ -1,0 +1,260 @@
+---
+title: التحقق من التدوير
+description: مثال طاقم مستقل يُثبت أن تدوير الأسرار ينتشر إلى عمليات النشر الجارية دون إعادة نشر.
+sidebarTitle: التحقق من التدوير
+---
+
+## نظرة عامة
+
+يوضّح لك هذا الدليل كيفية التحقق من أن **السر المُدوَّر في مزود السحابة لديك يُلتقط في أول إطلاق أتمتة لاحق** — بدون إعادة نشر ولا إعادة تشغيل عامل. هذا ذو صلة فقط عندما تكون قد كوّنت بيانات اعتماد مدعومة بـ Workload Identity ([AWS](/ar/enterprise/features/secrets-manager/aws-workload-identity)، [GCP](/ar/enterprise/features/secrets-manager/gcp-workload-identity)، [Azure](/ar/enterprise/features/secrets-manager/azure-workload-identity)). تتطلب عمليات نشر بيانات الاعتماد الثابتة إعادة نشر بعد التدوير؛ ليس هناك ما يجب التحقق منه هنا.
+
+تستخدم الوصفة أدناه طاقماً صغيراً مستقلاً بأداة واحدة ووكيل واحد ومهمة واحدة. لا يُشير موجه الطاقم أبداً إلى قيمة السر — بدلاً من ذلك، تقرأ أداة القيمة من `os.environ` وتُفيد ببصمة SHA-256 لما تراه. دوّر السر في مزود السحابة، أطلق مرة أخرى، وتتغير البصمة.
+
+<Note>
+لماذا بصمة وليس القيمة الخام؟ وضع الأسرار الخام في إخراج LLM وسجلات التتبع هو متجه تسرب. البصمة كافية لتأكيد "أن القيمة تغيّرت" دون كتابة القيمة الفعلية في أي مكان يمكن رصده.
+</Note>
+
+## المتطلبات المسبقة
+
+قبل تشغيل هذا التحقق:
+
+- بيانات اعتماد مزود أسرار مدعومة بـ WI مكوَّنة ([AWS](/ar/enterprise/features/secrets-manager/aws-workload-identity)، [GCP](/ar/enterprise/features/secrets-manager/gcp-workload-identity)، [Azure](/ar/enterprise/features/secrets-manager/azure-workload-identity)).
+- متغير بيئة على عملية النشر بـ `Secret = true`، المفتاح `API_KEY` (أو أي اسم تفضّله — اضبط الأداة أدناه لتطابقه)، يُشير إلى سر في مزود السحابة.
+- طريقة لتحديث قيمة السر في مزود السحابة (وصول CLI أو وحدة تحكم السحابة).
+- طريقة لإطلاق عملية النشر عبر HTTP (curl أو Postman أو علامة التبويب **Run** في CrewAI Platform).
+
+## الخطوة 1 — هيكلة طاقم التحقق
+
+أنشئ مشروع طاقم جديد. يُهيكل CrewAI CLI البنية:
+
+```bash
+crewai create crew rotation_verifier --skip_provider
+cd rotation_verifier
+```
+
+## الخطوة 2 — إضافة أداة صدى بيانات الاعتماد
+
+استبدل `src/rotation_verifier/tools/custom_tool.py` بأداة تقرأ متغير البيئة المدعوم بسر وتُعيد بصمة:
+
+```python src/rotation_verifier/tools/credential_echo_tool.py
+"""Tool that verifies a runtime-injected secret without leaking the value.
+
+Reads the secret-backed env var (populated by the workload-identity
+secrets manager at kickoff time) and returns a stable fingerprint. Never
+echo raw credential values into LLM output or logs in production code —
+the fingerprint alone is sufficient to confirm rotation worked.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import os
+
+from crewai.tools import BaseTool
+
+
+# Match the deployment environment variable's `key` field.
+ENV_VAR_NAME = "API_KEY"
+
+
+class CredentialEchoTool(BaseTool):
+    name: str = "credential_echo"
+    description: str = (
+        "Read the API credential from the worker's environment and return a "
+        "fingerprint summary. Use this exactly once when asked to verify the "
+        "current credential. Takes no arguments."
+    )
+
+    def _run(self) -> str:
+        value = os.environ.get(ENV_VAR_NAME)
+        if not value:
+            return (
+                f"ERROR: {ENV_VAR_NAME} env var is not set. The workload-"
+                "identity secret fetch did not run, or the deployment is "
+                "missing the secret-backed env var."
+            )
+        fingerprint = hashlib.sha256(value.encode()).hexdigest()[:12]
+        return f"Authenticated. credential.fingerprint=sha256:{fingerprint}"
+```
+
+## الخطوة 3 — استبدال تكوينات الوكيل والمهمة الافتراضية
+
+يضم الطاقم وكيلاً واحداً ومهمة واحدة — كلاهما بأوصاف **لا تذكر أبداً** قيمة السر، لذا تبقى مفاتيح المهام مستقرة عبر عمليات التدوير.
+
+```yaml src/rotation_verifier/config/agents.yaml
+credential_checker:
+  role: >
+    Credential Verifier
+  goal: >
+    Confirm that the workload-identity-backed secret reached this worker
+    process and report a fingerprint of the current value.
+  backstory: >
+    You are a no-nonsense reliability engineer responsible for verifying
+    that secrets fetched at runtime via workload identity are present
+    and fresh. You always use the credential_echo tool exactly once and
+    report the result verbatim — you never make up values.
+```
+
+```yaml src/rotation_verifier/config/tasks.yaml
+verify_credential_task:
+  description: >
+    Use the credential_echo tool to read the runtime-injected credential
+    and produce a one-line confirmation. The current year is {current_year}
+    (use it only in the timestamp; do not transform the credential output).
+  expected_output: >
+    A single line in the form:
+    "[{current_year}] <credential_echo tool's exact output>"
+  agent: credential_checker
+```
+
+## الخطوة 4 — توصيل فئة الطاقم
+
+```python src/rotation_verifier/crew.py
+from crewai import Agent, Crew, Process, Task
+from crewai.project import CrewBase, agent, crew, task
+from crewai.agents.agent_builder.base_agent import BaseAgent
+
+from rotation_verifier.tools.credential_echo_tool import CredentialEchoTool
+
+
+@CrewBase
+class RotationVerifierCrew():
+    """Single-task crew that verifies a workload-identity-backed secret
+    was successfully fetched at runtime.
+
+    Rotate the underlying secret in the cloud provider, kickoff again, and
+    the credential fingerprint in the agent's report changes — without any
+    re-deploy, worker restart, or input change. The crew prompt itself
+    never references the secret value.
+    """
+
+    agents: list[BaseAgent]
+    tasks: list[Task]
+
+    @agent
+    def credential_checker(self) -> Agent:
+        return Agent(
+            config=self.agents_config["credential_checker"],
+            tools=[CredentialEchoTool()],
+            verbose=True,
+        )
+
+    @task
+    def verify_credential_task(self) -> Task:
+        return Task(config=self.tasks_config["verify_credential_task"])
+
+    @crew
+    def crew(self) -> Crew:
+        return Crew(
+            agents=self.agents,
+            tasks=self.tasks,
+            process=Process.sequential,
+            verbose=True,
+        )
+```
+
+## الخطوة 5 — نشر الطاقم وتكوين متغير بيئة السر
+
+انشر هذا الطاقم على CrewAI Platform تماماً كما تنشر أي طاقم آخر. ثم على صفحة **Environment Variables** الخاصة بعملية النشر:
+
+- **Key:** `API_KEY` (يجب أن يطابق `ENV_VAR_NAME` في الأداة)
+- **Value Source:** بيانات الاعتماد المدعومة بـ WI التي أعدّتها في [AWS WI](/ar/enterprise/features/secrets-manager/aws-workload-identity) أو [GCP WI](/ar/enterprise/features/secrets-manager/gcp-workload-identity)
+- **Secret Name:** اسم السر في Secret Manager الخاص بمزود السحابة لديك
+
+{/* SCREENSHOT: Environment Variables form with key=API_KEY, secret-backed value source selected, secret name filled → /images/secrets-manager/verify-rotation/01-env-var-form.png */}
+
+## الخطوة 6 — تشغيل الإطلاق الأول
+
+استبدل `<DEPLOYMENT_AUTH_TOKEN>` و `<DEPLOYMENT_HOST>` بالقيم من علامة التبويب **Run** الخاصة بعملية النشر.
+
+```bash
+curl -m 60 \
+  -H "Authorization: Bearer <DEPLOYMENT_AUTH_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -X POST https://<DEPLOYMENT_HOST>/kickoff \
+  -d '{"inputs":{"current_year":"2026"}}'
+```
+
+عندما يكتمل الإطلاق (بضع ثوان)، تحقق من إخراج الوكيل. سترى:
+
+```
+[2026] Authenticated. credential.fingerprint=sha256:004421b993c9
+```
+
+سجّل البصمة. هذا التجزئة مرتبط بشكل فريد بأي قيمة سر موجودة حالياً في مزود السحابة لديك.
+
+## الخطوة 7 — تدوير السر في مزود السحابة
+
+<Tabs>
+  <Tab title="AWS">
+    ```bash
+    aws secretsmanager update-secret \
+      --region <REGION> \
+      --secret-id <SECRET_NAME> \
+      --secret-string "rotated value"
+    ```
+  </Tab>
+
+  <Tab title="GCP">
+    أضف إصداراً جديداً (يقرأ Secret Manager دائماً `latest`):
+
+    ```bash
+    echo -n "rotated value" | gcloud secrets versions add <SECRET_NAME> \
+      --data-file=- \
+      --project=<YOUR_PROJECT_ID>
+    ```
+  </Tab>
+
+  <Tab title="Azure">
+    ```bash
+    az keyvault secret set \
+      --vault-name <VAULT_NAME> \
+      --name <SECRET_NAME> \
+      --value "rotated value"
+    ```
+  </Tab>
+</Tabs>
+
+## الخطوة 8 — تشغيل إطلاق ثانٍ والمقارنة
+
+```bash
+curl -m 60 \
+  -H "Authorization: Bearer <DEPLOYMENT_AUTH_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -X POST https://<DEPLOYMENT_HOST>/kickoff \
+  -d '{"inputs":{"current_year":"2026"}}'
+```
+
+يُظهر إخراج الوكيل الآن **بصمة مختلفة**:
+
+```
+[2026] Authenticated. credential.fingerprint=sha256:e2fc89848f72
+```
+
+يُثبت هذا أن التدوير التُقط بواسطة عملية النشر الجارية دون إعادة نشر ولا إعادة تشغيل عامل ولا أي إجراء آخر من قِبل المشغّل.
+
+## ما يتحقق منه هذا — وما لا يتحقق منه
+
+**يتحقق من:**
+- يعمل إصدار رمز OIDC الخاص بـ WI من CrewAI Platform.
+- تقبل الثقة من جانب السحابة (مزود IAM OIDC لـ AWS، Workload Identity Pool لـ GCP، Federated Identity Credential لـ Azure) الرمز.
+- تمتلك الهوية من جانب السحابة (IAM Role / حساب خدمة GCP / Entra App Registration) وصولاً لقراءة السر.
+- تصل قيمة السر إلى `os.environ` لعملية العامل وقت الإطلاق.
+- تنتشر عمليات التدوير اللاحقة إلى الإطلاق التالي.
+
+**لا يتحقق من:**
+- أن طواقم الإنتاج الفعلية لديك تتعامل مع التدوير بسلاسة — مثلاً، المهام طويلة الأمد التي تقرأ متغير البيئة مرة واحدة عند البدء ستستمر في استخدام القيمة القديمة حتى تنتهي المهمة. خطّط وفقاً لذلك: اقرأ الأسرار عند نقطة الاستخدام، وليس عند استيراد الوحدة.
+
+## لماذا لا نُشير إلى السر مباشرةً في الموجه؟
+
+سيضع عرض توضيحي يبدو أبسط قيمة السر مباشرةً في وصف مهمة (مثلاً، "البحث عن `{api_key}`") ويتفحص الموجه. **لا تفعل ذلك.** لسببين:
+
+1. **يُسرّب السر إلى تتبعات استدعاء LLM والسجلات من جانب المزود.** يمكن لأي شخص لديه وصول للتتبعات قراءته.
+2. **يُغيّر وصف المهمة في كل إطلاق.** تُحدّد CrewAI Platform المهام بتجزئة MD5 للوصف؛ القيمة المُدوَّرة تعني أن التجزئة تتغير لكل إطلاق، مما يكسر ربط المهمة من وقت النشر إلى وقت التشغيل. العَرَض: تُسجَّل سجلات المهام كـ `pending_run` إلى الأبد، أو تُسجَّل بعض مهام طاقم متعدد المهام فقط.
+
+يتجاوز النمط القائم على الأداة في هذا الدليل كلتا المشكلتين: الموجه ثابت، تقرأ الأداة متغير البيئة وقت التشغيل، وتصل فقط بصمة القيمة إلى LLM.
+
+## الخطوات التالية
+
+- [العودة إلى نظرة عامة على مدير الأسرار](/ar/enterprise/features/secrets-manager/overview)
+- بمجرد التحقق، أَسقط طاقم التحقق. يجب أن تتبع الطواقم الفعلية النمط نفسه: الوصول إلى الأسرار عبر `os.environ` داخل أداة، وعدم استبدالها أبداً في الموجهات.
