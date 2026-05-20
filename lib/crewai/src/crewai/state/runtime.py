@@ -151,19 +151,28 @@ def _backfill_source_type(source: Any) -> None:
     )
 
 
+def _backfill_sources_on(container: Any) -> None:
+    """Apply source_type backfill to ``sources`` and ``knowledge_sources`` lists."""
+    if not isinstance(container, dict):
+        return
+    for key in ("sources", "knowledge_sources"):
+        for src in container.get(key) or []:
+            _backfill_source_type(src)
+
+
 def _backfill_discriminators(entity: Any) -> None:
     """Walk an entity dict and backfill discriminator fields added in 1.14.6."""
     if not isinstance(entity, dict):
         return
     _backfill_memory_kind(entity.get("memory"))
+    _backfill_sources_on(entity)
+    _backfill_sources_on(entity.get("knowledge"))
     for agent in entity.get("agents") or []:
-        _backfill_memory_kind(agent.get("memory") if isinstance(agent, dict) else None)
-    for container in (entity.get("knowledge"), entity):
-        if isinstance(container, dict):
-            for src in (
-                container.get("sources") or container.get("knowledge_sources") or []
-            ):
-                _backfill_source_type(src)
+        if not isinstance(agent, dict):
+            continue
+        _backfill_memory_kind(agent.get("memory"))
+        _backfill_sources_on(agent)
+        _backfill_sources_on(agent.get("knowledge"))
 
 
 class RuntimeState(RootModel):  # type: ignore[type-arg]
