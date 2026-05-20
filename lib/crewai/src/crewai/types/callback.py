@@ -19,6 +19,15 @@ from pydantic import BeforeValidator, WithJsonSchema
 from pydantic.functional_serializers import PlainSerializer
 
 
+_TRUSTED_DESERIALIZE_VALUES = frozenset({"1", "true", "yes"})
+
+
+def _trusted_deserialize() -> bool:
+    """Return True only if ``CREWAI_DESERIALIZE_CALLBACKS`` is an explicit yes."""
+    raw = os.environ.get("CREWAI_DESERIALIZE_CALLBACKS", "")
+    return raw.strip().lower() in _TRUSTED_DESERIALIZE_VALUES
+
+
 def _is_non_roundtrippable(fn: object) -> bool:
     """Return ``True`` if *fn* cannot survive a serialize/deserialize round-trip.
 
@@ -76,7 +85,7 @@ def string_to_callable(value: Any) -> Callable[..., Any]:
         raise ValueError(
             f"Invalid callback path {value!r}: expected 'module.name' format"
         )
-    if not os.environ.get("CREWAI_DESERIALIZE_CALLBACKS"):
+    if not _trusted_deserialize():
         raise ValueError(
             f"Refusing to resolve callback path {value!r}: "
             "set CREWAI_DESERIALIZE_CALLBACKS=1 to allow. "
@@ -205,7 +214,7 @@ def _dotted_path_to_instance(value: Any) -> Any:
         raise ValueError(
             f"Invalid provider path {value!r}: expected 'module.name' format"
         )
-    if not os.environ.get("CREWAI_DESERIALIZE_CALLBACKS"):
+    if not _trusted_deserialize():
         raise ValueError(
             f"Refusing to resolve provider path {value!r}: "
             "set CREWAI_DESERIALIZE_CALLBACKS=1 to allow. "

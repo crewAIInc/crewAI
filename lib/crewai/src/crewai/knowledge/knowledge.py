@@ -83,7 +83,9 @@ def _serialize_embedder_spec(value: Any) -> dict[str, Any] | None:
 def _validate_embedder_spec(value: Any) -> Any:
     """Resolve provider_class dotted-path dicts back to a class on restore."""
     if isinstance(value, dict) and set(value.keys()) == {"provider_class"}:
-        if not os.environ.get("CREWAI_DESERIALIZE_CALLBACKS"):
+        from crewai.types.callback import _trusted_deserialize
+
+        if not _trusted_deserialize():
             raise ValueError(
                 f"Refusing to resolve embedder provider_class "
                 f"{value['provider_class']!r}: set "
