@@ -187,6 +187,8 @@ exclude-newer = "3 days"
 # urllib3 <2.7.0 has GHSA-qccp-gfcp-xxvc (ProxyManager cross-origin redirect leaks Authorization/Cookie) and GHSA-mf9v-mfxr-j63j (streaming decompression-bomb bypass); force 2.7.0+.
 # langsmith <0.8.0 has GHSA-3644-q5cj-c5c7 (public prompt manifest deserialization, SSRF/secret disclosure); force 0.8.0+.
 # authlib <1.6.11 has GHSA-jj8c-mmj3-mmgv (CSRF bypass in cache-based state storage).
+# pip <26.1.1 has GHSA-58qw-9mgm-455v (archive handling); OSV considers 26.1.1 unaffected.
+# paramiko <5.0.0 has GHSA-r374-rxx8-8654 (SHA-1 in rsakey.py); OSV considers 5.0.0 unaffected. Transitive via composio-core.
 # litellm 1.83.8+ hard-pins openai==2.24.0, missing openai.types.responses used by crewai;
 # override to >=2.30.0 (the version litellm 1.83.7 used) until upstream relaxes the pin.
 override-dependencies = [
@@ -205,6 +207,8 @@ override-dependencies = [
     "gitpython>=3.1.50,<4",
     "langsmith>=0.8.0,<1",
     "authlib>=1.6.11",
+    "pip>=26.1.1",
+    "paramiko>=5.0.0",
 ]
 
 [tool.uv.workspace]
