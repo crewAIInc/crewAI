@@ -186,7 +186,20 @@ def _dotted_path_to_instance(value: Any) -> Any:
 
     If *value* is already a non-string object it is returned as-is.
     """
-    if value is None or not isinstance(value, str):
+    if value is None:
+        return value
+    if not isinstance(value, str):
+        if inspect.isclass(value):
+            raise ValueError(
+                f"Expected an instance or dotted path string, got class "
+                f"{getattr(value, '__module__', '<unknown>')}."
+                f"{getattr(value, '__qualname__', getattr(value, '__name__', ''))}."
+            )
+        if type(value).__module__ == "builtins":
+            raise ValueError(
+                f"Expected an instance of a user-defined class or dotted "
+                f"path string, got builtin value {value!r}."
+            )
         return value
     if "." not in value:
         raise ValueError(
