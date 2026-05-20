@@ -63,7 +63,10 @@ def _serialize_embedder_spec(value: Any) -> dict[str, Any] | None:
         return {"provider_class": f"{value.__module__}.{value.__qualname__}"}
     if isinstance(value, dict):
         return value
-    return None
+    raise TypeError(
+        f"Cannot serialize embedder of type {type(value).__name__}: "
+        "expected ProviderSpec dict, BaseEmbeddingsProvider instance, or subclass."
+    )
 
 
 class Knowledge(BaseModel):
