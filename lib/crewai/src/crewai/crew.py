@@ -492,23 +492,29 @@ class Crew(FlowTrackable, BaseModel):
 
         Checkpoint JSON omits the live ``Memory`` dependency on scope/slice
         views, so after restore they raise ``RuntimeError`` on first use.
-        Build a fresh ``Memory`` and bind it to any unbound views on the
-        crew and its agents.
+        Prefer the crew's restored ``Memory`` (from ``create_crew_memory``
+        or a ``Crew.memory=Memory(...)`` instance) so all views share one
+        backing store; fall back to a fresh ``Memory()`` only if nothing is
+        available.
         """
         from crewai.memory.memory_scope import MemoryScope, MemorySlice
         from crewai.memory.unified_memory import Memory
 
-        fresh: Memory | None = None
+        backing: Memory | None = None
+        if isinstance(self._memory, Memory):
+            backing = self._memory
+        elif isinstance(self.memory, Memory):
+            backing = self.memory
 
         def _ensure(view: Any) -> None:
-            nonlocal fresh
+            nonlocal backing
             if not isinstance(view, MemoryScope | MemorySlice):
                 return
             if view._memory is not None:
                 return
-            if fresh is None:
-                fresh = Memory()
-            view.bind(fresh)
+            if backing is None:
+                backing = Memory()
+            view.bind(backing)
 
         _ensure(self.memory)
         for agent in self.agents:
