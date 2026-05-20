@@ -418,7 +418,40 @@
                     "group": "Manage",
                     "pages": [
                       "en/enterprise/features/sso",
-                      "en/enterprise/features/rbac"
+                      "en/enterprise/features/rbac",
+                      {
+                        "group": "Secrets Manager",
+                        "icon": "lock",
+                        "pages": [
+                          "en/enterprise/features/secrets-manager/overview",
+                          "en/enterprise/features/secrets-manager/usage",
+                          {
+                            "group": "AWS",
+                            "icon": "aws",
+                            "pages": [
+                              "en/enterprise/features/secrets-manager/aws",
+                              "en/enterprise/features/secrets-manager/aws-workload-identity"
+                            ]
+                          },
+                          {
+                            "group": "GCP",
+                            "icon": "google",
+                            "pages": [
+                              "en/enterprise/features/secrets-manager/gcp",
+                              "en/enterprise/features/secrets-manager/gcp-workload-identity"
+                            ]
+                          },
+                          {
+                            "group": "Azure",
+                            "icon": "microsoft",
+                            "pages": [
+                              "en/enterprise/features/secrets-manager/azure",
+                              "en/enterprise/features/secrets-manager/azure-workload-identity"
+                            ]
+                          },
+                          "en/enterprise/features/secrets-manager/verify-rotation"
+                        ]
+                      }
                     ]
                   },
                   {
@@ -487,20 +520,6 @@
                       "en/enterprise/guides/team-management",
                       "en/enterprise/guides/human-in-the-loop",
                       "en/enterprise/guides/webhook-automation"
-                    ]
-                  },
-                  {
-                    "group": "Secrets Manager",
-                    "pages": [
-                      "en/enterprise/features/secrets-manager/overview",
-                      "en/enterprise/features/secrets-manager/usage",
-                      "en/enterprise/features/secrets-manager/aws",
-                      "en/enterprise/features/secrets-manager/aws-workload-identity",
-                      "en/enterprise/features/secrets-manager/gcp",
-                      "en/enterprise/features/secrets-manager/gcp-workload-identity",
-                      "en/enterprise/features/secrets-manager/azure",
-                      "en/enterprise/features/secrets-manager/azure-workload-identity",
-                      "en/enterprise/features/secrets-manager/verify-rotation"
                     ]
                   },
                   {
@@ -7206,7 +7225,40 @@
                   {
                     "group": "Gerenciar",
                     "pages": [
-                      "pt-BR/enterprise/features/rbac"
+                      "pt-BR/enterprise/features/rbac",
+                      {
+                        "group": "Secrets Manager",
+                        "icon": "lock",
+                        "pages": [
+                          "pt-BR/enterprise/features/secrets-manager/overview",
+                          "pt-BR/enterprise/features/secrets-manager/usage",
+                          {
+                            "group": "AWS",
+                            "icon": "aws",
+                            "pages": [
+                              "pt-BR/enterprise/features/secrets-manager/aws",
+                              "pt-BR/enterprise/features/secrets-manager/aws-workload-identity"
+                            ]
+                          },
+                          {
+                            "group": "GCP",
+                            "icon": "google",
+                            "pages": [
+                              "pt-BR/enterprise/features/secrets-manager/gcp",
+                              "pt-BR/enterprise/features/secrets-manager/gcp-workload-identity"
+                            ]
+                          },
+                          {
+                            "group": "Azure",
+                            "icon": "microsoft",
+                            "pages": [
+                              "pt-BR/enterprise/features/secrets-manager/azure",
+                              "pt-BR/enterprise/features/secrets-manager/azure-workload-identity"
+                            ]
+                          },
+                          "pt-BR/enterprise/features/secrets-manager/verify-rotation"
+                        ]
+                      }
                     ]
                   },
                   {
@@ -7259,20 +7311,6 @@
                       "pt-BR/enterprise/guides/team-management",
                       "pt-BR/enterprise/guides/human-in-the-loop",
                       "pt-BR/enterprise/guides/webhook-automation"
-                    ]
-                  },
-                  {
-                    "group": "Secrets Manager",
-                    "pages": [
-                      "pt-BR/enterprise/features/secrets-manager/overview",
-                      "pt-BR/enterprise/features/secrets-manager/usage",
-                      "pt-BR/enterprise/features/secrets-manager/aws",
-                      "pt-BR/enterprise/features/secrets-manager/aws-workload-identity",
-                      "pt-BR/enterprise/features/secrets-manager/gcp",
-                      "pt-BR/enterprise/features/secrets-manager/gcp-workload-identity",
-                      "pt-BR/enterprise/features/secrets-manager/azure",
-                      "pt-BR/enterprise/features/secrets-manager/azure-workload-identity",
-                      "pt-BR/enterprise/features/secrets-manager/verify-rotation"
                     ]
                   },
                   {
@@ -13707,7 +13745,40 @@
                   {
                     "group": "관리",
                     "pages": [
-                      "ko/enterprise/features/rbac"
+                      "ko/enterprise/features/rbac",
+                      {
+                        "group": "Secrets Manager",
+                        "icon": "lock",
+                        "pages": [
+                          "ko/enterprise/features/secrets-manager/overview",
+                          "ko/enterprise/features/secrets-manager/usage",
+                          {
+                            "group": "AWS",
+                            "icon": "aws",
+                            "pages": [
+                              "ko/enterprise/features/secrets-manager/aws",
+                              "ko/enterprise/features/secrets-manager/aws-workload-identity"
+                            ]
+                          },
+                          {
+                            "group": "GCP",
+                            "icon": "google",
+                            "pages": [
+                              "ko/enterprise/features/secrets-manager/gcp",
+                              "ko/enterprise/features/secrets-manager/gcp-workload-identity"
+                            ]
+                          },
+                          {
+                            "group": "Azure",
+                            "icon": "microsoft",
+                            "pages": [
+                              "ko/enterprise/features/secrets-manager/azure",
+                              "ko/enterprise/features/secrets-manager/azure-workload-identity"
+                            ]
+                          },
+                          "ko/enterprise/features/secrets-manager/verify-rotation"
+                        ]
+                      }
                     ]
                   },
                   {
@@ -13760,20 +13831,6 @@
                       "ko/enterprise/guides/team-management",
                       "ko/enterprise/guides/human-in-the-loop",
                       "ko/enterprise/guides/webhook-automation"
-                    ]
-                  },
-                  {
-                    "group": "Secrets Manager",
-                    "pages": [
-                      "ko/enterprise/features/secrets-manager/overview",
-                      "ko/enterprise/features/secrets-manager/usage",
-                      "ko/enterprise/features/secrets-manager/aws",
-                      "ko/enterprise/features/secrets-manager/aws-workload-identity",
-                      "ko/enterprise/features/secrets-manager/gcp",
-                      "ko/enterprise/features/secrets-manager/gcp-workload-identity",
-                      "ko/enterprise/features/secrets-manager/azure",
-                      "ko/enterprise/features/secrets-manager/azure-workload-identity",
-                      "ko/enterprise/features/secrets-manager/verify-rotation"
                     ]
                   },
                   {
@@ -20375,7 +20432,40 @@
                   {
                     "group": "الإدارة",
                     "pages": [
-                      "ar/enterprise/features/rbac"
+                      "ar/enterprise/features/rbac",
+                      {
+                        "group": "Secrets Manager",
+                        "icon": "lock",
+                        "pages": [
+                          "ar/enterprise/features/secrets-manager/overview",
+                          "ar/enterprise/features/secrets-manager/usage",
+                          {
+                            "group": "AWS",
+                            "icon": "aws",
+                            "pages": [
+                              "ar/enterprise/features/secrets-manager/aws",
+                              "ar/enterprise/features/secrets-manager/aws-workload-identity"
+                            ]
+                          },
+                          {
+                            "group": "GCP",
+                            "icon": "google",
+                            "pages": [
+                              "ar/enterprise/features/secrets-manager/gcp",
+                              "ar/enterprise/features/secrets-manager/gcp-workload-identity"
+                            ]
+                          },
+                          {
+                            "group": "Azure",
+                            "icon": "microsoft",
+                            "pages": [
+                              "ar/enterprise/features/secrets-manager/azure",
+                              "ar/enterprise/features/secrets-manager/azure-workload-identity"
+                            ]
+                          },
+                          "ar/enterprise/features/secrets-manager/verify-rotation"
+                        ]
+                      }
                     ]
                   },
                   {
@@ -20428,20 +20518,6 @@
                       "ar/enterprise/guides/team-management",
                       "ar/enterprise/guides/human-in-the-loop",
                       "ar/enterprise/guides/webhook-automation"
-                    ]
-                  },
-                  {
-                    "group": "Secrets Manager",
-                    "pages": [
-                      "ar/enterprise/features/secrets-manager/overview",
-                      "ar/enterprise/features/secrets-manager/usage",
-                      "ar/enterprise/features/secrets-manager/aws",
-                      "ar/enterprise/features/secrets-manager/aws-workload-identity",
-                      "ar/enterprise/features/secrets-manager/gcp",
-                      "ar/enterprise/features/secrets-manager/gcp-workload-identity",
-                      "ar/enterprise/features/secrets-manager/azure",
-                      "ar/enterprise/features/secrets-manager/azure-workload-identity",
-                      "ar/enterprise/features/secrets-manager/verify-rotation"
                     ]
                   },
                   {
