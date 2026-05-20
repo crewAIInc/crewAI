@@ -233,8 +233,8 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
             f"[bold blue]Publishing skill [bold]{name}[/bold] v{version} to {effective_org}...[/bold blue]"
         )
 
-        archive_bytes = self._build_skill_zip()
-        encoded_file = "data:application/zip;base64," + base64.b64encode(
+        archive_bytes = self._build_skill_tarball()
+        encoded_file = "data:application/x-gzip;base64," + base64.b64encode(
             archive_bytes
         ).decode("utf-8")
 
@@ -341,17 +341,17 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
         with zipfile.ZipFile(io.BytesIO(archive_bytes)) as zf:
             _safe_extract_zip(zf, dest)
 
-    def _build_skill_zip(self) -> bytes:
-        """Build an in-memory ZIP of SKILL.md + scripts/ + references/ + assets/."""
+    def _build_skill_tarball(self) -> bytes:
+        """Build an in-memory .tar.gz of SKILL.md + scripts/ + references/ + assets/."""
         buf = io.BytesIO()
-        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-            zf.write("SKILL.md")
+        with tarfile.open(fileobj=buf, mode="w:gz") as tf:
+            tf.add("SKILL.md")
             for folder in ("scripts", "references", "assets"):
                 folder_path = Path(folder)
                 if folder_path.is_dir():
                     for fpath in sorted(folder_path.rglob("*")):
                         if fpath.is_file():
-                            zf.write(fpath)
+                            tf.add(str(fpath))
         return buf.getvalue()
 
     def _parse_frontmatter(self, content: str) -> dict[str, str]:

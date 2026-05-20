@@ -12,6 +12,7 @@ import logging
 from pathlib import Path
 import tarfile
 from typing import TypedDict
+import zipfile
 
 
 _logger = logging.getLogger(__name__)
@@ -71,12 +72,16 @@ class SkillCacheManager:
 
         import io
 
-        with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode="r:gz") as tf:
-            try:
-                tf.extractall(skill_dir, filter="data")
-            except TypeError:
-                # Python < 3.12 doesn't support filter= keyword; fall back safely
-                _safe_extractall(tf, skill_dir)
+        # Try tar.gz first, fall back to zip
+        try:
+            with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode="r:gz") as tf:
+                try:
+                    tf.extractall(skill_dir, filter="data")
+                except TypeError:
+                    _safe_extractall(tf, skill_dir)
+        except tarfile.TarError:
+            with zipfile.ZipFile(io.BytesIO(archive_bytes)) as zf:
+                _safe_extract_zip(zf, skill_dir)
 
         meta: SkillMetadata = {
             "org": org,
@@ -131,3 +136,13 @@ def _safe_extractall(tf: tarfile.TarFile, dest: Path) -> None:
         if not member_path.is_relative_to(dest_resolved):
             raise ValueError(f"Blocked path traversal attempt: {member.name!r}")
     tf.extractall(dest)  # noqa: S202
+
+
+def _safe_extract_zip(zf: zipfile.ZipFile, dest: Path) -> None:
+    """Path-traversal-safe ZIP extraction."""
+    dest_resolved = dest.resolve()
+    for member in zf.namelist():
+        member_path = (dest / member).resolve()
+        if not member_path.is_relative_to(dest_resolved):
+            raise ValueError(f"Blocked path traversal attempt: {member!r}")
+    zf.extractall(dest)  # noqa: S202
