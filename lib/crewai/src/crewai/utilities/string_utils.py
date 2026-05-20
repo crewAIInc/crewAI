@@ -129,12 +129,17 @@ def interpolate_only(
         return ""
     if "{" not in input_string and "}" not in input_string:
         return input_string
+
+    variables = _VARIABLE_PATTERN.findall(input_string)
+    if not variables:
+        # Literal braces with no `{placeholder}` tokens (e.g. JSON examples in a
+        # task description) -- nothing to interpolate, return unchanged.
+        return input_string
     if not inputs:
         raise ValueError(
             "Inputs dictionary cannot be empty when interpolating variables"
         )
 
-    variables = _VARIABLE_PATTERN.findall(input_string)
     result = input_string
 
     # Check if all variables exist in inputs

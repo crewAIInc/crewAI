@@ -184,3 +184,32 @@ class TestInterpolateOnly:
             interpolate_only(template, inputs)
 
         assert "inputs dictionary cannot be empty" in str(excinfo.value).lower()
+
+    @pytest.mark.parametrize(
+        "template",
+        [
+            '{"status": "ok"}',
+            "Return literal {} here",
+            "Use positional {0} and {1}",
+            "A closing brace } with no opening placeholder",
+        ],
+    )
+    def test_literal_braces_without_placeholders_empty_inputs(self, template: str):
+        """Strings with braces but no `{placeholder}` need no interpolation.
+
+        Such a string has nothing to interpolate, so it must be returned
+        unchanged even when ``inputs`` is empty -- the empty-inputs guard only
+        applies when real placeholders are present.
+        """
+        result = interpolate_only(template, {})
+
+        assert result == template
+
+    def test_literal_braces_without_placeholders_with_inputs(self):
+        """Literal braces are preserved when real placeholders are also present."""
+        template = 'Emit {"status": "ok"} for {name}'
+        inputs: dict[str, Any] = {"name": "Alice"}
+
+        result = interpolate_only(template, inputs)
+
+        assert result == 'Emit {"status": "ok"} for Alice'
