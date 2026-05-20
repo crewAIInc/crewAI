@@ -204,4 +204,11 @@ def _dotted_path_to_instance(value: Any) -> Any:
             f"Invalid provider path {value!r}: expected a class, got "
             f"{type(cls).__name__}"
         )
-    return cls()
+    try:
+        return cls()
+    except TypeError as exc:
+        raise ValueError(
+            f"Cannot reinstantiate {value!r} with no arguments: {exc}. "
+            "Only no-arg constructors are checkpointable; rebuild the "
+            "instance manually and assign it after restore."
+        ) from exc
