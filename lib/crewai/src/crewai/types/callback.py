@@ -150,3 +150,50 @@ SerializableCallable = Annotated[
     PlainSerializer(callable_to_string, return_type=str, when_used="json"),
     WithJsonSchema({"type": "string"}),
 ]
+
+
+def _instance_to_dotted_path(value: Any) -> str:
+    """Serialize an instance to a dotted path naming its class."""
+    cls = type(value)
+    module = getattr(cls, "__module__", None)
+    qualname = getattr(cls, "__qualname__", None)
+    if module is None or qualname is None:
+        raise ValueError(
+            f"Cannot serialize {value!r}: class missing __module__ or __qualname__. "
+            "Use a module-level class for checkpointable instances."
+        )
+    if qualname.endswith("<lambda>") or "<locals>" in qualname:
+        raise ValueError(
+            f"Cannot serialize {value!r}: class defined in <locals>. "
+            "Use a module-level class for checkpointable instances."
+        )
+    return f"{module}.{qualname}"
+
+
+def _dotted_path_to_instance(value: Any) -> Any:
+    """Resolve a dotted path to a class and instantiate it with no args.
+
+    If *value* is already a non-string object it is returned as-is.
+    """
+    if value is None or not isinstance(value, str):
+        return value
+    if "." not in value:
+        raise ValueError(
+            f"Invalid provider path {value!r}: expected 'module.name' format"
+        )
+    if not os.environ.get("CREWAI_DESERIALIZE_CALLBACKS"):
+        raise ValueError(
+            f"Refusing to resolve provider path {value!r}: "
+            "set CREWAI_DESERIALIZE_CALLBACKS=1 to allow. "
+            "Only enable this for trusted checkpoint data."
+        )
+    cls = _resolve_dotted_path(value)
+    return cls()
+
+
+SerializableInstance = Annotated[
+    Any,
+    BeforeValidator(_dotted_path_to_instance),
+    PlainSerializer(_instance_to_dotted_path, return_type=str, when_used="json"),
+    WithJsonSchema({"type": "string"}),
+]

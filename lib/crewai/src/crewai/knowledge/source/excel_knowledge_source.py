@@ -1,6 +1,6 @@
 from pathlib import Path
 from types import ModuleType
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import Field, field_validator
 
@@ -16,6 +16,7 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
 
     _logger: Logger = Logger(verbose=True)
 
+    source_type: Literal["excel"] = "excel"
     file_path: Path | list[Path] | str | list[str] | None = Field(
         default=None,
         description="[Deprecated] The path to the file. Use file_paths instead.",

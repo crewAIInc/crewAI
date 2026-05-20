@@ -223,7 +223,13 @@ class Crew(FlowTrackable, BaseModel):
     ] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
     verbose: bool = Field(default=False)
-    memory: bool | Memory | MemoryScope | MemorySlice | None = Field(
+    memory: (
+        bool
+        | Annotated[
+            Memory | MemoryScope | MemorySlice, Field(discriminator="memory_kind")
+        ]
+        | None
+    ) = Field(
         default=False,
         description=(
             "Enable crew memory. Pass True for default Memory(), "

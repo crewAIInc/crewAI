@@ -127,6 +127,13 @@ def _validate_executor_ref(value: Any) -> Any:
     return value
 
 
+def _serialize_executor_ref(value: Any) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    result: dict[str, Any] = value.model_dump(mode="json")
+    return result
+
+
 def _serialize_llm_ref(value: Any) -> dict[str, Any] | None:
     if value is None:
         return None
@@ -251,14 +258,13 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     max_iter: int = Field(
         default=25, description="Maximum iterations for an agent to execute a task"
     )
-    agent_executor: SerializeAsAny[BaseAgentExecutor] | None = Field(
-        default=None, description="An instance of the CrewAgentExecutor class."
-    )
-
-    @field_validator("agent_executor", mode="before")
-    @classmethod
-    def _validate_agent_executor(cls, v: Any) -> Any:
-        return _validate_executor_ref(v)
+    agent_executor: Annotated[
+        SerializeAsAny[BaseAgentExecutor] | None,
+        BeforeValidator(_validate_executor_ref),
+        PlainSerializer(
+            _serialize_executor_ref, return_type=dict | None, when_used="json"
+        ),
+    ] = Field(default=None, description="An instance of the CrewAgentExecutor class.")
 
     llm: Annotated[
         str | BaseLLM | None,
@@ -326,7 +332,13 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         default=None,
         description="List of MCP server references. Supports 'https://server.com/path' for external servers and bare slugs like 'notion' for connected MCP integrations. Use '#tool_name' suffix for specific tools.",
     )
-    memory: bool | Memory | MemoryScope | MemorySlice | None = Field(
+    memory: (
+        bool
+        | Annotated[
+            Memory | MemoryScope | MemorySlice, Field(discriminator="memory_kind")
+        ]
+        | None
+    ) = Field(
         default=None,
         description=(
             "Enable agent memory. Pass True for default Memory(), "

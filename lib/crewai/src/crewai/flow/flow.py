@@ -120,6 +120,7 @@ from crewai.state.checkpoint_config import (
     _coerce_checkpoint,
     apply_checkpoint,
 )
+from crewai.types.callback import SerializableInstance
 
 
 if TYPE_CHECKING:
@@ -157,6 +158,14 @@ def _resolve_persistence(value: Any) -> Any:
         if cls is not None:
             return cls.model_validate(value)
     return value
+
+
+def _serialize_persistence(value: Any) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    if isinstance(value, FlowPersistence):
+        return value.model_dump(mode="json")
+    return None
 
 
 _INITIAL_STATE_CLASS_MARKER = "__crewai_pydantic_class_schema__"
@@ -949,15 +958,23 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     name: str | None = Field(default=None)
     tracing: bool | None = Field(default=None)
     stream: bool = Field(default=False)
-    memory: Memory | MemoryScope | MemorySlice | None = Field(default=None)
-    input_provider: InputProvider | None = Field(default=None)
+    memory: (
+        Annotated[
+            Memory | MemoryScope | MemorySlice, Field(discriminator="memory_kind")
+        ]
+        | None
+    ) = Field(default=None)
+    input_provider: SerializableInstance | None = Field(default=None)
     suppress_flow_events: bool = Field(default=False)
     human_feedback_history: list[HumanFeedbackResult] = Field(default_factory=list)
     last_human_feedback: HumanFeedbackResult | None = Field(default=None)
 
     persistence: Annotated[
-        SerializeAsAny[FlowPersistence] | Any,
+        SerializeAsAny[FlowPersistence] | None,
         BeforeValidator(lambda v, _: _resolve_persistence(v)),
+        PlainSerializer(
+            _serialize_persistence, return_type=dict | None, when_used="json"
+        ),
     ] = Field(default=None)
     max_method_calls: int = Field(default=100)
 
@@ -3172,7 +3189,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         from crewai.flow.flow_config import flow_config
 
         if self.input_provider is not None:
-            return self.input_provider
+            return cast(InputProvider, self.input_provider)
         if flow_config.input_provider is not None:
             return flow_config.input_provider
         return ConsoleProvider()

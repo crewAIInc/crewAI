@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 from urllib.parse import urlparse
 
 
@@ -45,6 +45,7 @@ class CrewDoclingSource(BaseKnowledgeSource):
 
     _logger: Logger = Logger(verbose=True)
 
+    source_type: Literal["docling"] = "docling"
     file_path: list[Path | str] | None = Field(default=None)
     file_paths: list[Path | str] = Field(default_factory=list)
     chunks: list[str] = Field(default_factory=list)

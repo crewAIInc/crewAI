@@ -21,6 +21,8 @@ class MemoryScope(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
+    memory_kind: Literal["scope"] = "scope"
+
     root_path: str = Field(default="/")
 
     _memory: Memory = PrivateAttr()
@@ -190,6 +192,8 @@ class MemorySlice(BaseModel):
     """View over multiple scopes: recall searches all, remember is a no-op when read_only."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    memory_kind: Literal["slice"] = "slice"
 
     scopes: list[str] = Field(default_factory=list)
     categories: list[str] | None = Field(default=None)
