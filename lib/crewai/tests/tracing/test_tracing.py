@@ -884,6 +884,49 @@ class TestTraceListenerSetup:
                     "test_batch_id_12345", "Internal Server Error"
                 )
 
+    def test_finalize_batch_clears_buffer_after_successful_send(self) -> None:
+        """Successful send must not restore a stale event buffer (duplicate events)."""
+        from crewai.events.listeners.tracing.types import TraceEvent
+
+        with patch(
+            "crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context",
+            return_value=True,
+        ):
+            batch_manager = TraceBatchManager()
+            batch_manager.current_batch = batch_manager.initialize_batch(
+                user_context={"privacy_level": "standard"},
+                execution_metadata={
+                    "execution_type": "flow",
+                    "flow_name": "TestFlow",
+                },
+            )
+            batch_manager.trace_batch_id = "batch-clear-test"
+            batch_manager.backend_initialized = True
+            batch_manager.event_buffer = [
+                TraceEvent(
+                    type="llm_call_started",
+                    timestamp="2026-01-01T00:00:00",
+                    event_id="evt-1",
+                    emission_sequence=1,
+                )
+            ]
+
+            with (
+                patch.object(
+                    batch_manager.plus_api,
+                    "send_trace_events",
+                    return_value=MagicMock(status_code=200),
+                ),
+                patch.object(
+                    batch_manager.plus_api,
+                    "finalize_trace_batch",
+                    return_value=MagicMock(status_code=200, json=MagicMock(return_value={})),
+                ),
+            ):
+                batch_manager.finalize_batch()
+
+            assert batch_manager.event_buffer == []
+
     def test_ephemeral_batch_includes_anon_id(self):
         """Test that ephemeral batch initialization sends anon_id from get_user_id()"""
         fake_user_id = "abc123def456"

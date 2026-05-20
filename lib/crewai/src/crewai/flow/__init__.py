@@ -4,12 +4,24 @@ from crewai.flow.async_feedback import (
     HumanFeedbackProvider,
     PendingFeedbackContext,
 )
+from crewai.flow.chat import (
+    ChatMessage,
+    ChatSession,
+    ConversationEventBridge,
+    TurnResult,
+)
+from crewai.flow.conversation import (
+    ChatState,
+    ConversationalConfig,
+    ConversationalInputs,
+)
 from crewai.flow.flow import Flow, and_, listen, or_, router, start
 from crewai.flow.flow_config import flow_config
 from crewai.flow.flow_serializer import flow_structure
 from crewai.flow.human_feedback import HumanFeedbackResult, human_feedback
 from crewai.flow.input_provider import InputProvider, InputResponse
 from crewai.flow.persistence import persist
+from crewai.flow.providers import QueueInputProvider
 from crewai.flow.visualization import (
     FlowStructure,
     build_flow_structure,
@@ -18,7 +30,13 @@ from crewai.flow.visualization import (
 
 
 __all__ = [
+    "ChatMessage",
+    "ChatSession",
+    "ChatState",
     "ConsoleProvider",
+    "ConversationEventBridge",
+    "ConversationalConfig",
+    "ConversationalInputs",
     "Flow",
     "FlowStructure",
     "HumanFeedbackPending",
@@ -27,6 +45,8 @@ __all__ = [
     "InputProvider",
     "InputResponse",
     "PendingFeedbackContext",
+    "QueueInputProvider",
+    "TurnResult",
     "and_",
     "build_flow_structure",
     "flow_config",

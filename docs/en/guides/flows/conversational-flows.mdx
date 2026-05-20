@@ -1,0 +1,150 @@
+---
+title: Conversational Flows
+description: Build multi-turn chat apps with kickoff per turn, message history, and intent routing.
+icon: comments
+mode: "wide"
+---
+
+## One entry point: `kickoff`
+
+Chat apps should use **`flow.kickoff(user_message=..., session_id=...)`** for each user line. Do not add a separate `chat()` method — session identity is `state.id` (same as `inputs["id"]` with `@persist`).
+
+| API | Use for |
+|-----|---------|
+| `kickoff(user_message=..., session_id=...)` | Each new user message (API, WebSocket turn, CLI loop) |
+| `ask()` | Blocking prompt **inside** one step (wizard, clarification) |
+| `@human_feedback` | Approve/reject **a step output** before continuing — not the next chat line |
+
+## Quick start
+
+```python
+from uuid import uuid4
+
+from pydantic import Field
+
+from crewai.flow import ChatState, Flow, listen, persist, router, start
+from crewai.flow.persistence import SQLiteFlowPersistence
+
+
+@persist(SQLiteFlowPersistence())
+class SupportFlow(Flow[ChatState]):
+    @start()
+    def bootstrap(self):
+        if self.state.session_ready:
+            return "ready"
+        # load permissions once per session
+        self.state.session_ready = True
+        return "ready"
+
+    @router(bootstrap)
+    def route(self):
+        if self.state.last_intent:
+            return self.state.last_intent
+        return self.classify_intent(
+            self.state.last_user_message,
+            outcomes=["order", "help", "goodbye"],
+            llm="gpt-4o-mini",
+            context=self.conversation_messages,
+        )
+
+    @listen("order")
+    def handle_order(self):
+        reply = "Your order is on the way."
+        self.append_message("assistant", reply)
+        return reply
+
+    @listen("help")
+    def handle_help(self):
+        reply = "How can I help?"
+        self.append_message("assistant", reply)
+        return reply
+
+
+session_id = str(uuid4())
+flow = SupportFlow()
+
+# Turn 1
+flow.kickoff(user_message="Where is my order?", session_id=session_id)
+
+# Turn 2 — same session, flow finished after turn 1 is normal
+flow.kickoff(user_message="What about returns?", session_id=session_id)
+```
+
+## When the flow finishes but the user keeps chatting
+
+`FlowFinished` means **this graph run** completed. The conversation continues with **another `kickoff`** and the same `session_id`. `@persist` restores `messages`, permissions flags, and context.
+
+For multi-turn chat, prefer **`@persist` on a single terminal step** (for example `finalize`) rather than on the whole `Flow` class. Class-level persist saves after every method; `load_state` uses the latest row, which is often a mid-run snapshot (for example right after `bootstrap`) and can omit handler updates from the same turn.
+
+Do **not** use `@human_feedback` for follow-up questions unless a human must approve a specific payload before it is shown.
+
+## Tracing across turns
+
+By default, `ConversationalConfig(defer_trace_finalization=True)` keeps **one trace batch** for the whole chat session instead of finalizing after every `kickoff()`. Call `flow.finalize_session_traces()` when the user leaves (or use `ChatSession.close()`, which does this automatically).
+
+```python
+flow.kickoff(user_message="Hello", session_id=session_id)
+flow.kickoff(user_message="Track my order", session_id=session_id)
+flow.finalize_session_traces()  # one link for the full conversation
+```
+
+Crews kicked off **inside** a flow method (for example a research step) append their events to the **parent flow batch**. `CrewKickoffCompleted` does not finalize that batch (even when crew worker threads lose `current_flow_id` context); finalization happens in `finalize_session_traces()`.
+
+Per-turn `flow_finished` is also deferred: only `flow_started` opens the session scope on the first turn, and `flow_finished` runs once in `finalize_session_traces()` so the event bus does not warn about a missing `flow_started`.
+
+## Kickoff parameters
+
+| Parameter | Purpose |
+|-----------|---------|
+| `user_message` | This turn's user text (also `inputs["user_message"]`) |
+| `session_id` | Conversation UUID → `inputs["id"]` / `state.id` |
+| `intents` | Optional labels for pre-kickoff `classify_intent` |
+| `intent_llm` | LLM for classification (required with `intents`) |
+| `interactive=True` | CLI demo loop via `ask()` (not for production APIs) |
+
+Class-level defaults:
+
+```python
+from crewai.flow import ConversationalConfig, Flow
+
+
+class MyFlow(Flow[ChatState]):
+    conversational_config = ConversationalConfig(
+        default_intents=["order", "help"],
+        intent_llm="gpt-4o-mini",
+    )
+```
+
+## Helpers on `Flow`
+
+- `append_message(role, content)` — update `state.messages`
+- `conversation_messages` — history for LLM calls
+- `classify_intent(text, outcomes, llm=..., context=...)` — route labels (same logic as `@human_feedback` collapse)
+- `receive_user_message(text, ...)` — append user line + optional classify
+- `input_history` — audit trail from `ask()`
+
+Recommended state shape: `ChatState` (`id`, `messages`, `last_user_message`, `last_intent`, `session_ready`).
+
+## ChatSession (WebSocket / SSE bridge)
+
+For UIs, use `ChatSession` to wrap kickoff and map events to `ChatMessage`:
+
+```python
+from crewai.flow import ChatSession
+
+
+def on_event(msg):
+    print(msg.type, msg.payload)
+
+
+session = ChatSession(flow, session_id="channel-1", on_event=on_event)
+turn = session.handle_turn("Hello")
+print(turn.output, turn.intent)
+session.close()
+```
+
+`QueueInputProvider` supports blocking `ask()` fed by a WebSocket handler (`provider.push(session_id, text)`).
+
+## Streaming
+
+Enable `stream = True` on the Flow class and use `kickoff` / `ChatSession.handle_turn(..., stream=True)` to emit `assistant_delta` events through `ConversationEventBridge`.

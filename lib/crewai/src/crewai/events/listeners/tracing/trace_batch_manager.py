@@ -70,6 +70,8 @@ class TraceBatchManager:
         self.execution_start_times: dict[str, datetime] = {}
         self.batch_owner_type: str | None = None
         self.batch_owner_id: str | None = None
+        self.defer_session_finalization: bool = False
+        self._batch_finalized: bool = False
         self.backend_initialized: bool = False
         self.ephemeral_trace_url: str | None = None
         try:
@@ -101,6 +103,7 @@ class TraceBatchManager:
                 user_context=user_context, execution_metadata=execution_metadata
             )
             self.is_current_batch_ephemeral = use_ephemeral
+            self._batch_finalized = False
 
             self.record_start_time("execution")
 
@@ -312,6 +315,9 @@ class TraceBatchManager:
     def finalize_batch(self) -> TraceBatch | None:
         """Finalize batch and return it for sending"""
 
+        if self._batch_finalized:
+            return None
+
         if not self.current_batch or not is_tracing_enabled_in_context():
             return None
 
@@ -340,10 +346,8 @@ class TraceBatchManager:
         self.current_batch.events = sorted_events
         events_sent_count = len(sorted_events)
         if sorted_events:
-            original_buffer = self.event_buffer
             self.event_buffer = sorted_events
             events_sent_to_backend_status = self._send_events_to_backend()
-            self.event_buffer = original_buffer
             if events_sent_to_backend_status == 500 and self.trace_batch_id:
                 self._mark_batch_as_failed(
                     self.trace_batch_id, "Error sending events to backend"
@@ -360,6 +364,7 @@ class TraceBatchManager:
         self.event_buffer.clear()
         self.trace_batch_id = None
         self.is_current_batch_ephemeral = False
+        self._batch_finalized = True
 
         self._cleanup_batch_data()
 
@@ -371,7 +376,7 @@ class TraceBatchManager:
         Args:
             events_count: Number of events that were successfully sent
         """
-        if not self.plus_api or not self.trace_batch_id:
+        if self._batch_finalized or not self.plus_api or not self.trace_batch_id:
             return
 
         try:
@@ -390,6 +395,7 @@ class TraceBatchManager:
             )
 
             if response.status_code == 200:
+                self._batch_finalized = True
                 access_code = response.json().get("access_code", None)
                 console = Console()
                 settings = Settings()

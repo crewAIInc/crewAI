@@ -83,7 +83,20 @@ from crewai.events.types.flow_events import (
     MethodExecutionStartedEvent,
 )
 from crewai.flow.constants import AND_CONDITION, OR_CONDITION
-from crewai.flow.flow_context import current_flow_id, current_flow_request_id
+from crewai.flow.conversation import (
+    ConversationalConfig,
+    append_message as _append_conversation_message,
+    get_conversation_messages,
+    get_conversational_config,
+    normalize_kickoff_inputs,
+    prepare_conversational_turn,
+    receive_user_message as _receive_user_message,
+)
+from crewai.flow.flow_context import (
+    current_flow_id,
+    current_flow_name,
+    current_flow_request_id,
+)
 from crewai.flow.flow_wrappers import (
     FlowCondition,
     FlowConditions,
@@ -952,6 +965,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     memory: Memory | MemoryScope | MemorySlice | None = Field(default=None)
     input_provider: InputProvider | None = Field(default=None)
     suppress_flow_events: bool = Field(default=False)
+    defer_trace_finalization: bool = Field(
+        default=False,
+        description=(
+            "When True, do not finalize the trace batch at the end of each kickoff. "
+            "Call finalize_session_traces() when the chat session ends."
+        ),
+    )
     human_feedback_history: list[HumanFeedbackResult] = Field(default_factory=list)
     last_human_feedback: HumanFeedbackResult | None = Field(default=None)
 
@@ -1073,7 +1093,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     _pending_feedback_context: PendingFeedbackContext | None = PrivateAttr(default=None)
     _human_feedback_method_outputs: dict[str, Any] = PrivateAttr(default_factory=dict)
     _input_history: list[InputHistoryEntry] = PrivateAttr(default_factory=list)
+    _conversation_messages: list[dict[str, Any]] = PrivateAttr(default_factory=list)
+    _pending_user_message: str | dict[str, Any] | None = PrivateAttr(default=None)
+    _pending_intents: Sequence[str] | None = PrivateAttr(default=None)
+    _pending_intent_llm: str | BaseLLM | None = PrivateAttr(default=None)
     _state: Any = PrivateAttr(default=None)
+
+    conversational_config: ClassVar[ConversationalConfig | None] = None
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:  # type: ignore[override]
         class _FlowGeneric(cls):  # type: ignore[valid-type,misc]
@@ -1198,6 +1224,116 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             raise ValueError("No memory configured for this flow")
         result: list[str] = self.memory.extract_memories(content)
         return result
+
+    @property
+    def conversation_messages(self) -> list[dict[str, Any]]:
+        """Message history from state or the internal conversation buffer."""
+        return get_conversation_messages(self)
+
+    @property
+    def input_history(self) -> list[InputHistoryEntry]:
+        """Read-only view of prompts and responses from ``ask()``."""
+        return list(self._input_history)
+
+    def append_message(
+        self,
+        role: Literal["user", "assistant", "system", "tool"],
+        content: str,
+        **extra: Any,
+    ) -> None:
+        """Append a message to conversation history on state or the fallback buffer."""
+        _append_conversation_message(self, role, content, **extra)
+
+    def classify_intent(
+        self,
+        text: str,
+        outcomes: Sequence[str],
+        *,
+        llm: str | BaseLLM,
+        context: Sequence[dict[str, Any]] | None = None,
+    ) -> str:
+        """Map user text to one of the given outcomes using an LLM."""
+        if context:
+            context_blob = "\n".join(
+                f"{m.get('role', 'user')}: {m.get('content', '')}" for m in context
+            )
+            feedback = f"{context_blob}\n\nLatest user message: {text}"
+        else:
+            feedback = text
+        return self._collapse_to_outcome(feedback, outcomes, llm)
+
+    def receive_user_message(
+        self,
+        text: str,
+        *,
+        outcomes: Sequence[str] | None = None,
+        llm: str | BaseLLM | None = None,
+    ) -> str:
+        """Append a user message and optionally set ``last_intent`` on state."""
+        return _receive_user_message(
+            self,
+            text,
+            outcomes=outcomes,
+            llm=llm,
+        )
+
+    def _configure_conversational_kickoff(
+        self,
+        *,
+        inputs: dict[str, Any] | None = None,
+        user_message: str | dict[str, Any] | None = None,
+        session_id: str | None = None,
+        intents: Sequence[str] | None = None,
+        intent_llm: str | BaseLLM | None = None,
+    ) -> dict[str, Any]:
+        """Store pending conversational turn options for ``kickoff_async``."""
+        config = get_conversational_config(self) or self.conversational_config
+        resolved_intents = intents
+        resolved_llm = intent_llm
+        if config is not None:
+            if resolved_intents is None:
+                resolved_intents = config.default_intents
+            if resolved_llm is None:
+                resolved_llm = config.intent_llm
+
+        resolved_message = user_message
+        if resolved_message is None and inputs and "user_message" in inputs:
+            resolved_message = inputs["user_message"]
+
+        self._pending_user_message = resolved_message
+        self._pending_intents = list(resolved_intents) if resolved_intents else None
+        self._pending_intent_llm = resolved_llm
+
+        if config is not None and config.defer_trace_finalization:
+            self.defer_trace_finalization = True
+            from crewai.events.listeners.tracing.trace_listener import (
+                TraceCollectionListener,
+            )
+
+            TraceCollectionListener().batch_manager.defer_session_finalization = True
+
+        return normalize_kickoff_inputs(
+            inputs,
+            user_message=resolved_message,
+            session_id=session_id,
+        )
+
+    def _clear_conversational_kickoff(self) -> None:
+        self._pending_user_message = None
+        self._pending_intents = None
+        self._pending_intent_llm = None
+
+    def _apply_pending_conversational_turn(self) -> None:
+        if self._pending_user_message is None:
+            return
+        config = get_conversational_config(self) or self.conversational_config
+        prepare_conversational_turn(
+            self,
+            user_message=self._pending_user_message,
+            intents=self._pending_intents,
+            intent_llm=self._pending_intent_llm,
+            config=config,
+        )
 
     def _mark_or_listener_fired(self, listener_name: FlowMethodName) -> bool:
         """Mark an OR listener as fired atomically.
@@ -1532,20 +1668,19 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             reset_emission_counter()
             reset_last_event_id()
 
-        if not self.suppress_flow_events:
-            future = crewai_event_bus.emit(
-                self,
-                FlowStartedEvent(
-                    type="flow_started",
-                    flow_name=self.name or self.__class__.__name__,
-                    inputs=None,
-                ),
-            )
-            if future and isinstance(future, Future):
-                try:
-                    await asyncio.wrap_future(future)
-                except Exception:
-                    logger.warning("FlowStartedEvent handler failed", exc_info=True)
+        future = crewai_event_bus.emit(
+            self,
+            FlowStartedEvent(
+                type="flow_started",
+                flow_name=self._flow_display_name(),
+                inputs=None,
+            ),
+        )
+        if future and isinstance(future, Future):
+            try:
+                await asyncio.wrap_future(future)
+            except Exception:
+                logger.warning("FlowStartedEvent handler failed", exc_info=True)
 
         get_env_context()
 
@@ -1698,29 +1833,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
             self._event_futures.clear()
 
-        if not self.suppress_flow_events:
-            future = crewai_event_bus.emit(
-                self,
-                FlowFinishedEvent(
-                    type="flow_finished",
-                    flow_name=self.name or self.__class__.__name__,
-                    result=final_result,
-                    state=self._copy_and_serialize_state(),
-                ),
-            )
-            if future and isinstance(future, Future):
-                try:
-                    await asyncio.wrap_future(future)
-                except Exception:
-                    logger.warning("FlowFinishedEvent handler failed", exc_info=True)
+        if not self._should_defer_trace_finalization():
+            await self._emit_flow_finished_async(final_result)
 
-            trace_listener = TraceCollectionListener()
-            if trace_listener.batch_manager.batch_owner_type == "flow":
-                if trace_listener.first_time_handler.is_first_time:
-                    trace_listener.first_time_handler.mark_events_collected()
-                    trace_listener.first_time_handler.handle_execution_completion()
-                else:
-                    trace_listener.batch_manager.finalize_batch()
+        self._finalize_flow_trace_batch()
 
         return final_result
 
@@ -2033,6 +2149,15 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         input_files: dict[str, FileInput] | None = None,
         from_checkpoint: CheckpointConfig | None = None,
         restore_from_state_id: str | None = None,
+        *,
+        user_message: str | dict[str, Any] | None = None,
+        session_id: str | None = None,
+        intents: Sequence[str] | None = None,
+        intent_llm: str | BaseLLM | None = None,
+        interactive: bool = False,
+        interactive_prompt: str | None = None,
+        interactive_timeout: float | None = None,
+        exit_commands: Sequence[str] | None = None,
     ) -> Any | FlowStreamingOutput:
         """Start the flow execution in a synchronous context.
 
@@ -2052,10 +2177,49 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 If the referenced state is not found, the kickoff falls back
                 silently to baseline behavior. Cannot be combined with
                 ``from_checkpoint``; passing both raises ``ValueError``.
+            user_message: Text or ``{"role": "user", "content": "..."}`` for this
+                chat turn. Appended to ``state.messages`` before the graph runs.
+            session_id: Conversation session UUID; merged into ``inputs["id"]``
+                for ``@persist`` restoration.
+            intents: Optional outcome labels for pre-kickoff intent classification.
+            intent_llm: LLM used when ``intents`` is set.
+            interactive: If True, run a CLI loop (``ask`` per line) until exit or
+                timeout. For local demos only; APIs should pass ``user_message``.
+            interactive_prompt: Prompt shown by ``ask()`` in interactive mode.
+            interactive_timeout: Per-line timeout for interactive ``ask()``.
+            exit_commands: Words that end interactive mode (default exit, quit).
 
         Returns:
             The final output from the flow or FlowStreamingOutput if streaming.
         """
+        if interactive:
+            if user_message is not None:
+                raise ValueError(
+                    "Cannot pass user_message with interactive=True; "
+                    "messages are collected via ask()."
+                )
+            if self.stream:
+                raise ValueError("interactive=True is not supported with stream=True")
+            return self._kickoff_interactive(
+                inputs=inputs,
+                input_files=input_files,
+                session_id=session_id,
+                intents=intents,
+                intent_llm=intent_llm,
+                interactive_prompt=interactive_prompt,
+                interactive_timeout=interactive_timeout,
+                exit_commands=exit_commands,
+                restore_from_state_id=restore_from_state_id,
+            )
+
+        inputs = self._configure_conversational_kickoff(
+            inputs=inputs,
+            user_message=user_message,
+            session_id=session_id,
+            intents=intents,
+            intent_llm=intent_llm,
+        )
+
         if from_checkpoint is not None and restore_from_state_id is not None:
             raise ValueError(
                 "Cannot combine `from_checkpoint` and `restore_from_state_id`. "
@@ -2064,7 +2228,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
         restored = apply_checkpoint(self, from_checkpoint)
         if restored is not None:
-            return restored.kickoff(inputs=inputs, input_files=input_files)
+            return restored.kickoff(
+                inputs=inputs,
+                input_files=input_files,
+                user_message=user_message,
+                session_id=session_id,
+                intents=intents,
+                intent_llm=intent_llm,
+            )
         if self.stream:
             result_holder: list[Any] = []
             current_task_info: TaskInfo = {
@@ -2087,6 +2258,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         inputs=inputs,
                         input_files=input_files,
                         restore_from_state_id=restore_from_state_id,
+                        user_message=self._pending_user_message,
+                        session_id=inputs.get("id") if inputs else None,
+                        intents=self._pending_intents,
+                        intent_llm=self._pending_intent_llm,
                     )
                     result_holder.append(result)
                 except Exception as e:
@@ -2110,11 +2285,18 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             return streaming_output
 
         async def _run_flow() -> Any:
-            return await self.kickoff_async(
-                inputs,
-                input_files,
-                restore_from_state_id=restore_from_state_id,
-            )
+            try:
+                return await self.kickoff_async(
+                    inputs,
+                    input_files,
+                    restore_from_state_id=restore_from_state_id,
+                    user_message=self._pending_user_message,
+                    session_id=inputs.get("id") if inputs else None,
+                    intents=self._pending_intents,
+                    intent_llm=self._pending_intent_llm,
+                )
+            finally:
+                self._clear_conversational_kickoff()
 
         try:
             asyncio.get_running_loop()
@@ -2124,12 +2306,65 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         except RuntimeError:
             return asyncio.run(_run_flow())
 
+    def _kickoff_interactive(
+        self,
+        *,
+        inputs: dict[str, Any] | None,
+        input_files: dict[str, FileInput] | None,
+        session_id: str | None,
+        intents: Sequence[str] | None,
+        intent_llm: str | BaseLLM | None,
+        interactive_prompt: str | None,
+        interactive_timeout: float | None,
+        exit_commands: Sequence[str] | None,
+        restore_from_state_id: str | None,
+    ) -> Any:
+        config = get_conversational_config(self) or self.conversational_config
+        prompt = interactive_prompt or (config.interactive_prompt if config else "You: ")
+        timeout = (
+            interactive_timeout
+            if interactive_timeout is not None
+            else (config.interactive_timeout if config else None)
+        )
+        exits = {c.strip().lower() for c in (exit_commands or (config.exit_commands if config else ("exit", "quit")))}
+        sid = session_id
+        if sid is None and inputs and "id" in inputs:
+            sid = str(inputs["id"])
+        if sid is None:
+            sid = str(uuid4())
+
+        last_result: Any = None
+        while True:
+            line = self.ask(prompt, timeout=timeout)
+            if line is None or line.strip().lower() in exits:
+                break
+            turn_inputs = self._configure_conversational_kickoff(
+                inputs=inputs,
+                user_message=line,
+                session_id=sid,
+                intents=intents,
+                intent_llm=intent_llm,
+            )
+            last_result = self.kickoff(
+                inputs=turn_inputs,
+                input_files=input_files,
+                restore_from_state_id=restore_from_state_id,
+            )
+            restore_from_state_id = None
+        self._clear_conversational_kickoff()
+        return last_result
+
     async def kickoff_async(
         self,
         inputs: dict[str, Any] | None = None,
         input_files: dict[str, FileInput] | None = None,
         from_checkpoint: CheckpointConfig | None = None,
         restore_from_state_id: str | None = None,
+        *,
+        user_message: str | dict[str, Any] | None = None,
+        session_id: str | None = None,
+        intents: Sequence[str] | None = None,
+        intent_llm: str | BaseLLM | None = None,
     ) -> Any | FlowStreamingOutput:
         """Start the flow execution asynchronously.
 
@@ -2150,10 +2385,22 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 separate persistence key. If the referenced state is not
                 found, falls back silently to baseline. Cannot be combined
                 with ``from_checkpoint``; passing both raises ``ValueError``.
+            user_message: User text for this conversational turn.
+            session_id: Session UUID (``inputs["id"]``).
+            intents: Optional labels for pre-kickoff classification.
+            intent_llm: LLM for classification when ``intents`` is set.
 
         Returns:
             The final output from the flow, which is the result of the last executed method.
         """
+        inputs = self._configure_conversational_kickoff(
+            inputs=inputs,
+            user_message=user_message,
+            session_id=session_id,
+            intents=intents,
+            intent_llm=intent_llm,
+        )
+
         if from_checkpoint is not None and restore_from_state_id is not None:
             raise ValueError(
                 "Cannot combine `from_checkpoint` and `restore_from_state_id`. "
@@ -2162,7 +2409,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
         restored = apply_checkpoint(self, from_checkpoint)
         if restored is not None:
-            return await restored.kickoff_async(inputs=inputs, input_files=input_files)
+            return await restored.kickoff_async(
+                inputs=inputs,
+                input_files=input_files,
+                user_message=user_message,
+                session_id=session_id,
+                intents=intents,
+                intent_llm=intent_llm,
+            )
         if self.stream:
             result_holder: list[Any] = []
             current_task_info: TaskInfo = {
@@ -2215,10 +2469,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         flow_id_token = None
         request_id_token = None
+        flow_name_token = None
         if current_flow_id.get() is None:
             flow_id_token = current_flow_id.set(self.flow_id)
         if current_flow_request_id.get() is None:
             request_id_token = current_flow_request_id.set(self.flow_id)
+        if current_flow_name.get() is None:
+            flow_name_token = current_flow_name.set(self._flow_display_name())
 
         try:
             # Reset flow state for fresh execution unless restoring from persistence
@@ -2301,8 +2558,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                             f"No flow state found for UUID: {restore_uuid}", color="red"
                         )
 
-                # Update state with any additional inputs (ignoring the 'id' key)
-                filtered_inputs = {k: v for k, v in inputs.items() if k != "id"}
+                # Update state with any additional inputs (ignoring conversational keys)
+                filtered_inputs = {
+                    k: v
+                    for k, v in inputs.items()
+                    if k not in ("id", "user_message", "last_intent")
+                }
                 if filtered_inputs:
                     self._initialize_state(filtered_inputs)
 
@@ -2310,30 +2571,50 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 reset_emission_counter()
                 reset_last_event_id()
 
-            if not self.suppress_flow_events:
-                future = crewai_event_bus.emit(
-                    self,
-                    FlowStartedEvent(
-                        type="flow_started",
-                        flow_name=self.name or self.__class__.__name__,
-                        inputs=inputs,
-                    ),
+            skip_flow_started = self._should_defer_trace_finalization() and getattr(
+                self, "_conversation_trace_started", False
+            )
+            if not skip_flow_started:
+                started_event = FlowStartedEvent(
+                    type="flow_started",
+                    flow_name=self._flow_display_name(),
+                    inputs=inputs,
                 )
+                future = crewai_event_bus.emit(self, started_event)
                 if future:
                     try:
                         await asyncio.wrap_future(future)
                     except Exception:
-                        logger.warning("FlowStartedEvent handler failed", exc_info=True)
+                        logger.warning(
+                            "FlowStartedEvent handler failed", exc_info=True
+                        )
+                if self._should_defer_trace_finalization():
+                    object.__setattr__(self, "_conversation_trace_started", True)
+                    object.__setattr__(
+                        self,
+                        "_conversation_flow_started_event_id",
+                        started_event.event_id,
+                    )
+                    from crewai.events.listeners.tracing.trace_listener import (
+                        TraceCollectionListener,
+                    )
+
+                    TraceCollectionListener().batch_manager.defer_session_finalization = (
+                        True
+                    )
+            if not self.suppress_flow_events:
                 self._log_flow_event(
                     f"Flow started with ID: {self.flow_id}", color="bold magenta"
                 )
 
-            # After FlowStarted (when not suppressed): env events must not pre-empt
-            # trace batch init with implicit "crew" execution_type.
+            # After FlowStarted: env events must not pre-empt trace batch init
+            # with implicit "crew" execution_type.
             get_env_context()
 
             if inputs is not None and "id" not in inputs:
                 self._initialize_state(inputs)
+
+            self._apply_pending_conversational_turn()
 
             if self._is_execution_resuming:
                 await self._replay_recorded_events()
@@ -2428,35 +2709,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 )
                 self._event_futures.clear()
 
-            if not self.suppress_flow_events:
-                future = crewai_event_bus.emit(
-                    self,
-                    FlowFinishedEvent(
-                        type="flow_finished",
-                        flow_name=self.name or self.__class__.__name__,
-                        result=final_output,
-                        state=self._copy_and_serialize_state(),
-                    ),
-                )
-                if future:
-                    try:
-                        await asyncio.wrap_future(future)
-                    except Exception:
-                        logger.warning(
-                            "FlowFinishedEvent handler failed", exc_info=True
-                        )
+            if not self._should_defer_trace_finalization():
+                await self._emit_flow_finished_async(final_output)
 
-            if not self.suppress_flow_events:
-                trace_listener = TraceCollectionListener()
-                if trace_listener.batch_manager.batch_owner_type == "flow":
-                    if trace_listener.first_time_handler.is_first_time:
-                        trace_listener.first_time_handler.mark_events_collected()
-                        trace_listener.first_time_handler.handle_execution_completion()
-                    else:
-                        trace_listener.batch_manager.finalize_batch()
+            self._finalize_flow_trace_batch()
 
             return final_output
         finally:
+            self._clear_conversational_kickoff()
             # Ensure all background memory saves complete before returning
             if self.memory is not None and hasattr(self.memory, "drain_writes"):
                 self.memory.drain_writes()
@@ -2464,6 +2724,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 current_flow_request_id.reset(request_id_token)
             if flow_id_token is not None:
                 current_flow_id.reset(flow_id_token)
+            if flow_name_token is not None:
+                current_flow_name.reset(flow_name_token)
             detach(flow_token)
 
     async def akickoff(
@@ -2472,6 +2734,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         input_files: dict[str, FileInput] | None = None,
         from_checkpoint: CheckpointConfig | None = None,
         restore_from_state_id: str | None = None,
+        *,
+        user_message: str | dict[str, Any] | None = None,
+        session_id: str | None = None,
+        intents: Sequence[str] | None = None,
+        intent_llm: str | BaseLLM | None = None,
     ) -> Any | FlowStreamingOutput:
         """Native async method to start the flow execution. Alias for kickoff_async.
 
@@ -2483,6 +2750,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             restore_from_state_id: Optional UUID of a previously-persisted flow
                 whose latest snapshot should hydrate this run's state. See
                 ``kickoff_async`` for full semantics.
+            user_message: User text for this conversational turn.
+            session_id: Session UUID (``inputs["id"]``).
+            intents: Optional labels for pre-kickoff classification.
+            intent_llm: LLM for classification when ``intents`` is set.
 
         Returns:
             The final output from the flow, which is the result of the last executed method.
@@ -2492,6 +2763,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             input_files,
             from_checkpoint,
             restore_from_state_id=restore_from_state_id,
+            user_message=user_message,
+            session_id=session_id,
+            intents=intents,
+            intent_llm=intent_llm,
         )
 
     async def _replay_recorded_events(self) -> None:
@@ -3354,6 +3629,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             ),
         )
 
+        if response:
+            _append_conversation_message(self, "user", response)
+
         return response
 
     def _request_human_feedback(
@@ -3553,6 +3831,99 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     f"Falling back to first outcome: {outcomes[0]}"
                 )
                 return outcomes[0]
+
+    def _flow_display_name(self) -> str:
+        return self.name or self.__class__.__name__
+
+    def _should_defer_trace_finalization(self) -> bool:
+        if self.defer_trace_finalization:
+            return True
+        config = get_conversational_config(self)
+        return bool(config and config.defer_trace_finalization)
+
+    async def _emit_flow_finished_async(self, result: Any) -> None:
+        """Emit ``FlowFinishedEvent`` and await handlers."""
+        future = crewai_event_bus.emit(
+            self,
+            FlowFinishedEvent(
+                type="flow_finished",
+                flow_name=self._flow_display_name(),
+                result=result,
+                state=self._copy_and_serialize_state(),
+            ),
+        )
+        if not future:
+            return
+        try:
+            if isinstance(future, Future):
+                await asyncio.wrap_future(future)
+            else:
+                await future
+        except Exception:
+            logger.warning("FlowFinishedEvent handler failed", exc_info=True)
+
+    def _emit_flow_finished_sync(self, result: Any) -> None:
+        """Emit ``FlowFinishedEvent`` from synchronous session teardown."""
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.run(self._emit_flow_finished_async(result))
+        else:
+            raise RuntimeError(
+                "Cannot emit flow_finished synchronously while an event loop is running"
+            )
+
+    def finalize_session_traces(self) -> None:
+        """Finalize the trace batch after a multi-turn conversational session."""
+        from crewai.events.event_context import restore_event_scope
+        from crewai.events.listeners.tracing.trace_listener import (
+            TraceCollectionListener,
+        )
+
+        trace_listener = TraceCollectionListener()
+        batch_manager = trace_listener.batch_manager
+
+        if batch_manager._batch_finalized or not batch_manager.is_batch_initialized():
+            batch_manager.defer_session_finalization = False
+            object.__setattr__(self, "_conversation_trace_started", False)
+            object.__setattr__(self, "_conversation_flow_started_event_id", None)
+            return
+
+        result = self._method_outputs[-1] if self._method_outputs else None
+        if (
+            self._should_defer_trace_finalization()
+            and getattr(self, "_conversation_trace_started", False)
+        ):
+            started_id = getattr(self, "_conversation_flow_started_event_id", None)
+            if started_id:
+                restore_event_scope(((started_id, "flow_started"),))
+            try:
+                self._emit_flow_finished_sync(result)
+            finally:
+                restore_event_scope(())
+            object.__setattr__(self, "_conversation_flow_started_event_id", None)
+
+        self._finalize_flow_trace_batch(force=True)
+        object.__setattr__(self, "_conversation_trace_started", False)
+        batch_manager.defer_session_finalization = False
+
+    def _finalize_flow_trace_batch(self, *, force: bool = False) -> None:
+        """Finalize the active trace batch when this flow owns it."""
+        if not force and self._should_defer_trace_finalization():
+            return
+
+        from crewai.events.listeners.tracing.trace_listener import (
+            TraceCollectionListener,
+        )
+
+        trace_listener = TraceCollectionListener()
+        if trace_listener.batch_manager.batch_owner_type != "flow":
+            return
+        if trace_listener.first_time_handler.is_first_time:
+            trace_listener.first_time_handler.mark_events_collected()
+            trace_listener.first_time_handler.handle_execution_completion()
+        else:
+            trace_listener.batch_manager.finalize_batch()
 
     def _log_flow_event(
         self,

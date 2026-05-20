@@ -320,20 +320,28 @@ class EventListener(BaseEventListener):
             self._telemetry.flow_execution_span(
                 event.flow_name, list(source._methods.keys())
             )
-            self.formatter.handle_flow_created(event.flow_name, str(source.flow_id))
-            self.formatter.handle_flow_started(event.flow_name, str(source.flow_id))
+            if not getattr(source, "suppress_flow_events", False):
+                self.formatter.handle_flow_created(
+                    event.flow_name, str(source.flow_id)
+                )
+                self.formatter.handle_flow_started(
+                    event.flow_name, str(source.flow_id)
+                )
 
         @crewai_event_bus.on(FlowFinishedEvent)
         def on_flow_finished(source: Any, event: FlowFinishedEvent) -> None:
-            self.formatter.handle_flow_status(
-                event.flow_name,
-                source.flow_id,
-            )
+            if not getattr(source, "suppress_flow_events", False):
+                self.formatter.handle_flow_status(
+                    event.flow_name,
+                    source.flow_id,
+                )
 
         @crewai_event_bus.on(MethodExecutionStartedEvent)
         def on_method_execution_started(
-            _: Any, event: MethodExecutionStartedEvent
+            source: Any, event: MethodExecutionStartedEvent
         ) -> None:
+            if getattr(source, "suppress_flow_events", False):
+                return
             self.formatter.handle_method_status(
                 event.method_name,
                 "running",
@@ -341,8 +349,10 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(MethodExecutionFinishedEvent)
         def on_method_execution_finished(
-            _: Any, event: MethodExecutionFinishedEvent
+            source: Any, event: MethodExecutionFinishedEvent
         ) -> None:
+            if getattr(source, "suppress_flow_events", False):
+                return
             self.formatter.handle_method_status(
                 event.method_name,
                 "completed",
