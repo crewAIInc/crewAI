@@ -410,7 +410,20 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             self.agent_executor._resuming = True
         if self.checkpoint_kickoff_event_id is not None:
             self._kickoff_event_id = self.checkpoint_kickoff_event_id
+        self._rebind_memory_view()
         self._restore_event_scope(state)
+
+    def _rebind_memory_view(self) -> None:
+        """Reattach a fresh ``Memory`` to a restored ``MemoryScope``/``MemorySlice``.
+
+        Checkpoint JSON omits the live ``Memory`` dependency, so scoped
+        memory views raise ``RuntimeError`` on first use after restore.
+        """
+        if (
+            isinstance(self.memory, MemoryScope | MemorySlice)
+            and self.memory._memory is None
+        ):
+            self.memory.bind(Memory())
 
     def _restore_event_scope(self, state: RuntimeState) -> None:
         """Rebuild the event scope stack from the checkpoint's event record.
