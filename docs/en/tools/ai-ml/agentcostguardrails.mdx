@@ -1,0 +1,206 @@
+---
+title: Agent Cost Guardrails
+description: Prevent runaway LLM costs in CrewAI crews with hard budget limits, per-call token caps, and circuit breakers.
+icon: shield-halved
+---
+
+# Agent Cost Guardrails
+
+## Description
+
+[Agent Cost Guardrails](https://pypi.org/project/agent-cost-guardrails/) is an open-source library that enforces hard spending limits on CrewAI crews. Without guardrails, a 3-agent research crew can spend $15–50 in a single `crew.kickoff()` call — a researcher loops through expensive LLM calls, a writer revises drafts repeatedly, and there is nothing to stop it.
+
+`CrewAIGuardrails` hooks into CrewAI's LLM call lifecycle to:
+
+- **Hard-stop the crew** when a configurable USD budget is reached
+- **Block individual calls** that would exceed a per-call token cap
+- **Alert at configurable thresholds** (e.g., 50% and 80% budget consumed)
+- **Report costs by agent** so you can see which agent is burning money
+
+## Installation
+
+```shell
+pip install "agent-cost-guardrails[crewai]"
+```
+
+No API key is required — the library hooks into the CrewAI runtime locally.
+
+## Quick Start
+
+```python
+from crewai import Agent, Crew, Task
+from agent_cost_guardrails.integrations import CrewAIGuardrails
+
+guards = CrewAIGuardrails(max_usd=5.00, max_tokens_per_call=8000)
+guards.install()
+
+researcher = Agent(
+    role="Researcher",
+    goal="Find comprehensive data on the topic",
+    llm="gpt-4o",
+)
+writer = Agent(
+    role="Writer",
+    goal="Write a polished report from research findings",
+    llm="gpt-4o",
+)
+
+research_task = Task(
+    description="Research the current state of AI agent frameworks",
+    agent=researcher,
+    expected_output="Detailed research notes",
+)
+writing_task = Task(
+    description="Write a concise report based on the research",
+    agent=writer,
+    expected_output="Polished report",
+)
+
+crew = Crew(agents=[researcher, writer], tasks=[research_task, writing_task])
+
+try:
+    result = crew.kickoff()
+except Exception as e:
+    print(f"Crew stopped: {e}")
+finally:
+    report = guards.cost_report()
+    print(f"Total: ${report['total_cost_usd']:.4f} across {report['total_calls']} calls")
+    print(f"By agent: {report['cost_by_agent']}")
+    guards.uninstall()
+```
+
+## Examples
+
+### Budget alert callbacks
+
+Receive a callback at configurable spend thresholds before the hard stop:
+
+```python
+from crewai import Agent, Crew, Task
+from agent_cost_guardrails.integrations import CrewAIGuardrails
+
+def on_budget_alert(threshold: float, spent: float, budget: float) -> None:
+    pct = int(threshold * 100)
+    if threshold >= 0.8:
+        print(f"WARNING: {pct}% of ${budget:.2f} budget used (${spent:.4f} spent)")
+    else:
+        print(f"INFO: {pct}% of ${budget:.2f} budget used")
+
+guards = CrewAIGuardrails(
+    max_usd=5.00,
+    max_tokens_per_call=8000,
+    alert_thresholds=[0.5, 0.8],   # alert at 50% and 80%
+    on_alert=on_budget_alert,
+)
+guards.install()
+
+# ... define crew and kick off as normal
+```
+
+### Three-agent crew with per-call token cap
+
+A circuit breaker that stops individual calls exceeding the token cap while allowing the rest of the crew to continue within budget:
+
+```python
+from crewai import Agent, Crew, Task
+from agent_cost_guardrails.integrations import CrewAIGuardrails
+
+guards = CrewAIGuardrails(
+    max_usd=10.00,
+    max_tokens_per_call=6000,   # reject any single call over 6 000 tokens
+)
+guards.install()
+
+researcher = Agent(
+    role="Researcher",
+    goal="Gather data on renewable energy trends",
+    backstory="You excel at finding relevant facts quickly.",
+    llm="gpt-4o",
+)
+analyst = Agent(
+    role="Analyst",
+    goal="Identify the three most important trends from the research",
+    backstory="You distill complex information into actionable insights.",
+    llm="gpt-4o",
+)
+writer = Agent(
+    role="Writer",
+    goal="Write a concise executive summary",
+    backstory="You write clearly and concisely for busy executives.",
+    llm="gpt-4o",
+)
+
+research_task = Task(
+    description="Research renewable energy adoption trends from the past 3 years",
+    agent=researcher,
+    expected_output="Bullet-point list of key data points",
+)
+analysis_task = Task(
+    description="Identify the top 3 trends from the research notes",
+    agent=analyst,
+    expected_output="Ranked list of three trends with supporting evidence",
+    context=[research_task],
+)
+writing_task = Task(
+    description="Write a one-page executive summary of the analysis",
+    agent=writer,
+    expected_output="Executive summary (300–400 words)",
+    context=[analysis_task],
+)
+
+crew = Crew(
+    agents=[researcher, analyst, writer],
+    tasks=[research_task, analysis_task, writing_task],
+)
+
+try:
+    result = crew.kickoff()
+    print(result)
+except Exception as e:
+    print(f"Crew stopped early: {e}")
+finally:
+    report = guards.cost_report()
+    print(f"\nCost report:")
+    print(f"  Total:     ${report['total_cost_usd']:.4f}")
+    print(f"  Budget:    ${report['budget_usd']:.2f}")
+    print(f"  Remaining: ${report['remaining_usd']:.4f}")
+    for agent, cost in report['cost_by_agent'].items():
+        print(f"  {agent}: ${cost:.4f}")
+    guards.uninstall()
+```
+
+## Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `max_usd` | `float` | required | Hard spending cap in USD. The crew is stopped when this is reached. |
+| `max_tokens_per_call` | `int \| None` | `None` | Maximum tokens (input + output) allowed in a single LLM call. Calls exceeding this are rejected before they execute. |
+| `alert_thresholds` | `list[float]` | `[0.5, 0.8]` | Fractions of `max_usd` at which the `on_alert` callback fires. |
+| `on_alert` | `Callable \| None` | `None` | Callback invoked when a threshold is crossed. Signature: `(threshold: float, spent: float, budget: float) -> None`. |
+
+## Cost Report
+
+`guards.cost_report()` returns a dict:
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `total_cost_usd` | `float` | Total USD spent across all LLM calls. |
+| `budget_usd` | `float` | The configured `max_usd`. |
+| `remaining_usd` | `float` | `budget_usd - total_cost_usd`. |
+| `total_calls` | `int` | Number of LLM calls made. |
+| `cost_by_agent` | `dict[str, float]` | Breakdown of spend by agent name. |
+| `cost_by_model` | `dict[str, float]` | Breakdown of spend by model name. |
+
+## Notes
+
+<Note>
+Call `guards.uninstall()` in a `finally` block to remove the hooks even if the crew raises an exception. If you omit it, the hooks remain active for the lifetime of the process.
+</Note>
+
+<Note>
+`max_tokens_per_call` is a pre-call estimate guard — it rejects calls whose estimated token count exceeds the cap before they reach the LLM. It does not enforce output length.
+</Note>
+
+<Tip>
+For pipelines that run multiple crews sequentially, call `guards.reset()` between crews to reset the spend counter while keeping the same budget and hooks installed.
+</Tip>
