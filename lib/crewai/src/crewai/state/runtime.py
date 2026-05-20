@@ -113,10 +113,46 @@ def _migrate(data: dict[str, Any]) -> dict[str, Any]:
         )
 
     # --- migrations in version order ---
-    # if stored < Version("X.Y.Z"):
-    #     data.setdefault("some_field", "default")
+    if stored < Version("1.14.6"):
+        for entity in data.get("entities") or []:
+            _backfill_discriminators(entity)
 
     return data
+
+
+def _backfill_memory_kind(value: Any) -> None:
+    """Infer ``memory_kind`` from structural fields on legacy memory dicts."""
+    if not isinstance(value, dict) or "memory_kind" in value:
+        return
+    if "scopes" in value:
+        value["memory_kind"] = "slice"
+    elif "root_path" in value:
+        value["memory_kind"] = "scope"
+    else:
+        value["memory_kind"] = "memory"
+
+
+def _backfill_source_type(source: Any) -> None:
+    """Infer ``source_type`` for legacy knowledge source dicts when possible."""
+    if not isinstance(source, dict) or "source_type" in source:
+        return
+    if "content" in source:
+        source["source_type"] = "string"
+
+
+def _backfill_discriminators(entity: Any) -> None:
+    """Walk an entity dict and backfill discriminator fields added in 1.14.6."""
+    if not isinstance(entity, dict):
+        return
+    _backfill_memory_kind(entity.get("memory"))
+    for agent in entity.get("agents") or []:
+        _backfill_memory_kind(agent.get("memory") if isinstance(agent, dict) else None)
+    for container in (entity.get("knowledge"), entity):
+        if isinstance(container, dict):
+            for src in (
+                container.get("sources") or container.get("knowledge_sources") or []
+            ):
+                _backfill_source_type(src)
 
 
 class RuntimeState(RootModel):  # type: ignore[type-arg]

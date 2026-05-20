@@ -38,14 +38,20 @@ def _resolve_knowledge_sources(value: Any) -> Any:
     if not isinstance(value, list):
         return value
     resolved: list[Any] = []
-    for item in value:
+    for idx, item in enumerate(value):
         if isinstance(item, dict):
             tag = item.get("source_type")
             cls = _KNOWN_SOURCES.get(tag) if isinstance(tag, str) else None
             if cls is None:
                 resolved.append(item)
             else:
-                resolved.append(cls.model_validate(item))
+                try:
+                    resolved.append(cls.model_validate(item))
+                except Exception as exc:
+                    raise ValueError(
+                        f"Failed to validate knowledge source at index {idx} "
+                        f"with source_type={tag!r}: {exc}"
+                    ) from exc
         else:
             resolved.append(item)
     return resolved
