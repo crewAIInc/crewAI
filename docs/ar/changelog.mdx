@@ -4,6 +4,86 @@ description: "تحديثات المنتج والتحسينات وإصلاحات 
 icon: "clock"
 mode: "wide"
 ---
+<Update label="19 مايو 2026">
+  ## v1.14.5
+
+  [عرض الإصدار على GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.5)
+
+  ## ما الذي تغير
+
+  ### الميزات
+  - إلغاء استخدام `CrewAgentExecutor`، وتعيين وكلاء الطاقم الافتراضيين إلى `AgentExecutor`
+  - تحسين أدوات صندوق الرمل Daytona
+  - إضافة معلمة بدء `restore_from_state_id`
+  - إضافة تسليط الضوء على `ExaSearchTool`، وإعادة تسميته من `EXASearchTool`
+
+  ### إصلاحات الأخطاء
+  - إصلاح تسرب الذاكرة في `git.py` باستخدام `cached_property`
+  - عرض استدعاءات الأدوات المتدفقة عندما تكون `available_functions` غائبة
+  - ضمان تحميل أحداث `skills` للتتبع
+  - تصحيح مسار نقطة النهاية للحالة من `/{kickoff_id}/status` إلى `/status/{kickoff_id}`
+  - استعادة كتلة الشيفرة المفقودة في دليل التدفق الأول للغة البرتغالية (pt-BR)
+  - منع `result_as_answer` من إرجاع رسائل الخطأ أو الكتل المرتبطة كإجابة نهائية
+  - الحفاظ على مخرجات المهام عبر تفريغ الدفعات غير المتزامنة
+  - دائمًا استعادة `task.output_pydantic` في كتلة finally
+  - التعامل مع إدخال `BaseModel` في `convert_to_model`
+
+  ### الوثائق
+  - تحديث سجل التغييرات والإصدار لـ v1.14.5
+  - إضافة دليل ترقية OSS و انتقال الطاقم إلى التدفق
+  - توثيق متغيرات البيئة الإضافية لأدوات المطور
+  - إضافة وثائق لـ `TavilyGetResearch`
+
+  ### إعادة الهيكلة
+  - استخراج واجهة سطر الأوامر إلى حزمة مستقلة `crewai-cli`
+
+  ## المساهمون
+
+  @NIK-TIGER-BILL, @akaKuruma, @cgoeppinger, @github-actions[bot], @greysonlalonde, @heitorado, @irfaan101, @iris-clawd, @lorenzejay, @manisrinivasan2k1, @minasami-pr, @mislavivanda, @theCyberTech, @theishangoswami, @wishhyt
+
+</Update>
+
+<Update label="18 مايو 2026">
+  ## v1.14.5a7
+
+  [عرض الإصدار على GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.5a7)
+
+  ## ما الذي تغير
+
+  ### الوثائق
+  - تحديث سجل التغييرات والإصدار لـ v1.14.5a6
+
+  ### تغييرات كسرية
+  - إلغاء حقل function_calling_llm
+
+  ## المساهمون
+
+  @greysonlalonde, @heitorado
+
+</Update>
+
+<Update label="15 مايو 2026">
+  ## v1.14.5a6
+
+  [عرض الإصدار على GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.5a6)
+
+  ## ما الذي تغير
+
+  ### إصلاحات الأخطاء
+  - إصلاح استدعاءات الأدوات المتدفقة عندما تكون available_functions غائبة
+  - رفع اعتماد langsmith إلى الإصدار >=0.8.0 لمعالجة GHSA-3644-q5cj-c5c7
+  - حل مشاكل الأماكن الشاغرة لكتل التعليمات البرمجية غير المترجمة في وثائق البرتغالية البرازيلية
+
+  ### الوثائق
+  - إضافة وثائق لـ TavilyGetResearch
+  - تحديث سجل التغييرات والإصدار لـ v1.14.5a5
+
+  ## المساهمون
+
+  @greysonlalonde, @heitorado, @iris-clawd, @lorenzejay, @manisrinivasan2k1
+
+</Update>
+
 <Update label="13 مايو 2026">
   ## v1.14.5a5
 

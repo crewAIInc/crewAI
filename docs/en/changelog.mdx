@@ -4,6 +4,86 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="May 19, 2026">
+  ## v1.14.5
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.5)
+
+  ## What's Changed
+
+  ### Features
+  - Deprecate `CrewAgentExecutor`, default Crew agents to `AgentExecutor`
+  - Improve Daytona sandbox tools
+  - Add `restore_from_state_id` kickoff parameter
+  - Add highlights to `ExaSearchTool`, rename from `EXASearchTool`
+
+  ### Bug Fixes
+  - Fix memory leak in `git.py` by using `cached_property`
+  - Surface streamed tool calls when `available_functions` is absent
+  - Ensure `skills` loading events for traces
+  - Correct status endpoint path from `/{kickoff_id}/status` to `/status/{kickoff_id}`
+  - Restore missing code block in pt-BR first-flow guide
+  - Prevent `result_as_answer` from returning hook-block or error messages as final answer
+  - Preserve task outputs across async batch flush
+  - Always restore `task.output_pydantic` in finally block
+  - Handle `BaseModel` input in `convert_to_model`
+
+  ### Documentation
+  - Update changelog and version for v1.14.5
+  - Add OSS upgrade & crew-to-flow migration guide
+  - Document additional env vars for devtools
+  - Add docs for `TavilyGetResearch`
+
+  ### Refactoring
+  - Extract CLI into standalone `crewai-cli` package
+
+  ## Contributors
+
+  @NIK-TIGER-BILL, @akaKuruma, @cgoeppinger, @github-actions[bot], @greysonlalonde, @heitorado, @irfaan101, @iris-clawd, @lorenzejay, @manisrinivasan2k1, @minasami-pr, @mislavivanda, @theCyberTech, @theishangoswami, @wishhyt
+
+</Update>
+
+<Update label="May 18, 2026">
+  ## v1.14.5a7
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.5a7)
+
+  ## What's Changed
+
+  ### Documentation
+  - Update changelog and version for v1.14.5a6
+
+  ### Breaking Changes
+  - Deprecate function_calling_llm field
+
+  ## Contributors
+
+  @greysonlalonde, @heitorado
+
+</Update>
+
+<Update label="May 15, 2026">
+  ## v1.14.5a6
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.5a6)
+
+  ## What's Changed
+
+  ### Bug Fixes
+  - Fix streamed tool calls when available_functions is absent
+  - Bump langsmith dependency to version >=0.8.0 to address GHSA-3644-q5cj-c5c7
+  - Resolve untranslated code block placeholders in Brazilian Portuguese documentation
+
+  ### Documentation
+  - Add documentation for TavilyGetResearch
+  - Update changelog and version for v1.14.5a5
+
+  ## Contributors
+
+  @greysonlalonde, @heitorado, @iris-clawd, @lorenzejay, @manisrinivasan2k1
+
+</Update>
+
 <Update label="May 13, 2026">
   ## v1.14.5a5
 

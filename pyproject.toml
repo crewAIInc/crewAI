@@ -185,7 +185,7 @@ exclude-newer = "3 days"
 # python-multipart <0.0.27 has GHSA-pp6c-gr5w-3c5g (DoS via unbounded multipart headers).
 # gitpython <3.1.50 has GHSA-mv93-w799-cj2w (config_writer newline injection bypassing the 3.1.49 patch -> RCE via core.hooksPath).
 # urllib3 <2.7.0 has GHSA-qccp-gfcp-xxvc (ProxyManager cross-origin redirect leaks Authorization/Cookie) and GHSA-mf9v-mfxr-j63j (streaming decompression-bomb bypass); force 2.7.0+.
-# langsmith <0.7.31 has GHSA-rr7j-v2q5-chgv (streaming token redaction bypass); force 0.7.31+.
+# langsmith <0.8.0 has GHSA-3644-q5cj-c5c7 (public prompt manifest deserialization, SSRF/secret disclosure); force 0.8.0+.
 # authlib <1.6.11 has GHSA-jj8c-mmj3-mmgv (CSRF bypass in cache-based state storage).
 # litellm 1.83.8+ hard-pins openai==2.24.0, missing openai.types.responses used by crewai;
 # override to >=2.30.0 (the version litellm 1.83.7 used) until upstream relaxes the pin.
@@ -203,7 +203,7 @@ override-dependencies = [
     "uv>=0.11.6,<1",
     "python-multipart>=0.0.27,<1",
     "gitpython>=3.1.50,<4",
-    "langsmith>=0.7.31,<0.8",
+    "langsmith>=0.8.0,<1",
     "authlib>=1.6.11",
 ]
 
