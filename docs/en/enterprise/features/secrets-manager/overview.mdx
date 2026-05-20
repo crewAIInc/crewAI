@@ -53,6 +53,17 @@ Setting up Secrets Manager is a three-step flow that involves both your cloud pr
 2. **An admin (or a permitted member) references a secret in an environment variable.** From the Environment Variables page, the user picks a provider credential and selects the secret name. See [Using the Secrets Manager](/en/enterprise/features/secrets-manager/usage#referencing-secrets-in-environment-variables).
 3. **The automation receives the resolved value at runtime.** When a crew or automation runs, CrewAI Platform fetches the secret from your provider and injects it as the environment variable's value. With Workload Identity, this fetch happens on every kickoff (rotation-aware). With static credentials, this fetch happens at deploy time and the value is baked into the deployment image.
 
+## Visibility & Scope
+
+<Warning>
+Workload Identity configurations are **organization-wide on each deployment** today — there is no per-automation binding. Two consequences worth knowing before you adopt the Workload Identity path broadly.
+</Warning>
+
+- **Every automation kickoff runs the secret-fetch phase**, regardless of whether the automation references any WI-backed environment variable. On every crew, flow, training, test, or checkpoint-restore kickoff, the runtime fetches all WI-backed environment variables configured for the deployment and writes them into the process environment. Cost: a small added latency per kickoff plus one cloud-side audit-log entry per WI-backed environment variable.
+- **All automations on the deployment see all WI-resolved environment variables.** You cannot today restrict a specific Workload Identity configuration (or the secrets it resolves) to a specific automation. Treat WI-backed secrets as available to every automation in the organization.
+
+Per-automation scoping is on the roadmap. Until then, plan Workload Identity usage at the organization level, not per workflow — and keep WI-backed environment variables limited to secrets every automation in the organization is allowed to read.
+
 ## Permissions
 
 Two CrewAI Platform features control access to Secrets Manager:

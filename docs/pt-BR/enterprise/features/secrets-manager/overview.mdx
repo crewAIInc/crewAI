@@ -53,6 +53,17 @@ Configurar o Secrets Manager é um fluxo de três passos que envolve tanto o seu
 2. **Um admin (ou um membro autorizado) referencia um segredo em uma variável de ambiente.** Na página de Variáveis de Ambiente, o usuário escolhe uma credencial de provedor e seleciona o nome do segredo. Veja [Usando o Secrets Manager](/pt-BR/enterprise/features/secrets-manager/usage#referencing-secrets-in-environment-variables).
 3. **A automação recebe o valor resolvido em runtime.** Quando um crew ou automação executa, a CrewAI Platform busca o segredo do seu provedor e o injeta como o valor da variável de ambiente. Com Workload Identity, essa busca acontece a cada kickoff (consciente de rotação). Com credenciais estáticas, essa busca acontece no momento do deploy e o valor é incorporado à imagem do deployment.
 
+## Visibilidade & Escopo
+
+<Warning>
+As configurações de Workload Identity são hoje **abrangentes a toda a organização em cada deployment** — não existe vinculação por automação. Duas consequências que vale conhecer antes de adotar o caminho de Workload Identity de forma ampla.
+</Warning>
+
+- **Todo kickoff de automação executa a fase de busca de segredos**, independentemente de a automação referenciar ou não alguma variável de ambiente atrelada a WI. Em todo kickoff de crew, flow, training, test ou checkpoint-restore, o runtime busca todas as variáveis de ambiente atreladas a WI configuradas para o deployment e as grava no ambiente do processo. Custo: uma pequena latência adicional por kickoff mais uma entrada no audit log do lado da nuvem por variável de ambiente atrelada a WI.
+- **Todas as automações no deployment enxergam todas as variáveis de ambiente resolvidas por WI.** Hoje você não pode restringir uma configuração específica de Workload Identity (ou os segredos que ela resolve) a uma automação específica. Trate os segredos atrelados a WI como disponíveis para toda automação da organização.
+
+Escopo por automação está no roadmap. Até lá, planeje o uso de Workload Identity no nível da organização, não por workflow — e mantenha as variáveis de ambiente atreladas a WI limitadas a segredos que toda automação da organização tem permissão de ler.
+
 ## Permissões
 
 Duas features da CrewAI Platform controlam o acesso ao Secrets Manager:
