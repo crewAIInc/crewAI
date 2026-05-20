@@ -31,7 +31,7 @@ from crewai.agents.tools_handler import ToolsHandler
 from crewai.events.base_events import set_emission_counter
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.event_context import restore_event_scope, set_last_event_id
-from crewai.knowledge.knowledge import Knowledge
+from crewai.knowledge.knowledge import Knowledge, _resolve_knowledge_sources
 from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
@@ -294,7 +294,10 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     knowledge: Knowledge | None = Field(
         default=None, description="Knowledge for the agent."
     )
-    knowledge_sources: list[BaseKnowledgeSource] | None = Field(
+    knowledge_sources: Annotated[
+        list[BaseKnowledgeSource] | None,
+        BeforeValidator(_resolve_knowledge_sources),
+    ] = Field(
         default=None,
         description="Knowledge sources for the agent.",
     )

@@ -93,7 +93,7 @@ from crewai.events.types.crew_events import (
     CrewTrainStartedEvent,
 )
 from crewai.flow.flow_trackable import FlowTrackable
-from crewai.knowledge.knowledge import Knowledge
+from crewai.knowledge.knowledge import Knowledge, _resolve_knowledge_sources
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
@@ -329,7 +329,10 @@ class Crew(FlowTrackable, BaseModel):
         default_factory=list,
         description="list of execution logs for tasks",
     )
-    knowledge_sources: list[BaseKnowledgeSource] | None = Field(
+    knowledge_sources: Annotated[
+        list[BaseKnowledgeSource] | None,
+        BeforeValidator(_resolve_knowledge_sources),
+    ] = Field(
         default=None,
         description=(
             "Knowledge sources for the crew. Add knowledge sources to the "
