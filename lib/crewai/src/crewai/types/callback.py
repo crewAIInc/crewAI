@@ -155,9 +155,11 @@ SerializableCallable = Annotated[
 def _instance_to_dotted_path(value: Any) -> str:
     """Serialize an instance to a dotted path naming its class."""
     if inspect.isclass(value):
-        raise ValueError(
-            f"Expected an instance, got class {value.__module__}.{value.__qualname__}."
+        module = getattr(value, "__module__", "<unknown>")
+        qualname = getattr(
+            value, "__qualname__", getattr(value, "__name__", str(type(value)))
         )
+        raise ValueError(f"Expected an instance, got class {module}.{qualname}.")
     cls = type(value)
     if cls.__module__ == "builtins":
         raise ValueError(

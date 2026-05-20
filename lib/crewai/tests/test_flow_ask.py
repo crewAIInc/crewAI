@@ -7,6 +7,7 @@ durability, input history tracking, and integration with flow machinery.
 
 from __future__ import annotations
 
+import copy
 import time
 from datetime import datetime
 from typing import Any
@@ -47,10 +48,15 @@ class _SaveStateRecorder:
         method_name: str,
         state_data: dict[str, Any] | BaseModel,
     ) -> None:
+        snapshot: dict[str, Any] | BaseModel
+        if isinstance(state_data, BaseModel):
+            snapshot = state_data.model_copy(deep=True)
+        else:
+            snapshot = copy.deepcopy(state_data)
         self.call_args_list.append(
-            _SaveCall((flow_uuid, method_name, state_data), {})
+            _SaveCall((flow_uuid, method_name, snapshot), {})
         )
-        self._owner._states[flow_uuid] = state_data
+        self._owner._states[flow_uuid] = snapshot
 
 
 class RecordingPersistence(FlowPersistence):
@@ -74,7 +80,12 @@ class RecordingPersistence(FlowPersistence):
         return None
 
     def load_state(self, flow_uuid: str) -> dict[str, Any] | None:
-        return None
+        snapshot = self._states.get(flow_uuid)
+        if snapshot is None:
+            return None
+        if isinstance(snapshot, BaseModel):
+            return snapshot.model_copy(deep=True).model_dump()
+        return copy.deepcopy(snapshot)
 
 
 class MockInputProvider:
