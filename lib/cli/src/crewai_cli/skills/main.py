@@ -130,11 +130,20 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
             raise SystemExit(1)
 
         data = get_response.json()
-        encoded = data.get("file", "")
-        if "," in encoded:
-            encoded = encoded.split(",", 1)[1]
-        archive_bytes = base64.b64decode(encoded)
-        version = data.get("version")
+        version = data.get("latest_version") or data.get("version")
+
+        download_url = data.get("download_url")
+        if download_url:
+            import httpx
+
+            dl_response = httpx.get(download_url, follow_redirects=True)
+            dl_response.raise_for_status()
+            archive_bytes = dl_response.content
+        else:
+            encoded = data.get("file", "")
+            if "," in encoded:
+                encoded = encoded.split(",", 1)[1]
+            archive_bytes = base64.b64decode(encoded)
 
         in_project = os.path.isfile("pyproject.toml")
         if in_project:

@@ -186,12 +186,21 @@ def download_skill(
 
     import base64
 
-    encoded = data.get("file", "")
-    # Strip data URI prefix if present
-    if "," in encoded:
-        encoded = encoded.split(",", 1)[1]
-    archive_bytes = base64.b64decode(encoded)
-    version = data.get("version")
+    import httpx
+
+    version = data.get("latest_version") or data.get("version")
+
+    download_url = data.get("download_url")
+    if download_url:
+        dl_response = httpx.get(download_url, follow_redirects=True)
+        dl_response.raise_for_status()
+        archive_bytes = dl_response.content
+    else:
+        encoded = data.get("file", "")
+        # Strip data URI prefix if present
+        if "," in encoded:
+            encoded = encoded.split(",", 1)[1]
+        archive_bytes = base64.b64decode(encoded)
 
     cache = SkillCacheManager()
     skill_dir = cache.store(org, name, version, archive_bytes)
