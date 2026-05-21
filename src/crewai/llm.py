@@ -143,6 +143,7 @@ class LLM:
         self.set_env_callbacks()
 
     def call(self, messages: List[Dict[str, str]], callbacks: List[Any] = []) -> str:
+        self.reasoning_content: Optional[str] = None
         with suppress_warnings():
             if callbacks and len(callbacks) > 0:
                 self.set_callbacks(callbacks)
@@ -175,7 +176,13 @@ class LLM:
                 params = {k: v for k, v in params.items() if v is not None}
 
                 response = litellm.completion(**params)
-                return response["choices"][0]["message"]["content"]
+
+                message = response["choices"][0]["message"]
+                self.reasoning_content = getattr(
+                    message, "reasoning_content", None
+                ) or message.get("reasoning_content")
+
+                return message["content"]
             except Exception as e:
                 if not LLMContextLengthExceededException(
                     str(e)

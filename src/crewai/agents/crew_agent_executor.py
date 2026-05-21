@@ -184,7 +184,13 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
                             )
                             self.have_forced_answer = True
                     self.messages.append(
-                        self._format_msg(formatted_answer.text, role="assistant")
+                        self._format_msg(
+                            formatted_answer.text,
+                            role="assistant",
+                            reasoning_content=getattr(
+                                self.llm, "reasoning_content", None
+                            ),
+                        )
                     )
 
         except OutputParserException as e:
@@ -406,9 +412,17 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
     def _format_answer(self, answer: str) -> Union[AgentAction, AgentFinish]:
         return CrewAgentParser(agent=self.agent).parse(answer)
 
-    def _format_msg(self, prompt: str, role: str = "user") -> Dict[str, str]:
+    def _format_msg(
+        self,
+        prompt: str,
+        role: str = "user",
+        reasoning_content: str = None,
+    ) -> Dict[str, str]:
         prompt = prompt.rstrip()
-        return {"role": role, "content": prompt}
+        msg: Dict[str, str] = {"role": role, "content": prompt}
+        if reasoning_content and role == "assistant":
+            msg["reasoning_content"] = reasoning_content
+        return msg
 
     def _handle_human_feedback(self, formatted_answer: AgentFinish) -> AgentFinish:
         """
