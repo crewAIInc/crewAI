@@ -19,6 +19,15 @@ from pydantic import BeforeValidator, WithJsonSchema
 from pydantic.functional_serializers import PlainSerializer
 
 
+_TRUSTED_DESERIALIZE_VALUES = frozenset({"1", "true", "yes"})
+
+
+def _trusted_deserialize() -> bool:
+    """Return True only if ``CREWAI_DESERIALIZE_CALLBACKS`` is an explicit yes."""
+    raw = os.environ.get("CREWAI_DESERIALIZE_CALLBACKS", "")
+    return raw.strip().lower() in _TRUSTED_DESERIALIZE_VALUES
+
+
 def _is_non_roundtrippable(fn: object) -> bool:
     """Return ``True`` if *fn* cannot survive a serialize/deserialize round-trip.
 
@@ -76,7 +85,7 @@ def string_to_callable(value: Any) -> Callable[..., Any]:
         raise ValueError(
             f"Invalid callback path {value!r}: expected 'module.name' format"
         )
-    if not os.environ.get("CREWAI_DESERIALIZE_CALLBACKS"):
+    if not _trusted_deserialize():
         raise ValueError(
             f"Refusing to resolve callback path {value!r}: "
             "set CREWAI_DESERIALIZE_CALLBACKS=1 to allow. "
@@ -150,3 +159,78 @@ SerializableCallable = Annotated[
     PlainSerializer(callable_to_string, return_type=str, when_used="json"),
     WithJsonSchema({"type": "string"}),
 ]
+
+
+def _instance_to_dotted_path(value: Any) -> str:
+    """Serialize an instance to a dotted path naming its class."""
+    if inspect.isclass(value):
+        module = getattr(value, "__module__", "<unknown>")
+        qualname = getattr(
+            value, "__qualname__", getattr(value, "__name__", str(type(value)))
+        )
+        raise ValueError(f"Expected an instance, got class {module}.{qualname}.")
+    cls = type(value)
+    if cls.__module__ == "builtins":
+        raise ValueError(
+            f"Cannot serialize {value!r}: builtin values are not "
+            "checkpointable instances."
+        )
+    module = getattr(cls, "__module__", None)
+    qualname = getattr(cls, "__qualname__", None)
+    if module is None or qualname is None:
+        raise ValueError(
+            f"Cannot serialize {value!r}: class missing __module__ or __qualname__. "
+            "Use a module-level class for checkpointable instances."
+        )
+    if qualname.endswith("<lambda>") or "<locals>" in qualname:
+        raise ValueError(
+            f"Cannot serialize {value!r}: class defined in <locals>. "
+            "Use a module-level class for checkpointable instances."
+        )
+    return f"{module}.{qualname}"
+
+
+def _dotted_path_to_instance(value: Any) -> Any:
+    """Resolve a dotted path to a class and instantiate it with no args.
+
+    If *value* is already a non-string object it is returned as-is.
+    """
+    if value is None:
+        return value
+    if not isinstance(value, str):
+        if inspect.isclass(value):
+            raise ValueError(
+                f"Expected an instance or dotted path string, got class "
+                f"{getattr(value, '__module__', '<unknown>')}."
+                f"{getattr(value, '__qualname__', getattr(value, '__name__', ''))}."
+            )
+        if type(value).__module__ == "builtins":
+            raise ValueError(
+                f"Expected an instance of a user-defined class or dotted "
+                f"path string, got builtin value {value!r}."
+            )
+        return value
+    if "." not in value:
+        raise ValueError(
+            f"Invalid provider path {value!r}: expected 'module.name' format"
+        )
+    if not _trusted_deserialize():
+        raise ValueError(
+            f"Refusing to resolve provider path {value!r}: "
+            "set CREWAI_DESERIALIZE_CALLBACKS=1 to allow. "
+            "Only enable this for trusted checkpoint data."
+        )
+    cls = _resolve_dotted_path(value)
+    if not inspect.isclass(cls):
+        raise ValueError(
+            f"Invalid provider path {value!r}: expected a class, got "
+            f"{type(cls).__name__}"
+        )
+    try:
+        return cls()
+    except TypeError as exc:
+        raise ValueError(
+            f"Cannot reinstantiate {value!r} with no arguments: {exc}. "
+            "Only no-arg constructors are checkpointable; rebuild the "
+            "instance manually and assign it after restore."
+        ) from exc
