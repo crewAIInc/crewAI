@@ -56,9 +56,13 @@ Configurar o Secrets Manager é um fluxo de três passos que envolve tanto o seu
 
 ## Visibilidade & Escopo
 
+<Warning>
 Variáveis de ambiente atreladas a WI seguem o mesmo modelo de atribuição das variáveis de ambiente em texto puro: uma automação resolve apenas as variáveis atreladas a WI explicitamente atribuídas a ela. Atribua uma variável atrelada a WI a uma automação pela página de Variáveis de Ambiente dessa automação; variáveis definidas no nível da organização ou em um projeto Studio não são resolvidas em kickoff até que você as atribua.
 
-Cada kickoff ainda executa a fase de busca de segredos. Em todo kickoff de crew, flow, training, test ou checkpoint-restore, o runtime busca as variáveis de ambiente atreladas a WI atribuídas àquela automação e as grava no ambiente do processo. O custo é proporcional ao número de variáveis atreladas a WI atribuídas: uma pequena latência adicional por kickoff mais uma entrada no audit log do lado da nuvem por variável atribuída.
+A fase de busca de segredos é executada em todo kickoff, mas só realiza trabalho quando há variáveis de ambiente atreladas a WI atribuídas ao deployment. Para cada variável atribuída, o runtime resolve o valor a partir do seu provedor de nuvem em todo kickoff de crew, flow, training, test ou checkpoint-restore e o grava no ambiente do processo. Sem nada atribuído, a fase é um no-op. Caso contrário, o custo é proporcional ao número de variáveis atribuídas: uma pequena latência adicional por kickoff mais uma entrada no audit log do lado da nuvem por variável.
+
+No nível das *configurações* de Workload Identity, o escopo ainda é abrangente a toda a organização hoje. Toda automação na organização é inicializada com base em todas as configurações de Workload Identity que a organização registrou, e hoje você não pode vincular uma configuração específica de Workload Identity a uma automação específica. Escopo por automação para Workload Identity está no roadmap. Até lá, registre apenas configurações de Workload Identity que toda automação da sua organização tenha permissão de usar.
+</Warning>
 
 ## Permissões
 
