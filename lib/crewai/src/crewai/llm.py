@@ -111,7 +111,7 @@ if LITELLM_AVAILABLE:
 
 MIN_CONTEXT: Final[int] = 1024
 MAX_CONTEXT: Final[int] = 2097152  # Current max from gemini-1.5-pro
-ANTHROPIC_PREFIXES: Final[tuple[str, str, str]] = ("anthropic/", "claude-", "claude/")
+ANTHROPIC_PREFIXES: Final[tuple[str, ...]] = ("anthropic/", "anthropic.", "claude-", "claude/")
 
 LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     # openai
@@ -465,8 +465,9 @@ class LLM(BaseLLM):
             )
 
         if provider == "anthropic" or provider == "claude":
-            return any(
-                model_lower.startswith(prefix) for prefix in ["claude-", "anthropic."]
+            return (
+                "claude" in model_lower
+                or model_lower.startswith("anthropic")
             )
 
         if provider == "gemini" or provider == "google":
@@ -574,6 +575,19 @@ class LLM(BaseLLM):
         if model in AZURE_MODELS:
             return "azure"
 
+        # Fallback to pattern matching for models not in constants
+        provider_order = [
+            "bedrock",
+            "openai",
+            "anthropic",
+            "gemini",
+            "deepseek",
+            "dashscope",
+        ]
+        for provider in provider_order:
+            if cls._matches_provider_pattern(model, provider):
+                return provider
+
         return "openai"
 
     @classmethod
@@ -653,8 +667,8 @@ class LLM(BaseLLM):
         Returns:
             bool: True if the model is from Anthropic, False otherwise.
         """
-        anthropic_prefixes = ("anthropic/", "claude-", "claude/")
-        return any(prefix in model.lower() for prefix in anthropic_prefixes)
+        anthropic_indicators = ("anthropic/", "anthropic.", "claude-", "claude/")
+        return any(indicator in model.lower() for indicator in anthropic_indicators)
 
     def _prepare_completion_params(
         self,
