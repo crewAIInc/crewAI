@@ -122,6 +122,32 @@ def test_lancedb_save_search(lancedb_path: Path) -> None:
     assert score >= 0.0
 
 
+def test_lancedb_row_to_record_normalizes_legacy_timestamps(
+    lancedb_path: Path,
+) -> None:
+    from crewai.memory.storage.lancedb_storage import LanceDBStorage
+
+    storage = LanceDBStorage(path=str(lancedb_path), vector_dim=4)
+    record = storage._row_to_record(
+        {
+            "id": "r1",
+            "content": "legacy timestamp",
+            "scope": "/foo",
+            "categories_str": "[]",
+            "metadata_str": "{}",
+            "importance": 0.5,
+            "created_at": "2026-01-01T12:00:00",
+            "last_accessed": "2026-01-01T14:00:00+02:00",
+            "vector": [0.0] * 4,
+            "source": None,
+            "private": False,
+        }
+    )
+
+    assert record.created_at == datetime(2026, 1, 1, 12, tzinfo=timezone.utc)
+    assert record.last_accessed == datetime(2026, 1, 1, 12, tzinfo=timezone.utc)
+
+
 def test_lancedb_delete_count(lancedb_path: Path) -> None:
     from crewai.memory.storage.lancedb_storage import LanceDBStorage
 

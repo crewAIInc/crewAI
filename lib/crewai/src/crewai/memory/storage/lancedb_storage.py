@@ -269,9 +269,13 @@ class LanceDBStorage:
             if val is None:
                 return datetime.now(timezone.utc)
             if isinstance(val, datetime):
-                return val
-            s = str(val)
-            return datetime.fromisoformat(s.replace("Z", "+00:00"))
+                dt = val
+            else:
+                s = str(val)
+                dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                return dt.replace(tzinfo=timezone.utc)
+            return dt.astimezone(timezone.utc)
 
         return MemoryRecord(
             id=str(row["id"]),
