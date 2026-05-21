@@ -1272,3 +1272,98 @@ class TestNativeToolCallingJsonParseError:
 
         assert "Error" in result["result"]
         assert "validation failed" in result["result"].lower() or "missing" in result["result"].lower()
+
+
+# =============================================================================
+# Regression tests for _parse_native_tool_call (issue #4972)
+# =============================================================================
+
+
+class TestParseNativeToolCall:
+    """Regression tests for `_parse_native_tool_call`.
+
+    Issue #4972: the Bedrock Converse API returns tool calls as dicts shaped
+    like ``{"name": ..., "input": {...}, "toolUseId": ...}`` (no ``function``
+    key). A previous truthy default in the dict branch caused
+    ``func_info.get("arguments", "{}")`` to short-circuit before falling back
+    to ``tool_call["input"]``, so every Bedrock tool call lost its arguments.
+
+    These tests lock in both the Bedrock shape and the OpenAI
+    ``{"function": {"name": ..., "arguments": ...}}`` shape so the bug
+    cannot silently regress.
+    """
+
+    def _make_executor(self) -> "CrewAgentExecutor":
+        """Build a minimal CrewAgentExecutor for invoking the parser."""
+        from crewai.agents.crew_agent_executor import CrewAgentExecutor
+
+        return CrewAgentExecutor(tools=[], original_tools=[])
+
+    @pytest.mark.parametrize(
+        ("tool_call", "expected_id", "expected_name", "expected_args"),
+        [
+            pytest.param(
+                {
+                    "name": "search_in_user_knowledgebase",
+                    "input": {"search_query": "test"},
+                    "toolUseId": "tooluse_abc123",
+                },
+                "tooluse_abc123",
+                "search_in_user_knowledgebase",
+                {"search_query": "test"},
+                id="bedrock_converse_dict_shape",
+            ),
+            pytest.param(
+                {
+                    "id": "call_xyz789",
+                    "function": {
+                        "name": "calculator",
+                        "arguments": '{"expression": "15 * 8"}',
+                    },
+                },
+                "call_xyz789",
+                "calculator",
+                '{"expression": "15 * 8"}',
+                id="openai_dict_shape",
+            ),
+        ],
+    )
+    def test_parse_native_tool_call_preserves_args(
+        self,
+        tool_call: dict,
+        expected_id: str,
+        expected_name: str,
+        expected_args,
+    ) -> None:
+        """Both Bedrock and OpenAI dict shapes must round-trip through
+        ``_parse_native_tool_call`` without losing the tool arguments."""
+        executor = self._make_executor()
+
+        parsed = executor._parse_native_tool_call(tool_call)
+
+        assert parsed is not None
+        call_id, func_name, func_args = parsed
+        assert call_id == expected_id
+        assert func_name == expected_name
+        assert func_args == expected_args
+
+    def test_parse_native_tool_call_bedrock_args_match_input(self) -> None:
+        """The parsed args must equal the original Bedrock ``input`` dict
+        (not the empty dict that triggered the bug)."""
+        original_input = {
+            "search_query": "vector embeddings",
+            "limit": 5,
+        }
+        tool_call = {
+            "name": "search_in_user_knowledgebase",
+            "input": original_input,
+            "toolUseId": "tooluse_regression_4972",
+        }
+        executor = self._make_executor()
+
+        parsed = executor._parse_native_tool_call(tool_call)
+
+        assert parsed is not None
+        _, _, func_args = parsed
+        assert func_args == original_input
+        assert func_args != {}
