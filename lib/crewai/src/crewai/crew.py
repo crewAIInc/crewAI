@@ -288,6 +288,21 @@ class Crew(FlowTrackable, BaseModel):
             "It may be used to adjust the output of the crew."
         ),
     )
+    before_tool_call: SerializableCallable | None = Field(
+        default=None,
+        description=(
+            "Optional callback executed before each tool call. "
+            "Receives (agent, tool_name, tool_input). "
+            "Raise an exception to block the call."
+        ),
+    )
+    after_tool_call: SerializableCallable | None = Field(
+        default=None,
+        description=(
+            "Optional callback executed after each tool call. "
+            "Receives (agent, tool_name, tool_input, tool_output)."
+        ),
+    )
     stream: bool = Field(
         default=False,
         description="Whether to stream output from the crew execution.",

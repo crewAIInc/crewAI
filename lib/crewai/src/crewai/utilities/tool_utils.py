@@ -115,7 +115,21 @@ async def aexecute_tool_and_check_finality(
         except Exception as e:
             logger.log("error", f"Error in before_tool_call hook: {e}")
 
+        crew_before_hook = getattr(crew, "before_tool_call", None) if crew else None
+        if crew_before_hook:
+            try:
+                crew_before_hook(agent, tool_calling.tool_name, tool_input)
+            except Exception as e:
+                return ToolResult(str(e), False)
+
         tool_result = await tool_usage.ause(tool_calling, agent_action.text)
+
+        crew_after_hook = getattr(crew, "after_tool_call", None) if crew else None
+        if crew_after_hook:
+            try:
+                crew_after_hook(agent, tool_calling.tool_name, tool_input, tool_result)
+            except Exception as e:
+                logger.log("error", f"Error in crew after_tool_call hook: {e}")
 
         after_hook_context = ToolCallHookContext(
             tool_name=sanitized_tool_name,
@@ -233,7 +247,21 @@ def execute_tool_and_check_finality(
         except Exception as e:
             logger.log("error", f"Error in before_tool_call hook: {e}")
 
+        crew_before_hook = getattr(crew, "before_tool_call", None) if crew else None
+        if crew_before_hook:
+            try:
+                crew_before_hook(agent, tool_calling.tool_name, tool_input)
+            except Exception as e:
+                return ToolResult(str(e), False)
+
         tool_result = tool_usage.use(tool_calling, agent_action.text)
+
+        crew_after_hook = getattr(crew, "after_tool_call", None) if crew else None
+        if crew_after_hook:
+            try:
+                crew_after_hook(agent, tool_calling.tool_name, tool_input, tool_result)
+            except Exception as e:
+                logger.log("error", f"Error in crew after_tool_call hook: {e}")
 
         after_hook_context = ToolCallHookContext(
             tool_name=sanitized_tool_name,

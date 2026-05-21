@@ -820,3 +820,414 @@ class TestNativeToolCallingHooksIntegration:
         finally:
             unregister_before_tool_call_hook(blocking_before_hook)
             unregister_after_tool_call_hook(after_hook)
+
+
+class TestCrewLevelToolCallHooks:
+    """Tests for crew-level before_tool_call and after_tool_call hooks."""
+
+    def test_crew_before_tool_call_blocks_execution(self):
+        """Test that crew.before_tool_call blocks tool execution when it raises."""
+        from crewai.agents.parser import AgentAction
+        from crewai.tools.tool_types import ToolResult
+        from crewai.utilities.tool_utils import execute_tool_and_check_finality
+
+        mock_tool = Mock()
+        mock_tool.name = "restricted_tool"
+        mock_tool.description = "A restricted tool"
+        mock_tool.result_as_answer = False
+        mock_tool.args_schema = None
+
+        mock_agent = Mock()
+        mock_agent.role = "Researcher"
+
+        mock_crew = Mock()
+
+        def before_tool_call(agent, tool_name, tool_input):
+            if tool_name == "restricted_tool":
+                raise PermissionError("restricted_tool requires Admin role")
+
+        mock_crew.before_tool_call = before_tool_call
+        mock_crew.after_tool_call = None
+        mock_crew.verbose = False
+
+        action = AgentAction(
+            text="Action: restricted_tool\nAction Input: {}",
+            thought="I should use restricted_tool",
+            tool="restricted_tool",
+            tool_input="{}",
+        )
+
+        from crewai.tools.tool_usage import ToolUsage
+        from crewai.tools.tool_calling import ToolCalling
+
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(
+                ToolUsage,
+                "parse_tool_calling",
+                lambda self, text: ToolCalling(
+                    tool_name="restricted_tool", arguments={}
+                ),
+            )
+
+            result = execute_tool_and_check_finality(
+                agent_action=action,
+                tools=[mock_tool],
+                agent=mock_agent,
+                crew=mock_crew,
+            )
+
+        assert isinstance(result, ToolResult)
+        assert "restricted_tool requires Admin role" in result.result
+        assert result.result_as_answer is False
+
+    def test_crew_before_tool_call_allows_execution(self):
+        """Test that crew.before_tool_call allows execution when it doesn't raise."""
+        from crewai.agents.parser import AgentAction
+        from crewai.tools.tool_types import ToolResult
+        from crewai.utilities.tool_utils import execute_tool_and_check_finality
+
+        mock_tool = Mock()
+        mock_tool.name = "allowed_tool"
+        mock_tool.description = "An allowed tool"
+        mock_tool.result_as_answer = False
+        mock_tool.args_schema = None
+
+        mock_agent = Mock()
+        mock_agent.role = "Admin"
+
+        call_log = []
+
+        def before_tool_call(agent, tool_name, tool_input):
+            call_log.append({
+                "agent_role": agent.role,
+                "tool_name": tool_name,
+                "tool_input": tool_input,
+            })
+
+        mock_crew = Mock()
+        mock_crew.before_tool_call = before_tool_call
+        mock_crew.after_tool_call = None
+        mock_crew.verbose = False
+
+        action = AgentAction(
+            text="Action: allowed_tool\nAction Input: {}",
+            thought="Use the tool",
+            tool="allowed_tool",
+            tool_input="{}",
+        )
+
+        from crewai.tools.tool_usage import ToolUsage
+        from crewai.tools.tool_calling import ToolCalling
+
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(
+                ToolUsage,
+                "parse_tool_calling",
+                lambda self, text: ToolCalling(
+                    tool_name="allowed_tool", arguments={"query": "test"}
+                ),
+            )
+            mp.setattr(
+                ToolUsage,
+                "use",
+                lambda self, calling, text: "Tool result",
+            )
+
+            result = execute_tool_and_check_finality(
+                agent_action=action,
+                tools=[mock_tool],
+                agent=mock_agent,
+                crew=mock_crew,
+            )
+
+        assert len(call_log) == 1
+        assert call_log[0]["agent_role"] == "Admin"
+        assert call_log[0]["tool_name"] == "allowed_tool"
+        assert result.result == "Tool result"
+
+    def test_crew_after_tool_call_receives_output(self):
+        """Test that crew.after_tool_call receives the correct tool output."""
+        from crewai.agents.parser import AgentAction
+        from crewai.utilities.tool_utils import execute_tool_and_check_finality
+
+        mock_tool = Mock()
+        mock_tool.name = "my_tool"
+        mock_tool.description = "A tool"
+        mock_tool.result_as_answer = False
+        mock_tool.args_schema = None
+
+        mock_agent = Mock()
+        mock_agent.role = "Researcher"
+
+        after_log = []
+
+        def after_tool_call(agent, tool_name, tool_input, tool_output):
+            after_log.append({
+                "agent_role": agent.role,
+                "tool_name": tool_name,
+                "tool_output": tool_output,
+            })
+
+        mock_crew = Mock()
+        mock_crew.before_tool_call = None
+        mock_crew.after_tool_call = after_tool_call
+        mock_crew.verbose = False
+
+        action = AgentAction(
+            text="Action: my_tool\nAction Input: {}",
+            thought="Use the tool",
+            tool="my_tool",
+            tool_input="{}",
+        )
+
+        from crewai.tools.tool_usage import ToolUsage
+        from crewai.tools.tool_calling import ToolCalling
+
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(
+                ToolUsage,
+                "parse_tool_calling",
+                lambda self, text: ToolCalling(
+                    tool_name="my_tool", arguments={"query": "AI"}
+                ),
+            )
+            mp.setattr(
+                ToolUsage,
+                "use",
+                lambda self, calling, text: "Result for: AI",
+            )
+
+            execute_tool_and_check_finality(
+                agent_action=action,
+                tools=[mock_tool],
+                agent=mock_agent,
+                crew=mock_crew,
+            )
+
+        assert len(after_log) == 1
+        assert after_log[0]["tool_name"] == "my_tool"
+        assert after_log[0]["tool_output"] == "Result for: AI"
+        assert after_log[0]["agent_role"] == "Researcher"
+
+    def test_crew_before_blocks_prevents_after_call(self):
+        """Test that when before_tool_call blocks, after_tool_call is not called."""
+        from crewai.agents.parser import AgentAction
+        from crewai.utilities.tool_utils import execute_tool_and_check_finality
+
+        mock_tool = Mock()
+        mock_tool.name = "my_tool"
+        mock_tool.description = "A tool"
+        mock_tool.result_as_answer = False
+
+        mock_agent = Mock()
+        mock_agent.role = "Researcher"
+
+        after_mock = Mock()
+
+        def before_tool_call(agent, tool_name, tool_input):
+            raise PermissionError("Blocked!")
+
+        mock_crew = Mock()
+        mock_crew.before_tool_call = before_tool_call
+        mock_crew.after_tool_call = after_mock
+        mock_crew.verbose = False
+
+        action = AgentAction(
+            text="Action: my_tool\nAction Input: {}",
+            thought="Use the tool",
+            tool="my_tool",
+            tool_input="{}",
+        )
+
+        from crewai.tools.tool_usage import ToolUsage
+        from crewai.tools.tool_calling import ToolCalling
+
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(
+                ToolUsage,
+                "parse_tool_calling",
+                lambda self, text: ToolCalling(
+                    tool_name="my_tool", arguments={}
+                ),
+            )
+
+            result = execute_tool_and_check_finality(
+                agent_action=action,
+                tools=[mock_tool],
+                agent=mock_agent,
+                crew=mock_crew,
+            )
+
+        assert "Blocked!" in result.result
+        after_mock.assert_not_called()
+
+    def test_crew_without_hooks_works_normally(self):
+        """Test that crews without hooks work normally."""
+        from crewai.agents.parser import AgentAction
+        from crewai.utilities.tool_utils import execute_tool_and_check_finality
+
+        mock_tool = Mock()
+        mock_tool.name = "my_tool"
+        mock_tool.description = "A tool"
+        mock_tool.result_as_answer = False
+        mock_tool.args_schema = None
+
+        mock_agent = Mock()
+        mock_agent.role = "Researcher"
+
+        mock_crew = Mock()
+        mock_crew.before_tool_call = None
+        mock_crew.after_tool_call = None
+        mock_crew.verbose = False
+
+        action = AgentAction(
+            text="Action: my_tool\nAction Input: {}",
+            thought="Use the tool",
+            tool="my_tool",
+            tool_input="{}",
+        )
+
+        from crewai.tools.tool_usage import ToolUsage
+        from crewai.tools.tool_calling import ToolCalling
+
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(
+                ToolUsage,
+                "parse_tool_calling",
+                lambda self, text: ToolCalling(
+                    tool_name="my_tool", arguments={}
+                ),
+            )
+            mp.setattr(
+                ToolUsage,
+                "use",
+                lambda self, calling, text: "Normal result",
+            )
+
+            result = execute_tool_and_check_finality(
+                agent_action=action,
+                tools=[mock_tool],
+                agent=mock_agent,
+                crew=mock_crew,
+            )
+
+        assert result.result == "Normal result"
+
+    def test_crew_both_hooks_together(self):
+        """Test that both before and after hooks work together."""
+        from crewai.agents.parser import AgentAction
+        from crewai.utilities.tool_utils import execute_tool_and_check_finality
+
+        mock_tool = Mock()
+        mock_tool.name = "my_tool"
+        mock_tool.description = "A tool"
+        mock_tool.result_as_answer = False
+        mock_tool.args_schema = None
+
+        mock_agent = Mock()
+        mock_agent.role = "Admin"
+
+        call_order = []
+
+        def before_tool_call(agent, tool_name, tool_input):
+            call_order.append("before")
+
+        def after_tool_call(agent, tool_name, tool_input, tool_output):
+            call_order.append("after")
+
+        mock_crew = Mock()
+        mock_crew.before_tool_call = before_tool_call
+        mock_crew.after_tool_call = after_tool_call
+        mock_crew.verbose = False
+
+        action = AgentAction(
+            text="Action: my_tool\nAction Input: {}",
+            thought="Use the tool",
+            tool="my_tool",
+            tool_input="{}",
+        )
+
+        from crewai.tools.tool_usage import ToolUsage
+        from crewai.tools.tool_calling import ToolCalling
+
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(
+                ToolUsage,
+                "parse_tool_calling",
+                lambda self, text: ToolCalling(
+                    tool_name="my_tool", arguments={}
+                ),
+            )
+            mp.setattr(
+                ToolUsage,
+                "use",
+                lambda self, calling, text: "Result",
+            )
+
+            result = execute_tool_and_check_finality(
+                agent_action=action,
+                tools=[mock_tool],
+                agent=mock_agent,
+                crew=mock_crew,
+            )
+
+        assert call_order == ["before", "after"]
+        assert result.result == "Result"
+
+    def test_crew_hook_fields_on_crew_model(self):
+        """Test that before_tool_call and after_tool_call can be set on Crew."""
+        from crewai import Agent, Crew, Task
+
+        def before_hook(agent, tool_name, tool_input):
+            pass
+
+        def after_hook(agent, tool_name, tool_input, tool_output):
+            pass
+
+        agent = Agent(
+            role="Researcher",
+            goal="Research",
+            backstory="A researcher",
+            allow_delegation=False,
+        )
+
+        task = Task(
+            description="Do research",
+            expected_output="Results",
+            agent=agent,
+        )
+
+        crew = Crew(
+            agents=[agent],
+            tasks=[task],
+            before_tool_call=before_hook,
+            after_tool_call=after_hook,
+        )
+
+        assert crew.before_tool_call is not None
+        assert crew.after_tool_call is not None
+
+    def test_crew_hooks_default_to_none(self):
+        """Test that hooks default to None when not set."""
+        from crewai import Agent, Crew, Task
+
+        agent = Agent(
+            role="Researcher",
+            goal="Research",
+            backstory="A researcher",
+            allow_delegation=False,
+        )
+
+        task = Task(
+            description="Do research",
+            expected_output="Results",
+            agent=agent,
+        )
+
+        crew = Crew(
+            agents=[agent],
+            tasks=[task],
+        )
+
+        assert crew.before_tool_call is None
+        assert crew.after_tool_call is None
