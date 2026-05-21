@@ -283,7 +283,38 @@ class CrewAgentExecutor(CrewAgentExecutorMixin):
             ] or tool_calling.tool_name.casefold().replace("_", " ") in [
                 name.casefold().strip() for name in self.tool_name_to_tool_map
             ]:
+                before_tool_call = getattr(self.crew, "before_tool_call", None) if self.crew else None
+                if before_tool_call:
+                    try:
+                        before_tool_call(
+                            self.agent,
+                            tool_calling.tool_name,
+                            tool_calling.arguments,
+                        )
+                    except Exception as e:
+                        tool_result = str(e)
+                        self.task.increment_tools_errors()
+                        if self.agent.verbose:
+                            self._printer.print(
+                                content=f"\n\nTool call blocked: {tool_result}\n",
+                                color="red",
+                            )
+                        return ToolResult(result=tool_result, result_as_answer=False)
+
                 tool_result = tool_usage.use(tool_calling, agent_action.text)
+
+                after_tool_call = getattr(self.crew, "after_tool_call", None) if self.crew else None
+                if after_tool_call:
+                    try:
+                        after_tool_call(
+                            self.agent,
+                            tool_calling.tool_name,
+                            tool_calling.arguments,
+                            tool_result,
+                        )
+                    except Exception:
+                        pass
+
                 tool = self.tool_name_to_tool_map.get(tool_calling.tool_name)
                 if tool:
                     return ToolResult(

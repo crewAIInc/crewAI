@@ -1123,7 +1123,7 @@ def test_kickoff_for_each_empty_input():
     assert results == []
 
 
-@pytest.mark.vcr(filter_headers=["authorization"])
+@pytest.mark.vcr(filter_headeruvs=["authorization"])
 def test_kickoff_for_each_invalid_input():
     """Tests if kickoff_for_each raises TypeError for invalid input types."""
 
@@ -3126,3 +3126,441 @@ def test_multimodal_agent_live_image_analysis():
     assert isinstance(result.raw, str)
     assert len(result.raw) > 100  # Expecting a detailed analysis
     assert "error" not in result.raw.lower()  # No error messages in response
+
+
+def test_before_tool_call_hook_blocks_tool():
+    """Test that before_tool_call can block a tool from executing by raising an exception."""
+    from unittest.mock import MagicMock, patch
+
+    from crewai.tools import tool
+
+    @tool
+    def allowed_tool(query: str) -> str:
+        """Useful for looking up general information."""
+        return f"Result for: {query}"
+
+    @tool
+    def restricted_tool(data: str) -> str:
+        """Useful for exporting customer data."""
+        return f"Exported: {data}"
+
+    def before_tool_call(agent, tool_name, tool_input):
+        if tool_name == "restricted_tool" and agent.role != "Admin":
+            raise PermissionError(
+                f"Tool '{tool_name}' requires Admin role, but agent has role '{agent.role}'"
+            )
+
+    researcher = Agent(
+        role="Researcher",
+        goal="Research information",
+        backstory="A research assistant",
+        tools=[allowed_tool, restricted_tool],
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Look up information about AI",
+        expected_output="A summary of findings.",
+        agent=researcher,
+    )
+
+    crew = Crew(
+        agents=[researcher],
+        tasks=[task],
+        before_tool_call=before_tool_call,
+    )
+
+    with patch.object(Agent, "execute_task") as execute:
+        execute.return_value = "ok"
+        crew.kickoff()
+
+    assert crew.before_tool_call is before_tool_call
+
+
+def test_before_tool_call_allows_tool():
+    """Test that before_tool_call allows tool execution when it doesn't raise."""
+    from unittest.mock import MagicMock, patch
+
+    from crewai.tools import tool
+
+    @tool
+    def my_tool(query: str) -> str:
+        """Useful for looking up information."""
+        return f"Result for: {query}"
+
+    call_log = []
+
+    def before_tool_call(agent, tool_name, tool_input):
+        call_log.append({
+            "agent_role": agent.role,
+            "tool_name": tool_name,
+            "tool_input": tool_input,
+        })
+
+    researcher = Agent(
+        role="Researcher",
+        goal="Research information",
+        backstory="A research assistant",
+        tools=[my_tool],
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Look up information about AI",
+        expected_output="A summary of findings.",
+        agent=researcher,
+    )
+
+    crew = Crew(
+        agents=[researcher],
+        tasks=[task],
+        before_tool_call=before_tool_call,
+    )
+
+    with patch.object(Agent, "execute_task") as execute:
+        execute.return_value = "ok"
+        crew.kickoff()
+
+    assert crew.before_tool_call is before_tool_call
+
+
+def test_after_tool_call_hook():
+    """Test that after_tool_call receives the correct arguments after tool execution."""
+    from unittest.mock import MagicMock, patch
+
+    from crewai.tools import tool
+
+    @tool
+    def my_tool(query: str) -> str:
+        """Useful for looking up information."""
+        return f"Result for: {query}"
+
+    call_log = []
+
+    def after_tool_call(agent, tool_name, tool_input, tool_output):
+        call_log.append({
+            "agent_role": agent.role,
+            "tool_name": tool_name,
+            "tool_input": tool_input,
+            "tool_output": tool_output,
+        })
+
+    researcher = Agent(
+        role="Researcher",
+        goal="Research information",
+        backstory="A research assistant",
+        tools=[my_tool],
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Look up information about AI",
+        expected_output="A summary of findings.",
+        agent=researcher,
+    )
+
+    crew = Crew(
+        agents=[researcher],
+        tasks=[task],
+        after_tool_call=after_tool_call,
+    )
+
+    with patch.object(Agent, "execute_task") as execute:
+        execute.return_value = "ok"
+        crew.kickoff()
+
+    assert crew.after_tool_call is after_tool_call
+
+
+def test_before_tool_call_hook_blocks_in_executor():
+    """Test that the before_tool_call hook actually blocks tool execution in the executor."""
+    from unittest.mock import MagicMock
+
+    from crewai.agents.crew_agent_executor import CrewAgentExecutor, ToolResult
+    from crewai.agents.parser import AgentAction
+    from crewai.agents.tools_handler import ToolsHandler
+    from crewai.tools import BaseTool, tool
+
+    @tool
+    def restricted_tool(data: str) -> str:
+        """Useful for exporting customer data."""
+        return f"Exported: {data}"
+
+    agent = Agent(
+        role="Researcher",
+        goal="Research information",
+        backstory="A research assistant",
+        tools=[restricted_tool],
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Look up information",
+        expected_output="A summary.",
+        agent=agent,
+    )
+
+    def before_tool_call(agent, tool_name, tool_input):
+        if tool_name == "restricted_tool":
+            raise PermissionError("restricted_tool is not allowed")
+
+    crew = MagicMock()
+    crew.before_tool_call = before_tool_call
+    crew.after_tool_call = None
+
+    parsed_tools = [restricted_tool.to_structured_tool()]
+    tools_handler = ToolsHandler()
+
+    executor = CrewAgentExecutor(
+        llm=MagicMock(),
+        task=task,
+        crew=crew,
+        agent=agent,
+        prompt={"prompt": "test"},
+        max_iter=1,
+        tools=parsed_tools,
+        tools_names="restricted_tool",
+        stop_words=["Observation"],
+        tools_description="restricted_tool: Useful for exporting customer data.",
+        tools_handler=tools_handler,
+        original_tools=[restricted_tool],
+        function_calling_llm=MagicMock(),
+    )
+
+    action = AgentAction(
+        text="Action: restricted_tool\nAction Input: {\"data\": \"test\"}",
+        thought="I should use restricted_tool",
+        tool="restricted_tool",
+        tool_input='{"data": "test"}',
+    )
+
+    result = executor._execute_tool_and_check_finality(action)
+
+    assert isinstance(result, ToolResult)
+    assert "restricted_tool is not allowed" in result.result
+    assert result.result_as_answer is False
+
+
+def test_after_tool_call_hook_called_in_executor():
+    """Test that the after_tool_call hook is called after tool execution in the executor."""
+    from unittest.mock import MagicMock, patch
+
+    from crewai.agents.crew_agent_executor import CrewAgentExecutor, ToolResult
+    from crewai.agents.parser import AgentAction
+    from crewai.agents.tools_handler import ToolsHandler
+    from crewai.tools import tool
+    from crewai.tools.tool_usage import ToolUsage
+
+    @tool
+    def my_tool(query: str) -> str:
+        """Useful for looking up information."""
+        return f"Result for: {query}"
+
+    agent = Agent(
+        role="Researcher",
+        goal="Research information",
+        backstory="A research assistant",
+        tools=[my_tool],
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Look up information",
+        expected_output="A summary.",
+        agent=agent,
+    )
+
+    after_call_log = []
+
+    def after_tool_call(agent, tool_name, tool_input, tool_output):
+        after_call_log.append({
+            "tool_name": tool_name,
+            "tool_output": tool_output,
+        })
+
+    crew = MagicMock()
+    crew.before_tool_call = None
+    crew.after_tool_call = after_tool_call
+
+    parsed_tools = [my_tool.to_structured_tool()]
+    tools_handler = ToolsHandler()
+
+    executor = CrewAgentExecutor(
+        llm=MagicMock(),
+        task=task,
+        crew=crew,
+        agent=agent,
+        prompt={"prompt": "test"},
+        max_iter=1,
+        tools=parsed_tools,
+        tools_names="my_tool",
+        stop_words=["Observation"],
+        tools_description="my_tool: Useful for looking up information.",
+        tools_handler=tools_handler,
+        original_tools=[my_tool],
+        function_calling_llm=MagicMock(),
+    )
+
+    action = AgentAction(
+        text="Action: my_tool\nAction Input: {\"query\": \"AI\"}",
+        thought="I should look up AI",
+        tool="my_tool",
+        tool_input='{"query": "AI"}',
+    )
+
+    with patch.object(ToolUsage, "use", return_value="Result for: AI"):
+        result = executor._execute_tool_and_check_finality(action)
+
+    assert len(after_call_log) == 1
+    assert after_call_log[0]["tool_name"] == "my_tool"
+    assert after_call_log[0]["tool_output"] == "Result for: AI"
+
+
+def test_crew_without_tool_call_hooks():
+    """Test that crews work normally without any tool call hooks."""
+    from unittest.mock import patch
+
+    from crewai.tools import tool
+
+    @tool
+    def my_tool(query: str) -> str:
+        """Useful for looking up information."""
+        return f"Result for: {query}"
+
+    researcher = Agent(
+        role="Researcher",
+        goal="Research information",
+        backstory="A research assistant",
+        tools=[my_tool],
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Look up information about AI",
+        expected_output="A summary of findings.",
+        agent=researcher,
+    )
+
+    crew = Crew(
+        agents=[researcher],
+        tasks=[task],
+    )
+
+    assert crew.before_tool_call is None
+    assert crew.after_tool_call is None
+
+    with patch.object(Agent, "execute_task") as execute:
+        execute.return_value = "ok"
+        crew.kickoff()
+
+
+def test_before_tool_call_with_both_hooks():
+    """Test that both before_tool_call and after_tool_call can be set together."""
+    from unittest.mock import MagicMock, patch
+
+    from crewai.tools import tool
+
+    @tool
+    def my_tool(query: str) -> str:
+        """Useful for looking up information."""
+        return f"Result for: {query}"
+
+    before_mock = MagicMock()
+    after_mock = MagicMock()
+
+    researcher = Agent(
+        role="Researcher",
+        goal="Research information",
+        backstory="A research assistant",
+        tools=[my_tool],
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Look up information about AI",
+        expected_output="A summary of findings.",
+        agent=researcher,
+    )
+
+    crew = Crew(
+        agents=[researcher],
+        tasks=[task],
+        before_tool_call=before_mock,
+        after_tool_call=after_mock,
+    )
+
+    assert crew.before_tool_call is before_mock
+    assert crew.after_tool_call is after_mock
+
+    with patch.object(Agent, "execute_task") as execute:
+        execute.return_value = "ok"
+        crew.kickoff()
+
+
+def test_before_tool_call_blocks_and_after_not_called():
+    """Test that when before_tool_call blocks a tool, after_tool_call is not called."""
+    from unittest.mock import MagicMock, patch
+
+    from crewai.agents.crew_agent_executor import CrewAgentExecutor, ToolResult
+    from crewai.agents.parser import AgentAction
+    from crewai.agents.tools_handler import ToolsHandler
+    from crewai.tools import tool
+
+    @tool
+    def my_tool(query: str) -> str:
+        """Useful for looking up information."""
+        return f"Result for: {query}"
+
+    def before_tool_call(agent, tool_name, tool_input):
+        raise PermissionError("Blocked!")
+
+    after_mock = MagicMock()
+
+    agent = Agent(
+        role="Researcher",
+        goal="Research information",
+        backstory="A research assistant",
+        tools=[my_tool],
+        allow_delegation=False,
+    )
+
+    task = Task(
+        description="Look up information",
+        expected_output="A summary.",
+        agent=agent,
+    )
+
+    crew = MagicMock()
+    crew.before_tool_call = before_tool_call
+    crew.after_tool_call = after_mock
+
+    parsed_tools = [my_tool.to_structured_tool()]
+    tools_handler = ToolsHandler()
+
+    executor = CrewAgentExecutor(
+        llm=MagicMock(),
+        task=task,
+        crew=crew,
+        agent=agent,
+        prompt={"prompt": "test"},
+        max_iter=1,
+        tools=parsed_tools,
+        tools_names="my_tool",
+        stop_words=["Observation"],
+        tools_description="my_tool: Useful for looking up information.",
+        tools_handler=tools_handler,
+        original_tools=[my_tool],
+        function_calling_llm=MagicMock(),
+    )
+
+    action = AgentAction(
+        text="Action: my_tool\nAction Input: {\"query\": \"test\"}",
+        thought="I should use my_tool",
+        tool="my_tool",
+        tool_input='{"query": "test"}',
+    )
+
+    result = executor._execute_tool_and_check_finality(action)
+
+    assert "Blocked!" in result.result
+    after_mock.assert_not_called()

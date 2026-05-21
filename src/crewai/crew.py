@@ -171,6 +171,14 @@ class Crew(BaseModel):
         default_factory=list,
         description="List of callbacks to be executed after crew kickoff. It may be used to adjust the output of the crew.",
     )
+    before_tool_call: Optional[Callable[..., Any]] = Field(
+        default=None,
+        description="Optional callback executed before each tool call. Receives (agent, tool_name, tool_input). Raise to block the call.",
+    )
+    after_tool_call: Optional[Callable[..., Any]] = Field(
+        default=None,
+        description="Optional callback executed after each tool call. Receives (agent, tool_name, tool_input, tool_output).",
+    )
     max_rpm: Optional[int] = Field(
         default=None,
         description="Maximum number of requests per minute for the crew execution to be respected.",
