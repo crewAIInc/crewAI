@@ -39,10 +39,6 @@ class DB2ToolSchema(BaseModel):
 class DB2Config(BaseModel):
     """All DB2 connection and search settings."""
 
-    # -------------------------------------
-    # DB2 Connection Settings
-    # -------------------------------------
-
     database: str
 
     hostname: str = "localhost"
@@ -55,10 +51,6 @@ class DB2Config(BaseModel):
 
     password: str | None = None
 
-    # -------------------------------------
-    # Table Settings
-    # -------------------------------------
-
     table_name: str = "documents"
 
     vector_column: str = "embedding"
@@ -66,10 +58,6 @@ class DB2Config(BaseModel):
     content_column: str = "content"
 
     metadata_column: str = "metadata"
-
-    # -------------------------------------
-    # Search Settings
-    # -------------------------------------
 
     limit: int = 3
 
@@ -92,10 +80,6 @@ class DB2VectorSearchTool(BaseTool):
     model_config = ConfigDict(
         arbitrary_types_allowed=True
     )
-
-    # -------------------------------------
-    # Metadata
-    # -------------------------------------
 
     name: str = "DB2VectorSearchTool"
 
@@ -143,15 +127,7 @@ class DB2VectorSearchTool(BaseTool):
         ]
     )
 
-    # -------------------------------------
-    # Config
-    # -------------------------------------
-
     db2_config: DB2Config
-
-    # -------------------------------------
-    # Runtime Dynamic Imports
-    # -------------------------------------
 
     db2_package: ImportString[Any] = Field(
         default="ibm_db",
@@ -170,9 +146,6 @@ class DB2VectorSearchTool(BaseTool):
         description="Optional custom embedding function.",
     )
 
-    # -------------------------------------
-    # Runtime State
-    # -------------------------------------
 
     connection: Any | None = None
 
@@ -180,9 +153,6 @@ class DB2VectorSearchTool(BaseTool):
 
     cursor: Any | None = None
 
-    # -------------------------------------
-    # Setup Lifecycle
-    # -------------------------------------
 
     @model_validator(mode="after")
     def _setup_db2(self) -> "DB2VectorSearchTool":
@@ -198,10 +168,6 @@ class DB2VectorSearchTool(BaseTool):
             )
 
         return self
-
-    # -------------------------------------
-    # Connection Management
-    # -------------------------------------
 
     def _build_connection_string(self) -> str:
 
@@ -262,26 +228,15 @@ class DB2VectorSearchTool(BaseTool):
             self.dbi_connection = None
             self.cursor = None
 
-    # -------------------------------------
-    # Embedding Logic
-    # -------------------------------------
-
     def _generate_embedding(
         self,
         text: str,
     ) -> list[float]:
 
-        # ---------------------------------
-        # Custom Embedding Function
-        # ---------------------------------
-
         if self.custom_embedding_fn:
             return self.custom_embedding_fn(text)
 
-        # ---------------------------------
-        # OpenAI Embedding Fallback
-        # ---------------------------------
-
+        
         return (
             __import__("openai")
             .OpenAI(
@@ -297,10 +252,6 @@ class DB2VectorSearchTool(BaseTool):
             .embedding
         )
 
-    # -------------------------------------
-    # SQL Filter Builder
-    # -------------------------------------
-
     def _build_filter_clause(
         self,
         filter_by: str | None,
@@ -311,10 +262,6 @@ class DB2VectorSearchTool(BaseTool):
 
         return f"WHERE {filter_by} = ?"
 
-    # -------------------------------------
-    # Main Retrieval Logic
-    # -------------------------------------
-
     def _run(
         self,
         query: str,
@@ -324,19 +271,11 @@ class DB2VectorSearchTool(BaseTool):
 
         try:
 
-            # ---------------------------------
-            # Generate Query Embedding
-            # ---------------------------------
-
             query_vector = (
                 self._generate_embedding(
                     query
                 )
             )
-
-            # ---------------------------------
-            # Connect To DB2
-            # ---------------------------------
 
             self._connect()
 
@@ -346,19 +285,11 @@ class DB2VectorSearchTool(BaseTool):
 
             vector_string = str(query_vector)
 
-            # ---------------------------------
-            # Optional Filter Clause
-            # ---------------------------------
-
             filter_clause = (
                 self._build_filter_clause(
                     filter_by
                 )
             )
-
-            # ---------------------------------
-            # Build SQL Query
-            # ---------------------------------
 
             sql = f"""
                 SELECT
@@ -379,10 +310,6 @@ class DB2VectorSearchTool(BaseTool):
                 FETCH FIRST {config.limit} ROWS ONLY
             """
 
-            # ---------------------------------
-            # Execute Query
-            # ---------------------------------
-
             if (
                 filter_by
                 and filter_value is not None
@@ -395,10 +322,6 @@ class DB2VectorSearchTool(BaseTool):
                 self.cursor.execute(sql)
 
             rows = self.cursor.fetchall()
-
-            # ---------------------------------
-            # Normalize Results
-            # ---------------------------------
 
             normalized_results = []
 
