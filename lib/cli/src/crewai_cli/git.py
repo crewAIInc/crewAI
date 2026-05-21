@@ -40,7 +40,7 @@ class Repository:
             encoding="utf-8",
         ).strip()
 
-    @cached_property  # noqa: B019
+    @cached_property
     def is_git_repo(self) -> bool:
         """Check if the current directory is a git repository."""
         try:
