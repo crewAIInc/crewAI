@@ -2908,27 +2908,26 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         Returns:
             A tuple of (result, finished_event_id) where finished_event_id is
-            the event_id of the MethodExecutionFinishedEvent, or None if events
-            are suppressed.
+            the event_id of the MethodExecutionFinishedEvent.
         """
         try:
             dumped_params = {f"_{i}": arg for i, arg in enumerate(args)} | (
                 kwargs or {}
             )
 
-            if not self.suppress_flow_events:
-                future = crewai_event_bus.emit(
-                    self,
-                    MethodExecutionStartedEvent(
-                        type="method_execution_started",
-                        method_name=method_name,
-                        flow_name=self.name or self.__class__.__name__,
-                        params=dumped_params,
-                        state=self._copy_and_serialize_state(),
-                    ),
-                )
-                if future:
-                    self._event_futures.append(future)
+            # Always emit for tracing; suppress_flow_events only hides console panels.
+            future = crewai_event_bus.emit(
+                self,
+                MethodExecutionStartedEvent(
+                    type="method_execution_started",
+                    method_name=method_name,
+                    flow_name=self.name or self.__class__.__name__,
+                    params=dumped_params,
+                    state=self._copy_and_serialize_state(),
+                ),
+            )
+            if future:
+                self._event_futures.append(future)
 
             # Set method name in context so ask() can read it without
             # stack inspection.  Must happen before copy_context() so the
@@ -2970,18 +2969,17 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self._completed_methods.add(method_name)
 
             finished_event_id: str | None = None
-            if not self.suppress_flow_events:
-                finished_event = MethodExecutionFinishedEvent(
-                    type="method_execution_finished",
-                    method_name=method_name,
-                    flow_name=self.name or self.__class__.__name__,
-                    state=self._copy_and_serialize_state(),
-                    result=result,
-                )
-                finished_event_id = finished_event.event_id
-                future = crewai_event_bus.emit(self, finished_event)
-                if future:
-                    self._event_futures.append(future)
+            finished_event = MethodExecutionFinishedEvent(
+                type="method_execution_finished",
+                method_name=method_name,
+                flow_name=self.name or self.__class__.__name__,
+                state=self._copy_and_serialize_state(),
+                result=result,
+            )
+            finished_event_id = finished_event.event_id
+            future = crewai_event_bus.emit(self, finished_event)
+            if future:
+                self._event_futures.append(future)
 
             return result, finished_event_id
         except Exception as e:
@@ -2996,24 +2994,23 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
                     self.persistence = SQLiteFlowPersistence()
 
-                # Emit paused event (not failed)
-                if not self.suppress_flow_events:
-                    future = crewai_event_bus.emit(
-                        self,
-                        MethodExecutionPausedEvent(
-                            type="method_execution_paused",
-                            method_name=method_name,
-                            flow_name=self.name or self.__class__.__name__,
-                            state=self._copy_and_serialize_state(),
-                            flow_id=e.context.flow_id,
-                            message=e.context.message,
-                            emit=e.context.emit,
-                        ),
-                    )
-                    if future:
-                        self._event_futures.append(future)
-            elif not self.suppress_flow_events:
-                # Regular failure - emit failed event
+                # Emit paused event (not failed); always emit for tracing.
+                future = crewai_event_bus.emit(
+                    self,
+                    MethodExecutionPausedEvent(
+                        type="method_execution_paused",
+                        method_name=method_name,
+                        flow_name=self.name or self.__class__.__name__,
+                        state=self._copy_and_serialize_state(),
+                        flow_id=e.context.flow_id,
+                        message=e.context.message,
+                        emit=e.context.emit,
+                    ),
+                )
+                if future:
+                    self._event_futures.append(future)
+            else:
+                # Regular failure - always emit for tracing.
                 future = crewai_event_bus.emit(
                     self,
                     MethodExecutionFailedEvent(
@@ -3911,15 +3908,19 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
     def _finalize_flow_trace_batch(self, *, force: bool = False) -> None:
         """Finalize the active trace batch when this flow owns it."""
-        if not force and self._should_defer_trace_finalization():
-            return
-
         from crewai.events.listeners.tracing.trace_listener import (
             TraceCollectionListener,
         )
 
         trace_listener = TraceCollectionListener()
-        if trace_listener.batch_manager.batch_owner_type != "flow":
+        batch_manager = trace_listener.batch_manager
+        if not force and (
+            self._should_defer_trace_finalization()
+            or batch_manager.defer_session_finalization
+        ):
+            return
+
+        if batch_manager.batch_owner_type != "flow":
             return
         if trace_listener.first_time_handler.is_first_time:
             trace_listener.first_time_handler.mark_events_collected()

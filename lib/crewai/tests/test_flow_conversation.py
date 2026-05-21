@@ -11,7 +11,11 @@ from pydantic import BaseModel, Field
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
-from crewai.events.types.flow_events import FlowStartedEvent
+from crewai.events.types.flow_events import (
+    FlowStartedEvent,
+    MethodExecutionFinishedEvent,
+    MethodExecutionStartedEvent,
+)
 from crewai.events.types.llm_events import LLMCallStartedEvent
 from crewai.flow import Flow, ChatState, listen, start
 from crewai.flow.flow_context import current_flow_id, current_flow_name
@@ -213,6 +217,31 @@ class TestFlowTracingWhenSuppressed:
 
         assert started == ["QuietFlow"]
 
+    def test_method_execution_emitted_when_panel_events_suppressed(self) -> None:
+        class QuietFlow(Flow[ChatState]):
+            suppress_flow_events = True
+
+            @start()
+            def begin(self) -> str:
+                return "ok"
+
+        started: list[str] = []
+        finished: list[str] = []
+        original_emit = crewai_event_bus.emit
+
+        def track_emit(source: Any, event: Any, *args: Any, **kwargs: Any) -> Any:
+            if isinstance(event, MethodExecutionStartedEvent):
+                started.append(event.method_name)
+            if isinstance(event, MethodExecutionFinishedEvent):
+                finished.append(event.method_name)
+            return original_emit(source, event, *args, **kwargs)
+
+        with patch.object(crewai_event_bus, "emit", side_effect=track_emit):
+            QuietFlow().kickoff()
+
+        assert started == ["begin"]
+        assert finished == ["begin"]
+
     def test_llm_action_inside_flow_claims_flow_trace_batch(self) -> None:
         listener = TraceCollectionListener()
         listener.batch_manager.current_batch = None
@@ -267,17 +296,16 @@ class TestDeferTraceFinalization:
         flow = SimpleChatFlow()
         flow.defer_trace_finalization = True
 
-        with patch(
-            "crewai.events.listeners.tracing.trace_listener.TraceCollectionListener"
-        ) as mock_listener_cls:
-            mock_listener_cls.return_value.batch_manager.batch_owner_type = "flow"
-            mock_listener_cls.return_value.first_time_handler.is_first_time = False
+        listener = TraceCollectionListener()
+        listener.batch_manager.batch_owner_type = "flow"
+        listener.first_time_handler.is_first_time = False
 
+        with patch.object(listener.batch_manager, "finalize_batch") as mock_finalize:
             flow._finalize_flow_trace_batch()
-            mock_listener_cls.assert_not_called()
+            mock_finalize.assert_not_called()
 
             flow._finalize_flow_trace_batch(force=True)
-            mock_listener_cls.assert_called_once()
+            mock_finalize.assert_called_once()
 
 
 class TestDeferredFlowLifecycleEvents:
@@ -459,6 +487,24 @@ class TestNestedCrewTracing:
                 mock_finalize.assert_not_called()
         finally:
             current_flow_id.reset(token)
+
+    def test_finalize_flow_trace_batch_respects_defer_session_flag(self) -> None:
+        """Nested Flow kickoffs (e.g. AgentExecutor) must not finalize a deferred session batch."""
+
+        class InnerFlow(Flow[ChatState]):
+            @start()
+            def begin(self) -> str:
+                return "ok"
+
+        listener = TraceCollectionListener()
+        listener.batch_manager.batch_owner_type = "flow"
+        listener.batch_manager.defer_session_finalization = True
+        listener.first_time_handler.is_first_time = False
+
+        inner = InnerFlow()
+        with patch.object(listener.batch_manager, "finalize_batch") as mock_finalize:
+            inner._finalize_flow_trace_batch()
+        mock_finalize.assert_not_called()
 
     def test_flow_owned_batch_skips_finalize_without_flow_context(self) -> None:
         from crewai.events.listeners.tracing.trace_listener import (

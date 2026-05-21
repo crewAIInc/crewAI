@@ -231,7 +231,15 @@ class TraceCollectionListener(BaseEventListener):
 
         @event_bus.on(FlowStartedEvent)
         def on_flow_started(source: Any, event: FlowStartedEvent) -> None:
-            # Always call _initialize_flow_batch to claim ownership.
+            # Nested flows (e.g. AgentExecutor inside a conversational Flow) must
+            # not re-claim an open session batch owned by the parent kickoff.
+            if (
+                self.batch_manager.defer_session_finalization
+                and self.batch_manager.is_batch_initialized()
+                and self.batch_manager.batch_owner_type == "flow"
+            ):
+                self._handle_trace_event("flow_started", source, event)
+                return
             # If batch was already initialized by a concurrent action event
             # (race condition), initialize_batch() returns early but
             # batch_owner_type is still correctly set to "flow".
@@ -275,6 +283,8 @@ class TraceCollectionListener(BaseEventListener):
         @event_bus.on(CrewKickoffCompletedEvent)
         def on_crew_completed(source: Any, event: CrewKickoffCompletedEvent) -> None:
             self._handle_trace_event("crew_kickoff_completed", source, event)
+            if self.batch_manager.defer_session_finalization:
+                return
             if self._nested_in_flow_execution():
                 return
             if self.batch_manager.batch_owner_type == "crew":
@@ -287,6 +297,8 @@ class TraceCollectionListener(BaseEventListener):
         @event_bus.on(CrewKickoffFailedEvent)
         def on_crew_failed(source: Any, event: CrewKickoffFailedEvent) -> None:
             self._handle_trace_event("crew_kickoff_failed", source, event)
+            if self.batch_manager.defer_session_finalization:
+                return
             if self._nested_in_flow_execution():
                 return
             if self.first_time_handler.is_first_time:
@@ -760,8 +772,10 @@ class TraceCollectionListener(BaseEventListener):
     def _try_initialize_flow_batch_from_context(self, event: Any) -> bool:
         """Claim a flow trace batch when an action event fires inside kickoff.
 
-        Flows with ``suppress_flow_events=True`` skip ``FlowStartedEvent``, so
-        LLM/tool events must not fall back to implicit crew batches.
+        When ``suppress_flow_events=True``, console panels are hidden but
+        ``FlowStartedEvent`` and method lifecycle events still emit; if no
+        batch exists yet, LLM/tool events must not fall back to implicit crew
+        batches.
         """
         from crewai.flow.flow_context import current_flow_id, current_flow_name
 
