@@ -25,7 +25,13 @@ class BaseKnowledgeSource(BaseModel, ABC):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
     storage: BaseKnowledgeStorage | None = Field(default=None)
-    metadata: dict[str, Any] = Field(default_factory=dict)  # Currently unused
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "Metadata merged into each stored document's metadata so it can be "
+            "matched by ``metadata_filter`` at query time."
+        ),
+    )
     collection_name: str | None = Field(default=None)
 
     @abstractmethod
@@ -50,15 +56,20 @@ class BaseKnowledgeSource(BaseModel, ABC):
     def _save_documents(self) -> None:
         """Save the documents to the storage.
 
-        This method should be called after the chunks and embeddings are generated.
+        This method should be called after the chunks and embeddings are
+        generated. When ``self.metadata`` is non-empty it is forwarded to the
+        underlying storage so each stored document carries the source-level
+        metadata and can be matched by ``metadata_filter`` at query time.
 
         Raises:
             ValueError: If no storage is configured.
         """
-        if self.storage is not None:
-            self.storage.save(self.chunks)
-        else:
+        if self.storage is None:
             raise ValueError("No storage found to save documents.")
+        if self.metadata:
+            self.storage.save(self.chunks, metadata=self.metadata)
+        else:
+            self.storage.save(self.chunks)
 
     @abstractmethod
     async def aadd(self) -> None:
@@ -67,12 +78,17 @@ class BaseKnowledgeSource(BaseModel, ABC):
     async def _asave_documents(self) -> None:
         """Save the documents to the storage asynchronously.
 
-        This method should be called after the chunks and embeddings are generated.
+        This method should be called after the chunks and embeddings are
+        generated. When ``self.metadata`` is non-empty it is forwarded to the
+        underlying storage so each stored document carries the source-level
+        metadata and can be matched by ``metadata_filter`` at query time.
 
         Raises:
             ValueError: If no storage is configured.
         """
-        if self.storage is not None:
-            await self.storage.asave(self.chunks)
-        else:
+        if self.storage is None:
             raise ValueError("No storage found to save documents.")
+        if self.metadata:
+            await self.storage.asave(self.chunks, metadata=self.metadata)
+        else:
+            await self.storage.asave(self.chunks)
