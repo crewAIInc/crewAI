@@ -118,13 +118,11 @@ def _deserialize_llm_from_context(
     if isinstance(llm_data, str):
         return LLM(model=llm_data)
 
-    if isinstance(llm_data, dict):
-        data = dict(llm_data)
-        model = data.pop("model", None)
-        if not model:
-            return None
-        return LLM(model=model, **data)
-    return None
+    data = dict(llm_data)
+    model = data.pop("model", None)
+    if not model:
+        return None
+    return LLM(model=model, **data)
 
 
 @dataclass
@@ -706,6 +704,6 @@ def human_feedback(
         # instead of creating a bare LLM from just the model string.
         wrapper._hf_llm = llm
 
-        return wrapper  # type: ignore[no-any-return]
+        return HumanFeedbackMethod(wrapper)  # type: ignore[return-value]
 
     return decorator

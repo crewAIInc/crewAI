@@ -39,10 +39,7 @@ class ToolsHandler(BaseModel):
         if self.cache and should_cache and calling.tool_name != CacheTools().name:
             input_str = ""
             if calling.arguments:
-                if isinstance(calling.arguments, dict):
-                    input_str = json.dumps(calling.arguments)
-                else:
-                    input_str = str(calling.arguments)
+                input_str = json.dumps(calling.arguments)
 
             self.cache.add(
                 tool=calling.tool_name,

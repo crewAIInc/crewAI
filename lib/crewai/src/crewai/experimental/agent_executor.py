@@ -2616,7 +2616,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             with _llm_stop_words_applied(self.llm, self):
                 self.kickoff()
 
-                formatted_answer = self.state.current_answer
+                formatted_answer: AgentAction | AgentFinish | None = (
+                    self.state.current_answer
+                )
 
                 if not isinstance(formatted_answer, AgentFinish):
                     raise RuntimeError(
@@ -2717,7 +2719,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             with _llm_stop_words_applied(self.llm, self):
                 await self.kickoff_async()
 
-                formatted_answer = self.state.current_answer
+                formatted_answer: AgentAction | AgentFinish | None = (
+                    self.state.current_answer
+                )
 
                 if not isinstance(formatted_answer, AgentFinish):
                     raise RuntimeError(

@@ -194,9 +194,6 @@ class GoogleGenAIVertexEmbeddingFunction(EmbeddingFunction[Documents]):
         Returns:
             List of embedding vectors.
         """
-        if isinstance(input, str):
-            input = [input]
-
         if self._use_legacy:
             return self._call_legacy(input)
         return self._call_genai(input)

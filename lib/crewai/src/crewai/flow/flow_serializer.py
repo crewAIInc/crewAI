@@ -28,7 +28,7 @@ import inspect
 import logging
 import re
 import textwrap
-from typing import Any, TypedDict, get_args, get_origin
+from typing import Any, Literal, TypeAlias, TypedDict, get_args, get_origin
 
 from pydantic import BaseModel
 from pydantic_core import PydanticUndefined
@@ -43,6 +43,8 @@ from crewai.flow.flow_wrappers import (
 
 
 logger = logging.getLogger(__name__)
+
+MethodType: TypeAlias = Literal["start", "listen", "router", "start_router"]
 
 
 class MethodInfo(TypedDict, total=False):
@@ -59,7 +61,7 @@ class MethodInfo(TypedDict, total=False):
     """
 
     name: str
-    type: str
+    type: MethodType
     trigger_methods: list[str]
     condition_type: str | None
     router_paths: list[str]
@@ -132,7 +134,7 @@ def _get_method_type(
     method: Any,
     start_methods: list[str],
     routers: set[str],
-) -> str:
+) -> MethodType:
     """Determine the type of a flow method.
 
     Args:
@@ -191,7 +193,6 @@ def _detect_crew_reference(method: Any) -> bool:
         True if crew reference detected, False otherwise.
     """
     try:
-        # Get the underlying function from wrapper
         func = method
         if hasattr(method, "_meth"):
             func = method._meth
@@ -201,12 +202,11 @@ def _detect_crew_reference(method: Any) -> bool:
         source = inspect.getsource(func)
         source = textwrap.dedent(source)
 
-        # Patterns that indicate Crew usage
         crew_patterns = [
-            r"\.crew\(\)",  # .crew() method call
-            r"Crew\s*\(",  # Crew( instantiation
-            r":\s*Crew\b",  # Type hint with Crew
-            r"->.*Crew",  # Return type hint with Crew
+            r"\.crew\(\)",
+            r"Crew\s*\(",
+            r":\s*Crew\b",
+            r"->.*Crew",
         ]
 
         for pattern in crew_patterns:
@@ -215,7 +215,6 @@ def _detect_crew_reference(method: Any) -> bool:
 
         return False
     except (OSError, TypeError):
-        # Can't get source code - assume no crew reference
         return False
 
 
@@ -231,11 +230,9 @@ def _extract_trigger_methods(method: Any) -> tuple[list[str], str | None]:
     trigger_methods: list[str] = []
     condition_type: str | None = None
 
-    # First try __trigger_methods__ (populated for simple conditions)
     if hasattr(method, "__trigger_methods__") and method.__trigger_methods__:
         trigger_methods = [str(m) for m in method.__trigger_methods__]
 
-    # For complex conditions (or_/and_ combinators), extract from __trigger_condition__
     if (
         not trigger_methods
         and hasattr(method, "__trigger_condition__")
@@ -264,11 +261,9 @@ def _extract_router_paths(
     """
     method_name = getattr(method, "__name__", "")
 
-    # First check if there are __router_paths__ on the method itself
     if hasattr(method, "__router_paths__") and method.__router_paths__:
         return [str(p) for p in method.__router_paths__]
 
-    # Then check the class-level registry
     if method_name in router_paths_registry:
         return [str(p) for p in router_paths_registry[method_name]]
 
@@ -276,39 +271,15 @@ def _extract_router_paths(
 
 
 def _extract_all_methods_from_condition(
-    condition: str | FlowCondition | dict[str, Any] | list[Any],
+    condition: str | FlowCondition,
 ) -> list[str]:
-    """Extract all method names from a condition tree recursively.
-
-    Args:
-        condition: Can be a string, FlowCondition tuple, dict, or list.
-
-    Returns:
-        List of all method names found in the condition.
-    """
+    """Extract all method names from a condition tree recursively."""
     if isinstance(condition, str):
         return [condition]
-    if isinstance(condition, tuple) and len(condition) == 2:
-        # FlowCondition: (condition_type, methods_list)
-        _, methods = condition
-        if isinstance(methods, list):
-            result: list[str] = []
-            for m in methods:
-                result.extend(_extract_all_methods_from_condition(m))
-            return result
-        return []
-    if isinstance(condition, dict):
-        conditions_list = condition.get("conditions", [])
-        dict_methods: list[str] = []
-        for sub_cond in conditions_list:
-            dict_methods.extend(_extract_all_methods_from_condition(sub_cond))
-        return dict_methods
-    if isinstance(condition, list):
-        list_methods: list[str] = []
-        for item in condition:
-            list_methods.extend(_extract_all_methods_from_condition(item))
-        return list_methods
-    return []
+    methods: list[str] = []
+    for sub_cond in condition.get("conditions", []):
+        methods.extend(_extract_all_methods_from_condition(sub_cond))
+    return methods
 
 
 def _generate_edges(
@@ -330,7 +301,6 @@ def _generate_edges(
     """
     edges: list[EdgeInfo] = []
 
-    # Generate edges from listeners (listen edges)
     for listener_name, condition_data in listeners.items():
         trigger_methods: list[str] = []
 
@@ -340,7 +310,6 @@ def _generate_edges(
         elif isinstance(condition_data, dict):
             trigger_methods = _extract_all_methods_from_condition(condition_data)
 
-        # Create edges from each trigger to the listener
         edges.extend(
             EdgeInfo(
                 from_method=trigger,
@@ -352,10 +321,8 @@ def _generate_edges(
             if trigger in all_methods
         )
 
-    # Generate edges from routers (route edges)
     for router_name, paths in router_paths.items():
         for path in paths:
-            # Find listeners that listen to this path
             for listener_name, condition_data in listeners.items():
                 path_triggers: list[str] = []
 
@@ -393,11 +360,9 @@ def _extract_state_schema(flow_class: type) -> StateSchemaInfo | None:
     """
     state_type: type | None = None
 
-    # Check for _initial_state_t set by __class_getitem__
     if hasattr(flow_class, "_initial_state_t"):
         state_type = flow_class._initial_state_t
 
-    # Check initial_state class attribute
     if state_type is None and hasattr(flow_class, "initial_state"):
         initial_state = flow_class.initial_state
         if isinstance(initial_state, type) and issubclass(initial_state, BaseModel):
@@ -405,7 +370,6 @@ def _extract_state_schema(flow_class: type) -> StateSchemaInfo | None:
         elif isinstance(initial_state, BaseModel):
             state_type = type(initial_state)
 
-    # Check __orig_bases__ for generic parameters
     if state_type is None and hasattr(flow_class, "__orig_bases__"):
         for base in flow_class.__orig_bases__:
             origin = get_origin(base)
@@ -420,7 +384,6 @@ def _extract_state_schema(flow_class: type) -> StateSchemaInfo | None:
     if state_type is None or not issubclass(state_type, BaseModel):
         return None
 
-    # Extract fields from the Pydantic model
     fields: list[StateFieldInfo] = []
     try:
         model_fields = state_type.model_fields
@@ -428,7 +391,6 @@ def _extract_state_schema(flow_class: type) -> StateSchemaInfo | None:
             field_type_str = "Any"
             if field_info.annotation is not None:
                 field_type_str = str(field_info.annotation)
-                # Clean up the type string
                 field_type_str = field_type_str.replace("typing.", "")
                 field_type_str = field_type_str.replace("<class '", "").replace(
                     "'>", ""
@@ -441,7 +403,6 @@ def _extract_state_schema(flow_class: type) -> StateSchemaInfo | None:
                 and not callable(field_info.default)
             ):
                 try:
-                    # Try to serialize the default value
                     default_value = field_info.default
                 except Exception:
                     default_value = str(field_info.default)
@@ -474,7 +435,6 @@ def _detect_flow_inputs(flow_class: type) -> list[str]:
     """
     inputs: list[str] = []
 
-    # Check for inputs in __init__ signature beyond standard Flow params
     try:
         init_method = flow_class.__init__  # type: ignore[misc]
         init_sig = inspect.signature(init_method)
@@ -533,7 +493,6 @@ def flow_structure(flow_class: type) -> FlowStructureInfo:
             f"Got {type(flow_class).__name__}"
         )
 
-    # Get class-level metadata set by FlowMeta
     start_methods: list[str] = getattr(flow_class, "_start_methods", [])
     listeners: dict[str, Any] = getattr(flow_class, "_listeners", {})
     routers: set[str] = getattr(flow_class, "_routers", set())
@@ -541,7 +500,6 @@ def flow_structure(flow_class: type) -> FlowStructureInfo:
         flow_class, "_router_paths", {}
     )
 
-    # Collect all flow methods
     methods: list[MethodInfo] = []
     all_method_names: set[str] = set()
 
@@ -554,7 +512,6 @@ def flow_structure(flow_class: type) -> FlowStructureInfo:
         except AttributeError:
             continue
 
-        # Check if it's a flow method
         is_flow_method = (
             isinstance(attr, (FlowMethod, StartMethod, ListenMethod, RouterMethod))
             or hasattr(attr, "__is_flow_method__")
@@ -568,21 +525,16 @@ def flow_structure(flow_class: type) -> FlowStructureInfo:
 
         all_method_names.add(attr_name)
 
-        # Get method type
         method_type = _get_method_type(attr_name, attr, start_methods, routers)
 
-        # Get trigger methods and condition type
         trigger_methods, condition_type = _extract_trigger_methods(attr)
 
-        # Get router paths if applicable
         router_paths_list: list[str] = []
         if method_type in ("router", "start_router"):
             router_paths_list = _extract_router_paths(attr, router_paths_registry)
 
-        # Check for human feedback
         has_hf = _has_human_feedback(attr)
 
-        # Check for crew reference
         has_crew = _detect_crew_reference(attr)
 
         method_info = MethodInfo(
@@ -596,16 +548,10 @@ def flow_structure(flow_class: type) -> FlowStructureInfo:
         )
         methods.append(method_info)
 
-    # Generate edges
     edges = _generate_edges(listeners, routers, router_paths_registry, all_method_names)
-
-    # Extract state schema
     state_schema = _extract_state_schema(flow_class)
-
-    # Detect inputs
     inputs = _detect_flow_inputs(flow_class)
 
-    # Get flow description from docstring
     description: str | None = None
     if flow_class.__doc__:
         description = flow_class.__doc__.strip()

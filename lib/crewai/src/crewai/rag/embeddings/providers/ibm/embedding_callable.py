@@ -54,9 +54,6 @@ class WatsonXEmbeddingFunction(EmbeddingFunction[Documents]):
                 "Install it with: uv add ibm-watsonx-ai"
             ) from e
 
-        if isinstance(input, str):
-            input = [input]
-
         embeddings_config: dict[str, Any] = {
             "model_id": self._config["model_id"],
         }

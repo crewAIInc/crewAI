@@ -798,10 +798,7 @@ class OpenAICompletion(BaseLLM):
             }
 
             if parameters:
-                if isinstance(parameters, dict):
-                    responses_tool["parameters"] = parameters
-                else:
-                    responses_tool["parameters"] = dict(parameters)
+                responses_tool["parameters"] = parameters
 
             responses_tools.append(responses_tool)
 

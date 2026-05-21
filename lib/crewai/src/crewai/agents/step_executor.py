@@ -308,15 +308,11 @@ class StepExecutor:
             if isinstance(formatted, AgentFinish):
                 return str(formatted.output)
 
-            if isinstance(formatted, AgentAction):
-                tool_calls_made.append(formatted.tool)
-                tool_result = self._execute_text_tool_with_events(formatted)
-                last_tool_result = tool_result
-                messages.append({"role": "assistant", "content": answer_str})
-                messages.append(self._build_observation_message(tool_result))
-                continue
-
-            return answer_str
+            tool_calls_made.append(formatted.tool)
+            tool_result = self._execute_text_tool_with_events(formatted)
+            last_tool_result = tool_result
+            messages.append({"role": "assistant", "content": answer_str})
+            messages.append(self._build_observation_message(tool_result))
 
         return last_tool_result
 

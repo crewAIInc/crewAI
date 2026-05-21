@@ -1159,12 +1159,10 @@ Follow these guidelines:
             return model_output, None
         if isinstance(model_output, dict):
             return None, model_output
-        if isinstance(model_output, str):
-            try:
-                return None, json.loads(model_output)
-            except json.JSONDecodeError:
-                return None, None
-        return None, None
+        try:
+            return None, json.loads(model_output)
+        except json.JSONDecodeError:
+            return None, None
 
     def _get_output_format(self) -> OutputFormat:
         if self.output_json:

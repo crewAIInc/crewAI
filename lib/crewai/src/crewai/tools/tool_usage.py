@@ -274,10 +274,7 @@ class ToolUsage:
             if self.tools_handler and self.tools_handler.cache:
                 input_str = ""
                 if calling.arguments:
-                    if isinstance(calling.arguments, dict):
-                        input_str = json.dumps(calling.arguments)
-                    else:
-                        input_str = str(calling.arguments)
+                    input_str = json.dumps(calling.arguments)
 
                 result = self.tools_handler.cache.read(
                     tool=sanitize_tool_name(calling.tool_name), input=input_str
@@ -303,7 +300,7 @@ class ToolUsage:
                 result = self._format_result(result=result)
                 # Don't return early - fall through to finally block
             elif result is None:
-                try:
+                try:  # type: ignore[unreachable]
                     if sanitize_tool_name(calling.tool_name) in [
                         sanitize_tool_name("Delegate work to coworker"),
                         sanitize_tool_name("Ask question to coworker"),
@@ -507,10 +504,7 @@ class ToolUsage:
             if self.tools_handler and self.tools_handler.cache:
                 input_str = ""
                 if calling.arguments:
-                    if isinstance(calling.arguments, dict):
-                        input_str = json.dumps(calling.arguments)
-                    else:
-                        input_str = str(calling.arguments)
+                    input_str = json.dumps(calling.arguments)
 
                 result = self.tools_handler.cache.read(
                     tool=sanitize_tool_name(calling.tool_name), input=input_str
@@ -536,7 +530,7 @@ class ToolUsage:
                 result = self._format_result(result=result)
                 # Don't return early - fall through to finally block
             elif result is None:
-                try:
+                try:  # type: ignore[unreachable]
                     if sanitize_tool_name(calling.tool_name) in [
                         sanitize_tool_name("Delegate work to coworker"),
                         sanitize_tool_name("Ask question to coworker"),
@@ -822,11 +816,6 @@ class ToolUsage:
             arguments = self._validate_tool_input(self.action.tool_input)
 
         except Exception:
-            if raise_error:
-                raise
-            return ToolUsageError(f"{I18N_DEFAULT.errors('tool_arguments_error')}")
-
-        if not isinstance(arguments, dict):
             if raise_error:
                 raise
             return ToolUsageError(f"{I18N_DEFAULT.errors('tool_arguments_error')}")

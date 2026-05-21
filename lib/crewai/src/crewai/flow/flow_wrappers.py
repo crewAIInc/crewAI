@@ -46,6 +46,8 @@ class FlowMethod(Generic[P, R]):
     both bound (instance) and unbound (class) method states.
     """
 
+    __is_flow_method__: bool = True
+
     def __init__(self, meth: Callable[P, R], instance: Any = None) -> None:
         """Initialize the flow method wrapper.
 
@@ -53,9 +55,9 @@ class FlowMethod(Generic[P, R]):
             meth: The method to wrap.
             instance: The instance to bind to (None for unbound).
         """
+        functools.update_wrapper(self, meth)
         self._meth = meth
         self._instance = instance
-        functools.update_wrapper(self, meth, updated=[])
         self.__name__: FlowMethodName = FlowMethodName(self.__name__)
         self.__signature__ = inspect.signature(meth)
 
@@ -69,16 +71,6 @@ class FlowMethod(Generic[P, R]):
                 import asyncio.coroutines
 
                 self._is_coroutine = asyncio.coroutines._is_coroutine  # type: ignore[attr-defined]
-
-        # Preserve flow-related attributes from wrapped method (e.g., from @human_feedback)
-        for attr in [
-            "__is_router__",
-            "__router_paths__",
-            "__human_feedback_config__",
-            "_hf_llm",  # Live LLM object for HITL resume
-        ]:
-            if hasattr(meth, attr):
-                setattr(self, attr, getattr(meth, attr))
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R:
         """Call the wrapped method.
@@ -101,6 +93,19 @@ class FlowMethod(Generic[P, R]):
             The original method before decoration.
         """
         return self._meth
+
+    def __getattr__(self, name: str) -> Any:
+        """Delegate missing attributes to the wrapped method.
+
+        Lets flow flags like ``__is_start_method__`` defined on the wrapped
+        method's class flow through transparently when this wrapper itself
+        wraps another FlowMethod.
+        """
+        try:
+            meth = object.__getattribute__(self, "_meth")
+        except AttributeError:
+            raise AttributeError(name) from None
+        return getattr(meth, name)
 
     def __get__(self, instance: Any, owner: type | None = None) -> Self:
         """Support the descriptor protocol for method binding.

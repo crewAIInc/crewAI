@@ -962,7 +962,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
-        ignored_types=(StartMethod, ListenMethod, RouterMethod),
+        ignored_types=(FlowMethod,),
         revalidate_instances="never",
     )
     __hash__ = object.__hash__
@@ -3008,8 +3008,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 if direct_methods_satisfied and nested_conditions_satisfied:
                     self._pending_and_listeners.pop(pending_key, None)
                     return True
-
-                return False
 
         return False
 

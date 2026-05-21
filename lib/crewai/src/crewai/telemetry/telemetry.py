@@ -97,7 +97,7 @@ class Telemetry:
         provider: OpenTelemetry tracer provider.
     """
 
-    _instance = None
+    _instance: Self | None = None
     _lock = threading.Lock()
 
     def __new__(cls) -> Self:
@@ -936,9 +936,6 @@ class Telemetry:
             key: The attribute key.
             value: The attribute value.
         """
-
-        if span is None:
-            return
 
         def _operation() -> None:
             return span.set_attribute(key, value)

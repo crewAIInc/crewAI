@@ -232,9 +232,6 @@ class A2UIClientExtension:
                     continue
 
                 data = root.data
-                if not isinstance(data, dict):
-                    continue
-
                 surface_id = _get_surface_id(data)
                 if not surface_id:
                     continue

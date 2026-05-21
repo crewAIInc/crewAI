@@ -569,9 +569,6 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         if not self._token_process:
             self._token_process = TokenProcess()
 
-        if self.security_config is None:
-            self.security_config = SecurityConfig()
-
         return self
 
     @field_validator("id", mode="before")
@@ -621,7 +618,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         task: Any,
         context: str | None = None,
         tools: list[BaseTool] | None = None,
-    ) -> str:
+    ) -> str | BaseModel:
         pass
 
     @abstractmethod
@@ -630,7 +627,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         task: Any,
         context: str | None = None,
         tools: list[BaseTool] | None = None,
-    ) -> str:
+    ) -> str | BaseModel:
         """Execute a task asynchronously."""
 
     @abstractmethod
