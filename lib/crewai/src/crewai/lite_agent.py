@@ -644,7 +644,8 @@ class LiteAgent(FlowTrackable, BaseModel):
                     str(agent_finish.output)
                 )
             except ValidationError:
-                pass
+                # Direct JSON validation failed; fall back to converter-based parsing below.
+                formatted_result = None
 
             if formatted_result is None:
                 try:

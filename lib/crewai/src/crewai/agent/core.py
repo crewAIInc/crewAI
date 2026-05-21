@@ -1694,7 +1694,8 @@ class Agent(BaseAgent):
             try:
                 formatted_result = response_format.model_validate_json(raw_output)
             except ValidationError:
-                pass
+                # Direct JSON validation failed; fall back to converter-based parsing below.
+                formatted_result = None
 
             if formatted_result is None:
                 try:
@@ -1715,6 +1716,7 @@ class Agent(BaseAgent):
                     if isinstance(conversion_result, BaseModel):
                         formatted_result = conversion_result
                 except ConverterError:
+                    # Conversion failure is non-fatal; raw output is preserved below.
                     pass
         else:
             raw_output = str(output) if not isinstance(output, str) else output
