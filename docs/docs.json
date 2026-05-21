@@ -419,7 +419,40 @@
                     "group": "Manage",
                     "pages": [
                       "en/enterprise/features/sso",
-                      "en/enterprise/features/rbac"
+                      "en/enterprise/features/rbac",
+                      {
+                        "group": "Secrets Manager",
+                        "icon": "lock",
+                        "pages": [
+                          "en/enterprise/features/secrets-manager/overview",
+                          "en/enterprise/features/secrets-manager/usage",
+                          {
+                            "group": "AWS",
+                            "icon": "aws",
+                            "pages": [
+                              "en/enterprise/features/secrets-manager/aws",
+                              "en/enterprise/features/secrets-manager/aws-workload-identity"
+                            ]
+                          },
+                          {
+                            "group": "GCP",
+                            "icon": "google",
+                            "pages": [
+                              "en/enterprise/features/secrets-manager/gcp",
+                              "en/enterprise/features/secrets-manager/gcp-workload-identity"
+                            ]
+                          },
+                          {
+                            "group": "Azure",
+                            "icon": "microsoft",
+                            "pages": [
+                              "en/enterprise/features/secrets-manager/azure",
+                              "en/enterprise/features/secrets-manager/azure-workload-identity"
+                            ]
+                          },
+                          "en/enterprise/features/secrets-manager/verify-rotation"
+                        ]
+                      }
                     ]
                   },
                   {
@@ -7207,7 +7240,40 @@
                   {
                     "group": "Gerenciar",
                     "pages": [
-                      "pt-BR/enterprise/features/rbac"
+                      "pt-BR/enterprise/features/rbac",
+                      {
+                        "group": "Secrets Manager",
+                        "icon": "lock",
+                        "pages": [
+                          "pt-BR/enterprise/features/secrets-manager/overview",
+                          "pt-BR/enterprise/features/secrets-manager/usage",
+                          {
+                            "group": "AWS",
+                            "icon": "aws",
+                            "pages": [
+                              "pt-BR/enterprise/features/secrets-manager/aws",
+                              "pt-BR/enterprise/features/secrets-manager/aws-workload-identity"
+                            ]
+                          },
+                          {
+                            "group": "GCP",
+                            "icon": "google",
+                            "pages": [
+                              "pt-BR/enterprise/features/secrets-manager/gcp",
+                              "pt-BR/enterprise/features/secrets-manager/gcp-workload-identity"
+                            ]
+                          },
+                          {
+                            "group": "Azure",
+                            "icon": "microsoft",
+                            "pages": [
+                              "pt-BR/enterprise/features/secrets-manager/azure",
+                              "pt-BR/enterprise/features/secrets-manager/azure-workload-identity"
+                            ]
+                          },
+                          "pt-BR/enterprise/features/secrets-manager/verify-rotation"
+                        ]
+                      }
                     ]
                   },
                   {
@@ -13708,7 +13774,40 @@
                   {
                     "group": "관리",
                     "pages": [
-                      "ko/enterprise/features/rbac"
+                      "ko/enterprise/features/rbac",
+                      {
+                        "group": "Secrets Manager",
+                        "icon": "lock",
+                        "pages": [
+                          "ko/enterprise/features/secrets-manager/overview",
+                          "ko/enterprise/features/secrets-manager/usage",
+                          {
+                            "group": "AWS",
+                            "icon": "aws",
+                            "pages": [
+                              "ko/enterprise/features/secrets-manager/aws",
+                              "ko/enterprise/features/secrets-manager/aws-workload-identity"
+                            ]
+                          },
+                          {
+                            "group": "GCP",
+                            "icon": "google",
+                            "pages": [
+                              "ko/enterprise/features/secrets-manager/gcp",
+                              "ko/enterprise/features/secrets-manager/gcp-workload-identity"
+                            ]
+                          },
+                          {
+                            "group": "Azure",
+                            "icon": "microsoft",
+                            "pages": [
+                              "ko/enterprise/features/secrets-manager/azure",
+                              "ko/enterprise/features/secrets-manager/azure-workload-identity"
+                            ]
+                          },
+                          "ko/enterprise/features/secrets-manager/verify-rotation"
+                        ]
+                      }
                     ]
                   },
                   {
@@ -20376,7 +20475,40 @@
                   {
                     "group": "الإدارة",
                     "pages": [
-                      "ar/enterprise/features/rbac"
+                      "ar/enterprise/features/rbac",
+                      {
+                        "group": "Secrets Manager",
+                        "icon": "lock",
+                        "pages": [
+                          "ar/enterprise/features/secrets-manager/overview",
+                          "ar/enterprise/features/secrets-manager/usage",
+                          {
+                            "group": "AWS",
+                            "icon": "aws",
+                            "pages": [
+                              "ar/enterprise/features/secrets-manager/aws",
+                              "ar/enterprise/features/secrets-manager/aws-workload-identity"
+                            ]
+                          },
+                          {
+                            "group": "GCP",
+                            "icon": "google",
+                            "pages": [
+                              "ar/enterprise/features/secrets-manager/gcp",
+                              "ar/enterprise/features/secrets-manager/gcp-workload-identity"
+                            ]
+                          },
+                          {
+                            "group": "Azure",
+                            "icon": "microsoft",
+                            "pages": [
+                              "ar/enterprise/features/secrets-manager/azure",
+                              "ar/enterprise/features/secrets-manager/azure-workload-identity"
+                            ]
+                          },
+                          "ar/enterprise/features/secrets-manager/verify-rotation"
+                        ]
+                      }
                     ]
                   },
                   {

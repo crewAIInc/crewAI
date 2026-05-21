@@ -7,18 +7,85 @@ durability, input history tracking, and integration with flow machinery.
 
 from __future__ import annotations
 
+import copy
 import time
 from datetime import datetime
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+from pydantic import BaseModel
+
 from crewai.flow import Flow, flow_config, listen, start
 from crewai.flow.async_feedback.providers import ConsoleProvider
 from crewai.flow.flow import FlowState
 from crewai.flow.input_provider import InputProvider, InputResponse
+from crewai.flow.persistence.base import FlowPersistence
 
 
 # ── Test helpers ─────────────────────────────────────────────────
+
+
+class _SaveCall:
+    """Lightweight stand-in for ``MagicMock.call_args`` entries."""
+
+    __slots__ = ("args", "kwargs")
+
+    def __init__(self, args: tuple[Any, ...], kwargs: dict[str, Any]) -> None:
+        self.args = args
+        self.kwargs = kwargs
+
+
+class _SaveStateRecorder:
+    """Callable that records each ``save_state`` invocation."""
+
+    def __init__(self, owner: RecordingPersistence) -> None:
+        self._owner = owner
+        self.call_args_list: list[_SaveCall] = []
+
+    def __call__(
+        self,
+        flow_uuid: str,
+        method_name: str,
+        state_data: dict[str, Any] | BaseModel,
+    ) -> None:
+        snapshot: dict[str, Any] | BaseModel
+        if isinstance(state_data, BaseModel):
+            snapshot = state_data.model_copy(deep=True)
+        else:
+            snapshot = copy.deepcopy(state_data)
+        self.call_args_list.append(
+            _SaveCall((flow_uuid, method_name, snapshot), {})
+        )
+        self._owner._states[flow_uuid] = snapshot
+
+
+class RecordingPersistence(FlowPersistence):
+    """In-memory FlowPersistence that records ``save_state`` invocations."""
+
+    persistence_type: str = "RecordingPersistence"
+
+    def model_post_init(self, _: Any) -> None:
+        object.__setattr__(self, "_states", {})
+        object.__setattr__(self, "save_state", _SaveStateRecorder(self))
+
+    def init_db(self) -> None:
+        return None
+
+    def save_state(  # type: ignore[no-redef]
+        self,
+        flow_uuid: str,
+        method_name: str,
+        state_data: dict[str, Any] | BaseModel,
+    ) -> None:
+        return None
+
+    def load_state(self, flow_uuid: str) -> dict[str, Any] | None:
+        snapshot = self._states.get(flow_uuid)
+        if snapshot is None:
+            return None
+        if isinstance(snapshot, BaseModel):
+            return snapshot.model_copy(deep=True).model_dump()
+        return copy.deepcopy(snapshot)
 
 
 class MockInputProvider:
@@ -436,8 +503,7 @@ class TestAskCheckpoint:
 
     def test_ask_checkpoints_state_before_waiting(self) -> None:
         """State is saved to persistence before waiting for input."""
-        mock_persistence = MagicMock()
-        mock_persistence.load_state.return_value = None
+        mock_persistence = RecordingPersistence()
 
         class TestFlow(Flow):
             input_provider = MockInputProvider(["answer"])
@@ -480,8 +546,7 @@ class TestAskCheckpoint:
         server crashes while waiting for input, previously gathered data
         is safe.
         """
-        mock_persistence = MagicMock()
-        mock_persistence.load_state.return_value = None
+        mock_persistence = RecordingPersistence()
 
         class GatherFlow(Flow):
             input_provider = MockInputProvider(["AI", "detailed"])
@@ -678,8 +743,7 @@ class TestAskIntegration:
 
     def test_ask_with_state_persistence_recovery(self) -> None:
         """Ask checkpoints state so previously gathered values survive."""
-        mock_persistence = MagicMock()
-        mock_persistence.load_state.return_value = None
+        mock_persistence = RecordingPersistence()
 
         class RecoverableFlow(Flow):
             input_provider = MockInputProvider(["AI", "detailed"])
