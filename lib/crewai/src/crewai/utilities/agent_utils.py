@@ -347,20 +347,28 @@ def handle_max_iterations_exceeded(
 
 
 def format_message_for_llm(
-    prompt: str, role: Literal["user", "assistant", "system"] = "user"
+    prompt: str,
+    role: Literal["user", "assistant", "system"] = "user",
+    reasoning_content: str | None = None,
 ) -> LLMMessage:
     """Format a message for the LLM.
 
     Args:
         prompt:  The message content.
         role:  The role of the message sender, either 'user' or 'assistant'.
+        reasoning_content:  Optional reasoning content for assistant messages
+            (e.g. from DeepSeek thinking mode). Only included when role is
+            'assistant' and the value is non-empty.
 
     Returns:
         A dictionary with 'role' and 'content' keys.
 
     """
     prompt = prompt.rstrip()
-    return {"role": role, "content": prompt}
+    msg: LLMMessage = {"role": role, "content": prompt}
+    if reasoning_content and role == "assistant":
+        msg["reasoning_content"] = reasoning_content
+    return msg
 
 
 def format_answer(answer: str) -> AgentAction | AgentFinish:

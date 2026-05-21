@@ -27,4 +27,5 @@ class LLMMessage(TypedDict):
     name: NotRequired[str]
     tool_calls: NotRequired[list[dict[str, Any]]]
     raw_tool_call_parts: NotRequired[list[Any]]
+    reasoning_content: NotRequired[str | None]
     files: NotRequired[dict[str, FileInput]]
