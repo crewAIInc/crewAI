@@ -199,3 +199,53 @@ def test_tool_usage_increments_structured_tool_once_per_call():
     assert "has reached its usage limit of 2 times" in third_result
     assert structured_tool.current_usage_count == 2
     assert original_tool.current_usage_count == 2
+
+
+@pytest.mark.asyncio
+async def test_tool_usage_increments_structured_tool_once_per_async_call():
+    """Test that async agent tool execution only consumes one usage per invocation."""
+
+    class LimitedTool(BaseTool):
+        name: str = "Limited Tool"
+        description: str = "A tool with usage limits for testing"
+        max_usage_count: int = 2
+
+        def _run(self, input_text: str) -> str:
+            return f"Processed {input_text}"
+
+    original_tool = LimitedTool()
+    structured_tool = original_tool.to_structured_tool()
+    llm = MagicMock()
+    llm.model = "gpt-4o-mini"
+    tool_usage = ToolUsage(
+        tools=[structured_tool],
+        agent=None,
+        task=None,
+        tools_handler=None,
+        function_calling_llm=llm,
+    )
+
+    first_result = await tool_usage.ause(
+        calling=ToolCalling(
+            tool_name="Limited Tool", arguments={"input_text": "first"}
+        ),
+        tool_string="",
+    )
+    second_result = await tool_usage.ause(
+        calling=ToolCalling(
+            tool_name="Limited Tool", arguments={"input_text": "second"}
+        ),
+        tool_string="",
+    )
+    third_result = await tool_usage.ause(
+        calling=ToolCalling(
+            tool_name="Limited Tool", arguments={"input_text": "third"}
+        ),
+        tool_string="",
+    )
+
+    assert first_result == "Processed first"
+    assert second_result == "Processed second"
+    assert "has reached its usage limit of 2 times" in third_result
+    assert structured_tool.current_usage_count == 2
+    assert original_tool.current_usage_count == 2
