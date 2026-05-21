@@ -14652,7 +14652,7 @@
       },
       "name": "MongoDBVectorSearchTool",
       "package_dependencies": [
-        "mongdb"
+        "pymongo"
       ],
       "run_params_schema": {
         "description": "Input for MongoDBTool.",
