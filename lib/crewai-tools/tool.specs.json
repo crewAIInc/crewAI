@@ -6821,7 +6821,26 @@
     },
     {
       "description": "Execute SQL queries against Databricks workspace tables and return the results. Provide a 'query' parameter with the SQL query to execute.",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "Databricks workspace URL (use with DATABRICKS_TOKEN, or set DATABRICKS_CONFIG_PROFILE instead).",
+          "name": "DATABRICKS_HOST",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Databricks personal access token (pair with DATABRICKS_HOST).",
+          "name": "DATABRICKS_TOKEN",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Databricks CLI profile name (alternative to DATABRICKS_HOST/TOKEN).",
+          "name": "DATABRICKS_CONFIG_PROFILE",
+          "required": false
+        }
+      ],
       "humanized_name": "Databricks SQL Query",
       "init_params_schema": {
         "$defs": {
