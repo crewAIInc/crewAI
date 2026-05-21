@@ -111,7 +111,12 @@ if LITELLM_AVAILABLE:
 
 MIN_CONTEXT: Final[int] = 1024
 MAX_CONTEXT: Final[int] = 2097152  # Current max from gemini-1.5-pro
-ANTHROPIC_PREFIXES: Final[tuple[str, ...]] = ("anthropic/", "anthropic.", "claude-", "claude/")
+ANTHROPIC_PREFIXES: Final[tuple[str, ...]] = (
+    "anthropic/",
+    "anthropic.",
+    "claude-",
+    "claude/",
+)
 
 LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     # openai
@@ -465,10 +470,7 @@ class LLM(BaseLLM):
             )
 
         if provider == "anthropic" or provider == "claude":
-            return (
-                "claude" in model_lower
-                or model_lower.startswith("anthropic")
-            )
+            return "claude" in model_lower or model_lower.startswith("anthropic")
 
         if provider == "gemini" or provider == "google":
             return any(
