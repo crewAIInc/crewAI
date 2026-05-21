@@ -1,0 +1,12 @@
+version: 2
+
+secret:
+  ignored-paths:
+    - 'lib/crewai-tools/src/crewai_tools/tools/siftq_search_tool/siftq_search_tool.py'
+    - 'lib/crewai-tools/tool.specs.json'
+
+  ignored-detections:
+    - detector-uuid: generic-api-key
+      matches:
+        - name: Default SiftQ API key in siftq_search_tool.py
+          match: mk-1D3D81EFC32A25683B0C2C3B315F8579

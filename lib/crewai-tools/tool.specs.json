@@ -23596,6 +23596,7 @@
           "max_content_length_per_result": {
             "default": 1000,
             "description": "Maximum length for the 'content' of each search result to avoid context window issues.",
+            "minimum": 1,
             "title": "Max Content Length Per Result",
             "type": "integer"
           },
@@ -23624,6 +23625,7 @@
           "timeout": {
             "default": 60,
             "description": "The timeout for the search request in seconds.",
+            "minimum": 1,
             "title": "Timeout",
             "type": "integer"
           }
@@ -23636,10 +23638,85 @@
       "package_dependencies": [],
       "run_params_schema": {
         "properties": {
+          "concise_snippet": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Override whether to return concise snippets with exact original text matches.",
+            "title": "Concise Snippet"
+          },
+          "include_raw_content": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Override whether to fetch and include the raw content from each source page.",
+            "title": "Include Raw Content"
+          },
+          "include_summary": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Override whether to include AI-generated summaries of each result.",
+            "title": "Include Summary"
+          },
+          "max_results": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Override the maximum number of results to return (1-100).",
+            "title": "Max Results"
+          },
           "query": {
             "description": "The search query string.",
             "title": "Query",
             "type": "string"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "enum": [
+                  "webpage",
+                  "document",
+                  "scholar",
+                  "image",
+                  "video",
+                  "podcast"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Override the search scope for this query. One of: webpage, document, scholar, image, video, podcast. Uses the tool's default scope if not provided.",
+            "title": "Scope"
           }
         },
         "required": [
