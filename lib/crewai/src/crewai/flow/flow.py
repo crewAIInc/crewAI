@@ -113,7 +113,7 @@ from crewai.flow.utils import (
     is_flow_method_name,
     is_simple_flow_condition,
 )
-from crewai.memory.memory_scope import MemoryScope, MemorySlice
+from crewai.memory.memory_scope import MemoryScope, MemorySlice, _ensure_memory_kind
 from crewai.memory.unified_memory import Memory
 from crewai.state.checkpoint_config import (
     CheckpointConfig,
@@ -157,6 +157,39 @@ def _resolve_persistence(value: Any) -> Any:
         if cls is not None:
             return cls.model_validate(value)
     return value
+
+
+def _serialize_persistence(value: Any) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    if isinstance(value, FlowPersistence):
+        return value.model_dump(mode="json")
+    raise TypeError(
+        f"Cannot serialize Flow.persistence of type {type(value).__name__}: "
+        "expected FlowPersistence or None."
+    )
+
+
+def _validate_input_provider(value: Any) -> Any:
+    if value is None or isinstance(value, InputProvider):
+        return value
+    from crewai.types.callback import _dotted_path_to_instance
+
+    resolved = _dotted_path_to_instance(value)
+    if resolved is None or isinstance(resolved, InputProvider):
+        return resolved
+    raise ValueError(
+        f"Resolved input_provider {resolved!r} does not implement the "
+        "InputProvider protocol (missing request_input)."
+    )
+
+
+def _serialize_input_provider(value: Any) -> str | None:
+    if value is None:
+        return None
+    from crewai.types.callback import _instance_to_dotted_path
+
+    return _instance_to_dotted_path(value)
 
 
 _INITIAL_STATE_CLASS_MARKER = "__crewai_pydantic_class_schema__"
@@ -949,15 +982,30 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     name: str | None = Field(default=None)
     tracing: bool | None = Field(default=None)
     stream: bool = Field(default=False)
-    memory: Memory | MemoryScope | MemorySlice | None = Field(default=None)
-    input_provider: InputProvider | None = Field(default=None)
+    memory: Annotated[
+        Annotated[
+            Memory | MemoryScope | MemorySlice, Field(discriminator="memory_kind")
+        ]
+        | None,
+        BeforeValidator(_ensure_memory_kind),
+    ] = Field(default=None)
+    input_provider: Annotated[
+        InputProvider | None,
+        BeforeValidator(_validate_input_provider),
+        PlainSerializer(
+            _serialize_input_provider, return_type=str | None, when_used="json"
+        ),
+    ] = Field(default=None)
     suppress_flow_events: bool = Field(default=False)
     human_feedback_history: list[HumanFeedbackResult] = Field(default_factory=list)
     last_human_feedback: HumanFeedbackResult | None = Field(default=None)
 
     persistence: Annotated[
-        SerializeAsAny[FlowPersistence] | Any,
+        SerializeAsAny[FlowPersistence] | None,
         BeforeValidator(lambda v, _: _resolve_persistence(v)),
+        PlainSerializer(
+            _serialize_persistence, return_type=dict | None, when_used="json"
+        ),
     ] = Field(default=None)
     max_method_calls: int = Field(default=100)
 
@@ -1050,6 +1098,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             }
         if self.checkpoint_state is not None:
             self._restore_state(self.checkpoint_state)
+        if (
+            isinstance(self.memory, MemoryScope | MemorySlice)
+            and self.memory._memory is None
+        ):
+            self.memory.bind(Memory())
         restore_event_scope(())
         reset_last_event_id()
 

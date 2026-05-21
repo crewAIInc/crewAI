@@ -93,11 +93,11 @@ from crewai.events.types.crew_events import (
     CrewTrainStartedEvent,
 )
 from crewai.flow.flow_trackable import FlowTrackable
-from crewai.knowledge.knowledge import Knowledge
+from crewai.knowledge.knowledge import Knowledge, _resolve_knowledge_sources
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
-from crewai.memory.memory_scope import MemoryScope, MemorySlice
+from crewai.memory.memory_scope import MemoryScope, MemorySlice, _ensure_memory_kind
 from crewai.memory.unified_memory import Memory
 from crewai.process import Process
 from crewai.rag.embeddings.types import EmbedderConfig
@@ -223,7 +223,14 @@ class Crew(FlowTrackable, BaseModel):
     ] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
     verbose: bool = Field(default=False)
-    memory: bool | Memory | MemoryScope | MemorySlice | None = Field(
+    memory: Annotated[
+        bool
+        | Annotated[
+            Memory | MemoryScope | MemorySlice, Field(discriminator="memory_kind")
+        ]
+        | None,
+        BeforeValidator(_ensure_memory_kind),
+    ] = Field(
         default=False,
         description=(
             "Enable crew memory. Pass True for default Memory(), "
@@ -322,7 +329,10 @@ class Crew(FlowTrackable, BaseModel):
         default_factory=list,
         description="list of execution logs for tasks",
     )
-    knowledge_sources: list[BaseKnowledgeSource] | None = Field(
+    knowledge_sources: Annotated[
+        list[BaseKnowledgeSource] | None,
+        BeforeValidator(_resolve_knowledge_sources),
+    ] = Field(
         default=None,
         description=(
             "Knowledge sources for the crew. Add knowledge sources to the "
@@ -477,7 +487,41 @@ class Crew(FlowTrackable, BaseModel):
         if self.checkpoint_train is not None:
             self._train = self.checkpoint_train
 
+        self._rebind_memory_views()
         self._restore_event_scope()
+
+    def _rebind_memory_views(self) -> None:
+        """Reattach a live ``Memory`` to restored ``MemoryScope``/``MemorySlice`` views.
+
+        Checkpoint JSON omits the live ``Memory`` dependency on scope/slice
+        views, so after restore they raise ``RuntimeError`` on first use.
+        Prefer the crew's restored ``Memory`` (from ``create_crew_memory``
+        or a ``Crew.memory=Memory(...)`` instance) so all views share one
+        backing store; fall back to a fresh ``Memory()`` only if nothing is
+        available.
+        """
+        from crewai.memory.memory_scope import MemoryScope, MemorySlice
+        from crewai.memory.unified_memory import Memory
+
+        backing: Memory | None = None
+        if isinstance(self._memory, Memory):
+            backing = self._memory
+        elif isinstance(self.memory, Memory):
+            backing = self.memory
+
+        def _ensure(view: Any) -> None:
+            nonlocal backing
+            if not isinstance(view, MemoryScope | MemorySlice):
+                return
+            if view._memory is not None:
+                return
+            if backing is None:
+                backing = Memory()
+            view.bind(backing)
+
+        _ensure(self.memory)
+        for agent in self.agents:
+            _ensure(agent.memory)
 
     def _restore_event_scope(self) -> None:
         """Rebuild the event scope stack from the checkpoint's event record."""

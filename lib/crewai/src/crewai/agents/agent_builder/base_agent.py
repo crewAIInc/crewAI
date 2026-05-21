@@ -31,13 +31,13 @@ from crewai.agents.tools_handler import ToolsHandler
 from crewai.events.base_events import set_emission_counter
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.event_context import restore_event_scope, set_last_event_id
-from crewai.knowledge.knowledge import Knowledge
+from crewai.knowledge.knowledge import Knowledge, _resolve_knowledge_sources
 from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.llms.base_llm import BaseLLM
 from crewai.mcp.config import MCPServerConfig
-from crewai.memory.memory_scope import MemoryScope, MemorySlice
+from crewai.memory.memory_scope import MemoryScope, MemorySlice, _ensure_memory_kind
 from crewai.memory.unified_memory import Memory
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.security_config import SecurityConfig
@@ -125,6 +125,13 @@ def _validate_executor_ref(value: Any) -> Any:
         cls = getattr(importlib.import_module(mod_path), cls_name)
         return cls.model_validate(value)
     return value
+
+
+def _serialize_executor_ref(value: Any) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    result: dict[str, Any] = value.model_dump(mode="json")
+    return result
 
 
 def _serialize_llm_ref(value: Any) -> dict[str, Any] | None:
@@ -251,14 +258,13 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     max_iter: int = Field(
         default=25, description="Maximum iterations for an agent to execute a task"
     )
-    agent_executor: SerializeAsAny[BaseAgentExecutor] | None = Field(
-        default=None, description="An instance of the CrewAgentExecutor class."
-    )
-
-    @field_validator("agent_executor", mode="before")
-    @classmethod
-    def _validate_agent_executor(cls, v: Any) -> Any:
-        return _validate_executor_ref(v)
+    agent_executor: Annotated[
+        SerializeAsAny[BaseAgentExecutor] | None,
+        BeforeValidator(_validate_executor_ref),
+        PlainSerializer(
+            _serialize_executor_ref, return_type=dict | None, when_used="json"
+        ),
+    ] = Field(default=None, description="An instance of the CrewAgentExecutor class.")
 
     llm: Annotated[
         str | BaseLLM | None,
@@ -288,7 +294,10 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     knowledge: Knowledge | None = Field(
         default=None, description="Knowledge for the agent."
     )
-    knowledge_sources: list[BaseKnowledgeSource] | None = Field(
+    knowledge_sources: Annotated[
+        list[BaseKnowledgeSource] | None,
+        BeforeValidator(_resolve_knowledge_sources),
+    ] = Field(
         default=None,
         description="Knowledge sources for the agent.",
     )
@@ -326,7 +335,14 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         default=None,
         description="List of MCP server references. Supports 'https://server.com/path' for external servers and bare slugs like 'notion' for connected MCP integrations. Use '#tool_name' suffix for specific tools.",
     )
-    memory: bool | Memory | MemoryScope | MemorySlice | None = Field(
+    memory: Annotated[
+        bool
+        | Annotated[
+            Memory | MemoryScope | MemorySlice, Field(discriminator="memory_kind")
+        ]
+        | None,
+        BeforeValidator(_ensure_memory_kind),
+    ] = Field(
         default=None,
         description=(
             "Enable agent memory. Pass True for default Memory(), "
@@ -397,7 +413,20 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             self.agent_executor._resuming = True
         if self.checkpoint_kickoff_event_id is not None:
             self._kickoff_event_id = self.checkpoint_kickoff_event_id
+        self._rebind_memory_view()
         self._restore_event_scope(state)
+
+    def _rebind_memory_view(self) -> None:
+        """Reattach a fresh ``Memory`` to a restored ``MemoryScope``/``MemorySlice``.
+
+        Checkpoint JSON omits the live ``Memory`` dependency, so scoped
+        memory views raise ``RuntimeError`` on first use after restore.
+        """
+        if (
+            isinstance(self.memory, MemoryScope | MemorySlice)
+            and self.memory._memory is None
+        ):
+            self.memory.bind(Memory())
 
     def _restore_event_scope(self, state: RuntimeState) -> None:
         """Rebuild the event scope stack from the checkpoint's event record.
