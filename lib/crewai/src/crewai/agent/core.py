@@ -28,6 +28,7 @@ from pydantic import (
     ConfigDict,
     Field,
     PrivateAttr,
+    ValidationError,
     model_validator,
 )
 from pydantic.functional_serializers import PlainSerializer
@@ -1691,24 +1692,30 @@ class Agent(BaseAgent):
         elif response_format:
             raw_output = str(output) if not isinstance(output, str) else output
             try:
-                model_schema = generate_model_description(response_format)
-                schema = json.dumps(model_schema, indent=2)
-                instructions = I18N_DEFAULT.slice("formatted_task_instructions").format(
-                    output_format=schema
-                )
-
-                converter = Converter(
-                    llm=cast(BaseLLM, self.llm),
-                    text=raw_output,
-                    model=response_format,
-                    instructions=instructions,
-                )
-
-                conversion_result = converter.to_pydantic()
-                if isinstance(conversion_result, BaseModel):
-                    formatted_result = conversion_result
-            except ConverterError:
+                formatted_result = response_format.model_validate_json(raw_output)
+            except ValidationError:
                 pass
+
+            if formatted_result is None:
+                try:
+                    model_schema = generate_model_description(response_format)
+                    schema = json.dumps(model_schema, indent=2)
+                    instructions = I18N_DEFAULT.slice(
+                        "formatted_task_instructions"
+                    ).format(output_format=schema)
+
+                    converter = Converter(
+                        llm=cast(BaseLLM, self.llm),
+                        text=raw_output,
+                        model=response_format,
+                        instructions=instructions,
+                    )
+
+                    conversion_result = converter.to_pydantic()
+                    if isinstance(conversion_result, BaseModel):
+                        formatted_result = conversion_result
+                except ConverterError:
+                    pass
         else:
             raw_output = str(output) if not isinstance(output, str) else output
 
