@@ -103,7 +103,7 @@ class MongoDBVectorSearchTool(BaseTool):
             ),
         ]
     )
-    package_dependencies: list[str] = Field(default_factory=lambda: ["mongdb"])
+    package_dependencies: list[str] = Field(default_factory=lambda: ["pymongo"])
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
