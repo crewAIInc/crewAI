@@ -181,12 +181,20 @@ def test_tool_usage_increments_structured_tool_once_per_call():
         ),
         tool_string="",
     )
+    assert first_result == "Processed first"
+    assert structured_tool.current_usage_count == 1
+    assert original_tool.current_usage_count == 1
+
     second_result = tool_usage.use(
         calling=ToolCalling(
             tool_name="Limited Tool", arguments={"input_text": "second"}
         ),
         tool_string="",
     )
+    assert second_result == "Processed second"
+    assert structured_tool.current_usage_count == 2
+    assert original_tool.current_usage_count == 2
+
     third_result = tool_usage.use(
         calling=ToolCalling(
             tool_name="Limited Tool", arguments={"input_text": "third"}
@@ -194,8 +202,6 @@ def test_tool_usage_increments_structured_tool_once_per_call():
         tool_string="",
     )
 
-    assert first_result == "Processed first"
-    assert second_result == "Processed second"
     assert "has reached its usage limit of 2 times" in third_result
     assert structured_tool.current_usage_count == 2
     assert original_tool.current_usage_count == 2
@@ -231,12 +237,20 @@ async def test_tool_usage_increments_structured_tool_once_per_async_call():
         ),
         tool_string="",
     )
+    assert first_result == "Processed first"
+    assert structured_tool.current_usage_count == 1
+    assert original_tool.current_usage_count == 1
+
     second_result = await tool_usage.ause(
         calling=ToolCalling(
             tool_name="Limited Tool", arguments={"input_text": "second"}
         ),
         tool_string="",
     )
+    assert second_result == "Processed second"
+    assert structured_tool.current_usage_count == 2
+    assert original_tool.current_usage_count == 2
+
     third_result = await tool_usage.ause(
         calling=ToolCalling(
             tool_name="Limited Tool", arguments={"input_text": "third"}
@@ -244,8 +258,6 @@ async def test_tool_usage_increments_structured_tool_once_per_async_call():
         tool_string="",
     )
 
-    assert first_result == "Processed first"
-    assert second_result == "Processed second"
     assert "has reached its usage limit of 2 times" in third_result
     assert structured_tool.current_usage_count == 2
     assert original_tool.current_usage_count == 2
