@@ -1503,9 +1503,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
             reasoning_content: Optional reasoning content from the LLM response.
         """
         self.messages.append(
-            format_message_for_llm(
-                text, role=role, reasoning_content=reasoning_content
-            )
+            format_message_for_llm(text, role=role, reasoning_content=reasoning_content)
         )
 
     def _show_start_logs(self) -> None:
