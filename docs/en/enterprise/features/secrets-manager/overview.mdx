@@ -56,14 +56,17 @@ Setting up Secrets Manager is a three-step flow that involves both your cloud pr
 
 ## Visibility & Scope
 
+<Note>
+WI-backed environment variables follow the same assignment model as plaintext environment variables: an automation resolves only the WI-backed variables explicitly assigned to it. Assign a WI-backed variable to an automation from the Environment Variables page on that automation; variables defined at the organization level or in a Studio project are not resolved at kickoff until you assign them.
+</Note>
+
+<Note>
+The secret-fetch stage runs on every kickoff but only does work when WI-backed environment variables are assigned to the deployment. For each assigned variable, the runtime resolves the value from your cloud provider on every crew, flow, training, test, or checkpoint-restore kickoff and writes it into the process environment. With nothing assigned, the stage is a no-op. Otherwise, cost is proportional to the number of assigned variables: a small added latency per kickoff plus one cloud-side audit-log entry per variable.
+</Note>
+
 <Warning>
-Workload Identity configurations are **organization-wide on each deployment** today — there is no per-automation binding. Two consequences worth knowing before you adopt the Workload Identity path broadly.
+At the Workload Identity *configuration* level, scope is still organization-wide today. Every automation in the organization is bootstrapped against every Workload Identity configuration the org has registered, and you cannot today bind a specific Workload Identity configuration to a specific automation. Per-automation Workload Identity scoping is on the roadmap. Until then, only register Workload Identity configurations every automation in your organization is allowed to use.
 </Warning>
-
-- **Every automation kickoff runs the secret-fetch phase**, regardless of whether the automation references any WI-backed environment variable. On every crew, flow, training, test, or checkpoint-restore kickoff, the runtime fetches all WI-backed environment variables configured for the deployment and writes them into the process environment. Cost: a small added latency per kickoff plus one cloud-side audit-log entry per WI-backed environment variable.
-- **All automations on the deployment see all WI-resolved environment variables.** You cannot today restrict a specific Workload Identity configuration (or the secrets it resolves) to a specific automation. Treat WI-backed secrets as available to every automation in the organization.
-
-Per-automation scoping is on the roadmap. Until then, plan Workload Identity usage at the organization level, not per workflow — and keep WI-backed environment variables limited to secrets every automation in the organization is allowed to read.
 
 ## Permissions
 

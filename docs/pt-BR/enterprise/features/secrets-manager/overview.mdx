@@ -56,14 +56,17 @@ Configurar o Secrets Manager é um fluxo de três passos que envolve tanto o seu
 
 ## Visibilidade & Escopo
 
+<Note>
+Variáveis de ambiente atreladas a WI seguem o mesmo modelo de atribuição das variáveis de ambiente em texto puro: uma automação resolve apenas as variáveis atreladas a WI explicitamente atribuídas a ela. Atribua uma variável atrelada a WI a uma automação pela página de Variáveis de Ambiente dessa automação; variáveis definidas no nível da organização ou em um projeto Studio não são resolvidas em kickoff até que você as atribua.
+</Note>
+
+<Note>
+A fase de busca de segredos é executada em todo kickoff, mas só realiza trabalho quando há variáveis de ambiente atreladas a WI atribuídas ao deployment. Para cada variável atribuída, o runtime resolve o valor a partir do seu provedor de nuvem em todo kickoff de crew, flow, training, test ou checkpoint-restore e o grava no ambiente do processo. Sem nada atribuído, a fase é um no-op. Caso contrário, o custo é proporcional ao número de variáveis atribuídas: uma pequena latência adicional por kickoff mais uma entrada no audit log do lado da nuvem por variável.
+</Note>
+
 <Warning>
-As configurações de Workload Identity são hoje **abrangentes a toda a organização em cada deployment** — não existe vinculação por automação. Duas consequências que vale conhecer antes de adotar o caminho de Workload Identity de forma ampla.
+No nível das *configurações* de Workload Identity, o escopo ainda é abrangente a toda a organização hoje. Toda automação na organização é inicializada com base em todas as configurações de Workload Identity que a organização registrou, e hoje você não pode vincular uma configuração específica de Workload Identity a uma automação específica. Escopo por automação para Workload Identity está no roadmap. Até lá, registre apenas configurações de Workload Identity que toda automação da sua organização tenha permissão de usar.
 </Warning>
-
-- **Todo kickoff de automação executa a fase de busca de segredos**, independentemente de a automação referenciar ou não alguma variável de ambiente atrelada a WI. Em todo kickoff de crew, flow, training, test ou checkpoint-restore, o runtime busca todas as variáveis de ambiente atreladas a WI configuradas para o deployment e as grava no ambiente do processo. Custo: uma pequena latência adicional por kickoff mais uma entrada no audit log do lado da nuvem por variável de ambiente atrelada a WI.
-- **Todas as automações no deployment enxergam todas as variáveis de ambiente resolvidas por WI.** Hoje você não pode restringir uma configuração específica de Workload Identity (ou os segredos que ela resolve) a uma automação específica. Trate os segredos atrelados a WI como disponíveis para toda automação da organização.
-
-Escopo por automação está no roadmap. Até lá, planeje o uso de Workload Identity no nível da organização, não por workflow — e mantenha as variáveis de ambiente atreladas a WI limitadas a segredos que toda automação da organização tem permissão de ler.
 
 ## Permissões
 
