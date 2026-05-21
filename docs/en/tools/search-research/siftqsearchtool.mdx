@@ -1,0 +1,139 @@
+---
+title: "SiftQ Search Tool"
+description: "Perform neural-ranked web searches using the SiftQ API"
+icon: "magnifying-glass"
+mode: "wide"
+---
+
+The `SiftqSearchTool` provides an interface to the SiftQ Search API, enabling CrewAI agents to perform neural-ranked web searches across multiple content scopes. It supports searching webpages, documents, scholarly articles, images, videos, and podcasts — all with configurable result count and content depth.
+
+## Installation
+
+The `SiftqSearchTool` is included with the `crewai-tools` package and uses the `requests` library, which is already a dependency. No additional packages are required.
+
+```shell
+uv add 'crewai[tools]'
+```
+
+## Environment Variables
+
+Optionally set your SiftQ API key as an environment variable for a higher rate limit:
+
+```bash
+export SIFTQ_API_KEY='your_siftq_api_key'
+```
+
+If no API key is set, a public free-tier key is used (limited to 100 searches/day).
+
+Get an API key at https://siftq.com (sign up, then create a key).
+
+## Example Usage
+
+Here's how to initialize and use the `SiftqSearchTool` within a CrewAI agent:
+
+```python
+import os
+from crewai import Agent, Task, Crew
+from crewai_tools import SiftqSearchTool
+
+# Optionally set your API key for higher rate limits
+# os.environ["SIFTQ_API_KEY"] = "YOUR_SIFTQ_API_KEY"
+
+# Initialize the tool
+siftq_tool = SiftqSearchTool()
+
+# Create an agent that uses the tool
+researcher = Agent(
+    role='Market Researcher',
+    goal='Find information about the latest AI trends',
+    backstory='An expert market researcher specializing in technology.',
+    tools=[siftq_tool],
+    verbose=True
+)
+
+# Create a task for the agent
+research_task = Task(
+    description='Search for the top 3 AI trends in 2024.',
+    expected_output='A JSON report summarizing the top 3 AI trends found.',
+    agent=researcher
+)
+
+# Form the crew and kick it off
+crew = Crew(
+    agents=[researcher],
+    tasks=[research_task],
+    verbose=2
+)
+
+result = crew.kickoff()
+print(result)
+```
+
+## Configuration Options
+
+The `SiftqSearchTool` accepts the following arguments during initialization or when calling the `run` method:
+
+- `query` (str): **Required**. The search query string.
+- `scope` (Literal["webpage", "document", "scholar", "image", "video", "podcast"], optional): The search scope. Defaults to `"webpage"`.
+- `api_key` (str, optional): The SiftQ API key. Falls back to the `SIFTQ_API_KEY` environment variable, then to a public free-tier key.
+- `include_summary` (bool, optional): Whether to include AI-generated summaries of each result. Defaults to `False`.
+- `include_raw_content` (bool, optional): Whether to fetch the raw content from each source page. Defaults to `False`.
+- `concise_snippet` (bool, optional): Whether to return concise snippets with exact original text matches. Defaults to `False`.
+- `max_results` (int, optional): The maximum number of results to return (1-100). Defaults to `5`.
+- `timeout` (int, optional): The request timeout in seconds. Defaults to `60`.
+
+## Advanced Usage
+
+You can configure the tool with custom parameters:
+
+```python
+# Search scholarly articles with AI summaries
+scholar_tool = SiftqSearchTool(
+    scope='scholar',
+    max_results=10,
+    include_summary=True
+)
+
+# Search webpages with full raw content
+deep_search_tool = SiftqSearchTool(
+    scope='webpage',
+    max_results=5,
+    include_raw_content=True,
+    include_summary=True
+)
+
+# Search for videos with concise snippets
+video_tool = SiftqSearchTool(
+    scope='video',
+    max_results=3,
+    concise_snippet=True
+)
+
+# The agent will use these defaults
+agent_with_custom_tool = Agent(
+    role="Advanced Researcher",
+    goal="Conduct detailed research across multiple content types",
+    tools=[scholar_tool, deep_search_tool, video_tool]
+)
+```
+
+## Features
+
+- **Neural-Ranked Search**: High-quality relevance using neural ranking algorithms
+- **Multiple Scopes**: Search webpages, documents, scholarly articles, images, videos, and podcasts
+- **AI Summaries**: Optionally include AI-generated summaries for each result
+- **Raw Content**: Fetch full page content when needed
+- **Concise Snippets**: Get text-matched snippets for precise answers
+- **Free Tier Available**: Public API key allows up to 100 searches per day
+- **Content Filtering**: Automatic content truncation prevents context window issues
+
+## Response Format
+
+The tool returns search results as a JSON string containing:
+- Search results with titles, URLs, and snippets
+- Optional AI summaries (when enabled)
+- Optional raw page content (when enabled)
+- Total result count and credits consumed
+- Scope-specific fields (authors, citations, duration, etc.)
+
+Content for each result is automatically truncated to prevent context window issues while maintaining the most relevant information.
