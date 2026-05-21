@@ -4,7 +4,7 @@ import os
 import time
 from typing import TYPE_CHECKING, Any, TypeGuard, TypedDict
 
-from crewai.tools import BaseTool
+from crewai.tools import BaseTool, EnvVar
 from pydantic import BaseModel, Field, model_validator
 
 
@@ -99,6 +99,25 @@ class DatabricksQueryTool(BaseTool):
 
     _workspace_client: WorkspaceClient | None = None
     package_dependencies: list[str] = Field(default_factory=lambda: ["databricks-sdk"])
+    env_vars: list[EnvVar] = Field(
+        default_factory=lambda: [
+            EnvVar(
+                name="DATABRICKS_HOST",
+                description="Databricks workspace URL (use with DATABRICKS_TOKEN, or set DATABRICKS_CONFIG_PROFILE instead).",
+                required=False,
+            ),
+            EnvVar(
+                name="DATABRICKS_TOKEN",
+                description="Databricks personal access token (pair with DATABRICKS_HOST).",
+                required=False,
+            ),
+            EnvVar(
+                name="DATABRICKS_CONFIG_PROFILE",
+                description="Databricks CLI profile name (alternative to DATABRICKS_HOST/TOKEN).",
+                required=False,
+            ),
+        ]
+    )
 
     def __init__(
         self,
