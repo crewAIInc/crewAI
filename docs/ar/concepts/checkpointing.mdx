@@ -5,7 +5,7 @@ icon: floppy-disk
 mode: "wide"
 ---
 
-الـ Checkpointing يحفظ لقطة من حالة التنفيذ اثناء التشغيل بحيث يمكن لطاقم او تدفق او وكيل الاستئناف بعد الفشل او التفرع الى فرع بديل.
+الـ Checkpointing يحفظ لقطة من حالة التنفيذ اثناء التشغيل بحيث يمكن لطاقم أو تدفق أو وكيل الاستئناف بعد الفشل أو التفرع إلى فرع بديل.
 
 <CardGroup cols={2}>
   <Card title="الشرح" icon="lightbulb" href="#الشرح">
@@ -39,7 +39,7 @@ mode: "wide"
 يتضمن CrewAI مزودين:
 
 - `JsonProvider` يكتب ملفا لكل نقطة حفظ. قابل للقراءة وسهل التفقد.
-- `SqliteProvider` يكتب الى قاعدة بيانات SQLite واحدة. افضل لنقاط الحفظ عالية التردد.
+- `SqliteProvider` يكتب إلى قاعدة بيانات SQLite واحدة. افضل لنقاط الحفظ عالية التردد.
 
 كلاهما يحذف اقدم نقاط الحفظ عند تحديد `max_checkpoints`.
 
@@ -49,7 +49,7 @@ mode: "wide"
 
 ### نموذج الوراثة
 
-`Crew` و`Flow` و`Agent` كلها تقبل وسيط `checkpoint`. يرث الابناء من الاب ما لم يحددوا قيمتهم الخاصة او يمرروا `False` للانسحاب. فعل الـ Checkpointing مرة واحدة على الطاقم وتشارك كل الوكلاء، او استبعد وكيلا واحدا بشكل انتقائي.
+`Crew` و`Flow` و`Agent` كلها تقبل وسيط `checkpoint`. يرث الابناء من الاب ما لم يحددوا قيمتهم الخاصة أو يمرروا `False` للانسحاب. فعل الـ Checkpointing مرة واحدة على الطاقم وتشارك كل الوكلاء، أو استبعد وكيلا واحدا بشكل انتقائي.
 
 ## درس تطبيقي: استئناف طاقم فاشل
 
@@ -103,7 +103,7 @@ mode: "wide"
     crew = Crew(agents=[...], tasks=[...], checkpoint=True)
     ```
 
-    يكتب الى `./.checkpoints/` عند كل `task_completed`.
+    يكتب إلى `./.checkpoints/` عند كل `task_completed`.
   </Accordion>
 
   <Accordion title="تخصيص التخزين والتردد" icon="sliders">
@@ -180,7 +180,7 @@ mode: "wide"
     ```
   </Accordion>
 
-  <Accordion title="التفرع الى فرع جديد" icon="code-branch">
+  <Accordion title="التفرع إلى فرع جديد" icon="code-branch">
     `fork()` يستعيد نقطة حفظ تحت نسب جديد بحيث لا يتصادم التشغيل الجديد مع الاصلي.
 
     ```python
@@ -192,7 +192,7 @@ mode: "wide"
     تسمية `branch` اختيارية؛ يتم انشاء واحدة اذا اغفلت.
   </Accordion>
 
-  <Accordion title="Checkpointing لـ Crew او Flow او Agent" icon="cubes">
+  <Accordion title="Checkpointing لـ Crew أو Flow أو Agent" icon="cubes">
     <Tabs>
       <Tab title="Crew">
         ```python
@@ -278,7 +278,7 @@ mode: "wide"
 
   <Accordion title="التصفح والاستئناف والتفرع من سطر الاوامر" icon="terminal">
     ```bash
-    crewai checkpoint                              # كشف تلقائي لـ .checkpoints/ او .checkpoints.db
+    crewai checkpoint                              # كشف تلقائي لـ .checkpoints/ أو .checkpoints.db
     crewai checkpoint --location ./my_checkpoints
     crewai checkpoint --location ./.checkpoints.db
     ```
@@ -321,7 +321,7 @@ mode: "wide"
 </ParamField>
 
 <ParamField path="provider" type="BaseProvider" default="JsonProvider()">
-  واجهة التخزين. `JsonProvider` او `SqliteProvider`.
+  واجهة التخزين. `JsonProvider` أو `SqliteProvider`.
 </ParamField>
 
 <ParamField path="max_checkpoints" type="int | None" default="None">
@@ -386,4 +386,4 @@ mode: "wide"
 | `crewai checkpoint` | تشغيل TUI؛ كشف التخزين تلقائيا. |
 | `crewai checkpoint --location <path>` | تشغيل TUI على موقع محدد. |
 | `crewai checkpoint list <path>` | سرد نقاط الحفظ. |
-| `crewai checkpoint info <path>` | تفقد ملف نقطة حفظ او اخر مدخل في قاعدة بيانات SQLite. |
+| `crewai checkpoint info <path>` | تفقد ملف نقطة حفظ أو اخر مدخل في قاعدة بيانات SQLite. |
