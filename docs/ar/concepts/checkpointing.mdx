@@ -5,20 +5,20 @@ icon: floppy-disk
 mode: "wide"
 ---
 
-الـ Checkpointing يحفظ لقطة من حالة التنفيذ اثناء التشغيل بحيث يمكن لطاقم أو تدفق أو وكيل الاستئناف بعد الفشل أو التفرع إلى فرع بديل.
+الـ Checkpointing يحفظ لقطة من حالة التنفيذ أثناء التشغيل بحيث يمكن لطاقم أو تدفق أو وكيل الاستئناف بعد الفشل أو التفرع إلى فرع بديل.
 
 <CardGroup cols={2}>
   <Card title="الشرح" icon="lightbulb" href="#الشرح">
-    كيف يعمل الـ Checkpointing: الاحداث والتخزين والوراثة.
+    كيف يعمل الـ Checkpointing: الأحداث والتخزين والوراثة.
   </Card>
   <Card title="درس تطبيقي" icon="graduation-cap" href="#درس-تطبيقي-استئناف-طاقم-فاشل">
-    دليل 5 دقائق: تشغيل، ايقاف، استئناف.
+    دليل 5 دقائق: تشغيل، إيقاف، استئناف.
   </Card>
   <Card title="ادلة عملية" icon="screwdriver-wrench" href="#ادلة-عملية">
     وصفات مركزة على المهام لسير العمل الشائع.
   </Card>
   <Card title="المرجع" icon="book" href="#المرجع">
-    `CheckpointConfig` والاحداث والمزودات وسطر الاوامر.
+    `CheckpointConfig` والأحداث والمزودات وسطر الأوامر.
   </Card>
 </CardGroup>
 
@@ -26,37 +26,37 @@ mode: "wide"
 
 ### ما هي نقطة الحفظ
 
-نقطة الحفظ هي لقطة متسلسلة من `RuntimeState` تكتب في نقطة معينة من التنفيذ. تسجل اي المهام اكتملت ومخرجاتها والمدخلات الحالية ومعرف نسب يحدد التشغيل.
+نقطة الحفظ هي لقطة متسلسلة من `RuntimeState` تكتب في نقطة معينة من التنفيذ. تسجل أي المهام اكتملت ومخرجاتها والمدخلات الحالية ومعرف نسب يحدد التشغيل.
 
-عند الاستعادة من نقطة حفظ، يعيد CrewAI بناء تلك الحالة ويتخطى العمل المكتمل ويستمر. عند التفرع، يستعيد CrewAI الحالة تحت نسب جديد بحيث لا يتداخل الفرع الجديد مع التشغيل الاصلي.
+عند الاستعادة من نقطة حفظ، يعيد CrewAI بناء تلك الحالة ويتخطى العمل المكتمل ويستمر. عند التفرع، يستعيد CrewAI الحالة تحت نسب جديد بحيث لا يتداخل الفرع الجديد مع التشغيل الأصلي.
 
 ### متى تكتب نقاط الحفظ
 
-الـ Checkpointing مدفوع بالاحداث. يشترك وقت التشغيل في الاحداث التي تحددها عبر `on_events` ويكتب نقطة حفظ عند اطلاق احدها. الافتراضي `task_completed` ينتج نقطة حفظ لكل مهمة منتهية — توازن معقول بين الدقة واستخدام القرص. الاحداث عالية التردد مثل `llm_call_completed` متاحة للاستعادة الدقيقة لكنها تكتب ملفات اكثر بكثير.
+الـ Checkpointing مدفوع بالأحداث. يشترك وقت التشغيل في الأحداث التي تحددها عبر `on_events` ويكتب نقطة حفظ عند إطلاق أحدها. الافتراضي `task_completed` ينتج نقطة حفظ لكل مهمة منتهية — توازن معقول بين الدقة واستخدام القرص. الأحداث عالية التردد مثل `llm_call_completed` متاحة للاستعادة الدقيقة لكنها تكتب ملفات أكثر بكثير.
 
 ### التخزين
 
 يتضمن CrewAI مزودين:
 
 - `JsonProvider` يكتب ملفا لكل نقطة حفظ. قابل للقراءة وسهل التفقد.
-- `SqliteProvider` يكتب إلى قاعدة بيانات SQLite واحدة. افضل لنقاط الحفظ عالية التردد.
+- `SqliteProvider` يكتب إلى قاعدة بيانات SQLite واحدة. أفضل لنقاط الحفظ عالية التردد.
 
-كلاهما يحذف اقدم نقاط الحفظ عند تحديد `max_checkpoints`.
+كلاهما يحذف أقدم نقاط الحفظ عند تحديد `max_checkpoints`.
 
 <Note>
-كتابة نقاط الحفظ بافضل جهد. فشل نقطة حفظ يسجل لكنه لا يقاطع التشغيل.
+كتابة نقاط الحفظ بأفضل جهد. فشل نقطة حفظ يسجل لكنه لا يقاطع التشغيل.
 </Note>
 
 ### نموذج الوراثة
 
-`Crew` و`Flow` و`Agent` كلها تقبل وسيط `checkpoint`. يرث الابناء من الاب ما لم يحددوا قيمتهم الخاصة أو يمرروا `False` للانسحاب. فعل الـ Checkpointing مرة واحدة على الطاقم وتشارك كل الوكلاء، أو استبعد وكيلا واحدا بشكل انتقائي.
+`Crew` و`Flow` و`Agent` كلها تقبل وسيط `checkpoint`. يرث الأبناء من الأب ما لم يحددوا قيمتهم الخاصة أو يمرروا `False` للانسحاب. فعل الـ Checkpointing مرة واحدة على الطاقم وتشارك كل الوكلاء، أو استبعد وكيلا واحدا بشكل انتقائي.
 
 ## درس تطبيقي: استئناف طاقم فاشل
 
 هذا الدليل يستغرق حوالي 5 دقائق. ستشغل طاقما بمهمتين، توقفه في المنتصف، ثم تستأنف من نقطة الحفظ المحفوظة.
 
 <Steps>
-  <Step title="انشئ الطاقم مع تفعيل الـ Checkpointing">
+  <Step title="أنشئ الطاقم مع تفعيل الـ Checkpointing">
     ```python
     from crewai import Agent, Crew, Task
 
@@ -73,12 +73,12 @@ mode: "wide"
     )
     ```
   </Step>
-  <Step title="شغله واوقفه بعد المهمة الاولى">
+  <Step title="شغله وأوقفه بعد المهمة الأولى">
     ```python
     result = crew.kickoff()
     ```
 
-    اضغط `Ctrl+C` بعد انتهاء المهمة الاولى. في `./.checkpoints/`، الملف بصيغة `<timestamp>_<uuid>.json` هو نقطة الحفظ.
+    اضغط `Ctrl+C` بعد انتهاء المهمة الأولى. في `./.checkpoints/`، الملف بصيغة `<timestamp>_<uuid>.json` هو نقطة الحفظ.
   </Step>
   <Step title="استأنف من نقطة الحفظ">
     ```python
@@ -98,7 +98,7 @@ mode: "wide"
 ## ادلة عملية
 
 <AccordionGroup>
-  <Accordion title="تفعيل الـ Checkpointing بالاعدادات الافتراضية" icon="play">
+  <Accordion title="تفعيل الـ Checkpointing بالإعدادات الافتراضية" icon="play">
     ```python
     crew = Crew(agents=[...], tasks=[...], checkpoint=True)
     ```
@@ -181,7 +181,7 @@ mode: "wide"
   </Accordion>
 
   <Accordion title="التفرع إلى فرع جديد" icon="code-branch">
-    `fork()` يستعيد نقطة حفظ تحت نسب جديد بحيث لا يتصادم التشغيل الجديد مع الاصلي.
+    `fork()` يستعيد نقطة حفظ تحت نسب جديد بحيث لا يتصادم التشغيل الجديد مع الأصلي.
 
     ```python
     config = CheckpointConfig(restore_from="./my_checkpoints/<file>.json")
@@ -189,7 +189,7 @@ mode: "wide"
     result = crew.kickoff(inputs={"strategy": "aggressive"})
     ```
 
-    تسمية `branch` اختيارية؛ يتم انشاء واحدة اذا اغفلت.
+    تسمية `branch` اختيارية؛ يتم إنشاء واحدة إذا أغفلت.
   </Accordion>
 
   <Accordion title="Checkpointing لـ Crew أو Flow أو Agent" icon="cubes">
@@ -250,7 +250,7 @@ mode: "wide"
   </Accordion>
 
   <Accordion title="كتابة نقطة حفظ يدويا" icon="code">
-    سجل معالجا على اي حدث واستدع `state.checkpoint()`.
+    سجل معالجا على أي حدث واستدع `state.checkpoint()`.
 
     <CodeGroup>
     ```python Sync
@@ -273,10 +273,10 @@ mode: "wide"
     ```
     </CodeGroup>
 
-    يتم تمرير وسيط `state` تلقائيا عندما يقبل المعالج ثلاثة معاملات. راجع [Event Listeners](/ar/concepts/event-listener) لقائمة الاحداث الكاملة.
+    يتم تمرير وسيط `state` تلقائيا عندما يقبل المعالج ثلاثة معاملات. راجع [Event Listeners](/ar/concepts/event-listener) لقائمة الأحداث الكاملة.
   </Accordion>
 
-  <Accordion title="التصفح والاستئناف والتفرع من سطر الاوامر" icon="terminal">
+  <Accordion title="التصفح والاستئناف والتفرع من سطر الأوامر" icon="terminal">
     ```bash
     crewai checkpoint                              # كشف تلقائي لـ .checkpoints/ أو .checkpoints.db
     crewai checkpoint --location ./my_checkpoints
@@ -287,11 +287,11 @@ mode: "wide"
       <img src="/images/checkpointing.png" alt="Checkpoint TUI" />
     </Frame>
 
-    اللوحة اليسرى تجمع نقاط الحفظ حسب الفرع؛ التفرعات تتداخل تحت ابيها. اختيار نقطة حفظ يعرض بياناتها الوصفية وحالة الكيان وتقدم المهام. **Resume** يكمل التشغيل؛ **Fork** يبدا فرعا جديدا.
+    اللوحة اليسرى تجمع نقاط الحفظ حسب الفرع؛ التفرعات تتداخل تحت أبيها. اختيار نقطة حفظ يعرض بياناتها الوصفية وحالة الكيان وتقدم المهام. **Resume** يكمل التشغيل؛ **Fork** يبدا فرعا جديدا.
 
     لوحة التفاصيل تعرض منطقتين قابلتين للتحرير:
 
-    - **Inputs** — مدخلات الـ kickoff الاصلية، معبأة مسبقا وقابلة للتحرير.
+    - **Inputs** — مدخلات الـ kickoff الأصلية، معبأة مسبقا وقابلة للتحرير.
     - **مخرجات المهام** — مخرجات المهام المكتملة. تحرير مخرج والضغط على **Fork** يبطل المهام التابعة لتعاد بالسياق المعدل.
 
     <Tip>
@@ -317,7 +317,7 @@ mode: "wide"
 </ParamField>
 
 <ParamField path="on_events" type="list[str]" default='["task_completed"]'>
-  انواع الاحداث التي تطلق نقطة حفظ. راجع [انواع الاحداث](#انواع-الاحداث).
+  أنواع الأحداث التي تطلق نقطة حفظ. راجع [أنواع الأحداث](#أنواع-الأحداث).
 </ParamField>
 
 <ParamField path="provider" type="BaseProvider" default="JsonProvider()">
@@ -325,7 +325,7 @@ mode: "wide"
 </ParamField>
 
 <ParamField path="max_checkpoints" type="int | None" default="None">
-  الحد الاقصى لنقاط الحفظ المحتفظ بها. الاقدم تحذف بعد كل كتابة.
+  الحد الاقصى لنقاط الحفظ المحتفظ بها. الأقدم تحذف بعد كل كتابة.
 </ParamField>
 
 <ParamField path="restore_from" type="Path | str | None" default="None">
@@ -337,11 +337,11 @@ mode: "wide"
 مقبولة في `Crew` و`Flow` و`Agent`.
 
 <ParamField path="None" type="افتراضي">
-  يرث من الاب.
+  يرث من الأب.
 </ParamField>
 
 <ParamField path="True" type="bool">
-  تفعيل بالاعدادات الافتراضية.
+  تفعيل بالإعدادات الافتراضية.
 </ParamField>
 
 <ParamField path="False" type="bool">
@@ -349,14 +349,14 @@ mode: "wide"
 </ParamField>
 
 <ParamField path="CheckpointConfig(...)" type="CheckpointConfig">
-  اعدادات مخصصة.
+  إعدادات مخصصة.
 </ParamField>
 
-### انواع الاحداث
+### أنواع الأحداث
 
 قيم شائعة لـ `on_events`:
 
-| حالة الاستخدام | الاحداث |
+| حالة الاستخدام | الأحداث |
 |:---------------|:--------|
 | بعد كل مهمة | `["task_completed"]` |
 | بعد كل طريقة في التدفق | `["method_execution_finished"]` |
@@ -366,7 +366,7 @@ mode: "wide"
 | كل شيء | `["*"]` |
 
 <Warning>
-`["*"]` والاحداث عالية التردد مثل `llm_call_completed` تكتب نقاط حفظ كثيرة وقد تضر بالاداء. استخدمها مع `max_checkpoints`.
+`["*"]` والأحداث عالية التردد مثل `llm_call_completed` تكتب نقاط حفظ كثيرة وقد تضر بالاداء. استخدمها مع `max_checkpoints`.
 </Warning>
 
 ### مزودات التخزين
@@ -379,11 +379,11 @@ mode: "wide"
   ملف قاعدة بيانات واحد في `location` مع journaling WAL.
 </ParamField>
 
-### سطر الاوامر
+### سطر الأوامر
 
 | الامر | الغرض |
 |:------|:------|
 | `crewai checkpoint` | تشغيل TUI؛ كشف التخزين تلقائيا. |
 | `crewai checkpoint --location <path>` | تشغيل TUI على موقع محدد. |
 | `crewai checkpoint list <path>` | سرد نقاط الحفظ. |
-| `crewai checkpoint info <path>` | تفقد ملف نقطة حفظ أو اخر مدخل في قاعدة بيانات SQLite. |
+| `crewai checkpoint info <path>` | تفقد ملف نقطة حفظ أو آخر مدخل في قاعدة بيانات SQLite. |
