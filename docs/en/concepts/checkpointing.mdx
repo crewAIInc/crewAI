@@ -26,9 +26,9 @@ Checkpointing saves a snapshot of execution state during a run so a crew, flow, 
 
 ### What a checkpoint is
 
-A checkpoint is a serialized snapshot of `RuntimeState` written at a point in execution. It records which tasks have completed, their outputs, the current inputs, and a lineage ID that identifies the run.
+A checkpoint captures everything CrewAI needs to recreate a run mid-flight: the full state of the crew, flow, or agent — configuration, agent memory and knowledge sources, task progress, intermediate outputs — alongside the kickoff inputs, the event history up to that point, and a lineage ID that ties the checkpoint to the run it came from.
 
-When you restore from a checkpoint, CrewAI rebuilds that state, skips already-completed work, and continues. When you fork from one, CrewAI restores the state under a new lineage so the new branch and the original run do not overwrite each other.
+Restoring rebuilds that state and continues. Completed tasks are skipped, memory and knowledge are rehydrated, and downstream work runs against the same outputs the original run produced. Forking does the same restore under a new lineage, so the new branch and the original run can write checkpoints side by side without overwriting each other.
 
 ### When checkpoints are written
 
@@ -172,14 +172,6 @@ This walkthrough takes ~5 minutes. You will run a two-task crew, kill it midway,
     ```
   </Accordion>
 
-  <Accordion title="Resume via the classmethod" icon="rotate-left">
-    ```python
-    config = CheckpointConfig(restore_from="./my_checkpoints/<file>.json")
-    crew = Crew.from_checkpoint(config)
-    result = crew.kickoff()
-    ```
-  </Accordion>
-
   <Accordion title="Fork into a new branch" icon="code-branch">
     `fork()` restores a checkpoint under a fresh lineage so the new run does not collide with the original.
 
@@ -225,10 +217,6 @@ This walkthrough takes ~5 minutes. You will run a two-task crew, kill it midway,
                 on_events=["method_execution_finished"],
             ),
         )
-        result = flow.kickoff()
-
-        config = CheckpointConfig(restore_from="./flow_cp/<file>.json")
-        flow = MyFlow.from_checkpoint(config)
         result = flow.kickoff()
         ```
       </Tab>
