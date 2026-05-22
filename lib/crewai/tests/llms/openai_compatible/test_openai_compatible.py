@@ -36,6 +36,10 @@ class TestProviderConfig:
         assert config.default_headers == {}
         assert config.api_key_required is True
         assert config.default_api_key is None
+        assert config.use_max_tokens_for_completion_tokens is False
+        assert config.supports_reasoning_effort is True
+        assert config.supports_strict_tool_schema is True
+        assert config.unsupported_params == ()
 
 
 class TestProviderRegistry:
@@ -94,6 +98,18 @@ class TestProviderRegistry:
         assert config.base_url == "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
         assert config.api_key_env == "DASHSCOPE_API_KEY"
         assert config.api_key_required is True
+
+    def test_nearai_config(self):
+        """Test NEAR AI Cloud provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["nearai"]
+        assert config.base_url == "https://cloud-api.near.ai/v1"
+        assert config.api_key_env == "NEARAI_API_KEY"
+        assert config.base_url_env == "NEARAI_BASE_URL"
+        assert config.api_key_required is True
+        assert config.use_max_tokens_for_completion_tokens is True
+        assert config.supports_reasoning_effort is False
+        assert config.supports_strict_tool_schema is False
+        assert config.unsupported_params == ("store",)
 
 
 class TestNormalizeOllamaBaseUrl:
@@ -223,6 +239,57 @@ class TestOpenAICompatibleCompletion:
         completion = OpenAICompatibleCompletion(model="llama3", provider="ollama")
         assert completion.supports_function_calling() is True
 
+    def test_nearai_remaps_max_completion_tokens(self):
+        """Test NEAR AI Cloud receives max_tokens instead of max_completion_tokens."""
+        with patch.dict(os.environ, {"NEARAI_API_KEY": "test-key"}):
+            completion = OpenAICompatibleCompletion(
+                model="anthropic/claude-haiku-4-5",
+                provider="nearai",
+                max_completion_tokens=100,
+            )
+            params = completion._prepare_completion_params(
+                messages=[{"role": "user", "content": "Hello"}]
+            )
+            assert params["max_tokens"] == 100
+            assert "max_completion_tokens" not in params
+
+    def test_nearai_drops_unsupported_params(self):
+        """Test NEAR AI Cloud does not receive unsupported OpenAI-only params."""
+        with patch.dict(os.environ, {"NEARAI_API_KEY": "test-key"}):
+            completion = OpenAICompatibleCompletion(
+                model="openai/o1",
+                provider="nearai",
+                reasoning_effort="low",
+                additional_params={"store": True},
+            )
+            params = completion._prepare_completion_params(
+                messages=[{"role": "user", "content": "Hello"}]
+            )
+            assert "reasoning_effort" not in params
+            assert "store" not in params
+
+    def test_nearai_removes_strict_from_tool_schema(self):
+        """Test NEAR AI Cloud tool schemas do not include strict mode."""
+        with patch.dict(os.environ, {"NEARAI_API_KEY": "test-key"}):
+            completion = OpenAICompatibleCompletion(
+                model="anthropic/claude-haiku-4-5", provider="nearai"
+            )
+            tools = [
+                {
+                    "name": "get_weather",
+                    "description": "Get the weather for a location",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {"location": {"type": "string"}},
+                        "required": ["location"],
+                    },
+                }
+            ]
+
+            converted_tools = completion._convert_tools_for_interference(tools)
+
+            assert "strict" not in converted_tools[0]["function"]
+
 
 class TestLLMIntegration:
     """Tests for LLM factory integration with OpenAI-compatible providers."""
@@ -270,6 +337,37 @@ class TestLLMIntegration:
             llm = LLM(model="dashscope/qwen-turbo")
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.provider == "dashscope"
+
+    def test_llm_creates_openai_compatible_for_nearai(self):
+        """Test LLM factory creates OpenAICompatibleCompletion for NEAR AI Cloud."""
+        with patch.dict(os.environ, {"NEARAI_API_KEY": "test-key"}):
+            llm = LLM(model="nearai/anthropic/claude-haiku-4-5")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "nearai"
+            assert llm.model == "anthropic/claude-haiku-4-5"
+            assert llm.base_url == "https://cloud-api.near.ai/v1"
+
+    def test_llm_creates_openai_compatible_for_nearai_with_explicit_provider(self):
+        """Test LLM factory routes to NEAR AI Cloud with explicit provider."""
+        with patch.dict(os.environ, {"NEARAI_API_KEY": "test-key"}):
+            llm = LLM(model="anthropic/claude-haiku-4-5", provider="nearai")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "nearai"
+            assert llm.model == "anthropic/claude-haiku-4-5"
+
+    def test_nearai_base_url_env_override(self):
+        """Test NEARAI_BASE_URL env var overrides default base URL."""
+        with patch.dict(
+            os.environ,
+            {
+                "NEARAI_API_KEY": "test-key",
+                "NEARAI_BASE_URL": "https://staging.cloud-api.near.ai/v1",
+            },
+        ):
+            completion = OpenAICompatibleCompletion(
+                model="anthropic/claude-haiku-4-5", provider="nearai"
+            )
+            assert completion.base_url == "https://staging.cloud-api.near.ai/v1"
 
     def test_llm_with_explicit_provider(self):
         """Test LLM with explicit provider parameter."""
