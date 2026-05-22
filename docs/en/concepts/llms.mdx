@@ -1189,6 +1189,43 @@ In this section, you'll find detailed examples that help you select, configure, 
     uv add 'crewai[litellm]'
     ```
   </Accordion>
+
+  <Accordion title="Auxen">
+    [Auxen](https://auxen.ai) hosts per-customer **dedicated** LLM endpoints (Llama 3.1/3.2, Qwen 2.5, Mistral, Gemma 2, Mixtral, Phi-3, Command R) with an OpenAI-compatible `/v1/chat/completions` API. Each instance is a dedicated GPU billed per-minute of runtime — no token charges, no monthly minimums.
+
+    Provision an instance from the [Auxen dashboard](https://auxen.ai) to obtain a per-instance base URL (`https://api.auxen.ai/v1/inst_xxx/v1`) and `auxk_*` API key. Set the following environment variables in your `.env` file:
+    ```toml Code
+    AUXEN_API_BASE=https://api.auxen.ai/v1/inst_xxx/v1
+    AUXEN_API_KEY=auxk_...
+    ```
+
+    Example usage in your CrewAI project — Auxen instances are OpenAI-wire-compatible, so configure via the `openai/` LiteLLM prefix with a custom base URL:
+    ```python Code
+    import os
+    from crewai import LLM
+
+    llm = LLM(
+        model="openai/llama-3.1-8b",  # or qwen2.5-14b, mistral-nemo-12b, etc.
+        api_key=os.environ["AUXEN_API_KEY"],
+        base_url=os.environ["AUXEN_API_BASE"],
+        temperature=0.7,
+    )
+    ```
+
+    <Info>
+      Auxen features:
+      - Dedicated GPU per instance (no shared inference fleet)
+      - OpenAI-compatible API (drop-in replacement)
+      - Per-minute billing, not per-token
+      - Open-source model catalog (Llama, Qwen, Mistral, Gemma, Mixtral, Phi, Command R)
+      - MCP server with OAuth 2.1 + PKCE for agent workloads
+    </Info>
+
+    **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
 </AccordionGroup>
 
 ## Streaming Responses
