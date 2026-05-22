@@ -443,16 +443,20 @@ class Crew(FlowTrackable, BaseModel):
                 if node.event.type == "task_started" and node.event.task_id:
                     started_task_ids.add(node.event.task_id)
 
+        is_hierarchical = self.process == Process.hierarchical
         resuming_task_agent_roles: set[str] = set()
         for task in self.tasks:
-            if (
-                task.output is None
-                and task.agent is not None
-                and str(task.id) in started_task_ids
-            ):
-                resuming_task_agent_roles.add(task.agent.role)
+            if task.output is not None or str(task.id) not in started_task_ids:
+                continue
+            executing_agent = self.manager_agent if is_hierarchical else task.agent
+            if executing_agent is not None:
+                resuming_task_agent_roles.add(executing_agent.role)
 
-        for agent in self.agents:
+        candidate_agents: list[BaseAgent] = list(self.agents)
+        if self.manager_agent is not None:
+            candidate_agents.append(self.manager_agent)
+
+        for agent in candidate_agents:
             agent.crew = self
             executor = agent.agent_executor
             if (
@@ -467,7 +471,7 @@ class Crew(FlowTrackable, BaseModel):
                 agent.agent_executor = None
         for task in self.tasks:
             if task.agent is not None:
-                for agent in self.agents:
+                for agent in candidate_agents:
                     if agent.role == task.agent.role:
                         task.agent = agent
                         if agent.agent_executor is not None and task.output is None:
@@ -536,28 +540,9 @@ class Crew(FlowTrackable, BaseModel):
         if state is None:
             return
 
-        # Restore crew scope and the in-progress task scope. Inner scopes
-        # (agent, llm, tool) are re-created by the executor on resume.
         stack: list[tuple[str, str]] = []
         if self._kickoff_event_id:
             stack.append((self._kickoff_event_id, "crew_kickoff_started"))
-
-        for task in self.tasks:
-            if task.output is not None:
-                continue
-            executor = task.agent.agent_executor if task.agent else None
-            if not (executor and executor._resuming):
-                break
-            task_id_str = str(task.id)
-            for node in state.event_record.nodes.values():
-                if (
-                    node.event.type == "task_started"
-                    and node.event.task_id == task_id_str
-                ):
-                    stack.append((node.event.event_id, "task_started"))
-                    break
-            break
-
         restore_event_scope(tuple(stack))
 
         # Restore last_event_id and emission counter from the record
