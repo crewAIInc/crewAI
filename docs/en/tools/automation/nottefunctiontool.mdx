@@ -1,0 +1,114 @@
+---
+title: Notte Function Tool
+description: Invoke a pre-deployed Notte Function (serverless workflow) from any CrewAI agent.
+icon: function
+mode: "wide"
+---
+
+
+# Overview
+
+The `NotteFunctionTool` lets a CrewAI agent invoke a [Notte Function](https://docs.notte.cc): a script deployed on the Notte platform as a parameterised, versioned, schedulable API endpoint.
+
+This is the complement to `NotteBrowserTool`. The browser tool drives a live session with natural-language instructions, deriving its plan from scratch every run. The function tool delegates to code that has already been deployed, reviewed, and tested. The agent picks *when* to invoke the function and *what variables to pass*; the function definition itself stays in source-controlled code on Notte, not in the LLM's prompt.
+
+Use cases that fit `NotteFunctionTool`:
+
+- Recurring data extraction where the page structure is known.
+- Pricing or inventory monitors run on a schedule.
+- Login + multi-step workflows that need deterministic, replayable execution.
+- Any web automation that should run identically across thousands of agent runs.
+
+## Prerequisites
+
+1. A [Notte](https://notte.cc) account with an API key.
+2. A deployed Notte Function. Functions are created on the Notte platform via the console or CLI; this tool invokes existing ones rather than defining new ones.
+3. The `notte-sdk` Python package installed.
+
+```bash
+uv add notte-sdk
+# or
+pip install notte-sdk
+```
+
+```bash
+export NOTTE_API_KEY="your-notte-api-key"
+```
+
+## Usage
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_tools import NotteFunctionTool
+
+# Bind to a specific deployed function at construction time. Give the tool
+# a description that explains, in plain English, what the function does and
+# which variables it expects, so the agent can decide when to call it.
+scrape_pricing = NotteFunctionTool(
+    function_id="fn_abc123",
+    description=(
+        "Run the deployed `scrape-pricing` function on Notte. "
+        "Takes `vendor` (str) and `tier` (str) as input variables. "
+        "Returns the latest pricing for that vendor and tier."
+    ),
+)
+
+analyst = Agent(
+    role="Pricing Analyst",
+    goal="Compile competitor pricing into a single weekly report",
+    backstory="I monitor SaaS pricing across the market.",
+    tools=[scrape_pricing],
+)
+
+task = Task(
+    description=(
+        "Run the pricing function for vendor='acme' and tier='pro', "
+        "then format the result as a markdown table."
+    ),
+    agent=analyst,
+)
+
+crew = Crew(agents=[analyst], tasks=[task])
+print(crew.kickoff())
+```
+
+## Combining with `NotteBrowserTool`
+
+The two tools compose cleanly: the browser tool for ad-hoc exploration, the function tool for production-grade execution of known tasks.
+
+```python
+from crewai_tools import NotteBrowserTool, NotteFunctionTool
+
+with NotteBrowserTool() as browser:
+    pricing = NotteFunctionTool(function_id="fn_abc123")
+
+    researcher = Agent(
+        role="Market Researcher",
+        goal="Discover new competitors and re-run pricing on known ones",
+        backstory="I survey the SaaS landscape.",
+        tools=[browser, pricing],
+    )
+    # The agent may use the browser tool to identify new vendors, then
+    # delegate the recurring pricing extraction to the deployed function.
+```
+
+## Configuration
+
+| Parameter | Default | Purpose |
+| --- | --- | --- |
+| `function_id` | required | Identifier of the deployed Notte Function. |
+| `api_key` | `os.getenv("NOTTE_API_KEY")` | API key for Notte. |
+| `decryption_key` | `None` | Optional decryption key for end-to-end-encrypted functions. |
+| `timeout` | `None` | Per-run timeout in seconds. Defaults to the SDK's built-in value. |
+| `raise_on_failure` | `False` | Raise on a failed run rather than returning an error result. |
+
+## Output
+
+Every call returns a JSON-encoded result with `success`, `data`, `error`, and `function_run_id` fields. `function_run_id` lets downstream calls retrieve full run metadata, logs, and replays via the Notte API.
+
+## Links
+
+- Notte Functions docs: <https://docs.notte.cc>
+- Notte product: <https://notte.cc>
+- Notte Python SDK on PyPI: [`notte-sdk`](https://pypi.org/project/notte-sdk/)
+- Companion tool: [`Notte Browser Tool`](/en/tools/web-scraping/nottebrowsertool)
