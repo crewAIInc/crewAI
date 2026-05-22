@@ -173,8 +173,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
     executor_type: Literal["experimental"] = "experimental"
     suppress_flow_events: bool = True  # always suppress for executor
-    llm: BaseLLM = Field(exclude=True)
-    prompt: SystemPromptResult | StandardPromptResult = Field(exclude=True)
+    llm: BaseLLM | None = Field(default=None, exclude=True)
+    prompt: SystemPromptResult | StandardPromptResult | None = Field(
+        default=None, exclude=True
+    )
     max_iter: int = Field(default=25, exclude=True)
     tools: list[CrewStructuredTool] = Field(default_factory=list, exclude=True)
     tools_names: str = Field(default="", exclude=True)
@@ -2585,6 +2587,11 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
             self._kickoff_input = inputs.get("input", "")
 
+            if self.prompt is None:
+                raise RuntimeError(
+                    "AgentExecutor.prompt is unset; the executor was not "
+                    "fully restored or initialized before execution."
+                )
             if "system" in self.prompt:
                 from crewai.llms.cache import mark_cache_breakpoint
 
@@ -2686,6 +2693,11 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
             self._kickoff_input = inputs.get("input", "")
 
+            if self.prompt is None:
+                raise RuntimeError(
+                    "AgentExecutor.prompt is unset; the executor was not "
+                    "fully restored or initialized before execution."
+                )
             if "system" in self.prompt:
                 from crewai.llms.cache import mark_cache_breakpoint
 

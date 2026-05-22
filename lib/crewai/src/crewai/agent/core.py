@@ -1411,6 +1411,7 @@ class Agent(BaseAgent):
 
         if _is_resuming_agent_executor(self.agent_executor):
             executor = self.agent_executor
+            executor.llm = cast(BaseLLM, self.llm)
             executor.tools = parsed_tools
             executor.tools_names = get_tool_names(parsed_tools)
             executor.tools_description = render_text_description_and_args(parsed_tools)
