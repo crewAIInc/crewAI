@@ -2587,10 +2587,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
             self._kickoff_input = inputs.get("input", "")
 
-            if self.prompt is None:
+            if self.llm is None or self.prompt is None:
                 raise RuntimeError(
-                    "AgentExecutor.prompt is unset; the executor was not "
-                    "fully restored or initialized before execution."
+                    "AgentExecutor.llm or .prompt is unset; the executor was "
+                    "not fully restored or initialized before execution."
                 )
             if "system" in self.prompt:
                 from crewai.llms.cache import mark_cache_breakpoint
@@ -2693,10 +2693,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
             self._kickoff_input = inputs.get("input", "")
 
-            if self.prompt is None:
+            if self.llm is None or self.prompt is None:
                 raise RuntimeError(
-                    "AgentExecutor.prompt is unset; the executor was not "
-                    "fully restored or initialized before execution."
+                    "AgentExecutor.llm or .prompt is unset; the executor was "
+                    "not fully restored or initialized before execution."
                 )
             if "system" in self.prompt:
                 from crewai.llms.cache import mark_cache_breakpoint
