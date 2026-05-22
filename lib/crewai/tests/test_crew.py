@@ -3966,6 +3966,33 @@ def test_fetch_inputs():
     )
 
 
+def test_fetch_inputs_ignores_literal_braces():
+    """fetch_inputs must only report real template variables.
+
+    Literal braces (embedded JSON examples, output schemas) and non-identifier
+    braces are not interpolated by ``interpolate_only``, so they must not be
+    reported as required inputs. Otherwise ``kickoff`` accepts inputs that are
+    silently ignored, while ``fetch_inputs`` advertises placeholders that can
+    never be filled.
+    """
+    agent = Agent(
+        role="Researcher",
+        goal="Research on {topic}.",
+        backstory='Reply as JSON like {"name": "value"}.',
+    )
+
+    task = Task(
+        description='Analyze {topic} and return {"result": [1, 2, 3]}.',
+        expected_output="Summary of {topic}. Ignore {123} markers.",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+
+    # Only the genuine identifier placeholder should be reported.
+    assert crew.fetch_inputs() == {"topic"}
+
+
 @pytest.mark.vcr()
 def test_task_tools_preserve_code_execution_tools():
     """

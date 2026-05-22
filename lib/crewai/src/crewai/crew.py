@@ -7,7 +7,6 @@ from copy import copy as shallow_copy
 from hashlib import md5
 import json
 from pathlib import Path
-import re
 from typing import (
     TYPE_CHECKING,
     Annotated,
@@ -142,7 +141,10 @@ from crewai.utilities.streaming import (
     signal_end,
     signal_error,
 )
-from crewai.utilities.string_utils import sanitize_tool_name
+from crewai.utilities.string_utils import (
+    TEMPLATE_VARIABLE_PATTERN,
+    sanitize_tool_name,
+)
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
@@ -1971,21 +1973,25 @@ class Crew(FlowTrackable, BaseModel):
         'role', 'goal', and 'backstory'.
 
         Returns a set of all discovered placeholder names.
+
+        Only valid template variables are reported — the same pattern used by
+        ``interpolate_only`` to substitute them. Literal braces (e.g. embedded
+        JSON examples or output schemas) are not interpolated, so they are not
+        treated as required inputs.
         """
-        placeholder_pattern = re.compile(r"\{(.+?)}")
         required_inputs: set[str] = set()
 
         # Scan tasks for inputs
         for task in self.tasks:
             # description and expected_output might contain e.g. {topic}, {user_name}
             text = f"{task.description or ''} {task.expected_output or ''}"
-            required_inputs.update(placeholder_pattern.findall(text))
+            required_inputs.update(TEMPLATE_VARIABLE_PATTERN.findall(text))
 
         # Scan agents for inputs
         for agent in self.agents:
             # role, goal, backstory might have placeholders like {role_detail}, etc.
             text = f"{agent.role or ''} {agent.goal or ''} {agent.backstory or ''}"
-            required_inputs.update(placeholder_pattern.findall(text))
+            required_inputs.update(TEMPLATE_VARIABLE_PATTERN.findall(text))
 
         return required_inputs
 
