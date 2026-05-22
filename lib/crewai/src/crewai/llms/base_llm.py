@@ -23,6 +23,7 @@ from pydantic import (
     ConfigDict,
     Field,
     PrivateAttr,
+    field_serializer,
     model_validator,
 )
 from typing_extensions import TypedDict
@@ -42,6 +43,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageStartedEvent,
 )
 from crewai.types.usage_metrics import UsageMetrics
+from crewai.utilities.pydantic_schema_utils import serialize_model_class
 
 
 try:
@@ -158,6 +160,10 @@ class BaseLLM(BaseModel, ABC):
         validation_alias=AliasChoices("stop", "stop_sequences"),
     )
     additional_params: dict[str, Any] = Field(default_factory=dict)
+
+    @field_serializer("response_format", when_used="json", check_fields=False)
+    def _serialize_response_format(self, value: Any) -> Any:
+        return serialize_model_class(value)
 
     def __setattr__(self, name: str, value: Any) -> None:
         if name in ("stop", "stop_sequences"):
