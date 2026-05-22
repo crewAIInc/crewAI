@@ -1025,7 +1025,7 @@ def test_gemini_crew_structured_output_with_tools():
         role="Calculator",
         goal="Perform calculations using available tools",
         backstory="You are a calculator assistant that uses tools to compute results.",
-        llm=LLM(model="google/gemini-2.0-flash-001"),
+        llm=LLM(model="google/gemini-2.5-flash"),
         tools=[add_numbers],
     )
 
