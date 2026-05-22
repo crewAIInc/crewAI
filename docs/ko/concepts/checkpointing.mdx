@@ -271,16 +271,33 @@ CrewAI에는 두 가지 프로바이더가 포함되어 있습니다:
     crewai checkpoint --location ./.checkpoints.db
     ```
 
-    <Frame>
-      <img src="/images/checkpointing.png" alt="Checkpoint TUI" />
+    <Frame caption="체크포인트 트리 — 브랜치와 포크가 부모 아래에 중첩됩니다.">
+      <img src="/images/checkpoint-tui-tree.png" alt="Checkpoint TUI tree view" />
     </Frame>
 
-    왼쪽 패널은 체크포인트를 브랜치별로 그룹화하며, 포크는 부모 아래에 중첩됩니다. 체크포인트를 선택하면 메타데이터, 엔티티 상태, 태스크 진행 상황이 표시됩니다. **Resume**은 실행을 계속하고, **Fork**는 새 브랜치를 시작합니다.
+    왼쪽 패널은 체크포인트를 브랜치별로 그룹화하며, 포크는 부모 아래에 중첩됩니다. 체크포인트를 선택하면 메타데이터, 엔티티 상태, 태스크 진행 상황이 있는 세부 정보 패널이 열립니다. **Resume**은 실행을 계속하고, **Fork**는 새 브랜치를 시작합니다.
+
+    <Frame caption="개요 탭 — 메타데이터, 엔티티 상태, 실행 요약.">
+      <img src="/images/checkpoint-tui-detail-overview.png" alt="Checkpoint detail overview tab" />
+    </Frame>
 
     세부 정보 패널에는 두 개의 편집 가능한 영역이 있습니다:
 
     - **Inputs** — 원래 kickoff의 입력으로, 미리 채워져 있으며 편집 가능합니다.
+
+      <Frame>
+        <img src="/images/checkpoint-tui-detail-inputs.png" alt="Editable kickoff inputs" />
+      </Frame>
+
     - **태스크 출력** — 완료된 태스크의 출력. 출력을 편집하고 **Fork**를 누르면 다운스트림 태스크가 무효화되어 수정된 컨텍스트로 다시 실행됩니다.
+
+      <Frame>
+        <img src="/images/checkpoint-tui-detail-tasks.png" alt="Editable task outputs" />
+      </Frame>
+
+    <Frame caption="포크 화면 — 선택한 체크포인트에서 새 브랜치를 확인합니다.">
+      <img src="/images/checkpoint-tui-details-fork.png" alt="Fork confirmation panel" />
+    </Frame>
 
     <Tip>
     "what if" 탐색에 유용합니다: 포크, 조정, 관찰.

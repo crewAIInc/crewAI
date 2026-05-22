@@ -271,16 +271,33 @@ mode: "wide"
     crewai checkpoint --location ./.checkpoints.db
     ```
 
-    <Frame>
-      <img src="/images/checkpointing.png" alt="Checkpoint TUI" />
+    <Frame caption="شجرة نقاط الحفظ — الفروع والتفرعات تتداخل تحت أبيها.">
+      <img src="/images/checkpoint-tui-tree.png" alt="Checkpoint TUI tree view" />
     </Frame>
 
-    اللوحة اليسرى تجمع نقاط الحفظ حسب الفرع؛ التفرعات تتداخل تحت أبيها. اختيار نقطة حفظ يعرض بياناتها الوصفية وحالة الكيان وتقدم المهام. **Resume** يكمل التشغيل؛ **Fork** يبدأ فرعا جديدا.
+    اللوحة اليسرى تجمع نقاط الحفظ حسب الفرع؛ التفرعات تتداخل تحت أبيها. اختيار نقطة حفظ يفتح لوحة التفاصيل مع بياناتها الوصفية وحالة الكيان وتقدم المهام. **Resume** يكمل التشغيل؛ **Fork** يبدأ فرعا جديدا.
+
+    <Frame caption="تبويب النظرة العامة — البيانات الوصفية وحالة الكيان وملخص التشغيل.">
+      <img src="/images/checkpoint-tui-detail-overview.png" alt="Checkpoint detail overview tab" />
+    </Frame>
 
     لوحة التفاصيل تعرض منطقتين قابلتين للتحرير:
 
     - **Inputs** — مدخلات الـ kickoff الأصلية، معبأة مسبقا وقابلة للتحرير.
+
+      <Frame>
+        <img src="/images/checkpoint-tui-detail-inputs.png" alt="Editable kickoff inputs" />
+      </Frame>
+
     - **مخرجات المهام** — مخرجات المهام المكتملة. تحرير مخرج والضغط على **Fork** يبطل المهام التابعة لتعاد بالسياق المعدل.
+
+      <Frame>
+        <img src="/images/checkpoint-tui-detail-tasks.png" alt="Editable task outputs" />
+      </Frame>
+
+    <Frame caption="عرض التفرع — تأكيد فرع جديد من نقطة الحفظ المختارة.">
+      <img src="/images/checkpoint-tui-details-fork.png" alt="Fork confirmation panel" />
+    </Frame>
 
     <Tip>
     مفيد لاستكشاف "ماذا لو": تفرع، عدل، راقب.

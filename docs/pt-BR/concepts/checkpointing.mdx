@@ -271,16 +271,33 @@ Este passo a passo leva cerca de 5 minutos. Voce executara uma crew de duas tare
     crewai checkpoint --location ./.checkpoints.db
     ```
 
-    <Frame>
-      <img src="/images/checkpointing.png" alt="Checkpoint TUI" />
+    <Frame caption="Arvore de checkpoints — branches e forks aninham sob seu pai.">
+      <img src="/images/checkpoint-tui-tree.png" alt="Checkpoint TUI tree view" />
     </Frame>
 
-    O painel esquerdo agrupa checkpoints por branch; forks aninham sob seu pai. Selecionar um checkpoint mostra seus metadados, estado da entidade e progresso das tarefas. **Resume** continua a execucao; **Fork** inicia uma nova branch.
+    O painel esquerdo agrupa checkpoints por branch; forks aninham sob seu pai. Selecionar um checkpoint abre o painel de detalhes com metadados, estado da entidade e progresso das tarefas. **Resume** continua a execucao; **Fork** inicia uma nova branch.
+
+    <Frame caption="Aba de visao geral — metadados, estado da entidade e resumo da execucao.">
+      <img src="/images/checkpoint-tui-detail-overview.png" alt="Checkpoint detail overview tab" />
+    </Frame>
 
     O painel de detalhes expoe duas areas editaveis:
 
     - **Inputs** — os inputs originais do kickoff, preenchidos e editaveis.
+
+      <Frame>
+        <img src="/images/checkpoint-tui-detail-inputs.png" alt="Editable kickoff inputs" />
+      </Frame>
+
     - **Saidas das tarefas** — saidas das tarefas concluidas. Editar uma saida e pressionar **Fork** invalida tarefas downstream para que sejam reexecutadas com o contexto modificado.
+
+      <Frame>
+        <img src="/images/checkpoint-tui-detail-tasks.png" alt="Editable task outputs" />
+      </Frame>
+
+    <Frame caption="Tela de fork — confirme uma nova branch a partir do checkpoint selecionado.">
+      <img src="/images/checkpoint-tui-details-fork.png" alt="Fork confirmation panel" />
+    </Frame>
 
     <Tip>
     Util para exploracao de cenarios: fork, ajuste, observe.

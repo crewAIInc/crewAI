@@ -271,16 +271,33 @@ This walkthrough takes ~5 minutes. You will run a two-task crew, kill it midway,
     crewai checkpoint --location ./.checkpoints.db
     ```
 
-    <Frame>
-      <img src="/images/checkpointing.png" alt="Checkpoint TUI" />
+    <Frame caption="Checkpoint tree — branches and forks nest under their parent.">
+      <img src="/images/checkpoint-tui-tree.png" alt="Checkpoint TUI tree view" />
     </Frame>
 
-    The left panel groups checkpoints by branch; forks nest under their parent. Selecting a checkpoint shows its metadata, entity state, and task progress. **Resume** continues the run; **Fork** starts a new branch.
+    The left panel groups checkpoints by branch; forks nest under their parent. Selecting a checkpoint opens the detail panel with metadata, entity state, and task progress. **Resume** continues the run; **Fork** starts a new branch.
+
+    <Frame caption="Overview tab — metadata, entity state, and run summary.">
+      <img src="/images/checkpoint-tui-detail-overview.png" alt="Checkpoint detail overview tab" />
+    </Frame>
 
     The detail panel exposes two editable areas:
 
     - **Inputs** — original kickoff inputs, pre-filled and editable.
+
+      <Frame>
+        <img src="/images/checkpoint-tui-detail-inputs.png" alt="Editable kickoff inputs" />
+      </Frame>
+
     - **Task outputs** — outputs of completed tasks. Editing an output and hitting **Fork** invalidates downstream tasks so they re-run against the modified context.
+
+      <Frame>
+        <img src="/images/checkpoint-tui-detail-tasks.png" alt="Editable task outputs" />
+      </Frame>
+
+    <Frame caption="Fork view — confirm a new branch from the selected checkpoint.">
+      <img src="/images/checkpoint-tui-details-fork.png" alt="Fork confirmation panel" />
+    </Frame>
 
     <Tip>
     Useful for "what if" exploration: fork, tweak, observe.
