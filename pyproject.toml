@@ -189,6 +189,7 @@ exclude-newer = "3 days"
 # authlib <1.6.11 has GHSA-jj8c-mmj3-mmgv (CSRF bypass in cache-based state storage).
 # pip <26.1.1 has GHSA-58qw-9mgm-455v (archive handling); OSV considers 26.1.1 unaffected.
 # paramiko <5.0.0 has GHSA-r374-rxx8-8654 (SHA-1 in rsakey.py); OSV considers 5.0.0 unaffected. Transitive via composio-core.
+# starlette <1.0.1 has PYSEC-2026-161 (missing Host header validation poisons request.url.path, bypassing path-based auth). Transitive via fastapi.
 # litellm 1.83.8+ hard-pins openai==2.24.0, missing openai.types.responses used by crewai;
 # override to >=2.30.0 (the version litellm 1.83.7 used) until upstream relaxes the pin.
 override-dependencies = [
@@ -209,6 +210,7 @@ override-dependencies = [
     "authlib>=1.6.11",
     "pip>=26.1.1",
     "paramiko>=5.0.0",
+    "starlette>=1.0.1",
 ]
 
 [tool.uv.workspace]
