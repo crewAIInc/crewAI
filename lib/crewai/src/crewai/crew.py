@@ -542,18 +542,26 @@ class Crew(FlowTrackable, BaseModel):
         if self._kickoff_event_id:
             stack.append((self._kickoff_event_id, "crew_kickoff_started"))
 
-        # Find the task_started event for the in-progress task (skipped on resume)
+        # Only push the restored task_started when the executor will actually
+        # resume mid-task and therefore skip re-emitting TaskStartedEvent.
+        # Otherwise a fresh task_started would be emitted, leaving the restored
+        # entry orphaned on the stack and producing an event pairing mismatch
+        # when crew_kickoff_completed eventually pops it.
         for task in self.tasks:
-            if task.output is None:
-                task_id_str = str(task.id)
-                for node in state.event_record.nodes.values():
-                    if (
-                        node.event.type == "task_started"
-                        and node.event.task_id == task_id_str
-                    ):
-                        stack.append((node.event.event_id, "task_started"))
-                        break
+            if task.output is not None:
+                continue
+            executor = task.agent.agent_executor if task.agent else None
+            if not (executor and executor._resuming):
                 break
+            task_id_str = str(task.id)
+            for node in state.event_record.nodes.values():
+                if (
+                    node.event.type == "task_started"
+                    and node.event.task_id == task_id_str
+                ):
+                    stack.append((node.event.event_id, "task_started"))
+                    break
+            break
 
         restore_event_scope(tuple(stack))
 
