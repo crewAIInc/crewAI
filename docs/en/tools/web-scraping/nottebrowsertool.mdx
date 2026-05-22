@@ -1,0 +1,130 @@
+---
+title: Notte Browser Tool
+description: Drive a managed remote browser session on the Notte browser-infrastructure platform from any CrewAI agent.
+icon: globe
+mode: "wide"
+---
+
+
+# Overview
+
+The `NotteBrowserTool` lets CrewAI agents interact with the live web through [Notte](https://notte.cc), a managed browser-infrastructure platform with a perception layer for natural-language action. Sessions are remote-hosted, so there is no local browser to install, run, or babysit.
+
+The tool exposes four capabilities through a single interface, selected via the `command_type` parameter:
+
+1. **Navigate**: open a URL in the session.
+2. **Act**: perform a natural-language action on the current page (e.g. "click the sign-up button").
+3. **Extract**: pull structured information out of the current page.
+4. **Observe**: list the interactive elements available on the current page.
+
+The shape mirrors the `StagehandTool`; the engine underneath is Notte's hosted browser + perception stack.
+
+## Prerequisites
+
+1. A [Notte](https://notte.cc) account with an API key.
+2. The `notte-sdk` Python package installed.
+
+Install the dependency:
+
+```bash
+uv add notte-sdk
+# or
+pip install notte-sdk
+```
+
+Set the API key:
+
+```bash
+export NOTTE_API_KEY="your-notte-api-key"
+```
+
+## Usage
+
+### Recommended: context manager
+
+The context-manager form starts a session lazily on the first call and stops it cleanly on exit, even if an exception is raised.
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_tools import NotteBrowserTool
+
+with NotteBrowserTool() as notte_tool:
+    researcher = Agent(
+        role="Web Researcher",
+        goal="Find and summarise information from websites",
+        backstory="I am an expert at finding things online.",
+        verbose=True,
+        tools=[notte_tool],
+    )
+
+    research_task = Task(
+        description=(
+            "Navigate to https://news.ycombinator.com and report the titles "
+            "of the top three posts as a numbered list."
+        ),
+        agent=researcher,
+    )
+
+    crew = Crew(
+        agents=[researcher],
+        tasks=[research_task],
+        verbose=True,
+    )
+
+    result = crew.kickoff()
+    print(result)
+```
+
+### Manual resource management
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_tools import NotteBrowserTool
+
+notte_tool = NotteBrowserTool()
+
+try:
+    researcher = Agent(
+        role="Web Researcher",
+        goal="Extract structured data from product pages",
+        backstory="I am good at reading product specs.",
+        tools=[notte_tool],
+    )
+    task = Task(
+        description="Visit https://example.com and extract the page heading.",
+        agent=researcher,
+    )
+    crew = Crew(agents=[researcher], tasks=[task])
+    print(crew.kickoff())
+finally:
+    notte_tool.close()
+```
+
+## Command types
+
+| `command_type` | Purpose | Required input |
+| --- | --- | --- |
+| `navigate` | Open a URL in the session. | `url` |
+| `act` (default) | Perform a natural-language action on the current page. | `instruction` |
+| `extract` | Pull structured data out of the current page. | `instruction` describing what to extract |
+| `observe` | Return the interactive elements on the current page. | (none) |
+
+`act` is executed via Notte's autonomous agent with a tight step budget (default `max_act_steps=3`), since Notte's low-level act surface is typed (action-ID based) rather than free-text.
+
+## Configuration
+
+| Parameter | Default | Purpose |
+| --- | --- | --- |
+| `api_key` | `os.getenv("NOTTE_API_KEY")` | API key for Notte. |
+| `headless` | `True` | Run the remote browser headless. |
+| `max_act_steps` | `3` | Step budget for `act` calls. Higher values allow more complex multi-step actions; lower values keep latency tight. |
+
+## Output
+
+Every call returns a JSON-encoded result with `success`, `data`, and `error` fields. `data` is a string for `navigate` and `act`, and a structured object for `extract` and `observe`.
+
+## Links
+
+- Notte product: <https://notte.cc>
+- Notte API and SDK reference: <https://docs.notte.cc>
+- Notte Python SDK on PyPI: [`notte-sdk`](https://pypi.org/project/notte-sdk/)

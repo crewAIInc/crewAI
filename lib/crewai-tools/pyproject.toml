@@ -106,6 +106,9 @@ mcp = [
 stagehand = [
     "stagehand>=0.4.1",
 ]
+notte = [
+    "notte-sdk>=1.8.19",
+]
 github = [
     "gitpython>=3.1.50,<4",
     "PyGithub==1.59.1",
