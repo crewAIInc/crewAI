@@ -317,7 +317,7 @@ mode: "wide"
 </ParamField>
 
 <ParamField path="on_events" type="list[CheckpointEventType]" default='["task_completed"]'>
-  أنواع الأحداث التي تطلق نقطة حفظ. `CheckpointEventType` هو `Literal` — مدقق الأنواع يكمل تلقائيا ويرفض القيم غير المدعومة. راجع [جميع الأحداث المدعومة](#جميع-الأحداث-المدعومة).
+  أنواع الأحداث التي تطلق نقطة حفظ. `CheckpointEventType` هو `Literal` — مدقق الأنواع يكمل تلقائيا ويرفض القيم غير المدعومة. راجع [أنواع الأحداث](#أنواع-الأحداث) للقائمة الكاملة.
 </ParamField>
 
 <ParamField path="provider" type="BaseProvider" default="JsonProvider()">
@@ -354,24 +354,13 @@ mode: "wide"
 
 ### أنواع الأحداث
 
-قيم شائعة لـ `on_events`:
-
-| حالة الاستخدام | الأحداث |
-|:---------------|:--------|
-| بعد كل مهمة | `["task_completed"]` |
-| بعد كل طريقة في التدفق | `["method_execution_finished"]` |
-| بعد تنفيذ الوكيل | `["agent_execution_completed"]`, `["lite_agent_execution_completed"]` |
-| عند اكتمال الطاقم فقط | `["crew_kickoff_completed"]` |
-| بعد كل استدعاء LLM | `["llm_call_completed"]` |
-| كل شيء | `["*"]` |
+يقبل `on_events` أي مجموعة من قيم `CheckpointEventType`. الافتراضي `["task_completed"]` يكتب نقطة حفظ لكل مهمة منتهية، و`["*"]` يطابق جميع الأحداث.
 
 <Warning>
 `["*"]` والأحداث عالية التردد مثل `llm_call_completed` تكتب نقاط حفظ كثيرة وقد تضر بالاداء. استخدمها مع `max_checkpoints`.
 </Warning>
 
-#### جميع الأحداث المدعومة
-
-<Expandable title="القائمة الكاملة لقيم CheckpointEventType">
+<Expandable title="جميع الأحداث المدعومة">
 
 - **Task** — `task_started`, `task_completed`, `task_failed`, `task_evaluation`
 - **Crew** — `crew_kickoff_started`, `crew_kickoff_completed`, `crew_kickoff_failed`, `crew_train_started`, `crew_train_completed`, `crew_train_failed`, `crew_test_started`, `crew_test_completed`, `crew_test_failed`, `crew_test_result`
@@ -389,7 +378,6 @@ mode: "wide"
 - **Logging** — `agent_logs_started`, `agent_logs_execution`
 - **A2A** — `a2a_delegation_started`, `a2a_delegation_completed`, `a2a_conversation_started`, `a2a_conversation_completed`, `a2a_message_sent`, `a2a_response_received`, `a2a_polling_started`, `a2a_polling_status`, `a2a_push_notification_registered`, `a2a_push_notification_received`, `a2a_push_notification_sent`, `a2a_push_notification_timeout`, `a2a_streaming_started`, `a2a_streaming_chunk`, `a2a_agent_card_fetched`, `a2a_authentication_failed`, `a2a_artifact_received`, `a2a_connection_error`, `a2a_server_task_started`, `a2a_server_task_completed`, `a2a_server_task_canceled`, `a2a_server_task_failed`, `a2a_parallel_delegation_started`, `a2a_parallel_delegation_completed`, `a2a_transport_negotiated`, `a2a_content_type_negotiated`, `a2a_context_created`, `a2a_context_expired`, `a2a_context_idle`, `a2a_context_completed`, `a2a_context_pruned`
 - **إشارات النظام** — `SIGTERM`, `SIGINT`, `SIGHUP`, `SIGTSTP`, `SIGCONT`
-- **Env** — `cc_env`, `codex_env`, `cursor_env`, `default_env`
 - **حرف بدل** — `"*"` يطابق جميع الأحداث.
 
 </Expandable>

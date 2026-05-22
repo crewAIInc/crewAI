@@ -317,7 +317,7 @@ This walkthrough takes ~5 minutes. You will run a two-task crew, kill it midway,
 </ParamField>
 
 <ParamField path="on_events" type="list[CheckpointEventType]" default='["task_completed"]'>
-  Event types that trigger a checkpoint. `CheckpointEventType` is a `Literal` — your type checker will autocomplete and reject unsupported values. See [all supported events](#all-supported-events).
+  Event types that trigger a checkpoint. `CheckpointEventType` is a `Literal` — your type checker will autocomplete and reject unsupported values. See [event types](#event-types) for the full list.
 </ParamField>
 
 <ParamField path="provider" type="BaseProvider" default="JsonProvider()">
@@ -354,24 +354,13 @@ Accepted by `Crew`, `Flow`, and `Agent`.
 
 ### Event types
 
-Common values for `on_events`:
-
-| Use case | Events |
-|:---------|:-------|
-| After each task | `["task_completed"]` |
-| After each flow method | `["method_execution_finished"]` |
-| After agent execution | `["agent_execution_completed"]`, `["lite_agent_execution_completed"]` |
-| On crew completion only | `["crew_kickoff_completed"]` |
-| After every LLM call | `["llm_call_completed"]` |
-| Everything | `["*"]` |
+`on_events` accepts any combination of `CheckpointEventType` values. The default `["task_completed"]` writes one checkpoint per finished task; `["*"]` matches every event.
 
 <Warning>
 `["*"]` and high-frequency events like `llm_call_completed` write many checkpoints and can degrade performance. Pair them with `max_checkpoints`.
 </Warning>
 
-#### All supported events
-
-<Expandable title="Full list of CheckpointEventType values">
+<Expandable title="All supported events">
 
 - **Task** — `task_started`, `task_completed`, `task_failed`, `task_evaluation`
 - **Crew** — `crew_kickoff_started`, `crew_kickoff_completed`, `crew_kickoff_failed`, `crew_train_started`, `crew_train_completed`, `crew_train_failed`, `crew_test_started`, `crew_test_completed`, `crew_test_failed`, `crew_test_result`
@@ -389,7 +378,6 @@ Common values for `on_events`:
 - **Logging** — `agent_logs_started`, `agent_logs_execution`
 - **A2A** — `a2a_delegation_started`, `a2a_delegation_completed`, `a2a_conversation_started`, `a2a_conversation_completed`, `a2a_message_sent`, `a2a_response_received`, `a2a_polling_started`, `a2a_polling_status`, `a2a_push_notification_registered`, `a2a_push_notification_received`, `a2a_push_notification_sent`, `a2a_push_notification_timeout`, `a2a_streaming_started`, `a2a_streaming_chunk`, `a2a_agent_card_fetched`, `a2a_authentication_failed`, `a2a_artifact_received`, `a2a_connection_error`, `a2a_server_task_started`, `a2a_server_task_completed`, `a2a_server_task_canceled`, `a2a_server_task_failed`, `a2a_parallel_delegation_started`, `a2a_parallel_delegation_completed`, `a2a_transport_negotiated`, `a2a_content_type_negotiated`, `a2a_context_created`, `a2a_context_expired`, `a2a_context_idle`, `a2a_context_completed`, `a2a_context_pruned`
 - **System signals** — `SIGTERM`, `SIGINT`, `SIGHUP`, `SIGTSTP`, `SIGCONT`
-- **Env** — `cc_env`, `codex_env`, `cursor_env`, `default_env`
 - **Wildcard** — `"*"` matches every event.
 
 </Expandable>

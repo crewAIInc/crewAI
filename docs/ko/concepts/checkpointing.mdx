@@ -317,7 +317,7 @@ CrewAI에는 두 가지 프로바이더가 포함되어 있습니다:
 </ParamField>
 
 <ParamField path="on_events" type="list[CheckpointEventType]" default='["task_completed"]'>
-  체크포인트를 트리거하는 이벤트 타입. `CheckpointEventType`은 `Literal`이므로 타입 체커가 자동 완성하고 지원되지 않는 값을 거부합니다. [지원되는 모든 이벤트](#지원되는-모든-이벤트) 참조.
+  체크포인트를 트리거하는 이벤트 타입. `CheckpointEventType`은 `Literal`이므로 타입 체커가 자동 완성하고 지원되지 않는 값을 거부합니다. 전체 목록은 [이벤트 타입](#이벤트-타입) 참조.
 </ParamField>
 
 <ParamField path="provider" type="BaseProvider" default="JsonProvider()">
@@ -354,24 +354,13 @@ CrewAI에는 두 가지 프로바이더가 포함되어 있습니다:
 
 ### 이벤트 타입
 
-`on_events`에 대한 일반적인 값:
-
-| 사용 사례 | 이벤트 |
-|:----------|:-------|
-| 각 태스크 완료 후 | `["task_completed"]` |
-| 각 플로우 메서드 완료 후 | `["method_execution_finished"]` |
-| 에이전트 실행 완료 후 | `["agent_execution_completed"]`, `["lite_agent_execution_completed"]` |
-| 크루 완료 시에만 | `["crew_kickoff_completed"]` |
-| 모든 LLM 호출 후 | `["llm_call_completed"]` |
-| 모든 이벤트 | `["*"]` |
+`on_events`는 `CheckpointEventType` 값의 임의 조합을 받습니다. 기본값 `["task_completed"]`는 완료된 태스크당 하나의 체크포인트를 기록하며, `["*"]`는 모든 이벤트와 일치합니다.
 
 <Warning>
 `["*"]` 및 `llm_call_completed`와 같은 고빈도 이벤트는 많은 체크포인트를 기록하고 성능을 저하시킬 수 있습니다. `max_checkpoints`와 함께 사용하세요.
 </Warning>
 
-#### 지원되는 모든 이벤트
-
-<Expandable title="CheckpointEventType 값 전체 목록">
+<Expandable title="지원되는 모든 이벤트">
 
 - **Task** — `task_started`, `task_completed`, `task_failed`, `task_evaluation`
 - **Crew** — `crew_kickoff_started`, `crew_kickoff_completed`, `crew_kickoff_failed`, `crew_train_started`, `crew_train_completed`, `crew_train_failed`, `crew_test_started`, `crew_test_completed`, `crew_test_failed`, `crew_test_result`
@@ -389,7 +378,6 @@ CrewAI에는 두 가지 프로바이더가 포함되어 있습니다:
 - **Logging** — `agent_logs_started`, `agent_logs_execution`
 - **A2A** — `a2a_delegation_started`, `a2a_delegation_completed`, `a2a_conversation_started`, `a2a_conversation_completed`, `a2a_message_sent`, `a2a_response_received`, `a2a_polling_started`, `a2a_polling_status`, `a2a_push_notification_registered`, `a2a_push_notification_received`, `a2a_push_notification_sent`, `a2a_push_notification_timeout`, `a2a_streaming_started`, `a2a_streaming_chunk`, `a2a_agent_card_fetched`, `a2a_authentication_failed`, `a2a_artifact_received`, `a2a_connection_error`, `a2a_server_task_started`, `a2a_server_task_completed`, `a2a_server_task_canceled`, `a2a_server_task_failed`, `a2a_parallel_delegation_started`, `a2a_parallel_delegation_completed`, `a2a_transport_negotiated`, `a2a_content_type_negotiated`, `a2a_context_created`, `a2a_context_expired`, `a2a_context_idle`, `a2a_context_completed`, `a2a_context_pruned`
 - **시스템 시그널** — `SIGTERM`, `SIGINT`, `SIGHUP`, `SIGTSTP`, `SIGCONT`
-- **Env** — `cc_env`, `codex_env`, `cursor_env`, `default_env`
 - **와일드카드** — `"*"`는 모든 이벤트와 일치합니다.
 
 </Expandable>
