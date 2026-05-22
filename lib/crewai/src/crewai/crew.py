@@ -542,11 +542,6 @@ class Crew(FlowTrackable, BaseModel):
         if self._kickoff_event_id:
             stack.append((self._kickoff_event_id, "crew_kickoff_started"))
 
-        # Only push the restored task_started when the executor will actually
-        # resume mid-task and therefore skip re-emitting TaskStartedEvent.
-        # Otherwise a fresh task_started would be emitted, leaving the restored
-        # entry orphaned on the stack and producing an event pairing mismatch
-        # when crew_kickoff_completed eventually pops it.
         for task in self.tasks:
             if task.output is not None:
                 continue
