@@ -806,6 +806,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
             if "toolUse" in tool_call:
                 tool_call = tool_call["toolUse"]
 
+            if not isinstance(tool_call, dict):
+                return None
+
             call_id = (
                 tool_call.get("id")
                 or tool_call.get("toolUseId")
