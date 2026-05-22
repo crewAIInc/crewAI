@@ -803,6 +803,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
             func_name = sanitize_tool_name(tool_call.name)
             return call_id, func_name, tool_call.input
         if isinstance(tool_call, dict):
+            if "toolUse" in tool_call:
+                tool_call = tool_call["toolUse"]
+
             call_id = (
                 tool_call.get("id")
                 or tool_call.get("toolUseId")
