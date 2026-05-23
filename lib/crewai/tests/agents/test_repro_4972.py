@@ -1,5 +1,4 @@
 import unittest
-from typing import Any
 from crewai.agents.crew_agent_executor import CrewAgentExecutor
 
 class TestParseNativeToolCall(unittest.TestCase):

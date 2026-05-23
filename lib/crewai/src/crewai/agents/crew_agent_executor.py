@@ -636,7 +636,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
             and "input" in first_item
         ):
             return True
-        if hasattr(first_item, "function_call") and first_item.function_call:
+        if isinstance(first_item, dict) and "toolUse" in first_item:
+            return True
+        if hasattr(first_item, "function_call") and first_item.function_call: 
             return True
         return False
 
