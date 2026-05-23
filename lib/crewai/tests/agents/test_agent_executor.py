@@ -950,6 +950,18 @@ class TestNativeToolExecution:
 
 
 class TestPlannerObserver:
+    def test_heuristic_observation_reflects_step_success(self):
+        from crewai.agents.planner_observer import PlannerObserver
+
+        ok = PlannerObserver.heuristic_observation(step_success=True, result="42")
+        assert ok.step_completed_successfully is True
+        assert ok.needs_full_replan is False
+
+        failed = PlannerObserver.heuristic_observation(
+            step_success=False, result="Error: timeout"
+        )
+        assert failed.step_completed_successfully is False
+
     def test_observe_fallback_is_conservative_on_llm_error(self):
         llm = Mock()
         llm.call.side_effect = RuntimeError("llm unavailable")
@@ -1332,19 +1344,93 @@ class TestResponseFormatWithKickoff:
 class TestReasoningEffort:
     """Test reasoning_effort levels in PlanningConfig.
 
-    - low:  observe() runs (validates step success), but skip decide/replan/refine
+    - low:  heuristic observation (no LLM), skip decide/replan/refine
     - medium: observe() runs, replan on failure only (mocked)
     - high: full observation pipeline with decide/replan/refine/goal-achieved
     """
 
+    def test_should_observe_steps_respects_config(self):
+        """observe_steps and reasoning_effort gate PlannerObserver LLM calls."""
+        from crewai.agent.planning_config import PlanningConfig
+        from crewai.experimental.agent_executor import AgentExecutor
+
+        executor = Mock(spec=AgentExecutor)
+        executor._should_observe_steps = (
+            AgentExecutor._should_observe_steps.__get__(executor)
+        )
+        executor.agent = Mock()
+
+        executor.agent.planning_config = PlanningConfig(reasoning_effort="low")
+        assert executor._should_observe_steps() is False
+
+        executor.agent.planning_config = PlanningConfig(
+            reasoning_effort="low", observe_steps=True
+        )
+        assert executor._should_observe_steps() is True
+
+        executor.agent.planning_config = PlanningConfig(
+            reasoning_effort="high", observe_steps=False
+        )
+        assert executor._should_observe_steps() is False
+
+        executor.agent.planning_config = PlanningConfig(reasoning_effort="medium")
+        assert executor._should_observe_steps() is True
+
+        executor.agent.planning_config = None
+        assert executor._should_observe_steps() is True
+
+    def test_reasoning_effort_low_skips_planner_observer_llm(self):
+        """Low effort must not call PlannerObserver.observe (no per-step LLM)."""
+        from crewai.agent.planning_config import PlanningConfig
+        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.utilities.planning_types import TodoItem, TodoList
+
+        executor = Mock(spec=AgentExecutor)
+        executor.agent = Mock()
+        executor.agent.planning_config = PlanningConfig(reasoning_effort="low")
+        executor.state = Mock()
+        executor.state.execution_log = [
+            {"type": "step_execution", "step_number": 1, "success": True},
+        ]
+
+        executor._should_observe_steps = (
+            AgentExecutor._should_observe_steps.__get__(executor)
+        )
+        executor._step_success_from_log = (
+            AgentExecutor._step_success_from_log.__get__(executor)
+        )
+        executor._observe_completed_step = (
+            AgentExecutor._observe_completed_step.__get__(executor)
+        )
+        executor._ensure_planner_observer = Mock()
+
+        todo = TodoItem(
+            step_number=1,
+            description="Step one",
+            status="running",
+            result="done",
+        )
+        executor.state.todos = TodoList(items=[todo])
+
+        observation = executor._observe_completed_step(
+            completed_step=todo,
+            result="done",
+            all_completed=[],
+            remaining_todos=[],
+        )
+
+        executor._ensure_planner_observer.assert_not_called()
+        assert observation.step_completed_successfully is True
+
     @pytest.mark.vcr()
     def test_reasoning_effort_low_skips_decide_and_replan(self):
-        """Low effort: observe runs but decide/replan/refine are never called.
+        """Low effort: heuristic observe, no decide/replan/refine LLM pipeline.
 
         Verifies that with reasoning_effort='low':
         1. The agent produces a correct result
-        2. The observation phase still runs (observations are stored)
+        2. Observations are still stored (heuristic path)
         3. The decide_next_action/refine/replan pipeline is bypassed
+        4. Per-step observation did not use the PlannerObserver LLM
         """
         from crewai import Agent, PlanningConfig
         from crewai.llm import LLM
@@ -1382,11 +1468,11 @@ class TestReasoningEffort:
         assert result is not None
         assert "10" in str(result)
 
-        # Verify observations were still collected (observe() ran)
+        # Verify observations were still collected (heuristic path, no LLM)
         executor = executor_ref[0]
         if executor is not None and executor.state.todos.items:
             assert len(executor.state.observations) > 0, (
-                "Low effort should still run observe() to validate steps"
+                "Low effort should still record heuristic observations"
             )
 
             # Verify no replan was triggered
@@ -1401,6 +1487,7 @@ class TestReasoningEffort:
             ]
             for log in observation_logs:
                 assert log.get("reasoning_effort") == "low"
+                assert log.get("llm_observation") is False
 
     @pytest.mark.vcr()
     def test_reasoning_effort_high_runs_full_observation_pipeline(self):

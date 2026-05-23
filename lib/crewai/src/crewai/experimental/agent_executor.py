@@ -407,6 +407,63 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             return int(config.step_timeout) if config.step_timeout is not None else None
         return None
 
+    def _should_observe_steps(self) -> bool:
+        """Whether to run PlannerObserver LLM calls after each step.
+
+        Explicit ``observe_steps=False`` disables observation at any effort level.
+        ``observe_steps=True`` forces it even at ``reasoning_effort="low"``.
+        When unset, ``low`` skips LLM observation; ``medium`` and ``high`` run it.
+        """
+        config = self.agent.planning_config
+        if config is not None and config.observe_steps is not None:
+            return bool(config.observe_steps)
+        if config is not None and config.reasoning_effort == "low":
+            return False
+        return True
+
+    def _step_success_from_log(self, step_number: int) -> bool | None:
+        """Read StepExecutor success flag from the execution audit log."""
+        for entry in reversed(self.state.execution_log):
+            if (
+                entry.get("type") == "step_execution"
+                and entry.get("step_number") == step_number
+            ):
+                success = entry.get("success")
+                if success is not None:
+                    return bool(success)
+        return None
+
+    def _observe_completed_step(
+        self,
+        *,
+        completed_step: TodoItem,
+        result: str,
+        all_completed: list[TodoItem],
+        remaining_todos: list[TodoItem],
+        step_success: bool | None = None,
+    ) -> StepObservation:
+        """Observe a completed step via LLM or a lightweight heuristic."""
+        from crewai.agents.planner_observer import PlannerObserver
+
+        if self._should_observe_steps():
+            observer = self._ensure_planner_observer()
+            return observer.observe(
+                completed_step=completed_step,
+                result=result,
+                all_completed=all_completed,
+                remaining_todos=remaining_todos,
+            )
+
+        if step_success is None:
+            step_success = self._step_success_from_log(completed_step.step_number)
+        if step_success is None:
+            step_success = True
+
+        return PlannerObserver.heuristic_observation(
+            step_success=step_success,
+            result=result,
+        )
+
     def _build_context_for_todo(self, todo: TodoItem) -> StepExecutionContext:
         """Build an isolated execution context for a single todo.
 
@@ -450,13 +507,13 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     ) -> Literal["step_observed_low", "step_observed_medium", "step_observed_high"]:
         """Observe step result and route based on reasoning_effort level.
 
-        Always runs PlannerObserver.observe() to validate whether the step
-        succeeded. Then routes to the appropriate handler based on the
-        agent's reasoning_effort setting:
+        Runs PlannerObserver LLM observation when enabled (medium/high by
+        default; low uses a heuristic with no extra LLM call). Then routes to
+        the appropriate handler based on the agent's reasoning_effort setting:
 
-        - "low": observe → mark complete → continue (no replan/refine)
-        - "medium": observe → replan on failure only (no refine)
-        - "high": observe → full decide pipeline (replan/refine/goal-achieved)
+        - "low": heuristic observe → mark complete → continue (no replan/refine)
+        - "medium": LLM observe → replan on failure only (no refine)
+        - "high": LLM observe → full decide pipeline (replan/refine/goal-achieved)
 
         Based on PLAN-AND-ACT Section 3.3.
         """
@@ -467,11 +524,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             # No todo — route to low handler which will just continue
             return "step_observed_low"
 
-        observer = self._ensure_planner_observer()
         all_completed = self.state.todos.get_completed_todos()
         remaining = self.state.todos.get_pending_todos()
 
-        observation = observer.observe(
+        observation = self._observe_completed_step(
             completed_step=current_todo,
             result=current_todo.result or "",
             all_completed=all_completed,
@@ -491,6 +547,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 "needs_full_replan": observation.needs_full_replan,
                 "goal_already_achieved": observation.goal_already_achieved,
                 "reasoning_effort": effort,
+                "llm_observation": self._should_observe_steps(),
             }
         )
 
@@ -1109,17 +1166,17 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         # Observe each completed step sequentially (observation updates shared state)
         effort = self._get_reasoning_effort()
-        observer = self._ensure_planner_observer()
 
-        for todo, _result in step_results:
+        for todo, step_result in step_results:
             all_completed = self.state.todos.get_completed_todos()
             remaining = self.state.todos.get_pending_todos()
 
-            observation = observer.observe(
+            observation = self._observe_completed_step(
                 completed_step=todo,
                 result=todo.result or "",
                 all_completed=all_completed,
                 remaining_todos=remaining,
+                step_success=step_result.success,
             )
 
             self.state.observations[todo.step_number] = observation
@@ -1134,6 +1191,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     "needs_full_replan": observation.needs_full_replan,
                     "goal_already_achieved": observation.goal_already_achieved,
                     "reasoning_effort": effort,
+                    "llm_observation": self._should_observe_steps(),
                 }
             )
 

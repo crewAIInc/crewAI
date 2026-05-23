@@ -379,8 +379,17 @@ class Agent(BaseAgent):
                 DeprecationWarning,
                 stacklevel=2,
             )
+            kwargs: dict[str, int] = {}
+            if self.max_reasoning_attempts is not None:
+                kwargs["max_attempts"] = self.max_reasoning_attempts
+            self.planning_config = PlanningConfig(**kwargs)
+
+        if self.planning and self.planning_config is None:
+            # Bare planning=True should be bounded and avoid per-step
+            # PlannerObserver LLM calls unless explicitly configured.
             self.planning_config = PlanningConfig(
-                max_attempts=self.max_reasoning_attempts,
+                reasoning_effort="low",
+                max_attempts=1,
             )
 
         return self
