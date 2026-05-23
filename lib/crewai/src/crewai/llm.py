@@ -466,7 +466,8 @@ class LLM(BaseLLM):
 
         if provider == "anthropic" or provider == "claude":
             return any(
-                model_lower.startswith(prefix) for prefix in ["claude-", "anthropic."]
+                model_lower.startswith(prefix)
+                for prefix in ["claude-", "anthropic.", "anthropic--"]
             )
 
         if provider == "gemini" or provider == "google":
@@ -2165,6 +2166,15 @@ class LLM(BaseLLM):
                 raise TypeError(
                     "Invalid message format. Each message must be a dict with 'role' and 'content' keys"
                 )
+
+        # Strip cache-breakpoint flags before sending to LiteLLM.
+        # Native providers already handle this via BaseLLM._format_messages,
+        # but the LiteLLM fallback path uses this method directly.
+        from crewai.llms.cache import strip_cache_breakpoint
+
+        messages = [dict(msg) for msg in messages]
+        for msg in messages:
+            strip_cache_breakpoint(msg)
 
         # Handle O1 models specially
         if "o1" in self.model.lower():
