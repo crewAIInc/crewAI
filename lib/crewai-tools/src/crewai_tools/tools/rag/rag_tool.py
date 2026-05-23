@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import os
-from typing import Any, Literal, cast
+from typing import Annotated, Any, Literal, cast
 
 from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
 from crewai.rag.embeddings.factory import build_embedder
@@ -8,8 +8,10 @@ from crewai.rag.embeddings.types import ProviderSpec
 from crewai.tools import BaseTool
 from pydantic import (
     BaseModel,
+    BeforeValidator,
     ConfigDict,
     Field,
+    PlainSerializer,
     TypeAdapter,
     ValidationError,
     field_validator,
@@ -100,6 +102,26 @@ class Adapter(BaseModel, ABC):
         """Add content to the knowledge base."""
 
 
+def _resolve_adapter(value: Any) -> Any:
+    """Validate the ``adapter`` field, returning a placeholder for dict input.
+
+    Adapter state is not round-tripped; the ``_ensure_adapter`` post-validator
+    rebuilds a fresh adapter from the tool's ``config``.
+    """
+    if isinstance(value, Adapter):
+        return value
+    if not isinstance(value, dict):
+        return value
+    return RagTool._AdapterPlaceholder()
+
+
+def _serialize_adapter(adapter: Any, info: Any) -> Any:
+    """Serialize the ``adapter`` field, dropping runtime state from the payload."""
+    if not isinstance(adapter, Adapter):
+        return adapter
+    return None
+
+
 class RagTool(BaseTool):
     class _AdapterPlaceholder(Adapter):
         def query(
@@ -123,7 +145,11 @@ class RagTool(BaseTool):
     similarity_threshold: float = 0.6
     limit: int = 5
     collection_name: str = "rag_tool_collection"
-    adapter: Adapter = Field(default_factory=_AdapterPlaceholder)
+    adapter: Annotated[
+        Adapter,
+        BeforeValidator(_resolve_adapter),
+        PlainSerializer(_serialize_adapter),
+    ] = Field(default_factory=_AdapterPlaceholder)
     config: RagToolConfig = Field(
         default_factory=RagToolConfig,
         description="Configuration format accepted by RagTool.",
