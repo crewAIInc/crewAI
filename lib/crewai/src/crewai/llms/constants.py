@@ -624,3 +624,33 @@ BEDROCK_MODELS: list[BedrockModels] = [
     "qwen.qwen3-coder-30b-a3b-v1:0",
     "twelvelabs.pegasus-1-2-v1:0",
 ]
+
+
+WatsonxModels: TypeAlias = Literal[
+    "ibm/granite-3-2b-instruct",
+    "ibm/granite-3-8b-instruct",
+    "ibm/granite-3-1-2b-instruct",
+    "ibm/granite-3-1-8b-instruct",
+    "ibm/granite-3-1-8b-base",
+    "ibm/granite-3-3-2b-instruct",
+    "ibm/granite-3-3-8b-instruct",
+    "ibm/granite-4-h-micro",
+    "ibm/granite-4-h-tiny",
+    "ibm/granite-4-h-small",
+    "ibm/granite-8b-code-instruct",
+    "ibm/granite-guardian-3-8b",
+]
+WATSONX_MODELS: list[WatsonxModels] = [
+    "ibm/granite-3-2b-instruct",
+    "ibm/granite-3-8b-instruct",
+    "ibm/granite-3-1-2b-instruct",
+    "ibm/granite-3-1-8b-instruct",
+    "ibm/granite-3-1-8b-base",
+    "ibm/granite-3-3-2b-instruct",
+    "ibm/granite-3-3-8b-instruct",
+    "ibm/granite-4-h-micro",
+    "ibm/granite-4-h-tiny",
+    "ibm/granite-4-h-small",
+    "ibm/granite-8b-code-instruct",
+    "ibm/granite-guardian-3-8b",
+]
