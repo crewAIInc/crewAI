@@ -2912,12 +2912,6 @@
       "humanized_name": "Search a CSV's content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -3902,9 +3896,7 @@
           }
         },
         "properties": {
-          "adapter": {
-            "$ref": "#/$defs/Adapter"
-          },
+          "adapter": {},
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -3964,12 +3956,6 @@
       "humanized_name": "Search a Code Docs content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -4954,9 +4940,7 @@
           }
         },
         "properties": {
-          "adapter": {
-            "$ref": "#/$defs/Adapter"
-          },
+          "adapter": {},
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -5641,12 +5625,6 @@
       "humanized_name": "Search a DOCX's content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -6631,9 +6609,7 @@
           }
         },
         "properties": {
-          "adapter": {
-            "$ref": "#/$defs/Adapter"
-          },
+          "adapter": {},
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -7926,12 +7902,6 @@
       "humanized_name": "Search a directory's content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -8916,9 +8886,7 @@
           }
         },
         "properties": {
-          "adapter": {
-            "$ref": "#/$defs/Adapter"
-          },
+          "adapter": {},
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -10762,12 +10730,6 @@
       "humanized_name": "Search a github repo's content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -11752,9 +11714,7 @@
           }
         },
         "properties": {
-          "adapter": {
-            "$ref": "#/$defs/Adapter"
-          },
+          "adapter": {},
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -12041,12 +12001,6 @@
       "humanized_name": "Search a JSON's content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -13031,9 +12985,7 @@
           }
         },
         "properties": {
-          "adapter": {
-            "$ref": "#/$defs/Adapter"
-          },
+          "adapter": {},
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -13316,12 +13268,6 @@
       "humanized_name": "Search a MDX's content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -14306,9 +14252,7 @@
           }
         },
         "properties": {
-          "adapter": {
-            "$ref": "#/$defs/Adapter"
-          },
+          "adapter": {},
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -14774,12 +14718,6 @@
       "humanized_name": "Search a database's table content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -15764,9 +15702,7 @@
           }
         },
         "properties": {
-          "adapter": {
-            "$ref": "#/$defs/Adapter"
-          },
+          "adapter": {},
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -15965,21 +15901,6 @@
               "description"
             ],
             "title": "EnvVar",
-            "type": "object"
-          },
-          "JsonResponseFormat": {
-            "description": "Response format requesting raw JSON output (e.g. ``{\"type\": \"json_object\"}``).",
-            "properties": {
-              "type": {
-                "const": "json_object",
-                "title": "Type",
-                "type": "string"
-              }
-            },
-            "required": [
-              "type"
-            ],
-            "title": "JsonResponseFormat",
             "type": "object"
           },
           "LLM": {
@@ -16210,16 +16131,6 @@
                 "title": "Reasoning Effort"
               },
               "response_format": {
-                "anyOf": [
-                  {
-                    "$ref": "#/$defs/JsonResponseFormat"
-                  },
-                  {},
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
                 "title": "Response Format"
               },
               "seed": {
@@ -17207,12 +17118,6 @@
       "humanized_name": "Search a PDF's content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -18197,9 +18102,7 @@
           }
         },
         "properties": {
-          "adapter": {
-            "$ref": "#/$defs/Adapter"
-          },
+          "adapter": {},
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -18906,12 +18809,6 @@
       "humanized_name": "Knowledge base",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -19896,9 +19793,7 @@
           }
         },
         "properties": {
-          "adapter": {
-            "$ref": "#/$defs/Adapter"
-          },
+          "adapter": {},
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -20994,12 +20889,6 @@
       "humanized_name": "Job Search",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -21984,9 +21873,7 @@
           }
         },
         "properties": {
-          "adapter": {
-            "$ref": "#/$defs/Adapter"
-          },
+          "adapter": {},
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -22462,12 +22349,6 @@
       "humanized_name": "Webpage to Markdown",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -23452,9 +23333,7 @@
           }
         },
         "properties": {
-          "adapter": {
-            "$ref": "#/$defs/Adapter"
-          },
+          "adapter": {},
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -24307,12 +24186,6 @@
       "humanized_name": "Search a txt's content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -25297,9 +25170,7 @@
           }
         },
         "properties": {
-          "adapter": {
-            "$ref": "#/$defs/Adapter"
-          },
+          "adapter": {},
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -26227,12 +26098,6 @@
       "humanized_name": "Search in a specific website",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -27217,9 +27082,7 @@
           }
         },
         "properties": {
-          "adapter": {
-            "$ref": "#/$defs/Adapter"
-          },
+          "adapter": {},
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -27279,12 +27142,6 @@
       "humanized_name": "Search a XML's content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -28269,9 +28126,7 @@
           }
         },
         "properties": {
-          "adapter": {
-            "$ref": "#/$defs/Adapter"
-          },
+          "adapter": {},
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -28331,12 +28186,6 @@
       "humanized_name": "Search a Youtube Channels content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -29321,9 +29170,7 @@
           }
         },
         "properties": {
-          "adapter": {
-            "$ref": "#/$defs/Adapter"
-          },
+          "adapter": {},
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -29383,12 +29230,6 @@
       "humanized_name": "Search a Youtube Video content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -30373,9 +30214,7 @@
           }
         },
         "properties": {
-          "adapter": {
-            "$ref": "#/$defs/Adapter"
-          },
+          "adapter": {},
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
