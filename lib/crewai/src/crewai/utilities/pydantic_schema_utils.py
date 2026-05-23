@@ -782,6 +782,20 @@ def _inline_top_level_ref(schema: dict[str, Any]) -> dict[str, Any]:
     return schema
 
 
+def serialize_model_class(value: Any) -> Any:
+    """Serialize a ``type[BaseModel]`` field value as its JSON schema.
+
+    Args:
+        value: A ``type[BaseModel]`` subclass, ``None``, or another union member.
+
+    Returns:
+        ``value.model_json_schema()`` for model classes, ``value`` otherwise.
+    """
+    if isinstance(value, type) and issubclass(value, BaseModel):
+        return value.model_json_schema()
+    return value
+
+
 def create_model_from_schema(  # type: ignore[no-any-unimported]
     json_schema: dict[str, Any],
     *,

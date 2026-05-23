@@ -23,6 +23,7 @@ from pydantic import (
     BaseModel,
     Field,
     PrivateAttr,
+    field_serializer,
     field_validator,
     model_validator,
 )
@@ -94,7 +95,10 @@ from crewai.utilities.guardrail import process_guardrail, serialize_guardrail_fo
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.llm_utils import create_llm
-from crewai.utilities.pydantic_schema_utils import generate_model_description
+from crewai.utilities.pydantic_schema_utils import (
+    generate_model_description,
+    serialize_model_class,
+)
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from crewai.utilities.types import LLMMessage
@@ -235,6 +239,11 @@ class LiteAgent(FlowTrackable, BaseModel):
     response_format: type[BaseModel] | None = Field(
         default=None, description="Pydantic model for structured output"
     )
+
+    @field_serializer("response_format", when_used="json")
+    def _serialize_response_format(self, value: Any) -> Any:
+        return serialize_model_class(value)
+
     verbose: bool = Field(
         default=False, description="Whether to print execution details"
     )
