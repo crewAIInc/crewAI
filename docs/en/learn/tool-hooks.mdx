@@ -9,6 +9,7 @@ Tool Call Hooks provide fine-grained control over tool execution during agent op
 ## Overview
 
 Tool hooks are executed at two critical points:
+
 - **Before Tool Call**: Modify inputs, validate parameters, or block execution
 - **After Tool Call**: Transform results, sanitize outputs, or log execution details
 
@@ -17,6 +18,7 @@ Tool hooks are executed at two critical points:
 ### Before Tool Call Hooks
 
 Executed before every tool execution, these hooks can:
+
 - Inspect and modify tool inputs
 - Block tool execution based on conditions
 - Implement approval gates for dangerous operations
@@ -24,6 +26,7 @@ Executed before every tool execution, these hooks can:
 - Log tool invocations
 
 **Signature:**
+
 ```python
 def before_hook(context: ToolCallHookContext) -> bool | None:
     # Return False to block execution
@@ -34,6 +37,7 @@ def before_hook(context: ToolCallHookContext) -> bool | None:
 ### After Tool Call Hooks
 
 Executed after every tool execution, these hooks can:
+
 - Modify or sanitize tool results
 - Add metadata or formatting
 - Log execution results
@@ -41,6 +45,7 @@ Executed after every tool execution, these hooks can:
 - Transform output formats
 
 **Signature:**
+
 ```python
 def after_hook(context: ToolCallHookContext) -> str | None:
     # Return modified result string
@@ -145,8 +150,257 @@ class MyProjCrew:
             tasks=self.tasks,
             process=Process.sequential,
             verbose=True
-        )
+    )
 ```
+
+## Provider-Based Guardrails
+
+If you want reusable pre-tool-call authorization without writing raw hook
+functions for each crew, CrewAI also exposes an optional `GuardrailProvider`
+seam on top of `before_tool_call`.
+
+This follows the same pattern used by frameworks such as Deerflow:
+
+- CrewAI defines the core seam
+- CrewAI ships a minimal built-in allowlist provider
+- external providers plug into the same interface
+
+This layer is optional and additive:
+
+- if you do not enable a guardrail, CrewAI tool execution behaves exactly as before
+- if you do enable one, CrewAI reuses the existing `before_tool_call` hook flow
+
+The core contract is intentionally small and synchronous today:
+
+- providers receive a normalized `GuardrailRequest`
+- providers return `allow` or `deny`
+- CrewAI maps that result onto the existing `before_tool_call` hook flow
+
+`before_tool_call` currently supports allow-or-block semantics only, so CrewAI
+does not add native `delegate`, `escalate`, or suspend/resume behavior here.
+Those workflows should be layered on top by provider packages or future runtime
+APIs, not guessed inside core.
+
+### GuardrailProvider Interface
+
+```python
+from crewai.hooks import GuardrailDecision, GuardrailProvider, GuardrailRequest
+
+
+class MyProvider:
+    name = "my-provider"
+
+    def evaluate(self, request: GuardrailRequest) -> GuardrailDecision:
+        if request.tool_name == "exec":
+            return GuardrailDecision(allow=False, reason="exec is not allowed")
+        return GuardrailDecision(allow=True)
+```
+
+Register it with:
+
+```python
+from crewai.hooks import enable_guardrail
+
+hook = enable_guardrail(MyProvider(), fail_closed=True)
+```
+
+`fail_closed=True` means provider errors block execution. If you prefer
+fail-open behavior during bootstrap or development:
+
+```python
+hook = enable_guardrail(MyProvider(), fail_closed=False)
+```
+
+When you no longer need it:
+
+```python
+from crewai.hooks import disable_guardrail
+
+disable_guardrail(hook)
+```
+
+### Built-In AllowlistGuardrailProvider
+
+CrewAI ships a minimal built-in provider for the most common case: allow or
+deny tools by name.
+
+```python
+from crewai.hooks import AllowlistGuardrailProvider, enable_guardrail
+
+provider = AllowlistGuardrailProvider(
+    allowed_tools=["read_file", "web_search"],
+    denied_tools=["exec"],
+)
+
+enable_guardrail(provider, fail_closed=True)
+```
+
+This provider is intentionally small and dependency-free. It is useful when you
+want a simple production safety boundary without bringing in an external policy
+engine. It works with CrewAI alone, with no additional provider package or
+remote service required.
+
+### Basic Runnable Example
+
+```python
+from crewai.hooks import AllowlistGuardrailProvider, disable_guardrail, enable_guardrail
+
+guardrail = enable_guardrail(
+    AllowlistGuardrailProvider(
+        allowed_tools=["read_file", "web_search"],
+        denied_tools=["delete_file", "exec"],
+    ),
+    fail_closed=True,
+)
+
+# ... run your crew here ...
+
+disable_guardrail(guardrail)
+```
+
+### Custom Provider Example
+
+```python
+from crewai.hooks import GuardrailDecision, GuardrailRequest, enable_guardrail
+
+
+class RoleAwareProvider:
+    name = "role-aware"
+
+    def evaluate(self, request: GuardrailRequest) -> GuardrailDecision:
+        if request.agent_role == "Research Agent" and request.tool_name == "delete_file":
+            return GuardrailDecision(allow=False, reason="research agents cannot delete files")
+        return GuardrailDecision(allow=True)
+
+
+enable_guardrail(RoleAwareProvider(), fail_closed=True)
+```
+
+### External OAP Provider Example
+
+CrewAI stays neutral here. It does **not** bundle Open Agent Passport (OAP) or
+any vendor-specific policy runtime. Instead, external providers can implement
+the same `GuardrailProvider` contract.
+
+[APort Agent Guardrails](https://github.com/aporthq/aport-agent-guardrails) is
+an example of that pattern. It ships an external
+`OAPGuardrailProvider` that evaluates tool calls against an
+[Open Agent Passport](https://github.com/aporthq/aport-spec) policy model.
+Use an external provider like this when you need more than simple tool-name
+allow/deny rules.
+
+Install it separately:
+
+```bash
+uvx --from aport-agent-guardrails aport setup --framework=crewai --integration-mode=native
+uv add aport-agent-guardrails
+```
+
+If you prefer the Node bootstrap, the equivalent one-time setup is:
+
+```bash
+npx -y @aporthq/aport-agent-guardrails crewai --integration-mode=native
+uv add aport-agent-guardrails
+```
+
+For CI or other non-interactive environments, the APort bootstrap command also
+supports explicit output and non-interactive mode:
+
+```bash
+APORT_CREWAI_CONFIG_DIR=.aport/crewai \
+APORT_NONINTERACTIVE=1 \
+uvx --from aport-agent-guardrails aport setup \
+  --framework=crewai \
+  --integration-mode=native
+uv add aport-agent-guardrails
+```
+
+The equivalent Node bootstrap is:
+
+```bash
+APORT_CREWAI_CONFIG_DIR=.aport/crewai \
+npx -y @aporthq/aport-agent-guardrails crewai \
+  --integration-mode=native \
+  --output .aport/crewai/aport/passport.json \
+  --non-interactive
+uv add aport-agent-guardrails
+```
+
+CrewAI runtime enforcement stays in Python. The `npx` command is only used for
+one-time passport/config bootstrap.
+
+```python
+from crewai.hooks import enable_guardrail
+from aport_guardrails.providers import OAPGuardrailProvider
+
+provider = OAPGuardrailProvider(framework="crewai")
+enable_guardrail(provider, fail_closed=True)
+```
+
+If you bootstrap APort into a custom config directory instead of the default
+`~/.aport/crewai/config.yaml`, pass it explicitly:
+
+```python
+provider = OAPGuardrailProvider(
+    framework="crewai",
+    config_path=".aport/crewai/config.yaml",
+)
+enable_guardrail(provider, fail_closed=True)
+```
+
+### Hosted Mode
+
+If an external provider is configured for hosted evaluation, the CrewAI code
+does not change. Configure the provider in its own config, for example:
+
+```yaml
+mode: api
+agent_id: ap_xxx
+```
+
+CrewAI stays agnostic to whether the provider evaluates locally or remotely.
+
+### Runtime Behavior
+
+When a provider returns `allow`, CrewAI continues with normal tool execution.
+When a provider returns `deny`, CrewAI blocks the call through the existing
+`before_tool_call` hook path and the underlying tool does not run.
+
+CrewAI currently surfaces the standard blocked-tool message from the hook layer
+rather than a provider-specific UI.
+
+### What External OAP Providers Can Enforce
+
+The built-in allowlist provider only answers “is this tool allowed by name?”.
+An external OAP provider can make richer decisions from the same tool call by
+evaluating the tool input against capabilities, assurance requirements, and
+limits defined in a passport and policy pack.
+
+For example, an external provider can answer questions such as:
+
+- can this agent create or merge a pull request in this repository, on this base branch, within review and size limits?
+- can this agent charge `USD 100` right now for this merchant, within its per-transaction and daily caps?
+- can this agent export this dataset only if the row count, destination, and PII handling stay within policy?
+
+CrewAI core still only receives an `allow` or `deny` result. The richer policy
+model stays inside the provider. That keeps CrewAI vendor-neutral while letting
+external providers enforce more than simple tool-name allowlists.
+
+In that setup:
+
+- CrewAI provides the hook seam
+- the APort package provides the OAP-aware provider
+- the passport format and policy evaluation stay outside CrewAI core
+- APort setup writes the local config and passport under `~/.aport/crewai`
+
+This keeps CrewAI open to APort, internal policy engines, and other provider
+implementations without coupling the framework to a single governance system.
+
+Note: the current CrewAI hook pipeline returns a generic blocked-tool message to
+the agent when any `before_tool_call` hook denies execution. Provider-specific
+`reason` values are still useful for logs, audits, and provider-side policy
+debugging, but they are not surfaced to the agent automatically by this core
+seam yet.
 
 ## Common Use Cases
 
@@ -577,20 +831,24 @@ def log_to_external_system(context: ToolCallHookContext) -> None:
 ## Troubleshooting
 
 ### Hook Not Executing
+
 - Verify hook is registered before crew execution
 - Check if previous hook returned `False` (blocks execution and subsequent hooks)
 - Ensure hook signature matches expected type
 
 ### Input Modifications Not Working
+
 - Use in-place modifications: `context.tool_input['key'] = value`
 - Don't replace the dict: `context.tool_input = {}`
 
 ### Result Modifications Not Working
+
 - Return the modified string from after hooks
 - Returning `None` keeps the original result
 - Ensure the tool actually returned a result
 
 ### Tool Blocked Unexpectedly
+
 - Check all before hooks for blocking conditions
 - Verify hook execution order
 - Add debug logging to identify which hook is blocking

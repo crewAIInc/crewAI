@@ -9,6 +9,7 @@ mode: "wide"
 ## نظرة عامة
 
 تُنفذ خطافات الأدوات في نقطتين حرجتين:
+
 - **قبل استدعاء الأداة**: تعديل المدخلات، التحقق من المعاملات، أو حظر التنفيذ
 - **بعد استدعاء الأداة**: تحويل النتائج، تنقية المخرجات، أو تسجيل تفاصيل التنفيذ
 
@@ -17,6 +18,7 @@ mode: "wide"
 ### خطافات ما قبل استدعاء الأداة
 
 تُنفذ قبل كل تنفيذ أداة، ويمكن لهذه الخطافات:
+
 - فحص وتعديل مدخلات الأداة
 - حظر تنفيذ الأداة بناءً على شروط
 - تنفيذ بوابات موافقة للعمليات الخطرة
@@ -24,6 +26,7 @@ mode: "wide"
 - تسجيل استدعاءات الأدوات
 
 **التوقيع:**
+
 ```python
 def before_hook(context: ToolCallHookContext) -> bool | None:
     # Return False to block execution
@@ -34,6 +37,7 @@ def before_hook(context: ToolCallHookContext) -> bool | None:
 ### خطافات ما بعد استدعاء الأداة
 
 تُنفذ بعد كل تنفيذ أداة، ويمكن لهذه الخطافات:
+
 - تعديل أو تنقية نتائج الأداة
 - إضافة بيانات وصفية أو تنسيق
 - تسجيل نتائج التنفيذ
@@ -41,6 +45,7 @@ def before_hook(context: ToolCallHookContext) -> bool | None:
 - تحويل تنسيقات المخرجات
 
 **التوقيع:**
+
 ```python
 def after_hook(context: ToolCallHookContext) -> str | None:
     # Return modified result string
@@ -147,6 +152,228 @@ class MyProjCrew:
             verbose=True
         )
 ```
+
+## حواجز الحماية المعتمدة على Provider
+
+إذا كنت تريد تفويضًا قابلاً لإعادة الاستخدام قبل استدعاء الأداة بدون كتابة
+دوال hook خام لكل crew، فإن CrewAI يوفّر أيضًا طبقة اختيارية من
+`GuardrailProvider` فوق `before_tool_call`.
+
+يتبع هذا النمط نفس الفكرة المستخدمة في أطر مثل Deerflow:
+
+- يعرّف CrewAI نقطة التوسعة الأساسية
+- يشحن CrewAI مزوّد allowlist مدمجًا وبسيطًا
+- يمكن للمزوّدات الخارجية أن تعمل عبر نفس العقد
+
+هذه الطبقة اختيارية وإضافية:
+
+- إذا لم تفعّل guardrail فسيبقى سلوك أدوات CrewAI كما هو
+- وإذا فعّلته، فسيعيد CrewAI استخدام تدفّق `before_tool_call` الحالي فقط
+
+العقد الأساسي صغير ومتزامن عمدًا اليوم:
+
+- يحصل المزوّد على `GuardrailRequest` موحّد
+- يعيد المزوّد `allow` أو `deny`
+- يربط CrewAI هذه النتيجة بتدفّق hook الحالي `before_tool_call`
+
+يدعم `before_tool_call` اليوم فقط دلالات السماح أو الحظر، لذلك لا يضيف CrewAI
+سلوك `delegate` أو `escalate` أو suspend/resume داخل هذا القلب.
+
+### واجهة GuardrailProvider
+
+```python
+from crewai.hooks import GuardrailDecision, GuardrailProvider, GuardrailRequest
+
+
+class MyProvider:
+    name = "my-provider"
+
+    def evaluate(self, request: GuardrailRequest) -> GuardrailDecision:
+        if request.tool_name == "exec":
+            return GuardrailDecision(allow=False, reason="exec غير مسموح")
+        return GuardrailDecision(allow=True)
+```
+
+التسجيل:
+
+```python
+from crewai.hooks import enable_guardrail
+
+hook = enable_guardrail(MyProvider(), fail_closed=True)
+```
+
+يعني `fail_closed=True` أن أخطاء المزوّد ستحظر التنفيذ. وإذا أردت fail-open
+أثناء الإعداد الأولي أو التطوير:
+
+```python
+hook = enable_guardrail(MyProvider(), fail_closed=False)
+```
+
+وعندما لا تحتاج إليه:
+
+```python
+from crewai.hooks import disable_guardrail
+
+disable_guardrail(hook)
+```
+
+### AllowlistGuardrailProvider المدمج
+
+يشحن CrewAI مزوّدًا مدمجًا وبسيطًا للحالة الأكثر شيوعًا: السماح أو المنع حسب
+اسم الأداة.
+
+```python
+from crewai.hooks import AllowlistGuardrailProvider, enable_guardrail
+
+provider = AllowlistGuardrailProvider(
+    allowed_tools=["read_file", "web_search"],
+    denied_tools=["exec"],
+)
+
+enable_guardrail(provider, fail_closed=True)
+```
+
+هذا المزوّد صغير وخالٍ من الاعتماديات. ويعمل مع CrewAI وحده، من دون الحاجة
+إلى حزمة provider إضافية أو خدمة بعيدة.
+
+### مثال أساسي قابل للتشغيل
+
+```python
+from crewai.hooks import AllowlistGuardrailProvider, disable_guardrail, enable_guardrail
+
+guardrail = enable_guardrail(
+    AllowlistGuardrailProvider(
+        allowed_tools=["read_file", "web_search"],
+        denied_tools=["delete_file", "exec"],
+    ),
+    fail_closed=True,
+)
+
+# ... شغّل crew هنا ...
+
+disable_guardrail(guardrail)
+```
+
+### مثال على Provider مخصص
+
+```python
+from crewai.hooks import GuardrailDecision, GuardrailRequest, enable_guardrail
+
+
+class RoleAwareProvider:
+    name = "role-aware"
+
+    def evaluate(self, request: GuardrailRequest) -> GuardrailDecision:
+        if request.agent_role == "Research Agent" and request.tool_name == "delete_file":
+            return GuardrailDecision(allow=False, reason="وكلاء البحث لا يمكنهم حذف الملفات")
+        return GuardrailDecision(allow=True)
+
+
+enable_guardrail(RoleAwareProvider(), fail_closed=True)
+```
+
+### مثال على OAP Provider خارجي
+
+يبقى CrewAI محايدًا هنا. فهو لا يضمّن Open Agent Passport (OAP) ولا أي محرك
+سياسات خاص بمورّد معين داخل القلب. بدلًا من ذلك يمكن للمزوّدات الخارجية تنفيذ
+نفس عقد `GuardrailProvider`.
+
+[APort Agent Guardrails](https://github.com/aporthq/aport-agent-guardrails) هو
+مثال على هذا النمط. إذ يوفّر `OAPGuardrailProvider` خارجيًا يقيّم استدعاءات
+الأدوات مقابل نموذج سياسات
+[Open Agent Passport](https://github.com/aporthq/aport-spec).
+استخدم مزوّدًا خارجيًا كهذا عندما تحتاج إلى أكثر من قواعد allow/deny البسيطة
+المبنية على اسم الأداة فقط.
+
+ثبّته بشكل منفصل:
+
+```bash
+uvx --from aport-agent-guardrails aport setup --framework=crewai --integration-mode=native
+uv add aport-agent-guardrails
+```
+
+وإذا فضّلت bootstrap عبر Node:
+
+```bash
+npx -y @aporthq/aport-agent-guardrails crewai --integration-mode=native
+uv add aport-agent-guardrails
+```
+
+ولـ CI أو البيئات غير التفاعلية:
+
+```bash
+APORT_CREWAI_CONFIG_DIR=.aport/crewai \
+APORT_NONINTERACTIVE=1 \
+uvx --from aport-agent-guardrails aport setup \
+  --framework=crewai \
+  --integration-mode=native
+uv add aport-agent-guardrails
+```
+
+يبقى تنفيذ CrewAI في وقت التشغيل داخل Python. ويُستخدم `npx` فقط للإعداد
+الأولي للـ passport/config.
+
+```python
+from crewai.hooks import enable_guardrail
+from aport_guardrails.providers import OAPGuardrailProvider
+
+provider = OAPGuardrailProvider(framework="crewai")
+enable_guardrail(provider, fail_closed=True)
+```
+
+وإذا كنت تستخدم مسار config مخصصًا:
+
+```python
+provider = OAPGuardrailProvider(
+    framework="crewai",
+    config_path=".aport/crewai/config.yaml",
+)
+enable_guardrail(provider, fail_closed=True)
+```
+
+### الوضع المستضاف
+
+إذا كان المزوّد الخارجي مهيأً للتقييم المستضاف، فلن تتغير شيفرة CrewAI.
+ويكفي ضبط المزوّد في ملف الإعداد الخاص به، مثلًا:
+
+```yaml
+mode: api
+agent_id: ap_xxx
+```
+
+يبقى CrewAI محايدًا تجاه ما إذا كان التقييم يتم محليًا أو عن بُعد.
+
+### سلوك وقت التشغيل
+
+عندما يعيد المزوّد نتيجة `allow`، يتابع CrewAI تنفيذ الأداة بشكل طبيعي.
+وعندما يعيد `deny`، يحظر CrewAI الاستدعاء عبر مسار hook الحالي
+`before_tool_call` ولا تُشغَّل الأداة نفسها.
+
+ويعرض CrewAI حاليًا رسالة الحظر القياسية من طبقة hook، وليس واجهة خاصة بكل
+مزوّد.
+
+في هذا الإعداد:
+
+- يوفّر CrewAI نقطة hook الأساسية
+- توفّر حزمة APort المزوّد الواعي بـ OAP
+- يبقى تنسيق passport وتقييم السياسة خارج قلب CrewAI
+
+### ما الذي يمكن لمزوّدات OAP الخارجية فرضه؟
+
+المزوّد المدمج من نوع allowlist يجيب فقط عن سؤال: "هل هذه الأداة مسموح بها
+بالاسم؟". أمّا مزوّد OAP الخارجي فيستطيع اتخاذ قرارات أغنى من استدعاء الأداة
+نفسه، عبر تقييم مدخلات الأداة مقابل القدرات ومتطلبات assurance والحدود
+المعرّفة في passport وpolicy pack.
+
+على سبيل المثال، يستطيع مزوّد خارجي الإجابة عن أسئلة مثل:
+
+- هل يمكن لهذا الوكيل إنشاء pull request أو دمجه في هذا المستودع وعلى هذا الفرع الأساسي ضمن حدود الحجم والمراجعات؟
+- هل يمكن لهذا الوكيل تحصيل `USD 100` الآن لهذا merchant ضمن الحد لكل معاملة والحد اليومي؟
+- هل يمكن لهذا الوكيل تصدير هذه البيانات فقط إذا بقي عدد الصفوف والوجهة ومعالجة PII ضمن حدود السياسة؟
+
+يبقى قلب CrewAI يتلقى نتيجة `allow` أو `deny` فقط. أمّا نموذج السياسة الأكثر
+غنى فيبقى داخل المزوّد. وهذا يحافظ على حياد CrewAI تجاه المورّدين، مع السماح
+للمزوّدات الخارجية بفرض ما هو أكثر من مجرد allowlist مبنية على أسماء الأدوات.
 
 ## حالات الاستخدام الشائعة
 
@@ -457,20 +684,24 @@ register_after_tool_call_hook(my_after_hook)
 ## استكشاف الأخطاء وإصلاحها
 
 ### الخطاف لا يُنفذ
+
 - تحقق من أن الخطاف مسجل قبل تنفيذ الطاقم
 - تحقق مما إذا كان خطاف سابق أرجع `False` (يحظر التنفيذ والخطافات اللاحقة)
 - تأكد من أن توقيع الخطاف يطابق النوع المتوقع
 
 ### تعديلات المدخلات لا تعمل
+
 - استخدم التعديلات في المكان: `context.tool_input['key'] = value`
 - لا تستبدل القاموس: `context.tool_input = {}`
 
 ### تعديلات النتائج لا تعمل
+
 - أرجع السلسلة النصية المعدلة من خطافات ما بعد
 - إرجاع `None` يحتفظ بالنتيجة الأصلية
 - تأكد من أن الأداة أرجعت نتيجة فعلاً
 
 ### أداة محظورة بشكل غير متوقع
+
 - تحقق من جميع خطافات ما قبل بحثاً عن شروط حظر
 - تحقق من ترتيب تنفيذ الخطافات
 - أضف تسجيل تصحيح لتحديد الخطاف الذي يحظر
