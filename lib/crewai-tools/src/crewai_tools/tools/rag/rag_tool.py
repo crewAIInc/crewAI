@@ -103,16 +103,16 @@ class Adapter(BaseModel, ABC):
 
 
 def _resolve_adapter(value: Any) -> Any:
-    """Validate the ``adapter`` field, returning a placeholder for dict input.
+    """Validate the ``adapter`` field, returning a placeholder for dict/None input.
 
     Adapter state is not round-tripped; the ``_ensure_adapter`` post-validator
     rebuilds a fresh adapter from the tool's ``config``.
     """
     if isinstance(value, Adapter):
         return value
-    if not isinstance(value, dict):
-        return value
-    return RagTool._AdapterPlaceholder()
+    if value is None or isinstance(value, dict):
+        return RagTool._AdapterPlaceholder()
+    return value
 
 
 def _serialize_adapter(adapter: Any, info: Any) -> Any:
@@ -148,7 +148,7 @@ class RagTool(BaseTool):
     adapter: Annotated[
         Adapter,
         BeforeValidator(_resolve_adapter),
-        PlainSerializer(_serialize_adapter),
+        PlainSerializer(_serialize_adapter, when_used="json"),
     ] = Field(default_factory=_AdapterPlaceholder)
     config: RagToolConfig = Field(
         default_factory=RagToolConfig,
