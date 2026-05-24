@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-
 from datetime import datetime
 from typing import Any, Optional, Protocol, runtime_checkable
 
@@ -181,8 +180,6 @@ class StorageBackend(Protocol):
         """Delete memories asynchronously."""
         ...
 
-
-
 class RedisStorageBackend:
     """Distributed Redis storage backend implementing the StorageBackend protocol."""
 
@@ -206,6 +203,8 @@ class RedisStorageBackend:
             db=db,
             password=password,
             decode_responses=True,
+            socket_connect_timeout=5.0,
+            socket_timeout=5.0,
         )
 
     def _get_key(self, record_id: str) -> str:
@@ -218,12 +217,6 @@ class RedisStorageBackend:
                     record_json = record.model_dump_json()
                 else:
                     record_data = record.__dict__.copy()
-                    # Fix: Handle all possible datetime fields dynamically
-                    for dt_field in ("created_at", "last_accessed"):
-                        if isinstance(record_data.get(dt_field), datetime):
-                            record_data[dt_field] = record_data[
-                                dt_field
-                            ].isoformat()
                     record_json = json.dumps(record_data, default=str)
 
                 pipe.set(self._get_key(record.id), record_json)
@@ -250,15 +243,14 @@ class RedisStorageBackend:
         older_than: datetime | None = None,
         metadata_filter: dict[str, Any] | None = None,
     ) -> int:
-        # Fix: Fail fast for unsupported filters to avoid hidden misuse
         if (
-            scope_prefix is not None
-            or categories is not None
+            categories is not None
             or older_than is not None
             or metadata_filter is not None
+            or (scope_prefix is not None and not record_ids)
         ):
             raise NotImplementedError(
-                "RedisStorageBackend.delete currently supports only record_ids."
+                "RedisStorageBackend.delete currently supports only record_ids filtering."
             )
 
         if record_ids:
@@ -277,7 +269,6 @@ class RedisStorageBackend:
         limit: int = 10,
         min_score: float = 0.0,
     ) -> list[tuple[MemoryRecord, float]]:
-        # Fix: Raise explicit NotImplementedError instead of returning silent empty data
         raise NotImplementedError(
             "RedisStorageBackend.search is not implemented yet."
         )
@@ -310,7 +301,6 @@ class RedisStorageBackend:
         )
 
     def count(self, scope_prefix: str | None = None) -> int:
-        # Fix: Handle scope_prefix guarding safely
         if scope_prefix is not None:
             raise NotImplementedError("Scoped count is not implemented yet.")
         count = 0
@@ -319,16 +309,18 @@ class RedisStorageBackend:
         return count
 
     def reset(self, scope_prefix: str | None = None) -> None:
-        # Fix: Prevent accidental global wiping when scoped reset is invoked
         if scope_prefix is not None:
             raise NotImplementedError("Scoped reset is not implemented yet.")
-        keys_to_delete = [
-            key for key in self.client.scan_iter("crewai:memory:*")
-        ]
-        if keys_to_delete:
-            self.client.delete(*keys_to_delete)
+        batch: list[str] = []
+        for key in self.client.scan_iter("crewai:memory:*"):
+            batch.append(key)
+            if len(batch) == 500:
+                self.client.delete(*batch)
+                batch.clear()
+        if batch:
+            self.client.delete(*batch)
 
-    # --- Async Implementations with thread offloading to avoid blocking ---
+    # --- Async Implementations with thread offloading ---
     async def asave(self, records: list[MemoryRecord]) -> None:
         await asyncio.to_thread(self.save, records)
 
