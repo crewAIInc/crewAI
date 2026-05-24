@@ -349,6 +349,12 @@ def embed_texts(embedder: Any, texts: list[str]) -> list[list[float]]:
     return embeddings
 
 
+def _as_utc(dt: datetime) -> datetime:
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
 def compute_composite_score(
     record: MemoryRecord,
     semantic_score: float,
@@ -368,7 +374,7 @@ def compute_composite_score(
         Tuple of (composite_score, match_reasons). match_reasons includes
         "semantic" always; "recency" if decay > 0.5; "importance" if record.importance > 0.5.
     """
-    age_seconds = (datetime.now(timezone.utc) - record.created_at).total_seconds()
+    age_seconds = (datetime.now(timezone.utc) - _as_utc(record.created_at)).total_seconds()
     age_days = max(age_seconds / 86400.0, 0.0)
     decay = 0.5 ** (age_days / config.recency_half_life_days)
 

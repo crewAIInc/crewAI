@@ -493,6 +493,21 @@ def test_composite_score_old_memory_decayed() -> None:
     assert "recency" not in reasons  # decay 0.25 is not > 0.5
 
 
+def test_composite_score_accepts_legacy_naive_datetime() -> None:
+    """Legacy records with naive UTC datetimes still score without type errors."""
+    config = MemoryConfig()
+    record = MemoryRecord(
+        content="legacy",
+        scope="/",
+        created_at=datetime.utcnow(),
+    )
+
+    score, reasons = compute_composite_score(record, 0.7, config)
+
+    assert score > 0
+    assert "semantic" in reasons
+
+
 def test_composite_score_reranks_results(
     tmp_path: Path, mock_embedder: MagicMock
 ) -> None:
