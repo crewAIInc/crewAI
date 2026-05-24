@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 
 from datetime import datetime
@@ -181,6 +182,7 @@ class StorageBackend(Protocol):
         ...
 
 
+
 class RedisStorageBackend:
     """Distributed Redis storage backend implementing the StorageBackend protocol."""
 
@@ -193,10 +195,10 @@ class RedisStorageBackend:
     ):
         try:
             import redis
-        except ImportError:
+        except ImportError as err:
             raise ImportError(
                 "Please install the redis package to use RedisStorageBackend: `pip install redis`"
-            )
+            ) from err
 
         self.client = redis.Redis(
             host=host,
@@ -212,18 +214,17 @@ class RedisStorageBackend:
     def save(self, records: list[MemoryRecord]) -> None:
         with self.client.pipeline() as pipe:
             for record in records:
-                # Use model_dump_json if available for robust Pydantic v2 serialization
                 if hasattr(record, "model_dump_json"):
                     record_json = record.model_dump_json()
                 else:
                     record_data = record.__dict__.copy()
-                    if "created_at" in record_data and isinstance(
-                        record_data["created_at"], datetime
-                    ):
-                        record_data["created_at"] = record_data[
-                            "created_at"
-                        ].isoformat()
-                    record_json = json.dumps(record_data)
+                    # Fix: Handle all possible datetime fields dynamically
+                    for dt_field in ("created_at", "last_accessed"):
+                        if isinstance(record_data.get(dt_field), datetime):
+                            record_data[dt_field] = record_data[
+                                dt_field
+                            ].isoformat()
+                    record_json = json.dumps(record_data, default=str)
 
                 pipe.set(self._get_key(record.id), record_json)
             pipe.execute()
@@ -233,10 +234,9 @@ class RedisStorageBackend:
         if not data:
             return None
         raw_data = json.loads(data)
-        if "created_at" in raw_data and isinstance(raw_data["created_at"], str):
-            raw_data["created_at"] = datetime.fromisoformat(
-                raw_data["created_at"]
-            )
+        for dt_field in ("created_at", "last_accessed"):
+            if dt_field in raw_data and isinstance(raw_data[dt_field], str):
+                raw_data[dt_field] = datetime.fromisoformat(raw_data[dt_field])
         return MemoryRecord(**raw_data)
 
     def update(self, record: MemoryRecord) -> None:
@@ -250,6 +250,17 @@ class RedisStorageBackend:
         older_than: datetime | None = None,
         metadata_filter: dict[str, Any] | None = None,
     ) -> int:
+        # Fix: Fail fast for unsupported filters to avoid hidden misuse
+        if (
+            scope_prefix is not None
+            or categories is not None
+            or older_than is not None
+            or metadata_filter is not None
+        ):
+            raise NotImplementedError(
+                "RedisStorageBackend.delete currently supports only record_ids."
+            )
+
         if record_ids:
             keys_to_delete = [self._get_key(rid) for rid in record_ids]
             return (
@@ -266,8 +277,10 @@ class RedisStorageBackend:
         limit: int = 10,
         min_score: float = 0.0,
     ) -> list[tuple[MemoryRecord, float]]:
-        # TODO: Implement full FT.SEARCH vector similarity index mapping using RediSearch modules
-        return []
+        # Fix: Raise explicit NotImplementedError instead of returning silent empty data
+        raise NotImplementedError(
+            "RedisStorageBackend.search is not implemented yet."
+        )
 
     def list_records(
         self,
@@ -275,37 +288,49 @@ class RedisStorageBackend:
         limit: int = 200,
         offset: int = 0,
     ) -> list[MemoryRecord]:
-        return []
+        raise NotImplementedError(
+            "RedisStorageBackend.list_records is not implemented yet."
+        )
 
     def get_scope_info(self, scope: str) -> ScopeInfo:
-        return ScopeInfo(
-            count=0, categories={}, date_range=None, child_scopes=[]
+        raise NotImplementedError(
+            "RedisStorageBackend.get_scope_info is not implemented yet."
         )
 
     def list_scopes(self, parent: str = "/") -> list[str]:
-        return []
+        raise NotImplementedError(
+            "RedisStorageBackend.list_scopes is not implemented yet."
+        )
 
     def list_categories(
         self, scope_prefix: str | None = None
     ) -> dict[str, int]:
-        return {}
+        raise NotImplementedError(
+            "RedisStorageBackend.list_categories is not implemented yet."
+        )
 
     def count(self, scope_prefix: str | None = None) -> int:
-        # Using scan_iter instead of keys() to prevent Redis thread blocking in production
+        # Fix: Handle scope_prefix guarding safely
+        if scope_prefix is not None:
+            raise NotImplementedError("Scoped count is not implemented yet.")
         count = 0
         for _ in self.client.scan_iter("crewai:memory:*"):
             count += 1
         return count
 
     def reset(self, scope_prefix: str | None = None) -> None:
-        # Using scan_iter for safe and non-blocking bulk deletion
-        keys_to_delete = [key for key in self.client.scan_iter("crewai:memory:*")]
+        # Fix: Prevent accidental global wiping when scoped reset is invoked
+        if scope_prefix is not None:
+            raise NotImplementedError("Scoped reset is not implemented yet.")
+        keys_to_delete = [
+            key for key in self.client.scan_iter("crewai:memory:*")
+        ]
         if keys_to_delete:
             self.client.delete(*keys_to_delete)
 
-    # --- Async Implementations required by the Protocol ---
+    # --- Async Implementations with thread offloading to avoid blocking ---
     async def asave(self, records: list[MemoryRecord]) -> None:
-        self.save(records)
+        await asyncio.to_thread(self.save, records)
 
     async def asearch(
         self,
@@ -316,7 +341,8 @@ class RedisStorageBackend:
         limit: int = 10,
         min_score: float = 0.0,
     ) -> list[tuple[MemoryRecord, float]]:
-        return self.search(
+        return await asyncio.to_thread(
+            self.search,
             query_embedding,
             scope_prefix,
             categories,
@@ -333,7 +359,8 @@ class RedisStorageBackend:
         older_than: datetime | None = None,
         metadata_filter: dict[str, Any] | None = None,
     ) -> int:
-        return self.delete(
+        return await asyncio.to_thread(
+            self.delete,
             scope_prefix,
             categories,
             record_ids,
