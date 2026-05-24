@@ -195,13 +195,21 @@ Ensure you have Python >=3.10 <3.14 installed on your system. CrewAI uses [UV](h
 First, install CrewAI:
 
 ```shell
+# Using uv (recommended)
 uv pip install crewai
+
+# Using pip
+pip install crewai
 ```
 
 If you want to install the 'crewai' package along with its optional features that include additional tools for agents, you can do so by using the following command:
 
 ```shell
+# Using uv (recommended)
 uv pip install 'crewai[tools]'
+
+# Using pip
+pip install 'crewai[tools]'
 ```
 
 The command above installs the basic package and also adds extra components which require more dependencies to function.
@@ -717,13 +725,21 @@ A: CrewAI is a standalone, lean, and fast Python framework built specifically fo
 A: Install CrewAI using pip:
 
 ```shell
+# Using uv (recommended)
 uv pip install crewai
+
+# Using pip
+pip install crewai
 ```
 
 For additional tools, use:
 
 ```shell
+# Using uv (recommended)
 uv pip install 'crewai[tools]'
+
+# Using pip
+pip install 'crewai[tools]'
 ```
 
 ### Q: Does CrewAI depend on LangChain?
