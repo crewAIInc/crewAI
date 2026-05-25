@@ -110,7 +110,7 @@ class DB2VectorSearchTool(BaseTool):
     package_dependencies: list[str] = Field(
         default_factory=lambda: [
             "ibm_db",
-            "openai",
+            "openai", # Optional openai is used for embeddings
         ]
     )
 
