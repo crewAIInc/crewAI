@@ -1079,7 +1079,11 @@ class Crew(FlowTrackable, BaseModel):
             response_template=getattr(agent, "response_template", None),
         ).task_execution()
 
-        return prompt_result.get("system", "") or prompt_result.get("prompt", "")
+        system: str = prompt_result.get("system", "") or ""
+        if system:
+            return system
+        prompt: str = prompt_result.get("prompt", "") or ""
+        return prompt
 
     @staticmethod
     def _common_prefix(strings: list[str]) -> str:
@@ -1132,13 +1136,11 @@ class Crew(FlowTrackable, BaseModel):
                     "warming shared prefix first",
                 )
                 first_agent, _ = agent_prompts[0]
-                if hasattr(first_agent, "llm") and hasattr(
-                    first_agent.llm, "preload_probe"
-                ):
+                if isinstance(first_agent.llm, BaseLLM):
                     first_agent.llm.preload_probe(prefix)
 
                 for agent, prompt in agent_prompts:
-                    if hasattr(agent, "llm") and hasattr(agent.llm, "preload_probe"):
+                    if isinstance(agent.llm, BaseLLM):
                         agent.llm.preload_probe(prompt)
                 return
             self._logger.log(
@@ -1152,14 +1154,14 @@ class Crew(FlowTrackable, BaseModel):
             with ThreadPoolExecutor(max_workers=min(len(agent_prompts), 4)) as pool:
                 futures = []
                 for agent, prompt in agent_prompts:
-                    if hasattr(agent, "llm") and hasattr(agent.llm, "preload_probe"):
+                    if isinstance(agent.llm, BaseLLM):
                         futures.append(pool.submit(agent.llm.preload_probe, prompt))
                 for f in futures:
                     f.result()
 
         elif strategy == "sequential":
             for agent, prompt in agent_prompts:
-                if hasattr(agent, "llm") and hasattr(agent.llm, "preload_probe"):
+                if isinstance(agent.llm, BaseLLM):
                     agent.llm.preload_probe(prompt)
 
         self._logger.log("info", "Cache preload: done")

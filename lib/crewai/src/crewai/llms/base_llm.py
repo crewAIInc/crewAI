@@ -389,10 +389,14 @@ class BaseLLM(BaseModel, ABC):
         Args:
             system_prompt: The full system prompt to warm.
         """
-        original_max_tokens = getattr(self, "max_tokens", None)
+        original_max_tokens: int | float | None = getattr(self, "max_tokens", None)
         original_temperature = self.temperature
         try:
-            self.max_tokens = 1
+            # Temporarily override for the probe call.  We go through the
+            # custom __setattr__ that BaseLLM already provides so that
+            # subclass fields (max_tokens, temperature) are set correctly
+            # even if they are not declared on BaseLLM itself.
+            self.__setattr__("max_tokens", 1)
             self.temperature = 0
             self.call(
                 messages=[
@@ -403,7 +407,7 @@ class BaseLLM(BaseModel, ABC):
         except Exception as exc:
             logger.warning("Cache preload probe failed: %s", exc)
         finally:
-            self.max_tokens = original_max_tokens
+            self.__setattr__("max_tokens", original_max_tokens)
             self.temperature = original_temperature
 
     def _supports_stop_words_implementation(self) -> bool:
