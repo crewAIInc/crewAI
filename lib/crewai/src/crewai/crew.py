@@ -1132,20 +1132,21 @@ class Crew(FlowTrackable, BaseModel):
                     "warming shared prefix first",
                 )
                 first_agent, _ = agent_prompts[0]
-                if hasattr(first_agent, "llm") and hasattr(first_agent.llm, "preload_probe"):
+                if hasattr(first_agent, "llm") and hasattr(
+                    first_agent.llm, "preload_probe"
+                ):
                     first_agent.llm.preload_probe(prefix)
 
                 for agent, prompt in agent_prompts:
                     if hasattr(agent, "llm") and hasattr(agent.llm, "preload_probe"):
                         agent.llm.preload_probe(prompt)
                 return
-            else:
-                self._logger.log(
-                    "info",
-                    f"Cache preload: shared prefix too short ({len(prefix)} chars), "
-                    "falling back to parallel strategy",
-                )
-                strategy = "parallel"
+            self._logger.log(
+                "info",
+                f"Cache preload: shared prefix too short ({len(prefix)} chars), "
+                "falling back to parallel strategy",
+            )
+            strategy = "parallel"
 
         if strategy == "parallel":
             with ThreadPoolExecutor(max_workers=min(len(agent_prompts), 4)) as pool:
