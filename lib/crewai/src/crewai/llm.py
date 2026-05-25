@@ -68,45 +68,75 @@ if TYPE_CHECKING:
     from crewai.tools.base_tool import BaseTool
     from crewai.utilities.types import LLMMessage
 
-try:
-    import litellm
-    from litellm.litellm_core_utils.get_supported_openai_params import (
-        get_supported_openai_params,
-    )
-    from litellm.types.utils import (
-        ChatCompletionDeltaToolCall,
-        Choices,
-        Delta as LiteLLMDelta,
-        Function,
-        Message,
-        ModelResponse,
-        ModelResponseBase,
-        ModelResponseStream,
-        StreamingChoices as LiteLLMStreamingChoices,
-    )
-    from litellm.utils import supports_response_schema
-
-    LITELLM_AVAILABLE = True
-except ImportError:
-    LITELLM_AVAILABLE = False
-    litellm = None  # type: ignore[assignment]
-    Choices = None  # type: ignore[assignment, misc]
-    LiteLLMDelta = None  # type: ignore[assignment, misc]
-    Message = None  # type: ignore[assignment, misc]
-    ModelResponseBase = None  # type: ignore[assignment, misc]
-    ModelResponseStream = None  # type: ignore[assignment, misc]
-    LiteLLMStreamingChoices = None  # type: ignore[assignment, misc]
-    get_supported_openai_params = None  # type: ignore[assignment]
-    ChatCompletionDeltaToolCall = None  # type: ignore[assignment, misc]
-    Function = None  # type: ignore[assignment, misc]
-    ModelResponse = None  # type: ignore[assignment, misc]
-    supports_response_schema = None  # type: ignore[assignment]
-
-
 load_dotenv()
 logger = logging.getLogger(__name__)
-if LITELLM_AVAILABLE:
-    litellm.suppress_debug_info = True
+
+# litellm is lazy-loaded to avoid its module-level dotenv.load_dotenv()
+# from polluting env vars (e.g. MODEL= overriding embedder model_name).
+_litellm_loaded = False
+litellm = None  # type: ignore[assignment]
+Choices = None  # type: ignore[assignment, misc]
+LiteLLMDelta = None  # type: ignore[assignment, misc]
+Message = None  # type: ignore[assignment, misc]
+ModelResponseBase = None  # type: ignore[assignment, misc]
+ModelResponseStream = None  # type: ignore[assignment, misc]
+LiteLLMStreamingChoices = None  # type: ignore[assignment, misc]
+get_supported_openai_params = None  # type: ignore[assignment]
+ChatCompletionDeltaToolCall = None  # type: ignore[assignment, misc]
+Function = None  # type: ignore[assignment, misc]
+ModelResponse = None  # type: ignore[assignment, misc]
+supports_response_schema = None  # type: ignore[assignment]
+LITELLM_AVAILABLE = False
+
+
+def _ensure_litellm() -> bool:
+    """Lazy-load litellm on first use. Returns True if available."""
+    global _litellm_loaded, LITELLM_AVAILABLE
+    global litellm, Choices, LiteLLMDelta, Message, ModelResponseBase
+    global ModelResponseStream, LiteLLMStreamingChoices, get_supported_openai_params
+    global ChatCompletionDeltaToolCall, Function, ModelResponse, supports_response_schema
+
+    if _litellm_loaded:
+        return LITELLM_AVAILABLE
+    _litellm_loaded = True
+
+    try:
+        import litellm as _litellm
+        from litellm.litellm_core_utils.get_supported_openai_params import (
+            get_supported_openai_params as _get_supported_openai_params,
+        )
+        from litellm.types.utils import (
+            ChatCompletionDeltaToolCall as _ChatCompletionDeltaToolCall,
+            Choices as _Choices,
+            Delta as _LiteLLMDelta,
+            Function as _Function,
+            Message as _Message,
+            ModelResponse as _ModelResponse,
+            ModelResponseBase as _ModelResponseBase,
+            ModelResponseStream as _ModelResponseStream,
+            StreamingChoices as _LiteLLMStreamingChoices,
+        )
+        from litellm.utils import supports_response_schema as _supports_response_schema
+
+        litellm = _litellm
+        Choices = _Choices
+        LiteLLMDelta = _LiteLLMDelta
+        Message = _Message
+        ModelResponseBase = _ModelResponseBase
+        ModelResponseStream = _ModelResponseStream
+        LiteLLMStreamingChoices = _LiteLLMStreamingChoices
+        get_supported_openai_params = _get_supported_openai_params
+        ChatCompletionDeltaToolCall = _ChatCompletionDeltaToolCall
+        Function = _Function
+        ModelResponse = _ModelResponse
+        supports_response_schema = _supports_response_schema
+
+        _litellm.suppress_debug_info = True
+        LITELLM_AVAILABLE = True
+    except ImportError:
+        LITELLM_AVAILABLE = False
+
+    return LITELLM_AVAILABLE
 
 
 MIN_CONTEXT: Final[int] = 1024
@@ -411,7 +441,8 @@ class LLM(BaseLLM):
             except Exception as e:
                 raise ImportError(f"Error importing native provider: {e}") from e
 
-        if not LITELLM_AVAILABLE:
+        # FALLBACK to LiteLLM — lazy-load on first use
+        if not _ensure_litellm():
             native_list = ", ".join(SUPPORTED_NATIVE_PROVIDERS)
             error_msg = (
                 f"Unable to initialize LLM with model '{model}'. "
@@ -632,7 +663,7 @@ class LLM(BaseLLM):
     @model_validator(mode="after")
     def _init_litellm(self) -> LLM:
         self.is_litellm = True
-        if LITELLM_AVAILABLE:
+        if _ensure_litellm():
             litellm.drop_params = True
             self.set_callbacks(self.callbacks or [])
             self.set_env_callbacks()
@@ -935,6 +966,15 @@ class LLM(BaseLLM):
                     if tool_arg.function.name
                 ]
                 if tool_calls_list:
+                    usage_dict = self._usage_to_dict(usage_info)
+                    self._handle_emit_call_events(
+                        response=tool_calls_list,
+                        call_type=LLMCallType.TOOL_CALL,
+                        from_task=from_task,
+                        from_agent=from_agent,
+                        messages=params["messages"],
+                        usage=usage_dict,
+                    )
                     return tool_calls_list
 
             finish_reason, response_id_last = (
@@ -1591,6 +1631,15 @@ class LLM(BaseLLM):
                         if result is not None:
                             return result
                     else:
+                        usage_dict = self._usage_to_dict(usage_info)
+                        self._handle_emit_call_events(
+                            response=tool_calls_list,
+                            call_type=LLMCallType.TOOL_CALL,
+                            from_task=from_task,
+                            from_agent=from_agent,
+                            messages=params.get("messages"),
+                            usage=usage_dict,
+                        )
                         return tool_calls_list
 
             usage_dict = self._usage_to_dict(usage_info)
@@ -2290,7 +2339,8 @@ class LLM(BaseLLM):
         Note: This validation only applies to the litellm fallback path.
         Native providers have their own validation.
         """
-        if not LITELLM_AVAILABLE or supports_response_schema is None:
+        if not _ensure_litellm() or supports_response_schema is None:
+            # When litellm is not available, skip validation
             # (this path should only be reached for litellm fallback models)
             return
 
@@ -2310,7 +2360,7 @@ class LLM(BaseLLM):
         Note: This method is only used by the litellm fallback path.
         Native providers override this method with their own implementation.
         """
-        if not LITELLM_AVAILABLE:
+        if not _ensure_litellm():
             # When litellm is not available, assume function calling is supported
             # (all modern models support it)
             return True
@@ -2334,7 +2384,7 @@ class LLM(BaseLLM):
         if "gpt-5" in model_lower:
             return False
 
-        if not LITELLM_AVAILABLE or get_supported_openai_params is None:
+        if not _ensure_litellm() or get_supported_openai_params is None:
             # When litellm is not available, assume stop words are supported
             return True
 
@@ -2382,7 +2432,8 @@ class LLM(BaseLLM):
         Note: This only affects the litellm fallback path. Native providers
         don't use litellm callbacks - they emit events via base_llm.py.
         """
-        if not LITELLM_AVAILABLE:
+        if not _ensure_litellm():
+            # When litellm is not available, callbacks are still stored
             # but not registered with litellm globals
             return
 
@@ -2420,7 +2471,8 @@ class LLM(BaseLLM):
         This will set `litellm.success_callback` to ["langfuse", "langsmith"] and
         `litellm.failure_callback` to ["langfuse"].
         """
-        if not LITELLM_AVAILABLE:
+        if not _ensure_litellm():
+            # When litellm is not available, env callbacks have no effect
             return
 
         with suppress_warnings():

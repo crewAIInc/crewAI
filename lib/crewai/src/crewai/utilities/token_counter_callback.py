@@ -13,13 +13,7 @@ from crewai.agents.agent_builder.utilities.base_token_process import TokenProces
 from crewai.utilities.logger_utils import suppress_warnings
 
 
-try:
-    from litellm.integrations.custom_logger import CustomLogger as LiteLLMCustomLogger
-
-    LITELLM_AVAILABLE = True
-except ImportError:
-    LiteLLMCustomLogger = None  # type: ignore[misc, assignment]
-    LITELLM_AVAILABLE = False
+LiteLLMCustomLogger = None  # type: ignore[misc, assignment]
 
 
 class TokenCalcHandler(BaseModel):

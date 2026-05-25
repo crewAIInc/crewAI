@@ -1,5 +1,6 @@
 from enum import Enum
 import subprocess
+from pathlib import Path
 
 import click
 from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
@@ -14,19 +15,177 @@ class CrewType(Enum):
     FLOW = "flow"
 
 
-def run_crew(trained_agents_file: str | None = None) -> None:
-    """Run the crew or flow by running a command in the UV environment.
+def _has_json_crew() -> bool:
+    """Check if this is a JSON-defined crew project."""
+    return Path("crew.jsonc").exists() or Path("crew.json").exists()
 
-    Starting from version 0.103.0, this command can be used to run both
-    standard crews and flows. For flows, it detects the type from pyproject.toml
-    and automatically runs the appropriate command.
+
+def _run_json_crew(daemon: bool = False) -> None:
+    """Load and run a JSON-defined crew."""
+    from dotenv import load_dotenv
+
+    env_file = Path.cwd() / ".env"
+    if env_file.exists():
+        load_dotenv(env_file, override=True)
+
+    crew_path = Path("crew.jsonc") if Path("crew.jsonc").exists() else Path("crew.json")
+
+    if daemon:
+        return _run_json_crew_daemon(crew_path)
+
+    from crewai_cli.crew_run_tui import CrewRunApp
+
+    app = CrewRunApp()
+    app._crew_json_path = crew_path
+
+    app.run()
+
+    _print_post_tui_summary(app)
+
+    if getattr(app, "_want_deploy", False):
+        _chain_deploy()
+
+    return app._crew_result
+
+
+def _run_json_crew_daemon(crew_path: Path) -> None:
+    """Run a JSON crew in daemon mode — plain console output, no TUI."""
+    import time
+
+    from rich.console import Console
+    from rich.text import Text
+
+    from crewai.project.crew_loader import load_crew
+
+    console = Console()
+    _TEAL = "#1F7982"
+    _RED = "#FF5A50"
+
+    crew, default_inputs = load_crew(crew_path)
+
+    console.print(
+        Text(f"  ▸ Running {crew.name or 'Crew'} ({len(crew.tasks)} tasks)", style=f"bold {_TEAL}")
+    )
+    console.print()
+
+    start = time.time()
+    try:
+        result = crew.kickoff(inputs=default_inputs)
+        elapsed = time.time() - start
+        console.print()
+        console.print(
+            Text(f"  ✔ Completed in {elapsed:.1f}s", style=f"bold {_TEAL}")
+        )
+        if result and hasattr(result, "raw") and result.raw:
+            console.print()
+            console.print(result.raw)
+        return result
+    except Exception as e:
+        elapsed = time.time() - start
+        console.print()
+        console.print(
+            Text(f"  ✘ Failed after {elapsed:.1f}s: {e}", style=f"bold {_RED}")
+        )
+        raise SystemExit(1) from e
+
+
+def _chain_deploy() -> None:
+    from rich.console import Console
+    console = Console()
+    try:
+        from crewai_cli.deploy.main import DeployCommand
+        console.print("\nStarting deployment…\n", style="bold #FF5A50")
+        DeployCommand().create_crew(confirm=False)
+    except SystemExit:
+        from crewai_cli.authentication.main import AuthenticationCommand
+        console.print()
+        AuthenticationCommand().login()
+        try:
+            DeployCommand().create_crew(confirm=False)
+        except Exception as e:
+            console.print(f"\nDeploy failed: {e}\n", style="bold red")
+    except Exception as e:
+        console.print(f"\nDeploy failed: {e}\n", style="bold red")
+
+
+def _print_post_tui_summary(app: object) -> None:
+    """Print a summary to the terminal after the Textual TUI exits."""
+    import time
+
+    from rich.console import Console
+    from rich.markdown import Markdown
+    from rich.padding import Padding
+    from rich.panel import Panel
+    from rich.text import Text
+
+    console = Console()
+    elapsed = time.time() - app._start_time
+
+    out_tokens = app._output_tokens + app._live_out_tokens
+    token_parts = []
+    if app._input_tokens:
+        token_parts.append(f"↑{app._input_tokens:,}")
+    if out_tokens:
+        token_parts.append(f"↓{out_tokens:,}")
+    token_str = "  ".join(token_parts)
+    if token_str:
+        token_str += " tokens"
+
+    _CREWAI_RED = "#FF5A50"
+    _CREWAI_TEAL = "#1F7982"
+
+    if app._status == "completed":
+        summary = Text()
+        summary.append(f"  ✔ Completed {app._total_tasks} tasks", style=f"bold {_CREWAI_TEAL}")
+        summary.append(f" in {elapsed:.1f}s", style="dim")
+        if token_str:
+            summary.append(f"  {token_str}", style="dim")
+        console.print(
+            Panel(
+                summary,
+                title=f" {app._crew_name} ",
+                title_align="left",
+                border_style=_CREWAI_TEAL,
+                padding=(0, 1),
+            )
+        )
+        if app._final_output:
+            console.print()
+            console.print(Text("  Final Result", style=f"bold {_CREWAI_TEAL}"))
+            console.print()
+            console.print(Padding(Markdown(app._final_output), (0, 2)))
+    elif app._status == "failed":
+        content = Text()
+        content.append("  ✘ Failed", style=f"bold {_CREWAI_RED}")
+        content.append(f" after {elapsed:.1f}s\n", style="dim")
+        if app._error:
+            content.append(f"\n  {app._error}\n", style=_CREWAI_RED)
+        console.print(
+            Panel(
+                content,
+                title=f" {app._crew_name} ",
+                title_align="left",
+                border_style=_CREWAI_RED,
+                padding=(0, 1),
+            )
+        )
+
+
+def run_crew(trained_agents_file: str | None = None, daemon: bool = False) -> None:
+    """Run the crew or flow.
 
     Args:
         trained_agents_file: Optional path to a trained-agents pickle produced
             by ``crewai train -f``. When set, exported as
             ``CREWAI_TRAINED_AGENTS_FILE`` so agents load suggestions from this
             file instead of the default ``trained_agents_data.pkl``.
+        daemon: Run without the TUI — plain console output.
     """
+    # JSON crew projects take precedence
+    if _has_json_crew():
+        _run_json_crew(daemon=daemon)
+        return
+
     crewai_version = get_crewai_version()
     min_required_version = "0.71.0"
     pyproject_data = read_toml()

@@ -49,6 +49,8 @@ __all__ = [
     "reset_tracing_enabled",
     "safe_serialize_to_dict",
     "set_suppress_tracing_messages",
+    "set_tui_mode",
+    "is_tui_mode",
     "set_tracing_enabled",
     "should_auto_collect_first_time_traces",
     "should_enable_tracing",
@@ -70,6 +72,16 @@ _first_time_trace_hook: ContextVar[Callable[[], bool] | None] = ContextVar(
 _suppress_tracing_messages: ContextVar[bool] = ContextVar(
     "_suppress_tracing_messages", default=False
 )
+
+_tui_mode: ContextVar[bool] = ContextVar("_tui_mode", default=False)
+
+
+def set_tui_mode(enabled: bool) -> object:
+    return _tui_mode.set(enabled)
+
+
+def is_tui_mode() -> bool:
+    return _tui_mode.get()
 
 
 def set_suppress_tracing_messages(suppress: bool) -> object:

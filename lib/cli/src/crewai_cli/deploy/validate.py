@@ -151,9 +151,18 @@ class DeployValidator:
     def ok(self) -> bool:
         return not self.errors
 
+    @property
+    def _is_json_crew(self) -> bool:
+        return (self.project_root / "crew.jsonc").exists() or (
+            self.project_root / "crew.json"
+        ).exists()
+
     def run(self) -> list[ValidationResult]:
         """Run all checks. Later checks are skipped when earlier ones make
         them impossible (e.g. no pyproject.toml → no lockfile check)."""
+        if self._is_json_crew:
+            return self._run_json_checks()
+
         if not self._check_pyproject():
             return self.results
 
@@ -175,6 +184,156 @@ class DeployValidator:
         self._check_version_vs_lockfile()
 
         return self.results
+
+    def _run_json_checks(self) -> list[ValidationResult]:
+        """Validation suite for JSON-defined crew projects."""
+        crew_path = (
+            self.project_root / "crew.jsonc"
+            if (self.project_root / "crew.jsonc").exists()
+            else self.project_root / "crew.json"
+        )
+
+        try:
+            raw = crew_path.read_text()
+            clean = re.sub(r"(?<!:)//.*?$", "", raw, flags=re.MULTILINE)
+            clean = re.sub(r"/\*.*?\*/", "", clean, flags=re.DOTALL)
+            clean = re.sub(r",\s*([}\]])", r"\1", clean)
+            crew_data = json.loads(clean)
+        except json.JSONDecodeError as e:
+            self._add(
+                Severity.ERROR,
+                "invalid_crew_json",
+                f"{crew_path.name} is not valid JSON",
+                detail=str(e),
+                hint="Check for syntax errors in your crew file.",
+            )
+            return self.results
+        except Exception as e:
+            self._add(
+                Severity.ERROR,
+                "invalid_crew_json",
+                f"Cannot parse {crew_path.name}",
+                detail=str(e),
+            )
+            return self.results
+
+        agents = crew_data.get("agents", [])
+        if not agents:
+            self._add(
+                Severity.ERROR,
+                "no_agents_defined",
+                "No agents defined in crew file",
+                hint="Add an \"agents\" list with at least one agent name.",
+            )
+
+        agents_dir = self.project_root / "agents"
+        for agent_name in agents:
+            found = (
+                (agents_dir / f"{agent_name}.jsonc").exists()
+                or (agents_dir / f"{agent_name}.json").exists()
+            )
+            if not found:
+                self._add(
+                    Severity.ERROR,
+                    "missing_agent_file",
+                    f"Agent file not found: agents/{agent_name}.jsonc",
+                    hint=f"Create agents/{agent_name}.jsonc with the agent definition.",
+                )
+
+        tasks = crew_data.get("tasks", [])
+        if not tasks:
+            self._add(
+                Severity.ERROR,
+                "no_tasks_defined",
+                "No tasks defined in crew file",
+                hint="Add a \"tasks\" list with at least one task.",
+            )
+
+        for task in tasks:
+            agent_ref = task.get("agent", "")
+            if agent_ref and agent_ref not in agents:
+                self._add(
+                    Severity.WARNING,
+                    "task_agent_mismatch",
+                    f"Task \"{task.get('name', '?')}\" references agent \"{agent_ref}\" not in agents list",
+                )
+
+        self._check_pyproject()
+        self._check_lockfile()
+        self._check_env_vars_json(crew_path, agents_dir, agents)
+        self._check_version_vs_lockfile()
+
+        return self.results
+
+    def _check_env_vars_json(
+        self, crew_path: Path, agents_dir: Path, agent_names: list[str]
+    ) -> None:
+        """Check for env var references in JSON crew files."""
+        referenced: set[str] = set()
+        pattern = re.compile(r"\$\{?([A-Z][A-Z0-9_]+)\}?")
+
+        for path in [crew_path]:
+            try:
+                referenced.update(pattern.findall(path.read_text(errors="ignore")))
+            except OSError:
+                pass
+
+        for name in agent_names:
+            for ext in (".jsonc", ".json"):
+                agent_path = agents_dir / f"{name}{ext}"
+                if agent_path.exists():
+                    try:
+                        referenced.update(
+                            pattern.findall(agent_path.read_text(errors="ignore"))
+                        )
+                    except OSError:
+                        pass
+
+        for py_path in self.project_root.rglob("*.py"):
+            if ".venv" in py_path.parts:
+                continue
+            try:
+                text = py_path.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            env_pattern = re.compile(
+                r"""(?x)
+                (?:os\.environ\s*(?:\[\s*|\.get\s*\(\s*)
+                  |os\.getenv\s*\(\s*
+                  |getenv\s*\(\s*)
+                ['"]([A-Z][A-Z0-9_]*)['"]
+                """
+            )
+            referenced.update(env_pattern.findall(text))
+
+        env_file = self.project_root / ".env"
+        env_keys: set[str] = set()
+        if env_file.exists():
+            for line in env_file.read_text(errors="ignore").splitlines():
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                env_keys.add(line.split("=", 1)[0].strip())
+
+        missing_known = sorted(
+            var
+            for var in referenced
+            if var in _KNOWN_API_KEY_HINTS
+            and var not in env_keys
+            and var not in os.environ
+        )
+        if missing_known:
+            self._add(
+                Severity.WARNING,
+                "env_vars_not_in_dotenv",
+                f"{len(missing_known)} referenced API key(s) not in .env",
+                detail=(
+                    "These env vars are referenced in your project but not set "
+                    f"locally: {', '.join(missing_known)}. Deploys will fail "
+                    "unless they are added to the deployment's Environment "
+                    "Variables in the CrewAI dashboard."
+                ),
+            )
 
     def _check_pyproject(self) -> bool:
         pyproject_path = self.project_root / "pyproject.toml"

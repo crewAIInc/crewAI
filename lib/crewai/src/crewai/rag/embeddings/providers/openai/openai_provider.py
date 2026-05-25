@@ -28,7 +28,7 @@ class OpenAIProvider(BaseEmbeddingsProvider[OpenAIEmbeddingFunction]):
         validation_alias=AliasChoices(
             "EMBEDDINGS_OPENAI_MODEL_NAME",
             "OPENAI_MODEL_NAME",
-            "model",
+            "model_name",
         ),
     )
     api_base: str | None = Field(
