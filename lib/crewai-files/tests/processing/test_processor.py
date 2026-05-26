@@ -162,7 +162,6 @@ class TestFileProcessorValidate:
             image=ImageConstraints(max_size_bytes=10),
         )
         processor = FileProcessor(constraints=constraints)
-        # Set mode to strict on the file
         file = ImageFile(
             source=FileBytes(data=MINIMAL_PNG, filename="test.png"), mode="strict"
         )
@@ -199,7 +198,6 @@ class TestFileProcessorProcess:
             image=ImageConstraints(max_size_bytes=10),
         )
         processor = FileProcessor(constraints=constraints)
-        # Set mode to strict on the file
         file = ImageFile(
             source=FileBytes(data=MINIMAL_PNG, filename="test.png"), mode="strict"
         )
@@ -214,7 +212,6 @@ class TestFileProcessorProcess:
             image=ImageConstraints(max_size_bytes=10),
         )
         processor = FileProcessor(constraints=constraints)
-        # Set mode to warn on the file
         file = ImageFile(
             source=FileBytes(data=MINIMAL_PNG, filename="test.png"), mode="warn"
         )
