@@ -14,6 +14,6 @@ class K8sExecTool(K8sBaseTool):
             if response.exit_code == 0:
                 return response.stdout
             else:
-                return f"Python execution failed (Exit Code {response.exit_code}):\n{response.stderr}"
+                return f"Command execution failed (Exit Code {response.exit_code}):\n{response.stderr}"
         finally:
             self._release_sandbox(sandbox, should_terminate)
