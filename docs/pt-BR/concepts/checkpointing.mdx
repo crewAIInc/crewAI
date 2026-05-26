@@ -1,15 +1,15 @@
 ---
 title: Checkpointing
-description: Salve automaticamente o estado de execucao para que crews, flows e agentes possam retomar apos falhas.
+description: Salve automaticamente o estado de execução para que crews, flows e agentes possam retomar após falhas.
 icon: floppy-disk
 mode: "wide"
 ---
 
-O checkpointing salva um snapshot do estado de execucao durante uma execucao para que uma crew, flow ou agente possa retomar apos uma falha ou ser bifurcado em uma branch alternativa.
+O checkpointing salva um snapshot do estado de execução durante uma execução para que uma crew, flow ou agente possa retomar após uma falha ou ser bifurcado em uma branch alternativa.
 
 <CardGroup cols={2}>
-  <Card title="Explicacao" icon="lightbulb" href="#explicacao">
-    Como o checkpointing funciona: eventos, armazenamento e heranca.
+  <Card title="Explicação" icon="lightbulb" href="#explicacao">
+    Como o checkpointing funciona: eventos, armazenamento e herança.
   </Card>
   <Card title="Tutorial" icon="graduation-cap" href="#tutorial-retomar-uma-crew-com-falha">
     Um passo a passo de 5 minutos: executar, interromper, retomar.
@@ -17,43 +17,43 @@ O checkpointing salva um snapshot do estado de execucao durante uma execucao par
   <Card title="Guias de uso" icon="screwdriver-wrench" href="#guias-de-uso">
     Receitas focadas em tarefas para fluxos comuns.
   </Card>
-  <Card title="Referencia" icon="book" href="#referencia">
+  <Card title="Referência" icon="book" href="#referencia">
     `CheckpointConfig`, eventos, provedores e CLI.
   </Card>
 </CardGroup>
 
-## Explicacao
+## Explicação
 
-### O que e um checkpoint
+### O que é um checkpoint
 
-Um checkpoint captura tudo o que o CrewAI precisa para recriar uma execucao em andamento: o estado completo da crew, flow ou agente — configuracao, memoria e fontes de conhecimento dos agentes, progresso das tarefas, saidas intermediarias, estado interno e atributos — junto com os inputs do kickoff, o historico de eventos ate aquele ponto e um ID de linhagem que liga o checkpoint a execucao de origem.
+Um checkpoint captura tudo o que o CrewAI precisa para recriar uma execução em andamento: o estado completo da crew, flow ou agente — configuração, memória e fontes de conhecimento dos agentes, progresso das tarefas, saídas intermediárias, estado interno e atributos — junto com os inputs do kickoff, o histórico de eventos até aquele ponto e um ID de linhagem que liga o checkpoint à execução de origem.
 
-Restaurar reconstroi esse estado e continua. Tarefas concluidas sao puladas, memoria e conhecimento sao reidratados, e o trabalho downstream roda contra as mesmas saidas que a execucao original produziu. Fazer fork executa a mesma restauracao sob uma nova linhagem, para que a nova branch e a execucao original gravem checkpoints lado a lado sem sobrescrever uma a outra.
+Restaurar reconstrói esse estado e continua. Tarefas concluídas são puladas, memória e conhecimento são reidratados, e o trabalho downstream roda contra as mesmas saídas que a execução original produziu. Fazer fork executa a mesma restauração sob uma nova linhagem, para que a nova branch e a execução original gravem checkpoints lado a lado sem sobrescrever uma a outra.
 
-### Quando os checkpoints sao gravados
+### Quando os checkpoints são gravados
 
-O checkpointing e orientado a eventos. O runtime se inscreve nos eventos selecionados em `on_events` e grava um checkpoint sempre que um e disparado. O padrao `task_completed` produz um checkpoint por tarefa finalizada — um equilibrio razoavel entre granularidade e uso de disco. Eventos de alta frequencia como `llm_call_completed` estao disponiveis para recuperacao mais granular, mas gravam muito mais arquivos.
+O checkpointing é orientado a eventos. O runtime se inscreve nos eventos selecionados em `on_events` e grava um checkpoint sempre que um é disparado. O padrão `task_completed` produz um checkpoint por tarefa finalizada — um equilíbrio razoável entre granularidade e uso de disco. Eventos de alta frequência como `llm_call_completed` estão disponíveis para recuperação mais granular, mas gravam muito mais arquivos.
 
 ### Armazenamento
 
 Dois provedores acompanham o CrewAI:
 
-- `JsonProvider` grava um arquivo por checkpoint. Legivel e facil de inspecionar.
-- `SqliteProvider` grava em um unico banco SQLite. Melhor para checkpointing de alta frequencia.
+- `JsonProvider` grava um arquivo por checkpoint. Legível e fácil de inspecionar.
+- `SqliteProvider` grava em um único banco SQLite. Melhor para checkpointing de alta frequência.
 
-Ambos removem os checkpoints mais antigos quando `max_checkpoints` esta definido.
+Ambos removem os checkpoints mais antigos quando `max_checkpoints` está definido.
 
 <Note>
-As gravacoes de checkpoint sao best-effort. Um checkpoint que falha e registrado em log, mas nao interrompe a execucao.
+As gravações de checkpoint são best-effort. Um checkpoint que falha é registrado em log, mas não interrompe a execução.
 </Note>
 
-### Modelo de heranca
+### Modelo de herança
 
-`Crew`, `Flow` e `Agent` aceitam um argumento `checkpoint`. Filhos herdam do pai a menos que definam seu proprio valor ou passem `False` para desativar. Ative o checkpointing uma vez na crew e todos os agentes participam, ou exclua um agente seletivamente.
+`Crew`, `Flow` e `Agent` aceitam um argumento `checkpoint`. Filhos herdam do pai a menos que definam seu próprio valor ou passem `False` para desativar. Ative o checkpointing uma vez na crew e todos os agentes participam, ou exclua um agente seletivamente.
 
 ## Tutorial: Retomar uma crew com falha
 
-Este passo a passo leva cerca de 5 minutos. Voce executara uma crew de duas tarefas, a interrompera no meio e a retomara a partir do checkpoint salvo.
+Este passo a passo leva cerca de 5 minutos. Você executará uma crew de duas tarefas, a interromperá no meio e a retomará a partir do checkpoint salvo.
 
 <Steps>
   <Step title="Crie a crew com checkpointing ativado">
@@ -73,12 +73,12 @@ Este passo a passo leva cerca de 5 minutos. Voce executara uma crew de duas tare
     )
     ```
   </Step>
-  <Step title="Execute e interrompa apos a primeira tarefa">
+  <Step title="Execute e interrompa após a primeira tarefa">
     ```python
     result = crew.kickoff()
     ```
 
-    Pressione `Ctrl+C` apos a primeira tarefa concluir. Em `./.checkpoints/`, um arquivo `<timestamp>_<uuid>.json` e o checkpoint.
+    Pressione `Ctrl+C` após a primeira tarefa concluir. Em `./.checkpoints/`, um arquivo `<timestamp>_<uuid>.json` é o checkpoint.
   </Step>
   <Step title="Retome a partir do checkpoint">
     ```python
@@ -91,14 +91,14 @@ Este passo a passo leva cerca de 5 minutos. Voce executara uma crew de duas tare
     )
     ```
 
-    A tarefa de pesquisa e pulada, o escritor executa contra a saida de pesquisa salva e a crew finaliza.
+    A tarefa de pesquisa é pulada, o escritor executa contra a saída de pesquisa salva e a crew finaliza.
   </Step>
 </Steps>
 
 ## Guias de uso
 
 <AccordionGroup>
-  <Accordion title="Ativar checkpointing com padroes" icon="play">
+  <Accordion title="Ativar checkpointing com padrões" icon="play">
     ```python
     crew = Crew(agents=[...], tasks=[...], checkpoint=True)
     ```
@@ -106,7 +106,7 @@ Este passo a passo leva cerca de 5 minutos. Voce executara uma crew de duas tare
     Grava em `./.checkpoints/` em cada `task_completed`.
   </Accordion>
 
-  <Accordion title="Personalizar armazenamento e frequencia" icon="sliders">
+  <Accordion title="Personalizar armazenamento e frequência" icon="sliders">
     ```python
     from crewai import Crew, CheckpointConfig
 
@@ -155,11 +155,11 @@ Este passo a passo leva cerca de 5 minutos. Voce executara uma crew de duas tare
     </CodeGroup>
 
     <Tip>
-    O SQLite ativa o modo journal WAL para leituras concorrentes. Prefira-o para checkpointing de alta frequencia.
+    O SQLite ativa o modo journal WAL para leituras concorrentes. Prefira-o para checkpointing de alta frequência.
     </Tip>
   </Accordion>
 
-  <Accordion title="Desativar um agente especifico" icon="user-slash">
+  <Accordion title="Desativar um agente específico" icon="user-slash">
     ```python
     crew = Crew(
         agents=[
@@ -173,7 +173,7 @@ Este passo a passo leva cerca de 5 minutos. Voce executara uma crew de duas tare
   </Accordion>
 
   <Accordion title="Fazer fork em uma nova branch" icon="code-branch">
-    `fork()` restaura um checkpoint sob uma nova linhagem para que a nova execucao nao colida com a original.
+    `fork()` restaura um checkpoint sob uma nova linhagem para que a nova execução não colida com a original.
 
     ```python
     config = CheckpointConfig(restore_from="./my_checkpoints/<file>.json")
@@ -181,7 +181,7 @@ Este passo a passo leva cerca de 5 minutos. Voce executara uma crew de duas tare
     result = crew.kickoff(inputs={"strategy": "aggressive"})
     ```
 
-    O label `branch` e opcional; um e gerado se omitido.
+    O label `branch` é opcional; um é gerado se omitido.
   </Accordion>
 
   <Accordion title="Checkpoint em Crew, Flow ou Agent" icon="cubes">
@@ -195,7 +195,7 @@ Este passo a passo leva cerca de 5 minutos. Voce executara uma crew de duas tare
         )
         ```
 
-        Gatilho padrao: `task_completed`.
+        Gatilho padrão: `task_completed`.
       </Tab>
       <Tab title="Flow">
         ```python
@@ -277,7 +277,7 @@ Este passo a passo leva cerca de 5 minutos. Voce executara uma crew de duas tare
     ```
     </CodeGroup>
 
-    Um argumento `state` e fornecido automaticamente quando o handler recebe tres parametros. Veja [Event Listeners](/pt-BR/concepts/event-listener) para o catalogo completo de eventos.
+    Um argumento `state` é fornecido automaticamente quando o handler recebe três parâmetros. Veja [Event Listeners](/pt-BR/concepts/event-listener) para o catálogo completo de eventos.
   </Accordion>
 
   <Accordion title="Navegar, retomar e fazer fork pela CLI" icon="terminal">
@@ -287,25 +287,25 @@ Este passo a passo leva cerca de 5 minutos. Voce executara uma crew de duas tare
     crewai checkpoint --location ./.checkpoints.db
     ```
 
-    <Frame caption="Arvore de checkpoints — branches e forks aninham sob seu pai.">
+    <Frame caption="Árvore de checkpoints — branches e forks aninham sob seu pai.">
       <img src="/images/checkpoint-tui-tree.png" alt="Checkpoint TUI tree view" />
     </Frame>
 
-    O painel esquerdo agrupa checkpoints por branch; forks aninham sob seu pai. Selecionar um checkpoint abre o painel de detalhes com metadados, estado da entidade e progresso das tarefas. **Resume** continua a execucao; **Fork** inicia uma nova branch.
+    O painel esquerdo agrupa checkpoints por branch; forks aninham sob seu pai. Selecionar um checkpoint abre o painel de detalhes com metadados, estado da entidade e progresso das tarefas. **Resume** continua a execução; **Fork** inicia uma nova branch.
 
-    <Frame caption="Aba de visao geral — metadados, estado da entidade e resumo da execucao.">
+    <Frame caption="Aba de visão geral — metadados, estado da entidade e resumo da execução.">
       <img src="/images/checkpoint-tui-detail-overview.png" alt="Checkpoint detail overview tab" />
     </Frame>
 
-    O painel de detalhes expoe duas areas editaveis:
+    O painel de detalhes expõe duas áreas editáveis:
 
-    - **Inputs** — os inputs originais do kickoff, preenchidos e editaveis.
+    - **Inputs** — os inputs originais do kickoff, preenchidos e editáveis.
 
       <Frame>
         <img src="/images/checkpoint-tui-detail-inputs.png" alt="Editable kickoff inputs" />
       </Frame>
 
-    - **Saidas das tarefas** — saidas das tarefas concluidas. Editar uma saida e pressionar **Fork** invalida tarefas downstream para que sejam reexecutadas com o contexto modificado.
+    - **Saídas das tarefas** — saídas das tarefas concluídas. Editar uma saída e pressionar **Fork** invalida tarefas downstream para que sejam reexecutadas com o contexto modificado.
 
       <Frame>
         <img src="/images/checkpoint-tui-detail-tasks.png" alt="Editable task outputs" />
@@ -316,7 +316,7 @@ Este passo a passo leva cerca de 5 minutos. Voce executara uma crew de duas tare
     </Frame>
 
     <Tip>
-    Util para exploracao de cenarios: fork, ajuste, observe.
+    Útil para exploração de cenários: fork, ajuste, observe.
     </Tip>
   </Accordion>
 
@@ -329,16 +329,16 @@ Este passo a passo leva cerca de 5 minutos. Voce executara uma crew de duas tare
   </Accordion>
 </AccordionGroup>
 
-## Referencia
+## Referência
 
 ### `CheckpointConfig`
 
 <ParamField path="location" type="str" default='"./.checkpoints"'>
-  Destino do armazenamento. Diretorio para `JsonProvider`, caminho de arquivo de banco para `SqliteProvider`.
+  Destino do armazenamento. Diretório para `JsonProvider`, caminho de arquivo de banco para `SqliteProvider`.
 </ParamField>
 
 <ParamField path="on_events" type="list[CheckpointEventType]" default='["task_completed"]'>
-  Tipos de evento que disparam um checkpoint. `CheckpointEventType` e um `Literal` — seu type checker autocompleta e rejeita valores nao suportados. Veja [tipos de evento](#tipos-de-evento) para a lista completa.
+  Tipos de evento que disparam um checkpoint. `CheckpointEventType` é um `Literal` — seu type checker autocompleta e rejeita valores não suportados. Veja [tipos de evento](#tipos-de-evento) para a lista completa.
 </ParamField>
 
 <ParamField path="provider" type="BaseProvider" default="JsonProvider()">
@@ -346,7 +346,7 @@ Este passo a passo leva cerca de 5 minutos. Voce executara uma crew de duas tare
 </ParamField>
 
 <ParamField path="max_checkpoints" type="int | None" default="None">
-  Maximo de checkpoints a reter. Os mais antigos sao removidos apos cada gravacao.
+  Máximo de checkpoints a reter. Os mais antigos são removidos após cada gravação.
 </ParamField>
 
 <ParamField path="restore_from" type="Path | str | None" default="None">
@@ -357,28 +357,28 @@ Este passo a passo leva cerca de 5 minutos. Voce executara uma crew de duas tare
 
 Aceito por `Crew`, `Flow` e `Agent`.
 
-<ParamField path="None" type="padrao">
+<ParamField path="None" type="padrão">
   Herda do pai.
 </ParamField>
 
 <ParamField path="True" type="bool">
-  Ativa com padroes.
+  Ativa com padrões.
 </ParamField>
 
 <ParamField path="False" type="bool">
-  Desativacao explicita. Interrompe a heranca.
+  Desativação explícita. Interrompe a herança.
 </ParamField>
 
 <ParamField path="CheckpointConfig(...)" type="CheckpointConfig">
-  Configuracao personalizada.
+  Configuração personalizada.
 </ParamField>
 
 ### Tipos de evento
 
-`on_events` aceita qualquer combinacao de valores `CheckpointEventType`. O padrao `["task_completed"]` grava um checkpoint por tarefa finalizada; `["*"]` corresponde a todos os eventos.
+`on_events` aceita qualquer combinação de valores `CheckpointEventType`. O padrão `["task_completed"]` grava um checkpoint por tarefa finalizada; `["*"]` corresponde a todos os eventos.
 
 <Warning>
-`["*"]` e eventos de alta frequencia como `llm_call_completed` gravam muitos checkpoints e podem degradar o desempenho. Combine com `max_checkpoints`.
+`["*"]` e eventos de alta frequência como `llm_call_completed` gravam muitos checkpoints e podem degradar o desempenho. Combine com `max_checkpoints`.
 </Warning>
 
 <Expandable title="Todos os eventos suportados">
@@ -410,14 +410,14 @@ Aceito por `Crew`, `Flow` e `Agent`.
 </ParamField>
 
 <ParamField path="SqliteProvider" type="provider">
-  Arquivo de banco unico em `location` com journaling WAL.
+  Arquivo de banco único em `location` com journaling WAL.
 </ParamField>
 
 ### CLI
 
-| Comando | Proposito |
+| Comando | Propósito |
 |:--------|:----------|
 | `crewai checkpoint` | Inicia a TUI; detecta o armazenamento automaticamente. |
-| `crewai checkpoint --location <path>` | Inicia a TUI em uma localizacao especifica. |
+| `crewai checkpoint --location <path>` | Inicia a TUI em uma localização específica. |
 | `crewai checkpoint list <path>` | Lista checkpoints. |
 | `crewai checkpoint info <path>` | Inspeciona um arquivo de checkpoint ou a entrada mais recente em um banco SQLite. |
