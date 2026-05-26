@@ -35,6 +35,7 @@ from crewai.flow.conversation import (
 )
 from crewai.flow.chat import ChatMessage, ChatSession
 from crewai.flow.providers import QueueInputProvider
+from crewai.state import CheckpointConfig
 from crewai.utilities.types import LLMMessage
 
 
@@ -203,6 +204,122 @@ class TestChatSession:
 
 
 class TestConversationalFlow:
+    def test_deferred_multi_turn_trace_keeps_event_sequence_continuous(
+        self,
+    ) -> None:
+        @ConversationConfig()
+        class TraceFlow(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "work"
+
+            @listen("work")
+            def do_work(self) -> str:
+                reply = f"worked: {self.state.current_user_message}"
+                self.append_assistant_message(reply)
+                return reply
+
+        events: list[Any] = []
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(FlowStartedEvent)
+            def capture_flow_started(source: Any, event: Any) -> None:
+                events.append(event)
+
+            @crewai_event_bus.on(MethodExecutionStartedEvent)
+            def capture_method_started(source: Any, event: Any) -> None:
+                events.append(event)
+
+            @crewai_event_bus.on(MethodExecutionFinishedEvent)
+            def capture_method_finished(source: Any, event: Any) -> None:
+                events.append(event)
+
+            flow = TraceFlow()
+            flow.handle_turn("research apple stock")
+            flow.handle_turn("research google stock")
+            flow.finalize_session_traces()
+            crewai_event_bus.flush()
+
+        flow_started_events = [
+            event for event in events if isinstance(event, FlowStartedEvent)
+        ]
+        method_events = [
+            event
+            for event in events
+            if isinstance(
+                event, MethodExecutionStartedEvent | MethodExecutionFinishedEvent
+            )
+        ]
+        sequences = [
+            event.emission_sequence
+            for event in events
+            if event.emission_sequence is not None
+        ]
+        assert len(flow_started_events) == 1
+        assert len(sequences) == len(set(sequences))
+        assert all(
+            event.parent_event_id == flow_started_events[0].event_id
+            for event in method_events
+        )
+
+    def test_handle_turn_defers_trace_until_session_finalize(self) -> None:
+        from crewai.events.listeners.tracing.trace_batch_manager import TraceBatch
+
+        @ConversationConfig()
+        class TraceFlow(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "work"
+
+            @listen("work")
+            def do_work(self) -> str:
+                self.append_assistant_message("done")
+                return "done"
+
+        flow = TraceFlow()
+        listener = TraceCollectionListener()
+        listener.batch_manager.current_batch = TraceBatch()
+        listener.batch_manager.batch_owner_type = "flow"
+        listener.batch_manager._batch_finalized = False
+        try:
+            with patch.object(flow, "_finalize_flow_trace_batch") as mock_finalize:
+                flow.handle_turn("hello")
+
+                assert flow.defer_trace_finalization is True
+                assert flow._should_defer_trace_finalization() is True
+                mock_finalize.assert_called_once_with()
+
+                flow.finalize_session_traces()
+
+            assert mock_finalize.call_args_list[-1] == ((), {"force": True})
+        finally:
+            listener.batch_manager.current_batch = None
+            listener.batch_manager.batch_owner_type = None
+            listener.batch_manager.defer_session_finalization = False
+            listener.batch_manager._batch_finalized = False
+
+    def test_handle_turn_delegates_to_restored_checkpoint_flow(self) -> None:
+        class CheckpointFlow(ConversationalFlow):
+            pass
+
+        flow = CheckpointFlow()
+        mock_restored = MagicMock(spec=CheckpointFlow)
+        mock_restored.kickoff.return_value = "restored reply"
+
+        cfg = CheckpointConfig(restore_from="/path/to/conversation_cp.json")
+        with patch.object(CheckpointFlow, "from_checkpoint", return_value=mock_restored):
+            result = flow.handle_turn("resume this chat", from_checkpoint=cfg)
+
+        mock_restored.kickoff.assert_called_once_with(
+            inputs={
+                "id": flow.state.id,
+                "user_message": "resume this chat",
+            },
+            input_files=None,
+            user_message="resume this chat",
+            session_id=flow.state.id,
+        )
+        assert mock_restored.checkpoint.restore_from is None
+        assert result == "restored reply"
+
     def test_handle_turn_routes_to_listener_and_records_public_result(self) -> None:
         @ConversationConfig(default_intents=["research"], intent_llm="gpt-4o-mini")
         class ResearchFlow(ConversationalFlow):

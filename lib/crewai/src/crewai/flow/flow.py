@@ -55,12 +55,18 @@ from pydantic._internal._model_construction import ModelMetaclass
 from rich.console import Console
 from rich.panel import Panel
 
-from crewai.events.base_events import reset_emission_counter
+from crewai.events.base_events import (
+    get_emission_sequence,
+    reset_emission_counter,
+    set_emission_counter,
+)
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.event_context import (
     get_current_parent_id,
+    get_last_event_id,
     reset_last_event_id,
     restore_event_scope,
+    set_last_event_id,
     triggered_by_scope,
 )
 from crewai.events.listeners.tracing.trace_listener import (
@@ -2246,6 +2252,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 restore_from_state_id=restore_from_state_id,
             )
 
+        original_inputs = inputs
+        has_conversational_kwargs = (
+            user_message is not None
+            or session_id is not None
+            or intents is not None
+            or intent_llm is not None
+            or (inputs is not None and "user_message" in inputs)
+        )
         inputs = self._configure_conversational_kickoff(
             inputs=inputs,
             user_message=user_message,
@@ -2262,14 +2276,19 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
         restored = apply_checkpoint(self, from_checkpoint)
         if restored is not None:
-            return restored.kickoff(
-                inputs=inputs,
-                input_files=input_files,
-                user_message=user_message,
-                session_id=session_id,
-                intents=intents,
-                intent_llm=intent_llm,
-            )
+            restored_kwargs: dict[str, Any] = {
+                "inputs": inputs if has_conversational_kwargs else original_inputs,
+                "input_files": input_files,
+            }
+            if user_message is not None:
+                restored_kwargs["user_message"] = user_message
+            if session_id is not None:
+                restored_kwargs["session_id"] = session_id
+            if intents is not None:
+                restored_kwargs["intents"] = intents
+            if intent_llm is not None:
+                restored_kwargs["intent_llm"] = intent_llm
+            return restored.kickoff(**restored_kwargs)
         if self.stream:
             result_holder: list[Any] = []
             current_task_info: TaskInfo = {
@@ -2437,6 +2456,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         Returns:
             The final output from the flow, which is the result of the last executed method.
         """
+        original_inputs = inputs
+        has_conversational_kwargs = (
+            user_message is not None
+            or session_id is not None
+            or intents is not None
+            or intent_llm is not None
+            or (inputs is not None and "user_message" in inputs)
+        )
         inputs = self._configure_conversational_kickoff(
             inputs=inputs,
             user_message=user_message,
@@ -2453,14 +2480,19 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
         restored = apply_checkpoint(self, from_checkpoint)
         if restored is not None:
-            return await restored.kickoff_async(
-                inputs=inputs,
-                input_files=input_files,
-                user_message=user_message,
-                session_id=session_id,
-                intents=intents,
-                intent_llm=intent_llm,
-            )
+            restored_kwargs: dict[str, Any] = {
+                "inputs": inputs if has_conversational_kwargs else original_inputs,
+                "input_files": input_files,
+            }
+            if user_message is not None:
+                restored_kwargs["user_message"] = user_message
+            if session_id is not None:
+                restored_kwargs["session_id"] = session_id
+            if intents is not None:
+                restored_kwargs["intents"] = intents
+            if intent_llm is not None:
+                restored_kwargs["intent_llm"] = intent_llm
+            return await restored.kickoff_async(**restored_kwargs)
         if self.stream:
             result_holder: list[Any] = []
             current_task_info: TaskInfo = {
@@ -2611,13 +2643,25 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 if filtered_inputs:
                     self._initialize_state(filtered_inputs)
 
-            if get_current_parent_id() is None:
+            continuing_deferred_session_trace = (
+                self._should_defer_trace_finalization()
+                and getattr(self, "_conversation_trace_started", False)
+            )
+            if get_current_parent_id() is None and continuing_deferred_session_trace:
+                set_emission_counter(
+                    getattr(self, "_conversation_trace_emission_sequence", 0)
+                )
+                last_event_id = getattr(self, "_conversation_trace_last_event_id", None)
+                if last_event_id:
+                    set_last_event_id(last_event_id)
+                started_id = getattr(self, "_conversation_flow_started_event_id", None)
+                if started_id:
+                    restore_event_scope(((started_id, "flow_started"),))
+            elif get_current_parent_id() is None:
                 reset_emission_counter()
                 reset_last_event_id()
 
-            skip_flow_started = self._should_defer_trace_finalization() and getattr(
-                self, "_conversation_trace_started", False
-            )
+            skip_flow_started = continuing_deferred_session_trace
             if not skip_flow_started:
                 started_event = FlowStartedEvent(
                     type="flow_started",
@@ -2753,6 +2797,41 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 await self._emit_flow_finished_async(final_output)
 
             self._finalize_flow_trace_batch()
+            if self._should_defer_trace_finalization():
+                event_record = (
+                    crewai_event_bus._runtime_state.event_record
+                    if crewai_event_bus._runtime_state is not None
+                    else None
+                )
+                recorded_events = (
+                    [node.event for node in event_record.nodes.values()]
+                    if event_record is not None
+                    else []
+                )
+                latest_event = max(
+                    recorded_events,
+                    key=lambda event: event.emission_sequence or 0,
+                    default=None,
+                )
+                latest_sequence = (
+                    latest_event.emission_sequence
+                    if latest_event is not None
+                    and latest_event.emission_sequence is not None
+                    else 0
+                )
+                object.__setattr__(
+                    self,
+                    "_conversation_trace_emission_sequence",
+                    max(
+                        get_emission_sequence(),
+                        latest_sequence,
+                    ),
+                )
+                object.__setattr__(
+                    self,
+                    "_conversation_trace_last_event_id",
+                    latest_event.event_id if latest_event else get_last_event_id(),
+                )
 
             return final_output
         finally:
@@ -3901,6 +3980,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             batch_manager.defer_session_finalization = False
             object.__setattr__(self, "_conversation_trace_started", False)
             object.__setattr__(self, "_conversation_flow_started_event_id", None)
+            object.__setattr__(self, "_conversation_trace_emission_sequence", 0)
+            object.__setattr__(self, "_conversation_trace_last_event_id", None)
             return
 
         result = self._method_outputs[-1] if self._method_outputs else None
@@ -3918,6 +3999,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         self._finalize_flow_trace_batch(force=True)
         object.__setattr__(self, "_conversation_trace_started", False)
+        object.__setattr__(self, "_conversation_trace_emission_sequence", 0)
+        object.__setattr__(self, "_conversation_trace_last_event_id", None)
         batch_manager.defer_session_finalization = False
 
     def _finalize_flow_trace_batch(self, *, force: bool = False) -> None:
