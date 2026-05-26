@@ -50,6 +50,12 @@ class DB2ToolSchema(BaseModel):
         ),
     )
 
+    @model_validator(mode="after")
+    def _validate_filter_pair(self) -> "DB2ToolSchema":
+        if (self.filter_by is None) ^ (self.filter_value is None):
+            raise ValueError("filter_by and filter_value must be provided together.")
+        return self
+
 
 class DB2Config(BaseModel):
     """All DB2 connection and search settings."""
@@ -252,6 +258,7 @@ class DB2VectorSearchTool(BaseTool):
             try:
                 self._connect()
             except Exception as e:
+                self._disconnect()  # Clean up any partial connections
                 return json.dumps({"success": False, "error": f"Failed to connect to DB2: {str(e)}"})
 
             config = self.db2_config
