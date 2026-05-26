@@ -1,0 +1,104 @@
+---
+title: "Watch your Automations"
+description: "Watch fleet health, LLM consumption, and per-automation behavior from the Automations tab."
+sidebarTitle: "Monitoring"
+icon: "gauge"
+mode: "wide"
+---
+
+## Overview
+
+The **Automations** tab is the read-only operations view of the [Agent Control Plane](/en/enterprise/features/agent-control-plane/overview). It combines two metric cards, an interactive sankey, and two sub-tables — **Automations** and **Consumption** — that you can search, filter, and sort.
+
+<Frame>
+  ![Agent Control Plane overview](/images/enterprise/acp-overview-automations-sankey.png)
+</Frame>
+
+All charts and tables respect the **Last 24 hours / Last Week / Last 30 days** selector at the top right. Deltas compare the selected window against the previous one of the same length.
+
+<Note>
+  Rows only show data for deployments on **crewAI v1.13 or higher** — older deployments appear in the *"We've detected N other automations that we can't display"* banner under the sankey and contribute zero metrics until they're updated and re-deployed. See [Overview — Requirements](/en/enterprise/features/agent-control-plane/overview#requirements).
+</Note>
+
+## Dashboard
+
+The header of the page has two metric cards and an interactive sankey. Clicking either card switches the sankey between two modes:
+
+- **Health mode** — `Total Automations → status buckets (Critical / Warning / Healthy)`. Click a bucket to filter the Automations table to just those deployments.
+- **Consumption mode** — `Model Providers → Automations → Total Cost`. Click a provider to filter the Consumption table to that provider.
+
+| Card | What it shows |
+|------|---------------|
+| **Automations** | `active` automations (and total count), total `errors` in the window, currently `active executions` (and total in the window), with a delta vs the previous period. |
+| **Consumption** | Total `cost` and `tokens used`, with a cost delta vs the previous period. |
+
+<Frame>
+  ![Overview with consumption sankey](/images/enterprise/acp-overview-consumption-sankey.png)
+</Frame>
+
+## Automations table
+
+The **Automations** sub-tab is the per-deployment breakdown of fleet health. Each row is one deployed crew or flow.
+
+<Frame>
+  ![Automations table with health status breakdown](/images/enterprise/acp-automations-table.png)
+</Frame>
+
+| Column | What it shows |
+|--------|---------------|
+| **Automation** | Deployment name and any tags assigned to it (e.g. `production`, `financial`). |
+| **Last execution** | Time since the most recent run. |
+| **Health Status Breakdown** | Stacked bar of `Critical` / `Warning` / `Healthy` percentages for executions in the window. |
+| **Executions with Errors** | Total failed executions in the window. |
+| **PII detection applied** | `Yes` if a per-deployment PII config or a matching [PII rule](/en/enterprise/features/agent-control-plane/rules) is active. |
+| **Executions** | Total executions in the window. |
+| **Last updated** | When the deployment was last re-deployed. |
+| **Crew Version** | The `crewai` version reported by the deployment. An info icon next to versions below `1.13` flags rows that can't contribute metrics. |
+
+Search by name, filter by `Status` (`Healthy` / `Warning` / `Critical`), and sort by any column header. Click a deployment name to open the **Automation panel** (see below).
+
+## Consumption table
+
+The **Consumption** sub-tab is the per-deployment breakdown of LLM spend and token usage.
+
+<Frame>
+  ![Consumption table broken down by LLM provider](/images/enterprise/acp-consumption-table.png)
+</Frame>
+
+| Column | What it shows |
+|--------|---------------|
+| **Automation** | Deployment name. |
+| **Last execution** | Time since the most recent run. |
+| **Tokens used** | One row per LLM provider used by this automation, with the delta vs the previous period. |
+| **Cost** | Cost per LLM provider, with the delta vs the previous period. |
+| **Total cost** | Sum across all providers, with the delta. |
+| **Executions** | Total executions in the window. |
+| **Last updated** | When the deployment was last re-deployed. |
+| **Crew Version** | The `crewai` version reported by the deployment. |
+
+Filter by **LLM provider** and sort by `Cost`, `Executions`, or `Last run`.
+
+<Info>
+  **Empty cells (`—` or `$0.00`) usually mean the deployment is below crewAI v1.13.** In the screenshot above, *Automation F* (`1.7.0`) and *Automation I* (`1.12.2`) show blanks for tokens and cost — their executions still run, but they don't emit the provider-level telemetry that powers this table. Update and re-deploy these crews to start collecting consumption data.
+</Info>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Agent Control Plane — Overview" icon="book-open" href="/en/enterprise/features/agent-control-plane/overview">
+    What ACP is, requirements, plan tiers, and RBAC.
+  </Card>
+  <Card title="Agent Control Plane — Rules" icon="shield-check" href="/en/enterprise/features/agent-control-plane/rules">
+    Apply organization-wide PII Redaction rules across many automations.
+  </Card>
+  <Card title="Traces" icon="timeline" href="/en/enterprise/features/traces">
+    Drill into a single execution to see agent reasoning, tool calls, and token usage.
+  </Card>
+  <Card title="Deploy to AMP" icon="rocket" href="/en/enterprise/guides/deploy-to-amp">
+    Deploy a crew on a crewAI version that supports the Agent Control Plane.
+  </Card>
+</CardGroup>
+
+<Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
+  Contact our support team for help interpreting metrics in the Agent Control Plane.
+</Card>
