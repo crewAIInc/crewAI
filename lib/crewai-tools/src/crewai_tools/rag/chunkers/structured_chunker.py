@@ -12,11 +12,11 @@ class CsvChunker(BaseChunker):
         if separators is None:
             separators = [
                 "\nRow ",  # Row boundaries (from CSVLoader format)
-                "\n",
-                " | ",
-                ", ",
-                " ",
-                "",
+                "\n",  # Line breaks
+                " | ",  # Column separators
+                ", ",  # Comma separators
+                " ",  # Word breaks
+                "",  # Character level
             ]
         super().__init__(chunk_size, chunk_overlap, separators, keep_separator)
 
@@ -32,13 +32,13 @@ class JsonChunker(BaseChunker):
         if separators is None:
             separators = [
                 "\n\n",  # Object/array boundaries
-                "\n",
-                "},",
-                "],",
-                ", ",
+                "\n",  # Line breaks
+                "},",  # Object endings
+                "],",  # Array endings
+                ", ",  # Property separators
                 ": ",  # Key-value separators
-                " ",
-                "",
+                " ",  # Word breaks
+                "",  # Character level
             ]
         super().__init__(chunk_size, chunk_overlap, separators, keep_separator)
 
@@ -53,14 +53,14 @@ class XmlChunker(BaseChunker):
     ):
         if separators is None:
             separators = [
-                "\n\n",
-                "\n",
-                ">",
+                "\n\n",  # Element boundaries
+                "\n",  # Line breaks
+                ">",  # Tag endings
                 ". ",  # Sentence endings (for text content)
-                "! ",
-                "? ",
-                ", ",
-                " ",
-                "",
+                "! ",  # Exclamation endings
+                "? ",  # Question endings
+                ", ",  # Comma separators
+                " ",  # Word breaks
+                "",  # Character level
             ]
         super().__init__(chunk_size, chunk_overlap, separators, keep_separator)
