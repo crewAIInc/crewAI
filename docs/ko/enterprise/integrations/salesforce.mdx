@@ -17,15 +17,59 @@ Salesforce 통합을 사용하기 전에 다음을 확인하세요:
 - 적절한 권한이 있는 Salesforce 계정
 - [통합 페이지](https://app.crewai.com/integrations)를 통해 Salesforce 계정 연결
 
+<Note>
+  Salesforce는 사용자가 연결하기 전에 **관리자가 CrewAI 패키지를 한 번 설치**
+  해야 합니다. 이는 Spring '26 릴리스부터 모든 ExternalClientApp 기반 통합에
+  적용되는 Salesforce 플랫폼의 요구 사항이며, CrewAI 고유의 단계가 아닙니다.
+  CrewAI AMP의 Connect Salesforce 플로우가 첫 연결 시 이 과정을 안내합니다.
+</Note>
+
 ## Salesforce 통합 설정
 
 ### 1. Salesforce 계정 연결
 
-1. [CrewAI AMP 통합](https://app.crewai.com/crewai_plus/connectors)으로 이동합니다.
+1. [CrewAI AMP 통합](https://app.crewai.com/crewai_plus/unified_tools)으로 이동합니다.
 2. 인증 통합 섹션에서 **Salesforce**를 찾습니다.
-3. **연결**을 클릭하고 OAuth 과정을 완료합니다.
+3. **연결**을 클릭합니다.
+
+이후 동작은 관리자가 조직에 CrewAI 패키지를 이미 설치했는지에 따라 달라집니다:
+
+- **패키지가 이미 설치된 경우:** 곧바로 Salesforce OAuth 동의 화면으로
+  이동합니다. 승인하면 연결이 완료됩니다.
+- **패키지가 아직 설치되지 않은 경우:** **Install CrewAI in Salesforce**
+  페이지가 표시됩니다. 아래의 일회성 설치 단계를 따른 뒤, CrewAI AMP로
+  돌아와 **연결**을 다시 클릭하세요.
+
 4. CRM 및 영업 관리에 필요한 권한을 부여합니다.
 5. [통합 설정](https://app.crewai.com/crewai_plus/settings/integrations)에서 Enterprise Token을 복사합니다.
+
+#### 일회성 관리자 설치 (Salesforce 관리자 전용)
+
+조직 내 누군가 **Connect Salesforce**를 처음 클릭하면, CrewAI는 CrewAI
+관리형 패키지의 설치 페이지로 리디렉션합니다. Salesforce 관리자가 조직
+전체를 위해 한 번만 설치하면 됩니다.
+
+1. CrewAI 내 설치 페이지에서 **Install in Salesforce**를 클릭합니다.
+   (해당 페이지 URL을 관리자에게 공유해도 됩니다. 설치 링크는 누구든 열 수
+   있도록 동작합니다.)
+2. 관리자 권한으로 Salesforce에 로그인합니다. 샌드박스 환경에서는 URL의
+   `login.salesforce.com`을 `test.salesforce.com`으로 바꾼 뒤 엽니다.
+3. **Install for All Users**를 선택하고, 서드파티 앱 동의 항목을 확인한 뒤
+   **Install**을 클릭합니다.
+4. Salesforce Setup에서 **External Client App Manager** → **CrewAI App** →
+   **Policies** 탭 → **Edit**로 이동하여 다음과 같이 설정합니다:
+   - **Permitted Users:** All users may self-authorize
+   - **IP Relaxation:** Relax IP restrictions
+   - **Refresh Token Policy:** Refresh token is valid until revoked
+5. 저장합니다.
+6. CrewAI AMP로 돌아가 **Connect Salesforce**를 다시 클릭합니다. 이번에는
+   OAuth가 정상적으로 완료됩니다.
+
+<Note>
+  **Salesforce 관리자가 아니신가요?** 설치 페이지의 URL(또는 설치 링크 자체)
+  을 Salesforce 관리자에게 전달하고 위 단계를 진행해 달라고 요청하세요.
+  관리자가 완료하면 CrewAI AMP로 돌아와 **연결**을 다시 클릭하면 됩니다.
+</Note>
 
 ### 2. 필수 패키지 설치
 
