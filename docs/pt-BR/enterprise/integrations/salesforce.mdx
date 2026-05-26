@@ -17,15 +17,65 @@ Antes de usar a integração Salesforce, certifique-se de que você possui:
 - Uma conta Salesforce com permissões apropriadas
 - Sua conta Salesforce conectada via a [página de Integrações](https://app.crewai.com/integrations)
 
+<Note>
+  O Salesforce exige uma **instalação única feita por um administrador** do
+  pacote CrewAI na sua organização antes que qualquer usuário possa se
+  conectar. Isso é uma exigência da plataforma Salesforce para todas as
+  integrações baseadas em ExternalClientApp a partir da release Spring '26 —
+  não é uma etapa específica da CrewAI. O fluxo Connect Salesforce na CrewAI
+  AMP guia você por esta etapa na primeira vez.
+</Note>
+
 ## Configurando a Integração Salesforce
 
 ### 1. Conecte sua Conta Salesforce
 
-1. Acesse [CrewAI AMP Integrações](https://app.crewai.com/crewai_plus/connectors)
-2. Encontre **Salesforce** na seção Integrações de Autenticação
-3. Clique em **Conectar** e complete o fluxo OAuth
-4. Conceda as permissões necessárias para gerenciamento de CRM e vendas
-5. Copie seu Token Enterprise em [Configurações de Integração](https://app.crewai.com/crewai_plus/settings/integrations)
+1. Acesse [CrewAI AMP Integrações](https://app.crewai.com/crewai_plus/connectors).
+2. Encontre **Salesforce** na seção Integrações de Autenticação.
+3. Clique em **Conectar**.
+
+O que acontece em seguida depende de o administrador Salesforce já ter
+instalado o pacote CrewAI na sua organização:
+
+- **Pacote já instalado:** você será levado diretamente à tela de consentimento
+  OAuth do Salesforce — aprove e a conexão estará feita.
+- **Pacote ainda não instalado:** você verá uma página **Install CrewAI in
+  Salesforce**. Siga as etapas de instalação única abaixo e, depois, volte à
+  CrewAI AMP e clique em **Conectar** novamente.
+
+4. Conceda as permissões necessárias para gerenciamento de CRM e vendas.
+5. Copie seu Token Enterprise em [Configurações de Integração](https://app.crewai.com/crewai_plus/settings/integrations).
+
+#### Instalação única pelo administrador (apenas admin Salesforce)
+
+Na primeira vez que alguém na sua organização clica em **Connect Salesforce**,
+a CrewAI redireciona para uma página de instalação que aponta para o pacote
+gerenciado CrewAI. Um administrador Salesforce precisa instalá-lo uma única
+vez para toda a organização.
+
+1. Na página de instalação dentro da CrewAI, clique em **Install in
+   Salesforce**. (Você também pode compartilhar a URL dessa página com seu
+   administrador — o link de instalação funciona para qualquer pessoa que o
+   abra.)
+2. Entre no Salesforce como administrador. Para sandboxes, troque
+   `login.salesforce.com` por `test.salesforce.com` na URL antes de abrir.
+3. Escolha **Install for All Users**, confirme o aviso sobre aplicativos de
+   terceiros e clique em **Install**.
+4. No Setup do Salesforce, busque **External Client App Manager** → **CrewAI
+   App** → abra a aba **Policies** → **Edit** e configure:
+   - **Permitted Users:** All users may self-authorize
+   - **IP Relaxation:** Relax IP restrictions
+   - **Refresh Token Policy:** Refresh token is valid until revoked
+5. Salve.
+6. Volte à CrewAI AMP e clique em **Connect Salesforce** novamente. Desta vez
+   o OAuth será concluído.
+
+<Note>
+  **Não é administrador Salesforce?** Encaminhe a URL da página de instalação
+  (ou o link de instalação em si) para o seu administrador e peça que ele
+  conclua as etapas acima. Quando ele terminar, volte à CrewAI AMP e clique
+  em **Conectar** novamente.
+</Note>
 
 ### 2. Instale o Pacote Necessário
 
