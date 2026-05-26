@@ -975,7 +975,7 @@ def test_anthropic_agent_kickoff_structured_output_with_tools():
         role="Calculator",
         goal="Perform calculations using available tools",
         backstory="You are a calculator assistant that uses tools to compute results.",
-        llm=LLM(model="anthropic/claude-3-5-haiku-20241022"),
+        llm=LLM(model="anthropic/claude-sonnet-4-6"),
         tools=[add_numbers],
         verbose=True,
     )
