@@ -409,7 +409,7 @@ def test_bedrock_aws_credentials_configuration():
     """
     aws_access_key_id = "test-access-key"
     aws_secret_access_key = "test-secret-key"
-    aws_region_name = "us-west-2"
+    aws_region_name = "us-east-1"
 
 
     with patch.dict(os.environ, {
