@@ -337,7 +337,7 @@ This walkthrough takes ~5 minutes. You will run a two-task crew, kill it midway,
   Storage destination. A directory for `JsonProvider`, a database file path for `SqliteProvider`.
 </ParamField>
 
-<ParamField path="on_events" type="list[CheckpointEventType]" default='["task_completed"]'>
+<ParamField path="on_events" type='list[CheckpointEventType | Literal["*"]]' default='["task_completed"]'>
   Event types that trigger a checkpoint. `CheckpointEventType` is a `Literal` — your type checker will autocomplete and reject unsupported values. See [event types](#event-types) for the full list.
 </ParamField>
 

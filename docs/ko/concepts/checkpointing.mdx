@@ -337,7 +337,7 @@ CrewAI에는 두 가지 프로바이더가 포함되어 있습니다:
   스토리지 대상. `JsonProvider`는 디렉토리, `SqliteProvider`는 데이터베이스 파일 경로.
 </ParamField>
 
-<ParamField path="on_events" type="list[CheckpointEventType]" default='["task_completed"]'>
+<ParamField path="on_events" type='list[CheckpointEventType | Literal["*"]]' default='["task_completed"]'>
   체크포인트를 트리거하는 이벤트 타입. `CheckpointEventType`은 `Literal`이므로 타입 체커가 자동 완성하고 지원되지 않는 값을 거부합니다. 전체 목록은 [이벤트 타입](#이벤트-타입) 참조.
 </ParamField>
 

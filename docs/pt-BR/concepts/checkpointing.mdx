@@ -337,7 +337,7 @@ Este passo a passo leva cerca de 5 minutos. Você executará uma crew de duas ta
   Destino do armazenamento. Diretório para `JsonProvider`, caminho de arquivo de banco para `SqliteProvider`.
 </ParamField>
 
-<ParamField path="on_events" type="list[CheckpointEventType]" default='["task_completed"]'>
+<ParamField path="on_events" type='list[CheckpointEventType | Literal["*"]]' default='["task_completed"]'>
   Tipos de evento que disparam um checkpoint. `CheckpointEventType` é um `Literal` — seu type checker autocompleta e rejeita valores não suportados. Veja [tipos de evento](#tipos-de-evento) para a lista completa.
 </ParamField>
 

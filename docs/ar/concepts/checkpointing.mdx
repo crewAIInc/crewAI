@@ -337,7 +337,7 @@ mode: "wide"
   وجهة التخزين. مجلد لـ `JsonProvider`، مسار ملف قاعدة بيانات لـ `SqliteProvider`.
 </ParamField>
 
-<ParamField path="on_events" type="list[CheckpointEventType]" default='["task_completed"]'>
+<ParamField path="on_events" type='list[CheckpointEventType | Literal["*"]]' default='["task_completed"]'>
   أنواع الأحداث التي تطلق نقطة حفظ. `CheckpointEventType` هو `Literal` — مدقق الأنواع يكمل تلقائيا ويرفض القيم غير المدعومة. راجع [أنواع الأحداث](#أنواع-الأحداث) للقائمة الكاملة.
 </ParamField>
 
