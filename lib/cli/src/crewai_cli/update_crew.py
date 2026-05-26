@@ -21,7 +21,6 @@ def migrate_pyproject(input_file: str, output_file: str) -> None:
     When the time comes that uv supports the new format, this function will be deprecated.
     """
     poetry_data = {}
-    # Read the input pyproject.toml
     pyproject_data = read_toml()
 
     new_pyproject: dict[str, Any] = {
@@ -29,7 +28,6 @@ def migrate_pyproject(input_file: str, output_file: str) -> None:
         "build-system": {"requires": ["hatchling"], "build-backend": "hatchling.build"},
     }
 
-    # Migrate project metadata
     if "tool" in pyproject_data and "poetry" in pyproject_data["tool"]:
         poetry_data = pyproject_data["tool"]["poetry"]
         new_pyproject["project"]["name"] = poetry_data.get("name")
@@ -44,18 +42,15 @@ def migrate_pyproject(input_file: str, output_file: str) -> None:
         ]
         new_pyproject["project"]["requires-python"] = poetry_data.get("python")
     else:
-        # If it's already in the new format, just copy the project and tool sections
         new_pyproject["project"] = pyproject_data.get("project", {})
         new_pyproject["tool"] = pyproject_data.get("tool", {})
 
-    # Migrate or copy dependencies
     if "dependencies" in new_pyproject["project"]:
-        # If dependencies are already in the new format, keep them as is
         pass
     elif poetry_data and "dependencies" in poetry_data:
         new_pyproject["project"]["dependencies"] = []
         for dep, version in poetry_data["dependencies"].items():
-            if isinstance(version, dict):  # Handle extras
+            if isinstance(version, dict):
                 extras = ",".join(version.get("extras", []))
                 new_dep = f"{dep}[{extras}]"
                 if "version" in version:
@@ -67,7 +62,6 @@ def migrate_pyproject(input_file: str, output_file: str) -> None:
                 new_dep = f"{dep}{parse_version(version)}"
             new_pyproject["project"]["dependencies"].append(new_dep)
 
-    # Migrate or copy scripts
     if poetry_data and "scripts" in poetry_data:
         new_pyproject["project"]["scripts"] = poetry_data["scripts"]
     elif pyproject_data.get("project", {}) and "scripts" in pyproject_data["project"]:
@@ -79,7 +73,6 @@ def migrate_pyproject(input_file: str, output_file: str) -> None:
         "run_crew" not in new_pyproject["project"]["scripts"]
         and len(new_pyproject["project"]["scripts"]) > 0
     ):
-        # Extract the module name from any existing script
         existing_scripts = new_pyproject["project"]["scripts"]
         module_name = next(
             (value.split(".")[0] for value in existing_scripts.values() if "." in value)
@@ -87,15 +80,12 @@ def migrate_pyproject(input_file: str, output_file: str) -> None:
 
         new_pyproject["project"]["scripts"]["run_crew"] = f"{module_name}.main:run"
 
-    # Migrate optional dependencies
     if poetry_data and "extras" in poetry_data:
         new_pyproject["project"]["optional-dependencies"] = poetry_data["extras"]
 
-    # Backup the old pyproject.toml
     backup_file = "pyproject-old.toml"
     shutil.copy2(input_file, backup_file)
 
-    # Rename the poetry.lock file
     lock_file = "poetry.lock"
     lock_backup = "poetry-old.lock"
     if os.path.exists(lock_file):
@@ -103,7 +93,6 @@ def migrate_pyproject(input_file: str, output_file: str) -> None:
     else:
         pass
 
-    # Write the new pyproject.toml
     with open(output_file, "wb") as f:
         tomli_w.dump(new_pyproject, f)
 
