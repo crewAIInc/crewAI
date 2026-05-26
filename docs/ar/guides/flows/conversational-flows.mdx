@@ -252,6 +252,32 @@ finally:
 
 `suppress_flow_events=True` يخفي لوحات Rich فقط؛ أحداث trace والـ methods تُصدر.
 
+### `ConversationalFlow` عالي المستوى
+
+يستخدم التجريد التجريبي عالي المستوى في `crewai.experimental.ConversationalFlow` دورة حياة tracing نفسها. عند تزيين الصنف بـ `@ConversationConfig(...)`، تكون قيمة `defer_trace_finalization` الافتراضية `True`، لذلك يبقي كل `handle_turn()` أثر الجلسة مفتوحاً بدلاً من تصديره فوراً.
+
+إذا استدعيت `handle_turn()` مباشرةً، أنهِ الجلسة داخل كتلة `finally`:
+
+```python
+from crewai.experimental import ConversationConfig, ConversationalFlow
+
+
+@ConversationConfig()
+class MyChatFlow(ConversationalFlow):
+    ...
+
+
+flow = MyChatFlow()
+
+try:
+    flow.handle_turn("مرحباً")
+    flow.handle_turn("أخبرني المزيد")
+finally:
+    flow.finalize_session_traces()
+```
+
+إذا غلّفت الـ flow باستخدام `ChatSession`، فاستدعِ `session.close()` بدلاً من ذلك؛ فهو ينهي traces المؤجلة نيابةً عنك. بدون أحد هذين الاستدعاءين، قد تبقى دفعة trace مفتوحة وقد لا ترى trace مُصدَّراً لآخر محادثة.
+
 ## `ChatSession` (WebSocket / SSE)
 
 غلاف `kickoff` وجسر أحداث اختياري للواجهات.

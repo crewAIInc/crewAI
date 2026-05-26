@@ -255,6 +255,32 @@ finally:
 
 `suppress_flow_events=True` only hides Rich console panels; trace and method events still emit for observability.
 
+### High-level `ConversationalFlow`
+
+The experimental high-level abstraction in `crewai.experimental.ConversationalFlow` uses the same tracing lifecycle. When you decorate the class with `@ConversationConfig(...)`, `defer_trace_finalization` defaults to `True`, so each `handle_turn()` keeps the session trace open instead of exporting immediately.
+
+If you call `handle_turn()` directly, finalize the session in a `finally` block:
+
+```python
+from crewai.experimental import ConversationConfig, ConversationalFlow
+
+
+@ConversationConfig()
+class MyChatFlow(ConversationalFlow):
+    ...
+
+
+flow = MyChatFlow()
+
+try:
+    flow.handle_turn("Hello")
+    flow.handle_turn("Tell me more")
+finally:
+    flow.finalize_session_traces()
+```
+
+If you wrap the flow with `ChatSession`, call `session.close()` instead; it finalizes deferred traces for you. Without one of these calls, the trace batch can remain open and you may not see an exported trace for the last conversation.
+
 ## `ChatSession` (WebSocket / SSE)
 
 Wraps `kickoff` and optional event bridging for UIs.
