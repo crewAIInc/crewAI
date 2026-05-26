@@ -472,9 +472,46 @@ class BaseLLM(BaseModel, ABC):
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
         from_agent: BaseAgent | None = None,
+        temperature: float | None = None,
+        top_p: float | None = None,
+        max_tokens: int | None = None,
+        stream: bool | None = None,
+        seed: int | None = None,
+        stop_sequences: list[str] | None = None,
+        frequency_penalty: float | None = None,
+        presence_penalty: float | None = None,
+        n: int | None = None,
     ) -> None:
-        """Emit LLM call started event."""
+        """Emit LLM call started event.
+
+        Sampling params default to introspecting ``self`` (``self.temperature``,
+        ``self.top_p``, ``self.stop`` -> ``stop_sequences``, ...) so providers
+        don't need to thread them through every emission site. Explicit
+        kwargs override the introspection.
+        """
         from crewai.utilities.serialization import to_serializable
+
+        if temperature is None:
+            temperature = getattr(self, "temperature", None)
+        if top_p is None:
+            top_p = getattr(self, "top_p", None)
+        if max_tokens is None:
+            max_tokens = getattr(self, "max_tokens", None)
+        if stream is None:
+            stream = getattr(self, "stream", None)
+        if seed is None:
+            seed = getattr(self, "seed", None)
+        if stop_sequences is None:
+            stop_attr = getattr(self, "stop", None) or getattr(
+                self, "stop_sequences", None
+            )
+            stop_sequences = stop_attr or None
+        if frequency_penalty is None:
+            frequency_penalty = getattr(self, "frequency_penalty", None)
+        if presence_penalty is None:
+            presence_penalty = getattr(self, "presence_penalty", None)
+        if n is None:
+            n = getattr(self, "n", None)
 
         crewai_event_bus.emit(
             self,
@@ -487,6 +524,15 @@ class BaseLLM(BaseModel, ABC):
                 from_agent=from_agent,
                 model=self.model,
                 call_id=get_current_call_id(),
+                temperature=temperature,
+                top_p=top_p,
+                max_tokens=max_tokens,
+                stream=stream,
+                seed=seed,
+                stop_sequences=stop_sequences,
+                frequency_penalty=frequency_penalty,
+                presence_penalty=presence_penalty,
+                n=n,
             ),
         )
 
@@ -498,6 +544,8 @@ class BaseLLM(BaseModel, ABC):
         from_agent: BaseAgent | None = None,
         messages: str | list[LLMMessage] | None = None,
         usage: dict[str, Any] | None = None,
+        finish_reason: str | None = None,
+        response_id: str | None = None,
     ) -> None:
         """Emit LLM call completed event."""
         from crewai.utilities.serialization import to_serializable
@@ -513,6 +561,8 @@ class BaseLLM(BaseModel, ABC):
                 model=self.model,
                 call_id=get_current_call_id(),
                 usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             ),
         )
 

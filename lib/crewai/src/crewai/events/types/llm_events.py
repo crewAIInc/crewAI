@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from crewai.events.base_events import BaseEvent
 
@@ -48,6 +48,17 @@ class LLMCallStartedEvent(LLMEventBase):
     tools: list[dict[str, Any]] | None = None
     callbacks: list[Any] | None = None
     available_functions: dict[str, Any] | None = None
+    # Sampling/request parameters forwarded for OTel GenAI compliance.
+    # All optional so legacy emitters keep working unchanged.
+    temperature: float | None = None
+    top_p: float | None = None
+    max_tokens: int | None = None
+    stream: bool | None = None
+    seed: int | None = None
+    stop_sequences: list[str] | None = None
+    frequency_penalty: float | None = None
+    presence_penalty: float | None = None
+    n: int | None = None
 
 
 class LLMCallCompletedEvent(LLMEventBase):
@@ -58,6 +69,23 @@ class LLMCallCompletedEvent(LLMEventBase):
     response: Any
     call_type: LLMCallType
     usage: dict[str, Any] | None = None
+    finish_reason: str | None = None
+    response_id: str | None = None
+
+    @field_validator("finish_reason", "response_id", mode="before")
+    @classmethod
+    def _coerce_non_string_to_none(cls, value: Any) -> str | None:
+        """Drop non-string values so test mocks and exotic provider types
+        (MagicMock, protobuf enums, etc.) never crash event construction.
+
+        Provider helpers are best-effort: when extraction returns something
+        non-string (e.g. a ``MagicMock`` in unit tests), we treat it as
+        "no value" rather than raising. Downstream telemetry already
+        handles the missing-attribute case.
+        """
+        if value is None or isinstance(value, str):
+            return value
+        return None
 
 
 class LLMCallFailedEvent(LLMEventBase):

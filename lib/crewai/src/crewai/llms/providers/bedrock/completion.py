@@ -677,7 +677,7 @@ class BedrockCompletion(BaseLLM):
             if usage:
                 self._track_token_usage_internal(usage)
 
-            stop_reason = response.get("stopReason")
+            stop_reason, response_id = self._extract_finish_reason_and_id(response)
             if stop_reason:
                 logging.debug(f"Response stop reason: {stop_reason}")
                 if stop_reason == "max_tokens":
@@ -716,6 +716,8 @@ class BedrockCompletion(BaseLLM):
                                 from_agent=from_agent,
                                 messages=messages,
                                 usage=usage,
+                                finish_reason=stop_reason,
+                                response_id=response_id,
                             )
                             return result
                         except Exception as e:
@@ -738,6 +740,8 @@ class BedrockCompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=messages,
                     usage=usage,
+                    finish_reason=stop_reason,
+                    response_id=response_id,
                 )
                 return non_structured_output_tool_uses
 
@@ -812,6 +816,8 @@ class BedrockCompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=messages,
                 usage=usage,
+                finish_reason=stop_reason,
+                response_id=response_id,
             )
 
             return self._invoke_after_llm_call_hooks(
@@ -951,7 +957,9 @@ class BedrockCompletion(BaseLLM):
             )
 
             stream = response.get("stream")
-            response_id = None
+            _, stream_response_id = self._extract_finish_reason_and_id(response)
+            response_id = stream_response_id
+            stream_finish_reason: str | None = None
             if stream:
                 for event in stream:
                     if "messageStart" in event:
@@ -1049,6 +1057,8 @@ class BedrockCompletion(BaseLLM):
                                         from_agent=from_agent,
                                         messages=messages,
                                         usage=usage_data,
+                                        finish_reason=stream_finish_reason,
+                                        response_id=response_id,
                                     )
                                     return result  # type: ignore[return-value]
                                 except Exception as e:
@@ -1102,6 +1112,7 @@ class BedrockCompletion(BaseLLM):
                             tool_use_id = None
                     elif "messageStop" in event:
                         stop_reason = event["messageStop"].get("stopReason")
+                        stream_finish_reason = stop_reason
                         logging.debug(f"Streaming message stopped: {stop_reason}")
                         if stop_reason == "max_tokens":
                             logging.warning(
@@ -1147,6 +1158,8 @@ class BedrockCompletion(BaseLLM):
             from_agent=from_agent,
             messages=messages,
             usage=usage_data,
+            finish_reason=stream_finish_reason,
+            response_id=response_id,
         )
 
         return full_response
@@ -1262,7 +1275,7 @@ class BedrockCompletion(BaseLLM):
             if usage:
                 self._track_token_usage_internal(usage)
 
-            stop_reason = response.get("stopReason")
+            stop_reason, response_id = self._extract_finish_reason_and_id(response)
             if stop_reason:
                 logging.debug(f"Response stop reason: {stop_reason}")
                 if stop_reason == "max_tokens":
@@ -1300,6 +1313,8 @@ class BedrockCompletion(BaseLLM):
                                 from_agent=from_agent,
                                 messages=messages,
                                 usage=usage,
+                                finish_reason=stop_reason,
+                                response_id=response_id,
                             )
                             return result
                         except Exception as e:
@@ -1322,6 +1337,8 @@ class BedrockCompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=messages,
                     usage=usage,
+                    finish_reason=stop_reason,
+                    response_id=response_id,
                 )
                 return non_structured_output_tool_uses
 
@@ -1987,6 +2004,27 @@ class BedrockCompletion(BaseLLM):
             config["topK"] = int(self.top_k)
 
         return config
+
+    @staticmethod
+    def _extract_finish_reason_and_id(
+        response: Any,
+    ) -> tuple[str | None, str | None]:
+        """Extract raw finish_reason (``stopReason``) and response_id
+        (``ResponseMetadata.RequestId``) from a Bedrock Converse response
+        dict. Defensive — returns (None, None) on any failure. Raw provider
+        value is kept; downstream telemetry owns the OTel enum coercion.
+        """
+        finish_reason: str | None = None
+        response_id: str | None = None
+        try:
+            if isinstance(response, dict):
+                finish_reason = response.get("stopReason")
+                metadata = response.get("ResponseMetadata") or {}
+                response_id = metadata.get("RequestId") if metadata else None
+        except (AttributeError, KeyError, TypeError, IndexError):
+            finish_reason = None
+            response_id = None
+        return finish_reason, response_id
 
     def _handle_client_error(self, e: ClientError) -> str:
         """Handle AWS ClientError with specific error codes and return error message."""
