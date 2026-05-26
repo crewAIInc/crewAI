@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
@@ -17,6 +17,13 @@ from crewai.events.types.flow_events import (
     MethodExecutionStartedEvent,
 )
 from crewai.events.types.llm_events import LLMCallStartedEvent
+from crewai.experimental import (
+    ConversationConfig,
+    ConversationMessage,
+    ConversationState,
+    ConversationalFlow,
+    RouterConfig,
+)
 from crewai.flow import Flow, ChatState, listen, start
 from crewai.flow.flow_context import current_flow_id, current_flow_name
 from crewai.flow.conversation import (
@@ -193,6 +200,280 @@ class TestChatSession:
         )
         assert msg.version == "1"
         assert msg.type == "assistant_delta"
+
+
+class TestConversationalFlow:
+    def test_handle_turn_routes_to_listener_and_records_public_result(self) -> None:
+        @ConversationConfig(default_intents=["research"], intent_llm="gpt-4o-mini")
+        class ResearchFlow(ConversationalFlow):
+            @listen("research")
+            def run_research(self) -> str:
+                self.append_agent_result(
+                    "researcher",
+                    "researched answer",
+                    visibility="public",
+                )
+                return "researched answer"
+
+        flow = ResearchFlow()
+
+        with patch.object(flow, "_collapse_to_outcome", return_value="research"):
+            result = flow.handle_turn("research CrewAI")
+
+        assert result == "researched answer"
+        assert "conversation_start" in ResearchFlow._start_methods
+        assert flow.state.current_user_message == "research CrewAI"
+        assert flow.state.last_intent == "research"
+        assert [message.role for message in flow.state.messages] == [
+            "user",
+            "assistant",
+        ]
+        assert flow.state.messages[-1].content == "researched answer"
+        assert flow.state.events[0].agent_name == "researcher"
+        assert flow.state.events[0].visibility == "public"
+
+    def test_private_agent_results_stay_out_of_shared_history(self) -> None:
+        class PrivateFlow(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "work"
+
+            @listen("work")
+            def do_work(self) -> None:
+                self.append_agent_result("planner", "private scratch")
+
+        flow = PrivateFlow()
+        flow.handle_turn("plan quietly")
+
+        assert [message.role for message in flow.state.messages] == ["user"]
+        assert flow.state.events[0].visibility == "private"
+        assert flow.state.agent_threads["planner"][0].content == "private scratch"
+
+    def test_answer_from_history_uses_configured_llm_and_appends_reply(self) -> None:
+        @ConversationConfig(answer_from_history_llm="gpt-4o-mini")
+        class HistoryFlow(ConversationalFlow):
+            pass
+
+        flow = HistoryFlow()
+        flow._state = ConversationState(
+            messages=[
+                ConversationMessage(role="user", content="research topic"),
+                ConversationMessage(role="assistant", content="prior findings"),
+            ]
+        )
+        llm = MagicMock()
+        llm.call.return_value = "summary from history"
+
+        with (
+            patch.object(
+                flow,
+                "_collapse_to_outcome",
+                return_value="answer_from_history",
+            ),
+            patch.object(flow, "_coerce_llm", return_value=llm),
+        ):
+            result = flow.handle_turn("summarize this")
+
+        assert result == "summary from history"
+        assert flow.state.messages[-1].role == "assistant"
+        assert flow.state.messages[-1].content == "summary from history"
+        llm.call.assert_called_once()
+
+    def test_router_config_uses_structured_intent_response(self) -> None:
+        class ResearchRoute(BaseModel):
+            intent: Literal["research", "clarify"]
+
+        llm = MagicMock()
+        llm.call.return_value = ResearchRoute(intent="research")
+
+        @ConversationConfig(
+            router=RouterConfig(
+                prompt="Classify the next action.",
+                response_format=ResearchRoute,
+                llm=llm,
+                routes=["research", "clarify"],
+                default_intent="clarify",
+                fallback_intent="clarify",
+            )
+        )
+        class RoutedFlow(ConversationalFlow):
+            @listen("research")
+            def run_research(self) -> str:
+                self.append_assistant_message("researched")
+                return "researched"
+
+            @listen("clarify")
+            def ask_clarification(self) -> str:
+                self.append_assistant_message("clarify")
+                return "clarify"
+
+        flow = RoutedFlow()
+        result = flow.handle_turn("research CrewAI")
+
+        assert result == "researched"
+        llm.call.assert_called_once()
+        assert llm.call.call_args.kwargs["response_format"] is ResearchRoute
+        assert flow.state.messages[-1].content == "researched"
+
+    def test_router_config_falls_back_for_invalid_intent(self) -> None:
+        class ResearchRoute(BaseModel):
+            intent: str
+
+        llm = MagicMock()
+        llm.call.return_value = ResearchRoute(intent="unknown")
+
+        @ConversationConfig(
+            router=RouterConfig(
+                prompt="Classify the next action.",
+                response_format=ResearchRoute,
+                llm=llm,
+                routes=["research", "clarify"],
+                default_intent="clarify",
+                fallback_intent="clarify",
+            )
+        )
+        class RoutedFlow(ConversationalFlow):
+            @listen("research")
+            def run_research(self) -> str:
+                self.append_assistant_message("researched")
+                return "researched"
+
+            @listen("clarify")
+            def ask_clarification(self) -> str:
+                self.append_assistant_message("clarify")
+                return "clarify"
+
+        flow = RoutedFlow()
+        result = flow.handle_turn("something vague")
+
+        assert result == "clarify"
+        assert flow.state.messages[-1].content == "clarify"
+
+    def test_router_effective_routes_include_builtins(self) -> None:
+        class ResearchRoute(BaseModel):
+            intent: Literal["research", "converse", "end"]
+
+        @ConversationConfig(
+            router=RouterConfig(
+                prompt="Classify.",
+                response_format=ResearchRoute,
+                routes=["research"],
+            )
+        )
+        class RoutedFlow(ConversationalFlow):
+            @listen("research")
+            def run_research(self) -> str:
+                return "researched"
+
+        flow = RoutedFlow()
+
+        assert flow._effective_routes(flow.conversational_config.router) == {
+            "research",
+            "converse",
+            "end",
+        }
+
+    def test_builtin_converse_appends_assistant_message_and_uses_history(self) -> None:
+        class ResearchRoute(BaseModel):
+            intent: Literal["research", "converse", "end"]
+
+        router_llm = MagicMock()
+        router_llm.call.return_value = ResearchRoute(intent="converse")
+        chat_llm = MagicMock()
+        chat_llm.call.return_value = "summary from built-in converse"
+
+        @ConversationConfig(
+            prompt="You are a helpful research assistant.",
+            llm=chat_llm,
+            router=RouterConfig(
+                prompt="Classify.",
+                response_format=ResearchRoute,
+                llm=router_llm,
+                routes=["research"],
+                default_intent="converse",
+            ),
+        )
+        class RoutedFlow(ConversationalFlow):
+            @listen("research")
+            def run_research(self) -> str:
+                self.append_agent_result(
+                    "researcher",
+                    "prior findings",
+                    visibility="public",
+                )
+                return "prior findings"
+
+        flow = RoutedFlow()
+        flow.state.messages = [
+            ConversationMessage(role="user", content="research CrewAI"),
+            ConversationMessage(role="assistant", content="prior findings"),
+        ]
+        result = flow.handle_turn("summarize findings")
+
+        assert result == "summary from built-in converse"
+        assert flow.state.messages[-1].content == "summary from built-in converse"
+        messages = chat_llm.call.call_args.kwargs["messages"]
+        assert messages[0] == {
+            "role": "system",
+            "content": "You are a helpful research assistant.",
+        }
+        assert any(message["content"] == "prior findings" for message in messages)
+        assert any(message["content"] == "summarize findings" for message in messages)
+
+    def test_builtin_end_marks_conversation_ended(self) -> None:
+        class ResearchRoute(BaseModel):
+            intent: Literal["research", "converse", "end"]
+
+        router_llm = MagicMock()
+        router_llm.call.return_value = ResearchRoute(intent="end")
+
+        @ConversationConfig(
+            router=RouterConfig(
+                prompt="Classify.",
+                response_format=ResearchRoute,
+                llm=router_llm,
+                routes=["research"],
+                default_intent="converse",
+            )
+        )
+        class RoutedFlow(ConversationalFlow):
+            @listen("research")
+            def run_research(self) -> str:
+                return "researched"
+
+        flow = RoutedFlow()
+        result = flow.handle_turn("bye")
+
+        assert result == "Conversation ended."
+        assert flow.state.ended is True
+        assert flow.state.messages[-1].content == "Conversation ended."
+
+    def test_custom_route_still_runs_with_builtin_routes(self) -> None:
+        class ResearchRoute(BaseModel):
+            intent: Literal["research", "converse", "end"]
+
+        router_llm = MagicMock()
+        router_llm.call.return_value = ResearchRoute(intent="research")
+
+        @ConversationConfig(
+            router=RouterConfig(
+                prompt="Classify.",
+                response_format=ResearchRoute,
+                llm=router_llm,
+                routes=["research"],
+                default_intent="converse",
+            )
+        )
+        class RoutedFlow(ConversationalFlow):
+            @listen("research")
+            def run_research(self) -> str:
+                self.append_agent_result("researcher", "researched", visibility="public")
+                return "researched"
+
+        flow = RoutedFlow()
+        result = flow.handle_turn("research CrewAI")
+
+        assert result == "researched"
+        assert flow.state.messages[-1].content == "researched"
 
 
 class TestFlowTracingWhenSuppressed:

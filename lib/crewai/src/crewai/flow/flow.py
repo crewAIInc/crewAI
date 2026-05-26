@@ -13,6 +13,7 @@ from collections.abc import (
     Iterable,
     Iterator,
     KeysView,
+    Mapping,
     Sequence,
     ValuesView,
 )
@@ -84,7 +85,6 @@ from crewai.events.types.flow_events import (
 )
 from crewai.flow.constants import AND_CONDITION, OR_CONDITION
 from crewai.flow.conversation import (
-    ConversationalConfig,
     append_message as _append_conversation_message,
     get_conversation_messages,
     get_conversational_config,
@@ -154,6 +154,7 @@ from crewai.utilities.streaming import (
     signal_end,
     signal_error,
 )
+from crewai.utilities.types import LLMMessage
 
 
 logger = logging.getLogger(__name__)
@@ -960,6 +961,27 @@ class FlowMeta(ModelMetaclass):
                         else:
                             router_paths[attr_name] = []
 
+        for base in bases:
+            for method_name in getattr(base, "_start_methods", []):
+                current_method = getattr(cls, method_name, None)
+                if is_flow_method(current_method) and method_name not in start_methods:
+                    start_methods.append(method_name)
+
+            for method_name, condition in getattr(base, "_listeners", {}).items():
+                current_method = getattr(cls, method_name, None)
+                if is_flow_method(current_method) and method_name not in listeners:
+                    listeners[method_name] = condition
+
+            for method_name in getattr(base, "_routers", set()):
+                current_method = getattr(cls, method_name, None)
+                if is_flow_method(current_method):
+                    routers.add(method_name)
+
+            for method_name, paths in getattr(base, "_router_paths", {}).items():
+                current_method = getattr(cls, method_name, None)
+                if is_flow_method(current_method) and method_name not in router_paths:
+                    router_paths[method_name] = paths
+
         cls._start_methods = start_methods  # type: ignore[attr-defined]
         cls._listeners = listeners  # type: ignore[attr-defined]
         cls._routers = routers  # type: ignore[attr-defined]
@@ -1146,13 +1168,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     _pending_feedback_context: PendingFeedbackContext | None = PrivateAttr(default=None)
     _human_feedback_method_outputs: dict[str, Any] = PrivateAttr(default_factory=dict)
     _input_history: list[InputHistoryEntry] = PrivateAttr(default_factory=list)
-    _conversation_messages: list[dict[str, Any]] = PrivateAttr(default_factory=list)
+    _conversation_messages: list[LLMMessage] = PrivateAttr(default_factory=list)
     _pending_user_message: str | dict[str, Any] | None = PrivateAttr(default=None)
     _pending_intents: Sequence[str] | None = PrivateAttr(default=None)
     _pending_intent_llm: str | BaseLLM | None = PrivateAttr(default=None)
     _state: Any = PrivateAttr(default=None)
 
-    conversational_config: ClassVar[ConversationalConfig | None] = None
+    conversational_config: ClassVar[Any | None] = None
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:  # type: ignore[override]
         class _FlowGeneric(cls):  # type: ignore[valid-type,misc]
@@ -1279,7 +1301,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         return result
 
     @property
-    def conversation_messages(self) -> list[dict[str, Any]]:
+    def conversation_messages(self) -> list[LLMMessage]:
         """Message history from state or the internal conversation buffer."""
         return get_conversation_messages(self)
 
@@ -1303,7 +1325,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         outcomes: Sequence[str],
         *,
         llm: str | BaseLLM,
-        context: Sequence[dict[str, Any]] | None = None,
+        context: Sequence[Mapping[str, Any]] | None = None,
     ) -> str:
         """Map user text to one of the given outcomes using an LLM."""
         if context:
@@ -1340,7 +1362,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         intent_llm: str | BaseLLM | None = None,
     ) -> dict[str, Any]:
         """Store pending conversational turn options for ``kickoff_async``."""
-        config = get_conversational_config(self) or self.conversational_config
+        config = get_conversational_config(self)
         resolved_intents = intents
         resolved_llm = intent_llm
         if config is not None:
@@ -1379,7 +1401,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     def _apply_pending_conversational_turn(self) -> None:
         if self._pending_user_message is None:
             return
-        config = get_conversational_config(self) or self.conversational_config
+        config = get_conversational_config(self)
         prepare_conversational_turn(
             self,
             user_message=self._pending_user_message,
@@ -2372,21 +2394,24 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         exit_commands: Sequence[str] | None,
         restore_from_state_id: str | None,
     ) -> Any:
-        config = get_conversational_config(self) or self.conversational_config
-        prompt = interactive_prompt or (
-            config.interactive_prompt if config else "You: "
+        config = get_conversational_config(self)
+        prompt = cast(
+            str,
+            interactive_prompt
+            or (getattr(config, "interactive_prompt", "You: ") if config else "You: "),
         )
         timeout = (
             interactive_timeout
             if interactive_timeout is not None
-            else (config.interactive_timeout if config else None)
+            else (getattr(config, "interactive_timeout", None) if config else None)
         )
-        exits = {
-            c.strip().lower()
-            for c in (
-                exit_commands or (config.exit_commands if config else ("exit", "quit"))
-            )
-        }
+        exit_values = exit_commands or cast(
+            Sequence[str],
+            getattr(config, "exit_commands", ("exit", "quit"))
+            if config
+            else ("exit", "quit"),
+        )
+        exits = {c.strip().lower() for c in exit_values}
         sid = session_id
         if sid is None and inputs and "id" in inputs:
             sid = str(inputs["id"])

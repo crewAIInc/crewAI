@@ -1,4 +1,13 @@
 from crewai.experimental.agent_executor import AgentExecutor, CrewAgentExecutorFlow
+from crewai.experimental.conversational_flow import (
+    AgentMessage,
+    ConversationConfig,
+    ConversationEvent,
+    ConversationMessage,
+    ConversationState,
+    ConversationalFlow,
+    RouterConfig,
+)
 from crewai.experimental.evaluation import (
     AgentEvaluationResult,
     AgentEvaluator,
@@ -24,7 +33,13 @@ __all__ = [
     "AgentEvaluationResult",
     "AgentEvaluator",
     "AgentExecutor",
+    "AgentMessage",
     "BaseEvaluator",
+    "ConversationConfig",
+    "ConversationEvent",
+    "ConversationMessage",
+    "ConversationState",
+    "ConversationalFlow",
     "CrewAgentExecutorFlow",  # Deprecated alias for AgentExecutor
     "EvaluationScore",
     "EvaluationTraceCallback",
@@ -35,6 +50,7 @@ __all__ = [
     "MetricCategory",
     "ParameterExtractionEvaluator",
     "ReasoningEfficiencyEvaluator",
+    "RouterConfig",
     "SemanticQualityEvaluator",
     "ToolInvocationEvaluator",
     "ToolSelectionEvaluator",

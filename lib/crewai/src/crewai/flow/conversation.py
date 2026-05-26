@@ -22,8 +22,6 @@ if TYPE_CHECKING:
     from crewai.llms.base_llm import BaseLLM
 
 
-TurnMode = Literal["auto", "follow_up", "initial"]
-
 _EXIT_COMMANDS_DEFAULT: tuple[str, ...] = ("exit", "quit")
 
 
@@ -84,8 +82,6 @@ def normalize_kickoff_inputs(
 
     if user_message is not None:
         merged["user_message"] = user_message
-    elif "user_message" in merged and isinstance(merged["user_message"], str):
-        pass
 
     return merged
 
@@ -159,7 +155,6 @@ def receive_user_message(
     *,
     outcomes: Sequence[str] | None = None,
     llm: str | BaseLLM | None = None,
-    metadata: dict[str, Any] | None = None,
 ) -> str:
     """Record a user turn: append message and optionally classify intent."""
     append_message(flow, "user", text)
