@@ -79,6 +79,15 @@ class DB2Config(BaseModel):
         default_factory=lambda: ["content"]
     )
 
+    @model_validator(mode="after")
+    def _validate_return_columns(self) -> "DB2Config":
+        if not self.return_columns:
+            raise ValueError(
+                "return_columns cannot be empty. At least one column must be specified "
+                "for the SELECT query to be valid."
+            )
+        return self
+
     # Strictly bound the limit
     limit: int = Field(
         default=3,
@@ -252,6 +261,15 @@ class DB2VectorSearchTool(BaseTool):
         filter_by: str | None = None,
         filter_value: Any | None = None,
     ) -> str:
+        # Validate query is not blank or whitespace-only
+        if query is None or query.strip() == "":
+            return json.dumps(
+                {
+                    "success": False,
+                    "error": "Query cannot be empty or contain only whitespace.",
+                },
+                indent=2,
+            )
 
         try:
             query_vector = self._generate_embedding(query)
@@ -333,9 +351,12 @@ class DB2VectorSearchTool(BaseTool):
             self._disconnect()
 
             return json.dumps(
-                normalized_results,
+                {
+                    "success": True,
+                    "results": normalized_results,
+                },
                 indent=2,
-                cls=DB2JSONEncoder 
+                cls=DB2JSONEncoder
             )
 
         except Exception as error:
