@@ -1,4 +1,5 @@
 import base64
+import shlex
 from typing import Any, Optional
 from pydantic import Field
 from crewai_tools.tools.k8s_agent_sandbox.base_tool import K8sBaseTool
@@ -22,32 +23,37 @@ class K8sFileTool(K8sBaseTool):
 
         try:
             action = action.lower()
-            if action == "read":
-                response = sandbox.commands.run(f'sh -c "cat {file_path}"')
-                if response.exit_code == 0:
-                    return response.stdout
-                return f"Error reading file {file_path}:\n{response.stderr}"
+            safe_path = shlex.quote(file_path)
 
-            elif action == "write":
+            if action == "read":
+                inner_cmd = f"cat {safe_path}"
+
+            elif action in ["write", "append"]:
                 if not content:
                     return "Error: 'content' parameter is required for the 'write' action."
-
                 # Base64 encode the content to safely write multiline text/symbols
                 encoded_content = base64.b64encode(content.encode('utf-8')).decode('utf-8')
-                response = sandbox.commands.run(f"sh -c \"echo '{encoded_content}' | base64 -d > {file_path}\"")
+                redirect_operator = ">" if action == "write" else ">>"
+                inner_cmd = f"echo '{encoded_content}' | base64 -d {redirect_operator} {safe_path}"
 
-                if response.exit_code == 0:
-                    return f"Successfully wrote content to {file_path}."
-                return f"Error writing to file {file_path}:\n{response.stderr}"
+            elif action == "delete":
+                inner_cmd = f"rm -rf {safe_path}"
 
             elif action == "list":
-                # Also wrapping list in sh -c just to be safe
-                response = sandbox.commands.run(f'sh -c "ls -la {file_path}"')
-                if response.exit_code == 0:
-                    return response.stdout
-                return f"Error listing path {file_path}:\n{response.stderr}"
+                inner_cmd = f"ls -la {file_path}"
 
             else:
-                return f"Error: Unknown action '{action}'. Supported actions are 'read', 'write', and 'list'."
+                return (
+                    f"Error: Unknown action '{action}'. "
+                    "Supported actions are 'read', 'write', 'append', 'delete', and 'list'."
+                )
+            safe_inner_cmd = shlex.quote(inner_cmd)
+            response = sandbox.commands.run(f"sh -c {safe_inner_cmd}")
+            if response.exit_code == 0:
+                if action in ["read", "list"]:
+                    return response.stdout
+                return f"Successfully executed '{action}' on {file_path}."
+            else:
+                return f"Error executing '{action}' on {file_path}:\n{response.stderr}"
         finally:
             self._release_sandbox(sandbox, should_terminate)

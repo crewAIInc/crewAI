@@ -22,7 +22,6 @@ class K8sPythonTool(K8sBaseTool):
             safe_command = f'python -c "import base64; exec(base64.b64decode(\'{encoded_code}\').decode(\'utf-8\'))"'
             exec_response = sandbox.commands.run(safe_command)
 
-            sandbox.terminate()
             if exec_response.exit_code == 0:
                 return exec_response.stdout
             else:
