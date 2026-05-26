@@ -7,7 +7,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from crewai.tools.base_tool import BaseTool
-from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.i18n import get_crew_i18n
 
 
 class RecallMemorySchema(BaseModel):
@@ -117,14 +117,14 @@ def create_memory_tools(memory: Any) -> list[BaseTool]:
     tools: list[BaseTool] = [
         RecallMemoryTool(
             memory=memory,
-            description=I18N_DEFAULT.tools("recall_memory"),
+            description=get_crew_i18n().tools("recall_memory"),
         ),
     ]
     if not memory.read_only:
         tools.append(
             RememberTool(
                 memory=memory,
-                description=I18N_DEFAULT.tools("save_to_memory"),
+                description=get_crew_i18n().tools("save_to_memory"),
             )
         )
     return tools

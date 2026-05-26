@@ -67,19 +67,19 @@ def build_task_prompt_with_schema(task: Task, task_prompt: str) -> str:
     Returns:
         The task prompt potentially augmented with schema instructions.
     """
-    from crewai.utilities.i18n import I18N_DEFAULT
+    from crewai.utilities.i18n import get_crew_i18n
 
     if (task.output_json or task.output_pydantic) and not task.response_model:
         if task.output_json:
             schema_dict = generate_model_description(task.output_json)
             schema = json.dumps(schema_dict["json_schema"]["schema"], indent=2)
-            task_prompt += "\n" + I18N_DEFAULT.slice(
+            task_prompt += "\n" + get_crew_i18n().slice(
                 "formatted_task_instructions"
             ).format(output_format=schema)
         elif task.output_pydantic:
             schema_dict = generate_model_description(task.output_pydantic)
             schema = json.dumps(schema_dict["json_schema"]["schema"], indent=2)
-            task_prompt += "\n" + I18N_DEFAULT.slice(
+            task_prompt += "\n" + get_crew_i18n().slice(
                 "formatted_task_instructions"
             ).format(output_format=schema)
     return task_prompt
@@ -95,10 +95,10 @@ def format_task_with_context(task_prompt: str, context: str | None) -> str:
     Returns:
         The task prompt formatted with context if provided.
     """
-    from crewai.utilities.i18n import I18N_DEFAULT
+    from crewai.utilities.i18n import get_crew_i18n
 
     if context:
-        return I18N_DEFAULT.slice("task_with_context").format(
+        return get_crew_i18n().slice("task_with_context").format(
             task=task_prompt, context=context
         )
     return task_prompt

@@ -13,7 +13,7 @@ from crewai.security.fingerprint import Fingerprint
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_types import ToolResult
 from crewai.tools.tool_usage import ToolUsage, ToolUsageError
-from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.i18n import get_crew_i18n
 from crewai.utilities.logger import Logger
 from crewai.utilities.string_utils import sanitize_tool_name
 
@@ -140,7 +140,7 @@ async def aexecute_tool_and_check_finality(
 
         return ToolResult(modified_result, tool.result_as_answer)
 
-    tool_result = I18N_DEFAULT.errors("wrong_tool_name").format(
+    tool_result = get_crew_i18n().errors("wrong_tool_name").format(
         tool=sanitized_tool_name,
         tools=", ".join(tool_name_to_tool_map.keys()),
     )
@@ -259,7 +259,7 @@ def execute_tool_and_check_finality(
 
         return ToolResult(modified_result, tool.result_as_answer)
 
-    tool_result = I18N_DEFAULT.errors("wrong_tool_name").format(
+    tool_result = get_crew_i18n().errors("wrong_tool_name").format(
         tool=sanitized_tool_name,
         tools=", ".join(tool_name_to_tool_map.keys()),
     )

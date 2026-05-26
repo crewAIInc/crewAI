@@ -1,0 +1,101 @@
+{
+  "hierarchical_manager_agent": {
+    "role": "CUSTOM_role",
+    "goal": "CUSTOM_goal",
+    "backstory": "CUSTOM_backstory"
+  },
+  "slices": {
+    "observation": "CUSTOM_observation",
+    "task": "CUSTOM_task",
+    "memory": "CUSTOM_memory",
+    "role_playing": "CUSTOM_role_playing",
+    "tools": "CUSTOM_tools",
+    "no_tools": "CUSTOM_no_tools",
+    "task_no_tools": "CUSTOM_task_no_tools",
+    "native_tools": "CUSTOM_native_tools",
+    "native_task": "CUSTOM_native_task",
+    "post_tool_reasoning": "CUSTOM_post_tool_reasoning",
+    "format": "CUSTOM_format",
+    "final_answer_format": "CUSTOM_final_answer_format",
+    "format_without_tools": "CUSTOM_format_without_tools",
+    "task_with_context": "CUSTOM_task_with_context",
+    "expected_output": "CUSTOM_expected_output",
+    "human_feedback": "CUSTOM_human_feedback",
+    "getting_input": "CUSTOM_getting_input",
+    "summarizer_system_message": "CUSTOM_summarizer_system_message",
+    "summarize_instruction": "CUSTOM_summarize_instruction",
+    "summary": "CUSTOM_summary",
+    "manager_request": "CUSTOM_manager_request",
+    "formatted_task_instructions": "CUSTOM_formatted_task_instructions",
+    "conversation_history_instruction": "CUSTOM_conversation_history_instruction",
+    "feedback_instructions": "CUSTOM_feedback_instructions",
+    "lite_agent_system_prompt_with_tools": "CUSTOM_lite_agent_system_prompt_with_tools",
+    "lite_agent_system_prompt_without_tools": "CUSTOM_lite_agent_system_prompt_without_tools",
+    "lite_agent_response_format": "CUSTOM_lite_agent_response_format",
+    "knowledge_search_query": "CUSTOM_knowledge_search_query",
+    "knowledge_search_query_system_prompt": "CUSTOM_knowledge_search_query_system_prompt",
+    "human_feedback_collapse": "CUSTOM_human_feedback_collapse",
+    "hitl_pre_review_system": "CUSTOM_hitl_pre_review_system",
+    "hitl_pre_review_user": "CUSTOM_hitl_pre_review_user",
+    "hitl_distill_system": "CUSTOM_hitl_distill_system",
+    "hitl_distill_user": "CUSTOM_hitl_distill_user"
+  },
+  "errors": {
+    "force_final_answer_error": "CUSTOM_force_final_answer_error",
+    "force_final_answer": "CUSTOM_force_final_answer",
+    "agent_tool_unexisting_coworker": "CUSTOM_agent_tool_unexisting_coworker",
+    "task_repeated_usage": "CUSTOM_task_repeated_usage",
+    "tool_usage_error": "CUSTOM_tool_usage_error",
+    "tool_arguments_error": "CUSTOM_tool_arguments_error",
+    "wrong_tool_name": "CUSTOM_wrong_tool_name",
+    "tool_usage_exception": "CUSTOM_tool_usage_exception",
+    "agent_tool_execution_error": "CUSTOM_agent_tool_execution_error",
+    "validation_error": "CUSTOM_validation_error"
+  },
+  "tools": {
+    "delegate_work": "CUSTOM_delegate_work",
+    "ask_question": "CUSTOM_ask_question",
+    "add_image": {
+      "name": "CUSTOM_name",
+      "description": "CUSTOM_description",
+      "default_action": "CUSTOM_default_action"
+    },
+    "recall_memory": "CUSTOM_recall_memory",
+    "save_to_memory": "CUSTOM_save_to_memory"
+  },
+  "memory": {
+    "query_system": "CUSTOM_query_system",
+    "extract_memories_system": "CUSTOM_extract_memories_system",
+    "extract_memories_user": "CUSTOM_extract_memories_user",
+    "query_user": "CUSTOM_query_user",
+    "save_system": "CUSTOM_save_system",
+    "save_user": "CUSTOM_save_user",
+    "consolidation_system": "CUSTOM_consolidation_system",
+    "consolidation_user": "CUSTOM_consolidation_user"
+  },
+  "reasoning": {
+    "initial_plan": "CUSTOM_initial_plan",
+    "refine_plan": "CUSTOM_refine_plan",
+    "create_plan_prompt": "CUSTOM_create_plan_prompt",
+    "refine_plan_prompt": "CUSTOM_refine_plan_prompt"
+  },
+  "planning": {
+    "system_prompt": "CUSTOM_system_prompt",
+    "create_plan_prompt": "CUSTOM_create_plan_prompt",
+    "refine_plan_prompt": "CUSTOM_refine_plan_prompt",
+    "observation_system_prompt": "CUSTOM_observation_system_prompt",
+    "observation_user_prompt": "CUSTOM_observation_user_prompt",
+    "step_executor_system_prompt": "CUSTOM_step_executor_system_prompt",
+    "step_executor_tools_section": "CUSTOM_step_executor_tools_section",
+    "step_executor_user_prompt": "CUSTOM_step_executor_user_prompt",
+    "step_executor_suggested_tool": "CUSTOM_step_executor_suggested_tool",
+    "step_executor_context_header": "CUSTOM_step_executor_context_header",
+    "step_executor_context_entry": "CUSTOM_step_executor_context_entry",
+    "step_executor_complete_step": "CUSTOM_step_executor_complete_step",
+    "todo_system_prompt": "CUSTOM_todo_system_prompt",
+    "synthesis_system_prompt": "CUSTOM_synthesis_system_prompt",
+    "synthesis_user_prompt": "CUSTOM_synthesis_user_prompt",
+    "replan_enhancement_prompt": "CUSTOM_replan_enhancement_prompt",
+    "step_executor_task_context": "CUSTOM_step_executor_task_context"
+  }
+}

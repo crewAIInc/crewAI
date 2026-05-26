@@ -213,6 +213,7 @@ class Crew(FlowTrackable, BaseModel):
         default_factory=TaskOutputStorageHandler
     )
     _kickoff_event_id: str | None = PrivateAttr(default=None)
+    _i18n_token: Any = PrivateAttr(default=None)
 
     name: str | None = Field(default="crew")
     cache: bool = Field(default=True)
@@ -1044,6 +1045,11 @@ class Crew(FlowTrackable, BaseModel):
             if self._memory is not None and hasattr(self._memory, "drain_writes"):
                 self._memory.drain_writes()
             clear_files(self.id)
+            if self._i18n_token is not None:
+                from crewai.utilities.i18n import reset_crew_i18n
+
+                reset_crew_i18n(self._i18n_token)
+                self._i18n_token = None
             detach(token)
 
     def _post_kickoff(self, result: CrewOutput) -> CrewOutput:

@@ -93,7 +93,7 @@ from crewai.utilities.converter import (
 )
 from crewai.utilities.guardrail import process_guardrail, serialize_guardrail_for_json
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
-from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.i18n import get_crew_i18n
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.pydantic_schema_utils import (
     generate_model_description,
@@ -577,7 +577,7 @@ class LiteAgent(FlowTrackable, BaseModel):
                     f"- {m.record.content}" for m in matches
                 )
             if memory_block:
-                formatted = I18N_DEFAULT.slice("memory").format(memory=memory_block)
+                formatted = get_crew_i18n().slice("memory").format(memory=memory_block)
                 if self._messages and self._messages[0].get("role") == "system":
                     existing_content = self._messages[0].get("content", "")
                     if not isinstance(existing_content, str):
@@ -650,7 +650,7 @@ class LiteAgent(FlowTrackable, BaseModel):
             try:
                 model_schema = generate_model_description(active_response_format)
                 schema = json.dumps(model_schema, indent=2)
-                instructions = I18N_DEFAULT.slice("formatted_task_instructions").format(
+                instructions = get_crew_i18n().slice("formatted_task_instructions").format(
                     output_format=schema
                 )
 
@@ -799,7 +799,7 @@ class LiteAgent(FlowTrackable, BaseModel):
         base_prompt = ""
         if self._parsed_tools:
             # Use the prompt template for agents with tools
-            base_prompt = I18N_DEFAULT.slice(
+            base_prompt = get_crew_i18n().slice(
                 "lite_agent_system_prompt_with_tools"
             ).format(
                 role=self.role,
@@ -810,7 +810,7 @@ class LiteAgent(FlowTrackable, BaseModel):
             )
         else:
             # Use the prompt template for agents without tools
-            base_prompt = I18N_DEFAULT.slice(
+            base_prompt = get_crew_i18n().slice(
                 "lite_agent_system_prompt_without_tools"
             ).format(
                 role=self.role,
@@ -822,7 +822,7 @@ class LiteAgent(FlowTrackable, BaseModel):
         if active_response_format:
             model_description = generate_model_description(active_response_format)
             schema_json = json.dumps(model_description, indent=2)
-            base_prompt += I18N_DEFAULT.slice("lite_agent_response_format").format(
+            base_prompt += get_crew_i18n().slice("lite_agent_response_format").format(
                 response_format=schema_json
             )
 

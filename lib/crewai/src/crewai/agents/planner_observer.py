@@ -23,7 +23,7 @@ from crewai.events.types.observation_events import (
     StepObservationStartedEvent,
 )
 from crewai.utilities.agent_utils import extract_task_section
-from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.i18n import get_crew_i18n
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.planning_types import StepObservation, TodoItem
 from crewai.utilities.types import LLMMessage
@@ -231,7 +231,7 @@ class PlannerObserver:
             task_desc = extract_task_section(self.kickoff_input)
             task_goal = "Complete the task successfully"
 
-        system_prompt = I18N_DEFAULT.retrieve("planning", "observation_system_prompt")
+        system_prompt = get_crew_i18n().retrieve("planning", "observation_system_prompt")
 
         completed_summary = ""
         if all_completed:
@@ -256,7 +256,7 @@ class PlannerObserver:
                 remaining_lines
             )
 
-        user_prompt = I18N_DEFAULT.retrieve(
+        user_prompt = get_crew_i18n().retrieve(
             "planning", "observation_user_prompt"
         ).format(
             task_description=task_desc,

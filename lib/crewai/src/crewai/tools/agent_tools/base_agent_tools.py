@@ -6,7 +6,7 @@ from pydantic import Field
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.task import Task
 from crewai.tools.base_tool import BaseTool
-from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.i18n import get_crew_i18n
 
 
 logger = logging.getLogger(__name__)
@@ -90,7 +90,7 @@ class BaseAgentTool(BaseTool):
             )
         except (AttributeError, ValueError) as e:
             # Handle specific exceptions that might occur during role name processing
-            return I18N_DEFAULT.errors("agent_tool_unexisting_coworker").format(
+            return get_crew_i18n().errors("agent_tool_unexisting_coworker").format(
                 coworkers="\n".join(
                     [
                         f"- {self.sanitize_agent_name(agent.role)}"
@@ -102,7 +102,7 @@ class BaseAgentTool(BaseTool):
 
         if not agent:
             # No matching agent found after sanitization
-            return I18N_DEFAULT.errors("agent_tool_unexisting_coworker").format(
+            return get_crew_i18n().errors("agent_tool_unexisting_coworker").format(
                 coworkers="\n".join(
                     [
                         f"- {self.sanitize_agent_name(agent.role)}"
@@ -117,7 +117,7 @@ class BaseAgentTool(BaseTool):
             task_with_assigned_agent = Task(
                 description=task,
                 agent=selected_agent,
-                expected_output=I18N_DEFAULT.slice("manager_request"),
+                expected_output=get_crew_i18n().slice("manager_request"),
             )
             logger.debug(
                 f"Created task for agent '{self.sanitize_agent_name(selected_agent.role)}': {task}"
@@ -125,6 +125,6 @@ class BaseAgentTool(BaseTool):
             return selected_agent.execute_task(task_with_assigned_agent, context)
         except Exception as e:
             # Handle task creation or execution errors
-            return I18N_DEFAULT.errors("agent_tool_execution_error").format(
+            return get_crew_i18n().errors("agent_tool_execution_error").format(
                 agent_role=self.sanitize_agent_name(selected_agent.role), error=str(e)
             )

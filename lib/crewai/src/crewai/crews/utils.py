@@ -354,6 +354,11 @@ def prepare_kickoff(
     crew._set_tasks_callbacks()
     crew._set_allow_crewai_trigger_context_for_first_task()
 
+    if crew.prompt_file:
+        from crewai.utilities.i18n import get_i18n, set_crew_i18n
+
+        crew._i18n_token = set_crew_i18n(get_i18n(crew.prompt_file))
+
     agents_to_setup: list[BaseAgent] = list(crew.agents)
     seen_agent_ids: set[int] = {id(agent) for agent in agents_to_setup}
     for task in crew.tasks:
