@@ -20,6 +20,8 @@ def test_planning_config_default_values():
     assert config.plan_prompt is None
     assert config.refine_prompt is None
     assert config.llm is None
+    assert config.observe_steps is None
+    assert config.reasoning_effort == "medium"
 
 
 def test_planning_config_custom_values():
@@ -82,6 +84,28 @@ def test_agent_with_planning_config_disabled():
 
     # Planning should be disabled
     assert agent.planning_enabled is False
+
+
+def test_planning_true_without_config_sets_bounded_max_attempts():
+    """planning=True alone must not leave max_attempts=None (infinite refine loop)."""
+    llm = LLM("gpt-4o-mini")
+
+    agent = Agent(
+        role="Test Agent",
+        goal="Test",
+        backstory="Test",
+        llm=llm,
+        planning=True,
+        verbose=False,
+    )
+
+    assert agent.planning_config is not None
+    assert agent.planning_config.max_attempts == 1
+    assert agent.planning_config.reasoning_effort == "low"
+    assert agent.planning_config.max_steps == 20
+    assert agent.planning_config.max_replans == 3
+    assert agent.planning_config.max_step_iterations == 15
+    assert agent.planning_config.step_timeout is None
 
 
 def test_planning_enabled_property():

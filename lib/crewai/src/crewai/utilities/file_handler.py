@@ -157,17 +157,12 @@ class PickleHandler:
         Returns:
             The data loaded from the file.
         """
-        with store_lock(f"file:{os.path.realpath(self.file_path)}"):
-            if (
-                not os.path.exists(self.file_path)
-                or os.path.getsize(self.file_path) == 0
-            ):
-                return {}
+        if not os.path.exists(self.file_path):
+            return {}
 
-            with open(self.file_path, "rb") as file:
-                try:
+        with store_lock(f"file:{os.path.realpath(self.file_path)}"):
+            try:
+                with open(self.file_path, "rb") as file:
                     return pickle.load(file)  # noqa: S301
-                except EOFError:
-                    return {}
-                except Exception:
-                    raise
+            except (FileNotFoundError, EOFError):
+                return {}
