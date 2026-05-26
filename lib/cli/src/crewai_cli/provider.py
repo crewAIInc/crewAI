@@ -146,7 +146,7 @@ def read_cache_file(cache_file: Path) -> dict[str, Any] | None:
         The JSON content of the cache file or None if the JSON is invalid.
     """
     try:
-        with open(cache_file, "r") as f:
+        with open(cache_file, "r", encoding="utf-8") as f:
             data: dict[str, Any] = json.load(f)
             return data
     except json.JSONDecodeError:
@@ -168,7 +168,7 @@ def fetch_provider_data(cache_file: Path) -> dict[str, Any] | None:
         with httpx.stream("GET", JSON_URL, timeout=60, verify=ssl_config) as response:
             response.raise_for_status()
             data = download_data(response)
-            with open(cache_file, "w") as f:
+            with open(cache_file, "w", encoding="utf-8") as f:
                 json.dump(data, f)
             return data
     except httpx.HTTPError as e:

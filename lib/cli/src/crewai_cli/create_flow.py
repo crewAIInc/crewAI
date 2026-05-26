@@ -27,7 +27,7 @@ def create_flow(name: str) -> None:
     (project_root / "tests").mkdir(exist_ok=True)
 
     # Create .env file
-    with open(project_root / ".env", "w") as file:
+    with open(project_root / ".env", "w", encoding="utf-8") as file:
         file.write("OPENAI_API_KEY=YOUR_API_KEY")
 
     package_dir = Path(__file__).parent
@@ -62,7 +62,7 @@ def create_flow(name: str) -> None:
         content = content.replace("{{flow_name}}", class_name)
         content = content.replace("{{folder_name}}", folder_name)
 
-        with open(dst_file, "w") as file:
+        with open(dst_file, "w", encoding="utf-8") as file:
             file.write(content)
 
     # Copy and process root template files

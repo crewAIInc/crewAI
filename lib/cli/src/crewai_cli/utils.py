@@ -44,14 +44,14 @@ def copy_template(
     src: Path, dst: Path, name: str, class_name: str, folder_name: str
 ) -> None:
     """Copy a file from src to dst."""
-    with open(src, "r") as file:
+    with open(src, "r", encoding="utf-8") as file:
         content = file.read()
 
     content = content.replace("{{name}}", name)
     content = content.replace("{{crew_name}}", class_name)
     content = content.replace("{{folder_name}}", folder_name)
 
-    with open(dst, "w") as file:
+    with open(dst, "w", encoding="utf-8") as file:
         file.write(content)
 
     click.secho(f"  - Created {dst}", fg="green")
@@ -60,7 +60,7 @@ def copy_template(
 def fetch_and_json_env_file(env_file_path: str = ".env") -> dict[str, Any]:
     """Fetch the environment variables from a .env file and return them as a dictionary."""
     try:
-        with open(env_file_path, "r") as f:
+        with open(env_file_path, "r", encoding="utf-8") as f:
             env_content = f.read()
 
         env_dict = {}
@@ -100,7 +100,7 @@ def tree_find_and_replace(directory: Path, find: str, replace: str) -> None:
 
             with open(filepath, "r", encoding="utf-8", errors="ignore") as file:
                 contents = file.read()
-            with open(filepath, "w") as file:
+            with open(filepath, "w", encoding="utf-8") as file:
                 file.write(contents.replace(find, replace))
 
             if find in filename:
@@ -121,7 +121,7 @@ def load_env_vars(folder_path: Path) -> dict[str, Any]:
     env_file_path = folder_path / ".env"
     env_vars = {}
     if env_file_path.exists():
-        with open(env_file_path, "r") as file:
+        with open(env_file_path, "r", encoding="utf-8") as file:
             for line in file:
                 key, _, value = line.strip().partition("=")
                 if key and value:
@@ -132,6 +132,6 @@ def load_env_vars(folder_path: Path) -> dict[str, Any]:
 def write_env_file(folder_path: Path, env_vars: dict[str, Any]) -> None:
     """Writes environment variables to a .env file in the specified folder."""
     env_file_path = folder_path / ".env"
-    with open(env_file_path, "w") as file:
+    with open(env_file_path, "w", encoding="utf-8") as file:
         for key, value in env_vars.items():
             file.write(f"{key.upper()}={value}\n")
