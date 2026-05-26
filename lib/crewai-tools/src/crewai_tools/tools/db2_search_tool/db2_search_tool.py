@@ -52,6 +52,8 @@ class DB2ToolSchema(BaseModel):
 
     @model_validator(mode="after")
     def _validate_filter_pair(self) -> "DB2ToolSchema":
+        if self.filter_by is not None and not self.filter_by.strip():
+            raise ValueError("filter_by must be a non-empty column name.")
         if (self.filter_by is None) ^ (self.filter_value is None):
             raise ValueError("filter_by and filter_value must be provided together.")
         return self
