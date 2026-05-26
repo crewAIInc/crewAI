@@ -245,7 +245,6 @@ class FileResolver:
         type_constraint = self._get_type_constraint(content_type, constraints)
 
         if type_constraint is not None:
-            # Check if file exceeds type-specific inline limit
             if file_size > type_constraint.max_size_bytes:
                 logger.debug(
                     f"File {file.filename} ({file_size}B) exceeds {content_type} "
