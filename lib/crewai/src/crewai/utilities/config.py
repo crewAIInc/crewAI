@@ -36,9 +36,9 @@ def process_config(
     return values
 
 def _dict_deep_update(to_dict: dict[str, Any], from_dict: dict[str, Any]) -> None:
-  """Internal helper to recursively update to_dict with from_dict values in-place."""
-  for key, value in from_dict.items():
-    if key in to_dict and isinstance(to_dict[key], dict) and isinstance(value, dict):
-      _dict_deep_update(to_dict[key], value)
-    else:
-      to_dict[key] = value
+    """Internal helper to recursively update to_dict with from_dict values in-place."""
+    for key, value in from_dict.items():
+        if key in to_dict and isinstance(to_dict[key], dict) and isinstance(value, dict):
+            _dict_deep_update(to_dict[key], value)
+        else:
+            to_dict[key] = value
