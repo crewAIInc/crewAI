@@ -57,6 +57,8 @@ from mcp import StdioServerParameters
 import os
 
 iflow_key = os.getenv("IFLOW_API_KEY")  # do not hardcode
+if not iflow_key:
+    raise ValueError("IFLOW_API_KEY is required. Set it in your environment before running this example.")
 
 server_params = StdioServerParameters(
     command="npx",
