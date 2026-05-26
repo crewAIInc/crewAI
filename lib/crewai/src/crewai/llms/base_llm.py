@@ -436,6 +436,18 @@ class BaseLLM(BaseModel, ABC):
         # Default implementation - subclasses should override with model-specific values
         return DEFAULT_CONTEXT_WINDOW_SIZE
 
+    def supports_assistant_prefill(self) -> bool:
+        """Check if the LLM supports assistant message prefill.
+
+        Some models (e.g. Claude 4.6+) reject requests where the last
+        message has the assistant role.  Subclasses should override this
+        method when prefill is not supported.
+
+        Returns:
+            True if the LLM supports assistant message prefill.
+        """
+        return True
+
     def supports_multimodal(self) -> bool:
         """Check if the LLM supports multimodal inputs.
 

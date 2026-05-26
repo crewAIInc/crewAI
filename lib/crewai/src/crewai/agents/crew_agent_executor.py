@@ -164,6 +164,16 @@ class CrewAgentExecutor(BaseAgentExecutor):
             self.llm.supports_stop_words() if isinstance(self.llm, BaseLLM) else False
         )
 
+    @property
+    def supports_prefill(self) -> bool:
+        """Check if the LLM supports assistant message prefill.
+
+        Returns:
+            bool: True if the LLM supports assistant prefill.
+        """
+        supports_fn = getattr(self.llm, "supports_assistant_prefill", None)
+        return supports_fn() if callable(supports_fn) else True
+
     def _setup_messages(self, inputs: dict[str, Any]) -> None:
         """Set up messages for the agent execution.
 
@@ -1478,10 +1488,32 @@ class CrewAgentExecutor(BaseAgentExecutor):
     ) -> None:
         """Add message to conversation history.
 
+        For models that do not support assistant message prefill (e.g.
+        Claude 4.6+), the observation portion of the response is moved
+        into a separate user-role message so the conversation never ends
+        with an assistant turn.
+
         Args:
             text: Message content.
             role: Message role (default: assistant).
         """
+        if role == "assistant" and not self.supports_prefill:
+            obs_marker = "\nObservation:"
+            if obs_marker in text:
+                pre_obs, obs_content = text.split(obs_marker, 1)
+                self.messages.append(format_message_for_llm(pre_obs, role="assistant"))
+                self.messages.append(
+                    format_message_for_llm(f"Observation:{obs_content}", role="user")
+                )
+            else:
+                self.messages.append(format_message_for_llm(text, role="assistant"))
+                self.messages.append(
+                    format_message_for_llm(
+                        "Please continue based on the information above.",
+                        role="user",
+                    )
+                )
+            return
         self.messages.append(format_message_for_llm(text, role=role))
 
     def _show_start_logs(self) -> None:

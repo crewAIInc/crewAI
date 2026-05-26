@@ -6,6 +6,7 @@ from datetime import datetime
 import json
 import logging
 import os
+import re
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -2284,6 +2285,39 @@ class LLM(BaseLLM):
         except Exception as e:
             logging.error(f"Failed to get supported params: {e!s}")
             return True  # Default to True
+
+    def supports_assistant_prefill(self) -> bool:
+        """Check if the model supports assistant message prefill.
+
+        Some Anthropic models (Claude 4.6+) reject requests where the
+        last message has the assistant role.  Returns True for models
+        that support prefill or where the capability cannot be determined.
+
+        Note: This method is only used by the litellm fallback path.
+        Native providers override this method with their own implementation.
+        """
+        if LITELLM_AVAILABLE and litellm is not None:
+            try:
+                info = litellm.get_model_info(self.model)
+                provider = info.get("litellm_provider", "")
+                prefill = info.get("supports_assistant_prefill")
+                if "anthropic" in provider and prefill is False:
+                    return False
+            except Exception:
+                logging.debug(
+                    "Could not determine prefill support from litellm "
+                    f"for model {self.model}; falling back to heuristic."
+                )
+
+        # Fallback heuristic for model names not in the litellm registry
+        model_lower = (self.model or "").lower()
+        if "claude" in model_lower:
+            match = re.search(r"claude.*?(\d+)[.-](\d{1,2})(?!\d)", model_lower)
+            if match:
+                major, minor = int(match.group(1)), int(match.group(2))
+                if (major == 4 and minor >= 6) or major >= 5:
+                    return False
+        return True
 
     def get_context_window_size(self) -> int:
         """

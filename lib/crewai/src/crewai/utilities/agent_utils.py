@@ -318,7 +318,14 @@ def handle_max_iterations_exceeded(
     else:
         assistant_message = I18N_DEFAULT.errors("force_final_answer")
 
-    messages.append(format_message_for_llm(assistant_message, role="assistant"))
+    # For models that don't support assistant prefill, use a user message
+    # so the conversation doesn't end with an assistant turn.
+    supports_prefill_fn = getattr(llm, "supports_assistant_prefill", None)
+    supports_prefill = supports_prefill_fn() if callable(supports_prefill_fn) else True
+    if supports_prefill:
+        messages.append(format_message_for_llm(assistant_message, role="assistant"))
+    else:
+        messages.append(format_message_for_llm(assistant_message, role="user"))
 
     # Perform one more LLM call to get the final answer
     answer = llm.call(
