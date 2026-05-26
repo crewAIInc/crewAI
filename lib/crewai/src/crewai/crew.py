@@ -385,6 +385,15 @@ class Crew(FlowTrackable, BaseModel):
     checkpoint_train: bool | None = Field(default=None)
     checkpoint_kickoff_event_id: str | None = Field(default=None)
 
+    @field_validator(
+        "before_kickoff_callbacks", "after_kickoff_callbacks", mode="before"
+    )
+    @classmethod
+    def _drop_unresolvable_callbacks(cls, value: Any) -> Any:
+        if isinstance(value, list):
+            return [v for v in value if v is not None]
+        return value
+
     @classmethod
     def from_checkpoint(cls, config: CheckpointConfig) -> Crew:
         """Restore a Crew from a checkpoint, ready to resume via kickoff().
