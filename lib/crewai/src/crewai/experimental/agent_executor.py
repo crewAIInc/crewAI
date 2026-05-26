@@ -108,6 +108,7 @@ from crewai.utilities.types import LLMMessage
 
 
 if TYPE_CHECKING:
+    from crewai.agents.planner_observer import PlannerObserver
     from crewai.agents.tools_handler import ToolsHandler
     from crewai.llms.base_llm import BaseLLM
     from crewai.tools.tool_types import ToolResult
@@ -210,7 +211,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     _has_been_invoked: bool = PrivateAttr(default=False)
     _instance_id: str = PrivateAttr(default_factory=lambda: str(uuid4())[:8])
     _step_executor: Any = PrivateAttr(default=None)
-    _planner_observer: Any = PrivateAttr(default=None)
+    _planner_observer: PlannerObserver | None = PrivateAttr(default=None)
 
     @model_validator(mode="after")
     def _setup_executor(self) -> Self:
@@ -360,7 +361,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             )
         return self._step_executor
 
-    def _ensure_planner_observer(self) -> Any:
+    def _ensure_planner_observer(self) -> PlannerObserver:
         """Lazily create the PlannerObserver (avoids circular imports)."""
         if self._planner_observer is None:
             from crewai.agents.planner_observer import PlannerObserver
@@ -589,10 +590,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         observation = self.state.observations.get(current_todo.step_number)
 
-        # Even at low effort, don't ignore a hard step failure.
-        # A hard failure is one where the step did not succeed AND a replan
-        # is explicitly required (e.g. required tool not found, permission
-        # denied, environment misconfiguration).
+        # Even at low effort, don't record failed steps as completed. Only
+        # trigger replanning for hard failures that explicitly require it.
         if (
             observation
             and not observation.step_completed_successfully
@@ -613,6 +612,22 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 observation.replan_reason or "Step did not complete successfully"
             )
             return "replan_now"
+
+        if observation and not observation.step_completed_successfully:
+            self.state.todos.mark_failed(
+                current_todo.step_number, result=current_todo.result
+            )
+            if self.agent.verbose:
+                failed = len(self.state.todos.get_failed_todos())
+                total = len(self.state.todos.items)
+                PRINTER.print(
+                    content=(
+                        f"[Low] Step {current_todo.step_number} failed "
+                        f"({failed} failed/{total} total) — continuing"
+                    ),
+                    color="yellow",
+                )
+            return "continue_plan"
 
         self.state.todos.mark_completed(
             current_todo.step_number, result=current_todo.result

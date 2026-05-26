@@ -1660,6 +1660,47 @@ class TestReasoningEffort:
         assert todo.status == "completed"
         assert todo.result == "Done successfully"
 
+    def test_reasoning_effort_low_marks_failed_steps_failed_without_replan(self):
+        """Low effort records failed heuristic observations without replanning."""
+        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.utilities.planning_types import (
+            StepObservation,
+            TodoItem,
+            TodoList,
+        )
+
+        executor = Mock(spec=AgentExecutor)
+        executor.agent = Mock()
+        executor.agent.verbose = False
+        executor.agent.planning_config = Mock()
+        executor.agent.planning_config.reasoning_effort = "low"
+        executor.handle_step_observed_low = (
+            AgentExecutor.handle_step_observed_low.__get__(executor)
+        )
+
+        todo = TodoItem(
+            step_number=1,
+            description="Do something",
+            status="running",
+            result="Error: tool failed",
+        )
+        todo_list = TodoList(items=[todo])
+        executor.state = Mock()
+        executor.state.todos = todo_list
+        executor.state.observations = {
+            1: StepObservation(
+                step_completed_successfully=False,
+                key_information_learned="",
+                remaining_plan_still_valid=True,
+                needs_full_replan=False,
+            )
+        }
+
+        route = executor.handle_step_observed_low()
+        assert route == "continue_plan"
+        assert todo.status == "failed"
+        assert todo.result == "Error: tool failed"
+
     def test_planning_config_reasoning_effort_default_is_medium(self):
         """Verify PlanningConfig defaults reasoning_effort to 'medium'
         (aligned with runtime default in _get_reasoning_effort)."""
