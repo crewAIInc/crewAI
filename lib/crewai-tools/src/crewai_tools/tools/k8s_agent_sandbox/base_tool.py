@@ -29,6 +29,7 @@ class K8sBaseTool(BaseTool):
         ),
     )
 
+    claim_name: Any | None = Field(default=None)
     _persistent_sandbox: Any | None = PrivateAttr(default=None)
     _lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
     _cleanup_registered: bool = PrivateAttr(default=False)
@@ -54,6 +55,9 @@ class K8sBaseTool(BaseTool):
         """Return (sandbox, should_kill_after_use)."""
         SandboxClient = self._import_sandbox_client_class()
         client = SandboxClient()
+
+        if self.claim_name:
+            return client.get_sandbox(self.claim_name), False
 
         if self.persistent:
             with self._lock:
