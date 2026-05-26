@@ -26,7 +26,7 @@ O checkpointing salva um snapshot do estado de execucao durante uma execucao par
 
 ### O que e um checkpoint
 
-Um checkpoint captura tudo o que o CrewAI precisa para recriar uma execucao em andamento: o estado completo da crew, flow ou agente — configuracao, memoria e fontes de conhecimento dos agentes, progresso das tarefas, saidas intermediarias — junto com os inputs do kickoff, o historico de eventos ate aquele ponto e um ID de linhagem que liga o checkpoint a execucao de origem.
+Um checkpoint captura tudo o que o CrewAI precisa para recriar uma execucao em andamento: o estado completo da crew, flow ou agente — configuracao, memoria e fontes de conhecimento dos agentes, progresso das tarefas, saidas intermediarias, estado interno e atributos — junto com os inputs do kickoff, o historico de eventos ate aquele ponto e um ID de linhagem que liga o checkpoint a execucao de origem.
 
 Restaurar reconstroi esse estado e continua. Tarefas concluidas sao puladas, memoria e conhecimento sao reidratados, e o trabalho downstream roda contra as mesmas saidas que a execucao original produziu. Fazer fork executa a mesma restauracao sob uma nova linhagem, para que a nova branch e a execucao original gravem checkpoints lado a lado sem sobrescrever uma a outra.
 
@@ -266,7 +266,7 @@ Este passo a passo leva cerca de 5 minutos. Voce executara uma crew de duas tare
 
   <Accordion title="Navegar, retomar e fazer fork pela CLI" icon="terminal">
     ```bash
-    crewai checkpoint                              # detecta automaticamente .checkpoints/ ou .checkpoints.db
+    crewai checkpoint
     crewai checkpoint --location ./my_checkpoints
     crewai checkpoint --location ./.checkpoints.db
     ```

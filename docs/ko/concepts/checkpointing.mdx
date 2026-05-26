@@ -26,7 +26,7 @@ mode: "wide"
 
 ### 체크포인트란
 
-체크포인트는 실행 중인 작업을 재현하기 위해 CrewAI가 필요한 모든 것을 캡처합니다: 크루, 플로우 또는 에이전트의 전체 상태 — 구성, 에이전트의 메모리 및 지식 소스, 태스크 진행 상황, 중간 출력값 — 그리고 kickoff 입력, 해당 시점까지의 이벤트 기록, 그리고 체크포인트를 원본 실행에 연결하는 lineage ID를 포함합니다.
+체크포인트는 실행 중인 작업을 재현하기 위해 CrewAI가 필요한 모든 것을 캡처합니다: 크루, 플로우 또는 에이전트의 전체 상태 — 구성, 에이전트의 메모리 및 지식 소스, 태스크 진행 상황, 중간 출력값, 내부 상태 및 속성 — 그리고 kickoff 입력, 해당 시점까지의 이벤트 기록, 그리고 체크포인트를 원본 실행에 연결하는 lineage ID를 포함합니다.
 
 복원하면 해당 상태를 재구성하고 계속 진행합니다. 완료된 태스크는 건너뛰고, 메모리와 지식은 재수화되며, 다운스트림 작업은 원본 실행이 생성한 동일한 출력을 기반으로 실행됩니다. 포크하면 새 lineage 아래에서 동일한 복원을 수행하여 새 브랜치와 원본 실행이 서로 덮어쓰지 않고 나란히 체크포인트를 기록할 수 있습니다.
 
@@ -266,7 +266,7 @@ CrewAI에는 두 가지 프로바이더가 포함되어 있습니다:
 
   <Accordion title="CLI에서 탐색, 재개, 포크" icon="terminal">
     ```bash
-    crewai checkpoint                              # .checkpoints/ 또는 .checkpoints.db 자동 감지
+    crewai checkpoint
     crewai checkpoint --location ./my_checkpoints
     crewai checkpoint --location ./.checkpoints.db
     ```

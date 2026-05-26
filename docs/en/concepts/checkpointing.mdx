@@ -26,7 +26,7 @@ Checkpointing saves a snapshot of execution state during a run so a crew, flow, 
 
 ### What a checkpoint is
 
-A checkpoint captures everything CrewAI needs to recreate a run mid-flight: the full state of the crew, flow, or agent — configuration, agent memory and knowledge sources, task progress, intermediate outputs — alongside the kickoff inputs, the event history up to that point, and a lineage ID that ties the checkpoint to the run it came from.
+A checkpoint captures everything CrewAI needs to recreate a run mid-flight: the full state of the crew, flow, or agent — configuration, agent memory and knowledge sources, task progress, intermediate outputs, internal state and attributes — alongside the kickoff inputs, the event history up to that point, and a lineage ID that ties the checkpoint to the run it came from.
 
 Restoring rebuilds that state and continues. Completed tasks are skipped, memory and knowledge are rehydrated, and downstream work runs against the same outputs the original run produced. Forking does the same restore under a new lineage, so the new branch and the original run can write checkpoints side by side without overwriting each other.
 
@@ -266,7 +266,7 @@ This walkthrough takes ~5 minutes. You will run a two-task crew, kill it midway,
 
   <Accordion title="Browse, resume, and fork from the CLI" icon="terminal">
     ```bash
-    crewai checkpoint                              # auto-detects .checkpoints/ or .checkpoints.db
+    crewai checkpoint
     crewai checkpoint --location ./my_checkpoints
     crewai checkpoint --location ./.checkpoints.db
     ```
