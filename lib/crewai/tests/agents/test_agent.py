@@ -1083,6 +1083,21 @@ def test_agent_use_trained_data_honors_env_var(crew_training_handler, monkeypatc
     )
 
 
+def test_agent_use_trained_data_skips_load_when_file_missing(tmp_path, monkeypatch):
+    monkeypatch.setenv(
+        "CREWAI_TRAINED_AGENTS_FILE", str(tmp_path / "does_not_exist.pkl")
+    )
+    agent = Agent(role="researcher", goal="test goal", backstory="test backstory")
+
+    with patch(
+        "crewai.utilities.file_handler.store_lock",
+        side_effect=AssertionError("kickoff acquired lock with no trained-agents file"),
+    ):
+        result = agent._use_trained_data(task_prompt="What is 1 + 1?")
+
+    assert result == "What is 1 + 1?"
+
+
 def test_agent_max_retry_limit():
     agent = Agent(
         role="test role",
