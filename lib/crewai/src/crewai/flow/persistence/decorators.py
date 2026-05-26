@@ -44,7 +44,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
-# Constants for log messages
 LOG_MESSAGES: Final[dict[str, str]] = {
     "save_state": "Saving flow state to memory for ID: {}",
     "save_error": "Failed to persist state for method {}: {}",
@@ -100,7 +99,6 @@ class PersistenceDecorator:
             if not flow_uuid:
                 raise ValueError("Flow state must have an 'id' field for persistence")
 
-            # Log state saving only if verbose is True
             if verbose:
                 PRINTER.print(
                     LOG_MESSAGES["save_state"].format(flow_uuid), color="cyan"
@@ -169,7 +167,6 @@ def persist(
         actual_persistence = persistence or SQLiteFlowPersistence()
 
         if isinstance(target, type):
-            # Class decoration
             original_init = target.__init__  # type: ignore[misc]
 
             @functools.wraps(original_init)
@@ -180,7 +177,7 @@ def persist(
 
             target.__init__ = new_init  # type: ignore[misc]
 
-            # Store original methods to preserve their decorators
+            # Preserve original methods' decorators
             original_methods = {
                 name: method
                 for name, method in target.__dict__.items()
@@ -194,10 +191,9 @@ def persist(
                 )
             }
 
-            # Create wrapped versions of the methods that include persistence
             for name, method in original_methods.items():
                 if asyncio.iscoroutinefunction(method):
-                    # Create a closure to capture the current name and method
+                    # Closure captures the current name and method
                     def create_async_wrapper(
                         method_name: str, original_method: Callable[..., Any]
                     ) -> Callable[..., Any]:
@@ -215,7 +211,6 @@ def persist(
 
                     wrapped = create_async_wrapper(name, method)
 
-                    # Preserve all original decorators and attributes
                     for attr in [
                         "__is_start_method__",
                         "__trigger_methods__",
@@ -226,10 +221,9 @@ def persist(
                             setattr(wrapped, attr, getattr(method, attr))
                     wrapped.__is_flow_method__ = True  # type: ignore[attr-defined]
 
-                    # Update the class with the wrapped method
                     setattr(target, name, wrapped)
                 else:
-                    # Create a closure to capture the current name and method
+
                     def create_sync_wrapper(
                         method_name: str, original_method: Callable[..., Any]
                     ) -> Callable[..., Any]:
@@ -245,7 +239,6 @@ def persist(
 
                     wrapped = create_sync_wrapper(name, method)
 
-                    # Preserve all original decorators and attributes
                     for attr in [
                         "__is_start_method__",
                         "__trigger_methods__",
@@ -256,11 +249,9 @@ def persist(
                             setattr(wrapped, attr, getattr(method, attr))
                     wrapped.__is_flow_method__ = True  # type: ignore[attr-defined]
 
-                    # Update the class with the wrapped method
                     setattr(target, name, wrapped)
 
             return target
-        # Method decoration
         method = target
         method.__is_flow_method__ = True  # type: ignore[attr-defined]
 

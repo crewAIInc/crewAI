@@ -379,8 +379,17 @@ class Agent(BaseAgent):
                 DeprecationWarning,
                 stacklevel=2,
             )
+            kwargs: dict[str, int] = {}
+            if self.max_reasoning_attempts is not None:
+                kwargs["max_attempts"] = self.max_reasoning_attempts
+            self.planning_config = PlanningConfig(**kwargs)
+
+        if self.planning and self.planning_config is None:
+            # Bare planning=True should be bounded and avoid per-step
+            # PlannerObserver LLM calls unless explicitly configured.
             self.planning_config = PlanningConfig(
-                max_attempts=self.max_reasoning_attempts,
+                reasoning_effort="low",
+                max_attempts=1,
             )
 
         return self
@@ -1109,9 +1118,14 @@ class Agent(BaseAgent):
         """
         if self.agent_executor is None:
             raise RuntimeError("Agent executor is not initialized.")
+        if not isinstance(self.llm, BaseLLM):
+            raise RuntimeError(
+                "LLM must be resolved before updating agent executor parameters."
+            )
 
         if task is not None:
             self.agent_executor.task = task
+        self.agent_executor.llm = self.llm
         self.agent_executor.tools = tools
         self.agent_executor.original_tools = raw_tools
         self.agent_executor.prompt = prompt
@@ -1411,6 +1425,11 @@ class Agent(BaseAgent):
 
         if _is_resuming_agent_executor(self.agent_executor):
             executor = self.agent_executor
+            if not isinstance(self.llm, BaseLLM):
+                raise RuntimeError(
+                    "LLM must be resolved before resuming agent executor."
+                )
+            executor.llm = self.llm
             executor.tools = parsed_tools
             executor.tools_names = get_tool_names(parsed_tools)
             executor.tools_description = render_text_description_and_args(parsed_tools)

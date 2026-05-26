@@ -107,7 +107,6 @@ class ToolUsage:
         self.function_calling_llm = function_calling_llm
         self.fingerprint_context = fingerprint_context or {}
 
-        # Set the maximum parsing attempts for bigger models
         if (
             self.function_calling_llm
             and self.function_calling_llm.model in OPENAI_BIGGER_MODELS
@@ -301,7 +300,6 @@ class ToolUsage:
                 result = usage_limit_error
                 self._telemetry.tool_usage_error(llm=self.function_calling_llm)
                 result = self._format_result(result=result)
-                # Don't return early - fall through to finally block
             elif result is None:
                 try:
                     if sanitize_tool_name(calling.tool_name) in [
@@ -381,7 +379,6 @@ class ToolUsage:
                     if available_tool and hasattr(
                         available_tool, "_increment_usage_count"
                     ):
-                        # Use _increment_usage_count to sync count to original tool
                         available_tool._increment_usage_count()
                         if (
                             hasattr(available_tool, "max_usage_count")
@@ -534,7 +531,6 @@ class ToolUsage:
                 result = usage_limit_error
                 self._telemetry.tool_usage_error(llm=self.function_calling_llm)
                 result = self._format_result(result=result)
-                # Don't return early - fall through to finally block
             elif result is None:
                 try:
                     if sanitize_tool_name(calling.tool_name) in [
@@ -614,7 +610,6 @@ class ToolUsage:
                     if available_tool and hasattr(
                         available_tool, "_increment_usage_count"
                     ):
-                        # Use _increment_usage_count to sync count to original tool
                         available_tool._increment_usage_count()
                         if (
                             hasattr(available_tool, "max_usage_count")
@@ -868,32 +863,27 @@ class ToolUsage:
                 "Tool input must be a valid dictionary in JSON or Python literal format"
             )
 
-        # Attempt 1: Parse as JSON
         try:
             arguments = json.loads(tool_input)
             if isinstance(arguments, dict):
                 return arguments
         except (JSONDecodeError, TypeError):
-            pass  # Continue to the next parsing attempt
+            pass
 
-        # Attempt 2: Parse as Python literal
         try:
             arguments = ast.literal_eval(tool_input)
             if isinstance(arguments, dict):
                 return arguments
         except (ValueError, SyntaxError):
             repaired_input = repair_json(tool_input)
-            # Continue to the next parsing attempt
 
-        # Attempt 3: Parse as JSON5
         try:
             arguments = json5.loads(tool_input)
             if isinstance(arguments, dict):
                 return arguments
         except (JSONDecodeError, ValueError, TypeError):
-            pass  # Continue to the next parsing attempt
+            pass
 
-        # Attempt 4: Repair JSON
         try:
             repaired_input = str(repair_json(tool_input, skip_json_loads=True))
             if self.agent and self.agent.verbose:
@@ -910,7 +900,6 @@ class ToolUsage:
             "Tool input must be a valid dictionary in JSON or Python literal format"
         )
         self._emit_validate_input_error(error_message)
-        # If all parsing attempts fail, raise an error
         raise Exception(error_message)
 
     def _emit_validate_input_error(self, final_error: str) -> None:
@@ -923,7 +912,6 @@ class ToolUsage:
             "agent": self.agent,  # Adding agent for fingerprint extraction
         }
 
-        # Include fingerprint context if available
         if self.fingerprint_context:
             tool_selection_data.update(self.fingerprint_context)
 
@@ -1000,7 +988,6 @@ class ToolUsage:
             ),
         }
 
-        # Include fingerprint context if available
         if self.fingerprint_context:
             event_data.update(self.fingerprint_context)
 
@@ -1017,7 +1004,6 @@ class ToolUsage:
         """
         security_context: dict[str, Any] = {}
 
-        # Add agent fingerprint if available
         if self.agent and hasattr(self.agent, "security_config"):
             security_config = getattr(self.agent, "security_config", None)
             if security_config and hasattr(security_config, "fingerprint"):
@@ -1028,7 +1014,6 @@ class ToolUsage:
                 except AttributeError:
                     pass
 
-        # Add task fingerprint if available
         if self.task and hasattr(self.task, "security_config"):
             security_config = getattr(self.task, "security_config", None)
             if security_config and hasattr(security_config, "fingerprint"):

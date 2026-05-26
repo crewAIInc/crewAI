@@ -112,14 +112,12 @@ def _resolve_dotted_path(path: str) -> Callable[..., Any]:
         ValueError: If no valid module can be imported from the path.
     """
     parts = path.split(".")
-    # Try importing progressively shorter prefixes as the module.
     for i in range(len(parts), 0, -1):
         module_path = ".".join(parts[:i])
         try:
             obj: Any = importlib.import_module(module_path)
         except (ImportError, TypeError, ValueError):
             continue
-        # Walk the remaining attribute chain.
         try:
             for attr in parts[i:]:
                 obj = getattr(obj, attr)
@@ -130,18 +128,15 @@ def _resolve_dotted_path(path: str) -> Callable[..., Any]:
     raise ValueError(f"Cannot resolve callback {path!r}")
 
 
-def callable_to_string(fn: Callable[..., Any]) -> str:
-    """Serialize a callable to its dotted-path string representation.
-
-    Uses ``fn.__module__`` and ``fn.__qualname__`` to produce a string such
-    as ``"builtins.print"``.  Lambdas and closures produce paths that contain
-    ``<locals>`` and cannot be round-tripped via :func:`string_to_callable`.
+def callable_to_string(fn: Callable[..., Any]) -> str | None:
+    """Serialize a module-level callable as a ``"module.qualname"`` string.
 
     Args:
         fn: The callable to serialize.
 
     Returns:
-        A dotted string of the form ``"module.qualname"``.
+        The dotted path, or ``None`` for lambdas and closures (not
+        resolvable by :func:`string_to_callable`).
     """
     module = getattr(fn, "__module__", None)
     qualname = getattr(fn, "__qualname__", None)
@@ -150,6 +145,8 @@ def callable_to_string(fn: Callable[..., Any]) -> str:
             f"Cannot serialize {fn!r}: missing __module__ or __qualname__. "
             "Use a module-level named function for checkpointable callbacks."
         )
+    if "<locals>" in qualname or qualname == "<lambda>":
+        return None
     return f"{module}.{qualname}"
 
 

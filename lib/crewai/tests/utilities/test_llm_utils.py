@@ -30,7 +30,6 @@ def test_create_llm_with_invalid_model_string() -> None:
         assert llm is not None
         assert isinstance(llm, BaseLLM)
 
-        # The error should occur when making the actual API call
         # We expect some kind of API error (NotFoundError, etc.)
         with pytest.raises(Exception):  # noqa: B017
             llm.call(messages=[{"role": "user", "content": "Hello, world!"}])
@@ -102,7 +101,7 @@ def test_create_llm_with_partial_attributes() -> None:
         llm = create_llm(llm_value=obj)
         assert isinstance(llm, BaseLLM)
         assert llm.model == "gpt-4o"
-        assert llm.temperature is None  # Should handle missing attributes gracefully
+        assert llm.temperature is None
 
 
 def test_create_llm_with_invalid_type() -> None:
@@ -113,7 +112,6 @@ def test_create_llm_with_invalid_type() -> None:
         assert isinstance(llm, BaseLLM)
         assert llm.model == "42"
 
-        # The error should occur when making the actual API call
         with pytest.raises(Exception):  # noqa: B017
             llm.call(messages=[{"role": "user", "content": "Hello, world!"}])
 

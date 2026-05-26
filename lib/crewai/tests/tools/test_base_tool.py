@@ -1,14 +1,13 @@
 import asyncio
-from typing import Callable
+from collections.abc import Callable
 from unittest.mock import patch
-
-import pytest
-from pydantic import BaseModel, Field
 
 from crewai.agent import Agent
 from crewai.crew import Crew
 from crewai.task import Task
 from crewai.tools import BaseTool, tool
+from pydantic import BaseModel, Field
+import pytest
 
 
 def test_creating_a_tool_using_annotation():
@@ -17,7 +16,6 @@ def test_creating_a_tool_using_annotation():
         """Clear description for what this tool is useful for, your agent will need this information to use it."""
         return question
 
-    # Assert all the right attributes were defined
     assert my_tool.name == "Name of my tool"
     assert "Tool Name: name_of_my_tool" in my_tool.description
     assert "Tool Arguments:" in my_tool.description
@@ -55,7 +53,6 @@ def test_creating_a_tool_using_baseclass():
             return question
 
     my_tool = MyCustomTool()
-    # Assert all the right attributes were defined
     assert my_tool.name == "Name of my tool"
 
     assert "Tool Name: name_of_my_tool" in my_tool.description
@@ -93,7 +90,6 @@ def test_setting_cache_function():
             return question
 
     my_tool = MyCustomTool()
-    # Assert all the right attributes were defined
     assert not my_tool.cache_function()
 
 
@@ -106,7 +102,6 @@ def test_default_cache_function_is_true():
             return question
 
     my_tool = MyCustomTool()
-    # Assert all the right attributes were defined
     assert my_tool.cache_function()
 
 
@@ -151,7 +146,7 @@ class AsyncTool(BaseTool):
 
     async def _run(self, input_text: str) -> str:
         """Process input text asynchronously."""
-        await asyncio.sleep(0.1)  # Simulate async operation
+        await asyncio.sleep(0.1)
         return f"Processed {input_text} asynchronously"
 
 
@@ -173,7 +168,7 @@ def test_async_run_returns_coroutine():
     result = tool._run(input_text="hello")
 
     assert asyncio.iscoroutine(result)
-    result.close()  # Clean up the coroutine
+    result.close()
 
 
 def test_run_calls_asyncio_run_for_async_tools():
@@ -234,9 +229,7 @@ def test_max_usage_count_is_respected():
     assert tool.current_usage_count == 5
 
 
-# =============================================================================
 # Schema Validation in run() Tests
-# =============================================================================
 
 
 class CodeExecutorInput(BaseModel):
@@ -358,9 +351,7 @@ class TestToolDecoratorRunValidation:
         assert result == "Hello, World!"
 
 
-# =============================================================================
 # Async arun() Schema Validation Tests
-# =============================================================================
 
 
 class AsyncCodeExecutorTool(BaseTool):

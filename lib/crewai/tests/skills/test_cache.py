@@ -72,7 +72,6 @@ class TestSkillCacheManager:
         archive_v2 = _make_tar_gz({"SKILL.md": "v2"})
         dest = cache.store("acme", "my-skill", "2.0.0", archive_v2)
 
-        # Old file should be gone
         assert not (dest / "extra.txt").exists()
         assert (dest / "SKILL.md").read_text() == "v2"
 
