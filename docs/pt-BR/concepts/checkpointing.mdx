@@ -44,7 +44,7 @@ Dois provedores acompanham o CrewAI:
 Ambos removem os checkpoints mais antigos quando `max_checkpoints` está definido.
 
 <Note>
-As gravações de checkpoint são best-effort. Um checkpoint que falha é registrado em log, mas não interrompe a execução.
+Gravações de checkpoint automáticas (acionadas por evento) são best-effort: uma falha é registrada em log e a execução continua. Chamadas manuais a `state.checkpoint()` e `state.acheckpoint()` relançam a exceção.
 </Note>
 
 ### Modelo de herança

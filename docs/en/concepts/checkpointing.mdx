@@ -44,7 +44,7 @@ Two providers ship with CrewAI:
 Both prune oldest checkpoints when `max_checkpoints` is set.
 
 <Note>
-Checkpoint writes are best-effort. A failed checkpoint is logged but does not interrupt the run.
+Auto-checkpoint writes (event-driven) are best-effort: a failed write is logged and the run continues. Manual `state.checkpoint()` and `state.acheckpoint()` calls re-raise on failure.
 </Note>
 
 ### Inheritance model
