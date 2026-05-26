@@ -41,14 +41,9 @@ def skill_command():
             yield cmd
 
 
-# ---------------------------------------------------------------------------
-# create
-# ---------------------------------------------------------------------------
-
 class TestSkillCreate:
     def test_create_in_project(self, skill_command, tmp_path):
         with in_temp_dir():
-            # Simulate being inside a project
             Path("pyproject.toml").write_text("[tool.poetry]\nname = 'test'\n")
             skill_command.create("my-skill")
             assert Path("skills/my-skill/SKILL.md").exists()
@@ -74,10 +69,6 @@ class TestSkillCreate:
             with pytest.raises(SystemExit):
                 skill_command.create("existing-skill", in_project=False)
 
-
-# ---------------------------------------------------------------------------
-# install
-# ---------------------------------------------------------------------------
 
 class TestSkillInstall:
     def _zip_skill(self, name: str) -> bytes:
@@ -118,10 +109,6 @@ class TestSkillInstall:
             assert Path("skills/my-skill/SKILL.md").exists()
 
 
-# ---------------------------------------------------------------------------
-# publish
-# ---------------------------------------------------------------------------
-
 class TestSkillPublish:
     def test_publish_no_skill_md(self, skill_command):
         with in_temp_dir():
@@ -155,7 +142,6 @@ class TestSkillPublish:
                 mock_resp.status_code = 200
                 mock_resp.json.return_value = {}
                 mock_client.publish_skill.return_value = mock_resp
-                # No org set → should SystemExit (no org_name in settings)
                 with patch("crewai_cli.skills.main.Settings") as mock_settings_cls:
                     mock_settings_cls.return_value.org_name = None
                     mock_settings_cls.return_value.enterprise_base_url = None
@@ -184,15 +170,10 @@ class TestSkillPublish:
             assert call_kwargs.kwargs["version"] == "1.0.0"
 
 
-# ---------------------------------------------------------------------------
-# list_cached
-# ---------------------------------------------------------------------------
-
 class TestSkillListCached:
     def test_list_cached_empty(self, skill_command, capsys):
         with in_temp_dir():
             skill_command.list_cached()
-            # Should not raise
 
     def test_list_cached_shows_project_skills(self, skill_command, capsys):
         with in_temp_dir():
@@ -202,4 +183,3 @@ class TestSkillListCached:
                 "---\nname: my-skill\nversion: 0.5.0\ndescription: A skill.\n---\nBody."
             )
             skill_command.list_cached()
-            # Should complete without error
