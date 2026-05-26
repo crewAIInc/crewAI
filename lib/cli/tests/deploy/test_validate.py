@@ -164,7 +164,6 @@ def test_poetry_lock_is_accepted(tmp_path: Path) -> None:
 
 def test_stale_lockfile_warns(tmp_path: Path) -> None:
     _scaffold_standard_crew(tmp_path)
-    # Make lockfile older than pyproject.
     lock = tmp_path / "uv.lock"
     pyproject = tmp_path / "pyproject.toml"
     old_time = pyproject.stat().st_mtime - 60
