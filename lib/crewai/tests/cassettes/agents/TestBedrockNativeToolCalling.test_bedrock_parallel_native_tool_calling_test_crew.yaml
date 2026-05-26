@@ -41,27 +41,31 @@ interactions:
       - AUTHORIZATION-XXX
       x-amz-date:
       - X-AMZ-DATE-XXX
+      x-amz-security-token:
+      - X-AMZ-SECURITY-TOKEN-XXX
     method: POST
-    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-haiku-20240307-v1%3A0/converse
+    uri: https://bedrock-runtime.us-west-2.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/converse
   response:
     body:
-      string: '{"message":"The security token included in the request is invalid."}'
+      string: '{"metrics":{"latencyMs":2911},"output":{"message":{"content":[{"text":"I''ll
+        execute all 3 parallel searches simultaneously right away!"},{"toolUse":{"input":{"query":"latest
+        OpenAI model release notes"},"name":"parallel_local_search_one","toolUseId":"tooluse_hd4QaBJIe0j2FasplcWi78","type":"tool_use"}},{"toolUse":{"input":{"query":"latest
+        Anthropic model release notes"},"name":"parallel_local_search_two","toolUseId":"tooluse_yB6xS6E1bsIOpv8rWcnpiR","type":"tool_use"}},{"toolUse":{"input":{"query":"latest
+        Gemini model release notes"},"name":"parallel_local_search_three","toolUseId":"tooluse_cjCrMYQMmA8diLWBnKJ86o","type":"tool_use"}}],"role":"assistant"}},"stopReason":"tool_use","usage":{"cacheReadInputTokenCount":0,"cacheReadInputTokens":0,"cacheWriteInputTokenCount":0,"cacheWriteInputTokens":0,"inputTokens":951,"outputTokens":169,"serverToolUsage":{},"totalTokens":1120}}'
     headers:
       Connection:
       - keep-alive
       Content-Length:
-      - '68'
+      - '883'
       Content-Type:
       - application/json
       Date:
-      - Thu, 19 Feb 2026 00:00:07 GMT
-      x-amzn-ErrorType:
-      - UnrecognizedClientException:http://internal.amazon.com/coral/com.amazon.coral.service/
+      - Tue, 26 May 2026 17:06:14 GMT
       x-amzn-RequestId:
       - X-AMZN-REQUESTID-XXX
     status:
-      code: 403
-      message: Forbidden
+      code: 200
+      message: OK
 - request:
     body: '{"messages": [{"role": "user", "content": [{"text": "\nCurrent Task: This
       is a tool-calling compliance test. In your next assistant turn, emit exactly
@@ -72,122 +76,35 @@ interactions:
       those 3 tool calls are emitted. After the tool results return, provide a one
       paragraph summary.\n\nThis is the expected criteria for your final answer: A
       one sentence summary of both tool outputs\nyou MUST return the actual complete
-      content as the final answer, not a summary."}]}, {"role": "user", "content":
-      [{"text": "\nCurrent Task: This is a tool-calling compliance test. In your next
-      assistant turn, emit exactly 3 tool calls in the same response (parallel tool
-      calls), in this order: 1) parallel_local_search_one(query=''latest OpenAI model
-      release notes''), 2) parallel_local_search_two(query=''latest Anthropic model
-      release notes''), 3) parallel_local_search_three(query=''latest Gemini model
-      release notes''). Do not call any other tools and do not answer before those
-      3 tool calls are emitted. After the tool results return, provide a one paragraph
-      summary.\n\nThis is the expected criteria for your final answer: A one sentence
-      summary of both tool outputs\nyou MUST return the actual complete content as
-      the final answer, not a summary."}]}], "inferenceConfig": {"stopSequences":
-      ["\nObservation:"]}, "system": [{"text": "You are Parallel Tool Agent. You follow
-      tool instructions precisely.\nYour personal goal is: Use both tools exactly
-      as instructed\n\nYou are Parallel Tool Agent. You follow tool instructions precisely.\nYour
-      personal goal is: Use both tools exactly as instructed"}], "toolConfig": {"tools":
-      [{"toolSpec": {"name": "parallel_local_search_one", "description": "Local search
-      tool #1 for concurrency testing.", "inputSchema": {"json": {"properties": {"query":
-      {"description": "Search query", "title": "Query", "type": "string"}}, "required":
-      ["query"], "type": "object", "additionalProperties": false}}}}, {"toolSpec":
-      {"name": "parallel_local_search_two", "description": "Local search tool #2 for
+      content as the final answer, not a summary."}]}, {"role": "assistant", "content":
+      [{"toolUse": {"toolUseId": "tooluse_hd4QaBJIe0j2FasplcWi78", "name": "parallel_local_search_one",
+      "input": {"query": "latest OpenAI model release notes"}}}, {"toolUse": {"toolUseId":
+      "tooluse_yB6xS6E1bsIOpv8rWcnpiR", "name": "parallel_local_search_two", "input":
+      {"query": "latest Anthropic model release notes"}}}, {"toolUse": {"toolUseId":
+      "tooluse_cjCrMYQMmA8diLWBnKJ86o", "name": "parallel_local_search_three", "input":
+      {"query": "latest Gemini model release notes"}}}]}, {"role": "user", "content":
+      [{"toolResult": {"toolUseId": "tooluse_hd4QaBJIe0j2FasplcWi78", "content": [{"text":
+      "[one] latest OpenAI model release notes"}]}}, {"toolResult": {"toolUseId":
+      "tooluse_yB6xS6E1bsIOpv8rWcnpiR", "content": [{"text": "[two] latest Anthropic
+      model release notes"}]}}, {"toolResult": {"toolUseId": "tooluse_cjCrMYQMmA8diLWBnKJ86o",
+      "content": [{"text": "[three] latest Gemini model release notes"}]}}]}], "inferenceConfig":
+      {"stopSequences": ["\nObservation:"]}, "system": [{"text": "You are Parallel
+      Tool Agent. You follow tool instructions precisely.\nYour personal goal is:
+      Use both tools exactly as instructed"}], "toolConfig": {"tools": [{"toolSpec":
+      {"name": "parallel_local_search_one", "description": "Local search tool #1 for
       concurrency testing.", "inputSchema": {"json": {"properties": {"query": {"description":
       "Search query", "title": "Query", "type": "string"}}, "required": ["query"],
-      "type": "object", "additionalProperties": false}}}}, {"toolSpec": {"name": "parallel_local_search_three",
-      "description": "Local search tool #3 for concurrency testing.", "inputSchema":
+      "type": "object", "additionalProperties": false}}}}, {"toolSpec": {"name": "parallel_local_search_two",
+      "description": "Local search tool #2 for concurrency testing.", "inputSchema":
       {"json": {"properties": {"query": {"description": "Search query", "title": "Query",
       "type": "string"}}, "required": ["query"], "type": "object", "additionalProperties":
-      false}}}}]}}'
-    headers:
-      Content-Length:
-      - '2855'
-      Content-Type:
-      - !!binary |
-        YXBwbGljYXRpb24vanNvbg==
-      User-Agent:
-      - X-USER-AGENT-XXX
-      amz-sdk-invocation-id:
-      - AMZ-SDK-INVOCATION-ID-XXX
-      amz-sdk-request:
-      - !!binary |
-        YXR0ZW1wdD0x
-      authorization:
-      - AUTHORIZATION-XXX
-      x-amz-date:
-      - X-AMZ-DATE-XXX
-    method: POST
-    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-haiku-20240307-v1%3A0/converse
-  response:
-    body:
-      string: '{"message":"The security token included in the request is invalid."}'
-    headers:
-      Connection:
-      - keep-alive
-      Content-Length:
-      - '68'
-      Content-Type:
-      - application/json
-      Date:
-      - Thu, 19 Feb 2026 00:00:07 GMT
-      x-amzn-ErrorType:
-      - UnrecognizedClientException:http://internal.amazon.com/coral/com.amazon.coral.service/
-      x-amzn-RequestId:
-      - X-AMZN-REQUESTID-XXX
-    status:
-      code: 403
-      message: Forbidden
-- request:
-    body: '{"messages": [{"role": "user", "content": [{"text": "\nCurrent Task: This
-      is a tool-calling compliance test. In your next assistant turn, emit exactly
-      3 tool calls in the same response (parallel tool calls), in this order: 1) parallel_local_search_one(query=''latest
-      OpenAI model release notes''), 2) parallel_local_search_two(query=''latest Anthropic
-      model release notes''), 3) parallel_local_search_three(query=''latest Gemini
-      model release notes''). Do not call any other tools and do not answer before
-      those 3 tool calls are emitted. After the tool results return, provide a one
-      paragraph summary.\n\nThis is the expected criteria for your final answer: A
-      one sentence summary of both tool outputs\nyou MUST return the actual complete
-      content as the final answer, not a summary."}]}, {"role": "user", "content":
-      [{"text": "\nCurrent Task: This is a tool-calling compliance test. In your next
-      assistant turn, emit exactly 3 tool calls in the same response (parallel tool
-      calls), in this order: 1) parallel_local_search_one(query=''latest OpenAI model
-      release notes''), 2) parallel_local_search_two(query=''latest Anthropic model
-      release notes''), 3) parallel_local_search_three(query=''latest Gemini model
-      release notes''). Do not call any other tools and do not answer before those
-      3 tool calls are emitted. After the tool results return, provide a one paragraph
-      summary.\n\nThis is the expected criteria for your final answer: A one sentence
-      summary of both tool outputs\nyou MUST return the actual complete content as
-      the final answer, not a summary."}]}, {"role": "user", "content": [{"text":
-      "\nCurrent Task: This is a tool-calling compliance test. In your next assistant
-      turn, emit exactly 3 tool calls in the same response (parallel tool calls),
-      in this order: 1) parallel_local_search_one(query=''latest OpenAI model release
-      notes''), 2) parallel_local_search_two(query=''latest Anthropic model release
-      notes''), 3) parallel_local_search_three(query=''latest Gemini model release
-      notes''). Do not call any other tools and do not answer before those 3 tool
-      calls are emitted. After the tool results return, provide a one paragraph summary.\n\nThis
-      is the expected criteria for your final answer: A one sentence summary of both
-      tool outputs\nyou MUST return the actual complete content as the final answer,
-      not a summary."}]}], "inferenceConfig": {"stopSequences": ["\nObservation:"]},
-      "system": [{"text": "You are Parallel Tool Agent. You follow tool instructions
-      precisely.\nYour personal goal is: Use both tools exactly as instructed\n\nYou
-      are Parallel Tool Agent. You follow tool instructions precisely.\nYour personal
-      goal is: Use both tools exactly as instructed\n\nYou are Parallel Tool Agent.
-      You follow tool instructions precisely.\nYour personal goal is: Use both tools
-      exactly as instructed"}], "toolConfig": {"tools": [{"toolSpec": {"name": "parallel_local_search_one",
-      "description": "Local search tool #1 for concurrency testing.", "inputSchema":
-      {"json": {"properties": {"query": {"description": "Search query", "title": "Query",
-      "type": "string"}}, "required": ["query"], "type": "object", "additionalProperties":
-      false}}}}, {"toolSpec": {"name": "parallel_local_search_two", "description":
-      "Local search tool #2 for concurrency testing.", "inputSchema": {"json": {"properties":
+      false}}}}, {"toolSpec": {"name": "parallel_local_search_three", "description":
+      "Local search tool #3 for concurrency testing.", "inputSchema": {"json": {"properties":
       {"query": {"description": "Search query", "title": "Query", "type": "string"}},
-      "required": ["query"], "type": "object", "additionalProperties": false}}}},
-      {"toolSpec": {"name": "parallel_local_search_three", "description": "Local search
-      tool #3 for concurrency testing.", "inputSchema": {"json": {"properties": {"query":
-      {"description": "Search query", "title": "Query", "type": "string"}}, "required":
-      ["query"], "type": "object", "additionalProperties": false}}}}]}}'
+      "required": ["query"], "type": "object", "additionalProperties": false}}}}]}}'
     headers:
       Content-Length:
-      - '3756'
+      - '2892'
       Content-Type:
       - !!binary |
         YXBwbGljYXRpb24vanNvbg==
@@ -202,25 +119,35 @@ interactions:
       - AUTHORIZATION-XXX
       x-amz-date:
       - X-AMZ-DATE-XXX
+      x-amz-security-token:
+      - X-AMZ-SECURITY-TOKEN-XXX
     method: POST
-    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-haiku-20240307-v1%3A0/converse
+    uri: https://bedrock-runtime.us-west-2.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/converse
   response:
     body:
-      string: '{"message":"The security token included in the request is invalid."}'
+      string: "{\"metrics\":{\"latencyMs\":4350},\"output\":{\"message\":{\"content\":[{\"text\":\"Here
+        is the complete content returned by all three tools:\\n\\n- **Tool 1 (parallel_local_search_one):**
+        `[one] latest OpenAI model release notes`\\n- **Tool 2 (parallel_local_search_two):**
+        `[two] latest Anthropic model release notes`\\n- **Tool 3 (parallel_local_search_three):**
+        `[three] latest Gemini model release notes`\\n\\nThe three parallel searches
+        returned placeholder results confirming the queries were received: the first
+        tool acknowledged a search for the latest OpenAI model release notes, the
+        second for the latest Anthropic model release notes, and the third for the
+        latest Gemini model release notes \u2014 indicating the local search tools
+        processed all three concurrent requests successfully but did not return detailed
+        release note content beyond the query echo.\"}],\"role\":\"assistant\"}},\"stopReason\":\"end_turn\",\"usage\":{\"cacheReadInputTokenCount\":0,\"cacheReadInputTokens\":0,\"cacheWriteInputTokenCount\":0,\"cacheWriteInputTokens\":0,\"inputTokens\":1234,\"outputTokens\":181,\"serverToolUsage\":{},\"totalTokens\":1415}}"
     headers:
       Connection:
       - keep-alive
       Content-Length:
-      - '68'
+      - '1093'
       Content-Type:
       - application/json
       Date:
-      - Thu, 19 Feb 2026 00:00:07 GMT
-      x-amzn-ErrorType:
-      - UnrecognizedClientException:http://internal.amazon.com/coral/com.amazon.coral.service/
+      - Tue, 26 May 2026 17:06:19 GMT
       x-amzn-RequestId:
       - X-AMZN-REQUESTID-XXX
     status:
-      code: 403
-      message: Forbidden
+      code: 200
+      message: OK
 version: 1

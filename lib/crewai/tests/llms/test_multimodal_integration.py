@@ -290,7 +290,7 @@ class TestBedrockMultimodalIntegration:
     @pytest.mark.vcr()
     def test_describe_image(self, test_image_bytes: bytes) -> None:
         """Test Bedrock Claude can describe an image."""
-        llm = LLM(model="bedrock/anthropic.claude-3-haiku-20240307-v1:0")
+        llm = LLM(model="bedrock/us.anthropic.claude-sonnet-4-6")
         files = {"image": ImageFile(source=test_image_bytes)}
 
         messages = _build_multimodal_message(
@@ -308,7 +308,7 @@ class TestBedrockMultimodalIntegration:
     @pytest.mark.vcr()
     def test_analyze_pdf(self) -> None:
         """Test Bedrock Claude can analyze a PDF."""
-        llm = LLM(model="bedrock/anthropic.claude-3-haiku-20240307-v1:0")
+        llm = LLM(model="bedrock/us.anthropic.claude-sonnet-4-6")
         files = {"document": PDFFile(source=MINIMAL_PDF)}
 
         messages = _build_multimodal_message(

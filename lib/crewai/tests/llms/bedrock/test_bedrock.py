@@ -439,7 +439,7 @@ def test_bedrock_aws_credentials_configuration():
     """
     aws_access_key_id = "test-access-key"
     aws_secret_access_key = "test-secret-key"
-    aws_region_name = "us-east-1"
+    aws_region_name = "us-west-2"
 
 
     # Test with environment variables
@@ -910,7 +910,7 @@ def test_bedrock_agent_kickoff_structured_output_without_tools():
         role="Analyst",
         goal="Provide structured analysis on topics",
         backstory="You are an expert analyst who provides clear, structured insights.",
-        llm=LLM(model="bedrock/anthropic.claude-3-sonnet-20240229-v1:0"),
+        llm=LLM(model="bedrock/us.anthropic.claude-sonnet-4-6"),
         tools=[],
         verbose=True,
     )
@@ -952,7 +952,7 @@ def test_bedrock_agent_kickoff_structured_output_with_tools():
         role="Calculator",
         goal="Perform calculations using available tools",
         backstory="You are a calculator assistant that uses tools to compute results.",
-        llm=LLM(model="bedrock/anthropic.claude-3-sonnet-20240229-v1:0"),
+        llm=LLM(model="bedrock/us.anthropic.claude-sonnet-4-6"),
         tools=[add_numbers],
         verbose=True,
     )
