@@ -2695,9 +2695,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             # with implicit "crew" execution_type.
             get_env_context()
 
-            if inputs is not None and "id" not in inputs:
-                self._initialize_state(inputs)
-
             self._apply_pending_conversational_turn()
 
             if self._is_execution_resuming:
