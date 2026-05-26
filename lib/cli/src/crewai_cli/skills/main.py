@@ -41,10 +41,6 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
         BaseCommand.__init__(self)
         PlusAPIMixin.__init__(self, telemetry=self._telemetry)
 
-    # ------------------------------------------------------------------
-    # create
-    # ------------------------------------------------------------------
-
     def create(self, name: str, in_project: bool = True) -> None:
         """Scaffold a new skill directory.
 
@@ -72,10 +68,6 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
             f"[green]Created skill [bold]{name}[/bold] at [bold]{skill_dir}[/bold].[/green]"
         )
         console.print(f"Edit [bold]{skill_md}[/bold] to define the skill instructions.")
-
-    # ------------------------------------------------------------------
-    # install
-    # ------------------------------------------------------------------
 
     def install(self, ref: str) -> None:
         """Download and install a registry skill.
@@ -182,10 +174,6 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
                 f"[green]Installed [bold]{ref}[/bold]{' (' + version + ')' if version else ''} to global cache.[/green]"
             )
 
-    # ------------------------------------------------------------------
-    # publish
-    # ------------------------------------------------------------------
-
     def publish(self, is_public: bool, org: str | None, force: bool = False) -> None:
         """Publish the skill in the current directory to the registry."""
         skill_md = Path("SKILL.md")
@@ -196,7 +184,6 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
             )
             raise SystemExit(1)
 
-        # Parse frontmatter to extract name + version
         try:
             frontmatter = self._parse_frontmatter(skill_md.read_text())
         except ValueError as exc:
@@ -257,10 +244,6 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
             f"Monitor status at: {base_url}/crewai_plus/skills/{effective_org}/{name}[/green]"
         )
 
-    # ------------------------------------------------------------------
-    # list_cached
-    # ------------------------------------------------------------------
-
     def list_cached(self) -> None:
         """Show locally installed skills."""
         table = Table(title="Installed Skills", show_lines=True)
@@ -269,7 +252,6 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
         table.add_column("Version")
         table.add_column("Path")
 
-        # Project-local ./skills/
         local_skills_dir = Path("skills")
         if local_skills_dir.is_dir():
             for skill_dir in sorted(local_skills_dir.iterdir()):
@@ -282,7 +264,6 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
                         str(skill_dir),
                     )
 
-        # Global cache
         cache_root = Path.home() / ".crewai" / "skills"
         if cache_root.exists():
             for org_dir in sorted(cache_root.iterdir()):
@@ -306,10 +287,6 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
 
         console.print(table)
 
-    # ------------------------------------------------------------------
-    # internal helpers
-    # ------------------------------------------------------------------
-
     def _print_current_organization(self) -> None:
         settings = Settings()
         if settings.org_uuid:
@@ -326,7 +303,6 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
 
     def _unpack_archive(self, archive_bytes: bytes, dest: Path) -> None:
         """Unpack a .tar.gz or .zip archive into dest."""
-        # Try tar first, then zip
         try:
             with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode="r:gz") as tf:
                 try:
@@ -337,7 +313,6 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
         except tarfile.TarError:
             pass
 
-        # Fallback: zip
         with zipfile.ZipFile(io.BytesIO(archive_bytes)) as zf:
             _safe_extract_zip(zf, dest)
 

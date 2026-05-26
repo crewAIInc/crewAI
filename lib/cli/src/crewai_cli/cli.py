@@ -42,7 +42,6 @@ from crewai_cli.utils import build_env_with_all_tool_credentials, read_toml
 
 def _get_cli_version() -> str:
     """Return the best available version string for the CLI."""
-    # Prefer crewai version if installed (keeps existing UX)
     try:
         return get_version("crewai")
     except Exception:  # noqa: S110
@@ -67,7 +66,6 @@ def crewai() -> None:
 def uv(uv_args: tuple[str, ...]) -> None:
     """A wrapper around uv commands that adds custom tool authentication through env vars."""
     try:
-        # Verify pyproject.toml exists first
         read_toml()
     except FileNotFoundError as e:
         raise SystemExit(
@@ -321,7 +319,6 @@ def memory(
         )
         raise SystemExit(1) from exc
 
-    # Build embedder spec from CLI flags.
     embedder_spec: dict[str, Any] | None = None
     if embedder_config:
         import json as _json
@@ -435,7 +432,6 @@ def logout(reset: bool) -> None:
         click.echo("Successfully logged out from CrewAI AMP.")
 
 
-# DEPLOY CREWAI+ COMMANDS
 @crewai.group()
 def deploy() -> None:
     """Deploy the Crew CLI group."""
@@ -766,17 +762,14 @@ def env_view() -> None:
 
     console = Console()
 
-    # Check for .env file
     env_file = Path(".env")
     env_file_exists = env_file.exists()
 
-    # Create table for environment variables
     table = Table(show_header=True, header_style="bold cyan", expand=True)
     table.add_column("Environment Variable", style="cyan", width=30)
     table.add_column("Value", style="white", width=20)
     table.add_column("Source", style="yellow", width=20)
 
-    # Check CREWAI_TRACING_ENABLED
     crewai_tracing = os.getenv("CREWAI_TRACING_ENABLED", "")
     if crewai_tracing:
         table.add_row(
@@ -791,7 +784,6 @@ def env_view() -> None:
             "[dim]—[/dim]",
         )
 
-    # Check other related env vars
     crewai_testing = os.getenv("CREWAI_TESTING", "")
     if crewai_testing:
         table.add_row("CREWAI_TESTING", crewai_testing, "Environment/Shell")
@@ -804,7 +796,6 @@ def env_view() -> None:
     if crewai_org_id:
         table.add_row("CREWAI_ORG_ID", crewai_org_id, "Environment/Shell")
 
-    # Check if .env file exists
     table.add_row(
         ".env file",
         "✅ Found" if env_file_exists else "❌ Not found",
@@ -820,7 +811,6 @@ def env_view() -> None:
     console.print("\n")
     console.print(panel)
 
-    # Show helpful message
     if env_file_exists:
         console.print(
             "\n[dim]💡 Tip: To enable tracing via .env, add: CREWAI_TRACING_ENABLED=true[/dim]"
@@ -896,11 +886,9 @@ def traces_status() -> None:
     table.add_column("Setting", style="cyan")
     table.add_column("Value", style="white")
 
-    # Check environment variable
     env_enabled = os.getenv("CREWAI_TRACING_ENABLED", "false")
     table.add_row("CREWAI_TRACING_ENABLED", env_enabled)
 
-    # Check user consent
     trace_consent = user_data.get("trace_consent")
     if trace_consent is True:
         consent_status = "✅ Enabled (user consented)"
@@ -910,7 +898,6 @@ def traces_status() -> None:
         consent_status = "⚪ Not set (first-time user)"
     table.add_row("User Consent", consent_status)
 
-    # Check overall status
     if is_tracing_enabled():
         overall_status = "✅ ENABLED"
         border_style = "green"
