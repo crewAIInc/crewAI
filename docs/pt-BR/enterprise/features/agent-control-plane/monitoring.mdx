@@ -1,0 +1,104 @@
+---
+title: "Observe suas Automações"
+description: "Acompanhe a saúde da frota, o consumo de LLM e o comportamento por automação a partir da aba Automações."
+sidebarTitle: "Monitoramento"
+icon: "gauge"
+mode: "wide"
+---
+
+## Visão Geral
+
+A aba **Automações** é a visão de operações somente leitura do [Agent Control Plane](/pt-BR/enterprise/features/agent-control-plane/overview). Ela combina dois cards de métricas, um sankey interativo e duas sub-tabelas — **Automações** e **Consumo** — nas quais você pode buscar, filtrar e ordenar.
+
+<Frame>
+  ![Visão geral do Agent Control Plane](/images/enterprise/acp-overview-automations-sankey.png)
+</Frame>
+
+Todos os gráficos e tabelas respeitam o seletor **Últimas 24 horas / Última Semana / Últimos 30 dias** no canto superior direito. As variações comparam a janela selecionada com a janela anterior de mesma duração.
+
+<Note>
+  As linhas só mostram dados de deployments em **crewAI v1.13 ou superior** — deployments mais antigos aparecem no banner *"We've detected N other automations that we can't display"* abaixo do sankey e não contribuem com nenhuma métrica até que sejam atualizados e re-implantados. Veja [Visão Geral — Requisitos](/pt-BR/enterprise/features/agent-control-plane/overview#requisitos).
+</Note>
+
+## Dashboard
+
+O topo da página tem dois cards de métricas e um sankey interativo. Clicar em qualquer um dos cards alterna o sankey entre dois modos:
+
+- **Modo Saúde** — `Total de Automações → buckets de status (Critical / Warning / Healthy)`. Clique em um bucket para filtrar a tabela Automações para esses deployments.
+- **Modo Consumo** — `Provedores de Modelo → Automações → Custo Total`. Clique em um provedor para filtrar a tabela Consumo para esse provedor.
+
+| Card | O que mostra |
+|------|---------------|
+| **Automações** | Automações `active` (e total), total de `errors` na janela, `active executions` no momento (e total na janela), com variação em relação ao período anterior. |
+| **Consumo** | `cost` total e `tokens used`, com variação de custo em relação ao período anterior. |
+
+<Frame>
+  ![Visão geral com o sankey de consumo](/images/enterprise/acp-overview-consumption-sankey.png)
+</Frame>
+
+## Tabela de Automações
+
+A sub-aba **Automações** é o detalhamento por deployment da saúde da frota. Cada linha é uma crew ou flow implantada.
+
+<Frame>
+  ![Tabela de automações com o detalhamento de status de saúde](/images/enterprise/acp-automations-table.png)
+</Frame>
+
+| Coluna | O que mostra |
+|--------|---------------|
+| **Automação** | Nome do deployment e quaisquer tags atribuídas a ele (ex.: `production`, `financial`). |
+| **Última execução** | Tempo decorrido desde a execução mais recente. |
+| **Health Status Breakdown** | Barra empilhada com percentuais de `Critical` / `Warning` / `Healthy` para as execuções na janela. |
+| **Executions with Errors** | Total de execuções com falha na janela. |
+| **PII detection applied** | `Yes` se houver configuração de PII por deployment ou uma [regra de PII](/pt-BR/enterprise/features/agent-control-plane/rules) correspondente ativa. |
+| **Executions** | Total de execuções na janela. |
+| **Last updated** | Quando o deployment foi re-implantado pela última vez. |
+| **Crew Version** | A versão do `crewai` reportada pelo deployment. Um ícone de informação ao lado de versões abaixo de `1.13` indica linhas que não conseguem contribuir com métricas. |
+
+Busque por nome, filtre por `Status` (`Healthy` / `Warning` / `Critical`) e ordene por qualquer cabeçalho de coluna. Clique no nome de um deployment para abrir o **painel da Automação**.
+
+## Tabela de Consumo
+
+A sub-aba **Consumo** é o detalhamento por deployment de gasto com LLM e uso de tokens.
+
+<Frame>
+  ![Tabela de consumo detalhada por provedor de LLM](/images/enterprise/acp-consumption-table.png)
+</Frame>
+
+| Coluna | O que mostra |
+|--------|---------------|
+| **Automação** | Nome do deployment. |
+| **Última execução** | Tempo decorrido desde a execução mais recente. |
+| **Tokens used** | Uma linha por provedor de LLM usado por esta automação, com variação em relação ao período anterior. |
+| **Cost** | Custo por provedor de LLM, com variação em relação ao período anterior. |
+| **Total cost** | Soma entre todos os provedores, com a variação. |
+| **Executions** | Total de execuções na janela. |
+| **Last updated** | Quando o deployment foi re-implantado pela última vez. |
+| **Crew Version** | A versão do `crewai` reportada pelo deployment. |
+
+Filtre por **LLM provider** e ordene por `Cost`, `Executions` ou `Last run`.
+
+<Info>
+  **Células vazias (`—` ou `$0.00`) normalmente significam que o deployment está abaixo do crewAI v1.13.** Na captura acima, *Automation F* (`1.7.0`) e *Automation I* (`1.12.2`) mostram valores em branco para tokens e custo — suas execuções ainda rodam, mas não emitem a telemetria a nível de provedor que alimenta esta tabela. Atualize e re-implante essas crews para começar a coletar dados de consumo.
+</Info>
+
+## Relacionados
+
+<CardGroup cols={2}>
+  <Card title="Agent Control Plane — Visão Geral" icon="book-open" href="/pt-BR/enterprise/features/agent-control-plane/overview">
+    O que é o ACP, requisitos, planos suportados e RBAC.
+  </Card>
+  <Card title="Agent Control Plane — Regras" icon="shield-check" href="/pt-BR/enterprise/features/agent-control-plane/rules">
+    Aplique regras de PII Redaction em nível de organização em muitas automações.
+  </Card>
+  <Card title="Traces" icon="timeline" href="/pt-BR/enterprise/features/traces">
+    Aprofunde em uma única execução para ver o raciocínio do agente, chamadas de ferramentas e uso de tokens.
+  </Card>
+  <Card title="Deploy no AMP" icon="rocket" href="/pt-BR/enterprise/guides/deploy-to-amp">
+    Implante uma crew em uma versão do crewAI que suporta o Agent Control Plane.
+  </Card>
+</CardGroup>
+
+<Card title="Precisa de ajuda?" icon="headset" href="mailto:support@crewai.com">
+  Entre em contato com nosso time de suporte para ajudar a interpretar métricas no Agent Control Plane.
+</Card>
