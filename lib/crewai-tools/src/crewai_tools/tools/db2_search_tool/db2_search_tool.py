@@ -260,7 +260,7 @@ class DB2VectorSearchTool(BaseTool):
             try:
                 self._connect()
             except Exception as e:
-                self._disconnect()  # Clean up any partial connections
+                self._disconnect()  # Clean up any partial connection
                 return json.dumps({"success": False, "error": f"Failed to connect to DB2: {str(e)}"})
 
             config = self.db2_config
