@@ -14,6 +14,7 @@ from pydantic import (
     PlainSerializer,
     TypeAdapter,
     ValidationError,
+    WithJsonSchema,
     field_validator,
     model_validator,
 )
@@ -149,6 +150,7 @@ class RagTool(BaseTool):
         Adapter,
         BeforeValidator(_resolve_adapter),
         PlainSerializer(_serialize_adapter, when_used="json"),
+        WithJsonSchema({"type": ["object", "null"]}),
     ] = Field(default_factory=_AdapterPlaceholder)
     config: RagToolConfig = Field(
         default_factory=RagToolConfig,

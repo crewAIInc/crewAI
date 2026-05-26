@@ -3896,7 +3896,12 @@
           }
         },
         "properties": {
-          "adapter": {},
+          "adapter": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -4940,7 +4945,12 @@
           }
         },
         "properties": {
-          "adapter": {},
+          "adapter": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -6609,7 +6619,12 @@
           }
         },
         "properties": {
-          "adapter": {},
+          "adapter": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -8886,7 +8901,12 @@
           }
         },
         "properties": {
-          "adapter": {},
+          "adapter": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -11714,7 +11734,12 @@
           }
         },
         "properties": {
-          "adapter": {},
+          "adapter": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -12985,7 +13010,12 @@
           }
         },
         "properties": {
-          "adapter": {},
+          "adapter": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -14252,7 +14282,12 @@
           }
         },
         "properties": {
-          "adapter": {},
+          "adapter": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -15702,7 +15737,12 @@
           }
         },
         "properties": {
-          "adapter": {},
+          "adapter": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -18102,7 +18142,12 @@
           }
         },
         "properties": {
-          "adapter": {},
+          "adapter": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -19793,7 +19838,12 @@
           }
         },
         "properties": {
-          "adapter": {},
+          "adapter": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -21873,7 +21923,12 @@
           }
         },
         "properties": {
-          "adapter": {},
+          "adapter": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -23333,7 +23388,12 @@
           }
         },
         "properties": {
-          "adapter": {},
+          "adapter": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -25170,7 +25230,12 @@
           }
         },
         "properties": {
-          "adapter": {},
+          "adapter": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -27082,7 +27147,12 @@
           }
         },
         "properties": {
-          "adapter": {},
+          "adapter": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -28126,7 +28196,12 @@
           }
         },
         "properties": {
-          "adapter": {},
+          "adapter": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -29170,7 +29245,12 @@
           }
         },
         "properties": {
-          "adapter": {},
+          "adapter": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
@@ -30214,7 +30294,12 @@
           }
         },
         "properties": {
-          "adapter": {},
+          "adapter": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
           "collection_name": {
             "default": "rag_tool_collection",
             "title": "Collection Name",
