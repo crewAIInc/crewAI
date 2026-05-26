@@ -1332,6 +1332,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 self.state.pending_tool_calls = list(answer)
                 return "native_tool_calls"
 
+            reasoning = self._get_llm_reasoning_content()
+
             if isinstance(answer, BaseModel):
                 self.state.current_answer = AgentFinish(
                     thought="",
@@ -1339,7 +1341,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     text=answer.model_dump_json(),
                 )
                 self._invoke_step_callback(self.state.current_answer)
-                self._append_message_to_state(answer.model_dump_json())
+                self._append_message_to_state(
+                    answer.model_dump_json(), reasoning_content=reasoning
+                )
                 return self._route_finish_with_todos("native_finished")
 
             # Text response - this is the final answer
@@ -1350,7 +1354,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     text=answer,
                 )
                 self._invoke_step_callback(self.state.current_answer)
-                self._append_message_to_state(answer)
+                self._append_message_to_state(answer, reasoning_content=reasoning)
 
                 return self._route_finish_with_todos("native_finished")
 
@@ -1361,7 +1365,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 text=str(answer),
             )
             self._invoke_step_callback(self.state.current_answer)
-            self._append_message_to_state(str(answer))
+            self._append_message_to_state(str(answer), reasoning_content=reasoning)
 
             return self._route_finish_with_todos("native_finished")
 
@@ -2825,16 +2829,26 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     color="red",
                 )
 
+    def _get_llm_reasoning_content(self) -> str | None:
+        """Return reasoning_content from the last LLM response, if any."""
+        return getattr(self.llm, "reasoning_content", None)
+
     def _append_message_to_state(
-        self, text: str, role: Literal["user", "assistant", "system"] = "assistant"
+        self,
+        text: str,
+        role: Literal["user", "assistant", "system"] = "assistant",
+        reasoning_content: str | None = None,
     ) -> None:
         """Add message to state conversation history.
 
         Args:
             text: Message content.
             role: Message role (default: assistant).
+            reasoning_content: Optional reasoning content from the LLM response.
         """
-        self.state.messages.append(format_message_for_llm(text, role=role))
+        self.state.messages.append(
+            format_message_for_llm(text, role=role, reasoning_content=reasoning_content)
+        )
 
     def _show_start_logs(self) -> None:
         """Emit agent start event."""

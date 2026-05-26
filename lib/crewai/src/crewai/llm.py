@@ -1232,6 +1232,15 @@ class LLM(BaseLLM):
             0
         ].message
         text_response = response_message.content or ""
+
+        # Store reasoning_content for models that return it (e.g. DeepSeek thinking mode)
+        self.reasoning_content: str | None = getattr(
+            response_message, "reasoning_content", None
+        ) or (
+            response_message.get("reasoning_content")
+            if hasattr(response_message, "get")
+            else None
+        )
         # --- 3) Handle callbacks with usage info
         if callbacks and len(callbacks) > 0:
             for callback in callbacks:
@@ -1742,6 +1751,7 @@ class LLM(BaseLLM):
             ValueError: If response format is not supported
             LLMContextLengthExceededError: If input exceeds model's context limit
         """
+        self.reasoning_content = None
         with llm_call_context() as call_id:
             crewai_event_bus.emit(
                 self,

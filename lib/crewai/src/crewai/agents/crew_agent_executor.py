@@ -422,7 +422,10 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     )
 
                 self._invoke_step_callback(formatted_answer)
-                self._append_message(formatted_answer.text)
+                self._append_message(
+                    formatted_answer.text,
+                    reasoning_content=self._get_llm_reasoning_content(),
+                )
 
             except OutputParserError as e:
                 formatted_answer = handle_output_parser_exception(  # type: ignore[assignment]
@@ -525,8 +528,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         output=answer,
                         text=answer,
                     )
+                    reasoning = self._get_llm_reasoning_content()
                     self._invoke_step_callback(formatted_answer)
-                    self._append_message(answer)
+                    self._append_message(answer, reasoning_content=reasoning)
                     self._show_logs(formatted_answer)
                     return formatted_answer
 
@@ -537,8 +541,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         output=answer,
                         text=output_json,
                     )
+                    reasoning = self._get_llm_reasoning_content()
                     self._invoke_step_callback(formatted_answer)
-                    self._append_message(output_json)
+                    self._append_message(output_json, reasoning_content=reasoning)
                     self._show_logs(formatted_answer)
                     return formatted_answer
 
@@ -547,8 +552,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     output=str(answer),
                     text=str(answer),
                 )
+                reasoning = self._get_llm_reasoning_content()
                 self._invoke_step_callback(formatted_answer)
-                self._append_message(str(answer))
+                self._append_message(str(answer), reasoning_content=reasoning)
                 self._show_logs(formatted_answer)
                 return formatted_answer
 
@@ -1234,7 +1240,10 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     )
 
                 await self._ainvoke_step_callback(formatted_answer)
-                self._append_message(formatted_answer.text)
+                self._append_message(
+                    formatted_answer.text,
+                    reasoning_content=self._get_llm_reasoning_content(),
+                )
 
             except OutputParserError as e:
                 formatted_answer = handle_output_parser_exception(  # type: ignore[assignment]
@@ -1336,8 +1345,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         output=answer,
                         text=answer,
                     )
+                    reasoning = self._get_llm_reasoning_content()
                     await self._ainvoke_step_callback(formatted_answer)
-                    self._append_message(answer)
+                    self._append_message(answer, reasoning_content=reasoning)
                     self._show_logs(formatted_answer)
                     return formatted_answer
 
@@ -1348,8 +1358,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         output=answer,
                         text=output_json,
                     )
+                    reasoning = self._get_llm_reasoning_content()
                     await self._ainvoke_step_callback(formatted_answer)
-                    self._append_message(output_json)
+                    self._append_message(output_json, reasoning_content=reasoning)
                     self._show_logs(formatted_answer)
                     return formatted_answer
 
@@ -1358,8 +1369,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     output=str(answer),
                     text=str(answer),
                 )
+                reasoning = self._get_llm_reasoning_content()
                 await self._ainvoke_step_callback(formatted_answer)
-                self._append_message(str(answer))
+                self._append_message(str(answer), reasoning_content=reasoning)
                 self._show_logs(formatted_answer)
                 return formatted_answer
 
@@ -1473,16 +1485,26 @@ class CrewAgentExecutor(BaseAgentExecutor):
             if inspect.iscoroutine(cb_result):
                 await cb_result
 
+    def _get_llm_reasoning_content(self) -> str | None:
+        """Return reasoning_content from the last LLM response, if any."""
+        return getattr(self.llm, "reasoning_content", None)
+
     def _append_message(
-        self, text: str, role: Literal["user", "assistant", "system"] = "assistant"
+        self,
+        text: str,
+        role: Literal["user", "assistant", "system"] = "assistant",
+        reasoning_content: str | None = None,
     ) -> None:
         """Add message to conversation history.
 
         Args:
             text: Message content.
             role: Message role (default: assistant).
+            reasoning_content: Optional reasoning content from the LLM response.
         """
-        self.messages.append(format_message_for_llm(text, role=role))
+        self.messages.append(
+            format_message_for_llm(text, role=role, reasoning_content=reasoning_content)
+        )
 
     def _show_start_logs(self) -> None:
         """Emit agent start event."""
