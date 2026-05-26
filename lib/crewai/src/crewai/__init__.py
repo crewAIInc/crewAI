@@ -52,6 +52,7 @@ __version__ = "1.14.6a1"
 
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "Memory": ("crewai.memory.unified_memory", "Memory"),
+    "MemoryPromptConfig": ("crewai.memory.types", "MemoryPromptConfig"),
 }
 
 
@@ -196,6 +197,7 @@ __all__ = [
     "Knowledge",
     "LLMGuardrail",
     "Memory",
+    "MemoryPromptConfig",
     "PlanningConfig",
     "Process",
     "RuntimeState",

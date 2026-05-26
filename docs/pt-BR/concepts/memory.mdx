@@ -157,6 +157,43 @@ class ResearchFlow(Flow):
 
 Veja a [documentação de Flows](/concepts/flows) para mais informações sobre memória em Flows.
 
+## Personalizando prompts de memória (`MemoryPromptConfig`)
+
+Substitua as instruções do LLM usadas em cada etapa de análise de memória (mesma ideia que ajustar prompts de planejamento). Passe um `MemoryPromptConfig` como `memory_prompt` em `Memory`. Defina apenas os campos necessários; nas demais etapas permanecem os padrões embutidos do `translations/en.json` da biblioteca, na chave `memory` (os nomes dos campos correspondem às chaves JSON).
+
+```python
+from crewai import Memory, MemoryPromptConfig
+
+memory = Memory(
+    llm="gpt-4o-mini",
+    memory_prompt=MemoryPromptConfig(
+        save_system="...",   # opcional
+        query_user="...",    # opcional
+    ),
+)
+```
+
+Você também pode passar `memory_prompt` para funções auxiliares em `crewai.memory.analyze` (por exemplo `extract_memories_from_content`) quando chamá-las diretamente.
+
+### O que cada par de prompts afeta
+
+| Campos | Quando roda | O que influencia |
+| --- | --- | --- |
+| `save_system` / `save_user` | Ao salvar (`analyze_for_save`) | `suggested_scope`, `categories`, `importance` e `extracted_metadata` inferidos antes do armazenamento e do embedding. |
+| `query_system` / `query_user` | Análise da consulta no recall (`analyze_query`) | `keywords`, `suggested_scopes`, `complexity`, `recall_queries` e `time_filter`, que orientam a busca vetorial e a profundidade do recall. |
+| `extract_memories_system` / `extract_memories_user` | `extract_memories_from_content` / `Memory.extract_memories` | Como o texto bruto é dividido em memórias atômicas (a persistência continua sendo via `remember()`). |
+| `consolidation_system` / `consolidation_user` | Quando o novo conteúdo é semelhante a registros existentes (`analyze_for_consolidation`) | Manter, atualizar ou excluir linhas existentes e se o novo conteúdo entra como memória própria. |
+
+### Placeholders
+
+Strings de **system** são enviadas como estão. Strings de **user** são preenchidas com `str.format` do Python. Templates de user personalizados devem incluir os mesmos nomes de placeholder dos padrões; caso contrário, a formatação falha.
+
+| Campo user | Placeholders obrigatórios |
+| --- | --- |
+| `save_user` | `{content}`, `{existing_scopes}`, `{existing_categories}` |
+| `query_user` | `{query}`, `{available_scopes}`, `{scope_desc}` |
+| `extract_memories_user` | `{content}` |
+| `consolidation_user` | `{new_content}`, `{records_summary}` |
 
 ## Escopos Hierárquicos
 

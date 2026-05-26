@@ -157,6 +157,43 @@ class ResearchFlow(Flow):
 
 See the [Flows documentation](/concepts/flows) for more on memory in Flows.
 
+## Customizing memory prompts (`MemoryPromptConfig`)
+
+Override the LLM instructions used at each memory analysis step (same idea as tuning planning prompts). Pass a `MemoryPromptConfig` as `memory_prompt` on `Memory`. Only set the fields you need; every other step keeps the bundled defaults from the library’s `translations/en.json` under the `memory` key (field names match those JSON keys).
+
+```python
+from crewai import Memory, MemoryPromptConfig
+
+memory = Memory(
+    llm="gpt-4o-mini",
+    memory_prompt=MemoryPromptConfig(
+        save_system="...",   # optional
+        query_user="...",    # optional
+    ),
+)
+```
+
+You can also pass `memory_prompt` into helpers in `crewai.memory.analyze` (for example `extract_memories_from_content`) when you call them directly.
+
+### What each prompt pair affects
+
+| Fields | When it runs | What it influences |
+| --- | --- | --- |
+| `save_system` / `save_user` | Saving (`analyze_for_save`) | Inferred `suggested_scope`, `categories`, `importance`, and `extracted_metadata` before storage and embedding. |
+| `query_system` / `query_user` | Recall query analysis (`analyze_query`) | `keywords`, `suggested_scopes`, `complexity`, `recall_queries`, and `time_filter`, which steer vector search and how deep recall goes. |
+| `extract_memories_system` / `extract_memories_user` | `extract_memories_from_content` / `Memory.extract_memories` | How raw text is split into discrete memory strings (persistence is still via `remember()`). |
+| `consolidation_system` / `consolidation_user` | When new content is similar to existing records (`analyze_for_consolidation`) | Whether to keep, update, or delete existing rows and whether to insert the new content as its own memory. |
+
+### Placeholders
+
+**System** strings are sent as-is. **User** strings are filled with Python’s `str.format`. Custom user templates must include the same placeholder names as the defaults or formatting will raise.
+
+| User field | Required placeholders |
+| --- | --- |
+| `save_user` | `{content}`, `{existing_scopes}`, `{existing_categories}` |
+| `query_user` | `{query}`, `{available_scopes}`, `{scope_desc}` |
+| `extract_memories_user` | `{content}` |
+| `consolidation_user` | `{new_content}`, `{records_summary}` |
 
 ## Hierarchical Scopes
 

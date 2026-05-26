@@ -157,6 +157,43 @@ class ResearchFlow(Flow):
 
 انظر [وثائق التدفقات](/concepts/flows) لمزيد من المعلومات حول الذاكرة في التدفقات.
 
+## تخصيص مطالبات الذاكرة (`MemoryPromptConfig`)
+
+يمكنك استبدال تعليمات نموذج اللغة في كل خطوة من تحليل الذاكرة (نفس فكرة ضبط مطالبات التخطيط). مرّر كائن `MemoryPromptConfig` كوسيط `memory_prompt` إلى `Memory`. عيّن الحقول التي تحتاجها فقط؛ تبقى الخطوات الأخرى على القيم الافتراضية المضمّنة في `translations/en.json` تحت المفتاح `memory` (أسماء الحقول تطابق مفاتيح JSON).
+
+```python
+from crewai import Memory, MemoryPromptConfig
+
+memory = Memory(
+    llm="gpt-4o-mini",
+    memory_prompt=MemoryPromptConfig(
+        save_system="...",   # اختياري
+        query_user="...",    # اختياري
+    ),
+)
+```
+
+يمكنك أيضًا تمرير `memory_prompt` إلى دوال مساعدة في `crewai.memory.analyze` (مثل `extract_memories_from_content`) عند استدعائها مباشرة.
+
+### تأثير كل زوج من المطالبات
+
+| الحقول | متى يعمل | ماذا يؤثر |
+| --- | --- | --- |
+| `save_system` / `save_user` | عند الحفظ (`analyze_for_save`) | `suggested_scope` و`categories` و`importance` و`extracted_metadata` المستنتجة قبل التخزين والتضمين. |
+| `query_system` / `query_user` | عند تحليل استعلام الاسترجاع (`analyze_query`) | `keywords` و`suggested_scopes` و`complexity` و`recall_queries` و`time_filter`، ما يوجّه البحث المتجهي وعمق الاسترجاع. |
+| `extract_memories_system` / `extract_memories_user` | `extract_memories_from_content` / `Memory.extract_memories` | كيفية تقسيم النص الخام إلى جمل ذاكرة منفصلة (لا يزال التخزين عبر `remember()`). |
+| `consolidation_system` / `consolidation_user` | عندما يكون المحتوى الجديد قريبًا دلاليًا من سجلات موجودة (`analyze_for_consolidation`) | الإبقاء على الصفوف أو تحديثها أو حذفها، وما إذا كان يُدرج المحتوى الجديد كذاكرة مستقلة. |
+
+### العناصر النائبة (placeholders)
+
+سلاسل **النظام (system)** تُرسل كما هي. سلاسل **المستخدم (user)** تُملأ بـ `str.format` في بايثون. يجب أن تتضمن قوالب المستخدم المخصصة نفس أسماء العناصر النائبة الافتراضية وإلا يفشل التنسيق.
+
+| حقل المستخدم | عناصر نائبة مطلوبة |
+| --- | --- |
+| `save_user` | `{content}`، `{existing_scopes}`، `{existing_categories}` |
+| `query_user` | `{query}`، `{available_scopes}`، `{scope_desc}` |
+| `extract_memories_user` | `{content}` |
+| `consolidation_user` | `{new_content}`، `{records_summary}` |
 
 ## النطاقات الهرمية
 

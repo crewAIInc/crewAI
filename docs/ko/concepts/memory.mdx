@@ -157,6 +157,43 @@ class ResearchFlow(Flow):
 
 Flow에서의 메모리에 대한 자세한 내용은 [Flows 문서](/concepts/flows)를 참조하세요.
 
+## 메모리 프롬프트 사용자 지정 (`MemoryPromptConfig`)
+
+메모리 분석 단계마다 사용되는 LLM 지시문을 덮어쓸 수 있습니다(플래닝 프롬프트를 조정하는 것과 같은 개념). `Memory`의 `memory_prompt`에 `MemoryPromptConfig`를 넘깁니다. 필요한 필드만 설정하면 되고, 나머지 단계는 라이브러리 번들 기본값(`translations/en.json`의 `memory` 키; 필드 이름이 해당 JSON 키와 일치)을 그대로 씁니다.
+
+```python
+from crewai import Memory, MemoryPromptConfig
+
+memory = Memory(
+    llm="gpt-4o-mini",
+    memory_prompt=MemoryPromptConfig(
+        save_system="...",   # 선택
+        query_user="...",    # 선택
+    ),
+)
+```
+
+`crewai.memory.analyze`의 헬퍼(예: `extract_memories_from_content`)를 직접 호출할 때도 `memory_prompt`를 넘길 수 있습니다.
+
+### 프롬프트 쌍별 역할
+
+| 필드 | 실행 시점 | 영향 |
+| --- | --- | --- |
+| `save_system` / `save_user` | 저장 시 (`analyze_for_save`) | 저장·임베딩 전에 추론되는 `suggested_scope`, `categories`, `importance`, `extracted_metadata`. |
+| `query_system` / `query_user` | 리콜 시 쿼리 분석 (`analyze_query`) | `keywords`, `suggested_scopes`, `complexity`, `recall_queries`, `time_filter` — 벡터 검색과 리콜 탐색 깊이에 영향. |
+| `extract_memories_system` / `extract_memories_user` | `extract_memories_from_content` / `Memory.extract_memories` | 긴 텍스트를 개별 메모리 문자열로 나누는 방식(저장은 여전히 `remember()`). |
+| `consolidation_system` / `consolidation_user` | 신규 콘텐츠가 기존 레코드와 유사할 때 (`analyze_for_consolidation`) | 기존 행 유지·갱신·삭제 및 신규 콘텐츠를 별도 메모리로 넣을지 여부. |
+
+### 플레이스홀더
+
+**system** 문자열은 그대로 전송됩니다. **user** 문자열은 Python `str.format`으로 채워집니다. 사용자 정의 user 템플릿에는 기본값과 동일한 플레이스홀더 이름이 포함되어야 하며, 그렇지 않으면 포맷 단계에서 오류가 납니다.
+
+| User 필드 | 필수 플레이스홀더 |
+| --- | --- |
+| `save_user` | `{content}`, `{existing_scopes}`, `{existing_categories}` |
+| `query_user` | `{query}`, `{available_scopes}`, `{scope_desc}` |
+| `extract_memories_user` | `{content}` |
+| `consolidation_user` | `{new_content}`, `{records_summary}` |
 
 ## 계층적 범위(Scopes)
 

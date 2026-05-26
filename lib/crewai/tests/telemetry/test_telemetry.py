@@ -3,8 +3,9 @@ import threading
 from unittest.mock import patch
 
 import pytest
-from crewai import Agent, Crew, Task
+from crewai import Agent, Crew, Memory, Task
 from crewai.telemetry import Telemetry
+from crewai.telemetry.utils import crew_memory_span_attribute_value
 from opentelemetry import trace
 
 
@@ -159,3 +160,20 @@ def test_no_signal_handler_traceback_in_non_main_thread():
     mock_holder["logger"].debug.assert_any_call(
         "Skipping signal handler registration: not running in main thread"
     )
+
+
+@pytest.mark.parametrize(
+    ("memory", "expected"),
+    [
+        (False, False),
+        (None, False),
+        (True, True),
+    ],
+)
+def test_crew_memory_span_attribute_value_primitives(memory, expected):
+    assert crew_memory_span_attribute_value(memory) is expected
+
+
+def test_crew_memory_span_attribute_value_memory_instance():
+    """Custom Memory instances must become a primitive string for OTLP."""
+    assert crew_memory_span_attribute_value(Memory()) == "Memory"
