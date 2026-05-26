@@ -238,6 +238,7 @@ def extract_task_section(text: str) -> str:
         return text[:2000] + "\n... [truncated]"
     return text
 
+
 def _executor_stop_words(
     executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
 ) -> list[str]:
