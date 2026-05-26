@@ -63,7 +63,6 @@ class SkillCacheManager:
             Path to the stored skill directory.
         """
         skill_dir = self._skill_dir(org, name)
-        # Wipe any previous version
         if skill_dir.exists():
             import shutil
 
@@ -72,7 +71,6 @@ class SkillCacheManager:
 
         import io
 
-        # Try tar.gz first, fall back to zip
         try:
             with tarfile.open(fileobj=io.BytesIO(archive_bytes), mode="r:gz") as tf:
                 try:

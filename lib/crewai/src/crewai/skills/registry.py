@@ -105,7 +105,6 @@ def resolve_registry_ref(
 
     org, name = parse_registry_ref(ref)
 
-    # 1. Project-local: ./skills/{name}/
     local_path = Path.cwd() / "skills" / name
     if local_path.is_dir() and (local_path / "SKILL.md").exists():
         try:
@@ -114,7 +113,6 @@ def resolve_registry_ref(
         except Exception:
             _logger.debug("Failed to load local skill at %s", local_path, exc_info=True)
 
-    # 2. Global cache
     cache = SkillCacheManager()
     cached_path = cache.get_cached_path(org, name)
     if cached_path is not None and (cached_path / "SKILL.md").exists():
@@ -126,7 +124,6 @@ def resolve_registry_ref(
                 "Failed to load cached skill at %s", cached_path, exc_info=True
             )
 
-    # 3. Download
     if _is_noninteractive():
         raise SkillNotCachedError(ref)
 
@@ -197,7 +194,6 @@ def download_skill(
         archive_bytes = dl_response.content
     else:
         encoded = data.get("file", "")
-        # Strip data URI prefix if present
         if "," in encoded:
             encoded = encoded.split(",", 1)[1]
         archive_bytes = base64.b64decode(encoded)

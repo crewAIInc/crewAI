@@ -227,7 +227,6 @@ class BaseLLM(BaseModel, ABC):
         if not data.get("model"):
             raise ValueError("Model name is required and cannot be empty")
 
-        # Normalize stop: accept str, list, or None; also accept stop_sequences alias
         stop_seqs = data.pop("stop_sequences", None)
         stop = stop_seqs if stop_seqs is not None else data.get("stop")
         if stop is None:
@@ -239,11 +238,9 @@ class BaseLLM(BaseModel, ABC):
         else:
             data["stop"] = list(stop)
 
-        # Default provider
         if not data.get("provider"):
             data["provider"] = "openai"
 
-        # Collect unknown kwargs into additional_params
         known_fields = set(cls.model_fields.keys())
         extras = {k: v for k, v in data.items() if k not in known_fields}
         for k in extras:
@@ -417,7 +414,6 @@ class BaseLLM(BaseModel, ABC):
                 earliest_stop_pos = stop_pos
                 found_stop_word = stop_word
 
-        # Truncate at the stop word if found
         if found_stop_word is not None:
             truncated = content[:earliest_stop_pos].strip()
             logging.debug(
@@ -433,7 +429,6 @@ class BaseLLM(BaseModel, ABC):
         Returns:
             The number of tokens/characters the model can handle.
         """
-        # Default implementation - subclasses should override with model-specific values
         return DEFAULT_CONTEXT_WINDOW_SIZE
 
     def supports_multimodal(self) -> bool:
@@ -468,8 +463,6 @@ class BaseLLM(BaseModel, ABC):
             A FileUploader instance, or None if not supported by this provider.
         """
         return None
-
-    # Common helper methods for native SDK implementations
 
     def _emit_call_started_event(
         self,
@@ -626,7 +619,6 @@ class BaseLLM(BaseModel, ABC):
             return None
 
         try:
-            # Emit tool usage started event
             started_at = datetime.now()
 
             crewai_event_bus.emit(
@@ -639,11 +631,9 @@ class BaseLLM(BaseModel, ABC):
                 ),
             )
 
-            # Execute the function
             fn = available_functions[function_name]
             result = fn(**function_args)
 
-            # Emit tool usage finished event
             crewai_event_bus.emit(
                 self,
                 event=ToolUsageFinishedEvent(
@@ -657,7 +647,6 @@ class BaseLLM(BaseModel, ABC):
                 ),
             )
 
-            # Emit LLM call completed event for tool call
             self._emit_call_completed_event(
                 response=result,
                 call_type=LLMCallType.TOOL_CALL,
@@ -671,7 +660,6 @@ class BaseLLM(BaseModel, ABC):
             error_msg = f"Error executing function '{function_name}': {e!s}"
             logging.error(error_msg)
 
-            # Emit tool usage error event
             if not hasattr(crewai_event_bus, "emit"):
                 raise ValueError(
                     "crewai_event_bus does not have an emit method"
@@ -688,7 +676,6 @@ class BaseLLM(BaseModel, ABC):
                 ),
             )
 
-            # Emit LLM call failed event
             self._emit_call_failed_event(
                 error=error_msg,
                 from_task=from_task,
@@ -808,7 +795,6 @@ class BaseLLM(BaseModel, ABC):
             return response
 
         try:
-            # Try to parse as JSON first
             if response.strip().startswith("{") or response.strip().startswith("["):
                 data = json.loads(response)
                 return response_format.model_validate(data)
@@ -846,7 +832,6 @@ class BaseLLM(BaseModel, ABC):
         Args:
             usage_data: Token usage data from the API response
         """
-        # Extract tokens in a provider-agnostic way
         prompt_tokens = (
             usage_data.get("prompt_tokens")
             or usage_data.get("prompt_token_count")
@@ -915,7 +900,6 @@ class BaseLLM(BaseModel, ABC):
             ... ):
             ...     raise ValueError("LLM call blocked by hook")
         """
-        # Only invoke hooks for direct calls (no agent context)
         if from_agent is not None:
             return True
 
@@ -985,7 +969,6 @@ class BaseLLM(BaseModel, ABC):
             ...         messages, result, from_agent
             ...     )
         """
-        # Only invoke hooks for direct calls (no agent context)
         if from_agent is not None or not isinstance(response, str):
             return response
 

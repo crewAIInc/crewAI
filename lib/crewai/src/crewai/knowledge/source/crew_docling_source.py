@@ -16,7 +16,6 @@ try:
     DOCLING_AVAILABLE = True
 except ImportError:
     DOCLING_AVAILABLE = False
-    # Provide type stubs for when docling is not available
     if TYPE_CHECKING:
         from docling.document_converter import DocumentConverter
         from docling_core.types.doc.document import DoclingDocument
@@ -136,7 +135,6 @@ class CrewDoclingSource(BaseKnowledgeSource):
                     else:
                         raise FileNotFoundError(f"File not found: {local_path}")
             else:
-                # this is an instance of Path
                 processed_paths.append(path)
         return processed_paths
 
@@ -147,7 +145,7 @@ class CrewDoclingSource(BaseKnowledgeSource):
                 [
                     result.scheme in ("http", "https"),
                     result.netloc,
-                    len(result.netloc.split(".")) >= 2,  # Ensure domain has TLD
+                    len(result.netloc.split(".")) >= 2,
                 ]
             )
         except Exception:

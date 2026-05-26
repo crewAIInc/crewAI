@@ -175,7 +175,6 @@ def get_possible_return_constants(
     try:
         source = inspect.getsource(function)
     except OSError:
-        # Can't get source code
         return None
     except Exception as e:
         if verbose:
@@ -186,9 +185,7 @@ def get_possible_return_constants(
         return None
 
     try:
-        # Remove leading indentation
         source = textwrap.dedent(source)
-        # Parse the source code into an AST
         code_ast = ast.parse(source)
     except IndentationError as e:
         if verbose:
@@ -254,12 +251,10 @@ def get_possible_return_constants(
 
     class VariableAssignmentVisitor(ast.NodeVisitor):
         def visit_Assign(self, node: ast.Assign) -> None:
-            # Check if this assignment is assigning a dictionary literal to a variable
             if isinstance(node.value, ast.Dict) and len(node.targets) == 1:
                 target = node.targets[0]
                 if isinstance(target, ast.Name):
                     var_name = target.id
-                    # Extract string values from the dictionary
                     dict_values = [
                         val.value
                         for val in node.value.values
@@ -328,13 +323,10 @@ def get_possible_return_constants(
         def visit_If(self, node: ast.If) -> None:
             self.generic_visit(node)
 
-    # Try to get the class context to infer state attribute values
     try:
         if hasattr(function, "__self__"):
-            # Method is bound, get the class
             class_obj = function.__self__.__class__
         elif hasattr(function, "__qualname__") and "." in function.__qualname__:
-            # Method is unbound but we can try to get class from module
             class_name = function.__qualname__.rsplit(".", 1)[0]
             if hasattr(function, "__globals__"):
                 class_obj = function.__globals__.get(class_name)
@@ -349,7 +341,6 @@ def get_possible_return_constants(
                 class_source = textwrap.dedent(class_source)
                 class_ast = ast.parse(class_source)
 
-                # Look for comparisons and assignments involving state attributes
                 class StateAttributeVisitor(ast.NodeVisitor):
                     def visit_Compare(self, node: ast.Compare) -> None:
                         """Find comparisons like: self.state.attr == "value" """
@@ -370,7 +361,6 @@ def get_possible_return_constants(
                                             comparator.value
                                         )
 
-                        # Also check right side
                         for comparator in node.comparators:
                             right_attr = get_attribute_chain(comparator)
                             if (
@@ -439,13 +429,11 @@ def calculate_node_levels(flow: Any) -> dict[str, int]:
     visited: set[str] = set()
     pending_and_listeners: dict[str, set[str]] = {}
 
-    # Make all start methods at level 0
     for method_name, method in flow._methods.items():
         if hasattr(method, "__is_start_method__"):
             levels[method_name] = 0
             queue.append(method_name)
 
-    # Precompute listener dependencies
     or_listeners = defaultdict(list)
     and_listeners = defaultdict(set)
     for listener_name, condition_data in flow._listeners.items():
@@ -463,7 +451,6 @@ def calculate_node_levels(flow: Any) -> dict[str, int]:
         elif condition_type == "AND":
             and_listeners[listener_name] = set(trigger_methods)
 
-    # Breadth-first traversal to assign levels
     while queue:
         current = queue.popleft()
         current_level = levels[current]

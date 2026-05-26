@@ -18,7 +18,6 @@ from crewai.types.callback import (
 )
 
 
-# ── Helpers ──────────────────────────────────────────────────────────
 
 
 def module_level_function() -> str:
@@ -42,7 +41,6 @@ class _Model(BaseModel):
     cb: SerializableCallable | None = None
 
 
-# ── _is_non_roundtrippable ───────────────────────────────────────────
 
 
 class TestIsNonRoundtrippable:
@@ -78,7 +76,6 @@ class TestIsNonRoundtrippable:
         assert _is_non_roundtrippable(_CallableInstance()) is True
 
 
-# ── callable_to_string ───────────────────────────────────────────────
 
 
 class TestCallableToString:
@@ -114,14 +111,12 @@ class TestCallableToString:
             callable_to_string(obj)
 
     def test_missing_module_raises(self) -> None:
-        # Create an object where getattr(obj, "__module__", None) returns None
         ns: dict[str, Any] = {"__qualname__": "x", "__module__": None}
         obj = type("NoMod", (), ns)()
         with pytest.raises(ValueError, match="missing __module__"):
             callable_to_string(obj)
 
 
-# ── string_to_callable ───────────────────────────────────────────────
 
 
 class TestStringToCallable:
@@ -168,7 +163,6 @@ class TestStringToCallable:
             string_to_callable("nonexistent.module.func")
 
 
-# ── _resolve_dotted_path ─────────────────────────────────────────────
 
 
 class TestResolveDottedPath:

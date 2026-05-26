@@ -299,7 +299,6 @@ class AnthropicCompletion(BaseLLM):
         """
         with llm_call_context():
             try:
-                # Emit call started event
                 self._emit_call_started_event(
                     messages=messages,
                     tools=tools,
@@ -309,7 +308,6 @@ class AnthropicCompletion(BaseLLM):
                     from_agent=from_agent,
                 )
 
-                # Format messages for Anthropic
                 formatted_messages, system_message = (
                     self._format_messages_for_anthropic(messages)
                 )
@@ -319,14 +317,12 @@ class AnthropicCompletion(BaseLLM):
                 ):
                     raise ValueError("LLM call blocked by before_llm_call hook")
 
-                # Prepare completion parameters
                 completion_params = self._prepare_completion_params(
                     formatted_messages, system_message, tools, available_functions
                 )
 
                 effective_response_model = response_model or self.response_format
 
-                # Handle streaming vs non-streaming
                 if self.stream:
                     return self._handle_streaming_completion(
                         completion_params,
@@ -448,11 +444,9 @@ class AnthropicCompletion(BaseLLM):
             "stream": self.stream,
         }
 
-        # Add system message if present
         if system_message:
             params["system"] = system_message
 
-        # Add optional parameters if set
         if self.temperature is not None:
             params["temperature"] = self.temperature
         if self.top_p is not None:
@@ -460,7 +454,6 @@ class AnthropicCompletion(BaseLLM):
         if self.stop_sequences:
             params["stop_sequences"] = self.stop_sequences
 
-        # Handle tools for Claude 3+
         if tools and self.supports_tools:
             converted_tools = self._convert_tools_for_interference(tools)
 
@@ -498,7 +491,6 @@ class AnthropicCompletion(BaseLLM):
         anthropic_tools = []
 
         for tool in tools:
-            # Pass through tool search tool definitions unchanged
             tool_type = tool.get("type", "")
             if tool_type in TOOL_SEARCH_TOOL_TYPES:
                 anthropic_tools.append(tool)
@@ -560,7 +552,6 @@ class AnthropicCompletion(BaseLLM):
         if self.tool_search is None:
             return tools
 
-        # Check if a tool search tool is already present (user passed one manually)
         has_search_tool = any(
             t.get("type", "") in TOOL_SEARCH_TOOL_TYPES for t in tools
         )
@@ -568,23 +559,19 @@ class AnthropicCompletion(BaseLLM):
         result: list[dict[str, Any]] = []
 
         if not has_search_tool:
-            # Map config type to API type identifier
             type_map = {
                 "regex": "tool_search_tool_regex_20251119",
                 "bm25": "tool_search_tool_bm25_20251119",
             }
             tool_type = type_map[self.tool_search.type]
-            # Tool search tool names follow the convention: tool_search_tool_{variant}
             tool_name = f"tool_search_tool_{self.tool_search.type}"
             result.append({"type": tool_type, "name": tool_name})
 
         for tool in tools:
-            # Don't modify tool search tools
             if tool.get("type", "") in TOOL_SEARCH_TOOL_TYPES:
                 result.append(tool)
                 continue
 
-            # Mark regular tools as deferred if not already set
             if "defer_loading" not in tool:
                 tool = {**tool, "defer_loading": True}
             result.append(tool)
@@ -724,7 +711,6 @@ class AnthropicCompletion(BaseLLM):
                     if len(text_blocks) == 1 and isinstance(text_blocks[0], str):
                         cache_match_contents.append(text_blocks[0])
 
-        # Use base class formatting first
         base_formatted = super()._format_messages(messages)
 
         formatted_messages: list[LLMMessage] = []
@@ -752,14 +738,12 @@ class AnthropicCompletion(BaseLLM):
                 }
                 pending_tool_results.append(tool_result)
             elif role == "assistant":
-                # First, flush any pending tool results as a user message
                 if pending_tool_results:
                     formatted_messages.append(
                         {"role": "user", "content": pending_tool_results}
                     )
                     pending_tool_results = []
 
-                # Handle assistant message with tool_calls (convert to Anthropic format)
                 tool_calls = message.get("tool_calls", [])
                 if tool_calls:
                     assistant_content: list[dict[str, Any]] = []
@@ -798,7 +782,6 @@ class AnthropicCompletion(BaseLLM):
                         LLMMessage(role="assistant", content=content_str)
                     )
             else:
-                # User message - first flush any pending tool results
                 if pending_tool_results:
                     formatted_messages.append(
                         {"role": "user", "content": pending_tool_results}
@@ -819,16 +802,13 @@ class AnthropicCompletion(BaseLLM):
                         LLMMessage(role=role_str, content=content_str)
                     )
 
-        # Flush any remaining pending tool results
         if pending_tool_results:
             formatted_messages.append({"role": "user", "content": pending_tool_results})
 
-        # Ensure first message is from user (Anthropic requirement)
+        # Anthropic requires the first message to come from "user"
         if not formatted_messages:
-            # If no messages, add a default user message
             formatted_messages.append({"role": "user", "content": "Hello"})
         elif formatted_messages[0]["role"] != "user":
-            # If first message is not from user, insert a user message at the beginning
             formatted_messages.insert(0, {"role": "user", "content": "Hello"})
 
         # Stamp cache_control on the message(s) whose original content was
@@ -983,9 +963,8 @@ class AnthropicCompletion(BaseLLM):
             ]
 
             if tool_uses:
-                # If no available_functions, return tool calls for executor to handle
-                # This allows the executor to manage tool execution with proper
-                # message history and post-tool reasoning prompts
+                # Without available_functions, return tool calls so the executor can
+                # manage execution with proper message history and post-tool reasoning prompts
                 if not available_functions:
                     self._emit_call_completed_event(
                         response=list(tool_uses),
@@ -1207,7 +1186,6 @@ class AnthropicCompletion(BaseLLM):
                 if not available_functions:
                     return list(tool_uses)
 
-                # Execute first tool and return result directly
                 result = self._execute_first_tool(
                     tool_uses, available_functions, from_task, from_agent
                 )
@@ -1330,7 +1308,6 @@ class AnthropicCompletion(BaseLLM):
 
         follow_up_params = params.copy()
 
-        # Add Claude's tool use response to conversation
         assistant_content: list[
             ThinkingBlock | ToolUseBlock | TextBlock | dict[str, Any]
         ] = []
@@ -1352,22 +1329,18 @@ class AnthropicCompletion(BaseLLM):
 
         assistant_message = {"role": "assistant", "content": assistant_content}
 
-        # Add user message with tool results
         user_message = {"role": "user", "content": tool_results}
 
-        # Update messages for follow-up call
         follow_up_params["messages"] = params["messages"] + [
             assistant_message,
             user_message,
         ]
 
         try:
-            # Send tool results back to Claude for final response
             final_response: Message = self._get_sync_client().messages.create(
                 **follow_up_params
             )
 
-            # Track token usage for follow-up call
             follow_up_usage = self._extract_anthropic_token_usage(final_response)
             self._track_token_usage_internal(follow_up_usage)
 
@@ -1388,7 +1361,6 @@ class AnthropicCompletion(BaseLLM):
 
             final_content = self._apply_stop_words(final_content)
 
-            # Emit completion event for the final response
             self._emit_call_completed_event(
                 response=final_content,
                 call_type=LLMCallType.LLM_CALL,
@@ -1398,7 +1370,6 @@ class AnthropicCompletion(BaseLLM):
                 usage=follow_up_usage,
             )
 
-            # Log combined token usage
             total_usage = {
                 "input_tokens": follow_up_usage.get("input_tokens", 0),
                 "output_tokens": follow_up_usage.get("output_tokens", 0),
@@ -1416,7 +1387,7 @@ class AnthropicCompletion(BaseLLM):
                 raise LLMContextLengthExceededError(str(e)) from e
 
             logging.error(f"Tool follow-up conversation failed: {e}")
-            # Fallback: return the first tool result if follow-up fails
+            # Fallback to first tool result when follow-up fails
             if tool_results:
                 return cast(str, tool_results[0]["content"])
             raise e
@@ -1516,7 +1487,6 @@ class AnthropicCompletion(BaseLLM):
             ]
 
             if tool_uses:
-                # If no available_functions, return tool calls for executor to handle
                 if not available_functions:
                     self._emit_call_completed_event(
                         response=list(tool_uses),
@@ -1825,7 +1795,6 @@ class AnthropicCompletion(BaseLLM):
         """Get the context window size for the model."""
         from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
 
-        # Context window sizes for Anthropic models
         context_windows = {
             "claude-3-5-sonnet": 200000,
             "claude-3-5-haiku": 200000,
@@ -1838,12 +1807,10 @@ class AnthropicCompletion(BaseLLM):
             "claude-instant": 100000,
         }
 
-        # Find the best match for the model name
         for model_prefix, size in context_windows.items():
             if self.model.startswith(model_prefix):
                 return int(size * CONTEXT_WINDOW_USAGE_RATIO)
 
-        # Default context window size for Claude models
         return int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
 
     @staticmethod

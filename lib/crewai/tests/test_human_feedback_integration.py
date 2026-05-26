@@ -120,7 +120,6 @@ class TestMultiStepFlows:
         ):
             flow.kickoff()
 
-        # Both feedbacks should be recorded
         assert len(flow.human_feedback_history) == 2
         assert flow.human_feedback_history[0].method_name == "draft"
         assert flow.human_feedback_history[0].feedback == "Good draft"
@@ -310,8 +309,6 @@ class TestMultiStepFlows:
 
         flow = SelfLoopFlow()
 
-        # First call: human rejects (outcome="review") -> self-loop
-        # Second call: human approves (outcome="approved") -> continue
         with (
             patch.object(
                 flow,
@@ -329,8 +326,8 @@ class TestMultiStepFlows:
         assert execution_order == [
             "initial_func",
             "do_work",
-            "review_work",   # first review -> rejected (review)
-            "review_work",   # second review -> approved
+            "review_work",
+            "review_work",
             "approve_work",
         ]
         assert result == "published"
@@ -688,7 +685,6 @@ class TestEventEmission:
         flow = EventFlow()
 
         # We can't easily capture events in tests, but we can verify
-        # the flow executes without errors
         with (
             patch.object(
                 event_listener.formatter, "pause_live_updates", return_value=None
@@ -773,7 +769,6 @@ class TestEdgeCases:
         with patch.object(flow, "_request_human_feedback", return_value="feedback"):
             result = flow.kickoff()
 
-        # Result should be HumanFeedbackResult when not routing
         assert isinstance(result, HumanFeedbackResult)
         assert result.output == "content"
         assert result.feedback == "feedback"
@@ -977,5 +972,4 @@ class TestLLMConfigPreservation:
             flow.kickoff()
 
         assert len(collapse_calls) == 1
-        # The LLM passed to _collapse_to_outcome should be the original instance
         assert collapse_calls[0] is llm_instance

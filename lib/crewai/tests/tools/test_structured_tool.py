@@ -1,10 +1,8 @@
-import pytest
-from pydantic import BaseModel, Field
-
 from crewai.tools.structured_tool import CrewStructuredTool
+from pydantic import BaseModel, Field
+import pytest
 
 
-# Test fixtures
 @pytest.fixture
 def basic_function():
     def test_func(param1: str, param2: int = 0) -> str:
@@ -97,7 +95,6 @@ def test_validate_function_signature(basic_function, schema_class):
         args_schema=schema_class,
     )
 
-    # Should not raise any exceptions
     tool._validate_function_signature()
 
 
@@ -178,11 +175,9 @@ def test_default_values_in_schema():
         func=default_func, name="test_tool", description="Test defaults"
     )
 
-    # Test with minimal parameters
     result = tool.invoke({"required_param": "test"})
     assert result == "test default None"
 
-    # Test with all parameters
     result = tool.invoke(
         {"required_param": "test", "optional_param": "custom", "nullable_param": 42}
     )
@@ -297,14 +292,12 @@ def test_structured_tool_invoke_calls_func_only_once():
         call_history.append(f"Call #{call_count} with param: {param}")
         return f"Result from call #{call_count}: {param}"
 
-    # Create CrewStructuredTool directly
     tool = CrewStructuredTool.from_function(
         func=counting_function,
         name="direct_test_tool",
         description="Tool to test direct invoke() method",
     )
 
-    # Call invoke() directly - this is where the bug was
     result = tool.invoke({"param": "test_value"})
 
     # Critical assertions that would catch the duplicate execution bug

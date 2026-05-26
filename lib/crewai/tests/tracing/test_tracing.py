@@ -57,13 +57,11 @@ class TestTraceListenerSetup:
         from crewai.events.event_listener import EventListener
         from crewai.events.listeners.tracing.utils import _tracing_enabled
 
-        # Reset the tracing enabled contextvar
         try:
             _tracing_enabled.set(None)
         except (LookupError, AttributeError):
             pass
 
-        # Clear event bus handlers BEFORE creating any new singletons
         with crewai_event_bus._rwlock.w_locked():
             crewai_event_bus._sync_handlers = {}
             crewai_event_bus._async_handlers = {}
@@ -79,18 +77,15 @@ class TestTraceListenerSetup:
             if "_listeners_setup" in instance_dict:
                 del TraceCollectionListener._instance._listeners_setup
 
-        # Reset class attributes
         TraceCollectionListener._instance = None
         TraceCollectionListener._initialized = False
         TraceCollectionListener._listeners_setup = False
 
-        # Reset EventListener singleton
         if hasattr(EventListener, "_instance"):
             EventListener._instance = None
 
         yield
 
-        # Clean up after test
         with crewai_event_bus._rwlock.w_locked():
             crewai_event_bus._sync_handlers = {}
             crewai_event_bus._async_handlers = {}
@@ -106,7 +101,6 @@ class TestTraceListenerSetup:
             if "_listeners_setup" in instance_dict:
                 del TraceCollectionListener._instance._listeners_setup
 
-        # Reset class attributes
         TraceCollectionListener._instance = None
         TraceCollectionListener._initialized = False
         TraceCollectionListener._listeners_setup = False
@@ -280,7 +274,6 @@ class TestTraceListenerSetup:
 
             from crewai.events.event_bus import crewai_event_bus
 
-            # Create and setup trace listener explicitly
             trace_listener = TraceCollectionListener()
             trace_listener.setup_listeners(crewai_event_bus)
 
@@ -301,12 +294,10 @@ class TestTraceListenerSetup:
                 ]
                 assert len(completion_events) >= 1
 
-                # Verify the first completion event has proper structure
                 completion_event = completion_events[0]
                 assert "crew_name" in completion_event.event_data
                 assert completion_event.event_data["crew_name"] == "crew"
 
-                # Verify all events have proper structure
                 for call in add_event_mock.call_args_list:
                     event = call.args[0]
                     assert isinstance(event, TraceEvent)
@@ -500,7 +491,6 @@ class TestTraceListenerSetup:
             crewai_event_bus._handler_dependencies = {}
             crewai_event_bus._execution_plan_cache = {}
 
-        # Reset EventListener singleton
         if hasattr(EventListener, "_instance"):
             EventListener._instance = None
 
@@ -516,7 +506,6 @@ class TestTraceListenerSetup:
             crewai_event_bus._handler_dependencies = {}
             crewai_event_bus._execution_plan_cache = {}
 
-        # Reset EventListener singleton
         if hasattr(EventListener, "_instance"):
             EventListener._instance = None
 
@@ -844,11 +833,9 @@ class TestTraceListenerSetup:
 
     def test_trace_batch_marked_as_failed_on_finalize_error(self):
         """Test that trace batch is marked as failed when finalization returns non-200 status"""
-        # Test the error handling logic directly in TraceBatchManager
         with patch("crewai.events.listeners.tracing.trace_batch_manager.is_tracing_enabled_in_context", return_value=True):
             batch_manager = TraceBatchManager()
 
-            # Initialize a batch
             batch_manager.current_batch = batch_manager.initialize_batch(
                 user_context={"privacy_level": "standard"},
                 execution_metadata={
@@ -859,7 +846,6 @@ class TestTraceListenerSetup:
             batch_manager.trace_batch_id = "test_batch_id_12345"
             batch_manager.backend_initialized = True
 
-            # Mock the API responses
             with (
                 patch.object(
                     batch_manager.plus_api,
@@ -876,10 +862,8 @@ class TestTraceListenerSetup:
                     "mark_trace_batch_as_failed",
                 ) as mock_mark_failed,
             ):
-                # Call finalize_batch directly
                 batch_manager.finalize_batch()
 
-                # Verify that mark_trace_batch_as_failed was called with the error message
                 mock_mark_failed.assert_called_once_with(
                     "test_batch_id_12345", "Internal Server Error"
                 )
@@ -1044,7 +1028,7 @@ class TestTraceBatchIdClearedOnFailure:
         """_send_events_to_backend must return early when trace_batch_id is None."""
         bm = self._make_batch_manager()
         bm.trace_batch_id = None
-        bm.event_buffer = [MagicMock()]  # has events
+        bm.event_buffer = [MagicMock()]
 
         with patch.object(
             bm.plus_api, "send_ephemeral_trace_events"
@@ -1297,7 +1281,7 @@ class TestFirstTimeHandlerBackendInitGuard:
             patch.object(
                 bm.plus_api,
                 "initialize_ephemeral_trace_batch",
-                return_value=None,  # server call fails
+                return_value=None,
             ),
             patch.object(bm, "_send_events_to_backend") as mock_send,
             patch.object(bm, "_finalize_backend_batch") as mock_finalize,
@@ -1397,7 +1381,7 @@ class TestAuthFailbackToEphemeral:
             execution_metadata={"execution_type": "crew", "crew_name": "test"},
         )
         bm.trace_batch_id = bm.current_batch.batch_id
-        bm.is_current_batch_ephemeral = False  # authenticated path
+        bm.is_current_batch_ephemeral = False
         return bm
 
     def test_401_non_ephemeral_falls_back_to_ephemeral(self):

@@ -231,7 +231,7 @@ def test_safe_repair_json():
 def test_safe_repair_json_unrepairable():
     invalid_json = "{invalid_json"
     result = parser._safe_repair_json(invalid_json)
-    assert result == invalid_json  # Should return the original if unrepairable
+    assert result == invalid_json
 
 
 def test_safe_repair_json_missing_quotes():

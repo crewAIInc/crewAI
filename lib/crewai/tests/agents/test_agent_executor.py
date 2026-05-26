@@ -238,7 +238,6 @@ class TestAgentExecutor:
 
         result = executor.finalize()
 
-        # Should return "skipped" and not set is_finished
         assert result == "skipped"
         assert executor.state.is_finished is False
 
@@ -373,7 +372,6 @@ class TestAgentExecutor:
         mock_dependencies["step_callback"] = None
         executor = _build_executor(**mock_dependencies)
 
-        # Should not raise error
         executor._invoke_step_callback(
             AgentFinish(thought="thinking", output="test", text="final")
         )
@@ -691,7 +689,6 @@ class TestFlowInvoke:
         """Test successful invoke without human feedback."""
         executor = _build_executor(**mock_dependencies)
 
-        # Mock kickoff to set the final answer in state
         def mock_kickoff_side_effect():
             executor.state.current_answer = AgentFinish(
                 thought="final thinking", output="Final result", text="complete"
@@ -934,7 +931,6 @@ class TestNativeToolExecution:
         executor.state.todos = TodoList(items=[])
         assert executor.check_native_todo_completion() == "todo_not_satisfied"
 
-        # With a current todo that has tool_to_use → satisfied
         running = TodoItem(
             step_number=1,
             description="Use the expected tool",
@@ -944,7 +940,6 @@ class TestNativeToolExecution:
         executor.state.todos = TodoList(items=[running])
         assert executor.check_native_todo_completion() == "todo_satisfied"
 
-        # With a current todo without tool_to_use → still satisfied
         running.tool_to_use = None
         assert executor.check_native_todo_completion() == "todo_satisfied"
 
@@ -1004,10 +999,8 @@ class TestAgentExecutorPlanning:
             verbose=False,
         )
 
-        # Execute kickoff with a simple task
         result = agent.kickoff("What is 2 + 2?")
 
-        # Verify result
         assert result is not None
         assert "4" in str(result)
 
@@ -1028,10 +1021,8 @@ class TestAgentExecutorPlanning:
             verbose=False,
         )
 
-        # Execute kickoff
         result = agent.kickoff("What is 3 + 3?")
 
-        # Verify we get a result
         assert result is not None
         assert "6" in str(result)
 
@@ -1048,13 +1039,12 @@ class TestAgentExecutorPlanning:
             goal="Help solve simple math problems",
             backstory="A helpful assistant",
             llm=llm,
-            planning=False,  # Explicitly disable planning
+            planning=False,
             verbose=False,
         )
 
         result = agent.kickoff("What is 5 + 5?")
 
-        # Should still complete successfully
         assert result is not None
         assert "10" in str(result)
 
@@ -1077,7 +1067,6 @@ class TestAgentExecutorPlanning:
                 verbose=False,
             )
 
-        # Should have planning_config created from reasoning=True
         assert agent.planning_config is not None
         assert agent.planning_enabled is True
 
@@ -1099,7 +1088,6 @@ class TestAgentExecutorPlanning:
             verbose=False,
         )
 
-        # Track executor for inspection
         executor_ref = [None]
         original_invoke = AgentExecutor.invoke
 
@@ -1110,10 +1098,8 @@ class TestAgentExecutorPlanning:
         with patch.object(AgentExecutor, "invoke", capture_executor):
             result = agent.kickoff("What is 7 + 7?")
 
-        # Verify result
         assert result is not None
 
-        # If we captured an executor, check its state
         if executor_ref[0] is not None:
             # After planning, state should have plan info
             assert hasattr(executor_ref[0].state, "plan")
@@ -1145,7 +1131,6 @@ class TestAgentExecutorPlanning:
             verbose=False,
         )
 
-        # Track the plan that gets generated
         captured_plan = [None]
         original_invoke = AgentExecutor.invoke
 
@@ -1160,13 +1145,10 @@ class TestAgentExecutorPlanning:
                 "Show your work for each step."
             )
 
-        # Verify we got a result with step outputs
         assert result is not None
         result_str = str(result)
-        # Should contain at least some mathematical content from the steps
         assert "prime" in result_str.lower() or "2" in result_str or "10" in result_str
 
-        # Verify a plan was generated
         assert captured_plan[0] is not None
 
     @pytest.mark.vcr()
@@ -1209,7 +1191,6 @@ class TestAgentExecutorPlanning:
 
         assert result is not None
         result_str = str(result)
-        # Should contain conversion-related content
         assert "212" in result_str or "210" in result_str or "Fahrenheit" in result_str or "celsius" in result_str.lower()
 
         # Plan should exist
@@ -1298,10 +1279,8 @@ class TestResponseFormatWithKickoff:
         )
 
         assert result is not None
-        # The synthesis step should have produced structured output
         assert result.pydantic is not None
         assert isinstance(result.pydantic, ResearchSummary)
-        # Verify the structured fields are populated
         assert len(result.pydantic.topic) > 0
         assert len(result.pydantic.key_findings) >= 1
         assert len(result.pydantic.conclusion) > 0
@@ -1365,7 +1344,6 @@ class TestReasoningEffort:
             verbose=False,
         )
 
-        # Capture the executor to inspect state after execution
         executor_ref = [None]
         original_invoke = AgentExecutor.invoke
 
@@ -1382,19 +1360,16 @@ class TestReasoningEffort:
         assert result is not None
         assert "10" in str(result)
 
-        # Verify observations were still collected (observe() ran)
         executor = executor_ref[0]
         if executor is not None and executor.state.todos.items:
             assert len(executor.state.observations) > 0, (
                 "Low effort should still run observe() to validate steps"
             )
 
-            # Verify no replan was triggered
             assert executor.state.replan_count == 0, (
                 "Low effort should never trigger replanning"
             )
 
-            # Check execution log for reasoning_effort annotation
             observation_logs = [
                 log for log in executor.state.execution_log
                 if log.get("type") == "observation"
@@ -1447,14 +1422,12 @@ class TestReasoningEffort:
         assert result is not None
         assert "10" in str(result)
 
-        # Verify observations were collected
         executor = executor_ref[0]
         if executor is not None and executor.state.todos.items:
             assert len(executor.state.observations) > 0, (
                 "High effort should run observe() on every step"
             )
 
-            # Check execution log shows high reasoning_effort
             observation_logs = [
                 log for log in executor.state.execution_log
                 if log.get("type") == "observation"
@@ -1476,7 +1449,6 @@ class TestReasoningEffort:
             TodoList,
         )
 
-        # --- Build a minimal mock executor with medium effort ---
         executor = Mock(spec=AgentExecutor)
         executor.agent = Mock()
         executor.agent.verbose = False
@@ -1488,7 +1460,6 @@ class TestReasoningEffort:
             AgentExecutor.handle_step_observed_medium.__get__(executor)
         )
 
-        # --- Case 1: step succeeded → should return "continue_plan" ---
         success_todo = TodoItem(
             step_number=1,
             description="Calculate something",
@@ -1501,7 +1472,6 @@ class TestReasoningEffort:
             remaining_plan_still_valid=True,
         )
 
-        # Set up state
         todo_list = TodoList(items=[success_todo])
         executor.state = Mock()
         executor.state.todos = todo_list
@@ -1513,7 +1483,6 @@ class TestReasoningEffort:
         )
         assert success_todo.status == "completed"
 
-        # --- Case 2: step failed → should return "replan_now" ---
         failed_todo = TodoItem(
             step_number=2,
             description="Divide by zero",
@@ -1553,7 +1522,6 @@ class TestReasoningEffort:
         executor.agent.planning_config = Mock()
         executor.agent.planning_config.reasoning_effort = "low"
 
-        # Bind the real method
         executor.handle_step_observed_low = (
             AgentExecutor.handle_step_observed_low.__get__(executor)
         )
@@ -1589,7 +1557,6 @@ class TestReasoningEffort:
         with pytest.raises(ValidationError):
             PlanningConfig(reasoning_effort="ultra")
 
-        # Valid values should work
         for level in ("low", "medium", "high"):
             config = PlanningConfig(reasoning_effort=level)
             assert config.reasoning_effort == level
@@ -1751,9 +1718,7 @@ class TestObserverResponseParsing:
         assert observation.replan_reason == "build system is misconfigured"
 
 
-# =========================================================================
 # Max Iterations Routing
-# =========================================================================
 
 
 class TestMaxIterationsRouting:
@@ -1791,9 +1756,7 @@ class TestMaxIterationsRouting:
         assert result == "continue_reasoning_native"
 
 
-# =========================================================================
 # Native Tool Call Edge Cases
-# =========================================================================
 
 
 class TestNativeToolCallMaxUsage:
@@ -1809,9 +1772,7 @@ class TestNativeToolCallMaxUsage:
         assert 'result = f"Tool \'{func_name}\' has reached its maximum usage limit' in source
 
 
-# =========================================================================
 # Executor State Reset on Re-invoke
-# =========================================================================
 
 
 class TestExecutorStateReset:
@@ -1841,9 +1802,7 @@ class TestExecutorStateReset:
         )
 
 
-# =========================================================================
 # Plan Generation Isolation
-# =========================================================================
 
 
 class TestPlanGenerationIsolation:
@@ -1863,9 +1822,7 @@ class TestPlanGenerationIsolation:
         )
 
 
-# =========================================================================
 # Todo Status Tracking
-# =========================================================================
 
 
 class TestTodoStatusTracking:
@@ -1906,9 +1863,7 @@ class TestTodoStatusTracking:
         assert len(completed) == 0
 
 
-# =========================================================================
 # TodoList Result Handling
-# =========================================================================
 
 
 class TestTodoResultHandling:
@@ -1948,9 +1903,7 @@ class TestTodoResultHandling:
         assert item.result == "existing", "None result should not overwrite existing"
 
 
-# =========================================================================
 # Dependency Resolution with Failed Steps
-# =========================================================================
 
 
 class TestDependencyResolutionWithFailures:
@@ -1994,9 +1947,7 @@ class TestDependencyResolutionWithFailures:
         assert len(ready) == 1, "Downstream todo should be ready when dep is failed"
 
 
-# =========================================================================
 # PlanningConfig Defaults
-# =========================================================================
 
 
 class TestPlanningConfigDefaults:
@@ -2020,9 +1971,7 @@ class TestPlanningConfigDefaults:
         assert config.reasoning_effort == "medium"
 
 
-# =========================================================================
 # Vision Image Format Contract
-# =========================================================================
 
 
 class TestVisionImageFormatContract:
