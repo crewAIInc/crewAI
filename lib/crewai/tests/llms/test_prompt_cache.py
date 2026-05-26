@@ -194,3 +194,59 @@ class TestNonAnthropicStripsMarker:
         formatted = llm._format_messages(messages)
         for m in formatted:
             assert CACHE_BREAKPOINT_KEY not in m
+
+
+class TestLiteLLMPathStripsMarker:
+    """Regression tests for issue #5886: cache_breakpoint must be stripped
+    on the LiteLLM code path (used by Groq, OpenAI-compatible, etc.)
+    which does NOT call BaseLLM._format_messages().
+    """
+
+    def test_prepare_completion_params_strips_cache_breakpoint(self) -> None:
+        """_prepare_completion_params must strip cache_breakpoint from the
+        messages payload so providers like Groq do not receive unsupported keys.
+        """
+        from crewai.llm import LLM
+
+        llm = LLM(model="groq/llama-3.3-70b-versatile", is_litellm=True)
+        messages = [
+            mark_cache_breakpoint({"role": "system", "content": "You are a researcher"}),
+            mark_cache_breakpoint({"role": "user", "content": "Write a summary of AI trends"}),
+        ]
+        params = llm._prepare_completion_params(messages)
+        for msg in params["messages"]:
+            assert CACHE_BREAKPOINT_KEY not in msg, (
+                f"cache_breakpoint leaked to LiteLLM params: {msg}"
+            )
+
+    def test_prepare_completion_params_preserves_original_markers(self) -> None:
+        """Stripping must not mutate the caller's messages — executors reuse
+        their messages list across ReAct loop iterations.
+        """
+        from crewai.llm import LLM
+
+        llm = LLM(model="groq/llama-3.3-70b-versatile", is_litellm=True)
+        messages = [
+            mark_cache_breakpoint({"role": "system", "content": "stable system"}),
+            mark_cache_breakpoint({"role": "user", "content": "stable user"}),
+        ]
+        llm._prepare_completion_params(messages)
+        # Original messages must still carry the markers
+        assert messages[0][CACHE_BREAKPOINT_KEY] is True
+        assert messages[1][CACHE_BREAKPOINT_KEY] is True
+
+    def test_prepare_completion_params_without_markers(self) -> None:
+        """Messages without cache_breakpoint must pass through unchanged."""
+        from crewai.llm import LLM
+
+        llm = LLM(model="groq/llama-3.3-70b-versatile", is_litellm=True)
+        messages = [
+            {"role": "system", "content": "You are helpful"},
+            {"role": "user", "content": "Hello"},
+        ]
+        params = llm._prepare_completion_params(messages)
+        assert len(params["messages"]) == 2
+        assert params["messages"][0]["content"] == "You are helpful"
+        assert params["messages"][1]["content"] == "Hello"
+        for msg in params["messages"]:
+            assert CACHE_BREAKPOINT_KEY not in msg
