@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import functools
 import os
+from collections.abc import Callable
 from typing import Any
 import pytest
 from pydantic import BaseModel, ValidationError
@@ -93,10 +94,18 @@ class TestCallableToString:
         result = callable_to_string(print)
         assert result == "builtins.print"
 
-    def test_lambda_produces_locals_path(self) -> None:
+    def test_lambda_returns_none(self) -> None:
         fn = lambda: None  # noqa: E731
-        result = callable_to_string(fn)
-        assert "<lambda>" in result
+        assert callable_to_string(fn) is None
+
+    def test_closure_returns_none(self) -> None:
+        def outer() -> Callable[[], None]:
+            def inner() -> None:
+                return None
+
+            return inner
+
+        assert callable_to_string(outer()) is None
 
     def test_missing_qualname_raises(self) -> None:
         obj = type("NoQual", (), {"__module__": "test"})()
