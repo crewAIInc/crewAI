@@ -242,20 +242,36 @@ Este passo a passo leva cerca de 5 minutos. Voce executara uma crew de duas tare
 
     <CodeGroup>
     ```python Sync
+    from __future__ import annotations
+
+    from typing import TYPE_CHECKING, Any
+
     from crewai.events.event_bus import crewai_event_bus
     from crewai.events.types.llm_events import LLMCallCompletedEvent
 
+    if TYPE_CHECKING:
+        from crewai.state.runtime import RuntimeState
+
+
     @crewai_event_bus.on(LLMCallCompletedEvent)
-    def on_llm_done(source, event, state):
+    def on_llm_done(source: Any, event: LLMCallCompletedEvent, state: RuntimeState) -> None:
         path = state.checkpoint("./my_checkpoints")
         print(f"Checkpoint salvo: {path}")
     ```
     ```python Async
+    from __future__ import annotations
+
+    from typing import TYPE_CHECKING, Any
+
     from crewai.events.event_bus import crewai_event_bus
     from crewai.events.types.llm_events import LLMCallCompletedEvent
 
+    if TYPE_CHECKING:
+        from crewai.state.runtime import RuntimeState
+
+
     @crewai_event_bus.on(LLMCallCompletedEvent)
-    async def on_llm_done_async(source, event, state):
+    async def on_llm_done_async(source: Any, event: LLMCallCompletedEvent, state: RuntimeState) -> None:
         path = await state.acheckpoint("./my_checkpoints")
         print(f"Checkpoint salvo: {path}")
     ```
