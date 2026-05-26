@@ -93,7 +93,7 @@ from crewai.utilities.agent_utils import (
     track_delegation_if_needed,
 )
 from crewai.utilities.constants import TRAINING_DATA_FILE
-from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.i18n import get_crew_i18n
 from crewai.utilities.planning_types import (
     PlanStep,
     StepObservation,
@@ -1448,7 +1448,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             action.result = str(e)
             self._append_message_to_state(action.text)
 
-            reasoning_prompt = I18N_DEFAULT.slice("post_tool_reasoning")
+            reasoning_prompt = get_crew_i18n().slice("post_tool_reasoning")
             reasoning_message: LLMMessage = {
                 "role": "user",
                 "content": reasoning_prompt,
@@ -1469,7 +1469,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             self.state.is_finished = True
             return "tool_result_is_final"
 
-        reasoning_prompt = I18N_DEFAULT.slice("post_tool_reasoning")
+        reasoning_prompt = get_crew_i18n().slice("post_tool_reasoning")
         reasoning_message_post: LLMMessage = {
             "role": "user",
             "content": reasoning_prompt,
@@ -2220,12 +2220,18 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         # Build synthesis prompt
         role = self.agent.role if self.agent else "Assistant"
 
-        system_prompt = I18N_DEFAULT.retrieve(
-            "planning", "synthesis_system_prompt"
-        ).format(role=role)
-        user_prompt = I18N_DEFAULT.retrieve("planning", "synthesis_user_prompt").format(
-            task_description=task_description,
-            combined_steps=combined_steps,
+        system_prompt = (
+            get_crew_i18n()
+            .retrieve("planning", "synthesis_system_prompt")
+            .format(role=role)
+        )
+        user_prompt = (
+            get_crew_i18n()
+            .retrieve("planning", "synthesis_user_prompt")
+            .format(
+                task_description=task_description,
+                combined_steps=combined_steps,
+            )
         )
 
         try:
@@ -2470,9 +2476,11 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             self.task.description if self.task else getattr(self, "_kickoff_input", "")
         )
 
-        enhancement = I18N_DEFAULT.retrieve(
-            "planning", "replan_enhancement_prompt"
-        ).format(previous_context=previous_context)
+        enhancement = (
+            get_crew_i18n()
+            .retrieve("planning", "replan_enhancement_prompt")
+            .format(previous_context=previous_context)
+        )
 
         return f"{original}{enhancement}"
 
@@ -2776,7 +2784,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         Returns:
             Updated action or final answer.
         """
-        add_image_tool = I18N_DEFAULT.tools("add_image")
+        add_image_tool = get_crew_i18n().tools("add_image")
         if (
             isinstance(add_image_tool, dict)
             and formatted_answer.tool.casefold().strip()

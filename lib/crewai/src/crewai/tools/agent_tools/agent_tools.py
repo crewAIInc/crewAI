@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from crewai.tools.agent_tools.ask_question_tool import AskQuestionTool
 from crewai.tools.agent_tools.delegate_work_tool import DelegateWorkTool
-from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.i18n import get_crew_i18n
 
 
 if TYPE_CHECKING:
@@ -25,12 +25,16 @@ class AgentTools:
 
         delegate_tool = DelegateWorkTool(
             agents=self.agents,
-            description=I18N_DEFAULT.tools("delegate_work").format(coworkers=coworkers),  # type: ignore
+            description=get_crew_i18n()
+            .tools("delegate_work")
+            .format(coworkers=coworkers),  # type: ignore
         )
 
         ask_tool = AskQuestionTool(
             agents=self.agents,
-            description=I18N_DEFAULT.tools("ask_question").format(coworkers=coworkers),  # type: ignore
+            description=get_crew_i18n()
+            .tools("ask_question")
+            .format(coworkers=coworkers),  # type: ignore
         )
 
         return [delegate_tool, ask_tool]

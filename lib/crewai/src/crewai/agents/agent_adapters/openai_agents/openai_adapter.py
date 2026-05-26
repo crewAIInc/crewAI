@@ -32,7 +32,7 @@ from crewai.events.types.agent_events import (
 from crewai.tools import BaseTool
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.utilities import Logger
-from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.i18n import get_crew_i18n
 from crewai.utilities.import_utils import require
 
 
@@ -137,8 +137,10 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
         try:
             task_prompt: str = task.prompt()
             if context:
-                task_prompt = I18N_DEFAULT.slice("task_with_context").format(
-                    task=task_prompt, context=context
+                task_prompt = (
+                    get_crew_i18n()
+                    .slice("task_with_context")
+                    .format(task=task_prompt, context=context)
                 )
             crewai_event_bus.emit(
                 self,

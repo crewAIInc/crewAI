@@ -1,5 +1,6 @@
 """Internationalization support for CrewAI prompts and messages."""
 
+import contextvars
 from functools import lru_cache
 import json
 import os
@@ -145,3 +146,33 @@ def get_i18n(prompt_file: str | None = None) -> I18N:
 
 
 I18N_DEFAULT: I18N = get_i18n()
+
+
+_crew_i18n_var: contextvars.ContextVar[I18N | None] = contextvars.ContextVar(
+    "_crew_i18n", default=None
+)
+
+
+def get_crew_i18n() -> I18N:
+    """Return the crew-scoped I18N override if set, otherwise ``I18N_DEFAULT``.
+
+    When a :class:`Crew` with a ``prompt_file`` is kicked off, the custom
+    I18N instance is pushed into a :class:`contextvars.ContextVar` so that
+    all code running during that crew execution automatically picks up the
+    custom prompts.
+    """
+    return _crew_i18n_var.get() or I18N_DEFAULT
+
+
+def set_crew_i18n(i18n: I18N | None) -> contextvars.Token[I18N | None]:
+    """Set (or clear) the crew-scoped I18N override.
+
+    Returns a token that can be passed to :func:`reset_crew_i18n` for
+    proper cleanup.
+    """
+    return _crew_i18n_var.set(i18n)
+
+
+def reset_crew_i18n(token: contextvars.Token[I18N | None]) -> None:
+    """Reset the crew-scoped I18N override to its previous value."""
+    _crew_i18n_var.reset(token)

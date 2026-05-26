@@ -15,7 +15,7 @@ from crewai.events.types.reasoning_events import (
     AgentReasoningStartedEvent,
 )
 from crewai.llm import LLM
-from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.i18n import get_crew_i18n
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.planning_types import PlanStep
 from crewai.utilities.string_utils import sanitize_tool_name
@@ -482,20 +482,24 @@ class AgentReasoning:
         """Get the system prompt for planning.
 
         Returns:
-            The system prompt, either custom or from I18N_DEFAULT.
+            The system prompt, either custom or from get_crew_i18n().
         """
         if self.config.system_prompt is not None:
             return self.config.system_prompt
 
         # Try new "planning" section first, fall back to "reasoning" for compatibility
         try:
-            return I18N_DEFAULT.retrieve("planning", "system_prompt")
+            return get_crew_i18n().retrieve("planning", "system_prompt")
         except (KeyError, AttributeError):
             # Fallback to reasoning section for backward compatibility
-            return I18N_DEFAULT.retrieve("reasoning", "initial_plan").format(
-                role=self.agent.role,
-                goal=self.agent.goal,
-                backstory=self._get_agent_backstory(),
+            return (
+                get_crew_i18n()
+                .retrieve("reasoning", "initial_plan")
+                .format(
+                    role=self.agent.role,
+                    goal=self.agent.goal,
+                    backstory=self._get_agent_backstory(),
+                )
             )
 
     def _get_agent_backstory(self) -> str:
@@ -528,21 +532,29 @@ class AgentReasoning:
 
         # Try new "planning" section first
         try:
-            return I18N_DEFAULT.retrieve("planning", "create_plan_prompt").format(
-                description=self.description,
-                expected_output=self.expected_output,
-                tools=available_tools,
-                max_steps=self.config.max_steps,
+            return (
+                get_crew_i18n()
+                .retrieve("planning", "create_plan_prompt")
+                .format(
+                    description=self.description,
+                    expected_output=self.expected_output,
+                    tools=available_tools,
+                    max_steps=self.config.max_steps,
+                )
             )
         except (KeyError, AttributeError):
             # Fallback to reasoning section for backward compatibility
-            return I18N_DEFAULT.retrieve("reasoning", "create_plan_prompt").format(
-                role=self.agent.role,
-                goal=self.agent.goal,
-                backstory=self._get_agent_backstory(),
-                description=self.description,
-                expected_output=self.expected_output,
-                tools=available_tools,
+            return (
+                get_crew_i18n()
+                .retrieve("reasoning", "create_plan_prompt")
+                .format(
+                    role=self.agent.role,
+                    goal=self.agent.goal,
+                    backstory=self._get_agent_backstory(),
+                    description=self.description,
+                    expected_output=self.expected_output,
+                    tools=available_tools,
+                )
             )
 
     def _format_available_tools(self) -> str:
@@ -585,16 +597,24 @@ class AgentReasoning:
 
         # Try new "planning" section first
         try:
-            return I18N_DEFAULT.retrieve("planning", "refine_plan_prompt").format(
-                current_plan=current_plan,
+            return (
+                get_crew_i18n()
+                .retrieve("planning", "refine_plan_prompt")
+                .format(
+                    current_plan=current_plan,
+                )
             )
         except (KeyError, AttributeError):
             # Fallback to reasoning section for backward compatibility
-            return I18N_DEFAULT.retrieve("reasoning", "refine_plan_prompt").format(
-                role=self.agent.role,
-                goal=self.agent.goal,
-                backstory=self._get_agent_backstory(),
-                current_plan=current_plan,
+            return (
+                get_crew_i18n()
+                .retrieve("reasoning", "refine_plan_prompt")
+                .format(
+                    role=self.agent.role,
+                    goal=self.agent.goal,
+                    backstory=self._get_agent_backstory(),
+                    current_plan=current_plan,
+                )
             )
 
     @staticmethod
@@ -643,10 +663,14 @@ def _call_llm_with_reasoning_prompt(
     Returns:
         The LLM response.
     """
-    system_prompt = I18N_DEFAULT.retrieve("reasoning", plan_type).format(
-        role=reasoning_agent.role,
-        goal=reasoning_agent.goal,
-        backstory=backstory,
+    system_prompt = (
+        get_crew_i18n()
+        .retrieve("reasoning", plan_type)
+        .format(
+            role=reasoning_agent.role,
+            goal=reasoning_agent.goal,
+            backstory=backstory,
+        )
     )
 
     response = llm.call(

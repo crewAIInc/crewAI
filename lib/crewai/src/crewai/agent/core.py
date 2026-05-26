@@ -102,7 +102,7 @@ from crewai.utilities.converter import Converter, ConverterError
 from crewai.utilities.env import get_env_context
 from crewai.utilities.guardrail import process_guardrail, serialize_guardrail_for_json
 from crewai.utilities.guardrail_types import GuardrailCallable, GuardrailType
-from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.i18n import get_crew_i18n
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.prompts import Prompts, StandardPromptResult, SystemPromptResult
 from crewai.utilities.pydantic_schema_utils import generate_model_description
@@ -608,7 +608,7 @@ class Agent(BaseAgent):
                         m.format() for m in matches
                     )
             if memory.strip() != "":
-                task_prompt += I18N_DEFAULT.slice("memory").format(memory=memory)
+                task_prompt += get_crew_i18n().slice("memory").format(memory=memory)
 
             crewai_event_bus.emit(
                 self,
@@ -1024,7 +1024,7 @@ class Agent(BaseAgent):
             response_template=self.response_template,
         ).task_execution()
 
-        stop_words = [I18N_DEFAULT.slice("observation")]
+        stop_words = [get_crew_i18n().slice("observation")]
         if self.response_template:
             stop_words.append(
                 self.response_template.split("{{ .Response }}")[1].strip()
@@ -1310,10 +1310,12 @@ class Agent(BaseAgent):
                 from_agent=self,
             ),
         )
-        query = I18N_DEFAULT.slice("knowledge_search_query").format(
-            task_prompt=task_prompt
+        query = (
+            get_crew_i18n()
+            .slice("knowledge_search_query")
+            .format(task_prompt=task_prompt)
         )
-        rewriter_prompt = I18N_DEFAULT.slice("knowledge_search_query_system_prompt")
+        rewriter_prompt = get_crew_i18n().slice("knowledge_search_query_system_prompt")
         if not isinstance(self.llm, BaseLLM):
             self._logger.log(
                 "warning",
@@ -1488,9 +1490,9 @@ class Agent(BaseAgent):
                         m.format() for m in matches
                     )
                 if memory_block:
-                    formatted_messages += "\n\n" + I18N_DEFAULT.slice("memory").format(
-                        memory=memory_block
-                    )
+                    formatted_messages += "\n\n" + get_crew_i18n().slice(
+                        "memory"
+                    ).format(memory=memory_block)
                 crewai_event_bus.emit(
                     self,
                     event=MemoryRetrievalCompletedEvent(
@@ -1703,8 +1705,10 @@ class Agent(BaseAgent):
             try:
                 model_schema = generate_model_description(response_format)
                 schema = json.dumps(model_schema, indent=2)
-                instructions = I18N_DEFAULT.slice("formatted_task_instructions").format(
-                    output_format=schema
+                instructions = (
+                    get_crew_i18n()
+                    .slice("formatted_task_instructions")
+                    .format(output_format=schema)
                 )
 
                 converter = Converter(

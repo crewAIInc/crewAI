@@ -19,7 +19,7 @@ from crewai.agents.constants import (
     MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE,
     UNABLE_TO_REPAIR_JSON_RESULTS,
 )
-from crewai.utilities.i18n import I18N_DEFAULT as _I18N
+from crewai.utilities.i18n import get_crew_i18n
 
 
 @dataclass
@@ -115,13 +115,13 @@ def parse(text: str) -> AgentAction | AgentFinish:
 
     if not ACTION_REGEX.search(text):
         raise OutputParserError(
-            f"{MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE}\n{_I18N.slice('final_answer_format')}",
+            f"{MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE}\n{get_crew_i18n().slice('final_answer_format')}",
         )
     if not ACTION_INPUT_ONLY_REGEX.search(text):
         raise OutputParserError(
             MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE,
         )
-    err_format = _I18N.slice("format_without_tools")
+    err_format = get_crew_i18n().slice("format_without_tools")
     error = f"{err_format}"
     raise OutputParserError(
         error,

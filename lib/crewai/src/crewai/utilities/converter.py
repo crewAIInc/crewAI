@@ -10,7 +10,7 @@ from pydantic import BaseModel, ValidationError
 from typing_extensions import Unpack
 
 from crewai.agents.agent_builder.utilities.base_output_converter import OutputConverter
-from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.i18n import get_crew_i18n
 from crewai.utilities.internal_instructor import InternalInstructor
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 
@@ -22,7 +22,6 @@ if TYPE_CHECKING:
     from crewai.llms.base_llm import BaseLLM
 
 _JSON_PATTERN: Final[re.Pattern[str]] = re.compile(r"({.*})", re.DOTALL)
-_I18N = I18N_DEFAULT
 
 
 class ConverterError(Exception):
@@ -548,15 +547,19 @@ def get_conversion_instructions(
     ):
         schema_dict = generate_model_description(model)
         schema = json.dumps(schema_dict, indent=2)
-        formatted_task_instructions = _I18N.slice("formatted_task_instructions").format(
-            output_format=schema
+        formatted_task_instructions = (
+            get_crew_i18n()
+            .slice("formatted_task_instructions")
+            .format(output_format=schema)
         )
         instructions += formatted_task_instructions
     else:
         model_description = generate_model_description(model)
         schema_json = json.dumps(model_description, indent=2)
-        formatted_task_instructions = _I18N.slice("formatted_task_instructions").format(
-            output_format=schema_json
+        formatted_task_instructions = (
+            get_crew_i18n()
+            .slice("formatted_task_instructions")
+            .format(output_format=schema_json)
         )
         instructions += formatted_task_instructions
     return instructions

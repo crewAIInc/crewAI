@@ -91,7 +91,7 @@ from crewai.utilities.guardrail_types import (
     GuardrailType,
     GuardrailsType,
 )
-from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.i18n import get_crew_i18n
 from crewai.utilities.string_utils import interpolate_only
 
 
@@ -970,8 +970,10 @@ class Task(BaseModel):
 
         tasks_slices = [description]
 
-        output = I18N_DEFAULT.slice("expected_output").format(
-            expected_output=self.expected_output
+        output = (
+            get_crew_i18n()
+            .slice("expected_output")
+            .format(expected_output=self.expected_output)
         )
         tasks_slices = [description, output]
 
@@ -1042,7 +1044,7 @@ Follow these guidelines:
                 raise ValueError(f"Error interpolating output_file path: {e!s}") from e
 
         if inputs.get("crew_chat_messages"):
-            conversation_instruction = I18N_DEFAULT.slice(
+            conversation_instruction = get_crew_i18n().slice(
                 "conversation_history_instruction"
             )
 
@@ -1318,9 +1320,13 @@ Follow these guidelines:
                 self.retry_count += 1
                 current_retry_count = self.retry_count
 
-            context = I18N_DEFAULT.errors("validation_error").format(
-                guardrail_result_error=guardrail_result.error,
-                task_output=task_output.raw,
+            context = (
+                get_crew_i18n()
+                .errors("validation_error")
+                .format(
+                    guardrail_result_error=guardrail_result.error,
+                    task_output=task_output.raw,
+                )
             )
             if agent and agent.verbose:
                 PRINTER.print(
@@ -1429,9 +1435,13 @@ Follow these guidelines:
                 self.retry_count += 1
                 current_retry_count = self.retry_count
 
-            context = I18N_DEFAULT.errors("validation_error").format(
-                guardrail_result_error=guardrail_result.error,
-                task_output=task_output.raw,
+            context = (
+                get_crew_i18n()
+                .errors("validation_error")
+                .format(
+                    guardrail_result_error=guardrail_result.error,
+                    task_output=task_output.raw,
+                )
             )
             if agent and agent.verbose:
                 PRINTER.print(

@@ -3511,7 +3511,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         from crewai.llm import LLM
         from crewai.llms.base_llm import BaseLLM as BaseLLMClass
-        from crewai.utilities.i18n import I18N_DEFAULT
+        from crewai.utilities.i18n import get_crew_i18n
 
         llm_instance: BaseLLMClass
         if isinstance(llm, str):
@@ -3531,7 +3531,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 description=f"The outcome that best matches the feedback. Must be one of: {', '.join(outcomes)}"
             )
 
-        prompt_template = I18N_DEFAULT.slice("human_feedback_collapse")
+        prompt_template = get_crew_i18n().slice("human_feedback_collapse")
 
         prompt = prompt_template.format(
             feedback=feedback,

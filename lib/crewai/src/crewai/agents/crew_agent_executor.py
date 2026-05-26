@@ -70,7 +70,7 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.file_store import aget_all_files, get_all_files
-from crewai.utilities.i18n import I18N_DEFAULT
+from crewai.utilities.i18n import get_crew_i18n
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.tool_utils import (
@@ -751,7 +751,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     if tool_finish:
                         return tool_finish
 
-                reasoning_prompt = I18N_DEFAULT.slice("post_tool_reasoning")
+                reasoning_prompt = get_crew_i18n().slice("post_tool_reasoning")
                 reasoning_message: LLMMessage = {
                     "role": "user",
                     "content": reasoning_prompt,
@@ -774,7 +774,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
         if tool_finish:
             return tool_finish
 
-        reasoning_prompt = I18N_DEFAULT.slice("post_tool_reasoning")
+        reasoning_prompt = get_crew_i18n().slice("post_tool_reasoning")
         reasoning_message = {
             "role": "user",
             "content": reasoning_prompt,
@@ -1430,7 +1430,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
         Returns:
             Updated action or final answer.
         """
-        add_image_tool = I18N_DEFAULT.tools("add_image")
+        add_image_tool = get_crew_i18n().tools("add_image")
         if (
             isinstance(add_image_tool, dict)
             and formatted_answer.tool.casefold().strip()
@@ -1632,5 +1632,5 @@ class CrewAgentExecutor(BaseAgentExecutor):
             Formatted message dict.
         """
         return format_message_for_llm(
-            I18N_DEFAULT.slice("feedback_instructions").format(feedback=feedback)
+            get_crew_i18n().slice("feedback_instructions").format(feedback=feedback)
         )
