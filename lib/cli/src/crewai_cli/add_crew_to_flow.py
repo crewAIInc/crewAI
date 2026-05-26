@@ -8,7 +8,6 @@ from crewai_cli.utils import copy_template
 
 def add_crew_to_flow(crew_name: str) -> None:
     """Add a new crew to the current flow."""
-    # Check if pyproject.toml exists in the current directory
     if not Path("pyproject.toml").exists():
         PRINTER.print(
             "This command must be run from the root of a flow project.", color="red"
@@ -17,7 +16,6 @@ def add_crew_to_flow(crew_name: str) -> None:
             "This command must be run from the root of a flow project."
         )
 
-    # Determine the flow folder based on the current directory
     flow_folder = Path.cwd()
     crews_folder = flow_folder / "src" / flow_folder.name / "crews"
 
@@ -25,7 +23,6 @@ def add_crew_to_flow(crew_name: str) -> None:
         PRINTER.print("Crews folder does not exist in the current flow.", color="red")
         raise click.ClickException("Crews folder does not exist in the current flow.")
 
-    # Create the crew within the flow's crews directory
     create_embedded_crew(crew_name, parent_folder=crews_folder)
 
     click.echo(
@@ -51,13 +48,12 @@ def create_embedded_crew(crew_name: str, parent_folder: Path) -> None:
         click.secho(f"Creating crew {folder_name}...", fg="green", bold=True)
         crew_folder.mkdir(parents=True)
 
-    # Create config and crew.py files
     config_folder = crew_folder / "config"
     config_folder.mkdir(exist_ok=True)
 
     templates_dir = Path(__file__).parent / "templates" / "crew"
     config_template_files = ["agents.yaml", "tasks.yaml"]
-    crew_template_file = f"{folder_name}.py"  # Updated file name
+    crew_template_file = f"{folder_name}.py"
 
     for file_name in config_template_files:
         src_file = templates_dir / "config" / file_name
