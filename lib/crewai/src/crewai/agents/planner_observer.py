@@ -39,7 +39,8 @@ logger = logging.getLogger(__name__)
 class PlannerObserver:
     """Observes step execution results and decides on plan continuation.
 
-    After EVERY step execution, this class:
+    When ``observe_steps`` is enabled (see ``PlanningConfig``), after EVERY
+    step execution this class:
     1. Analyzes what the step accomplished
     2. Identifies new information learned
     3. Decides if the remaining plan is still valid
@@ -82,6 +83,32 @@ class PlannerObserver:
                 return config.llm
             return create_llm(config.llm)
         return self.agent.llm
+
+    @staticmethod
+    def heuristic_observation(
+        *,
+        step_success: bool,
+        result: str = "",
+    ) -> StepObservation:
+        """Build an observation without an LLM call.
+
+        Used when ``PlanningConfig.observe_steps`` is False or when
+        ``reasoning_effort`` is ``"low"`` (the default skips LLM observation).
+
+        Args:
+            step_success: Whether StepExecutor reported the step as successful.
+            result: The step result string (unused today; reserved for heuristics).
+
+        Returns:
+            A StepObservation derived from execution metadata only.
+        """
+        _ = result
+        return StepObservation(
+            step_completed_successfully=step_success,
+            key_information_learned="",
+            remaining_plan_still_valid=True,
+            needs_full_replan=False,
+        )
 
     def observe(
         self,

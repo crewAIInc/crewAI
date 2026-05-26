@@ -169,10 +169,11 @@ class AgentReasoning:
 
         if self.agent.planning_config is not None:
             return self.agent.planning_config
-        # Fallback for backward compatibility
-        return PlanningConfig(
-            max_attempts=getattr(self.agent, "max_reasoning_attempts", None),
-        )
+        # Fallback when planning is enabled without an explicit config
+        max_attempts = getattr(self.agent, "max_reasoning_attempts", None)
+        if max_attempts is not None:
+            return PlanningConfig(max_attempts=max_attempts)
+        return PlanningConfig()
 
     def _resolve_llm(self) -> LLM:
         """Resolve which LLM to use for planning.
