@@ -93,11 +93,11 @@ from crewai.events.types.crew_events import (
     CrewTrainStartedEvent,
 )
 from crewai.flow.flow_trackable import FlowTrackable
-from crewai.knowledge.knowledge import Knowledge
+from crewai.knowledge.knowledge import Knowledge, _resolve_knowledge_sources
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.llm import LLM
 from crewai.llms.base_llm import BaseLLM
-from crewai.memory.memory_scope import MemoryScope, MemorySlice
+from crewai.memory.memory_scope import MemoryScope, MemorySlice, _ensure_memory_kind
 from crewai.memory.unified_memory import Memory
 from crewai.process import Process
 from crewai.rag.embeddings.types import EmbedderConfig
@@ -223,7 +223,14 @@ class Crew(FlowTrackable, BaseModel):
     ] = Field(default_factory=list)
     process: Process = Field(default=Process.sequential)
     verbose: bool = Field(default=False)
-    memory: bool | Memory | MemoryScope | MemorySlice | None = Field(
+    memory: Annotated[
+        bool
+        | Annotated[
+            Memory | MemoryScope | MemorySlice, Field(discriminator="memory_kind")
+        ]
+        | None,
+        BeforeValidator(_ensure_memory_kind),
+    ] = Field(
         default=False,
         description=(
             "Enable crew memory. Pass True for default Memory(), "
@@ -322,7 +329,10 @@ class Crew(FlowTrackable, BaseModel):
         default_factory=list,
         description="list of execution logs for tasks",
     )
-    knowledge_sources: list[BaseKnowledgeSource] | None = Field(
+    knowledge_sources: Annotated[
+        list[BaseKnowledgeSource] | None,
+        BeforeValidator(_resolve_knowledge_sources),
+    ] = Field(
         default=None,
         description=(
             "Knowledge sources for the crew. Add knowledge sources to the "
@@ -341,9 +351,9 @@ class Crew(FlowTrackable, BaseModel):
         default=None,
         description="Knowledge for the crew.",
     )
-    skills: list[Path | Skill] | None = Field(
+    skills: list[Path | Skill | str] | None = Field(
         default=None,
-        description="Skill search paths or pre-loaded Skill objects applied to all agents in the crew.",
+        description="Skill search paths, pre-loaded Skill objects, or '@org/name' registry refs applied to all agents in the crew.",
     )
 
     security_config: SecurityConfig = Field(
@@ -371,6 +381,15 @@ class Crew(FlowTrackable, BaseModel):
     checkpoint_inputs: dict[str, Any] | None = Field(default=None)
     checkpoint_train: bool | None = Field(default=None)
     checkpoint_kickoff_event_id: str | None = Field(default=None)
+
+    @field_validator(
+        "before_kickoff_callbacks", "after_kickoff_callbacks", mode="before"
+    )
+    @classmethod
+    def _drop_unresolvable_callbacks(cls, value: Any) -> Any:
+        if isinstance(value, list):
+            return [v for v in value if v is not None]
+        return value
 
     @classmethod
     def from_checkpoint(cls, config: CheckpointConfig) -> Crew:
@@ -433,16 +452,20 @@ class Crew(FlowTrackable, BaseModel):
                 if node.event.type == "task_started" and node.event.task_id:
                     started_task_ids.add(node.event.task_id)
 
+        is_hierarchical = self.process == Process.hierarchical
         resuming_task_agent_roles: set[str] = set()
         for task in self.tasks:
-            if (
-                task.output is None
-                and task.agent is not None
-                and str(task.id) in started_task_ids
-            ):
-                resuming_task_agent_roles.add(task.agent.role)
+            if task.output is not None or str(task.id) not in started_task_ids:
+                continue
+            executing_agent = self.manager_agent if is_hierarchical else task.agent
+            if executing_agent is not None:
+                resuming_task_agent_roles.add(executing_agent.role)
 
-        for agent in self.agents:
+        candidate_agents: list[BaseAgent] = list(self.agents)
+        if self.manager_agent is not None:
+            candidate_agents.append(self.manager_agent)
+
+        for agent in candidate_agents:
             agent.crew = self
             executor = agent.agent_executor
             if (
@@ -457,7 +480,7 @@ class Crew(FlowTrackable, BaseModel):
                 agent.agent_executor = None
         for task in self.tasks:
             if task.agent is not None:
-                for agent in self.agents:
+                for agent in candidate_agents:
                     if agent.role == task.agent.role:
                         task.agent = agent
                         if agent.agent_executor is not None and task.output is None:
@@ -477,7 +500,41 @@ class Crew(FlowTrackable, BaseModel):
         if self.checkpoint_train is not None:
             self._train = self.checkpoint_train
 
+        self._rebind_memory_views()
         self._restore_event_scope()
+
+    def _rebind_memory_views(self) -> None:
+        """Reattach a live ``Memory`` to restored ``MemoryScope``/``MemorySlice`` views.
+
+        Checkpoint JSON omits the live ``Memory`` dependency on scope/slice
+        views, so after restore they raise ``RuntimeError`` on first use.
+        Prefer the crew's restored ``Memory`` (from ``create_crew_memory``
+        or a ``Crew.memory=Memory(...)`` instance) so all views share one
+        backing store; fall back to a fresh ``Memory()`` only if nothing is
+        available.
+        """
+        from crewai.memory.memory_scope import MemoryScope, MemorySlice
+        from crewai.memory.unified_memory import Memory
+
+        backing: Memory | None = None
+        if isinstance(self._memory, Memory):
+            backing = self._memory
+        elif isinstance(self.memory, Memory):
+            backing = self.memory
+
+        def _ensure(view: Any) -> None:
+            nonlocal backing
+            if not isinstance(view, MemoryScope | MemorySlice):
+                return
+            if view._memory is not None:
+                return
+            if backing is None:
+                backing = Memory()
+            view.bind(backing)
+
+        _ensure(self.memory)
+        for agent in self.agents:
+            _ensure(agent.memory)
 
     def _restore_event_scope(self) -> None:
         """Rebuild the event scope stack from the checkpoint's event record."""
@@ -492,25 +549,9 @@ class Crew(FlowTrackable, BaseModel):
         if state is None:
             return
 
-        # Restore crew scope and the in-progress task scope. Inner scopes
-        # (agent, llm, tool) are re-created by the executor on resume.
         stack: list[tuple[str, str]] = []
         if self._kickoff_event_id:
             stack.append((self._kickoff_event_id, "crew_kickoff_started"))
-
-        # Find the task_started event for the in-progress task (skipped on resume)
-        for task in self.tasks:
-            if task.output is None:
-                task_id_str = str(task.id)
-                for node in state.event_record.nodes.values():
-                    if (
-                        node.event.type == "task_started"
-                        and node.event.task_id == task_id_str
-                    ):
-                        stack.append((node.event.event_id, "task_started"))
-                        break
-                break
-
         restore_event_scope(tuple(stack))
 
         # Restore last_event_id and emission counter from the record
@@ -525,6 +566,20 @@ class Crew(FlowTrackable, BaseModel):
             set_last_event_id(last_event_id)
         if max_seq > 0:
             set_emission_counter(max_seq)
+
+    @field_validator("skills", mode="before")
+    @classmethod
+    def coerce_skill_strings(cls, skills: Any) -> Any:
+        """Coerce plain path strings to Path objects; keep @-prefixed refs as str."""
+        if not isinstance(skills, list):
+            return skills
+        result = []
+        for item in skills:
+            if isinstance(item, str) and not item.startswith("@"):
+                result.append(Path(item))
+            else:
+                result.append(item)
+        return result
 
     @field_validator("id", mode="before")
     @classmethod

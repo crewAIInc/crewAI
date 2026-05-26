@@ -63,6 +63,8 @@ class Memory(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
+    memory_kind: Literal["memory"] = "memory"
+
     llm: Annotated[BaseLLM | str, PlainValidator(_passthrough)] = Field(
         default="gpt-4o-mini",
         description="LLM for analysis (model name or BaseLLM instance).",

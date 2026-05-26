@@ -434,7 +434,7 @@ class Agent(BaseAgent):
         from crewai.crew import Crew
 
         if resolved_crew_skills is None:
-            crew_skills: list[Path | SkillModel] | None = (
+            crew_skills: list[Path | SkillModel | str] | None = (
                 self.crew.skills
                 if isinstance(self.crew, Crew) and isinstance(self.crew.skills, list)
                 else None
@@ -446,7 +446,7 @@ class Agent(BaseAgent):
             return
 
         needs_work = self.skills and any(
-            isinstance(s, Path)
+            isinstance(s, (Path, str))
             or (isinstance(s, SkillModel) and s.disclosure_level < INSTRUCTIONS)
             for s in self.skills
         )
@@ -454,14 +454,28 @@ class Agent(BaseAgent):
             return
 
         seen: set[str] = set()
-        resolved: list[Path | SkillModel] = []
-        items: list[Path | SkillModel] = list(self.skills) if self.skills else []
+        resolved: list[Path | SkillModel | str] = []
+        items: list[Path | SkillModel | str] = list(self.skills) if self.skills else []
 
         if crew_skills:
             items.extend(crew_skills)
 
         for item in items:
-            if isinstance(item, Path):
+            if isinstance(item, str):
+                from crewai.skills.registry import (
+                    is_registry_ref,
+                    parse_registry_ref,
+                    resolve_registry_ref,
+                )
+
+                if is_registry_ref(item):
+                    skill = resolve_registry_ref(item, source=self)
+                    org, _ = parse_registry_ref(item)
+                    dedup_key = f"{org}/{skill.name}"
+                    if dedup_key not in seen:
+                        seen.add(dedup_key)
+                        resolved.append(skill)
+            elif isinstance(item, Path):
                 discovered = discover_skills(item, source=self)
                 for skill in discovered:
                     if skill.name not in seen:
@@ -1095,9 +1109,14 @@ class Agent(BaseAgent):
         """
         if self.agent_executor is None:
             raise RuntimeError("Agent executor is not initialized.")
+        if not isinstance(self.llm, BaseLLM):
+            raise RuntimeError(
+                "LLM must be resolved before updating agent executor parameters."
+            )
 
         if task is not None:
             self.agent_executor.task = task
+        self.agent_executor.llm = self.llm
         self.agent_executor.tools = tools
         self.agent_executor.original_tools = raw_tools
         self.agent_executor.prompt = prompt
@@ -1397,6 +1416,11 @@ class Agent(BaseAgent):
 
         if _is_resuming_agent_executor(self.agent_executor):
             executor = self.agent_executor
+            if not isinstance(self.llm, BaseLLM):
+                raise RuntimeError(
+                    "LLM must be resolved before resuming agent executor."
+                )
+            executor.llm = self.llm
             executor.tools = parsed_tools
             executor.tools_names = get_tool_names(parsed_tools)
             executor.tools_description = render_text_description_and_args(parsed_tools)

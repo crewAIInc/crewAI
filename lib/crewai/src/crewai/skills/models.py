@@ -78,6 +78,10 @@ class SkillFrontmatter(BaseModel):
         alias="allowed-tools",
         description="Pre-approved tool names the skill may use, parsed from a space-delimited string in frontmatter.",
     )
+    version: str | None = Field(
+        default=None,
+        description="Semantic version of the skill, e.g. '1.0.0'. Optional for local skills.",
+    )
 
     @model_validator(mode="before")
     @classmethod
