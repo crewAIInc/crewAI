@@ -31,9 +31,7 @@ from crewai.flow.async_feedback import (
 from crewai.flow.persistence import SQLiteFlowPersistence
 
 
-# =============================================================================
 # PendingFeedbackContext Tests
-# =============================================================================
 
 
 class TestPendingFeedbackContext:
@@ -146,9 +144,7 @@ class TestPendingFeedbackContext:
         assert restored.metadata == original.metadata
 
 
-# =============================================================================
 # HumanFeedbackPending Exception Tests
-# =============================================================================
 
 
 class TestHumanFeedbackPending:
@@ -225,9 +221,7 @@ class TestHumanFeedbackPending:
         assert exc_info.value.context.flow_id == "catch-test"
 
 
-# =============================================================================
 # HumanFeedbackProvider Protocol Tests
-# =============================================================================
 
 
 class TestHumanFeedbackProvider:
@@ -258,9 +252,7 @@ class TestHumanFeedbackProvider:
         assert isinstance(provider, HumanFeedbackProvider)
 
 
-# =============================================================================
 # ConsoleProvider Tests
-# =============================================================================
 
 
 class TestConsoleProvider:
@@ -276,9 +268,7 @@ class TestConsoleProvider:
 
 
 
-# =============================================================================
 # SQLite Persistence Tests for Async Feedback
-# =============================================================================
 
 
 class TestSQLitePendingFeedback:
@@ -302,14 +292,12 @@ class TestSQLitePendingFeedback:
 
             state_data = {"counter": 10, "items": ["a", "b"]}
 
-            # Save pending feedback
             persistence.save_pending_feedback(
                 flow_uuid="persist-test-123",
                 context=context,
                 state_data=state_data,
             )
 
-            # Load pending feedback
             result = persistence.load_pending_feedback("persist-test-123")
 
             assert result is not None
@@ -348,13 +336,10 @@ class TestSQLitePendingFeedback:
                 state_data={"key": "value"},
             )
 
-            # Verify it exists
             assert persistence.load_pending_feedback("clear-test") is not None
 
-            # Clear it
             persistence.clear_pending_feedback("clear-test")
 
-            # Verify it's gone
             assert persistence.load_pending_feedback("clear-test") is None
 
     def test_replace_existing_pending_feedback(self) -> None:
@@ -365,7 +350,6 @@ class TestSQLitePendingFeedback:
 
             flow_id = "replace-test"
 
-            # Save first version
             context1 = PendingFeedbackContext(
                 flow_id=flow_id,
                 flow_class="test.Flow",
@@ -379,7 +363,6 @@ class TestSQLitePendingFeedback:
                 state_data={"version": 1},
             )
 
-            # Save second version (should replace)
             context2 = PendingFeedbackContext(
                 flow_id=flow_id,
                 flow_class="test.Flow",
@@ -393,7 +376,6 @@ class TestSQLitePendingFeedback:
                 state_data={"version": 2},
             )
 
-            # Load and verify it's the second version
             result = persistence.load_pending_feedback(flow_id)
             assert result is not None
             state, context = result
@@ -401,9 +383,7 @@ class TestSQLitePendingFeedback:
             assert context.method_name == "method2"
 
 
-# =============================================================================
 # Custom Async Provider Tests
-# =============================================================================
 
 
 class TestCustomAsyncProvider:
@@ -442,9 +422,7 @@ class TestCustomAsyncProvider:
         )
 
 
-# =============================================================================
 # Flow.from_pending and resume Tests
-# =============================================================================
 
 
 class TestFlowResumeWithFeedback:
@@ -458,8 +436,6 @@ class TestFlowResumeWithFeedback:
             def begin(self):
                 return "started"
 
-        # When no persistence is provided, it uses default SQLiteFlowPersistence
-        # This will raise "No pending feedback found" (not a persistence error)
         with pytest.raises(ValueError, match="No pending feedback found"):
             TestFlow.from_pending("nonexistent-id")
 
@@ -506,7 +482,6 @@ class TestFlowResumeWithFeedback:
                 state_data={"id": "test-restore-123", "counter": 42},
             )
 
-            # Restore flow
             flow = TestFlow.from_pending("test-restore-123", persistence)
 
             assert flow._pending_feedback_context is not None
@@ -541,7 +516,6 @@ class TestFlowResumeWithFeedback:
                 db_path = os.path.join(tmpdir, "test.db")
                 persistence = SQLiteFlowPersistence(db_path)
 
-                # Save pending feedback
                 context = PendingFeedbackContext(
                     flow_id="async-context-test",
                     flow_class="TestFlow",
@@ -580,7 +554,6 @@ class TestFlowResumeWithFeedback:
                 def process(self, result):
                     return f"processed: {result.feedback}"
 
-            # Save pending feedback
             context = PendingFeedbackContext(
                 flow_id="async-direct-test",
                 flow_class="TestFlow",
@@ -633,16 +606,13 @@ class TestFlowResumeWithFeedback:
                 state_data={"id": "resume-test-123"},
             )
 
-            # Restore and resume
             flow = TestFlow.from_pending("resume-test-123", persistence)
             result = flow.resume("looks good!")
 
-            # Verify feedback was processed
             assert flow.last_human_feedback is not None
             assert flow.last_human_feedback.feedback == "looks good!"
             assert flow.last_human_feedback.output == "generated content"
 
-            # Verify pending feedback was cleared
             assert persistence.load_pending_feedback("resume-test-123") is None
 
     @patch("crewai.flow.flow.crewai_event_bus.emit")
@@ -674,7 +644,6 @@ class TestFlowResumeWithFeedback:
                     self.result_path = "rejected"
                     return "Rejected!"
 
-            # Save pending feedback
             context = PendingFeedbackContext(
                 flow_id="route-test-123",
                 flow_class="test.TestFlow",
@@ -690,20 +659,16 @@ class TestFlowResumeWithFeedback:
                 state_data={"id": "route-test-123"},
             )
 
-            # Restore and resume - mock _collapse_to_outcome directly
             flow = TestFlow.from_pending("route-test-123", persistence)
 
             with patch.object(flow, "_collapse_to_outcome", return_value="approved"):
                 result = flow.resume("yes, this looks great")
 
-            # Verify routing worked
             assert flow.last_human_feedback.outcome == "approved"
             assert flow.result_path == "approved"
 
 
-# =============================================================================
 # Integration Tests with @human_feedback decorator
-# =============================================================================
 
 
 class TestAsyncHumanFeedbackIntegration:
@@ -718,7 +683,6 @@ class TestAsyncHumanFeedbackIntegration:
             ) -> str:
                 raise HumanFeedbackPending(context=context)
 
-        # This should not raise
         class TestFlow(Flow):
             @start()
             @human_feedback(
@@ -729,7 +693,6 @@ class TestAsyncHumanFeedbackIntegration:
                 return "content"
 
         flow = TestFlow()
-        # Verify the method has the provider config
         method = getattr(flow, "review")
         assert hasattr(method, "__human_feedback_config__")
         assert method.__human_feedback_config__.provider is not None
@@ -748,7 +711,6 @@ class TestAsyncHumanFeedbackIntegration:
                 def request_feedback(
                     self, context: PendingFeedbackContext, flow: Flow
                 ) -> str:
-                    # Save pending state
                     self.persistence.save_pending_feedback(
                         flow_uuid=context.flow_id,
                         context=context,
@@ -776,10 +738,8 @@ class TestAsyncHumanFeedbackIntegration:
             assert isinstance(result, HumanFeedbackPending)
             assert result.callback_info["saved"] is True
 
-            # Get flow ID from the returned pending context
             flow_id = result.context.flow_id
 
-            # Verify state was persisted
             persisted = persistence.load_pending_feedback(flow_id)
             assert persisted is not None
 
@@ -823,7 +783,6 @@ class TestAsyncHumanFeedbackIntegration:
                     self.processed_feedback = feedback_result.feedback
                     return f"Final: {feedback_result.feedback}"
 
-            # Phase 1: Start flow (should pause)
             flow1 = ReviewFlow(persistence=persistence)
             result = flow1.kickoff()
 
@@ -832,18 +791,14 @@ class TestAsyncHumanFeedbackIntegration:
             assert len(flow_id_holder) == 1
             paused_flow_id = flow_id_holder[0]
 
-            # Phase 2: Resume flow
             flow2 = ReviewFlow.from_pending(paused_flow_id, persistence)
             result = flow2.resume("This is my feedback")
 
-            # Verify feedback was processed
             assert flow2.last_human_feedback.feedback == "This is my feedback"
             assert flow2.processed_feedback == "This is my feedback"
 
 
-# =============================================================================
 # Edge Case Tests
-# =============================================================================
 
 
 class TestAutoPersistence:
@@ -871,20 +826,17 @@ class TestAutoPersistence:
             def generate(self):
                 return "content"
 
-        # Create flow WITHOUT persistence
         flow = TestFlow()
-        assert flow.persistence is None  # No persistence initially
+        assert flow.persistence is None
 
         # kickoff should auto-create persistence when HumanFeedbackPending is raised
         result = flow.kickoff()
 
-        # Should return HumanFeedbackPending (not raise it)
         assert isinstance(result, HumanFeedbackPending)
 
         # Persistence should have been auto-created
         assert flow.persistence is not None
 
-        # The pending feedback should be saved
         flow_id = result.context.flow_id
         loaded = flow.persistence.load_pending_feedback(flow_id)
         assert loaded is not None
@@ -935,7 +887,6 @@ class TestCollapseToOutcomeJsonParsing:
 
         with patch("crewai.llm.LLM") as MockLLM:
             mock_llm = MagicMock()
-            # Invalid JSON that contains "approved"
             mock_llm.call.return_value = "{invalid json but says approved"
             MockLLM.return_value = mock_llm
 
@@ -988,7 +939,6 @@ class TestLLMObjectPreservedInContext:
             db_path = os.path.join(tmpdir, "test_flows.db")
             persistence = SQLiteFlowPersistence(db_path)
 
-            # Create a real LLM object (not a string)
             from crewai.llm import LLM
             mock_llm_obj = LLM(model="gemini-2.0-flash", provider="gemini")
 
@@ -1034,17 +984,14 @@ class TestLLMObjectPreservedInContext:
                     self.result_path = "needs_changes"
                     return "Changes needed"
 
-            # Phase 1: Start flow (should pause)
             flow1 = TestFlow(persistence=persistence)
             result = flow1.kickoff()
             assert isinstance(result, HumanFeedbackPending)
 
-            # Verify the context stored the model config dict, not None
             assert provider.captured_context is not None
             assert isinstance(provider.captured_context.llm, dict)
             assert provider.captured_context.llm["model"] == "gemini/gemini-2.0-flash"
 
-            # Verify it survives persistence roundtrip
             flow_id = result.context.flow_id
             loaded = persistence.load_pending_feedback(flow_id)
             assert loaded is not None
@@ -1052,13 +999,11 @@ class TestLLMObjectPreservedInContext:
             assert isinstance(loaded_context.llm, dict)
             assert loaded_context.llm["model"] == "gemini/gemini-2.0-flash"
 
-            # Phase 2: Resume with positive feedback - should use LLM to classify
             flow2 = TestFlow.from_pending(flow_id, persistence)
             assert flow2._pending_feedback_context is not None
             assert isinstance(flow2._pending_feedback_context.llm, dict)
             assert flow2._pending_feedback_context.llm["model"] == "gemini/gemini-2.0-flash"
 
-            # Mock _collapse_to_outcome to verify it gets called (not skipped)
             with patch.object(flow2, "_collapse_to_outcome", return_value="approved") as mock_collapse:
                 flow2.resume("this looks good, proceed!")
 
@@ -1093,7 +1038,7 @@ class TestLLMObjectPreservedInContext:
         """Test that llm is None when object has no model attribute."""
         from crewai.flow.human_feedback import _serialize_llm_for_context
 
-        mock_obj = MagicMock(spec=[])  # No attributes
+        mock_obj = MagicMock(spec=[])
         assert _serialize_llm_for_context(mock_obj) is None
 
     def test_provider_prefix_added_to_bare_model(self) -> None:
@@ -1146,7 +1091,7 @@ class TestAsyncHumanFeedbackEdgeCases:
 
         # Serialize and deserialize
         serialized = context.to_dict()
-        json_str = json.dumps(serialized)  # Should be JSON serializable
+        json_str = json.dumps(serialized)
         restored = PendingFeedbackContext.from_dict(json.loads(json_str))
 
         assert restored.method_output == complex_output
@@ -1162,7 +1107,6 @@ class TestAsyncHumanFeedbackEdgeCases:
                 def generate(self):
                     return "content"
 
-            # Save pending feedback with default_outcome
             context = PendingFeedbackContext(
                 flow_id="default-test",
                 flow_class="test.Flow",
@@ -1182,7 +1126,7 @@ class TestAsyncHumanFeedbackEdgeCases:
             flow = TestFlow.from_pending("default-test", persistence)
 
             with patch("crewai.flow.flow.crewai_event_bus.emit"):
-                result = flow.resume("")  # Empty feedback
+                result = flow.resume("")
 
             assert flow.last_human_feedback.outcome == "approved"
 
@@ -1216,16 +1160,12 @@ class TestAsyncHumanFeedbackEdgeCases:
             flow = TestFlow.from_pending("no-feedback-test", persistence)
 
             with patch("crewai.flow.flow.crewai_event_bus.emit"):
-                # Call resume() with no arguments - should use default
                 result = flow.resume()
 
             assert flow.last_human_feedback.outcome == "approved"
             assert flow.last_human_feedback.feedback == ""
 
 
-# =============================================================================
-# Tests for _hf_llm attribute and live LLM resolution on resume
-# =============================================================================
 
 
 class TestLiveLLMPreservationOnResume:
@@ -1235,7 +1175,6 @@ class TestLiveLLMPreservationOnResume:
         """Test that _hf_llm is set on the wrapper when llm is a BaseLLM instance."""
         from crewai.llms.base_llm import BaseLLM
 
-        # Create a mock BaseLLM object
         mock_llm = MagicMock(spec=BaseLLM)
         mock_llm.model = "gemini/gemini-3-flash"
 
@@ -1301,7 +1240,7 @@ class TestLiveLLMPreservationOnResume:
                 @human_feedback(
                     message="Approve?",
                     emit=["approved", "rejected"],
-                    llm=live_llm,  # Full LLM object with credentials
+                    llm=live_llm,
                 )
                 def review(self):
                     return "content"
@@ -1311,7 +1250,6 @@ class TestLiveLLMPreservationOnResume:
                     self.result_path = "approved"
                     return "Approved!"
 
-            # Save pending feedback with just a model STRING (simulating serialization)
             context = PendingFeedbackContext(
                 flow_id="live-llm-test",
                 flow_class="TestFlow",
@@ -1327,10 +1265,8 @@ class TestLiveLLMPreservationOnResume:
                 state_data={"id": "live-llm-test"},
             )
 
-            # Restore flow - this re-imports the class with the live LLM
             flow = TestFlow.from_pending("live-llm-test", persistence)
 
-            # Mock _collapse_to_outcome to capture what LLM it receives
             captured_llm = []
 
             def capture_llm(feedback, outcomes, llm):
@@ -1340,11 +1276,9 @@ class TestLiveLLMPreservationOnResume:
             with patch.object(flow, "_collapse_to_outcome", side_effect=capture_llm):
                 flow.resume("looks good!")
 
-            # The key assertion: _collapse_to_outcome received the LIVE BaseLLM object,
             # NOT the serialized string. The live_llm was captured at class definition
             # time and stored on the method wrapper as _hf_llm.
             assert len(captured_llm) == 1
-            # Verify it's the same object that was passed to the decorator
             # (which is stored on the method's _hf_llm attribute)
             method = flow._methods.get("review")
             assert method is not None
@@ -1374,7 +1308,6 @@ class TestLiveLLMPreservationOnResume:
                 def review(self):
                     return "content"
 
-            # Save pending feedback
             context = PendingFeedbackContext(
                 flow_id="fallback-test",
                 flow_class="TestFlow",
@@ -1397,7 +1330,6 @@ class TestLiveLLMPreservationOnResume:
             if hasattr(method, "_hf_llm"):
                 delattr(method, "_hf_llm")
 
-            # Mock _collapse_to_outcome to capture what LLM it receives
             captured_llm = []
 
             def capture_llm(feedback, outcomes, llm):
@@ -1407,7 +1339,6 @@ class TestLiveLLMPreservationOnResume:
             with patch.object(flow, "_collapse_to_outcome", side_effect=capture_llm):
                 flow.resume("looks good!")
 
-            # Should fall back to deserialized LLM from context string
             assert len(captured_llm) == 1
             from crewai.llms.base_llm import BaseLLM as BaseLLMClass
             assert isinstance(captured_llm[0], BaseLLMClass)
@@ -1431,12 +1362,11 @@ class TestLiveLLMPreservationOnResume:
                 @human_feedback(
                     message="Approve?",
                     emit=["approved", "rejected"],
-                    llm="gpt-4o-mini",  # String LLM
+                    llm="gpt-4o-mini",
                 )
                 def review(self):
                     return "content"
 
-            # Save pending feedback
             context = PendingFeedbackContext(
                 flow_id="string-llm-test",
                 flow_class="TestFlow",
@@ -1454,11 +1384,9 @@ class TestLiveLLMPreservationOnResume:
 
             flow = TestFlow.from_pending("string-llm-test", persistence)
 
-            # Verify _hf_llm is a string
             method = flow._methods.get("review")
             assert method._hf_llm == "gpt-4o-mini"
 
-            # Mock _collapse_to_outcome to capture what LLM it receives
             captured_llm = []
 
             def capture_llm(feedback, outcomes, llm):

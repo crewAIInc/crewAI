@@ -1,14 +1,13 @@
 import io
 import os
-import zipfile
 from unittest.mock import MagicMock, patch
+import zipfile
 
-import httpx
-import pytest
 from click.testing import CliRunner
-
 from crewai_cli.cli import template_add, template_list
 from crewai_cli.remote_template.main import TemplateCommand
+import httpx
+import pytest
 
 
 @pytest.fixture
@@ -35,7 +34,6 @@ def _make_zipball(files: dict[str, str], top_dir: str = "crewAIInc-template_test
     return buf.getvalue()
 
 
-# --- CLI command tests ---
 
 
 @patch("crewai_cli.cli.TemplateCommand")
@@ -73,7 +71,6 @@ def test_template_add_with_output_dir(mock_cls, runner):
     mock_instance.add_template.assert_called_once_with("deep_research", "my_project")
 
 
-# --- TemplateCommand unit tests ---
 
 
 class TestTemplateCommand:
@@ -89,7 +86,6 @@ class TestTemplateCommand:
         mock_response = MagicMock()
         mock_response.json.return_value = SAMPLE_REPOS
         mock_response.raise_for_status = MagicMock()
-        # Return empty on page 2 to stop pagination
         mock_empty = MagicMock()
         mock_empty.json.return_value = []
         mock_empty.raise_for_status = MagicMock()
@@ -245,7 +241,6 @@ class TestTemplateCommand:
 
         os.chdir(tmp_path)
         cmd.add_template("deep_research")
-        # Should return without downloading
 
     @patch.object(TemplateCommand, "_install_repo")
     @patch("crewai_cli.remote_template.main.click.prompt", return_value="2")

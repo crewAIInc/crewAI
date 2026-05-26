@@ -40,7 +40,6 @@ def test_llm_callback_replacement():
     sleep(5)
     usage_metrics_2 = calc_handler_2.token_cost_process.get_summary()
 
-    # The first handler should not have been updated
     assert usage_metrics_1.successful_requests == 1
     assert usage_metrics_2.successful_requests == 1
     assert usage_metrics_1 == calc_handler_1.token_cost_process.get_summary()
@@ -50,7 +49,6 @@ def test_llm_callback_replacement():
 def test_llm_call_with_string_input():
     llm = LLM(model="gpt-4o-mini")
 
-    # Test the call method with a string input
     result = llm.call("Return the name of a random city in the world.")
     assert isinstance(result, str)
     assert len(result.strip()) > 0  # Ensure the response is not empty
@@ -61,7 +59,6 @@ def test_llm_call_with_string_input_and_callbacks():
     llm = LLM(model="gpt-4o-mini", is_litellm=True)
     calc_handler = TokenCalcHandler(token_cost_process=TokenProcess())
 
-    # Test the call method with a string input and callbacks
     result = llm.call(
         "Tell me a joke.",
         callbacks=[calc_handler],
@@ -78,7 +75,6 @@ def test_llm_call_with_message_list():
     llm = LLM(model="gpt-4o-mini")
     messages = [{"role": "user", "content": "What is the capital of France?"}]
 
-    # Test the call method with a list of messages
     result = llm.call(messages)
     assert isinstance(result, str)
     assert "Paris" in result
@@ -94,7 +90,6 @@ def test_llm_call_with_tool_and_string_input():
 
         return str(datetime.now().year)
 
-    # Create tool schema
     tool_schema = {
         "type": "function",
         "function": {
@@ -111,7 +106,6 @@ def test_llm_call_with_tool_and_string_input():
     # Available functions mapping
     available_functions = {"get_current_year": get_current_year}
 
-    # Test the call method with a string input and tool
     result = llm.call(
         "What is the current year?",
         tools=[tool_schema],
@@ -130,7 +124,6 @@ def test_llm_call_with_tool_and_message_list():
         """Returns the square of a number."""
         return number * number
 
-    # Create tool schema
     tool_schema = {
         "type": "function",
         "function": {
@@ -151,7 +144,6 @@ def test_llm_call_with_tool_and_message_list():
 
     messages = [{"role": "user", "content": "What is the square of 5?"}]
 
-    # Test the call method with messages and tool
     result = llm.call(
         messages,
         tools=[tool_schema],
@@ -174,7 +166,6 @@ def test_llm_passes_additional_params():
     messages = [{"role": "user", "content": "Hello, world!"}]
 
     with patch("litellm.completion") as mocked_completion:
-        # Create mocks for response structure
         mock_message = MagicMock()
         mock_message.content = "Test response"
         mock_message.tool_calls = None
@@ -188,7 +179,6 @@ def test_llm_passes_additional_params():
             "total_tokens": 10,
         }
 
-        # Set up the mocked completion to return the mock response
         mocked_completion.return_value = mock_response
 
         result = llm.call(messages)
@@ -207,7 +197,6 @@ def test_llm_passes_additional_params():
         assert kwargs["model"] == "gpt-4o-mini"
         assert kwargs["messages"] == messages
 
-        # Check the result from llm.call
         assert result == "Test response"
 
 
@@ -237,7 +226,6 @@ def test_validate_call_params_supported():
             response_format=DummyResponse,
             is_litellm=True,
         )
-        # Should not raise any error.
         llm._validate_call_params()
 
 
@@ -258,7 +246,6 @@ def test_validate_call_params_not_supported():
 
 
 def test_validate_call_params_no_response_format():
-    # When no response_format is provided, no validation error should occur.
     llm = LLM(model="gemini/gemini-1.5-pro", response_format=None, is_litellm=True)
     llm._validate_call_params()
 
@@ -342,15 +329,13 @@ def test_o3_mini_reasoning_effort_medium():
 
 def test_context_window_validation():
     """Test that context window validation works correctly."""
-    # Test valid window size
     llm = LLM(model="o3-mini")
     assert llm.get_context_window_size() == int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
 
-    # Test invalid window size
     with pytest.raises(ValueError) as excinfo:
         with patch.dict(
             "crewai.llm.LLM_CONTEXT_WINDOW_SIZES",
-            {"test-model": 500},  # Below minimum
+            {"test-model": 500},
             clear=True,
         ):
             llm = LLM(model="test-model")
@@ -388,7 +373,6 @@ def test_context_window_exceeded_error_handling():
 
     llm = LLM(model="gpt-4", is_litellm=True)
 
-    # Test non-streaming response
     with patch("litellm.completion") as mock_completion:
         mock_completion.side_effect = ContextWindowExceededError(
             "This model's maximum context length is 8192 tokens. However, your messages resulted in 10000 tokens.",
@@ -402,7 +386,6 @@ def test_context_window_exceeded_error_handling():
         assert "context length exceeded" in str(excinfo.value).lower()
         assert "8192 tokens" in str(excinfo.value)
 
-    # Test streaming response
     llm = LLM(model="gpt-4", stream=True, is_litellm=True)
     with patch("litellm.completion") as mock_completion:
         mock_completion.side_effect = ContextWindowExceededError(
@@ -438,7 +421,6 @@ def user_message():
 
 def test_anthropic_message_formatting_edge_cases(anthropic_llm):
     """Test edge cases for Anthropic message formatting."""
-    # Test None messages
     anthropic_llm = AnthropicCompletion(model="claude-3-sonnet", is_litellm=False)
     with pytest.raises(TypeError):
         anthropic_llm._format_messages_for_anthropic(None)
@@ -449,7 +431,6 @@ def test_anthropic_message_formatting_edge_cases(anthropic_llm):
     assert formatted[0]["role"] == "user"
     assert formatted[0]["content"] == "Hello"
 
-    # Test invalid message format
     with pytest.raises(ValueError, match="must have 'role' and 'content' keys"):
         anthropic_llm._format_messages_for_anthropic([{"invalid": "message"}])
 
@@ -461,7 +442,7 @@ def test_anthropic_model_detection():
         ("claude-instant", True),
         ("claude/v1", True),
         ("gpt-4", False),
-        ("anthropomorphic", False),  # Should not match partial words
+        ("anthropomorphic", False),
     ]
 
     for model, expected in models:
@@ -471,7 +452,6 @@ def test_anthropic_model_detection():
 
 def test_anthropic_message_formatting(anthropic_llm, system_message, user_message):
     """Test Anthropic message formatting with fixtures."""
-    # Test when first message is system
 
     # Test empty message list - Anthropic requires first message to be from user
     formatted, extracted_system = anthropic_llm._format_messages_for_anthropic([])
@@ -479,7 +459,6 @@ def test_anthropic_message_formatting(anthropic_llm, system_message, user_messag
     assert formatted[0]["role"] == "user"
     assert formatted[0]["content"] == "Hello"
 
-    # Test invalid message format
     with pytest.raises(ValueError, match="must have 'role' and 'content' keys"):
         anthropic_llm._format_messages_for_anthropic([{"invalid": "message"}])
 
@@ -830,7 +809,6 @@ def test_native_provider_raises_error_when_supported_but_fails():
     """Test that when a native provider is in SUPPORTED_NATIVE_PROVIDERS but fails to instantiate, we raise the error."""
     with patch("crewai.llm.SUPPORTED_NATIVE_PROVIDERS", ["openai"]):
         with patch("crewai.llm.LLM._get_native_provider") as mock_get_native:
-            # Mock that provider exists but throws an error when instantiated
             mock_provider = MagicMock()
             mock_provider.side_effect = ValueError(
                 "Native provider initialization failed"
@@ -847,7 +825,6 @@ def test_native_provider_raises_error_when_supported_but_fails():
 def test_native_provider_falls_back_to_litellm_when_not_in_supported_list():
     """Test that when a provider is not in SUPPORTED_NATIVE_PROVIDERS, we fall back to LiteLLM."""
     with patch("crewai.llm.SUPPORTED_NATIVE_PROVIDERS", ["openai", "anthropic"]):
-        # Using a provider not in the supported list
         llm = LLM(model="groq/llama-3.1-70b-versatile", is_litellm=False)
 
         # Should fall back to LiteLLM

@@ -474,7 +474,6 @@ class TraceCollectionListener(BaseEventListener):
         ) -> None:
             self._handle_action_event("agent_reasoning_failed", source, event)
 
-        # Observation events (Plan-and-Execute)
         @event_bus.on(StepObservationStartedEvent)
         def on_step_observation_started(
             source: Any, event: StepObservationStartedEvent

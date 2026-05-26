@@ -50,23 +50,17 @@ class FileHandler:
         Raises:
             ValueError: If file_path is neither a string nor a boolean.
         """
-        if file_path is True:  # File path is boolean True
+        if file_path is True:
             self._path = os.path.join(os.curdir, "logs.txt")
 
-        elif isinstance(file_path, str):  # File path is a string
+        elif isinstance(file_path, str):
             if file_path.endswith((".json", ".txt")):
-                self._path = (
-                    file_path  # No modification if the file ends with .json or .txt
-                )
+                self._path = file_path
             else:
-                self._path = (
-                    file_path + ".txt"
-                )  # Append .txt if the file doesn't end with .json or .txt
+                self._path = file_path + ".txt"
 
         else:
-            raise ValueError(
-                "file_path must be a string or boolean."
-            )  # Handle the case where file_path isn't valid
+            raise ValueError("file_path must be a string or boolean.")
 
     def log(self, **kwargs: Unpack[LogEntry]) -> None:
         """Log data with structured fields.
@@ -96,14 +90,11 @@ class FileHandler:
                 log_entry = {"timestamp": now, **kwargs}
 
                 if self._path.endswith(".json"):
-                    # Append log in JSON format
                     try:
-                        # Try reading existing content to avoid overwriting
                         with open(self._path, encoding="utf-8") as read_file:
                             existing_data = json.load(read_file)
                             existing_data.append(log_entry)
                     except (json.JSONDecodeError, FileNotFoundError):
-                        # If no valid JSON or file doesn't exist, start with an empty list
                         existing_data = [log_entry]
 
                     with open(self._path, "w", encoding="utf-8") as write_file:
@@ -111,7 +102,6 @@ class FileHandler:
                         write_file.write("\n")
 
                 else:
-                    # Append log in plain text format
                     message = (
                         f"{now}: "
                         + ", ".join(

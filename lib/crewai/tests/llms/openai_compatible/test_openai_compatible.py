@@ -126,7 +126,6 @@ class TestOpenAICompatibleCompletion:
 
     def test_missing_required_api_key_raises_error(self):
         """Test that missing required API key raises ValueError."""
-        # Clear any existing env var
         env_key = "DEEPSEEK_API_KEY"
         original = os.environ.pop(env_key, None)
         try:

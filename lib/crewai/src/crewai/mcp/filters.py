@@ -29,7 +29,6 @@ class ToolFilterContext(BaseModel):
     )
 
 
-# Type alias for tool filter functions
 ToolFilter = (
     Callable[[ToolFilterContext, dict[str, Any]], bool]
     | Callable[[dict[str, Any]], bool]
@@ -79,15 +78,13 @@ class StaticToolFilter:
         """
         tool_name = tool.get("name", "")
 
-        # Blocked tools take precedence
+        # Blocked tools take precedence over allowed tools
         if self.blocked_tool_names and tool_name in self.blocked_tool_names:
             return False
 
-        # If allow list exists, tool must be in it
         if self.allowed_tool_names:
             return tool_name in self.allowed_tool_names
 
-        # No restrictions - allow all
         return True
 
 
