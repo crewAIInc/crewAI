@@ -238,6 +238,23 @@ stagehand_tool = StagehandTool(
 )
 ```
 
+If you need Browserbase session-level features like verified browsers, proxies, or regional routing, pass them through `browserbase_session_create_params`:
+
+```python
+stagehand_tool = StagehandTool(
+    api_key="your-browserbase-api-key",
+    project_id="your-browserbase-project-id",
+    model_api_key="your-llm-api-key",
+    browserbase_session_create_params={
+        "proxies": True,
+        "region": "us-west-2",
+        "browser_settings": {
+            "verified": True,
+        },
+    },
+)
+```
+
 ## Tips for Effective Use
 
 1. **Be specific in instructions**: The more specific your instructions, the better the results. For example, instead of "click the button," use "click the 'Submit' button at the bottom of the contact form."
@@ -264,10 +281,10 @@ stagehand_tool = StagehandTool(
 
 - [Stagehand Documentation](https://docs.stagehand.dev/reference/introduction) - Complete reference for the Stagehand framework
 - [Browserbase](https://www.browserbase.com) - Browser automation platform
-- [Join Slack Community](https://stagehand.dev/slack) - Get help and connect with other users of Stagehand
+- [Join Discord Community](https://stagehand.dev/discord) - Get help and connect with other users of Stagehand
 
 ## Contact
 
 For more information about Stagehand, visit [the Stagehand documentation](https://docs.stagehand.dev/).
 
-For questions about the CrewAI integration, join our [Slack](https://stagehand.dev/slack) or open an issue in this repository.
+For questions about the CrewAI integration, join our [Discord](https://stagehand.dev/discord) or open an issue in this repository.

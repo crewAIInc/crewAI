@@ -1,5 +1,6 @@
+import asyncio
 import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -135,6 +136,7 @@ def test_stagehand_tool_initialization():
     assert tool.dom_settle_timeout_ms == 3000
     assert tool.self_heal is True
     assert tool.wait_for_captcha_solves is True
+    assert tool.browserbase_session_create_params is None
 
 
 @patch(
@@ -244,6 +246,10 @@ def test_initialization_parameters():
         self_heal=False,
         wait_for_captcha_solves=False,
         verbose=3,
+        browserbase_session_create_params={
+            "proxies": True,
+            "browser_settings": {"verified": True},
+        },
         _testing=True,  # Enable testing mode
     )
 
@@ -256,6 +262,69 @@ def test_initialization_parameters():
     assert tool.self_heal is False
     assert tool.wait_for_captcha_solves is False
     assert tool.verbose == 3
+    assert tool.browserbase_session_create_params == {
+        "proxies": True,
+        "browser_settings": {"verified": True},
+    }
+
+
+def test_setup_stagehand_forwards_browserbase_session_create_params():
+    """Test that Browserbase session create params are forwarded to Stagehand."""
+    stagehand_instance = MagicMock()
+    stagehand_instance.init = AsyncMock()
+    stagehand_instance.page = MagicMock()
+    stagehand_instance.session_id = "test-session-id"
+
+    with (
+        patch(
+            "crewai_tools.tools.stagehand_tool.stagehand_tool._HAS_STAGEHAND",
+            True,
+        ),
+        patch(
+            "crewai_tools.tools.stagehand_tool.stagehand_tool.configure_logging"
+        ),
+        patch(
+            "crewai_tools.tools.stagehand_tool.stagehand_tool.StagehandConfig"
+        ) as mock_stagehand_config,
+        patch(
+            "crewai_tools.tools.stagehand_tool.stagehand_tool.Stagehand",
+            return_value=stagehand_instance,
+        ) as mock_stagehand,
+    ):
+        tool = StagehandTool(
+            api_key="custom_api_key",
+            project_id="custom_project_id",
+            model_api_key="custom_model_api_key",
+            browserbase_session_create_params={
+                "proxies": True,
+                "browser_settings": {"verified": True},
+            },
+        )
+
+        asyncio.run(tool._setup_stagehand())
+
+        mock_stagehand_config.assert_called_once_with(
+            env="BROWSERBASE",
+            apiKey="custom_api_key",
+            projectId="custom_project_id",
+            modelApiKey="custom_model_api_key",
+            modelName=tool.model_name,
+            apiUrl="https://api.stagehand.browserbase.com/v1",
+            domSettleTimeoutMs=3000,
+            selfHeal=True,
+            waitForCaptchaSolves=True,
+            verbose=1,
+            browserbaseSessionID=None,
+            browserbaseSessionCreateParams={
+                "proxies": True,
+                "browser_settings": {"verified": True},
+            },
+        )
+        mock_stagehand.assert_called_once_with(
+            config=mock_stagehand_config.return_value,
+            server_url="https://api.stagehand.browserbase.com/v1",
+            model_api_key="custom_model_api_key",
+        )
 
 
 def test_close_method():
