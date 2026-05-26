@@ -17,8 +17,8 @@ class AddImageTool(BaseTool):
     """Tool for adding images to the content"""
 
     name: str = Field(
-        default_factory=lambda: get_crew_i18n().tools("add_image")["name"]
-    )  # type: ignore[index]
+        default_factory=lambda: get_crew_i18n().tools("add_image")["name"]  # type: ignore[index]
+    )
     description: str = Field(
         default_factory=lambda: get_crew_i18n().tools("add_image")["description"]  # type: ignore[index]
     )
