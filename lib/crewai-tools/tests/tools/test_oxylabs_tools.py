@@ -113,7 +113,6 @@ def test_tool_initialization_with_env_vars(tool_class: type[BaseTool]):
     ],
 )
 def test_tool_initialization_failure(tool_class: type[BaseTool]):
-    # making sure env vars are not set
     for key in ["OXYLABS_USERNAME", "OXYLABS_PASSWORD"]:
         if key in os.environ:
             del os.environ[key]
@@ -150,12 +149,10 @@ def test_tool_invocation(
     # setting via __dict__ to bypass pydantic validation
     tool.__dict__["oxylabs_api"] = oxylabs_api
 
-    # verifying parsed job returns json content
     result = tool.run("Scraping Query 1")
     assert isinstance(result, str)
     assert isinstance(json.loads(result), dict)
 
-    # verifying raw job returns str
     result = tool.run("Scraping Query 2")
     assert isinstance(result, str)
     assert "<!DOCTYPE html>" in result
