@@ -186,8 +186,6 @@ class Telemetry:
 
         self._safe_telemetry_procedure(_operation)
 
-    # --- CLI-facing spans ---------------------------------------------------
-
     def deploy_signup_error_span(self) -> None:
         """Records when an error occurs during the deployment signup process."""
 
