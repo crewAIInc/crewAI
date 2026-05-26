@@ -299,6 +299,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "hosted_vllm",
     "cerebras",
     "dashscope",
+    "oci",
 ]
 
 
@@ -388,6 +389,7 @@ class LLM(BaseLLM):
                 "hosted_vllm": "hosted_vllm",
                 "cerebras": "cerebras",
                 "dashscope": "dashscope",
+                "oci": "oci",
             }
 
             canonical_provider = provider_mapping.get(prefix.lower())
@@ -507,6 +509,9 @@ class LLM(BaseLLM):
             # OpenRouter uses org/model format but accepts anything
             return True
 
+        if provider == "oci":
+            return model_lower.startswith("ocid1.generativeaiendpoint") or "." in model_lower
+
         return False
 
     @classmethod
@@ -541,6 +546,9 @@ class LLM(BaseLLM):
         if provider == "azure":
             # azure does not provide a list of available models, determine a better way to handle this
             return True
+
+        if provider == "oci":
+            return cls._matches_provider_pattern(model, provider)
 
         # Fallback to pattern matching for models not in constants
         return cls._matches_provider_pattern(model, provider)
@@ -622,6 +630,11 @@ class LLM(BaseLLM):
             )
 
             return OpenAICompatibleCompletion
+
+        if provider == "oci":
+            from crewai.llms.providers.oci.completion import OCICompletion
+
+            return OCICompletion
 
         return None
 
