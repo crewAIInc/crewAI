@@ -45,5 +45,4 @@ class TestPickleHandler(unittest.TestCase):
         with pytest.raises(Exception) as exc:
             self.handler.load()
 
-        assert str(exc.value) == "pickle data was truncated"
-        assert "<class '_pickle.UnpicklingError'>" == str(exc.type)
+        assert "<class 'json.decoder.JSONDecodeError'>" == str(exc.type)

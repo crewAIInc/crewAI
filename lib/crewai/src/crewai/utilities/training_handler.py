@@ -27,7 +27,7 @@ class CrewTrainingHandler(PickleHandler):
         data = self.load()
         if agent_id not in data:
             data[agent_id] = {}
-        data[agent_id][train_iteration] = new_data
+        data[agent_id][str(train_iteration)] = new_data
         self.save(data)
 
     def clear(self) -> None:

@@ -36,7 +36,7 @@ from crewai.tools.structured_tool import (
     _serialize_schema,
     build_schema_hint,
 )
-from crewai.types.callback import SerializableCallable, _resolve_dotted_path
+from crewai.types.callback import SerializableCallable, _resolve_dotted_path, string_to_callable
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
 
@@ -69,7 +69,7 @@ def _resolve_tool_dict(value: dict[str, Any]) -> Any:
         val = data.get(key)
         if isinstance(val, str):
             try:
-                data[key] = _resolve_dotted_path(val)
+                data[key] = string_to_callable(val)
             except (ValueError, ImportError):
                 data.pop(key)
 
