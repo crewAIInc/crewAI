@@ -81,7 +81,6 @@ def _judge_with_llm(
 
 def _parse_judge_response(raw: str) -> tuple[bool, float]:
     """Extract ``(passed, score)`` from a judge LLM response."""
-    # Try full JSON parse first.
     try:
         data = json.loads(raw)
         score = float(data["score"])
@@ -90,13 +89,11 @@ def _parse_judge_response(raw: str) -> tuple[bool, float]:
     except (json.JSONDecodeError, KeyError, TypeError, ValueError):
         pass
 
-    # Fallback: look for a bare number (e.g. "0.85").
     match = re.search(r"\b(0(?:\.\d+)?|1(?:\.0+)?)\b", raw)
     if match:
         score = float(match.group(1))
         return score >= 0.7, max(0.0, min(1.0, score))
 
-    # Cannot parse — conservative fail.
     return False, 0.0
 
 
@@ -105,14 +102,7 @@ def _score_case(
     actual: str,
     judge_model: str,
 ) -> tuple[bool, float]:
-    """Score a single benchmark case.
-
-    Scoring rules:
-    - No ``expected`` and no ``criteria``: auto-pass, score 1.0.
-    - ``expected`` only: case-insensitive substring match → 1.0 / 0.0.
-    - ``criteria`` only: LLM judge → score from judge.
-    - Both: both must pass; score = average of the two.
-    """
+    """Score a single benchmark case."""
     has_expected = case.expected is not None
     has_criteria = case.criteria is not None
 
@@ -120,7 +110,7 @@ def _score_case(
         return True, 1.0
 
     if has_expected and not has_criteria:
-        assert case.expected is not None  # for type-checker
+        assert case.expected is not None
         matched = case.expected.lower() in actual.lower()
         return matched, 1.0 if matched else 0.0
 
@@ -128,7 +118,6 @@ def _score_case(
         assert case.criteria is not None
         return _judge_with_llm(case.criteria, case.input, actual, judge_model)
 
-    # Both expected and criteria.
     assert case.expected is not None and case.criteria is not None
     expected_matched = case.expected.lower() in actual.lower()
     expected_score = 1.0 if expected_matched else 0.0
@@ -184,26 +173,10 @@ def run_benchmark(
     agent_path: Path,
     cases: list[BenchmarkCase],
     models: list[str] | None = None,
-    judge_model: str = "openai/gpt-4o-mini",
+    judge_model: str = "openai/gpt-5.4-mini",
     case_timeout: int = 90,
 ) -> dict[str, list[BenchmarkResult]]:
-    """Run benchmark cases against an agent across one or more models.
-
-    For each model the agent is loaded fresh, its LLM is overridden, and
-    memory is disabled for isolation.  Cases within a model are executed
-    concurrently (up to 4 at a time) using ``asyncio``.
-
-    Parameters:
-        agent_path: Path to the agent's JSON/JSONC definition.
-        cases: Pre-loaded benchmark cases.
-        models: List of model identifiers to test.  Defaults to the agent's
-            own configured LLM.
-        judge_model: Model used for qualitative scoring.
-        case_timeout: Per-case timeout in seconds.
-
-    Returns:
-        Dict mapping each model name to its list of ``BenchmarkResult`` objects.
-    """
+    """Run benchmark cases against an agent across one or more models."""
     if not models:
         probe_agent = load_agent(agent_path)
         default_model = _agent_model_name(probe_agent)
@@ -327,7 +300,10 @@ def _execute_case_sync(
     model: str,
 ) -> str:
     """Load agent, override LLM, and run the case synchronously."""
+    from crewai.events.listeners.tracing.utils import set_suppress_tracing_messages
     from crewai.llm import LLM
+
+    set_suppress_tracing_messages(True)
 
     agent = load_agent(agent_path)
     agent.llm = LLM(model=model)
@@ -336,7 +312,39 @@ def _execute_case_sync(
 
 
 # ---------------------------------------------------------------------------
-# Results printer
+# Rich output helpers
+# ---------------------------------------------------------------------------
+
+
+def _score_color(score: float) -> str:
+    if score >= 0.7:
+        return "green"
+    if score >= 0.4:
+        return "yellow"
+    return "red"
+
+
+def _score_bar(score: float, width: int = 20) -> str:
+    clamped = max(0.0, min(1.0, score))
+    filled = round(clamped * width)
+    empty = width - filled
+    color = _score_color(score)
+    bar = f"[{color}]{'█' * filled}[/{color}]"
+    if empty:
+        bar += f"[dim]{'░' * empty}[/dim]"
+    return bar
+
+
+def _fmt_tokens(n: int) -> str:
+    if n >= 1_000_000:
+        return f"{n / 1_000_000:.1f}M"
+    if n >= 1_000:
+        return f"{n / 1_000:.1f}k"
+    return str(n)
+
+
+# ---------------------------------------------------------------------------
+# Results display
 # ---------------------------------------------------------------------------
 
 
@@ -344,14 +352,12 @@ def print_results(
     results: dict[str, list[BenchmarkResult]],
     threshold: float,
 ) -> None:
-    """Print a human-readable summary table of benchmark results.
+    """Print Rich-formatted benchmark results with score bars."""
+    from rich.console import Console
+    from rich.panel import Panel
+    from rich.text import Text
 
-    Uses plain text only (no Rich dependency).
-
-    Parameters:
-        results: Dict mapping model names to result lists.
-        threshold: The pass/fail threshold for average score.
-    """
+    console = Console()
     overall_pass = True
 
     for model, model_results in results.items():
@@ -360,42 +366,49 @@ def print_results(
         avg_score = (
             sum(r.score for r in model_results) / total if total else 0.0
         )
-        avg_time = (
-            sum(r.response_time_ms for r in model_results) / total
-            if total
-            else 0.0
-        )
+        total_time = sum(r.response_time_ms for r in model_results) / 1000
         model_pass = avg_score >= threshold
 
         if not model_pass:
             overall_pass = False
 
-        # Header
-        status = "PASS" if model_pass else "FAIL"
-        print(f"\n{'=' * 60}")
-        print(f"  Model: {model}")
-        print(f"  Status: {status}  (threshold: {threshold:.0%})")
-        print(f"  Cases: {passed}/{total} passed")
-        print(f"  Avg score: {avg_score:.2f}")
-        print(f"  Avg time: {avg_time:.0f}ms")
-        print(f"{'=' * 60}")
-
-        # Per-case detail
-        print(f"  {'#':<4} {'Pass':<6} {'Score':<7} {'Time':<8} Input")
-        print(f"  {'-' * 56}")
+        bar_w = 10
+        input_w = 35
+        rows: list[str] = []
         for r in model_results:
-            mark = "OK" if r.passed else "FAIL"
-            truncated_input = (
-                r.input[:40] + "..." if len(r.input) > 40 else r.input
-            )
-            print(
-                f"  {r.case_index:<4} {mark:<6} {r.score:<7.2f} {r.response_time_ms:<8} {truncated_input}"
+            inp = r.input[: input_w - 1] + "…" if len(r.input) >= input_w else r.input
+            inp_pad = inp + " " * max(0, input_w - len(inp))
+            bar = _score_bar(r.score, bar_w)
+            badge = "[green]PASS[/green]" if r.passed else "[red]FAIL[/red]"
+            time_s = f"{r.response_time_ms / 1000:>5.1f}s"
+            rows.append(
+                f"  [dim]{r.case_index + 1:>2}[/dim]  {inp_pad}  {bar} {r.score:.2f}  {badge}  [dim]{time_s}[/dim]"
             )
 
-    # Overall verdict
-    print()
+        color = _score_color(avg_score)
+        summary_parts = [
+            f"[{color}]{passed}/{total} passed[/{color}]",
+            f"avg [{color}]{avg_score:.2f}[/{color}]",
+            f"[dim]{total_time:.1f}s[/dim]",
+        ]
+
+        body = "\n".join(rows) + "\n\n  " + "  ·  ".join(summary_parts)
+        panel = Panel(
+            body,
+            title=f"[bold cyan]{model}[/bold cyan]",
+            subtitle=f"[dim]threshold: {threshold:.0%}[/dim]",
+            subtitle_align="left",
+            title_align="left",
+            border_style="dim",
+            padding=(0, 1),
+            expand=False,
+        )
+        console.print()
+        console.print(panel)
+
+    console.print()
     if overall_pass:
-        print("BENCHMARK PASSED")
+        console.print(Text("  TEST PASSED", style="bold green"))
     else:
-        print("BENCHMARK FAILED")
+        console.print(Text("  TEST FAILED", style="bold red"))
         sys.exit(1)

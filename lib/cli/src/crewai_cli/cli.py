@@ -354,7 +354,7 @@ def memory(
     "-m",
     "--model",
     type=str,
-    default="gpt-4o-mini",
+    default="gpt-5.4-mini",
     help="LLM Model to run the tests on the Crew. For now only accepting only OpenAI models.",
 )
 @click.option(
@@ -387,24 +387,30 @@ def _run_json_benchmarks(model: str) -> None:
     """Run benchmarks for a JSON-defined crew project."""
     from pathlib import Path
 
+    from rich.console import Console
+
+    from crewai.events.listeners.tracing.utils import set_suppress_tracing_messages
     from crewai.project.benchmark import (
         load_benchmark_cases,
         print_results,
         run_benchmark,
     )
 
+    set_suppress_tracing_messages(True)
+    console = Console()
+
     tests_dir = Path("tests")
     agents_dir = Path("agents")
 
     if not tests_dir.is_dir():
-        click.secho("No tests/ directory found.", fg="yellow")
+        console.print("  No tests/ directory found.", style="yellow")
         return
 
     case_files = sorted(tests_dir.glob("*_cases.json")) + sorted(
         tests_dir.glob("*_cases.jsonc")
     )
     if not case_files:
-        click.secho("No test case files found in tests/.", fg="yellow")
+        console.print("  No test case files found in tests/.", style="yellow")
         return
 
     for case_file in case_files:
@@ -417,17 +423,74 @@ def _run_json_benchmarks(model: str) -> None:
                 break
 
         if agent_file is None:
-            click.secho(f"Agent '{agent_name}' not found for {case_file.name}, skipping.", fg="yellow")
+            console.print(f"  Agent '{agent_name}' not found for {case_file.name}, skipping.", style="yellow")
             continue
 
-        click.echo(f"Benchmarking agent: {agent_name}")
         cases, threshold = load_benchmark_cases(case_file)
-        results = run_benchmark(
-            agent_path=agent_file,
-            cases=cases,
-            models=[model] if model != "gpt-4o-mini" else None,
-            judge_model="openai/gpt-4o-mini",
+        case_count = len(cases)
+        judge = "openai/gpt-5.4-mini"
+        console.print()
+        console.print(
+            f"  Testing [bold cyan]{agent_name}[/bold cyan] — {case_count} case(s), threshold {threshold:.0%}, judge [dim]{judge}[/dim]"
         )
+
+        import time as _time
+
+        from rich.live import Live
+        from rich.spinner import Spinner
+        from rich.text import Text
+
+        class _ProgressLine:
+            def __init__(self, n: int) -> None:
+                self._n = n
+                self._start = _time.monotonic()
+                self._spinner = Spinner("dots", style="cyan")
+                self.activity: str = "thinking…"
+
+            def __rich__(self) -> Text:
+                now = _time.monotonic()
+                elapsed = now - self._start
+                mins, secs = divmod(int(elapsed), 60)
+                ts = f"{mins}:{secs:02d}" if mins else f"{secs}s"
+                t = Text("  ")
+                t.append_text(self._spinner.render(now))
+                t.append(f" Running {self._n} case(s)… ", style="cyan")
+                t.append(ts, style="dim")
+                if self.activity:
+                    t.append(f"  {self.activity}", style="dim italic")
+                return t
+
+        progress = _ProgressLine(case_count)
+
+        from crewai.events.event_bus import crewai_event_bus
+        from crewai.events.types.tool_usage_events import ToolUsageStartedEvent
+
+        _handlers: list[tuple[type, object]] = []
+
+        def _reg(evt_type: type, fn: object) -> None:
+            crewai_event_bus.on(evt_type)(fn)
+            _handlers.append((evt_type, fn))
+
+        def _on_tool_start(_src: object, event: ToolUsageStartedEvent) -> None:
+            name = (event.tool_name or "tool").replace("_", " ")
+            progress.activity = f"using {name}"
+
+        _reg(ToolUsageStartedEvent, _on_tool_start)
+
+        try:
+            with Live(progress, console=console, refresh_per_second=8, transient=True):
+                results = run_benchmark(
+                    agent_path=agent_file,
+                    cases=cases,
+                    models=[model] if model != "gpt-5.4-mini" else None,
+                    judge_model=judge,
+                )
+        finally:
+            for evt_type, fn in _handlers:
+                try:
+                    crewai_event_bus.off(evt_type, fn)
+                except Exception:
+                    pass
         print_results(results, threshold)
 
 

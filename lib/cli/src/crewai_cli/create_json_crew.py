@@ -90,7 +90,7 @@ _RESEARCHER_AGENT_JSONC = """\
   "llm": "__LLM__",
 
   // Override LLM used specifically for tool/function calling
-  // "function_calling_llm": "openai/gpt-4o-mini",
+  // "function_calling_llm": "openai/gpt-5.4-mini",
 
   // Tools available to this agent
   // Built-in: "SerperDevTool", "ScrapeWebsiteTool", "FileReadTool", etc.
@@ -152,7 +152,7 @@ _REPORTING_ANALYST_JSONC = """\
   // LLM model in provider/model format
   "llm": "__LLM__",
 
-  // "function_calling_llm": "openai/gpt-4o-mini",
+  // "function_calling_llm": "openai/gpt-5.4-mini",
 
   // Tools available to this agent
   "tools": [],
@@ -272,7 +272,7 @@ _CONFIG_JSONC = """\
     "threshold": 0.7,
 
     // LLM model used to evaluate qualitative test criteria
-    "judge_model": "openai/gpt-4o-mini",
+    "judge_model": "openai/gpt-5.4-mini",
 
     // Per-case timeout in seconds
     "case_timeout": 90
@@ -720,7 +720,7 @@ def _agent_to_jsonc(agent: dict[str, Any]) -> str:
   "llm": {json.dumps(agent["llm"])},
 
   // Override LLM used specifically for tool/function calling
-  // "function_calling_llm": "openai/gpt-4o-mini",
+  // "function_calling_llm": "openai/gpt-5.4-mini",
 
   // Tools available to this agent
   // Built-in: "SerperDevTool", "ScrapeWebsiteTool", "FileReadTool", etc.
@@ -987,6 +987,7 @@ def create_json_crew(
     folder_path.mkdir(parents=True)
     (folder_path / "agents").mkdir()
     (folder_path / "tools").mkdir()
+    (folder_path / "skills").mkdir()
     (folder_path / "tests").mkdir()
     (folder_path / "knowledge").mkdir()
 
@@ -1030,6 +1031,9 @@ def create_json_crew(
         "# Add your knowledge files here\n",
         encoding="utf-8",
     )
+
+    # Keep skills dir tracked by git
+    (folder_path / "skills" / ".gitkeep").write_text("", encoding="utf-8")
 
     # Setup .env with API keys
     if not skip_provider:

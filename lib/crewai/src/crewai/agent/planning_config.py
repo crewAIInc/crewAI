@@ -69,7 +69,7 @@ class PlanningConfig(BaseModel):
                 max_attempts=3,
                 max_steps=10,
                 plan_prompt="Create a focused plan for: {description}",
-                llm="gpt-4o-mini",
+                llm="gpt-5.4-mini",
             ),
         )
         ```

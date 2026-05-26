@@ -197,18 +197,19 @@ class TraceConsentScreen(ModalScreen[bool]):
     #consent-dialog {
         width: 50;
         height: auto;
-        max-height: 14;
+        max-height: 16;
         background: #1c1c1c;
         border: tall #333333;
-        padding: 1 2;
+        padding: 1 2 2 2;
     }
     #consent-buttons {
         height: 3;
         margin-top: 1;
-        align: center middle;
+        width: 100%;
+        layout: horizontal;
     }
     .consent-btn {
-        min-width: 16;
+        width: 1fr;
         height: 3;
         margin: 0 1;
     }
@@ -220,6 +221,12 @@ class TraceConsentScreen(ModalScreen[bool]):
     }
     #btn-consent-yes:hover {
         background: #28969f;
+    }
+    #btn-consent-yes:disabled {
+        background: #1F7982;
+        color: #e0e0e0;
+        text-opacity: 100%;
+        opacity: 100%;
     }
     #btn-consent-no {
         background: #333333;
@@ -237,9 +244,15 @@ class TraceConsentScreen(ModalScreen[bool]):
         Binding("escape", "consent_no", "Cancel", show=False),
     ]
 
+    def __init__(self) -> None:
+        super().__init__()
+        self._sending = False
+        self._frame = 0
+        self._spin_timer: Any = None
+
     def compose(self) -> ComposeResult:
         with Vertical(id="consent-dialog"):
-            yield Static(self._build_content())
+            yield Static(self._build_content(), id="consent-text")
             with Horizontal(id="consent-buttons"):
                 yield Button("View Traces", id="btn-consent-yes", classes="consent-btn")
                 yield Button("Cancel", id="btn-consent-no", classes="consent-btn")
@@ -252,16 +265,40 @@ class TraceConsentScreen(ModalScreen[bool]):
         t.append("  Traces will be enabled for future runs.\n", style=_C_MUTED)
         return t
 
+    def _start_sending(self) -> None:
+        self._sending = True
+        btn_yes = self.query_one("#btn-consent-yes", Button)
+        btn_no = self.query_one("#btn-consent-no", Button)
+        btn_yes.disabled = True
+        btn_yes.label = f"{_SPINNER[0]} Loading…"
+        btn_no.display = False
+        self._spin_timer = self.set_interval(1 / 8, self._spin_tick)
+        self.app._on_trace_consent_accepted()
+
+    def _spin_tick(self) -> None:
+        self._frame += 1
+        try:
+            btn = self.query_one("#btn-consent-yes", Button)
+            btn.label = f"{_SPINNER[self._frame % len(_SPINNER)]} Loading…"
+        except Exception:
+            pass
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
+        if self._sending:
+            return
         if event.button.id == "btn-consent-yes":
-            self.dismiss(True)
+            self._start_sending()
         else:
             self.dismiss(False)
 
     def action_consent_yes(self) -> None:
-        self.dismiss(True)
+        if self._sending:
+            return
+        self._start_sending()
 
     def action_consent_no(self) -> None:
+        if self._sending:
+            return
         self.dismiss(False)
 
 
@@ -309,7 +346,8 @@ Screen {
 }
 
 #scroll-area {
-    height: 1fr;
+    height: 3fr;
+    min-height: 6;
     scrollbar-size-vertical: 1;
     scrollbar-color: #666666;
     scrollbar-color-hover: #FF5A50;
@@ -341,8 +379,8 @@ FooterKey .footer-key--key {
 }
 
 #log-panel {
-    height: 1fr;
-    min-height: 16;
+    height: 2fr;
+    min-height: 6;
     background: #1c1c1c;
     border-top: hkey #333333;
     scrollbar-size-vertical: 1;
@@ -481,6 +519,7 @@ FooterKey .footer-key--key {
         self._elapsed_frozen: float | None = None
         self._want_deploy: bool = False
         self._trace_url: str | None = None
+        self._consent_screen: TraceConsentScreen | None = None
 
     # ── Layout ──────────────────────────────────────────────
 
@@ -587,6 +626,11 @@ FooterKey .footer-key--key {
             if self._plan:
                 for sn in self._plan_step_status:
                     self._plan_step_status[sn] = "done"
+            now = time.time()
+            for entry in self._log_entries:
+                if entry["status"] == "running":
+                    entry["status"] = "success"
+                    entry["duration"] = now - entry["start_time"]
         try:
             from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
             listener = TraceCollectionListener._instance
@@ -616,6 +660,11 @@ FooterKey .footer-key--key {
             self._is_streaming = False
             self._current_step = None
             self._elapsed_frozen = time.time() - self._start_time
+            now = time.time()
+            for entry in self._log_entries:
+                if entry["status"] == "running":
+                    entry["status"] = "error"
+                    entry["duration"] = now - entry["start_time"]
         self._tick()
         self._tick_timer.stop()
         self._tick_timer = self.set_interval(1 / 2, self._tick)
@@ -677,17 +726,11 @@ FooterKey .footer-key--key {
             except Exception:
                 pass
             return
-        self.push_screen(TraceConsentScreen(), callback=self._on_trace_consent)
+        self._consent_screen = TraceConsentScreen()
+        self.push_screen(self._consent_screen)
 
-    def _on_trace_consent(self, consented: bool) -> None:
-        if consented:
-            try:
-                btn = self.query_one("#btn-traces", Button)
-                btn.label = "Sending…"
-                btn.disabled = True
-            except Exception:
-                pass
-            self._send_traces_worker()
+    def _on_trace_consent_accepted(self) -> None:
+        self._send_traces_worker()
 
     @work(thread=True)
     def _send_traces_worker(self) -> None:
@@ -702,6 +745,7 @@ FooterKey .footer-key--key {
 
             listener = TraceCollectionListener._instance
             if not listener:
+                self.call_from_thread(self._dismiss_consent_modal)
                 return
 
             bm = listener.batch_manager
@@ -720,18 +764,29 @@ FooterKey .footer-key--key {
 
             if url:
                 self._trace_url = url
-                def _update_btn() -> None:
+                def _done() -> None:
+                    self._dismiss_consent_modal()
                     try:
                         btn = self.query_one("#btn-traces", Button)
                         btn.label = "✔ Open Traces"
                         btn.id = "btn-traces-done"
                     except Exception:
                         pass
-                self.call_from_thread(_update_btn)
+                self.call_from_thread(_done)
                 try:
                     webbrowser.open(url)
                 except Exception:
                     pass
+            else:
+                self.call_from_thread(self._dismiss_consent_modal)
+        except Exception:
+            self.call_from_thread(self._dismiss_consent_modal)
+
+    def _dismiss_consent_modal(self) -> None:
+        try:
+            screen = self._consent_screen
+            if screen and screen.is_attached:
+                screen.dismiss(False)
         except Exception:
             pass
 
@@ -1353,10 +1408,6 @@ FooterKey .footer-key--key {
                 self._is_streaming = False
                 self._streaming_text = ""
                 now = time.time()
-                for entry in self._log_entries:
-                    if entry["status"] == "running" and entry["tool_name"] != event.tool_name:
-                        entry["status"] = "success"
-                        entry["duration"] = now - entry["start_time"]
                 args_str = ""
                 if event.tool_args:
                     try:
@@ -1365,6 +1416,17 @@ FooterKey .footer-key--key {
                         )
                     except Exception:
                         args_str = str(event.tool_args)
+                for entry in self._log_entries:
+                    if (
+                        entry["status"] == "running"
+                        and entry["tool_name"] == event.tool_name
+                        and entry["args"] == (args_str or None)
+                    ):
+                        return
+                for entry in self._log_entries:
+                    if entry["status"] == "running" and entry["tool_name"] != event.tool_name:
+                        entry["status"] = "success"
+                        entry["duration"] = now - entry["start_time"]
                 self._current_task_steps.append(
                     {
                         "type": "tool",
@@ -1468,6 +1530,57 @@ FooterKey .footer-key--key {
             self._replace_step("red", f"✘ {event.tool_name}", error_text)
 
         self._register_handler(ToolUsageErrorEvent, on_tool_error)
+
+        from crewai.events.types.memory_events import (
+            MemoryRetrievalStartedEvent,
+            MemoryRetrievalCompletedEvent,
+            MemoryRetrievalFailedEvent,
+        )
+
+        @crewai_event_bus.on(MemoryRetrievalStartedEvent)
+        def on_memory_retrieval_started(source: Any, event: MemoryRetrievalStartedEvent) -> None:
+            with self._lock:
+                self._log_entries.append(
+                    {
+                        "tool_name": "memory_recall",
+                        "status": "running",
+                        "args": None,
+                        "result": None,
+                        "error": None,
+                        "start_time": time.time(),
+                        "duration": None,
+                        "task_idx": self._current_task_idx,
+                    }
+                )
+
+        self._register_handler(MemoryRetrievalStartedEvent, on_memory_retrieval_started)
+
+        @crewai_event_bus.on(MemoryRetrievalCompletedEvent)
+        def on_memory_retrieval_completed(source: Any, event: MemoryRetrievalCompletedEvent) -> None:
+            with self._lock:
+                for entry in reversed(self._log_entries):
+                    if entry["tool_name"] == "memory_recall" and entry["status"] == "running":
+                        entry["status"] = "success"
+                        entry["duration"] = event.retrieval_time_ms / 1000
+                        content = event.memory_content or ""
+                        if content:
+                            entry["result"] = content[:3000]
+                        break
+
+        self._register_handler(MemoryRetrievalCompletedEvent, on_memory_retrieval_completed)
+
+        @crewai_event_bus.on(MemoryRetrievalFailedEvent)
+        def on_memory_retrieval_failed(source: Any, event: MemoryRetrievalFailedEvent) -> None:
+            with self._lock:
+                for idx, entry in enumerate(self._log_entries):
+                    if entry["tool_name"] == "memory_recall" and entry["status"] == "running":
+                        entry["status"] = "error"
+                        entry["error"] = event.error
+                        entry["duration"] = 0
+                        self._log_expanded.add(idx)
+                        break
+
+        self._register_handler(MemoryRetrievalFailedEvent, on_memory_retrieval_failed)
 
         @crewai_event_bus.on(AgentLogsExecutionEvent)
         def on_agent_execution(

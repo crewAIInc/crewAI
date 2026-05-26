@@ -66,7 +66,7 @@ class Memory(BaseModel):
     memory_kind: Literal["memory"] = "memory"
 
     llm: Annotated[BaseLLM | str, PlainValidator(_passthrough)] = Field(
-        default="gpt-4o-mini",
+        default="gpt-5.4-mini",
         description="LLM for analysis (model name or BaseLLM instance).",
     )
     storage: Annotated[StorageBackend | str, PlainValidator(_passthrough)] = Field(
@@ -239,7 +239,7 @@ class Memory(BaseModel):
                 raise RuntimeError(
                     f"Memory requires an LLM for analysis but initialization failed: {e}\n\n"
                     "To fix this, do one of the following:\n"
-                    "  - Set OPENAI_API_KEY for the default model (gpt-4o-mini)\n"
+                    "  - Set OPENAI_API_KEY for the default model (gpt-5.4-mini)\n"
                     '  - Pass a different model: Memory(llm="anthropic/claude-3-haiku-20240307")\n'
                     '  - Pass any LLM instance: Memory(llm=LLM(model="your-model"))\n'
                     "  - To skip LLM analysis, pass all fields explicitly to remember()\n"
