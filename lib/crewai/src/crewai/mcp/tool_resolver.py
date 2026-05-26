@@ -383,22 +383,19 @@ class MCPToolResolver:
             if mcp_config.tool_filter:
                 filtered_tools = []
                 for tool in tools_list:
-                    if callable(mcp_config.tool_filter):
-                        try:
-                            from crewai.mcp.filters import ToolFilterContext
+                    try:
+                        from crewai.mcp.filters import ToolFilterContext
 
-                            context = ToolFilterContext(
-                                agent=self._agent,
-                                server_name=server_name,
-                                run_context=None,
-                            )
-                            if mcp_config.tool_filter(context, tool):  # type: ignore[call-arg, arg-type]
-                                filtered_tools.append(tool)
-                        except (TypeError, AttributeError):
-                            if mcp_config.tool_filter(tool):  # type: ignore[call-arg, arg-type]
-                                filtered_tools.append(tool)
-                    else:
-                        filtered_tools.append(tool)
+                        context = ToolFilterContext(
+                            agent=self._agent,
+                            server_name=server_name,
+                            run_context=None,
+                        )
+                        if mcp_config.tool_filter(context, tool):  # type: ignore[call-arg, arg-type]
+                            filtered_tools.append(tool)
+                    except (TypeError, AttributeError):  # noqa: PERF203
+                        if mcp_config.tool_filter(tool):  # type: ignore[call-arg, arg-type]
+                            filtered_tools.append(tool)
                 tools_list = filtered_tools
 
             if not tools_list:

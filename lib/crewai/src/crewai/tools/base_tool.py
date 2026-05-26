@@ -423,28 +423,10 @@ class BaseTool(BaseModel, ABC):
         )
 
     def _set_args_schema(self) -> None:
-        if self.args_schema is None:
-            run_sig = signature(self._run)
-            fields: dict[str, Any] = {}
+        """No-op retained for backward compatibility.
 
-            for param_name, param in run_sig.parameters.items():
-                if param_name in ("self", "return"):
-                    continue
-                if param.kind in (Parameter.VAR_POSITIONAL, Parameter.VAR_KEYWORD):
-                    continue
-
-                annotation = (
-                    param.annotation if param.annotation != param.empty else Any
-                )
-
-                if param.default is param.empty:
-                    fields[param_name] = (annotation, ...)
-                else:
-                    fields[param_name] = (annotation, param.default)
-
-            self.args_schema = create_model(
-                f"{self.__class__.__name__}Schema", **fields
-            )
+        Schema generation is performed by the ``args_schema`` field validator.
+        """
 
     def _generate_description(self) -> None:
         """Generate the tool description with a JSON schema for arguments."""

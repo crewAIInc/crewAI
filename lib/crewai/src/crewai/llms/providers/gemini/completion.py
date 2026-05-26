@@ -582,19 +582,16 @@ class GeminiCompletion(BaseLLM):
             parts: list[types.Part] = []
             if isinstance(content, list):
                 for item in content:
-                    if isinstance(item, dict):
-                        if "text" in item:
-                            parts.append(types.Part.from_text(text=str(item["text"])))
-                        elif "inlineData" in item:
-                            inline = item["inlineData"]
-                            parts.append(
-                                types.Part.from_bytes(
-                                    data=base64.b64decode(inline["data"]),
-                                    mime_type=inline["mimeType"],
-                                )
+                    if "text" in item:
+                        parts.append(types.Part.from_text(text=str(item["text"])))
+                    elif "inlineData" in item:
+                        inline = item["inlineData"]
+                        parts.append(
+                            types.Part.from_bytes(
+                                data=base64.b64decode(inline["data"]),
+                                mime_type=inline["mimeType"],
                             )
-                    else:
-                        parts.append(types.Part.from_text(text=str(item)))
+                        )
             else:
                 parts.append(types.Part.from_text(text=str(content) if content else ""))
 

@@ -47,7 +47,7 @@ def _ensure_handlers_registered() -> None:
         return
     with _register_lock:
         if _handlers_registered:
-            return
+            return  # type: ignore[unreachable]
         _register_all_handlers(crewai_event_bus)
         _handlers_registered = True
 

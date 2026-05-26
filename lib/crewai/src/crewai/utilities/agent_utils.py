@@ -1679,7 +1679,7 @@ def _setup_before_llm_call_hooks(
                 )
 
         if not isinstance(executor_context.messages, list):
-            if verbose:
+            if verbose:  # type: ignore[unreachable]
                 printer.print(
                     content=(
                         "Warning: before_llm_call hook replaced messages with non-list. "
@@ -1742,7 +1742,7 @@ def _setup_after_llm_call_hooks(
                 )
 
         if not isinstance(executor_context.messages, list):
-            if verbose:
+            if verbose:  # type: ignore[unreachable]
                 printer.print(
                     content=(
                         "Warning: after_llm_call hook replaced messages with non-list. "

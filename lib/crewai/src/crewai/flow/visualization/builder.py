@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 
 def _extract_direct_or_triggers(
-    condition: str | dict[str, Any] | list[Any] | FlowCondition,
+    condition: str | FlowCondition,
 ) -> list[str]:
     """Extract direct OR-level trigger strings from a condition.
 
@@ -39,36 +39,22 @@ def _extract_direct_or_triggers(
     - and_("a", "b") -> [] (neither are direct triggers, both required)
     - or_(and_("a", "b"), "c") -> ["c"] (only "c" is a direct trigger)
 
-    Args:
-        condition: Can be a string, dict, or list.
-
     Returns:
         List of direct OR-level trigger strings.
     """
     if isinstance(condition, str):
         return [condition]
-    if isinstance(condition, dict):
-        cond_type = condition.get("type", OR_CONDITION)
-        conditions_list = condition.get("conditions", [])
-
-        if cond_type == OR_CONDITION:
-            strings = []
-            for sub_cond in conditions_list:
-                strings.extend(_extract_direct_or_triggers(sub_cond))
-            return strings
+    cond_type = condition.get("type", OR_CONDITION)
+    if cond_type != OR_CONDITION:
         return []
-    if isinstance(condition, list):
-        strings = []
-        for item in condition:
-            strings.extend(_extract_direct_or_triggers(item))
-        return strings
-    if callable(condition) and hasattr(condition, "__name__"):
-        return [condition.__name__]
-    return []
+    strings: list[str] = []
+    for sub_cond in condition.get("conditions", []):
+        strings.extend(_extract_direct_or_triggers(sub_cond))
+    return strings
 
 
 def _extract_all_trigger_names(
-    condition: str | dict[str, Any] | list[Any] | FlowCondition,
+    condition: str | FlowCondition,
 ) -> list[str]:
     """Extract ALL trigger names from a condition for display purposes.
 
@@ -81,50 +67,26 @@ def _extract_all_trigger_names(
     - and_("a", "b") -> ["a", "b"]
     - or_(and_("a", method_6), method_4) -> ["a", "method_6", "method_4"]
 
-    Args:
-        condition: Can be a string, dict, or list.
-
     Returns:
         List of all trigger names found in the condition.
     """
     if isinstance(condition, str):
         return [condition]
-    if isinstance(condition, dict):
-        conditions_list = condition.get("conditions", [])
-        strings = []
-        for sub_cond in conditions_list:
-            strings.extend(_extract_all_trigger_names(sub_cond))
-        return strings
-    if isinstance(condition, list):
-        strings = []
-        for item in condition:
-            strings.extend(_extract_all_trigger_names(item))
-        return strings
-    if callable(condition) and hasattr(condition, "__name__"):
-        return [condition.__name__]
-    return []
+    strings: list[str] = []
+    for sub_cond in condition.get("conditions", []):
+        strings.extend(_extract_all_trigger_names(sub_cond))
+    return strings
 
 
 def _create_edges_from_condition(
-    condition: str | dict[str, Any] | list[Any] | FlowCondition,
+    condition: str | FlowCondition,
     target: str,
     nodes: dict[str, NodeMetadata],
 ) -> list[StructureEdge]:
     """Create edges from a condition tree, preserving AND/OR semantics.
 
-    This function recursively processes the condition tree and creates edges
-    with the appropriate condition_type for each trigger.
-
     For AND conditions, all triggers get edges with condition_type="AND".
     For OR conditions, triggers get edges with condition_type="OR".
-
-    Args:
-        condition: The condition tree (string, dict, or list).
-        target: The target node name.
-        nodes: Dictionary of all nodes for validation.
-
-    Returns:
-        List of StructureEdge objects representing the condition.
     """
     edges: list[StructureEdge] = []
 
@@ -138,39 +100,24 @@ def _create_edges_from_condition(
                     is_router_path=False,
                 )
             )
-    elif callable(condition) and hasattr(condition, "__name__"):
-        method_name = condition.__name__
-        if method_name in nodes:
-            edges.append(
-                StructureEdge(
-                    source=method_name,
-                    target=target,
-                    condition_type=OR_CONDITION,
-                    is_router_path=False,
-                )
-            )
-    elif isinstance(condition, dict):
-        cond_type = condition.get("type", OR_CONDITION)
-        conditions_list = condition.get("conditions", [])
+        return edges
 
-        if cond_type == AND_CONDITION:
-            triggers = _extract_all_trigger_names(condition)
-            edges.extend(
-                StructureEdge(
-                    source=trigger,
-                    target=target,
-                    condition_type=AND_CONDITION,
-                    is_router_path=False,
-                )
-                for trigger in triggers
-                if trigger in nodes
+    cond_type = condition.get("type", OR_CONDITION)
+    if cond_type == AND_CONDITION:
+        triggers = _extract_all_trigger_names(condition)
+        edges.extend(
+            StructureEdge(
+                source=trigger,
+                target=target,
+                condition_type=AND_CONDITION,
+                is_router_path=False,
             )
-        else:
-            for sub_cond in conditions_list:
-                edges.extend(_create_edges_from_condition(sub_cond, target, nodes))
-    elif isinstance(condition, list):
-        for item in condition:
-            edges.extend(_create_edges_from_condition(item, target, nodes))
+            for trigger in triggers
+            if trigger in nodes
+        )
+    else:
+        for sub_cond in condition.get("conditions", []):
+            edges.extend(_create_edges_from_condition(sub_cond, target, nodes))
 
     return edges
 

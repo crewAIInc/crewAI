@@ -4,7 +4,6 @@ This module contains the OpenAIAgentToolAdapter class that converts CrewAI tools
 to OpenAI Assistant-compatible format using the agents library.
 """
 
-from collections.abc import Awaitable
 import inspect
 import json
 from typing import Any, cast
@@ -114,12 +113,8 @@ class OpenAIAgentToolAdapter(BaseToolAdapter):
                 else:
                     args_dict = {param_name: str(arguments)}
 
-                output: Any | Awaitable[Any] = tool._run(**args_dict)
-
-                if inspect.isawaitable(output):
-                    result: Any = await output
-                else:
-                    result = output
+                output: Any = tool._run(**args_dict)
+                result: Any = await output if inspect.isawaitable(output) else output
 
                 if isinstance(result, (dict, list, str, int, float, bool, type(None))):
                     return result

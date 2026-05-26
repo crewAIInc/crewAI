@@ -258,8 +258,6 @@ def validate_catalog_components_v09(message: A2UIMessageV09) -> None:
 
     errors: list[Any] = []
     for entry in message.update_components.components:
-        if not isinstance(entry, dict):
-            continue
         type_name = entry.get("component")
         if not isinstance(type_name, str):
             continue

@@ -46,8 +46,8 @@ class LangGraphToolAdapter(BaseToolAdapter):
         else:
             all_tools = tools
         for tool in all_tools:
-            if isinstance(tool, LangChainBaseTool):
-                converted_tools.append(tool)
+            if isinstance(tool, LangChainBaseTool):  # type: ignore[unreachable]
+                converted_tools.append(tool)  # type: ignore[unreachable]
                 continue
 
             sanitized_name: str = self.sanitize_tool_name(tool.name)

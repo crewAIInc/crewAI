@@ -484,10 +484,7 @@ class AnthropicCompletion(BaseLLM):
                     params["tool_choice"] = {"type": "tool", "name": tool_name}
 
         if self.thinking:
-            if isinstance(self.thinking, AnthropicThinkingConfig):
-                params["thinking"] = self.thinking.model_dump()
-            else:
-                params["thinking"] = self.thinking
+            params["thinking"] = self.thinking.model_dump()
 
         return params
 

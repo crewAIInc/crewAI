@@ -178,7 +178,7 @@ class StreamingHandler:
                                     is_final=is_final_update,
                                 )
 
-                        elif isinstance(event, Message):
+                        elif isinstance(event, Message):  # type: ignore[unreachable]
                             new_messages.append(event)
                             result_parts.extend(
                                 part.root.text

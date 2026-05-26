@@ -141,12 +141,12 @@ def resolve_refs(schema: dict[str, Any]) -> dict[str, Any]:
 
 
 def add_key_in_dict_recursively(
-    d: dict[str, Any],
+    d: Any,
     key: str,
     value: Any,
     criteria: Callable[[dict[str, Any]], bool],
     _seen: set[int] | None = None,
-) -> dict[str, Any]:
+) -> Any:
     """Recursively adds a key/value pair to all nested dicts matching `criteria`.
 
     Args:
@@ -338,9 +338,6 @@ def add_const_to_oneof_variants(schema: dict[str, Any]) -> dict[str, Any]:
 
     def _process_oneof(node: dict[str, Any]) -> dict[str, Any]:
         """Process a single node that might contain a oneOf with discriminator."""
-        if not isinstance(node, dict):
-            return node
-
         if "oneOf" in node and "discriminator" in node:
             discriminator = node["discriminator"]
             property_name = discriminator.get("propertyName")
@@ -606,8 +603,6 @@ def sanitize_tool_params_for_openai_strict(
     params: dict[str, Any],
 ) -> dict[str, Any]:
     """Sanitize a JSON schema for OpenAI strict function calling."""
-    if not isinstance(params, dict):
-        return params
     return cast(
         dict[str, Any], strip_unsupported_formats(_common_strict_pipeline(params))
     )
@@ -617,8 +612,6 @@ def sanitize_tool_params_for_anthropic_strict(
     params: dict[str, Any],
 ) -> dict[str, Any]:
     """Sanitize a JSON schema for Anthropic strict tool use."""
-    if not isinstance(params, dict):
-        return params
     sanitized = lift_top_level_anyof(_common_strict_pipeline(params))
     sanitized = _strip_keys_recursive(sanitized, _CLAUDE_STRICT_UNSUPPORTED)
     return cast(dict[str, Any], strip_unsupported_formats(sanitized))

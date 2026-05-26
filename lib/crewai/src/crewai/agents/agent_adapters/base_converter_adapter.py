@@ -112,9 +112,6 @@ class BaseConverterAdapter(ABC):
         Returns:
             Extracted JSON string if found and valid, otherwise the original result.
         """
-        if not isinstance(result, str):
-            return str(result)
-
         if valid := BaseConverterAdapter._validate_json(result):
             return valid
 

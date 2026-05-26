@@ -291,7 +291,9 @@ class TraceBatchManager:
             )
 
             if response is None:
-                logger.warning("Failed to send trace events. Events will be lost.")
+                logger.warning(  # type: ignore[unreachable]
+                    "Failed to send trace events. Events will be lost."
+                )
                 return 500
 
             if response.status_code in [200, 201]:

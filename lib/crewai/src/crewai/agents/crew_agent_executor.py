@@ -334,7 +334,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
         Returns:
             Final answer from the agent.
         """
-        formatted_answer = None
+        formatted_answer: AgentAction | AgentFinish | None = None
         while not isinstance(formatted_answer, AgentFinish):
             try:
                 if has_reached_max_iterations(self.iterations, self.max_iter):
@@ -385,12 +385,12 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         )
                         formatted_answer = process_llm_response(
                             answer_str, self.use_stop_words
-                        )  # type: ignore[assignment]
+                        )
                 else:
                     answer_str = str(answer) if not isinstance(answer, str) else answer
                     formatted_answer = process_llm_response(
                         answer_str, self.use_stop_words
-                    )  # type: ignore[assignment]
+                    )
 
                 if isinstance(formatted_answer, AgentAction):
                     fingerprint_context = {}
@@ -425,7 +425,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 self._append_message(formatted_answer.text)
 
             except OutputParserError as e:
-                formatted_answer = handle_output_parser_exception(  # type: ignore[assignment]
+                formatted_answer = handle_output_parser_exception(
                     e=e,
                     messages=self.messages,
                     iterations=self.iterations,
@@ -1145,7 +1145,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
         Returns:
             Final answer from the agent.
         """
-        formatted_answer = None
+        formatted_answer: AgentAction | AgentFinish | None = None
         while not isinstance(formatted_answer, AgentFinish):
             try:
                 if has_reached_max_iterations(self.iterations, self.max_iter):
@@ -1197,12 +1197,12 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         )
                         formatted_answer = process_llm_response(
                             answer_str, self.use_stop_words
-                        )  # type: ignore[assignment]
+                        )
                 else:
                     answer_str = str(answer) if not isinstance(answer, str) else answer
                     formatted_answer = process_llm_response(
                         answer_str, self.use_stop_words
-                    )  # type: ignore[assignment]
+                    )
 
                 if isinstance(formatted_answer, AgentAction):
                     fingerprint_context = {}
@@ -1237,7 +1237,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 self._append_message(formatted_answer.text)
 
             except OutputParserError as e:
-                formatted_answer = handle_output_parser_exception(  # type: ignore[assignment]
+                formatted_answer = handle_output_parser_exception(
                     e=e,
                     messages=self.messages,
                     iterations=self.iterations,

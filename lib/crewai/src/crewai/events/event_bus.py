@@ -166,7 +166,7 @@ class CrewAIEventsBus:
 
         with self._instance_lock:
             if self._executor_initialized:
-                return
+                return  # type: ignore[unreachable]
 
             self._sync_executor = ThreadPoolExecutor(
                 max_workers=10,
@@ -304,7 +304,7 @@ class CrewAIEventsBus:
                 from crewai import RuntimeState
 
                 if RuntimeState is None:
-                    logger.warning(
+                    logger.warning(  # type: ignore[unreachable]
                         "RuntimeState unavailable; skipping entity registration."
                     )
                     return
@@ -428,7 +428,7 @@ class CrewAIEventsBus:
         if cached_plan is None:
             with self._rwlock.w_locked():
                 if self._shutting_down:
-                    return
+                    return  # type: ignore[unreachable]
                 cached_plan = self._execution_plan_cache.get(event_type)
                 if cached_plan is None:
                     sync_handlers = self._sync_handlers.get(event_type, frozenset())

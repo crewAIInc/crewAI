@@ -155,11 +155,8 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
         # Updated to account for .xlsx workbooks with multiple tabs/sheets
         content_str = ""
         for value in self.content.values():
-            if isinstance(value, dict):
-                for sheet_value in value.values():
-                    content_str += str(sheet_value) + "\n"
-            else:
-                content_str += str(value) + "\n"
+            for sheet_value in value.values():
+                content_str += str(sheet_value) + "\n"
 
         new_chunks = self._chunk_text(content_str)
         self.chunks.extend(new_chunks)
@@ -169,11 +166,8 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
         """Add Excel file content asynchronously."""
         content_str = ""
         for value in self.content.values():
-            if isinstance(value, dict):
-                for sheet_value in value.values():
-                    content_str += str(sheet_value) + "\n"
-            else:
-                content_str += str(value) + "\n"
+            for sheet_value in value.values():
+                content_str += str(sheet_value) + "\n"
 
         new_chunks = self._chunk_text(content_str)
         self.chunks.extend(new_chunks)

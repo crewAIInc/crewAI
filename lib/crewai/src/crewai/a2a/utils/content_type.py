@@ -317,9 +317,7 @@ def get_part_content_type(part: Part) -> str:
         if mime == APPLICATION_A2UI_JSON:
             return APPLICATION_A2UI_JSON
         return APPLICATION_JSON
-    if root.kind == "file":
-        return root.file.mime_type or APPLICATION_OCTET_STREAM
-    return APPLICATION_OCTET_STREAM
+    return root.file.mime_type or APPLICATION_OCTET_STREAM
 
 
 def validate_message_parts(

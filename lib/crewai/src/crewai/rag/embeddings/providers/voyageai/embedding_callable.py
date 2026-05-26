@@ -47,9 +47,6 @@ class VoyageAIEmbeddingFunction(EmbeddingFunction[Documents]):
             List of embedding vectors.
         """
 
-        if isinstance(input, str):
-            input = [input]
-
         result = self._client.embed(
             texts=input,
             model=self._config.get("model", "voyage-2"),

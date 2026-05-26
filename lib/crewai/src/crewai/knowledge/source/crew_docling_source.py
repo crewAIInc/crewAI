@@ -92,8 +92,6 @@ class CrewDoclingSource(BaseKnowledgeSource):
             raise e
 
     def add(self) -> None:
-        if self.content is None:
-            return
         for doc in self.content:
             new_chunks_iterable = self._chunk_doc(doc)
             self.chunks.extend(list(new_chunks_iterable))
@@ -101,8 +99,6 @@ class CrewDoclingSource(BaseKnowledgeSource):
 
     async def aadd(self) -> None:
         """Add docling content asynchronously."""
-        if self.content is None:
-            return
         for doc in self.content:
             new_chunks_iterable = self._chunk_doc(doc)
             self.chunks.extend(list(new_chunks_iterable))
