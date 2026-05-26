@@ -970,8 +970,10 @@ class Task(BaseModel):
 
         tasks_slices = [description]
 
-        output = get_crew_i18n().slice("expected_output").format(
-            expected_output=self.expected_output
+        output = (
+            get_crew_i18n()
+            .slice("expected_output")
+            .format(expected_output=self.expected_output)
         )
         tasks_slices = [description, output]
 
@@ -1318,9 +1320,13 @@ Follow these guidelines:
                 self.retry_count += 1
                 current_retry_count = self.retry_count
 
-            context = get_crew_i18n().errors("validation_error").format(
-                guardrail_result_error=guardrail_result.error,
-                task_output=task_output.raw,
+            context = (
+                get_crew_i18n()
+                .errors("validation_error")
+                .format(
+                    guardrail_result_error=guardrail_result.error,
+                    task_output=task_output.raw,
+                )
             )
             if agent and agent.verbose:
                 PRINTER.print(
@@ -1429,9 +1435,13 @@ Follow these guidelines:
                 self.retry_count += 1
                 current_retry_count = self.retry_count
 
-            context = get_crew_i18n().errors("validation_error").format(
-                guardrail_result_error=guardrail_result.error,
-                task_output=task_output.raw,
+            context = (
+                get_crew_i18n()
+                .errors("validation_error")
+                .format(
+                    guardrail_result_error=guardrail_result.error,
+                    task_output=task_output.raw,
+                )
             )
             if agent and agent.verbose:
                 PRINTER.print(

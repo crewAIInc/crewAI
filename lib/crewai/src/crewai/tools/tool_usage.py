@@ -229,8 +229,10 @@ class ToolUsage:
         """
         if self._check_tool_repeated_usage(calling=calling):
             try:
-                result = get_crew_i18n().errors("task_repeated_usage").format(
-                    tool_names=self.tools_names
+                result = (
+                    get_crew_i18n()
+                    .errors("task_repeated_usage")
+                    .format(tool_names=self.tools_names)
                 )
                 self._telemetry.tool_repeated_usage(
                     llm=self.function_calling_llm,
@@ -414,12 +416,14 @@ class ToolUsage:
                     self._run_attempts += 1
                     if self._run_attempts > self._max_parsing_attempts:
                         self._telemetry.tool_usage_error(llm=self.function_calling_llm)
-                        error_message = get_crew_i18n().errors(
-                            "tool_usage_exception"
-                        ).format(
-                            error=e,
-                            tool=sanitize_tool_name(tool.name),
-                            tool_inputs=tool.description,
+                        error_message = (
+                            get_crew_i18n()
+                            .errors("tool_usage_exception")
+                            .format(
+                                error=e,
+                                tool=sanitize_tool_name(tool.name),
+                                tool_inputs=tool.description,
+                            )
                         )
                         result = ToolUsageError(
                             f"\n{error_message}.\nMoving on then. {get_crew_i18n().slice('format').format(tool_names=self.tools_names)}"
@@ -460,8 +464,10 @@ class ToolUsage:
         # Repeated usage check happens before event emission - safe to return early
         if self._check_tool_repeated_usage(calling=calling):
             try:
-                result = get_crew_i18n().errors("task_repeated_usage").format(
-                    tool_names=self.tools_names
+                result = (
+                    get_crew_i18n()
+                    .errors("task_repeated_usage")
+                    .format(tool_names=self.tools_names)
                 )
                 self._telemetry.tool_repeated_usage(
                     llm=self.function_calling_llm,
@@ -647,12 +653,14 @@ class ToolUsage:
                     self._run_attempts += 1
                     if self._run_attempts > self._max_parsing_attempts:
                         self._telemetry.tool_usage_error(llm=self.function_calling_llm)
-                        error_message = get_crew_i18n().errors(
-                            "tool_usage_exception"
-                        ).format(
-                            error=e,
-                            tool=sanitize_tool_name(tool.name),
-                            tool_inputs=tool.description,
+                        error_message = (
+                            get_crew_i18n()
+                            .errors("tool_usage_exception")
+                            .format(
+                                error=e,
+                                tool=sanitize_tool_name(tool.name),
+                                tool_inputs=tool.description,
+                            )
                         )
                         result = ToolUsageError(
                             f"\n{error_message}.\nMoving on then. {get_crew_i18n().slice('format').format(tool_names=self.tools_names)}"

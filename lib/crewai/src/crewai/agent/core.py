@@ -1310,8 +1310,10 @@ class Agent(BaseAgent):
                 from_agent=self,
             ),
         )
-        query = get_crew_i18n().slice("knowledge_search_query").format(
-            task_prompt=task_prompt
+        query = (
+            get_crew_i18n()
+            .slice("knowledge_search_query")
+            .format(task_prompt=task_prompt)
         )
         rewriter_prompt = get_crew_i18n().slice("knowledge_search_query_system_prompt")
         if not isinstance(self.llm, BaseLLM):
@@ -1488,9 +1490,9 @@ class Agent(BaseAgent):
                         m.format() for m in matches
                     )
                 if memory_block:
-                    formatted_messages += "\n\n" + get_crew_i18n().slice("memory").format(
-                        memory=memory_block
-                    )
+                    formatted_messages += "\n\n" + get_crew_i18n().slice(
+                        "memory"
+                    ).format(memory=memory_block)
                 crewai_event_bus.emit(
                     self,
                     event=MemoryRetrievalCompletedEvent(
@@ -1703,8 +1705,10 @@ class Agent(BaseAgent):
             try:
                 model_schema = generate_model_description(response_format)
                 schema = json.dumps(model_schema, indent=2)
-                instructions = get_crew_i18n().slice("formatted_task_instructions").format(
-                    output_format=schema
+                instructions = (
+                    get_crew_i18n()
+                    .slice("formatted_task_instructions")
+                    .format(output_format=schema)
                 )
 
                 converter = Converter(

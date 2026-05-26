@@ -137,8 +137,10 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
         try:
             task_prompt: str = task.prompt()
             if context:
-                task_prompt = get_crew_i18n().slice("task_with_context").format(
-                    task=task_prompt, context=context
+                task_prompt = (
+                    get_crew_i18n()
+                    .slice("task_with_context")
+                    .format(task=task_prompt, context=context)
                 )
             crewai_event_bus.emit(
                 self,

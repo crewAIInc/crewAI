@@ -140,9 +140,13 @@ async def aexecute_tool_and_check_finality(
 
         return ToolResult(modified_result, tool.result_as_answer)
 
-    tool_result = get_crew_i18n().errors("wrong_tool_name").format(
-        tool=sanitized_tool_name,
-        tools=", ".join(tool_name_to_tool_map.keys()),
+    tool_result = (
+        get_crew_i18n()
+        .errors("wrong_tool_name")
+        .format(
+            tool=sanitized_tool_name,
+            tools=", ".join(tool_name_to_tool_map.keys()),
+        )
     )
     return ToolResult(result=tool_result, result_as_answer=False)
 
@@ -259,8 +263,12 @@ def execute_tool_and_check_finality(
 
         return ToolResult(modified_result, tool.result_as_answer)
 
-    tool_result = get_crew_i18n().errors("wrong_tool_name").format(
-        tool=sanitized_tool_name,
-        tools=", ".join(tool_name_to_tool_map.keys()),
+    tool_result = (
+        get_crew_i18n()
+        .errors("wrong_tool_name")
+        .format(
+            tool=sanitized_tool_name,
+            tools=", ".join(tool_name_to_tool_map.keys()),
+        )
     )
     return ToolResult(result=tool_result, result_as_answer=False)

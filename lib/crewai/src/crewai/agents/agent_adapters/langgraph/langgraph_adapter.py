@@ -190,8 +190,10 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
             task_prompt = task.prompt() if hasattr(task, "prompt") else str(task)
 
             if context:
-                task_prompt = get_crew_i18n().slice("task_with_context").format(
-                    task=task_prompt, context=context
+                task_prompt = (
+                    get_crew_i18n()
+                    .slice("task_with_context")
+                    .format(task=task_prompt, context=context)
                 )
 
             crewai_event_bus.emit(

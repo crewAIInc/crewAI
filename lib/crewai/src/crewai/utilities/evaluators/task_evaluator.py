@@ -98,9 +98,11 @@ class TaskEvaluator:
 
         if not self.llm.supports_function_calling():  # type: ignore[union-attr]
             schema_dict = generate_model_description(TaskEvaluation)
-            output_schema: str = get_crew_i18n().slice(
-                "formatted_task_instructions"
-            ).format(output_format=json.dumps(schema_dict, indent=2))
+            output_schema: str = (
+                get_crew_i18n()
+                .slice("formatted_task_instructions")
+                .format(output_format=json.dumps(schema_dict, indent=2))
+            )
             instructions = f"{instructions}\n\n{output_schema}"
 
         converter = Converter(
@@ -172,9 +174,11 @@ class TaskEvaluator:
 
         if not self.llm.supports_function_calling():  # type: ignore[union-attr]
             schema_dict = generate_model_description(TrainingTaskEvaluation)
-            output_schema: str = get_crew_i18n().slice(
-                "formatted_task_instructions"
-            ).format(output_format=json.dumps(schema_dict, indent=2))
+            output_schema: str = (
+                get_crew_i18n()
+                .slice("formatted_task_instructions")
+                .format(output_format=json.dumps(schema_dict, indent=2))
+            )
             instructions = f"{instructions}\n\n{output_schema}"
 
         converter = TrainingConverter(

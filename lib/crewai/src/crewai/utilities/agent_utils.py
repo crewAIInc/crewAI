@@ -905,9 +905,9 @@ async def _asummarize_chunks(
                 get_crew_i18n().slice("summarizer_system_message"), role="system"
             ),
             format_message_for_llm(
-                get_crew_i18n().slice("summarize_instruction").format(
-                    conversation=conversation_text
-                ),
+                get_crew_i18n()
+                .slice("summarize_instruction")
+                .format(conversation=conversation_text),
             ),
         ]
         summary = await llm.acall(summarization_messages, callbacks=callbacks)
@@ -975,9 +975,9 @@ def summarize_messages(
                     get_crew_i18n().slice("summarizer_system_message"), role="system"
                 ),
                 format_message_for_llm(
-                    get_crew_i18n().slice("summarize_instruction").format(
-                        conversation=conversation_text
-                    ),
+                    get_crew_i18n()
+                    .slice("summarize_instruction")
+                    .format(conversation=conversation_text),
                 ),
             ]
             summary = llm.call(summarization_messages, callbacks=callbacks)

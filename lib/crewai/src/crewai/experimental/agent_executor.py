@@ -2220,12 +2220,18 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         # Build synthesis prompt
         role = self.agent.role if self.agent else "Assistant"
 
-        system_prompt = get_crew_i18n().retrieve(
-            "planning", "synthesis_system_prompt"
-        ).format(role=role)
-        user_prompt = get_crew_i18n().retrieve("planning", "synthesis_user_prompt").format(
-            task_description=task_description,
-            combined_steps=combined_steps,
+        system_prompt = (
+            get_crew_i18n()
+            .retrieve("planning", "synthesis_system_prompt")
+            .format(role=role)
+        )
+        user_prompt = (
+            get_crew_i18n()
+            .retrieve("planning", "synthesis_user_prompt")
+            .format(
+                task_description=task_description,
+                combined_steps=combined_steps,
+            )
         )
 
         try:
@@ -2470,9 +2476,11 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             self.task.description if self.task else getattr(self, "_kickoff_input", "")
         )
 
-        enhancement = get_crew_i18n().retrieve(
-            "planning", "replan_enhancement_prompt"
-        ).format(previous_context=previous_context)
+        enhancement = (
+            get_crew_i18n()
+            .retrieve("planning", "replan_enhancement_prompt")
+            .format(previous_context=previous_context)
+        )
 
         return f"{original}{enhancement}"
 

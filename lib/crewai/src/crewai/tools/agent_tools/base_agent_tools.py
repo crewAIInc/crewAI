@@ -90,26 +90,34 @@ class BaseAgentTool(BaseTool):
             )
         except (AttributeError, ValueError) as e:
             # Handle specific exceptions that might occur during role name processing
-            return get_crew_i18n().errors("agent_tool_unexisting_coworker").format(
-                coworkers="\n".join(
-                    [
-                        f"- {self.sanitize_agent_name(agent.role)}"
-                        for agent in self.agents
-                    ]
-                ),
-                error=str(e),
+            return (
+                get_crew_i18n()
+                .errors("agent_tool_unexisting_coworker")
+                .format(
+                    coworkers="\n".join(
+                        [
+                            f"- {self.sanitize_agent_name(agent.role)}"
+                            for agent in self.agents
+                        ]
+                    ),
+                    error=str(e),
+                )
             )
 
         if not agent:
             # No matching agent found after sanitization
-            return get_crew_i18n().errors("agent_tool_unexisting_coworker").format(
-                coworkers="\n".join(
-                    [
-                        f"- {self.sanitize_agent_name(agent.role)}"
-                        for agent in self.agents
-                    ]
-                ),
-                error=f"No agent found with role '{sanitized_name}'",
+            return (
+                get_crew_i18n()
+                .errors("agent_tool_unexisting_coworker")
+                .format(
+                    coworkers="\n".join(
+                        [
+                            f"- {self.sanitize_agent_name(agent.role)}"
+                            for agent in self.agents
+                        ]
+                    ),
+                    error=f"No agent found with role '{sanitized_name}'",
+                )
             )
 
         selected_agent = agent[0]
@@ -125,6 +133,11 @@ class BaseAgentTool(BaseTool):
             return selected_agent.execute_task(task_with_assigned_agent, context)
         except Exception as e:
             # Handle task creation or execution errors
-            return get_crew_i18n().errors("agent_tool_execution_error").format(
-                agent_role=self.sanitize_agent_name(selected_agent.role), error=str(e)
+            return (
+                get_crew_i18n()
+                .errors("agent_tool_execution_error")
+                .format(
+                    agent_role=self.sanitize_agent_name(selected_agent.role),
+                    error=str(e),
+                )
             )

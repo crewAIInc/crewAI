@@ -98,8 +98,10 @@ def format_task_with_context(task_prompt: str, context: str | None) -> str:
     from crewai.utilities.i18n import get_crew_i18n
 
     if context:
-        return get_crew_i18n().slice("task_with_context").format(
-            task=task_prompt, context=context
+        return (
+            get_crew_i18n()
+            .slice("task_with_context")
+            .format(task=task_prompt, context=context)
         )
     return task_prompt
 

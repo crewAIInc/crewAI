@@ -650,8 +650,10 @@ class LiteAgent(FlowTrackable, BaseModel):
             try:
                 model_schema = generate_model_description(active_response_format)
                 schema = json.dumps(model_schema, indent=2)
-                instructions = get_crew_i18n().slice("formatted_task_instructions").format(
-                    output_format=schema
+                instructions = (
+                    get_crew_i18n()
+                    .slice("formatted_task_instructions")
+                    .format(output_format=schema)
                 )
 
                 converter = Converter(
@@ -799,31 +801,37 @@ class LiteAgent(FlowTrackable, BaseModel):
         base_prompt = ""
         if self._parsed_tools:
             # Use the prompt template for agents with tools
-            base_prompt = get_crew_i18n().slice(
-                "lite_agent_system_prompt_with_tools"
-            ).format(
-                role=self.role,
-                backstory=self.backstory,
-                goal=self.goal,
-                tools=render_text_description_and_args(self._parsed_tools),
-                tool_names=get_tool_names(self._parsed_tools),
+            base_prompt = (
+                get_crew_i18n()
+                .slice("lite_agent_system_prompt_with_tools")
+                .format(
+                    role=self.role,
+                    backstory=self.backstory,
+                    goal=self.goal,
+                    tools=render_text_description_and_args(self._parsed_tools),
+                    tool_names=get_tool_names(self._parsed_tools),
+                )
             )
         else:
             # Use the prompt template for agents without tools
-            base_prompt = get_crew_i18n().slice(
-                "lite_agent_system_prompt_without_tools"
-            ).format(
-                role=self.role,
-                backstory=self.backstory,
-                goal=self.goal,
+            base_prompt = (
+                get_crew_i18n()
+                .slice("lite_agent_system_prompt_without_tools")
+                .format(
+                    role=self.role,
+                    backstory=self.backstory,
+                    goal=self.goal,
+                )
             )
 
         active_response_format = response_format or self.response_format
         if active_response_format:
             model_description = generate_model_description(active_response_format)
             schema_json = json.dumps(model_description, indent=2)
-            base_prompt += get_crew_i18n().slice("lite_agent_response_format").format(
-                response_format=schema_json
+            base_prompt += (
+                get_crew_i18n()
+                .slice("lite_agent_response_format")
+                .format(response_format=schema_json)
             )
 
         return base_prompt

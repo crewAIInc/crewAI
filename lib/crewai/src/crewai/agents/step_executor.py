@@ -210,18 +210,24 @@ class StepExecutor:
         tools_section = ""
         if self.tools and not self._use_native_tools:
             tool_names = ", ".join(sanitize_tool_name(t.name) for t in self.tools)
-            tools_section = get_crew_i18n().retrieve(
-                "planning", "step_executor_tools_section"
-            ).format(tool_names=tool_names)
+            tools_section = (
+                get_crew_i18n()
+                .retrieve("planning", "step_executor_tools_section")
+                .format(tool_names=tool_names)
+            )
         elif self.tools:
             tool_names = ", ".join(sanitize_tool_name(t.name) for t in self.tools)
             tools_section = f"\n\nAvailable tools: {tool_names}"
 
-        return get_crew_i18n().retrieve("planning", "step_executor_system_prompt").format(
-            role=role,
-            backstory=backstory,
-            goal=goal,
-            tools_section=tools_section,
+        return (
+            get_crew_i18n()
+            .retrieve("planning", "step_executor_system_prompt")
+            .format(
+                role=role,
+                backstory=backstory,
+                goal=goal,
+                tools_section=tools_section,
+            )
         )
 
     def _build_user_prompt(self, todo: TodoItem, context: StepExecutionContext) -> str:
@@ -232,24 +238,26 @@ class StepExecutor:
             task_section = extract_task_section(context.task_description)
             if task_section:
                 parts.append(
-                    get_crew_i18n().retrieve(
-                        "planning", "step_executor_task_context"
-                    ).format(
+                    get_crew_i18n()
+                    .retrieve("planning", "step_executor_task_context")
+                    .format(
                         task_context=task_section,
                     )
                 )
 
         parts.append(
-            get_crew_i18n().retrieve("planning", "step_executor_user_prompt").format(
+            get_crew_i18n()
+            .retrieve("planning", "step_executor_user_prompt")
+            .format(
                 step_description=todo.description,
             )
         )
 
         if todo.tool_to_use:
             parts.append(
-                get_crew_i18n().retrieve(
-                    "planning", "step_executor_suggested_tool"
-                ).format(
+                get_crew_i18n()
+                .retrieve("planning", "step_executor_suggested_tool")
+                .format(
                     tool_to_use=todo.tool_to_use,
                 )
             )
@@ -260,12 +268,14 @@ class StepExecutor:
             )
             for step_num, result in sorted(context.dependency_results.items()):
                 parts.append(
-                    get_crew_i18n().retrieve(
-                        "planning", "step_executor_context_entry"
-                    ).format(step_number=step_num, result=result)
+                    get_crew_i18n()
+                    .retrieve("planning", "step_executor_context_entry")
+                    .format(step_number=step_num, result=result)
                 )
 
-        parts.append(get_crew_i18n().retrieve("planning", "step_executor_complete_step"))
+        parts.append(
+            get_crew_i18n().retrieve("planning", "step_executor_complete_step")
+        )
 
         return "\n".join(parts)
 

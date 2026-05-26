@@ -492,10 +492,14 @@ class AgentReasoning:
             return get_crew_i18n().retrieve("planning", "system_prompt")
         except (KeyError, AttributeError):
             # Fallback to reasoning section for backward compatibility
-            return get_crew_i18n().retrieve("reasoning", "initial_plan").format(
-                role=self.agent.role,
-                goal=self.agent.goal,
-                backstory=self._get_agent_backstory(),
+            return (
+                get_crew_i18n()
+                .retrieve("reasoning", "initial_plan")
+                .format(
+                    role=self.agent.role,
+                    goal=self.agent.goal,
+                    backstory=self._get_agent_backstory(),
+                )
             )
 
     def _get_agent_backstory(self) -> str:
@@ -528,21 +532,29 @@ class AgentReasoning:
 
         # Try new "planning" section first
         try:
-            return get_crew_i18n().retrieve("planning", "create_plan_prompt").format(
-                description=self.description,
-                expected_output=self.expected_output,
-                tools=available_tools,
-                max_steps=self.config.max_steps,
+            return (
+                get_crew_i18n()
+                .retrieve("planning", "create_plan_prompt")
+                .format(
+                    description=self.description,
+                    expected_output=self.expected_output,
+                    tools=available_tools,
+                    max_steps=self.config.max_steps,
+                )
             )
         except (KeyError, AttributeError):
             # Fallback to reasoning section for backward compatibility
-            return get_crew_i18n().retrieve("reasoning", "create_plan_prompt").format(
-                role=self.agent.role,
-                goal=self.agent.goal,
-                backstory=self._get_agent_backstory(),
-                description=self.description,
-                expected_output=self.expected_output,
-                tools=available_tools,
+            return (
+                get_crew_i18n()
+                .retrieve("reasoning", "create_plan_prompt")
+                .format(
+                    role=self.agent.role,
+                    goal=self.agent.goal,
+                    backstory=self._get_agent_backstory(),
+                    description=self.description,
+                    expected_output=self.expected_output,
+                    tools=available_tools,
+                )
             )
 
     def _format_available_tools(self) -> str:
@@ -585,16 +597,24 @@ class AgentReasoning:
 
         # Try new "planning" section first
         try:
-            return get_crew_i18n().retrieve("planning", "refine_plan_prompt").format(
-                current_plan=current_plan,
+            return (
+                get_crew_i18n()
+                .retrieve("planning", "refine_plan_prompt")
+                .format(
+                    current_plan=current_plan,
+                )
             )
         except (KeyError, AttributeError):
             # Fallback to reasoning section for backward compatibility
-            return get_crew_i18n().retrieve("reasoning", "refine_plan_prompt").format(
-                role=self.agent.role,
-                goal=self.agent.goal,
-                backstory=self._get_agent_backstory(),
-                current_plan=current_plan,
+            return (
+                get_crew_i18n()
+                .retrieve("reasoning", "refine_plan_prompt")
+                .format(
+                    role=self.agent.role,
+                    goal=self.agent.goal,
+                    backstory=self._get_agent_backstory(),
+                    current_plan=current_plan,
+                )
             )
 
     @staticmethod
@@ -643,10 +663,14 @@ def _call_llm_with_reasoning_prompt(
     Returns:
         The LLM response.
     """
-    system_prompt = get_crew_i18n().retrieve("reasoning", plan_type).format(
-        role=reasoning_agent.role,
-        goal=reasoning_agent.goal,
-        backstory=backstory,
+    system_prompt = (
+        get_crew_i18n()
+        .retrieve("reasoning", plan_type)
+        .format(
+            role=reasoning_agent.role,
+            goal=reasoning_agent.goal,
+            backstory=backstory,
+        )
     )
 
     response = llm.call(

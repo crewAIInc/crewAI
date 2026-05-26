@@ -59,8 +59,10 @@ class OpenAIConverterAdapter(BaseConverterAdapter):
         if not self._output_format:
             return base_prompt
 
-        output_schema: str = get_crew_i18n().slice("formatted_task_instructions").format(
-            output_format=json.dumps(self._schema, indent=2)
+        output_schema: str = (
+            get_crew_i18n()
+            .slice("formatted_task_instructions")
+            .format(output_format=json.dumps(self._schema, indent=2))
         )
 
         return f"{base_prompt}\n\n{output_schema}"

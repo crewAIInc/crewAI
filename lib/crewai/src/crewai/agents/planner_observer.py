@@ -231,7 +231,9 @@ class PlannerObserver:
             task_desc = extract_task_section(self.kickoff_input)
             task_goal = "Complete the task successfully"
 
-        system_prompt = get_crew_i18n().retrieve("planning", "observation_system_prompt")
+        system_prompt = get_crew_i18n().retrieve(
+            "planning", "observation_system_prompt"
+        )
 
         completed_summary = ""
         if all_completed:
@@ -256,16 +258,18 @@ class PlannerObserver:
                 remaining_lines
             )
 
-        user_prompt = get_crew_i18n().retrieve(
-            "planning", "observation_user_prompt"
-        ).format(
-            task_description=task_desc,
-            task_goal=task_goal,
-            completed_summary=completed_summary,
-            step_number=completed_step.step_number,
-            step_description=completed_step.description,
-            step_result=result,
-            remaining_summary=remaining_summary,
+        user_prompt = (
+            get_crew_i18n()
+            .retrieve("planning", "observation_user_prompt")
+            .format(
+                task_description=task_desc,
+                task_goal=task_goal,
+                completed_summary=completed_summary,
+                step_number=completed_step.step_number,
+                step_description=completed_step.description,
+                step_result=result,
+                remaining_summary=remaining_summary,
+            )
         )
 
         return [
