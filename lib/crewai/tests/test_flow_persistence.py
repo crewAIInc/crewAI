@@ -23,7 +23,7 @@ def test_persist_decorator_saves_state(tmp_path, caplog):
     persistence = SQLiteFlowPersistence(db_path)
 
     class TestFlow(Flow[Dict[str, str]]):
-        initial_state = dict()  # Use dict instance as initial state
+        initial_state = dict()
 
         @start()
         @persist(persistence)
@@ -31,11 +31,9 @@ def test_persist_decorator_saves_state(tmp_path, caplog):
             self.state["message"] = "Hello, World!"
             self.state["id"] = "test-uuid"  # Ensure we have an ID for persistence
 
-    # Run flow and verify state is saved
     flow = TestFlow(persistence=persistence)
     flow.kickoff()
 
-    # Load state from DB and verify
     saved_state = persistence.load_state(flow.state["id"])
     assert saved_state is not None
     assert saved_state["message"] == "Hello, World!"
@@ -55,11 +53,9 @@ def test_structured_state_persistence(tmp_path):
             self.state.counter += 1
             self.state.message = f"Count is {self.state.counter}"
 
-    # Run flow and verify state changes are saved
     flow = StructuredFlow(persistence=persistence)
     flow.kickoff()
 
-    # Load and verify state
     saved_state = persistence.load_state(flow.state.id)
     assert saved_state is not None
     assert saved_state["counter"] == 1
@@ -71,7 +67,6 @@ def test_flow_state_restoration(tmp_path):
     db_path = os.path.join(tmp_path, "test_flows.db")
     persistence = SQLiteFlowPersistence(db_path)
 
-    # First flow execution to create initial state
     class RestorableFlow(Flow[TestState]):
         @start()
         @persist(persistence)
@@ -81,28 +76,23 @@ def test_flow_state_restoration(tmp_path):
             if self.state.counter == 0:
                 self.state.counter = 42
 
-    # Create and persist initial state
     flow1 = RestorableFlow(persistence=persistence)
     flow1.kickoff()
     original_uuid = flow1.state.id
 
-    # Test case 1: Restore using restore_uuid with field override
     flow2 = RestorableFlow(persistence=persistence)
     flow2.kickoff(inputs={"id": original_uuid, "counter": 43})
 
-    # Verify state restoration and selective field override
     assert flow2.state.id == original_uuid
-    assert flow2.state.message == "Original message"  # Preserved
-    assert flow2.state.counter == 43  # Overridden
+    assert flow2.state.message == "Original message"
+    assert flow2.state.counter == 43
 
-    # Test case 2: Restore using kwargs['id']
     flow3 = RestorableFlow(persistence=persistence)
     flow3.kickoff(inputs={"id": original_uuid, "message": "Updated message"})
 
-    # Verify state restoration and selective field override
     assert flow3.state.id == original_uuid
-    assert flow3.state.counter == 43  # Preserved
-    assert flow3.state.message == "Updated message"  # Overridden
+    assert flow3.state.counter == 43
+    assert flow3.state.message == "Updated message"
 
 
 def test_multiple_method_persistence(tmp_path):
@@ -134,7 +124,6 @@ def test_multiple_method_persistence(tmp_path):
     flow2 = MultiStepFlow(persistence=persistence)
     flow2.kickoff(inputs={"id": flow.state.id})
 
-    # Load final state
     final_state = flow2.state
     assert final_state is not None
     assert final_state.counter == 2
@@ -163,7 +152,6 @@ def test_multiple_method_persistence(tmp_path):
     flow2 = NoPersistenceMultiStepFlow(persistence=persistence)
     flow2.kickoff(inputs={"id": flow.state.id})
 
-    # Load final state
     final_state = flow2.state
     assert final_state.counter == 99999
     assert final_state.message == "Step 99999"
@@ -177,12 +165,11 @@ def test_persist_decorator_verbose_logging(tmp_path, caplog):
     db_path = os.path.join(tmp_path, "test_flows.db")
     persistence = SQLiteFlowPersistence(db_path)
 
-    # Test with verbose=False (default)
     class QuietFlow(Flow[Dict[str, str]]):
         initial_state = dict()
 
         @start()
-        @persist(persistence)  # Default verbose=False
+        @persist(persistence)
         def init_step(self):
             self.state["message"] = "Hello, World!"
             self.state["id"] = "test-uuid-1"
@@ -191,10 +178,8 @@ def test_persist_decorator_verbose_logging(tmp_path, caplog):
     flow.kickoff()
     assert "Saving flow state" not in caplog.text
 
-    # Clear the log
     caplog.clear()
 
-    # Test with verbose=True
     class VerboseFlow(Flow[Dict[str, str]]):
         initial_state = dict()
 
@@ -264,7 +249,6 @@ def test_fork_with_restore_from_state_id(tmp_path):
         def step(self):
             self.state.counter += 1
 
-    # Run 1: build up source state. counter goes 0 -> 1.
     flow1 = ForkableFlow(persistence=persistence)
     flow1.kickoff()
     source_uuid = flow1.state.id

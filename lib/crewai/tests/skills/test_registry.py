@@ -5,13 +5,12 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from crewai.skills.registry import (
     SkillNotCachedError,
     is_registry_ref,
     parse_registry_ref,
 )
+import pytest
 
 
 class TestIsRegistryRef:
@@ -72,7 +71,6 @@ class TestResolveRegistryRef:
         skills_dir.mkdir()
         self._make_skill_dir(skills_dir, "my-skill")
 
-        # Mock SkillCacheManager to return None (not cached) so only local is hit
         mock_cache = MagicMock()
         mock_cache.get_cached_path.return_value = None
 

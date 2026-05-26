@@ -219,8 +219,6 @@ class TestCrewKickoffCompaction:
 
         crew = Crew(agents=[agent], tasks=[task], verbose=False)
 
-        # This may or may not trigger compaction depending on actual response sizes.
-        # The test verifies the code path doesn't crash.
         result = crew.kickoff()
         assert result is not None
 

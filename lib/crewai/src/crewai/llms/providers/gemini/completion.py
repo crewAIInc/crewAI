@@ -73,14 +73,12 @@ class GeminiCompletion(BaseLLM):
                 "Interceptors are currently supported for OpenAI and Anthropic providers only."
             )
 
-        # Normalize stop_sequences from stop kwarg
         popped = data.pop("stop_sequences", None)
         seqs = popped if popped is not None else (data.get("stop") or [])
         if isinstance(seqs, str):
             seqs = [seqs]
         data["stop"] = seqs
 
-        # Resolve env vars
         data["api_key"] = (
             data.get("api_key")
             or os.getenv("GOOGLE_API_KEY")
@@ -96,7 +94,6 @@ class GeminiCompletion(BaseLLM):
             use_vx = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "").lower() == "true"
         data["use_vertexai"] = use_vx
 
-        # Model-specific settings
         model = data.get("model", "gemini-2.0-flash-001")
         version_match = re.search(r"gemini-(\d+(?:\.\d+)?)", model.lower())
         data["supports_tools"] = bool(
@@ -189,7 +186,6 @@ class GeminiCompletion(BaseLLM):
         if self.client_params:
             client_params.update(self.client_params)
 
-        # Determine authentication mode based on available credentials
         has_api_key = bool(self.api_key)
         has_project = bool(self.project)
 
@@ -466,15 +462,12 @@ class GeminiCompletion(BaseLLM):
         self.tools = tools
         config_params: dict[str, Any] = {}
 
-        # Add system instruction if present
         if system_instruction:
-            # Convert system instruction to Content format
             system_content = types.Content(
                 role="user", parts=[types.Part.from_text(text=system_instruction)]
             )
             config_params["system_instruction"] = system_content
 
-        # Add generation config parameters
         if self.temperature is not None:
             config_params["temperature"] = self.temperature
         if self.top_p is not None:
@@ -568,7 +561,6 @@ class GeminiCompletion(BaseLLM):
         Returns:
             Tuple of (formatted_contents, system_instruction)
         """
-        # Use base class formatting first
         base_formatted = super()._format_messages(messages)
 
         contents: list[types.Content] = []
@@ -578,7 +570,6 @@ class GeminiCompletion(BaseLLM):
             role = message["role"]
             content = message["content"]
 
-            # Build parts list from content
             parts: list[types.Part] = []
             if isinstance(content, list):
                 for item in content:
@@ -601,7 +592,7 @@ class GeminiCompletion(BaseLLM):
             text_content: str = " ".join(p.text for p in parts if p.text is not None)
 
             if role == "system":
-                # Extract system instruction - Gemini handles it separately
+                # Gemini handles system instructions separately from content
                 if system_instruction:
                     system_instruction += f"\n\n{text_content}"
                 else:
@@ -675,10 +666,9 @@ class GeminiCompletion(BaseLLM):
 
                 contents.append(types.Content(role="model", parts=tool_parts))
             else:
-                # Convert role for Gemini (assistant -> model)
+                # Gemini uses "model" instead of "assistant"
                 gemini_role = "model" if role == "assistant" else "user"
 
-                # Create Content object
                 gemini_content = types.Content(role=gemini_role, parts=parts)
                 contents.append(gemini_content)
 
@@ -749,7 +739,6 @@ class GeminiCompletion(BaseLLM):
         """
         messages_for_event = self._convert_contents_to_dict(contents)
 
-        # Handle structured output validation
         if response_model:
             return self._validate_and_emit_structured_output(
                 content=content,
@@ -842,12 +831,11 @@ class GeminiCompletion(BaseLLM):
         if response.candidates and (self.tools or available_functions):
             candidate = response.candidates[0]
             if candidate.content and candidate.content.parts:
-                # Collect function call parts
                 function_call_parts = [
                     part for part in candidate.content.parts if part.function_call
                 ]
 
-                # Check for structured_output pseudo-tool call (used when tools + response_model)
+                # structured_output pseudo-tool is used when tools + response_model are both set
                 if response_model and function_call_parts:
                     for part in function_call_parts:
                         if (
@@ -868,7 +856,6 @@ class GeminiCompletion(BaseLLM):
                                 usage=usage,
                             )
 
-                # Filter out structured_output from function calls returned to executor
                 non_structured_output_parts = [
                     part
                     for part in function_call_parts
@@ -878,8 +865,8 @@ class GeminiCompletion(BaseLLM):
                     )
                 ]
 
-                # If there are function calls but no available_functions,
-                # return them for the executor to handle (like OpenAI/Anthropic)
+                # Without available_functions, return calls so the executor handles them
+                # (matches OpenAI/Anthropic behavior).
                 if non_structured_output_parts and not available_functions:
                     self._emit_call_completed_event(
                         response=non_structured_output_parts,
@@ -891,13 +878,11 @@ class GeminiCompletion(BaseLLM):
                     )
                     return non_structured_output_parts
 
-                # Otherwise execute the tools internally
                 for part in candidate.content.parts:
                     if part.function_call:
                         function_name = part.function_call.name
                         if function_name is None:
                             continue
-                        # Skip structured_output - it's handled above
                         if function_name == STRUCTURED_OUTPUT_TOOL_NAME:
                             continue
                         function_args = (
@@ -1076,21 +1061,17 @@ class GeminiCompletion(BaseLLM):
             )
             return raw_parts
 
-        # Handle completed function calls (excluding structured_output)
         if non_structured_output_calls and available_functions:
             for call_data in non_structured_output_calls.values():
                 function_name = call_data["name"]
                 function_args = call_data["args"]
 
-                # Skip if function_name is None
                 if not isinstance(function_name, str):
                     continue
 
-                # Ensure function_args is a dict
                 if not isinstance(function_args, dict):
                     function_args = {}
 
-                # Execute tool
                 result = self._handle_tool_execution(
                     function_name=function_name,
                     function_args=function_args,
@@ -1313,13 +1294,11 @@ class GeminiCompletion(BaseLLM):
             "gemma-3-27b": 128000,
         }
 
-        # Find the best match for the model name
         for model_prefix, size in context_windows.items():
             if self.model.startswith(model_prefix):
                 return int(size * CONTEXT_WINDOW_USAGE_RATIO)
 
-        # Default context window size for Gemini models
-        return int(1048576 * CONTEXT_WINDOW_USAGE_RATIO)  # 1M tokens
+        return int(1048576 * CONTEXT_WINDOW_USAGE_RATIO)  # 1M tokens default
 
     @staticmethod
     def _extract_token_usage(response: GenerateContentResponse) -> dict[str, Any]:

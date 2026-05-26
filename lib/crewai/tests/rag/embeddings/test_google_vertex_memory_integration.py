@@ -10,10 +10,9 @@ end-to-end while testing memory storage separately with a fake embedder.
 import os
 from unittest.mock import patch
 
-import pytest
-
 from crewai import Agent, Crew, Task
 from crewai.memory.unified_memory import Memory
+import pytest
 
 
 @pytest.fixture(autouse=True)
@@ -26,7 +25,6 @@ def setup_vertex_ai_env():
     """
     env_updates = {"GOOGLE_GENAI_USE_VERTEXAI": "true"}
 
-    # Add a mock API key
     if "GOOGLE_API_KEY" not in os.environ and "GEMINI_API_KEY" not in os.environ:
         env_updates["GOOGLE_API_KEY"] = "test-key"
 
@@ -110,11 +108,8 @@ def test_crew_memory_with_google_vertex_embedder(
     assert result.raw is not None
     assert len(result.raw) > 0
 
-    # Now verify the memory storage path works by calling remember() directly
-    # with a fake embedder that doesn't need real API calls.
     memory._embedder_instance = _fake_embedder
 
-    # Pass all fields explicitly to skip LLM analysis in the encoding flow.
     record = memory.remember(
         content=f"AI summary: {result.raw[:100]}",
         scope="/test",
