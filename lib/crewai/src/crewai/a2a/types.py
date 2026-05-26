@@ -6,8 +6,6 @@ from typing import (
     Annotated,
     Any,
     Literal,
-    Protocol,
-    runtime_checkable,
 )
 
 from pydantic import BeforeValidator, HttpUrl, TypeAdapter
@@ -55,15 +53,6 @@ Url = Annotated[
         lambda value: str(http_url_adapter.validate_python(value, strict=True))
     ),
 ]
-
-
-@runtime_checkable
-class AgentResponseProtocol(Protocol):
-    """Protocol for the dynamically created AgentResponse model."""
-
-    a2a_ids: tuple[str, ...]
-    message: str
-    is_a2a: bool
 
 
 class PartsMetadataDict(TypedDict, total=False):

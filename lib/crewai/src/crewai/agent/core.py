@@ -111,12 +111,6 @@ from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
 
-try:
-    from crewai.a2a.types import AgentResponseProtocol
-except ImportError:
-    AgentResponseProtocol = None  # type: ignore[assignment, misc]
-
-
 if TYPE_CHECKING:
     from crewai_files import FileInput
 
@@ -650,15 +644,7 @@ class Agent(BaseAgent):
 
         result = process_tool_results(self, result)
 
-        output_for_event = result
-        if (
-            AgentResponseProtocol is not None
-            and isinstance(result, BaseModel)
-            and isinstance(result, AgentResponseProtocol)
-        ):
-            output_for_event = str(result.message)
-        elif not isinstance(result, str):
-            output_for_event = str(result)
+        output_for_event = result if isinstance(result, str) else str(result)
 
         crewai_event_bus.emit(
             self,
