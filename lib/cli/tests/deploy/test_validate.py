@@ -110,6 +110,45 @@ def _run_without_import_check(root: Path) -> DeployValidator:
     return v
 
 
+def _scaffold_json_crew(root: Path, *, task_agent: str = "researcher") -> None:
+    (root / "pyproject.toml").write_text(_make_pyproject(name="json_crew"))
+    (root / "uv.lock").write_text("# dummy uv lockfile\n")
+    agents_dir = root / "agents"
+    agents_dir.mkdir()
+    (agents_dir / "researcher.jsonc").write_text(
+        dedent(
+            """
+            {
+              "role": "Researcher",
+              "goal": "Research things",
+              "backstory": "Experienced researcher",
+              "llm": "openai/gpt-4o-mini"
+            }
+            """
+        ).strip()
+        + "\n"
+    )
+    (root / "crew.jsonc").write_text(
+        dedent(
+            f"""
+            {{
+              "name": "json_crew",
+              "agents": ["researcher"],
+              "tasks": [
+                {{
+                  "name": "research",
+                  "description": "Research https://example.com/a//b",
+                  "expected_output": "Findings",
+                  "agent": "{task_agent}"
+                }}
+              ]
+            }}
+            """
+        ).strip()
+        + "\n"
+    )
+
+
 @pytest.mark.parametrize(
     "project_name, expected",
     [
@@ -127,6 +166,38 @@ def test_valid_standard_crew_project_passes(tmp_path: Path) -> None:
     _scaffold_standard_crew(tmp_path)
     v = _run_without_import_check(tmp_path)
     assert v.ok, f"expected clean run, got {v.results}"
+
+
+def test_valid_json_crew_project_passes(tmp_path: Path) -> None:
+    _scaffold_json_crew(tmp_path)
+    v = DeployValidator(project_root=tmp_path)
+    v.run()
+    assert "invalid_crew_json" not in _codes(v)
+
+
+def test_json_task_agent_mismatch_is_error(tmp_path: Path) -> None:
+    _scaffold_json_crew(tmp_path, task_agent="missing_agent")
+    v = DeployValidator(project_root=tmp_path)
+    v.run()
+    finding = next(r for r in v.results if r.code == "invalid_crew_json")
+    assert finding.severity is Severity.ERROR
+    assert "missing_agent" in finding.detail
+
+
+def test_json_runtime_fields_are_deploy_errors(tmp_path: Path) -> None:
+    _scaffold_json_crew(tmp_path)
+    crew_path = tmp_path / "crew.jsonc"
+    crew_path.write_text(
+        crew_path.read_text().replace(
+            '"name": "json_crew",',
+            '"name": "json_crew",\n  "id": "00000000-0000-4000-8000-000000000000",',
+        )
+    )
+    v = DeployValidator(project_root=tmp_path)
+    v.run()
+    finding = next(r for r in v.results if r.code == "invalid_crew_json")
+    assert finding.severity is Severity.ERROR
+    assert "runtime-only" in finding.detail
 
 
 def test_missing_pyproject_errors(tmp_path: Path) -> None:

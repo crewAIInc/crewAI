@@ -8,17 +8,18 @@ Designed to be invoked by ``crewai test`` on a JSON-configured project.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
 import json
+from pathlib import Path
 import re
 import sys
 import time
-from collections.abc import Callable
-from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel
 
-from crewai.project.json_loader import load_agent, strip_jsonc_comments
+from crewai.project.json_loader import load_agent, load_jsonc_file
 
 
 # ---------------------------------------------------------------------------
@@ -119,19 +120,20 @@ def _score_case(
         return True, 1.0
 
     if has_expected and not has_criteria:
-        assert case.expected is not None
-        matched = case.expected.lower() in actual.lower()
+        expected = case.expected or ""
+        matched = expected.lower() in actual.lower()
         return matched, 1.0 if matched else 0.0
 
     if has_criteria and not has_expected:
-        assert case.criteria is not None
-        return _judge_with_llm(case.criteria, case.input, actual, judge_model)
+        criteria = case.criteria or ""
+        return _judge_with_llm(criteria, case.input, actual, judge_model)
 
-    assert case.expected is not None and case.criteria is not None
-    expected_matched = case.expected.lower() in actual.lower()
+    expected = case.expected or ""
+    criteria = case.criteria or ""
+    expected_matched = expected.lower() in actual.lower()
     expected_score = 1.0 if expected_matched else 0.0
     judge_passed, judge_score = _judge_with_llm(
-        case.criteria, case.input, actual, judge_model
+        criteria, case.input, actual, judge_model
     )
     avg_score = (expected_score + judge_score) / 2.0
     return expected_matched and judge_passed, avg_score
@@ -155,8 +157,7 @@ def load_benchmark_cases(path: Path) -> tuple[list[BenchmarkCase], float]:
     Returns:
         ``(cases, threshold)``
     """
-    raw_text = path.read_text(encoding="utf-8")
-    data = json.loads(strip_jsonc_comments(raw_text))
+    data = load_jsonc_file(path)
 
     if isinstance(data, list):
         cases = [BenchmarkCase(**item) for item in data]
@@ -179,8 +180,7 @@ def load_crew_benchmark_cases(path: Path) -> list[CrewBenchmarkCase]:
     Each case contains ``inputs`` (dict passed to ``crew.kickoff``) and
     ``criteria``/``expected`` for scoring the result.
     """
-    raw_text = path.read_text(encoding="utf-8")
-    data = json.loads(strip_jsonc_comments(raw_text))
+    data = load_jsonc_file(path)
 
     if isinstance(data, list):
         return [CrewBenchmarkCase(**item) for item in data]
@@ -661,7 +661,7 @@ def run_crew_benchmark(
             actual = ""
 
             try:
-                actual = _execute_crew_case_sync(
+                actual = _execute_crew_case_with_timeout(
                     crew_path=crew_path,
                     case=case,
                     agent_name=agent,
@@ -727,12 +727,9 @@ def _execute_crew_case_sync(
     timeout: int = 300,
 ) -> str:
     """Execute a single crew benchmark case and return the output string."""
-    import logging
-
     from crewai.events.listeners.tracing.utils import set_suppress_tracing_messages
 
     set_suppress_tracing_messages(True)
-    logging.getLogger("crewai.state.checkpoint_listener").setLevel(logging.CRITICAL)
 
     if checkpoint_path and agent_name:
         from crewai import Crew
@@ -750,13 +747,11 @@ def _execute_crew_case_sync(
         result = crew.kickoff(inputs=case.inputs or {})
     else:
         from crewai.project.crew_loader import load_crew
-        from crewai.state.checkpoint_config import CheckpointConfig
 
         crew, default_inputs = load_crew(crew_path)
         crew.verbose = False
         for a in crew.agents:
             a.verbose = False
-        crew.checkpoint = CheckpointConfig()
 
         if model_override:
             if agent_name:
@@ -771,6 +766,34 @@ def _execute_crew_case_sync(
         result = crew.kickoff(inputs=inputs)
 
     return str(result.raw) if hasattr(result, "raw") else str(result)
+
+
+def _execute_crew_case_with_timeout(
+    crew_path: Path,
+    case: CrewBenchmarkCase,
+    agent_name: str | None = None,
+    model_override: str | None = None,
+    checkpoint_path: Path | None = None,
+    timeout: int = 300,
+) -> str:
+    """Execute a crew benchmark case with the same timeout contract as agent tests."""
+    executor = ThreadPoolExecutor(max_workers=1)
+    future = executor.submit(
+        _execute_crew_case_sync,
+        crew_path,
+        case,
+        agent_name,
+        model_override,
+        checkpoint_path,
+        timeout,
+    )
+    try:
+        return future.result(timeout=timeout)
+    except TimeoutError:
+        future.cancel()
+        return f"[TIMEOUT after {timeout}s]"
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
 
 
 def _swap_agent_model(
@@ -797,8 +820,7 @@ def _find_checkpoint_before_agent(
 ) -> Path | None:
     """Find the most recent checkpoint where prior tasks are complete but
     the target agent's task has not yet run."""
-    raw = crew_path.read_text(encoding="utf-8")
-    defn = json.loads(strip_jsonc_comments(raw))
+    defn = load_jsonc_file(crew_path)
     task_defs = defn.get("tasks", [])
 
     target_idx = None

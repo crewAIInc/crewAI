@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import sys
 
 import pytest
 
-from crewai.project.json_loader import load_agent, strip_jsonc_comments
+from crewai.project.json_loader import JSONProjectValidationError, load_agent, strip_jsonc_comments
 
 
 class TestStripJsoncComments:
@@ -28,6 +29,18 @@ class TestStripJsoncComments:
         result = strip_jsonc_comments(text)
         data = json.loads(result)
         assert data["url"] == "https://example.com"
+
+    def test_preserves_comment_markers_inside_strings(self):
+        text = """{
+  "url": "https://example.com/a//b",
+  "pattern": "keep /* this */ text",
+  "text": "value // not a comment",
+}"""
+        result = strip_jsonc_comments(text)
+        data = json.loads(result)
+        assert data["url"] == "https://example.com/a//b"
+        assert data["pattern"] == "keep /* this */ text"
+        assert data["text"] == "value // not a comment"
 
     def test_removes_trailing_commas(self):
         text = '{\n  "a": 1,\n  "b": 2,\n}'
@@ -111,6 +124,79 @@ class TestLoadAgent:
         agent = load_agent(agent_file)
         assert agent.verbose is True
         assert agent.max_iter == 15
+
+    def test_load_agent_accepts_public_agent_config_fields(self, tmp_path: Path):
+        agent_def = {
+            "role": "Analyst",
+            "goal": "Analyze data",
+            "backstory": "Data expert.",
+            "max_execution_time": 30,
+            "use_system_prompt": False,
+            "system_template": "system: {{ .System }}",
+            "prompt_template": "prompt: {{ .Prompt }}",
+            "response_template": "response: {{ .Response }}",
+            "inject_date": True,
+            "date_format": "%Y",
+            "guardrail": "Only return concise answers.",
+            "guardrail_max_retries": 1,
+            "security_config": {"fingerprint": "agent-seed"},
+        }
+        agent_file = tmp_path / "agent.json"
+        agent_file.write_text(json.dumps(agent_def))
+
+        agent = load_agent(agent_file)
+        assert agent.max_execution_time == 30
+        assert agent.use_system_prompt is False
+        assert agent.system_template == "system: {{ .System }}"
+        assert agent.inject_date is True
+        assert agent.guardrail == "Only return concise answers."
+
+    def test_load_agent_accepts_serialized_tool_dict(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        module = tmp_path / "test_tools.py"
+        module.write_text(
+            "from crewai.tools.base_tool import BaseTool\n"
+            "class EchoTool(BaseTool):\n"
+            "    name: str = 'echo'\n"
+            "    description: str = 'Echo input'\n"
+            "    def _run(self, value: str = '') -> str:\n"
+            "        return value\n"
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        sys.modules.pop("test_tools", None)
+
+        agent_def = {
+            "role": "Tool User",
+            "goal": "Use tools",
+            "backstory": "Tool expert.",
+            "tools": [
+                {
+                    "tool_type": "test_tools.EchoTool",
+                    "name": "echo",
+                    "description": "Echo input",
+                }
+            ],
+        }
+        agent_file = tmp_path / "agent.json"
+        agent_file.write_text(json.dumps(agent_def))
+
+        agent = load_agent(agent_file)
+        assert len(agent.tools or []) == 1
+        assert agent.tools[0].name == "echo"
+
+    def test_load_agent_rejects_runtime_fields(self, tmp_path: Path):
+        agent_def = {
+            "id": "00000000-0000-4000-8000-000000000000",
+            "role": "Analyst",
+            "goal": "Analyze data",
+            "backstory": "Data expert.",
+        }
+        agent_file = tmp_path / "agent.json"
+        agent_file.write_text(json.dumps(agent_def))
+
+        with pytest.raises(JSONProjectValidationError, match="runtime-only"):
+            load_agent(agent_file)
 
     def test_settings_block_takes_precedence(self, tmp_path: Path):
         agent_def = {

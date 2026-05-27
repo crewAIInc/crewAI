@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import time
 
 import pytest
 
@@ -13,6 +14,7 @@ from crewai.project.benchmark import (
     _find_checkpoint_before_agent,
     _parse_judge_response,
     _score_case,
+    _execute_crew_case_with_timeout,
     load_benchmark_cases,
     load_crew_benchmark_cases,
 )
@@ -181,6 +183,28 @@ class TestLoadCrewBenchmarkCases:
 
         cases = load_crew_benchmark_cases(f)
         assert len(cases) == 1
+
+
+class TestCrewBenchmarkTimeout:
+    def test_execute_crew_case_timeout_returns_timeout_result(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        def slow_case(*_args, **_kwargs):
+            time.sleep(1)
+            return "done"
+
+        monkeypatch.setattr(
+            "crewai.project.benchmark._execute_crew_case_sync",
+            slow_case,
+        )
+
+        result = _execute_crew_case_with_timeout(
+            crew_path=tmp_path / "crew.jsonc",
+            case=CrewBenchmarkCase(inputs={}),
+            timeout=0.01,
+        )
+
+        assert result == "[TIMEOUT after 0.01s]"
 
 
 class TestFindCheckpointBeforeAgent:

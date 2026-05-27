@@ -38,6 +38,11 @@ import subprocess
 import sys
 from typing import Any
 
+from crewai.project.json_loader import (
+    JSONProjectValidationError,
+    load_jsonc_file,
+    validate_crew_project,
+)
 from rich.console import Console
 
 from crewai_cli.utils import parse_toml
@@ -194,18 +199,15 @@ class DeployValidator:
         )
 
         try:
-            raw = crew_path.read_text()
-            clean = re.sub(r"(?<!:)//.*?$", "", raw, flags=re.MULTILINE)
-            clean = re.sub(r"/\*.*?\*/", "", clean, flags=re.DOTALL)
-            clean = re.sub(r",\s*([}\]])", r"\1", clean)
-            crew_data = json.loads(clean)
-        except json.JSONDecodeError as e:
+            crew_data = load_jsonc_file(crew_path)
+            validate_crew_project(crew_path, self.project_root / "agents")
+        except JSONProjectValidationError as e:
             self._add(
                 Severity.ERROR,
                 "invalid_crew_json",
-                f"{crew_path.name} is not valid JSON",
-                detail=str(e),
-                hint="Check for syntax errors in your crew file.",
+                f"{crew_path.name} has invalid JSON crew configuration",
+                detail="\n".join(e.errors),
+                hint="Fix the JSON crew, agent, and task references before deploying.",
             )
             return self.results
         except Exception as e:
@@ -217,46 +219,8 @@ class DeployValidator:
             )
             return self.results
 
-        agents = crew_data.get("agents", [])
-        if not agents:
-            self._add(
-                Severity.ERROR,
-                "no_agents_defined",
-                "No agents defined in crew file",
-                hint="Add an \"agents\" list with at least one agent name.",
-            )
-
+        agents = crew_data.get("agents", []) if isinstance(crew_data, dict) else []
         agents_dir = self.project_root / "agents"
-        for agent_name in agents:
-            found = (
-                (agents_dir / f"{agent_name}.jsonc").exists()
-                or (agents_dir / f"{agent_name}.json").exists()
-            )
-            if not found:
-                self._add(
-                    Severity.ERROR,
-                    "missing_agent_file",
-                    f"Agent file not found: agents/{agent_name}.jsonc",
-                    hint=f"Create agents/{agent_name}.jsonc with the agent definition.",
-                )
-
-        tasks = crew_data.get("tasks", [])
-        if not tasks:
-            self._add(
-                Severity.ERROR,
-                "no_tasks_defined",
-                "No tasks defined in crew file",
-                hint="Add a \"tasks\" list with at least one task.",
-            )
-
-        for task in tasks:
-            agent_ref = task.get("agent", "")
-            if agent_ref and agent_ref not in agents:
-                self._add(
-                    Severity.WARNING,
-                    "task_agent_mismatch",
-                    f"Task \"{task.get('name', '?')}\" references agent \"{agent_ref}\" not in agents list",
-                )
 
         self._check_pyproject()
         self._check_lockfile()
@@ -272,11 +236,10 @@ class DeployValidator:
         referenced: set[str] = set()
         pattern = re.compile(r"\$\{?([A-Z][A-Z0-9_]+)\}?")
 
-        for path in [crew_path]:
-            try:
-                referenced.update(pattern.findall(path.read_text(errors="ignore")))
-            except OSError:
-                pass
+        try:
+            referenced.update(pattern.findall(crew_path.read_text(errors="ignore")))
+        except OSError:
+            pass
 
         for name in agent_names:
             for ext in (".jsonc", ".json"):

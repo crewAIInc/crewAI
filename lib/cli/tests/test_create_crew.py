@@ -7,6 +7,7 @@ from unittest import mock
 import pytest
 from click.testing import CliRunner
 from crewai_cli.create_crew import create_crew, create_folder_structure
+from crewai_cli.create_json_crew import _default_model_for_provider, create_json_crew
 
 
 @pytest.fixture
@@ -345,3 +346,73 @@ def test_env_vars_are_uppercased_in_env_file(
     env_file_path = crew_path / ".env"
     content = env_file_path.read_text()
     assert "MODEL=" in content
+
+
+def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    with mock.patch(
+        "crewai_cli.create_json_crew._wizard_agents_and_tasks"
+    ) as mock_wizard:
+        mock_wizard.return_value = (
+            [
+                {
+                    "name": "researcher",
+                    "role": "Researcher",
+                    "goal": "Research",
+                    "backstory": "Researcher",
+                    "llm": "openai/gpt-5.5",
+                    "tools": [],
+                    "planning": False,
+                    "allow_delegation": False,
+                }
+            ],
+            [
+                {
+                    "name": "research_task",
+                    "description": "Research",
+                    "expected_output": "Findings",
+                    "agent": "researcher",
+                    "context": [],
+                    "output_file": None,
+                }
+            ],
+            {"process": "sequential", "memory": False, "inputs": {}},
+        )
+
+        create_json_crew("JSON Crew", provider="openai", skip_provider=True)
+
+    mock_wizard.assert_called_once_with(
+        skip_provider=True,
+        default_llm="openai/gpt-5.5",
+    )
+    assert (tmp_path / "json_crew" / "crew.jsonc").exists()
+    crew_template = (tmp_path / "json_crew" / "crew.jsonc").read_text()
+    assert (
+        '"guardrail": "Every factual claim needs context support."'
+        in crew_template
+    )
+    assert '"guardrails": [' in crew_template
+    assert '"guardrail_max_retries": 2' in crew_template
+    assert "Docs: https://docs.crewai.com/concepts/tasks" in crew_template
+    assert '"output_pydantic": null' in crew_template
+    assert '"markdown": false' in crew_template
+    assert "Docs: https://docs.crewai.com/concepts/crews" in crew_template
+    assert '"manager_agent": "researcher"' in crew_template
+    assert '"output_log_file": "crew.log"' in crew_template
+
+    agent_template = (
+        tmp_path / "json_crew" / "agents" / "researcher.jsonc"
+    ).read_text()
+    assert "Optional agent-level guardrail" in agent_template
+    assert '"guardrail_max_retries": 2' in agent_template
+    assert "Docs: https://docs.crewai.com/concepts/agents" in agent_template
+    assert '"reasoning": true' in agent_template
+    assert '"knowledge_sources": []' in agent_template
+
+
+def test_json_provider_default_model_helper():
+    assert _default_model_for_provider("openai") == "openai/gpt-5.5"
+    assert _default_model_for_provider("anthropic/claude-custom") == (
+        "anthropic/claude-custom"
+    )
+    assert _default_model_for_provider("unknown") is None

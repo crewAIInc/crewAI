@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
+import sys
 from typing import Any
 
 import click
@@ -97,6 +97,24 @@ _RESEARCHER_AGENT_JSONC = """\
   // Custom: "custom:my_tool" loads from tools/my_tool.py
   "tools": [],
 
+  // Optional agent-level guardrail — validates this agent's final output.
+  // String guardrails are checked by an LLM and can reject/retry output.
+  // "guardrail": "Only answer with information supported by retrieved evidence.",
+  // "guardrail_max_retries": 2,
+
+  // Advanced agent options:
+  // Docs: https://docs.crewai.com/concepts/agents
+  // "reasoning": true,
+  // "max_reasoning_attempts": 3,
+  // "multimodal": false,
+  // "allow_code_execution": false,
+  // "code_execution_mode": "safe",
+  // "knowledge_sources": [],
+  // "knowledge_config": {},
+  // "inject_date": true,
+  // "date_format": "%Y-%m-%d",
+  // "security_config": {},
+
   // Agent behavior settings
   "settings": {
     // Show detailed execution logs
@@ -157,6 +175,18 @@ _REPORTING_ANALYST_JSONC = """\
   // Tools available to this agent
   "tools": [],
 
+  // Optional agent-level guardrail — validates this agent's final output.
+  // "guardrail": "Only produce reports grounded in the provided task context.",
+  // "guardrail_max_retries": 2,
+
+  // Advanced agent options:
+  // Docs: https://docs.crewai.com/concepts/agents
+  // "reasoning": true,
+  // "max_reasoning_attempts": 3,
+  // "knowledge_sources": [],
+  // "knowledge_config": {},
+  // "security_config": {},
+
   // Agent behavior settings
   "settings": {
     "verbose": false,
@@ -196,6 +226,25 @@ _CREW_JSONC = """\
       // Clear definition of what the output should look like
       "expected_output": "A list with 10 bullet points of the most relevant information about {topic}",
 
+      // Optional task guardrail(s) validate output before the task completes.
+      // Use either "guardrail" for one rule or "guardrails" for multiple rules.
+      // On failure, CrewAI retries up to guardrail_max_retries times.
+      // "guardrail": "Every factual claim must be supported by research findings.",
+      // "guardrails": [
+      //   "Every factual claim must be supported by research findings.",
+      //   "The answer must be a numbered or bulleted list."
+      // ],
+      // "guardrail_max_retries": 2,
+
+      // Advanced task options:
+      // Docs: https://docs.crewai.com/concepts/tasks
+      // "output_json": null,
+      // "output_pydantic": null,
+      // "response_model": null,
+      // "markdown": false,
+      // "input_files": [],
+      // "security_config": {},
+
       // Which agent handles this task (must be in the agents list above)
       "agent": "researcher"
 
@@ -218,6 +267,19 @@ _CREW_JSONC = """\
       "name": "reporting_task",
       "description": "Review the context you got and expand each topic into a full section for a report. Make sure the report is detailed and contains any and all relevant information.",
       "expected_output": "A fully fledged report with the main topics, each with a full section of information. Formatted as markdown.",
+
+      // Optional task guardrail(s) validate output before the task completes.
+      // "guardrail": "The report must only use facts from the research context.",
+      // "guardrail_max_retries": 2,
+
+      // Advanced task options:
+      // Docs: https://docs.crewai.com/concepts/tasks
+      // "output_json": null,
+      // "output_pydantic": null,
+      // "markdown": true,
+      // "create_directory": true,
+      // "security_config": {},
+
       "agent": "reporting_analyst",
 
       // This task receives the output of research_task as context
@@ -250,6 +312,19 @@ _CREW_JSONC = """\
 
   // LLM for the manager agent (required when process is "hierarchical")
   // "manager_llm": "openai/gpt-4o",
+
+  // Advanced crew options:
+  // Docs: https://docs.crewai.com/concepts/crews
+  // "manager_agent": "reporting_analyst",
+  // "function_calling_llm": "openai/gpt-4o-mini",
+  // "max_rpm": null,
+  // "cache": true,
+  // "knowledge_sources": [],
+  // "embedder": {},
+  // "output_log_file": "crew.log",
+  // "stream": false,
+  // "tracing": false,
+  // "security_config": {},
 
   // Default input values — interpolated into {placeholder} strings
   // in agent roles/goals/backstories and task descriptions
@@ -411,7 +486,7 @@ def _prompt_text(label: str, default: str = "") -> str:
         click.style(f"  {label}", fg="cyan"),
         default=default,
         show_default=bool(default),
-        prompt_suffix=click.style(" › ", fg="bright_white"),
+        prompt_suffix=click.style(" > ", fg="bright_white"),
     ).strip()
 
 
@@ -419,7 +494,7 @@ def _confirm(label: str, default: bool = False) -> bool:
     return click.confirm(
         click.style(f"  {label}", fg="cyan"),
         default=default,
-        prompt_suffix=click.style(" › ", fg="bright_white"),
+        prompt_suffix=click.style(" > ", fg="bright_white"),
     )
 
 
@@ -428,6 +503,7 @@ def _wizard_agent(
     existing_names: list[str],
     skip_provider: bool = False,
     last_llm: str | None = None,
+    preset_llm: str | None = None,
 ) -> dict[str, Any] | None:
     """Interactive wizard for one agent. Returns agent dict or None if skipped."""
     click.echo()
@@ -449,7 +525,10 @@ def _wizard_agent(
     backstory = _prompt_text("Backstory")
 
     # LLM model
-    if skip_provider:
+    if preset_llm:
+        llm = preset_llm
+        click.secho(f"  ✔ {llm}", fg="green")
+    elif skip_provider:
         llm = last_llm or "openai/gpt-4o"
     elif last_llm:
         reuse_labels = [
@@ -471,9 +550,9 @@ def _wizard_agent(
 
     tools: list[str] = []
     if selected_indices:
-        for idx in selected_indices:
-            if idx < len(_FLAT_TOOLS):
-                tools.append(_FLAT_TOOLS[idx][0])
+        tools.extend(
+            _FLAT_TOOLS[idx][0] for idx in selected_indices if idx < len(_FLAT_TOOLS)
+        )
     if tools:
         click.secho(f"  ✔ {len(tools)} tool{'s' if len(tools) != 1 else ''}", fg="green")
     else:
@@ -533,7 +612,7 @@ def _wizard_task(
     if prior_task_names:
         ctx_indices = pick_many(
             "Context from prior tasks (space to toggle):",
-            prior_task_names + ["None"],
+            [*prior_task_names, "None"],
         )
         context = [
             prior_task_names[i]
@@ -556,7 +635,10 @@ def _wizard_task(
     }
 
 
-def _wizard_agents_and_tasks(skip_provider: bool = False) -> tuple[list[dict], list[dict], dict]:
+def _wizard_agents_and_tasks(
+    skip_provider: bool = False,
+    default_llm: str | None = None,
+) -> tuple[list[dict], list[dict], dict]:
     """Run the full interactive wizard. Returns (agents, tasks, crew_settings)."""
     agents: list[dict[str, Any]] = []
     tasks: list[dict[str, Any]] = []
@@ -573,6 +655,7 @@ def _wizard_agents_and_tasks(skip_provider: bool = False) -> tuple[list[dict], l
             existing_names=[a["name"] for a in agents],
             skip_provider=skip_provider,
             last_llm=last_llm,
+            preset_llm=default_llm if not agents else None,
         )
         if agent is None and not agents:
             click.secho("  Need at least one agent.", fg="yellow")
@@ -633,7 +716,7 @@ def _wizard_agents_and_tasks(skip_provider: bool = False) -> tuple[list[dict], l
             click.style("  ", fg="cyan"),
             default="",
             show_default=False,
-            prompt_suffix=click.style("› ", fg="bright_white"),
+            prompt_suffix=click.style("> ", fg="bright_white"),
         ).strip()
         if not raw:
             break
@@ -727,6 +810,24 @@ def _agent_to_jsonc(agent: dict[str, Any]) -> str:
   // Custom: "custom:my_tool" loads from tools/my_tool.py
   "tools": {json.dumps(agent["tools"])},
 
+  // Optional agent-level guardrail — validates this agent's final output.
+  // String guardrails are checked by an LLM and can reject/retry output.
+  // "guardrail": "Only answer with information supported by retrieved evidence.",
+  // "guardrail_max_retries": 2,
+
+  // Advanced agent options:
+  // Docs: https://docs.crewai.com/concepts/agents
+  // "reasoning": true,
+  // "max_reasoning_attempts": 3,
+  // "multimodal": false,
+  // "allow_code_execution": false,
+  // "code_execution_mode": "safe",
+  // "knowledge_sources": [],
+  // "knowledge_config": {{}},
+  // "inject_date": true,
+  // "date_format": "%Y-%m-%d",
+  // "security_config": {{}},
+
   // Agent behavior settings
   "settings": {{
 {settings_block}
@@ -739,34 +840,53 @@ def _task_to_json_fragment(task: dict[str, Any]) -> str:
     """Convert task wizard data to a JSON-like fragment for embedding in crew JSONC."""
     lines = []
     lines.append("    {")
-    lines.append(f'      // Task identifier')
+    lines.append('      // Task identifier')
     lines.append(f'      "name": {json.dumps(task["name"])},')
-    lines.append(f'')
-    lines.append(f'      // What the task should accomplish')
+    lines.append('')
+    lines.append('      // What the task should accomplish')
     lines.append(f'      "description": {json.dumps(task["description"])},')
-    lines.append(f'')
-    lines.append(f'      // Clear definition of what the output should look like')
+    lines.append('')
+    lines.append('      // Clear definition of what the output should look like')
     lines.append(f'      "expected_output": {json.dumps(task["expected_output"])},')
-    lines.append(f'')
-    lines.append(f'      // Which agent handles this task')
+    lines.append('')
+    lines.append('      // Optional task guardrail(s) validate output before completion')
+    lines.append('      // Use "guardrail" for one rule or "guardrails" for many')
+    lines.append('      // Failed guardrails retry up to guardrail_max_retries times')
+    lines.append('      // "guardrail": "Every factual claim needs context support.",')
+    lines.append('      // "guardrails": [')
+    lines.append('      //   "Every factual claim must be supported by context.",')
+    lines.append('      //   "The answer must match the expected output format."')
+    lines.append('      // ],')
+    lines.append('      // "guardrail_max_retries": 2,')
+    lines.append('')
+    lines.append('      // Advanced task options:')
+    lines.append('      // Docs: https://docs.crewai.com/concepts/tasks')
+    lines.append('      // "output_json": null,')
+    lines.append('      // "output_pydantic": null,')
+    lines.append('      // "response_model": null,')
+    lines.append('      // "markdown": false,')
+    lines.append('      // "input_files": [],')
+    lines.append('      // "security_config": {},')
+    lines.append('')
+    lines.append('      // Which agent handles this task')
     lines.append(f'      "agent": {json.dumps(task["agent"])}')
 
     if task.get("context"):
         lines[-1] += ","  # add comma to agent line
-        lines.append(f'')
-        lines.append(f'      // Task outputs used as context')
+        lines.append('')
+        lines.append('      // Task outputs used as context')
         lines.append(f'      "context": {json.dumps(task["context"])}')
 
     if task.get("output_file"):
         lines[-1] += ","
-        lines.append(f'')
-        lines.append(f'      // Save output to a file')
+        lines.append('')
+        lines.append('      // Save output to a file')
         lines.append(f'      "output_file": {json.dumps(task["output_file"])}')
 
-    lines.append(f'')
-    lines.append(f'      // "tools": [],')
-    lines.append(f'      // "human_input": false,')
-    lines.append(f'      // "async_execution": false')
+    lines.append('')
+    lines.append('      // "tools": [],')
+    lines.append('      // "human_input": false,')
+    lines.append('      // "async_execution": false')
     lines.append("    }")
     return "\n".join(lines)
 
@@ -784,7 +904,11 @@ def _crew_to_jsonc(
     # Re-indent inputs to 4-space
     inputs_lines = inputs_json.split("\n")
     if len(inputs_lines) > 1:
-        inputs_json = inputs_lines[0] + "\n" + "\n".join("  " + l for l in inputs_lines[1:])
+        inputs_json = (
+            inputs_lines[0]
+            + "\n"
+            + "\n".join("  " + line for line in inputs_lines[1:])
+        )
 
     process = settings.get("process", "sequential")
     memory = "true" if settings.get("memory") else "false"
@@ -821,6 +945,19 @@ def _crew_to_jsonc(
 
   // LLM for the manager agent (required when process is "hierarchical")
   // "manager_llm": "openai/gpt-4o",
+
+  // Advanced crew options:
+  // Docs: https://docs.crewai.com/concepts/crews
+  // "manager_agent": "{agents[0]['name']}",
+  // "function_calling_llm": "openai/gpt-4o-mini",
+  // "max_rpm": null,
+  // "cache": true,
+  // "knowledge_sources": [],
+  // "embedder": {{}},
+  // "output_log_file": "crew.log",
+  // "stream": false,
+  // "tracing": false,
+  // "security_config": {{}},
 
   // Default input values — interpolated into {{placeholder}} strings
   // in agent roles/goals/backstories and task descriptions
@@ -866,7 +1003,7 @@ def _select_model() -> str:
         custom: str = click.prompt(
             click.style("  Enter model (provider/model)", fg="cyan"),
             type=str,
-            prompt_suffix=click.style(" › ", fg="bright_white"),
+            prompt_suffix=click.style(" > ", fg="bright_white"),
         )
         return custom.strip()
 
@@ -878,7 +1015,7 @@ def _select_model() -> str:
         custom = click.prompt(
             click.style(f"  Enter model name for {provider_key}/", fg="cyan"),
             type=str,
-            prompt_suffix=click.style(" › ", fg="bright_white"),
+            prompt_suffix=click.style(" > ", fg="bright_white"),
         )
         return f"{provider_key}/{custom.strip()}"
 
@@ -893,7 +1030,7 @@ def _select_model() -> str:
         custom = click.prompt(
             click.style(f"  Enter model name for {provider_key}/", fg="cyan"),
             type=str,
-            prompt_suffix=click.style(" › ", fg="bright_white"),
+            prompt_suffix=click.style(" > ", fg="bright_white"),
         )
         result = f"{provider_key}/{custom.strip()}"
     else:
@@ -902,6 +1039,21 @@ def _select_model() -> str:
 
     click.secho(f"  → {result}", fg="green")
     return result
+
+
+def _default_model_for_provider(provider: str | None) -> str | None:
+    """Return the default provider/model string for a ``--provider`` value."""
+    if not provider:
+        return None
+    normalized = provider.strip().lower()
+    if not normalized:
+        return None
+    if "/" in normalized:
+        return normalized
+    models = _PROVIDER_MODELS.get(normalized)
+    if not models:
+        return None
+    return f"{normalized}/{models[0][0]}"
 
 
 # ── Helpers ─────────────────────────────────────────────────────
@@ -935,7 +1087,7 @@ def _setup_env(folder_path: Path, llm_model: str) -> None:
                     click.style(f"  {details['prompt']}", fg="cyan"),
                     default="",
                     show_default=False,
-                    prompt_suffix=click.style(" › ", fg="bright_white"),
+                    prompt_suffix=click.style(" > ", fg="bright_white"),
                 )
                 if api_key_value.strip():
                     env_vars[details["key_name"]] = api_key_value
@@ -981,7 +1133,10 @@ def create_json_crew(
     click.echo()
     click.secho(f"  Creating crew: {name}", fg="green", bold=True)
 
-    agents, tasks, crew_settings = _wizard_agents_and_tasks(skip_provider)
+    agents, tasks, crew_settings = _wizard_agents_and_tasks(
+        skip_provider=skip_provider,
+        default_llm=_default_model_for_provider(provider),
+    )
 
     # Create directories
     folder_path.mkdir(parents=True)

@@ -5,6 +5,7 @@ Two-column layout: left sidebar (tasks/agents/tokens) + main content
 """
 
 import json as _json
+import re
 import time
 import threading
 from typing import Any
@@ -33,6 +34,8 @@ _C_TEXT = "#e0e0e0"       # light text on dark bg
 _C_DIM = "#AAAAAA"        # crewai.background-grey
 _C_MUTED = "#666666"      # dimmer than _C_DIM for past timeline
 _C_CYAN = "#1F7982"       # alias for teal — used for accents
+
+_STEP_NUMBER_RE = re.compile(r"\bstep\s+(\d+)\b", re.IGNORECASE)
 
 
 def _enable_tracing_in_dotenv() -> None:
@@ -623,9 +626,6 @@ FooterKey .footer-key--key {
             for k in self._task_statuses:
                 if self._task_statuses[k] == "active":
                     self._task_statuses[k] = "done"
-            if self._plan:
-                for sn in self._plan_step_status:
-                    self._plan_step_status[sn] = "done"
             now = time.time()
             for entry in self._log_entries:
                 if entry["status"] == "running":
@@ -962,7 +962,10 @@ FooterKey .footer-key--key {
         # Plan section
         if self._plan and self._plan.get("steps"):
             plan_title = self._plan.get("plan", "Plan")
-            completed = self._status in ("completed", "failed")
+            completed = self._status == "completed" and all(
+                self._plan_step_status.get(step.get("step_number")) == "done"
+                for step in self._plan["steps"]
+            )
             if completed:
                 total = len(self._plan["steps"])
                 t.append("  PLAN  ", style=f"bold {_C_MUTED}")
@@ -984,6 +987,9 @@ FooterKey .footer-key--key {
                     if st == "done":
                         t.append("  ✔ ", style=_C_GREEN)
                         t.append(f"{sn}. {short}\n", style=_C_MUTED)
+                    elif st == "failed":
+                        t.append("  ✘ ", style=_C_RED)
+                        t.append(f"{sn}. {short}\n", style=_C_RED)
                     elif st == "active":
                         t.append(f"  {self._spinner()} ", style=_C_PRIMARY)
                         t.append(f"{sn}. {short}\n", style=_C_TEXT)
@@ -1175,7 +1181,50 @@ FooterKey .footer-key--key {
                 # Incomplete JSON — hide the partial blob
                 text = text[:plan_start].strip()
 
+        text = self._strip_step_observation_json(text)
         return _format_json_in_text(text)
+
+    def _strip_step_observation_json(self, text: str) -> str:
+        """Hide structured step-observation JSON from the live transcript."""
+        if "step_completed_successfully" not in text:
+            return text
+
+        result: list[str] = []
+        decoder = _json.JSONDecoder()
+        i = 0
+        while i < len(text):
+            start = text.find("{", i)
+            if start < 0:
+                result.append(text[i:])
+                break
+
+            result.append(text[i:start])
+            try:
+                parsed, offset = decoder.raw_decode(text[start:])
+            except ValueError:
+                if "step_completed_successfully" in text[start:]:
+                    break
+                result.append(text[start])
+                i = start + 1
+                continue
+
+            end = start + offset
+            if self._is_step_observation_payload(parsed):
+                i = end
+                continue
+
+            result.append(text[start:end])
+            i = end
+
+        return "".join(result).strip()
+
+    @staticmethod
+    def _is_step_observation_payload(payload: Any) -> bool:
+        return (
+            isinstance(payload, dict)
+            and "step_completed_successfully" in payload
+            and "key_information_learned" in payload
+        )
 
     # ── Event helpers ───────────────────────────────────────
 
@@ -1226,20 +1275,64 @@ FooterKey .footer-key--key {
                         pass
                     return
 
-    def _update_plan_step(self, status: str) -> None:
-        """Advance the next pending plan step. Pure sequential — no pattern matching."""
-        if not self._plan:
+    def _set_plan_step_status(self, step_number: int, status: str) -> None:
+        """Set status for an explicit plan step reported by the planner."""
+        if not self._plan or step_number not in self._plan_step_status:
             return
-        for step in self._plan["steps"]:
-            sn = step.get("step_number", 0)
-            current = self._plan_step_status.get(sn, "pending")
-            if current == "done":
+
+        if status == "active":
+            for sn, current in list(self._plan_step_status.items()):
+                if sn != step_number and current == "active":
+                    self._plan_step_status[sn] = "pending"
+
+        self._plan_step_status[step_number] = status
+
+    def _try_parse_step_observation(self, text: str) -> bool:
+        """Parse streamed observation JSON and update the exact step it names."""
+        if "step_completed_successfully" not in text:
+            return False
+
+        decoder = _json.JSONDecoder()
+        updated = False
+        i = 0
+        while i < len(text):
+            start = text.find("{", i)
+            if start < 0:
+                break
+            try:
+                payload, offset = decoder.raw_decode(text[start:])
+            except ValueError:
+                i = start + 1
                 continue
-            if status == "active" and current == "pending":
-                self._plan_step_status[sn] = "active"
-            elif status == "done" and current in ("pending", "active"):
-                self._plan_step_status[sn] = "done"
-            break
+
+            if self._is_step_observation_payload(payload):
+                step_number = self._observation_step_number(payload)
+                if step_number is not None:
+                    status = (
+                        "done"
+                        if payload.get("step_completed_successfully") is True
+                        else "failed"
+                    )
+                    self._set_plan_step_status(step_number, status)
+                    updated = True
+            i = start + max(offset, 1)
+
+        return updated
+
+    def _observation_step_number(self, payload: dict[str, Any]) -> int | None:
+        raw_step_number = payload.get("step_number")
+        if isinstance(raw_step_number, int):
+            return raw_step_number
+
+        searchable = " ".join(
+            str(payload.get(field) or "")
+            for field in ("key_information_learned", "replan_reason")
+        )
+        match = _STEP_NUMBER_RE.search(searchable)
+        if not match:
+            return None
+
+        return int(match.group(1))
 
     # ── Event subscription ──────────────────────────────────
 
@@ -1261,6 +1354,19 @@ FooterKey .footer-key--key {
     def _subscribe(self) -> None:
         from crewai.events.event_bus import crewai_event_bus
         from crewai.events.types.crew_events import CrewKickoffStartedEvent
+        from crewai.events.types.llm_events import (
+            LLMCallCompletedEvent,
+            LLMCallStartedEvent,
+            LLMStreamChunkEvent,
+        )
+        from crewai.events.types.logging_events import (
+            AgentLogsExecutionEvent,
+            AgentLogsStartedEvent,
+        )
+        from crewai.events.types.observation_events import (
+            StepObservationCompletedEvent,
+            StepObservationStartedEvent,
+        )
         from crewai.events.types.task_events import (
             TaskCompletedEvent,
             TaskFailedEvent,
@@ -1270,15 +1376,6 @@ FooterKey .footer-key--key {
             ToolUsageErrorEvent,
             ToolUsageFinishedEvent,
             ToolUsageStartedEvent,
-        )
-        from crewai.events.types.logging_events import (
-            AgentLogsExecutionEvent,
-            AgentLogsStartedEvent,
-        )
-        from crewai.events.types.llm_events import (
-            LLMCallCompletedEvent,
-            LLMCallStartedEvent,
-            LLMStreamChunkEvent,
         )
 
         @crewai_event_bus.on(CrewKickoffStartedEvent)
@@ -1399,8 +1496,35 @@ FooterKey .footer-key--key {
                 self._live_out_tokens += 1
                 if not self._plan and '{"plan"' in self._streaming_text:
                     self._try_parse_plan(self._streaming_text)
+                if self._plan and "step_completed_successfully" in self._streaming_text:
+                    self._try_parse_step_observation(self._streaming_text)
 
         self._register_handler(LLMStreamChunkEvent, on_stream_chunk)
+
+        @crewai_event_bus.on(StepObservationStartedEvent)
+        def on_step_observation_started(
+            source: Any, event: StepObservationStartedEvent
+        ) -> None:
+            with self._lock:
+                self._set_plan_step_status(event.step_number, "active")
+
+        self._register_handler(
+            StepObservationStartedEvent, on_step_observation_started
+        )
+
+        @crewai_event_bus.on(StepObservationCompletedEvent)
+        def on_step_observation_completed(
+            source: Any, event: StepObservationCompletedEvent
+        ) -> None:
+            with self._lock:
+                status = (
+                    "done" if event.step_completed_successfully else "failed"
+                )
+                self._set_plan_step_status(event.step_number, status)
+
+        self._register_handler(
+            StepObservationCompletedEvent, on_step_observation_completed
+        )
 
         @crewai_event_bus.on(ToolUsageStartedEvent)
         def on_tool_started(source: Any, event: ToolUsageStartedEvent) -> None:
@@ -1448,8 +1572,6 @@ FooterKey .footer-key--key {
                         "task_idx": self._current_task_idx,
                     }
                 )
-                if self._plan:
-                    self._update_plan_step("active")
             self._complete_step("teal", f"⚡ {event.tool_name}…")
 
         self._register_handler(ToolUsageStartedEvent, on_tool_started)
@@ -1493,8 +1615,6 @@ FooterKey .footer-key--key {
                         entry["duration"] = time.time() - entry["start_time"]
                         entry["from_cache"] = from_cache
                         break
-                if self._plan:
-                    self._update_plan_step("done")
             self._replace_step("green", f"✔ {event.tool_name}")
 
         self._register_handler(ToolUsageFinishedEvent, on_tool_finished)
