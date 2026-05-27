@@ -8,20 +8,10 @@ interactions:
       [{"toolSpec": {"name": "add_numbers", "description": "Add two numbers together
       and return the sum.", "inputSchema": {"json": {"properties": {"a": {"title":
       "A", "type": "integer"}, "b": {"title": "B", "type": "integer"}}, "required":
-      ["a", "b"], "type": "object", "additionalProperties": false}}}}, {"toolSpec":
-      {"name": "structured_output", "description": "Use this tool to provide your
-      final structured response. Call this tool when you have gathered all necessary
-      information and are ready to provide the final answer in the required format.",
-      "inputSchema": {"json": {"description": "Structured output for calculation results.",
-      "properties": {"operation": {"description": "The mathematical operation performed",
-      "title": "Operation", "type": "string"}, "result": {"description": "The result
-      of the calculation", "title": "Result", "type": "integer"}, "explanation": {"description":
-      "Brief explanation of the calculation", "title": "Explanation", "type": "string"}},
-      "required": ["operation", "result", "explanation"], "title": "CalculationResult",
-      "type": "object", "additionalProperties": false}}}}]}}'
+      ["a", "b"], "type": "object", "additionalProperties": false}}}}]}}'
     headers:
       Content-Length:
-      - '1509'
+      - '702'
       Content-Type:
       - !!binary |
         YXBwbGljYXRpb24vanNvbg==
@@ -36,21 +26,23 @@ interactions:
       - AUTHORIZATION-XXX
       x-amz-date:
       - X-AMZ-DATE-XXX
+      x-amz-security-token:
+      - X-AMZ-SECURITY-TOKEN-XXX
     method: POST
-    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-sonnet-20240229-v1%3A0/converse
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/converse
   response:
     body:
-      string: '{"metrics":{"latencyMs":1968},"output":{"message":{"content":[{"text":"Okay,
-        let''s calculate 15 + 27 using the add_numbers tool:"},{"toolUse":{"input":{"a":15,"b":27},"name":"add_numbers","toolUseId":"tooluse_pSseOamVELzpL3kQG5VukN"}}],"role":"assistant"}},"stopReason":"tool_use","usage":{"inputTokens":488,"outputTokens":91,"serverToolUsage":{},"totalTokens":579}}'
+      string: '{"metrics":{"latencyMs":1570},"output":{"message":{"content":[{"text":"I''ll
+        calculate 15 + 27 right away using the `add_numbers` tool!"},{"toolUse":{"input":{"a":15,"b":27},"name":"add_numbers","toolUseId":"tooluse_lYs0ulbVGQaYseRBvZ7tdX","type":"tool_use"}}],"role":"assistant"}},"stopReason":"tool_use","usage":{"cacheReadInputTokenCount":0,"cacheReadInputTokens":0,"cacheWriteInputTokenCount":0,"cacheWriteInputTokens":0,"inputTokens":645,"outputTokens":92,"serverToolUsage":{},"totalTokens":737}}'
     headers:
       Connection:
       - keep-alive
       Content-Length:
-      - '366'
+      - '500'
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Feb 2026 22:01:04 GMT
+      - Fri, 24 Apr 2026 20:49:36 GMT
       x-amzn-RequestId:
       - X-AMZN-REQUESTID-XXX
     status:
@@ -59,29 +51,19 @@ interactions:
 - request:
     body: '{"messages": [{"role": "user", "content": [{"text": "\nCurrent Task: Calculate
       15 + 27 using your add_numbers tool. Report the result."}]}, {"role": "assistant",
-      "content": [{"toolUse": {"toolUseId": "tooluse_pSseOamVELzpL3kQG5VukN", "name":
+      "content": [{"toolUse": {"toolUseId": "tooluse_lYs0ulbVGQaYseRBvZ7tdX", "name":
       "add_numbers", "input": {"a": 15, "b": 27}}}]}, {"role": "user", "content":
-      [{"toolResult": {"toolUseId": "tooluse_pSseOamVELzpL3kQG5VukN", "content": [{"text":
+      [{"toolResult": {"toolUseId": "tooluse_lYs0ulbVGQaYseRBvZ7tdX", "content": [{"text":
       "42"}]}}]}], "inferenceConfig": {"stopSequences": ["\nObservation:"]}, "system":
       [{"text": "You are Calculator. You are a calculator assistant that uses tools
       to compute results.\nYour personal goal is: Perform calculations using available
       tools"}], "toolConfig": {"tools": [{"toolSpec": {"name": "add_numbers", "description":
       "Add two numbers together and return the sum.", "inputSchema": {"json": {"properties":
       {"a": {"title": "A", "type": "integer"}, "b": {"title": "B", "type": "integer"}},
-      "required": ["a", "b"], "type": "object", "additionalProperties": false}}}},
-      {"toolSpec": {"name": "structured_output", "description": "Use this tool to
-      provide your final structured response. Call this tool when you have gathered
-      all necessary information and are ready to provide the final answer in the required
-      format.", "inputSchema": {"json": {"description": "Structured output for calculation
-      results.", "properties": {"operation": {"description": "The mathematical operation
-      performed", "title": "Operation", "type": "string"}, "result": {"description":
-      "The result of the calculation", "title": "Result", "type": "integer"}, "explanation":
-      {"description": "Brief explanation of the calculation", "title": "Explanation",
-      "type": "string"}}, "required": ["operation", "result", "explanation"], "title":
-      "CalculationResult", "type": "object", "additionalProperties": false}}}}]}}'
+      "required": ["a", "b"], "type": "object", "additionalProperties": false}}}}]}}'
     headers:
       Content-Length:
-      - '1784'
+      - '977'
       Content-Type:
       - !!binary |
         YXBwbGljYXRpb24vanNvbg==
@@ -96,41 +78,50 @@ interactions:
       - AUTHORIZATION-XXX
       x-amz-date:
       - X-AMZ-DATE-XXX
+      x-amz-security-token:
+      - X-AMZ-SECURITY-TOKEN-XXX
     method: POST
-    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-sonnet-20240229-v1%3A0/converse
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/converse
   response:
     body:
-      string: '{"metrics":{"latencyMs":7598},"output":{"message":{"content":[{"toolUse":{"input":{"operation":"Addition","result":42,"explanation":"I
-        added 15 and 27 using the add_numbers tool."},"name":"structured_output","toolUseId":"tooluse_RT8uSPaM37Q8CVuo3rJLtI"}}],"role":"assistant"}},"stopReason":"tool_use","usage":{"inputTokens":571,"outputTokens":102,"serverToolUsage":{},"totalTokens":673}}'
+      string: "{\"metrics\":{\"latencyMs\":1456},\"output\":{\"message\":{\"content\":[{\"text\":\"The
+        result of **15 + 27 = 42**! \U0001F9EE\\n\\nUsing the `add_numbers` tool,
+        I computed the sum of 15 and 27, and the result is **42**.\"}],\"role\":\"assistant\"}},\"stopReason\":\"end_turn\",\"usage\":{\"cacheReadInputTokenCount\":0,\"cacheReadInputTokens\":0,\"cacheWriteInputTokenCount\":0,\"cacheWriteInputTokens\":0,\"inputTokens\":729,\"outputTokens\":51,\"serverToolUsage\":{},\"totalTokens\":780}}"
     headers:
       Connection:
       - keep-alive
       Content-Length:
-      - '387'
+      - '443'
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Feb 2026 22:01:12 GMT
+      - Fri, 24 Apr 2026 20:49:37 GMT
       x-amzn-RequestId:
       - X-AMZN-REQUESTID-XXX
     status:
       code: 200
       message: OK
 - request:
-    body: '{"messages": [{"role": "user", "content": [{"text": "\nCurrent Task: Calculate
-      15 + 27 using your add_numbers tool. Report the result."}]}, {"role": "assistant",
-      "content": [{"toolUse": {"toolUseId": "tooluse_pSseOamVELzpL3kQG5VukN", "name":
-      "add_numbers", "input": {"a": 15, "b": 27}}}]}, {"role": "user", "content":
-      [{"toolResult": {"toolUseId": "tooluse_pSseOamVELzpL3kQG5VukN", "content": [{"text":
-      "42"}]}}]}, {"role": "assistant", "content": [{"text": "{\"operation\":\"Addition\",\"result\":42,\"explanation\":\"I
-      added 15 and 27 using the add_numbers tool.\"}"}]}], "inferenceConfig": {"stopSequences":
-      ["\nObservation:"]}, "system": [{"text": "You are Calculator. You are a calculator
-      assistant that uses tools to compute results.\nYour personal goal is: Perform
-      calculations using available tools"}], "toolConfig": {"tools": [{"toolSpec":
-      {"name": "add_numbers", "description": "Add two numbers together and return
-      the sum.", "inputSchema": {"json": {"properties": {"a": {"title": "A", "type":
-      "integer"}, "b": {"title": "B", "type": "integer"}}, "required": ["a", "b"],
-      "type": "object", "additionalProperties": false}}}}, {"toolSpec": {"name": "structured_output",
+    body: '{"messages": [{"role": "user", "content": [{"text": "The result of **15
+      + 27 = 42**! \ud83e\uddee\n\nUsing the `add_numbers` tool, I computed the sum
+      of 15 and 27, and the result is **42**."}]}], "inferenceConfig": {"stopSequences":
+      ["\nObservation:"]}, "system": [{"text": "Format your final answer according
+      to the following OpenAPI schema: {\n  \"type\": \"json_schema\",\n  \"json_schema\":
+      {\n    \"name\": \"CalculationResult\",\n    \"strict\": true,\n    \"schema\":
+      {\n      \"description\": \"Structured output for calculation results.\",\n      \"properties\":
+      {\n        \"operation\": {\n          \"description\": \"The mathematical operation
+      performed\",\n          \"title\": \"Operation\",\n          \"type\": \"string\"\n        },\n        \"result\":
+      {\n          \"description\": \"The result of the calculation\",\n          \"title\":
+      \"Result\",\n          \"type\": \"integer\"\n        },\n        \"explanation\":
+      {\n          \"description\": \"Brief explanation of the calculation\",\n          \"title\":
+      \"Explanation\",\n          \"type\": \"string\"\n        }\n      },\n      \"required\":
+      [\n        \"operation\",\n        \"result\",\n        \"explanation\"\n      ],\n      \"title\":
+      \"CalculationResult\",\n      \"type\": \"object\",\n      \"additionalProperties\":
+      false\n    }\n  }\n}\n\nIMPORTANT: Preserve the original content exactly as-is.
+      Do NOT rewrite, paraphrase, or modify the meaning of the content. Only structure
+      it to match the schema format.\n\nDo not include the OpenAPI schema in the final
+      output. Ensure the final output does not include any code block markers like
+      ```json or ```python."}], "toolConfig": {"tools": [{"toolSpec": {"name": "structured_output",
       "description": "Use this tool to provide your final structured response. Call
       this tool when you have gathered all necessary information and are ready to
       provide the final answer in the required format.", "inputSchema": {"json": {"description":
@@ -140,10 +131,10 @@ interactions:
       "type": "integer"}, "explanation": {"description": "Brief explanation of the
       calculation", "title": "Explanation", "type": "string"}}, "required": ["operation",
       "result", "explanation"], "title": "CalculationResult", "type": "object", "additionalProperties":
-      false}}}}]}}'
+      false}}}}], "toolChoice": {"tool": {"name": "structured_output"}}}}'
     headers:
       Content-Length:
-      - '1942'
+      - '2545'
       Content-Type:
       - !!binary |
         YXBwbGljYXRpb24vanNvbg==
@@ -158,28 +149,27 @@ interactions:
       - AUTHORIZATION-XXX
       x-amz-date:
       - X-AMZ-DATE-XXX
+      x-amz-security-token:
+      - X-AMZ-SECURITY-TOKEN-XXX
     method: POST
-    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-sonnet-20240229-v1%3A0/converse
+    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/converse
   response:
     body:
-      string: '{"message":"The model returned the following errors: Your API request
-        included an `assistant` message in the final position, which would pre-fill
-        the `assistant` response. When using tools, pre-filling the `assistant` response
-        is not supported."}'
+      string: "{\"metrics\":{\"latencyMs\":1729},\"output\":{\"message\":{\"content\":[{\"toolUse\":{\"input\":{\"operation\":\"add_numbers\",\"result\":42,\"explanation\":\"The
+        result of **15 + 27 = 42**! \U0001F9EE\\n\\nUsing the `add_numbers` tool,
+        I computed the sum of 15 and 27, and the result is **42**.\"},\"name\":\"structured_output\",\"toolUseId\":\"tooluse_FavcTtQCbzFrqURMiduSla\",\"type\":\"tool_use\"}}],\"role\":\"assistant\"}},\"stopReason\":\"tool_use\",\"usage\":{\"cacheReadInputTokenCount\":0,\"cacheReadInputTokens\":0,\"cacheWriteInputTokenCount\":0,\"cacheWriteInputTokens\":0,\"inputTokens\":1150,\"outputTokens\":116,\"serverToolUsage\":{},\"totalTokens\":1266}}"
     headers:
       Connection:
       - keep-alive
       Content-Length:
-      - '246'
+      - '603'
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Feb 2026 22:01:12 GMT
-      x-amzn-ErrorType:
-      - ValidationException:http://internal.amazon.com/coral/com.amazon.bedrock/
+      - Fri, 24 Apr 2026 20:49:39 GMT
       x-amzn-RequestId:
       - X-AMZN-REQUESTID-XXX
     status:
-      code: 400
-      message: Bad Request
+      code: 200
+      message: OK
 version: 1

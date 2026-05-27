@@ -2121,3 +2121,103 @@ class TestVisionImageFormatContract:
         assert hasattr(AnthropicCompletion, "_convert_image_blocks"), (
             "Anthropic provider must have _convert_image_blocks for auto-conversion"
         )
+
+
+class TestLoopResponseModelGuard:
+    """Regression: response_model must not be sent to the LLM during a tool loop.
+
+    Bug: when output_pydantic + tools are both set, OpenAI's Responses API
+    (and several other providers) constrain the first response to the
+    structured-output schema, so the model emits placeholder JSON instead of
+    calling tools. Schema conversion is post-processed, so the LLM call must
+    omit response_model whenever tools are present.
+    """
+
+    def _make_pydantic_model(self):
+        from pydantic import BaseModel as _BaseModel
+
+        class _Out(_BaseModel):
+            answer: str
+
+        return _Out
+
+    def _crew_executor(self, *, with_tools: bool, response_model):
+        from crewai.agents.crew_agent_executor import CrewAgentExecutor
+
+        tool = Mock()
+        tool.name = "search"
+        tool.description = "search"
+
+        executor = CrewAgentExecutor.model_construct(
+            response_model=response_model,
+            original_tools=[tool] if with_tools else [],
+        )
+        return executor
+
+    def test_crew_helper_strips_when_tools_present(self):
+        Model = self._make_pydantic_model()
+        ex = self._crew_executor(with_tools=True, response_model=Model)
+        assert ex._loop_response_model() is None
+
+    def test_crew_helper_preserves_when_no_tools(self):
+        Model = self._make_pydantic_model()
+        ex = self._crew_executor(with_tools=False, response_model=Model)
+        assert ex._loop_response_model() is Model
+
+    def test_crew_helper_returns_none_when_no_response_model(self):
+        ex = self._crew_executor(with_tools=False, response_model=None)
+        assert ex._loop_response_model() is None
+
+    def test_experimental_helper_strips_when_tools_present(self):
+        Model = self._make_pydantic_model()
+        llm = Mock()
+        llm.supports_stop_words.return_value = False
+        tool = Mock()
+        tool.name = "search"
+        ex = _build_executor(llm=llm, response_model=Model, original_tools=[tool])
+        assert ex._loop_response_model() is None
+
+    def test_experimental_helper_preserves_when_no_tools(self):
+        Model = self._make_pydantic_model()
+        llm = Mock()
+        llm.supports_stop_words.return_value = False
+        ex = _build_executor(llm=llm, response_model=Model, original_tools=[])
+        assert ex._loop_response_model() is Model
+
+    def test_loop_call_sites_route_through_helper(self):
+        """Source-level guard: every in-loop LLM call must use the helper.
+
+        This catches regressions where someone reintroduces
+        `response_model=self.response_model` inside a tool loop.
+        """
+        import inspect
+        from crewai.agents import crew_agent_executor as _crew_mod
+        from crewai.experimental import agent_executor as _exp_mod
+
+        for mod, names in (
+            (
+                _crew_mod,
+                (
+                    "_invoke_loop_react",
+                    "_invoke_loop_native_tools",
+                    "_ainvoke_loop_react",
+                    "_ainvoke_loop_native_tools",
+                ),
+            ),
+            (
+                _exp_mod,
+                ("call_llm_and_parse", "call_llm_native_tools"),
+            ),
+        ):
+            cls = (
+                _crew_mod.CrewAgentExecutor
+                if mod is _crew_mod
+                else _exp_mod.AgentExecutor
+            )
+            for name in names:
+                src = inspect.getsource(getattr(cls, name))
+                assert "response_model=self.response_model" not in src, (
+                    f"{cls.__name__}.{name} forwards self.response_model directly. "
+                    "Use self._loop_response_model() instead — see "
+                    "TestLoopResponseModelGuard for the bug it prevents."
+                )

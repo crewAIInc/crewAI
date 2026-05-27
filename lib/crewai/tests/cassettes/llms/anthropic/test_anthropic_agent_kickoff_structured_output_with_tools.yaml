@@ -1,14 +1,10 @@
 interactions:
 - request:
     body: '{"max_tokens":4096,"messages":[{"role":"user","content":"\nCurrent Task:
-      Calculate 15 + 27 using your add_numbers tool. Report the result."}],"model":"claude-3-5-haiku-20241022","stop_sequences":["\nObservation:"],"stream":false,"system":"You
+      Calculate 15 + 27 using your add_numbers tool. Report the result."}],"model":"claude-sonnet-4-6","stop_sequences":["\nObservation:"],"stream":false,"system":"You
       are Calculator. You are a calculator assistant that uses tools to compute results.\nYour
-      personal goal is: Perform calculations using available tools","tool_choice":{"type":"tool","name":"structured_output"},"tools":[{"name":"structured_output","description":"Output
-      the structured response","input_schema":{"type":"object","description":"Structured
-      output for calculation results.","title":"CalculationResult","properties":{"operation":{"type":"string","description":"The
-      mathematical operation performed","title":"Operation"},"result":{"type":"integer","description":"The
-      result of the calculation","title":"Result"},"explanation":{"type":"string","description":"Brief
-      explanation of the calculation","title":"Explanation"}},"additionalProperties":false,"required":["operation","result","explanation"]}}]}'
+      personal goal is: Perform calculations using available tools","tools":[{"name":"add_numbers","description":"Add
+      two numbers together and return the sum.","input_schema":{"properties":{"a":{"type":"integer"},"b":{"type":"integer"}},"required":["a","b"],"type":"object","additionalProperties":false},"strict":true}]}'
     headers:
       User-Agent:
       - X-USER-AGENT-XXX
@@ -21,7 +17,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1050'
+      - '638'
       content-type:
       - application/json
       host:
@@ -37,7 +33,7 @@ interactions:
       x-stainless-os:
       - X-STAINLESS-OS-XXX
       x-stainless-package-version:
-      - 0.73.0
+      - 0.96.0
       x-stainless-retry-count:
       - '0'
       x-stainless-runtime:
@@ -50,8 +46,8 @@ interactions:
     uri: https://api.anthropic.com/v1/messages
   response:
     body:
-      string: '{"model":"claude-3-5-haiku-20241022","id":"msg_01MsoNSVoPuoMYGCcJLvfXS6","type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01TtAsqddWjE7C4GYmCKavdg","name":"structured_output","input":{"operation":"Addition","result":42,"explanation":"Added
-        15 and 27 together"}}],"stop_reason":"tool_use","stop_sequence":null,"usage":{"input_tokens":573,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":75,"service_tier":"standard","inference_geo":"not_available"}}'
+      string: '{"model":"claude-sonnet-4-6","id":"msg_016CHZY3K6G73PFc4iAJVC5C","type":"message","role":"assistant","content":[{"type":"text","text":"I''ll
+        calculate 15 + 27 right away using the `add_numbers` tool!"},{"type":"tool_use","id":"toolu_011UPTzkFNsgYshddoTX2A8X","name":"add_numbers","input":{"a":15,"b":27},"caller":{"type":"direct"}}],"stop_reason":"tool_use","stop_sequence":null,"stop_details":null,"usage":{"input_tokens":633,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":0},"output_tokens":92,"service_tier":"standard","inference_geo":"global"}}'
     headers:
       CF-RAY:
       - CF-RAY-XXX
@@ -62,7 +58,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Thu, 12 Feb 2026 22:11:20 GMT
+      - Fri, 24 Apr 2026 20:48:28 GMT
       Server:
       - cloudflare
       Transfer-Encoding:
@@ -84,11 +80,119 @@ interactions:
       anthropic-ratelimit-output-tokens-reset:
       - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-RESET-XXX
       anthropic-ratelimit-requests-limit:
-      - '4000'
+      - '20000'
       anthropic-ratelimit-requests-remaining:
-      - '3999'
+      - '19999'
       anthropic-ratelimit-requests-reset:
-      - '2026-02-12T22:11:18Z'
+      - '2026-04-24T20:48:25Z'
+      anthropic-ratelimit-tokens-limit:
+      - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-tokens-reset:
+      - ANTHROPIC-RATELIMIT-TOKENS-RESET-XXX
+      cf-cache-status:
+      - DYNAMIC
+      request-id:
+      - REQUEST-ID-XXX
+      set-cookie:
+      - SET-COOKIE-XXX
+      strict-transport-security:
+      - STS-XXX
+      x-envoy-upstream-service-time:
+      - '2056'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"max_tokens":4096,"messages":[{"role":"user","content":"\nCurrent Task:
+      Calculate 15 + 27 using your add_numbers tool. Report the result."},{"role":"assistant","content":[{"type":"tool_use","id":"toolu_011UPTzkFNsgYshddoTX2A8X","name":"add_numbers","input":{"a":15,"b":27}}]},{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_011UPTzkFNsgYshddoTX2A8X","content":"42"}]}],"model":"claude-sonnet-4-6","stop_sequences":["\nObservation:"],"stream":false,"system":"You
+      are Calculator. You are a calculator assistant that uses tools to compute results.\nYour
+      personal goal is: Perform calculations using available tools","tools":[{"name":"add_numbers","description":"Add
+      two numbers together and return the sum.","input_schema":{"properties":{"a":{"type":"integer"},"b":{"type":"integer"}},"required":["a","b"],"type":"object","additionalProperties":false},"strict":true}]}'
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '887'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.anthropic.com
+      x-api-key:
+      - X-API-KEY-XXX
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 0.96.0
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+      x-stainless-timeout:
+      - NOT_GIVEN
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: "{\"model\":\"claude-sonnet-4-6\",\"id\":\"msg_01V13FHBygrTHV6pnhocqvd9\",\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"text\",\"text\":\"The
+        result of **15 + 27 = 42**! \U0001F389\\n\\nUsing the `add_numbers` tool,
+        I computed the sum of 15 and 27, and the result is **42**.\"}],\"stop_reason\":\"end_turn\",\"stop_sequence\":null,\"stop_details\":null,\"usage\":{\"input_tokens\":717,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":0},\"output_tokens\":51,\"service_tier\":\"standard\",\"inference_geo\":\"global\"}}"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Security-Policy:
+      - CSP-FILTERED
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 24 Apr 2026 20:48:32 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-organization-id:
+      - ANTHROPIC-ORGANIZATION-ID-XXX
+      anthropic-ratelimit-input-tokens-limit:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-input-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-input-tokens-reset:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-output-tokens-limit:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-output-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-output-tokens-reset:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-requests-limit:
+      - '20000'
+      anthropic-ratelimit-requests-remaining:
+      - '19999'
+      anthropic-ratelimit-requests-reset:
+      - '2026-04-24T20:48:28Z'
       anthropic-ratelimit-tokens-limit:
       - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
       anthropic-ratelimit-tokens-remaining:
@@ -102,7 +206,139 @@ interactions:
       strict-transport-security:
       - STS-XXX
       x-envoy-upstream-service-time:
-      - '1234'
+      - '4700'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: "{\"max_tokens\":4096,\"messages\":[{\"role\":\"user\",\"content\":\"The
+      result of **15 + 27 = 42**! \U0001F389\\n\\nUsing the `add_numbers` tool, I
+      computed the sum of 15 and 27, and the result is **42**.\"}],\"model\":\"claude-sonnet-4-6\",\"stop_sequences\":[\"\\nObservation:\"],\"stream\":false,\"system\":\"Format
+      your final answer according to the following OpenAPI schema: {\\n  \\\"type\\\":
+      \\\"json_schema\\\",\\n  \\\"json_schema\\\": {\\n    \\\"name\\\": \\\"CalculationResult\\\",\\n
+      \   \\\"strict\\\": true,\\n    \\\"schema\\\": {\\n      \\\"description\\\":
+      \\\"Structured output for calculation results.\\\",\\n      \\\"properties\\\":
+      {\\n        \\\"operation\\\": {\\n          \\\"description\\\": \\\"The mathematical
+      operation performed\\\",\\n          \\\"title\\\": \\\"Operation\\\",\\n          \\\"type\\\":
+      \\\"string\\\"\\n        },\\n        \\\"result\\\": {\\n          \\\"description\\\":
+      \\\"The result of the calculation\\\",\\n          \\\"title\\\": \\\"Result\\\",\\n
+      \         \\\"type\\\": \\\"integer\\\"\\n        },\\n        \\\"explanation\\\":
+      {\\n          \\\"description\\\": \\\"Brief explanation of the calculation\\\",\\n
+      \         \\\"title\\\": \\\"Explanation\\\",\\n          \\\"type\\\": \\\"string\\\"\\n
+      \       }\\n      },\\n      \\\"required\\\": [\\n        \\\"operation\\\",\\n
+      \       \\\"result\\\",\\n        \\\"explanation\\\"\\n      ],\\n      \\\"title\\\":
+      \\\"CalculationResult\\\",\\n      \\\"type\\\": \\\"object\\\",\\n      \\\"additionalProperties\\\":
+      false\\n    }\\n  }\\n}\\n\\nIMPORTANT: Preserve the original content exactly
+      as-is. Do NOT rewrite, paraphrase, or modify the meaning of the content. Only
+      structure it to match the schema format.\\n\\nDo not include the OpenAPI schema
+      in the final output. Ensure the final output does not include any code block
+      markers like ```json or ```python.\",\"tool_choice\":{\"type\":\"tool\",\"name\":\"structured_output\"},\"tools\":[{\"name\":\"structured_output\",\"description\":\"Output
+      the structured response\",\"input_schema\":{\"type\":\"object\",\"description\":\"Structured
+      output for calculation results.\",\"title\":\"CalculationResult\",\"properties\":{\"operation\":{\"type\":\"string\",\"description\":\"The
+      mathematical operation performed\",\"title\":\"Operation\"},\"result\":{\"type\":\"integer\",\"description\":\"The
+      result of the calculation\",\"title\":\"Result\"},\"explanation\":{\"type\":\"string\",\"description\":\"Brief
+      explanation of the calculation\",\"title\":\"Explanation\"}},\"additionalProperties\":false,\"required\":[\"operation\",\"result\",\"explanation\"]}}]}"
+    headers:
+      User-Agent:
+      - X-USER-AGENT-XXX
+      accept:
+      - application/json
+      accept-encoding:
+      - ACCEPT-ENCODING-XXX
+      anthropic-version:
+      - '2023-06-01'
+      connection:
+      - keep-alive
+      content-length:
+      - '2313'
+      content-type:
+      - application/json
+      cookie:
+      - COOKIE-XXX
+      host:
+      - api.anthropic.com
+      x-api-key:
+      - X-API-KEY-XXX
+      x-stainless-arch:
+      - X-STAINLESS-ARCH-XXX
+      x-stainless-async:
+      - 'false'
+      x-stainless-lang:
+      - python
+      x-stainless-os:
+      - X-STAINLESS-OS-XXX
+      x-stainless-package-version:
+      - 0.96.0
+      x-stainless-retry-count:
+      - '0'
+      x-stainless-runtime:
+      - CPython
+      x-stainless-runtime-version:
+      - 3.13.3
+      x-stainless-timeout:
+      - NOT_GIVEN
+    method: POST
+    uri: https://api.anthropic.com/v1/messages
+  response:
+    body:
+      string: "{\"model\":\"claude-sonnet-4-6\",\"id\":\"msg_01Csx2k6XmGyjfWkdLrXzLyA\",\"type\":\"message\",\"role\":\"assistant\",\"content\":[{\"type\":\"tool_use\",\"id\":\"toolu_01DzJ3ZUUnvPPJgzioZnxjKM\",\"name\":\"structured_output\",\"input\":{\"operation\":\"add_numbers\",\"result\":42,\"explanation\":\"The
+        result of **15 + 27 = 42**! \U0001F389\\n\\nUsing the `add_numbers` tool,
+        I computed the sum of 15 and 27, and the result is **42**.\"},\"caller\":{\"type\":\"direct\"}}],\"stop_reason\":\"tool_use\",\"stop_sequence\":null,\"stop_details\":null,\"usage\":{\"input_tokens\":1122,\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0,\"cache_creation\":{\"ephemeral_5m_input_tokens\":0,\"ephemeral_1h_input_tokens\":0},\"output_tokens\":116,\"service_tier\":\"standard\",\"inference_geo\":\"global\"}}"
+    headers:
+      CF-RAY:
+      - CF-RAY-XXX
+      Connection:
+      - keep-alive
+      Content-Security-Policy:
+      - CSP-FILTERED
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 24 Apr 2026 20:48:34 GMT
+      Server:
+      - cloudflare
+      Transfer-Encoding:
+      - chunked
+      X-Robots-Tag:
+      - none
+      anthropic-organization-id:
+      - ANTHROPIC-ORGANIZATION-ID-XXX
+      anthropic-ratelimit-input-tokens-limit:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-input-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-input-tokens-reset:
+      - ANTHROPIC-RATELIMIT-INPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-output-tokens-limit:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-output-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-output-tokens-reset:
+      - ANTHROPIC-RATELIMIT-OUTPUT-TOKENS-RESET-XXX
+      anthropic-ratelimit-requests-limit:
+      - '20000'
+      anthropic-ratelimit-requests-remaining:
+      - '19999'
+      anthropic-ratelimit-requests-reset:
+      - '2026-04-24T20:48:32Z'
+      anthropic-ratelimit-tokens-limit:
+      - ANTHROPIC-RATELIMIT-TOKENS-LIMIT-XXX
+      anthropic-ratelimit-tokens-remaining:
+      - ANTHROPIC-RATELIMIT-TOKENS-REMAINING-XXX
+      anthropic-ratelimit-tokens-reset:
+      - ANTHROPIC-RATELIMIT-TOKENS-RESET-XXX
+      cf-cache-status:
+      - DYNAMIC
+      request-id:
+      - REQUEST-ID-XXX
+      server-timing:
+      - x-originResponse;dur=1594
+      strict-transport-security:
+      - STS-XXX
+      vary:
+      - Accept-Encoding
+      x-envoy-upstream-service-time:
+      - '1588'
     status:
       code: 200
       message: OK

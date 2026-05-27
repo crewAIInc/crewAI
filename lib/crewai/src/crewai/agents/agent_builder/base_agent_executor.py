@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from pydantic import BaseModel, Field, PrivateAttr
+from pydantic import BaseModel as PydanticBaseModel, Field, PrivateAttr
 
 from crewai.agents.parser import AgentFinish
 from crewai.memory.utils import sanitize_scope_name
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from crewai.task import Task
 
 
-class BaseAgentExecutor(BaseModel):
+class BaseAgentExecutor(PydanticBaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
     executor_type: str = "base"
@@ -27,6 +27,26 @@ class BaseAgentExecutor(BaseModel):
     max_iter: int = Field(default=25)
     messages: list[LLMMessage] = Field(default_factory=list)
     _resuming: bool = PrivateAttr(default=False)
+
+    def _loop_response_model(self) -> type[PydanticBaseModel] | None:
+        """Return the response_model to forward to the LLM during a tool loop.
+
+        When the executor has tools, returns ``None``. Sending a strict
+        structured-output schema alongside ``tools=`` makes many providers
+        (notably OpenAI's Responses API with ``text.format`` json_schema)
+        constrain the first response to the schema, so the model emits
+        placeholder JSON instead of calling tools. Schema conversion is
+        applied as post-processing in ``Task._export_output()`` (Crew path)
+        or via ``Converter`` in ``Agent._build_output_from_result()``
+        (standalone kickoff path).
+
+        Subclasses must define ``original_tools`` and ``response_model``
+        attributes; this base implementation reads them via ``getattr`` so
+        the helper works for any executor that exposes those names.
+        """
+        if getattr(self, "original_tools", None):
+            return None
+        return getattr(self, "response_model", None)
 
     def _save_to_memory(self, output: AgentFinish) -> None:
         """Save task result to unified memory (memory or crew._memory)."""
