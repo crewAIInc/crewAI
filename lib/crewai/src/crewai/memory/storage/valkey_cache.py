@@ -86,6 +86,7 @@ class ValkeyCache:
 
                         config = GlideClientConfiguration(
                             addresses=[NodeAddress(host, port)],
+                            client_name="crewai_valkey",
                             database_id=db,
                             credentials=(
                                 ServerCredentials(password=self._password)
