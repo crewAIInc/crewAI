@@ -81,7 +81,8 @@ class TestPickleHandler(unittest.TestCase):
         assert "<class '_pickle.UnpicklingError'>" == str(exc.type)
 
     def test_load_rejects_unsafe_pickle_globals(self):
-        marker = "CREWAI_PICKLE_HANDLER_EXPLOITED"
+        marker = f"CREWAI_PICKLE_HANDLER_EXPLOITED_{uuid.uuid4().hex}"
+        previous_value = os.environ.get(marker)
 
         class _Exploit:
             def __reduce__(self):
@@ -98,4 +99,7 @@ class TestPickleHandler(unittest.TestCase):
 
             assert marker not in os.environ
         finally:
-            os.environ.pop(marker, None)
+            if previous_value is None:
+                os.environ.pop(marker, None)
+            else:
+                os.environ[marker] = previous_value
