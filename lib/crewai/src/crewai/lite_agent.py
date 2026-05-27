@@ -23,6 +23,7 @@ from pydantic import (
     BaseModel,
     Field,
     PrivateAttr,
+    ValidationError,
     field_serializer,
     field_validator,
     model_validator,
@@ -639,28 +640,37 @@ class LiteAgent(FlowTrackable, BaseModel):
             formatted_result = agent_finish.output
         elif active_response_format:
             try:
-                model_schema = generate_model_description(active_response_format)
-                schema = json.dumps(model_schema, indent=2)
-                instructions = I18N_DEFAULT.slice("formatted_task_instructions").format(
-                    output_format=schema
+                formatted_result = active_response_format.model_validate_json(
+                    str(agent_finish.output)
                 )
+            except ValidationError:
+                # Direct JSON validation failed; fall back to converter-based parsing below.
+                formatted_result = None
 
-                converter = Converter(
-                    llm=self.llm,
-                    text=agent_finish.output,
-                    model=active_response_format,
-                    instructions=instructions,
-                )
+            if formatted_result is None:
+                try:
+                    model_schema = generate_model_description(active_response_format)
+                    schema = json.dumps(model_schema, indent=2)
+                    instructions = I18N_DEFAULT.slice(
+                        "formatted_task_instructions"
+                    ).format(output_format=schema)
 
-                result = converter.to_pydantic()
-                if isinstance(result, BaseModel):
-                    formatted_result = result
-            except ConverterError as e:
-                if self.verbose:
-                    PRINTER.print(
-                        content=f"Failed to parse output into response format after retries: {e.message}",
-                        color="yellow",
+                    converter = Converter(
+                        llm=self.llm,
+                        text=agent_finish.output,
+                        model=active_response_format,
+                        instructions=instructions,
                     )
+
+                    result = converter.to_pydantic()
+                    if isinstance(result, BaseModel):
+                        formatted_result = result
+                except ConverterError as e:
+                    if self.verbose:
+                        PRINTER.print(
+                            content=f"Failed to parse output into response format after retries: {e.message}",
+                            color="yellow",
+                        )
 
         if isinstance(self.llm, BaseLLM):
             usage_metrics = self.llm.get_token_usage_summary()
