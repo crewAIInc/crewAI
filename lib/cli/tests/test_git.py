@@ -99,3 +99,12 @@ def test_origin_url(fp, repository):
         stdout="https://github.com/user/repo.git\n",
     )
     assert repository.origin_url() == "https://github.com/user/repo.git"
+
+
+def test_origin_url_no_remote(fp, repository):
+    fp.register(
+        ["git", "remote", "get-url", "origin"],
+        returncode=1,
+        stderr="fatal: No such remote 'origin'\n",
+    )
+    assert repository.origin_url() is None
