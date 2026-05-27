@@ -1,9 +1,15 @@
 """Tests for upload cache."""
 
 from datetime import datetime, timedelta, timezone
+import json
+import pickle
 
 from crewai_files import FileBytes, ImageFile
-from crewai_files.cache.upload_cache import CachedUpload, UploadCache
+from crewai_files.cache.upload_cache import (
+    CachedUpload,
+    UploadCache,
+    _CachedUploadSerializer,
+)
 
 
 # Minimal valid PNG
@@ -74,6 +80,41 @@ class TestCachedUpload:
         )
 
         assert cached.is_expired() is False
+
+
+class TestCachedUploadSerializer:
+    """Tests for cache serializer compatibility."""
+
+    def test_json_round_trip(self):
+        """Test cached uploads round-trip through the JSON serializer."""
+        now = datetime.now(timezone.utc)
+        cached = CachedUpload(
+            file_id="file-123",
+            provider="gemini",
+            file_uri="files/file-123",
+            content_type="image/png",
+            uploaded_at=now,
+            expires_at=now + timedelta(hours=48),
+        )
+        serializer = _CachedUploadSerializer()
+
+        loaded = serializer.loads(serializer.dumps(cached))
+
+        assert loaded == cached
+
+    def test_unreadable_payloads_are_cache_misses(self):
+        """Test unreadable payloads are treated as cache misses."""
+        serializer = _CachedUploadSerializer()
+        old_pickle_payload = pickle.dumps({"file_id": "file-123"})
+        payloads = [
+            old_pickle_payload,
+            "not-json",
+            json.dumps(["not", "a", "dict"]),
+            json.dumps({"file_id": "file-123"}),
+        ]
+
+        for payload in payloads:
+            assert serializer.loads(payload) is None  # type: ignore[arg-type]
 
 
 class TestUploadCache:

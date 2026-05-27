@@ -42,7 +42,9 @@ class _CachedUploadSerializer(BaseSerializer):
             "file_uri": obj.file_uri,
             "content_type": obj.content_type,
             "uploaded_at": obj.uploaded_at.isoformat(),
-            "expires_at": obj.expires_at.isoformat() if obj.expires_at is not None else None,
+            "expires_at": obj.expires_at.isoformat()
+            if obj.expires_at is not None
+            else None,
         }
 
     @staticmethod
@@ -68,12 +70,16 @@ class _CachedUploadSerializer(BaseSerializer):
     def loads(self, value: str | None) -> CachedUpload | None:  # type: ignore[override]
         if value is None:
             return None
-        parsed = json.loads(value)
-        if parsed is None:
+        try:
+            parsed = json.loads(value)
+            if parsed is None:
+                return None
+            if not isinstance(parsed, dict):
+                return None
+            return self._from_json(parsed)
+        except (TypeError, ValueError, KeyError) as exc:
+            logger.debug("Ignoring unreadable cached upload payload: %s", exc)
             return None
-        if not isinstance(parsed, dict):
-            raise ValueError("invalid cached upload payload")
-        return self._from_json(parsed)
 
 
 @dataclass
