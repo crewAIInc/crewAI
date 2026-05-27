@@ -494,6 +494,248 @@ def _run_json_benchmarks(model: str) -> None:
         print_results(results, threshold)
 
 
+@crewai.command()
+@click.option(
+    "--agent",
+    type=str,
+    default=None,
+    help="Target a specific agent for benchmarking (uses checkpointing to skip prior tasks).",
+)
+@click.option(
+    "-m",
+    "--models",
+    multiple=True,
+    help="Models to compare (e.g. -m openai/gpt-5.4 -m anthropic/claude-sonnet-4-6).",
+)
+@click.option(
+    "--judge-model",
+    default="openai/gpt-5.4-mini",
+    help="Model used for LLM judge evaluation.",
+)
+@click.option(
+    "--timeout",
+    "case_timeout",
+    type=int,
+    default=300,
+    help="Timeout in seconds per case.",
+)
+def benchmark(
+    agent: str | None,
+    models: tuple[str, ...],
+    judge_model: str,
+    case_timeout: int,
+) -> None:
+    """Benchmark the crew end-to-end, or compare models for a specific agent."""
+    from pathlib import Path
+
+    crew_path: Path | None = None
+    for name in ("crew.jsonc", "crew.json"):
+        if Path(name).exists():
+            crew_path = Path(name)
+            break
+
+    if crew_path is None:
+        click.secho("No crew.jsonc or crew.json found in current directory.", fg="red")
+        raise SystemExit(1)
+
+    if agent:
+        agents_dir = Path("agents")
+        found = any(
+            (agents_dir / f"{agent}{ext}").exists()
+            for ext in (".jsonc", ".json")
+        )
+        if not found:
+            click.secho(f"Agent '{agent}' not found in agents/ directory.", fg="red")
+            raise SystemExit(1)
+
+    _run_benchmark_command(
+        crew_path=crew_path,
+        agent=agent,
+        models=list(models) if models else None,
+        judge_model=judge_model,
+        case_timeout=case_timeout,
+    )
+
+
+def _run_benchmark_command(
+    crew_path: "Path",
+    agent: str | None,
+    models: list[str] | None,
+    judge_model: str,
+    case_timeout: int,
+) -> None:
+    """Execute the crew-level benchmark command."""
+    import time as _time
+    from pathlib import Path
+
+    from rich.console import Console
+    from rich.live import Live
+    from rich.spinner import Spinner
+    from rich.text import Text
+
+    from crewai.events.listeners.tracing.utils import set_suppress_tracing_messages
+    from crewai.project.benchmark import (
+        load_crew_benchmark_cases,
+        print_comparison_chart,
+        print_results_chart,
+        run_crew_benchmark,
+    )
+
+    set_suppress_tracing_messages(True)
+    console = Console()
+
+    cases_path = None
+    tests_dir = Path("tests")
+    for name in ("benchmark.jsonc", "benchmark.json"):
+        candidate = tests_dir / name
+        if candidate.exists():
+            cases_path = candidate
+            break
+
+    if cases_path is None:
+        console.print("  [yellow]No tests/benchmark.jsonc found.[/yellow]")
+        console.print("  [dim]Create tests/benchmark.jsonc with crew-level benchmark cases.[/dim]")
+        raise SystemExit(1)
+
+    try:
+        cases = load_crew_benchmark_cases(cases_path)
+    except (FileNotFoundError, ValueError) as e:
+        console.print(f"  [red]Error loading cases: {e}[/red]")
+        raise SystemExit(1) from e
+
+    if not cases:
+        console.print("  [yellow]No benchmark cases found.[/yellow]")
+        raise SystemExit(1)
+
+    models_str = ", ".join(models) if models else "default"
+    agent_str = f" → [bold]{agent}[/bold]" if agent else ""
+    console.print()
+    console.print(
+        f"  [bold cyan]Benchmarking[/bold cyan] [bold]{crew_path.stem}[/bold]{agent_str}  "
+        f"[dim]{len(cases)} case(s) · judge {judge_model} · models: {models_str}[/dim]"
+    )
+
+    class _BenchmarkProgress:
+        def __init__(self) -> None:
+            self._start = _time.monotonic()
+            self._spinner = Spinner("dots", style="cyan")
+            self._state: dict[str, dict] = {}
+            self.activity: str = "thinking…"
+
+        def on_progress(self, event: dict) -> None:
+            t = event["type"]
+            model = event.get("model", "")
+            if t == "model_start":
+                self._state[model] = {
+                    "done": 0,
+                    "total": event["total_cases"],
+                    "status": "running",
+                    "passed": 0,
+                    "avg": 0.0,
+                    "time": 0.0,
+                }
+            elif t == "case_done":
+                s = self._state.get(model, {})
+                s["done"] = s.get("done", 0) + 1
+                if event.get("passed"):
+                    s["passed"] = s.get("passed", 0) + 1
+            elif t == "model_done":
+                s = self._state.get(model, {})
+                s["status"] = "done"
+                s["passed"] = event.get("passed", 0)
+                s["done"] = event.get("total", 0)
+                s["avg"] = event.get("avg_score", 0.0)
+                s["time"] = event.get("total_time", 0.0)
+
+        def __rich__(self) -> Text:
+            from crewai.project.benchmark import _score_color
+
+            now = _time.monotonic()
+            elapsed = now - self._start
+            mins, secs = divmod(int(elapsed), 60)
+            ts = f"{mins}:{secs:02d}" if mins else f"{secs}s"
+
+            t = Text("  ")
+
+            if not self._state:
+                t.append_text(self._spinner.render(now))
+                t.append(" Starting… ", style="cyan")
+                t.append(ts, style="dim")
+                if self.activity:
+                    t.append(f"  {self.activity}", style="dim italic")
+                return t
+
+            for model, info in self._state.items():
+                if info["status"] == "done":
+                    color = _score_color(info["avg"])
+                    t.append("✓ ", style="green")
+                    t.append(model, style="bold")
+                    t.append(f"  {info['passed']}/{info['done']}", style=color)
+                    t.append(f"  {info['avg']:.2f}", style=color)
+                    t.append(f"  {info['time']:.1f}s", style="dim")
+                else:
+                    t.append_text(self._spinner.render(now))
+                    t.append(f" {model}", style="bold")
+                    done = info.get("done", 0)
+                    total = info.get("total", 0)
+                    if total:
+                        bar_w = 10
+                        pct = done / total
+                        filled = round(pct * bar_w)
+                        t.append("  ", style="")
+                        t.append("█" * filled + "░" * (bar_w - filled), style="cyan")
+                        t.append(f" {done}/{total}", style="dim")
+                    t.append(f"  {ts}", style="dim")
+                    if self.activity:
+                        t.append(f"  {self.activity}", style="dim italic")
+                t.append("   ")
+            return t
+
+    progress = _BenchmarkProgress()
+
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.types.tool_usage_events import ToolUsageStartedEvent
+
+    _handlers: list[tuple[type, object]] = []
+
+    def _reg(evt_type: type, fn: object) -> None:
+        crewai_event_bus.on(evt_type)(fn)
+        _handlers.append((evt_type, fn))
+
+    def _on_tool_start(_src: object, event: ToolUsageStartedEvent) -> None:
+        name = (event.tool_name or "tool").replace("_", " ")
+        progress.activity = f"using {name}"
+
+    _reg(ToolUsageStartedEvent, _on_tool_start)
+
+    try:
+        with Live(progress, console=console, refresh_per_second=8, transient=True):
+            results = run_crew_benchmark(
+                crew_path=crew_path,
+                cases=cases,
+                agent=agent,
+                models=models,
+                judge_model=judge_model,
+                case_timeout=case_timeout,
+                on_progress=progress.on_progress,
+            )
+    finally:
+        for evt_type, fn in _handlers:
+            try:
+                crewai_event_bus.off(evt_type, fn)
+            except Exception:
+                pass
+
+    if len(results) == 1:
+        print_results_chart(next(iter(results.values())), console=console)
+    elif len(results) > 1:
+        for model_results in results.values():
+            print_results_chart(model_results, console=console)
+        print_comparison_chart(results, console=console)
+
+    console.print()
+
+
 @crewai.command(
     context_settings={
         "ignore_unknown_options": True,

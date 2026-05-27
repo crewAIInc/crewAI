@@ -9,9 +9,12 @@ import pytest
 
 from crewai.project.benchmark import (
     BenchmarkCase,
+    CrewBenchmarkCase,
+    _find_checkpoint_before_agent,
     _parse_judge_response,
     _score_case,
     load_benchmark_cases,
+    load_crew_benchmark_cases,
 )
 
 
@@ -131,3 +134,128 @@ class TestParseJudgeResponse:
         passed, score = _parse_judge_response(raw)
         assert passed is False
         assert score == 0.0
+
+
+class TestLoadCrewBenchmarkCases:
+    def test_load_bare_array(self, tmp_path: Path):
+        data = [
+            {"inputs": {"topic": "AI"}, "criteria": "be insightful"}
+        ]
+        f = tmp_path / "benchmark.json"
+        f.write_text(json.dumps(data))
+
+        cases = load_crew_benchmark_cases(f)
+        assert len(cases) == 1
+        assert cases[0].inputs == {"topic": "AI"}
+        assert cases[0].criteria == "be insightful"
+
+    def test_load_wrapper_object(self, tmp_path: Path):
+        data = {
+            "cases": [
+                {"inputs": {}, "criteria": "good output"},
+                {"inputs": {"x": "1"}, "expected": "result"},
+            ],
+        }
+        f = tmp_path / "benchmark.json"
+        f.write_text(json.dumps(data))
+
+        cases = load_crew_benchmark_cases(f)
+        assert len(cases) == 2
+
+    def test_defaults(self, tmp_path: Path):
+        data = [{"criteria": "reasonable"}]
+        f = tmp_path / "benchmark.json"
+        f.write_text(json.dumps(data))
+
+        cases = load_crew_benchmark_cases(f)
+        assert cases[0].inputs == {}
+        assert cases[0].expected is None
+
+    def test_with_jsonc_comments(self, tmp_path: Path):
+        jsonc = """[
+  // Crew benchmark case
+  {"inputs": {}, "criteria": "good"}
+]"""
+        f = tmp_path / "benchmark.jsonc"
+        f.write_text(jsonc)
+
+        cases = load_crew_benchmark_cases(f)
+        assert len(cases) == 1
+
+
+class TestFindCheckpointBeforeAgent:
+    def test_returns_none_when_no_checkpoint_dir(self, tmp_path: Path):
+        crew_file = tmp_path / "crew.jsonc"
+        crew_file.write_text(json.dumps({
+            "agents": ["agent_a", "agent_b"],
+            "tasks": [
+                {"name": "t1", "description": "d", "expected_output": "e", "agent": "agent_a"},
+                {"name": "t2", "description": "d", "expected_output": "e", "agent": "agent_b"},
+            ],
+        }))
+
+        result = _find_checkpoint_before_agent(crew_file, "agent_b")
+        assert result is None
+
+    def test_returns_none_for_first_agent(self, tmp_path: Path):
+        crew_file = tmp_path / "crew.jsonc"
+        crew_file.write_text(json.dumps({
+            "agents": ["agent_a"],
+            "tasks": [
+                {"name": "t1", "description": "d", "expected_output": "e", "agent": "agent_a"},
+            ],
+        }))
+
+        result = _find_checkpoint_before_agent(crew_file, "agent_a")
+        assert result is None
+
+    def test_finds_valid_checkpoint(self, tmp_path: Path):
+        crew_file = tmp_path / "crew.jsonc"
+        crew_file.write_text(json.dumps({
+            "agents": ["agent_a", "agent_b"],
+            "tasks": [
+                {"name": "t1", "description": "d", "expected_output": "e", "agent": "agent_a"},
+                {"name": "t2", "description": "d", "expected_output": "e", "agent": "agent_b"},
+            ],
+        }))
+
+        cp_dir = tmp_path / ".checkpoints" / "main"
+        cp_dir.mkdir(parents=True)
+        cp_file = cp_dir / "20260101T000000_abcd1234_p-none.json"
+        cp_file.write_text(json.dumps({
+            "entities": [{
+                "tasks": [
+                    {"output": {"raw": "task 1 done"}},
+                    {"output": None},
+                ],
+            }],
+        }))
+
+        result = _find_checkpoint_before_agent(crew_file, "agent_b")
+        assert result == cp_file
+
+    def test_skips_invalid_checkpoint(self, tmp_path: Path):
+        crew_file = tmp_path / "crew.jsonc"
+        crew_file.write_text(json.dumps({
+            "agents": ["agent_a", "agent_b"],
+            "tasks": [
+                {"name": "t1", "description": "d", "expected_output": "e", "agent": "agent_a"},
+                {"name": "t2", "description": "d", "expected_output": "e", "agent": "agent_b"},
+            ],
+        }))
+
+        cp_dir = tmp_path / ".checkpoints" / "main"
+        cp_dir.mkdir(parents=True)
+        # Both tasks complete — not useful for benchmarking agent_b
+        cp_file = cp_dir / "20260101T000000_abcd1234_p-none.json"
+        cp_file.write_text(json.dumps({
+            "entities": [{
+                "tasks": [
+                    {"output": {"raw": "done"}},
+                    {"output": {"raw": "also done"}},
+                ],
+            }],
+        }))
+
+        result = _find_checkpoint_before_agent(crew_file, "agent_b")
+        assert result is None
