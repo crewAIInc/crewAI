@@ -108,6 +108,85 @@ class TestLLMCallStartedEventSamplingParams:
         assert event.n is None
 
 
+class TestStopSequencesCoercion:
+    # The OTel SDK falls back to str(value) when a span attribute isn't a
+    # recognised Sequence[str], producing the protobuf textproto repr
+    # ("values { string_value: ... }") in downstream telemetry. The
+    # field_validator coerces exotic iterables (Vertex/Gemini protobuf
+    # containers, tuples, generators) to a clean list[str] up front so the
+    # OTel attribute is always shaped correctly.
+    def test_bare_string_is_wrapped_in_list(self):
+        event = LLMCallStartedEvent(call_id="call-1", stop_sequences="\nObservation:")
+        assert event.stop_sequences == ["\nObservation:"]
+
+    @pytest.mark.parametrize(
+        "raw, expected",
+        [
+            (["\nObservation:", "Final Answer:"], ["\nObservation:", "Final Answer:"]),
+            (("\nObservation:",), ["\nObservation:"]),
+            ((s for s in ["a", "b"]), ["a", "b"]),
+            ([], []),
+        ],
+    )
+    def test_python_iterables_pass_through(
+        self, raw: Any, expected: list[str]
+    ) -> None:
+        event = LLMCallStartedEvent(call_id="call-1", stop_sequences=raw)
+        assert event.stop_sequences == expected
+
+    def test_protobuf_like_repeated_container_is_coerced(self):
+        # Mirrors google.protobuf RepeatedScalarContainer: iterable yielding
+        # actual Python str objects. Should pass through cleanly.
+        class _RepeatedScalar:
+            def __init__(self, items: list[str]) -> None:
+                self._items = items
+
+            def __iter__(self):
+                return iter(self._items)
+
+        event = LLMCallStartedEvent(
+            call_id="call-1",
+            stop_sequences=_RepeatedScalar(["\nObservation:"]),
+        )
+        assert event.stop_sequences == ["\nObservation:"]
+
+    def test_protobuf_listvalue_with_nested_values_coerces_to_textproto_strings(self):
+        # Mirrors google.protobuf.struct_pb2.ListValue: iterable yielding
+        # `Value` messages whose str() is "string_value: \"...\"". The
+        # coercion will str() each element, which is still wrong-shaped but
+        # at least lands as a real list[str] for the OTel attribute instead
+        # of a single textproto-blob string. Documents observed behaviour;
+        # the upstream fix is to pass list[str] to LLM.stop, not ListValue.
+        class _PbValue:
+            def __init__(self, string_value: str) -> None:
+                self.string_value = string_value
+
+            def __str__(self) -> str:
+                return f'string_value: "{self.string_value}"'
+
+        class _PbListValue:
+            def __init__(self, values: list[_PbValue]) -> None:
+                self.values = values
+
+            def __iter__(self):
+                return iter(self.values)
+
+        event = LLMCallStartedEvent(
+            call_id="call-1",
+            stop_sequences=_PbListValue([_PbValue("\\nObservation:")]),
+        )
+        assert event.stop_sequences == ['string_value: "\\nObservation:"']
+
+    @pytest.mark.parametrize("bad_input", [123, 12.5, object()])
+    def test_non_iterable_falls_back_to_none(self, bad_input: Any) -> None:
+        event = LLMCallStartedEvent(call_id="call-1", stop_sequences=bad_input)
+        assert event.stop_sequences is None
+
+    def test_none_stays_none(self):
+        event = LLMCallStartedEvent(call_id="call-1", stop_sequences=None)
+        assert event.stop_sequences is None
+
+
 class TestEmitCallStartedEventIntrospectsSamplingParams:
     def test_reads_sampling_params_off_self(self, mock_emit):
         llm = _StubLLM(model="test-model", temperature=0.4)

@@ -60,6 +60,32 @@ class LLMCallStartedEvent(LLMEventBase):
     presence_penalty: float | None = None
     n: int | None = None
 
+    @field_validator("stop_sequences", mode="before")
+    @classmethod
+    def _coerce_stop_sequences_to_str_list(cls, value: Any) -> list[str] | None:
+        """Normalize stop_sequences to ``list[str] | None``.
+
+        Some providers store stop sequences in non-Python-list containers —
+        e.g. a Vertex AI / Gemini code path can hand back a
+        ``google.protobuf.struct_pb2.ListValue`` or a ``RepeatedScalarContainer``.
+        Without coercion the OTel SDK falls back to ``str(value)`` when
+        ``gen_ai.request.stop_sequences`` is set, producing the protobuf
+        textproto repr (``values { string_value: \"...\" }``) instead of a
+        proper ``Sequence[str]``.
+
+        A bare string is treated as a single stop sequence. Anything that
+        can't be iterated cleanly falls back to ``None`` rather than crashing
+        event construction.
+        """
+        if value is None:
+            return None
+        if isinstance(value, str):
+            return [value]
+        try:
+            return [item if isinstance(item, str) else str(item) for item in value]
+        except TypeError:
+            return None
+
 
 class LLMCallCompletedEvent(LLMEventBase):
     """Event emitted when a LLM call completes"""
