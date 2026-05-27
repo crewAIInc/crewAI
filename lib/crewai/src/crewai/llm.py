@@ -1452,7 +1452,6 @@ class LLM(BaseLLM):
         params["stream"] = True
         params["stream_options"] = {"include_usage": True}
         response_id = None
-        last_chunk: Any | None = None
         # See sync sibling: incrementally track finish_reason/response_id so the
         # usage-only final chunk doesn't wipe them.
         stream_finish_reason: str | None = None
@@ -1462,7 +1461,6 @@ class LLM(BaseLLM):
             async for chunk in await litellm.acompletion(**params):
                 chunk_count += 1
                 chunk_content = None
-                last_chunk = chunk
                 response_id = chunk.id if isinstance(chunk, ModelResponseBase) else None
 
                 chunk_finish, chunk_id = self._extract_finish_reason_and_response_id(
