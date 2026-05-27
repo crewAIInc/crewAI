@@ -2018,22 +2018,20 @@ class BedrockCompletion(BaseLLM):
     def _extract_finish_reason_and_id(
         response: Any,
     ) -> tuple[str | None, str | None]:
-        """Extract raw finish_reason (``stopReason``) and response_id
-        (``ResponseMetadata.RequestId``) from a Bedrock Converse response
-        dict. Defensive — returns (None, None) on any failure. Raw provider
-        value is kept; downstream telemetry owns the OTel enum coercion.
+        """Extract raw finish_reason (``stopReason``) from a Bedrock Converse
+        response dict. Defensive — returns (None, None) on any failure.
+
+        Bedrock Converse has no model-level response id; ResponseMetadata.RequestId
+        is an AWS infra trace id (semantically different from OpenAI's chatcmpl-XXX),
+        so we omit response_id rather than mislead downstream telemetry consumers.
         """
         finish_reason: str | None = None
-        response_id: str | None = None
         try:
             if isinstance(response, dict):
                 finish_reason = response.get("stopReason")
-                metadata = response.get("ResponseMetadata") or {}
-                response_id = metadata.get("RequestId") if metadata else None
         except (AttributeError, KeyError, TypeError, IndexError):
             finish_reason = None
-            response_id = None
-        return finish_reason, response_id
+        return finish_reason, None
 
     def _handle_client_error(self, e: ClientError) -> str:
         """Handle AWS ClientError with specific error codes and return error message."""

@@ -722,6 +722,11 @@ class LLM(BaseLLM):
         last_chunk = None
         chunk_count = 0
         usage_info = None
+        # Tracked across the loop: LiteLLM with include_usage emits a final
+        # usage-only chunk with empty choices, so the post-loop last_chunk has
+        # no finish_reason. Capture both incrementally instead.
+        stream_finish_reason: str | None = None
+        stream_response_id: str | None = None
 
         accumulated_tool_args: defaultdict[int, AccumulatedToolArgs] = defaultdict(
             AccumulatedToolArgs
@@ -740,6 +745,14 @@ class LLM(BaseLLM):
 
                 if isinstance(chunk, ModelResponseBase):
                     response_id = chunk.id
+
+                chunk_finish, chunk_id = self._extract_finish_reason_and_response_id(
+                    chunk
+                )
+                if chunk_finish:
+                    stream_finish_reason = chunk_finish
+                if chunk_id and not stream_response_id:
+                    stream_response_id = chunk_id
 
                 try:
                     choices = None
@@ -913,7 +926,8 @@ class LLM(BaseLLM):
                     return tool_calls_list
 
             finish_reason, response_id_last = (
-                self._extract_finish_reason_and_response_id(last_chunk)
+                stream_finish_reason,
+                stream_response_id,
             )
 
             if not tool_calls or not available_functions:
@@ -979,7 +993,8 @@ class LLM(BaseLLM):
             if full_response.strip():
                 logging.warning(f"Returning partial response despite error: {e!s}")
                 finish_reason, response_id_last = (
-                    self._extract_finish_reason_and_response_id(last_chunk)
+                    stream_finish_reason,
+                    stream_response_id,
                 )
                 self._handle_emit_call_events(
                     response=full_response,
@@ -1438,6 +1453,10 @@ class LLM(BaseLLM):
         params["stream_options"] = {"include_usage": True}
         response_id = None
         last_chunk: Any | None = None
+        # See sync sibling: incrementally track finish_reason/response_id so the
+        # usage-only final chunk doesn't wipe them.
+        stream_finish_reason: str | None = None
+        stream_response_id: str | None = None
 
         try:
             async for chunk in await litellm.acompletion(**params):
@@ -1445,6 +1464,14 @@ class LLM(BaseLLM):
                 chunk_content = None
                 last_chunk = chunk
                 response_id = chunk.id if isinstance(chunk, ModelResponseBase) else None
+
+                chunk_finish, chunk_id = self._extract_finish_reason_and_response_id(
+                    chunk
+                )
+                if chunk_finish:
+                    stream_finish_reason = chunk_finish
+                if chunk_id and not stream_response_id:
+                    stream_response_id = chunk_id
 
                 try:
                     choices = None
@@ -1553,7 +1580,8 @@ class LLM(BaseLLM):
 
             usage_dict = self._usage_to_dict(usage_info)
             finish_reason, response_id_last = (
-                self._extract_finish_reason_and_response_id(last_chunk)
+                stream_finish_reason,
+                stream_response_id,
             )
             self._handle_emit_call_events(
                 response=full_response,
@@ -1578,7 +1606,8 @@ class LLM(BaseLLM):
                 raise
             if full_response:
                 finish_reason, response_id_last = (
-                    self._extract_finish_reason_and_response_id(last_chunk)
+                    stream_finish_reason,
+                    stream_response_id,
                 )
                 self._handle_emit_call_events(
                     response=full_response,
