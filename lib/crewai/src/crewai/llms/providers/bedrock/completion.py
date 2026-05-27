@@ -1414,6 +1414,8 @@ class BedrockCompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=messages,
                 usage=usage,
+                finish_reason=stop_reason,
+                response_id=response_id,
             )
 
             return text_content
@@ -1548,7 +1550,9 @@ class BedrockCompletion(BaseLLM):
             )
 
             stream = response.get("stream")
-            response_id = None
+            _, stream_response_id = self._extract_finish_reason_and_id(response)
+            response_id = stream_response_id
+            stream_finish_reason: str | None = None
             if stream:
                 async for event in stream:
                     if "messageStart" in event:
@@ -1647,6 +1651,8 @@ class BedrockCompletion(BaseLLM):
                                         from_agent=from_agent,
                                         messages=messages,
                                         usage=usage_data,
+                                        finish_reason=stream_finish_reason,
+                                        response_id=response_id,
                                     )
                                     return result  # type: ignore[return-value]
                                 except Exception as e:
@@ -1704,6 +1710,7 @@ class BedrockCompletion(BaseLLM):
 
                     elif "messageStop" in event:
                         stop_reason = event["messageStop"].get("stopReason")
+                        stream_finish_reason = stop_reason
                         logging.debug(f"Streaming message stopped: {stop_reason}")
                         if stop_reason == "max_tokens":
                             logging.warning(
@@ -1750,6 +1757,8 @@ class BedrockCompletion(BaseLLM):
             from_agent=from_agent,
             messages=messages,
             usage=usage_data,
+            finish_reason=stream_finish_reason,
+            response_id=response_id,
         )
 
         return self._invoke_after_llm_call_hooks(
