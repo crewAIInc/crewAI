@@ -23,7 +23,6 @@ from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.llm_events import (
     LLMCallCompletedEvent,
     LLMCallFailedEvent,
-    LLMCallStartedEvent,
     LLMCallType,
     LLMStreamChunkEvent,
 )
@@ -32,6 +31,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
 from crewai.llms.base_llm import (
     BaseLLM,
     JsonResponseFormat,
@@ -1744,28 +1744,14 @@ class LLM(BaseLLM):
             ValueError: If response format is not supported
             LLMContextLengthExceededError: If input exceeds model's context limit
         """
-        with llm_call_context() as call_id:
-            crewai_event_bus.emit(
-                self,
-                event=LLMCallStartedEvent(
-                    messages=messages,
-                    tools=tools,
-                    callbacks=callbacks,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    model=self.model,
-                    call_id=call_id,
-                    temperature=getattr(self, "temperature", None),
-                    top_p=getattr(self, "top_p", None),
-                    max_tokens=getattr(self, "max_tokens", None),
-                    stream=getattr(self, "stream", None),
-                    seed=getattr(self, "seed", None),
-                    stop_sequences=getattr(self, "stop", None),
-                    frequency_penalty=getattr(self, "frequency_penalty", None),
-                    presence_penalty=getattr(self, "presence_penalty", None),
-                    n=getattr(self, "n", None),
-                ),
+        with llm_call_context():
+            self._emit_call_started_event(
+                messages=messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
             )
 
             self._validate_call_params()
@@ -1897,28 +1883,14 @@ class LLM(BaseLLM):
             ValueError: If response format is not supported
             LLMContextLengthExceededError: If input exceeds model's context limit
         """
-        with llm_call_context() as call_id:
-            crewai_event_bus.emit(
-                self,
-                event=LLMCallStartedEvent(
-                    messages=messages,
-                    tools=tools,
-                    callbacks=callbacks,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    model=self.model,
-                    call_id=call_id,
-                    temperature=getattr(self, "temperature", None),
-                    top_p=getattr(self, "top_p", None),
-                    max_tokens=getattr(self, "max_tokens", None),
-                    stream=getattr(self, "stream", None),
-                    seed=getattr(self, "seed", None),
-                    stop_sequences=getattr(self, "stop", None),
-                    frequency_penalty=getattr(self, "frequency_penalty", None),
-                    presence_penalty=getattr(self, "presence_penalty", None),
-                    n=getattr(self, "n", None),
-                ),
+        with llm_call_context():
+            self._emit_call_started_event(
+                messages=messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
             )
 
             self._validate_call_params()
@@ -2065,43 +2037,10 @@ class LLM(BaseLLM):
     def _extract_finish_reason_and_response_id(
         response_or_chunk: Any,
     ) -> tuple[str | None, str | None]:
-        """Extract raw finish_reason and response_id from a LiteLLM response
-        or accumulated streaming chunk.
-
-        Defensive: never raises; returns (None, None) on any failure. Keeps
-        raw provider values without coercion — downstream telemetry owns the
-        OTel GenAI enum mapping.
+        """LiteLLM responses/chunks share the choices-shape with OpenAI/Azure;
+        delegate to the shared extractor.
         """
-        def _as_str(value: Any) -> str | None:
-            return value if isinstance(value, str) else None
-
-        finish_reason: str | None = None
-        response_id: str | None = None
-        try:
-            raw_id = getattr(response_or_chunk, "id", None)
-            if raw_id is None and isinstance(response_or_chunk, dict):
-                raw_id = response_or_chunk.get("id")
-            response_id = _as_str(raw_id)
-        except (AttributeError, TypeError):
-            response_id = None
-
-        try:
-            choices = None
-            if isinstance(response_or_chunk, dict) and "choices" in response_or_chunk:
-                choices = response_or_chunk["choices"]
-            else:
-                choices = getattr(response_or_chunk, "choices", None)
-            if choices:
-                first = choices[0]
-                if isinstance(first, dict):
-                    raw_finish = first.get("finish_reason")
-                else:
-                    raw_finish = getattr(first, "finish_reason", None)
-                finish_reason = _as_str(raw_finish)
-        except (AttributeError, IndexError, TypeError, KeyError):
-            finish_reason = None
-
-        return finish_reason, response_id
+        return extract_choices_finish_reason_and_id(response_or_chunk)
 
     def _process_message_files(self, messages: list[LLMMessage]) -> list[LLMMessage]:
         """Process files attached to messages and format for provider.

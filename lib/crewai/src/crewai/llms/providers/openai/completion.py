@@ -29,6 +29,7 @@ from openai.types.responses import (
 from pydantic import BaseModel, PrivateAttr, model_validator
 
 from crewai.events.types.llm_events import LLMCallType
+from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
 from crewai.llms.base_llm import BaseLLM, JsonResponseFormat, llm_call_context
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
@@ -2428,24 +2429,10 @@ class OpenAICompletion(BaseLLM):
     def _extract_chat_finish_reason_and_id(
         response: Any,
     ) -> tuple[str | None, str | None]:
-        """Extract raw finish_reason and response_id from a ChatCompletion or
-        ChatCompletionChunk-like object. Defensive — returns (None, None) on
-        any failure. Raw provider value is kept; downstream telemetry owns
-        OTel enum coercion.
+        """ChatCompletion / ChatCompletionChunk share the choices-shape;
+        delegate to the shared extractor.
         """
-        finish_reason: str | None = None
-        response_id: str | None = None
-        try:
-            response_id = getattr(response, "id", None)
-        except (AttributeError, TypeError):
-            response_id = None
-        try:
-            choices = getattr(response, "choices", None)
-            if choices:
-                finish_reason = getattr(choices[0], "finish_reason", None)
-        except (AttributeError, IndexError, TypeError):
-            finish_reason = None
-        return finish_reason, response_id
+        return extract_choices_finish_reason_and_id(response)
 
     @staticmethod
     def _extract_responses_finish_reason_and_id(
@@ -2455,17 +2442,10 @@ class OpenAICompletion(BaseLLM):
         API ``Response`` object. The Responses API exposes ``status`` rather
         than ``finish_reason``; we forward the raw status value.
         """
-        finish_reason: str | None = None
-        response_id: str | None = None
-        try:
-            response_id = getattr(response, "id", None)
-        except (AttributeError, TypeError):
-            response_id = None
-        try:
-            finish_reason = getattr(response, "status", None)
-        except (AttributeError, TypeError):
-            finish_reason = None
-        return finish_reason, response_id
+        return (
+            getattr(response, "status", None),
+            getattr(response, "id", None),
+        )
 
     def _extract_openai_token_usage(
         self, response: ChatCompletion | ChatCompletionChunk

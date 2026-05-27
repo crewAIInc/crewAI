@@ -11,6 +11,7 @@ from crewai.events.types.llm_events import (
     LLMCallType,
 )
 from crewai.llm import LLM
+from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
 from crewai.llms.base_llm import BaseLLM
 
 
@@ -234,3 +235,60 @@ class TestLLMExtractFinishReasonAndResponseId:
         assert LLM._extract_finish_reason_and_response_id(None) == (None, None)
         assert LLM._extract_finish_reason_and_response_id(42) == (None, None)
         assert LLM._extract_finish_reason_and_response_id("string") == (None, None)
+
+
+class TestExtractChoicesFinishReasonAndIdHelper:
+    # The shared extractor is consumed by LLM (LiteLLM), OpenAI Chat, and Azure.
+    # TestLLMExtractFinishReasonAndResponseId exercises the choices-shape paths
+    # transitively; these tests cover the direct-call surface and the
+    # import contract.
+    @pytest.mark.parametrize(
+        "response, expected",
+        [
+            (
+                SimpleNamespace(
+                    id="resp-1", choices=[SimpleNamespace(finish_reason="stop")]
+                ),
+                ("stop", "resp-1"),
+            ),
+            (
+                {"id": "resp-2", "choices": [{"finish_reason": "length"}]},
+                ("length", "resp-2"),
+            ),
+            (
+                SimpleNamespace(
+                    id="resp-3", choices=[{"finish_reason": "tool_calls"}]
+                ),
+                ("tool_calls", "resp-3"),
+            ),
+            (
+                {
+                    "id": "resp-4",
+                    "choices": [SimpleNamespace(finish_reason="content_filter")],
+                },
+                ("content_filter", "resp-4"),
+            ),
+        ],
+    )
+    def test_extracts_choices_shape(
+        self, response: Any, expected: tuple[str | None, str | None]
+    ) -> None:
+        assert extract_choices_finish_reason_and_id(response) == expected
+
+    @pytest.mark.parametrize(
+        "bad_input",
+        [
+            None,
+            42,
+            "string",
+            {},
+            SimpleNamespace(),
+            SimpleNamespace(choices=[]),
+            SimpleNamespace(choices=[SimpleNamespace()]),
+            {"id": 12345, "choices": [{"finish_reason": MagicMock()}]},
+        ],
+    )
+    def test_never_raises_returns_nones_or_coerces(self, bad_input: Any) -> None:
+        finish_reason, response_id = extract_choices_finish_reason_and_id(bad_input)
+        assert finish_reason is None or isinstance(finish_reason, str)
+        assert response_id is None or isinstance(response_id, str)

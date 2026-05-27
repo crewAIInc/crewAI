@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, PrivateAttr, model_validator
 from typing_extensions import Self
 
+from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -1317,24 +1318,10 @@ class AzureCompletion(BaseLLM):
     def _extract_finish_reason_and_id(
         response_or_update: Any,
     ) -> tuple[str | None, str | None]:
-        """Extract raw finish_reason and response_id from an Azure
-        ``ChatCompletions`` or ``StreamingChatCompletionsUpdate`` object.
-        Defensive — returns (None, None) on any failure. Raw provider value
-        is kept; downstream telemetry owns OTel enum coercion.
+        """Azure ``ChatCompletions`` / ``StreamingChatCompletionsUpdate``
+        share the choices-shape; delegate to the shared extractor.
         """
-        finish_reason: str | None = None
-        response_id: str | None = None
-        try:
-            response_id = getattr(response_or_update, "id", None)
-        except (AttributeError, TypeError):
-            response_id = None
-        try:
-            choices = getattr(response_or_update, "choices", None)
-            if choices:
-                finish_reason = getattr(choices[0], "finish_reason", None)
-        except (AttributeError, IndexError, TypeError):
-            finish_reason = None
-        return finish_reason, response_id
+        return extract_choices_finish_reason_and_id(response_or_update)
 
     @staticmethod
     def _extract_azure_token_usage(response: ChatCompletions) -> dict[str, Any]:

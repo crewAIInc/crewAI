@@ -1874,17 +1874,10 @@ class AnthropicCompletion(BaseLLM):
         ``"end_turn"``, ``"max_tokens"``, ``"tool_use"``); we forward it raw
         and let downstream telemetry map to the OTel GenAI enum.
         """
-        finish_reason: str | None = None
-        response_id: str | None = None
-        try:
-            response_id = getattr(message, "id", None)
-        except (AttributeError, TypeError):
-            response_id = None
-        try:
-            finish_reason = getattr(message, "stop_reason", None)
-        except (AttributeError, TypeError):
-            finish_reason = None
-        return finish_reason, response_id
+        return (
+            getattr(message, "stop_reason", None),
+            getattr(message, "id", None),
+        )
 
     @staticmethod
     def _extract_anthropic_token_usage(
