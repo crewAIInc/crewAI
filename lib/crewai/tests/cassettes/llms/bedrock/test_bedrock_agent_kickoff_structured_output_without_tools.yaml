@@ -33,29 +33,37 @@ interactions:
       - AUTHORIZATION-XXX
       x-amz-date:
       - X-AMZ-DATE-XXX
+      x-amz-security-token:
+      - X-AMZ-SECURITY-TOKEN-XXX
     method: POST
-    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/anthropic.claude-3-sonnet-20240229-v1%3A0/converse
+    uri: https://bedrock-runtime.us-west-2.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/converse
   response:
     body:
-      string: '{"metrics":{"latencyMs":3496},"output":{"message":{"content":[{"toolUse":{"input":{"topic":"Benefits
-        of remote work","key_points":"- Increased flexibility and work-life balance\n-
-        Reduced commute time and costs\n- Access to a wider talent pool for companies\n-
-        Increased productivity for some employees\n- Environmental benefits from reduced
-        commuting","summary":"Remote work offers several benefits including improved
-        work-life balance, cost and time savings from eliminating commutes, access
-        to a broader talent pool for employers, productivity gains, and environmental
-        advantages from reduced transportation. However, it also presents challenges
-        like social isolation, blurred work-life boundaries, and potential distractions
-        at home that need to be managed effectively."},"name":"structured_output","toolUseId":"tooluse_Jfg8pUBaRxWkKwR_rp5mCw"}}],"role":"assistant"}},"stopReason":"tool_use","usage":{"inputTokens":512,"outputTokens":187,"serverToolUsage":{},"totalTokens":699}}'
+      string: "{\"metrics\":{\"latencyMs\":6183},\"output\":{\"message\":{\"content\":[{\"toolUse\":{\"input\":{\"topic\":\"Benefits
+        of Remote Work\",\"key_points\":[\"Improved Work-Life Balance: Employees gain
+        flexibility to manage personal and professional responsibilities, reducing
+        stress and burnout.\",\"Increased Productivity: Fewer office distractions
+        and elimination of commutes allow workers to focus more effectively on tasks.\",\"Cost
+        Savings: Both employers (reduced office overhead) and employees (lower commuting
+        and wardrobe costs) benefit financially.\",\"Access to Global Talent: Companies
+        can hire the best candidates regardless of geographic location, expanding
+        the talent pool.\",\"Environmental Impact: Reduced commuting leads to lower
+        carbon emissions and a smaller environmental footprint.\",\"Employee Retention
+        & Satisfaction: Greater autonomy and flexibility contribute to higher job
+        satisfaction and lower turnover rates.\"],\"summary\":\"Remote work offers
+        a compelling mix of personal, financial, and organizational advantages. It
+        empowers employees with flexibility and autonomy while enabling businesses
+        to cut costs, access wider talent pools, and boost overall productivity \u2014
+        making it a mutually beneficial arrangement in the modern workforce.\"},\"name\":\"structured_output\",\"toolUseId\":\"tooluse_miAVY9Wyw0HMShZbgbyTwX\",\"type\":\"tool_use\"}}],\"role\":\"assistant\"}},\"stopReason\":\"tool_use\",\"usage\":{\"cacheReadInputTokenCount\":0,\"cacheReadInputTokens\":0,\"cacheWriteInputTokenCount\":0,\"cacheWriteInputTokens\":0,\"inputTokens\":851,\"outputTokens\":268,\"serverToolUsage\":{},\"totalTokens\":1119}}"
     headers:
       Connection:
       - keep-alive
       Content-Length:
-      - '982'
+      - '1568'
       Content-Type:
       - application/json
       Date:
-      - Fri, 30 Jan 2026 01:04:10 GMT
+      - Tue, 26 May 2026 17:05:01 GMT
       x-amzn-RequestId:
       - X-AMZN-REQUESTID-XXX
     status:
