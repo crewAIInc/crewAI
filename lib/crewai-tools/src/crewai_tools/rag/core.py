@@ -191,7 +191,6 @@ class RAG(Adapter):
             metadatas = results.get("metadatas", [None])[0] or []
             distances = results.get("distances", [None])[0] or []
 
-            # Return sources with relevance scores
             formatted_results = []
             for i, doc in enumerate(documents):
                 metadata = metadatas[i] if i < len(metadatas) else {}

@@ -17,15 +17,62 @@ mode: "wide"
 - حساب Salesforce بالصلاحيات المناسبة
 - ربط حساب Salesforce الخاص بك عبر [صفحة التكاملات](https://app.crewai.com/integrations)
 
+<Note>
+  يتطلب Salesforce **تثبيتًا واحدًا يقوم به مسؤول النظام (admin)** لحزمة
+  CrewAI في مؤسستك قبل أن يتمكن أي مستخدم من الاتصال. هذا متطلب من منصة
+  Salesforce لجميع التكاملات المعتمدة على ExternalClientApp اعتبارًا من
+  إصدار Spring '26 — وليس خطوة خاصة بـ CrewAI. تدليلك خطوة Connect
+  Salesforce في CrewAI AMP خلال هذه العملية عند المحاولة الأولى.
+</Note>
+
 ## إعداد تكامل Salesforce
 
 ### 1. ربط حساب Salesforce الخاص بك
 
-1. انتقل إلى [تكاملات CrewAI AMP](https://app.crewai.com/crewai_plus/connectors)
-2. ابحث عن **Salesforce** في قسم تكاملات المصادقة
-3. انقر على **Connect** وأكمل عملية OAuth
-4. امنح الصلاحيات اللازمة لإدارة CRM والمبيعات
-5. انسخ رمز المؤسسة من [إعدادات التكامل](https://app.crewai.com/crewai_plus/settings/integrations)
+1. انتقل إلى [تكاملات CrewAI AMP](https://app.crewai.com/crewai_plus/unified_tools).
+2. ابحث عن **Salesforce** في قسم تكاملات المصادقة.
+3. انقر على **Connect**.
+
+ما يحدث بعد ذلك يعتمد على ما إذا كان مسؤول Salesforce في مؤسستك قد ثبّت
+حزمة CrewAI بالفعل:
+
+- **الحزمة مثبتة بالفعل:** سيتم نقلك مباشرة إلى شاشة موافقة OAuth في
+  Salesforce — اعتمدها وسيكتمل الاتصال.
+- **الحزمة غير مثبتة بعد:** سترى صفحة **Install CrewAI in Salesforce**.
+  اتبع خطوات التثبيت لمرة واحدة أدناه، ثم عُد إلى CrewAI AMP وانقر على
+  **Connect** مرة أخرى.
+
+4. امنح الصلاحيات اللازمة لإدارة CRM والمبيعات.
+5. انسخ رمز المؤسسة من [إعدادات التكامل](https://app.crewai.com/crewai_plus/settings/integrations).
+
+#### تثبيت لمرة واحدة بواسطة المسؤول (مسؤول Salesforce فقط)
+
+عند أول نقرة على **Connect Salesforce** من أي مستخدم في مؤسستك، تقوم CrewAI
+بإعادة توجيهك إلى صفحة تثبيت تُشير إلى حزمة CrewAI المُدارة. يحتاج مسؤول
+Salesforce إلى تثبيتها مرة واحدة فقط لكامل المؤسسة.
+
+1. في صفحة التثبيت داخل CrewAI، انقر على **Install in Salesforce**. (يمكنك
+   أيضًا مشاركة عنوان URL لتلك الصفحة مع المسؤول — رابط التثبيت يعمل لأي
+   شخص يفتحه.)
+2. سجّل الدخول إلى Salesforce بصلاحيات مسؤول. لبيئات Sandbox، استبدل
+   `login.salesforce.com` بـ `test.salesforce.com` في الرابط قبل فتحه.
+3. اختر **Install for All Users**، ووافق على إشعار تطبيقات الجهات
+   الخارجية، ثم انقر **Install**.
+4. من Setup في Salesforce، ابحث عن **External Client App Manager** ←
+   **CrewAI App** ← افتح علامة التبويب **Policies** ← **Edit**، واضبط
+   القيم التالية:
+   - **Permitted Users:** All users may self-authorize
+   - **IP Relaxation:** Relax IP restrictions
+   - **Refresh Token Policy:** Refresh token is valid until revoked
+5. احفظ التغييرات.
+6. عُد إلى CrewAI AMP وانقر على **Connect Salesforce** مرة أخرى. سيكتمل
+   OAuth هذه المرة.
+
+<Note>
+  **لست مسؤول Salesforce؟** أعِد توجيه عنوان URL لصفحة التثبيت (أو رابط
+  التثبيت نفسه) إلى مسؤول Salesforce لديكم واطلب منه إكمال الخطوات أعلاه.
+  بمجرد انتهائه، عُد إلى CrewAI AMP وانقر على **Connect** مرة أخرى.
+</Note>
 
 ### 2. تثبيت الحزمة المطلوبة
 
