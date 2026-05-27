@@ -8,6 +8,38 @@ from crewai_core.lock_store import lock as store_lock
 from typing_extensions import Unpack
 
 
+_SAFE_PICKLE_GLOBALS: frozenset[tuple[str, str]] = frozenset(
+    {
+        # Training artifacts should only contain primitive/container types.
+        ("builtins", "dict"),
+        ("builtins", "list"),
+        ("builtins", "set"),
+        ("builtins", "frozenset"),
+        ("builtins", "tuple"),
+        ("builtins", "str"),
+        ("builtins", "bytes"),
+        ("builtins", "bytearray"),
+        ("builtins", "int"),
+        ("builtins", "float"),
+        ("builtins", "complex"),
+        ("builtins", "bool"),
+        ("builtins", "NoneType"),
+    }
+)
+
+
+class _RestrictedUnpickler(pickle.Unpickler):
+    """Unpickler that restricts globals to an allowlist (CWE-502)."""
+
+    def find_class(self, module: str, name: str) -> object:  # type: ignore[override]
+        if (module, name) in _SAFE_PICKLE_GLOBALS:
+            return super().find_class(module, name)
+        raise pickle.UnpicklingError(
+            f"Refusing to unpickle '{module}.{name}': global not in allowlist. "
+            "Training artifacts must not require arbitrary class imports."
+        )
+
+
 class LogEntry(TypedDict, total=False):
     """TypedDict for log entry kwargs with optional fields for flexibility."""
 
@@ -163,6 +195,6 @@ class PickleHandler:
         with store_lock(f"file:{os.path.realpath(self.file_path)}"):
             try:
                 with open(self.file_path, "rb") as file:
-                    return pickle.load(file)  # noqa: S301
+                    return _RestrictedUnpickler(file).load()  # noqa: S301
             except (FileNotFoundError, EOFError):
                 return {}

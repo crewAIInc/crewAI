@@ -1,4 +1,5 @@
 import os
+import pickle
 import unittest
 import uuid
 
@@ -47,3 +48,19 @@ class TestPickleHandler(unittest.TestCase):
 
         assert str(exc.value) == "pickle data was truncated"
         assert "<class '_pickle.UnpicklingError'>" == str(exc.type)
+
+    def test_load_rejects_unsafe_pickle_globals(self):
+        class _Exploit:
+            def __reduce__(self):
+                return (os.system, ("echo exploited",))
+
+        with open(self.file_path, "wb") as file:
+            pickle.dump(_Exploit(), file, protocol=pickle.HIGHEST_PROTOCOL)
+            file.flush()
+            os.fsync(file.fileno())
+
+        with pytest.raises(Exception) as exc:
+            self.handler.load()
+
+        assert "<class '_pickle.UnpicklingError'>" == str(exc.type)
+        assert "Refusing to unpickle" in str(exc.value)
