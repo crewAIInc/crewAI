@@ -7,6 +7,7 @@ various transport types, similar to OpenAI's Agents SDK.
 from pydantic import BaseModel, Field
 
 from crewai.mcp.filters import ToolFilter
+from crewai.mcp.transports.stdio import DEFAULT_ALLOWED_COMMANDS
 
 
 class MCPServerStdio(BaseModel):
@@ -43,6 +44,14 @@ class MCPServerStdio(BaseModel):
     tool_filter: ToolFilter | None = Field(
         default=None,
         description="Optional tool filter for filtering available tools.",
+    )
+    allowed_commands: frozenset[str] | None = Field(
+        default=DEFAULT_ALLOWED_COMMANDS,
+        description=(
+            "Optional frozenset of allowed command basenames for security validation. "
+            "Defaults to common runtimes (python, node, npx, uvx, uv, deno, docker). "
+            "Set to None to disable the allowlist check."
+        ),
     )
     cache_tools_list: bool = Field(
         default=False,
