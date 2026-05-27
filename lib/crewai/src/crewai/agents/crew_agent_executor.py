@@ -164,6 +164,11 @@ class CrewAgentExecutor(BaseAgentExecutor):
             self.llm.supports_stop_words() if isinstance(self.llm, BaseLLM) else False
         )
 
+    def _llm_is_anthropic(self) -> bool:
+        """Return True if the configured LLM is an Anthropic model."""
+        model: str = getattr(getattr(self, "llm", None), "model", "") or ""
+        return model.startswith("claude") or "anthropic" in model
+
     def _setup_messages(self, inputs: dict[str, Any]) -> None:
         """Set up messages for the agent execution.
 
@@ -176,6 +181,11 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
         from crewai.llms.cache import mark_cache_breakpoint
 
+        # cache_breakpoint is an Anthropic-only feature; injecting it for other
+        # providers (Groq, OpenAI-compatible APIs, etc.) causes a hard
+        # validation error on the provider side.
+        _mark = mark_cache_breakpoint if self._llm_is_anthropic() else (lambda m: m)
+
         if self.prompt is not None and "system" in self.prompt:
             system_prompt = self._format_prompt(
                 cast(str, self.prompt.get("system", "")), inputs
@@ -183,22 +193,11 @@ class CrewAgentExecutor(BaseAgentExecutor):
             user_prompt = self._format_prompt(
                 cast(str, self.prompt.get("user", "")), inputs
             )
-            # Cache breakpoints: end-of-system caches the per-agent stable
-            # prefix; end-of-user caches the per-task stable prefix across
-            # ReAct-loop iterations.
-            self.messages.append(
-                mark_cache_breakpoint(
-                    format_message_for_llm(system_prompt, role="system")
-                )
-            )
-            self.messages.append(
-                mark_cache_breakpoint(format_message_for_llm(user_prompt))
-            )
+            self.messages.append(_mark(format_message_for_llm(system_prompt, role="system")))
+            self.messages.append(_mark(format_message_for_llm(user_prompt)))
         elif self.prompt is not None:
             user_prompt = self._format_prompt(self.prompt.get("prompt", ""), inputs)
-            self.messages.append(
-                mark_cache_breakpoint(format_message_for_llm(user_prompt))
-            )
+            self.messages.append(_mark(format_message_for_llm(user_prompt)))
 
         provider.post_setup_messages(cast(ExecutorContext, cast(object, self)))
 
