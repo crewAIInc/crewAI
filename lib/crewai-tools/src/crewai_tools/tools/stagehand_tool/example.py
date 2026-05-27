@@ -28,23 +28,19 @@ from crewai_tools import StagehandTool
 _printer = Printer()
 
 
-# Load environment variables from .env file
 load_dotenv()
 
-# Get API keys from environment variables
 # You can set these in your shell or in a .env file
 browserbase_api_key = os.environ.get("BROWSERBASE_API_KEY")
 browserbase_project_id = os.environ.get("BROWSERBASE_PROJECT_ID")
-model_api_key = os.environ.get("OPENAI_API_KEY")  # or OPENAI_API_KEY
+model_api_key = os.environ.get("OPENAI_API_KEY")
 
-# Initialize the StagehandTool with your credentials and use context manager
 with StagehandTool(
-    api_key=browserbase_api_key,  # New parameter naming
-    project_id=browserbase_project_id,  # New parameter naming
+    api_key=browserbase_api_key,
+    project_id=browserbase_project_id,
     model_api_key=model_api_key,
-    model_name=AvailableModel.GPT_4O,  # Using the enum from schemas
+    model_name=AvailableModel.GPT_4O,
 ) as stagehand_tool:
-    # Create a web researcher agent with the StagehandTool
     researcher = Agent(
         role="Web Researcher",
         goal="Find and extract information from websites using different Stagehand primitives",
@@ -74,7 +70,6 @@ with StagehandTool(
         tools=[stagehand_tool],
     )
 
-    # Define a research task that demonstrates all three primitives
     research_task = Task(
         description=(
             "Demonstrate Stagehand capabilities by performing the following steps:\n"
@@ -104,7 +99,6 @@ with StagehandTool(
         agent=researcher,
     )
 
-    # Set up the crew
     crew = Crew(
         agents=[researcher],
         tasks=[research_task],  # You can switch this to web_research_task if you prefer
@@ -112,7 +106,6 @@ with StagehandTool(
         process=Process.sequential,
     )
 
-    # Run the crew and get the result
     result = crew.kickoff()
 
     _printer.print("\n==== RESULTS ====\n", color="cyan")

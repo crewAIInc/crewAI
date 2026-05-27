@@ -252,7 +252,6 @@ class TestCrewKickoffStreaming:
 
         streaming = CrewStreamingOutput(sync_iterator=gen())
 
-        # Iterate all chunks
         _ = list(streaming)
 
         # Simulate what _finalize_streaming does
@@ -405,7 +404,6 @@ class TestCrewKickoffStreamingAsync:
 
         streaming = CrewStreamingOutput(async_iterator=async_gen())
 
-        # Iterate all chunks
         async for _ in streaming:
             pass
 

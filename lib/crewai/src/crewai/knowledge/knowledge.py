@@ -62,7 +62,7 @@ def _resolve_knowledge_sources(value: Any) -> Any:
     return resolved
 
 
-os.environ["TOKENIZERS_PARALLELISM"] = "false"  # removes logging from fastembed
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
 def _serialize_embedder_spec(value: Any) -> dict[str, Any] | None:

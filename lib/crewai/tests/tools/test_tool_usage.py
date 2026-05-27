@@ -5,7 +5,6 @@ import threading
 import time
 from unittest.mock import MagicMock, patch
 
-import pytest
 from crewai import Agent, Task
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.tool_usage_events import (
@@ -18,6 +17,7 @@ from crewai.events.types.tool_usage_events import (
 from crewai.tools import BaseTool
 from crewai.tools.tool_usage import ToolUsage
 from pydantic import BaseModel, Field
+import pytest
 
 
 class RandomNumberToolInput(BaseModel):
@@ -63,30 +63,24 @@ def test_random_number_tool_range():
 def test_random_number_tool_invalid_range():
     tool = RandomNumberTool()
     with pytest.raises(ValueError):
-        tool._run(10, 1)  # min_value > max_value
+        tool._run(10, 1)
 
 
 def test_random_number_tool_schema():
     tool = RandomNumberTool()
 
-    # Get the schema using model_json_schema()
     schema = tool.args_schema.model_json_schema()
 
-    # Convert the schema to a string
     schema_str = json.dumps(schema)
 
-    # Check if the schema string contains the expected fields
     assert "min_value" in schema_str
     assert "max_value" in schema_str
 
-    # Parse the schema string back to a dictionary
     schema_dict = json.loads(schema_str)
 
-    # Check if the schema contains the correct field types
     assert schema_dict["properties"]["min_value"]["type"] == "integer"
     assert schema_dict["properties"]["max_value"]["type"] == "integer"
 
-    # Check if the schema contains the field descriptions
     assert (
         "minimum value" in schema_dict["properties"]["min_value"]["description"].lower()
     )
@@ -109,7 +103,6 @@ def test_tool_usage_render():
 
     rendered = tool_usage._render()
 
-    # Check that the rendered output contains the expected tool information
     assert "Tool Name: random_number_generator" in rendered
     assert "Tool Arguments:" in rendered
     assert (
@@ -117,7 +110,6 @@ def test_tool_usage_render():
         in rendered
     )
 
-    # Check that the JSON schema format is used (proper JSON schema types)
     assert '"min_value"' in rendered
     assert '"max_value"' in rendered
     assert '"type": "integer"' in rendered
@@ -126,7 +118,6 @@ def test_tool_usage_render():
 
 
 def test_validate_tool_input_booleans_and_none():
-    # Create a ToolUsage instance with mocks
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
@@ -136,7 +127,6 @@ def test_validate_tool_input_booleans_and_none():
         action=MagicMock(),
     )
 
-    # Input with booleans and None
     tool_input = '{"key1": True, "key2": False, "key3": None}'
     expected_arguments = {"key1": True, "key2": False, "key3": None}
 
@@ -145,7 +135,6 @@ def test_validate_tool_input_booleans_and_none():
 
 
 def test_validate_tool_input_mixed_types():
-    # Create a ToolUsage instance with mocks
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
@@ -155,7 +144,6 @@ def test_validate_tool_input_mixed_types():
         action=MagicMock(),
     )
 
-    # Input with mixed types
     tool_input = '{"number": 123, "text": "Some text", "flag": True}'
     expected_arguments = {"number": 123, "text": "Some text", "flag": True}
 
@@ -164,7 +152,6 @@ def test_validate_tool_input_mixed_types():
 
 
 def test_validate_tool_input_single_quotes():
-    # Create a ToolUsage instance with mocks
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
@@ -174,7 +161,6 @@ def test_validate_tool_input_single_quotes():
         action=MagicMock(),
     )
 
-    # Input with single quotes instead of double quotes
     tool_input = "{'key': 'value', 'flag': True}"
     expected_arguments = {"key": "value", "flag": True}
 
@@ -183,7 +169,6 @@ def test_validate_tool_input_single_quotes():
 
 
 def test_validate_tool_input_invalid_json_repairable():
-    # Create a ToolUsage instance with mocks
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
@@ -193,7 +178,6 @@ def test_validate_tool_input_invalid_json_repairable():
         action=MagicMock(),
     )
 
-    # Invalid JSON input that can be repaired
     tool_input = '{"key": "value", "list": [1, 2, 3,]}'
     expected_arguments = {"key": "value", "list": [1, 2, 3]}
 
@@ -202,7 +186,6 @@ def test_validate_tool_input_invalid_json_repairable():
 
 
 def test_validate_tool_input_with_special_characters():
-    # Create a ToolUsage instance with mocks
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[],
@@ -212,7 +195,6 @@ def test_validate_tool_input_with_special_characters():
         action=MagicMock(),
     )
 
-    # Input with special characters
     tool_input = '{"message": "Hello, world! \u263a", "valid": True}'
     expected_arguments = {"message": "Hello, world! ☺", "valid": True}
 
@@ -303,17 +285,15 @@ def test_validate_tool_input_with_trailing_commas():
 
 
 def test_validate_tool_input_invalid_input():
-    # Create mock agent with proper string values
     mock_agent = MagicMock()
-    mock_agent.key = "test_agent_key"  # Must be a string
-    mock_agent.role = "test_agent_role"  # Must be a string
-    mock_agent._original_role = "test_agent_role"  # Must be a string
+    mock_agent.key = "test_agent_key"
+    mock_agent.role = "test_agent_role"
+    mock_agent._original_role = "test_agent_role"
     mock_agent.verbose = False
 
-    # Create mock action with proper string value
     mock_action = MagicMock()
-    mock_action.tool = "test_tool"  # Must be a string
-    mock_action.tool_input = "test_input"  # Must be a string
+    mock_action.tool = "test_tool"
+    mock_action.tool_input = "test_input"
 
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
@@ -339,7 +319,6 @@ def test_validate_tool_input_invalid_input():
             in str(e_info.value)
         )
 
-    # Test for None input separately
     arguments = tool_usage._validate_tool_input(None)
     assert arguments == {}
 
@@ -427,7 +406,6 @@ def test_validate_tool_input_large_json_content():
         action=MagicMock(),
     )
 
-    # Simulate a large JSON content
     tool_input = (
         '{"data": ' + json.dumps([{"id": i, "value": i * 2} for i in range(1000)]) + "}"
     )
@@ -509,18 +487,15 @@ def test_tool_selection_error_event_direct():
 
 def test_tool_validate_input_error_event():
     """Test tool validation input error event emission from ToolUsage class."""
-    # Mock agent and required components
     mock_agent = MagicMock()
     mock_agent.key = "test_key"
     mock_agent.role = "test_role"
     mock_agent.verbose = False
     mock_agent._original_role = "test_role"
 
-    # Mock task and tools handler
     mock_task = MagicMock()
     mock_tools_handler = MagicMock()
 
-    # Create test tool
     class TestTool(BaseTool):
         name: str = "Test Tool"
         description: str = "A test tool"
@@ -530,7 +505,6 @@ def test_tool_validate_input_error_event():
 
     test_tool = TestTool()
 
-    # Create ToolUsage instance
     tool_usage = ToolUsage(
         tools_handler=mock_tools_handler,
         tools=[test_tool],
@@ -539,7 +513,6 @@ def test_tool_validate_input_error_event():
         agent=mock_agent,
         action=MagicMock(tool="test_tool"),
     )
-    # Mock all parsing attempts to fail
     with (
         patch("json.loads", side_effect=json.JSONDecodeError("Test Error", "", 0)),
         patch("ast.literal_eval", side_effect=ValueError),
@@ -555,7 +528,6 @@ def test_tool_validate_input_error_event():
                 received_events.append(event)
                 condition.notify()
 
-        # Test invalid input
         invalid_input = "invalid json {[}"
         with pytest.raises(Exception):  # noqa: B017
             tool_usage._validate_tool_input(invalid_input)
@@ -564,7 +536,6 @@ def test_tool_validate_input_error_event():
             if not received_events:
                 condition.wait(timeout=5)
 
-        # Verify event was emitted
         assert len(received_events) == 1, "Expected one event to be emitted"
         event = received_events[0]
         assert isinstance(event, ToolValidateInputErrorEvent)
@@ -576,21 +547,18 @@ def test_tool_validate_input_error_event():
 
 def test_tool_usage_finished_event_with_result():
     """Test that ToolUsageFinishedEvent is emitted with correct result attributes."""
-    # Create mock agent with proper string values
     mock_agent = MagicMock()
     mock_agent.key = "test_agent_key"
     mock_agent.role = "test_agent_role"
     mock_agent._original_role = "test_agent_role"
     mock_agent.verbose = False
 
-    # Create mock task
     mock_task = MagicMock()
     mock_task.delegations = 0
     mock_task.name = "Test Task"
     mock_task.description = "A test task for tool usage"
     mock_task.id = "test-task-id"
 
-    # Create mock tool
     class TestTool(BaseTool):
         name: str = "Test Tool"
         description: str = "A test tool"
@@ -600,11 +568,9 @@ def test_tool_usage_finished_event_with_result():
 
     test_tool = TestTool()
 
-    # Create mock tool calling
     mock_tool_calling = MagicMock()
     mock_tool_calling.arguments = {"arg1": "value1"}
 
-    # Create ToolUsage instance
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[test_tool],
@@ -622,7 +588,6 @@ def test_tool_usage_finished_event_with_result():
         received_events.append(event)
         event_received.set()
 
-    # Call on_tool_use_finished with test data
     started_at = time.time()
     result = "test output result"
     tool_usage.on_tool_use_finished(
@@ -638,13 +603,12 @@ def test_tool_usage_finished_event_with_result():
     event = received_events[0]
     assert isinstance(event, ToolUsageFinishedEvent)
 
-    # Verify event attributes
     assert event.agent_key == "test_agent_key"
     assert event.agent_role == "test_agent_role"
     assert event.tool_name == "test_tool"
     assert event.tool_args == {"arg1": "value1"}
     assert event.tool_class == "TestTool"
-    assert event.run_attempts == 1  # Default value from ToolUsage
+    assert event.run_attempts == 1
     assert event.delegations == 0
     assert event.from_cache is False
     assert event.output == "test output result"
@@ -655,21 +619,18 @@ def test_tool_usage_finished_event_with_result():
 
 def test_tool_usage_finished_event_with_cached_result():
     """Test that ToolUsageFinishedEvent is emitted with correct result attributes when using cached result."""
-    # Create mock agent with proper string values
     mock_agent = MagicMock()
     mock_agent.key = "test_agent_key"
     mock_agent.role = "test_agent_role"
     mock_agent._original_role = "test_agent_role"
     mock_agent.verbose = False
 
-    # Create mock task
     mock_task = MagicMock()
     mock_task.delegations = 0
     mock_task.name = "Test Task"
     mock_task.description = "A test task for tool usage"
     mock_task.id = "test-task-id"
 
-    # Create mock tool
     class TestTool(BaseTool):
         name: str = "Test Tool"
         description: str = "A test tool"
@@ -679,11 +640,9 @@ def test_tool_usage_finished_event_with_cached_result():
 
     test_tool = TestTool()
 
-    # Create mock tool calling
     mock_tool_calling = MagicMock()
     mock_tool_calling.arguments = {"arg1": "value1"}
 
-    # Create ToolUsage instance
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
         tools=[test_tool],
@@ -701,7 +660,6 @@ def test_tool_usage_finished_event_with_cached_result():
         received_events.append(event)
         event_received.set()
 
-    # Call on_tool_use_finished with test data and from_cache=True
     started_at = time.time()
     result = "cached test output result"
     tool_usage.on_tool_use_finished(
@@ -717,13 +675,12 @@ def test_tool_usage_finished_event_with_cached_result():
     event = received_events[0]
     assert isinstance(event, ToolUsageFinishedEvent)
 
-    # Verify event attributes
     assert event.agent_key == "test_agent_key"
     assert event.agent_role == "test_agent_role"
     assert event.tool_name == "test_tool"
     assert event.tool_args == {"arg1": "value1"}
     assert event.tool_class == "TestTool"
-    assert event.run_attempts == 1  # Default value from ToolUsage
+    assert event.run_attempts == 1
     assert event.delegations == 0
     assert event.from_cache is True
     assert event.output == "cached test output result"

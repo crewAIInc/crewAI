@@ -126,9 +126,6 @@ class TestJSONLoader:
         finally:
             os.unlink(path)
 
-    # ------------------------------
-    # URL-based tests
-    # ------------------------------
 
     @patch("requests.get")
     def test_url_response_valid_json(self, mock_get):

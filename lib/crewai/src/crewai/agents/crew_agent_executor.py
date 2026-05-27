@@ -1125,7 +1125,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
         Returns:
             Final answer from the agent.
         """
-        # Check if model supports native function calling
         use_native_tools = (
             hasattr(self.llm, "supports_function_calling")
             and callable(getattr(self.llm, "supports_function_calling", None))
@@ -1136,7 +1135,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
         if use_native_tools:
             return await self._ainvoke_loop_native_tools()
 
-        # Fall back to ReAct text-based pattern
         return await self._ainvoke_loop_react()
 
     async def _ainvoke_loop_react(self) -> AgentFinish:
@@ -1281,7 +1279,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
         Returns:
             Final answer from the agent.
         """
-        # Convert tools to OpenAI schema format
         if not self.original_tools:
             return await self._ainvoke_loop_native_no_tools()
 

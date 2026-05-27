@@ -2384,6 +2384,15 @@
                   {
                     "group": "Manage",
                     "pages": [
+                      {
+                        "group": "Agent Control Plane",
+                        "icon": "gauge",
+                        "pages": [
+                          "en/enterprise/features/agent-control-plane/overview",
+                          "en/enterprise/features/agent-control-plane/monitoring",
+                          "en/enterprise/features/agent-control-plane/rules"
+                        ]
+                      },
                       "en/enterprise/features/sso",
                       "en/enterprise/features/rbac"
                     ]
@@ -2868,6 +2877,15 @@
                   {
                     "group": "Manage",
                     "pages": [
+                      {
+                        "group": "Agent Control Plane",
+                        "icon": "gauge",
+                        "pages": [
+                          "en/enterprise/features/agent-control-plane/overview",
+                          "en/enterprise/features/agent-control-plane/monitoring",
+                          "en/enterprise/features/agent-control-plane/rules"
+                        ]
+                      },
                       "en/enterprise/features/sso",
                       "en/enterprise/features/rbac"
                     ]
@@ -3352,6 +3370,15 @@
                   {
                     "group": "Manage",
                     "pages": [
+                      {
+                        "group": "Agent Control Plane",
+                        "icon": "gauge",
+                        "pages": [
+                          "en/enterprise/features/agent-control-plane/overview",
+                          "en/enterprise/features/agent-control-plane/monitoring",
+                          "en/enterprise/features/agent-control-plane/rules"
+                        ]
+                      },
                       "en/enterprise/features/sso",
                       "en/enterprise/features/rbac"
                     ]
@@ -3836,6 +3863,15 @@
                   {
                     "group": "Manage",
                     "pages": [
+                      {
+                        "group": "Agent Control Plane",
+                        "icon": "gauge",
+                        "pages": [
+                          "en/enterprise/features/agent-control-plane/overview",
+                          "en/enterprise/features/agent-control-plane/monitoring",
+                          "en/enterprise/features/agent-control-plane/rules"
+                        ]
+                      },
                       "en/enterprise/features/sso",
                       "en/enterprise/features/rbac"
                     ]
@@ -9101,6 +9137,15 @@
                   {
                     "group": "Gerenciar",
                     "pages": [
+                      {
+                        "group": "Agent Control Plane",
+                        "icon": "gauge",
+                        "pages": [
+                          "pt-BR/enterprise/features/agent-control-plane/overview",
+                          "pt-BR/enterprise/features/agent-control-plane/monitoring",
+                          "pt-BR/enterprise/features/agent-control-plane/rules"
+                        ]
+                      },
                       "pt-BR/enterprise/features/rbac"
                     ]
                   },
@@ -9562,6 +9607,15 @@
                   {
                     "group": "Gerenciar",
                     "pages": [
+                      {
+                        "group": "Agent Control Plane",
+                        "icon": "gauge",
+                        "pages": [
+                          "pt-BR/enterprise/features/agent-control-plane/overview",
+                          "pt-BR/enterprise/features/agent-control-plane/monitoring",
+                          "pt-BR/enterprise/features/agent-control-plane/rules"
+                        ]
+                      },
                       "pt-BR/enterprise/features/rbac"
                     ]
                   },
@@ -10023,6 +10077,15 @@
                   {
                     "group": "Gerenciar",
                     "pages": [
+                      {
+                        "group": "Agent Control Plane",
+                        "icon": "gauge",
+                        "pages": [
+                          "pt-BR/enterprise/features/agent-control-plane/overview",
+                          "pt-BR/enterprise/features/agent-control-plane/monitoring",
+                          "pt-BR/enterprise/features/agent-control-plane/rules"
+                        ]
+                      },
                       "pt-BR/enterprise/features/rbac"
                     ]
                   },
@@ -10484,6 +10547,15 @@
                   {
                     "group": "Gerenciar",
                     "pages": [
+                      {
+                        "group": "Agent Control Plane",
+                        "icon": "gauge",
+                        "pages": [
+                          "pt-BR/enterprise/features/agent-control-plane/overview",
+                          "pt-BR/enterprise/features/agent-control-plane/monitoring",
+                          "pt-BR/enterprise/features/agent-control-plane/rules"
+                        ]
+                      },
                       "pt-BR/enterprise/features/rbac"
                     ]
                   },
@@ -15671,6 +15743,15 @@
                   {
                     "group": "관리",
                     "pages": [
+                      {
+                        "group": "Agent Control Plane",
+                        "icon": "gauge",
+                        "pages": [
+                          "ko/enterprise/features/agent-control-plane/overview",
+                          "ko/enterprise/features/agent-control-plane/monitoring",
+                          "ko/enterprise/features/agent-control-plane/rules"
+                        ]
+                      },
                       "ko/enterprise/features/rbac"
                     ]
                   },
@@ -16145,6 +16226,15 @@
                   {
                     "group": "관리",
                     "pages": [
+                      {
+                        "group": "Agent Control Plane",
+                        "icon": "gauge",
+                        "pages": [
+                          "ko/enterprise/features/agent-control-plane/overview",
+                          "ko/enterprise/features/agent-control-plane/monitoring",
+                          "ko/enterprise/features/agent-control-plane/rules"
+                        ]
+                      },
                       "ko/enterprise/features/rbac"
                     ]
                   },
@@ -16619,6 +16709,15 @@
                   {
                     "group": "관리",
                     "pages": [
+                      {
+                        "group": "Agent Control Plane",
+                        "icon": "gauge",
+                        "pages": [
+                          "ko/enterprise/features/agent-control-plane/overview",
+                          "ko/enterprise/features/agent-control-plane/monitoring",
+                          "ko/enterprise/features/agent-control-plane/rules"
+                        ]
+                      },
                       "ko/enterprise/features/rbac"
                     ]
                   },
@@ -17093,6 +17192,15 @@
                   {
                     "group": "관리",
                     "pages": [
+                      {
+                        "group": "Agent Control Plane",
+                        "icon": "gauge",
+                        "pages": [
+                          "ko/enterprise/features/agent-control-plane/overview",
+                          "ko/enterprise/features/agent-control-plane/monitoring",
+                          "ko/enterprise/features/agent-control-plane/rules"
+                        ]
+                      },
                       "ko/enterprise/features/rbac"
                     ]
                   },
@@ -22358,6 +22466,15 @@
                   {
                     "group": "الإدارة",
                     "pages": [
+                      {
+                        "group": "Agent Control Plane",
+                        "icon": "gauge",
+                        "pages": [
+                          "ar/enterprise/features/agent-control-plane/overview",
+                          "ar/enterprise/features/agent-control-plane/monitoring",
+                          "ar/enterprise/features/agent-control-plane/rules"
+                        ]
+                      },
                       "ar/enterprise/features/rbac"
                     ]
                   },
@@ -22832,6 +22949,15 @@
                   {
                     "group": "الإدارة",
                     "pages": [
+                      {
+                        "group": "Agent Control Plane",
+                        "icon": "gauge",
+                        "pages": [
+                          "ar/enterprise/features/agent-control-plane/overview",
+                          "ar/enterprise/features/agent-control-plane/monitoring",
+                          "ar/enterprise/features/agent-control-plane/rules"
+                        ]
+                      },
                       "ar/enterprise/features/rbac"
                     ]
                   },
@@ -23306,6 +23432,15 @@
                   {
                     "group": "الإدارة",
                     "pages": [
+                      {
+                        "group": "Agent Control Plane",
+                        "icon": "gauge",
+                        "pages": [
+                          "ar/enterprise/features/agent-control-plane/overview",
+                          "ar/enterprise/features/agent-control-plane/monitoring",
+                          "ar/enterprise/features/agent-control-plane/rules"
+                        ]
+                      },
                       "ar/enterprise/features/rbac"
                     ]
                   },
@@ -23780,6 +23915,15 @@
                   {
                     "group": "الإدارة",
                     "pages": [
+                      {
+                        "group": "Agent Control Plane",
+                        "icon": "gauge",
+                        "pages": [
+                          "ar/enterprise/features/agent-control-plane/overview",
+                          "ar/enterprise/features/agent-control-plane/monitoring",
+                          "ar/enterprise/features/agent-control-plane/rules"
+                        ]
+                      },
                       "ar/enterprise/features/rbac"
                     ]
                   },

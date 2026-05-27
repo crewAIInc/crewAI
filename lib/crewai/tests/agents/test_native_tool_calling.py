@@ -215,9 +215,7 @@ def _attach_parallel_probe_handler() -> None:
             event.finished_at.timestamp(),
         )
 
-# =============================================================================
 # OpenAI Provider Tests
-# =============================================================================
 
 
 class TestOpenAINativeToolCalling:
@@ -448,9 +446,7 @@ class TestOpenAINativeToolCalling:
             unregister_after_tool_call_hook(after_hook)
 
 
-# =============================================================================
 # Anthropic Provider Tests
-# =============================================================================
 class TestAnthropicNativeToolCalling:
     """Tests for native tool calling with Anthropic models."""
 
@@ -559,9 +555,7 @@ class TestAnthropicNativeToolCalling:
         _assert_tools_overlapped()
 
 
-# =============================================================================
 # Google/Gemini Provider Tests
-# =============================================================================
 
 
 class TestGeminiNativeToolCalling:
@@ -672,9 +666,7 @@ class TestGeminiNativeToolCalling:
         _assert_tools_overlapped()
 
 
-# =============================================================================
 # Azure Provider Tests
-# =============================================================================
 
 
 class TestAzureNativeToolCalling:
@@ -688,7 +680,6 @@ class TestAzureNativeToolCalling:
             "AZURE_API_BASE": "https://test.openai.azure.com",
             "AZURE_API_VERSION": "2024-02-15-preview",
         }
-        # Only patch if keys are not already in environment
         if "AZURE_API_KEY" not in os.environ:
             with patch.dict(os.environ, env_vars):
                 yield
@@ -796,9 +787,7 @@ class TestAzureNativeToolCalling:
         _assert_tools_overlapped()
 
 
-# =============================================================================
 # Bedrock Provider Tests
-# =============================================================================
 
 
 class TestBedrockNativeToolCalling:
@@ -901,9 +890,7 @@ class TestBedrockNativeToolCalling:
         _assert_tools_overlapped()
 
 
-# =============================================================================
 # Cross-Provider Native Tool Calling Behavior Tests
-# =============================================================================
 
 
 class TestNativeToolCallingBehavior:
@@ -930,9 +917,7 @@ class TestNativeToolCallingBehavior:
         assert llm.supports_function_calling() is True
 
 
-# =============================================================================
 # Token Usage Tests
-# =============================================================================
 
 
 class TestNativeToolCallingTokenUsage:
@@ -1000,20 +985,16 @@ def test_native_tool_calling_error_handling(failing_tool: FailingTool):
     result = agent.kickoff("Use the failing_tool to do something.")
     assert result is not None
 
-    # Verify error event was emitted
     assert event_received.wait(timeout=10), "ToolUsageErrorEvent was not emitted"
     assert len(received_events) >= 1
 
-    # Verify event attributes
     error_event = received_events[0]
     assert error_event.tool_name == "failing_tool"
     assert error_event.agent_role == agent.role
     assert "This tool always fails" in str(error_event.error)
 
 
-# =============================================================================
 # Max Usage Count Tests for Native Tool Calling
-# =============================================================================
 
 
 class CountingInput(BaseModel):
@@ -1042,7 +1023,6 @@ class TestMaxUsageCountWithNativeToolCalling:
         """Test that max_usage_count is properly tracked when using native tool calling."""
         tool = CountingTool(max_usage_count=3)
 
-        # Verify initial state
         assert tool.max_usage_count == 3
         assert tool.current_usage_count == 0
 
@@ -1065,7 +1045,6 @@ class TestMaxUsageCountWithNativeToolCalling:
         crew = Crew(agents=[agent], tasks=[task])
         crew.kickoff()
 
-        # Verify usage count was tracked
         assert tool.max_usage_count == 3
         assert tool.current_usage_count <= tool.max_usage_count
 
@@ -1094,7 +1073,6 @@ class TestMaxUsageCountWithNativeToolCalling:
         crew = Crew(agents=[agent], tasks=[task])
         result = crew.kickoff()
 
-        # The tool should have been limited to max_usage_count (2) calls
         assert result is not None
         assert tool.current_usage_count == tool.max_usage_count
         # After hitting the limit, further calls should have been rejected
@@ -1126,14 +1104,11 @@ class TestMaxUsageCountWithNativeToolCalling:
         result = crew.kickoff()
 
         assert result is not None
-        # Verify the requested calls occurred while keeping usage bounded.
         assert tool.current_usage_count >= 2
         assert tool.current_usage_count <= tool.max_usage_count
 
 
-# =============================================================================
 # JSON Parse Error Handling Tests
-# =============================================================================
 
 
 class TestNativeToolCallingJsonParseError:

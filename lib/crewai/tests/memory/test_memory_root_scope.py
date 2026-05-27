@@ -20,7 +20,6 @@ from crewai.memory.utils import (
 )
 
 
-# --- Utility function tests ---
 
 
 class TestSanitizeScopeName:
@@ -120,7 +119,6 @@ class TestJoinScopePaths:
         assert join_scope_paths("", "inner") == "/inner"
 
 
-# --- Memory root_scope tests ---
 
 
 @pytest.fixture
@@ -226,7 +224,7 @@ class TestMemoryRootScope:
             scope="/inner",
             categories=["test"],
             importance=0.7,
-            root_scope="/override/path",  # Override instance-level
+            root_scope="/override/path",
         )
 
         assert record is not None
@@ -291,7 +289,7 @@ class TestMemoryRootScope:
             scope="/inner",
             categories=["test"],
             importance=0.7,
-            root_scope="/agent/researcher",  # Per-call override
+            root_scope="/agent/researcher",
         )
         mem.drain_writes()
 
@@ -319,12 +317,12 @@ class TestRootScopePathNormalization:
             storage=str(tmp_path / "db"),
             llm=MagicMock(),
             embedder=mock_embedder,
-            root_scope="/crew/test/",  # Trailing slash
+            root_scope="/crew/test/",
         )
 
         record = mem.remember(
             "Test",
-            scope="/inner/",  # Both have slashes
+            scope="/inner/",
             categories=["test"],
             importance=0.5,
         )
@@ -343,12 +341,12 @@ class TestRootScopePathNormalization:
             storage=str(tmp_path / "db"),
             llm=MagicMock(),
             embedder=mock_embedder,
-            root_scope="crew/test",  # No leading slash
+            root_scope="crew/test",
         )
 
         record = mem.remember(
             "Test",
-            scope="inner",  # No leading slash
+            scope="inner",
             categories=["test"],
             importance=0.5,
         )
@@ -371,7 +369,7 @@ class TestRootScopePathNormalization:
 
         record = mem.remember(
             "Test",
-            scope="/",  # Root scope
+            scope="/",
             categories=["test"],
             importance=0.5,
         )
@@ -488,7 +486,7 @@ class TestCrewAutoScoping:
             memory=mem,
         )
 
-        assert crew._memory.root_scope == "/custom/path"  # Not overwritten
+        assert crew._memory.root_scope == "/custom/path"
 
     def test_crew_sanitizes_name_for_root_scope(self) -> None:
         """Crew name with special chars is sanitized for root_scope."""
@@ -725,13 +723,12 @@ class TestEncodingFlowRootScope:
         """Group A (fast path) items properly prepend root_scope."""
         from crewai.memory.encoding_flow import ItemState
 
-        # Test _apply_defaults directly on an ItemState without going through Flow
         # since Flow.state is a property without a setter
         item = ItemState(
             content="Test",
-            scope="/inner",  # Explicit
-            categories=["cat"],  # Explicit
-            importance=0.5,  # Explicit
+            scope="/inner",
+            categories=["cat"],
+            importance=0.5,
             root_scope="/crew/test",
         )
 
@@ -793,7 +790,6 @@ class TestMemoryScopeWithRootScope:
             root_scope="/crew/test",
         )
 
-        # Create a MemoryScope
         scope = MemoryScope(memory=mem, root_path="/agent/1")
 
         # Remember through the scope
@@ -804,9 +800,7 @@ class TestMemoryScopeWithRootScope:
             importance=0.5,
         )
 
-        # The MemoryScope prepends its root_path, then Memory prepends root_scope
         # MemoryScope.remember prepends /agent/1 to /task -> /agent/1/task
-        # Then Memory's root_scope /crew/test gets prepended by encoding flow
         # Final: /crew/test/agent/1/task
         assert record is not None
         # Note: MemoryScope builds the scope before calling memory.remember
@@ -823,14 +817,12 @@ class TestReadIsolation:
         """recall() with root_scope returns only records within that scope."""
         from crewai.memory.unified_memory import Memory
 
-        # Create memory without root_scope and store some records
         mem_global = Memory(
             storage=str(tmp_path / "db"),
             llm=MagicMock(),
             embedder=mock_embedder,
         )
 
-        # Store records at different scopes
         mem_global.remember(
             "Global record",
             scope="/other/scope",
@@ -850,7 +842,6 @@ class TestReadIsolation:
             importance=0.5,
         )
 
-        # Create a scoped view for crew-a
         mem_scoped = Memory(
             storage=str(tmp_path / "db"),
             llm=MagicMock(),
@@ -923,7 +914,6 @@ class TestReadIsolation:
         """list_records() with root_scope defaults to that scope."""
         from crewai.memory.unified_memory import Memory
 
-        # Store records at different scopes
         mem_global = Memory(
             storage=str(tmp_path / "db"),
             llm=MagicMock(),
@@ -933,7 +923,6 @@ class TestReadIsolation:
         mem_global.remember("Global", scope="/other", categories=["x"], importance=0.5)
         mem_global.remember("Scoped", scope="/crew/a/inner", categories=["x"], importance=0.5)
 
-        # Create scoped memory
         mem_scoped = Memory(
             storage=str(tmp_path / "db"),
             llm=MagicMock(),
@@ -1022,7 +1011,6 @@ class TestReadIsolation:
             root_scope="/crew/a",
         )
 
-        # reset() should only delete /crew/a records
         mem_scoped.reset()
 
         # Check with a fresh global memory instance to avoid stale table references
@@ -1048,7 +1036,7 @@ class TestAgentExecutorBackwardCompat:
 
         mock_memory = MagicMock()
         mock_memory.read_only = False
-        mock_memory.root_scope = None  # No root_scope set
+        mock_memory.root_scope = None
         mock_memory.extract_memories.return_value = ["Fact A"]
 
         mock_agent = MagicMock()
@@ -1066,7 +1054,6 @@ class TestAgentExecutorBackwardCompat:
 
         executor._save_to_memory(AgentFinish(thought="", output="R", text="R"))
 
-        # Should NOT pass root_scope when memory has none
         mock_memory.remember_many.assert_called_once()
         call_kwargs = mock_memory.remember_many.call_args.kwargs
         assert "root_scope" not in call_kwargs
@@ -1080,7 +1067,7 @@ class TestAgentExecutorBackwardCompat:
 
         mock_memory = MagicMock()
         mock_memory.read_only = False
-        mock_memory.root_scope = "/crew/test"  # Has root_scope
+        mock_memory.root_scope = "/crew/test"
         mock_memory.extract_memories.return_value = ["Fact A"]
 
         mock_agent = MagicMock()
@@ -1098,7 +1085,6 @@ class TestAgentExecutorBackwardCompat:
 
         executor._save_to_memory(AgentFinish(thought="", output="R", text="R"))
 
-        # Should pass extended root_scope
         mock_memory.remember_many.assert_called_once()
         call_kwargs = mock_memory.remember_many.call_args.kwargs
         assert call_kwargs["root_scope"] == "/crew/test/agent/researcher"
@@ -1124,7 +1110,6 @@ class TestConsolidationIsolation:
             config=MemoryConfig(),
         )
 
-        # Create item with root_scope
         item = ItemState(
             content="Test",
             scope="/inner",
@@ -1133,13 +1118,10 @@ class TestConsolidationIsolation:
         )
         flow.state.items = [item]
 
-        # Run parallel_find_similar
         flow.parallel_find_similar()
 
-        # Check that search was called with correct scope_prefix
         mock_storage.search.assert_called_once()
         call_kwargs = mock_storage.search.call_args.kwargs
-        # Should be /crew/a/inner (root + inner combined)
         assert call_kwargs["scope_prefix"] == "/crew/a/inner"
 
     def test_consolidation_search_without_root_scope(
@@ -1159,7 +1141,6 @@ class TestConsolidationIsolation:
             config=MemoryConfig(),
         )
 
-        # Create item without root_scope
         item = ItemState(
             content="Test",
             scope="/inner",
@@ -1168,10 +1149,8 @@ class TestConsolidationIsolation:
         )
         flow.state.items = [item]
 
-        # Run parallel_find_similar
         flow.parallel_find_similar()
 
-        # Check that search was called with explicit scope only
         mock_storage.search.assert_called_once()
         call_kwargs = mock_storage.search.call_args.kwargs
         assert call_kwargs["scope_prefix"] == "/inner"

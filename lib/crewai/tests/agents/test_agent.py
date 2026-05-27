@@ -28,26 +28,21 @@ from crewai.utilities import RPMController
 
 
 def test_agent_llm_creation_with_env_vars():
-    # Store original environment variables
     original_api_key = os.environ.get("OPENAI_API_KEY")
     original_api_base = os.environ.get("OPENAI_API_BASE")
     original_model_name = os.environ.get("OPENAI_MODEL_NAME")
 
-    # Set up environment variables
     os.environ["OPENAI_API_KEY"] = "test_api_key"
     os.environ["OPENAI_API_BASE"] = "https://test-api-base.com"
     os.environ["OPENAI_MODEL_NAME"] = "gpt-4-turbo"
 
-    # Create an agent without specifying LLM
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
 
-    # Check if LLM is created correctly
     assert isinstance(agent.llm, BaseLLM)
     assert agent.llm.model == "gpt-4-turbo"
     assert agent.llm.api_key == "test_api_key"
     assert agent.llm.base_url == "https://test-api-base.com"
 
-    # Clean up environment variables
     del os.environ["OPENAI_API_KEY"]
     del os.environ["OPENAI_API_BASE"]
     del os.environ["OPENAI_MODEL_NAME"]
@@ -59,16 +54,13 @@ def test_agent_llm_creation_with_env_vars():
     if original_model_name:
         os.environ["OPENAI_MODEL_NAME"] = original_model_name
 
-    # Create an agent without specifying LLM
     agent = Agent(role="test role", goal="test goal", backstory="test backstory")
 
-    # Check if LLM is created correctly
     assert isinstance(agent.llm, BaseLLM)
     assert agent.llm.model != "gpt-4-turbo"
     assert agent.llm.api_key != "test_api_key"
     assert agent.llm.base_url != "https://test-api-base.com"
 
-    # Restore original environment variables
     if original_api_key:
         os.environ["OPENAI_API_KEY"] = original_api_key
     if original_api_base:
@@ -389,7 +381,6 @@ def test_agent_custom_max_iterations():
     assert result is not None
     assert isinstance(result, str)
     assert len(result) > 0
-    # With max_iter=1, exactly two provider calls are expected:
     # one inside the reasoning loop and one for the forced final answer.
     assert call_count == 2
 
@@ -584,7 +575,6 @@ def test_agent_without_max_rpm_respects_crew_rpm(capsys):
     with patch.object(RPMController, "_wait_for_next_minute") as moveon:
         moveon.return_value = True
         result = crew.kickoff()
-        # Verify the crew executed and RPM limit was triggered
         assert result is not None
         assert moveon.called
 
@@ -698,7 +688,6 @@ def test_agent_definition_based_on_dict():
     assert agent.tools == []
 
 
-# test for human input
 @pytest.mark.vcr()
 @pytest.mark.filterwarnings("ignore::DeprecationWarning")
 def test_agent_human_input():
@@ -725,8 +714,8 @@ def test_agent_human_input():
     # Side effect function for _prompt_input to simulate multiple feedback iterations
     feedback_responses = iter(
         [
-            "Don't say hi, say Hello instead!",  # First feedback: instruct change
-            "",  # Second feedback: empty string signals acceptance
+            "Don't say hi, say Hello instead!",
+            "",
         ]
     )
 
@@ -746,13 +735,11 @@ def test_agent_human_input():
             return_value=AgentFinish(output="Hello", thought="", text=""),
         ),
     ):
-        # Execute the task
         output = agent.execute_task(task)
 
         # Assertions to ensure the agent behaves correctly.
         # It should have requested feedback twice.
         assert mock_prompt_input.call_count == 2
-        # The final result should be processed to "Hello"
         assert output.strip().lower() == "hello"
 
 
@@ -844,13 +831,10 @@ Thought:<|eot_id|>
     with patch.object(AgentExecutor, "_format_prompt") as mock_format_prompt:
         mock_format_prompt.return_value = expected_prompt
 
-        # Trigger the _format_prompt method
         agent.agent_executor._format_prompt("dummy_prompt", {})
 
-        # Assert that _format_prompt was called
         mock_format_prompt.assert_called_once()
 
-        # Assert that the returned prompt matches the expected prompt
         assert mock_format_prompt.return_value == expected_prompt
 
 
@@ -1194,7 +1178,6 @@ def test_agent_with_callbacks():
     )
 
     assert isinstance(agent.llm, BaseLLM)
-    # All LLM implementations now support callbacks consistently
     assert hasattr(agent.llm, "callbacks")
     assert len(agent.llm.callbacks) == 1
     assert agent.llm.callbacks[0] == dummy_callback
@@ -1242,14 +1225,11 @@ def test_llm_call_with_error():
 
 @pytest.mark.vcr()
 def test_handle_context_length_exceeds_limit():
-    # Import necessary modules
     from crewai.utilities.agent_utils import handle_context_length
     from crewai_core.printer import Printer
 
-    # Create mocks for dependencies
     printer = Printer()
 
-    # Create an agent just for its LLM
     agent = Agent(
         role="test role",
         goal="test goal",
@@ -1259,7 +1239,6 @@ def test_handle_context_length_exceeds_limit():
 
     llm = agent.llm
 
-    # Create test messages
     messages = [
         {
             "role": "user",
@@ -1267,11 +1246,9 @@ def test_handle_context_length_exceeds_limit():
         }
     ]
 
-    # Set up test parameters
     respect_context_window = True
     callbacks = []
 
-    # Apply our patch to summarize_messages to force an error
     with patch("crewai.utilities.agent_utils.summarize_messages") as mock_summarize:
         mock_summarize.side_effect = ValueError("Context length limit exceeded")
 
@@ -1285,7 +1262,6 @@ def test_handle_context_length_exceeds_limit():
                 callbacks=callbacks,
             )
 
-        # Verify our patch was called and raised the correct error
         assert "Context length limit exceeded" in str(excinfo.value)
         mock_summarize.assert_called_once()
 
@@ -1353,19 +1329,16 @@ def test_agent_with_all_llm_attributes():
     assert agent.llm.timeout == 10
     assert agent.llm.temperature == 0.7
     assert agent.llm.top_p == 0.9
-    # assert agent.llm.n == 1
     assert set(agent.llm.stop) == set(["STOP", "END"])
     assert all(word in agent.llm.stop for word in ["STOP", "END"])
     assert agent.llm.max_tokens == 100
     assert agent.llm.presence_penalty == 0.1
     assert agent.llm.frequency_penalty == 0.1
-    # assert agent.llm.logit_bias == {50256: -100}
     assert agent.llm.response_format == {"type": "json_object"}
     assert agent.llm.seed == 42
     assert agent.llm.logprobs
     assert agent.llm.top_logprobs == 5
     assert agent.llm.base_url == "https://api.openai.com/v1"
-    # assert agent.llm.api_version == "2023-05-15"
     assert agent.llm.api_key == "sk-your-api-key-here"
 
 
@@ -1807,7 +1780,6 @@ def test_agent_with_knowledge_sources_generate_search_query():
         crew = Crew(agents=[agent], tasks=[task])
         result = crew.kickoff()
 
-        # Updated assertion to check the JSON content
         assert "Brandon" in str(agent.knowledge_search_query)
         assert "favorite color" in str(agent.knowledge_search_query)
 
@@ -1830,7 +1802,6 @@ def test_agent_with_knowledge_with_no_crewai_knowledge():
         knowledge=mock_knowledge,
     )
 
-    # Create a task that requires the agent to use the knowledge
     task = Task(
         description="What is Vidit's favorite color?",
         expected_output="Vidit's favorclearite color.",
@@ -1855,7 +1826,6 @@ def test_agent_with_only_crewai_knowledge():
         ),
     )
 
-    # Create a task that requires the agent to use the knowledge
     task = Task(
         description="What is Vidit's favorite color?",
         expected_output="Vidit's favorite color.",
@@ -1884,7 +1854,6 @@ def test_agent_knowledege_with_crewai_knowledge():
         knowledge=agent_knowledge,
     )
 
-    # Create a task that requires the agent to use the knowledge
     task = Task(
         description="What is Vidit's favorite color?",
         expected_output="Vidit's favorclearite color.",
@@ -1902,23 +1871,20 @@ def test_litellm_auth_error_handling():
     """Test that LiteLLM authentication errors are handled correctly and not retried."""
     from litellm import AuthenticationError as LiteLLMAuthenticationError
 
-    # Create an agent with a mocked LLM and max_retry_limit=0
     agent = Agent(
         role="test role",
         goal="test goal",
         backstory="test backstory",
         llm=LLM(model="gpt-4", is_litellm=True),
-        max_retry_limit=0,  # Disable retries for authentication errors
+        max_retry_limit=0,
     )
 
-    # Create a task
     task = Task(
         description="Test task",
         expected_output="Test output",
         agent=agent,
     )
 
-    # Mock the LLM call to raise AuthenticationError
     with (
         patch.object(LLM, "call") as mock_llm_call,
         pytest.raises(LiteLLMAuthenticationError, match="Invalid API key"),
@@ -1928,7 +1894,6 @@ def test_litellm_auth_error_handling():
         )
         agent.execute_task(task)
 
-    # Verify the call was only made once (no retries)
     mock_llm_call.assert_called_once()
 
 
@@ -1937,7 +1902,6 @@ def test_crew_agent_executor_litellm_auth_error():
     from crewai.agents.tools_handler import ToolsHandler
     from litellm.exceptions import AuthenticationError
 
-    # Create an agent and executor
     agent = Agent(
         role="test role",
         goal="test goal",
@@ -1950,7 +1914,6 @@ def test_crew_agent_executor_litellm_auth_error():
         agent=agent,
     )
 
-    # Create executor with all required parameters
     executor = CrewAgentExecutor(
         agent=agent,
         task=task,
@@ -1965,7 +1928,6 @@ def test_crew_agent_executor_litellm_auth_error():
         tools_handler=ToolsHandler(),
     )
 
-    # Mock the LLM call to raise AuthenticationError
     with (
         patch.object(LLM, "call") as mock_llm_call,
         pytest.raises(AuthenticationError) as exc_info,
@@ -1981,10 +1943,8 @@ def test_crew_agent_executor_litellm_auth_error():
             }
         )
 
-    # Verify the call was only made once (no retries)
     mock_llm_call.assert_called_once()
 
-    # Assert that the exception was raised and has the expected attributes
     assert exc_info.type is AuthenticationError
     assert "Invalid API key".lower() in exc_info.value.message.lower()
     assert exc_info.value.llm_provider == "openai"
@@ -2004,14 +1964,12 @@ def test_litellm_anthropic_error_handling():
         max_retry_limit=0,
     )
 
-    # Create a task
     task = Task(
         description="Test task",
         expected_output="Test output",
         agent=agent,
     )
 
-    # Mock the LLM call to raise AnthropicError
     with (
         patch.object(LLM, "call") as mock_llm_call,
         pytest.raises(AnthropicError, match="Test Anthropic error"),
@@ -2022,7 +1980,6 @@ def test_litellm_anthropic_error_handling():
         )
         agent.execute_task(task)
 
-    # Verify the LLM call was only made once (no retries)
     mock_llm_call.assert_called_once()
 
 

@@ -22,7 +22,6 @@ from crewai.flow.input_provider import InputProvider, InputResponse
 from crewai.flow.persistence.base import FlowPersistence
 
 
-# ── Test helpers ─────────────────────────────────────────────────
 
 
 class _SaveCall:
@@ -123,7 +122,6 @@ class SlowMockProvider:
         return self.response
 
 
-# ── Basic Functionality ──────────────────────────────────────────
 
 
 class TestAskBasic:
@@ -244,10 +242,9 @@ class TestAskBasic:
         flow = TestFlow()
         result = flow.kickoff()
         assert result == ""
-        assert result is not None  # Explicitly not None
+        assert result is not None
 
 
-# ── Timeout ──────────────────────────────────────────────────────
 
 
 class TestAskTimeout:
@@ -307,14 +304,13 @@ class TestAskTimeout:
 
             @start()
             def my_method(self):
-                return self.ask("Question?")  # no timeout
+                return self.ask("Question?")
 
         flow = TestFlow()
         result = flow.kickoff()
         assert result == "answer"
 
 
-# ── Provider Resolution ──────────────────────────────────────────
 
 
 class TestProviderResolution:
@@ -393,12 +389,11 @@ class TestProviderResolution:
             result = flow.kickoff()
             assert result == "from flow"
             assert flow_provider.messages == ["Q?"]
-            assert global_provider.messages == []  # not called
+            assert global_provider.messages == []
         finally:
             flow_config.input_provider = original
 
 
-# ── Events ───────────────────────────────────────────────────────
 
 
 class TestAskEvents:
@@ -495,7 +490,6 @@ class TestAskEvents:
         assert events_captured[0].response is None
 
 
-# ── Auto-checkpoint (Durability) ─────────────────────────────────
 
 
 class TestAskCheckpoint:
@@ -516,7 +510,6 @@ class TestAskCheckpoint:
         flow = TestFlow(persistence=mock_persistence)
         flow.kickoff()
 
-        # Find the _ask_checkpoint call among save_state calls
         checkpoint_calls = [
             c for c in mock_persistence.save_state.call_args_list
             if c.kwargs.get("method_name") == "_ask_checkpoint"
@@ -534,7 +527,7 @@ class TestAskCheckpoint:
             def my_method(self):
                 return self.ask("Question?")
 
-        flow = TestFlow()  # No persistence
+        flow = TestFlow()
         result = flow.kickoff()
         assert result == "answer"  # Works fine without persistence
 
@@ -553,10 +546,8 @@ class TestAskCheckpoint:
 
             @start()
             def gather(self):
-                # First ask: nothing in state yet
                 topic = self.ask("Topic?")
                 self.state["topic"] = topic
-                # Second ask: state now has topic, checkpoint saves it
                 depth = self.ask("Depth?")
                 self.state["depth"] = depth
                 return {"topic": topic, "depth": depth}
@@ -565,7 +556,6 @@ class TestAskCheckpoint:
         result = flow.kickoff()
         assert result == {"topic": "AI", "depth": "detailed"}
 
-        # Find the checkpoint calls
         checkpoint_calls = [
             c for c in mock_persistence.save_state.call_args_list
             if c.kwargs.get("method_name") == "_ask_checkpoint"
@@ -573,7 +563,6 @@ class TestAskCheckpoint:
         ]
         assert len(checkpoint_calls) == 2
 
-        # The second checkpoint (before asking "Depth?") should have topic
         second_checkpoint = checkpoint_calls[1]
         # state_data is the third positional arg or keyword arg
         if second_checkpoint.kwargs.get("state_data"):
@@ -583,7 +572,6 @@ class TestAskCheckpoint:
         assert state_data.get("topic") == "AI"
 
 
-# ── Input History ────────────────────────────────────────────────
 
 
 class TestInputHistory:
@@ -666,7 +654,6 @@ class TestInputHistory:
         assert flow._input_history[0]["response"] is None
 
 
-# ── Integration ──────────────────────────────────────────────────
 
 
 class TestAskIntegration:
@@ -764,7 +751,6 @@ class TestAskIntegration:
         assert result["topic"] == "AI"
         assert result["depth"] == "detailed"
 
-        # Verify checkpoints were made
         checkpoint_calls = [
             c for c in mock_persistence.save_state.call_args_list
             if c.kwargs.get("method_name") == "_ask_checkpoint"
@@ -833,7 +819,6 @@ class TestAskIntegration:
         assert "finished" in events_seen
 
 
-# ── Console Provider ─────────────────────────────────────────────
 
 
 class TestConsoleProviderInput:
@@ -874,7 +859,6 @@ class TestConsoleProviderInput:
         ):
             provider.request_input("What topic?", MagicMock())
 
-        # Verify the message was printed
         print_calls = [str(c) for c in mock_console.print.call_args_list]
         assert any("What topic?" in c for c in print_calls)
 
@@ -919,7 +903,6 @@ class TestConsoleProviderInput:
         assert isinstance(provider, InputProvider)
 
 
-# ── InputProvider Protocol ───────────────────────────────────────
 
 
 class TestInputProviderProtocol:
@@ -941,7 +924,6 @@ class TestInputProviderProtocol:
         assert isinstance(provider, InputProvider)
 
 
-# ── Error Handling ───────────────────────────────────────────────
 
 
 class TestAskErrorHandling:
@@ -984,7 +966,6 @@ class TestAskErrorHandling:
         assert result is None
 
 
-# ── Metadata ─────────────────────────────────────────────────────
 
 
 class TestAskMetadata:
@@ -1195,7 +1176,6 @@ class TestAskMetadata:
         flow = TestFlow()
         flow.kickoff()
 
-        # Both calls should have recorded their own metadata
         assert len(flow._input_history) == 2
 
         alice_entry = next(

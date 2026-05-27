@@ -252,12 +252,10 @@ class CrewAIRagAdapter(Adapter):
                         if filename.startswith("."):
                             continue
 
-                        # Skip binary files based on extension
                         file_ext = os.path.splitext(filename)[1].lower()
                         if file_ext in binary_extensions:
                             continue
 
-                        # Skip __pycache__ directories
                         if "__pycache__" in root:
                             continue
 

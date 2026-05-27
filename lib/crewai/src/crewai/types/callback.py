@@ -112,14 +112,12 @@ def _resolve_dotted_path(path: str) -> Callable[..., Any]:
         ValueError: If no valid module can be imported from the path.
     """
     parts = path.split(".")
-    # Try importing progressively shorter prefixes as the module.
     for i in range(len(parts), 0, -1):
         module_path = ".".join(parts[:i])
         try:
             obj: Any = importlib.import_module(module_path)
         except (ImportError, TypeError, ValueError):
             continue
-        # Walk the remaining attribute chain.
         try:
             for attr in parts[i:]:
                 obj = getattr(obj, attr)

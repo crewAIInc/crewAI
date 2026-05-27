@@ -57,7 +57,7 @@ class FirecrawlScrapeWebsiteTool(BaseTool):
             "only_main_content": True,
             "include_tags": [],
             "exclude_tags": [],
-            "max_age": 172800000,  # 2 days cache
+            "max_age": 172800000,
             "headers": {},
             "wait_for": 0,
             "mobile": False,
