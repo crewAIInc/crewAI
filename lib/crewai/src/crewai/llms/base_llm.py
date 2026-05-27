@@ -151,7 +151,7 @@ class BaseLLM(BaseModel, ABC):
     model: str
     temperature: float | None = None
     top_p: float | None = None
-    max_tokens: int | None = None
+    max_tokens: int | float | None = None
     stream: bool | None = None
     seed: int | None = None
     frequency_penalty: float | None = None
@@ -481,7 +481,7 @@ class BaseLLM(BaseModel, ABC):
         from_agent: BaseAgent | None = None,
         temperature: float | None = None,
         top_p: float | None = None,
-        max_tokens: int | None = None,
+        max_tokens: int | float | None = None,
         stream: bool | None = None,
         seed: int | None = None,
         stop_sequences: list[str] | None = None,
@@ -489,9 +489,7 @@ class BaseLLM(BaseModel, ABC):
         presence_penalty: float | None = None,
         n: int | None = None,
     ) -> None:
-        """Emit LLM call started event.
-
-        """
+        """Emit LLM call started event."""
         from crewai.utilities.serialization import to_serializable
 
         if temperature is None:

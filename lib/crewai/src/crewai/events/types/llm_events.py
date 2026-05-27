@@ -52,7 +52,7 @@ class LLMCallStartedEvent(LLMEventBase):
     # All optional so legacy emitters keep working unchanged.
     temperature: float | None = None
     top_p: float | None = None
-    max_tokens: int | None = None
+    max_tokens: int | float | None = None
     stream: bool | None = None
     seed: int | None = None
     stop_sequences: list[str] | None = None
