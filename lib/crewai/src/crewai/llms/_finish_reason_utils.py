@@ -8,6 +8,7 @@ defensive walk. Providers with genuinely different shapes — Anthropic
 (``stop_reason``), Bedrock (``stopReason``), Gemini (protobuf enum), OpenAI
 Responses (``status``) — keep their own helpers.
 """
+
 from __future__ import annotations
 
 from typing import Any
