@@ -745,6 +745,8 @@ class LLM(BaseLLM):
 
                 if isinstance(chunk, ModelResponseBase):
                     response_id = chunk.id
+                elif isinstance(chunk, dict):
+                    response_id = chunk.get("id")
 
                 chunk_finish, chunk_id = self._extract_finish_reason_and_response_id(
                     chunk
@@ -1461,7 +1463,12 @@ class LLM(BaseLLM):
             async for chunk in await litellm.acompletion(**params):
                 chunk_count += 1
                 chunk_content = None
-                response_id = chunk.id if isinstance(chunk, ModelResponseBase) else None
+                if isinstance(chunk, ModelResponseBase):
+                    response_id = chunk.id
+                elif isinstance(chunk, dict):
+                    response_id = chunk.get("id")
+                else:
+                    response_id = None
 
                 chunk_finish, chunk_id = self._extract_finish_reason_and_response_id(
                     chunk

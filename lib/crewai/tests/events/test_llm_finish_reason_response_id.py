@@ -9,6 +9,7 @@ from crewai.events.types.llm_events import (
     LLMCallCompletedEvent,
     LLMCallStartedEvent,
     LLMCallType,
+    LLMStreamChunkEvent,
 )
 from crewai.llm import LLM
 from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
@@ -220,6 +221,128 @@ class TestEmitCallStartedEventIntrospectsSamplingParams:
 
         event = mock_emit.call_args[1]["event"]
         assert event.temperature == 0.9
+
+
+class TestBaseLLMSamplingParamFields:
+    # Regression: PR #5945 review feedback. Sampling params are declared as
+    # typed fields on BaseLLM so ``_emit_call_started_event`` reads them via
+    # plain attribute access instead of getattr/hasattr fallbacks. Kwargs
+    # like ``n=1`` bind directly to the typed field via Pydantic; there is
+    # no promotion from ``additional_params``.
+    def test_sampling_kwargs_bind_to_typed_fields(self, mock_emit):
+        from crewai.llms.providers.openai.completion import OpenAICompletion
+
+        llm = LLM(model="gpt-4", n=1, temperature=0.5, seed=42)
+
+        assert isinstance(llm, OpenAICompletion)
+        assert llm.n == 1
+        assert llm.temperature == 0.5
+        assert llm.seed == 42
+        assert "n" not in llm.additional_params
+        assert "temperature" not in llm.additional_params
+        assert "seed" not in llm.additional_params
+
+        llm._emit_call_started_event(messages="hi")
+
+        event = mock_emit.call_args[1]["event"]
+        assert isinstance(event, LLMCallStartedEvent)
+        assert event.n == 1
+        assert event.temperature == 0.5
+        assert event.seed == 42
+
+    def test_additional_params_are_not_promoted_to_typed_fields(self, mock_emit):
+        # Callers who pass sampling params through ``additional_params``
+        # opt out of typed-field semantics. We intentionally do NOT promote
+        # those values back into ``self.n`` / ``self.temperature``, so the
+        # emitter sees ``None`` for those attributes. If a caller wants the
+        # value surfaced in telemetry, they pass it as a kwarg.
+        llm = LLM(
+            model="gpt-4",
+            additional_params={"n": 1, "temperature": 0.5, "seed": 42},
+        )
+
+        assert llm.n is None
+        assert llm.temperature is None
+        assert llm.seed is None
+        assert llm.additional_params == {"n": 1, "temperature": 0.5, "seed": 42}
+
+        llm._emit_call_started_event(messages="hi")
+
+        event = mock_emit.call_args[1]["event"]
+        assert isinstance(event, LLMCallStartedEvent)
+        assert event.n is None
+        assert event.temperature is None
+        assert event.seed is None
+
+    def test_emit_uses_call_scoped_stop_override(self, mock_emit):
+        from crewai.llms.base_llm import call_stop_override
+
+        llm = _StubLLM(model="test-model", stop=["A"])
+
+        with call_stop_override(llm, ["X"]):
+            llm._emit_call_started_event(messages="hi")
+
+        event = mock_emit.call_args[1]["event"]
+        assert isinstance(event, LLMCallStartedEvent)
+        assert event.stop_sequences == ["X"]
+        # Instance-level stop is never mutated by the override.
+        assert llm.stop == ["A"]
+
+
+class TestStreamingDictChunkResponseIdPropagation:
+    # Regression: PR #5945 coderabbitai feedback. The streaming loop only
+    # extracted ``chunk.id`` for ``ModelResponseBase`` instances; dict-shaped
+    # chunks (LiteLLM emits these in some configs) silently dropped the id
+    # and ``LLMStreamChunkEvent.response_id`` came through as ``None``.
+    def _dict_chunks(self) -> list[dict[str, Any]]:
+        return [
+            {
+                "id": "test-chunk-id",
+                "choices": [{"delta": {"content": "hi"}, "finish_reason": None}],
+            },
+            {
+                "id": "test-chunk-id",
+                "choices": [{"delta": {"content": " there"}, "finish_reason": "stop"}],
+            },
+        ]
+
+    def _stream_event_response_ids(self, mock_emit) -> list[str | None]:
+        return [
+            call.kwargs["event"].response_id
+            for call in mock_emit.call_args_list
+            if isinstance(call.kwargs.get("event"), LLMStreamChunkEvent)
+        ]
+
+    def test_sync_dict_chunk_id_propagates_to_stream_event(self, mock_emit):
+        llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+
+        with patch(
+            "crewai.llm.litellm.completion",
+            return_value=iter(self._dict_chunks()),
+        ):
+            llm.call("anything")
+
+        ids = self._stream_event_response_ids(mock_emit)
+        assert ids, "expected at least one LLMStreamChunkEvent"
+        assert all(rid == "test-chunk-id" for rid in ids), ids
+
+    @pytest.mark.asyncio
+    async def test_async_dict_chunk_id_propagates_to_stream_event(self, mock_emit):
+        llm = LLM(model="gpt-4o-mini", is_litellm=True, stream=True)
+
+        async def _aiter():
+            for chunk in self._dict_chunks():
+                yield chunk
+
+        async def _acompletion(*_args, **_kwargs):
+            return _aiter()
+
+        with patch("crewai.llm.litellm.acompletion", side_effect=_acompletion):
+            await llm.acall("anything")
+
+        ids = self._stream_event_response_ids(mock_emit)
+        assert ids, "expected at least one LLMStreamChunkEvent"
+        assert all(rid == "test-chunk-id" for rid in ids), ids
 
 
 class TestEmitCallCompletedEventPassesFinishReasonAndResponseId:

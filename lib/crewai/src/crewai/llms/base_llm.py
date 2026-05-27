@@ -150,6 +150,13 @@ class BaseLLM(BaseModel, ABC):
     llm_type: str = "base"
     model: str
     temperature: float | None = None
+    top_p: float | None = None
+    max_tokens: int | None = None
+    stream: bool | None = None
+    seed: int | None = None
+    frequency_penalty: float | None = None
+    presence_penalty: float | None = None
+    n: int | None = None
     api_key: str | None = None
     base_url: str | None = None
     provider: str = Field(default="openai")
@@ -484,34 +491,27 @@ class BaseLLM(BaseModel, ABC):
     ) -> None:
         """Emit LLM call started event.
 
-        Sampling params default to introspecting ``self`` (``self.temperature``,
-        ``self.top_p``, ``self.stop`` -> ``stop_sequences``, ...) so providers
-        don't need to thread them through every emission site. Explicit
-        kwargs override the introspection.
         """
         from crewai.utilities.serialization import to_serializable
 
         if temperature is None:
-            temperature = getattr(self, "temperature", None)
+            temperature = self.temperature
         if top_p is None:
-            top_p = getattr(self, "top_p", None)
+            top_p = self.top_p
         if max_tokens is None:
-            max_tokens = getattr(self, "max_tokens", None)
+            max_tokens = self.max_tokens
         if stream is None:
-            stream = getattr(self, "stream", None)
+            stream = self.stream
         if seed is None:
-            seed = getattr(self, "seed", None)
+            seed = self.seed
         if stop_sequences is None:
-            stop_attr = getattr(self, "stop", None) or getattr(
-                self, "stop_sequences", None
-            )
-            stop_sequences = stop_attr or None
+            stop_sequences = self.stop_sequences or None
         if frequency_penalty is None:
-            frequency_penalty = getattr(self, "frequency_penalty", None)
+            frequency_penalty = self.frequency_penalty
         if presence_penalty is None:
-            presence_penalty = getattr(self, "presence_penalty", None)
+            presence_penalty = self.presence_penalty
         if n is None:
-            n = getattr(self, "n", None)
+            n = self.n
 
         crewai_event_bus.emit(
             self,
