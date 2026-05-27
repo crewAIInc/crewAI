@@ -12,6 +12,7 @@ from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from pydantic import BaseModel
 
 from crewai.agents.tools_handler import ToolsHandler as _ToolsHandler
 from crewai.agents.step_executor import StepExecutor
@@ -107,6 +108,9 @@ class TestAgentExecutorState:
 
 class TestAgentExecutor:
     """Test AgentExecutor class."""
+
+    class StructuredResult(BaseModel):
+        value: str
 
     @pytest.fixture
     def mock_dependencies(self):
@@ -214,6 +218,49 @@ class TestAgentExecutor:
         result = executor.continue_iteration()
 
         assert result == "check_iteration"
+
+    def test_call_llm_and_parse_does_not_pass_response_model_with_tools(
+        self, mock_dependencies
+    ):
+        """Structured output should not be requested during ReAct tool loops."""
+        executor = _build_executor(
+            **mock_dependencies,
+            original_tools=[Mock()],
+            response_model=self.StructuredResult,
+            callbacks=[],
+        )
+        executor.state.messages = [{"role": "user", "content": "Use a tool"}]
+
+        with patch(
+            "crewai.experimental.agent_executor.get_llm_response",
+            return_value="Thought: done\nFinal Answer: complete",
+        ) as get_llm_response_mock:
+            result = executor.call_llm_and_parse()
+
+        assert result == "parsed"
+        assert get_llm_response_mock.call_args.kwargs["response_model"] is None
+
+    def test_call_llm_native_tools_does_not_pass_response_model_with_tools(
+        self, mock_dependencies
+    ):
+        """Structured output should not be requested during native tool calls."""
+        executor = _build_executor(
+            **mock_dependencies,
+            original_tools=[Mock()],
+            response_model=self.StructuredResult,
+            callbacks=[],
+        )
+        executor._openai_tools = [{"type": "function", "function": {"name": "lookup"}}]
+        executor.state.messages = [{"role": "user", "content": "Use a tool"}]
+
+        with patch(
+            "crewai.experimental.agent_executor.get_llm_response",
+            return_value="complete",
+        ) as get_llm_response_mock:
+            result = executor.call_llm_native_tools()
+
+        assert result == "native_finished"
+        assert get_llm_response_mock.call_args.kwargs["response_model"] is None
 
     def test_finalize_success(self, mock_dependencies):
         """Test finalize with valid AgentFinish."""

@@ -824,7 +824,7 @@ class TestBedrockNativeToolCalling:
         self, calculator_tool: CalculatorTool
     ) -> None:
         """Test Bedrock agent kickoff with mocked LLM call."""
-        llm = LLM(model="bedrock/anthropic.claude-3-haiku-20240307-v1:0")
+        llm = LLM(model="bedrock/us.anthropic.claude-sonnet-4-6")
 
         agent = Agent(
             role="Math Assistant",
@@ -858,7 +858,7 @@ class TestBedrockNativeToolCalling:
             goal="Use both tools exactly as instructed",
             backstory="You follow tool instructions precisely.",
             tools=parallel_tools,
-            llm=LLM(model="bedrock/anthropic.claude-3-haiku-20240307-v1:0"),
+            llm=LLM(model="bedrock/us.anthropic.claude-sonnet-4-6"),
             verbose=False,
             max_iter=3,
         )
@@ -881,7 +881,7 @@ class TestBedrockNativeToolCalling:
             goal="Use both tools exactly as instructed",
             backstory="You follow tool instructions precisely.",
             tools=parallel_tools,
-            llm=LLM(model="bedrock/anthropic.claude-3-haiku-20240307-v1:0"),
+            llm=LLM(model="bedrock/us.anthropic.claude-sonnet-4-6"),
             verbose=False,
             max_iter=3,
         )
