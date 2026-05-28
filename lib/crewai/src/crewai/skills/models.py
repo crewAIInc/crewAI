@@ -49,6 +49,7 @@ class SkillFrontmatter(BaseModel):
         license: Optional license name or reference.
         compatibility: Optional compatibility information (max 500 chars).
         metadata: Optional additional metadata as string key-value pairs.
+            Conventional keys include 'version' (skill semantic version).
         allowed_tools: Optional space-delimited list of pre-approved tools.
     """
 
@@ -71,16 +72,13 @@ class SkillFrontmatter(BaseModel):
     )
     metadata: dict[str, str] | None = Field(
         default=None,
-        description="Arbitrary string key-value pairs for custom skill metadata.",
+        description="Arbitrary string key-value pairs for custom skill metadata. "
+        "Conventional keys include 'version' for the skill's semantic version.",
     )
     allowed_tools: list[str] | None = Field(
         default=None,
         alias="allowed-tools",
         description="Pre-approved tool names the skill may use, parsed from a space-delimited string in frontmatter.",
-    )
-    version: str | None = Field(
-        default=None,
-        description="Semantic version of the skill, e.g. '1.0.0'. Optional for local skills.",
     )
 
     @model_validator(mode="before")
@@ -92,6 +90,19 @@ class SkillFrontmatter(BaseModel):
         raw = values.get(key) or values.get(alt_key)
         if isinstance(raw, str):
             values[key] = raw.split()
+        return values
+
+    @model_validator(mode="before")
+    @classmethod
+    def lift_top_level_version(cls, values: dict[str, Any]) -> dict[str, Any]:
+        """Move a top-level 'version' YAML key into metadata for back-compat."""
+        if "version" not in values:
+            return values
+        version = values.pop("version")
+        metadata = values.get("metadata") or {}
+        if isinstance(metadata, dict) and "version" not in metadata:
+            metadata["version"] = str(version) if version is not None else None
+            values["metadata"] = metadata
         return values
 
 

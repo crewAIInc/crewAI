@@ -23,9 +23,10 @@ console = Console()
 _SKILL_MD_TEMPLATE = """\
 ---
 name: {name}
-version: 0.1.0
 description: |
   A short description of what this skill does.
+metadata:
+  version: 0.1.0
 ---
 
 ## Instructions
@@ -191,7 +192,11 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
             raise SystemExit(1) from exc
 
         name = frontmatter.get("name")
-        version = frontmatter.get("version")
+        raw_metadata = frontmatter.get("metadata")
+        metadata_version = (
+            raw_metadata.get("version") if isinstance(raw_metadata, dict) else None
+        )
+        version = metadata_version or frontmatter.get("version")
         description = frontmatter.get("description")
 
         if not name:
@@ -362,9 +367,15 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
             return result
 
     def _read_version(self, skill_md: Path) -> str | None:
-        """Read the version field from a SKILL.md file, or None."""
+        """Read the version from a SKILL.md file's metadata, or None.
+
+        Falls back to a top-level 'version' key for back-compat.
+        """
         try:
             fm = self._parse_frontmatter(skill_md.read_text())
+            raw_metadata = fm.get("metadata")
+            if isinstance(raw_metadata, dict) and raw_metadata.get("version"):
+                return raw_metadata.get("version")
             return fm.get("version")
         except Exception:
             return None
