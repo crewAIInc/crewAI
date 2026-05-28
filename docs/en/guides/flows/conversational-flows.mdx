@@ -409,83 +409,20 @@ finally:
 
 ### `ConversationalFlow` trace lifecycle
 
-The experimental [`ConversationalFlow`](#high-level-conversationalflow-experimental) uses the same tracing lifecycle: `defer_trace_finalization` defaults to `True`, so each `handle_turn()` keeps the session trace open. Always finalize at the end of the session — either in a `finally` block around your loop, or via `ChatSession.close()`. Without one of these calls the trace batch stays open and the final conversation may never export.
-
-## `ChatSession` (WebSocket / SSE)
-
-Wraps `kickoff` and optional event bridging for UIs.
-
-```python
-from crewai.flow import ChatMessage, ChatSession
-
-
-def on_event(msg: ChatMessage):
-    print(msg.type, msg.payload)
-
-
-session = ChatSession(
-    flow,
-    session_id="channel-1",
-    intents=["order", "help"],
-    intent_llm="gpt-4o-mini",
-    on_event=on_event,
-)
-
-turn = session.handle_turn("Hello")
-print(turn.output, turn.intent, len(turn.messages))
-
-for msg in session.iter_turn_stream("Tell me more"):
-    print(msg.type, msg.payload)
-
-session.close()  # finalize_session_traces when deferred
-```
-
-| Type | Purpose |
-|------|---------|
-| `ChatSession` | One session; `handle_turn`, `iter_turn_stream`, `close` |
-| `TurnResult` | `session_id`, `output`, `intent`, `messages`, optional `streaming` |
-| `ChatMessage` | Wire format: `type`, `session_id`, `payload`, `seq` |
-| `ConversationEventBridge` | Maps bus events → `ChatMessage` (`assistant_delta`, `tool_*`, …) |
-
-`ChatMessage.type` values: `user_message`, `assistant_delta`, `assistant_done`, `turn_started`, `turn_finished`, `error`, `tool_started`, `tool_finished`.
-
-`stamp_conversation_fingerprint(event, session_id)` — set `conversation_id` on events for external dispatchers.
-
-## `QueueInputProvider` (blocking `ask` from WebSocket)
-
-For flows that call `ask()` inside a method while messages arrive on a socket:
-
-```python
-from crewai.flow import Flow, QueueInputProvider
-
-provider = QueueInputProvider()
-flow = MyFlow(input_provider=provider)
-
-# WebSocket handler:
-provider.push(session_id, user_text)
-
-# Inside a flow method:
-reply = flow.ask("You: ", metadata={"session_id": session_id})
-provider.close_session(session_id)  # unblock with None
-```
+The experimental [`ConversationalFlow`](#high-level-conversationalflow-experimental) uses the same tracing lifecycle: `defer_trace_finalization` defaults to `True`, so each `handle_turn()` keeps the session trace open. Always finalize at the end of the session — wrap your REPL/loop in `try/finally` and call `flow.finalize_session_traces()` on exit. Without it, the trace batch stays open and the final conversation may never export.
 
 ## Streaming
 
-Set `stream = True` on the `Flow` class. Use `kickoff(...)` or `ChatSession.handle_turn(..., stream=True)` so `ConversationEventBridge` emits `assistant_delta` (and related) events.
+Set `stream = True` on the `Flow` class. `kickoff(...)` will then emit `assistant_delta` (and related) events through the standard event bus.
 
 ## Imports
 
 ```python
 from crewai.flow import (
-    ChatMessage,
-    ChatSession,
     ChatState,
     ConversationalConfig,
     ConversationalInputs,
-    ConversationEventBridge,
     Flow,
-    QueueInputProvider,
-    TurnResult,
     listen,
     persist,
     router,

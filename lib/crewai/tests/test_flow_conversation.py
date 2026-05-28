@@ -33,8 +33,6 @@ from crewai.flow.conversation import (
     normalize_kickoff_inputs,
     prepare_conversational_turn,
 )
-from crewai.flow.chat import ChatMessage, ChatSession
-from crewai.flow.providers import QueueInputProvider
 from crewai.state import CheckpointConfig
 from crewai.utilities.types import LLMMessage
 
@@ -161,46 +159,6 @@ class TestClassifyIntent:
 
         assert outcome == "help"
         assert "I need help" in mock.call_args[0][0]
-
-
-class TestQueueInputProvider:
-    def test_push_and_request_input(self) -> None:
-        provider = QueueInputProvider()
-        flow = SimpleChatFlow()
-        flow._state = ChatState(id="sess-q")
-
-        provider.push("sess-q", "hello")
-        result = provider.request_input(">", flow, metadata={"session_id": "sess-q"})
-        assert result == "hello"
-
-
-class TestChatSession:
-    def test_handle_turn_returns_turn_result(self) -> None:
-        flow = SimpleChatFlow()
-        session = ChatSession(
-            flow,
-            session_id="chat-1",
-            intents=["order", "help"],
-            intent_llm="gpt-4o-mini",
-        )
-
-        with patch.object(flow, "_collapse_to_outcome", return_value="help"):
-            turn = session.handle_turn("hi there")
-
-        assert turn.session_id == "chat-1"
-        assert turn.output == "done"
-        assert turn.intent == "help"
-        assert any(m["role"] == "user" for m in turn.messages)
-        session.close()
-
-    def test_chat_message_model(self) -> None:
-        msg = ChatMessage(
-            type="assistant_delta",
-            session_id="x",
-            payload={"chunk": "hi"},
-        )
-        assert msg.version == "1"
-        assert msg.type == "assistant_delta"
 
 
 class TestConversationalFlow:

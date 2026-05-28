@@ -409,81 +409,20 @@ finally:
 
 ### `ConversationalFlow` trace 수명 주기
 
-실험적 [`ConversationalFlow`](#고수준-conversationalflow-실험적)는 동일한 tracing 수명 주기를 따릅니다. `defer_trace_finalization` 기본값이 `True`이므로 각 `handle_turn()`이 세션 trace를 열어 둡니다. 세션 끝에서 항상 finalize하세요 — REPL 루프 주변의 `finally`나 `ChatSession.close()`로요. 둘 다 호출하지 않으면 batch가 열린 채 남아 마지막 대화가 export되지 않을 수 있습니다.
-
-## `ChatSession` (WebSocket / SSE)
-
-UI용 `kickoff` 래퍼 및 선택적 이벤트 브리지.
-
-```python
-from crewai.flow import ChatMessage, ChatSession
-
-
-def on_event(msg: ChatMessage):
-    print(msg.type, msg.payload)
-
-
-session = ChatSession(
-    flow,
-    session_id="channel-1",
-    intents=["order", "help"],
-    intent_llm="gpt-4o-mini",
-    on_event=on_event,
-)
-
-turn = session.handle_turn("안녕하세요")
-print(turn.output, turn.intent, len(turn.messages))
-
-for msg in session.iter_turn_stream("더 알려주세요"):
-    print(msg.type, msg.payload)
-
-session.close()  # 지연 시 finalize_session_traces
-```
-
-| 타입 | 목적 |
-|------|------|
-| `ChatSession` | 세션; `handle_turn`, `iter_turn_stream`, `close` |
-| `TurnResult` | `session_id`, `output`, `intent`, `messages`, 선택적 `streaming` |
-| `ChatMessage` | wire 형식: `type`, `session_id`, `payload`, `seq` |
-| `ConversationEventBridge` | bus 이벤트 → `ChatMessage` |
-
-`ChatMessage.type`: `user_message`, `assistant_delta`, `assistant_done`, `turn_started`, `turn_finished`, `error`, `tool_started`, `tool_finished`.
-
-`stamp_conversation_fingerprint(event, session_id)` — 외부 디스패처용 `conversation_id` 설정.
-
-## `QueueInputProvider` (WebSocket에서 블로킹 `ask`)
-
-메서드 내부에서 `ask()`를 호출하고 소켓으로 메시지를 받을 때:
-
-```python
-from crewai.flow import Flow, QueueInputProvider
-
-provider = QueueInputProvider()
-flow = MyFlow(input_provider=provider)
-
-provider.push(session_id, user_text)
-
-reply = flow.ask("You: ", metadata={"session_id": session_id})
-provider.close_session(session_id)
-```
+실험적 [`ConversationalFlow`](#고수준-conversationalflow-실험적)는 동일한 tracing 수명 주기를 따릅니다. `defer_trace_finalization` 기본값이 `True`이므로 각 `handle_turn()`이 세션 trace를 열어 둡니다. 세션 끝에서 항상 finalize하세요 — REPL/루프를 `try/finally`로 감싸고 종료 시 `flow.finalize_session_traces()`를 호출하세요. 호출하지 않으면 batch가 열린 채 남아 마지막 대화가 export되지 않을 수 있습니다.
 
 ## 스트리밍
 
-`Flow` 클래스에 `stream = True`. `kickoff(...)` 또는 `ChatSession.handle_turn(..., stream=True)`로 `assistant_delta` 등 이벤트 발생.
+`Flow` 클래스에 `stream = True`. `kickoff(...)`가 표준 이벤트 버스를 통해 `assistant_delta` 등 이벤트를 발생시킵니다.
 
 ## import
 
 ```python
 from crewai.flow import (
-    ChatMessage,
-    ChatSession,
     ChatState,
     ConversationalConfig,
     ConversationalInputs,
-    ConversationEventBridge,
     Flow,
-    QueueInputProvider,
-    TurnResult,
     listen,
     persist,
     router,
