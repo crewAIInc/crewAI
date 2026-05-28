@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from crewai.skills.registry import (
+from crewai.experimental.skills.registry import (
     SkillNotCachedError,
     is_registry_ref,
     parse_registry_ref,
@@ -75,11 +75,11 @@ class TestResolveRegistryRef:
         mock_cache.get_cached_path.return_value = None
 
         with (
-            patch("crewai.skills.registry._is_noninteractive", return_value=False),
+            patch("crewai.experimental.skills.registry._is_noninteractive", return_value=False),
             patch.object(Path, "cwd", return_value=tmp_path),
-            patch("crewai.skills.registry.SkillCacheManager", return_value=mock_cache),
+            patch("crewai.experimental.skills.registry.SkillCacheManager", return_value=mock_cache),
         ):
-            from crewai.skills.registry import resolve_registry_ref
+            from crewai.experimental.skills.registry import resolve_registry_ref
             skill = resolve_registry_ref("@acme/my-skill")
 
         assert skill.name == "my-skill"
@@ -90,11 +90,11 @@ class TestResolveRegistryRef:
         mock_cache.get_cached_path.return_value = None
 
         with (
-            patch("crewai.skills.registry._is_noninteractive", return_value=True),
+            patch("crewai.experimental.skills.registry._is_noninteractive", return_value=True),
             patch.object(Path, "cwd", return_value=tmp_path),
-            patch("crewai.skills.registry.SkillCacheManager", return_value=mock_cache),
+            patch("crewai.experimental.skills.registry.SkillCacheManager", return_value=mock_cache),
         ):
-            from crewai.skills.registry import resolve_registry_ref
+            from crewai.experimental.skills.registry import resolve_registry_ref
             with pytest.raises(SkillNotCachedError) as exc_info:
                 resolve_registry_ref("@acme/ghost-skill")
             assert "@acme/ghost-skill" in str(exc_info.value)
@@ -112,11 +112,11 @@ class TestResolveRegistryRef:
 
         # tmp_path has no ./skills/ directory
         with (
-            patch("crewai.skills.registry._is_noninteractive", return_value=False),
+            patch("crewai.experimental.skills.registry._is_noninteractive", return_value=False),
             patch.object(Path, "cwd", return_value=tmp_path),
-            patch("crewai.skills.registry.SkillCacheManager", return_value=mock_cache),
+            patch("crewai.experimental.skills.registry.SkillCacheManager", return_value=mock_cache),
         ):
-            from crewai.skills.registry import resolve_registry_ref
+            from crewai.experimental.skills.registry import resolve_registry_ref
             skill = resolve_registry_ref("@acme/cached-skill")
 
         assert skill.name == "cached-skill"
