@@ -6,18 +6,15 @@ from crewai_tools import FileReadTool
 
 def test_file_read_tool_constructor():
     """Test FileReadTool initialization with file_path."""
-    # Create a temporary test file
     test_file = "/tmp/test_file.txt"
     test_content = "Hello, World!"
     with open(test_file, "w") as f:
         f.write(test_content)
 
-    # Test initialization with file_path
     tool = FileReadTool(file_path=test_file)
     assert tool.file_path == test_file
     assert "test_file.txt" in tool.description
 
-    # Clean up
     os.remove(test_file)
 
 
@@ -28,7 +25,6 @@ def test_file_read_tool_run():
 
     # Use mock_open to mock file operations
     with patch("builtins.open", mock_open(read_data=test_content)):
-        # Test reading file with runtime file_path
         tool = FileReadTool()
         result = tool._run(file_path=test_file)
         assert result == test_content
@@ -36,16 +32,13 @@ def test_file_read_tool_run():
 
 def test_file_read_tool_error_handling():
     """Test FileReadTool error handling."""
-    # Test missing file path
     tool = FileReadTool()
     result = tool._run()
     assert "Error: No file path provided" in result
 
-    # Test non-existent file
     result = tool._run(file_path="/nonexistent/file.txt")
     assert "Error: File not found at path:" in result
 
-    # Test permission error
     with patch("builtins.open", side_effect=PermissionError()):
         result = tool._run(file_path="/tmp/no_permission.txt")
         assert "Error: Permission denied" in result
@@ -58,7 +51,6 @@ def test_file_read_tool_constructor_and_run():
     content1 = "File 1 content"
     content2 = "File 2 content"
 
-    # First test with content1
     with patch("builtins.open", mock_open(read_data=content1)):
         tool = FileReadTool(file_path=test_file1)
         result = tool._run()
@@ -90,7 +82,6 @@ def test_file_read_tool_chunk_reading():
     with patch("builtins.open", mock_open(read_data=file_content)):
         tool = FileReadTool()
 
-        # Test reading a specific chunk (lines 3-5)
         result = tool._run(file_path=test_file, start_line=3, line_count=3)
         expected = "".join(lines[2:5])  # Lines are 0-indexed in the array
         assert result == expected
@@ -120,7 +111,6 @@ def test_file_read_tool_chunk_error_handling():
     with patch("builtins.open", mock_open(read_data=file_content)):
         tool = FileReadTool()
 
-        # Test start_line exceeding file length
         result = tool._run(file_path=test_file, start_line=10)
         assert "Error: Start line 10 exceeds the number of lines in the file" in result
 
@@ -139,12 +129,10 @@ def test_file_read_tool_zero_or_negative_start_line():
     with patch("builtins.open", mock_open(read_data=file_content)):
         tool = FileReadTool()
 
-        # Test with start_line = None
         result = tool._run(file_path=test_file, start_line=None)
         expected = "".join(lines)  # Should read the entire file
         assert result == expected
 
-        # Test with start_line = 0
         result = tool._run(file_path=test_file, start_line=0)
         expected = "".join(lines)  # Should read the entire file
         assert result == expected
@@ -154,7 +142,6 @@ def test_file_read_tool_zero_or_negative_start_line():
         expected = "".join(lines[0:3])  # Should read first 3 lines
         assert result == expected
 
-        # Test with negative start_line
         result = tool._run(file_path=test_file, start_line=-5)
         expected = "".join(lines)  # Should read the entire file
         assert result == expected

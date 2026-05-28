@@ -41,7 +41,6 @@ class ToolUsageEvent(BaseEvent):
 
         super().__init__(**data)
 
-        # Set fingerprint data from the agent
         if self.agent and hasattr(self.agent, "fingerprint") and self.agent.fingerprint:
             self.source_fingerprint = self.agent.fingerprint.uuid_str
             self.source_type = "agent"
@@ -101,7 +100,6 @@ class ToolExecutionErrorEvent(BaseEvent):
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
-        # Set fingerprint data from the agent
         if self.agent and hasattr(self.agent, "fingerprint") and self.agent.fingerprint:
             self.source_fingerprint = self.agent.fingerprint.uuid_str
             self.source_type = "agent"

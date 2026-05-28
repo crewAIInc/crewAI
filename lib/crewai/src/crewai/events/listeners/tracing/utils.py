@@ -526,7 +526,6 @@ def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
                 response = input().strip().lower()
                 result[0] = response in ["y", "yes"]
             except (EOFError, KeyboardInterrupt, OSError, LookupError):
-                # Handle all input-related errors silently
                 result[0] = False
 
         ctx = contextvars.copy_context()
@@ -540,7 +539,6 @@ def prompt_user_for_trace_viewing(timeout_seconds: int = 20) -> bool:
         return result[0]
 
     except Exception:
-        # Suppress any warnings or errors and assume "no"
         return False
 
 

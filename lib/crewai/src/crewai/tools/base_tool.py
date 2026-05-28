@@ -8,7 +8,6 @@ from inspect import Parameter, signature
 import json
 import threading
 from typing import (
-    Annotated,
     Any,
     Generic,
     ParamSpec,
@@ -22,10 +21,10 @@ from pydantic import (
     ConfigDict,
     Field,
     GetCoreSchemaHandler,
-    PlainSerializer,
     PrivateAttr,
     computed_field,
     create_model,
+    field_serializer,
     field_validator,
 )
 from pydantic_core import CoreSchema, core_schema
@@ -145,14 +144,17 @@ class BaseTool(BaseModel, ABC):
         default_factory=list,
         description="List of environment variables used by the tool.",
     )
-    args_schema: Annotated[
-        type[PydanticBaseModel],
-        PlainSerializer(_serialize_schema, return_type=dict | None, when_used="json"),
-    ] = Field(
+    args_schema: type[PydanticBaseModel] = Field(
         default=_ArgsSchemaPlaceholder,
         validate_default=True,
         description="The schema for the arguments that the tool accepts.",
     )
+
+    @field_serializer("args_schema", when_used="json")
+    def _serialize_args_schema(
+        self, schema: type[PydanticBaseModel] | None
+    ) -> dict[str, Any] | None:
+        return _serialize_schema(schema)
 
     description_updated: bool = Field(
         default=False, description="Flag to check if the description has been updated."

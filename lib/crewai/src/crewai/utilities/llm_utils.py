@@ -113,13 +113,11 @@ def _llm_via_environment_or_fallback() -> LLM | None:
 
     api_base = os.environ.get("API_BASE") or os.environ.get("AZURE_API_BASE")
 
-    # Synchronize base_url and api_base if one is populated and the other is not
     if base_url and not api_base:
         api_base = base_url
     elif api_base and not base_url:
         base_url = api_base
 
-    # Initialize llm_params dictionary
     llm_params: dict[str, Any] = {
         "model": model,
         "temperature": temperature,
@@ -158,7 +156,6 @@ def _llm_via_environment_or_fallback() -> LLM | None:
                 if key_name and key_name not in unaccepted_attributes:
                     env_value = os.environ.get(key_name)
                     if env_value:
-                        # Map environment variable names to recognized parameters
                         param_key = _normalize_key_name(key_name.lower())
                         llm_params[param_key] = env_value
                 elif isinstance(env_var, dict):

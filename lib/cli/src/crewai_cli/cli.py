@@ -26,6 +26,7 @@ from crewai_cli.replay_from_task import replay_task_command
 from crewai_cli.reset_memories_command import reset_memories_command
 from crewai_cli.run_crew import run_crew
 from crewai_cli.settings.main import SettingsCommand
+from crewai_cli.skills.main import SkillCommand
 from crewai_cli.task_outputs import load_task_outputs
 from crewai_cli.tools.main import ToolCommand
 from crewai_cli.train_crew import train_crew
@@ -41,7 +42,6 @@ from crewai_cli.utils import build_env_with_all_tool_credentials, read_toml
 
 def _get_cli_version() -> str:
     """Return the best available version string for the CLI."""
-    # Prefer crewai version if installed (keeps existing UX)
     try:
         return get_version("crewai")
     except Exception:  # noqa: S110
@@ -66,7 +66,6 @@ def crewai() -> None:
 def uv(uv_args: tuple[str, ...]) -> None:
     """A wrapper around uv commands that adds custom tool authentication through env vars."""
     try:
-        # Verify pyproject.toml exists first
         read_toml()
     except FileNotFoundError as e:
         raise SystemExit(
@@ -320,7 +319,6 @@ def memory(
         )
         raise SystemExit(1) from exc
 
-    # Build embedder spec from CLI flags.
     embedder_spec: dict[str, Any] | None = None
     if embedder_config:
         import json as _json
@@ -434,7 +432,6 @@ def logout(reset: bool) -> None:
         click.echo("Successfully logged out from CrewAI AMP.")
 
 
-# DEPLOY CREWAI+ COMMANDS
 @crewai.group()
 def deploy() -> None:
     """Deploy the Crew CLI group."""
@@ -544,6 +541,56 @@ def tool_publish(is_public: bool, force: bool) -> None:
     tool_cmd = ToolCommand()
     tool_cmd.login()
     tool_cmd.publish(is_public, force)
+
+
+@crewai.group()
+def skill() -> None:
+    """Skill Repository related commands."""
+
+
+@skill.command(name="create")
+@click.argument("name")
+@click.option(
+    "--no-project",
+    "in_project",
+    is_flag=True,
+    default=True,
+    flag_value=False,
+    help="Create skill in current dir instead of ./skills/",
+)
+def skill_create(name: str, in_project: bool) -> None:
+    skill_cmd = SkillCommand()
+    skill_cmd.create(name, in_project=in_project)
+
+
+@skill.command(name="install")
+@click.argument("ref")
+def skill_install(ref: str) -> None:
+    skill_cmd = SkillCommand()
+    skill_cmd.install(ref)
+
+
+@skill.command(name="publish")
+@click.option(
+    "--force",
+    is_flag=True,
+    default=False,
+    show_default=True,
+    help="Skip git-state validation.",
+)
+@click.option("--public", "is_public", flag_value=True, default=False)
+@click.option("--private", "is_public", flag_value=False)
+@click.option("--org", default=None, help="Organisation slug (overrides settings).")
+def skill_publish(is_public: bool, org: str | None, force: bool) -> None:
+    skill_cmd = SkillCommand()
+    skill_cmd.publish(is_public, org=org, force=force)
+
+
+@skill.command(name="list")
+def skill_list() -> None:
+    """List locally installed skills."""
+    skill_cmd = SkillCommand()
+    skill_cmd.list_cached()
 
 
 @crewai.group()
@@ -715,17 +762,14 @@ def env_view() -> None:
 
     console = Console()
 
-    # Check for .env file
     env_file = Path(".env")
     env_file_exists = env_file.exists()
 
-    # Create table for environment variables
     table = Table(show_header=True, header_style="bold cyan", expand=True)
     table.add_column("Environment Variable", style="cyan", width=30)
     table.add_column("Value", style="white", width=20)
     table.add_column("Source", style="yellow", width=20)
 
-    # Check CREWAI_TRACING_ENABLED
     crewai_tracing = os.getenv("CREWAI_TRACING_ENABLED", "")
     if crewai_tracing:
         table.add_row(
@@ -740,7 +784,6 @@ def env_view() -> None:
             "[dim]—[/dim]",
         )
 
-    # Check other related env vars
     crewai_testing = os.getenv("CREWAI_TESTING", "")
     if crewai_testing:
         table.add_row("CREWAI_TESTING", crewai_testing, "Environment/Shell")
@@ -753,7 +796,6 @@ def env_view() -> None:
     if crewai_org_id:
         table.add_row("CREWAI_ORG_ID", crewai_org_id, "Environment/Shell")
 
-    # Check if .env file exists
     table.add_row(
         ".env file",
         "✅ Found" if env_file_exists else "❌ Not found",
@@ -769,7 +811,6 @@ def env_view() -> None:
     console.print("\n")
     console.print(panel)
 
-    # Show helpful message
     if env_file_exists:
         console.print(
             "\n[dim]💡 Tip: To enable tracing via .env, add: CREWAI_TRACING_ENABLED=true[/dim]"
@@ -845,11 +886,9 @@ def traces_status() -> None:
     table.add_column("Setting", style="cyan")
     table.add_column("Value", style="white")
 
-    # Check environment variable
     env_enabled = os.getenv("CREWAI_TRACING_ENABLED", "false")
     table.add_row("CREWAI_TRACING_ENABLED", env_enabled)
 
-    # Check user consent
     trace_consent = user_data.get("trace_consent")
     if trace_consent is True:
         consent_status = "✅ Enabled (user consented)"
@@ -859,7 +898,6 @@ def traces_status() -> None:
         consent_status = "⚪ Not set (first-time user)"
     table.add_row("User Consent", consent_status)
 
-    # Check overall status
     if is_tracing_enabled():
         overall_status = "✅ ENABLED"
         border_style = "green"

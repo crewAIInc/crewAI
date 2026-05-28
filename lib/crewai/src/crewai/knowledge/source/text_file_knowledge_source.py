@@ -1,10 +1,13 @@
 from pathlib import Path
+from typing import Literal
 
 from crewai.knowledge.source.base_file_knowledge_source import BaseFileKnowledgeSource
 
 
 class TextFileKnowledgeSource(BaseFileKnowledgeSource):
     """A knowledge source that stores and queries text file content using embeddings."""
+
+    source_type: Literal["text_file"] = "text_file"
 
     def load_content(self) -> dict[Path, str]:
         """Load and preprocess text file content."""

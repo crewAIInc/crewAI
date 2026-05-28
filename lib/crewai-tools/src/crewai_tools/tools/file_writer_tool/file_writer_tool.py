@@ -37,11 +37,9 @@ class FileWriterTool(BaseTool):
             filepath = os.path.join(directory, filename)
 
             # Prevent path traversal: the resolved path must be strictly inside
-            # the resolved directory. This blocks ../sequences, absolute paths in
             # filename, and symlink escapes regardless of how directory is set.
             # is_relative_to() does a proper path-component comparison that is
             # safe on case-insensitive filesystems and avoids the "// " edge case
-            # that plagues startswith(real_directory + os.sep).
             # We also reject the case where filepath resolves to the directory
             # itself, since that is not a valid file target.
             real_directory = Path(directory).resolve()

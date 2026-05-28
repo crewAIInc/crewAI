@@ -31,9 +31,7 @@ def sanitize_metadata_for_chromadb(metadata: dict[str, Any]) -> dict[str, Any]:
         if isinstance(value, (str, int, float, bool)) or value is None:
             sanitized[key] = value
         elif isinstance(value, (list, tuple)):
-            # Convert lists/tuples to pipe-separated strings
             sanitized[key] = " | ".join(str(v) for v in value)
         else:
-            # Convert other types to string
             sanitized[key] = str(value)
     return sanitized

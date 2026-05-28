@@ -49,9 +49,6 @@ def _pydantic_valid_event(data: dict[str, Any]) -> bool:
         return False
 
 
-# ---------------------------------------------------------------------------
-# Valid server-to-client payloads
-# ---------------------------------------------------------------------------
 
 VALID_SERVER_MESSAGES: list[dict[str, Any]] = [
     {
@@ -126,9 +123,6 @@ VALID_SERVER_MESSAGES: list[dict[str, Any]] = [
     },
 ]
 
-# ---------------------------------------------------------------------------
-# Invalid server-to-client payloads
-# ---------------------------------------------------------------------------
 
 INVALID_SERVER_MESSAGES: list[dict[str, Any]] = [
     {},
@@ -141,9 +135,6 @@ INVALID_SERVER_MESSAGES: list[dict[str, Any]] = [
     {"unknownType": {"surfaceId": "s1"}},
 ]
 
-# ---------------------------------------------------------------------------
-# Valid client-to-server payloads
-# ---------------------------------------------------------------------------
 
 VALID_CLIENT_EVENTS: list[dict[str, Any]] = [
     {
@@ -169,9 +160,6 @@ VALID_CLIENT_EVENTS: list[dict[str, Any]] = [
     },
 ]
 
-# ---------------------------------------------------------------------------
-# Invalid client-to-server payloads
-# ---------------------------------------------------------------------------
 
 INVALID_CLIENT_EVENTS: list[dict[str, Any]] = [
     {},
@@ -188,9 +176,7 @@ INVALID_CLIENT_EVENTS: list[dict[str, Any]] = [
     },
 ]
 
-# ---------------------------------------------------------------------------
 # Catalog component payloads (validated structurally)
-# ---------------------------------------------------------------------------
 
 VALID_COMPONENTS: dict[str, dict[str, Any]] = {
     "Text": {"text": {"literalString": "hello"}, "usageHint": "h1"},

@@ -31,7 +31,6 @@ def run_crew(trained_agents_file: str | None = None) -> None:
     min_required_version = "0.71.0"
     pyproject_data = read_toml()
 
-    # Check for legacy poetry configuration
     if pyproject_data.get("tool", {}).get("poetry") and (
         version.parse(crewai_version) < version.parse(min_required_version)
     ):
@@ -41,14 +40,11 @@ def run_crew(trained_agents_file: str | None = None) -> None:
             fg="red",
         )
 
-    # Determine crew type
     is_flow = pyproject_data.get("tool", {}).get("crewai", {}).get("type") == "flow"
     crew_type = CrewType.FLOW if is_flow else CrewType.STANDARD
 
-    # Display appropriate message
     click.echo(f"Running the {'Flow' if is_flow else 'Crew'}")
 
-    # Execute the appropriate command
     execute_command(crew_type, trained_agents_file=trained_agents_file)
 
 

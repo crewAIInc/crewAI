@@ -16,7 +16,6 @@ mode: "wide"
 
 - **Sequencial**: Executa tarefas de forma sequencial, garantindo que as tarefas sejam concluídas em uma progressão ordenada.
 - **Hierárquico**: Organiza tarefas em uma hierarquia gerencial, onde as tarefas são delegadas e executadas com base numa cadeia de comando estruturada. Um modelo de linguagem de gerente (`manager_llm`) ou um agente gerente personalizado (`manager_agent`) deve ser especificado na crew para habilitar o processo hierárquico, facilitando a criação e o gerenciamento de tarefas pelo gerente.
-- **Processo Consensual (Planejado)**: Visando a tomada de decisão colaborativa entre agentes para execução de tarefas, esse tipo de processo introduz uma abordagem democrática ao gerenciamento de tarefas dentro do CrewAI. Está planejado para desenvolvimento futuro e ainda não está implementado no código-fonte.
 
 ## O Papel dos Processos no Trabalho em Equipe
 Os processos permitem que agentes individuais atuem como uma unidade coesa, otimizando seus esforços para atingir objetivos comuns com eficiência e coerência.
@@ -59,9 +58,9 @@ Emulando uma hierarquia corporativa, o CrewAI permite especificar um agente gere
 
 ## Classe Process: Visão Detalhada
 
-A classe `Process` é implementada como uma enumeração (`Enum`), garantindo segurança de tipo e restringindo os valores de processos aos tipos definidos (`sequential`, `hierarchical`). O processo consensual está planejado para inclusão futura, reforçando nosso compromisso com o desenvolvimento contínuo e a inovação.
+A classe `Process` é implementada como uma enumeração (`Enum`), garantindo segurança de tipo e restringindo os valores de processos aos tipos definidos (`sequential`, `hierarchical`).
 
 ## Conclusão
 
 A colaboração estruturada possibilitada pelos processos dentro do CrewAI é fundamental para permitir o trabalho em equipe sistemático entre agentes.
-Esta documentação foi atualizada para refletir os mais recentes recursos, melhorias e a planejada integração do Processo Consensual, garantindo que os usuários tenham acesso às informações mais atuais e abrangentes.
+Esta documentação foi atualizada para refletir os mais recentes recursos e melhorias, garantindo que os usuários tenham acesso às informações mais atuais e abrangentes.

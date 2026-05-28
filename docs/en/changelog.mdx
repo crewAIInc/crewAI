@@ -4,6 +4,63 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="May 27, 2026">
+  ## v1.14.6a2
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.6a2)
+
+  ## What's Changed
+
+  ### Features
+  - Enhance `StdioTransport` to prevent environment variable leakage
+  - Enhance planning configuration and observation handling
+  - Declare `env_vars` on `DatabricksQueryTool`
+  - Add Agent Control Plane documentation
+
+  ### Bug Fixes
+  - Fix structured output leaks in tool-calling loops
+  - Drop unroundtrippable callbacks and adapter state in checkpointing
+  - Serialize `type[BaseModel]` fields as JSON schema in checkpointing
+  - Avoid orphan `task_started` on resume scope restore
+  - Allow `AgentExecutor` to restore from checkpoint
+  - Correct MongoDB typo to `pymongo` in package dependencies
+
+  ### Documentation
+  - Restructure checkpointing page
+  - Document one-time admin package install step
+  - Migrate Secrets Manager / Workload Identity from replicated-config
+  - Remove Skills Repository entry from changelog
+
+  ## Contributors
+
+  @github-actions[bot], @greysonlalonde, @heitorado, @iris-clawd, @lorenzejay, @lucasgomide, @mattatcha, @thiagomoretto, @vinibrsl
+
+</Update>
+
+<Update label="May 21, 2026">
+  ## v1.14.6a1
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.6a1)
+
+  ## What's Changed
+
+  ### Features
+  - Generate categorized release notes for enterprise
+
+  ### Bug Fixes
+  - Harden RuntimeState serialization across entity fields
+  - Bump idna to 3.15 to address security issue GHSA-65pc-fj4g-8rjx
+  - Remove `{" "}` JSX expressions breaking `<Steps>` render
+
+  ### Documentation
+  - Update changelog and version for v1.14.5
+
+  ## Contributors
+
+  @akaKuruma, @alex-clawd, @greysonlalonde
+
+</Update>
+
 <Update label="May 19, 2026">
   ## v1.14.5
 
