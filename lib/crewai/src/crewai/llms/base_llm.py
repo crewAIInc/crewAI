@@ -47,7 +47,7 @@ from crewai.utilities.pydantic_schema_utils import serialize_model_class
 
 
 try:
-    from crewai_files import format_multimodal_content
+    from crewai_files import TextFile, format_multimodal_content
 
     HAS_CREWAI_FILES = True
 except ImportError:
@@ -739,12 +739,26 @@ class BaseLLM(BaseModel, ABC):
             return messages
 
         if not self.supports_multimodal():
-            if any(msg.get("files") for msg in messages):
-                raise ValueError(
-                    f"Model '{self.model}' does not support multimodal input, "
-                    "but files were provided via 'input_files'. "
-                    "Use a vision-capable model or remove the file inputs."
-                )
+            for msg in messages:
+                files: list[Any] = msg.get("files") or []
+                if not files:
+                    continue
+                text_files = [f for f in files if isinstance(f, TextFile)]
+                non_text_files = [f for f in files if not isinstance(f, TextFile)]
+                if non_text_files:
+                    raise ValueError(
+                        f"Model '{self.model}' does not support multimodal input, "
+                        "but files were provided via 'input_files'. "
+                        "Use a vision-capable model or remove the file inputs."
+                    )
+                # Inject text-file contents directly into the message body so
+                # non-vision models can still read text attachments.
+                if text_files:
+                    injected = "\n\n".join(f.read_text() for f in text_files)
+                    existing = msg.get("content", "")
+                    if isinstance(existing, str):
+                        msg["content"] = f"{existing}\n\n{injected}".strip()
+                    msg.pop("files", None)
             return messages
 
         provider = getattr(self, "provider", None) or getattr(self, "model", "openai")

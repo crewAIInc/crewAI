@@ -371,3 +371,77 @@ class TestMultipleFilesFormatting:
         result = format_multimodal_content({}, llm.model)
 
         assert result == []
+
+
+class TestTextFileNonMultimodalInjection:
+    """Tests for TextFile handling on non-vision models.
+
+    Regression tests for https://github.com/crewAIInc/crewAI/issues/5137
+
+    Before the fix, passing *any* file (including text-only TextFile) to a
+    non-multimodal model raised a ValueError.  Text files should instead be
+    read as plain text and injected into the message content so that
+    text-only models can still process them.
+    """
+
+    def _make_non_vision_llm(self) -> LLM:
+        return LLM(model="gpt-3.5-turbo", is_litellm=True)
+
+    def test_text_file_injected_into_message_content(self) -> None:
+        """TextFile content is appended to the message body for non-vision models."""
+        llm = self._make_non_vision_llm()
+        msg: dict = {"role": "user", "content": "Summarise this:", "files": [TextFile(source=b"line one\nline two")]}
+
+        result = llm._process_message_files([msg])
+
+        assert len(result) == 1
+        assert "files" not in result[0], "files key must be stripped after injection"
+        assert "line one" in result[0]["content"]
+        assert "line two" in result[0]["content"]
+        assert "Summarise this:" in result[0]["content"]
+
+    def test_multiple_text_files_all_injected(self) -> None:
+        """All TextFile instances are injected when there are several."""
+        llm = self._make_non_vision_llm()
+        msg: dict = {
+            "role": "user",
+            "content": "Context:",
+            "files": [
+                TextFile(source=b"file A"),
+                TextFile(source=b"file B"),
+            ],
+        }
+
+        result = llm._process_message_files([msg])
+
+        assert "file A" in result[0]["content"]
+        assert "file B" in result[0]["content"]
+
+    def test_image_file_on_non_multimodal_still_raises(self) -> None:
+        """ImageFile on a non-vision model must still raise ValueError."""
+        llm = self._make_non_vision_llm()
+        msg: dict = {"role": "user", "content": "Look at this", "files": [ImageFile(source=MINIMAL_PNG)]}
+
+        with pytest.raises(ValueError, match="does not support multimodal"):
+            llm._process_message_files([msg])
+
+    def test_mixed_text_and_image_raises(self) -> None:
+        """A mix of TextFile and ImageFile raises because of the ImageFile."""
+        llm = self._make_non_vision_llm()
+        msg: dict = {
+            "role": "user",
+            "content": "Mixed",
+            "files": [TextFile(source=b"some text"), ImageFile(source=MINIMAL_PNG)],
+        }
+
+        with pytest.raises(ValueError, match="does not support multimodal"):
+            llm._process_message_files([msg])
+
+    def test_no_files_returns_messages_unchanged(self) -> None:
+        """Messages without files pass through unmodified."""
+        llm = self._make_non_vision_llm()
+        msg: dict = {"role": "user", "content": "plain message"}
+
+        result = llm._process_message_files([msg])
+
+        assert result[0]["content"] == "plain message"
