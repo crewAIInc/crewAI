@@ -1385,7 +1385,9 @@ class GeminiCompletion(BaseLLM):
         ``.name`` attribute (e.g. ``"STOP"``, ``"MAX_TOKENS"``); we forward
         it raw and let downstream telemetry map to the OTel GenAI enum.
         """
-        response_id = getattr(response, "response_id", None)
+        raw_response_id = getattr(response, "response_id", None)
+        response_id = raw_response_id if isinstance(raw_response_id, str) else None
+
         finish_reason: str | None = None
         candidates = getattr(response, "candidates", None)
         if candidates:
@@ -1394,9 +1396,8 @@ class GeminiCompletion(BaseLLM):
             except (IndexError, TypeError, KeyError):
                 candidate_finish = None
             if candidate_finish is not None:
-                finish_reason = getattr(candidate_finish, "name", None) or str(
-                    candidate_finish
-                )
+                name = getattr(candidate_finish, "name", None)
+                finish_reason = name if isinstance(name, str) else None
         return finish_reason, response_id
 
     @staticmethod

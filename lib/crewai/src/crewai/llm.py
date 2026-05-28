@@ -1596,7 +1596,7 @@ class LLM(BaseLLM):
                 messages=params.get("messages"),
                 usage=usage_dict,
                 finish_reason=finish_reason,
-                response_id=response_id_last or response_id,
+                response_id=response_id_last,
             )
             return full_response
 
@@ -1622,7 +1622,7 @@ class LLM(BaseLLM):
                     messages=params.get("messages"),
                     usage=self._usage_to_dict(usage_info),
                     finish_reason=finish_reason,
-                    response_id=response_id_last or response_id,
+                    response_id=response_id_last,
                 )
                 return full_response
             raise
