@@ -321,7 +321,7 @@ class LLM(BaseLLM):
         "claude": ["claude-", "anthropic."],
         "gemini": ["gemini-", "gemma-", "learnlm-"],
         "google": ["gemini-", "gemma-", "learnlm-"],
-        "bedrock": ["."],
+        "bedrock": ["us.", "eu.", "apac.", "global.", "amazon.", "anthropic.", "meta."],
         "azure": ["gpt-", "gpt-35-", "o1", "o3", "o4", "azure-"],
         "deepseek": ["deepseek"],
         "dashscope": ["qwen"],
@@ -467,7 +467,7 @@ class LLM(BaseLLM):
         custom_prefixes = os.getenv("CREWAI_LLM_PREFIXES")
         if custom_prefixes:
             # We create a new list by adding the custom ones to the base ones
-            allowed_prefixes = allowed_prefixes + custom_prefixes.split(",")
+            allowed_prefixes = allowed_prefixes + [p.strip().lower() for p in custom_prefixes.split(",")]
 
         # 5. Final check
         return any(model_lower.startswith(prefix) for prefix in allowed_prefixes)
