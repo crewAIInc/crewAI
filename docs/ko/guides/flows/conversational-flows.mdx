@@ -231,6 +231,158 @@ def route(self):
 
 후속 채팅 줄에 `@human_feedback`를 쓰지 마세요. 특정 스텝 출력을 사람이 승인해야 할 때만 사용하세요.
 
+## 고수준 `ConversationalFlow` (실험적)
+
+`crewai.experimental.ConversationalFlow`는 턴 단위의 배관 작업을 대신 처리해 주는 의견 강한(opinionated) 서브클래스입니다. `@start` / `@router` / `converse_turn` / `end_conversation` 그래프가 내장되어 있고, `state.messages`를 관리하며, router LLM을 구동하고, 턴 간 trace 배치를 열린 상태로 유지합니다. 여러분은 **커스텀 라우트**만 작성하면 되고, 나머지는 프레임워크가 담당합니다.
+
+LLM 기반 라우터와 라우트별 핸들러로 멀티턴 챗을 만들고 싶지만 라이프사이클을 직접 배선하고 싶지 않을 때 사용하세요. 완전한 제어가 필요하면 위의 `Flow[ChatState]`로 내려가세요.
+
+### 빠른 예제
+
+```python
+from crewai import LLM
+from crewai.experimental import ConversationConfig, ConversationalFlow, RouterConfig
+from crewai.flow import listen
+
+
+ROUTER_LLM = LLM(model="gpt-4o-mini")
+
+
+@ConversationConfig(
+    system_prompt="A multi-agent assistant for ordinary chat and tool-backed tasks.",
+    llm=ROUTER_LLM,
+    router=RouterConfig(),  # 라우트 + 설명은 @listen 핸들러에서 자동 발견
+)
+class SupportFlow(ConversationalFlow):
+    @listen("INTERNET_SEARCH")
+    def handle_internet_search(self) -> str:
+        """Fresh web research, current news, real-time lookups."""
+        ...
+        self.append_assistant_message(reply)
+        return reply
+
+    @listen("CREWAI_DOCS")
+    def handle_crewai_docs(self) -> str:
+        """Look up the CrewAI documentation for framework/API questions."""
+        ...
+        self.append_assistant_message(reply)
+        return reply
+
+
+flow = SupportFlow()
+try:
+    flow.handle_turn("뭘 할 수 있어?")                # converse(빌트인)로 라우팅
+    flow.handle_turn("AI 뉴스를 웹에서 찾아줘.")        # INTERNET_SEARCH로 라우팅
+    flow.handle_turn("첫 번째 결과를 요약해줘.")        # 다시 converse로 라우팅
+finally:
+    flow.finalize_session_traces()
+```
+
+### `ConversationConfig`
+
+클래스 단위의 챗 기본값을 부착하는 클래스 데코레이터입니다.
+
+| 필드 | 기본값 | 목적 |
+|------|--------|------|
+| `system_prompt` | i18n `slices.conversational_system_prompt` | 빌트인 `converse_turn`이 사용하는 system 메시지. 빈 문자열(`""`)을 전달하면 system 메시지를 끕니다. |
+| `llm` | `None` | 대화용 LLM (빌트인 `converse_turn`이 사용하고 router 폴백도 됨). |
+| `router` | `None` | LLM 기반 라우팅을 위한 `RouterConfig`. 없으면 항상 `converse`로 떨어집니다. |
+| `answer_from_history_prompt` | 프레임워크 기본값 | 선택적인 `answer_from_history` 라우트용 system 메시지. |
+| `answer_from_history_llm` | `None` | 설정되면 `answer_from_history` 단축 경로가 활성화됩니다. |
+| `intent_llm` | `None` | 레거시 `intents=`/`default_intents` 사전 분류용 LLM. |
+| `default_intents` | `None` | 레거시 사전 분류용 outcome 레이블. |
+| `visible_agent_outputs` | `None` | `"all"` 또는 `append_agent_result()` 결과를 사용자에게 공개로 승격할 에이전트 이름 목록. |
+| `defer_trace_finalization` | `True` | `handle_turn()` 호출들 사이에서 하나의 trace 배치를 열어 둡니다. |
+
+### `RouterConfig`와 자동 생성되는 라우트 카탈로그
+
+```python
+RouterConfig(
+    prompt="선택적인 도메인 프레이밍 (정책, 톤, 페르소나).",
+    response_format=MyRoute,        # 선택; 없으면 자동 생성
+    llm=ROUTER_LLM,                  # ConversationConfig.llm으로 폴백
+    routes=["INTERNET_SEARCH", "CREWAI_DOCS"],   # 선택; 리스너에서 추론
+    route_descriptions={
+        "INTERNET_SEARCH": "이 라우트만 docstring 대신 사용할 설명.",
+    },
+    default_intent="converse",       # LLM 호출 실패 또는 LLM 없음일 때 사용
+    fallback_intent="converse",      # LLM이 잘못된 라우트를 반환할 때 사용
+    intent_field="intent",
+)
+```
+
+router에 전달되는 프롬프트는 자동으로 만들어집니다. 각 라우트의 설명은 다음 우선순위로 결정됩니다:
+
+1. `RouterConfig.route_descriptions[label]` — 명시적 오버라이드.
+2. `ConversationalFlow.builtin_route_descriptions[label]` — `converse`, `end`, `answer_from_history`용 프레임워크 캐닝 텍스트 (router LLM용으로 다듬어진 문구).
+3. `@listen(label)` 핸들러 docstring의 첫 줄(비어있지 않은 줄).
+4. 빈 문자열 (라우트만 카탈로그에 등장하고 설명은 없음).
+
+실제 사용에서 **새 라우트를 추가하는 방법은 `@listen("X")` + 한 줄짜리 docstring**입니다:
+
+```python
+@listen("INTERNET_SEARCH")
+def handle_internet_search(self) -> str:
+    """Fresh web research, current news, real-time lookups."""
+    ...
+```
+
+…그러면 router LLM은 다음을 봅니다:
+
+```
+Routes:
+- CREWAI_DOCS: Look up the CrewAI documentation for framework/API questions.
+- INTERNET_SEARCH: Fresh web research, current news, real-time lookups.
+- converse: Ordinary chat, follow-ups, summaries, clarifications…
+- end: User signals the conversation is finished (goodbye, exit, done).
+```
+
+`RouterConfig.prompt`는 **도메인 프레이밍** (어시스턴트 페르소나, 비즈니스 규칙, 톤)을 위한 자리입니다. 라우트 카탈로그는 자동 생성되니 `prompt` 안에 라우트 목록을 넣지 마세요. 핸들러를 추가하는 순간 동기화가 깨집니다.
+
+### 빌트인 라우트
+
+| 라우트 | 핸들러 | 목적 |
+|--------|--------|------|
+| `converse` | `converse_turn` | 기본 챗 핸들러. system prompt + 정식 메시지 히스토리와 함께 `ConversationConfig.llm`을 호출합니다. |
+| `end` | `end_conversation` | `state.ended = True`로 설정하고 종료 응답을 보냅니다. |
+| `answer_from_history` | `answer_from_history_turn` | 선택적. `ConversationConfig.answer_from_history_llm`이 설정되어 있고 메시지를 히스토리만으로 답할 수 있을 때 라우팅됩니다. |
+
+서브클래스에 같은 이름의 핸들러를 정의하면 어떤 것이든 오버라이드할 수 있습니다.
+
+### `handle_turn()` 시맨틱
+
+`flow.handle_turn(message)`는 한 턴을 실행합니다:
+
+1. 그래프가 다시 실행되도록 턴 단위 실행 추적(`_completed_methods`, `_method_outputs`)을 초기화합니다 — 이게 없으면 동일 인스턴스에서 반복 `kickoff` 호출 시 `Flow.kickoff_async`가 `inputs={"id": ...}`를 체크포인트 복원으로 간주해 2번째 턴부터 단락 회로가 발생합니다.
+2. 사용자 메시지를 `state.messages`에 추가하고 `current_user_message` / `last_user_message`를 설정합니다. `last_intent`는 **이전 턴 값이 유지**되어 router LLM이 신호로 활용할 수 있습니다.
+3. `conversation_start` → `route_conversation` → 선택된 `@listen` 핸들러 순으로 실행됩니다.
+4. router는 결정을 `state.last_intent`에 저장합니다 (다음 턴의 router 컨텍스트에서 보입니다).
+5. 핸들러가 문자열을 반환했지만 `append_assistant_message`를 직접 호출하지 않았다면, `handle_turn`이 대신 추가해 줍니다.
+
+`flow.kickoff(user_message=..., session_id=...)`를 직접 호출해도 동일한 reset/run 로직이 동작합니다. `handle_turn`은 그 위에 얹은 편의 래퍼입니다.
+
+### 커스텀 router 동작
+
+매 라우팅 결정마다 사이드 이펙트(이벤트 버스 셋업, 텔레메트리)를 실행하려면 `route_turn`을 오버라이드하세요:
+
+```python
+class SupportFlow(ConversationalFlow):
+    def route_turn(self, context: dict[str, Any]) -> str | None:
+        self.event_bus = MyBus(self)
+        return super().route_turn(context)
+```
+
+LLM router를 우회해 프로그램적으로 라우트를 선택하려면 `route_turn`에서 문자열을 반환하세요. `None`을 반환하면 `_route_with_config(...)`로 떨어집니다.
+
+### `append_assistant_message`와 `append_agent_result`
+
+`@listen(label)` 핸들러 안에서 두 가지 중 선택하세요:
+
+- `self.append_assistant_message(text)` — 사용자에게 보이는 어시스턴트 턴을 `state.messages`에 추가합니다. 다음 턴의 `converse_turn`이 이 내용을 보게 됩니다.
+- `self.append_agent_result(agent_name, result, visibility="private")` — 구조화된 이벤트를 `state.events`에, 스레드를 `state.agent_threads[agent_name]`에 기록합니다. public 가시성은 자동으로 `append_assistant_message`도 호출합니다. 정식 히스토리를 더럽히지 말아야 할 임시 작업에는 private을 쓰세요.
+
+`ConversationConfig.visible_agent_outputs`로 특정 에이전트의 private 결과를 전역적으로 public으로 승격할 수 있습니다 (`"all"` 또는 이름 리스트).
+
 ## 턴 간 트레이싱
 
 `defer_trace_finalization=True` (`ConversationalConfig` 기본값):
@@ -255,31 +407,9 @@ finally:
 
 `suppress_flow_events=True`는 Rich 콘솔 패널만 숨깁니다. trace 및 method 이벤트는 계속 발생합니다.
 
-### 고수준 `ConversationalFlow`
+### `ConversationalFlow` trace 수명 주기
 
-`crewai.experimental.ConversationalFlow`의 실험적 고수준 추상화도 같은 tracing 수명 주기를 사용합니다. 클래스를 `@ConversationConfig(...)`로 데코레이트하면 `defer_trace_finalization`의 기본값이 `True`이므로, 각 `handle_turn()`은 즉시 export하지 않고 세션 trace를 열린 상태로 유지합니다.
-
-`handle_turn()`을 직접 호출한다면 `finally` 블록에서 세션을 finalize하세요:
-
-```python
-from crewai.experimental import ConversationConfig, ConversationalFlow
-
-
-@ConversationConfig()
-class MyChatFlow(ConversationalFlow):
-    ...
-
-
-flow = MyChatFlow()
-
-try:
-    flow.handle_turn("안녕하세요")
-    flow.handle_turn("더 알려주세요")
-finally:
-    flow.finalize_session_traces()
-```
-
-flow를 `ChatSession`으로 감싸는 경우에는 대신 `session.close()`를 호출하세요. 이 메서드가 지연된 trace를 finalize합니다. 둘 중 하나를 호출하지 않으면 trace batch가 열린 상태로 남아 마지막 대화의 export된 trace가 보이지 않을 수 있습니다.
+실험적 [`ConversationalFlow`](#고수준-conversationalflow-실험적)는 동일한 tracing 수명 주기를 따릅니다. `defer_trace_finalization` 기본값이 `True`이므로 각 `handle_turn()`이 세션 trace를 열어 둡니다. 세션 끝에서 항상 finalize하세요 — REPL 루프 주변의 `finally`나 `ChatSession.close()`로요. 둘 다 호출하지 않으면 batch가 열린 채 남아 마지막 대화가 export되지 않을 수 있습니다.
 
 ## `ChatSession` (WebSocket / SSE)
 

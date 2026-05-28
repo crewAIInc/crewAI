@@ -231,6 +231,158 @@ Use **`@listen("RESEARCH")`** (or similar) for steps that run `Agent.kickoff()` 
 
 Do **not** use `@human_feedback` for follow-up chat lines unless a human must approve a specific step output before it is shown.
 
+## High-level `ConversationalFlow` (experimental)
+
+`crewai.experimental.ConversationalFlow` is an opinionated subclass that handles the per-turn plumbing for you: it ships with a built-in `@start` / `@router` / `converse_turn` / `end_conversation` graph, manages `state.messages`, drives the router LLM, and keeps the trace batch open across turns. You write the **custom routes**; the framework owns the rest.
+
+Use it when you want a multi-turn chat with an LLM-driven router and per-route handlers without wiring the lifecycle yourself. Drop down to `Flow[ChatState]` (above) when you need full control.
+
+### Quick example
+
+```python
+from crewai import LLM
+from crewai.experimental import ConversationConfig, ConversationalFlow, RouterConfig
+from crewai.flow import listen
+
+
+ROUTER_LLM = LLM(model="gpt-4o-mini")
+
+
+@ConversationConfig(
+    system_prompt="A multi-agent assistant for ordinary chat and tool-backed tasks.",
+    llm=ROUTER_LLM,
+    router=RouterConfig(),  # routes + descriptions auto-discovered from @listen handlers
+)
+class SupportFlow(ConversationalFlow):
+    @listen("INTERNET_SEARCH")
+    def handle_internet_search(self) -> str:
+        """Fresh web research, current news, real-time lookups."""
+        ...
+        self.append_assistant_message(reply)
+        return reply
+
+    @listen("CREWAI_DOCS")
+    def handle_crewai_docs(self) -> str:
+        """Look up the CrewAI documentation for framework/API questions."""
+        ...
+        self.append_assistant_message(reply)
+        return reply
+
+
+flow = SupportFlow()
+try:
+    flow.handle_turn("What can you do?")              # routes to converse (built-in)
+    flow.handle_turn("Search the web for AI news.")   # routes to INTERNET_SEARCH
+    flow.handle_turn("Summarize the first result.")   # routes back to converse
+finally:
+    flow.finalize_session_traces()
+```
+
+### `ConversationConfig`
+
+Class decorator that attaches per-class chat defaults.
+
+| Field | Default | Purpose |
+|-------|---------|---------|
+| `system_prompt` | `slices.conversational_system_prompt` from i18n | System message used by the built-in `converse_turn`. Pass `""` to opt out entirely. |
+| `llm` | `None` | Conversation LLM (used by `converse_turn` and as router fallback). |
+| `router` | `None` | `RouterConfig` for LLM-driven routing. Without it, the flow always falls through to `converse`. |
+| `answer_from_history_prompt` | Framework default | System message for the optional `answer_from_history` route. |
+| `answer_from_history_llm` | `None` | Enables the `answer_from_history` short-circuit when set. |
+| `intent_llm` | `None` | LLM for legacy `intents=`/`default_intents` pre-classification. |
+| `default_intents` | `None` | Outcome labels for legacy pre-classification. |
+| `visible_agent_outputs` | `None` | `"all"`, or a list of agent names whose `append_agent_result()` calls should be promoted to public assistant messages. |
+| `defer_trace_finalization` | `True` | Keep one trace batch open across `handle_turn()` calls. |
+
+### `RouterConfig` and the auto-built route catalog
+
+```python
+RouterConfig(
+    prompt="Optional domain framing (policy, voice, persona).",
+    response_format=MyRoute,        # optional; auto-generated otherwise
+    llm=ROUTER_LLM,                  # falls back to ConversationConfig.llm
+    routes=["INTERNET_SEARCH", "CREWAI_DOCS"],   # optional; inferred from listeners
+    route_descriptions={
+        "INTERNET_SEARCH": "Override the docstring for this one route.",
+    },
+    default_intent="converse",       # used when LLM call fails or no LLM available
+    fallback_intent="converse",      # used when LLM returns an invalid route
+    intent_field="intent",
+)
+```
+
+The router prompt that gets sent to the LLM is built automatically. For each route the framework picks a description with this precedence:
+
+1. `RouterConfig.route_descriptions[label]` — explicit override.
+2. `ConversationalFlow.builtin_route_descriptions[label]` — framework-canned text for `converse`, `end`, `answer_from_history` (phrased for the router LLM).
+3. First non-empty line of the `@listen(label)` handler's docstring.
+4. Empty (the route is listed without a description).
+
+So in practice, **adding a new route is `@listen("X")` + a one-line docstring**:
+
+```python
+@listen("INTERNET_SEARCH")
+def handle_internet_search(self) -> str:
+    """Fresh web research, current news, real-time lookups."""
+    ...
+```
+
+…and the router LLM sees:
+
+```
+Routes:
+- CREWAI_DOCS: Look up the CrewAI documentation for framework/API questions.
+- INTERNET_SEARCH: Fresh web research, current news, real-time lookups.
+- converse: Ordinary chat, follow-ups, summaries, clarifications…
+- end: User signals the conversation is finished (goodbye, exit, done).
+```
+
+`RouterConfig.prompt` is for **domain framing** (assistant persona, business rules, voice). The route catalog is auto-built — don't list routes in `prompt`; they'll drift the moment you add a handler.
+
+### Built-in routes
+
+| Route | Handler | Purpose |
+|-------|---------|---------|
+| `converse` | `converse_turn` | Default chat handler. Calls `ConversationConfig.llm` with the system prompt + canonical message history. |
+| `end` | `end_conversation` | Sets `state.ended = True` and emits a terminator reply. |
+| `answer_from_history` | `answer_from_history_turn` | Optional. Routes here when `ConversationConfig.answer_from_history_llm` is set and the message can be answered from existing history. |
+
+You can override any of these by defining a same-named handler in your subclass.
+
+### `handle_turn()` semantics
+
+`flow.handle_turn(message)` runs one turn:
+
+1. Resets per-execution tracking (`_completed_methods`, `_method_outputs`) so the graph re-runs — without this, repeated `kickoff` calls on the same flow instance would short-circuit on turn 2+ because `Flow.kickoff_async` treats `inputs={"id": ...}` as a checkpoint restore.
+2. Appends the user message to `state.messages`, sets `current_user_message` / `last_user_message`. `last_intent` is **preserved from the prior turn** so the router LLM can use it as a signal.
+3. Runs `conversation_start` → `route_conversation` → the chosen `@listen` handler.
+4. The router stores its decision in `state.last_intent` (visible to the next turn's router context).
+5. If your handler returned a string and didn't already call `append_assistant_message`, `handle_turn` appends it for you.
+
+You can also call `flow.kickoff(user_message=..., session_id=...)` directly — the same reset/run logic fires. `handle_turn` is the ergonomic wrapper.
+
+### Custom router behavior
+
+To run side effects (event bus setup, telemetry) on every routing decision, override `route_turn`:
+
+```python
+class SupportFlow(ConversationalFlow):
+    def route_turn(self, context: dict[str, Any]) -> str | None:
+        self.event_bus = MyBus(self)
+        return super().route_turn(context)
+```
+
+To bypass the LLM router entirely and pick a route programmatically, return a string from `route_turn`; returning `None` falls back to `_route_with_config(...)`.
+
+### `append_assistant_message` and `append_agent_result`
+
+Inside a `@listen(label)` handler, choose:
+
+- `self.append_assistant_message(text)` — adds a user-visible assistant turn to `state.messages`. The next turn's `converse_turn` sees it.
+- `self.append_agent_result(agent_name, result, visibility="private")` — records a structured event in `state.events` and a thread in `state.agent_threads[agent_name]`. Public visibility also calls `append_assistant_message` for you. Use private results for scratch work that shouldn't pollute the canonical history.
+
+`ConversationConfig.visible_agent_outputs` can promote specific agents' private results to public globally (`"all"`, or a list of agent names).
+
 ## Tracing across turns
 
 With `defer_trace_finalization=True` (default in `ConversationalConfig`):
@@ -255,31 +407,9 @@ finally:
 
 `suppress_flow_events=True` only hides Rich console panels; trace and method events still emit for observability.
 
-### High-level `ConversationalFlow`
+### `ConversationalFlow` trace lifecycle
 
-The experimental high-level abstraction in `crewai.experimental.ConversationalFlow` uses the same tracing lifecycle. When you decorate the class with `@ConversationConfig(...)`, `defer_trace_finalization` defaults to `True`, so each `handle_turn()` keeps the session trace open instead of exporting immediately.
-
-If you call `handle_turn()` directly, finalize the session in a `finally` block:
-
-```python
-from crewai.experimental import ConversationConfig, ConversationalFlow
-
-
-@ConversationConfig()
-class MyChatFlow(ConversationalFlow):
-    ...
-
-
-flow = MyChatFlow()
-
-try:
-    flow.handle_turn("Hello")
-    flow.handle_turn("Tell me more")
-finally:
-    flow.finalize_session_traces()
-```
-
-If you wrap the flow with `ChatSession`, call `session.close()` instead; it finalizes deferred traces for you. Without one of these calls, the trace batch can remain open and you may not see an exported trace for the last conversation.
+The experimental [`ConversationalFlow`](#high-level-conversationalflow-experimental) uses the same tracing lifecycle: `defer_trace_finalization` defaults to `True`, so each `handle_turn()` keeps the session trace open. Always finalize at the end of the session — either in a `finally` block around your loop, or via `ChatSession.close()`. Without one of these calls the trace batch stays open and the final conversation may never export.
 
 ## `ChatSession` (WebSocket / SSE)
 

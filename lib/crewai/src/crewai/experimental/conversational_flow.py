@@ -4,15 +4,17 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from enum import Enum
 import json
 from typing import Any, ClassVar, Literal, cast
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, create_model
 
 from crewai.flow.conversation import get_conversation_messages
 from crewai.flow.flow import Flow, listen, router, start
 from crewai.llms.base_llm import BaseLLM
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.types import LLMMessage
 
 
@@ -33,22 +35,35 @@ _ANSWER_FROM_HISTORY_PROMPT_DEFAULT = (
 
 @dataclass
 class RouterConfig:
-    """Class-level LLM router configuration for ``ConversationalFlow``."""
+    """Class-level LLM router configuration for ``ConversationalFlow``.
 
-    prompt: str
-    response_format: type[BaseModel]
+    ``route_descriptions`` overrides the per-route descriptions used to build
+    the router LLM's "available routes" catalog. Routes without an entry fall
+    back to the handler's docstring first line (or, for built-in routes, the
+    framework's canned description). ``prompt`` is reserved for domain
+    policy/voice, not the route catalog — that's auto-built.
+    """
+
+    prompt: str | None = None
+    response_format: type[BaseModel] | None = None
     llm: Any | None = None
     routes: Sequence[str] | None = None
-    default_intent: str | None = None
-    fallback_intent: str | None = None
+    route_descriptions: dict[str, str] | None = None
+    default_intent: str | None = "converse"
+    fallback_intent: str | None = "converse"
     intent_field: str = "intent"
 
 
 @dataclass
 class ConversationConfig:
-    """Class-level configuration for experimental conversational flows."""
+    """Class-level configuration for experimental conversational flows.
 
-    prompt: str | None = None
+    ``system_prompt`` defaults to the ``slices.conversational_system_prompt``
+    translation when left as ``None``. Pass an empty string to opt out of any
+    system prompt for ``converse_turn``.
+    """
+
+    system_prompt: str | None = None
     llm: Any | None = None
     router: RouterConfig | None = None
     answer_from_history_prompt: str = _ANSWER_FROM_HISTORY_PROMPT_DEFAULT
@@ -136,6 +151,21 @@ class ConversationalFlow(Flow[ConversationState]):
 
     conversational_config: ClassVar[ConversationConfig | None] = None
     builtin_routes: ClassVar[tuple[str, ...]] = ("converse", "end")
+    internal_routes: ClassVar[tuple[str, ...]] = (
+        "answer_from_history",
+        "conversation_start",
+    )
+    builtin_route_descriptions: ClassVar[dict[str, str]] = {
+        "converse": (
+            "Ordinary chat, follow-ups, summaries, clarifications, and "
+            "questions answerable from prior conversation history."
+        ),
+        "end": ("User signals the conversation is finished (goodbye, exit, done)."),
+        "answer_from_history": (
+            "Answer directly from prior conversation history without invoking "
+            "tools, agents, or custom routes."
+        ),
+    }
 
     @start()
     def conversation_start(self) -> str | None:
@@ -148,20 +178,22 @@ class ConversationalFlow(Flow[ConversationState]):
         context = self.build_router_context()
         configured_route = self.route_turn(context)
         if configured_route:
+            self.state.last_intent = configured_route
             return configured_route
 
         if self.state.last_intent:
             return self.state.last_intent
 
         if self.can_answer_from_history(context):
+            self.state.last_intent = "answer_from_history"
             return "answer_from_history"
 
+        self.state.last_intent = "converse"
         return "converse"
 
     @listen("converse")
     def converse_turn(self) -> str:
         """Built-in chat handler over canonical conversation history."""
-        config = self._conversation_config
         llm = self._default_conversation_llm()
         if llm is None:
             content = "I can continue the conversation once an LLM is configured."
@@ -169,8 +201,9 @@ class ConversationalFlow(Flow[ConversationState]):
             return content
 
         messages: list[LLMMessage] = []
-        if config is not None and config.prompt:
-            messages.append({"role": "system", "content": config.prompt})
+        system_prompt = self._resolve_system_prompt()
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
         messages.extend(self.conversation_messages)
 
         response = self._coerce_llm(llm).call(messages=messages)
@@ -209,6 +242,26 @@ class ConversationalFlow(Flow[ConversationState]):
         self.append_assistant_message(content)
         return content
 
+    def kickoff(self, *args: Any, **kwargs: Any) -> Any:
+        """Run one conversational turn.
+
+        Every call into ``ConversationalFlow`` is a turn, so reset the graph
+        execution tracking before delegating. Without this, calls after the
+        first see ``_completed_methods`` populated, ``Flow.kickoff_async``
+        flips ``_is_execution_resuming = True``, every method short-circuits,
+        and the prior turn's output is returned. The persisted Pydantic state
+        (messages, current_user_message, etc.) is preserved on ``self._state``.
+
+        Checkpoint restores deliberately keep ``_completed_methods`` populated
+        so paused work resumes; skip the reset in that path.
+        """
+        is_checkpoint_restore = kwargs.get("from_checkpoint") is not None or (
+            len(args) >= 3 and args[2] is not None
+        )
+        if not is_checkpoint_restore:
+            self._reset_turn_execution_state()
+        return super().kickoff(*args, **kwargs)
+
     def handle_turn(
         self,
         message: str,
@@ -237,9 +290,8 @@ class ConversationalFlow(Flow[ConversationState]):
 
     def build_router_context(self) -> dict[str, Any]:
         """Build context used by the routing policy for the current turn."""
-        config = self._conversation_config
         return {
-            "prompt": config.prompt if config else None,
+            "system_prompt": self._resolve_system_prompt(),
             "current_user_message": self.state.current_user_message,
             "message_history": self.conversation_messages,
             "events": [event.model_dump() for event in self.state.events],
@@ -336,6 +388,32 @@ class ConversationalFlow(Flow[ConversationState]):
     def _conversation_config(self) -> ConversationConfig | None:
         return getattr(type(self), "conversational_config", None)
 
+    def _reset_turn_execution_state(self) -> None:
+        """Clear per-execution tracking so the next turn re-runs the graph.
+
+        Mirrors what ``Flow.kickoff_async`` does on a non-restoring run: drops
+        completed-method tracking, per-method call counts, and pending listener
+        bookkeeping. ``self._state`` (messages, current_user_message, etc.) is
+        deliberately untouched so the conversation continues uninterrupted.
+        """
+        self._completed_methods.clear()
+        self._method_outputs.clear()
+        self._pending_and_listeners.clear()
+        self._method_call_counts.clear()
+        self._clear_or_listeners()
+        self._is_execution_resuming = False
+
+    def _resolve_system_prompt(self) -> str | None:
+        """Return the effective conversational system prompt.
+
+        ``None`` on the config (the default) resolves to the i18n base prompt;
+        an empty string is treated as an explicit opt-out.
+        """
+        config = self._conversation_config
+        if config is None or config.system_prompt is None:
+            return I18N_DEFAULT.slice("conversational_system_prompt")
+        return config.system_prompt or None
+
     def receive_user_message(
         self,
         text: str,
@@ -343,11 +421,17 @@ class ConversationalFlow(Flow[ConversationState]):
         outcomes: Sequence[str] | None = None,
         llm: str | BaseLLM | None = None,
     ) -> str:
-        """Append a user turn and optionally classify its intent."""
+        """Append a user turn and optionally classify its intent.
+
+        ``last_intent`` is preserved across turns so the router prompt can use
+        the prior turn's route as a signal (e.g., follow-up after RESEARCH
+        should usually route to ``converse``). The legacy intent-classification
+        path below still overwrites it when outcomes are provided, and
+        ``route_conversation`` reassigns it on every router decision.
+        """
         self.state.messages.append(ConversationMessage(role="user", content=text))
         self.state.current_user_message = text
         self.state.last_user_message = text
-        self.state.last_intent = None
 
         if outcomes and llm is not None:
             intent = self.classify_intent(
@@ -390,15 +474,16 @@ class ConversationalFlow(Flow[ConversationState]):
         router_config: RouterConfig,
         context: dict[str, Any],
     ) -> str | None:
-        if router_config.llm is None:
+        router_llm = self._default_router_llm(router_config)
+        if router_llm is None:
             return router_config.default_intent
 
         try:
-            llm = self._coerce_llm(router_config.llm)
+            llm = self._coerce_llm(router_llm)
             response = self._call_router_llm(
                 llm,
                 messages=self._build_router_messages(router_config, context),
-                response_format=router_config.response_format,
+                response_format=self._router_response_format(router_config),
             )
             intent = self._extract_router_intent(response, router_config.intent_field)
         except Exception:
@@ -412,6 +497,36 @@ class ConversationalFlow(Flow[ConversationState]):
             return router_config.fallback_intent or router_config.default_intent
 
         return intent
+
+    def _default_router_llm(self, router_config: RouterConfig) -> Any | None:
+        config = self._conversation_config
+        return (
+            router_config.llm
+            or (config.intent_llm if config else None)
+            or (config.llm if config else None)
+        )
+
+    def _router_response_format(
+        self,
+        router_config: RouterConfig,
+    ) -> type[BaseModel]:
+        if router_config.response_format is not None:
+            return router_config.response_format
+
+        routes = sorted(self._effective_routes(router_config))
+        field_definitions: dict[str, Any] = {
+            router_config.intent_field: (
+                str,
+                Field(description=f"One of: {', '.join(routes)}"),
+            )
+        }
+        return cast(
+            type[BaseModel],
+            create_model(
+                "ConversationRoute",
+                **field_definitions,
+            ),
+        )
 
     def _call_router_llm(
         self,
@@ -437,16 +552,24 @@ class ConversationalFlow(Flow[ConversationState]):
         router_config: RouterConfig,
         context: dict[str, Any],
     ) -> list[LLMMessage]:
+        catalog = self._build_route_catalog(router_config)
         context = {
             **context,
-            "available_routes": sorted(self._effective_routes(router_config)),
+            "available_routes": sorted(catalog.keys()),
         }
+        domain_prompt = f"{router_config.prompt}\n\n" if router_config.prompt else ""
+        routes_section = "Routes:\n" + "\n".join(
+            f"- {label}: {description}" if description else f"- {label}"
+            for label, description in sorted(catalog.items())
+        )
         routing_prompt = (
-            f"{router_config.prompt}\n\n"
-            "Choose one route from available_routes. Use 'converse' for follow-ups, "
-            "summaries, rewrites, clarification that can be answered from history, "
-            "and ordinary chat. Use custom routes only for tool-backed or workflow "
-            "actions. Use 'end' when the user is done."
+            domain_prompt
+            + routes_section
+            + "\n\nChoose exactly one route from the list above. Prefer "
+            "'converse' for follow-ups, summaries, and clarifications about "
+            "prior turns — even if they touch on a topic the user previously "
+            "invoked a custom route for. Use a custom route only when the user "
+            "is making a fresh request for that tool or workflow."
         )
         return [
             {"role": "system", "content": routing_prompt},
@@ -455,6 +578,53 @@ class ConversationalFlow(Flow[ConversationState]):
                 "content": json.dumps(context, default=str),
             },
         ]
+
+    def _build_route_catalog(
+        self,
+        router_config: RouterConfig | None,
+    ) -> dict[str, str]:
+        """Build a ``{label: description}`` catalog for the router prompt.
+
+        Priority per route:
+          1. ``router_config.route_descriptions`` override (user-provided).
+          2. ``builtin_route_descriptions`` (framework-canned for converse/end/
+             answer_from_history — phrased for LLM routing).
+          3. First non-empty line of the ``@listen`` handler's docstring.
+          4. Empty (route appears in the catalog without a description).
+        """
+        label_to_method: dict[str, str] = {}
+        for listener_name, condition in self._listeners.items():
+            if isinstance(condition, tuple):
+                _, trigger_labels = condition
+                for trigger_label in trigger_labels:
+                    label_to_method.setdefault(str(trigger_label), str(listener_name))
+
+        routes = self._effective_routes(router_config)
+        overrides = (
+            router_config.route_descriptions
+            if router_config and router_config.route_descriptions
+            else {}
+        )
+
+        catalog: dict[str, str] = {}
+        for route_label in routes:
+            if route_label in overrides:
+                catalog[route_label] = overrides[route_label]
+                continue
+            if route_label in self.builtin_route_descriptions:
+                catalog[route_label] = self.builtin_route_descriptions[route_label]
+                continue
+
+            handler_name = label_to_method.get(route_label)
+            description = ""
+            if handler_name:
+                method = getattr(type(self), handler_name, None)
+                doc = getattr(method, "__doc__", None)
+                if doc:
+                    description = doc.strip().split("\n", 1)[0].strip()
+            catalog[route_label] = description
+
+        return catalog
 
     def _extract_router_intent(self, response: Any, intent_field: str) -> str | None:
         if isinstance(response, BaseModel):
@@ -473,6 +643,8 @@ class ConversationalFlow(Flow[ConversationState]):
 
         if value is None:
             return None
+        if isinstance(value, Enum):
+            return str(value.value)
         return str(value)
 
     def _valid_route_labels(self) -> set[str]:
@@ -486,7 +658,11 @@ class ConversationalFlow(Flow[ConversationState]):
     def _effective_routes(self, router_config: RouterConfig | None = None) -> set[str]:
         custom_routes = set(router_config.routes or ()) if router_config else set()
         if not custom_routes:
-            custom_routes = self._valid_route_labels()
+            custom_routes = (
+                self._valid_route_labels()
+                - set(self.builtin_routes)
+                - set(self.internal_routes)
+            )
         return custom_routes | set(self.builtin_routes)
 
     def _default_conversation_llm(self) -> Any | None:

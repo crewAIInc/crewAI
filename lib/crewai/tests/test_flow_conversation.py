@@ -489,6 +489,55 @@ class TestConversationalFlow:
             "end",
         }
 
+    def test_router_infers_custom_routes_without_internal_routes(self) -> None:
+        class ResearchRoute(BaseModel):
+            intent: Literal["research", "converse", "end"]
+
+        @ConversationConfig(
+            router=RouterConfig(
+                prompt="Classify.",
+                response_format=ResearchRoute,
+            )
+        )
+        class RoutedFlow(ConversationalFlow):
+            @listen("research")
+            def run_research(self) -> str:
+                return "researched"
+
+        flow = RoutedFlow()
+
+        assert flow._effective_routes(flow.conversational_config.router) == {
+            "research",
+            "converse",
+            "end",
+        }
+
+    def test_router_config_uses_conversational_defaults(self) -> None:
+        llm = MagicMock()
+
+        @ConversationConfig(
+            llm=llm,
+            router=RouterConfig(),
+        )
+        class RoutedFlow(ConversationalFlow):
+            @listen("research")
+            def run_research(self) -> str:
+                self.append_assistant_message("researched")
+                return "researched"
+
+        flow = RoutedFlow()
+        response_format = flow._router_response_format(flow.conversational_config.router)
+        llm.call.return_value = response_format(intent="research")
+
+        result = flow.handle_turn("research CrewAI")
+
+        assert result == "researched"
+        llm.call.assert_called_once()
+        assert llm.call.call_args.kwargs["response_format"].__name__ == (
+            "ConversationRoute"
+        )
+        assert flow.state.messages[-1].content == "researched"
+
     def test_builtin_converse_appends_assistant_message_and_uses_history(self) -> None:
         class ResearchRoute(BaseModel):
             intent: Literal["research", "converse", "end"]
@@ -499,7 +548,7 @@ class TestConversationalFlow:
         chat_llm.call.return_value = "summary from built-in converse"
 
         @ConversationConfig(
-            prompt="You are a helpful research assistant.",
+            system_prompt="You are a helpful research assistant.",
             llm=chat_llm,
             router=RouterConfig(
                 prompt="Classify.",
@@ -563,6 +612,181 @@ class TestConversationalFlow:
         assert result == "Conversation ended."
         assert flow.state.ended is True
         assert flow.state.messages[-1].content == "Conversation ended."
+
+    def test_handle_turn_reruns_graph_after_prior_turn_completed(self) -> None:
+        """Multi-turn must not flip ``_is_execution_resuming`` and short-circuit.
+
+        ``Flow.kickoff`` with persistence enabled treats ``inputs={"id": ...}``
+        as a checkpoint restore, so it skips clearing ``_completed_methods``.
+        Without ``ConversationalFlow.kickoff`` resetting that state, turn 2+
+        sees every method as already-completed, short-circuits to
+        ``_method_outputs[-1]``, and returns the previous turn's output.
+        """
+
+        class Route(BaseModel):
+            intent: Literal["RESEARCH", "converse", "end"]
+
+        router_llm = MagicMock()
+        router_llm.call.side_effect = [
+            Route(intent="converse"),
+            Route(intent="RESEARCH"),
+        ]
+        chat_llm = MagicMock()
+        chat_llm.call.return_value = "general help"
+
+        @ConversationConfig(
+            llm=chat_llm,
+            router=RouterConfig(
+                response_format=Route,
+                llm=router_llm,
+                routes=["RESEARCH"],
+            ),
+        )
+        class DemoFlow(ConversationalFlow):
+            @listen("RESEARCH")
+            def handle_research(self) -> str:
+                self.append_assistant_message("fresh research")
+                return "fresh research"
+
+        flow = DemoFlow()
+        from crewai.flow.persistence import SQLiteFlowPersistence
+
+        import tempfile
+        from pathlib import Path
+
+        flow.persistence = SQLiteFlowPersistence(
+            str(Path(tempfile.mkdtemp()) / "regression.db")
+        )
+
+        out1 = flow.handle_turn("tell me what you can do")
+        out2 = flow.handle_turn("now do research")
+
+        assert out1 == "general help"
+        assert out2 == "fresh research"
+        assert chat_llm.call.call_count == 1
+        assert router_llm.call.call_count == 2
+        assert flow.state.messages[-1].content == "fresh research"
+        assert flow._is_execution_resuming is False
+
+    def test_route_catalog_combines_docstrings_builtins_and_overrides(self) -> None:
+        """Catalog precedence: route_descriptions > built-in > docstring."""
+
+        @ConversationConfig(
+            router=RouterConfig(
+                routes=["RESEARCH", "ORDER"],
+                route_descriptions={"ORDER": "explicit override for order route"},
+            )
+        )
+        class CatalogFlow(ConversationalFlow):
+            @listen("RESEARCH")
+            def handle_research(self) -> str:
+                """Fresh web research, current news, real-time lookups."""
+                return "researched"
+
+            @listen("ORDER")
+            def handle_order(self) -> str:
+                """This docstring should NOT win — override takes priority."""
+                return "ordered"
+
+        flow = CatalogFlow()
+        catalog = flow._build_route_catalog(flow.conversational_config.router)
+
+        assert catalog["RESEARCH"] == (
+            "Fresh web research, current news, real-time lookups."
+        )
+        assert catalog["ORDER"] == "explicit override for order route"
+        # Built-in routes get framework-canned descriptions.
+        assert "Ordinary chat" in catalog["converse"]
+        assert "finished" in catalog["end"]
+
+    def test_route_catalog_falls_back_to_empty_when_no_docstring(self) -> None:
+        @ConversationConfig(router=RouterConfig(routes=["BARE"]))
+        class BareFlow(ConversationalFlow):
+            @listen("BARE")
+            def handle_bare(self) -> str:
+                return "bare"
+
+        flow = BareFlow()
+        catalog = flow._build_route_catalog(flow.conversational_config.router)
+
+        assert catalog["BARE"] == ""
+
+    def test_router_messages_include_route_catalog(self) -> None:
+        """The router system prompt must enumerate routes with descriptions."""
+
+        class Route(BaseModel):
+            intent: Literal["RESEARCH", "converse", "end"]
+
+        router_llm = MagicMock()
+        router_llm.call.return_value = Route(intent="RESEARCH")
+
+        @ConversationConfig(
+            router=RouterConfig(
+                prompt="A research-focused assistant.",
+                response_format=Route,
+                llm=router_llm,
+                routes=["RESEARCH"],
+            )
+        )
+        class RoutedFlow(ConversationalFlow):
+            @listen("RESEARCH")
+            def handle_research(self) -> str:
+                """Fresh web research and current news."""
+                self.append_assistant_message("researched")
+                return "researched"
+
+        flow = RoutedFlow()
+        flow.handle_turn("research today's AI news")
+
+        system_message = router_llm.call.call_args.kwargs["messages"][0]["content"]
+        assert "Routes:" in system_message
+        assert "- RESEARCH: Fresh web research and current news." in system_message
+        assert "- converse: Ordinary chat" in system_message
+        assert system_message.startswith("A research-focused assistant.")
+
+    def test_router_decision_persists_last_intent_and_passes_it_next_turn(
+        self,
+    ) -> None:
+        """Router must record its decision so the next turn's router LLM sees it."""
+
+        class Route(BaseModel):
+            intent: Literal["research", "converse", "end"]
+
+        router_llm = MagicMock()
+        router_llm.call.side_effect = [
+            Route(intent="research"),
+            Route(intent="converse"),
+        ]
+        chat_llm = MagicMock()
+        chat_llm.call.return_value = "follow-up reply"
+
+        @ConversationConfig(
+            llm=chat_llm,
+            router=RouterConfig(
+                response_format=Route,
+                llm=router_llm,
+                routes=["research"],
+            ),
+        )
+        class RoutedFlow(ConversationalFlow):
+            @listen("research")
+            def run_research(self) -> str:
+                self.append_assistant_message("researched")
+                return "researched"
+
+        flow = RoutedFlow()
+
+        flow.handle_turn("research CrewAI")
+        assert flow.state.last_intent == "research"
+
+        flow.handle_turn("tell me more about that")
+        assert flow.state.last_intent == "converse"
+
+        # Turn 2's router LLM must have seen last_intent='research' in its context.
+        second_call_user_content = router_llm.call.call_args_list[1].kwargs["messages"][1][
+            "content"
+        ]
+        assert '"last_intent": "research"' in second_call_user_content
 
     def test_custom_route_still_runs_with_builtin_routes(self) -> None:
         class ResearchRoute(BaseModel):
