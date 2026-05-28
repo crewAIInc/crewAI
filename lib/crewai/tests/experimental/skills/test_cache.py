@@ -8,7 +8,7 @@ import json
 import tarfile
 from pathlib import Path
 
-from crewai.skills.cache import SkillCacheManager
+from crewai.experimental.skills.cache import SkillCacheManager
 
 
 def _make_tar_gz(files: dict[str, str]) -> bytes:

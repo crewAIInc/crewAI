@@ -36,7 +36,7 @@ def skill_command():
             TokenManager().save_tokens(
                 "test-token", (datetime.now() + timedelta(seconds=36000)).timestamp()
             )
-            from crewai_cli.skills.main import SkillCommand
+            from crewai_cli.experimental.skills.main import SkillCommand
             cmd = SkillCommand()
             yield cmd
 
@@ -142,7 +142,7 @@ class TestSkillPublish:
                 mock_resp.status_code = 200
                 mock_resp.json.return_value = {}
                 mock_client.publish_skill.return_value = mock_resp
-                with patch("crewai_cli.skills.main.Settings") as mock_settings_cls:
+                with patch("crewai_cli.experimental.skills.main.Settings") as mock_settings_cls:
                     mock_settings_cls.return_value.org_name = None
                     mock_settings_cls.return_value.enterprise_base_url = None
                     with pytest.raises(SystemExit):
@@ -151,14 +151,14 @@ class TestSkillPublish:
     def test_publish_calls_api(self, skill_command):
         with in_temp_dir():
             Path("SKILL.md").write_text(
-                "---\nname: my-skill\nversion: 1.0.0\ndescription: A test skill.\n---\nInstructions."
+                "---\nname: my-skill\ndescription: A test skill.\nmetadata:\n  version: 1.0.0\n---\nInstructions."
             )
             mock_resp = MagicMock()
             mock_resp.is_success = True
             mock_resp.status_code = 200
             mock_resp.json.return_value = {}
             skill_command.plus_api_client.publish_skill = MagicMock(return_value=mock_resp)
-            with patch("crewai_cli.skills.main.Settings") as mock_settings_cls:
+            with patch("crewai_cli.experimental.skills.main.Settings") as mock_settings_cls:
                 mock_settings_cls.return_value.org_name = "acme"
                 mock_settings_cls.return_value.enterprise_base_url = None
 
