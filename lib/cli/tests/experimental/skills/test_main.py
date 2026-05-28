@@ -151,7 +151,7 @@ class TestSkillPublish:
     def test_publish_calls_api(self, skill_command):
         with in_temp_dir():
             Path("SKILL.md").write_text(
-                "---\nname: my-skill\nversion: 1.0.0\ndescription: A test skill.\n---\nInstructions."
+                "---\nname: my-skill\ndescription: A test skill.\nmetadata:\n  version: 1.0.0\n---\nInstructions."
             )
             mock_resp = MagicMock()
             mock_resp.is_success = True

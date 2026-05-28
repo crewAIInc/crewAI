@@ -193,10 +193,9 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
 
         name = frontmatter.get("name")
         raw_metadata = frontmatter.get("metadata")
-        metadata_version = (
+        version = (
             raw_metadata.get("version") if isinstance(raw_metadata, dict) else None
         )
-        version = metadata_version or frontmatter.get("version")
         description = frontmatter.get("description")
 
         if not name:
@@ -367,16 +366,13 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
             return result
 
     def _read_version(self, skill_md: Path) -> str | None:
-        """Read the version from a SKILL.md file's metadata, or None.
-
-        Falls back to a top-level 'version' key for back-compat.
-        """
+        """Read the version from a SKILL.md file's metadata, or None."""
         try:
             fm = self._parse_frontmatter(skill_md.read_text())
             raw_metadata = fm.get("metadata")
-            if isinstance(raw_metadata, dict) and raw_metadata.get("version"):
+            if isinstance(raw_metadata, dict):
                 return raw_metadata.get("version")
-            return fm.get("version")
+            return None
         except Exception:
             return None
 

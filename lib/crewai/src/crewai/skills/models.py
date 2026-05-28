@@ -92,19 +92,6 @@ class SkillFrontmatter(BaseModel):
             values[key] = raw.split()
         return values
 
-    @model_validator(mode="before")
-    @classmethod
-    def lift_top_level_version(cls, values: dict[str, Any]) -> dict[str, Any]:
-        """Move a top-level 'version' YAML key into metadata for back-compat."""
-        if "version" not in values:
-            return values
-        version = values.pop("version")
-        metadata = values.get("metadata") or {}
-        if isinstance(metadata, dict) and "version" not in metadata:
-            metadata["version"] = str(version) if version is not None else None
-            values["metadata"] = metadata
-        return values
-
 
 class Skill(BaseModel):
     """A loaded Agent Skill with progressive disclosure support.
