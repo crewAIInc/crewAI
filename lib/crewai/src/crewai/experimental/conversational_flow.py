@@ -26,12 +26,6 @@ ExecutionContext = Any
 ConversationMessageRole = Literal["user", "assistant", "system", "tool"]
 ConversationEventVisibility = Literal["private", "public"]
 
-_ANSWER_FROM_HISTORY_PROMPT_DEFAULT = (
-    "Given the current user message and the canonical message history, decide "
-    "whether the assistant can answer from message_history without running "
-    "additional tools or agents. If so, answer clearly using only that context."
-)
-
 
 @dataclass
 class RouterConfig:
@@ -60,13 +54,14 @@ class ConversationConfig:
 
     ``system_prompt`` defaults to the ``slices.conversational_system_prompt``
     translation when left as ``None``. Pass an empty string to opt out of any
-    system prompt for ``converse_turn``.
+    system prompt for ``converse_turn``. ``answer_from_history_prompt`` falls
+    back to ``slices.conversational_answer_from_history_prompt`` when ``None``.
     """
 
     system_prompt: str | None = None
     llm: Any | None = None
     router: RouterConfig | None = None
-    answer_from_history_prompt: str = _ANSWER_FROM_HISTORY_PROMPT_DEFAULT
+    answer_from_history_prompt: str | None = None
     default_intents: Sequence[str] | None = None
     intent_llm: Any | None = None
     answer_from_history_llm: Any | None = None
@@ -233,7 +228,7 @@ class ConversationalFlow(Flow[ConversationState]):
         messages: list[LLMMessage] = [
             {
                 "role": "system",
-                "content": config.answer_from_history_prompt,
+                "content": self._resolve_answer_from_history_prompt(),
             },
             *self.build_agent_context("answer_from_history"),
         ]
@@ -327,7 +322,7 @@ class ConversationalFlow(Flow[ConversationState]):
             return False
 
         feedback = (
-            f"{config.answer_from_history_prompt}\n\n"
+            f"{self._resolve_answer_from_history_prompt()}\n\n"
             f"Current user message: {context.get('current_user_message')}\n\n"
             f"Message history:\n{self._format_messages(self.conversation_messages)}"
         )
@@ -413,6 +408,18 @@ class ConversationalFlow(Flow[ConversationState]):
         if config is None or config.system_prompt is None:
             return I18N_DEFAULT.slice("conversational_system_prompt")
         return config.system_prompt or None
+
+    def _resolve_answer_from_history_prompt(self) -> str:
+        """Return the effective ``answer_from_history`` prompt.
+
+        ``None`` (the default) falls back to the i18n slice. Unlike
+        ``system_prompt``, this prompt is always needed when the route runs,
+        so it does not support an empty-string opt-out.
+        """
+        config = self._conversation_config
+        if config is None or not config.answer_from_history_prompt:
+            return I18N_DEFAULT.slice("conversational_answer_from_history_prompt")
+        return config.answer_from_history_prompt
 
     def receive_user_message(
         self,
