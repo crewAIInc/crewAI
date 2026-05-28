@@ -4,6 +4,39 @@ description: "تحديثات المنتج والتحسينات وإصلاحات 
 icon: "clock"
 mode: "wide"
 ---
+<Update label="27 مايو 2026">
+  ## v1.14.6a2
+
+  [عرض الإصدار على GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.6a2)
+
+  ## ما الذي تغير
+
+  ### الميزات
+  - تحسين `StdioTransport` لمنع تسرب متغيرات البيئة
+  - تحسين تكوين التخطيط ومعالجة المراقبة
+  - إعلان `env_vars` على `DatabricksQueryTool`
+  - إضافة وثائق خطة التحكم بالوكيل
+
+  ### إصلاحات الأخطاء
+  - إصلاح تسرب المخرجات المنظمة في حلقات استدعاء الأدوات
+  - حذف الاستدعاءات غير القابلة للعودة وحالة المحول في نقاط التحقق
+  - تسلسل حقول `type[BaseModel]` كـ JSON schema في نقاط التحقق
+  - تجنب `task_started` اليتيمة عند استعادة نطاق الاستئناف
+  - السماح لـ `AgentExecutor` بالاستعادة من نقطة تحقق
+  - تصحيح خطأ مطبعي في MongoDB إلى `pymongo` في تبعيات الحزمة
+
+  ### الوثائق
+  - إعادة هيكلة صفحة نقاط التحقق
+  - توثيق خطوة تثبيت حزمة الإدارة لمرة واحدة
+  - نقل Secrets Manager / Workload Identity من replicated-config
+  - إزالة إدخال Skills Repository من سجل التغييرات
+
+  ## المساهمون
+
+  @github-actions[bot], @greysonlalonde, @heitorado, @iris-clawd, @lorenzejay, @lucasgomide, @mattatcha, @thiagomoretto, @vinibrsl
+
+</Update>
+
 <Update label="21 مايو 2026">
   ## v1.14.6a1
 
@@ -12,7 +45,6 @@ mode: "wide"
   ## ما الذي تغير
 
   ### الميزات
-  - إضافة مستودع المهارات مع التسجيل، التخزين المؤقت، واجهة سطر الأوامر، وتكامل SDK
   - توليد ملاحظات إصدار مصنفة للمؤسسات
 
   ### إصلاحات الأخطاء
