@@ -472,7 +472,7 @@ class Agent(BaseAgent):
 
         for item in items:
             if isinstance(item, str):
-                from crewai.skills.registry import (
+                from crewai.experimental.skills.registry import (
                     is_registry_ref,
                     parse_registry_ref,
                     resolve_registry_ref,

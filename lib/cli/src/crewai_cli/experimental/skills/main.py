@@ -147,7 +147,7 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
             )
         else:
             try:
-                from crewai.skills.cache import SkillCacheManager
+                from crewai.experimental.skills.cache import SkillCacheManager
 
                 cache = SkillCacheManager()
                 cache.store(org, name, version, archive_bytes)
