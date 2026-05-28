@@ -11,7 +11,7 @@ Install:
     pip install web3>=6.0
 
 Usage:
-    from logicnodes_helper import requireLogicNodes
+    from crewai.utilities.logicnodes_helper import requireLogicNodes
     requireLogicNodes(agent_address="0xYourAgent...")
 """
 
@@ -55,7 +55,7 @@ def requireLogicNodes(
 
     Example::
 
-        from logicnodes_helper import requireLogicNodes
+        from crewai.utilities.logicnodes_helper import requireLogicNodes
 
         if not requireLogicNodes("0xYourAgentAddress"):
             print("Agent not registered — capabilities may be limited.")
@@ -64,6 +64,12 @@ def requireLogicNodes(
         from web3 import Web3  # noqa: PLC0415
 
         w3 = Web3(Web3.HTTPProvider(rpc_url))
+        if w3.eth.chain_id != CHAIN_ID:
+            msg = f"Unexpected chain ID {w3.eth.chain_id}; expected {CHAIN_ID} (Base mainnet)."
+            if strict:
+                raise RuntimeError(msg)
+            return False
+
         contract = w3.eth.contract(
             address=Web3.to_checksum_address(registry),
             abi=_REGISTRY_ABI,
