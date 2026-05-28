@@ -28,6 +28,7 @@ from pydantic import (
     ConfigDict,
     Field,
     PrivateAttr,
+    ValidationError,
     model_validator,
 )
 from pydantic.functional_serializers import PlainSerializer
@@ -471,7 +472,7 @@ class Agent(BaseAgent):
 
         for item in items:
             if isinstance(item, str):
-                from crewai.skills.registry import (
+                from crewai.experimental.skills.registry import (
                     is_registry_ref,
                     parse_registry_ref,
                     resolve_registry_ref,
@@ -1710,24 +1711,32 @@ class Agent(BaseAgent):
         elif response_format:
             raw_output = str(output) if not isinstance(output, str) else output
             try:
-                model_schema = generate_model_description(response_format)
-                schema = json.dumps(model_schema, indent=2)
-                instructions = I18N_DEFAULT.slice("formatted_task_instructions").format(
-                    output_format=schema
-                )
+                formatted_result = response_format.model_validate_json(raw_output)
+            except ValidationError:
+                # Direct JSON validation failed; fall back to converter-based parsing below.
+                formatted_result = None
 
-                converter = Converter(
-                    llm=cast(BaseLLM, self.llm),
-                    text=raw_output,
-                    model=response_format,
-                    instructions=instructions,
-                )
+            if formatted_result is None:
+                try:
+                    model_schema = generate_model_description(response_format)
+                    schema = json.dumps(model_schema, indent=2)
+                    instructions = I18N_DEFAULT.slice(
+                        "formatted_task_instructions"
+                    ).format(output_format=schema)
 
-                conversion_result = converter.to_pydantic()
-                if isinstance(conversion_result, BaseModel):
-                    formatted_result = conversion_result
-            except ConverterError:
-                pass
+                    converter = Converter(
+                        llm=cast(BaseLLM, self.llm),
+                        text=raw_output,
+                        model=response_format,
+                        instructions=instructions,
+                    )
+
+                    conversion_result = converter.to_pydantic()
+                    if isinstance(conversion_result, BaseModel):
+                        formatted_result = conversion_result
+                except ConverterError:
+                    # Conversion failure is non-fatal; raw output is preserved below.
+                    pass
         else:
             raw_output = str(output) if not isinstance(output, str) else output
 

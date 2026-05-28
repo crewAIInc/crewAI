@@ -137,7 +137,6 @@ def test_file_exists_error_handling(tool, temp_env, overwrite):
     assert read_file(path) == "Pre-existing content"
 
 
-# --- Path traversal prevention ---
 
 def test_blocks_traversal_in_filename(tool, temp_env):
     # Create a sibling "outside" directory so we can assert nothing was written there.
