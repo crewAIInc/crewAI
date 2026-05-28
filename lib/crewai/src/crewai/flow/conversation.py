@@ -73,8 +73,16 @@ def normalize_kickoff_inputs(
     *,
     user_message: str | dict[str, Any] | None = None,
     session_id: str | None = None,
-) -> dict[str, Any]:
-    """Merge conversational kickoff kwargs into the inputs dict."""
+) -> dict[str, Any] | None:
+    """Merge conversational kickoff kwargs into the inputs dict.
+
+    Returns ``None`` when the caller passed no inputs and no conversational
+    kwargs — so ``FlowStartedEvent.inputs`` stays ``None`` for stateless flows
+    instead of being materialized as an empty dict.
+    """
+    if inputs is None and user_message is None and session_id is None:
+        return None
+
     merged: dict[str, Any] = dict(inputs or {})
 
     if session_id is not None:

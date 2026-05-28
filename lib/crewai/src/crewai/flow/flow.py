@@ -1359,7 +1359,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         session_id: str | None = None,
         intents: Sequence[str] | None = None,
         intent_llm: str | BaseLLM | None = None,
-    ) -> dict[str, Any]:
+    ) -> dict[str, Any] | None:
         """Store pending conversational turn options for ``kickoff_async``."""
         config = get_conversational_config(self)
         resolved_intents = intents
