@@ -505,20 +505,32 @@ class LanceDBStorage:
             return 0
         tenant_clause = _tenant_where(tenant_id, user_id)
         with store_lock(self._lock_name):
-            if record_ids and not (categories or metadata_filter):
+            # Fast path: pure record_ids delete with no other predicates.
+            # If any of older_than / categories / metadata_filter is also
+            # specified, fall through to the scan branch so those predicates
+            # are honored AND intersected with record_ids.
+            if record_ids and not (categories or metadata_filter or older_than):
                 before = int(self._table.count_rows())
                 ids_expr = ", ".join(f"'{_sql_quote(rid)}'" for rid in record_ids)
                 self._do_write(
                     "delete", f"({tenant_clause}) AND id IN ({ids_expr})"
                 )
                 return before - int(self._table.count_rows())
-            if categories or metadata_filter:
+            if categories or metadata_filter or (record_ids and older_than):
                 rows = self._scan_rows(
                     scope_prefix, tenant_id=tenant_id, user_id=user_id
+                )
+                # When record_ids is provided alongside other predicates, the
+                # delete is the INTERSECTION of all of them: a row must match
+                # the predicates AND be in record_ids.
+                allowed_ids: set[str] | None = (
+                    set(record_ids) if record_ids else None
                 )
                 to_delete: list[str] = []
                 for row in rows:
                     record = self._row_to_record(row)
+                    if allowed_ids is not None and record.id not in allowed_ids:
+                        continue
                     if categories and not any(
                         c in record.categories for c in categories
                     ):

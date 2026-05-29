@@ -198,6 +198,62 @@ def test_migrate_dry_run_does_not_write(tmp_path: Path) -> None:
     assert "tenant_id" not in field_names
 
 
+def test_migrate_pagination_streams_past_page_size(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Tables larger than a single page must be fully scanned, not truncated.
+
+    Pre-fix bug: the migrator did ``.limit(10_000_000).to_list()`` and silently
+    dropped anything past that cap. The paginated streamer must keep going
+    until an empty page is returned.
+    """
+    from crewai_cli import memory_migrate
+
+    # Force a small page size so a small fixture exercises the loop.
+    monkeypatch.setattr(memory_migrate, "_SCAN_PAGE_SIZE", 2)
+
+    store = tmp_path / "memory"
+    store.mkdir(parents=True, exist_ok=True)
+    db = lancedb.connect(str(store))
+    rows = [
+        {
+            "id": f"row-{i}",
+            "content": f"item {i}",
+            "scope": "/",
+            "categories_str": "[]",
+            "metadata_str": json.dumps({"customer_id": f"cust-{i}"}),
+            "importance": 0.5,
+            "created_at": datetime.utcnow().isoformat(),
+            "last_accessed": datetime.utcnow().isoformat(),
+            "source": "",
+            "private": False,
+            "vector": [0.1, 0.2, 0.3, 0.4],
+        }
+        for i in range(7)  # 4 pages: 2, 2, 2, 1
+    ]
+    db.create_table("memories", rows)
+
+    summary = memory_migrate.run_migrate(
+        storage_dir=str(store),
+        default_tenant="_default",
+        from_metadata_key="customer_id",
+        table_name="memories",
+        dry_run=False,
+    )
+
+    # All 7 rows must be visited even though the page size is 2.
+    assert summary["rows_scanned"] == 7
+    assert summary["rows_with_metadata_key"] == 7
+    assert summary["rows_updated"] == 7
+
+    by_id = {
+        r["id"]: r
+        for r in db.open_table("memories").search().to_list()
+    }
+    for i in range(7):
+        assert by_id[f"row-{i}"]["tenant_id"] == f"cust-{i}"
+
+
 def test_migrate_rejects_empty_default_tenant(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="default_tenant"):
         run_migrate(

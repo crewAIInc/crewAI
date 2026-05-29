@@ -14,10 +14,16 @@ The migration is two layers:
 
 The command is idempotent. Running it twice does not change anything that was
 already correct.
+
+The scan is paginated and column-selected: it never loads the ``vector`` column
+(which dominates per-row memory) and never tries to materialize the whole table
+at once. The previous implementation capped the read at 10_000_000 rows and
+silently truncated past it; this one streams every row in fixed-size pages.
 """
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 import json
 import logging
 import os
@@ -28,6 +34,16 @@ from typing import Any, TypedDict
 _logger = logging.getLogger(__name__)
 
 
+# Only the columns we actually inspect during migration. Crucially this omits
+# the ``vector`` column -- on a 1536-dimension index, that column is ~6 KiB per
+# row and dominates memory use. We do not need it to stamp tenant_id.
+_SCAN_COLUMNS = ["id", "tenant_id", "metadata_str"]
+
+# Page size for the paginated scan. 5_000 keeps peak memory bounded
+# (~5 MiB per page including json metadata) while amortizing per-call overhead.
+_SCAN_PAGE_SIZE = 5_000
+
+
 class MigrateSummary(TypedDict):
     storage_dir: str
     table_name: str
@@ -35,6 +51,41 @@ class MigrateSummary(TypedDict):
     rows_to_stamp: int
     rows_with_metadata_key: int
     rows_updated: int
+
+
+def _iter_rows_paginated(table: Any) -> Iterator[dict[str, Any]]:
+    """Yield rows from a LanceDB table in fixed-size pages, columns-selected.
+
+    Selects only columns we actually inspect during migration. The heavy
+    ``vector`` column is never materialized. ``tenant_id`` is only selected
+    when the schema already has it -- in dry-run against a pre-isolation
+    table the column does not exist yet, and asking for it raises a LanceDB
+    schema error. A missing tenant_id column is equivalent to every row
+    being unstamped for the purpose of migration accounting.
+
+    Pagination uses an offset cursor. The migration is read-then-write with
+    no concurrent writers expected, so the per-row id stays stable across
+    pages.
+    """
+    available = {field.name for field in table.schema}
+    select_columns = [c for c in _SCAN_COLUMNS if c in available]
+    offset = 0
+    while True:
+        query = table.search().select(select_columns).limit(_SCAN_PAGE_SIZE)
+        # .offset() is the chained form on lancedb >= 0.16; older versions
+        # only support reading from the start. The migration documents the
+        # supported lancedb version range in pyproject; here we assume the
+        # chain is available.
+        if offset:
+            query = query.offset(offset)
+        page = query.to_list()
+        if not page:
+            return
+        for row in page:
+            yield row
+        if len(page) < _SCAN_PAGE_SIZE:
+            return
+        offset += len(page)
 
 
 def _resolve_storage_dir(storage_dir: str | None) -> Path:
@@ -117,16 +168,16 @@ def run_migrate(
                 exc,
             )
 
-    # Scan every row that needs stamping.
-    # A row needs stamping if:
+    # Scan every row that needs stamping. The iterator pages through the
+    # table fetching only id, tenant_id, and metadata_str -- the heavy
+    # ``vector`` column is never materialized. A row needs stamping if:
     #   - tenant_id is missing/empty, OR
-    #   - --from-metadata-key was provided AND metadata[key] differs from row's
-    #     current tenant_id (idempotent: re-runs don't re-update unchanged rows).
-    rows = table.search().limit(10_000_000).to_list()
-    summary["rows_scanned"] = len(rows)
-
+    #   - --from-metadata-key was provided AND metadata[key] differs from the
+    #     row's current tenant_id (idempotent: re-runs don't re-update
+    #     unchanged rows).
     to_update: list[dict[str, Any]] = []
-    for row in rows:
+    for row in _iter_rows_paginated(table):
+        summary["rows_scanned"] += 1
         # A row that pre-dates the tenant_id column (or has an empty value)
         # is treated as if it had been stamped with default_tenant. This makes
         # dry-run and real-run report identical rows_to_stamp counts -- the

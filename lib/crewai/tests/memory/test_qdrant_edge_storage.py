@@ -67,6 +67,52 @@ def test_save_search(storage: QdrantEdgeStorage) -> None:
     assert score >= 0.0
 
 
+def test_search_isolates_tenants_with_colliding_embeddings(
+    storage: QdrantEdgeStorage,
+) -> None:
+    """Two tenants store records with identical embeddings; each tenant's
+    search must return only its own row. This is the Qdrant-backed mirror of
+    the LanceDB isolation contract in test_tenant_isolation.py.
+    """
+    embedding = [0.5, 0.5, 0.5, 0.5]
+    alice = _rec(content="alice secret", scope="/", embedding=embedding)
+    alice.tenant_id = "alice"
+    bob = _rec(content="bob secret", scope="/", embedding=embedding)
+    bob.tenant_id = "bob"
+    storage.save([alice, bob])
+
+    alice_hits = storage.search(embedding, tenant_id="alice", limit=10)
+    bob_hits = storage.search(embedding, tenant_id="bob", limit=10)
+
+    assert len(alice_hits) == 1
+    assert alice_hits[0][0].content == "alice secret"
+    assert alice_hits[0][0].tenant_id == "alice"
+    assert not any("bob" in r.content for r, _ in alice_hits)
+
+    assert len(bob_hits) == 1
+    assert bob_hits[0][0].content == "bob secret"
+    assert bob_hits[0][0].tenant_id == "bob"
+    assert not any("alice" in r.content for r, _ in bob_hits)
+
+
+def test_delete_is_tenant_scoped(storage: QdrantEdgeStorage) -> None:
+    """A tenant-scoped delete must not touch another tenant's rows."""
+    alice = _rec(content="alice", scope="/")
+    alice.tenant_id = "alice"
+    bob = _rec(content="bob", scope="/")
+    bob.tenant_id = "bob"
+    storage.save([alice, bob])
+
+    deleted = storage.delete(tenant_id="alice")
+    assert deleted == 1
+
+    bob_remaining = storage.list_records(tenant_id="bob")
+    assert len(bob_remaining) == 1
+    assert bob_remaining[0].content == "bob"
+    alice_remaining = storage.list_records(tenant_id="alice")
+    assert alice_remaining == []
+
+
 def test_delete_count(storage: QdrantEdgeStorage) -> None:
     r = _rec(scope="/")
     storage.save([r])

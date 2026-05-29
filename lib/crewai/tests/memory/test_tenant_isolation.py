@@ -44,14 +44,30 @@ def lance_storage(lance_path: Path) -> LanceDBStorage:
 
 @pytest.fixture
 def mock_embedder() -> MagicMock:
-    """Embedder that returns DIFFERENT embeddings per text, never identical."""
+    """Embedder that returns DIFFERENT embeddings per text, never identical.
+
+    A naive ``abs(hash(t)) % N`` mapping buckets distinct texts into N
+    collisions, which would let two different inputs produce identical
+    vectors and make the isolation assertions in this file pass vacuously
+    (the foreign-tenant row would be filtered by tenant predicate, not by
+    semantic distance). Using a SHA-256 digest of the text gives 2^32 worth
+    of distinct values across four float buckets while staying deterministic
+    across test runs.
+    """
+    import hashlib
+
     m = MagicMock()
 
     def embed(texts: list[str]) -> list[list[float]]:
-        out = []
+        out: list[list[float]] = []
         for t in texts:
-            h = abs(hash(t)) % 1000 / 1000.0
-            out.append([h, 1.0 - h, h * 0.5, 1.0 - h * 0.5])
+            digest = hashlib.sha256(t.encode("utf-8")).digest()
+            # 4 buckets of 4 bytes each -> 4 floats in [0, 1).
+            vec = [
+                int.from_bytes(digest[i * 4 : (i + 1) * 4], "big") / 2**32
+                for i in range(4)
+            ]
+            out.append(vec)
         return out
 
     m.side_effect = embed
@@ -303,6 +319,53 @@ class TestMemoryIsolation:
         assert deleted == 1
         bob_hits = m.recall("note", tenant_id="bob", depth="shallow")
         assert any("bob note" in h.record.content for h in bob_hits)
+
+    def test_deep_recall_honors_tenant(
+        self, tmp_path: Path, mock_embedder: MagicMock
+    ) -> None:
+        """depth='deep' goes through RecallFlow with LLM-driven exploration.
+
+        The design doc claims RecallFlow is safe by construction because it
+        holds a ScopedStorage, not the raw backend. This test exercises that
+        path end to end so the claim has receipts. Without this test, every
+        recall in this class would be the depth='shallow' path and the
+        deep-recall code would be uncovered for isolation.
+        """
+        from crewai.memory.unified_memory import Memory
+
+        # An LLM mock that always says "fall through to direct search" -- we
+        # don't need the LLM's analysis to validate isolation; we need the
+        # RecallFlow path to execute at all.
+        llm = MagicMock()
+        llm.call.return_value = "{}"
+
+        m = Memory(
+            storage=str(tmp_path / "mem.lance"),
+            llm=llm,
+            embedder=mock_embedder,
+        )
+        m.remember(
+            "alice's birthday is March 4",
+            tenant_id="alice",
+            scope="/personal",
+            categories=["birthday"],
+            importance=0.5,
+        )
+        m.remember(
+            "bob's birthday is March 4",
+            tenant_id="bob",
+            scope="/personal",
+            categories=["birthday"],
+            importance=0.5,
+        )
+
+        alice = m.recall("when is the birthday", tenant_id="alice", depth="deep")
+        bob = m.recall("when is the birthday", tenant_id="bob", depth="deep")
+
+        assert all(h.record.tenant_id == "alice" for h in alice)
+        assert all(h.record.tenant_id == "bob" for h in bob)
+        assert not any("bob" in h.record.content for h in alice)
+        assert not any("alice" in h.record.content for h in bob)
 
     def test_instance_default_tenant_holds(
         self, tmp_path: Path, mock_embedder: MagicMock

@@ -131,6 +131,71 @@ def test_lancedb_delete_count(lancedb_path: Path) -> None:
     assert storage.count(tenant_id="_default") == 0
 
 
+def test_lancedb_delete_record_ids_intersects_with_other_filters(
+    lancedb_path: Path,
+) -> None:
+    """delete(record_ids=..., older_than=...) must INTERSECT both predicates.
+
+    Pre-fix bug: record_ids + older_than took the record_ids fast path and
+    silently ignored older_than. Equivalently, record_ids + categories scanned
+    by categories and never intersected the result with record_ids.
+    """
+    from datetime import datetime, timedelta
+
+    from crewai.memory.storage.lancedb_storage import LanceDBStorage
+
+    storage = LanceDBStorage(path=str(lancedb_path), vector_dim=4)
+
+    old = MemoryRecord(
+        id="old-id",
+        content="old",
+        scope="/",
+        embedding=[0.0] * 4,
+        created_at=datetime(2020, 1, 1),
+    )
+    new = MemoryRecord(
+        id="new-id",
+        content="new",
+        scope="/",
+        embedding=[0.0] * 4,
+        created_at=datetime.utcnow(),
+    )
+    storage.save([old, new])
+
+    # record_ids targets both, but older_than="1 day ago" should only match `old`.
+    cutoff = datetime.utcnow() - timedelta(days=1)
+    deleted = storage.delete(
+        tenant_id="_default",
+        record_ids=["old-id", "new-id"],
+        older_than=cutoff,
+    )
+    assert deleted == 1
+    remaining = storage.list_records(tenant_id="_default")
+    assert {r.id for r in remaining} == {"new-id"}
+
+
+def test_lancedb_delete_record_ids_intersects_with_categories(
+    lancedb_path: Path,
+) -> None:
+    """delete(record_ids=..., categories=...) must INTERSECT both predicates."""
+    from crewai.memory.storage.lancedb_storage import LanceDBStorage
+
+    storage = LanceDBStorage(path=str(lancedb_path), vector_dim=4)
+    storage.save([
+        MemoryRecord(id="a", content="a", scope="/", categories=["x"], embedding=[0.0] * 4),
+        MemoryRecord(id="b", content="b", scope="/", categories=["x"], embedding=[0.0] * 4),
+        MemoryRecord(id="c", content="c", scope="/", categories=["y"], embedding=[0.0] * 4),
+    ])
+
+    # record_ids says [a, c]; categories says [x]; intersection is just `a`.
+    deleted = storage.delete(
+        tenant_id="_default", record_ids=["a", "c"], categories=["x"]
+    )
+    assert deleted == 1
+    remaining = {r.id for r in storage.list_records(tenant_id="_default")}
+    assert remaining == {"b", "c"}
+
+
 def test_lancedb_list_scopes_get_scope_info(lancedb_path: Path) -> None:
     from crewai.memory.storage.lancedb_storage import LanceDBStorage
 

@@ -415,7 +415,13 @@ def memory_migrate(
     if from_metadata_key:
         click.echo(f"From metadata key: {from_metadata_key}")
         click.echo(f"  with key set:    {summary['rows_with_metadata_key']}")
-        click.echo(f"  without key:     {summary['rows_to_stamp'] - summary['rows_with_metadata_key']}")
+        # "without key" is derived from rows_scanned, not rows_to_stamp,
+        # because rows_to_stamp shrinks on reruns once the data is migrated
+        # and would produce a misleading (possibly negative) display value.
+        click.echo(
+            f"  without key:     "
+            f"{summary['rows_scanned'] - summary['rows_with_metadata_key']}"
+        )
     if dry_run:
         click.echo("DRY RUN -- no changes written. Re-run without --dry-run to apply.")
     else:
