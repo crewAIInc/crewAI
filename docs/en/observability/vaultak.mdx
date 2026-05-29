@@ -1,7 +1,7 @@
 ---
 title: Vaultak Integration
 description: Runtime security and behavioral monitoring for CrewAI agents
-icon: shield-check
+icon: shield-halved
 mode: "wide"
 ---
 
@@ -128,6 +128,7 @@ vaultak = VaultakCallbackHandler(
     api_key="vtk_...",
     agent_name="prod-db-crew",
     risk_threshold=5.0,  # Block anything above medium risk
+    verbose=True,        # Log every scored action to stdout
 )
 ```
 
