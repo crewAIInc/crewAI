@@ -8,7 +8,12 @@ import sys
 
 import pytest
 
-from crewai.project.json_loader import JSONProjectValidationError, load_agent, strip_jsonc_comments
+from crewai.project.json_loader import (
+    JSONProjectValidationError,
+    find_json_project_file,
+    load_agent,
+    strip_jsonc_comments,
+)
 
 
 class TestStripJsoncComments:
@@ -58,6 +63,14 @@ class TestStripJsoncComments:
         text = '{"key": "value"}'
         result = strip_jsonc_comments(text)
         assert json.loads(result) == {"key": "value"}
+
+
+def test_find_json_project_file_prefers_jsonc(tmp_path: Path):
+    (tmp_path / "agent.json").write_text("{}")
+    jsonc_path = tmp_path / "agent.jsonc"
+    jsonc_path.write_text("{}")
+
+    assert find_json_project_file(tmp_path, "agent") == jsonc_path
 
 
 class TestLoadAgent:

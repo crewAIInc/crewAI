@@ -1,8 +1,9 @@
 from enum import Enum
-import subprocess
 from pathlib import Path
+import subprocess
 
 import click
+from crewai.project.json_loader import find_crew_json_file
 from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
 from packaging import version
 
@@ -17,7 +18,7 @@ class CrewType(Enum):
 
 def _has_json_crew() -> bool:
     """Check if this is a JSON-defined crew project."""
-    return Path("crew.jsonc").exists() or Path("crew.json").exists()
+    return find_crew_json_file() is not None
 
 
 def _run_json_crew(daemon: bool = False) -> None:
@@ -28,7 +29,9 @@ def _run_json_crew(daemon: bool = False) -> None:
     if env_file.exists():
         load_dotenv(env_file, override=True)
 
-    crew_path = Path("crew.jsonc") if Path("crew.jsonc").exists() else Path("crew.json")
+    crew_path = find_crew_json_file()
+    if crew_path is None:
+        raise FileNotFoundError("No crew.jsonc or crew.json found")
 
     if daemon:
         return _run_json_crew_daemon(crew_path)
@@ -52,19 +55,21 @@ def _run_json_crew_daemon(crew_path: Path) -> None:
     """Run a JSON crew in daemon mode — plain console output, no TUI."""
     import time
 
+    from crewai.project.crew_loader import load_crew
     from rich.console import Console
     from rich.text import Text
 
-    from crewai.project.crew_loader import load_crew
-
     console = Console()
-    _TEAL = "#1F7982"
-    _RED = "#FF5A50"
+    teal = "#1F7982"
+    red = "#FF5A50"
 
     crew, default_inputs = load_crew(crew_path)
 
     console.print(
-        Text(f"  ▸ Running {crew.name or 'Crew'} ({len(crew.tasks)} tasks)", style=f"bold {_TEAL}")
+        Text(
+            f"  ▸ Running {crew.name or 'Crew'} ({len(crew.tasks)} tasks)",
+            style=f"bold {teal}",
+        )
     )
     console.print()
 
@@ -73,9 +78,7 @@ def _run_json_crew_daemon(crew_path: Path) -> None:
         result = crew.kickoff(inputs=default_inputs)
         elapsed = time.time() - start
         console.print()
-        console.print(
-            Text(f"  ✔ Completed in {elapsed:.1f}s", style=f"bold {_TEAL}")
-        )
+        console.print(Text(f"  ✔ Completed in {elapsed:.1f}s", style=f"bold {teal}"))
         if result and hasattr(result, "raw") and result.raw:
             console.print()
             console.print(result.raw)
@@ -84,7 +87,7 @@ def _run_json_crew_daemon(crew_path: Path) -> None:
         elapsed = time.time() - start
         console.print()
         console.print(
-            Text(f"  ✘ Failed after {elapsed:.1f}s: {e}", style=f"bold {_RED}")
+            Text(f"  ✘ Failed after {elapsed:.1f}s: {e}", style=f"bold {red}")
         )
         raise SystemExit(1) from e
 
@@ -131,12 +134,15 @@ def _print_post_tui_summary(app: object) -> None:
     if token_str:
         token_str += " tokens"
 
-    _CREWAI_RED = "#FF5A50"
-    _CREWAI_TEAL = "#1F7982"
+    crewai_red = "#FF5A50"
+    crewai_teal = "#1F7982"
 
     if app._status == "completed":
         summary = Text()
-        summary.append(f"  ✔ Completed {app._total_tasks} tasks", style=f"bold {_CREWAI_TEAL}")
+        summary.append(
+            f"  ✔ Completed {app._total_tasks} tasks",
+            style=f"bold {crewai_teal}",
+        )
         summary.append(f" in {elapsed:.1f}s", style="dim")
         if token_str:
             summary.append(f"  {token_str}", style="dim")
@@ -145,27 +151,27 @@ def _print_post_tui_summary(app: object) -> None:
                 summary,
                 title=f" {app._crew_name} ",
                 title_align="left",
-                border_style=_CREWAI_TEAL,
+                border_style=crewai_teal,
                 padding=(0, 1),
             )
         )
         if app._final_output:
             console.print()
-            console.print(Text("  Final Result", style=f"bold {_CREWAI_TEAL}"))
+            console.print(Text("  Final Result", style=f"bold {crewai_teal}"))
             console.print()
             console.print(Padding(Markdown(app._final_output), (0, 2)))
     elif app._status == "failed":
         content = Text()
-        content.append("  ✘ Failed", style=f"bold {_CREWAI_RED}")
+        content.append("  ✘ Failed", style=f"bold {crewai_red}")
         content.append(f" after {elapsed:.1f}s\n", style="dim")
         if app._error:
-            content.append(f"\n  {app._error}\n", style=_CREWAI_RED)
+            content.append(f"\n  {app._error}\n", style=crewai_red)
         console.print(
             Panel(
                 content,
                 title=f" {app._crew_name} ",
                 title_align="left",
-                border_style=_CREWAI_RED,
+                border_style=crewai_red,
                 padding=(0, 1),
             )
         )

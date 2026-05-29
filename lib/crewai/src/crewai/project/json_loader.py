@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import json
 import logging
 from pathlib import Path
@@ -68,6 +69,46 @@ _CREW_RUNTIME_FIELDS = {
 }
 
 
+JSON_PROJECT_EXTENSIONS = (".jsonc", ".json")
+
+
+@dataclass(frozen=True)
+class JSONAgentDefinition:
+    """Parsed JSON agent definition and constructor kwargs."""
+
+    name: str
+    path: Path
+    definition: dict[str, Any]
+    kwargs: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class JSONCrewProject:
+    """Parsed JSON crew project used by runtime loading and validation."""
+
+    crew_path: Path
+    agents_dir: Path
+    definition: dict[str, Any]
+    agent_names: list[str]
+    agents: dict[str, JSONAgentDefinition]
+    task_definitions: list[dict[str, Any]]
+
+
+def find_json_project_file(directory: str | Path, stem: str) -> Path | None:
+    """Return ``stem.jsonc`` or ``stem.json``, preferring JSONC."""
+    root = Path(directory)
+    for ext in JSON_PROJECT_EXTENSIONS:
+        candidate = root / f"{stem}{ext}"
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def find_crew_json_file(project_root: str | Path = ".") -> Path | None:
+    """Find the JSON crew definition in a project root."""
+    return find_json_project_file(project_root, "crew")
+
+
 def strip_jsonc_comments(text: str) -> str:
     """Strip JSONC comments and trailing commas while preserving string values."""
     without_comments = _strip_jsonc_comments(text)
@@ -111,19 +152,51 @@ def load_agent(source: str | Path) -> Any:
 def validate_crew_project(
     source: str | Path,
     agents_dir: Path | None = None,
-) -> None:
+) -> JSONCrewProject:
     """Validate JSON crew structure without kicking off the crew."""
+    return load_json_crew_project(source, agents_dir=agents_dir, collect_errors=True)
+
+
+def load_json_crew_project(
+    source: str | Path,
+    agents_dir: Path | None = None,
+    *,
+    collect_errors: bool = False,
+) -> JSONCrewProject:
+    """Parse and structurally validate a JSON crew project.
+
+    When ``collect_errors`` is true, all discoverable structural errors are
+    returned as a single ``JSONProjectValidationError`` for deploy validation.
+    Runtime loading keeps the previous fail-fast behavior where possible.
+    """
     crew_path = Path(source)
     if agents_dir is None:
         agents_dir = crew_path.parent / "agents"
 
     errors: list[str] = []
+
+    def fail(message: str, exc_type: type[Exception] = JSONProjectError) -> None:
+        if collect_errors:
+            errors.append(message)
+            return
+        raise exc_type(message)
+
+    def fail_many(messages: list[str]) -> None:
+        if not messages:
+            return
+        if collect_errors:
+            errors.extend(messages)
+            return
+        raise JSONProjectValidationError(messages)
+
     try:
         defn = _expect_object(load_jsonc_file(crew_path), crew_path)
     except Exception as exc:
-        raise JSONProjectValidationError([str(exc)]) from exc
+        if collect_errors:
+            raise JSONProjectValidationError([str(exc)]) from exc
+        raise
 
-    errors.extend(
+    fail_many(
         _field_errors(
             defn,
             _crew_allowed_fields(),
@@ -135,32 +208,47 @@ def validate_crew_project(
 
     agent_names = defn.get("agents", [])
     if not isinstance(agent_names, list) or not agent_names:
-        errors.append(f"{crew_path}: 'agents' must be a non-empty list")
+        fail(f"{crew_path}: 'agents' must be a non-empty list")
         agent_names = []
 
     agents_dir = Path(agents_dir)
+    agent_definitions: dict[str, JSONAgentDefinition] = {}
     for agent_name in agent_names:
         if not isinstance(agent_name, str) or not agent_name:
-            errors.append(
-                f"{crew_path}: each agent reference must be a non-empty string"
-            )
+            fail(f"{crew_path}: each agent reference must be a non-empty string")
             continue
-        agent_file = _find_agent_file(agents_dir, agent_name)
+        agent_file = find_json_project_file(agents_dir, agent_name)
         if agent_file is None:
-            errors.append(
-                f"{crew_path}: agent '{agent_name}' not found in {agents_dir} "
+            message = (
+                f"Agent definition for '{agent_name}' not found in {agents_dir} "
                 f"(tried {agent_name}.jsonc and {agent_name}.json)"
             )
+            if collect_errors:
+                errors.append(
+                    f"{crew_path}: agent '{agent_name}' not found in {agents_dir} "
+                    f"(tried {agent_name}.jsonc and {agent_name}.json)"
+                )
+            else:
+                raise FileNotFoundError(message)
             continue
         try:
             agent_defn = _expect_object(load_jsonc_file(agent_file), agent_file)
-            _agent_kwargs_from_definition(agent_defn, agent_file)
+            agent_kwargs = _agent_kwargs_from_definition(agent_defn, agent_file)
         except Exception as exc:
-            errors.append(str(exc))
+            if collect_errors:
+                errors.append(str(exc))
+                continue
+            raise
+        agent_definitions[agent_name] = JSONAgentDefinition(
+            name=agent_name,
+            path=agent_file,
+            definition=agent_defn,
+            kwargs=agent_kwargs,
+        )
 
     task_defs = defn.get("tasks", [])
     if not isinstance(task_defs, list) or not task_defs:
-        errors.append(f"{crew_path}: 'tasks' must be a non-empty list")
+        fail(f"{crew_path}: 'tasks' must be a non-empty list")
         task_defs = []
 
     known_tasks: set[str] = set()
@@ -168,9 +256,9 @@ def validate_crew_project(
     for index, task_defn in enumerate(task_defs):
         task_path = f"{crew_path}: tasks[{index}]"
         if not isinstance(task_defn, dict):
-            errors.append(f"{task_path} must be an object")
+            fail(f"{task_path} must be an object")
             continue
-        errors.extend(
+        fail_many(
             _field_errors(
                 task_defn,
                 _task_allowed_fields(),
@@ -178,31 +266,32 @@ def validate_crew_project(
                 task_path,
             )
         )
-        errors.extend(
+        missing_required = [
             f"{task_path} missing required field '{required}'"
             for required in ("description", "expected_output")
             if required not in task_defn
-        )
+        ]
+        fail_many(missing_required)
 
         agent_ref = task_defn.get("agent")
         if agent_ref is not None and agent_ref not in known_agents:
-            errors.append(
+            fail(
                 f"{task_path} references agent '{agent_ref}' which is not in the crew agents list"
             )
 
         context_names = task_defn.get("context")
         if context_names is not None:
             if not isinstance(context_names, list):
-                errors.append(
+                fail(
                     f"{task_path} field 'context' must be a list of task names"
                 )
             else:
-                errors.extend(
+                fail_many([
                     f"{task_path} has context reference '{ctx_name}' but that task "
                     "has not been defined yet"
                     for ctx_name in context_names
                     if ctx_name not in known_tasks
-                )
+                ])
 
         task_name = task_defn.get("name")
         if isinstance(task_name, str) and task_name:
@@ -210,6 +299,15 @@ def validate_crew_project(
 
     if errors:
         raise JSONProjectValidationError(errors)
+
+    return JSONCrewProject(
+        crew_path=crew_path,
+        agents_dir=agents_dir,
+        definition=defn,
+        agent_names=list(agent_names),
+        agents=agent_definitions,
+        task_definitions=task_defs,
+    )
 
 
 def _strip_jsonc_comments(text: str) -> str:
@@ -481,14 +579,6 @@ def _crew_allowed_fields() -> set[str]:
     from crewai import Crew
 
     return set(Crew.model_fields) - _CREW_RUNTIME_FIELDS
-
-
-def _find_agent_file(agents_dir: Path, name: str) -> Path | None:
-    for ext in (".jsonc", ".json"):
-        candidate = agents_dir / f"{name}{ext}"
-        if candidate.exists():
-            return candidate
-    return None
 
 
 def _format_validation_error(path: str | Path, exc: ValidationError) -> str:

@@ -386,6 +386,9 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
         default_llm="openai/gpt-5.5",
     )
     assert (tmp_path / "json_crew" / "crew.jsonc").exists()
+    assert not (tmp_path / "json_crew" / "tests").exists()
+    assert not (tmp_path / "json_crew" / "config.jsonc").exists()
+
     crew_template = (tmp_path / "json_crew" / "crew.jsonc").read_text()
     assert (
         '"guardrail": "Every factual claim needs context support."'

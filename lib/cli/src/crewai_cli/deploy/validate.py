@@ -40,7 +40,8 @@ from typing import Any
 
 from crewai.project.json_loader import (
     JSONProjectValidationError,
-    load_jsonc_file,
+    find_crew_json_file,
+    find_json_project_file,
     validate_crew_project,
 )
 from rich.console import Console
@@ -158,9 +159,7 @@ class DeployValidator:
 
     @property
     def _is_json_crew(self) -> bool:
-        return (self.project_root / "crew.jsonc").exists() or (
-            self.project_root / "crew.json"
-        ).exists()
+        return find_crew_json_file(self.project_root) is not None
 
     def run(self) -> list[ValidationResult]:
         """Run all checks. Later checks are skipped when earlier ones make
@@ -192,15 +191,12 @@ class DeployValidator:
 
     def _run_json_checks(self) -> list[ValidationResult]:
         """Validation suite for JSON-defined crew projects."""
-        crew_path = (
-            self.project_root / "crew.jsonc"
-            if (self.project_root / "crew.jsonc").exists()
-            else self.project_root / "crew.json"
-        )
+        crew_path = find_crew_json_file(self.project_root)
+        if crew_path is None:
+            return self.results
 
         try:
-            crew_data = load_jsonc_file(crew_path)
-            validate_crew_project(crew_path, self.project_root / "agents")
+            project = validate_crew_project(crew_path, self.project_root / "agents")
         except JSONProjectValidationError as e:
             self._add(
                 Severity.ERROR,
@@ -219,12 +215,11 @@ class DeployValidator:
             )
             return self.results
 
-        agents = crew_data.get("agents", []) if isinstance(crew_data, dict) else []
         agents_dir = self.project_root / "agents"
 
         self._check_pyproject()
         self._check_lockfile()
-        self._check_env_vars_json(crew_path, agents_dir, agents)
+        self._check_env_vars_json(crew_path, agents_dir, project.agent_names)
         self._check_version_vs_lockfile()
 
         return self.results
@@ -242,15 +237,15 @@ class DeployValidator:
             pass
 
         for name in agent_names:
-            for ext in (".jsonc", ".json"):
-                agent_path = agents_dir / f"{name}{ext}"
-                if agent_path.exists():
-                    try:
-                        referenced.update(
-                            pattern.findall(agent_path.read_text(errors="ignore"))
-                        )
-                    except OSError:
-                        pass
+            agent_path = find_json_project_file(agents_dir, name)
+            if agent_path is None:
+                continue
+            try:
+                referenced.update(
+                    pattern.findall(agent_path.read_text(errors="ignore"))
+                )
+            except OSError:
+                pass
 
         for py_path in self.project_root.rglob("*.py"):
             if ".venv" in py_path.parts:

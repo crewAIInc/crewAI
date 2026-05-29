@@ -11,11 +11,8 @@ from crewai.project.json_loader import (
     JSONProjectError,
     JSONProjectValidationError,
     _crew_kwargs_from_definition,
-    _expect_object,
-    _find_agent_file,
     _task_kwargs_from_definition,
-    load_agent,
-    load_jsonc_file,
+    load_json_crew_project,
 )
 
 
@@ -29,42 +26,29 @@ def load_crew(
     default inputs.  Agent definitions are resolved from individual
     ``<name>.jsonc`` / ``<name>.json`` files inside an ``agents/`` directory.
     """
-    from crewai import Crew, Task
+    from crewai import Agent, Crew, Task
 
     crew_path = Path(source)
-    defn = _expect_object(load_jsonc_file(crew_path), crew_path)
-
-    if agents_dir is None:
-        agents_dir = crew_path.parent / "agents"
-
-    agent_names = defn.get("agents", [])
-    if not isinstance(agent_names, list) or not agent_names:
-        raise JSONProjectError(f"{crew_path}: 'agents' must be a non-empty list")
+    project = load_json_crew_project(crew_path, agents_dir=agents_dir)
 
     agents_map: dict[str, Any] = {}
-    for name in agent_names:
-        if not isinstance(name, str) or not name:
+    for name in project.agent_names:
+        agent_def = project.agents[name]
+        try:
+            agents_map[name] = Agent(**agent_def.kwargs)
+        except ValidationError as exc:
             raise JSONProjectError(
-                f"{crew_path}: each agent reference must be a non-empty string"
-            )
-        agent_file = _find_agent_file(Path(agents_dir), name)
-        if agent_file is None:
-            raise FileNotFoundError(
-                f"Agent definition for '{name}' not found in {agents_dir} "
-                f"(tried {name}.jsonc and {name}.json)"
-            )
-        agents_map[name] = load_agent(agent_file)
-
-    task_defs = defn.get("tasks", [])
-    if not isinstance(task_defs, list) or not task_defs:
-        raise JSONProjectError(f"{crew_path}: 'tasks' must be a non-empty list")
+                f"{agent_def.path}: validation failed: {exc}"
+            ) from exc
+        except Exception as exc:
+            raise JSONProjectError(
+                f"{agent_def.path}: failed to load agent: {exc}"
+            ) from exc
 
     tasks_list: list[Task] = []
     task_name_map: dict[str, Task] = {}
 
-    for index, task_defn in enumerate(task_defs):
-        if not isinstance(task_defn, dict):
-            raise JSONProjectError(f"{crew_path}: tasks[{index}] must be an object")
+    for index, task_defn in enumerate(project.task_definitions):
         source_label = f"{crew_path}: tasks[{index}]"
         task_kwargs = _task_kwargs_from_definition(
             task_defn,
@@ -85,7 +69,7 @@ def load_crew(
             task_name_map[task_name] = task
 
     crew_kwargs = _crew_kwargs_from_definition(
-        defn,
+        project.definition,
         agents=list(agents_map.values()),
         tasks=tasks_list,
         agents_map=agents_map,
@@ -101,7 +85,7 @@ def load_crew(
     except Exception as exc:
         raise JSONProjectError(f"{crew_path}: failed to load crew: {exc}") from exc
 
-    return crew, defn.get("inputs", {})
+    return crew, project.definition.get("inputs", {})
 
 
 def load_crew_and_kickoff(

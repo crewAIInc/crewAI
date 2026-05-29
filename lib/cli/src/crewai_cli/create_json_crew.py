@@ -71,316 +71,7 @@ _PROVIDER_MODELS: dict[str, list[tuple[str, str]]] = {
 }
 
 
-# ── Agent / crew templates (JSONC with comments) ──────────────
-
-_RESEARCHER_AGENT_JSONC = """\
-{
-  // Agent's role title — appears in prompts and logs
-  // Supports {placeholder} interpolation from crew inputs
-  "role": "{topic} Senior Data Researcher",
-
-  // The agent's primary objective
-  "goal": "Uncover cutting-edge developments in {topic}",
-
-  // Background story that shapes the agent's personality and approach
-  "backstory": "You're a seasoned researcher with a knack for uncovering the latest developments in {topic}. Known for your ability to find the most relevant information and present it in a clear and concise manner.",
-
-  // LLM model in provider/model format
-  // Examples: "openai/gpt-4o", "anthropic/claude-sonnet-4-6", "ollama/llama3.3"
-  "llm": "__LLM__",
-
-  // Override LLM used specifically for tool/function calling
-  // "function_calling_llm": "openai/gpt-5.4-mini",
-
-  // Tools available to this agent
-  // Built-in: "SerperDevTool", "ScrapeWebsiteTool", "FileReadTool", etc.
-  // Custom: "custom:my_tool" loads from tools/my_tool.py
-  "tools": [],
-
-  // Optional agent-level guardrail — validates this agent's final output.
-  // String guardrails are checked by an LLM and can reject/retry output.
-  // "guardrail": "Only answer with information supported by retrieved evidence.",
-  // "guardrail_max_retries": 2,
-
-  // Advanced agent options:
-  // Docs: https://docs.crewai.com/concepts/agents
-  // "reasoning": true,
-  // "max_reasoning_attempts": 3,
-  // "multimodal": false,
-  // "allow_code_execution": false,
-  // "code_execution_mode": "safe",
-  // "knowledge_sources": [],
-  // "knowledge_config": {},
-  // "inject_date": true,
-  // "date_format": "%Y-%m-%d",
-  // "security_config": {},
-
-  // Agent behavior settings
-  "settings": {
-    // Show detailed execution logs
-    "verbose": false,
-
-    // Allow this agent to delegate tasks to other agents in the crew
-    "allow_delegation": false,
-
-    // Maximum reasoning iterations per task (prevents infinite loops)
-    // "max_iter": 25,
-
-    // Maximum tokens for agent's response generation
-    // "max_tokens": null,
-
-    // Maximum execution time in seconds
-    // "max_execution_time": null,
-
-    // Maximum LLM requests per minute (rate limiting)
-    // "max_rpm": null,
-
-    // Enable agent-level memory (persists across tasks)
-    // "memory": false,
-
-    // Cache tool results to avoid duplicate calls
-    // "cache": true,
-
-    // Auto-summarize context when it exceeds the LLM's context window
-    // "respect_context_window": true,
-
-    // Maximum retries on execution errors
-    // "max_retry_limit": 2,
-
-    // Enable step-by-step planning before task execution
-    // "planning": false,
-
-    // Include system prompt in LLM calls
-    // "use_system_prompt": true
-  }
-}
-"""
-
-_REPORTING_ANALYST_JSONC = """\
-{
-  // Agent's role title — appears in prompts and logs
-  "role": "{topic} Reporting Analyst",
-
-  // The agent's primary objective
-  "goal": "Create detailed reports based on {topic} data analysis and research findings",
-
-  // Background story that shapes the agent's personality and approach
-  "backstory": "You're a meticulous analyst with a keen eye for detail. You're known for your ability to turn complex data into clear and concise reports, making it easy for others to understand and act on the information you provide.",
-
-  // LLM model in provider/model format
-  "llm": "__LLM__",
-
-  // "function_calling_llm": "openai/gpt-5.4-mini",
-
-  // Tools available to this agent
-  "tools": [],
-
-  // Optional agent-level guardrail — validates this agent's final output.
-  // "guardrail": "Only produce reports grounded in the provided task context.",
-  // "guardrail_max_retries": 2,
-
-  // Advanced agent options:
-  // Docs: https://docs.crewai.com/concepts/agents
-  // "reasoning": true,
-  // "max_reasoning_attempts": 3,
-  // "knowledge_sources": [],
-  // "knowledge_config": {},
-  // "security_config": {},
-
-  // Agent behavior settings
-  "settings": {
-    "verbose": false,
-    "allow_delegation": false
-    // "max_iter": 25,
-    // "max_tokens": null,
-    // "max_execution_time": null,
-    // "max_rpm": null,
-    // "memory": false,
-    // "cache": true,
-    // "respect_context_window": true,
-    // "max_retry_limit": 2,
-    // "planning": false,
-    // "use_system_prompt": true
-  }
-}
-"""
-
-_CREW_JSONC = """\
-{
-  // Display name for this crew
-  "name": "__NAME__",
-
-  // Agents to include — each must have a matching agents/<name>.jsonc file
-  "agents": ["researcher", "reporting_analyst"],
-
-  // Task definitions — executed in order for sequential process
-  "tasks": [
-    {
-      // Task identifier — used for context references between tasks
-      "name": "research_task",
-
-      // What the task should accomplish
-      // Supports {placeholder} interpolation from inputs below
-      "description": "Conduct a thorough research about {topic}. Make sure you find any interesting and relevant information given the current year is {current_year}.",
-
-      // Clear definition of what the output should look like
-      "expected_output": "A list with 10 bullet points of the most relevant information about {topic}",
-
-      // Optional task guardrail(s) validate output before the task completes.
-      // Use either "guardrail" for one rule or "guardrails" for multiple rules.
-      // On failure, CrewAI retries up to guardrail_max_retries times.
-      // "guardrail": "Every factual claim must be supported by research findings.",
-      // "guardrails": [
-      //   "Every factual claim must be supported by research findings.",
-      //   "The answer must be a numbered or bulleted list."
-      // ],
-      // "guardrail_max_retries": 2,
-
-      // Advanced task options:
-      // Docs: https://docs.crewai.com/concepts/tasks
-      // "output_json": null,
-      // "output_pydantic": null,
-      // "response_model": null,
-      // "markdown": false,
-      // "input_files": [],
-      // "security_config": {},
-
-      // Which agent handles this task (must be in the agents list above)
-      "agent": "researcher"
-
-      // List of task names whose outputs become context for this task
-      // "context": [],
-
-      // Additional tools available only for this task
-      // "tools": [],
-
-      // Write task output to a file
-      // "output_file": null,
-
-      // Pause for human review before accepting the output
-      // "human_input": false,
-
-      // Run this task in parallel with the next task
-      // "async_execution": false
-    },
-    {
-      "name": "reporting_task",
-      "description": "Review the context you got and expand each topic into a full section for a report. Make sure the report is detailed and contains any and all relevant information.",
-      "expected_output": "A fully fledged report with the main topics, each with a full section of information. Formatted as markdown.",
-
-      // Optional task guardrail(s) validate output before the task completes.
-      // "guardrail": "The report must only use facts from the research context.",
-      // "guardrail_max_retries": 2,
-
-      // Advanced task options:
-      // Docs: https://docs.crewai.com/concepts/tasks
-      // "output_json": null,
-      // "output_pydantic": null,
-      // "markdown": true,
-      // "create_directory": true,
-      // "security_config": {},
-
-      "agent": "reporting_analyst",
-
-      // This task receives the output of research_task as context
-      "context": ["research_task"],
-
-      // Save the final report to a file
-      "output_file": "report.md"
-
-      // "human_input": false,
-      // "async_execution": false
-    }
-  ],
-
-  // Execution process
-  // "sequential" — tasks run in order, each receiving prior task outputs
-  // "hierarchical" — a manager agent delegates tasks (requires manager_llm)
-  "process": "sequential",
-
-  // Enable verbose logging during execution
-  "verbose": true,
-
-  // Enable crew memory — persists context and learnings across tasks
-  "memory": false,
-
-  // Automatically plan the execution strategy before running tasks
-  // "planning": false,
-
-  // LLM for the planning step (used when planning is true)
-  // "planning_llm": "openai/gpt-4o",
-
-  // LLM for the manager agent (required when process is "hierarchical")
-  // "manager_llm": "openai/gpt-4o",
-
-  // Advanced crew options:
-  // Docs: https://docs.crewai.com/concepts/crews
-  // "manager_agent": "reporting_analyst",
-  // "function_calling_llm": "openai/gpt-4o-mini",
-  // "max_rpm": null,
-  // "cache": true,
-  // "knowledge_sources": [],
-  // "embedder": {},
-  // "output_log_file": "crew.log",
-  // "stream": false,
-  // "tracing": false,
-  // "security_config": {},
-
-  // Default input values — interpolated into {placeholder} strings
-  // in agent roles/goals/backstories and task descriptions
-  "inputs": {
-    "topic": "AI LLMs",
-    "current_year": "2025"
-  }
-}
-"""
-
-_CONFIG_JSONC = """\
-{
-  // Benchmark test configuration (used by `crewai test`)
-  "test": {
-    // Number of test iterations per case
-    // Higher values give more reliable scores but take longer
-    "iterations": 3,
-
-    // Minimum average score to pass (0.0 to 1.0)
-    "threshold": 0.7,
-
-    // LLM model used to evaluate qualitative test criteria
-    "judge_model": "openai/gpt-5.4-mini",
-
-    // Per-case timeout in seconds
-    "case_timeout": 90
-  }
-}
-"""
-
-_RESEARCHER_CASES_JSONC = """\
-[
-  {
-    // Input prompt sent to the agent
-    "input": "What are the latest developments in AI?",
-
-    // Substring the response must contain (case-insensitive)
-    // Set to null to skip substring matching
-    "expected": "AI",
-
-    // Qualitative criteria evaluated by the judge LLM
-    // Set to null to skip qualitative evaluation
-    "criteria": "The response should contain specific, recent AI developments."
-  }
-]
-"""
-
-_REPORTING_ANALYST_CASES_JSONC = """\
-[
-  {
-    "input": "Write a summary report about recent advances in machine learning.",
-    "expected": "machine learning",
-    "criteria": "The response should be formatted as a report with clear sections."
-  }
-]
-"""
+# ── Static project files ───────────────────────────────────────
 
 _PYPROJECT_TOML = """\
 [project]
@@ -419,17 +110,10 @@ A crewAI project using JSON-first configuration.
 crewai run
 ```
 
-## Testing
-
-```bash
-crewai test
-```
-
 ## Project Structure
 
 - `agents/` - Agent definitions (JSONC)
 - `crew.jsonc` - Crew definition with tasks and configuration
-- `tests/` - Benchmark test cases for each agent
 - `tools/` - Custom tools (Python)
 - `knowledge/` - Knowledge files for agents
 """
@@ -966,27 +650,6 @@ def _crew_to_jsonc(
 """
 
 
-def _test_case_jsonc(agent: dict[str, Any]) -> str:
-    """Generate a default test case JSONC for an agent."""
-    role = agent["role"]
-    return f"""\
-[
-  {{
-    // Input prompt sent to the agent
-    "input": "Perform a sample task as a {role}.",
-
-    // Substring the response must contain (case-insensitive)
-    // Set to null to skip substring matching
-    "expected": null,
-
-    // Qualitative criteria evaluated by the judge LLM
-    // Set to null to skip qualitative evaluation
-    "criteria": "The response should demonstrate expertise as a {role}."
-  }}
-]
-"""
-
-
 # ── Model selection ─────────────────────────────────────────────
 
 
@@ -1057,11 +720,6 @@ def _default_model_for_provider(provider: str | None) -> str | None:
 
 
 # ── Helpers ─────────────────────────────────────────────────────
-
-
-def _write_json(path: Path, data: dict | list) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
 
 def _write_jsonc(path: Path, content: str) -> None:
@@ -1143,7 +801,6 @@ def create_json_crew(
     (folder_path / "agents").mkdir()
     (folder_path / "tools").mkdir()
     (folder_path / "skills").mkdir()
-    (folder_path / "tests").mkdir()
     (folder_path / "knowledge").mkdir()
 
     for agent in agents:
@@ -1156,15 +813,6 @@ def create_json_crew(
         folder_path / "crew.jsonc",
         _crew_to_jsonc(name, agents, tasks, crew_settings),
     )
-
-    for agent in agents:
-        _write_jsonc(
-            folder_path / "tests" / f"{agent['name']}_cases.jsonc",
-            _test_case_jsonc(agent),
-        )
-
-    # Write config
-    _write_jsonc(folder_path / "config.jsonc", _CONFIG_JSONC)
 
     # Write pyproject.toml
     (folder_path / "pyproject.toml").write_text(
@@ -1210,8 +858,4 @@ def create_json_crew(
     click.echo("    agents/*.jsonc    Define agent roles, goals, and LLMs")
     click.echo("    crew.jsonc        Configure tasks, process, and inputs")
     click.echo("    tools/            Add custom tools (Python)")
-    click.echo()
-    click.secho("  Test & benchmark:", fg="cyan")
-    click.echo("    crewai test       Run benchmark tests against your agents")
-    click.echo("    tests/            Edit test cases and thresholds")
     click.echo()
