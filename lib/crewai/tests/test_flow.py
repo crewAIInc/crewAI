@@ -1737,6 +1737,108 @@ def test_cyclic_flow_multiple_or_listeners_fire_every_iteration():
         )
 
 
+def test_or_listener_retriggers_via_different_router_signals():
+    """Test that an or_() listener re-fires when a router emits different signals.
+
+    Regression test for issue #5972: @listen(or_(A, B, C)) multi-source OR
+    listener only fires once, blocking cyclic flow re-triggering.
+
+    Pattern: start → router emits "SignalA" → handler (or_ listener) fires →
+    handler's router emits "SignalB" → handler should fire AGAIN (but was
+    blocked by _fired_or_listeners).
+    """
+    execution_order = []
+
+    class OrRetriggerFlow(Flow):
+        iteration = 0
+        max_iterations = 3
+
+        @start()
+        def begin(self):
+            execution_order.append("begin")
+
+        @router(begin)
+        def init_router(self):
+            execution_order.append("init_router")
+            return "SignalA"
+
+        @listen(or_("SignalA", "SignalB"))
+        def handler(self):
+            self.iteration += 1
+            execution_order.append(f"handler_{self.iteration}")
+
+        @router(handler)
+        def handler_router(self):
+            execution_order.append(f"handler_router_{self.iteration}")
+            if self.iteration < self.max_iterations:
+                return "SignalB"
+            return "done"
+
+        @listen("done")
+        def finish(self):
+            execution_order.append("finish")
+
+    flow = OrRetriggerFlow()
+    flow.kickoff()
+
+    # handler must fire max_iterations times (once for SignalA, rest for SignalB)
+    handler_events = [e for e in execution_order if e.startswith("handler_") and not e.startswith("handler_router")]
+    assert len(handler_events) == 3, (
+        f"or_() listener 'handler' should fire every iteration via different "
+        f"router signals, got {len(handler_events)} fires: {execution_order}"
+    )
+
+    assert "finish" in execution_order, (
+        f"Flow should have reached 'finish', got: {execution_order}"
+    )
+
+
+def test_or_listener_retriggers_via_same_router_signal():
+    """Test that an or_() listener re-fires when a router emits the same signal repeatedly.
+
+    Variant of issue #5972: the router always emits the SAME signal that
+    re-triggers the or_() listener.
+    """
+    execution_order = []
+
+    class SameSignalFlow(Flow):
+        iteration = 0
+        max_iterations = 3
+
+        @start()
+        def begin(self):
+            execution_order.append("begin")
+
+        @router(begin)
+        def init_router(self):
+            return "process"
+
+        @listen(or_("process", "other"))
+        def handler(self):
+            self.iteration += 1
+            execution_order.append(f"handler_{self.iteration}")
+
+        @router(handler)
+        def handler_router(self):
+            if self.iteration < self.max_iterations:
+                return "process"
+            return "exit"
+
+        @listen("exit")
+        def finish(self):
+            execution_order.append("finish")
+
+    flow = SameSignalFlow()
+    flow.kickoff()
+
+    handler_events = [e for e in execution_order if e.startswith("handler_") and not e.startswith("handler_router")]
+    assert len(handler_events) == 3, (
+        f"or_() listener 'handler' should re-fire via same router signal, "
+        f"got {len(handler_events)} fires: {execution_order}"
+    )
+    assert "finish" in execution_order
+
+
 def test_cyclic_flow_works_with_persist_and_id_input():
     """Cyclic router flows must complete all iterations when persistence is
     enabled and 'id' is passed in inputs.
