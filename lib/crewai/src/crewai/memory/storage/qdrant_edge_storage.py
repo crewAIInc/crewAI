@@ -47,6 +47,11 @@ DEFAULT_VECTOR_DIM: Final[int] = 1536
 
 _SCROLL_BATCH: Final[int] = 256
 
+# Tenant isolation: every point carries a tenant_id in its payload. Pre-isolation
+# payloads (no tenant_id key) are read back as this default tenant so
+# single-tenant deployments keep working unchanged.
+_DEFAULT_TENANT: Final[str] = "_default"
+
 
 def _uuid_to_point_id(uuid_str: str) -> int:
     """Convert a UUID string to a stable Qdrant point ID.
@@ -160,25 +165,27 @@ class QdrantEdgeStorage:
             return EdgeShard.create(str(path), self._config)
 
     def _ensure_indexes(self, shard: EdgeShard) -> None:
-        """Create payload indexes for efficient filtering."""
+        """Create payload indexes for efficient filtering.
+
+        tenant_id is indexed because every read path filters on it; without
+        the index, the WHERE-on-tenant_id becomes a full scan and isolation
+        carries a meaningful latency cost.
+        """
         if self._indexes_created:
             return
         try:
-            shard.update(
-                UpdateOperation.create_field_index(
-                    "scope_ancestors", PayloadSchemaType.Keyword
+            for field in (
+                "tenant_id",
+                "user_id",
+                "scope_ancestors",
+                "categories",
+                "record_id",
+            ):
+                shard.update(
+                    UpdateOperation.create_field_index(
+                        field, PayloadSchemaType.Keyword
+                    )
                 )
-            )
-            shard.update(
-                UpdateOperation.create_field_index(
-                    "categories", PayloadSchemaType.Keyword
-                )
-            )
-            shard.update(
-                UpdateOperation.create_field_index(
-                    "record_id", PayloadSchemaType.Keyword
-                )
-            )
             self._indexes_created = True
         except Exception:
             _logger.debug("Index creation failed (may already exist)", exc_info=True)
@@ -204,6 +211,8 @@ class QdrantEdgeStorage:
                 "last_accessed": record.last_accessed.isoformat(),
                 "source": record.source or "",
                 "private": record.private,
+                "tenant_id": record.tenant_id or _DEFAULT_TENANT,
+                "user_id": record.user_id or "",
             },
         )
 
@@ -221,6 +230,12 @@ class QdrantEdgeStorage:
                 return val
             return datetime.fromisoformat(str(val).replace("Z", "+00:00"))
 
+        # Backward compat: pre-isolation payloads have neither key.
+        raw_tenant = payload.get("tenant_id")
+        tenant_id = str(raw_tenant) if raw_tenant else _DEFAULT_TENANT
+        raw_user = payload.get("user_id")
+        user_id = str(raw_user) if raw_user else None
+
         return MemoryRecord(
             id=str(payload["record_id"]),
             content=str(payload["content"]),
@@ -233,19 +248,39 @@ class QdrantEdgeStorage:
             embedding=vector.get(VECTOR_NAME) if vector else None,
             source=payload.get("source") or None,
             private=bool(payload.get("private", False)),
+            tenant_id=tenant_id,
+            user_id=user_id,
         )
 
     @staticmethod
-    def _build_scope_filter(scope_prefix: str | None) -> Filter | None:
-        """Build a Qdrant Filter for scope prefix matching."""
-        if scope_prefix is None or not scope_prefix.strip("/"):
-            return None
-        prefix = scope_prefix.rstrip("/")
-        if not prefix.startswith("/"):
-            prefix = "/" + prefix
-        return Filter(
-            must=[FieldCondition(key="scope_ancestors", match=MatchValue(value=prefix))]
-        )
+    def _build_tenant_filter(
+        tenant_id: str,
+        user_id: str | None = None,
+        scope_prefix: str | None = None,
+    ) -> Filter:
+        """Build a Qdrant Filter pinning a query to one tenant (and optionally scope/user).
+
+        Every read path in this storage assembles its Filter by calling this
+        helper. The tenant_id clause is always present so foreign-tenant
+        points never enter the candidate pool.
+        """
+        must: list[FieldCondition] = [
+            FieldCondition(key="tenant_id", match=MatchValue(value=tenant_id))
+        ]
+        if user_id is not None:
+            must.append(
+                FieldCondition(key="user_id", match=MatchValue(value=user_id))
+            )
+        if scope_prefix is not None and scope_prefix.strip("/"):
+            prefix = scope_prefix.rstrip("/")
+            if not prefix.startswith("/"):
+                prefix = "/" + prefix
+            must.append(
+                FieldCondition(
+                    key="scope_ancestors", match=MatchValue(value=prefix)
+                )
+            )
+        return Filter(must=must)
 
     @staticmethod
     def _scroll_all(
@@ -301,14 +336,17 @@ class QdrantEdgeStorage:
     def search(
         self,
         query_embedding: list[float],
+        *,
+        tenant_id: str,
+        user_id: str | None = None,
         scope_prefix: str | None = None,
         categories: list[str] | None = None,
         metadata_filter: dict[str, Any] | None = None,
         limit: int = 10,
         min_score: float = 0.0,
     ) -> list[tuple[MemoryRecord, float]]:
-        """Search both central and local shards, merge results."""
-        filt = self._build_scope_filter(scope_prefix)
+        """Search both central and local shards, merge results (scoped to tenant)."""
+        filt = self._build_tenant_filter(tenant_id, user_id, scope_prefix)
         fetch_limit = limit * 3 if (categories or metadata_filter) else limit
         all_scored: list[tuple[dict[str, Any], float, bool]] = []
 
@@ -364,13 +402,16 @@ class QdrantEdgeStorage:
 
     def delete(
         self,
+        *,
+        tenant_id: str,
+        user_id: str | None = None,
         scope_prefix: str | None = None,
         categories: list[str] | None = None,
         record_ids: list[str] | None = None,
         older_than: datetime | None = None,
         metadata_filter: dict[str, Any] | None = None,
     ) -> int:
-        """Delete matching records from central shard."""
+        """Delete matching records from central shard (scoped to tenant)."""
         total_deleted = 0
         for shard_path in (self._central_path, self._local_path):
             if not shard_path.exists():
@@ -378,6 +419,8 @@ class QdrantEdgeStorage:
             try:
                 total_deleted += self._delete_from_shard_path(
                     shard_path,
+                    tenant_id,
+                    user_id,
                     scope_prefix,
                     categories,
                     record_ids,
@@ -391,6 +434,8 @@ class QdrantEdgeStorage:
     def _delete_from_shard_path(
         self,
         shard_path: Path,
+        tenant_id: str,
+        user_id: str | None,
         scope_prefix: str | None,
         categories: list[str] | None,
         record_ids: list[str] | None,
@@ -402,6 +447,8 @@ class QdrantEdgeStorage:
         try:
             deleted = self._delete_from_shard(
                 shard,
+                tenant_id,
+                user_id,
                 scope_prefix,
                 categories,
                 record_ids,
@@ -416,30 +463,43 @@ class QdrantEdgeStorage:
     def _delete_from_shard(
         self,
         shard: EdgeShard,
+        tenant_id: str,
+        user_id: str | None,
         scope_prefix: str | None,
         categories: list[str] | None,
         record_ids: list[str] | None,
         older_than: datetime | None,
         metadata_filter: dict[str, Any] | None,
     ) -> int:
-        """Delete matching records from a single shard, returning count deleted."""
-        before = shard.count(CountRequest())
+        """Delete matching records from a single shard (scoped to tenant)."""
+        # Tenant clause is always part of the filter -- a delete by record_id
+        # cannot wipe a row that belongs to a different tenant.
+        tenant_filter = self._build_tenant_filter(tenant_id, user_id, scope_prefix)
+        before = shard.count(CountRequest(filter=tenant_filter))
 
         if record_ids and not (categories or metadata_filter or older_than):
-            point_ids: list[int | uuid.UUID | str] = [
-                _uuid_to_point_id(rid) for rid in record_ids
+            # Resolve record_ids against the tenant's rows so a delete by id
+            # cannot reach another tenant's data.
+            allowed_ids = set(record_ids)
+            tenant_points = self._scroll_all(shard, filt=tenant_filter)
+            to_delete: list[int | uuid.UUID | str] = [
+                pt.id
+                for pt in tenant_points
+                if str(pt.payload.get("record_id", "")) in allowed_ids
             ]
-            shard.update(UpdateOperation.delete_points(point_ids))
-            return before - shard.count(CountRequest())
+            if to_delete:
+                shard.update(UpdateOperation.delete_points(to_delete))
+            return before - shard.count(CountRequest(filter=tenant_filter))
 
         if categories or metadata_filter or older_than:
-            scope_filter = self._build_scope_filter(scope_prefix)
-            points = self._scroll_all(shard, filt=scope_filter)
-            allowed_ids: set[str] | None = set(record_ids) if record_ids else None
-            to_delete: list[int | uuid.UUID | str] = []
+            points = self._scroll_all(shard, filt=tenant_filter)
+            allowed_ids_opt: set[str] | None = (
+                set(record_ids) if record_ids else None
+            )
+            to_delete = []
             for pt in points:
                 record = self._payload_to_record(pt.payload or {})
-                if allowed_ids and record.id not in allowed_ids:
+                if allowed_ids_opt and record.id not in allowed_ids_opt:
                     continue
                 if categories and not any(c in record.categories for c in categories):
                     continue
@@ -452,17 +512,12 @@ class QdrantEdgeStorage:
                 to_delete.append(pt.id)
             if to_delete:
                 shard.update(UpdateOperation.delete_points(to_delete))
-            return before - shard.count(CountRequest())
+            return before - shard.count(CountRequest(filter=tenant_filter))
 
-        scope_filter = self._build_scope_filter(scope_prefix)
-        if scope_filter:
-            shard.update(UpdateOperation.delete_points_by_filter(filter=scope_filter))
-        else:
-            points = self._scroll_all(shard)
-            if points:
-                all_ids: list[int | uuid.UUID | str] = [p.id for p in points]
-                shard.update(UpdateOperation.delete_points(all_ids))
-        return before - shard.count(CountRequest())
+        # No record_ids, no other predicates -- delete every point matching
+        # the tenant (+ optional scope) filter.
+        shard.update(UpdateOperation.delete_points_by_filter(filter=tenant_filter))
+        return before - shard.count(CountRequest(filter=tenant_filter))
 
     def update(self, record: MemoryRecord) -> None:
         """Update a record by upserting with the same point ID."""
@@ -484,8 +539,14 @@ class QdrantEdgeStorage:
         finally:
             local.close()
 
-    def get_record(self, record_id: str) -> MemoryRecord | None:
-        """Return a single record by ID, or None if not found."""
+    def get_record(
+        self, record_id: str, *, tenant_id: str, user_id: str | None = None
+    ) -> MemoryRecord | None:
+        """Return a single record by ID, or None if not found in the tenant.
+
+        A point found by ID but owned by a different tenant is treated as
+        not-found, which is what the isolation invariant requires.
+        """
         point_id = _uuid_to_point_id(record_id)
         for shard_path in (self._local_path, self._central_path):
             if not shard_path.exists():
@@ -496,6 +557,12 @@ class QdrantEdgeStorage:
                 shard.close()
                 if records:
                     payload = records[0].payload or {}
+                    # Tenant check is the isolation guarantee. A point that
+                    # collides on ID but lives in another tenant is invisible.
+                    if payload.get("tenant_id", _DEFAULT_TENANT) != tenant_id:
+                        continue
+                    if user_id is not None and payload.get("user_id") != user_id:
+                        continue
                     vec = records[0].vector
                     vec_dict = vec if isinstance(vec, dict) else None
                     return self._payload_to_record(payload, vec_dict)  # type: ignore[arg-type]
@@ -505,12 +572,15 @@ class QdrantEdgeStorage:
 
     def list_records(
         self,
+        *,
+        tenant_id: str,
+        user_id: str | None = None,
         scope_prefix: str | None = None,
         limit: int = 200,
         offset: int = 0,
     ) -> list[MemoryRecord]:
-        """List records in a scope, newest first."""
-        filt = self._build_scope_filter(scope_prefix)
+        """List records in a scope (scoped to tenant), newest first."""
+        filt = self._build_tenant_filter(tenant_id, user_id, scope_prefix)
         all_records: list[MemoryRecord] = []
         seen_ids: set[str] = set()
 
@@ -532,11 +602,13 @@ class QdrantEdgeStorage:
         all_records.sort(key=lambda r: r.created_at, reverse=True)
         return all_records[offset : offset + limit]
 
-    def get_scope_info(self, scope: str) -> ScopeInfo:
-        """Get information about a scope."""
+    def get_scope_info(
+        self, scope: str, *, tenant_id: str, user_id: str | None = None
+    ) -> ScopeInfo:
+        """Get information about a scope (scoped to tenant)."""
         scope = scope.rstrip("/") or "/"
         prefix = scope if scope != "/" else None
-        filt = self._build_scope_filter(prefix)
+        filt = self._build_tenant_filter(tenant_id, user_id, prefix)
 
         all_points: list[Any] = []
         for shard_path in (self._central_path, self._local_path):
@@ -598,13 +670,21 @@ class QdrantEdgeStorage:
             child_scopes=sorted(children),
         )
 
-    def list_scopes(self, parent: str = "/") -> list[str]:
-        """List immediate child scopes under a parent path."""
+    def list_scopes(
+        self,
+        parent: str = "/",
+        *,
+        tenant_id: str,
+        user_id: str | None = None,
+    ) -> list[str]:
+        """List immediate child scopes under a parent path (scoped to tenant)."""
         parent = parent.rstrip("/") or ""
         prefix = (parent + "/") if parent else "/"
 
         all_scopes: set[str] = set()
-        filt = self._build_scope_filter(prefix if prefix != "/" else None)
+        filt = self._build_tenant_filter(
+            tenant_id, user_id, prefix if prefix != "/" else None
+        )
         for shard_path in (self._central_path, self._local_path):
             if not shard_path.exists():
                 continue
@@ -623,8 +703,14 @@ class QdrantEdgeStorage:
                 _logger.debug("list_scopes failed on %s", shard_path, exc_info=True)
         return sorted(all_scopes)
 
-    def list_categories(self, scope_prefix: str | None = None) -> dict[str, int]:
-        """List categories and their counts within a scope."""
+    def list_categories(
+        self,
+        *,
+        tenant_id: str,
+        user_id: str | None = None,
+        scope_prefix: str | None = None,
+    ) -> dict[str, int]:
+        """List categories and their counts within a scope (scoped to tenant)."""
         if not self._local_has_data and self._central_path.exists():
             try:
                 shard = EdgeShard.load(str(self._central_path))
@@ -636,7 +722,7 @@ class QdrantEdgeStorage:
                     )
                 except Exception:  # noqa: S110
                     pass
-                filt = self._build_scope_filter(scope_prefix)
+                filt = self._build_tenant_filter(tenant_id, user_id, scope_prefix)
                 facet_result = shard.facet(
                     FacetRequest(key="categories", limit=1000, filter=filt)
                 )
@@ -646,14 +732,25 @@ class QdrantEdgeStorage:
                 _logger.debug("list_categories failed on central", exc_info=True)
 
         counts: dict[str, int] = {}
-        for record in self.list_records(scope_prefix=scope_prefix, limit=50_000):
+        for record in self.list_records(
+            tenant_id=tenant_id,
+            user_id=user_id,
+            scope_prefix=scope_prefix,
+            limit=50_000,
+        ):
             for c in record.categories:
                 counts[c] = counts.get(c, 0) + 1
         return counts
 
-    def count(self, scope_prefix: str | None = None) -> int:
-        """Count records in scope (and subscopes)."""
-        filt = self._build_scope_filter(scope_prefix)
+    def count(
+        self,
+        *,
+        tenant_id: str,
+        user_id: str | None = None,
+        scope_prefix: str | None = None,
+    ) -> int:
+        """Count records in scope (and subscopes), scoped to tenant."""
+        filt = self._build_tenant_filter(tenant_id, user_id, scope_prefix)
         if not self._local_has_data:
             if self._central_path.exists():
                 try:
@@ -677,17 +774,25 @@ class QdrantEdgeStorage:
                 _logger.debug("count failed on %s", shard_path, exc_info=True)
         return len(seen_ids)
 
-    def reset(self, scope_prefix: str | None = None) -> None:
-        """Reset (delete all) memories in scope."""
-        if scope_prefix is None or not scope_prefix.strip("/"):
-            for shard_path in (self._central_path, self._local_path):
-                if shard_path.exists():
-                    shutil.rmtree(shard_path, ignore_errors=True)
-            self._local_has_data = False
-            self._indexes_created = False
-            return
+    def reset(
+        self,
+        *,
+        tenant_id: str,
+        user_id: str | None = None,
+        scope_prefix: str | None = None,
+    ) -> None:
+        """Reset (delete all) memories for this tenant.
 
-        self.delete(scope_prefix=scope_prefix)
+        Even an unscoped reset is bound to the tenant; resetting one tenant
+        never wipes another tenant's data. To remove the entire on-disk
+        store, delete the storage directory directly.
+        """
+        # Always go through delete() so the tenant_id predicate is applied;
+        # the old "shutil.rmtree everything" path was cross-tenant by design
+        # and is no longer reachable from this class.
+        self.delete(
+            tenant_id=tenant_id, user_id=user_id, scope_prefix=scope_prefix
+        )
 
     def touch_records(self, record_ids: list[str]) -> None:
         """Update last_accessed to now for the given record IDs."""
@@ -836,16 +941,21 @@ class QdrantEdgeStorage:
     async def asearch(
         self,
         query_embedding: list[float],
+        *,
+        tenant_id: str,
+        user_id: str | None = None,
         scope_prefix: str | None = None,
         categories: list[str] | None = None,
         metadata_filter: dict[str, Any] | None = None,
         limit: int = 10,
         min_score: float = 0.0,
     ) -> list[tuple[MemoryRecord, float]]:
-        """Search for memories asynchronously."""
+        """Search for memories asynchronously (scoped to tenant)."""
         return await asyncio.to_thread(
             self.search,
             query_embedding,
+            tenant_id=tenant_id,
+            user_id=user_id,
             scope_prefix=scope_prefix,
             categories=categories,
             metadata_filter=metadata_filter,
@@ -855,15 +965,20 @@ class QdrantEdgeStorage:
 
     async def adelete(
         self,
+        *,
+        tenant_id: str,
+        user_id: str | None = None,
         scope_prefix: str | None = None,
         categories: list[str] | None = None,
         record_ids: list[str] | None = None,
         older_than: datetime | None = None,
         metadata_filter: dict[str, Any] | None = None,
     ) -> int:
-        """Delete memories asynchronously."""
+        """Delete memories asynchronously (scoped to tenant)."""
         return await asyncio.to_thread(
             self.delete,
+            tenant_id=tenant_id,
+            user_id=user_id,
             scope_prefix=scope_prefix,
             categories=categories,
             record_ids=record_ids,

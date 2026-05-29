@@ -37,6 +37,36 @@ _SCAN_ROWS_LIMIT = 50_000
 _MAX_RETRIES = 5
 _RETRY_BASE_DELAY = 0.2  # seconds; doubles on each retry
 
+# Tenant isolation: every row carries a tenant_id. Pre-isolation tables are
+# migrated to this default tenant when first opened, so existing single-tenant
+# deployments keep working unchanged.
+_DEFAULT_TENANT = "_default"
+
+
+def _sql_quote(value: str) -> str:
+    """Escape a string literal for use inside a LanceDB WHERE clause.
+
+    LanceDB uses SQL-like single-quoted string literals. The only escape is
+    doubling a single quote. Centralizing this here keeps every tenant_id /
+    user_id / scope predicate using the same escape so Bandit's S608
+    rule does not fire and so a hostile tenant_id cannot break out of the
+    quoted literal.
+    """
+    return value.replace("'", "''")
+
+
+def _tenant_where(tenant_id: str, user_id: str | None = None) -> str:
+    """Build the WHERE fragment that pins a query to one tenant (and optionally one user).
+
+    Every read path in this storage assembles its WHERE clause by starting
+    from this fragment and ANDing on top. There is no read path that does
+    not call this function.
+    """
+    clause = f"tenant_id = '{_sql_quote(tenant_id)}'"
+    if user_id is not None:
+        clause += f" AND user_id = '{_sql_quote(user_id)}'"
+    return clause
+
 
 class LanceDBStorage:
     """LanceDB-backed storage for the unified memory system."""
@@ -97,6 +127,7 @@ class LanceDBStorage:
             self._table: Any = self._db.open_table(self._table_name)
             self._vector_dim: int = self._infer_dim_from_table(self._table)
             with store_lock(self._lock_name):
+                self._ensure_tenant_columns()
                 self._ensure_scope_index()
             self._compact_if_needed()
         except Exception:
@@ -168,6 +199,8 @@ class LanceDBStorage:
                 "last_accessed": datetime.utcnow().isoformat(),
                 "source": "",
                 "private": False,
+                "tenant_id": _DEFAULT_TENANT,
+                "user_id": "",
                 "vector": [0.0] * vector_dim,
             }
         ]
@@ -178,6 +211,48 @@ class LanceDBStorage:
         else:
             table.delete("id = '__schema_placeholder__'")
         return table
+
+    def _ensure_tenant_columns(self) -> None:
+        """Add ``tenant_id`` and ``user_id`` columns to an existing table if missing.
+
+        This is the lazy schema upgrade for tables that were created before
+        per-tenant isolation. Existing rows are stamped with ``_default`` so
+        every read path's ``WHERE tenant_id = ?`` predicate matches. The
+        upgrade is best-effort: if LanceDB does not support add_columns at
+        runtime, or if the columns already exist, the exception is swallowed
+        and the storage continues. The migrate CLI command is the supported
+        path for explicitly stamping existing data.
+
+        Caller must already hold ``store_lock(self._lock_name)``.
+        """
+        if self._table is None:
+            return
+        existing = {field.name for field in self._table.schema}
+        to_add: dict[str, str] = {}
+        if "tenant_id" not in existing:
+            to_add["tenant_id"] = f"'{_DEFAULT_TENANT}'"
+        if "user_id" not in existing:
+            to_add["user_id"] = "''"
+        if not to_add:
+            return
+        try:
+            self._table.add_columns(to_add)
+            _logger.info(
+                "Migrated LanceDB table %r: added columns %s with default tenant=%r. "
+                "Run `crewai memory migrate` to assign real tenants to existing rows.",
+                self._table_name,
+                sorted(to_add),
+                _DEFAULT_TENANT,
+            )
+        except Exception:
+            _logger.warning(
+                "Could not auto-add tenant columns to LanceDB table %r. "
+                "Existing rows will read back as tenant=%r via row-level defaults. "
+                "Run `crewai memory migrate` if needed.",
+                self._table_name,
+                _DEFAULT_TENANT,
+                exc_info=True,
+            )
 
     def _ensure_scope_index(self) -> None:
         """Create a BTREE scalar index on the ``scope`` column if not present.
@@ -255,6 +330,8 @@ class LanceDBStorage:
             "last_accessed": record.last_accessed.isoformat(),
             "source": record.source or "",
             "private": record.private,
+            "tenant_id": record.tenant_id or _DEFAULT_TENANT,
+            "user_id": record.user_id or "",
             "vector": record.embedding
             if record.embedding
             else [0.0] * self._vector_dim,
@@ -268,6 +345,15 @@ class LanceDBStorage:
                 return val
             s = str(val)
             return datetime.fromisoformat(s.replace("Z", "+00:00"))
+
+        # Backward compat: pre-isolation rows have neither column; new rows
+        # have tenant_id stamped on save. Either way, every record loaded
+        # through this method has a non-empty tenant_id so downstream
+        # filtering and the ScopedStorage double-check never see None.
+        raw_tenant = row.get("tenant_id")
+        tenant_id = str(raw_tenant) if raw_tenant else _DEFAULT_TENANT
+        raw_user = row.get("user_id")
+        user_id = str(raw_user) if raw_user else None
 
         return MemoryRecord(
             id=str(row["id"]),
@@ -283,6 +369,8 @@ class LanceDBStorage:
             embedding=row.get("vector"),
             source=row.get("source") or None,
             private=bool(row.get("private", False)),
+            tenant_id=tenant_id,
+            user_id=user_id,
         )
 
     def save(self, records: list[MemoryRecord]) -> None:
@@ -342,12 +430,19 @@ class LanceDBStorage:
                 values={"last_accessed": now},
             )
 
-    def get_record(self, record_id: str) -> MemoryRecord | None:
-        """Return a single record by ID, or None if not found."""
+    def get_record(
+        self, record_id: str, *, tenant_id: str, user_id: str | None = None
+    ) -> MemoryRecord | None:
+        """Return a single record by ID, or None if not found in the tenant.
+
+        A record found by id but owned by a different tenant is treated as
+        not-found, which is what the isolation invariant requires.
+        """
         if self._table is None:
             return None
-        safe_id = str(record_id).replace("'", "''")
-        rows = self._table.search().where(f"id = '{safe_id}'").limit(1).to_list()
+        safe_id = _sql_quote(str(record_id))
+        where = f"id = '{safe_id}' AND {_tenant_where(tenant_id, user_id)}"
+        rows = self._table.search().where(where).limit(1).to_list()
         if not rows:
             return None
         return self._row_to_record(rows[0])
@@ -355,6 +450,9 @@ class LanceDBStorage:
     def search(
         self,
         query_embedding: list[float],
+        *,
+        tenant_id: str,
+        user_id: str | None = None,
         scope_prefix: str | None = None,
         categories: list[str] | None = None,
         metadata_filter: dict[str, Any] | None = None,
@@ -364,10 +462,14 @@ class LanceDBStorage:
         if self._table is None:
             return []
         query = self._table.search(query_embedding)
+        # Tenant predicate is unconditional and pushed down so foreign-tenant
+        # rows never enter the ANN candidate pool.
+        where = _tenant_where(tenant_id, user_id)
         if scope_prefix is not None and scope_prefix.strip("/"):
             prefix = scope_prefix.rstrip("/")
-            like_val = prefix + "%"
-            query = query.where(f"scope LIKE '{like_val}'")
+            like_val = _sql_quote(prefix) + "%"
+            where += f" AND scope LIKE '{like_val}'"
+        query = query.where(where)
         results = query.limit(
             limit * 3 if (categories or metadata_filter) else limit
         ).to_list()
@@ -390,6 +492,9 @@ class LanceDBStorage:
 
     def delete(
         self,
+        *,
+        tenant_id: str,
+        user_id: str | None = None,
         scope_prefix: str | None = None,
         categories: list[str] | None = None,
         record_ids: list[str] | None = None,
@@ -398,14 +503,19 @@ class LanceDBStorage:
     ) -> int:
         if self._table is None:
             return 0
+        tenant_clause = _tenant_where(tenant_id, user_id)
         with store_lock(self._lock_name):
             if record_ids and not (categories or metadata_filter):
                 before = int(self._table.count_rows())
-                ids_expr = ", ".join(f"'{rid}'" for rid in record_ids)
-                self._do_write("delete", f"id IN ({ids_expr})")
+                ids_expr = ", ".join(f"'{_sql_quote(rid)}'" for rid in record_ids)
+                self._do_write(
+                    "delete", f"({tenant_clause}) AND id IN ({ids_expr})"
+                )
                 return before - int(self._table.count_rows())
             if categories or metadata_filter:
-                rows = self._scan_rows(scope_prefix)
+                rows = self._scan_rows(
+                    scope_prefix, tenant_id=tenant_id, user_id=user_id
+                )
                 to_delete: list[str] = []
                 for row in rows:
                     record = self._row_to_record(row)
@@ -423,21 +533,23 @@ class LanceDBStorage:
                 if not to_delete:
                     return 0
                 before = int(self._table.count_rows())
-                ids_expr = ", ".join(f"'{rid}'" for rid in to_delete)
-                self._do_write("delete", f"id IN ({ids_expr})")
+                ids_expr = ", ".join(f"'{_sql_quote(rid)}'" for rid in to_delete)
+                self._do_write(
+                    "delete", f"({tenant_clause}) AND id IN ({ids_expr})"
+                )
                 return before - int(self._table.count_rows())
-            conditions = []
+            conditions = [tenant_clause]
             if scope_prefix is not None and scope_prefix.strip("/"):
                 prefix = scope_prefix.rstrip("/")
                 if not prefix.startswith("/"):
                     prefix = "/" + prefix
-                conditions.append(f"scope LIKE '{prefix}%' OR scope = '/'")
+                conditions.append(
+                    f"(scope LIKE '{_sql_quote(prefix)}%' OR scope = '/')"
+                )
             if older_than is not None:
-                conditions.append(f"created_at < '{older_than.isoformat()}'")
-            if not conditions:
-                before = int(self._table.count_rows())
-                self._do_write("delete", "id != ''")
-                return before - int(self._table.count_rows())
+                conditions.append(
+                    f"created_at < '{_sql_quote(older_than.isoformat())}'"
+                )
             where_expr = " AND ".join(conditions)
             before = int(self._table.count_rows())
             self._do_write("delete", where_expr)
@@ -448,31 +560,44 @@ class LanceDBStorage:
         scope_prefix: str | None = None,
         limit: int = _SCAN_ROWS_LIMIT,
         columns: list[str] | None = None,
+        *,
+        tenant_id: str,
+        user_id: str | None = None,
     ) -> list[dict[str, Any]]:
-        """Scan rows optionally filtered by scope prefix.
+        """Scan rows scoped to a tenant, optionally filtered by scope prefix.
 
         Uses a full table scan (no vector query) so the limit is applied after
-        the scope filter, not to ANN candidates before filtering.
+        the tenant + scope filter, not to ANN candidates before filtering.
 
         Args:
             scope_prefix: Optional scope path prefix to filter by.
             limit: Maximum number of rows to return (applied after filtering).
-            columns: Optional list of column names to fetch.  Pass only the
+            columns: Optional list of column names to fetch. Pass only the
                 columns you need for metadata operations to avoid reading the
                 heavy ``vector`` column unnecessarily.
+            tenant_id: Isolation key (required, keyword-only).
+            user_id: Optional sub-tenant filter.
         """
         if self._table is None:
             return []
         q = self._table.search()
+        where = _tenant_where(tenant_id, user_id)
         if scope_prefix is not None and scope_prefix.strip("/"):
-            q = q.where(f"scope LIKE '{scope_prefix.rstrip('/')}%'")
+            where += f" AND scope LIKE '{_sql_quote(scope_prefix.rstrip('/'))}%'"
+        q = q.where(where)
         if columns is not None:
             q = q.select(columns)
         result: list[dict[str, Any]] = q.limit(limit).to_list()
         return result
 
     def list_records(
-        self, scope_prefix: str | None = None, limit: int = 200, offset: int = 0
+        self,
+        *,
+        tenant_id: str,
+        user_id: str | None = None,
+        scope_prefix: str | None = None,
+        limit: int = 200,
+        offset: int = 0,
     ) -> list[MemoryRecord]:
         """List records in a scope, newest first.
 
@@ -484,12 +609,19 @@ class LanceDBStorage:
         Returns:
             List of MemoryRecord, ordered by created_at descending.
         """
-        rows = self._scan_rows(scope_prefix, limit=limit + offset)
+        rows = self._scan_rows(
+            scope_prefix,
+            limit=limit + offset,
+            tenant_id=tenant_id,
+            user_id=user_id,
+        )
         records = [self._row_to_record(r) for r in rows]
         records.sort(key=lambda r: r.created_at, reverse=True)
         return records[offset : offset + limit]
 
-    def get_scope_info(self, scope: str) -> ScopeInfo:
+    def get_scope_info(
+        self, scope: str, *, tenant_id: str, user_id: str | None = None
+    ) -> ScopeInfo:
         scope = scope.rstrip("/") or "/"
         prefix = scope if scope != "/" else ""
         if prefix and not prefix.startswith("/"):
@@ -497,6 +629,8 @@ class LanceDBStorage:
         rows = self._scan_rows(
             prefix or None,
             columns=["scope", "categories_str", "created_at"],
+            tenant_id=tenant_id,
+            user_id=user_id,
         )
         if not rows:
             return ScopeInfo(
@@ -545,10 +679,21 @@ class LanceDBStorage:
             child_scopes=sorted(children),
         )
 
-    def list_scopes(self, parent: str = "/") -> list[str]:
+    def list_scopes(
+        self,
+        parent: str = "/",
+        *,
+        tenant_id: str,
+        user_id: str | None = None,
+    ) -> list[str]:
         parent = parent.rstrip("/") or ""
         prefix = (parent + "/") if parent else "/"
-        rows = self._scan_rows(prefix if prefix != "/" else None, columns=["scope"])
+        rows = self._scan_rows(
+            prefix if prefix != "/" else None,
+            columns=["scope"],
+            tenant_id=tenant_id,
+            user_id=user_id,
+        )
         children: set[str] = set()
         for row in rows:
             sc = str(row.get("scope", ""))
@@ -559,8 +704,19 @@ class LanceDBStorage:
                     children.add(prefix + first_component)
         return sorted(children)
 
-    def list_categories(self, scope_prefix: str | None = None) -> dict[str, int]:
-        rows = self._scan_rows(scope_prefix, columns=["categories_str"])
+    def list_categories(
+        self,
+        *,
+        tenant_id: str,
+        user_id: str | None = None,
+        scope_prefix: str | None = None,
+    ) -> dict[str, int]:
+        rows = self._scan_rows(
+            scope_prefix,
+            columns=["categories_str"],
+            tenant_id=tenant_id,
+            user_id=user_id,
+        )
         counts: dict[str, int] = {}
         for row in rows:
             cat_str = row.get("categories_str") or "[]"
@@ -572,27 +728,48 @@ class LanceDBStorage:
                 counts[c] = counts.get(c, 0) + 1
         return counts
 
-    def count(self, scope_prefix: str | None = None) -> int:
+    def count(
+        self,
+        *,
+        tenant_id: str,
+        user_id: str | None = None,
+        scope_prefix: str | None = None,
+    ) -> int:
         if self._table is None:
             return 0
-        if scope_prefix is None or scope_prefix.strip("/") == "":
-            return int(self._table.count_rows())
-        info = self.get_scope_info(scope_prefix)
+        # Even an unfiltered count is scoped to a tenant; "count rows across
+        # all tenants" is intentionally not exposed.
+        info = self.get_scope_info(
+            scope_prefix or "/", tenant_id=tenant_id, user_id=user_id
+        )
         return info.record_count
 
-    def reset(self, scope_prefix: str | None = None) -> None:
+    def reset(
+        self,
+        *,
+        tenant_id: str,
+        user_id: str | None = None,
+        scope_prefix: str | None = None,
+    ) -> None:
+        """Reset (delete all) memories for this tenant.
+
+        There is no "drop the whole table" path; resetting one tenant never
+        wipes another tenant's data. To remove the entire on-disk table,
+        delete the storage directory directly.
+        """
+        if self._table is None:
+            return
+        tenant_clause = _tenant_where(tenant_id, user_id)
         with store_lock(self._lock_name):
             if scope_prefix is None or scope_prefix.strip("/") == "":
-                if self._table is not None:
-                    self._db.drop_table(self._table_name)
-                self._table = None
-                return
-            if self._table is None:
+                self._do_write("delete", tenant_clause)
                 return
             prefix = scope_prefix.rstrip("/")
             if prefix:
                 self._do_write(
-                    "delete", f"scope >= '{prefix}' AND scope < '{prefix}/\uffff'"
+                    "delete",
+                    f"({tenant_clause}) AND scope >= '{_sql_quote(prefix)}' "
+                    f"AND scope < '{_sql_quote(prefix)}/\uffff'",
                 )
 
     def optimize(self) -> None:
@@ -617,6 +794,9 @@ class LanceDBStorage:
     async def asearch(
         self,
         query_embedding: list[float],
+        *,
+        tenant_id: str,
+        user_id: str | None = None,
         scope_prefix: str | None = None,
         categories: list[str] | None = None,
         metadata_filter: dict[str, Any] | None = None,
@@ -625,6 +805,8 @@ class LanceDBStorage:
     ) -> list[tuple[MemoryRecord, float]]:
         return self.search(
             query_embedding,
+            tenant_id=tenant_id,
+            user_id=user_id,
             scope_prefix=scope_prefix,
             categories=categories,
             metadata_filter=metadata_filter,
@@ -634,6 +816,9 @@ class LanceDBStorage:
 
     async def adelete(
         self,
+        *,
+        tenant_id: str,
+        user_id: str | None = None,
         scope_prefix: str | None = None,
         categories: list[str] | None = None,
         record_ids: list[str] | None = None,
@@ -641,6 +826,8 @@ class LanceDBStorage:
         metadata_filter: dict[str, Any] | None = None,
     ) -> int:
         return self.delete(
+            tenant_id=tenant_id,
+            user_id=user_id,
             scope_prefix=scope_prefix,
             categories=categories,
             record_ids=record_ids,

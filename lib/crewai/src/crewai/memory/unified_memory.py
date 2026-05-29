@@ -696,6 +696,7 @@ class Memory(BaseModel):
                 else:
                     raw = self._storage.search(
                         embedding,
+                        tenant_id="_default",
                         scope_prefix=effective_scope,
                         categories=categories,
                         limit=limit,
@@ -800,6 +801,7 @@ class Memory(BaseModel):
         elif effective_scope is not None and self.root_scope:
             effective_scope = join_scope_paths(self.root_scope, effective_scope)
         return self._storage.delete(
+            tenant_id="_default",
             scope_prefix=effective_scope,
             categories=categories,
             record_ids=record_ids,
@@ -832,7 +834,7 @@ class Memory(BaseModel):
         Raises:
             ValueError: If the record is not found.
         """
-        existing = self._storage.get_record(record_id)
+        existing = self._storage.get_record(record_id, tenant_id="_default")
         if existing is None:
             raise ValueError(f"Record not found: {record_id}")
         now = datetime.utcnow()
@@ -889,7 +891,7 @@ class Memory(BaseModel):
             effective_path = join_scope_paths(self.root_scope, effective_path)
         elif effective_path is None:
             effective_path = "/"
-        return self._storage.list_scopes(effective_path)
+        return self._storage.list_scopes(effective_path, tenant_id="_default")
 
     def list_records(
         self, scope: str | None = None, limit: int = 200, offset: int = 0
@@ -908,7 +910,10 @@ class Memory(BaseModel):
         elif effective_scope is not None and self.root_scope:
             effective_scope = join_scope_paths(self.root_scope, effective_scope)
         return self._storage.list_records(
-            scope_prefix=effective_scope, limit=limit, offset=offset
+            tenant_id="_default",
+            scope_prefix=effective_scope,
+            limit=limit,
+            offset=offset,
         )
 
     def info(self, path: str | None = None) -> ScopeInfo:
@@ -925,7 +930,7 @@ class Memory(BaseModel):
             effective_path = join_scope_paths(self.root_scope, effective_path)
         elif effective_path is None:
             effective_path = "/"
-        return self._storage.get_scope_info(effective_path)
+        return self._storage.get_scope_info(effective_path, tenant_id="_default")
 
     def tree(self, path: str | None = None, max_depth: int = 3) -> str:
         """Return a formatted tree of scopes (string).
@@ -948,7 +953,7 @@ class Memory(BaseModel):
         def _walk(p: str, depth: int, prefix: str) -> None:
             if depth > max_depth:
                 return
-            info = self._storage.get_scope_info(p)
+            info = self._storage.get_scope_info(p, tenant_id="_default")
             lines.append(f"{prefix}{p or '/'} ({info.record_count} records)")
             for child in info.child_scopes[:20]:
                 _walk(child, depth + 1, prefix + "  ")
@@ -968,7 +973,9 @@ class Memory(BaseModel):
             effective_path = self.root_scope
         elif effective_path is not None and self.root_scope:
             effective_path = join_scope_paths(self.root_scope, effective_path)
-        return self._storage.list_categories(scope_prefix=effective_path)
+        return self._storage.list_categories(
+            tenant_id="_default", scope_prefix=effective_path
+        )
 
     def reset(self, scope: str | None = None) -> None:
         """Reset (delete all) memories in scope.
@@ -982,7 +989,7 @@ class Memory(BaseModel):
             effective_scope = self.root_scope
         elif effective_scope is not None and self.root_scope:
             effective_scope = join_scope_paths(self.root_scope, effective_scope)
-        self._storage.reset(scope_prefix=effective_scope)
+        self._storage.reset(tenant_id="_default", scope_prefix=effective_scope)
 
     async def aextract_memories(self, content: str) -> list[str]:
         """Async variant of extract_memories."""

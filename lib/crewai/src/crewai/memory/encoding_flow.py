@@ -176,6 +176,7 @@ class EncodingFlow(Flow[EncodingState]):
 
             return self._storage.search(  # type: ignore[no-any-return]
                 item.embedding,
+                tenant_id="_default",
                 scope_prefix=effective_prefix,
                 categories=None,
                 limit=self._config.consolidation_limit,
@@ -248,9 +249,13 @@ class EncodingFlow(Flow[EncodingState]):
                 None,
             )
             scope_search_root = active_root if active_root else "/"
-            existing_scopes = self._storage.list_scopes(scope_search_root) or ["/"]
+            existing_scopes = self._storage.list_scopes(
+                scope_search_root, tenant_id="_default"
+            ) or ["/"]
             existing_categories = list(
-                self._storage.list_categories(scope_prefix=active_root).keys()
+                self._storage.list_categories(
+                    tenant_id="_default", scope_prefix=active_root
+                ).keys()
             )
 
         save_futures: dict[int, Future[MemoryAnalysis]] = {}
@@ -449,7 +454,9 @@ class EncodingFlow(Flow[EncodingState]):
 
         updated_records: dict[str, MemoryRecord] = {}
         if dedup_deletes:
-            self._storage.delete(record_ids=list(dedup_deletes))
+            self._storage.delete(
+                tenant_id="_default", record_ids=list(dedup_deletes)
+            )
             self.state.records_deleted += len(dedup_deletes)
 
         for rid, (_item_idx, new_content) in dedup_updates.items():

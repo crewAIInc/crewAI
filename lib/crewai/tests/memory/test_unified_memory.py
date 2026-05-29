@@ -108,6 +108,7 @@ def test_lancedb_save_search(lancedb_path: Path) -> None:
     storage.save([r])
     results = storage.search(
         [0.1, 0.2, 0.3, 0.4],
+        tenant_id="_default",
         scope_prefix="/foo",
         limit=5,
     )
@@ -124,10 +125,10 @@ def test_lancedb_delete_count(lancedb_path: Path) -> None:
     storage = LanceDBStorage(path=str(lancedb_path), vector_dim=4)
     r = MemoryRecord(content="x", scope="/", embedding=[0.0] * 4)
     storage.save([r])
-    assert storage.count() == 1
-    n = storage.delete(scope_prefix="/")
+    assert storage.count(tenant_id="_default") == 1
+    n = storage.delete(tenant_id="_default", scope_prefix="/")
     assert n >= 1
-    assert storage.count() == 0
+    assert storage.count(tenant_id="_default") == 0
 
 
 def test_lancedb_list_scopes_get_scope_info(lancedb_path: Path) -> None:
@@ -138,9 +139,9 @@ def test_lancedb_list_scopes_get_scope_info(lancedb_path: Path) -> None:
         MemoryRecord(content="a", scope="/", embedding=[0.0] * 4),
         MemoryRecord(content="b", scope="/team", embedding=[0.0] * 4),
     ])
-    scopes = storage.list_scopes("/")
+    scopes = storage.list_scopes("/", tenant_id="_default")
     assert "/team" in scopes  # list_scopes returns children, not root itself
-    info = storage.get_scope_info("/")
+    info = storage.get_scope_info("/", tenant_id="_default")
     assert info.record_count >= 1
     assert info.path == "/"
 
@@ -189,10 +190,10 @@ def test_memory_forget(tmp_path: Path, mock_embedder: MagicMock) -> None:
 
     m = Memory(storage=str(tmp_path / "db2"), llm=MagicMock(), embedder=mock_embedder)
     m.remember("To forget", scope="/x", categories=[], importance=0.5, metadata={})
-    assert m._storage.count("/x") >= 1
+    assert m._storage.count(tenant_id="_default", scope_prefix="/x") >= 1
     n = m.forget(scope="/x")
     assert n >= 1
-    assert m._storage.count("/x") == 0
+    assert m._storage.count(tenant_id="_default", scope_prefix="/x") == 0
 
 
 def test_memory_scope_slice(tmp_path: Path, mock_embedder: MagicMock) -> None:
@@ -635,7 +636,7 @@ def test_remember_survives_llm_failure(
     assert record.categories == []
     assert record.importance == 0.5
     assert record.id is not None
-    assert mem._storage.count() == 1
+    assert mem._storage.count(tenant_id="_default") == 1
 
 
 
@@ -748,7 +749,7 @@ def test_intra_batch_dedup_drops_near_identical(tmp_path: Path) -> None:
         importance=0.7,
     )
     mem.drain_writes()
-    assert mem._storage.count() == 1
+    assert mem._storage.count(tenant_id="_default") == 1
 
 
 def test_intra_batch_dedup_keeps_merely_similar(tmp_path: Path) -> None:
@@ -781,7 +782,7 @@ def test_intra_batch_dedup_keeps_merely_similar(tmp_path: Path) -> None:
         importance=0.6,
     )
     mem.drain_writes()
-    assert mem._storage.count() == 2
+    assert mem._storage.count(tenant_id="_default") == 2
 
 
 def test_batch_consolidation_deduplicates_against_storage(
@@ -810,7 +811,7 @@ def test_batch_consolidation_deduplicates_against_storage(
     mem._storage.save([
         MemoryRecord(content="CrewAI is great.", scope="/test", importance=0.7, embedding=emb),
     ])
-    assert mem._storage.count() == 1
+    assert mem._storage.count(tenant_id="_default") == 1
 
     # remember_many with the same content + a new one (all identical embeddings)
     mem.remember_many(
@@ -822,7 +823,7 @@ def test_batch_consolidation_deduplicates_against_storage(
     mem.drain_writes()
     # Intra-batch dedup fires: same embedding = 1.0 >= 0.98, so item 1 is dropped.
     # LLM says don't insert -> no new records. Total stays at 1.
-    assert mem._storage.count() == 1
+    assert mem._storage.count(tenant_id="_default") == 1
 
 
 def test_parallel_find_similar_runs_all_searches(tmp_path: Path) -> None:
@@ -877,7 +878,7 @@ def test_single_remember_uses_batch_flow(tmp_path: Path, mock_embedder: MagicMoc
     assert record.content == "Single fact."
     assert record.scope == "/project"
     assert record.importance == 0.8
-    assert mem._storage.count() == 1
+    assert mem._storage.count(tenant_id="_default") == 1
 
 
 def test_parallel_analyze_runs_concurrent_calls(tmp_path: Path) -> None:
@@ -915,7 +916,7 @@ def test_parallel_analyze_runs_concurrent_calls(tmp_path: Path) -> None:
     mem.remember_many(["Fact A.", "Fact B.", "Fact C."])
     mem.drain_writes()
     assert llm.call.call_count == 3
-    assert mem._storage.count() == 3
+    assert mem._storage.count(tenant_id="_default") == 3
 
 
 
@@ -950,7 +951,7 @@ def test_remember_many_returns_immediately(tmp_path: Path) -> None:
     assert result == []
     # After draining, records should exist
     mem.drain_writes()
-    assert mem._storage.count() == 2
+    assert mem._storage.count(tenant_id="_default") == 2
 
 
 def test_recall_drains_pending_writes(tmp_path: Path, mock_embedder: MagicMock) -> None:
@@ -990,4 +991,4 @@ def test_close_drains_and_shuts_down(tmp_path: Path, mock_embedder: MagicMock) -
     )
     mem.close()
     # After close, records should be persisted
-    assert mem._storage.count() == 1
+    assert mem._storage.count(tenant_id="_default") == 1
