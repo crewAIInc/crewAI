@@ -23,6 +23,7 @@ from crewai.events.types.memory_events import (
 from crewai.llms.base_llm import BaseLLM
 from crewai.memory.analyze import extract_memories_from_content
 from crewai.memory.storage.backend import StorageBackend
+from crewai.memory.storage.scoped_storage import ScopedStorage
 from crewai.memory.types import (
     MemoryConfig,
     MemoryMatch,
@@ -137,6 +138,23 @@ class Memory(BaseModel):
             "will store memories at '/crew/research/<inferred_scope>'."
         ),
     )
+    tenant_id: str = Field(
+        default="_default",
+        description=(
+            "Default tenant for all save/recall calls on this instance. The hard "
+            "isolation boundary: a recall scoped to tenant A never returns rows "
+            "written by tenant B. Per-call tenant_id kwargs on remember/recall/forget "
+            "override this default. Leave at '_default' for single-tenant deployments."
+        ),
+    )
+    user_id: str | None = Field(
+        default=None,
+        description=(
+            "Default user_id within the tenant for all calls on this instance. "
+            "Soft sub-partition; tenant_id is the security boundary. Per-call "
+            "kwargs override this default."
+        ),
+    )
 
     _config: MemoryConfig = PrivateAttr()
     _llm_instance: BaseLLM | None = PrivateAttr(default=None)
@@ -220,6 +238,26 @@ class Memory(BaseModel):
             self._storage = self.storage
 
     _MEMORY_DOCS_URL = "https://docs.crewai.com/concepts/memory"
+
+    def _scoped(
+        self,
+        tenant_id: str | None = None,
+        user_id: str | None = None,
+    ) -> ScopedStorage:
+        """Return a ScopedStorage proxy bound to the resolved (tenant_id, user_id).
+
+        Resolution order: per-call kwarg > instance default > '_default'.
+
+        Every internal call into the underlying storage goes through this
+        factory so the isolation invariant is enforced uniformly. Cheap to
+        construct -- a fresh instance per call lets a single Memory instance
+        serve many tenants concurrently.
+        """
+        resolved_tenant = tenant_id or self.tenant_id
+        resolved_user = user_id if user_id is not None else self.user_id
+        return ScopedStorage(
+            self._storage, tenant_id=resolved_tenant, user_id=resolved_user
+        )
 
     @property
     def _llm(self) -> BaseLLM:
@@ -341,11 +379,14 @@ class Memory(BaseModel):
         source: str | None = None,
         private: bool = False,
         root_scope: str | None = None,
+        tenant_id: str | None = None,
+        user_id: str | None = None,
     ) -> list[MemoryRecord]:
         """Run the batch EncodingFlow for one or more items. No event emission.
 
-        This is the core encoding logic shared by ``remember()`` and
-        ``remember_many()``. Events are managed by the calling method.
+        Hands the EncodingFlow a ScopedStorage bound to the resolved tenant.
+        Once the Flow holds a scoped handle, every save and lookup it does
+        is automatically tenant-scoped -- the Flow cannot escape the filter.
 
         Args:
             contents: List of text content to encode and store.
@@ -357,6 +398,8 @@ class Memory(BaseModel):
             private: Whether items are private.
             root_scope: Structural root scope prefix. LLM-inferred or explicit
                 scopes are nested under this root.
+            tenant_id: Tenant for this batch (resolution: arg > instance default > "_default").
+            user_id: Optional sub-tenant identity.
 
         Returns:
             List of created MemoryRecord instances.
@@ -364,7 +407,7 @@ class Memory(BaseModel):
         from crewai.memory.encoding_flow import EncodingFlow
 
         flow = EncodingFlow(
-            storage=self._storage,
+            storage=self._scoped(tenant_id, user_id),
             llm=self._llm,
             embedder=self._embedder,
             config=self._config,
@@ -400,6 +443,8 @@ class Memory(BaseModel):
         private: bool = False,
         agent_role: str | None = None,
         root_scope: str | None = None,
+        tenant_id: str | None = None,
+        user_id: str | None = None,
     ) -> MemoryRecord | None:
         """Store a single item in memory (synchronous).
 
@@ -413,11 +458,19 @@ class Memory(BaseModel):
             categories: Optional categories; inferred if None.
             metadata: Optional metadata; merged with LLM-extracted if inferred.
             importance: Optional importance 0-1; inferred if None.
-            source: Optional provenance identifier (e.g. user ID, session ID).
-            private: If True, only visible to recall from the same source.
+            source: Optional provenance identifier. Note: provenance only --
+                not an isolation boundary. Use tenant_id for isolation.
+            private: If True, hidden from recall by other sources within the
+                tenant. Note: within-tenant filter, not isolation. Use
+                tenant_id (or user_id within a tenant) for isolation.
             agent_role: Optional agent role for event metadata.
             root_scope: Optional root scope override. If provided, this overrides
                 the instance-level root_scope for this call only.
+            tenant_id: Tenant for this record (resolution: arg > instance
+                default > "_default"). The hard isolation boundary -- a row
+                saved with tenant_id="A" is never returned by recall scoped
+                to tenant_id="B".
+            user_id: Optional sub-tenant identity within tenant_id.
 
         Returns:
             The created MemoryRecord, or None if this memory is read-only.
@@ -454,6 +507,8 @@ class Memory(BaseModel):
                 source,
                 private,
                 effective_root,
+                tenant_id,
+                user_id,
             )
             records = future.result()
             record = records[0] if records else None
@@ -493,6 +548,8 @@ class Memory(BaseModel):
         private: bool = False,
         agent_role: str | None = None,
         root_scope: str | None = None,
+        tenant_id: str | None = None,
+        user_id: str | None = None,
     ) -> list[MemoryRecord]:
         """Store multiple items in memory (non-blocking).
 
@@ -537,6 +594,8 @@ class Memory(BaseModel):
             private,
             agent_role,
             effective_root,
+            tenant_id,
+            user_id,
         )
         return []
 
@@ -551,6 +610,8 @@ class Memory(BaseModel):
         private: bool,
         agent_role: str | None,
         root_scope: str | None = None,
+        tenant_id: str | None = None,
+        user_id: str | None = None,
     ) -> list[MemoryRecord]:
         """Run the encoding pipeline in a background thread with event emission.
 
@@ -598,6 +659,8 @@ class Memory(BaseModel):
                 source,
                 private,
                 root_scope,
+                tenant_id,
+                user_id,
             )
             elapsed_ms = (time.perf_counter() - start) * 1000
         except RuntimeError:
@@ -645,6 +708,8 @@ class Memory(BaseModel):
         depth: Literal["shallow", "deep"] = "deep",
         source: str | None = None,
         include_private: bool = False,
+        tenant_id: str | None = None,
+        user_id: str | None = None,
     ) -> list[MemoryMatch]:
         """Retrieve relevant memories.
 
@@ -653,15 +718,27 @@ class Memory(BaseModel):
         targeted sub-queries, selects scopes, searches in parallel, and applies
         confidence-based routing for optional deeper exploration.
 
+        Isolation: results are pre-filtered to (tenant_id, user_id) at the
+        storage layer via ScopedStorage. The within-tenant source/private
+        filter below is applied AFTER tenant isolation, so it cannot leak
+        cross-tenant rows regardless of the source/include_private values.
+
         Args:
             query: Natural language query.
             scope: Optional scope prefix to search within.
             categories: Optional category filter.
             limit: Max number of results.
             depth: "shallow" for direct vector search, "deep" for intelligent flow.
-            source: Optional provenance filter. Private records are only visible
-                    when this matches the record's source.
-            include_private: If True, all private records are visible regardless of source.
+            source: Provenance filter applied within the tenant. Private records
+                are only visible when this matches the record's source. Note:
+                not an isolation boundary -- use tenant_id for that.
+            include_private: If True, all private records within the tenant are
+                visible regardless of source.
+            tenant_id: Tenant for this recall (resolution: arg > instance
+                default > "_default"). A row written by another tenant is
+                NEVER returned, under any ranking, embedding collision, or
+                query depth.
+            user_id: Optional sub-tenant identity within tenant_id.
 
         Returns:
             List of MemoryMatch, ordered by relevance.
@@ -675,6 +752,8 @@ class Memory(BaseModel):
             effective_scope = self.root_scope
         elif effective_scope is not None and self.root_scope:
             effective_scope = join_scope_paths(self.root_scope, effective_scope)
+
+        scoped = self._scoped(tenant_id, user_id)
 
         _source = "unified_memory"
         try:
@@ -694,14 +773,18 @@ class Memory(BaseModel):
                 if not embedding:
                     results: list[MemoryMatch] = []
                 else:
-                    raw = self._storage.search(
+                    raw = scoped.search(
                         embedding,
-                        tenant_id="_default",
                         scope_prefix=effective_scope,
                         categories=categories,
                         limit=limit,
                         min_score=0.0,
                     )
+                    # Within-tenant source/private filter. Applied after
+                    # ScopedStorage already filtered to this tenant, so cannot
+                    # leak cross-tenant rows. Kept for backward compatibility
+                    # with single-tenant deployments using the private flag --
+                    # for new per-user isolation, prefer user_id.
                     if not include_private:
                         raw = [
                             (r, s)
@@ -723,7 +806,7 @@ class Memory(BaseModel):
                 from crewai.memory.recall_flow import RecallFlow
 
                 flow = RecallFlow(
-                    storage=self._storage,
+                    storage=scoped,
                     llm=self._llm,
                     embedder=self._embedder,
                     config=self._config,
@@ -781,8 +864,10 @@ class Memory(BaseModel):
         older_than: datetime | None = None,
         metadata_filter: dict[str, Any] | None = None,
         record_ids: list[str] | None = None,
+        tenant_id: str | None = None,
+        user_id: str | None = None,
     ) -> int:
-        """Delete memories matching criteria.
+        """Delete memories matching criteria (scoped to tenant).
 
         Args:
             scope: Scope to delete from. If None and root_scope is set, deletes
@@ -790,7 +875,12 @@ class Memory(BaseModel):
             categories: Filter by categories.
             older_than: Delete records older than this datetime.
             metadata_filter: Filter by metadata fields.
-            record_ids: Specific record IDs to delete.
+            record_ids: Specific record IDs to delete. Even an id-targeted
+                delete is constrained to the tenant -- a foreign id will not
+                match.
+            tenant_id: Tenant whose rows are eligible (resolution:
+                arg > instance default > "_default").
+            user_id: Optional sub-tenant filter.
 
         Returns:
             Number of records deleted.
@@ -800,8 +890,7 @@ class Memory(BaseModel):
             effective_scope = self.root_scope
         elif effective_scope is not None and self.root_scope:
             effective_scope = join_scope_paths(self.root_scope, effective_scope)
-        return self._storage.delete(
-            tenant_id="_default",
+        return self._scoped(tenant_id, user_id).delete(
             scope_prefix=effective_scope,
             categories=categories,
             record_ids=record_ids,
@@ -817,8 +906,12 @@ class Memory(BaseModel):
         categories: list[str] | None = None,
         metadata: dict[str, Any] | None = None,
         importance: float | None = None,
+        tenant_id: str | None = None,
+        user_id: str | None = None,
     ) -> MemoryRecord:
-        """Update an existing memory record by ID.
+        """Update an existing memory record by ID (scoped to tenant).
+
+        A record_id that belongs to another tenant is treated as not-found.
 
         Args:
             record_id: ID of the record to update.
@@ -827,14 +920,18 @@ class Memory(BaseModel):
             categories: New categories.
             metadata: New metadata.
             importance: New importance score.
+            tenant_id: Tenant whose record is looked up
+                (resolution: arg > instance default > "_default").
+            user_id: Optional sub-tenant filter.
 
         Returns:
             The updated MemoryRecord.
 
         Raises:
-            ValueError: If the record is not found.
+            ValueError: If the record is not found in the tenant.
         """
-        existing = self._storage.get_record(record_id, tenant_id="_default")
+        scoped = self._scoped(tenant_id, user_id)
+        existing = scoped.get_record(record_id)
         if existing is None:
             raise ValueError(f"Record not found: {record_id}")
         now = datetime.utcnow()
@@ -852,7 +949,7 @@ class Memory(BaseModel):
         if importance is not None:
             updates["importance"] = importance
         updated = existing.model_copy(update=updates)
-        self._storage.update(updated)
+        scoped.update(updated)
         return updated
 
     def scope(self, path: str) -> Any:
@@ -877,12 +974,19 @@ class Memory(BaseModel):
             read_only=read_only,
         )
 
-    def list_scopes(self, path: str | None = None) -> list[str]:
-        """List immediate child scopes under path.
+    def list_scopes(
+        self,
+        path: str | None = None,
+        tenant_id: str | None = None,
+        user_id: str | None = None,
+    ) -> list[str]:
+        """List immediate child scopes under path (scoped to tenant).
 
         Args:
             path: Scope path to list children of. If None and root_scope is set,
                 defaults to root_scope. Otherwise defaults to '/'.
+            tenant_id: Tenant whose scopes are listed.
+            user_id: Optional sub-tenant filter.
         """
         effective_path = path
         if effective_path is None and self.root_scope:
@@ -891,37 +995,50 @@ class Memory(BaseModel):
             effective_path = join_scope_paths(self.root_scope, effective_path)
         elif effective_path is None:
             effective_path = "/"
-        return self._storage.list_scopes(effective_path, tenant_id="_default")
+        return self._scoped(tenant_id, user_id).list_scopes(effective_path)
 
     def list_records(
-        self, scope: str | None = None, limit: int = 200, offset: int = 0
+        self,
+        scope: str | None = None,
+        limit: int = 200,
+        offset: int = 0,
+        tenant_id: str | None = None,
+        user_id: str | None = None,
     ) -> list[MemoryRecord]:
-        """List records in a scope, newest first.
+        """List records in a scope (scoped to tenant), newest first.
 
         Args:
             scope: Optional scope path prefix to filter by. If None and root_scope
                 is set, defaults to root_scope.
             limit: Maximum number of records to return.
             offset: Number of records to skip (for pagination).
+            tenant_id: Tenant whose records are listed.
+            user_id: Optional sub-tenant filter.
         """
         effective_scope = scope
         if effective_scope is None and self.root_scope:
             effective_scope = self.root_scope
         elif effective_scope is not None and self.root_scope:
             effective_scope = join_scope_paths(self.root_scope, effective_scope)
-        return self._storage.list_records(
-            tenant_id="_default",
+        return self._scoped(tenant_id, user_id).list_records(
             scope_prefix=effective_scope,
             limit=limit,
             offset=offset,
         )
 
-    def info(self, path: str | None = None) -> ScopeInfo:
-        """Return scope info for path.
+    def info(
+        self,
+        path: str | None = None,
+        tenant_id: str | None = None,
+        user_id: str | None = None,
+    ) -> ScopeInfo:
+        """Return scope info for path (scoped to tenant).
 
         Args:
             path: Scope path to get info for. If None and root_scope is set,
                 defaults to root_scope. Otherwise defaults to '/'.
+            tenant_id: Tenant whose scope info is read.
+            user_id: Optional sub-tenant filter.
         """
         effective_path = path
         if effective_path is None and self.root_scope:
@@ -930,15 +1047,23 @@ class Memory(BaseModel):
             effective_path = join_scope_paths(self.root_scope, effective_path)
         elif effective_path is None:
             effective_path = "/"
-        return self._storage.get_scope_info(effective_path, tenant_id="_default")
+        return self._scoped(tenant_id, user_id).get_scope_info(effective_path)
 
-    def tree(self, path: str | None = None, max_depth: int = 3) -> str:
-        """Return a formatted tree of scopes (string).
+    def tree(
+        self,
+        path: str | None = None,
+        max_depth: int = 3,
+        tenant_id: str | None = None,
+        user_id: str | None = None,
+    ) -> str:
+        """Return a formatted tree of scopes (string), scoped to tenant.
 
         Args:
             path: Root path for the tree. If None and root_scope is set,
                 defaults to root_scope. Otherwise defaults to '/'.
             max_depth: Maximum depth to traverse.
+            tenant_id: Tenant whose scope tree is rendered.
+            user_id: Optional sub-tenant filter.
         """
         effective_path = path
         if effective_path is None and self.root_scope:
@@ -948,12 +1073,13 @@ class Memory(BaseModel):
         elif effective_path is None:
             effective_path = "/"
 
+        scoped = self._scoped(tenant_id, user_id)
         lines: list[str] = []
 
         def _walk(p: str, depth: int, prefix: str) -> None:
             if depth > max_depth:
                 return
-            info = self._storage.get_scope_info(p, tenant_id="_default")
+            info = scoped.get_scope_info(p)
             lines.append(f"{prefix}{p or '/'} ({info.record_count} records)")
             for child in info.child_scopes[:20]:
                 _walk(child, depth + 1, prefix + "  ")
@@ -961,35 +1087,52 @@ class Memory(BaseModel):
         _walk(effective_path.rstrip("/") or "/", 0, "")
         return "\n".join(lines) if lines else f"{effective_path or '/'} (0 records)"
 
-    def list_categories(self, path: str | None = None) -> dict[str, int]:
-        """List categories and counts.
+    def list_categories(
+        self,
+        path: str | None = None,
+        tenant_id: str | None = None,
+        user_id: str | None = None,
+    ) -> dict[str, int]:
+        """List categories and counts (scoped to tenant).
 
         Args:
             path: Scope path to filter categories by. If None and root_scope is set,
                 defaults to root_scope.
+            tenant_id: Tenant whose categories are counted.
+            user_id: Optional sub-tenant filter.
         """
         effective_path = path
         if effective_path is None and self.root_scope:
             effective_path = self.root_scope
         elif effective_path is not None and self.root_scope:
             effective_path = join_scope_paths(self.root_scope, effective_path)
-        return self._storage.list_categories(
-            tenant_id="_default", scope_prefix=effective_path
+        return self._scoped(tenant_id, user_id).list_categories(
+            scope_prefix=effective_path
         )
 
-    def reset(self, scope: str | None = None) -> None:
-        """Reset (delete all) memories in scope.
+    def reset(
+        self,
+        scope: str | None = None,
+        tenant_id: str | None = None,
+        user_id: str | None = None,
+    ) -> None:
+        """Reset (delete all) memories in scope, within the tenant.
+
+        Resetting one tenant never wipes another tenant's data. To remove
+        the entire on-disk store, delete the storage directory directly.
 
         Args:
             scope: Scope to reset. If None and root_scope is set, resets only
-                within root_scope. If None and no root_scope, resets all.
+                within root_scope.
+            tenant_id: Tenant whose rows are wiped.
+            user_id: Optional sub-tenant filter.
         """
         effective_scope = scope
         if effective_scope is None and self.root_scope:
             effective_scope = self.root_scope
         elif effective_scope is not None and self.root_scope:
             effective_scope = join_scope_paths(self.root_scope, effective_scope)
-        self._storage.reset(tenant_id="_default", scope_prefix=effective_scope)
+        self._scoped(tenant_id, user_id).reset(scope_prefix=effective_scope)
 
     async def aextract_memories(self, content: str) -> list[str]:
         """Async variant of extract_memories."""
@@ -1004,6 +1147,8 @@ class Memory(BaseModel):
         importance: float | None = None,
         source: str | None = None,
         private: bool = False,
+        tenant_id: str | None = None,
+        user_id: str | None = None,
     ) -> MemoryRecord | None:
         """Async remember: delegates to sync for now."""
         return self.remember(
@@ -1014,6 +1159,8 @@ class Memory(BaseModel):
             importance=importance,
             source=source,
             private=private,
+            tenant_id=tenant_id,
+            user_id=user_id,
         )
 
     async def aremember_many(
@@ -1026,6 +1173,8 @@ class Memory(BaseModel):
         source: str | None = None,
         private: bool = False,
         agent_role: str | None = None,
+        tenant_id: str | None = None,
+        user_id: str | None = None,
     ) -> list[MemoryRecord]:
         """Async remember_many: delegates to sync for now."""
         return self.remember_many(
@@ -1037,6 +1186,8 @@ class Memory(BaseModel):
             source=source,
             private=private,
             agent_role=agent_role,
+            tenant_id=tenant_id,
+            user_id=user_id,
         )
 
     async def arecall(
@@ -1048,6 +1199,8 @@ class Memory(BaseModel):
         depth: Literal["shallow", "deep"] = "deep",
         source: str | None = None,
         include_private: bool = False,
+        tenant_id: str | None = None,
+        user_id: str | None = None,
     ) -> list[MemoryMatch]:
         """Async recall: delegates to sync for now."""
         return self.recall(
@@ -1058,4 +1211,6 @@ class Memory(BaseModel):
             depth=depth,
             source=source,
             include_private=include_private,
+            tenant_id=tenant_id,
+            user_id=user_id,
         )

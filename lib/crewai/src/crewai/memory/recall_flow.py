@@ -97,7 +97,6 @@ class RecallFlow(Flow[RecallState]):
         ) -> tuple[str, list[tuple[MemoryRecord, float]]]:
             raw = self._storage.search(
                 embedding,
-                tenant_id="_default",
                 scope_prefix=scope,
                 categories=search_categories,
                 limit=self.state.limit * _RECALL_OVERSAMPLE_FACTOR,
@@ -202,15 +201,11 @@ class RecallFlow(Flow[RecallState]):
             )
             self.state.query_analysis = analysis
         else:
-            available = self._storage.list_scopes(
-                self.state.scope or "/", tenant_id="_default"
-            )
+            available = self._storage.list_scopes(self.state.scope or "/")
             if not available:
                 available = ["/"]
             scope_info = (
-                self._storage.get_scope_info(
-                    self.state.scope or "/", tenant_id="_default"
-                )
+                self._storage.get_scope_info(self.state.scope or "/")
                 if self.state.scope
                 else None
             )
@@ -254,9 +249,7 @@ class RecallFlow(Flow[RecallState]):
             candidates = [s for s in analysis.suggested_scopes if s]
         else:
             try:
-                candidates = self._storage.list_scopes(
-                    scope_prefix, tenant_id="_default"
-                )
+                candidates = self._storage.list_scopes(scope_prefix)
             except Exception:
                 logger.warning(
                     "Storage list_scopes failed in filter_and_chunk, "

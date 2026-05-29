@@ -6,17 +6,18 @@ The contract:
 If any test in this file fails or passes vacuously (e.g. because the
 embeddings happen to differ), the per-tenant isolation feature is broken.
 
-Tests in this file are split into two groups:
+Tests in this file are split into three groups:
 
-* ``TestScopedStorage`` -- exercise ScopedStorage directly. These tests pass
-  as of PR #3 (this PR) because they go through the wrapper, which is the
-  enforcement chokepoint.
+* ``TestScopedStorage`` -- exercise ScopedStorage directly. The wrapper is
+  the enforcement chokepoint and these tests are the primary security
+  contract.
+* ``TestMemoryBackCompat`` -- pin that single-tenant deployments (no
+  tenant_id passed anywhere) keep working unchanged via the '_default'
+  fallback.
 * ``TestMemoryIsolation`` -- exercise Memory.remember / Memory.recall /
-  Memory.forget. These tests are XFAIL'd until PR #4 wires ScopedStorage
-  through Memory; the XFAILs are removed in that PR. Keeping them here in
-  PR #3 (failing on purpose) is the design doc's test contract -- a feature
-  without an isolation test is unfinished, and these are the failing
-  receipts that motivate PR #4.
+  Memory.forget with explicit tenant_id kwargs end to end. These prove
+  isolation works through the full public API, including the deep-recall
+  LLM exploration path that goes through RecallFlow.
 """
 
 from __future__ import annotations
@@ -254,12 +255,6 @@ class TestMemoryBackCompat:
         assert all(h.record.tenant_id == "_default" for h in hits)
 
 
-@pytest.mark.xfail(
-    reason="PR #4 wires ScopedStorage through Memory and adds tenant_id "
-    "kwargs to remember/recall/forget. Until then these calls TypeError.",
-    strict=True,
-    raises=TypeError,
-)
 class TestMemoryIsolation:
     def test_cross_tenant_recall_returns_nothing(
         self, tmp_path: Path, mock_embedder: MagicMock
@@ -308,3 +303,31 @@ class TestMemoryIsolation:
         assert deleted == 1
         bob_hits = m.recall("note", tenant_id="bob", depth="shallow")
         assert any("bob note" in h.record.content for h in bob_hits)
+
+    def test_instance_default_tenant_holds(
+        self, tmp_path: Path, mock_embedder: MagicMock
+    ) -> None:
+        # Memory configured with a default tenant should auto-scope every call.
+        from crewai.memory.unified_memory import Memory
+
+        alice_mem = Memory(
+            storage=str(tmp_path / "mem.lance"),
+            llm=MagicMock(),
+            embedder=mock_embedder,
+            tenant_id="alice",
+        )
+        bob_mem = Memory(
+            storage=str(tmp_path / "mem.lance"),
+            llm=MagicMock(),
+            embedder=mock_embedder,
+            tenant_id="bob",
+        )
+        alice_mem.remember("alice's calendar", scope="/")
+        bob_mem.remember("bob's calendar", scope="/")
+
+        alice = alice_mem.recall("calendar", depth="shallow")
+        bob = bob_mem.recall("calendar", depth="shallow")
+        assert all(h.record.tenant_id == "alice" for h in alice)
+        assert all(h.record.tenant_id == "bob" for h in bob)
+        assert not any("bob" in h.record.content for h in alice)
+        assert not any("alice" in h.record.content for h in bob)
