@@ -1,0 +1,69 @@
+%% Per-tenant memory isolation — identity propagation and enforcement path
+%% Source of truth for the diagram embedded in
+%%   design-docs/0001-per-tenant-memory-isolation.md
+%% Render:
+%%   npx -p @mermaid-js/mermaid-cli mmdc -i identity-propagation.mmd -o identity-propagation.svg
+%%   (or paste into https://mermaid.live)
+flowchart TD
+    Caller["Caller<br/>(API handler, Flow step, agent)"]
+    Resolve{"Resolve effective tenant<br/>per-call &gt; instance default &gt; '_default'"}
+
+    subgraph MemoryAPI["Memory — public API"]
+        Remember["remember(content, tenant_id=, user_id=)"]
+        Recall["recall(query, tenant_id=, user_id=)"]
+        Forget["forget(tenant_id=, user_id=)"]
+        Scoped["_scoped(tenant_id, user_id)<br/>builds ScopedStorage proxy"]
+    end
+
+    subgraph Enforcement["ScopedStorage — ENFORCEMENT CHOKEPOINT"]
+        Stamp["WRITE — stamp tenant_id on every record<br/>cross-tenant record raises PermissionError"]
+        Inject["READ — inject tenant_id predicate<br/>callers cannot omit it"]
+        Verify["VERIFY — re-check every returned row<br/>foreign tenant row raises RuntimeError (loud)"]
+    end
+
+    subgraph Protocol["StorageBackend Protocol"]
+        SaveAPI["save(records)"]
+        SearchAPI["search(*, tenant_id: str, …)<br/>required keyword-only<br/>mypy --strict catches omissions in CI"]
+        DeleteAPI["delete(*, tenant_id: str, …)"]
+    end
+
+    subgraph Backend["Underlying backend — LanceDB / Chroma / Qdrant"]
+        Column["tenant_id column<br/>NOT NULL + index on (tenant_id, scope)"]
+        Filter["WHERE tenant_id = ? pushed into vector query<br/>foreign rows never enter candidate pool"]
+    end
+
+    RecallFlow["RecallFlow (deep mode)<br/>holds ScopedStorage, not raw backend<br/>→ exploration cannot escape tenant filter"]
+
+    Caller --> Resolve
+    Resolve --> Remember
+    Resolve --> Recall
+    Resolve --> Forget
+
+    Remember --> Scoped
+    Recall --> Scoped
+    Forget --> Scoped
+
+    Scoped --> Stamp
+    Scoped --> Inject
+    Inject --> Verify
+
+    Stamp --> SaveAPI
+    Verify --> SearchAPI
+    Inject --> DeleteAPI
+
+    SaveAPI --> Column
+    SearchAPI --> Filter
+    DeleteAPI --> Filter
+
+    Recall -. depth=deep .-> RecallFlow
+    RecallFlow --> Scoped
+
+    classDef enforce fill:#ffe6e6,stroke:#c0392b,stroke-width:3px,color:#000
+    classDef boundary fill:#fff4e0,stroke:#e67e22,stroke-width:2px,color:#000
+    classDef storage fill:#e8f4fd,stroke:#2980b9,stroke-width:2px,color:#000
+    classDef caller fill:#eafaf1,stroke:#27ae60,stroke-width:2px,color:#000
+
+    class Stamp,Inject,Verify enforce
+    class SaveAPI,SearchAPI,DeleteAPI boundary
+    class Column,Filter storage
+    class Caller,Resolve caller
