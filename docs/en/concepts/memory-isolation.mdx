@@ -1,0 +1,314 @@
+---
+title: Memory Isolation
+description: Per-tenant and per-user memory partitioning for multi-user CrewAI deployments.
+icon: shield-halved
+mode: "wide"
+---
+
+## When You Need This
+
+If your CrewAI app serves **more than one user from a single process** — a SaaS product, a multi-tenant internal tool, a customer-support bot that talks to many customers — you need per-tenant memory isolation.
+
+Without it, every user's memories pool into the same vector collection. Alice's `recall()` will return rows that Bob saved, ranked by whatever the embedder thinks is most similar. That is a data leak, not a UX nit.
+
+If you are using CrewAI from a single-user CLI, a notebook, or a single-tenant deployment, you do **not** need to change anything. Memory keeps working exactly as before with a built-in default tenant.
+
+<Warning>
+**Not the same thing as `scope`.** The `scope` parameter on `Memory` (`/customer/acme-corp`, `/agent/researcher`, etc.) is a *structural* path for organizing memories by topic. It is **not** a security boundary. A `recall()` that omits the scope will still return rows from any scope. For real isolation between users or tenants, use `tenant_id`.
+</Warning>
+
+## The Guarantee
+
+> A `recall()` scoped to tenant A will never return a memory written by tenant B — under any ranking, embedding collision, query depth, or backend.
+
+This is enforced at the storage layer, not by the calling agent. An agent that asks for the wrong data does not get it.
+
+## Quick Start
+
+```python
+from crewai import Memory
+
+memory = Memory()
+
+# Alice and Bob each save a credential under the same scope
+memory.remember("My API key is alice-secret-123", tenant_id="alice")
+memory.remember("My API key is bob-secret-456",   tenant_id="bob")
+
+# Alice's recall only sees Alice's row
+alice = memory.recall("what is my api key", tenant_id="alice")
+assert all(m.record.tenant_id == "alice" for m in alice)
+
+# Bob's recall only sees Bob's row
+bob = memory.recall("what is my api key", tenant_id="bob")
+assert all(m.record.tenant_id == "bob" for m in bob)
+```
+
+That is the entire feature, end to end. Everything below is pattern guidance.
+
+## Tenants, Users, and Scopes
+
+Three concepts. They look similar; they are not.
+
+| Concept | Set at | Purpose | Is it a security boundary? |
+|---|---|---|---|
+| `tenant_id` | Per call or per `Memory()` | **Isolation.** Hard wall between customers, organizations, accounts. | **Yes.** |
+| `user_id` | Per call or per `Memory()` | **Sub-partition** within a tenant. Lets a tenant admin recall across their own users without crossing tenants. | Soft. |
+| `scope` | Per record | **Structural.** Organizes memories into a topic tree (`/project/alpha`, `/agent/researcher`). | No. |
+
+A SaaS deployment usually wants:
+
+- `tenant_id="customer_42"` — the customer who owns the data.
+- `user_id="alice"` — the person inside that customer making the request.
+- `scope="/agent/researcher/findings"` — what kind of memory this is.
+
+Examples:
+
+```python
+# Recall only Alice's memories inside customer_42
+memory.recall("my preferences", tenant_id="customer_42", user_id="alice")
+
+# Recall all memories inside customer_42 (tenant admin view)
+memory.recall("recent decisions", tenant_id="customer_42")
+
+# Forget everything for customer_42 — right-to-be-forgotten
+memory.forget(tenant_id="customer_42")
+```
+
+## Common Patterns
+
+### Multi-tenant SaaS
+
+One `Memory` instance, many tenants. Resolve the tenant from your auth layer (JWT, session, request header) and pass it on every call.
+
+```python
+from crewai import Memory
+
+memory = Memory()  # one process-wide instance
+
+def handle_request(request):
+    tenant_id = request.user.tenant_id      # from your auth
+    user_id   = request.user.id
+
+    memory.remember(
+        request.message,
+        tenant_id=tenant_id,
+        user_id=user_id,
+    )
+
+    return memory.recall(
+        request.query,
+        tenant_id=tenant_id,
+        user_id=user_id,
+    )
+```
+
+### With `Crew.kickoff()`
+
+Pass identity at kickoff. Agents inside the crew receive a memory handle that is already bound to the right tenant — they cannot recall outside it, even if a prompt-injected agent tries.
+
+```python
+from crewai import Crew, Agent, Task
+
+crew = Crew(agents=[...], tasks=[...], memory=True)
+
+result = crew.kickoff(
+    inputs={"topic": "Q4 strategy"},
+    tenant_id="customer_42",
+    user_id="alice",
+)
+```
+
+### Inside Flows
+
+`tenant_id` and `user_id` thread through Flow state. Set them once at the start; every downstream Crew kickoff inherits them.
+
+```python
+from crewai.flow.flow import Flow, start, listen
+
+class SupportFlow(Flow):
+    @start()
+    def begin(self):
+        self.state.tenant_id = self.inputs["tenant_id"]
+        self.state.user_id   = self.inputs["user_id"]
+
+    @listen(begin)
+    def answer(self):
+        return support_crew.kickoff(
+            inputs={"question": self.inputs["question"]},
+            tenant_id=self.state.tenant_id,
+            user_id=self.state.user_id,
+        )
+```
+
+### Tenant-bound `Memory` instances
+
+If you prefer dependency injection over per-call kwargs, bind `tenant_id` at construction:
+
+```python
+def memory_for(request) -> Memory:
+    return Memory(tenant_id=request.user.tenant_id, user_id=request.user.id)
+```
+
+Per-call kwargs always win over instance defaults, so this pattern composes with the SaaS pattern above when you need to.
+
+### Customer-support bot (replacing the old `scope` pattern)
+
+The old documentation example used `scope="/customer/acme-corp"` for per-customer context. That was structural, not isolated. The correct pattern is:
+
+```python
+# Before (NOT isolated)
+memory.remember("Prefers email", scope="/customer/acme-corp")
+
+# After (isolated)
+memory.remember("Prefers email", tenant_id="acme-corp")
+```
+
+You can still use `scope` *inside* a tenant for organization:
+
+```python
+memory.remember(
+    "Prefers email",
+    tenant_id="acme-corp",
+    scope="/preferences/communication",
+)
+```
+
+## Migrating Existing Deployments
+
+If you have an existing CrewAI app with memory data on disk, you have two questions to answer:
+
+**1. Are all your existing memories owned by one identity?**
+
+If yes (single-user app, single-tenant SaaS), there is nothing to do. The default tenant `"_default"` covers all existing rows. Your code keeps working unchanged.
+
+**2. Did you previously use `scope` or `source` to fake per-user isolation?**
+
+Run the one-shot migration to assign each row a real `tenant_id`:
+
+```bash
+crewai memory migrate \
+  --storage-dir $CREWAI_STORAGE_DIR \
+  --default-tenant _default \
+  --dry-run
+```
+
+`--dry-run` prints what would change without writing. Remove it once you're satisfied.
+
+If you need to assign different tenants to different existing rows (e.g. you stored a customer ID in metadata), the migration command supports a `--from-metadata-key` flag:
+
+```bash
+crewai memory migrate \
+  --storage-dir $CREWAI_STORAGE_DIR \
+  --from-metadata-key customer_id
+```
+
+This reads each row's `metadata["customer_id"]` and sets it as `tenant_id`. Rows missing the key fall back to `--default-tenant`.
+
+<Tip>
+The migration is **idempotent** — running it twice is safe. Run it during a maintenance window; do not run it against a live writing process.
+</Tip>
+
+## What Gets Filtered
+
+| Operation | Scoped to tenant? |
+|---|---|
+| `memory.recall(query, tenant_id="alice")` | Yes — vector search filters at the backend. |
+| `memory.forget(tenant_id="alice")` | Yes — only Alice's rows are deleted. |
+| `memory.list_records(tenant_id="alice")` | Yes. |
+| `memory.list_scopes(tenant_id="alice")` | Yes — Alice only sees scopes she has written to. |
+| `memory.list_categories(tenant_id="alice")` | Yes. |
+| `memory.count(tenant_id="alice")` | Yes. |
+| `memory.reset(tenant_id="alice")` | Yes — wipes Alice's tenant only. There is no "wipe everything" call. |
+| Deep recall via `RecallFlow` (`depth="deep"`) | Yes — the LLM exploration loop sees only the tenant's rows. |
+| Embedder | Shared. Embeddings are not a security boundary. |
+
+## Threat Model
+
+What this feature defends against, in plain language:
+
+- **A user querying for another user's data.** The vector store filters `WHERE tenant_id = ?` before ranking, so foreign-tenant rows are never candidates.
+- **A buggy or forgotten filter in your code.** If you forget to pass `tenant_id`, you fall back to the `"_default"` tenant — which is **its own bucket**, not a global view. The fallback is non-leaking by design.
+- **A prompt-injected agent trying to "ignore previous instructions" and recall everything.** Agents receive a `Memory` handle that is already bound to a tenant. There is no API on that handle to widen the scope.
+- **A broken backend filter.** A second-line check inside the storage wrapper re-verifies every returned row's `tenant_id`. If a row sneaks through, the call raises an exception loudly rather than returning a quietly-filtered result.
+
+What this feature does **not** do:
+
+- **Authenticate the caller.** Verifying that "the person calling with `tenant_id='alice'` is actually Alice" is your auth layer's job. This feature enforces the predicate; it does not validate it.
+- **Encrypt data per tenant.** Records are stored in the same database in plaintext (or whatever your backend's at-rest encryption setting is). Per-tenant encryption is a separate feature.
+- **Prevent operator misuse.** A developer with database access can read any row. This is no different from any other application database.
+
+## Comparison
+
+| | Built-in `Memory` (this page) | External providers (mem0, etc.) |
+|---|---|---|
+| Per-user / per-tenant isolation | **Yes** | Yes |
+| Survives restart | Yes | Yes |
+| Cross-crew shared memory | Limited (via `scope`) | First-class |
+| Long-term consolidation, decay | Basic | Advanced |
+| Network dependency | None (local LanceDB/Chroma) | Yes |
+| Self-hosted | Yes | Depends on provider |
+
+If you need cross-crew knowledge graphs, advanced consolidation, or a managed service, an external provider is the right tool. If you need isolation for a self-hosted or local-first deployment, use built-in `Memory` with `tenant_id`.
+
+## FAQ
+
+**Do I have to pass `tenant_id` everywhere now?**
+No. If you don't pass it, calls fall back to the `"_default"` tenant. All your existing single-user code keeps working, and all existing rows on disk are readable as `"_default"`.
+
+**Can I have a `Memory` instance per tenant instead of passing `tenant_id` per call?**
+Yes: `Memory(tenant_id="customer_42")`. Both patterns work. Per-call kwargs override instance defaults, so you can mix them.
+
+**What happens if a record's `tenant_id` and my `ScopedStorage`'s `tenant_id` disagree on save?**
+The save raises `PermissionError`. Silent relabeling would mask bugs; loud failure surfaces them.
+
+**Is `tenant_id` sent to my LLM or embedder?**
+No. It is a storage-layer predicate. The LLM sees the content and the query; it does not see the tenant identifier unless you put it in the content yourself.
+
+**Does this work with the deep-recall LLM exploration (`depth="deep"`)?**
+Yes. The exploration loop searches through the same scoped storage handle and cannot escape the tenant filter.
+
+**What about the legacy `BaseRAGStorage` path?**
+The same `tenant_id` field and filter applies. Both code paths are covered.
+
+**Can I delete all of one tenant's data for a right-to-be-forgotten request?**
+Yes: `memory.forget(tenant_id="customer_42")` deletes every record for that tenant. `memory.reset(tenant_id="customer_42")` is the equivalent for the LanceDB/Chroma backend.
+
+**Should I use `tenant_id` or `user_id` or both?**
+- One organization, multiple users: `tenant_id="org_id"`, `user_id="user_id"`.
+- One isolation level only (e.g. each end-user is independent): `tenant_id="user_id"` and skip `user_id`.
+- Pick the field name that matches your real boundary. `tenant_id` is the hard wall; `user_id` is the soft partition inside it.
+
+## API Reference
+
+### `Memory(...)` constructor
+
+| Argument | Type | Default | Notes |
+|---|---|---|---|
+| `tenant_id` | `str` | `"_default"` | Default tenant for all calls on this instance. |
+| `user_id` | `str \| None` | `None` | Default user_id for all calls on this instance. |
+
+### `Memory.remember(content, *, tenant_id=None, user_id=None, ...)`
+
+Stores a record under the resolved tenant. If `tenant_id` is omitted, falls back to the instance default, then to `"_default"`.
+
+### `Memory.recall(query, *, tenant_id=None, user_id=None, ...)`
+
+Returns matches restricted to the resolved tenant. With `user_id` set, further restricted to that user.
+
+### `Memory.forget(*, tenant_id=None, user_id=None, ...)`
+
+Deletes records matching the resolved tenant (and optionally user). Returns the count deleted.
+
+### `Crew.kickoff(inputs={...}, *, tenant_id=None, user_id=None)`
+
+Sets the tenant context for all agents and memory access during this kickoff.
+
+### `crewai memory migrate`
+
+One-shot CLI command to stamp existing unscoped data with a tenant. See [Migrating Existing Deployments](#migrating-existing-deployments).
+
+## See Also
+
+- [Memory](/en/concepts/memory) — the underlying unified memory system.
+- [Knowledge](/en/concepts/knowledge) — for shared, read-only knowledge sources (not per-user data).
+- [Production Architecture](/en/concepts/production-architecture) — deployment patterns for multi-tenant CrewAI.
