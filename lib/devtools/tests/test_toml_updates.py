@@ -13,9 +13,6 @@ from crewai_devtools.cli import (
 )
 
 
-# --- update_pyproject_version ---
-
-
 class TestUpdatePyprojectVersion:
     def test_updates_version(self, tmp_path: Path) -> None:
         pyproject = tmp_path / "pyproject.toml"
@@ -80,9 +77,6 @@ class TestUpdatePyprojectVersion:
 
         assert "# This is important" in result
         assert 'description = "A package"' in result
-
-
-# --- _pin_crewai_deps ---
 
 
 class TestPinCrewaiDeps:
@@ -195,9 +189,6 @@ class TestPinCrewaiDeps:
         assert "==" not in result
 
 
-# --- _repin_crewai_install ---
-
-
 class TestRepinCrewaiInstall:
     def test_repins_a2a_extra(self) -> None:
         result = _repin_crewai_install('uv pip install "crewai[a2a]==1.14.0"', "2.0.0")
@@ -226,9 +217,6 @@ class TestRepinCrewaiInstall:
     def test_no_version_specifier_unchanged(self) -> None:
         cmd = 'pip install "crewai[tools]>=1.0"'
         assert _repin_crewai_install(cmd, "2.0.0") == cmd
-
-
-# --- update_pyproject_dependencies ---
 
 
 class TestUpdatePyprojectDependencies:
@@ -318,9 +306,6 @@ class TestUpdatePyprojectDependencies:
         result = pyproject.read_text()
         assert '"crewai==2.0.0"' in result
         assert '"crewai-core==2.0.0"' in result
-
-
-# --- update_template_dependencies ---
 
 
 class TestUpdateTemplateDependencies:

@@ -203,7 +203,6 @@ class TestUploadCache:
             source=FileBytes(data=MINIMAL_PNG + b"x", filename="test2.png")
         )
 
-        # Add one expired and one valid entry
         past = datetime.now(timezone.utc) - timedelta(hours=1)
         future = datetime.now(timezone.utc) + timedelta(hours=24)
 

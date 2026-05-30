@@ -78,9 +78,6 @@ class Prompts(BaseModel):
             A dictionary containing the constructed prompt(s).
         """
         slices: list[COMPONENTS] = ["role_playing"]
-        # When using native tool calling with tools, use native_tools instructions
-        # When using ReAct pattern with tools, use tools instructions
-        # When no tools are available, use no_tools instructions
         if self.has_tools:
             if not self.use_native_tool_calling:
                 slices.append("tools")
@@ -88,7 +85,6 @@ class Prompts(BaseModel):
             slices.append("no_tools")
         system: str = self._build_prompt(slices) + self._build_skill_block()
 
-        # Determine which task slice to use:
         task_slice: COMPONENTS
         if self.use_native_tool_calling:
             task_slice = "native_task"
@@ -156,13 +152,11 @@ class Prompts(BaseModel):
         """
         prompt: str
         if not system_template or not prompt_template:
-            # If any of the required templates are missing, fall back to the default format
             prompt_parts: list[str] = [
                 I18N_DEFAULT.slice(component) for component in components
             ]
             prompt = "".join(prompt_parts)
         else:
-            # All templates are provided, use them
             template_parts: list[str] = [
                 I18N_DEFAULT.slice(component)
                 for component in components
@@ -174,7 +168,6 @@ class Prompts(BaseModel):
             prompt = prompt_template.replace(
                 "{{ .Prompt }}", "".join(I18N_DEFAULT.slice("task"))
             )
-            # Handle missing response_template
             if response_template:
                 response: str = response_template.split("{{ .Response }}")[0]
                 prompt = f"{system}\n{prompt}\n{response}"

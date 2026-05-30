@@ -2,8 +2,6 @@
 
 import base64
 
-import pytest
-
 from crewai.tools.agent_tools.read_file_tool import ReadFileTool
 from crewai_files import ImageFile, PDFFile, TextFile
 
@@ -32,7 +30,7 @@ class TestReadFileTool:
         result = self.tool._run(file_name="missing.txt")
 
         assert "File 'missing.txt' not found" in result
-        assert "doc.txt" in result  # Lists available files
+        assert "doc.txt" in result
 
     def test_run_text_file(self) -> None:
         """Test reading a text file returns decoded content."""
@@ -70,7 +68,6 @@ class TestReadFileTool:
         assert "image/png" in result
         assert "Base64:" in result
 
-        # Verify base64 can be decoded
         b64_part = result.split("Base64: ")[1]
         decoded = base64.b64decode(b64_part)
         assert decoded == png_bytes

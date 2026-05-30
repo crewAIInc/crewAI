@@ -17,7 +17,6 @@ class TestCacheMarkerHelpers:
         marked = mark_cache_breakpoint(original)
         assert marked[CACHE_BREAKPOINT_KEY] is True
         # Marker must NOT bleed back into the caller's dict — callers may
-        # pass literal dicts and reuse them across calls.
         assert CACHE_BREAKPOINT_KEY not in original
 
     def test_strip_is_idempotent(self) -> None:
@@ -40,13 +39,11 @@ class TestBaseFormatDoesNotMutate:
             mark_cache_breakpoint({"role": "system", "content": "stable system"}),
             mark_cache_breakpoint({"role": "user", "content": "stable user"}),
         ]
-        # First call: provider strips markers from the returned (copied) list
         first = llm._format_messages(messages)
         assert all(CACHE_BREAKPOINT_KEY not in m for m in first)
         # Original list must STILL carry the markers
         assert messages[0][CACHE_BREAKPOINT_KEY] is True
         assert messages[1][CACHE_BREAKPOINT_KEY] is True
-        # Second call from the same list still sees the markers
         second = llm._format_messages(messages)
         assert all(CACHE_BREAKPOINT_KEY not in m for m in second)
         assert messages[0][CACHE_BREAKPOINT_KEY] is True
@@ -64,7 +61,6 @@ class TestAnthropicCacheStamping:
         assert isinstance(system, list)
         assert system[0]["cache_control"] == {"type": "ephemeral"}
         assert system[0]["text"] == "you are helpful"
-        # First user block carries cache_control too
         last_block = formatted[0]["content"][-1]
         assert last_block["cache_control"] == {"type": "ephemeral"}
 
@@ -90,7 +86,6 @@ class TestAnthropicCacheStamping:
             {"role": "tool", "tool_call_id": "tc_1", "content": "volatile tool result"},
         ]
         formatted, _system = llm._format_messages_for_anthropic(messages)
-        # Find the message that holds the stable prompt
         stable = next(
             fm
             for fm in formatted

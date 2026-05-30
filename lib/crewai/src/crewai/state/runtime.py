@@ -112,11 +112,66 @@ def _migrate(data: dict[str, Any]) -> dict[str, Any]:
             current,
         )
 
-    # --- migrations in version order ---
-    # if stored < Version("X.Y.Z"):
-    #     data.setdefault("some_field", "default")
+    if stored < Version("1.14.6"):
+        for entity in data.get("entities") or []:
+            _backfill_discriminators(entity)
 
     return data
+
+
+def _backfill_memory_kind(value: Any) -> None:
+    """Infer ``memory_kind`` from structural fields on legacy memory dicts."""
+    if not isinstance(value, dict) or "memory_kind" in value:
+        return
+    if "scopes" in value:
+        value["memory_kind"] = "slice"
+    elif "root_path" in value:
+        value["memory_kind"] = "scope"
+    else:
+        value["memory_kind"] = "memory"
+
+
+def _backfill_source_type(source: Any) -> None:
+    """Infer ``source_type`` for legacy knowledge source dicts when possible.
+
+    Only StringKnowledgeSource is reliably inferrable: it stores ``content``
+    as a plain string. File-based sources (CSV/PDF/Excel/JSON/docling) also
+    have a ``content`` field but populate it with dicts/lists, so we leave
+    those untagged and let downstream validation surface a clear error.
+    """
+    if not isinstance(source, dict) or "source_type" in source:
+        return
+    if isinstance(source.get("content"), str):
+        source["source_type"] = "string"
+        return
+    raise ValueError(
+        "Legacy knowledge source is missing 'source_type' and could not be "
+        "inferred during migration. Re-checkpoint after upgrading to 1.14.6+."
+    )
+
+
+def _backfill_sources_on(container: Any) -> None:
+    """Apply source_type backfill to ``sources`` and ``knowledge_sources`` lists."""
+    if not isinstance(container, dict):
+        return
+    for key in ("sources", "knowledge_sources"):
+        for src in container.get(key) or []:
+            _backfill_source_type(src)
+
+
+def _backfill_discriminators(entity: Any) -> None:
+    """Walk an entity dict and backfill discriminator fields added in 1.14.6."""
+    if not isinstance(entity, dict):
+        return
+    _backfill_memory_kind(entity.get("memory"))
+    _backfill_sources_on(entity)
+    _backfill_sources_on(entity.get("knowledge"))
+    for agent in entity.get("agents") or []:
+        if not isinstance(agent, dict):
+            continue
+        _backfill_memory_kind(agent.get("memory"))
+        _backfill_sources_on(agent)
+        _backfill_sources_on(agent.get("knowledge"))
 
 
 class RuntimeState(RootModel):  # type: ignore[type-arg]

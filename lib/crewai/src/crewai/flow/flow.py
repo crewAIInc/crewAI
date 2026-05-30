@@ -113,7 +113,7 @@ from crewai.flow.utils import (
     is_flow_method_name,
     is_simple_flow_condition,
 )
-from crewai.memory.memory_scope import MemoryScope, MemorySlice
+from crewai.memory.memory_scope import MemoryScope, MemorySlice, _ensure_memory_kind
 from crewai.memory.unified_memory import Memory
 from crewai.state.checkpoint_config import (
     CheckpointConfig,
@@ -157,6 +157,39 @@ def _resolve_persistence(value: Any) -> Any:
         if cls is not None:
             return cls.model_validate(value)
     return value
+
+
+def _serialize_persistence(value: Any) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    if isinstance(value, FlowPersistence):
+        return value.model_dump(mode="json")
+    raise TypeError(
+        f"Cannot serialize Flow.persistence of type {type(value).__name__}: "
+        "expected FlowPersistence or None."
+    )
+
+
+def _validate_input_provider(value: Any) -> Any:
+    if value is None or isinstance(value, InputProvider):
+        return value
+    from crewai.types.callback import _dotted_path_to_instance
+
+    resolved = _dotted_path_to_instance(value)
+    if resolved is None or isinstance(resolved, InputProvider):
+        return resolved
+    raise ValueError(
+        f"Resolved input_provider {resolved!r} does not implement the "
+        "InputProvider protocol (missing request_input)."
+    )
+
+
+def _serialize_input_provider(value: Any) -> str | None:
+    if value is None:
+        return None
+    from crewai.types.callback import _instance_to_dotted_path
+
+    return _instance_to_dotted_path(value)
 
 
 _INITIAL_STATE_CLASS_MARKER = "__crewai_pydantic_class_schema__"
@@ -846,18 +879,15 @@ class FlowMeta(ModelMetaclass):
         routers = set()
 
         for attr_name, attr_value in namespace.items():
-            # Check for any flow-related attributes
             if (
                 hasattr(attr_value, "__is_flow_method__")
                 or hasattr(attr_value, "__is_start_method__")
                 or hasattr(attr_value, "__trigger_methods__")
                 or hasattr(attr_value, "__is_router__")
             ):
-                # Register start methods
                 if hasattr(attr_value, "__is_start_method__"):
                     start_methods.append(attr_name)
 
-                # Register listeners and routers
                 if (
                     hasattr(attr_value, "__trigger_methods__")
                     and attr_value.__trigger_methods__ is not None
@@ -880,14 +910,13 @@ class FlowMeta(ModelMetaclass):
                         and attr_value.__is_router__
                     ):
                         routers.add(attr_name)
-                        # First check for explicit __router_paths__ (set by @human_feedback(emit=[...]))
+                        # Explicit __router_paths__ set by @human_feedback(emit=[...]) takes priority over source analysis
                         if (
                             hasattr(attr_value, "__router_paths__")
                             and attr_value.__router_paths__
                         ):
                             router_paths[attr_name] = attr_value.__router_paths__
                         else:
-                            # Fall back to source code analysis for @router methods
                             possible_returns = get_possible_return_constants(attr_value)
                             if possible_returns:
                                 router_paths[attr_name] = possible_returns
@@ -901,7 +930,6 @@ class FlowMeta(ModelMetaclass):
                     and attr_value.__is_router__
                 ):
                     routers.add(attr_name)
-                    # Get router paths from the decorator attribute
                     if (
                         hasattr(attr_value, "__router_paths__")
                         and attr_value.__router_paths__
@@ -949,15 +977,30 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     name: str | None = Field(default=None)
     tracing: bool | None = Field(default=None)
     stream: bool = Field(default=False)
-    memory: Memory | MemoryScope | MemorySlice | None = Field(default=None)
-    input_provider: InputProvider | None = Field(default=None)
+    memory: Annotated[
+        Annotated[
+            Memory | MemoryScope | MemorySlice, Field(discriminator="memory_kind")
+        ]
+        | None,
+        BeforeValidator(_ensure_memory_kind),
+    ] = Field(default=None)
+    input_provider: Annotated[
+        InputProvider | None,
+        BeforeValidator(_validate_input_provider),
+        PlainSerializer(
+            _serialize_input_provider, return_type=str | None, when_used="json"
+        ),
+    ] = Field(default=None)
     suppress_flow_events: bool = Field(default=False)
     human_feedback_history: list[HumanFeedbackResult] = Field(default_factory=list)
     last_human_feedback: HumanFeedbackResult | None = Field(default=None)
 
     persistence: Annotated[
-        SerializeAsAny[FlowPersistence] | Any,
+        SerializeAsAny[FlowPersistence] | None,
         BeforeValidator(lambda v, _: _resolve_persistence(v)),
+        PlainSerializer(
+            _serialize_persistence, return_type=dict | None, when_used="json"
+        ),
     ] = Field(default=None)
     max_method_calls: int = Field(default=100)
 
@@ -1050,6 +1093,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             }
         if self.checkpoint_state is not None:
             self._restore_state(self.checkpoint_state)
+        if (
+            isinstance(self.memory, MemoryScope | MemorySlice)
+            and self.memory._memory is None
+        ):
+            self.memory.bind(Memory())
         restore_event_scope(())
         reset_last_event_id()
 
@@ -1126,12 +1174,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             flow_name = sanitize_scope_name(self.name or self.__class__.__name__)
             self.memory = Memory(root_scope=f"/flow/{flow_name}")
 
-        # Register all flow-related methods
         for method_name in dir(self):
             if not method_name.startswith("_"):
                 method = getattr(self, method_name)
                 if is_flow_method(method):
-                    # Ensure method is bound to this instance
                     if not hasattr(method, "__self__"):
                         method = method.__get__(self, self.__class__)
                     self._methods[method.__name__] = method
@@ -1412,23 +1458,15 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
             persistence = SQLiteFlowPersistence()
 
-        # Load pending feedback context and state
         loaded = persistence.load_pending_feedback(flow_id)
         if loaded is None:
             raise ValueError(f"No pending feedback found for flow_id: {flow_id}")
 
         state_data, pending_context = loaded
 
-        # Create flow instance with persistence
         instance = cls(persistence=persistence, **kwargs)
-
-        # Restore state
         instance._initialize_state(state_data)
-
-        # Store pending context for resume
         instance._pending_feedback_context = pending_context
-
-        # Mark that we're resuming execution
         instance._is_execution_resuming = True
 
         return instance
@@ -1572,15 +1610,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if llm is None:
             llm = _deserialize_llm_from_context(context.llm)
 
-        # Determine outcome
         collapsed_outcome: str | None = None
 
         if not feedback.strip():
-            # Empty feedback
             if default_outcome:
                 collapsed_outcome = default_outcome
             elif emit:
-                # No default and no feedback - use first outcome
                 collapsed_outcome = emit[0]
         elif emit:
             if llm is not None:
@@ -1592,7 +1627,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             else:
                 collapsed_outcome = emit[0]
 
-        # Create result
         result = HumanFeedbackResult(
             output=context.method_output,
             feedback=feedback,
@@ -1602,7 +1636,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             metadata=context.metadata,
         )
 
-        # Store in flow instance
         self.human_feedback_history.append(result)
         self.last_human_feedback = result
 
@@ -1610,11 +1643,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         self._pending_feedback_context = None
 
-        # Clear pending feedback from persistence
         if self.persistence:
             self.persistence.clear_pending_feedback(context.flow_id)
 
-        # Emit feedback received event
         crewai_event_bus.emit(
             self,
             MethodExecutionFinishedEvent(
@@ -1669,7 +1700,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     state_data=state_data,
                 )
 
-                # Emit flow paused event
                 crewai_event_bus.emit(
                     self,
                     FlowPausedEvent(
@@ -1682,7 +1712,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         emit=e.context.emit,
                     ),
                 )
-                # Return the pending exception instead of raising
                 return e
             raise
 
@@ -1774,7 +1803,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             if init_state is dict:
                 return cast(T, {"id": str(uuid4())})
 
-        # Handle dictionary instance case
         if isinstance(init_state, dict):
             new_state = dict(init_state)  # Copy to avoid mutations
             if "id" not in new_state:
@@ -1875,27 +1903,22 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             TypeError: If state is neither BaseModel nor dictionary
         """
         if isinstance(self._state, dict):
-            # For dict states, update with inputs
-            # If inputs contains an id, use it (for restoring from persistence)
-            # Otherwise preserve the current id or generate a new one
+            # If inputs contains an id, use it (for restoring from persistence);
+            # otherwise preserve the current id or generate a new one.
             current_id = self._state.get("id")
             inputs_has_id = "id" in inputs
 
-            # Update specified fields
             for k, v in inputs.items():
                 self._state[k] = v
 
-            # Ensure ID is set: prefer inputs id, then current id, then generate
             if not inputs_has_id:
                 if current_id:
                     self._state["id"] = current_id
                 elif "id" not in self._state:
                     self._state["id"] = str(uuid4())
         elif isinstance(self._state, BaseModel):
-            # For BaseModel states, preserve existing fields unless overridden
             try:
                 model = self._state
-                # Get current state as dict
                 if hasattr(model, "model_dump"):
                     current_state = model.model_dump()
                 elif hasattr(model, "dict"):
@@ -1905,19 +1928,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         k: v for k, v in model.__dict__.items() if not k.startswith("_")
                     }
 
-                # Create new state with preserved fields and updates
                 new_state = {**current_state, **inputs}
 
-                # Create new instance with merged state
                 model_class = type(model)
                 if hasattr(model_class, "model_validate"):
-                    # Pydantic v2
                     self._state = cast(T, model_class.model_validate(new_state))
                 elif hasattr(model_class, "parse_obj"):
-                    # Pydantic v1
                     self._state = cast(T, model_class.parse_obj(new_state))
                 else:
-                    # Fallback for other BaseModel implementations
                     self._state = cast(T, model_class(**new_state))
             except ValidationError as e:
                 raise ValueError(f"Invalid inputs for structured state: {e}") from e
@@ -1934,26 +1952,20 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             ValueError: If validation fails for structured state
             TypeError: If state is neither BaseModel nor dictionary
         """
-        # When restoring from persistence, use the stored ID
         stored_id = stored_state.get("id")
         if not stored_id:
             raise ValueError("Stored state must have an 'id' field")
 
         if isinstance(self._state, dict):
-            # For dict states, update all fields from stored state
             self._state.clear()
             self._state.update(stored_state)
         elif isinstance(self._state, BaseModel):
-            # For BaseModel states, create new instance with stored values
             model = self._state
             if hasattr(model, "model_validate"):
-                # Pydantic v2
                 self._state = cast(T, type(model).model_validate(stored_state))
             elif hasattr(model, "parse_obj"):
-                # Pydantic v1
                 self._state = cast(T, type(model).parse_obj(stored_state))
             else:
-                # Fallback for other BaseModel implementations
                 self._state = cast(T, type(model)(**stored_state))
         else:
             raise TypeError(f"State must be dict or BaseModel, got {type(self._state)}")
@@ -2874,9 +2886,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         await asyncio.gather(*tasks)
 
                 if current_trigger in router_results:
-                    # Find start methods triggered by this router result
                     for method_name in self._start_methods:
-                        # Check if this start method is triggered by the current trigger
                         if method_name in self._listeners:
                             condition_data = self._listeners[method_name]
                             should_trigger = False
@@ -2888,15 +2898,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                                 should_trigger = current_trigger in all_methods
 
                             if should_trigger:
-                                # Execute conditional start method triggered by router result
                                 if method_name in self._completed_methods:
-                                    # For cyclic re-execution, temporarily clear resumption flag
+                                    # Cyclic re-execution: temporarily clear resumption flag so the method actually re-runs
                                     was_resuming = self._is_execution_resuming
                                     self._is_execution_resuming = False
                                     await self._execute_start_method(method_name)
                                     self._is_execution_resuming = was_resuming
                                 else:
-                                    # First-time execution of conditional start
                                     await self._execute_start_method(method_name)
 
     def _evaluate_condition(
@@ -3138,7 +3146,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         listener_name, method
                     )
 
-            # Execute listeners (and possibly routers) of this listener
             await self._execute_listeners(
                 listener_name, listener_result, finished_event_id
             )
@@ -3154,8 +3161,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     logger.error(f"Error executing listener {listener_name}: {e}")
                     e._flow_listener_logged = True  # type: ignore[attr-defined]
             raise
-
-    # ── User Input (self.ask) ────────────────────────────────────────
 
     def _resolve_input_provider(self) -> InputProvider:
         """Resolve the input provider using the priority chain.
@@ -3271,7 +3276,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         method_name = current_flow_method_name.get("unknown")
 
-        # Emit input requested event
         crewai_event_bus.emit(
             self,
             FlowInputRequestedEvent(
@@ -3283,7 +3287,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             ),
         )
 
-        # Auto-checkpoint state before waiting
         self._checkpoint_state_for_ask()
 
         provider = self._resolve_input_provider()
@@ -3316,7 +3319,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             logger.debug("Input provider error in ask()", exc_info=True)
             raw = None
 
-        # Normalize provider response: str, InputResponse, or None
         response: str | None = None
         response_metadata: dict[str, Any] | None = None
 
@@ -3328,7 +3330,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         else:
             response = None
 
-        # Record in history
         self._input_history.append(
             {
                 "message": message,
@@ -3340,7 +3341,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             }
         )
 
-        # Emit input received event
         crewai_event_bus.emit(
             self,
             FlowInputReceivedEvent(
@@ -3379,7 +3379,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             HumanFeedbackRequestedEvent,
         )
 
-        # Emit feedback requested event
         crewai_event_bus.emit(
             self,
             HumanFeedbackRequestedEvent(
@@ -3392,19 +3391,16 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             ),
         )
 
-        # Pause live updates during human input
         formatter = event_listener.formatter
         formatter.pause_live_updates()
 
         try:
-            # Display output with formatting using centralized Rich console
             formatter.console.print("\n" + "═" * 50, style="bold cyan")
             formatter.console.print("  OUTPUT FOR REVIEW", style="bold cyan")
             formatter.console.print("═" * 50 + "\n", style="bold cyan")
             formatter.console.print(output)
             formatter.console.print("\n" + "═" * 50 + "\n", style="bold cyan")
 
-            # Show message and prompt for feedback
             formatter.console.print(message, style="yellow")
             formatter.console.print(
                 "(Press Enter to skip, or type your feedback)\n", style="cyan"
@@ -3412,7 +3408,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
             feedback = input("Your feedback: ").strip()
 
-            # Emit feedback received event
             crewai_event_bus.emit(
                 self,
                 HumanFeedbackReceivedEvent(
@@ -3426,7 +3421,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
             return feedback
         finally:
-            # Resume live updates
             formatter.resume_live_updates()
 
     def _collapse_to_outcome(
@@ -3468,7 +3462,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         else:
             raise ValueError(f"Invalid llm type: {type(llm)}. Expected str or BaseLLM.")
 
-        # Dynamically create a Pydantic model with constrained outcomes
         outcomes_tuple = tuple(outcomes)
 
         class FeedbackOutcome(BaseModel):
@@ -3486,8 +3479,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         )
 
         try:
-            # Try structured output first (function calling)
-            # Note: LLM.call with response_model returns JSON string, not Pydantic model
+            # NOTE: LLM.call with response_model returns JSON string, not a Pydantic model
             response = llm_instance.call(
                 messages=[{"role": "user", "content": prompt}],
                 response_model=FeedbackOutcome,
@@ -3514,7 +3506,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 return outcomes[0]
 
         except Exception as e:
-            # Fallback to simple prompting if structured output fails
             logger.warning(
                 f"Structured output failed, falling back to simple prompting: {e}"
             )
@@ -3524,7 +3515,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 )
                 response_clean = str(response).strip()
 
-                # Exact match (case-insensitive)
                 for outcome in outcomes:
                     if outcome.lower() == response_clean.lower():
                         return outcome
@@ -3540,7 +3530,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 if best_outcome is not None:
                     return best_outcome
 
-                # Fallback to first outcome
                 logger.warning(
                     f"Could not match LLM response '{response_clean}' to outcomes {list(outcomes)}. "
                     f"Falling back to first outcome: {outcomes[0]}"

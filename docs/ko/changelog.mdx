@@ -4,6 +4,140 @@ description: "CrewAI의 제품 업데이트, 개선 사항 및 버그 수정"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="2026년 5월 28일">
+  ## v1.14.6
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.6)
+
+  ## 변경 사항
+
+  ### 기능
+  - 환경 변수 유출을 방지하기 위해 StdioTransport 강화
+  - 계획 구성 및 관찰 처리 개선
+  - DatabricksQueryTool에서 env_vars 선언
+  - 에이전트 제어 평면 문서 추가
+
+  ### 버그 수정
+  - 도구 호출 루프에서 구조화된 출력 유출 수정
+  - 체크포인트에서 원형으로 돌아갈 수 없는 콜백 및 어댑터 상태 제거
+  - 체크포인트에서 type[BaseModel] 필드를 JSON 스키마로 직렬화
+  - 복원 범위 복원 시 고아 task_started 방지
+  - AgentExecutor가 체크포인트에서 복원할 수 있도록 허용
+  - package_dependencies에서 mongodb 오타를 pymongo로 수정
+
+  ### 문서
+  - 에이전트 제어 평면 페이지에 ACP (Beta) 문서 탐색 블록 추가
+  - 프로세스 페이지에서 합의 프로세스 참조 제거
+  - 체크포인트 페이지 구조 재편성
+  - 일회성 관리자 패키지 설치 단계 문서화
+  - Secrets Manager / Workload Identity를 replicated-config에서 마이그레이션
+  - `<Steps>` 렌더링을 방해하는 `{" "}` JSX 표현 제거
+
+  ### 리팩토링
+  - Skills Repository를 실험적 + CREWAI_EXPERIMENTAL 게이트로 이동
+
+  ## 기여자
+
+  @akaKuruma, @alex-clawd, @github-actions[bot], @greysonlalonde, @heitorado, @iris-clawd, @lorenzejay, @lucasgomide, @mattatcha, @thiagomoretto, @vinibrsl
+
+</Update>
+
+<Update label="2026년 5월 27일">
+  ## v1.14.6a2
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.6a2)
+
+  ## 변경 사항
+
+  ### 기능
+  - 환경 변수 유출을 방지하기 위해 `StdioTransport` 개선
+  - 계획 구성 및 관찰 처리 개선
+  - `DatabricksQueryTool`에서 `env_vars` 선언
+  - 에이전트 제어 평면 문서 추가
+
+  ### 버그 수정
+  - 도구 호출 루프에서 구조화된 출력 유출 수정
+  - 체크포인팅에서 원형으로 돌아갈 수 없는 콜백 및 어댑터 상태 제거
+  - 체크포인팅에서 `type[BaseModel]` 필드를 JSON 스키마로 직렬화
+  - 복원 범위 복원 시 고아 `task_started` 방지
+  - `AgentExecutor`가 체크포인트에서 복원할 수 있도록 허용
+  - 패키지 종속성에서 MongoDB 오타를 `pymongo`로 수정
+
+  ### 문서
+  - 체크포인팅 페이지 구조 재편성
+  - 일회성 관리자 패키지 설치 단계 문서화
+  - 복제된 구성에서 비밀 관리자 / 작업 부하 ID 마이그레이션
+  - 변경 로그에서 기술 리포지토리 항목 제거
+
+  ## 기여자
+
+  @github-actions[bot], @greysonlalonde, @heitorado, @iris-clawd, @lorenzejay, @lucasgomide, @mattatcha, @thiagomoretto, @vinibrsl
+
+</Update>
+
+<Update label="2026년 5월 21일">
+  ## v1.14.6a1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.6a1)
+
+  ## 변경 사항
+
+  ### 기능
+  - 기업용으로 분류된 릴리스 노트 생성
+
+  ### 버그 수정
+  - 엔티티 필드 전반에 걸쳐 RuntimeState 직렬화 강화
+  - 보안 문제 GHSA-65pc-fj4g-8rjx를 해결하기 위해 idna를 3.15로 업데이트
+  - `<Steps>` 렌더링을 방해하는 `{" "}` JSX 표현식 제거
+
+  ### 문서
+  - v1.14.5에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @akaKuruma, @alex-clawd, @greysonlalonde
+
+</Update>
+
+<Update label="2026년 5월 19일">
+  ## v1.14.5
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.5)
+
+  ## 변경 사항
+
+  ### 기능
+  - `CrewAgentExecutor` 사용 중단, 기본 Crew 에이전트를 `AgentExecutor`로 설정
+  - Daytona 샌드박스 도구 개선
+  - `restore_from_state_id` 시작 매개변수 추가
+  - `ExaSearchTool`에 하이라이트 추가, 이름을 `EXASearchTool`에서 변경
+
+  ### 버그 수정
+  - `git.py`에서 `cached_property`를 사용하여 메모리 누수 수정
+  - `available_functions`가 없을 때 스트리밍 도구 호출 표시
+  - 추적을 위한 `skills` 로딩 이벤트 보장
+  - 상태 엔드포인트 경로를 `/{kickoff_id}/status`에서 `/status/{kickoff_id}`로 수정
+  - pt-BR 첫 흐름 가이드에서 누락된 코드 블록 복원
+  - `result_as_answer`가 후크 블록이나 오류 메시지를 최종 답변으로 반환하지 않도록 방지
+  - 비동기 배치 플러시 간 작업 출력 보존
+  - 항상 finally 블록에서 `task.output_pydantic` 복원
+  - `convert_to_model`에서 `BaseModel` 입력 처리
+
+  ### 문서화
+  - v1.14.5에 대한 변경 로그 및 버전 업데이트
+  - OSS 업그레이드 및 Crew-투-흐름 마이그레이션 가이드 추가
+  - 개발 도구를 위한 추가 환경 변수 문서화
+  - `TavilyGetResearch`에 대한 문서 추가
+
+  ### 리팩토링
+  - CLI를 독립형 `crewai-cli` 패키지로 추출
+
+  ## 기여자
+
+  @NIK-TIGER-BILL, @akaKuruma, @cgoeppinger, @github-actions[bot], @greysonlalonde, @heitorado, @irfaan101, @iris-clawd, @lorenzejay, @manisrinivasan2k1, @minasami-pr, @mislavivanda, @theCyberTech, @theishangoswami, @wishhyt
+
+</Update>
+
 <Update label="2026년 5월 18일">
   ## v1.14.5a7
 

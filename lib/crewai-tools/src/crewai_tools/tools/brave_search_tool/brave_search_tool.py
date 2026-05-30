@@ -68,7 +68,6 @@ class BraveSearchTool(BaseTool):
             )
         BraveSearchTool._last_request_time = time.time()
 
-        # Construct and send the request
         try:
             # Fallback to "query" or "search_query" for backwards compatibility
             query = kwargs.get("q") or kwargs.get("query") or kwargs.get("search_query")
@@ -123,11 +122,9 @@ class BraveSearchTool(BaseTool):
                 payload["operators"] = operators
 
             # Limit the result types to "web" since there is presently no
-            # handling of other types like "discussions", "faq", "infobox",
             # "news", "videos", or "locations".
             payload["result_filter"] = "web"
 
-            # Setup Request Headers
             headers = {
                 "X-Subscription-Token": os.environ["BRAVE_API_KEY"],
                 "Accept": "application/json",
@@ -136,7 +133,7 @@ class BraveSearchTool(BaseTool):
             response = requests.get(
                 self.search_url, headers=headers, params=payload, timeout=30
             )
-            response.raise_for_status()  # Handle non-200 responses
+            response.raise_for_status()
             results = response.json()
 
             # TODO: Handle other result types like "discussions", "faq", etc.

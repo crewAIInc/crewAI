@@ -339,7 +339,6 @@ def human_feedback(
             return "Content to review..."
         ```
     """
-    # Validation at decoration time
     if emit is not None:
         if not llm:
             raise ValueError(
@@ -358,8 +357,6 @@ def human_feedback(
 
     def decorator(func: F) -> F:
         """Inner decorator that wraps the function."""
-
-        # -- HITL learning helpers (only used when learn=True) --------
 
         def _get_hitl_prompt(key: str) -> str:
             """Read a HITL prompt from the i18n translations."""
@@ -485,8 +482,6 @@ def human_feedback(
                     exc_info=True,
                 )
 
-        # -- Core feedback helpers ------------------------------------
-
         def _build_feedback_context(
             flow_instance: Flow[Any], method_output: Any
         ) -> tuple[Any, Any]:
@@ -565,15 +560,12 @@ def human_feedback(
             raw_feedback: str,
         ) -> HumanFeedbackResult | str:
             """Process feedback and return result or outcome."""
-            # Determine outcome
             collapsed_outcome: str | None = None
 
             if not raw_feedback.strip():
-                # Empty feedback
                 if default_outcome:
                     collapsed_outcome = default_outcome
                 elif emit:
-                    # No default and no feedback - use first outcome
                     collapsed_outcome = emit[0]
             elif emit:
                 if llm is not None:
@@ -585,7 +577,6 @@ def human_feedback(
                 else:
                     collapsed_outcome = emit[0]
 
-            # Create result
             result = HumanFeedbackResult(
                 output=method_output,
                 feedback=raw_feedback,
@@ -595,7 +586,6 @@ def human_feedback(
                 metadata=metadata or {},
             )
 
-            # Store in flow instance
             flow_instance.human_feedback_history.append(result)
             flow_instance.last_human_feedback = result
 
@@ -607,19 +597,17 @@ def human_feedback(
             return result
 
         if asyncio.iscoroutinefunction(func):
-            # Async wrapper
+
             @wraps(func)
             async def async_wrapper(self: Flow[Any], *args: Any, **kwargs: Any) -> Any:
                 method_output = await func(self, *args, **kwargs)
 
-                # Pre-review: apply past HITL lessons before human sees it
                 if learn and getattr(self, "memory", None) is not None:
                     method_output = _pre_review_with_lessons(self, method_output)
 
                 raw_feedback = await _request_feedback_async(self, method_output)
                 result = _process_feedback(self, method_output, raw_feedback)
 
-                # Distill: extract lessons from output + feedback, store in memory
                 if (
                     learn
                     and getattr(self, "memory", None) is not None
@@ -627,10 +615,10 @@ def human_feedback(
                 ):
                     _distill_and_store_lessons(self, method_output, raw_feedback)
 
-                # Stash the real method output for final flow result when emit is set
-                # (result is the collapsed outcome string for routing, but we want to
-                # preserve the actual method output as the flow's final result)
-                # Uses per-method dict for concurrency safety and to handle None returns
+                # Stash the real method output for final flow result when emit is set:
+                # result is the collapsed outcome string for routing, but we preserve the
+                # actual method output as the flow's final result. Uses per-method dict for
+                # concurrency safety and to handle None returns.
                 if emit:
                     self._human_feedback_method_outputs[func.__name__] = method_output
 
@@ -638,19 +626,17 @@ def human_feedback(
 
             wrapper: Any = async_wrapper
         else:
-            # Sync wrapper
+
             @wraps(func)
             def sync_wrapper(self: Flow[Any], *args: Any, **kwargs: Any) -> Any:
                 method_output = func(self, *args, **kwargs)
 
-                # Pre-review: apply past HITL lessons before human sees it
                 if learn and getattr(self, "memory", None) is not None:
                     method_output = _pre_review_with_lessons(self, method_output)
 
                 raw_feedback = _request_feedback(self, method_output)
                 result = _process_feedback(self, method_output, raw_feedback)
 
-                # Distill: extract lessons from output + feedback, store in memory
                 if (
                     learn
                     and getattr(self, "memory", None) is not None
@@ -658,10 +644,10 @@ def human_feedback(
                 ):
                     _distill_and_store_lessons(self, method_output, raw_feedback)
 
-                # Stash the real method output for final flow result when emit is set
-                # (result is the collapsed outcome string for routing, but we want to
-                # preserve the actual method output as the flow's final result)
-                # Uses per-method dict for concurrency safety and to handle None returns
+                # Stash the real method output for final flow result when emit is set:
+                # result is the collapsed outcome string for routing, but we preserve the
+                # actual method output as the flow's final result. Uses per-method dict for
+                # concurrency safety and to handle None returns.
                 if emit:
                     self._human_feedback_method_outputs[func.__name__] = method_output
 
@@ -669,7 +655,6 @@ def human_feedback(
 
             wrapper = sync_wrapper
 
-        # Preserve existing Flow decorator attributes
         for attr in [
             "__is_start_method__",
             "__trigger_methods__",
@@ -680,7 +665,7 @@ def human_feedback(
             if hasattr(func, attr):
                 setattr(wrapper, attr, getattr(func, attr))
 
-        # Add human feedback specific attributes (create config inline to avoid race conditions)
+        # Create config inline to avoid race conditions
         wrapper.__human_feedback_config__ = HumanFeedbackConfig(
             message=message,
             emit=emit,
