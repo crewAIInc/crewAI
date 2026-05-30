@@ -66,7 +66,6 @@ class AgentExecutionErrorEvent(BaseEvent):
         return self
 
 
-# New event classes for LiteAgent
 class LiteAgentExecutionStartedEvent(BaseEvent):
     """Event emitted when a LiteAgent starts executing"""
 
@@ -94,7 +93,6 @@ class LiteAgentExecutionErrorEvent(BaseEvent):
     type: Literal["lite_agent_execution_error"] = "lite_agent_execution_error"
 
 
-# Agent Eval events
 class AgentEvaluationStartedEvent(BaseEvent):
     agent_id: str
     agent_role: str

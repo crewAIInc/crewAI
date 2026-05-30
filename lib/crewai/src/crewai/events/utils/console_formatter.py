@@ -184,7 +184,6 @@ To enable tracing, do any one of these:
         """Print to console. Simplified to only handle panel-based output."""
         if should_suppress_console_output():
             return
-        # Skip blank lines during streaming
         if len(args) == 0 and self._is_streaming:
             return
         self.console.print(*args, **kwargs)
@@ -874,8 +873,6 @@ To enable tracing, do any one of these:
         )
         self.print_panel(error_content, "❌ Search Error", "red")
 
-    # ----------- AGENT REASONING EVENTS -----------
-
     def handle_reasoning_started(
         self,
         attempt: int,
@@ -935,8 +932,6 @@ To enable tracing, do any one of these:
             Error=error,
         )
         self.print_panel(error_content, "❌ Reasoning Error", "red")
-
-    # ----------- OBSERVATION EVENTS (Plan-and-Execute) -----------
 
     def handle_observation_started(
         self,
@@ -1082,8 +1077,6 @@ To enable tracing, do any one of these:
 
         self.print_panel(content, "🎯 Early Goal Achievement", "green")
 
-    # ----------- AGENT LOGGING EVENTS -----------
-
     def handle_agent_logs_started(
         self,
         agent_role: str,
@@ -1096,7 +1089,6 @@ To enable tracing, do any one of these:
 
         agent_role = agent_role.partition("\n")[0]
 
-        # Create panel content
         content = Text()
         content.append("Agent: ", style="white")
         content.append(f"{agent_role}", style="bright_green bold")
@@ -1105,7 +1097,6 @@ To enable tracing, do any one of these:
             content.append("\n\nTask: ", style="white")
             content.append(f"{task_description}", style="bright_green")
 
-        # Create and display the panel
         agent_panel = Panel(
             content,
             title="🤖 Agent Started",
@@ -1132,7 +1123,6 @@ To enable tracing, do any one of these:
         agent_role = agent_role.partition("\n")[0]
 
         if isinstance(formatted_answer, AgentAction):
-            # Create tool output content with better formatting
             output_text = str(formatted_answer.result)
             if len(output_text) > 2000:
                 output_text = output_text[:1997] + "..."
@@ -1144,7 +1134,6 @@ To enable tracing, do any one of these:
                 padding=(1, 2),
             )
 
-            # Print all panels
             self.print(output_panel)
             self.print()
 
@@ -1463,7 +1452,6 @@ To enable tracing, do any one of these:
         crewai_agent_role = self._pending_a2a_agent_role or agent_role or "User"
         message_content = self._pending_a2a_message or ""
 
-        # Determine status styling
         if status == "completed":
             style = "green"
             status_indicator = "✓"
@@ -1505,7 +1493,6 @@ To enable tracing, do any one of these:
 
         self.print_panel(content, f"💬 A2A Turn #{turn_number}", style)
 
-        # Clear pending state
         self._pending_a2a_message = None
         self._pending_a2a_agent_role = None
         self._pending_a2a_turn_number = None
@@ -1544,13 +1531,10 @@ To enable tracing, do any one of these:
 
             self.print_panel(content, "❌ A2A Failed", "red")
 
-        # Reset state
         self.current_a2a_turn_count = 0
         self._pending_a2a_message = None
         self._pending_a2a_agent_role = None
         self._pending_a2a_turn_number = None
-
-    # ----------- MCP EVENTS -----------
 
     def handle_mcp_connection_started(
         self,

@@ -34,9 +34,6 @@ _LANGUAGE_NAMES: Final[dict[DocLang, str]] = {
 }
 
 
-# --- Structured output models ---
-
-
 class DocAction(BaseModel):
     """A single documentation action to take."""
 
@@ -65,8 +62,6 @@ class DocsAnalysis(BaseModel):
         description="List of documentation actions to take.",
     )
 
-
-# --- Prompts ---
 
 _ANALYZE_SYSTEM: Final[str] = """\
 You are a documentation analyst for the CrewAI open-source framework.

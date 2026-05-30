@@ -456,13 +456,11 @@ def test_chained_routers_no_self_loops():
     flow = ChainedRouterFlow()
     structure = build_flow_structure(flow)
 
-    # Check that no self-loops exist
     for edge in structure["edges"]:
         assert edge["source"] != edge["target"], (
             f"Self-loop detected: {edge['source']} -> {edge['target']}"
         )
 
-    # Verify correct connections
     router_edges = [edge for edge in structure["edges"] if edge["is_router_path"]]
 
     # session_in_cache -> check_exp (via 'exp')
@@ -510,12 +508,10 @@ def test_routers_with_shared_output_strings():
 
         @router(start)
         def router_a(self):
-            # This router can output 'auth' or 'skip'
             return "auth"
 
         @router("auth")
         def router_b(self):
-            # This router listens to 'auth' but outputs 'done'
             return "done"
 
         @listen("done")
@@ -529,7 +525,6 @@ def test_routers_with_shared_output_strings():
     flow = SharedOutputRouterFlow()
     structure = build_flow_structure(flow)
 
-    # Check no self-loops
     for edge in structure["edges"]:
         assert edge["source"] != edge["target"], (
             f"Self-loop detected: {edge['source']} -> {edge['target']}"
@@ -568,7 +563,6 @@ def test_warning_for_router_without_paths(caplog):
 
         @router(begin)
         def dynamic_router(self):
-            # Returns a variable that can't be statically analyzed
             import random
             return random.choice(["path_a", "path_b"])
 
@@ -585,13 +579,11 @@ def test_warning_for_router_without_paths(caplog):
     with caplog.at_level(logging.WARNING):
         build_flow_structure(flow)
 
-    # Check that warning was logged for the router
     assert any(
         "Could not determine return paths for router 'dynamic_router'" in record.message
         for record in caplog.records
     )
 
-    # Check that error was logged for orphaned triggers
     assert any(
         "Found listeners waiting for triggers" in record.message
         for record in caplog.records
@@ -627,7 +619,6 @@ def test_warning_for_orphaned_listeners(caplog):
     with caplog.at_level(logging.ERROR):
         build_flow_structure(flow)
 
-    # Check that error was logged for orphaned trigger
     assert any(
         "Found listeners waiting for triggers" in record.message
         and "option_c" in record.message

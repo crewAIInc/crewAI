@@ -25,7 +25,6 @@ class ImagePromptSchema(BaseModel):
         if not path.exists():
             raise ValueError(f"Image file does not exist: {v}")
 
-        # Validate supported formats
         valid_extensions = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
         if path.suffix.lower() not in valid_extensions:
             raise ValueError(

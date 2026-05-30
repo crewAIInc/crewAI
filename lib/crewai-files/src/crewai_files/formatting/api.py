@@ -114,14 +114,12 @@ def format_multimodal_content(
     content_blocks: list[dict[str, Any]] = []
     provider_type = _normalize_provider(provider)
 
-    # Add text block first if provided
     if text:
         content_blocks.append(_format_text_block(text, provider_type, api))
 
     if not files:
         return content_blocks
 
-    # Use API-specific constraints for OpenAI
     constraints_key: str = provider_type
     if api == "responses" and "openai" in provider_type.lower():
         constraints_key = "openai_responses"
@@ -186,7 +184,6 @@ async def aformat_multimodal_content(
     if not files:
         return content_blocks
 
-    # Use API-specific constraints for OpenAI
     constraints_key: str = provider_type
     if api == "responses" and "openai" in provider_type.lower():
         constraints_key = "openai_responses"

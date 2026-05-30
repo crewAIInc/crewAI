@@ -39,16 +39,12 @@ class MDXLoader(BaseLoader):
     def _parse_mdx(self, content: str, source_ref: str) -> LoaderResult:
         cleaned_content = content
 
-        # Remove import statements
         cleaned_content = _IMPORT_PATTERN.sub("", cleaned_content)
 
-        # Remove export statements
         cleaned_content = _EXPORT_PATTERN.sub("", cleaned_content)
 
-        # Remove JSX tags (simple approach)
         cleaned_content = _JSX_TAG_PATTERN.sub("", cleaned_content)
 
-        # Clean up extra whitespace
         cleaned_content = _EXTRA_NEWLINES_PATTERN.sub("\n\n", cleaned_content)
         cleaned_content = cleaned_content.strip()
 
