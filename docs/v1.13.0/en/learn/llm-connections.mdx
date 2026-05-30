@@ -156,6 +156,17 @@ You can connect to OpenAI-compatible LLMs using either environment variables or 
             agent = Agent(llm=llm, ...)
             ```
 
+            ```python Tuning Engines
+            # Governed OpenAI-compatible endpoint for model routing,
+            # policy controls, audit logs, traces, approvals, and cost visibility.
+            llm = LLM(
+                model="gpt-4o-mini",
+                api_key="your-tuning-engines-key",
+                base_url="https://api.tuningengines.com/v1"
+            )
+            agent = Agent(llm=llm, ...)
+            ```
+
             ```python Google
             # Example using Gemini's OpenAI-compatible API
             llm = LLM(
