@@ -1271,6 +1271,34 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         with self._or_listeners_lock:
             self._fired_or_listeners.discard(listener_name)
 
+    def _reset_or_listeners_for_router_results(
+        self, router_results: list[FlowMethodName]
+    ) -> None:
+        """Reset fired OR listeners that could be triggered by router results.
+
+        This enables cyclic flow re-triggering when a router emits a signal
+        that should re-trigger an OR listener that has already fired in the
+        current execution. Without this, _fired_or_listeners permanently blocks
+        the listener and the clearing logic in _execute_single_listener (which
+        handles cyclic re-execution) can never be reached.
+
+        Only clears listeners matching router results, preserving the concurrent
+        start-method protection for the original trigger_method.
+        """
+        with self._or_listeners_lock:
+            for listener_name in list(self._fired_or_listeners):
+                condition_data = self._listeners.get(listener_name)
+                if condition_data is None:
+                    continue
+                if is_simple_flow_condition(condition_data):
+                    _, methods = condition_data
+                    if any(r in methods for r in router_results):
+                        self._fired_or_listeners.discard(listener_name)
+                elif is_flow_condition_dict(condition_data):
+                    all_methods = _extract_all_methods_recursive(condition_data)
+                    if any(r in all_methods for r in router_results):
+                        self._fired_or_listeners.discard(listener_name)
+
     def _build_racing_groups(self) -> dict[frozenset[FlowMethodName], FlowMethodName]:
         """Identify groups of methods that race for the same OR listener.
 
@@ -2846,6 +2874,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         # Now execute normal listeners for all router results and the original trigger
         all_triggers = [trigger_method, *router_results]
+
+        # For router results, clear _fired_or_listeners entries for any OR
+        # listeners that could be triggered by those results.  This unblocks
+        # cyclic flows where a router emits a signal that should re-trigger an
+        # OR listener that already fired earlier in the same execution.
+        if router_results:
+            self._reset_or_listeners_for_router_results(router_results)
 
         for current_trigger in all_triggers:
             if current_trigger:  # Skip None results
