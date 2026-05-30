@@ -480,7 +480,12 @@ def test_multiple_guardrails_with_mixed_string_and_taskoutput():
 
 
 def test_multiple_guardrails_with_retry_on_middle_guardrail():
-    """Test that retry works correctly when a middle guardrail fails."""
+    """Test that retry works correctly when a middle guardrail fails.
+
+    When the second guardrail fails, the task is re-executed and ALL
+    guardrails are re-evaluated from the beginning on the new output.
+    This ensures earlier guardrails are not silently bypassed.
+    """
 
     call_count = {"first": 0, "second": 0, "third": 0}
 
@@ -516,10 +521,14 @@ def test_multiple_guardrails_with_retry_on_middle_guardrail():
 
     result = task.execute_sync(agent=agent)
     assert task._guardrail_retry_counts.get(1, 0) == 1
-    assert call_count["first"] == 1
+    # first_guardrail is called twice: once in the initial pass and
+    # once after the retry restarts all guardrails from the beginning.
+    assert call_count["first"] == 2
     assert call_count["second"] == 2
     assert call_count["third"] == 1
     assert "Second(2)" in result.raw
+    # Verify first guardrail is also properly applied on the retried output
+    assert "First(2)" in result.raw
 
 
 def test_multiple_guardrails_with_max_retries_exceeded():
@@ -774,8 +783,194 @@ def test_per_guardrail_independent_retry_tracking():
     assert task._guardrail_retry_counts.get(1, 0) == 1
     assert task._guardrail_retry_counts.get(2, 0) == 0
 
-    assert call_counts["g1"] == 3
+    # g1 is called 4 times: twice failing, once succeeding (attempt 3),
+    # then once more when g2's failure triggers a full restart.
+    assert call_counts["g1"] == 4
     assert call_counts["g2"] == 2
     assert call_counts["g3"] == 1
 
     assert "G3(1)" in result.raw
+    assert "G1(4)" in result.raw
+
+
+def test_retry_revalidates_earlier_guardrails():
+    """Test that when a later guardrail fails and triggers a retry, the new
+    output is re-validated against ALL guardrails from the beginning.
+
+    This is the core fix for issue #5979: guardrails must be enforced as
+    constraints, not suggestions. A retry output that violates an earlier
+    guardrail must be caught.
+    """
+
+    def length_guardrail(result: TaskOutput) -> tuple[bool, str]:
+        """Require output to be at least 20 characters."""
+        if len(result.raw) < 20:
+            return (False, f"Output too short ({len(result.raw)} chars, need 20+)")
+        return (True, result.raw)
+
+    def no_digits_guardrail(result: TaskOutput) -> tuple[bool, str]:
+        """Reject output containing digits."""
+        if any(c.isdigit() for c in result.raw):
+            return (False, "Output must not contain digits")
+        return (True, result.raw)
+
+    call_count = 0
+
+    def mock_execute_task(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            # First attempt: long enough but contains digits → passes length,
+            # fails no_digits
+            return "this text has digits 123 in it"
+        if call_count == 2:
+            # Second attempt (after no_digits retry): short, no digits →
+            # would pass no_digits but must fail length on re-validation
+            return "no digits here"
+        # Third attempt: long enough, no digits → passes both
+        return "this is a valid long text without any numbers"
+
+    agent = Mock()
+    agent.role = "revalidation_agent"
+    agent.execute_task = mock_execute_task
+    agent.crew = None
+    agent.last_messages = []
+
+    task = create_smart_task(
+        description="Test re-validation of earlier guardrails",
+        expected_output="Valid text",
+        guardrails=[length_guardrail, no_digits_guardrail],
+        guardrail_max_retries=3,
+    )
+
+    result = task.execute_sync(agent=agent)
+    # The final output must satisfy BOTH guardrails
+    assert len(result.raw) >= 20
+    assert not any(c.isdigit() for c in result.raw)
+    assert result.raw == "this is a valid long text without any numbers"
+    # Three task executions: original + two retries
+    assert call_count == 3
+    assert task.retry_count == 2
+
+
+def test_negative_guardrail_max_retries_rejected():
+    """Test that negative guardrail_max_retries raises a validation error."""
+    with pytest.raises(Exception):
+        create_smart_task(
+            description="Test negative max retries",
+            expected_output="Should fail",
+            guardrail_max_retries=-1,
+        )
+
+
+def test_zero_guardrail_max_retries_no_retry():
+    """Test that guardrail_max_retries=0 means no retries — fail immediately."""
+
+    def failing_guardrail(result: TaskOutput) -> tuple[bool, str]:
+        return (False, "Always fails")
+
+    agent = Mock()
+    agent.role = "no_retry_agent"
+    agent.execute_task.return_value = "test"
+    agent.crew = None
+    agent.last_messages = []
+
+    task = create_smart_task(
+        description="Test zero max retries",
+        expected_output="Output",
+        guardrail=failing_guardrail,
+        guardrail_max_retries=0,
+    )
+
+    with pytest.raises(Exception) as exc_info:
+        task.execute_sync(agent=agent)
+
+    assert "after 0 retries" in str(exc_info.value)
+    # Agent should not have been asked to retry
+    assert agent.execute_task.call_count == 1
+
+
+def test_single_guardrail_retry_still_works():
+    """Test that single guardrail retry logic is preserved in the new
+    _run_guardrails implementation."""
+
+    call_count = 0
+
+    def guardrail(result: TaskOutput) -> tuple[bool, str]:
+        nonlocal call_count
+        call_count += 1
+        if call_count <= 2:
+            return (False, f"Attempt {call_count} failed")
+        return (True, result.raw.upper())
+
+    agent = Mock()
+    agent.role = "single_retry_agent"
+    agent.execute_task.return_value = "hello world"
+    agent.crew = None
+    agent.last_messages = []
+
+    task = create_smart_task(
+        description="Test single guardrail retry",
+        expected_output="Output",
+        guardrail=guardrail,
+        guardrail_max_retries=3,
+    )
+
+    result = task.execute_sync(agent=agent)
+    assert result.raw == "HELLO WORLD"
+    assert call_count == 3
+    assert task.retry_count == 2
+
+
+def test_retry_restart_catches_earlier_guardrail_violation():
+    """Regression test: ensure that after a retry triggered by guardrail N,
+    the new output is checked by guardrails 0..N-1 as well.
+
+    Scenario:
+      g0 = length check (>= 10 chars)
+      g1 = no-uppercase check
+      Original output: 'HELLO WORLD LONG TEXT' → passes g0, fails g1 → retry
+      Retry output: 'short' → must fail g0 (re-validation catches it) → retry again
+      Final output: 'this works fine' → passes both
+    """
+
+    call_count = 0
+
+    def length_check(result: TaskOutput) -> tuple[bool, str]:
+        if len(result.raw) < 10:
+            return (False, "Too short")
+        return (True, result.raw)
+
+    def no_uppercase(result: TaskOutput) -> tuple[bool, str]:
+        if result.raw != result.raw.lower():
+            return (False, "Must be lowercase")
+        return (True, result.raw)
+
+    def mock_execute(*args, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return "HELLO WORLD LONG TEXT"
+        if call_count == 2:
+            return "short"
+        return "this works fine"
+
+    agent = Mock()
+    agent.role = "regression_agent"
+    agent.execute_task = mock_execute
+    agent.crew = None
+    agent.last_messages = []
+
+    task = create_smart_task(
+        description="Regression test",
+        expected_output="Valid text",
+        guardrails=[length_check, no_uppercase],
+        guardrail_max_retries=3,
+    )
+
+    result = task.execute_sync(agent=agent)
+    assert result.raw == "this works fine"
+    assert call_count == 3
+    # retry 1 triggered by g1 (no_uppercase), retry 2 triggered by g0 (length_check)
+    assert task._guardrail_retry_counts.get(0, 0) == 1
+    assert task._guardrail_retry_counts.get(1, 0) == 1
