@@ -13,6 +13,7 @@ from typing import (
     Literal,
     TypedDict,
     cast,
+    ClassVar
 )
 
 from dotenv import load_dotenv
@@ -313,6 +314,23 @@ class AccumulatedToolArgs(BaseModel):
 
 class LLM(BaseLLM):
     llm_type: Literal["litellm"] = "litellm"
+    # The central registry for model prefixes
+    PROVIDER_PREFIXES: ClassVar[dict] = {
+        "openai": ["gpt-", "o1", "o3", "o4", "whisper-"],
+        "anthropic": ["claude-", "anthropic."],
+        "claude": ["claude-", "anthropic."],
+        "gemini": ["gemini-", "gemma-", "learnlm-"],
+        "google": ["gemini-", "gemma-", "learnlm-"],
+        "bedrock": ["us.", "eu.", "apac.", "global.", "amazon.", "anthropic.", "meta."],
+        "azure": ["gpt-", "gpt-35-", "o1", "o3", "o4", "azure-"],
+        "deepseek": ["deepseek"],
+        "dashscope": ["qwen"],
+        "ollama": ["*"],
+        "ollama_chat": ["*"],
+        "hosted_vllm": ["*"],
+        "cerebras": ["*"],
+        "openrouter": ["*"],
+    }
     completion_cost: float | None = None
     timeout: float | int | None = None
     top_p: float | None = None
@@ -431,70 +449,28 @@ class LLM(BaseLLM):
 
     @classmethod
     def _matches_provider_pattern(cls, model: str, provider: str) -> bool:
-        """Check if a model name matches provider-specific patterns.
-
-        This allows supporting models that aren't in the hardcoded constants list,
-        including "latest" versions and new models that follow provider naming conventions.
-
-        Args:
-            model: The model name to check
-            provider: The provider to check against (canonical name)
-
-        Returns:
-            True if the model matches the provider's naming pattern, False otherwise
-        """
+        """Check if a model name matches provider-specific patterns."""
         model_lower = model.lower()
+        
+        # 1. Retrieve the list from our class registry
+        allowed_prefixes = cls.PROVIDER_PREFIXES.get(provider, [])
+        
+        # 2. Safety Check: If provider is unknown, return False
+        if not allowed_prefixes:
+            return False
 
-        if provider == "openai":
-            return any(
-                model_lower.startswith(prefix)
-                for prefix in ["gpt-", "o1", "o3", "o4", "whisper-"]
-            )
-
-        if provider == "anthropic" or provider == "claude":
-            return any(
-                model_lower.startswith(prefix) for prefix in ["claude-", "anthropic."]
-            )
-
-        if provider == "gemini" or provider == "google":
-            return any(
-                model_lower.startswith(prefix)
-                for prefix in ["gemini-", "gemma-", "learnlm-"]
-            )
-
-        if provider == "bedrock":
-            return "." in model_lower
-
-        if provider == "azure":
-            return any(
-                model_lower.startswith(prefix)
-                for prefix in ["gpt-", "gpt-35-", "o1", "o3", "o4", "azure-"]
-            )
-
-        # OpenAI-compatible providers - most accept any model name, but some
-        # (DeepSeek, Dashscope) restrict to their own model prefixes
-        if provider == "deepseek":
-            return model_lower.startswith("deepseek")
-
-        if provider == "ollama" or provider == "ollama_chat":
-            # Ollama accepts any local model name
+        # 3. Catch-all: If it has the "*" flag, return True immediately
+        if "*" in allowed_prefixes:
             return True
 
-        if provider == "hosted_vllm":
-            # vLLM serves any model
-            return True
+        # 4. Dynamic Gate: Merge defaults with custom env variable
+        custom_prefixes = os.getenv("CREWAI_LLM_PREFIXES")
+        if custom_prefixes:
+            # We create a new list by adding the custom ones to the base ones
+            allowed_prefixes = allowed_prefixes + [p.strip().lower() for p in custom_prefixes.split(",")]
 
-        if provider == "cerebras":
-            return True
-
-        if provider == "dashscope":
-            return model_lower.startswith("qwen")
-
-        if provider == "openrouter":
-            # OpenRouter uses org/model format but accepts anything
-            return True
-
-        return False
+        # 5. Final check
+        return any(model_lower.startswith(prefix) for prefix in allowed_prefixes)
 
     @classmethod
     def _validate_model_in_constants(cls, model: str, provider: str) -> bool:
