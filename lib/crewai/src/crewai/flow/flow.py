@@ -2645,6 +2645,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             the event_id of the MethodExecutionFinishedEvent, or None if events
             are suppressed.
         """
+        logger.info("Executing flow method: %s", method_name)
         try:
             dumped_params = {f"_{i}": arg for i, arg in enumerate(args)} | (
                 kwargs or {}
