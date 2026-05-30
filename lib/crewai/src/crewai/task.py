@@ -1249,9 +1249,7 @@ Follow these guidelines:
 
         if isinstance(guardrail_result.result, str):
             task_output.raw = guardrail_result.result
-            pydantic_output, json_output = self._export_output(
-                guardrail_result.result
-            )
+            pydantic_output, json_output = self._export_output(guardrail_result.result)
             task_output.pydantic = pydantic_output
             task_output.json_dict = json_output
         elif isinstance(guardrail_result.result, TaskOutput):
@@ -1429,9 +1427,7 @@ Follow these guidelines:
                     color="yellow",
                 )
 
-            result = agent.execute_task(
-                task=self, context=context, tools=tools
-            )
+            result = agent.execute_task(task=self, context=context, tools=tools)
             task_output = self._rebuild_task_output(result, agent)
 
     async def _arun_guardrails(
@@ -1510,7 +1506,5 @@ Follow these guidelines:
                     color="yellow",
                 )
 
-            result = await agent.aexecute_task(
-                task=self, context=context, tools=tools
-            )
+            result = await agent.aexecute_task(task=self, context=context, tools=tools)
             task_output = await self._arebuild_task_output(result, agent)
