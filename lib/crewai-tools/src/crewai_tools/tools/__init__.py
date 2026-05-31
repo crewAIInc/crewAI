@@ -145,6 +145,13 @@ from crewai_tools.tools.scrapegraph_scrape_tool.scrapegraph_scrape_tool import (
 from crewai_tools.tools.scrapfly_scrape_website_tool.scrapfly_scrape_website_tool import (
     ScrapflyScrapeWebsiteTool,
 )
+from crewai_tools.tools.scavio_tool.scavio_amazon_search_tool import (
+    ScavioAmazonSearchTool,
+)
+from crewai_tools.tools.scavio_tool.scavio_search_tool import ScavioSearchTool
+from crewai_tools.tools.scavio_tool.scavio_youtube_search_tool import (
+    ScavioYouTubeSearchTool,
+)
 from crewai_tools.tools.selenium_scraping_tool.selenium_scraping_tool import (
     SeleniumScrapingTool,
 )
@@ -282,6 +289,9 @@ __all__ = [
     "ScrapegraphScrapeTool",
     "ScrapegraphScrapeToolSchema",
     "ScrapflyScrapeWebsiteTool",
+    "ScavioAmazonSearchTool",
+    "ScavioSearchTool",
+    "ScavioYouTubeSearchTool",
     "SeleniumScrapingTool",
     "SerpApiGoogleSearchTool",
     "SerpApiGoogleShoppingTool",
