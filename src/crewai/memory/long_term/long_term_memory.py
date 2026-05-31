@@ -22,10 +22,26 @@ class LongTermMemory(Memory):
     def save(self, item: LongTermMemoryItem) -> None:  # type: ignore # BUG?: Signature of "save" incompatible with supertype "Memory"
         metadata = item.metadata
         metadata.update({"agent": item.agent, "expected_output": item.expected_output})
+
+        task_description = item.task
+        if isinstance(task_description, str):
+            task_description = self.sanitizer.sanitize(task_description)
+
+        sanitized_metadata = dict(metadata)
+        for key in ("suggestions", "expected_output"):
+            val = sanitized_metadata.get(key)
+            if isinstance(val, str):
+                sanitized_metadata[key] = self.sanitizer.sanitize(val)
+            elif isinstance(val, list):
+                sanitized_metadata[key] = [
+                    self.sanitizer.sanitize(v) if isinstance(v, str) else v
+                    for v in val
+                ]
+
         self.storage.save(  # type: ignore # BUG?: Unexpected keyword argument "task_description","score","datetime" for "save" of "Storage"
-            task_description=item.task,
-            score=metadata["quality"],
-            metadata=metadata,
+            task_description=task_description,
+            score=sanitized_metadata["quality"],
+            metadata=sanitized_metadata,
             datetime=item.datetime,
         )
 

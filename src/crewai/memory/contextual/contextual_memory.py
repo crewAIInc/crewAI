@@ -1,6 +1,7 @@
 from typing import Any, Dict, Optional
 
 from crewai.memory import EntityMemory, LongTermMemory, ShortTermMemory, UserMemory
+from crewai.memory.sanitizer import MemorySanitizer, get_default_sanitizer
 
 
 class ContextualMemory:
@@ -21,6 +22,15 @@ class ContextualMemory:
         self.em = em
         self.um = um
 
+        sanitize = True
+        if memory_config is not None:
+            sanitize = memory_config.get("sanitize_memory", True)
+        self.sanitizer: MemorySanitizer = (
+            get_default_sanitizer()
+            if sanitize
+            else MemorySanitizer(enabled=False)
+        )
+
     def build_context_for_task(self, task, context) -> str:
         """
         Automatically builds a minimal, highly relevant set of contextual information
@@ -37,7 +47,9 @@ class ContextualMemory:
         context.append(self._fetch_entity_context(query))
         if self.memory_provider == "mem0":
             context.append(self._fetch_user_context(query))
-        return "\n".join(filter(None, context))
+
+        merged = "\n".join(filter(None, context))
+        return self.sanitizer.sanitize(merged)
 
     def _fetch_stm_context(self, query) -> str:
         """
