@@ -230,5 +230,5 @@ crewai-tools = { workspace = true }
 crewai-devtools = { workspace = true }
 crewai-files = { workspace = true }
 crewai-cli = { workspace = true }
-scavio = { git = "https://github.com/scavio-ai/scavio-python", branch = "main" }
+scavio = { git = "https://github.com/scavio-ai/scavio-python", tag = "v0.1.1" }
 crewai-core = { workspace = true }

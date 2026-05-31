@@ -13,7 +13,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-05-28T13:46:27.107033Z"
+exclude-newer = "2026-05-28T15:24:09.247417Z"
 exclude-newer-span = "P3D"
 
 [manifest]
@@ -1736,7 +1736,7 @@ requires-dist = [
     { name = "pytube", specifier = "~=15.0.0" },
     { name = "qdrant-client", marker = "extra == 'qdrant-client'", specifier = ">=1.12.1" },
     { name = "requests", specifier = ">=2.33.0,<3" },
-    { name = "scavio", marker = "extra == 'scavio'", git = "https://github.com/scavio-ai/scavio-python?branch=main" },
+    { name = "scavio", marker = "extra == 'scavio'", git = "https://github.com/scavio-ai/scavio-python?tag=v0.1.1" },
     { name = "scrapegraph-py", marker = "extra == 'scrapegraph-py'", specifier = ">=1.9.0" },
     { name = "scrapfly-sdk", marker = "extra == 'scrapfly-sdk'", specifier = ">=0.8.19" },
     { name = "selenium", marker = "extra == 'selenium'", specifier = ">=4.27.1" },
@@ -8019,7 +8019,7 @@ torch = [
 [[package]]
 name = "scavio"
 version = "0.1.1"
-source = { git = "https://github.com/scavio-ai/scavio-python?branch=main#c3d359c1099c2a009f56e75bb1885dbf41cf6469" }
+source = { git = "https://github.com/scavio-ai/scavio-python?tag=v0.1.1#c3d359c1099c2a009f56e75bb1885dbf41cf6469" }
 dependencies = [
     { name = "httpx" },
     { name = "requests" },
