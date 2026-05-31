@@ -60,12 +60,6 @@ class ScavioYouTubeSearchTool(ScavioBaseTool):
         Returns:
             A JSON string containing YouTube search results.
         """
-        if not self.client:
-            raise ValueError(
-                "Scavio client is not initialized. Ensure 'scavio' is "
-                "installed and API key is set."
-            )
-
         raw = self.client.youtube.search(
             query=query,
             upload_date=self.upload_date,
@@ -89,12 +83,6 @@ class ScavioYouTubeSearchTool(ScavioBaseTool):
         Returns:
             A JSON string containing YouTube search results.
         """
-        if not self.async_client:
-            raise ValueError(
-                "Scavio async client is not initialized. Ensure 'scavio' "
-                "is installed and API key is set."
-            )
-
         raw = await self.async_client.youtube.search(
             query=query,
             upload_date=self.upload_date,

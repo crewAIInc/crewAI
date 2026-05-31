@@ -62,12 +62,6 @@ class ScavioAmazonSearchTool(ScavioBaseTool):
         Returns:
             A JSON string containing product search results.
         """
-        if not self.client:
-            raise ValueError(
-                "Scavio client is not initialized. Ensure 'scavio' is "
-                "installed and API key is set."
-            )
-
         raw = self.client.amazon.search(
             query=query,
             domain=self.domain,
@@ -91,12 +85,6 @@ class ScavioAmazonSearchTool(ScavioBaseTool):
         Returns:
             A JSON string containing product search results.
         """
-        if not self.async_client:
-            raise ValueError(
-                "Scavio async client is not initialized. Ensure 'scavio' "
-                "is installed and API key is set."
-            )
-
         raw = await self.async_client.amazon.search(
             query=query,
             domain=self.domain,

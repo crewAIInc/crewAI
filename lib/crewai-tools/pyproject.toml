@@ -16,7 +16,6 @@ dependencies = [
     "python-docx~=1.2.0",
     "youtube-transcript-api~=1.2.2",
     "pymupdf~=1.26.6",
-    "scavio",
 ]
 
 
@@ -123,6 +122,9 @@ oxylabs = [
 ]
 mongodb = [
     "pymongo>=4.13"
+]
+scavio = [
+    "scavio>=0.1.0",
 ]
 mysql = [
     "pymysql>=1.1.1"

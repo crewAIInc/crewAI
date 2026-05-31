@@ -16,8 +16,8 @@ except ImportError:
 class ScavioBaseTool(BaseTool):
     """Base class for Scavio API tools.
 
-    Handles client initialization, API key resolution, and the
-    missing-package auto-install prompt shared by all Scavio tools.
+    Handles client initialization, API key resolution, and shared
+    utilities for all Scavio tools.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -33,6 +33,7 @@ class ScavioBaseTool(BaseTool):
     )
     max_results: int = Field(
         default=5,
+        ge=1,
         description="The maximum number of results to return.",
     )
 
@@ -51,46 +52,19 @@ class ScavioBaseTool(BaseTool):
 
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
-        if SCAVIO_AVAILABLE:
-            self.client = ScavioClient(api_key=self.api_key)
-            self.async_client = AsyncScavioClient(api_key=self.api_key)
-        else:
-            try:
-                import subprocess
-
-                import click
-            except ImportError as e:
-                raise ImportError(
-                    "The 'scavio' package is required. 'click' and 'subprocess' "
-                    "are also needed to assist with installation if the package "
-                    "is missing. Please install 'scavio' manually "
-                    "(e.g., 'pip install scavio') and ensure 'click' and "
-                    "'subprocess' are available."
-                ) from e
-
-            if click.confirm(
-                "You are missing the 'scavio' package, which is required "
-                "for Scavio tools. Would you like to install it?"
-            ):
-                try:
-                    subprocess.run(  # noqa: S607, S603
-                        ["uv", "add", "scavio"],
-                        check=True,
-                    )
-                    raise ImportError(
-                        "'scavio' has been installed. Please restart your "
-                        "Python application to use Scavio tools."
-                    )
-                except subprocess.CalledProcessError as e:
-                    raise ImportError(
-                        f"Attempted to install 'scavio' but failed: {e}. "
-                        f"Please install it manually to use Scavio tools."
-                    ) from e
-            else:
-                raise ImportError(
-                    "The 'scavio' package is required to use Scavio tools. "
-                    "Please install it with: uv add scavio"
-                )
+        if not SCAVIO_AVAILABLE:
+            raise ImportError(
+                "The 'scavio' package is required to use Scavio tools. "
+                "Install it with: pip install scavio"
+            )
+        if not self.api_key:
+            raise ValueError(
+                "A Scavio API key is required. Provide it via the "
+                "'api_key' parameter or set the SCAVIO_API_KEY "
+                "environment variable."
+            )
+        self.client = ScavioClient(api_key=self.api_key)
+        self.async_client = AsyncScavioClient(api_key=self.api_key)
 
     def _truncate_results(
         self, raw: dict[str, Any], key: str = "results"

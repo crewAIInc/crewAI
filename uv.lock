@@ -13,11 +13,8 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-05-19T15:27:50.647689Z"
+exclude-newer = "2026-05-28T13:46:27.107033Z"
 exclude-newer-span = "P3D"
-
-[options.exclude-newer-package]
-starlette = "2026-05-22T16:00:00Z"
 
 [manifest]
 members = [
@@ -1654,6 +1651,9 @@ rag = [
     { name = "lxml" },
     { name = "python-docx" },
 ]
+scavio = [
+    { name = "scavio" },
+]
 scrapegraph-py = [
     { name = "scrapegraph-py" },
 ]
@@ -1736,6 +1736,7 @@ requires-dist = [
     { name = "pytube", specifier = "~=15.0.0" },
     { name = "qdrant-client", marker = "extra == 'qdrant-client'", specifier = ">=1.12.1" },
     { name = "requests", specifier = ">=2.33.0,<3" },
+    { name = "scavio", marker = "extra == 'scavio'", git = "https://github.com/scavio-ai/scavio-python?branch=main" },
     { name = "scrapegraph-py", marker = "extra == 'scrapegraph-py'", specifier = ">=1.9.0" },
     { name = "scrapfly-sdk", marker = "extra == 'scrapfly-sdk'", specifier = ">=0.8.19" },
     { name = "selenium", marker = "extra == 'selenium'", specifier = ">=4.27.1" },
@@ -1753,7 +1754,7 @@ requires-dist = [
     { name = "weaviate-client", marker = "extra == 'weaviate-client'", specifier = ">=4.10.2" },
     { name = "youtube-transcript-api", specifier = "~=1.2.2" },
 ]
-provides-extras = ["apify", "beautifulsoup4", "bedrock", "browserbase", "composio-core", "contextual", "couchbase", "databricks-sdk", "daytona", "e2b", "exa-py", "firecrawl-py", "github", "hyperbrowser", "linkup-sdk", "mcp", "mongodb", "multion", "mysql", "oxylabs", "patronus", "postgresql", "qdrant-client", "rag", "scrapegraph-py", "scrapfly-sdk", "selenium", "serpapi", "singlestore", "snowflake", "spider-client", "sqlalchemy", "stagehand", "tavily-python", "weaviate-client", "xml"]
+provides-extras = ["apify", "beautifulsoup4", "bedrock", "browserbase", "composio-core", "contextual", "couchbase", "databricks-sdk", "daytona", "e2b", "exa-py", "firecrawl-py", "github", "hyperbrowser", "linkup-sdk", "mcp", "mongodb", "multion", "mysql", "oxylabs", "patronus", "postgresql", "qdrant-client", "rag", "scavio", "scrapegraph-py", "scrapfly-sdk", "selenium", "serpapi", "singlestore", "snowflake", "spider-client", "sqlalchemy", "stagehand", "tavily-python", "weaviate-client", "xml"]
 
 [[package]]
 name = "cryptography"
@@ -8013,6 +8014,15 @@ torch = [
     { name = "numpy", version = "2.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "packaging" },
     { name = "torch" },
+]
+
+[[package]]
+name = "scavio"
+version = "0.1.1"
+source = { git = "https://github.com/scavio-ai/scavio-python?branch=main#c3d359c1099c2a009f56e75bb1885dbf41cf6469" }
+dependencies = [
+    { name = "httpx" },
+    { name = "requests" },
 ]
 
 [[package]]

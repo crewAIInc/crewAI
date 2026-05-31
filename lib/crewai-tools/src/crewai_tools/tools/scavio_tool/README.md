@@ -12,10 +12,10 @@ Available tools:
 
 ## Installation
 
-Install the `scavio` Python SDK:
+Install with the `scavio` extra:
 
 ```shell
-uv add 'crewai[tools]' scavio
+uv add 'crewai-tools[scavio]'
 ```
 
 ## Environment Variables

@@ -71,12 +71,6 @@ class ScavioSearchTool(ScavioBaseTool):
         Returns:
             A JSON string containing the search results.
         """
-        if not self.client:
-            raise ValueError(
-                "Scavio client is not initialized. Ensure 'scavio' is "
-                "installed and API key is set."
-            )
-
         raw = self.client.google.search(
             query=query,
             search_type=self.search_type,
@@ -103,12 +97,6 @@ class ScavioSearchTool(ScavioBaseTool):
         Returns:
             A JSON string containing the search results.
         """
-        if not self.async_client:
-            raise ValueError(
-                "Scavio async client is not initialized. Ensure 'scavio' "
-                "is installed and API key is set."
-            )
-
         raw = await self.async_client.google.search(
             query=query,
             search_type=self.search_type,
