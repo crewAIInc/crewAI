@@ -547,6 +547,16 @@ def flow_structure(flow_class: type) -> FlowStructureInfo:
         if not is_flow_method:
             continue
 
+        # Conversational built-ins on the base ``Flow`` class (``conversation_start``,
+        # ``route_conversation``, ``converse_turn``, etc.) are inert on non-chat
+        # subclasses — they're not registered in ``_start_methods`` / ``_listeners``,
+        # so excluding them here keeps the serialized structure aligned with what
+        # actually fires at runtime.
+        if getattr(attr, "__conversational_only__", False) and not getattr(
+            flow_class, "conversational", False
+        ):
+            continue
+
         all_method_names.add(attr_name)
 
         method_type = _get_method_type(attr_name, attr, start_methods, routers)
