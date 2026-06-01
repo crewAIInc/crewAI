@@ -215,6 +215,33 @@ def test_or_listener_re_arms_across_router_loop():
     assert fire_count == 3
 
 
+def test_or_listener_does_not_double_fire_across_chained_routers():
+    """Chained routers within one dispatch wave must not re-fire the same ``or_`` listener."""
+    fire_count = 0
+
+    class ChainedRouterOrFlow(Flow):
+        @start()
+        def kick(self):
+            return "kick"
+
+        @router(kick)
+        def router_a(self):
+            return "SignalA"
+
+        @router("SignalA")
+        def router_b(self):
+            return "SignalB"
+
+        @listen(or_("SignalA", "SignalB"))
+        def handler(self):
+            nonlocal fire_count
+            fire_count += 1
+
+    ChainedRouterOrFlow().kickoff()
+
+    assert fire_count == 1
+
+
 def test_flow_with_router():
     """Test a flow that uses a router method to determine the next step."""
     execution_order = []

@@ -918,7 +918,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         with self._or_listeners_lock:
             self._fired_or_listeners.discard(listener_name)
 
-    def _rearm_or_listeners_for_trigger(self, trigger: FlowMethodName) -> None:
+    def _rearm_or_listeners_for_trigger(
+        self,
+        trigger: FlowMethodName,
+        rearmable: set[FlowMethodName] | None = None,
+    ) -> None:
         """Re-arm fired OR listeners whose condition includes ``trigger``.
 
         Called when a router emits a fresh signal so cyclic flows can re-fire
@@ -927,13 +931,23 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         Args:
             trigger: The signal/method name a router just emitted.
+            rearmable: Optional set restricting which listeners may be re-armed.
+                When provided, listeners outside this set are skipped, and any
+                listener re-armed is removed from it.
         """
         with self._or_listeners_lock:
             if not self._fired_or_listeners:
                 return
+            candidates: set[FlowMethodName] = (
+                self._fired_or_listeners & rearmable
+                if rearmable is not None
+                else set(self._fired_or_listeners)
+            )
+            if not candidates:
+                return
             trigger_str = str(trigger)
             to_discard: list[FlowMethodName] = []
-            for listener_name in self._fired_or_listeners:
+            for listener_name in candidates:
                 condition_data = self._listeners.get(listener_name)
                 if condition_data is None:
                     continue
@@ -947,6 +961,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         to_discard.append(listener_name)
             for listener_name in to_discard:
                 self._fired_or_listeners.discard(listener_name)
+                if rearmable is not None:
+                    rearmable.discard(listener_name)
 
     def _build_racing_groups(self) -> dict[frozenset[FlowMethodName], FlowMethodName]:
         """Identify groups of methods that race for the same OR listener.
@@ -2523,10 +2539,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         all_triggers = [trigger_method, *router_results]
 
+        with self._or_listeners_lock:
+            rearmable: set[FlowMethodName] = set(self._fired_or_listeners)
+
         for idx, current_trigger in enumerate(all_triggers):
             if current_trigger:
-                if idx > 0:
-                    self._rearm_or_listeners_for_trigger(current_trigger)
+                if idx > 0 and rearmable:
+                    self._rearm_or_listeners_for_trigger(current_trigger, rearmable)
                 listeners_triggered = self._find_triggered_methods(
                     current_trigger, router_only=False
                 )
