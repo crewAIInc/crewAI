@@ -481,6 +481,7 @@
                       "en/enterprise/integrations/salesforce",
                       "en/enterprise/integrations/shopify",
                       "en/enterprise/integrations/slack",
+                      "en/enterprise/integrations/snowflake",
                       "en/enterprise/integrations/stripe",
                       "en/enterprise/integrations/zendesk"
                     ]
@@ -998,6 +999,7 @@
                       "en/enterprise/integrations/salesforce",
                       "en/enterprise/integrations/shopify",
                       "en/enterprise/integrations/slack",
+                      "en/enterprise/integrations/snowflake",
                       "en/enterprise/integrations/stripe",
                       "en/enterprise/integrations/zendesk"
                     ]
@@ -1482,6 +1484,7 @@
                       "en/enterprise/integrations/salesforce",
                       "en/enterprise/integrations/shopify",
                       "en/enterprise/integrations/slack",
+                      "en/enterprise/integrations/snowflake",
                       "en/enterprise/integrations/stripe",
                       "en/enterprise/integrations/zendesk"
                     ]
@@ -1965,6 +1968,7 @@
                       "en/enterprise/integrations/salesforce",
                       "en/enterprise/integrations/shopify",
                       "en/enterprise/integrations/slack",
+                      "en/enterprise/integrations/snowflake",
                       "en/enterprise/integrations/stripe",
                       "en/enterprise/integrations/zendesk"
                     ]
@@ -2448,6 +2452,7 @@
                       "en/enterprise/integrations/salesforce",
                       "en/enterprise/integrations/shopify",
                       "en/enterprise/integrations/slack",
+                      "en/enterprise/integrations/snowflake",
                       "en/enterprise/integrations/stripe",
                       "en/enterprise/integrations/zendesk"
                     ]
@@ -2941,6 +2946,7 @@
                       "en/enterprise/integrations/salesforce",
                       "en/enterprise/integrations/shopify",
                       "en/enterprise/integrations/slack",
+                      "en/enterprise/integrations/snowflake",
                       "en/enterprise/integrations/stripe",
                       "en/enterprise/integrations/zendesk"
                     ]
@@ -3434,6 +3440,7 @@
                       "en/enterprise/integrations/salesforce",
                       "en/enterprise/integrations/shopify",
                       "en/enterprise/integrations/slack",
+                      "en/enterprise/integrations/snowflake",
                       "en/enterprise/integrations/stripe",
                       "en/enterprise/integrations/zendesk"
                     ]
@@ -3927,6 +3934,7 @@
                       "en/enterprise/integrations/salesforce",
                       "en/enterprise/integrations/shopify",
                       "en/enterprise/integrations/slack",
+                      "en/enterprise/integrations/snowflake",
                       "en/enterprise/integrations/stripe",
                       "en/enterprise/integrations/zendesk"
                     ]
@@ -4420,6 +4428,7 @@
                       "en/enterprise/integrations/salesforce",
                       "en/enterprise/integrations/shopify",
                       "en/enterprise/integrations/slack",
+                      "en/enterprise/integrations/snowflake",
                       "en/enterprise/integrations/stripe",
                       "en/enterprise/integrations/zendesk"
                     ]
@@ -4902,6 +4911,7 @@
                       "en/enterprise/integrations/salesforce",
                       "en/enterprise/integrations/shopify",
                       "en/enterprise/integrations/slack",
+                      "en/enterprise/integrations/snowflake",
                       "en/enterprise/integrations/stripe",
                       "en/enterprise/integrations/zendesk"
                     ]
@@ -5384,6 +5394,7 @@
                       "en/enterprise/integrations/salesforce",
                       "en/enterprise/integrations/shopify",
                       "en/enterprise/integrations/slack",
+                      "en/enterprise/integrations/snowflake",
                       "en/enterprise/integrations/stripe",
                       "en/enterprise/integrations/zendesk"
                     ]
@@ -5866,6 +5877,7 @@
                       "en/enterprise/integrations/salesforce",
                       "en/enterprise/integrations/shopify",
                       "en/enterprise/integrations/slack",
+                      "en/enterprise/integrations/snowflake",
                       "en/enterprise/integrations/stripe",
                       "en/enterprise/integrations/zendesk"
                     ]
@@ -6350,6 +6362,7 @@
                       "en/enterprise/integrations/salesforce",
                       "en/enterprise/integrations/shopify",
                       "en/enterprise/integrations/slack",
+                      "en/enterprise/integrations/snowflake",
                       "en/enterprise/integrations/stripe",
                       "en/enterprise/integrations/zendesk"
                     ]
@@ -6832,6 +6845,7 @@
                       "en/enterprise/integrations/salesforce",
                       "en/enterprise/integrations/shopify",
                       "en/enterprise/integrations/slack",
+                      "en/enterprise/integrations/snowflake",
                       "en/enterprise/integrations/stripe",
                       "en/enterprise/integrations/zendesk"
                     ]
@@ -7317,6 +7331,7 @@
                       "en/enterprise/integrations/salesforce",
                       "en/enterprise/integrations/shopify",
                       "en/enterprise/integrations/slack",
+                      "en/enterprise/integrations/snowflake",
                       "en/enterprise/integrations/stripe",
                       "en/enterprise/integrations/zendesk"
                     ]
@@ -7841,6 +7856,7 @@
                       "pt-BR/enterprise/integrations/salesforce",
                       "pt-BR/enterprise/integrations/shopify",
                       "pt-BR/enterprise/integrations/slack",
+              "pt-BR/enterprise/integrations/snowflake",
                       "pt-BR/enterprise/integrations/stripe",
                       "pt-BR/enterprise/integrations/zendesk"
                     ]
@@ -8335,6 +8351,7 @@
                       "pt-BR/enterprise/integrations/salesforce",
                       "pt-BR/enterprise/integrations/shopify",
                       "pt-BR/enterprise/integrations/slack",
+              "pt-BR/enterprise/integrations/snowflake",
                       "pt-BR/enterprise/integrations/stripe",
                       "pt-BR/enterprise/integrations/zendesk"
                     ]
@@ -8796,6 +8813,7 @@
                       "pt-BR/enterprise/integrations/salesforce",
                       "pt-BR/enterprise/integrations/shopify",
                       "pt-BR/enterprise/integrations/slack",
+              "pt-BR/enterprise/integrations/snowflake",
                       "pt-BR/enterprise/integrations/stripe",
                       "pt-BR/enterprise/integrations/zendesk"
                     ]
@@ -9257,6 +9275,7 @@
                       "pt-BR/enterprise/integrations/salesforce",
                       "pt-BR/enterprise/integrations/shopify",
                       "pt-BR/enterprise/integrations/slack",
+              "pt-BR/enterprise/integrations/snowflake",
                       "pt-BR/enterprise/integrations/stripe",
                       "pt-BR/enterprise/integrations/zendesk"
                     ]
@@ -9717,6 +9736,7 @@
                       "pt-BR/enterprise/integrations/salesforce",
                       "pt-BR/enterprise/integrations/shopify",
                       "pt-BR/enterprise/integrations/slack",
+              "pt-BR/enterprise/integrations/snowflake",
                       "pt-BR/enterprise/integrations/stripe",
                       "pt-BR/enterprise/integrations/zendesk"
                     ]
@@ -10187,6 +10207,7 @@
                       "pt-BR/enterprise/integrations/salesforce",
                       "pt-BR/enterprise/integrations/shopify",
                       "pt-BR/enterprise/integrations/slack",
+              "pt-BR/enterprise/integrations/snowflake",
                       "pt-BR/enterprise/integrations/stripe",
                       "pt-BR/enterprise/integrations/zendesk"
                     ]
@@ -10657,6 +10678,7 @@
                       "pt-BR/enterprise/integrations/salesforce",
                       "pt-BR/enterprise/integrations/shopify",
                       "pt-BR/enterprise/integrations/slack",
+              "pt-BR/enterprise/integrations/snowflake",
                       "pt-BR/enterprise/integrations/stripe",
                       "pt-BR/enterprise/integrations/zendesk"
                     ]
@@ -11127,6 +11149,7 @@
                       "pt-BR/enterprise/integrations/salesforce",
                       "pt-BR/enterprise/integrations/shopify",
                       "pt-BR/enterprise/integrations/slack",
+              "pt-BR/enterprise/integrations/snowflake",
                       "pt-BR/enterprise/integrations/stripe",
                       "pt-BR/enterprise/integrations/zendesk"
                     ]
@@ -11597,6 +11620,7 @@
                       "pt-BR/enterprise/integrations/salesforce",
                       "pt-BR/enterprise/integrations/shopify",
                       "pt-BR/enterprise/integrations/slack",
+              "pt-BR/enterprise/integrations/snowflake",
                       "pt-BR/enterprise/integrations/stripe",
                       "pt-BR/enterprise/integrations/zendesk"
                     ]
@@ -12057,6 +12081,7 @@
                       "pt-BR/enterprise/integrations/salesforce",
                       "pt-BR/enterprise/integrations/shopify",
                       "pt-BR/enterprise/integrations/slack",
+              "pt-BR/enterprise/integrations/snowflake",
                       "pt-BR/enterprise/integrations/stripe",
                       "pt-BR/enterprise/integrations/zendesk"
                     ]
@@ -12517,6 +12542,7 @@
                       "pt-BR/enterprise/integrations/salesforce",
                       "pt-BR/enterprise/integrations/shopify",
                       "pt-BR/enterprise/integrations/slack",
+              "pt-BR/enterprise/integrations/snowflake",
                       "pt-BR/enterprise/integrations/stripe",
                       "pt-BR/enterprise/integrations/zendesk"
                     ]
@@ -12977,6 +13003,7 @@
                       "pt-BR/enterprise/integrations/salesforce",
                       "pt-BR/enterprise/integrations/shopify",
                       "pt-BR/enterprise/integrations/slack",
+              "pt-BR/enterprise/integrations/snowflake",
                       "pt-BR/enterprise/integrations/stripe",
                       "pt-BR/enterprise/integrations/zendesk"
                     ]
@@ -13436,6 +13463,7 @@
                       "pt-BR/enterprise/integrations/salesforce",
                       "pt-BR/enterprise/integrations/shopify",
                       "pt-BR/enterprise/integrations/slack",
+              "pt-BR/enterprise/integrations/snowflake",
                       "pt-BR/enterprise/integrations/stripe",
                       "pt-BR/enterprise/integrations/zendesk"
                     ]
@@ -13895,6 +13923,7 @@
                       "pt-BR/enterprise/integrations/salesforce",
                       "pt-BR/enterprise/integrations/shopify",
                       "pt-BR/enterprise/integrations/slack",
+              "pt-BR/enterprise/integrations/snowflake",
                       "pt-BR/enterprise/integrations/stripe",
                       "pt-BR/enterprise/integrations/zendesk"
                     ]
@@ -14355,6 +14384,7 @@
                       "pt-BR/enterprise/integrations/salesforce",
                       "pt-BR/enterprise/integrations/shopify",
                       "pt-BR/enterprise/integrations/slack",
+              "pt-BR/enterprise/integrations/snowflake",
                       "pt-BR/enterprise/integrations/stripe",
                       "pt-BR/enterprise/integrations/zendesk"
                     ]
@@ -14891,6 +14921,7 @@
                       "ko/enterprise/integrations/salesforce",
                       "ko/enterprise/integrations/shopify",
                       "ko/enterprise/integrations/slack",
+              "ko/enterprise/integrations/snowflake",
                       "ko/enterprise/integrations/stripe",
                       "ko/enterprise/integrations/zendesk"
                     ]
@@ -15397,6 +15428,7 @@
                       "ko/enterprise/integrations/salesforce",
                       "ko/enterprise/integrations/shopify",
                       "ko/enterprise/integrations/slack",
+              "ko/enterprise/integrations/snowflake",
                       "ko/enterprise/integrations/stripe",
                       "ko/enterprise/integrations/zendesk"
                     ]
@@ -15870,6 +15902,7 @@
                       "ko/enterprise/integrations/salesforce",
                       "ko/enterprise/integrations/shopify",
                       "ko/enterprise/integrations/slack",
+              "ko/enterprise/integrations/snowflake",
                       "ko/enterprise/integrations/stripe",
                       "ko/enterprise/integrations/zendesk"
                     ]
@@ -16343,6 +16376,7 @@
                       "ko/enterprise/integrations/salesforce",
                       "ko/enterprise/integrations/shopify",
                       "ko/enterprise/integrations/slack",
+              "ko/enterprise/integrations/snowflake",
                       "ko/enterprise/integrations/stripe",
                       "ko/enterprise/integrations/zendesk"
                     ]
@@ -16816,6 +16850,7 @@
                       "ko/enterprise/integrations/salesforce",
                       "ko/enterprise/integrations/shopify",
                       "ko/enterprise/integrations/slack",
+              "ko/enterprise/integrations/snowflake",
                       "ko/enterprise/integrations/stripe",
                       "ko/enterprise/integrations/zendesk"
                     ]
@@ -17299,6 +17334,7 @@
                       "ko/enterprise/integrations/salesforce",
                       "ko/enterprise/integrations/shopify",
                       "ko/enterprise/integrations/slack",
+              "ko/enterprise/integrations/snowflake",
                       "ko/enterprise/integrations/stripe",
                       "ko/enterprise/integrations/zendesk"
                     ]
@@ -17782,6 +17818,7 @@
                       "ko/enterprise/integrations/salesforce",
                       "ko/enterprise/integrations/shopify",
                       "ko/enterprise/integrations/slack",
+              "ko/enterprise/integrations/snowflake",
                       "ko/enterprise/integrations/stripe",
                       "ko/enterprise/integrations/zendesk"
                     ]
@@ -18265,6 +18302,7 @@
                       "ko/enterprise/integrations/salesforce",
                       "ko/enterprise/integrations/shopify",
                       "ko/enterprise/integrations/slack",
+              "ko/enterprise/integrations/snowflake",
                       "ko/enterprise/integrations/stripe",
                       "ko/enterprise/integrations/zendesk"
                     ]
@@ -18748,6 +18786,7 @@
                       "ko/enterprise/integrations/salesforce",
                       "ko/enterprise/integrations/shopify",
                       "ko/enterprise/integrations/slack",
+              "ko/enterprise/integrations/snowflake",
                       "ko/enterprise/integrations/stripe",
                       "ko/enterprise/integrations/zendesk"
                     ]
@@ -19221,6 +19260,7 @@
                       "ko/enterprise/integrations/salesforce",
                       "ko/enterprise/integrations/shopify",
                       "ko/enterprise/integrations/slack",
+              "ko/enterprise/integrations/snowflake",
                       "ko/enterprise/integrations/stripe",
                       "ko/enterprise/integrations/zendesk"
                     ]
@@ -19694,6 +19734,7 @@
                       "ko/enterprise/integrations/salesforce",
                       "ko/enterprise/integrations/shopify",
                       "ko/enterprise/integrations/slack",
+              "ko/enterprise/integrations/snowflake",
                       "ko/enterprise/integrations/stripe",
                       "ko/enterprise/integrations/zendesk"
                     ]
@@ -20167,6 +20208,7 @@
                       "ko/enterprise/integrations/salesforce",
                       "ko/enterprise/integrations/shopify",
                       "ko/enterprise/integrations/slack",
+              "ko/enterprise/integrations/snowflake",
                       "ko/enterprise/integrations/stripe",
                       "ko/enterprise/integrations/zendesk"
                     ]
@@ -20639,6 +20681,7 @@
                       "ko/enterprise/integrations/salesforce",
                       "ko/enterprise/integrations/shopify",
                       "ko/enterprise/integrations/slack",
+              "ko/enterprise/integrations/snowflake",
                       "ko/enterprise/integrations/stripe",
                       "ko/enterprise/integrations/zendesk"
                     ]
@@ -21111,6 +21154,7 @@
                       "ko/enterprise/integrations/salesforce",
                       "ko/enterprise/integrations/shopify",
                       "ko/enterprise/integrations/slack",
+              "ko/enterprise/integrations/snowflake",
                       "ko/enterprise/integrations/stripe",
                       "ko/enterprise/integrations/zendesk"
                     ]
@@ -21584,6 +21628,7 @@
                       "ko/enterprise/integrations/salesforce",
                       "ko/enterprise/integrations/shopify",
                       "ko/enterprise/integrations/slack",
+              "ko/enterprise/integrations/snowflake",
                       "ko/enterprise/integrations/stripe",
                       "ko/enterprise/integrations/zendesk"
                     ]
@@ -22120,6 +22165,7 @@
                       "ar/enterprise/integrations/salesforce",
                       "ar/enterprise/integrations/shopify",
                       "ar/enterprise/integrations/slack",
+              "ar/enterprise/integrations/snowflake",
                       "ar/enterprise/integrations/stripe",
                       "ar/enterprise/integrations/zendesk"
                     ]
@@ -22626,6 +22672,7 @@
                       "ar/enterprise/integrations/salesforce",
                       "ar/enterprise/integrations/shopify",
                       "ar/enterprise/integrations/slack",
+              "ar/enterprise/integrations/snowflake",
                       "ar/enterprise/integrations/stripe",
                       "ar/enterprise/integrations/zendesk"
                     ]
@@ -23099,6 +23146,7 @@
                       "ar/enterprise/integrations/salesforce",
                       "ar/enterprise/integrations/shopify",
                       "ar/enterprise/integrations/slack",
+              "ar/enterprise/integrations/snowflake",
                       "ar/enterprise/integrations/stripe",
                       "ar/enterprise/integrations/zendesk"
                     ]
@@ -23572,6 +23620,7 @@
                       "ar/enterprise/integrations/salesforce",
                       "ar/enterprise/integrations/shopify",
                       "ar/enterprise/integrations/slack",
+              "ar/enterprise/integrations/snowflake",
                       "ar/enterprise/integrations/stripe",
                       "ar/enterprise/integrations/zendesk"
                     ]
@@ -24045,6 +24094,7 @@
                       "ar/enterprise/integrations/salesforce",
                       "ar/enterprise/integrations/shopify",
                       "ar/enterprise/integrations/slack",
+              "ar/enterprise/integrations/snowflake",
                       "ar/enterprise/integrations/stripe",
                       "ar/enterprise/integrations/zendesk"
                     ]
@@ -24528,6 +24578,7 @@
                       "ar/enterprise/integrations/salesforce",
                       "ar/enterprise/integrations/shopify",
                       "ar/enterprise/integrations/slack",
+              "ar/enterprise/integrations/snowflake",
                       "ar/enterprise/integrations/stripe",
                       "ar/enterprise/integrations/zendesk"
                     ]
@@ -25011,6 +25062,7 @@
                       "ar/enterprise/integrations/salesforce",
                       "ar/enterprise/integrations/shopify",
                       "ar/enterprise/integrations/slack",
+              "ar/enterprise/integrations/snowflake",
                       "ar/enterprise/integrations/stripe",
                       "ar/enterprise/integrations/zendesk"
                     ]
@@ -25494,6 +25546,7 @@
                       "ar/enterprise/integrations/salesforce",
                       "ar/enterprise/integrations/shopify",
                       "ar/enterprise/integrations/slack",
+              "ar/enterprise/integrations/snowflake",
                       "ar/enterprise/integrations/stripe",
                       "ar/enterprise/integrations/zendesk"
                     ]
@@ -25977,6 +26030,7 @@
                       "ar/enterprise/integrations/salesforce",
                       "ar/enterprise/integrations/shopify",
                       "ar/enterprise/integrations/slack",
+              "ar/enterprise/integrations/snowflake",
                       "ar/enterprise/integrations/stripe",
                       "ar/enterprise/integrations/zendesk"
                     ]
@@ -26450,6 +26504,7 @@
                       "ar/enterprise/integrations/salesforce",
                       "ar/enterprise/integrations/shopify",
                       "ar/enterprise/integrations/slack",
+              "ar/enterprise/integrations/snowflake",
                       "ar/enterprise/integrations/stripe",
                       "ar/enterprise/integrations/zendesk"
                     ]
@@ -26923,6 +26978,7 @@
                       "ar/enterprise/integrations/salesforce",
                       "ar/enterprise/integrations/shopify",
                       "ar/enterprise/integrations/slack",
+              "ar/enterprise/integrations/snowflake",
                       "ar/enterprise/integrations/stripe",
                       "ar/enterprise/integrations/zendesk"
                     ]
@@ -27396,6 +27452,7 @@
                       "ar/enterprise/integrations/salesforce",
                       "ar/enterprise/integrations/shopify",
                       "ar/enterprise/integrations/slack",
+              "ar/enterprise/integrations/snowflake",
                       "ar/enterprise/integrations/stripe",
                       "ar/enterprise/integrations/zendesk"
                     ]
@@ -27868,6 +27925,7 @@
                       "ar/enterprise/integrations/salesforce",
                       "ar/enterprise/integrations/shopify",
                       "ar/enterprise/integrations/slack",
+              "ar/enterprise/integrations/snowflake",
                       "ar/enterprise/integrations/stripe",
                       "ar/enterprise/integrations/zendesk"
                     ]
@@ -28340,6 +28398,7 @@
                       "ar/enterprise/integrations/salesforce",
                       "ar/enterprise/integrations/shopify",
                       "ar/enterprise/integrations/slack",
+              "ar/enterprise/integrations/snowflake",
                       "ar/enterprise/integrations/stripe",
                       "ar/enterprise/integrations/zendesk"
                     ]
@@ -28813,6 +28872,7 @@
                       "ar/enterprise/integrations/salesforce",
                       "ar/enterprise/integrations/shopify",
                       "ar/enterprise/integrations/slack",
+              "ar/enterprise/integrations/snowflake",
                       "ar/enterprise/integrations/stripe",
                       "ar/enterprise/integrations/zendesk"
                     ]
