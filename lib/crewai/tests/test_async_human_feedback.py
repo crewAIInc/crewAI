@@ -569,13 +569,13 @@ class TestFlowResumeWithFeedback:
 
             flow = TestFlow.from_pending("async-direct-test", persistence)
 
-            with patch("crewai.flow.flow.crewai_event_bus.emit"):
+            with patch("crewai.flow.runtime.crewai_event_bus.emit"):
                 result = await flow.resume_async("async feedback")
 
             assert flow.last_human_feedback is not None
             assert flow.last_human_feedback.feedback == "async feedback"
 
-    @patch("crewai.flow.flow.crewai_event_bus.emit")
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
     def test_resume_basic(self, mock_emit: MagicMock) -> None:
         """Test basic resume functionality."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -615,7 +615,7 @@ class TestFlowResumeWithFeedback:
 
             assert persistence.load_pending_feedback("resume-test-123") is None
 
-    @patch("crewai.flow.flow.crewai_event_bus.emit")
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
     def test_resume_routing(self, mock_emit: MagicMock) -> None:
         """Test resume with routing."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -697,7 +697,7 @@ class TestAsyncHumanFeedbackIntegration:
         assert hasattr(method, "__human_feedback_config__")
         assert method.__human_feedback_config__.provider is not None
 
-    @patch("crewai.flow.flow.crewai_event_bus.emit")
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
     def test_async_provider_pauses_flow(self, mock_emit: MagicMock) -> None:
         """Test that async provider pauses flow execution."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -743,7 +743,7 @@ class TestAsyncHumanFeedbackIntegration:
             persisted = persistence.load_pending_feedback(flow_id)
             assert persisted is not None
 
-    @patch("crewai.flow.flow.crewai_event_bus.emit")
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
     def test_full_async_flow_cycle(self, mock_emit: MagicMock) -> None:
         """Test complete async flow: start -> pause -> resume."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -804,7 +804,7 @@ class TestAsyncHumanFeedbackIntegration:
 class TestAutoPersistence:
     """Tests for automatic persistence when no persistence is provided."""
 
-    @patch("crewai.flow.flow.crewai_event_bus.emit")
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
     def test_auto_persistence_when_none_provided(self, mock_emit: MagicMock) -> None:
         """Test that persistence is auto-created when HumanFeedbackPending is raised."""
 
@@ -925,7 +925,7 @@ class TestCollapseToOutcomeJsonParsing:
 class TestLLMObjectPreservedInContext:
     """Tests that BaseLLM objects have their model string preserved in PendingFeedbackContext."""
 
-    @patch("crewai.flow.flow.crewai_event_bus.emit")
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
     def test_basellm_object_model_string_survives_roundtrip(self, mock_emit: MagicMock) -> None:
         """Test that when llm is a BaseLLM object, its model string is stored in context
         so that outcome collapsing works after async pause/resume.
@@ -1125,7 +1125,7 @@ class TestAsyncHumanFeedbackEdgeCases:
 
             flow = TestFlow.from_pending("default-test", persistence)
 
-            with patch("crewai.flow.flow.crewai_event_bus.emit"):
+            with patch("crewai.flow.runtime.crewai_event_bus.emit"):
                 result = flow.resume("")
 
             assert flow.last_human_feedback.outcome == "approved"
@@ -1159,7 +1159,7 @@ class TestAsyncHumanFeedbackEdgeCases:
 
             flow = TestFlow.from_pending("no-feedback-test", persistence)
 
-            with patch("crewai.flow.flow.crewai_event_bus.emit"):
+            with patch("crewai.flow.runtime.crewai_event_bus.emit"):
                 result = flow.resume()
 
             assert flow.last_human_feedback.outcome == "approved"
@@ -1213,7 +1213,7 @@ class TestLiveLLMPreservationOnResume:
         assert hasattr(method, "_hf_llm")
         assert method._hf_llm == "gpt-4o-mini"
 
-    @patch("crewai.flow.flow.crewai_event_bus.emit")
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
     def test_resume_async_uses_live_basellm_over_serialized_string(
         self, mock_emit: MagicMock
     ) -> None:
@@ -1286,7 +1286,7 @@ class TestLiveLLMPreservationOnResume:
             # And verify it's a BaseLLM instance, not a string
             assert isinstance(captured_llm[0], BaseLLM)
 
-    @patch("crewai.flow.flow.crewai_event_bus.emit")
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
     def test_resume_async_falls_back_to_serialized_string_when_no_hf_llm(
         self, mock_emit: MagicMock
     ) -> None:
@@ -1344,7 +1344,7 @@ class TestLiveLLMPreservationOnResume:
             assert isinstance(captured_llm[0], BaseLLMClass)
             assert captured_llm[0].model == "gpt-4o-mini"
 
-    @patch("crewai.flow.flow.crewai_event_bus.emit")
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
     def test_resume_async_uses_string_from_context_when_hf_llm_is_string(
         self, mock_emit: MagicMock
     ) -> None:
