@@ -298,7 +298,10 @@ class OpenAICompatibleCompletion(OpenAICompletion):
             if msg.get("role") == "system":
                 msg["content"] = (msg.get("content") or "") + instruction
                 return
-        params["messages"] = [{"role": "system", "content": instruction.lstrip()}, *msgs]
+        params["messages"] = [
+            {"role": "system", "content": instruction.lstrip()},
+            *msgs,
+        ]
 
     @staticmethod
     def _extract_json_from_text(text: str) -> str:
@@ -386,7 +389,9 @@ class OpenAICompatibleCompletion(OpenAICompletion):
                 )
                 return parsed
             except Exception as e:
-                logging.warning(f"Structured output parsing failed, returning raw content: {e}")
+                logging.warning(
+                    f"Structured output parsing failed, returning raw content: {e}"
+                )
 
         content = self._apply_stop_words(content)
         self._emit_call_completed_event(
@@ -433,7 +438,9 @@ class OpenAICompatibleCompletion(OpenAICompletion):
 
         self._inject_schema_instructions(modified_params, schema_dict)
 
-        response = await self._get_async_client().chat.completions.create(**modified_params)
+        response = await self._get_async_client().chat.completions.create(
+            **modified_params
+        )
 
         usage = self._extract_openai_token_usage(response)
         self._track_token_usage_internal(usage)
@@ -466,7 +473,9 @@ class OpenAICompatibleCompletion(OpenAICompletion):
                 )
                 return parsed
             except Exception as e:
-                logging.warning(f"Structured output parsing failed, returning raw content: {e}")
+                logging.warning(
+                    f"Structured output parsing failed, returning raw content: {e}"
+                )
 
         content = self._apply_stop_words(content)
         self._emit_call_completed_event(
@@ -516,7 +525,9 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         full_response = ""
         usage_data: dict[str, Any] | None = None
 
-        completion_stream = self._get_sync_client().chat.completions.create(**modified_params)
+        completion_stream = self._get_sync_client().chat.completions.create(
+            **modified_params
+        )
 
         for chunk in completion_stream:
             response_id_stream = chunk.id if hasattr(chunk, "id") else None
