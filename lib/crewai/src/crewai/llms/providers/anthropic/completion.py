@@ -256,6 +256,8 @@ class AnthropicCompletion(BaseLLM):
             self.api_key = os.getenv("ANTHROPIC_API_KEY")
             if self.api_key is None:
                 raise ValueError("ANTHROPIC_API_KEY is required")
+        if isinstance(self.api_key, str):
+            self.api_key = self.api_key.strip()
 
         client_params = {
             "api_key": self.api_key,
