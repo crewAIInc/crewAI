@@ -161,6 +161,30 @@ def test_flow_with_or_condition():
     )
 
 
+def test_or_listener_fires_once_across_parallel_starts():
+    """Parallel ``@start`` paths feeding ``or_`` must not double-fire the listener."""
+    fire_count = 0
+
+    class ParallelOrFlow(Flow):
+        @start()
+        async def fast_start(self):
+            return "fast"
+
+        @start()
+        async def slow_start(self):
+            await asyncio.sleep(0.2)
+            return "slow"
+
+        @listen(or_(fast_start, slow_start))
+        def handler(self):
+            nonlocal fire_count
+            fire_count += 1
+
+    asyncio.run(ParallelOrFlow().kickoff_async())
+
+    assert fire_count == 1
+
+
 def test_or_listener_re_arms_across_router_loop():
     """Regression for #5972: multi-source ``or_`` re-fires on each router emission."""
     fire_count = 0

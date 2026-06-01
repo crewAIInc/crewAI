@@ -1271,6 +1271,36 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         with self._or_listeners_lock:
             self._fired_or_listeners.discard(listener_name)
 
+    def _rearm_or_listeners_for_trigger(self, trigger: FlowMethodName) -> None:
+        """Re-arm fired OR listeners whose condition includes ``trigger``.
+
+        Called when a router emits a fresh signal so cyclic flows can re-fire
+        multi-source ``or_`` listeners. Listeners whose condition does not
+        reference the trigger are left fired.
+
+        Args:
+            trigger: The signal/method name a router just emitted.
+        """
+        with self._or_listeners_lock:
+            if not self._fired_or_listeners:
+                return
+            trigger_str = str(trigger)
+            to_discard: list[FlowMethodName] = []
+            for listener_name in self._fired_or_listeners:
+                condition_data = self._listeners.get(listener_name)
+                if condition_data is None:
+                    continue
+                if is_simple_flow_condition(condition_data):
+                    _, methods = condition_data
+                    if trigger in methods or trigger_str in {str(m) for m in methods}:
+                        to_discard.append(listener_name)
+                elif is_flow_condition_dict(condition_data):
+                    all_methods = _extract_all_methods_recursive(condition_data)
+                    if trigger_str in {str(m) for m in all_methods}:
+                        to_discard.append(listener_name)
+            for listener_name in to_discard:
+                self._fired_or_listeners.discard(listener_name)
+
     def _build_racing_groups(self) -> dict[frozenset[FlowMethodName], FlowMethodName]:
         """Identify groups of methods that race for the same OR listener.
 
@@ -2841,20 +2871,19 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         else str(router_result)
                     )
                     if router_result is not None
-                    else FlowMethodName("")  # Update for next iteration of router chain
+                    else FlowMethodName("")
                 )
 
-        # Now execute normal listeners for all router results and the original trigger
         all_triggers = [trigger_method, *router_results]
 
-        for current_trigger in all_triggers:
-            if current_trigger:  # Skip None results
+        for idx, current_trigger in enumerate(all_triggers):
+            if current_trigger:
+                if idx > 0:
+                    self._rearm_or_listeners_for_trigger(current_trigger)
                 listeners_triggered = self._find_triggered_methods(
                     current_trigger, router_only=False
                 )
                 if listeners_triggered:
-                    # Determine what result to pass to listeners
-                    # For router outcomes, pass the HumanFeedbackResult if available
                     listener_result = router_result_to_feedback.get(
                         str(current_trigger), result
                     )
@@ -3145,8 +3174,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     listener_result, finished_event_id = await self._execute_method(
                         listener_name, method
                     )
-
-            self._discard_or_listener(listener_name)
 
             await self._execute_listeners(
                 listener_name, listener_result, finished_event_id
