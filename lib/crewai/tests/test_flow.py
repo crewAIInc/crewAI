@@ -161,6 +161,36 @@ def test_flow_with_or_condition():
     )
 
 
+def test_or_listener_re_arms_across_router_loop():
+    """Regression for #5972: multi-source ``or_`` re-fires on each router emission."""
+    fire_count = 0
+
+    class CyclicOrFlow(Flow):
+        iteration = 0
+
+        @start()
+        def kick(self):
+            return "kick"
+
+        @router(kick)
+        def initial_router(self):
+            return "SignalA"
+
+        @listen(or_("SignalA", "SignalB"))
+        def handler(self):
+            nonlocal fire_count
+            fire_count += 1
+
+        @router(handler)
+        def loop_router(self):
+            self.iteration += 1
+            return "stop" if self.iteration >= 3 else "SignalB"
+
+    CyclicOrFlow().kickoff()
+
+    assert fire_count == 3
+
+
 def test_flow_with_router():
     """Test a flow that uses a router method to determine the next step."""
     execution_order = []

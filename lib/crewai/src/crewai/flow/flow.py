@@ -3146,6 +3146,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         listener_name, method
                     )
 
+            self._discard_or_listener(listener_name)
+
             await self._execute_listeners(
                 listener_name, listener_result, finished_event_id
             )
