@@ -7,14 +7,12 @@ mode: "wide"
 
 Interoperability is a core concept in CrewAI. This guide will show you how to bring your own agents that work within a Crew.
 
-
 ## Adapter Guide for Bringing your own agents (Langgraph Agents, OpenAI Agents, etc...)
 We require 3 adapters to turn any agent from different frameworks to work within crew.
 
 1. BaseAgentAdapter
 2. BaseToolAdapter
 3. BaseConverter
-
 
 ## BaseAgentAdapter
 This abstract class defines the common interface and functionality that all
@@ -35,7 +33,7 @@ Here's how you implement your custom adapter:
     ```python
     from crewai.agents.agent_adapters.base_agent_adapter import BaseAgentAdapter
     from crewai.tools import BaseTool
-    from typing import List, Optional, Any, Dict
+    from typing import Any
 
     class MyCustomAgentAdapter(BaseAgentAdapter):
         # ... implementation details ...
@@ -45,7 +43,7 @@ Here's how you implement your custom adapter:
     The constructor should call the parent class constructor `super().__init__(**kwargs)` and perform any initialization specific to your external agent. You can use the optional `agent_config` dictionary passed during CrewAI's `Agent` initialization to configure your adapter and the underlying agent.
 
     ```python
-    def __init__(self, agent_config: Optional[Dict[str, Any]] = None, **kwargs: Any):
+    def __init__(self, agent_config: dict[str, Any] | None = None, **kwargs: Any):
         super().__init__(agent_config=agent_config, **kwargs)
         # Initialize your external agent here, possibly using agent_config
         # Example: self.external_agent = initialize_my_agent(agent_config)
@@ -56,7 +54,7 @@ Here's how you implement your custom adapter:
     This abstract method is crucial. It receives a list of CrewAI `BaseTool` instances. Your implementation must convert or adapt these tools into the format expected by your external agent framework. This might involve wrapping them, extracting specific attributes, or registering them with the external agent instance.
 
     ```python
-    def configure_tools(self, tools: Optional[List[BaseTool]] = None) -> None:
+    def configure_tools(self, tools: list[BaseTool] | None = None) -> None:
         if tools:
             adapted_tools = []
             for tool in tools:
@@ -96,7 +94,7 @@ Here's how you implement your custom tool adapter:
     ```python
     from crewai.agents.agent_adapters.base_tool_adapter import BaseToolAdapter
     from crewai.tools import BaseTool
-    from typing import List, Any
+    from typing import Any
 
     class MyCustomToolAdapter(BaseToolAdapter):
         # ... implementation details ...
@@ -106,7 +104,7 @@ Here's how you implement your custom tool adapter:
     This is the core abstract method you must implement. It receives a list of CrewAI `BaseTool` instances provided to the agent. Your task is to iterate through this list, adapt each `BaseTool` into the format expected by your external framework, and store the converted tools in the `self.converted_tools` list (which is initialized in the base class constructor).
 
     ```python
-    def configure_tools(self, tools: List[BaseTool]) -> None:
+    def configure_tools(self, tools: list[BaseTool]) -> None:
         """Configure and convert CrewAI tools for the specific implementation."""
         self.converted_tools = [] # Reset in case it's called multiple times
         for tool in tools:
@@ -175,7 +173,7 @@ Here's how you implement your custom tool adapter:
 
     ```python
     # Inside MyCustomAgentAdapter.configure_tools
-    def configure_tools(self, tools: Optional[List[BaseTool]] = None) -> None:
+    def configure_tools(self, tools: list[BaseTool] | None = None) -> None:
         if tools:
             tool_adapter = MyCustomToolAdapter() # Instantiate your tool adapter
             tool_adapter.configure_tools(tools)  # Convert the tools
@@ -328,7 +326,6 @@ We provide out of the box adapters for the following frameworks:
 ```python
 import json
 import os
-from typing import List
 
 from crewai_tools import SerperDevTool
 from src.crewai import Agent, Crew, Task
@@ -368,10 +365,8 @@ reporter_agent = LangGraphAgentAdapter(
     verbose=True,
 )
 
-
 class Code(BaseModel):
     code: str
-
 
 task = Task(
     description="Give an answer to the coding question: {task}",
@@ -385,11 +380,9 @@ task2 = Task(
     agent=link_finder_agent,
 )
 
-
 class Report(BaseModel):
     code: str
-    links: List[str]
-
+    links: list[str]
 
 task3 = Task(
     description="Report the results of the tasks.",

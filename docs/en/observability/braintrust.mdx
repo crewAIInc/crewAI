@@ -47,7 +47,7 @@ Initialize the Braintrust OpenTelemetry instrumentation to start capturing trace
 
 ```python
 import os
-from typing import Any, Dict
+from typing import Any
 
 from braintrust.otel import BraintrustSpanProcessor
 from crewai import Agent, Crew, Task
@@ -69,7 +69,6 @@ def setup_tracing() -> None:
     provider.add_span_processor(BraintrustSpanProcessor())
     CrewAIInstrumentor().instrument(tracer_provider=provider)
     OpenAIInstrumentor().instrument(tracer_provider=provider)
-
 
 setup_tracing()
 ```

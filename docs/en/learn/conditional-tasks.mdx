@@ -13,7 +13,7 @@ This powerful feature enables crews to make decisions and execute tasks selectiv
 ## Example Usage
 
 ```python Code
-from typing import List
+
 from pydantic import BaseModel
 from crewai import Agent, Crew
 from crewai.tasks.conditional_task import ConditionalTask
@@ -50,7 +50,7 @@ summary_generator_agent = Agent(
 )
 
 class EventOutput(BaseModel):
-    events: List[str]
+    events: list[str]
 
 task1 = Task(
     description="Fetch data about events in San Francisco using Serper tool",

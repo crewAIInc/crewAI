@@ -78,20 +78,19 @@ If you have not installed CrewAI yet, follow the [installation guide](/en/instal
 
     ```python content_crew.py
     # src/latest_ai_flow/crews/content_crew/content_crew.py
-    from typing import List
+    
 
     from crewai import Agent, Crew, Process, Task
     from crewai.agents.agent_builder.base_agent import BaseAgent
     from crewai.project import CrewBase, agent, crew, task
     from crewai_tools import SerperDevTool
 
-
     @CrewBase
     class ResearchCrew:
       """Single-agent research crew used inside the Flow."""
 
-      agents: List[BaseAgent]
-      tasks: List[Task]
+      agents: list[BaseAgent]
+      tasks: list[Task]
 
       agents_config = "config/agents.yaml"
       tasks_config = "config/tasks.yaml"
@@ -133,11 +132,9 @@ If you have not installed CrewAI yet, follow the [installation guide](/en/instal
 
     from latest_ai_flow.crews.content_crew.content_crew import ResearchCrew
 
-
     class ResearchFlowState(BaseModel):
       topic: str = ""
       report: str = ""
-
 
     class LatestAiFlow(Flow[ResearchFlowState]):
       @start()
@@ -158,14 +155,11 @@ If you have not installed CrewAI yet, follow the [installation guide](/en/instal
       def summarize(self):
         print("Report path: output/report.md")
 
-
     def kickoff():
       LatestAiFlow().kickoff()
 
-
     def plot():
       LatestAiFlow().plot()
-
 
     if __name__ == "__main__":
       kickoff()
@@ -193,9 +187,6 @@ If you have not installed CrewAI yet, follow the [installation guide](/en/instal
 
   `crewai run` executes the Flow entrypoint defined in your project (same command as for crews; project type is `"flow"` in `pyproject.toml`).
   </Step>
-
-
-
 
   <Step title="Check the output">
   You should see logs from the Flow and the crew. Open **`output/report.md`** for the generated report (excerpt):

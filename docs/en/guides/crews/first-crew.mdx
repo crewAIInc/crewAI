@@ -58,7 +58,6 @@ This will generate a project with the basic structure needed for your crew. The 
   <img src="/images/crews.png" alt="CrewAI Framework Overview" />
 </Frame>
 
-
 ## Step 2: Explore the Project Structure
 
 Let's take a moment to understand the project structure created by the CLI. CrewAI follows best practices for Python projects, making it easy to maintain and extend your code as your crews become more complex.
@@ -187,14 +186,13 @@ from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 from crewai_tools import SerperDevTool
 from crewai.agents.agent_builder.base_agent import BaseAgent
-from typing import List
 
 @CrewBase
 class ResearchCrew():
     """Research crew for comprehensive topic analysis and reporting"""
 
-    agents: List[BaseAgent]
-    tasks: List[Task]
+    agents: list[BaseAgent]
+    tasks: list[Task]
 
     @agent
     def researcher(self) -> Agent:
