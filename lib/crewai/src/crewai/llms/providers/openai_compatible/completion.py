@@ -16,11 +16,16 @@ from dataclasses import dataclass, field
 import json
 import logging
 import os
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, model_validator
 
 from crewai.llms.providers.openai.completion import OpenAICompletion
+from crewai.utilities.types import LLMMessage
+
+
+if TYPE_CHECKING:
+    from crewai.tools.base_tool import BaseTool
 
 
 @dataclass(frozen=True)
@@ -265,8 +270,8 @@ class OpenAICompatibleCompletion(OpenAICompletion):
 
     def _prepare_completion_params(
         self,
-        messages: list[dict[str, Any]],
-        tools: list[dict[str, Any]] | None = None,
+        messages: list[LLMMessage],
+        tools: list[dict[str, BaseTool]] | None = None,
     ) -> dict[str, Any]:
         """Prepare params, stripping json_schema response_format if unsupported."""
         params = super()._prepare_completion_params(messages, tools)
