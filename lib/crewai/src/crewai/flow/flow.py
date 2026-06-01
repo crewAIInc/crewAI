@@ -21,7 +21,9 @@ from concurrent.futures import Future, ThreadPoolExecutor
 import contextvars
 import copy
 import enum
+from enum import Enum
 import inspect
+import json
 import logging
 import threading
 from typing import (
@@ -50,6 +52,7 @@ from pydantic import (
     PrivateAttr,
     SerializeAsAny,
     ValidationError,
+    create_model,
 )
 from pydantic._internal._model_construction import ModelMetaclass
 from rich.console import Console
@@ -88,6 +91,16 @@ from crewai.events.types.flow_events import (
     MethodExecutionFinishedEvent,
     MethodExecutionPausedEvent,
     MethodExecutionStartedEvent,
+)
+from crewai.experimental.conversational import (
+    AgentMessage,
+    ConversationConfig,
+    ConversationEvent,
+    ConversationMessage,
+    ConversationState,
+    RouterConfig,
+    _conversational_only,
+    message_to_llm_dict,
 )
 from crewai.flow.constants import AND_CONDITION, OR_CONDITION
 from crewai.flow.conversation import (
@@ -144,7 +157,7 @@ from crewai.state.checkpoint_config import (
 if TYPE_CHECKING:
     from crewai_files import FileInput
 
-    from crewai.context import ExecutionContext
+    from crewai.context import ExecutionContext as _TypedExecutionContext  # noqa: F401
     from crewai.flow.async_feedback.types import PendingFeedbackContext
     from crewai.llms.base_llm import BaseLLM
 
@@ -161,6 +174,15 @@ from crewai.utilities.streaming import (
     signal_error,
 )
 from crewai.utilities.types import LLMMessage
+
+
+# Runtime alias so Pydantic can resolve the ``execution_context`` field's
+# annotation in subclass modules without those modules needing to import
+# ``crewai.context.ExecutionContext`` themselves. The real class is brought
+# in under ``TYPE_CHECKING`` above for static analysis. We can't import it at
+# runtime because ``crewai.context`` is loaded mid-initialization when this
+# module is imported through ``crewai.__init__`` (circular).
+ExecutionContext = Any
 
 
 logger = logging.getLogger(__name__)
@@ -898,6 +920,17 @@ class FlowMeta(ModelMetaclass):
         router_paths = {}
         routers = set()
 
+        # ``conversational = True`` is the opt-in for built-in conversational
+        # methods (those carrying ``__conversational_only__``). Non-chat flows
+        # skip the registration entirely — the methods exist on the class as
+        # inert attributes but never fire.
+        is_conversational = bool(namespace.get("conversational", False))
+        if not is_conversational:
+            for base in bases:
+                if getattr(base, "conversational", False):
+                    is_conversational = True
+                    break
+
         for attr_name, attr_value in namespace.items():
             if (
                 hasattr(attr_value, "__is_flow_method__")
@@ -905,6 +938,11 @@ class FlowMeta(ModelMetaclass):
                 or hasattr(attr_value, "__trigger_methods__")
                 or hasattr(attr_value, "__is_router__")
             ):
+                if (
+                    getattr(attr_value, "__conversational_only__", False)
+                    and not is_conversational
+                ):
+                    continue
                 if hasattr(attr_value, "__is_start_method__"):
                     start_methods.append(attr_name)
 
@@ -962,26 +1000,103 @@ class FlowMeta(ModelMetaclass):
                         else:
                             router_paths[attr_name] = []
 
+        # Inherited flow methods are anchored to the BASE class's decorated
+        # method, not the subclass's current attribute. This lets a subclass
+        # override an inherited ``@start`` / ``@listen`` / ``@router`` method
+        # without re-applying the decorator — the slot stays registered as
+        # long as the base declared it.
+        #
+        # Conversational-only methods on a base (e.g. ``conversation_start``)
+        # are skipped here when the subclass didn't opt into conversational
+        # mode, so non-chat flows pay no graph cost.
+        def _skip_conversational(method: Any) -> bool:
+            return (
+                getattr(method, "__conversational_only__", False)
+                and not is_conversational
+            )
+
         for base in bases:
             for method_name in getattr(base, "_start_methods", []):
-                current_method = getattr(cls, method_name, None)
-                if is_flow_method(current_method) and method_name not in start_methods:
+                base_method = getattr(base, method_name, None)
+                if not is_flow_method(base_method) or _skip_conversational(base_method):
+                    continue
+                if method_name not in start_methods:
                     start_methods.append(method_name)
 
             for method_name, condition in getattr(base, "_listeners", {}).items():
-                current_method = getattr(cls, method_name, None)
-                if is_flow_method(current_method) and method_name not in listeners:
+                base_method = getattr(base, method_name, None)
+                if not is_flow_method(base_method) or _skip_conversational(base_method):
+                    continue
+                if method_name not in listeners:
                     listeners[method_name] = condition
 
             for method_name in getattr(base, "_routers", set()):
-                current_method = getattr(cls, method_name, None)
-                if is_flow_method(current_method):
-                    routers.add(method_name)
+                base_method = getattr(base, method_name, None)
+                if not is_flow_method(base_method) or _skip_conversational(base_method):
+                    continue
+                routers.add(method_name)
 
             for method_name, paths in getattr(base, "_router_paths", {}).items():
-                current_method = getattr(cls, method_name, None)
-                if is_flow_method(current_method) and method_name not in router_paths:
+                base_method = getattr(base, method_name, None)
+                if not is_flow_method(base_method) or _skip_conversational(base_method):
+                    continue
+                if method_name not in router_paths:
                     router_paths[method_name] = paths
+
+        # When this subclass opts into conversational mode, also harvest
+        # conversational-only methods that the base class skipped during its
+        # own namespace scan (because the base had ``conversational = False``
+        # by default). This is what wires the built-in ``conversation_start``
+        # / ``route_conversation`` / ``converse_turn`` graph onto a subclass
+        # that sets ``conversational = True``.
+        if is_conversational:
+            seen_conv: set[str] = set()
+            for base in bases:
+                for attr_name in dir(base):
+                    if attr_name.startswith("_") or attr_name in seen_conv:
+                        continue
+                    attr_value = getattr(base, attr_name, None)
+                    if not is_flow_method(attr_value):
+                        continue
+                    if not getattr(attr_value, "__conversational_only__", False):
+                        continue
+                    seen_conv.add(attr_name)
+
+                    if (
+                        hasattr(attr_value, "__is_start_method__")
+                        and attr_name not in start_methods
+                    ):
+                        start_methods.append(attr_name)
+
+                    trigger_methods = getattr(attr_value, "__trigger_methods__", None)
+                    if trigger_methods is not None:
+                        condition_type = getattr(
+                            attr_value, "__condition_type__", OR_CONDITION
+                        )
+                        if attr_name not in listeners:
+                            trigger_condition = getattr(
+                                attr_value, "__trigger_condition__", None
+                            )
+                            if trigger_condition is not None:
+                                listeners[attr_name] = trigger_condition
+                            else:
+                                listeners[attr_name] = (condition_type, trigger_methods)
+
+                        if getattr(attr_value, "__is_router__", False):
+                            routers.add(attr_name)
+                            if attr_name not in router_paths:
+                                paths_attr = getattr(
+                                    attr_value, "__router_paths__", None
+                                )
+                                if paths_attr:
+                                    router_paths[attr_name] = paths_attr
+                                else:
+                                    possible_returns = get_possible_return_constants(
+                                        attr_value
+                                    )
+                                    router_paths[attr_name] = (
+                                        possible_returns if possible_returns else []
+                                    )
 
         cls._start_methods = start_methods  # type: ignore[attr-defined]
         cls._listeners = listeners  # type: ignore[attr-defined]
@@ -1175,7 +1290,31 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     _pending_intent_llm: str | BaseLLM | None = PrivateAttr(default=None)
     _state: Any = PrivateAttr(default=None)
 
-    conversational_config: ClassVar[Any | None] = None
+    # === EXPERIMENTAL: conversational mode ===
+    # When ``conversational = True`` on a subclass, the built-in conversational
+    # graph (``conversation_start`` -> ``route_conversation`` -> ``converse_turn``
+    # / ``end_conversation`` / ``answer_from_history_turn``) registers and
+    # ``handle_turn`` becomes the chat entry point. When ``False`` (default),
+    # the methods exist as inert attributes and never register or fire —
+    # non-chat flows pay no runtime cost.
+    conversational: ClassVar[bool] = False
+    conversational_config: ClassVar[ConversationConfig | None] = None
+    builtin_routes: ClassVar[tuple[str, ...]] = ("converse", "end")
+    internal_routes: ClassVar[tuple[str, ...]] = (
+        "answer_from_history",
+        "conversation_start",
+    )
+    builtin_route_descriptions: ClassVar[dict[str, str]] = {
+        "converse": (
+            "Ordinary chat, follow-ups, summaries, clarifications, and "
+            "questions answerable from prior conversation history."
+        ),
+        "end": ("User signals the conversation is finished (goodbye, exit, done)."),
+        "answer_from_history": (
+            "Answer directly from prior conversation history without invoking "
+            "tools, agents, or custom routes."
+        ),
+    }
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:  # type: ignore[override]
         class _FlowGeneric(cls):  # type: ignore[valid-type,misc]
@@ -1228,13 +1367,47 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             flow_name = sanitize_scope_name(self.name or self.__class__.__name__)
             self.memory = Memory(root_scope=f"/flow/{flow_name}")
 
-        for method_name in dir(self):
-            if not method_name.startswith("_"):
-                method = getattr(self, method_name)
-                if is_flow_method(method):
-                    if not hasattr(method, "__self__"):
-                        method = method.__get__(self, self.__class__)
-                    self._methods[method.__name__] = method
+        # Build the runtime method lookup. ``_start_methods`` / ``_listeners`` /
+        # ``_routers`` are populated by ``__init_subclass__`` and are the source
+        # of truth for which slots are flow methods — including slots a
+        # subclass overrode without re-decorating. Walk those slots first so
+        # the override (which may be a plain function) still gets bound here.
+        registered_slots: set[str] = set()
+        registered_slots.update(getattr(type(self), "_start_methods", []))
+        registered_slots.update(getattr(type(self), "_listeners", {}).keys())
+        registered_slots.update(getattr(type(self), "_routers", set()))
+        for method_name in registered_slots:
+            method = getattr(self, method_name, None)
+            if method is None:
+                continue
+            if not hasattr(method, "__self__"):
+                method = method.__get__(self, self.__class__)
+            self._methods[FlowMethodName(method_name)] = method
+
+        # Also pick up any leftover flow-decorated attributes that aren't
+        # already registered (defensive — preserves the prior catch-all scan).
+        # We walk the MRO's class ``__dict__`` rather than ``dir(self)`` +
+        # ``getattr`` so we don't trigger ``@property`` descriptors (those
+        # would run user code mid-init, before state is set up — e.g. a
+        # user property accessing ``self.state.messages`` would crash).
+        is_conversational = getattr(type(self), "conversational", False)
+        seen_in_dict: set[str] = set()
+        for klass in type(self).__mro__:
+            for method_name, raw in klass.__dict__.items():
+                if method_name.startswith("_") or method_name in self._methods:
+                    continue
+                if method_name in seen_in_dict:
+                    continue
+                seen_in_dict.add(method_name)
+                if not is_flow_method(raw):
+                    continue
+                if (
+                    getattr(raw, "__conversational_only__", False)
+                    and not is_conversational
+                ):
+                    continue
+                bound = raw.__get__(self, self.__class__)
+                self._methods[FlowMethodName(method_name)] = bound
 
     def recall(self, query: str, **kwargs: Any) -> Any:
         """Recall relevant memories. Delegates to this flow's memory.
@@ -1301,8 +1474,15 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
     @property
     def conversation_messages(self) -> list[LLMMessage]:
-        """Message history from state or the internal conversation buffer."""
-        return get_conversation_messages(self)
+        """Message history from state or the internal conversation buffer.
+
+        Coerces ``ConversationMessage`` / dict / str entries into LLM-shaped
+        dicts so the same property works for ``ConversationState`` and the
+        legacy ``ChatState`` shape.
+        """
+        return [
+            message_to_llm_dict(message) for message in get_conversation_messages(self)
+        ]
 
     @property
     def input_history(self) -> list[InputHistoryEntry]:
@@ -1343,7 +1523,31 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         outcomes: Sequence[str] | None = None,
         llm: str | BaseLLM | None = None,
     ) -> str:
-        """Append a user message and optionally set ``last_intent`` on state."""
+        """Append a user message and optionally set ``last_intent`` on state.
+
+        Conversational flows (``self.conversational == True``) push a
+        ``ConversationMessage`` onto ``state.messages`` and preserve
+        ``last_intent`` across turns so the router LLM can use the prior
+        turn's route as a signal. Non-conversational flows fall through to
+        the legacy ``ChatState`` helper (which only touches dict-shaped
+        messages and clears ``last_intent`` per turn).
+        """
+        if self.conversational:
+            state = cast(ConversationState, self.state)
+            state.messages.append(ConversationMessage(role="user", content=text))
+            state.current_user_message = text
+            state.last_user_message = text
+            if outcomes and llm is not None:
+                intent = self.classify_intent(
+                    text,
+                    outcomes,
+                    llm=llm,
+                    context=self.conversation_messages,
+                )
+                state.last_intent = intent
+                return intent
+            return text
+
         return _receive_user_message(
             self,
             text,
@@ -1400,6 +1604,31 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     def _apply_pending_conversational_turn(self) -> None:
         if self._pending_user_message is None:
             return
+
+        if self.conversational:
+            # Conversational flows use the bound ``self.receive_user_message``
+            # so ``ConversationState.messages`` gets ``ConversationMessage``
+            # instances and ``last_intent`` is preserved across turns.
+            text = self._coerce_user_message_text(self._pending_user_message)
+            if not text.strip():
+                return
+
+            cfg = self._conversation_config
+            outcomes = self._pending_intents
+            if outcomes is None and cfg is not None:
+                outcomes = cfg.default_intents
+            llm = self._pending_intent_llm
+            if llm is None and cfg is not None:
+                llm = cfg.intent_llm
+
+            if outcomes:
+                if llm is None:
+                    raise ValueError("intent_llm is required when intents are provided")
+                self.receive_user_message(text, outcomes=outcomes, llm=llm)
+            else:
+                self.receive_user_message(text)
+            return
+
         config = get_conversational_config(self)
         prepare_conversational_turn(
             self,
@@ -1909,6 +2138,18 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         """
         init_state = self.initial_state
 
+        # Conversational subclasses default to ``ConversationState`` if the
+        # user didn't supply an explicit type parameter (``Flow[...]``) or an
+        # ``initial_state``. This makes ``class MyChat(Flow): conversational
+        # = True`` work without forcing every user to import and parameterize
+        # ``ConversationState`` themselves.
+        if (
+            init_state is None
+            and getattr(type(self), "conversational", False)
+            and not hasattr(self, "_initial_state_t")
+        ):
+            return cast(T, ConversationState())
+
         if init_state is None and hasattr(self, "_initial_state_t"):
             state_type = self._initial_state_t
             if isinstance(state_type, type):
@@ -2232,6 +2473,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         Returns:
             The final output from the flow or FlowStreamingOutput if streaming.
         """
+        # Conversational flows: every kickoff is a turn, so reset the graph
+        # execution tracking (so the second turn re-runs instead of being
+        # treated as a checkpoint restore). Checkpoint restores deliberately
+        # keep ``_completed_methods`` populated so paused work resumes; skip
+        # the reset on that path.
+        if self.conversational and from_checkpoint is None:
+            self._reset_turn_execution_state()
+
         if interactive:
             if user_message is not None:
                 raise ValueError(
@@ -2718,11 +2967,22 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     if unconditional_starts
                     else self._start_methods
                 )
-                tasks = [
-                    self._execute_start_method(start_method)
-                    for start_method in starts_to_execute
-                ]
-                await asyncio.gather(*tasks)
+                if self.conversational:
+                    # Conversational mode: run @start methods sequentially so
+                    # user setup (e.g. permission loading, event bus attach)
+                    # completes before the router fires. ``_start_methods``
+                    # preserves declaration + MRO order, and the framework's
+                    # ``conversation_start`` is harvested from the base last,
+                    # so it naturally runs at the end and its router decision
+                    # only fires after every user start finishes.
+                    for start_method in starts_to_execute:
+                        await self._execute_start_method(start_method)
+                else:
+                    tasks = [
+                        self._execute_start_method(start_method)
+                        for start_method in starts_to_execute
+                    ]
+                    await asyncio.gather(*tasks)
             except Exception as e:
                 # Check if flow was paused for human feedback
                 from crewai.flow.async_feedback.types import HumanFeedbackPending
@@ -4071,6 +4331,570 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         )
         structure = build_flow_structure(self)
         return render_interactive(structure, filename=filename, show=show)
+
+    # ==================================================================
+    # EXPERIMENTAL: conversational graph + helpers
+    # ------------------------------------------------------------------
+    # These methods only register on subclasses that opt in via
+    # ``conversational = True``. The ``@_conversational_only`` marker is
+    # what the metaclass scan keys off to decide whether to attach them
+    # to ``_start_methods`` / ``_listeners`` / ``_routers``. Non-chat flows
+    # see them as inert attributes — they never fire.
+    # ==================================================================
+
+    @start()
+    @_conversational_only
+    def conversation_start(self) -> str | None:
+        """Internal Flow entrypoint that hands the user message to the router.
+
+        In conversational mode, ``Flow.kickoff_async`` runs all ``@start``
+        methods sequentially and this one is registered last, so any user
+        ``@start`` methods (e.g. permission loading) have already finished
+        before the returned value triggers ``route_conversation``.
+        """
+        state = cast(ConversationState, self.state)
+        return state.current_user_message
+
+    @router(conversation_start)
+    @_conversational_only
+    def route_conversation(self) -> str:
+        """Route the current turn to a listener label."""
+        state = cast(ConversationState, self.state)
+        context = self.build_router_context()
+        configured_route = self.route_turn(context)
+        if configured_route:
+            state.last_intent = configured_route
+            return configured_route
+
+        if state.last_intent:
+            return state.last_intent
+
+        if self.can_answer_from_history(context):
+            state.last_intent = "answer_from_history"
+            return "answer_from_history"
+
+        state.last_intent = "converse"
+        return "converse"
+
+    @listen("converse")
+    @_conversational_only
+    def converse_turn(self) -> str:
+        """Built-in chat handler over canonical conversation history."""
+        llm = self._default_conversation_llm()
+        if llm is None:
+            content = "I can continue the conversation once an LLM is configured."
+            self.append_assistant_message(content)
+            return content
+
+        messages: list[LLMMessage] = []
+        system_prompt = self._resolve_system_prompt()
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.extend(self.conversation_messages)
+
+        response = self._coerce_llm(llm).call(messages=messages)
+        content = self._stringify_result(response)
+        self.append_assistant_message(content)
+        return content
+
+    @listen("end")
+    @_conversational_only
+    def end_conversation(self) -> str:
+        """Built-in conversation terminator."""
+        cast(ConversationState, self.state).ended = True
+        content = "Conversation ended."
+        self.append_assistant_message(content)
+        return content
+
+    @listen("answer_from_history")
+    @_conversational_only
+    def answer_from_history_turn(self) -> str | None:
+        """Answer directly from canonical conversation history when configured."""
+        config = self._conversation_config
+        if config is None:
+            return None
+        llm = config.answer_from_history_llm
+        if llm is None:
+            return None
+
+        llm_instance = self._coerce_llm(llm)
+        messages: list[LLMMessage] = [
+            {
+                "role": "system",
+                "content": self._resolve_answer_from_history_prompt(),
+            },
+            *self.build_agent_context("answer_from_history"),
+        ]
+        response = llm_instance.call(messages=messages)
+        content = self._stringify_result(response)
+        self.append_assistant_message(content)
+        return content
+
+    def handle_turn(
+        self,
+        message: str,
+        *,
+        session_id: str | None = None,
+        intents: Sequence[str] | None = None,
+        intent_llm: str | BaseLLM | None = None,
+        **kickoff_kwargs: Any,
+    ) -> Any:
+        """Append a user message, run one conversational turn, and return output.
+
+        Available only when ``conversational = True`` is set on the subclass.
+        """
+        assistant_count = self._assistant_message_count()
+        state = cast(ConversationState, self.state)
+        result = self.kickoff(
+            user_message=message,
+            session_id=session_id or state.id,
+            intents=intents,
+            intent_llm=intent_llm,
+            **kickoff_kwargs,
+        )
+        if (
+            result is not None
+            and self._assistant_message_count() == assistant_count
+            and self._is_public_turn_result(result)
+        ):
+            self.append_assistant_message(self._stringify_result(result))
+        return result
+
+    def build_router_context(self) -> dict[str, Any]:
+        """Build context used by the routing policy for the current turn."""
+        state = cast(ConversationState, self.state)
+        return {
+            "system_prompt": self._resolve_system_prompt(),
+            "current_user_message": state.current_user_message,
+            "message_history": self.conversation_messages,
+            "events": [event.model_dump() for event in state.events],
+            "last_intent": state.last_intent,
+        }
+
+    def build_agent_context(self, agent_name: str) -> list[LLMMessage]:
+        """Build canonical message context for an agent or direct LLM call."""
+        state = cast(ConversationState, self.state)
+        messages = list(self.conversation_messages)
+        thread = state.agent_threads.get(agent_name, [])
+        messages.extend(
+            cast(
+                LLMMessage,
+                {
+                    "role": msg.role,
+                    "content": self._stringify_result(msg.content),
+                },
+            )
+            for msg in thread
+        )
+        return messages
+
+    def route_turn(self, context: dict[str, Any]) -> str | None:
+        """Route the current turn via the LLM router.
+
+        When ``ConversationConfig.router`` is omitted, the router is
+        auto-enabled with default settings as long as the flow declares
+        custom ``@listen`` handlers (anything beyond the built-in
+        ``converse`` / ``end`` routes). This means
+        ``@ConversationConfig(llm=ROUTER_LLM)`` is enough to dispatch to
+        your custom handlers — no explicit ``RouterConfig()`` needed.
+
+        Pass an explicit ``RouterConfig`` only to override the routing
+        prompt, supply per-route descriptions, or change the
+        default/fallback intent. Override this method to bypass the LLM
+        router entirely (e.g., permission gates before the LLM decision).
+        """
+        config = self._conversation_config
+        if config is None:
+            return None
+
+        router_config = config.router
+        if router_config is None:
+            # Don't auto-enable when the user opted into the legacy
+            # ``default_intents`` classification path — that one already
+            # sets ``state.last_intent`` during pending-turn application,
+            # and ``route_conversation`` reads it as the fallback.
+            if config.default_intents:
+                return None
+
+            custom_routes = self._effective_routes(None) - set(self.builtin_routes)
+            if not custom_routes:
+                return None
+            router_config = RouterConfig()
+
+        return self._route_with_config(router_config, context)
+
+    def can_answer_from_history(self, context: dict[str, Any]) -> bool:
+        """Return whether this turn can be answered from message history."""
+        config = self._conversation_config
+        if config is None or config.answer_from_history_llm is None:
+            return False
+        if len(self.conversation_messages) < 2:
+            return False
+
+        feedback = (
+            f"{self._resolve_answer_from_history_prompt()}\n\n"
+            f"Current user message: {context.get('current_user_message')}\n\n"
+            f"Message history:\n{self._format_messages(self.conversation_messages)}"
+        )
+        outcome = self._collapse_to_outcome(
+            feedback,
+            ("answer_from_history", "route_to_flow"),
+            config.answer_from_history_llm,
+        )
+        return outcome == "answer_from_history"
+
+    def append_agent_result(
+        self,
+        agent_name: str,
+        result: Any,
+        *,
+        visibility: Literal["private", "public"] = "private",
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """Record an agent result, optionally making it visible to the user."""
+        content = self._stringify_result(result)
+        event_visibility = self._resolve_visibility(agent_name, visibility)
+        event = ConversationEvent(
+            type="agent_result",
+            agent_name=agent_name,
+            visibility=event_visibility,
+            payload={"content": content, **(metadata or {})},
+        )
+        state = cast(ConversationState, self.state)
+        state.events.append(event)
+        state.agent_threads.setdefault(agent_name, []).append(
+            AgentMessage(content=content, metadata=metadata or {})
+        )
+        if event_visibility == "public":
+            self.append_assistant_message(content)
+
+    def append_assistant_message(
+        self,
+        content: str,
+        *,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """Append a final user-visible assistant message."""
+        cast(ConversationState, self.state).messages.append(
+            ConversationMessage(
+                role="assistant",
+                content=content,
+                metadata=metadata or {},
+            )
+        )
+
+    @property
+    def _conversation_config(self) -> ConversationConfig | None:
+        return getattr(type(self), "conversational_config", None)
+
+    def _reset_turn_execution_state(self) -> None:
+        """Clear per-execution tracking so the next turn re-runs the graph.
+
+        Mirrors what ``Flow.kickoff_async`` does on a non-restoring run: drops
+        completed-method tracking, per-method call counts, and pending listener
+        bookkeeping. ``self._state`` (messages, current_user_message, etc.) is
+        deliberately untouched so the conversation continues uninterrupted.
+        """
+        self._completed_methods.clear()
+        self._method_outputs.clear()
+        self._pending_and_listeners.clear()
+        self._method_call_counts.clear()
+        self._clear_or_listeners()
+        self._is_execution_resuming = False
+
+    def _resolve_system_prompt(self) -> str | None:
+        """Return the effective conversational system prompt.
+
+        ``None`` on the config (the default) resolves to the i18n base prompt;
+        an empty string is treated as an explicit opt-out.
+        """
+        from crewai.utilities.i18n import I18N_DEFAULT
+
+        config = self._conversation_config
+        if config is None or config.system_prompt is None:
+            return I18N_DEFAULT.slice("conversational_system_prompt")
+        return config.system_prompt or None
+
+    def _resolve_answer_from_history_prompt(self) -> str:
+        """Return the effective ``answer_from_history`` prompt."""
+        from crewai.utilities.i18n import I18N_DEFAULT
+
+        config = self._conversation_config
+        if config is None or not config.answer_from_history_prompt:
+            return I18N_DEFAULT.slice("conversational_answer_from_history_prompt")
+        return config.answer_from_history_prompt
+
+    def _route_with_config(
+        self,
+        router_config: RouterConfig,
+        context: dict[str, Any],
+    ) -> str | None:
+        router_llm = self._default_router_llm(router_config)
+        if router_llm is None:
+            return router_config.default_intent
+
+        try:
+            llm = self._coerce_llm(router_llm)
+            response = self._call_router_llm(
+                llm,
+                messages=self._build_router_messages(router_config, context),
+                response_format=self._router_response_format(router_config),
+            )
+            intent = self._extract_router_intent(response, router_config.intent_field)
+        except Exception:
+            return router_config.fallback_intent or router_config.default_intent
+
+        if intent is None:
+            return router_config.fallback_intent or router_config.default_intent
+
+        valid_labels = self._effective_routes(router_config)
+        if valid_labels and intent not in valid_labels:
+            return router_config.fallback_intent or router_config.default_intent
+
+        return intent
+
+    def _default_router_llm(self, router_config: RouterConfig) -> Any | None:
+        config = self._conversation_config
+        return (
+            router_config.llm
+            or (config.intent_llm if config else None)
+            or (config.llm if config else None)
+        )
+
+    def _router_response_format(
+        self,
+        router_config: RouterConfig,
+    ) -> type[BaseModel]:
+        if router_config.response_format is not None:
+            return router_config.response_format
+
+        routes = sorted(self._effective_routes(router_config))
+        field_definitions: dict[str, Any] = {
+            router_config.intent_field: (
+                str,
+                Field(description=f"One of: {', '.join(routes)}"),
+            )
+        }
+        return cast(
+            type[BaseModel],
+            create_model(
+                "ConversationRoute",
+                **field_definitions,
+            ),
+        )
+
+    def _call_router_llm(
+        self,
+        llm: Any,
+        *,
+        messages: list[LLMMessage],
+        response_format: type[BaseModel],
+    ) -> Any:
+        """Call the router LLM with CrewAI's response_format naming.
+
+        Older local LLM implementations may still expose ``response_model``;
+        keep the compatibility fallback isolated from the public config shape.
+        """
+        try:
+            return llm.call(messages=messages, response_format=response_format)
+        except TypeError as exc:
+            if "response_format" not in str(exc):
+                raise
+            return llm.call(messages=messages, response_model=response_format)
+
+    def _build_router_messages(
+        self,
+        router_config: RouterConfig,
+        context: dict[str, Any],
+    ) -> list[LLMMessage]:
+        catalog = self._build_route_catalog(router_config)
+        context = {
+            **context,
+            "available_routes": sorted(catalog.keys()),
+        }
+        domain_prompt = f"{router_config.prompt}\n\n" if router_config.prompt else ""
+        routes_section = "Routes:\n" + "\n".join(
+            f"- {label}: {description}" if description else f"- {label}"
+            for label, description in sorted(catalog.items())
+        )
+        routing_prompt = (
+            domain_prompt
+            + routes_section
+            + "\n\nChoose exactly one route from the list above. Prefer "
+            "'converse' for follow-ups, summaries, and clarifications about "
+            "prior turns — even if they touch on a topic the user previously "
+            "invoked a custom route for. Use a custom route only when the user "
+            "is making a fresh request for that tool or workflow."
+        )
+        return [
+            {"role": "system", "content": routing_prompt},
+            {
+                "role": "user",
+                "content": json.dumps(context, default=str),
+            },
+        ]
+
+    def _build_route_catalog(
+        self,
+        router_config: RouterConfig | None,
+    ) -> dict[str, str]:
+        """Build a ``{label: description}`` catalog for the router prompt.
+
+        Priority per route:
+          1. ``router_config.route_descriptions`` override (user-provided).
+          2. ``builtin_route_descriptions`` (framework-canned for converse/end/
+             answer_from_history — phrased for LLM routing).
+          3. First non-empty line of the ``@listen`` handler's docstring.
+          4. Empty (route appears in the catalog without a description).
+        """
+        label_to_method: dict[str, str] = {}
+        for listener_name, condition in self._listeners.items():
+            if isinstance(condition, tuple):
+                _, trigger_labels = condition
+                for trigger_label in trigger_labels:
+                    label_to_method.setdefault(str(trigger_label), str(listener_name))
+
+        routes = self._effective_routes(router_config)
+        overrides = (
+            router_config.route_descriptions
+            if router_config and router_config.route_descriptions
+            else {}
+        )
+
+        catalog: dict[str, str] = {}
+        for route_label in routes:
+            if route_label in overrides:
+                catalog[route_label] = overrides[route_label]
+                continue
+            if route_label in self.builtin_route_descriptions:
+                catalog[route_label] = self.builtin_route_descriptions[route_label]
+                continue
+
+            handler_name = label_to_method.get(route_label)
+            description = ""
+            if handler_name:
+                method = getattr(type(self), handler_name, None)
+                doc = getattr(method, "__doc__", None)
+                if doc:
+                    description = doc.strip().split("\n", 1)[0].strip()
+            catalog[route_label] = description
+
+        return catalog
+
+    def _extract_router_intent(self, response: Any, intent_field: str) -> str | None:
+        if isinstance(response, BaseModel):
+            value = getattr(response, intent_field, None)
+        elif isinstance(response, dict):
+            value = response.get(intent_field)
+        elif isinstance(response, str):
+            try:
+                parsed = json.loads(response)
+            except json.JSONDecodeError:
+                value = response.strip()
+            else:
+                value = parsed.get(intent_field)
+        else:
+            value = getattr(response, intent_field, None)
+
+        if value is None:
+            return None
+        if isinstance(value, Enum):
+            return str(value.value)
+        return str(value)
+
+    def _valid_route_labels(self) -> set[str]:
+        labels: set[str] = set()
+        for condition in self._listeners.values():
+            if isinstance(condition, tuple):
+                _, methods = condition
+                labels.update(str(method) for method in methods)
+        return labels
+
+    def _effective_routes(self, router_config: RouterConfig | None = None) -> set[str]:
+        custom_routes = set(router_config.routes or ()) if router_config else set()
+        if not custom_routes:
+            custom_routes = (
+                self._valid_route_labels()
+                - set(self.builtin_routes)
+                - set(self.internal_routes)
+            )
+        return custom_routes | set(self.builtin_routes)
+
+    def _default_conversation_llm(self) -> Any | None:
+        config = self._conversation_config
+        if config is None:
+            return None
+        if config.llm is not None:
+            return config.llm
+        if config.answer_from_history_llm is not None:
+            return config.answer_from_history_llm
+        if config.router is not None:
+            return config.router.llm
+        return config.intent_llm
+
+    def _resolve_visibility(
+        self,
+        agent_name: str,
+        visibility: Literal["private", "public"],
+    ) -> Literal["private", "public"]:
+        if visibility == "public":
+            return "public"
+        config = self._conversation_config
+        visible = config.visible_agent_outputs if config else None
+        if visible == "all" or (visible is not None and agent_name in visible):
+            return "public"
+        return "private"
+
+    def _is_public_turn_result(self, result: Any) -> bool:
+        if not isinstance(result, str):
+            return False
+        if result in {
+            "conversation",
+            "converse",
+            "end",
+            "answer_from_history",
+            "route_to_flow",
+        }:
+            return False
+        return result != cast(ConversationState, self.state).last_intent
+
+    def _assistant_message_count(self) -> int:
+        state = cast(ConversationState, self.state)
+        return sum(1 for message in state.messages if message.role == "assistant")
+
+    @staticmethod
+    def _coerce_user_message_text(user_message: str | dict[str, Any] | Any) -> str:
+        if isinstance(user_message, str):
+            return user_message
+        if isinstance(user_message, dict) and user_message.get("content") is not None:
+            return str(user_message["content"])
+        return str(user_message)
+
+    @staticmethod
+    def _stringify_result(result: Any) -> str:
+        if hasattr(result, "raw"):
+            return str(result.raw)
+        if isinstance(result, BaseModel):
+            return result.model_dump_json()
+        return str(result)
+
+    @staticmethod
+    def _format_messages(messages: Sequence[Mapping[str, Any]]) -> str:
+        return "\n".join(
+            f"{message.get('role', 'user')}: {message.get('content', '')}"
+            for message in messages
+        )
+
+    @staticmethod
+    def _coerce_llm(llm: str | BaseLLM | Any) -> Any:
+        from crewai.llm import LLM
+        from crewai.llms.base_llm import BaseLLM as BaseLLMClass
+
+        if isinstance(llm, str):
+            return LLM(model=llm)
+        if isinstance(llm, BaseLLMClass) or callable(getattr(llm, "call", None)):
+            return llm
+        raise ValueError(f"Invalid llm type: {type(llm)}. Expected str or BaseLLM.")
 
     @staticmethod
     def _show_tracing_disabled_message() -> None:

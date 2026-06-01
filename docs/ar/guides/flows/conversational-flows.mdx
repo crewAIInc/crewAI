@@ -228,18 +228,22 @@ def route(self):
 
 لا تستخدم `@human_feedback` لأسطر المتابعة في الدردشة إلا عند الحاجة لموافقة بشرية على مخرجات خطوة محددة.
 
-## `ConversationalFlow` عالي المستوى (تجريبي)
+## `Flow` المحادثاتي (تجريبي)
 
-`crewai.experimental.ConversationalFlow` هو صنف فرعي ذو رأي يتولى السباكة لكل جولة نيابةً عنك: يأتي مع رسم `@start` / `@router` / `converse_turn` / `end_conversation` مدمج، ويدير `state.messages`، ويُشغّل LLM التوجيه، ويبقي دفعة trace مفتوحة عبر الجولات. أنت تكتب **المسارات المخصصة** فقط؛ والإطار يتولى الباقي.
+فعّل الرسم المحادثاتي بتعيين `conversational = True` على صنف فرعي من `Flow`. عندئذٍ يُظهر `Flow` الأساسي رسم `@start` / `@router` / `converse_turn` / `end_conversation` مدمجاً، ويدير `state.messages`، ويُشغّل LLM التوجيه، ويبقي دفعة trace مفتوحة عبر الجولات. أنت تكتب **المسارات المخصصة** فقط؛ والإطار يتولى الباقي.
 
-استخدمه عندما تريد دردشة متعددة الجولات مع موجّه قائم على LLM ومعالجات لكل مسار دون توصيل دورة الحياة يدوياً. انزل إلى `Flow[ChatState]` (في الأعلى) عندما تحتاج تحكماً كاملاً.
+استخدمه عندما تريد دردشة متعددة الجولات مع موجّه قائم على LLM ومعالجات لكل مسار دون توصيل دورة الحياة يدوياً. استخدم `Flow[ChatState]` (النمط الأدنى مستوى في الأعلى) عندما تحتاج تحكماً كاملاً. لا يزال `crewai.experimental.ConversationalFlow` يعمل كاسم مستعار من سطر واحد لـ `Flow[ConversationState]` مع `conversational = True` — يُحتفظ به للاستيرادات القديمة؛ يُفضّل الشكل الصريح في الشيفرة الجديدة.
 
 ### مثال سريع
 
 ```python
-from crewai import LLM
-from crewai.experimental import ConversationConfig, ConversationalFlow, RouterConfig
+from crewai import LLM, Flow
 from crewai.flow import listen
+from crewai.flow.conversational import (
+    ConversationConfig,
+    ConversationState,
+    RouterConfig,
+)
 
 
 ROUTER_LLM = LLM(model="gpt-4o-mini")
@@ -250,7 +254,9 @@ ROUTER_LLM = LLM(model="gpt-4o-mini")
     llm=ROUTER_LLM,
     router=RouterConfig(),  # المسارات + الأوصاف تُكتشف تلقائياً من معالجات @listen
 )
-class SupportFlow(ConversationalFlow):
+class SupportFlow(Flow[ConversationState]):
+    conversational = True
+
     @listen("INTERNET_SEARCH")
     def handle_internet_search(self) -> str:
         """Fresh web research, current news, real-time lookups."""
@@ -311,7 +317,7 @@ RouterConfig(
 تُبنى رسالة الموجّه إلى LLM تلقائياً. لكل مسار يختار الإطار وصفاً بهذا الترتيب من الأولوية:
 
 1. `RouterConfig.route_descriptions[label]` — تجاوز صريح.
-2. `ConversationalFlow.builtin_route_descriptions[label]` — نص جاهز من الإطار لـ `converse` و`end` و`answer_from_history` (مصاغ لـ LLM التوجيه).
+2. `Flow.builtin_route_descriptions[label]` — نص جاهز من الإطار لـ `converse` و`end` و`answer_from_history` (مصاغ لـ LLM التوجيه).
 3. أول سطر غير فارغ من docstring معالج `@listen(label)`.
 4. فارغ (المسار يظهر في الفهرس بلا وصف).
 
@@ -363,7 +369,9 @@ Routes:
 لتشغيل آثار جانبية (إعداد ناقل أحداث، قياس عن بُعد) في كل قرار توجيه، تجاوز `route_turn`:
 
 ```python
-class SupportFlow(ConversationalFlow):
+class SupportFlow(Flow[ConversationState]):
+    conversational = True
+
     def route_turn(self, context: dict[str, Any]) -> str | None:
         self.event_bus = MyBus(self)
         return super().route_turn(context)
@@ -404,9 +412,9 @@ finally:
 
 `suppress_flow_events=True` يخفي لوحات Rich فقط؛ أحداث trace والـ methods تُصدر.
 
-### دورة حياة trace لـ `ConversationalFlow`
+### دورة حياة trace لـ `Flow` المحادثاتي
 
-تستخدم [`ConversationalFlow`](#conversationalflow-عالي-المستوى-تجريبي) التجريبية نفس دورة حياة tracing: `defer_trace_finalization` افتراضياً `True`، فيبقي كل `handle_turn()` أثر الجلسة مفتوحاً. أنهِ دوماً عند نهاية الجلسة — لُف حلقتك بـ `try/finally` واستدعِ `flow.finalize_session_traces()` عند الخروج. بدون ذلك، تبقى الدفعة مفتوحة وقد لا تُصدَّر آخر محادثة أبداً.
+يستخدم [`Flow` المحادثاتي](#flow-المحادثاتي-تجريبي) التجريبي نفس دورة حياة tracing: `defer_trace_finalization` افتراضياً `True`، فيبقي كل `handle_turn()` أثر الجلسة مفتوحاً. أنهِ دوماً عند نهاية الجلسة — لُف حلقتك بـ `try/finally` واستدعِ `flow.finalize_session_traces()` عند الخروج. بدون ذلك، تبقى الدفعة مفتوحة وقد لا تُصدَّر آخر محادثة أبداً.
 
 ## البث
 

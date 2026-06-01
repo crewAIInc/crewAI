@@ -231,18 +231,22 @@ Use **`@listen("RESEARCH")`** (ou similar) para passos com `Agent.kickoff()` e f
 
 Não use `@human_feedback` para linhas de chat de follow-up, a menos que um humano precise aprovar uma saída específica antes de exibi-la.
 
-## `ConversationalFlow` de alto nível (experimental)
+## `Flow` conversacional (experimental)
 
-`crewai.experimental.ConversationalFlow` é uma subclasse opinativa que cuida do encanamento por turno para você: já vem com um grafo embutido `@start` / `@router` / `converse_turn` / `end_conversation`, gerencia `state.messages`, dirige o LLM de roteamento e mantém o batch de trace aberto entre os turnos. Você escreve as **rotas customizadas**; o framework cuida do resto.
+Habilite o grafo conversacional definindo `conversational = True` em uma subclasse de `Flow`. O `Flow` base passa a expor um grafo embutido `@start` / `@router` / `converse_turn` / `end_conversation`, gerencia `state.messages`, dirige o LLM de roteamento e mantém o batch de trace aberto entre os turnos. Você escreve as **rotas customizadas**; o framework cuida do resto.
 
-Use-a quando quiser um chat multi-turno com router LLM e handlers por rota sem cablar o ciclo de vida na mão. Desça para `Flow[ChatState]` (acima) quando precisar de controle total.
+Use isto quando quiser um chat multi-turno com router LLM e handlers por rota sem cablar o ciclo de vida na mão. Use `Flow[ChatState]` (o padrão de mais baixo nível acima) quando precisar de controle total. `crewai.experimental.ConversationalFlow` ainda funciona como alias de `Flow[ConversationState]` com `conversational = True` — preservado para imports legados; prefira a forma explícita em código novo.
 
 ### Exemplo rápido
 
 ```python
-from crewai import LLM
-from crewai.experimental import ConversationConfig, ConversationalFlow, RouterConfig
+from crewai import LLM, Flow
 from crewai.flow import listen
+from crewai.flow.conversational import (
+    ConversationConfig,
+    ConversationState,
+    RouterConfig,
+)
 
 
 ROUTER_LLM = LLM(model="gpt-4o-mini")
@@ -253,7 +257,9 @@ ROUTER_LLM = LLM(model="gpt-4o-mini")
     llm=ROUTER_LLM,
     router=RouterConfig(),  # rotas + descrições auto-descobertas pelos handlers @listen
 )
-class SupportFlow(ConversationalFlow):
+class SupportFlow(Flow[ConversationState]):
+    conversational = True
+
     @listen("INTERNET_SEARCH")
     def handle_internet_search(self) -> str:
         """Fresh web research, current news, real-time lookups."""
@@ -314,7 +320,7 @@ RouterConfig(
 O prompt do router é montado automaticamente. Para cada rota o framework escolhe a descrição nesta precedência:
 
 1. `RouterConfig.route_descriptions[label]` — override explícito.
-2. `ConversationalFlow.builtin_route_descriptions[label]` — texto canônico do framework para `converse`, `end`, `answer_from_history` (otimizado para o LLM de routing).
+2. `Flow.builtin_route_descriptions[label]` — texto canônico do framework para `converse`, `end`, `answer_from_history` (otimizado para o LLM de routing).
 3. Primeira linha não vazia da docstring do handler `@listen(label)`.
 4. Vazio (a rota aparece no catálogo sem descrição).
 
@@ -366,7 +372,9 @@ Você também pode chamar `flow.kickoff(user_message=..., session_id=...)` diret
 Para rodar efeitos colaterais (setup de event bus, telemetria) em toda decisão de routing, sobrescreva `route_turn`:
 
 ```python
-class SupportFlow(ConversationalFlow):
+class SupportFlow(Flow[ConversationState]):
+    conversational = True
+
     def route_turn(self, context: dict[str, Any]) -> str | None:
         self.event_bus = MyBus(self)
         return super().route_turn(context)
@@ -407,9 +415,9 @@ finally:
 
 `suppress_flow_events=True` só oculta painéis do console; eventos de trace e método ainda são emitidos.
 
-### Ciclo de vida de trace do `ConversationalFlow`
+### Ciclo de vida de trace do `Flow` conversacional
 
-A [`ConversationalFlow`](#conversationalflow-de-alto-nível-experimental) experimental usa o mesmo ciclo de vida de tracing: `defer_trace_finalization` é `True` por padrão, então cada `handle_turn()` mantém o trace da sessão aberto. Sempre finalize ao fim da sessão — envolva seu loop em `try/finally` e chame `flow.finalize_session_traces()` na saída. Sem isso, o batch fica aberto e a última conversa pode nunca ser exportada.
+O [`Flow` conversacional](#flow-conversacional-experimental) experimental usa o mesmo ciclo de vida de tracing: `defer_trace_finalization` é `True` por padrão, então cada `handle_turn()` mantém o trace da sessão aberto. Sempre finalize ao fim da sessão — envolva seu loop em `try/finally` e chame `flow.finalize_session_traces()` na saída. Sem isso, o batch fica aberto e a última conversa pode nunca ser exportada.
 
 ## Streaming
 

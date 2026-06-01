@@ -231,18 +231,22 @@ Use **`@listen("RESEARCH")`** (or similar) for steps that run `Agent.kickoff()` 
 
 Do **not** use `@human_feedback` for follow-up chat lines unless a human must approve a specific step output before it is shown.
 
-## High-level `ConversationalFlow` (experimental)
+## Conversational `Flow` (experimental)
 
-`crewai.experimental.ConversationalFlow` is an opinionated subclass that handles the per-turn plumbing for you: it ships with a built-in `@start` / `@router` / `converse_turn` / `end_conversation` graph, manages `state.messages`, drives the router LLM, and keeps the trace batch open across turns. You write the **custom routes**; the framework owns the rest.
+Opt into the conversational chat graph by setting `conversational = True` on a `Flow` subclass. The base `Flow` then ships a built-in `@start` / `@router` / `converse_turn` / `end_conversation` graph, manages `state.messages`, drives the router LLM, and keeps the trace batch open across turns. You write the **custom routes**; the framework owns the rest.
 
-Use it when you want a multi-turn chat with an LLM-driven router and per-route handlers without wiring the lifecycle yourself. Drop down to `Flow[ChatState]` (above) when you need full control.
+Use this when you want a multi-turn chat with an LLM-driven router and per-route handlers without wiring the lifecycle yourself. Use `Flow[ChatState]` (the lower-level pattern above) when you need full control. `crewai.experimental.ConversationalFlow` still works as a one-line alias for `Flow[ConversationState]` with `conversational = True` — kept for legacy imports, prefer the explicit form in new code.
 
 ### Quick example
 
 ```python
-from crewai import LLM
-from crewai.experimental import ConversationConfig, ConversationalFlow, RouterConfig
+from crewai import LLM, Flow
 from crewai.flow import listen
+from crewai.flow.conversational import (
+    ConversationConfig,
+    ConversationState,
+    RouterConfig,
+)
 
 
 ROUTER_LLM = LLM(model="gpt-4o-mini")
@@ -253,7 +257,9 @@ ROUTER_LLM = LLM(model="gpt-4o-mini")
     llm=ROUTER_LLM,
     router=RouterConfig(),  # routes + descriptions auto-discovered from @listen handlers
 )
-class SupportFlow(ConversationalFlow):
+class SupportFlow(Flow[ConversationState]):
+    conversational = True
+
     @listen("INTERNET_SEARCH")
     def handle_internet_search(self) -> str:
         """Fresh web research, current news, real-time lookups."""
@@ -314,7 +320,7 @@ RouterConfig(
 The router prompt that gets sent to the LLM is built automatically. For each route the framework picks a description with this precedence:
 
 1. `RouterConfig.route_descriptions[label]` — explicit override.
-2. `ConversationalFlow.builtin_route_descriptions[label]` — framework-canned text for `converse`, `end`, `answer_from_history` (phrased for the router LLM).
+2. `Flow.builtin_route_descriptions[label]` — framework-canned text for `converse`, `end`, `answer_from_history` (phrased for the router LLM).
 3. First non-empty line of the `@listen(label)` handler's docstring.
 4. Empty (the route is listed without a description).
 
@@ -366,7 +372,9 @@ You can also call `flow.kickoff(user_message=..., session_id=...)` directly — 
 To run side effects (event bus setup, telemetry) on every routing decision, override `route_turn`:
 
 ```python
-class SupportFlow(ConversationalFlow):
+class SupportFlow(Flow[ConversationState]):
+    conversational = True
+
     def route_turn(self, context: dict[str, Any]) -> str | None:
         self.event_bus = MyBus(self)
         return super().route_turn(context)
@@ -407,9 +415,9 @@ finally:
 
 `suppress_flow_events=True` only hides Rich console panels; trace and method events still emit for observability.
 
-### `ConversationalFlow` trace lifecycle
+### Conversational `Flow` trace lifecycle
 
-The experimental [`ConversationalFlow`](#high-level-conversationalflow-experimental) uses the same tracing lifecycle: `defer_trace_finalization` defaults to `True`, so each `handle_turn()` keeps the session trace open. Always finalize at the end of the session — wrap your REPL/loop in `try/finally` and call `flow.finalize_session_traces()` on exit. Without it, the trace batch stays open and the final conversation may never export.
+The experimental [conversational `Flow`](#conversational-flow-experimental) uses the same tracing lifecycle: `defer_trace_finalization` defaults to `True`, so each `handle_turn()` keeps the session trace open. Always finalize at the end of the session — wrap your REPL/loop in `try/finally` and call `flow.finalize_session_traces()` on exit. Without it, the trace batch stays open and the final conversation may never export.
 
 ## Streaming
 

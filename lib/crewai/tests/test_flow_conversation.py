@@ -571,6 +571,160 @@ class TestConversationalFlow:
         assert flow.state.ended is True
         assert flow.state.messages[-1].content == "Conversation ended."
 
+    def test_router_auto_enables_when_custom_routes_declared_and_no_explicit_config(
+        self,
+    ) -> None:
+        """``ConversationConfig(llm=...)`` alone wires LLM routing for custom listeners.
+
+        Users shouldn't have to pass ``router=RouterConfig()`` just to flip
+        the router on — declaring custom ``@listen`` handlers + giving the
+        config an LLM is sufficient. Only opt out by setting
+        ``default_intents`` (legacy path).
+        """
+
+        class Route(BaseModel):
+            intent: Literal["INTERNET_SEARCH", "converse", "end"]
+
+        router_llm = MagicMock()
+        router_llm.call.return_value = Route(intent="INTERNET_SEARCH")
+
+        @ConversationConfig(llm=router_llm)  # no router= here
+        class AutoEnabledFlow(ConversationalFlow):
+            @listen("INTERNET_SEARCH")
+            def handle_search(self) -> str:
+                """Fresh web research."""
+                self.append_assistant_message("searched")
+                return "searched"
+
+        flow = AutoEnabledFlow()
+        result = flow.handle_turn("research today's AI news")
+
+        assert result == "searched"
+        # Router LLM should have been invoked.
+        assert router_llm.call.call_count >= 1
+
+    def test_router_auto_enable_skipped_when_only_builtin_routes(self) -> None:
+        """No custom routes → no auto-enable; falls through to converse."""
+
+        chat_llm = MagicMock()
+        chat_llm.call.return_value = "hi there"
+
+        @ConversationConfig(llm=chat_llm)
+        class NoCustomFlow(ConversationalFlow):
+            pass
+
+        flow = NoCustomFlow()
+        flow.handle_turn("hello")
+
+        assert flow.state.last_intent == "converse"
+        # chat_llm was used by converse_turn, not as a router.
+        assert chat_llm.call.call_count == 1
+
+    def test_router_auto_enable_skipped_when_default_intents_set(self) -> None:
+        """Legacy ``default_intents`` opts out of router auto-enable."""
+
+        @ConversationConfig(default_intents=["search"], intent_llm="gpt-4o-mini")
+        class LegacyFlow(ConversationalFlow):
+            @listen("search")
+            def handle_search(self) -> str:
+                """Web research."""
+                self.append_assistant_message("legacy-searched")
+                return "legacy-searched"
+
+        flow = LegacyFlow()
+        with patch.object(flow, "_collapse_to_outcome", return_value="search"):
+            result = flow.handle_turn("look it up")
+
+        # Legacy path set state.last_intent via classify_intent; auto-router did NOT
+        # overwrite it because default_intents short-circuits the auto-enable.
+        assert result == "legacy-searched"
+        assert flow.state.last_intent == "search"
+
+    def test_user_start_methods_run_sequentially_before_router_in_conversational_mode(
+        self,
+    ) -> None:
+        """Conversational flows: user ``@start`` methods finish before router fires.
+
+        Non-chat flows run ``@start`` methods in parallel via ``asyncio.gather``,
+        which would race with ``conversation_start`` and let the router fire
+        before user setup finished. In conversational mode the framework runs
+        them sequentially, with ``conversation_start`` last.
+        """
+        order: list[str] = []
+
+        @ConversationConfig()
+        class BootstrapFlow(ConversationalFlow):
+            @start()
+            def load_profile(self) -> None:
+                if not self.state.session_ready:
+                    order.append("load_profile")
+                    self.state.session_ready = True
+
+            @start()
+            def attach_bus(self) -> None:
+                order.append("attach_bus")
+
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                order.append("route_turn")
+                return "work"
+
+            @listen("work")
+            def do_work(self) -> str:
+                order.append("do_work")
+                self.append_assistant_message("worked")
+                return "worked"
+
+        flow = BootstrapFlow()
+        flow.handle_turn("turn 1")
+
+        # Both user @start methods complete before route_turn fires.
+        load_idx = order.index("load_profile")
+        attach_idx = order.index("attach_bus")
+        route_idx = order.index("route_turn")
+        assert load_idx < route_idx
+        assert attach_idx < route_idx
+
+        # Bootstrap gate works: load_profile only fires on the first turn.
+        order.clear()
+        flow.handle_turn("turn 2")
+        assert "load_profile" not in order
+        assert "attach_bus" in order  # still fires every turn
+        assert "route_turn" in order
+
+    def test_subclass_can_override_conversation_start_without_redecorating(
+        self,
+    ) -> None:
+        """Overriding an inherited ``@start`` method must not unregister it.
+
+        Before the metaclass fix, subclasses had to re-apply ``@start()`` on
+        every override or the parent's ``conversation_start`` would silently
+        drop out of ``_start_methods`` — leaving the flow with nothing to fire.
+        """
+
+        bootstrap_calls: list[str] = []
+
+        @ConversationConfig()
+        class BootstrapFlow(ConversationalFlow):
+            def conversation_start(self) -> str | None:
+                bootstrap_calls.append("ran")
+                return super().conversation_start()
+
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "work"
+
+            @listen("work")
+            def do_work(self) -> str:
+                self.append_assistant_message("worked")
+                return "worked"
+
+        flow = BootstrapFlow()
+        assert "conversation_start" in flow._start_methods
+
+        flow.handle_turn("hi")
+
+        assert bootstrap_calls == ["ran"]
+        assert flow.state.messages[-1].content == "worked"
+
     def test_handle_turn_reruns_graph_after_prior_turn_completed(self) -> None:
         """Multi-turn must not flip ``_is_execution_resuming`` and short-circuit.
 

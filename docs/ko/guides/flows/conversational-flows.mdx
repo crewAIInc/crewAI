@@ -231,18 +231,22 @@ def route(self):
 
 후속 채팅 줄에 `@human_feedback`를 쓰지 마세요. 특정 스텝 출력을 사람이 승인해야 할 때만 사용하세요.
 
-## 고수준 `ConversationalFlow` (실험적)
+## 대화형 `Flow` (실험적)
 
-`crewai.experimental.ConversationalFlow`는 턴 단위의 배관 작업을 대신 처리해 주는 의견 강한(opinionated) 서브클래스입니다. `@start` / `@router` / `converse_turn` / `end_conversation` 그래프가 내장되어 있고, `state.messages`를 관리하며, router LLM을 구동하고, 턴 간 trace 배치를 열린 상태로 유지합니다. 여러분은 **커스텀 라우트**만 작성하면 되고, 나머지는 프레임워크가 담당합니다.
+`Flow` 서브클래스에 `conversational = True`를 지정하면 대화형 챗 그래프가 활성화됩니다. 베이스 `Flow`가 `@start` / `@router` / `converse_turn` / `end_conversation` 그래프를 노출하고, `state.messages`를 관리하며, router LLM을 구동하고, 턴 간 trace 배치를 열린 상태로 유지합니다. 여러분은 **커스텀 라우트**만 작성하면 되고, 나머지는 프레임워크가 담당합니다.
 
-LLM 기반 라우터와 라우트별 핸들러로 멀티턴 챗을 만들고 싶지만 라이프사이클을 직접 배선하고 싶지 않을 때 사용하세요. 완전한 제어가 필요하면 위의 `Flow[ChatState]`로 내려가세요.
+LLM 기반 라우터와 라우트별 핸들러로 멀티턴 챗을 만들고 싶지만 라이프사이클을 직접 배선하고 싶지 않을 때 사용하세요. 완전한 제어가 필요하면 위의 `Flow[ChatState]`로 내려가세요. `crewai.experimental.ConversationalFlow`는 `Flow[ConversationState]` + `conversational = True`의 한 줄 별칭으로 계속 동작하며 — 레거시 임포트를 위해 유지되지만, 새 코드에서는 명시적 형태를 권장합니다.
 
 ### 빠른 예제
 
 ```python
-from crewai import LLM
-from crewai.experimental import ConversationConfig, ConversationalFlow, RouterConfig
+from crewai import LLM, Flow
 from crewai.flow import listen
+from crewai.flow.conversational import (
+    ConversationConfig,
+    ConversationState,
+    RouterConfig,
+)
 
 
 ROUTER_LLM = LLM(model="gpt-4o-mini")
@@ -253,7 +257,9 @@ ROUTER_LLM = LLM(model="gpt-4o-mini")
     llm=ROUTER_LLM,
     router=RouterConfig(),  # 라우트 + 설명은 @listen 핸들러에서 자동 발견
 )
-class SupportFlow(ConversationalFlow):
+class SupportFlow(Flow[ConversationState]):
+    conversational = True
+
     @listen("INTERNET_SEARCH")
     def handle_internet_search(self) -> str:
         """Fresh web research, current news, real-time lookups."""
@@ -314,7 +320,7 @@ RouterConfig(
 router에 전달되는 프롬프트는 자동으로 만들어집니다. 각 라우트의 설명은 다음 우선순위로 결정됩니다:
 
 1. `RouterConfig.route_descriptions[label]` — 명시적 오버라이드.
-2. `ConversationalFlow.builtin_route_descriptions[label]` — `converse`, `end`, `answer_from_history`용 프레임워크 캐닝 텍스트 (router LLM용으로 다듬어진 문구).
+2. `Flow.builtin_route_descriptions[label]` — `converse`, `end`, `answer_from_history`용 프레임워크 캐닝 텍스트 (router LLM용으로 다듬어진 문구).
 3. `@listen(label)` 핸들러 docstring의 첫 줄(비어있지 않은 줄).
 4. 빈 문자열 (라우트만 카탈로그에 등장하고 설명은 없음).
 
@@ -366,7 +372,9 @@ Routes:
 매 라우팅 결정마다 사이드 이펙트(이벤트 버스 셋업, 텔레메트리)를 실행하려면 `route_turn`을 오버라이드하세요:
 
 ```python
-class SupportFlow(ConversationalFlow):
+class SupportFlow(Flow[ConversationState]):
+    conversational = True
+
     def route_turn(self, context: dict[str, Any]) -> str | None:
         self.event_bus = MyBus(self)
         return super().route_turn(context)
@@ -407,9 +415,9 @@ finally:
 
 `suppress_flow_events=True`는 Rich 콘솔 패널만 숨깁니다. trace 및 method 이벤트는 계속 발생합니다.
 
-### `ConversationalFlow` trace 수명 주기
+### 대화형 `Flow` trace 수명 주기
 
-실험적 [`ConversationalFlow`](#고수준-conversationalflow-실험적)는 동일한 tracing 수명 주기를 따릅니다. `defer_trace_finalization` 기본값이 `True`이므로 각 `handle_turn()`이 세션 trace를 열어 둡니다. 세션 끝에서 항상 finalize하세요 — REPL/루프를 `try/finally`로 감싸고 종료 시 `flow.finalize_session_traces()`를 호출하세요. 호출하지 않으면 batch가 열린 채 남아 마지막 대화가 export되지 않을 수 있습니다.
+실험적 [대화형 `Flow`](#대화형-flow-실험적)는 동일한 tracing 수명 주기를 따릅니다. `defer_trace_finalization` 기본값이 `True`이므로 각 `handle_turn()`이 세션 trace를 열어 둡니다. 세션 끝에서 항상 finalize하세요 — REPL/루프를 `try/finally`로 감싸고 종료 시 `flow.finalize_session_traces()`를 호출하세요. 호출하지 않으면 batch가 열린 채 남아 마지막 대화가 export되지 않을 수 있습니다.
 
 ## 스트리밍
 
