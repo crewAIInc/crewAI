@@ -288,6 +288,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "hosted_vllm",
     "cerebras",
     "dashscope",
+    "snowflake",
 ]
 
 
@@ -376,6 +377,7 @@ class LLM(BaseLLM):
                 "hosted_vllm": "hosted_vllm",
                 "cerebras": "cerebras",
                 "dashscope": "dashscope",
+                "snowflake": "snowflake",
             }
 
             canonical_provider = provider_mapping.get(prefix.lower())
@@ -494,6 +496,9 @@ class LLM(BaseLLM):
             # OpenRouter uses org/model format but accepts anything
             return True
 
+        if provider == "snowflake":
+            return True
+
         return False
 
     @classmethod
@@ -591,6 +596,11 @@ class LLM(BaseLLM):
             from crewai.llms.providers.bedrock.completion import BedrockCompletion
 
             return BedrockCompletion
+
+        if provider == "snowflake":
+            from crewai.llms.providers.snowflake.completion import SnowflakeCompletion
+
+            return SnowflakeCompletion
 
         openai_compatible_providers = {
             "openrouter",

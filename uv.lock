@@ -13,7 +13,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-05-29T06:38:49.259217Z"
+exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for backwards compatibility when using relative exclude-newer values.
 exclude-newer-span = "P3D"
 
 [manifest]
@@ -1389,7 +1389,7 @@ requires-dist = [
     { name = "boto3", marker = "extra == 'aws'", specifier = "~=1.42.79" },
     { name = "boto3", marker = "extra == 'bedrock'", specifier = "~=1.42.79" },
     { name = "chromadb", specifier = "~=1.1.0" },
-    { name = "click", specifier = "~=8.1.7" },
+    { name = "click", specifier = ">=8.1.7,<9" },
     { name = "crewai-cli", editable = "lib/cli" },
     { name = "crewai-core", editable = "lib/crewai-core" },
     { name = "crewai-files", marker = "extra == 'file-processing'", editable = "lib/crewai-files" },
@@ -1459,7 +1459,7 @@ dependencies = [
 requires-dist = [
     { name = "appdirs", specifier = "~=1.4.4" },
     { name = "certifi" },
-    { name = "click", specifier = "~=8.1.7" },
+    { name = "click", specifier = ">=8.1.7,<9" },
     { name = "crewai-core", editable = "lib/crewai-core" },
     { name = "cryptography", specifier = ">=42.0" },
     { name = "httpx", specifier = "~=0.28.1" },
@@ -1523,7 +1523,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "click", specifier = "~=8.1.7" },
+    { name = "click", specifier = ">=8.1.7,<9" },
     { name = "openai", specifier = ">=1.83.0,<3" },
     { name = "pygithub", specifier = "~=1.59.1" },
     { name = "python-dotenv", specifier = ">=1.2.2,<2" },
