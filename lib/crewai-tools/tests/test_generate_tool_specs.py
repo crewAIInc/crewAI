@@ -45,7 +45,6 @@ class MockTool(BaseTool):
     )
 
 
-# --- Intermediate base class (like RagTool, BraveSearchToolBase) ---
 class MockIntermediateBase(BaseTool):
     """Simulates an intermediate tool base class (e.g. RagTool, BraveSearchToolBase)."""
 

@@ -74,7 +74,6 @@ class ValidationResult:
     hint: str = ""
 
 
-# Maps known provider env var names → label used in hint messages.
 _KNOWN_API_KEY_HINTS: dict[str, str] = {
     "OPENAI_API_KEY": "OpenAI",
     "ANTHROPIC_API_KEY": "Anthropic",

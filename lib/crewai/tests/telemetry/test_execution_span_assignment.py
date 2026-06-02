@@ -78,8 +78,6 @@ def test_crew_execution_span_assigned_on_kickoff():
 
     crew.kickoff()
 
-    # The critical check: verify the crew has _execution_span set
-    # This is what end_crew() needs to properly close the span
     assert crew._execution_span is not None, (
         "crew._execution_span should be set after kickoff when share_crew=True. "
         "The event_listener.py must assign the return value of crew_execution_span() "

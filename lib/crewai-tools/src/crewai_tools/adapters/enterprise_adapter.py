@@ -46,7 +46,6 @@ class EnterpriseActionTool(BaseTool):
 
         schema_props, required = self._extract_schema_info(action_schema)
 
-        # Define field definitions for the model
         field_definitions = {}
         for param_name, param_details in schema_props.items():
             param_desc = param_details.get("description", "")
@@ -59,12 +58,10 @@ class EnterpriseActionTool(BaseTool):
             except Exception:
                 field_type = str
 
-            # Create field definition based on requirement
             field_definitions[param_name] = self._create_field_definition(
                 field_type, is_required, param_desc
             )
 
-        # Create the model
         if field_definitions:
             try:
                 args_schema = create_model(  # type: ignore[call-overload]

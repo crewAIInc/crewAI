@@ -18,7 +18,6 @@ class TestFlowHumanInputIntegration:
         assert callable(formatter.pause_live_updates)
         assert callable(formatter.resume_live_updates)
 
-        # Should not raise
         formatter.pause_live_updates()
         formatter.resume_live_updates()
 
@@ -84,7 +83,6 @@ class TestFlowHumanInputIntegration:
         try:
             formatter._streaming_live = None
 
-            # Should not raise when no session exists
             formatter.pause_live_updates()
             formatter.resume_live_updates()
 
@@ -133,9 +131,7 @@ class TestFlowHumanInputIntegration:
             mock_resume.assert_called_once()
             assert result == "training feedback"
 
-            # Verify the training panel was printed via formatter's console
             mock_console_print.assert_called()
-            # Check that a Panel with training title was printed
             call_args = mock_console_print.call_args_list
             training_panel_found = any(
                 hasattr(call[0][0], "title") and "Training" in str(call[0][0].title)

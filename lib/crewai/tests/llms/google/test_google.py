@@ -48,19 +48,15 @@ def test_gemini_completion_module_is_imported():
     """
     module_name = "crewai.llms.providers.gemini.completion"
 
-    # Remove module from cache if it exists
     if module_name in sys.modules:
         del sys.modules[module_name]
 
-    # Create LLM instance - this should trigger the import
     LLM(model="google/gemini-2.0-flash-001")
 
-    # Verify the module was imported
     assert module_name in sys.modules
     completion_mod = sys.modules[module_name]
     assert isinstance(completion_mod, types.ModuleType)
 
-    # Verify the class exists in the module
     assert hasattr(completion_mod, 'GeminiCompletion')
 
 
@@ -89,7 +85,6 @@ def test_native_gemini_raises_error_when_initialization_fails():
     but fails to instantiate, we raise an ImportError instead of silently falling back.
     This provides clearer error messages to users about missing dependencies.
     """
-    # Mock the _get_native_provider to return a failing class
     with patch('crewai.llm.LLM._get_native_provider') as mock_get_provider:
 
         class FailingCompletion:
@@ -98,11 +93,9 @@ def test_native_gemini_raises_error_when_initialization_fails():
 
         mock_get_provider.return_value = FailingCompletion
 
-        # This should raise ImportError with clear message
         with pytest.raises(ImportError) as excinfo:
             LLM(model="google/gemini-2.0-flash-001")
 
-        # Verify the error message is helpful
         assert "Error importing native provider" in str(excinfo.value)
         assert "Native Google Gen AI SDK failed" in str(excinfo.value)
 
@@ -162,7 +155,6 @@ def test_gemini_completion_call():
     """
     llm = LLM(model="google/gemini-2.0-flash-001")
 
-    # Mock the call method on the instance
     with patch.object(llm, 'call', return_value="Hello! I'm Gemini, ready to help.") as mock_call:
         result = llm.call("Hello, how are you?")
 
@@ -174,13 +166,10 @@ def test_gemini_completion_called_during_crew_execution():
     """
     Test that GeminiCompletion.call is actually invoked when running a crew
     """
-    # Create the LLM instance first
     gemini_llm = LLM(model="google/gemini-2.0-flash-001")
 
-    # Mock the call method on the specific instance
     with patch.object(gemini_llm, 'call', return_value="Tokyo has 14 million people.") as mock_call:
 
-        # Create agent with explicit LLM configuration
         agent = Agent(
             role="Research Assistant",
             goal="Find population info",
@@ -197,7 +186,6 @@ def test_gemini_completion_called_during_crew_execution():
         crew = Crew(agents=[agent], tasks=[task])
         result = crew.kickoff()
 
-        # Verify mock was called
         assert mock_call.called
         assert "14 million" in str(result)
 
@@ -206,10 +194,8 @@ def test_gemini_completion_call_arguments():
     """
     Test that GeminiCompletion.call is invoked with correct arguments
     """
-    # Create LLM instance first
     gemini_llm = LLM(model="google/gemini-2.0-flash-001")
 
-    # Mock the instance method
     with patch.object(gemini_llm, 'call') as mock_call:
         mock_call.return_value = "Task completed successfully."
 
@@ -217,7 +203,7 @@ def test_gemini_completion_call_arguments():
             role="Test Agent",
             goal="Complete a simple task",
             backstory="You are a test agent.",
-            llm=gemini_llm  # Use same instance
+            llm=gemini_llm
         )
 
         task = Task(
@@ -229,18 +215,14 @@ def test_gemini_completion_call_arguments():
         crew = Crew(agents=[agent], tasks=[task])
         crew.kickoff()
 
-        # Verify call was made
         assert mock_call.called
 
-        # Check the arguments passed to the call method
         call_args = mock_call.call_args
         assert call_args is not None
 
-        # The first argument should be the messages
-        messages = call_args[0][0]  # First positional argument
+        messages = call_args[0][0]
         assert isinstance(messages, (str, list))
 
-        # Verify that the task description appears in the messages
         if isinstance(messages, str):
             assert "hello world" in messages.lower()
         elif isinstance(messages, list):
@@ -252,10 +234,8 @@ def test_multiple_gemini_calls_in_crew():
     """
     Test that GeminiCompletion.call is invoked multiple times for multiple tasks
     """
-    # Create LLM instance first
     gemini_llm = LLM(model="google/gemini-2.0-flash-001")
 
-    # Mock the instance method
     with patch.object(gemini_llm, 'call') as mock_call:
         mock_call.return_value = "Task completed."
 
@@ -263,7 +243,7 @@ def test_multiple_gemini_calls_in_crew():
             role="Multi-task Agent",
             goal="Complete multiple tasks",
             backstory="You can handle multiple tasks.",
-            llm=gemini_llm  # Use same instance
+            llm=gemini_llm
         )
 
         task1 = Task(
@@ -284,12 +264,10 @@ def test_multiple_gemini_calls_in_crew():
         )
         crew.kickoff()
 
-        # Verify multiple calls were made
         assert mock_call.call_count >= 2  # At least one call per task
 
-        # Verify each call had proper arguments
         for call in mock_call.call_args_list:
-            assert len(call[0]) > 0  # Has positional arguments
+            assert len(call[0]) > 0
             messages = call[0][0]
             assert messages is not None
 
@@ -305,10 +283,8 @@ def test_gemini_completion_with_tools():
         """A sample tool for testing"""
         return f"Tool result for: {query}"
 
-    # Create LLM instance first
     gemini_llm = LLM(model="google/gemini-2.0-flash-001")
 
-    # Mock the instance method
     with patch.object(gemini_llm, 'call') as mock_call:
         mock_call.return_value = "Task completed with tools."
 
@@ -316,7 +292,7 @@ def test_gemini_completion_with_tools():
             role="Tool User",
             goal="Use tools to complete tasks",
             backstory="You can use tools.",
-            llm=gemini_llm,  # Use same instance
+            llm=gemini_llm,
             tools=[sample_tool]
         )
 
@@ -342,7 +318,6 @@ def test_gemini_completion_with_tools():
 def test_gemini_raises_error_when_model_not_supported():
     """Test that GeminiCompletion raises ValueError when model not supported"""
 
-    # Mock the Google client to raise an error
     with patch('crewai.llms.providers.gemini.completion.genai') as mock_genai:
         mock_client = MagicMock()
         mock_genai.Client.return_value = mock_client
@@ -392,7 +367,6 @@ def test_gemini_api_key_configuration():
     """
     Test that API key configuration works for both GOOGLE_API_KEY and GEMINI_API_KEY
     """
-    # Test with GOOGLE_API_KEY
     with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-google-key"}):
         llm = LLM(model="google/gemini-2.0-flash-001")
 
@@ -400,7 +374,6 @@ def test_gemini_api_key_configuration():
         assert isinstance(llm, GeminiCompletion)
         assert llm.api_key == "test-google-key"
 
-    # Test with GEMINI_API_KEY
     with patch.dict(os.environ, {"GEMINI_API_KEY": "test-gemini-key"}, clear=True):
         llm = LLM(model="google/gemini-2.0-flash-001")
 
@@ -439,10 +412,8 @@ def test_gemini_generation_config():
     from crewai.llms.providers.gemini.completion import GeminiCompletion
     assert isinstance(llm, GeminiCompletion)
 
-    # Test config preparation
     config = llm._prepare_generation_config()
 
-    # Verify config has the expected parameters
     assert hasattr(config, 'temperature') or 'temperature' in str(config)
     assert hasattr(config, 'top_p') or 'top_p' in str(config)
     assert hasattr(config, 'top_k') or 'top_k' in str(config)
@@ -482,12 +453,12 @@ def test_gemini_context_window_size():
     # Test Gemini 2.0 Flash
     llm_2_0 = LLM(model="google/gemini-2.0-flash-001")
     context_size_2_0 = llm_2_0.get_context_window_size()
-    assert context_size_2_0 > 500000  # Should be substantial (1M tokens)
+    assert context_size_2_0 > 500000
 
     # Test Gemini 1.5 Pro
     llm_1_5 = LLM(model="google/gemini-1.5-pro")
     context_size_1_5 = llm_1_5.get_context_window_size()
-    assert context_size_1_5 > 1000000  # Should be very large (2M tokens)
+    assert context_size_1_5 > 1000000
 
 
 def test_gemini_message_formatting():
@@ -496,7 +467,6 @@ def test_gemini_message_formatting():
     """
     llm = LLM(model="google/gemini-2.0-flash-001")
 
-    # Test message formatting
     test_messages = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Hello"},
@@ -510,11 +480,9 @@ def test_gemini_message_formatting():
     assert system_instruction == "You are a helpful assistant."
 
     # Remaining messages should be Content objects
-    assert len(formatted_contents) >= 3  # Should have user, model, user messages
+    assert len(formatted_contents) >= 3
 
-    # First content should be user role
     assert formatted_contents[0].role == "user"
-    # Second should be model (converted from assistant)
     assert formatted_contents[1].role == "model"
 
 
@@ -522,11 +490,9 @@ def test_gemini_streaming_parameter():
     """
     Test that streaming parameter is properly handled
     """
-    # Test non-streaming
     llm_no_stream = LLM(model="google/gemini-2.0-flash-001", stream=False)
     assert llm_no_stream.stream == False
 
-    # Test streaming
     llm_stream = LLM(model="google/gemini-2.0-flash-001", stream=True)
     assert llm_stream.stream == True
 
@@ -537,7 +503,6 @@ def test_gemini_tool_conversion():
     """
     llm = LLM(model="google/gemini-2.0-flash-001")
 
-    # Mock tool in CrewAI format
     crewai_tools = [{
         "type": "function",
         "function": {
@@ -553,7 +518,6 @@ def test_gemini_tool_conversion():
         }
     }]
 
-    # Test tool conversion
     gemini_tools = llm._convert_tools_for_interference(crewai_tools)
 
     assert len(gemini_tools) == 1
@@ -669,7 +633,6 @@ def test_gemini_tool_returning_float():
     crew = Crew(agents=[agent], tasks=[task], verbose=True)
     result = crew.kickoff()
 
-    # The result should contain 30000 (the sum)
     assert "30000" in result.raw
 
 
@@ -677,17 +640,14 @@ def test_gemini_stop_sequences_sync():
     """Test that stop and stop_sequences attributes stay synchronized."""
     llm = LLM(model="google/gemini-2.0-flash-001")
 
-    # Test setting stop as a list
     llm.stop = ["\nObservation:", "\nThought:"]
     assert llm.stop_sequences == ["\nObservation:", "\nThought:"]
     assert llm.stop == ["\nObservation:", "\nThought:"]
 
-    # Test setting stop as a string
     llm.stop = "\nFinal Answer:"
     assert llm.stop_sequences == ["\nFinal Answer:"]
     assert llm.stop == ["\nFinal Answer:"]
 
-    # Test setting stop as None
     llm.stop = None
     assert llm.stop_sequences == []
     assert llm.stop == []
@@ -700,7 +660,6 @@ def test_gemini_stop_sequences_sent_to_api():
     # Set stop sequences via the stop attribute (simulating CrewAgentExecutor)
     llm.stop = ["\nObservation:", "\nThought:"]
 
-    # Patch the API call to capture parameters without making real call
     with patch.object(llm._client.models, 'generate_content') as mock_generate:
         mock_response = MagicMock()
         mock_response.text = "Hello"
@@ -714,12 +673,9 @@ def test_gemini_stop_sequences_sent_to_api():
 
         llm.call("Say hello in one word")
 
-        # Verify stop_sequences were passed to the API in the config
         call_kwargs = mock_generate.call_args[1]
         assert "config" in call_kwargs
-        # The config object should have stop_sequences set
         config = call_kwargs["config"]
-        # Check if the config has stop_sequences attribute
         assert hasattr(config, 'stop_sequences') or 'stop_sequences' in config.__dict__
         if hasattr(config, 'stop_sequences'):
             assert config.stop_sequences == ["\nObservation:", "\nThought:"]
@@ -803,7 +759,6 @@ def test_gemini_2_0_model_detection():
     assert isinstance(llm_2_5, GeminiCompletion)
     assert llm_2_5.is_gemini_2_0 is True
 
-    # Test non-2.0 models
     llm_1_5 = LLM(model="google/gemini-1.5-pro")
     assert isinstance(llm_1_5, GeminiCompletion)
     assert llm_1_5.is_gemini_2_0 is False
@@ -813,7 +768,6 @@ def test_add_property_ordering_to_schema():
     """Test that _add_property_ordering correctly adds propertyOrdering to schemas."""
     from crewai.llms.providers.gemini.completion import GeminiCompletion
 
-    # Test simple object schema
     simple_schema = {
         "type": "object",
         "properties": {
@@ -828,7 +782,6 @@ def test_add_property_ordering_to_schema():
     assert "propertyOrdering" in result
     assert result["propertyOrdering"] == ["name", "age", "email"]
 
-    # Test nested object schema
     nested_schema = {
         "type": "object",
         "properties": {
@@ -871,13 +824,10 @@ def test_gemini_2_0_response_model_with_property_ordering():
 
     llm = LLM(model="google/gemini-2.0-flash-001")
 
-    # Prepare generation config with response model
     config = llm._prepare_generation_config(response_model=TestResponse)
 
-    # Verify that the config has response_json_schema
     assert hasattr(config, 'response_json_schema') or 'response_json_schema' in config.__dict__
 
-    # Get the schema
     if hasattr(config, 'response_json_schema'):
         schema = config.response_json_schema
     else:
@@ -901,27 +851,21 @@ def test_gemini_1_5_response_model_uses_response_schema():
 
     llm = LLM(model="google/gemini-1.5-pro")
 
-    # Prepare generation config with response model
     config = llm._prepare_generation_config(response_model=TestResponse)
 
-    # Verify that the config uses response_schema (not response_json_schema)
     assert hasattr(config, 'response_schema') or 'response_schema' in config.__dict__
     assert not (hasattr(config, 'response_json_schema') and config.response_json_schema is not None)
 
-    # Get the schema
     if hasattr(config, 'response_schema'):
         schema = config.response_schema
     else:
         schema = config.__dict__.get('response_schema')
 
     # For Gemini 1.5, response_schema should be the Pydantic model itself
-    # The SDK handles conversion internally
     assert schema is TestResponse or isinstance(schema, type)
 
 
-# =============================================================================
 # Agent Kickoff Structured Output Tests
-# =============================================================================
 
 
 @pytest.mark.vcr()
@@ -1025,7 +969,7 @@ def test_gemini_crew_structured_output_with_tools():
         role="Calculator",
         goal="Perform calculations using available tools",
         backstory="You are a calculator assistant that uses tools to compute results.",
-        llm=LLM(model="google/gemini-2.0-flash-001"),
+        llm=LLM(model="google/gemini-2.5-flash"),
         tools=[add_numbers],
     )
 
@@ -1063,20 +1007,16 @@ def test_gemini_stop_words_not_applied_to_structured_output():
     # Gemini uses stop_sequences instead of stop
     llm = GeminiCompletion(
         model="gemini-2.0-flash-001",
-        stop_sequences=["Observation:", "Final Answer:"],  # Common stop words
+        stop_sequences=["Observation:", "Final Answer:"],
     )
 
     # JSON response that contains a stop word pattern in a string field
-    # Without the fix, this would be truncated at "Observation:" breaking the JSON
     json_response = '{"finding": "The data shows growth", "observation": "Observation: This confirms the hypothesis"}'
 
-    # Test the _validate_structured_output method which is used for structured output handling
     result = llm._validate_structured_output(json_response, ResearchResult)
 
-    # Should successfully parse the full JSON without truncation
     assert isinstance(result, ResearchResult)
     assert result.finding == "The data shows growth"
-    # The observation field should contain the full text including "Observation:"
     assert "Observation:" in result.observation
 
 
@@ -1097,7 +1037,6 @@ def test_gemini_stop_words_still_applied_to_regular_responses():
     # Response that contains a stop word - should be truncated
     response_with_stop_word = "I need to search for more information.\n\nAction: search\nObservation: Found results"
 
-    # Test the _apply_stop_words method directly
     result = llm._apply_stop_words(response_with_stop_word)
 
     # Response should be truncated at the stop word
@@ -1134,7 +1073,6 @@ def test_gemini_structured_output_preserves_json_with_stop_word_patterns():
         "final_answer": "Final Answer: The data shows positive growth"
     }'''
 
-    # Test the _validate_structured_output method - this should NOT truncate
     # since it's structured output
     result = llm._validate_structured_output(json_with_stop_patterns, AgentObservation)
 
@@ -1156,13 +1094,11 @@ def test_gemini_cached_prompt_tokens():
 
     llm = LLM(model="google/gemini-2.5-flash")
 
-    # First call
     llm.call([
         {"role": "system", "content": system_msg},
         {"role": "user", "content": "Say hello in one word."},
     ])
 
-    # Second call: same system prompt
     llm.call([
         {"role": "system", "content": system_msg},
         {"role": "user", "content": "Say goodbye in one word."},
@@ -1209,7 +1145,6 @@ def test_gemini_cached_prompt_tokens_with_tools():
 
     llm = LLM(model="google/gemini-2.5-flash")
 
-    # First call with tool
     llm.call(
         [
             {"role": "system", "content": system_msg},
@@ -1219,7 +1154,6 @@ def test_gemini_cached_prompt_tokens_with_tools():
         available_functions={"get_weather": get_weather},
     )
 
-    # Second call with same system prompt + tools
     llm.call(
         [
             {"role": "system", "content": system_msg},

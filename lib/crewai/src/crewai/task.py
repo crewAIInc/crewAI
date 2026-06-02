@@ -338,7 +338,6 @@ class Task(BaseModel):
             if len(positional_args) != 1:
                 raise ValueError("Guardrail function must accept exactly one parameter")
 
-            # Check return annotation if present, but don't require it
             return_annotation = sig.return_annotation
             if return_annotation != inspect.Signature.empty:
                 return_annotation_args = get_args(return_annotation)
@@ -505,34 +504,28 @@ class Task(BaseModel):
         if value is None:
             return None
 
-        # Basic security checks
         if ".." in value:
             raise ValueError(
                 "Path traversal attempts are not allowed in output_file paths"
             )
 
-        # Check for shell expansion first
         if value.startswith(("~", "$")):
             raise ValueError(
                 "Shell expansion characters are not allowed in output_file paths"
             )
 
-        # Then check other shell special characters
         if any(char in value for char in ["|", ">", "<", "&", ";"]):
             raise ValueError(
                 "Shell special characters are not allowed in output_file paths"
             )
 
-        # Don't strip leading slash if it's a template path with variables
         if "{" in value or "}" in value:
-            # Validate template variable format
             template_vars = [part.split("}")[0] for part in value.split("{")[1:]]
             for var in template_vars:
                 if not var.isidentifier():
                     raise ValueError(f"Invalid template variable name: {var}")
             return value
 
-        # Strip leading slash for regular paths
         if value.startswith("/"):
             return value[1:]
         return value
@@ -761,7 +754,7 @@ class Task(BaseModel):
         except Exception as e:
             self.end_time = datetime.datetime.now()
             crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))
-            raise e  # Re-raise the exception after emitting the event
+            raise e
         finally:
             clear_task_files(self.id)
             reset_current_task_id(task_id_token)
@@ -842,7 +835,6 @@ class Task(BaseModel):
                         guardrail_index=idx,
                     )
 
-            # backwards support
             if self._guardrail:
                 task_output = self._invoke_guardrail_function(
                     task_output=task_output,
@@ -887,7 +879,7 @@ class Task(BaseModel):
         except Exception as e:
             self.end_time = datetime.datetime.now()
             crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))
-            raise e  # Re-raise the exception after emitting the event
+            raise e
         finally:
             clear_task_files(self.id)
             reset_current_task_id(task_id_token)
@@ -1280,7 +1272,6 @@ Follow these guidelines:
             )
 
             if guardrail_result.success:
-                # Guardrail passed
                 if guardrail_result.result is None:
                     raise Exception(
                         "Task guardrail returned None as result. This is not allowed."
@@ -1298,9 +1289,7 @@ Follow these guidelines:
 
                 return task_output
 
-            # Guardrail failed
             if attempt >= self.guardrail_max_retries:
-                # Max retries reached
                 guardrail_name = (
                     f"guardrail {guardrail_index}"
                     if guardrail_index is not None
@@ -1328,7 +1317,6 @@ Follow these guidelines:
                     color="yellow",
                 )
 
-            # Regenerate output from agent
             result = agent.execute_task(
                 task=self,
                 context=context,

@@ -320,8 +320,6 @@ class CheckpointTUI(App[_TuiResult]):
         self._refresh_tree()
         self.query_one("#tree-panel", Tree).root.expand()
 
-    # ── Tree building ──────────────────────────────────────────────
-
     @staticmethod
     def _top_level_entity(entry: dict[str, Any]) -> tuple[str, str]:
         etype, ename = "unknown", ""
@@ -472,8 +470,6 @@ class CheckpointTUI(App[_TuiResult]):
         storage = "SQLite" if _is_sqlite(self._location) else "JSON"
         self.sub_title = self._location
         self.query_one("#status", Static).update(f" {count} checkpoint(s) | {storage}")
-
-    # ── Detail panel ───────────────────────────────────────────────
 
     async def _clear_scroll(self, tab_id: str) -> VerticalScroll:
         tab = self.query_one(f"#{tab_id}", TabPane)
@@ -661,8 +657,6 @@ class CheckpointTUI(App[_TuiResult]):
             )
             await scroll.mount(row)
 
-    # ── Data collection ────────────────────────────────────────────
-
     def _collect_inputs(self) -> dict[str, Any] | None:
         if not self._input_keys:
             return None
@@ -698,8 +692,6 @@ class CheckpointTUI(App[_TuiResult]):
         if _is_sqlite(self._location):
             return f"{self._location}#{entry['name']}"
         return str(entry.get("name", ""))
-
-    # ── Events ─────────────────────────────────────────────────────
 
     async def on_tree_node_highlighted(
         self, event: Tree.NodeHighlighted[dict[str, Any]]

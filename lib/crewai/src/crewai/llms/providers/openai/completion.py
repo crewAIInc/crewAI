@@ -247,7 +247,6 @@ class OpenAICompletion(BaseLLM):
         if not data.get("provider"):
             data["provider"] = "openai"
         data["api_key"] = data.get("api_key") or os.getenv("OPENAI_API_KEY")
-        # Extract api_base from kwargs if present
         if "api_base" not in data:
             data["api_base"] = None
         model = data.get("model", "gpt-4o")
@@ -333,7 +332,6 @@ class OpenAICompletion(BaseLLM):
     def to_config_dict(self) -> dict[str, Any]:
         """Extend base config with OpenAI-specific fields."""
         config = super().to_config_dict()
-        # Client-level params (from OpenAI SDK)
         if self.organization:
             config["organization"] = self.organization
         if self.project:
@@ -342,7 +340,6 @@ class OpenAICompletion(BaseLLM):
             config["timeout"] = self.timeout
         if self.max_retries != 2:
             config["max_retries"] = self.max_retries
-        # Completion params
         if self.top_p is not None:
             config["top_p"] = self.top_p
         if self.frequency_penalty is not None:
@@ -665,7 +662,6 @@ class OpenAICompletion(BaseLLM):
         for message in messages:
             if message.get("role") == "system":
                 content = message.get("content", "")
-                # System messages should always have string content
                 content_str = content if isinstance(content, str) else str(content)
                 if instructions:
                     instructions = f"{instructions}\n\n{content_str}"
@@ -674,7 +670,7 @@ class OpenAICompletion(BaseLLM):
             else:
                 input_messages.append(message)
 
-        # Prepare input with optional reasoning items for ZDR chaining
+        # Prepend reasoning items for ZDR (zero-data-retention) chaining when configured
         final_input: list[Any] = []
         if self.auto_chain_reasoning and self._last_reasoning_items:
             final_input.extend(self._last_reasoning_items)
@@ -700,7 +696,6 @@ class OpenAICompletion(BaseLLM):
         elif self.auto_chain and self._last_response_id:
             params["previous_response_id"] = self._last_response_id
 
-        # Handle include parameter with auto_chain_reasoning support
         include_items: list[str] = list(self.include) if self.include else []
         if self.auto_chain_reasoning:
             if "reasoning.encrypted_content" not in include_items:
@@ -819,11 +814,9 @@ class OpenAICompletion(BaseLLM):
         try:
             response: Response = self._get_sync_client().responses.create(**params)
 
-            # Track response ID for auto-chaining
             if self.auto_chain and response.id:
                 self._last_response_id = response.id
 
-            # Track reasoning items for ZDR auto-chaining
             if self.auto_chain_reasoning:
                 reasoning_items = self._extract_reasoning_items(response)
                 if reasoning_items:
@@ -832,7 +825,6 @@ class OpenAICompletion(BaseLLM):
             usage = self._extract_responses_token_usage(response)
             self._track_token_usage_internal(usage)
 
-            # If parse_tool_outputs is enabled, return structured result
             if self.parse_tool_outputs:
                 parsed_result = self._extract_builtin_tool_outputs(response)
                 parsed_result.text = self._apply_stop_words(parsed_result.text)
@@ -957,11 +949,9 @@ class OpenAICompletion(BaseLLM):
                 **params
             )
 
-            # Track response ID for auto-chaining
             if self.auto_chain and response.id:
                 self._last_response_id = response.id
 
-            # Track reasoning items for ZDR auto-chaining
             if self.auto_chain_reasoning:
                 reasoning_items = self._extract_reasoning_items(response)
                 if reasoning_items:
@@ -970,7 +960,6 @@ class OpenAICompletion(BaseLLM):
             usage = self._extract_responses_token_usage(response)
             self._track_token_usage_internal(usage)
 
-            # If parse_tool_outputs is enabled, return structured result
             if self.parse_tool_outputs:
                 parsed_result = self._extract_builtin_tool_outputs(response)
                 parsed_result.text = self._apply_stop_words(parsed_result.text)
@@ -1124,10 +1113,8 @@ class OpenAICompletion(BaseLLM):
 
             elif event.type == "response.completed":
                 final_response = event.response
-                # Track response ID for auto-chaining
                 if self.auto_chain and event.response and event.response.id:
                     self._last_response_id = event.response.id
-                # Track reasoning items for ZDR auto-chaining
                 if self.auto_chain_reasoning and event.response:
                     reasoning_items = self._extract_reasoning_items(event.response)
                     if reasoning_items:
@@ -1136,7 +1123,6 @@ class OpenAICompletion(BaseLLM):
                     usage = self._extract_responses_token_usage(event.response)
                     self._track_token_usage_internal(usage)
 
-        # If parse_tool_outputs is enabled, return structured result
         if self.parse_tool_outputs and final_response:
             parsed_result = self._extract_builtin_tool_outputs(final_response)
             parsed_result.text = self._apply_stop_words(parsed_result.text)
@@ -1252,10 +1238,8 @@ class OpenAICompletion(BaseLLM):
 
             elif event.type == "response.completed":
                 final_response = event.response
-                # Track response ID for auto-chaining
                 if self.auto_chain and event.response and event.response.id:
                     self._last_response_id = event.response.id
-                # Track reasoning items for ZDR auto-chaining
                 if self.auto_chain_reasoning and event.response:
                     reasoning_items = self._extract_reasoning_items(event.response)
                     if reasoning_items:
@@ -1264,7 +1248,6 @@ class OpenAICompletion(BaseLLM):
                     usage = self._extract_responses_token_usage(event.response)
                     self._track_token_usage_internal(usage)
 
-        # If parse_tool_outputs is enabled, return structured result
         if self.parse_tool_outputs and final_response:
             parsed_result = self._extract_builtin_tool_outputs(final_response)
             parsed_result.text = self._apply_stop_words(parsed_result.text)
@@ -1551,7 +1534,6 @@ class OpenAICompletion(BaseLLM):
             params["tools"] = self._convert_tools_for_interference(tools)
             params["tool_choice"] = "auto"
 
-        # Filter out CrewAI-specific parameters that shouldn't go to the API
         crewai_specific_params = {
             "callbacks",
             "available_functions",
@@ -1644,8 +1626,7 @@ class OpenAICompletion(BaseLLM):
             choice: Choice = response.choices[0]
             message = choice.message
 
-            # If there are tool_calls but no available_functions, return the tool_calls
-            # This allows the caller (e.g., executor) to handle tool execution
+            # Without available_functions, return tool_calls so the caller (executor) handles execution
             if message.tool_calls and not available_functions:
                 self._emit_call_completed_event(
                     response=list(message.tool_calls),
@@ -1657,7 +1638,6 @@ class OpenAICompletion(BaseLLM):
                 )
                 return list(message.tool_calls)
 
-            # If there are tool_calls and available_functions, execute the tools
             if message.tool_calls and available_functions:
                 tool_call = message.tool_calls[0]
                 if not isinstance(tool_call, ChatCompletionMessageFunctionToolCall):
@@ -1732,7 +1712,6 @@ class OpenAICompletion(BaseLLM):
             )
             raise ConnectionError(error_msg) from e
         except Exception as e:
-            # Handle context length exceeded and other errors
             if is_context_length_exceeded(e):
                 logging.error(f"Context window exceeded: {e}")
                 raise LLMContextLengthExceededError(str(e)) from e
@@ -2033,8 +2012,7 @@ class OpenAICompletion(BaseLLM):
             choice: Choice = response.choices[0]
             message = choice.message
 
-            # If there are tool_calls but no available_functions, return the tool_calls
-            # This allows the caller (e.g., executor) to handle tool execution
+            # Without available_functions, return tool_calls so the caller (executor) handles execution
             if message.tool_calls and not available_functions:
                 self._emit_call_completed_event(
                     response=list(message.tool_calls),
@@ -2046,7 +2024,6 @@ class OpenAICompletion(BaseLLM):
                 )
                 return list(message.tool_calls)
 
-            # If there are tool_calls and available_functions, execute the tools
             if message.tool_calls and available_functions:
                 from openai.types.chat.chat_completion_message_function_tool_call import (
                     ChatCompletionMessageFunctionToolCall,
@@ -2322,12 +2299,10 @@ class OpenAICompletion(BaseLLM):
             "o4-mini": 200000,
         }
 
-        # Find the best match for the model name
         for model_prefix, size in context_windows.items():
             if self.model.startswith(model_prefix):
                 return int(size * CONTEXT_WINDOW_USAGE_RATIO)
 
-        # Default context window size
         return int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
 
     def _extract_openai_token_usage(
@@ -2358,7 +2333,6 @@ class OpenAICompletion(BaseLLM):
         """Format messages for OpenAI API."""
         base_formatted = super()._format_messages(messages)
 
-        # Apply OpenAI-specific formatting
         formatted_messages: list[LLMMessage] = []
 
         for message in base_formatted:

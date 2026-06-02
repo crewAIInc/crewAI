@@ -10,7 +10,7 @@ requires-python = ">=3.10, <3.14"
 classifiers = ["Private :: Do Not Upload"]
 private = true
 dependencies = [
-    "click~=8.1.7",
+    "click>=8.1.7,<9",
     "tomlkit~=0.13.2",
     "openai>=1.83.0,<3",
     "python-dotenv>=1.2.2,<2",

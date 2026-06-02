@@ -27,9 +27,7 @@ def in_temp_dir():
 
 @pytest.fixture
 def tool_command():
-    # Create a temporary directory for each test to avoid token storage conflicts
     with tempfile.TemporaryDirectory() as temp_dir:
-        # Mock the secure storage path to use the temp directory
         with patch.object(
             TokenManager, "_get_secure_storage_path", return_value=Path(temp_dir)
         ):
@@ -97,7 +95,6 @@ def test_install_success(
         env=unittest.mock.ANY,
     )
 
-    # Verify _print_current_organization was called
     mock_print_org.assert_called_once()
 
 

@@ -29,7 +29,6 @@ from crewai.state.runtime import RuntimeState
 from crewai.task import Task
 
 
-# ---------- _resolve ----------
 
 
 class TestResolve:
@@ -49,7 +48,6 @@ class TestResolve:
         assert _resolve(cfg) is cfg
 
 
-# ---------- _find_checkpoint inheritance ----------
 
 
 class TestFindCheckpoint:
@@ -115,7 +113,6 @@ class TestFindCheckpoint:
         assert _find_checkpoint("random") is None
 
 
-# ---------- _prune ----------
 
 
 class TestPrune:
@@ -158,7 +155,6 @@ class TestPrune:
             assert len(os.listdir(branch_dir)) == 1
 
 
-# ---------- CheckpointConfig ----------
 
 
 class TestCheckpointConfig:
@@ -188,7 +184,6 @@ class TestCheckpointConfig:
         assert cfg.trigger_events == {"task_completed", "crew_kickoff_completed"}
 
 
-# ---------- RuntimeState lineage ----------
 
 
 class TestRuntimeStateLineage:
@@ -370,7 +365,6 @@ class TestFlowInitialStateSerialization:
         assert restored.root[0].initial_state == {"id": "x", "foo": "bar"}
 
 
-# ---------- JsonProvider forking ----------
 
 
 class TestJsonProviderFork:
@@ -392,7 +386,6 @@ class TestJsonProviderFork:
     def test_prune_branch_aware(self) -> None:
         provider = JsonProvider()
         with tempfile.TemporaryDirectory() as d:
-            # Write 3 checkpoints on main, 2 on fork
             for _ in range(3):
                 provider.checkpoint("{}", d, branch="main")
                 time.sleep(0.01)
@@ -406,7 +399,7 @@ class TestJsonProviderFork:
             main_dir = os.path.join(d, "main")
             fork_dir = os.path.join(d, "fork", "a")
             assert len(os.listdir(main_dir)) == 1
-            assert len(os.listdir(fork_dir)) == 2  # untouched
+            assert len(os.listdir(fork_dir)) == 2
 
     def test_extract_id(self) -> None:
         provider = JsonProvider()
@@ -449,7 +442,6 @@ class TestJsonProviderFork:
             assert id2 != id1
             assert state._parent_id == id2
 
-            # Verify the second checkpoint blob has parent_id == id1
             with open(loc2) as f:
                 data2 = json.loads(f.read())
             assert data2["parent_id"] == id1
@@ -481,7 +473,6 @@ class TestJsonProviderFork:
         return RuntimeState(root=[crew])
 
 
-# ---------- SqliteProvider forking ----------
 
 
 class TestSqliteProviderFork:
@@ -536,7 +527,6 @@ class TestSqliteProviderFork:
             id2 = state._checkpoint_id
             assert id2 != id1
 
-            # Second row should have parent_id == id1
             with sqlite3.connect(db) as conn:
                 row = conn.execute(
                     "SELECT parent_id FROM checkpoints WHERE id = ?", (id2,)
@@ -551,7 +541,6 @@ class TestSqliteProviderFork:
         return RuntimeState(root=[crew])
 
 
-# ---------- Kickoff from_checkpoint parameter ----------
 
 
 class TestKickoffFromCheckpoint:
@@ -624,7 +613,6 @@ class TestKickoffFromCheckpoint:
         assert result == "flow_result"
 
 
-# ---------- Agent checkpoint/fork ----------
 
 
 class TestAgentCheckpoint:

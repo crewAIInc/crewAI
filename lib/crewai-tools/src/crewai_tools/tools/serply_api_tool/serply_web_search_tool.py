@@ -58,7 +58,6 @@ class SerplyWebSearchTool(BaseTool):
         self.device_type = device_type
         self.proxy_location = proxy_location
 
-        # build query parameters
         self.query_payload = {
             "num": limit,
             "gl": proxy_location.upper(),
@@ -80,7 +79,6 @@ class SerplyWebSearchTool(BaseTool):
         elif "search_query" in kwargs:
             self.query_payload["q"] = kwargs["search_query"]  # type: ignore[index]
 
-        # build the url
         url = f"{self.search_url}{urlencode(self.query_payload)}"  # type: ignore[arg-type]
 
         response = requests.request(
