@@ -65,7 +65,8 @@ class LockBackend(Protocol):
 
     def __call__(
         self, name: str, *, timeout: float
-    ) -> AbstractContextManager[None]: ...
+    ) -> AbstractContextManager[None]:
+        raise NotImplementedError
 
 
 # Active backend override; ``None`` means use the built-in default selection.
