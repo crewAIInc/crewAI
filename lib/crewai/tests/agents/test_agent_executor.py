@@ -136,6 +136,33 @@ class TestAgentExecutor:
 
         assert executor.state.messages[0]["files"] == {"document": stored_file}
 
+    @pytest.mark.asyncio
+    async def test_ainject_files_from_crew_task_store_uses_async_store(self):
+        """Async file injection should not call the sync file store helper."""
+        crew_id = uuid4()
+        task_id = uuid4()
+        stored_file = TextFile(source=b"stored content")
+        executor = _build_executor(
+            crew=SimpleNamespace(id=crew_id),
+            task=SimpleNamespace(id=task_id),
+        )
+        executor.state.messages = [{"role": "user", "content": "Analyze this file"}]
+
+        with (
+            patch(
+                "crewai.experimental.agent_executor.aget_all_files",
+                new=AsyncMock(return_value={"document": stored_file}),
+            ) as async_get_files,
+            patch(
+                "crewai.experimental.agent_executor.get_all_files",
+                side_effect=AssertionError("sync file store should not be called"),
+            ),
+        ):
+            await executor._ainject_files_from_inputs({})
+
+        async_get_files.assert_awaited_once_with(crew_id, task_id)
+        assert executor.state.messages[0]["files"] == {"document": stored_file}
+
     @pytest.fixture
     def mock_dependencies(self):
         """Create mock dependencies for executor."""

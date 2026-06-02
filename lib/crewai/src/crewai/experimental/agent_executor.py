@@ -93,7 +93,7 @@ from crewai.utilities.agent_utils import (
     track_delegation_if_needed,
 )
 from crewai.utilities.constants import TRAINING_DATA_FILE
-from crewai.utilities.file_store import get_all_files
+from crewai.utilities.file_store import aget_all_files, get_all_files
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.planning_types import (
     PlanStep,
@@ -2772,7 +2772,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     mark_cache_breakpoint(format_message_for_llm(user_prompt))
                 )
 
-            self._inject_files_from_inputs(inputs)
+            await self._ainject_files_from_inputs(inputs)
 
             self.state.ask_for_human_input = bool(
                 inputs.get("ask_for_human_input", False)
@@ -2992,6 +2992,27 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         if self.crew and self.task:
             stored_files = get_all_files(self.crew.id, self.task.id)
+            if stored_files:
+                files.update(stored_files)
+
+        if inputs.get("files"):
+            files.update(inputs["files"])
+
+        if not files:
+            return
+
+        for i in range(len(self.state.messages) - 1, -1, -1):
+            msg = self.state.messages[i]
+            if msg.get("role") == "user":
+                msg["files"] = files
+                break
+
+    async def _ainject_files_from_inputs(self, inputs: dict[str, Any]) -> None:
+        """Async inject files into the last user message."""
+        files: dict[str, Any] = {}
+
+        if self.crew and self.task:
+            stored_files = await aget_all_files(self.crew.id, self.task.id)
             if stored_files:
                 files.update(stored_files)
 
