@@ -187,7 +187,7 @@ flowchart TD
 - **Filename Requirement:** Ensure that the filename ends with `.pkl`. The code will raise a `ValueError` if this condition is not met.
 - **Error Handling:** The code handles subprocess errors and unexpected exceptions, providing error messages to the user.
 - Trained guidance is applied at prompt time; it does not modify your Python/YAML agent configuration.
-- Agents automatically load trained suggestions from a file named `trained_agents_data.pkl` located in the current working directory. If you trained to a different filename, either rename it to `trained_agents_data.pkl` before running, or adjust the loader in code.
+- Agents automatically load trained suggestions from a file named `trained_agents_data.pkl` located in the current working directory. If you trained to a different filename, pass that path with `Crew(trained_agents_file="my_custom_trained.pkl")`, set `CREWAI_TRAINED_AGENTS_FILE`, or use `crewai run -f my_custom_trained.pkl`.
 - You can change the output filename when calling `crewai train` with `-f/--filename`. Absolute paths are supported if you want to save outside the CWD.
 
 It is important to note that the training process may take some time, depending on the complexity of your agents and will also require your feedback on each iteration.
