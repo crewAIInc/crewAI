@@ -62,7 +62,7 @@ def _build_default_document_converter() -> DocumentConverter:
     docling = _import_docling()
     input_format = docling.input_format
     return cast(
-        DocumentConverter,
+        "DocumentConverter",
         docling.document_converter(
             allowed_formats=[
                 input_format.MD,
