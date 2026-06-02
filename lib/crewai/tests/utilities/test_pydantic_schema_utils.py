@@ -347,9 +347,7 @@ class TestAllOfMerging:
         assert obj.item.id == 1
 
 
-# ---------------------------------------------------------------------------
 # $ref resolution
-# ---------------------------------------------------------------------------
 
 
 class TestRefResolution:
@@ -374,9 +372,7 @@ class TestRefResolution:
         assert obj.item.name == "Widget"
 
 
-# ---------------------------------------------------------------------------
 # model_name parameter
-# ---------------------------------------------------------------------------
 
 
 class TestModelName:
@@ -410,9 +406,7 @@ class TestModelName:
         assert Model.__name__ == "DynamicModel"
 
 
-# ---------------------------------------------------------------------------
 # enrich_descriptions
-# ---------------------------------------------------------------------------
 
 
 class TestEnrichDescriptions:
@@ -477,9 +471,7 @@ class TestEnrichDescriptions:
         assert "Maximum: 10" in nested_field.description
 
 
-# ---------------------------------------------------------------------------
 # Edge cases
-# ---------------------------------------------------------------------------
 
 
 class TestEdgeCases:
@@ -507,9 +499,7 @@ class TestEdgeCases:
             create_model_from_schema(schema)
 
 
-# ---------------------------------------------------------------------------
 # build_rich_field_description
-# ---------------------------------------------------------------------------
 
 
 class TestBuildRichFieldDescription:
@@ -548,7 +538,6 @@ class TestBuildRichFieldDescription:
         assert "Examples:" in desc
         assert "'foo'" in desc
         assert "'baz'" in desc
-        # Only first 3 shown
         assert "'extra'" not in desc
 
     def test_combined_constraints(self) -> None:
@@ -564,9 +553,7 @@ class TestBuildRichFieldDescription:
         assert "Format: int32" in desc
 
 
-# ---------------------------------------------------------------------------
 # Schema transformation functions
-# ---------------------------------------------------------------------------
 
 
 class TestResolveRefs:
@@ -884,9 +871,7 @@ class TestEndToEndMCPSchema:
         assert obj.filters.categories == ["news", "tech"]
 
 
-# ---------------------------------------------------------------------------
 # Recursive / circular $ref schemas (GH-5490)
-# ---------------------------------------------------------------------------
 
 RECURSIVE_NODE_SCHEMA: dict = {
     "$defs": {

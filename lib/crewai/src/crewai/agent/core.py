@@ -28,6 +28,7 @@ from pydantic import (
     ConfigDict,
     Field,
     PrivateAttr,
+    ValidationError,
     model_validator,
 )
 from pydantic.functional_serializers import PlainSerializer
@@ -220,7 +221,11 @@ class Agent(BaseAgent):
         str | BaseLLM | None,
         BeforeValidator(_validate_llm_ref),
         PlainSerializer(_serialize_llm_ref, return_type=dict | None, when_used="json"),
-    ] = Field(description="Language model that will run the agent.", default=None)
+    ] = Field(
+        description="Language model that will run the agent.",
+        default=None,
+        deprecated="function_calling_llm is deprecated and will be removed in a future release.",
+    )
     system_template: str | None = Field(
         default=None, description="System format for the agent."
     )
@@ -375,8 +380,17 @@ class Agent(BaseAgent):
                 DeprecationWarning,
                 stacklevel=2,
             )
+            kwargs: dict[str, int] = {}
+            if self.max_reasoning_attempts is not None:
+                kwargs["max_attempts"] = self.max_reasoning_attempts
+            self.planning_config = PlanningConfig(**kwargs)
+
+        if self.planning and self.planning_config is None:
+            # Bare planning=True should be bounded and avoid per-step
+            # PlannerObserver LLM calls unless explicitly configured.
             self.planning_config = PlanningConfig(
-                max_attempts=self.max_reasoning_attempts,
+                reasoning_effort="low",
+                max_attempts=1,
             )
 
         return self
@@ -430,7 +444,7 @@ class Agent(BaseAgent):
         from crewai.crew import Crew
 
         if resolved_crew_skills is None:
-            crew_skills: list[Path | SkillModel] | None = (
+            crew_skills: list[Path | SkillModel | str] | None = (
                 self.crew.skills
                 if isinstance(self.crew, Crew) and isinstance(self.crew.skills, list)
                 else None
@@ -442,7 +456,7 @@ class Agent(BaseAgent):
             return
 
         needs_work = self.skills and any(
-            isinstance(s, Path)
+            isinstance(s, (Path, str))
             or (isinstance(s, SkillModel) and s.disclosure_level < INSTRUCTIONS)
             for s in self.skills
         )
@@ -450,14 +464,28 @@ class Agent(BaseAgent):
             return
 
         seen: set[str] = set()
-        resolved: list[Path | SkillModel] = []
-        items: list[Path | SkillModel] = list(self.skills) if self.skills else []
+        resolved: list[Path | SkillModel | str] = []
+        items: list[Path | SkillModel | str] = list(self.skills) if self.skills else []
 
         if crew_skills:
             items.extend(crew_skills)
 
         for item in items:
-            if isinstance(item, Path):
+            if isinstance(item, str):
+                from crewai.experimental.skills.registry import (
+                    is_registry_ref,
+                    parse_registry_ref,
+                    resolve_registry_ref,
+                )
+
+                if is_registry_ref(item):
+                    skill = resolve_registry_ref(item, source=self)
+                    org, _ = parse_registry_ref(item)
+                    dedup_key = f"{org}/{skill.name}"
+                    if dedup_key not in seen:
+                        seen.add(dedup_key)
+                        resolved.append(skill)
+            elif isinstance(item, Path):
                 discovered = discover_skills(item, source=self)
                 for skill in discovered:
                     if skill.name not in seen:
@@ -1091,9 +1119,14 @@ class Agent(BaseAgent):
         """
         if self.agent_executor is None:
             raise RuntimeError("Agent executor is not initialized.")
+        if not isinstance(self.llm, BaseLLM):
+            raise RuntimeError(
+                "LLM must be resolved before updating agent executor parameters."
+            )
 
         if task is not None:
             self.agent_executor.task = task
+        self.agent_executor.llm = self.llm
         self.agent_executor.tools = tools
         self.agent_executor.original_tools = raw_tools
         self.agent_executor.prompt = prompt
@@ -1393,6 +1426,11 @@ class Agent(BaseAgent):
 
         if _is_resuming_agent_executor(self.agent_executor):
             executor = self.agent_executor
+            if not isinstance(self.llm, BaseLLM):
+                raise RuntimeError(
+                    "LLM must be resolved before resuming agent executor."
+                )
+            executor.llm = self.llm
             executor.tools = parsed_tools
             executor.tools_names = get_tool_names(parsed_tools)
             executor.tools_description = render_text_description_and_args(parsed_tools)
@@ -1673,24 +1711,32 @@ class Agent(BaseAgent):
         elif response_format:
             raw_output = str(output) if not isinstance(output, str) else output
             try:
-                model_schema = generate_model_description(response_format)
-                schema = json.dumps(model_schema, indent=2)
-                instructions = I18N_DEFAULT.slice("formatted_task_instructions").format(
-                    output_format=schema
-                )
+                formatted_result = response_format.model_validate_json(raw_output)
+            except ValidationError:
+                # Direct JSON validation failed; fall back to converter-based parsing below.
+                formatted_result = None
 
-                converter = Converter(
-                    llm=cast(BaseLLM, self.llm),
-                    text=raw_output,
-                    model=response_format,
-                    instructions=instructions,
-                )
+            if formatted_result is None:
+                try:
+                    model_schema = generate_model_description(response_format)
+                    schema = json.dumps(model_schema, indent=2)
+                    instructions = I18N_DEFAULT.slice(
+                        "formatted_task_instructions"
+                    ).format(output_format=schema)
 
-                conversion_result = converter.to_pydantic()
-                if isinstance(conversion_result, BaseModel):
-                    formatted_result = conversion_result
-            except ConverterError:
-                pass
+                    converter = Converter(
+                        llm=cast(BaseLLM, self.llm),
+                        text=raw_output,
+                        model=response_format,
+                        instructions=instructions,
+                    )
+
+                    conversion_result = converter.to_pydantic()
+                    if isinstance(conversion_result, BaseModel):
+                        formatted_result = conversion_result
+                except ConverterError:
+                    # Conversion failure is non-fatal; raw output is preserved below.
+                    pass
         else:
             raw_output = str(output) if not isinstance(output, str) else output
 

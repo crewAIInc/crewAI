@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 from urllib.parse import urlparse
 
 
@@ -16,7 +16,6 @@ try:
     DOCLING_AVAILABLE = True
 except ImportError:
     DOCLING_AVAILABLE = False
-    # Provide type stubs for when docling is not available
     if TYPE_CHECKING:
         from docling.document_converter import DocumentConverter
         from docling_core.types.doc.document import DoclingDocument
@@ -45,6 +44,7 @@ class CrewDoclingSource(BaseKnowledgeSource):
 
     _logger: Logger = Logger(verbose=True)
 
+    source_type: Literal["docling"] = "docling"
     file_path: list[Path | str] | None = Field(default=None)
     file_paths: list[Path | str] = Field(default_factory=list)
     chunks: list[str] = Field(default_factory=list)
@@ -135,7 +135,6 @@ class CrewDoclingSource(BaseKnowledgeSource):
                     else:
                         raise FileNotFoundError(f"File not found: {local_path}")
             else:
-                # this is an instance of Path
                 processed_paths.append(path)
         return processed_paths
 
@@ -146,7 +145,7 @@ class CrewDoclingSource(BaseKnowledgeSource):
                 [
                     result.scheme in ("http", "https"),
                     result.netloc,
-                    len(result.netloc.split(".")) >= 2,  # Ensure domain has TLD
+                    len(result.netloc.split(".")) >= 2,
                 ]
             )
         except Exception:

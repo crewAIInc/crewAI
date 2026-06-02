@@ -5,225 +5,419 @@ icon: floppy-disk
 mode: "wide"
 ---
 
+الـ Checkpointing يحفظ لقطة من حالة التنفيذ أثناء التشغيل بحيث يمكن لطاقم أو تدفق أو وكيل الاستئناف بعد الفشل أو التفرع إلى فرع بديل.
+
+<CardGroup cols={2}>
+  <Card title="الشرح" icon="lightbulb" href="#الشرح">
+    كيف يعمل الـ Checkpointing: الأحداث والتخزين والوراثة.
+  </Card>
+  <Card title="درس تطبيقي" icon="graduation-cap" href="#درس-تطبيقي-استئناف-طاقم-فاشل">
+    دليل 5 دقائق: تشغيل، إيقاف، استئناف.
+  </Card>
+  <Card title="ادلة عملية" icon="screwdriver-wrench" href="#ادلة-عملية">
+    وصفات مركزة على المهام لسير العمل الشائع.
+  </Card>
+  <Card title="المرجع" icon="book" href="#المرجع">
+    `CheckpointConfig` والأحداث والمزودات وسطر الأوامر.
+  </Card>
+</CardGroup>
+
+## الشرح
+
+### ما هي نقطة الحفظ
+
+تلتقط نقطة الحفظ كل ما يحتاجه CrewAI لإعادة إنشاء تشغيل أثناء سيره: الحالة الكاملة للطاقم أو التدفق أو الوكيل — التكوين، وذاكرة الوكلاء ومصادر المعرفة، وتقدم المهام، والمخرجات الوسيطة، والحالة الداخلية والسمات — إلى جانب مدخلات الـ kickoff، وسجل الأحداث حتى تلك النقطة، ومعرف نسب يربط نقطة الحفظ بالتشغيل الذي جاءت منه.
+
+الاستعادة تعيد بناء تلك الحالة وتستمر. تتخطى المهام المكتملة، وتعاد ترطيب الذاكرة والمعرفة، ويعمل العمل التابع على نفس المخرجات التي أنتجها التشغيل الأصلي. التفرع يجري نفس الاستعادة تحت نسب جديد، بحيث يكتب الفرع الجديد والتشغيل الأصلي نقاط الحفظ جنبا إلى جنب دون أن يطمس أحدهما الآخر.
+
+### متى تكتب نقاط الحفظ
+
+الـ Checkpointing مدفوع بالأحداث. يشترك وقت التشغيل في الأحداث التي تحددها عبر `on_events` ويكتب نقطة حفظ عند إطلاق أحدها. الافتراضي `task_completed` ينتج نقطة حفظ لكل مهمة منتهية — توازن معقول بين الدقة واستخدام القرص. الأحداث عالية التردد مثل `llm_call_completed` متاحة للاستعادة الدقيقة لكنها تكتب ملفات أكثر بكثير.
+
+### التخزين
+
+يتضمن CrewAI مزودين:
+
+- `JsonProvider` يكتب ملفا لكل نقطة حفظ. قابل للقراءة وسهل التفقد.
+- `SqliteProvider` يكتب إلى قاعدة بيانات SQLite واحدة. أفضل لنقاط الحفظ عالية التردد.
+
+كلاهما يحذف أقدم نقاط الحفظ عند تحديد `max_checkpoints`.
+
+<Note>
+كتابة نقاط الحفظ بأفضل جهد. فشل نقطة حفظ يسجل لكنه لا يقاطع التشغيل.
+</Note>
+
+### نموذج الوراثة
+
+`Crew` و`Flow` و`Agent` كلها تقبل وسيط `checkpoint`. يرث الأبناء من الأب ما لم يحددوا قيمتهم الخاصة أو يمرروا `False` للانسحاب. فعل الـ Checkpointing مرة واحدة على الطاقم وتشارك كل الوكلاء، أو استبعد وكيلا واحدا بشكل انتقائي.
+
+## درس تطبيقي: استئناف طاقم فاشل
+
+هذا الدليل يستغرق حوالي 5 دقائق. ستشغل طاقما بمهمتين، توقفه في المنتصف، ثم تستأنف من نقطة الحفظ المحفوظة.
+
+<Steps>
+  <Step title="أنشئ الطاقم مع تفعيل الـ Checkpointing">
+    ```python
+    from crewai import Agent, Crew, Task
+
+    researcher = Agent(role="Researcher", goal="Research", backstory="Expert")
+    writer = Agent(role="Writer", goal="Write", backstory="Expert")
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[
+            Task(description="Research AI trends", agent=researcher, expected_output="bullets"),
+            Task(description="Write a summary", agent=writer, expected_output="paragraph"),
+        ],
+        checkpoint=True,
+    )
+    ```
+  </Step>
+  <Step title="شغله وأوقفه بعد المهمة الأولى">
+    ```python
+    result = crew.kickoff()
+    ```
+
+    اضغط `Ctrl+C` بعد انتهاء المهمة الأولى. في `./.checkpoints/`، الملف بصيغة `<timestamp>_<uuid>.json` هو نقطة الحفظ.
+  </Step>
+  <Step title="استأنف من نقطة الحفظ">
+    ```python
+    from crewai import CheckpointConfig
+
+    result = crew.kickoff(
+        from_checkpoint=CheckpointConfig(
+            restore_from="./.checkpoints/<timestamp>_<uuid>.json",
+        ),
+    )
+    ```
+
+    يتم تخطي مهمة البحث، ويعمل الكاتب على مخرجات البحث المحفوظة، وينتهي الطاقم.
+  </Step>
+</Steps>
+
+## ادلة عملية
+
+<AccordionGroup>
+  <Accordion title="تفعيل الـ Checkpointing بالإعدادات الافتراضية" icon="play">
+    ```python
+    crew = Crew(agents=[...], tasks=[...], checkpoint=True)
+    ```
+
+    يكتب إلى `./.checkpoints/` عند كل `task_completed`.
+  </Accordion>
+
+  <Accordion title="تخصيص التخزين والتردد" icon="sliders">
+    ```python
+    from crewai import Crew, CheckpointConfig
+
+    crew = Crew(
+        agents=[...],
+        tasks=[...],
+        checkpoint=CheckpointConfig(
+            location="./my_checkpoints",
+            on_events=["task_completed", "crew_kickoff_completed"],
+            max_checkpoints=5,
+        ),
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="اختيار مزود التخزين" icon="database">
+    <CodeGroup>
+    ```python JsonProvider
+    from crewai import Crew, CheckpointConfig
+    from crewai.state import JsonProvider
+
+    crew = Crew(
+        agents=[...],
+        tasks=[...],
+        checkpoint=CheckpointConfig(
+            location="./my_checkpoints",
+            provider=JsonProvider(),
+            max_checkpoints=5,
+        ),
+    )
+    ```
+    ```python SqliteProvider
+    from crewai import Crew, CheckpointConfig
+    from crewai.state import SqliteProvider
+
+    crew = Crew(
+        agents=[...],
+        tasks=[...],
+        checkpoint=CheckpointConfig(
+            location="./.checkpoints.db",
+            provider=SqliteProvider(),
+            max_checkpoints=50,
+        ),
+    )
+    ```
+    </CodeGroup>
+
+    <Tip>
+    SQLite يفعل وضع journal WAL للقراءات المتزامنة. يفضل لنقاط الحفظ عالية التردد.
+    </Tip>
+  </Accordion>
+
+  <Accordion title="استبعاد وكيل واحد" icon="user-slash">
+    ```python
+    crew = Crew(
+        agents=[
+            Agent(role="Researcher", ...),
+            Agent(role="Writer", ..., checkpoint=False),
+        ],
+        tasks=[...],
+        checkpoint=True,
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="التفرع إلى فرع جديد" icon="code-branch">
+    `fork()` يستعيد نقطة حفظ تحت نسب جديد بحيث لا يتصادم التشغيل الجديد مع الأصلي.
+
+    ```python
+    config = CheckpointConfig(restore_from="./my_checkpoints/<file>.json")
+    crew = Crew.fork(config, branch="experiment-a")
+    result = crew.kickoff(inputs={"strategy": "aggressive"})
+    ```
+
+    تسمية `branch` اختيارية؛ يتم إنشاء واحدة إذا أغفلت.
+  </Accordion>
+
+  <Accordion title="Checkpointing لـ Crew أو Flow أو Agent" icon="cubes">
+    <Tabs>
+      <Tab title="Crew">
+        ```python
+        crew = Crew(
+            agents=[researcher, writer],
+            tasks=[research_task, write_task, review_task],
+            checkpoint=CheckpointConfig(location="./crew_cp"),
+        )
+        ```
+
+        المشغل الافتراضي: `task_completed`.
+      </Tab>
+      <Tab title="Flow">
+        ```python
+        from crewai.flow.flow import Flow, start, listen
+        from crewai import CheckpointConfig
+
+        class MyFlow(Flow):
+            @start()
+            def step_one(self):
+                return "data"
+
+            @listen(step_one)
+            def step_two(self, data):
+                return process(data)
+
+        flow = MyFlow(
+            checkpoint=CheckpointConfig(
+                location="./flow_cp",
+                on_events=["method_execution_finished"],
+            ),
+        )
+        result = flow.kickoff()
+        ```
+      </Tab>
+      <Tab title="Agent">
+        ```python
+        agent = Agent(
+            role="Researcher",
+            goal="Research topics",
+            backstory="Expert researcher",
+            checkpoint=CheckpointConfig(
+                location="./agent_cp",
+                on_events=["lite_agent_execution_completed"],
+            ),
+        )
+        result = agent.kickoff(messages=[{"role": "user", "content": "Research AI trends"}])
+        ```
+      </Tab>
+    </Tabs>
+  </Accordion>
+
+  <Accordion title="كتابة نقطة حفظ يدويا" icon="code">
+    سجل معالجا على أي حدث واستدع `state.checkpoint()`.
+
+    <CodeGroup>
+    ```python Sync
+    from __future__ import annotations
+
+    from typing import TYPE_CHECKING, Any
+
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.types.llm_events import LLMCallCompletedEvent
+
+    if TYPE_CHECKING:
+        from crewai.state.runtime import RuntimeState
+
+
+    @crewai_event_bus.on(LLMCallCompletedEvent)
+    def on_llm_done(source: Any, event: LLMCallCompletedEvent, state: RuntimeState) -> None:
+        path = state.checkpoint("./my_checkpoints")
+        print(f"تم حفظ نقطة الحفظ: {path}")
+    ```
+    ```python Async
+    from __future__ import annotations
+
+    from typing import TYPE_CHECKING, Any
+
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.types.llm_events import LLMCallCompletedEvent
+
+    if TYPE_CHECKING:
+        from crewai.state.runtime import RuntimeState
+
+
+    @crewai_event_bus.on(LLMCallCompletedEvent)
+    async def on_llm_done_async(source: Any, event: LLMCallCompletedEvent, state: RuntimeState) -> None:
+        path = await state.acheckpoint("./my_checkpoints")
+        print(f"تم حفظ نقطة الحفظ: {path}")
+    ```
+    </CodeGroup>
+
+    يتم تمرير وسيط `state` تلقائيا عندما يقبل المعالج ثلاثة معاملات. راجع [Event Listeners](/ar/concepts/event-listener) لقائمة الأحداث الكاملة.
+  </Accordion>
+
+  <Accordion title="التصفح والاستئناف والتفرع من سطر الأوامر" icon="terminal">
+    ```bash
+    crewai checkpoint
+    crewai checkpoint --location ./my_checkpoints
+    crewai checkpoint --location ./.checkpoints.db
+    ```
+
+    <Frame caption="شجرة نقاط الحفظ — الفروع والتفرعات تتداخل تحت أبيها.">
+      <img src="/images/checkpoint-tui-tree.png" alt="Checkpoint TUI tree view" />
+    </Frame>
+
+    اللوحة اليسرى تجمع نقاط الحفظ حسب الفرع؛ التفرعات تتداخل تحت أبيها. اختيار نقطة حفظ يفتح لوحة التفاصيل مع بياناتها الوصفية وحالة الكيان وتقدم المهام. **Resume** يكمل التشغيل؛ **Fork** يبدأ فرعا جديدا.
+
+    <Frame caption="تبويب النظرة العامة — البيانات الوصفية وحالة الكيان وملخص التشغيل.">
+      <img src="/images/checkpoint-tui-detail-overview.png" alt="Checkpoint detail overview tab" />
+    </Frame>
+
+    لوحة التفاصيل تعرض منطقتين قابلتين للتحرير:
+
+    - **Inputs** — مدخلات الـ kickoff الأصلية، معبأة مسبقا وقابلة للتحرير.
+
+      <Frame>
+        <img src="/images/checkpoint-tui-detail-inputs.png" alt="Editable kickoff inputs" />
+      </Frame>
+
+    - **مخرجات المهام** — مخرجات المهام المكتملة. تحرير مخرج والضغط على **Fork** يبطل المهام التابعة لتعاد بالسياق المعدل.
+
+      <Frame>
+        <img src="/images/checkpoint-tui-detail-tasks.png" alt="Editable task outputs" />
+      </Frame>
+
+    <Frame caption="عرض التفرع — تأكيد فرع جديد من نقطة الحفظ المختارة.">
+      <img src="/images/checkpoint-tui-details-fork.png" alt="Fork confirmation panel" />
+    </Frame>
+
+    <Tip>
+    مفيد لاستكشاف "ماذا لو": تفرع، عدل، راقب.
+    </Tip>
+  </Accordion>
+
+  <Accordion title="تفقد نقاط الحفظ بدون TUI" icon="magnifying-glass">
+    ```bash
+    crewai checkpoint list ./my_checkpoints
+    crewai checkpoint info ./my_checkpoints/<file>.json
+    crewai checkpoint info ./.checkpoints.db
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## المرجع
+
+### `CheckpointConfig`
+
+<ParamField path="location" type="str" default='"./.checkpoints"'>
+  وجهة التخزين. مجلد لـ `JsonProvider`، مسار ملف قاعدة بيانات لـ `SqliteProvider`.
+</ParamField>
+
+<ParamField path="on_events" type='list[CheckpointEventType | Literal["*"]]' default='["task_completed"]'>
+  أنواع الأحداث التي تطلق نقطة حفظ. `CheckpointEventType` هو `Literal` — مدقق الأنواع يكمل تلقائيا ويرفض القيم غير المدعومة. راجع [أنواع الأحداث](#أنواع-الأحداث) للقائمة الكاملة.
+</ParamField>
+
+<ParamField path="provider" type="BaseProvider" default="JsonProvider()">
+  واجهة التخزين. `JsonProvider` أو `SqliteProvider`.
+</ParamField>
+
+<ParamField path="max_checkpoints" type="int | None" default="None">
+  الحد الاقصى لنقاط الحفظ المحتفظ بها. الأقدم تحذف بعد كل كتابة.
+</ParamField>
+
+<ParamField path="restore_from" type="Path | str | None" default="None">
+  نقطة الحفظ المراد استعادتها عند تمريرها عبر `from_checkpoint`.
+</ParamField>
+
+### قيم حقل `checkpoint`
+
+مقبولة في `Crew` و`Flow` و`Agent`.
+
+<ParamField path="None" type="افتراضي">
+  يرث من الأب.
+</ParamField>
+
+<ParamField path="True" type="bool">
+  تفعيل بالإعدادات الافتراضية.
+</ParamField>
+
+<ParamField path="False" type="bool">
+  انسحاب صريح. يوقف الوراثة.
+</ParamField>
+
+<ParamField path="CheckpointConfig(...)" type="CheckpointConfig">
+  إعدادات مخصصة.
+</ParamField>
+
+### أنواع الأحداث
+
+يقبل `on_events` أي مجموعة من قيم `CheckpointEventType`. الافتراضي `["task_completed"]` يكتب نقطة حفظ لكل مهمة منتهية، و`["*"]` يطابق جميع الأحداث.
+
 <Warning>
-الـ Checkpointing في اصدار مبكر. قد تتغير واجهات البرمجة في الاصدارات المستقبلية.
+`["*"]` والأحداث عالية التردد مثل `llm_call_completed` تكتب نقاط حفظ كثيرة وقد تضر بالاداء. استخدمها مع `max_checkpoints`.
 </Warning>
 
-## نظرة عامة
+<Expandable title="جميع الأحداث المدعومة">
 
-يقوم الـ Checkpointing بحفظ حالة التنفيذ تلقائيا اثناء التشغيل. اذا فشل طاقم او تدفق او وكيل اثناء التنفيذ، يمكنك الاستعادة من اخر نقطة حفظ والاستئناف دون اعادة تنفيذ العمل المكتمل.
+- **Task** — `task_started`, `task_completed`, `task_failed`, `task_evaluation`
+- **Crew** — `crew_kickoff_started`, `crew_kickoff_completed`, `crew_kickoff_failed`, `crew_train_started`, `crew_train_completed`, `crew_train_failed`, `crew_test_started`, `crew_test_completed`, `crew_test_failed`, `crew_test_result`
+- **Agent** — `agent_execution_started`, `agent_execution_completed`, `agent_execution_error`, `lite_agent_execution_started`, `lite_agent_execution_completed`, `lite_agent_execution_error`, `agent_evaluation_started`, `agent_evaluation_completed`, `agent_evaluation_failed`
+- **Flow** — `flow_created`, `flow_started`, `flow_finished`, `flow_paused`, `method_execution_started`, `method_execution_finished`, `method_execution_failed`, `method_execution_paused`, `human_feedback_requested`, `human_feedback_received`, `flow_input_requested`, `flow_input_received`
+- **LLM** — `llm_call_started`, `llm_call_completed`, `llm_call_failed`, `llm_stream_chunk`, `llm_thinking_chunk`
+- **LLM Guardrail** — `llm_guardrail_started`, `llm_guardrail_completed`, `llm_guardrail_failed`
+- **Tool** — `tool_usage_started`, `tool_usage_finished`, `tool_usage_error`, `tool_validate_input_error`, `tool_selection_error`, `tool_execution_error`
+- **Memory** — `memory_save_started`, `memory_save_completed`, `memory_save_failed`, `memory_query_started`, `memory_query_completed`, `memory_query_failed`, `memory_retrieval_started`, `memory_retrieval_completed`, `memory_retrieval_failed`
+- **Knowledge** — `knowledge_search_query_started`, `knowledge_search_query_completed`, `knowledge_query_started`, `knowledge_query_completed`, `knowledge_query_failed`, `knowledge_search_query_failed`
+- **Reasoning** — `agent_reasoning_started`, `agent_reasoning_completed`, `agent_reasoning_failed`
+- **MCP** — `mcp_connection_started`, `mcp_connection_completed`, `mcp_connection_failed`, `mcp_tool_execution_started`, `mcp_tool_execution_completed`, `mcp_tool_execution_failed`, `mcp_config_fetch_failed`
+- **Observation** — `step_observation_started`, `step_observation_completed`, `step_observation_failed`, `plan_refinement`, `plan_replan_triggered`, `goal_achieved_early`
+- **Skill** — `skill_discovery_started`, `skill_discovery_completed`, `skill_loaded`, `skill_activated`, `skill_load_failed`
+- **Logging** — `agent_logs_started`, `agent_logs_execution`
+- **A2A** — `a2a_delegation_started`, `a2a_delegation_completed`, `a2a_conversation_started`, `a2a_conversation_completed`, `a2a_message_sent`, `a2a_response_received`, `a2a_polling_started`, `a2a_polling_status`, `a2a_push_notification_registered`, `a2a_push_notification_received`, `a2a_push_notification_sent`, `a2a_push_notification_timeout`, `a2a_streaming_started`, `a2a_streaming_chunk`, `a2a_agent_card_fetched`, `a2a_authentication_failed`, `a2a_artifact_received`, `a2a_connection_error`, `a2a_server_task_started`, `a2a_server_task_completed`, `a2a_server_task_canceled`, `a2a_server_task_failed`, `a2a_parallel_delegation_started`, `a2a_parallel_delegation_completed`, `a2a_transport_negotiated`, `a2a_content_type_negotiated`, `a2a_context_created`, `a2a_context_expired`, `a2a_context_idle`, `a2a_context_completed`, `a2a_context_pruned`
+- **إشارات النظام** — `SIGTERM`, `SIGINT`, `SIGHUP`, `SIGTSTP`, `SIGCONT`
+- **حرف بدل** — `"*"` يطابق جميع الأحداث.
 
-## البداية السريعة
+</Expandable>
 
-```python
-from crewai import Crew, CheckpointConfig
+### مزودات التخزين
 
-crew = Crew(
-    agents=[...],
-    tasks=[...],
-    checkpoint=True,  # يستخدم الافتراضيات: ./.checkpoints, عند task_completed
-)
-result = crew.kickoff()
-```
+<ParamField path="JsonProvider" type="provider">
+  ملف واحد لكل نقطة حفظ بصيغة `<timestamp>_<uuid>.json` داخل `location`.
+</ParamField>
 
-تتم كتابة ملفات نقاط الحفظ في `./.checkpoints/` بعد اكتمال كل مهمة.
+<ParamField path="SqliteProvider" type="provider">
+  ملف قاعدة بيانات واحد في `location` مع journaling WAL.
+</ParamField>
 
-## التكوين
+### سطر الأوامر
 
-استخدم `CheckpointConfig` للتحكم الكامل:
-
-```python
-from crewai import Crew, CheckpointConfig
-
-crew = Crew(
-    agents=[...],
-    tasks=[...],
-    checkpoint=CheckpointConfig(
-        location="./my_checkpoints",
-        on_events=["task_completed", "crew_kickoff_completed"],
-        max_checkpoints=5,
-    ),
-)
-```
-
-### حقول CheckpointConfig
-
-| الحقل | النوع | الافتراضي | الوصف |
-|:------|:------|:----------|:------|
-| `location` | `str` | `"./.checkpoints"` | مسار ملفات نقاط الحفظ |
-| `on_events` | `list[str]` | `["task_completed"]` | انواع الاحداث التي تطلق نقطة حفظ |
-| `provider` | `BaseProvider` | `JsonProvider()` | واجهة التخزين |
-| `max_checkpoints` | `int \| None` | `None` | الحد الاقصى للملفات؛ يتم حذف الاقدم اولا |
-
-### الوراثة والانسحاب
-
-يقبل حقل `checkpoint` في Crew و Flow و Agent قيم `CheckpointConfig` او `True` او `False` او `None`:
-
-| القيمة | السلوك |
-|:-------|:-------|
-| `None` (افتراضي) | يرث من الاصل. الوكيل يرث اعدادات الطاقم. |
-| `True` | تفعيل بالاعدادات الافتراضية. |
-| `False` | انسحاب صريح. يوقف الوراثة من الاصل. |
-| `CheckpointConfig(...)` | اعدادات مخصصة. |
-
-```python
-crew = Crew(
-    agents=[
-        Agent(role="Researcher", ...),                  # يرث checkpoint من الطاقم
-        Agent(role="Writer", ..., checkpoint=False),     # منسحب، بدون نقاط حفظ
-    ],
-    tasks=[...],
-    checkpoint=True,
-)
-```
-
-## الاستئناف من نقطة حفظ
-
-```python
-# استعادة واستئناف
-crew = Crew.from_checkpoint("./my_checkpoints/20260407T120000_abc123.json")
-result = crew.kickoff()  # يستأنف من اخر مهمة مكتملة
-```
-
-يتخطى الطاقم المستعاد المهام المكتملة ويستأنف من اول مهمة غير مكتملة.
-
-## يعمل على Crew و Flow و Agent
-
-### Crew
-
-```python
-crew = Crew(
-    agents=[researcher, writer],
-    tasks=[research_task, write_task, review_task],
-    checkpoint=CheckpointConfig(location="./crew_cp"),
-)
-```
-
-المشغل الافتراضي: `task_completed` (نقطة حفظ واحدة لكل مهمة مكتملة).
-
-### Flow
-
-```python
-from crewai.flow.flow import Flow, start, listen
-from crewai import CheckpointConfig
-
-class MyFlow(Flow):
-    @start()
-    def step_one(self):
-        return "data"
-
-    @listen(step_one)
-    def step_two(self, data):
-        return process(data)
-
-flow = MyFlow(
-    checkpoint=CheckpointConfig(
-        location="./flow_cp",
-        on_events=["method_execution_finished"],
-    ),
-)
-result = flow.kickoff()
-
-# استئناف
-flow = MyFlow.from_checkpoint("./flow_cp/20260407T120000_abc123.json")
-result = flow.kickoff()
-```
-
-### Agent
-
-```python
-agent = Agent(
-    role="Researcher",
-    goal="Research topics",
-    backstory="Expert researcher",
-    checkpoint=CheckpointConfig(
-        location="./agent_cp",
-        on_events=["lite_agent_execution_completed"],
-    ),
-)
-result = agent.kickoff(messages=[{"role": "user", "content": "Research AI trends"}])
-```
-
-## مزودات التخزين
-
-يتضمن CrewAI مزودي تخزين لنقاط الحفظ.
-
-### JsonProvider (افتراضي)
-
-يكتب كل نقطة حفظ كملف JSON منفصل.
-
-```python
-from crewai import Crew, CheckpointConfig
-from crewai.state import JsonProvider
-
-crew = Crew(
-    agents=[...],
-    tasks=[...],
-    checkpoint=CheckpointConfig(
-        location="./my_checkpoints",
-        provider=JsonProvider(),
-        max_checkpoints=5,
-    ),
-)
-```
-
-### SqliteProvider
-
-يخزن جميع نقاط الحفظ في ملف قاعدة بيانات SQLite واحد.
-
-```python
-from crewai import Crew, CheckpointConfig
-from crewai.state import SqliteProvider
-
-crew = Crew(
-    agents=[...],
-    tasks=[...],
-    checkpoint=CheckpointConfig(
-        location="./.checkpoints.db",
-        provider=SqliteProvider(),
-    ),
-)
-```
-
-
-## انواع الاحداث
-
-يقبل حقل `on_events` اي مجموعة من سلاسل انواع الاحداث. الخيارات الشائعة:
-
-| حالة الاستخدام | الاحداث |
-|:---------------|:--------|
-| بعد كل مهمة (Crew) | `["task_completed"]` |
-| بعد كل طريقة في التدفق | `["method_execution_finished"]` |
-| بعد تنفيذ الوكيل | `["agent_execution_completed"]`, `["lite_agent_execution_completed"]` |
-| عند اكتمال الطاقم فقط | `["crew_kickoff_completed"]` |
-| بعد كل استدعاء LLM | `["llm_call_completed"]` |
-| على كل شيء | `["*"]` |
-
-<Warning>
-استخدام `["*"]` او احداث عالية التردد مثل `llm_call_completed` سيكتب العديد من ملفات نقاط الحفظ وقد يؤثر على الاداء. استخدم `max_checkpoints` للحد من استخدام المساحة.
-</Warning>
-
-## نقاط الحفظ اليدوية
-
-للتحكم الكامل، سجل معالج الاحداث الخاص بك واستدع `state.checkpoint()` مباشرة:
-
-```python
-from crewai.events.event_bus import crewai_event_bus
-from crewai.events.types.llm_events import LLMCallCompletedEvent
-
-# معالج متزامن
-@crewai_event_bus.on(LLMCallCompletedEvent)
-def on_llm_done(source, event, state):
-    path = state.checkpoint("./my_checkpoints")
-    print(f"تم حفظ نقطة الحفظ: {path}")
-
-# معالج غير متزامن
-@crewai_event_bus.on(LLMCallCompletedEvent)
-async def on_llm_done_async(source, event, state):
-    path = await state.acheckpoint("./my_checkpoints")
-    print(f"تم حفظ نقطة الحفظ: {path}")
-```
-
-وسيط `state` هو `RuntimeState` الذي يتم تمريره تلقائيا بواسطة ناقل الاحداث عندما يقبل المعالج 3 معاملات. يمكنك تسجيل معالجات على اي نوع حدث مدرج في وثائق [Event Listeners](/ar/concepts/event-listener).
-
-الـ Checkpointing يعمل بافضل جهد: اذا فشلت كتابة نقطة حفظ، يتم تسجيل الخطأ ولكن التنفيذ يستمر دون انقطاع.
+| الامر | الغرض |
+|:------|:------|
+| `crewai checkpoint` | تشغيل TUI؛ كشف التخزين تلقائيا. |
+| `crewai checkpoint --location <path>` | تشغيل TUI على موقع محدد. |
+| `crewai checkpoint list <path>` | سرد نقاط الحفظ. |
+| `crewai checkpoint info <path>` | تفقد ملف نقطة حفظ أو آخر مدخل في قاعدة بيانات SQLite. |

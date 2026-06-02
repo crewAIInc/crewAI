@@ -37,7 +37,6 @@ class TriggersCommand(BaseCommand, PlusAPIMixin):
     def execute_with_trigger(self, trigger_path: str) -> None:
         """Execute crew with trigger payload."""
         try:
-            # Parse app_slug/trigger_slug
             if "/" not in trigger_path:
                 console.print(
                     "[bold red]Error: Trigger must be in format 'app_slug/trigger_slug'[/bold red]"
@@ -63,7 +62,6 @@ class TriggersCommand(BaseCommand, PlusAPIMixin):
             trigger_data = response.json()
             self._display_trigger_info(trigger_data)
 
-            # Run crew with trigger payload
             self._run_crew_with_payload(trigger_data.get("sample_payload", {}))
 
         except Exception as e:

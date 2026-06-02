@@ -87,7 +87,6 @@ def test_task_with_failing_guardrail():
         guardrail_max_retries=1,
     )
 
-    # First execution fails guardrail, second succeeds
     agent.execute_task.side_effect = ["bad result", "good result"]
     with pytest.raises(Exception) as exc_info:
         task.execute_sync(agent=agent)
@@ -141,7 +140,6 @@ def test_guardrail_error_in_context():
         guardrail_max_retries=1,
     )
 
-    # Mock execute_task to succeed on second attempt
     first_call = True
 
     def execute_task(task, context, tools):
@@ -202,12 +200,10 @@ def test_task_guardrail_process_output(task_output):
     )
 
     result = guardrail(task_output)
-    # Should return a tuple of (bool, str)
     assert isinstance(result, tuple)
     assert len(result) == 2
     assert isinstance(result[0], bool)
     # Note: Due to VCR cassette issues, this may return False with an error message
-    # The important thing is that the guardrail returns a valid response
     assert result[1] is not None
 
 
@@ -414,7 +410,6 @@ def test_multiple_guardrails_with_validation_failure():
             return (False, "Missing formatting")
         return (True, result.raw)
 
-    # Use a callable that tracks calls and returns appropriate values
     call_count = 0
 
     def mock_execute_task(*args, **kwargs):
@@ -441,7 +436,6 @@ def test_multiple_guardrails_with_validation_failure():
     )
 
     result = task.execute_sync(agent=agent)
-    # The second call should be processed through all guardrails
     assert result.raw == "Formatted: this is a longer text that meets requirements"
     assert task._guardrail_retry_counts.get(0, 0) == 1
 
@@ -586,7 +580,6 @@ def test_multiple_guardrails_with_llm_guardrails():
         """Callable guardrail."""
         return (True, f"Callable: {result.raw}")
 
-    # Create a proper mock agent without config issues
     from crewai import Agent
 
     agent = Agent(
@@ -600,10 +593,9 @@ def test_multiple_guardrails_with_llm_guardrails():
         agent=agent,
     )
 
-    # The LLM guardrail will be converted to LLMGuardrail internally
     assert len(task._guardrails) == 2
     assert callable(task._guardrails[0])
-    assert callable(task._guardrails[1])  # LLMGuardrail is callable
+    assert callable(task._guardrails[1])
 
 
 def test_multiple_guardrails_processing_order():
@@ -682,7 +674,6 @@ def test_multiple_guardrails_with_pydantic_output():
 
     result = task.execute_sync(agent=agent)
 
-    # Verify the result is valid JSON and can be parsed
     import json
 
     parsed = json.loads(result.raw)
@@ -731,12 +722,11 @@ def test_guardrails_vs_single_guardrail_mutual_exclusion():
     task = create_smart_task(
         description="Test mutual exclusion",
         expected_output="Exclusion test",
-        guardrail=single_guardrail,  # This should be ignored
-        guardrails=[list_guardrail],  # This should be used
+        guardrail=single_guardrail,
+        guardrails=[list_guardrail],
     )
 
     result = task.execute_sync(agent=agent)
-    # Should only use the guardrails list, not the single guardrail
     assert result.raw == "List: test"
     assert task._guardrail is None  # Single guardrail should be nullified
 

@@ -116,7 +116,6 @@ class ToolCallHookContext:
             event_listener.formatter.resume_live_updates()
 
 
-# Global hook registries
 _before_tool_call_hooks: list[BeforeToolCallHookType | BeforeToolCallHookCallable] = []
 _after_tool_call_hooks: list[AfterToolCallHookType | AfterToolCallHookCallable] = []
 

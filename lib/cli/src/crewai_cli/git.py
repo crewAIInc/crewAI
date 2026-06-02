@@ -1,4 +1,4 @@
-from functools import lru_cache
+from functools import cached_property
 import subprocess
 
 
@@ -9,7 +9,7 @@ class Repository:
         if not self.is_git_installed():
             raise ValueError("Git is not installed or not found in your PATH.")
 
-        if not self.is_git_repo():
+        if not self.is_git_repo:
             raise ValueError(f"{self.path} is not a Git repository.")
 
         self.fetch()
@@ -40,13 +40,9 @@ class Repository:
             encoding="utf-8",
         ).strip()
 
-    @lru_cache(maxsize=None)  # noqa: B019
+    @cached_property
     def is_git_repo(self) -> bool:
-        """Check if the current directory is a git repository.
-
-        Notes:
-          - TODO: This method is cached to avoid redundant checks, but using lru_cache on methods can lead to memory leaks
-        """
+        """Check if the current directory is a git repository."""
         try:
             subprocess.check_output(
                 ["git", "rev-parse", "--is-inside-work-tree"],  # noqa: S607

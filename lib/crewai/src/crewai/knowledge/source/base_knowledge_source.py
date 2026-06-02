@@ -13,7 +13,9 @@ class BaseKnowledgeSource(BaseModel, ABC):
     chunk_size: int = 4000
     chunk_overlap: int = 200
     chunks: list[str] = Field(default_factory=list)
-    chunk_embeddings: list[np.ndarray[Any, np.dtype[Any]]] = Field(default_factory=list)
+    chunk_embeddings: list[np.ndarray[Any, np.dtype[Any]]] = Field(
+        default_factory=list, exclude=True
+    )
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
     storage: KnowledgeStorage | None = Field(default=None)

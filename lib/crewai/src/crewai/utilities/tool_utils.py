@@ -245,7 +245,6 @@ def execute_tool_and_check_finality(
             tool_result=tool_result,
         )
 
-        # Execute after_tool_call hooks
         after_hooks = get_after_tool_call_hooks()
         modified_result: str = tool_result
         try:
