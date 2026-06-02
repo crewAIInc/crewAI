@@ -22,7 +22,6 @@ from glide import (
     ConnectionError,
     DataType,
     DistanceMetricType,
-    Field,
     FtCreateOptions,
     FtSearchLimit,
     FtSearchOptions,
@@ -530,7 +529,6 @@ class ValkeyStorage:
 
         try:
             # Build vector field attributes using the concrete subclass
-            vector_attrs: VectorFieldAttributesHnsw | VectorFieldAttributesFlat
             if self._index_algorithm == "HNSW":
                 algorithm = VectorAlgorithm.HNSW
                 vector_attrs = VectorFieldAttributesHnsw(
@@ -547,7 +545,7 @@ class ValkeyStorage:
                 )
 
             # Build schema
-            schema: list[Field] = [
+            schema = [
                 VectorField("embedding", algorithm, vector_attrs),
                 TagField("scope"),
                 TagField("categories", separator=","),
@@ -690,7 +688,7 @@ class ValkeyStorage:
             # Store record hash (Valkey Search will auto-index it)
             await client.hset(
                 record_key,
-                record_dict,  # type: ignore[arg-type]  # str keys are valid str|bytes
+                record_dict,
             )
 
             # Update all index structures
@@ -846,7 +844,7 @@ class ValkeyStorage:
         # Store updated record hash
         await client.hset(
             record_key,
-            record_dict,  # type: ignore[arg-type]  # str keys are valid str|bytes
+            record_dict,
         )
 
         # Add to new indexes
