@@ -195,6 +195,12 @@ class _ConversationalMixin:
     ) -> Any:
         """Append a user message, run one conversational turn, and return output.
 
+        .. warning::
+
+           **EXPERIMENTAL.** This is the public entry point for the
+           conversational ``Flow``. Signature and semantics may change before
+           the feature graduates from ``crewai.experimental``.
+
         Available only when ``conversational = True`` is set on the subclass.
         Stashes the message + session_id as pending turn state, runs kickoff
         (which restores from persist and then applies the pending turn), and
@@ -419,6 +425,22 @@ class _ConversationalMixin:
     @property
     def _conversation_config(self) -> ConversationConfig | None:
         return getattr(type(self), "conversational_config", None)
+
+    def _should_defer_trace_finalization(self) -> bool:
+        """Whether per-turn ``FlowFinished`` + ``finalize_batch`` should be skipped.
+
+        True when either:
+          - ``flow.defer_trace_finalization`` is set on the instance, OR
+          - the class-level ``ConversationConfig.defer_trace_finalization``
+            on a conversational subclass is True.
+
+        Either source enables the deferred-session pattern. The caller
+        eventually invokes ``finalize_session_traces()`` to close the batch.
+        """
+        if getattr(self, "defer_trace_finalization", False):
+            return True
+        config = self._conversation_config
+        return bool(config and config.defer_trace_finalization)
 
     def _reset_turn_execution_state(self) -> None:
         """Clear per-execution tracking so the next turn re-runs the graph."""

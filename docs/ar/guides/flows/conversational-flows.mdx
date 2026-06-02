@@ -230,6 +230,15 @@ def route(self):
 
 ## `Flow` المحادثاتي (تجريبي)
 
+<Warning>
+  **ميزة تجريبية.** سطح `Flow` المحادثاتي (`conversational = True`،
+  `handle_turn`، `ConversationConfig`، `RouterConfig`،
+  `ConversationState`، الرسم البياني المدمج والمساعدات) يقع تحت
+  `crewai.experimental` وقد يتغير شكله قبل التخرج. ثبّت إصدار CrewAI إذا
+  كنت تعتمد على سلوك محدد، وراقب changelog للتحديثات الكاسرة. الملاحظات
+  والمشاكل مرحب بها.
+</Warning>
+
 فعّل الرسم المحادثاتي بتعيين `conversational = True` على صنف فرعي من `Flow`. عندئذٍ يُظهر `Flow` الأساسي رسم `@start` / `@router` / `converse_turn` / `end_conversation` مدمجاً، ويدير `state.messages`، ويُشغّل LLM التوجيه، ويبقي دفعة trace مفتوحة عبر الجولات. أنت تكتب **المسارات المخصصة** فقط؛ والإطار يتولى الباقي.
 
 استخدمه عندما تريد دردشة متعددة الجولات مع موجّه قائم على LLM ومعالجات لكل مسار دون توصيل دورة الحياة يدوياً. استخدم `Flow[ChatState]` (النمط الأدنى مستوى في الأعلى) عندما تحتاج تحكماً كاملاً. لا يزال `crewai.experimental.ConversationalFlow` يعمل كاسم مستعار من سطر واحد لـ `Flow[ConversationState]` مع `conversational = True` — يُحتفظ به للاستيرادات القديمة؛ يُفضّل الشكل الصريح في الشيفرة الجديدة.
@@ -239,7 +248,7 @@ def route(self):
 ```python
 from crewai import LLM, Flow
 from crewai.flow import listen
-from crewai.flow.conversational import (
+from crewai.experimental.conversational import (
     ConversationConfig,
     ConversationState,
     RouterConfig,

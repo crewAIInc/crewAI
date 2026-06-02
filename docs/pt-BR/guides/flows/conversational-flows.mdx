@@ -233,6 +233,15 @@ Não use `@human_feedback` para linhas de chat de follow-up, a menos que um huma
 
 ## `Flow` conversacional (experimental)
 
+<Warning>
+  **Funcionalidade experimental.** A superfície do `Flow` conversacional
+  (`conversational = True`, `handle_turn`, `ConversationConfig`,
+  `RouterConfig`, `ConversationState`, o grafo embutido + helpers) vive em
+  `crewai.experimental` e pode mudar de formato antes de graduar. Fixe a
+  versão do CrewAI se depende de comportamento específico e acompanhe o
+  changelog para mudanças quebradoras. Feedback / issues bem-vindos.
+</Warning>
+
 Habilite o grafo conversacional definindo `conversational = True` em uma subclasse de `Flow`. O `Flow` base passa a expor um grafo embutido `@start` / `@router` / `converse_turn` / `end_conversation`, gerencia `state.messages`, dirige o LLM de roteamento e mantém o batch de trace aberto entre os turnos. Você escreve as **rotas customizadas**; o framework cuida do resto.
 
 Use isto quando quiser um chat multi-turno com router LLM e handlers por rota sem cablar o ciclo de vida na mão. Use `Flow[ChatState]` (o padrão de mais baixo nível acima) quando precisar de controle total. `crewai.experimental.ConversationalFlow` ainda funciona como alias de `Flow[ConversationState]` com `conversational = True` — preservado para imports legados; prefira a forma explícita em código novo.
@@ -242,7 +251,7 @@ Use isto quando quiser um chat multi-turno com router LLM e handlers por rota se
 ```python
 from crewai import LLM, Flow
 from crewai.flow import listen
-from crewai.flow.conversational import (
+from crewai.experimental.conversational import (
     ConversationConfig,
     ConversationState,
     RouterConfig,

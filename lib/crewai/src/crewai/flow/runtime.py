@@ -713,6 +713,13 @@ class Flow(_ConversationalMixin, BaseModel, Generic[T], metaclass=FlowMeta):
     # ``handle_turn`` becomes the chat entry point. When ``False`` (default),
     # the methods exist as inert attributes and never register or fire —
     # non-chat flows pay no runtime cost.
+    #
+    # ⚠ EXPERIMENTAL FEATURE. The whole conversational surface
+    # (``conversational`` ClassVar, ``handle_turn``, ``ConversationConfig``,
+    # ``RouterConfig``, ``ConversationState``, the built-in graph + helpers)
+    # lives under ``crewai.experimental`` and may change shape before
+    # graduating. Pin your CrewAI version if you depend on specific
+    # behavior, and watch the changelog for breaking updates.
     conversational: ClassVar[bool] = False
     conversational_config: ClassVar[ConversationConfig | None] = None
     builtin_routes: ClassVar[tuple[str, ...]] = ("converse", "end")
@@ -2223,7 +2230,7 @@ class Flow(_ConversationalMixin, BaseModel, Generic[T], metaclass=FlowMeta):
             # before emitting ``FlowFinishedEvent`` (otherwise the bus
             # warns "Ending event 'flow_finished' emitted with empty
             # scope stack").
-            if self.defer_trace_finalization:
+            if self._should_defer_trace_finalization():
                 object.__setattr__(
                     self, "_deferred_flow_started_event_id", started_event.event_id
                 )
@@ -2345,8 +2352,10 @@ class Flow(_ConversationalMixin, BaseModel, Generic[T], metaclass=FlowMeta):
             # When ``defer_trace_finalization`` is set, skip both per-turn
             # ``FlowFinishedEvent`` AND trace-batch finalization. The caller
             # invokes ``finalize_session_traces()`` once at session end to
-            # close out the whole conversation as one trace.
-            if not self.defer_trace_finalization:
+            # close out the whole conversation as one trace. The flag is
+            # read from EITHER the instance attribute (set by user code) OR
+            # the class-level ``ConversationConfig.defer_trace_finalization``.
+            if not self._should_defer_trace_finalization():
                 future = crewai_event_bus.emit(
                     self,
                     FlowFinishedEvent(

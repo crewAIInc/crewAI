@@ -233,6 +233,14 @@ def route(self):
 
 ## 대화형 `Flow` (실험적)
 
+<Warning>
+  **실험적 기능입니다.** 대화형 `Flow`의 API 표면(`conversational = True`,
+  `handle_turn`, `ConversationConfig`, `RouterConfig`, `ConversationState`,
+  내장 그래프와 헬퍼)은 `crewai.experimental` 하위에 있으며 정식 출시
+  전까지 변경될 수 있습니다. 특정 동작에 의존한다면 CrewAI 버전을 고정하고
+  변경 사항이 있는지 changelog를 확인하세요. 피드백과 이슈 환영합니다.
+</Warning>
+
 `Flow` 서브클래스에 `conversational = True`를 지정하면 대화형 챗 그래프가 활성화됩니다. 베이스 `Flow`가 `@start` / `@router` / `converse_turn` / `end_conversation` 그래프를 노출하고, `state.messages`를 관리하며, router LLM을 구동하고, 턴 간 trace 배치를 열린 상태로 유지합니다. 여러분은 **커스텀 라우트**만 작성하면 되고, 나머지는 프레임워크가 담당합니다.
 
 LLM 기반 라우터와 라우트별 핸들러로 멀티턴 챗을 만들고 싶지만 라이프사이클을 직접 배선하고 싶지 않을 때 사용하세요. 완전한 제어가 필요하면 위의 `Flow[ChatState]`로 내려가세요. `crewai.experimental.ConversationalFlow`는 `Flow[ConversationState]` + `conversational = True`의 한 줄 별칭으로 계속 동작하며 — 레거시 임포트를 위해 유지되지만, 새 코드에서는 명시적 형태를 권장합니다.
@@ -242,7 +250,7 @@ LLM 기반 라우터와 라우트별 핸들러로 멀티턴 챗을 만들고 싶
 ```python
 from crewai import LLM, Flow
 from crewai.flow import listen
-from crewai.flow.conversational import (
+from crewai.experimental.conversational import (
     ConversationConfig,
     ConversationState,
     RouterConfig,

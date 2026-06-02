@@ -44,6 +44,13 @@ def _conversational_only(func: F) -> F:
 class RouterConfig:
     """LLM router configuration for the experimental conversational ``Flow``.
 
+    .. warning::
+
+       **EXPERIMENTAL.** Part of the conversational ``Flow`` surface. Fields
+       and defaults may change before the feature graduates from
+       ``crewai.experimental``. Pin your CrewAI version if you depend on
+       a specific shape.
+
     ``route_descriptions`` overrides the per-route descriptions used to build
     the router LLM's "available routes" catalog. Routes without an entry fall
     back to the handler's docstring first line (or, for built-in routes, the
@@ -64,6 +71,13 @@ class RouterConfig:
 @dataclass
 class ConversationConfig:
     """Class-level configuration for the experimental conversational ``Flow``.
+
+    .. warning::
+
+       **EXPERIMENTAL.** Part of the conversational ``Flow`` surface. Fields
+       and defaults may change before the feature graduates from
+       ``crewai.experimental``. Pin your CrewAI version if you depend on
+       a specific shape.
 
     ``system_prompt`` defaults to the ``slices.conversational_system_prompt``
     translation when left as ``None``. Pass an empty string to opt out of any
@@ -120,6 +134,11 @@ class ConversationEvent(BaseModel):
 
 class ConversationState(BaseModel):
     """Structured state for the experimental conversational ``Flow``.
+
+    .. warning::
+
+       **EXPERIMENTAL.** Field shape and defaults may change before the
+       conversational ``Flow`` graduates from ``crewai.experimental``.
 
     ``messages`` is the canonical user-facing history. Agent/tool scratch work
     belongs in ``events`` or ``agent_threads`` unless explicitly made public.
