@@ -649,6 +649,7 @@ FooterKey .footer-key--key {
             pass
         self._tick()
         self._scroll_to_result()
+        self.call_later(self._focus_activity_log)
         self._tick_timer.stop()
         self._tick_timer = self.set_interval(1 / 2, self._tick)
 
@@ -666,6 +667,7 @@ FooterKey .footer-key--key {
                     entry["status"] = "error"
                     entry["duration"] = now - entry["start_time"]
         self._tick()
+        self.call_later(self._focus_activity_log)
         self._tick_timer.stop()
         self._tick_timer = self.set_interval(1 / 2, self._tick)
 
@@ -685,10 +687,14 @@ FooterKey .footer-key--key {
                 return
         except Exception:
             return
+        should_refresh = False
         with self._lock:
             if self._log_entries:
                 self._log_cursor = min(self._log_cursor + 1, len(self._log_entries) - 1)
                 self._log_scroll_needed = True
+                should_refresh = True
+        if should_refresh:
+            self._refresh_log_panel()
 
     def action_log_up(self) -> None:
         try:
@@ -696,9 +702,14 @@ FooterKey .footer-key--key {
                 return
         except Exception:
             return
+        should_refresh = False
         with self._lock:
-            self._log_cursor = max(self._log_cursor - 1, 0)
-            self._log_scroll_needed = True
+            if self._log_entries:
+                self._log_cursor = max(self._log_cursor - 1, 0)
+                self._log_scroll_needed = True
+                should_refresh = True
+        if should_refresh:
+            self._refresh_log_panel()
 
     def action_log_toggle(self) -> None:
         try:
@@ -706,11 +717,16 @@ FooterKey .footer-key--key {
                 return
         except Exception:
             return
+        should_refresh = False
         with self._lock:
-            if self._log_cursor in self._log_expanded:
-                self._log_expanded.discard(self._log_cursor)
-            else:
-                self._log_expanded.add(self._log_cursor)
+            if self._log_entries:
+                if self._log_cursor in self._log_expanded:
+                    self._log_expanded.discard(self._log_cursor)
+                else:
+                    self._log_expanded.add(self._log_cursor)
+                should_refresh = True
+        if should_refresh:
+            self._refresh_log_panel()
 
     def action_quit(self) -> None:
         self._unsubscribe()
@@ -810,6 +826,20 @@ FooterKey .footer-key--key {
         except Exception:
             pass
 
+    def _focus_activity_log(self) -> None:
+        if not self.is_mounted:
+            return
+        log_panel = self.query_one("#log-panel", VerticalScroll)
+        if log_panel.display:
+            log_panel.focus()
+
+    def _refresh_log_panel(self) -> None:
+        if not self.is_mounted:
+            return
+        with self._lock:
+            if self.query_one("#log-panel").display:
+                self._render_log_panel()
+
     def on_click(self, event: Any) -> None:
         try:
             widget = self.query_one("#log-content", Static)
@@ -828,6 +858,7 @@ FooterKey .footer-key--key {
                     else:
                         self._log_expanded.add(idx)
                     break
+        self._refresh_log_panel()
 
     # ── Tick (8 fps) ────────────────────────────────────────
 
@@ -1079,13 +1110,12 @@ FooterKey .footer-key--key {
                 self._log_expanded.add(i)
 
             arrow = "▾" if expanded else "▸"
-            prefix = f"  {_C_PRIMARY}" if focused else ""
 
             if focused:
                 t.append("\n")
-                t.append(f" › ", style=_C_PRIMARY)
+                t.append(" › ", style=_C_PRIMARY)
             else:
-                t.append(f"\n   ", style="")
+                t.append("\n   ", style="")
 
             if status == "running":
                 elapsed = now - entry["start_time"]

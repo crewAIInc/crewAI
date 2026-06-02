@@ -1,4 +1,7 @@
 from datetime import datetime
+import time
+
+import pytest
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.observation_events import (
@@ -24,6 +27,20 @@ def _app_with_plan() -> CrewRunApp:
     }
     app._plan_step_status = {1: "pending", 2: "pending", 3: "pending"}
     return app
+
+
+def _log_entry(name: str) -> dict:
+    now = time.time()
+    return {
+        "tool_name": name,
+        "status": "success",
+        "args": None,
+        "result": f"{name} result",
+        "error": None,
+        "start_time": now,
+        "duration": 1.0,
+        "task_idx": 1,
+    }
 
 
 def test_plan_step_status_updates_only_the_explicit_step() -> None:
@@ -156,3 +173,27 @@ def test_step_observation_json_is_hidden_from_streaming_text() -> None:
         )
         == "Visible before  visible after"
     )
+
+
+@pytest.mark.asyncio
+async def test_completed_run_keeps_activity_log_keyboard_navigation_active() -> None:
+    app = CrewRunApp()
+
+    async with app.run_test(size=(100, 40)) as pilot:
+        app._log_entries = [_log_entry("search"), _log_entry("scrape")]
+
+        app._on_crew_done("final output")
+        await pilot.pause()
+
+        assert app.focused is app.query_one("#log-panel")
+
+        await pilot.press("down", "enter")
+        await pilot.pause()
+
+        assert app._log_cursor == 1
+        assert app._log_expanded == {1}
+
+        await pilot.press("up")
+        await pilot.pause()
+
+        assert app._log_cursor == 0
