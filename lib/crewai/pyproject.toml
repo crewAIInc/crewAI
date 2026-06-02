@@ -27,9 +27,9 @@ dependencies = [
     "openpyxl~=3.1.5",
     # Authentication and Security
     "python-dotenv>=1.2.2,<2",
-    "pyjwt>=2.9.0,<3",
+    "pyjwt>=2.13.0,<3",
     # Configuration and Utils
-    "click~=8.1.7",
+    "click>=8.1.7,<9",
     "appdirs~=1.4.4",
     "jsonref~=1.1.0",
     "json-repair~=0.25.2",
