@@ -8,11 +8,16 @@ any [project.scripts], so uv could not find an executable to expose.
 from __future__ import annotations
 
 import importlib
+import sys
 from pathlib import Path
 
 import click
 import pytest
-import tomllib
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib
 
 
 CREWAI_PYPROJECT = (

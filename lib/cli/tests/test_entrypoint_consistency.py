@@ -8,10 +8,15 @@ via `uv tool install` exposes the `crewai` executable.
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import pytest
-import tomllib
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib
 
 
 LIB_DIR = Path(__file__).resolve().parents[2]
