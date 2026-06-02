@@ -156,7 +156,7 @@ class TestSnowflakeRequests:
 
         assert messages == [{"role": "user", "content": "Write a summary."}]
 
-    def test_claude_model_adds_user_turn_after_tool_call_assistant_message(
+    def test_claude_model_removes_dangling_tool_call_without_result(
         self, monkeypatch: pytest.MonkeyPatch
     ):
         _snowflake_env(monkeypatch)
@@ -179,8 +179,43 @@ class TestSnowflakeRequests:
             ]
         )
 
-        assert messages[-2]["role"] == "assistant"
-        assert messages[-2]["tool_calls"][0]["id"] == "call_1"
+        assert messages == [{"role": "user", "content": "Use the tool."}]
+
+    def test_claude_model_preserves_complete_tool_call_result_pair(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        _snowflake_env(monkeypatch)
+        llm = SnowflakeCompletion(model="claude-sonnet-4-5")
+
+        messages = llm._format_messages(
+            [
+                {"role": "user", "content": "Use the tool."},
+                {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": "call_1",
+                            "type": "function",
+                            "function": {"name": "lookup", "arguments": "{}"},
+                        }
+                    ],
+                },
+                {
+                    "role": "tool",
+                    "tool_call_id": "call_1",
+                    "content": "result",
+                },
+            ]
+        )
+
+        assert messages[-3]["role"] == "assistant"
+        assert messages[-3]["tool_calls"][0]["id"] == "call_1"
+        assert messages[-2] == {
+            "role": "tool",
+            "tool_call_id": "call_1",
+            "content": "result",
+        }
         assert messages[-1]["role"] == "user"
 
     def test_claude_model_maps_max_tokens_to_max_completion_tokens(
