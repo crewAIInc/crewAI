@@ -19,21 +19,23 @@ interactions:
       - AUTHORIZATION-XXX
       x-amz-date:
       - X-AMZ-DATE-XXX
+      x-amz-security-token:
+      - X-AMZ-SECURITY-TOKEN-XXX
     method: POST
-    uri: https://bedrock-runtime.us-east-1.amazonaws.com/model/us.anthropic.claude-3-5-sonnet-20241022-v2%3A0/converse
+    uri: https://bedrock-runtime.us-west-2.amazonaws.com/model/us.anthropic.claude-sonnet-4-6/converse
   response:
     body:
-      string: '{"metrics":{"latencyMs":966},"output":{"message":{"content":[{"text":"Here''s
-        a long story about a dragon:"}],"role":"assistant"}},"stopReason":"max_tokens","usage":{"inputTokens":16,"outputTokens":10,"serverToolUsage":{},"totalTokens":26}}'
+      string: '{"metrics":{"latencyMs":1421},"output":{"message":{"content":[{"text":"#
+        The Last Ember of Varathorn"}],"role":"assistant"}},"stopReason":"max_tokens","usage":{"cacheReadInputTokenCount":0,"cacheReadInputTokens":0,"cacheWriteInputTokenCount":0,"cacheWriteInputTokens":0,"inputTokens":16,"outputTokens":10,"serverToolUsage":{},"totalTokens":26}}'
     headers:
       Connection:
       - keep-alive
       Content-Length:
-      - '239'
+      - '344'
       Content-Type:
       - application/json
       Date:
-      - Mon, 01 Dec 2025 08:50:58 GMT
+      - Tue, 26 May 2026 17:05:16 GMT
       x-amzn-RequestId:
       - X-AMZN-REQUESTID-XXX
     status:

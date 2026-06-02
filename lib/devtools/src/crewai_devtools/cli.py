@@ -918,7 +918,7 @@ def _update_all_versions(
             "[yellow]Warning:[/yellow] No __version__ attributes found to update"
         )
 
-    templates_dir = lib_dir / "crewai" / "src" / "crewai" / "cli" / "templates"
+    templates_dir = lib_dir / "cli" / "src" / "crewai_cli" / "templates"
     if templates_dir.exists():
         if dry_run:
             for tpl in templates_dir.rglob("pyproject.toml"):
