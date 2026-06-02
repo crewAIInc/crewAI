@@ -31,7 +31,6 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
         cls, v: Path | list[Path] | str | list[str] | None, info: Any
     ) -> Path | list[Path] | str | list[str] | None:
         """Validate that at least one of file_path or file_paths is provided."""
-        # Single check if both are None, O(1) instead of nested conditions
         if (
             v is None
             and info.data.get(
@@ -101,7 +100,6 @@ class BaseFileKnowledgeSource(BaseKnowledgeSource, ABC):
         if self.file_paths is None:
             raise ValueError("Your source must be provided with a file_paths: []")
 
-        # Convert single path to list
         path_list: list[Path | str] = (
             [self.file_paths]
             if isinstance(self.file_paths, (str, Path))

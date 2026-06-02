@@ -197,10 +197,6 @@ class LanceDBStorage:
                 "Scope index creation skipped (may already exist)", exc_info=True
             )
 
-    # ------------------------------------------------------------------
-    # Automatic background compaction
-    # ------------------------------------------------------------------
-
     def _compact_if_needed(self) -> None:
         """Spawn a background compaction on startup.
 

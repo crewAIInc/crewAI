@@ -57,7 +57,6 @@ async def test_connection_pooling(snowflake_tool, mock_snowflake_connection):
     with patch.object(snowflake_tool, "_create_connection") as mock_create_conn:
         mock_create_conn.return_value = mock_snowflake_connection
 
-        # Execute multiple queries
         await asyncio.gather(
             snowflake_tool._run("SELECT 1"),
             snowflake_tool._run("SELECT 2"),
@@ -73,10 +72,8 @@ async def test_cleanup_on_deletion(snowflake_tool, mock_snowflake_connection):
     with patch.object(snowflake_tool, "_create_connection") as mock_create_conn:
         mock_create_conn.return_value = mock_snowflake_connection
 
-        # Add connection to pool
         await snowflake_tool._get_connection()
 
-        # Return connection to pool
         async with snowflake_tool._pool_lock:
             snowflake_tool._connection_pool.append(mock_snowflake_connection)
 
@@ -91,12 +88,10 @@ def test_config_validation():
     with pytest.raises(ValueError):
         SnowflakeConfig()
 
-    # Test invalid account format
     with pytest.raises(ValueError):
         SnowflakeConfig(
             account="invalid//account", user="test_user", password="test_pass"
         )
 
-    # Test missing authentication
     with pytest.raises(ValueError):
         SnowflakeConfig(account="test_account", user="test_user")

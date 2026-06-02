@@ -53,22 +53,18 @@ def test_azure_tool_use_conversation_flow():
     from crewai.llms.providers.azure.completion import AzureCompletion
     from azure.ai.inference.models import ChatCompletionsToolCall
 
-    # Create AzureCompletion instance
     completion = AzureCompletion(
         model="gpt-4",
         api_key="test-key",
         endpoint="https://test.openai.azure.com"
     )
 
-    # Mock tool function
     def mock_weather_tool(location: str) -> str:
         return f"The weather in {location} is sunny and 75°F"
 
     available_functions = {"get_weather": mock_weather_tool}
 
-    # Mock the Azure client responses
     with patch.object(completion._client, 'complete') as mock_complete:
-        # Mock tool call in response with proper type
         mock_tool_call = MagicMock(spec=ChatCompletionsToolCall)
         mock_tool_call.function.name = "get_weather"
         mock_tool_call.function.arguments = '{"location": "San Francisco"}'
@@ -90,17 +86,14 @@ def test_azure_tool_use_conversation_flow():
 
         mock_complete.return_value = mock_response
 
-        # Test the call
         messages = [{"role": "user", "content": "What's the weather like in San Francisco?"}]
         result = completion.call(
             messages=messages,
             available_functions=available_functions
         )
 
-        # Verify the tool was executed and returned the result
         assert result == "The weather in San Francisco is sunny and 75°F"
 
-        # Verify that the API was called
         assert mock_complete.called
 
 @pytest.mark.usefixtures("mock_azure_credentials")
@@ -110,19 +103,15 @@ def test_azure_completion_module_is_imported():
     """
     module_name = "crewai.llms.providers.azure.completion"
 
-    # Remove module from cache if it exists
     if module_name in sys.modules:
         del sys.modules[module_name]
 
-    # Create LLM instance - this should trigger the import
     LLM(model="azure/gpt-4")
 
-    # Verify the module was imported
     assert module_name in sys.modules
     completion_mod = sys.modules[module_name]
     assert isinstance(completion_mod, types.ModuleType)
 
-    # Verify the class exists in the module
     assert hasattr(completion_mod, 'AzureCompletion')
 
 
@@ -131,7 +120,6 @@ def test_native_azure_raises_error_when_initialization_fails():
     Test that LLM raises ImportError when native Azure completion fails to initialize.
     This ensures we don't silently fall back when there's a configuration issue.
     """
-    # Mock the _get_native_provider to return a failing class
     with patch('crewai.llm.LLM._get_native_provider') as mock_get_provider:
 
         class FailingCompletion:
@@ -199,7 +187,6 @@ def test_azure_completion_call():
     """
     llm = LLM(model="azure/gpt-4")
 
-    # Mock the call method on the instance
     with patch.object(llm, 'call', return_value="Hello! I'm Azure OpenAI, ready to help.") as mock_call:
         result = llm.call("Hello, how are you?")
 
@@ -212,13 +199,10 @@ def test_azure_completion_called_during_crew_execution():
     """
     Test that AzureCompletion.call is actually invoked when running a crew
     """
-    # Create the LLM instance first
     azure_llm = LLM(model="azure/gpt-4")
 
-    # Mock the call method on the specific instance
     with patch.object(azure_llm, 'call', return_value="Tokyo has 14 million people.") as mock_call:
 
-        # Create agent with explicit LLM configuration
         agent = Agent(
             role="Research Assistant",
             goal="Find population info",
@@ -235,7 +219,6 @@ def test_azure_completion_called_during_crew_execution():
         crew = Crew(agents=[agent], tasks=[task])
         result = crew.kickoff()
 
-        # Verify mock was called
         assert mock_call.called
         assert "14 million" in str(result)
 
@@ -245,10 +228,8 @@ def test_azure_completion_call_arguments():
     """
     Test that AzureCompletion.call is invoked with correct arguments
     """
-    # Create LLM instance first
     azure_llm = LLM(model="azure/gpt-4")
 
-    # Mock the instance method
     with patch.object(azure_llm, 'call') as mock_call:
         mock_call.return_value = "Task completed successfully."
 
@@ -256,7 +237,7 @@ def test_azure_completion_call_arguments():
             role="Test Agent",
             goal="Complete a simple task",
             backstory="You are a test agent.",
-            llm=azure_llm  # Use same instance
+            llm=azure_llm
         )
 
         task = Task(
@@ -268,18 +249,14 @@ def test_azure_completion_call_arguments():
         crew = Crew(agents=[agent], tasks=[task])
         crew.kickoff()
 
-        # Verify call was made
         assert mock_call.called
 
-        # Check the arguments passed to the call method
         call_args = mock_call.call_args
         assert call_args is not None
 
-        # The first argument should be the messages
-        messages = call_args[0][0]  # First positional argument
+        messages = call_args[0][0]
         assert isinstance(messages, (str, list))
 
-        # Verify that the task description appears in the messages
         if isinstance(messages, str):
             assert "hello world" in messages.lower()
         elif isinstance(messages, list):
@@ -291,10 +268,8 @@ def test_multiple_azure_calls_in_crew():
     """
     Test that AzureCompletion.call is invoked multiple times for multiple tasks
     """
-    # Create LLM instance first
     azure_llm = LLM(model="azure/gpt-4")
 
-    # Mock the instance method
     with patch.object(azure_llm, 'call') as mock_call:
         mock_call.return_value = "Task completed."
 
@@ -302,7 +277,7 @@ def test_multiple_azure_calls_in_crew():
             role="Multi-task Agent",
             goal="Complete multiple tasks",
             backstory="You can handle multiple tasks.",
-            llm=azure_llm  # Use same instance
+            llm=azure_llm
         )
 
         task1 = Task(
@@ -323,12 +298,10 @@ def test_multiple_azure_calls_in_crew():
         )
         crew.kickoff()
 
-        # Verify multiple calls were made
         assert mock_call.call_count >= 2  # At least one call per task
 
-        # Verify each call had proper arguments
         for call in mock_call.call_args_list:
-            assert len(call[0]) > 0  # Has positional arguments
+            assert len(call[0]) > 0
             messages = call[0][0]
             assert messages is not None
 
@@ -344,10 +317,8 @@ def test_azure_completion_with_tools():
         """A sample tool for testing"""
         return f"Tool result for: {query}"
 
-    # Create LLM instance first
     azure_llm = LLM(model="azure/gpt-4")
 
-    # Mock the instance method
     with patch.object(azure_llm, 'call') as mock_call:
         mock_call.return_value = "Task completed with tools."
 
@@ -355,7 +326,7 @@ def test_azure_completion_with_tools():
             role="Tool User",
             goal="Use tools to complete tasks",
             backstory="You can use tools.",
-            llm=azure_llm,  # Use same instance
+            llm=azure_llm,
             tools=[sample_tool]
         )
 
@@ -475,7 +446,6 @@ def test_azure_endpoint_configuration():
     """
     Test that Azure endpoint configuration works with multiple environment variable names
     """
-    # Test with AZURE_ENDPOINT
     with patch.dict(os.environ, {
         "AZURE_API_KEY": "test-key",
         "AZURE_ENDPOINT": "https://test1.openai.azure.com"
@@ -486,7 +456,6 @@ def test_azure_endpoint_configuration():
         assert isinstance(llm, AzureCompletion)
         assert llm.endpoint == "https://test1.openai.azure.com/openai/deployments/gpt-4"
 
-    # Test with AZURE_OPENAI_ENDPOINT
     with patch.dict(os.environ, {
         "AZURE_API_KEY": "test-key",
         "AZURE_OPENAI_ENDPOINT": "https://test2.openai.azure.com"
@@ -517,14 +486,12 @@ def test_azure_model_capabilities():
     """
     Test that model capabilities are correctly identified
     """
-    # Test GPT-4 model (supports function calling)
     llm_gpt4 = LLM(model="azure/gpt-4")
     from crewai.llms.providers.azure.completion import AzureCompletion
     assert isinstance(llm_gpt4, AzureCompletion)
     assert llm_gpt4.is_openai_model == True
     assert llm_gpt4.supports_function_calling() == True
 
-    # Test GPT-3.5 model
     llm_gpt35 = LLM(model="azure/gpt-35-turbo")
     assert isinstance(llm_gpt35, AzureCompletion)
     assert llm_gpt35.is_openai_model == True
@@ -566,7 +533,6 @@ def test_azure_model_detection():
     """
     Test that various Azure model formats are properly detected
     """
-    # Test Azure model naming patterns
     azure_test_cases = [
         "azure/gpt-4",
         "azure_openai/gpt-4",
@@ -654,7 +620,6 @@ def test_azure_stop_words_not_included_for_unsupported_models():
         "AZURE_API_KEY": "test-key",
         "AZURE_ENDPOINT": "https://models.inference.ai.azure.com"
     }):
-        # Test GPT-5 model - stop should NOT be included even if set
         llm_gpt5 = LLM(
             model="azure/gpt-5-nano",
             stop=["STOP", "END"]
@@ -664,7 +629,6 @@ def test_azure_stop_words_not_included_for_unsupported_models():
         )
         assert "stop" not in params, "stop should not be included for GPT-5 models"
 
-        # Test regular model - stop SHOULD be included
         llm_gpt4 = LLM(
             model="azure/gpt-4",
             stop=["STOP", "END"]
@@ -680,12 +644,10 @@ def test_azure_context_window_size():
     """
     Test that Azure models return correct context window sizes
     """
-    # Test GPT-4
     llm_gpt4 = LLM(model="azure/gpt-4")
     context_size_gpt4 = llm_gpt4.get_context_window_size()
-    assert context_size_gpt4 > 0  # Should return valid context size
+    assert context_size_gpt4 > 0
 
-    # Test GPT-4o
     llm_gpt4o = LLM(model="azure/gpt-4o")
     context_size_gpt4o = llm_gpt4o.get_context_window_size()
     assert context_size_gpt4o > context_size_gpt4  # GPT-4o has larger context
@@ -697,7 +659,6 @@ def test_azure_message_formatting():
     """
     llm = LLM(model="azure/gpt-4")
 
-    # Test message formatting
     test_messages = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Hello"},
@@ -707,10 +668,8 @@ def test_azure_message_formatting():
 
     formatted_messages = llm._format_messages_for_azure(test_messages)
 
-    # All messages should be formatted as dictionaries with content
     assert len(formatted_messages) == 4
 
-    # Verify each message is a dict with content
     for msg in formatted_messages:
         assert isinstance(msg, dict)
         assert "content" in msg
@@ -720,11 +679,9 @@ def test_azure_streaming_parameter():
     """
     Test that streaming parameter is properly handled
     """
-    # Test non-streaming
     llm_no_stream = LLM(model="azure/gpt-4", stream=False)
     assert llm_no_stream.stream == False
 
-    # Test streaming
     llm_stream = LLM(model="azure/gpt-4", stream=True)
     assert llm_stream.stream == True
 
@@ -735,7 +692,6 @@ def test_azure_tool_conversion():
     """
     llm = LLM(model="azure/gpt-4")
 
-    # Mock tool in CrewAI format
     crewai_tools = [{
         "type": "function",
         "function": {
@@ -751,7 +707,6 @@ def test_azure_tool_conversion():
         }
     }]
 
-    # Test tool conversion
     azure_tools = llm._convert_tools_for_interference(crewai_tools)
 
     assert len(azure_tools) == 1
@@ -782,7 +737,6 @@ def test_azure_token_usage_tracking():
     """
     llm = LLM(model="azure/gpt-4")
 
-    # Mock the Azure response with usage information
     with patch.object(llm._client, 'complete') as mock_complete:
         mock_message = MagicMock()
         mock_message.content = "test response"
@@ -802,10 +756,8 @@ def test_azure_token_usage_tracking():
 
         result = llm.call("Hello")
 
-        # Verify the response
         assert result == "test response"
 
-        # Verify token usage was extracted
         usage = llm._extract_azure_token_usage(mock_response)
         assert usage["prompt_tokens"] == 50
         assert usage["completion_tokens"] == 25
@@ -820,7 +772,6 @@ def test_azure_http_error_handling():
 
     llm = LLM(model="azure/gpt-4")
 
-    # Mock an HTTP error
     with patch.object(llm._client, 'complete') as mock_complete:
         mock_complete.side_effect = HttpResponseError(message="Rate limit exceeded", response=MagicMock(status_code=429))
 
@@ -849,7 +800,6 @@ def test_azure_api_version_default():
 
     from crewai.llms.providers.azure.completion import AzureCompletion
     assert isinstance(llm, AzureCompletion)
-    # Should use default or environment variable
     assert llm.api_version is not None
 
 
@@ -857,11 +807,9 @@ def test_azure_function_calling_support():
     """
     Test that function calling is supported for OpenAI models
     """
-    # Test with GPT-4 (supports function calling)
     llm_gpt4 = LLM(model="azure/gpt-4")
     assert llm_gpt4.supports_function_calling() == True
 
-    # Test with GPT-3.5 (supports function calling)
     llm_gpt35 = LLM(model="azure/gpt-35-turbo")
     assert llm_gpt35.supports_function_calling() == True
 
@@ -891,7 +839,7 @@ def test_azure_openai_endpoint_url_with_trailing_slash():
 
     with patch.dict(os.environ, {
         "AZURE_API_KEY": "test-key",
-        "AZURE_ENDPOINT": "https://test-resource.openai.azure.com/"  # trailing slash
+        "AZURE_ENDPOINT": "https://test-resource.openai.azure.com/"
     }):
         llm = LLM(model="azure/gpt-4o")
 
@@ -938,7 +886,6 @@ def test_azure_openai_model_parameter_excluded():
     }):
         llm = LLM(model="azure/gpt-4")
 
-        # Prepare params to check model parameter handling
         params = llm._prepare_completion_params(
             messages=[{"role": "user", "content": "test"}]
         )
@@ -977,7 +924,6 @@ def test_azure_message_formatting_with_role():
 
     llm = LLM(model="azure/gpt-4")
 
-    # Test with string message
     formatted = llm._format_messages_for_azure("Hello world")
     assert isinstance(formatted, list)
     assert len(formatted) > 0
@@ -1072,7 +1018,7 @@ def test_azure_api_version_properly_passed():
     with patch.dict(os.environ, {
         "AZURE_API_KEY": "test-key",
         "AZURE_ENDPOINT": "https://test.openai.azure.com",
-        "AZURE_API_VERSION": ""  # Clear env var to test default
+        "AZURE_API_VERSION": ""
     }, clear=False):
         llm = LLM(model="azure/gpt-4", api_version="2024-08-01")
         assert llm.api_version == "2024-08-01"
@@ -1082,7 +1028,7 @@ def test_azure_api_version_properly_passed():
         "AZURE_ENDPOINT": "https://test.openai.azure.com"
     }, clear=True):
         llm_default = LLM(model="azure/gpt-4")
-        assert llm_default.api_version == "2024-06-01"  # Current default
+        assert llm_default.api_version == "2024-06-01"
 
 
 def test_azure_timeout_and_max_retries_stored():
@@ -1149,7 +1095,6 @@ def test_azure_endpoint_validation_with_azure_prefix():
     }):
         llm = LLM(model="azure/gpt-4o-mini")
 
-        # Should strip 'azure/' prefix and use 'gpt-4o-mini' as deployment name
         assert "gpt-4o-mini" in llm.endpoint
         assert "azure/gpt-4o-mini" not in llm.endpoint
 
@@ -1189,7 +1134,6 @@ def test_azure_deepseek_model_support():
         "AZURE_API_KEY": "test-key",
         "AZURE_ENDPOINT": "https://models.inference.ai.azure.com"
     }):
-        # Test DeepSeek model
         llm_deepseek = LLM(model="azure/deepseek-chat")
 
         # Endpoint should not be modified for non-OpenAI endpoints
@@ -1225,11 +1169,9 @@ def test_azure_mistral_and_other_models():
         }):
             llm = LLM(model=f"azure/{model_name}")
 
-            # Verify endpoint is not modified
             assert llm.endpoint == "https://models.inference.ai.azure.com"
             assert llm.is_azure_openai_endpoint == False
 
-            # Verify model parameter is included
             params = llm._prepare_completion_params(
                 messages=[{"role": "user", "content": "test"}]
             )
@@ -1290,9 +1232,7 @@ def test_azure_streaming_returns_usage_metrics():
     assert result.token_usage.successful_requests >= 1
 
 
-# =============================================================================
 # Agent Kickoff Structured Output Tests
-# =============================================================================
 
 
 @pytest.mark.vcr()
@@ -1389,16 +1329,14 @@ def test_azure_stop_words_not_applied_to_structured_output():
         finding: str = Field(description="The research finding")
         observation: str = Field(description="Observation about the finding")
 
-    # Create AzureCompletion instance with stop words configured
     llm = AzureCompletion(
         model="gpt-4",
         api_key="test-key",
         endpoint="https://test.openai.azure.com",
-        stop=["Observation:", "Final Answer:"],  # Common stop words
+        stop=["Observation:", "Final Answer:"],
     )
 
     # JSON response that contains a stop word pattern in a string field
-    # Without the fix, this would be truncated at "Observation:" breaking the JSON
     json_response = '{"finding": "The data shows growth", "observation": "Observation: This confirms the hypothesis"}'
 
     with patch.object(llm._client, 'complete') as mock_complete:
@@ -1419,16 +1357,13 @@ def test_azure_stop_words_not_applied_to_structured_output():
 
         mock_complete.return_value = mock_response
 
-        # Call with response_model - stop words should NOT be applied
         result = llm.call(
             messages=[{"role": "user", "content": "Analyze the data"}],
             response_model=ResearchResult,
         )
 
-        # Should successfully parse the full JSON without truncation
         assert isinstance(result, ResearchResult)
         assert result.finding == "The data shows growth"
-        # The observation field should contain the full text including "Observation:"
         assert "Observation:" in result.observation
 
 
@@ -1439,7 +1374,6 @@ def test_azure_stop_words_still_applied_to_regular_responses():
     """
     from crewai.llms.providers.azure.completion import AzureCompletion
 
-    # Create AzureCompletion instance with stop words configured
     llm = AzureCompletion(
         model="gpt-4",
         api_key="test-key",
@@ -1468,7 +1402,6 @@ def test_azure_stop_words_still_applied_to_regular_responses():
 
         mock_complete.return_value = mock_response
 
-        # Call WITHOUT response_model - stop words SHOULD be applied
         result = llm.call(
             messages=[{"role": "user", "content": "Search for something"}],
         )
