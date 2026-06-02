@@ -3,10 +3,11 @@ from __future__ import annotations
 from collections.abc import Iterator
 from functools import cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, NamedTuple, Self, cast
+from typing import TYPE_CHECKING, Any, Literal, NamedTuple, cast
 from urllib.parse import urlparse
 
 from pydantic import Field, model_validator
+from typing_extensions import Self
 
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
