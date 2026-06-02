@@ -179,19 +179,11 @@ def set_lock_backend(backend: LockBackend | None) -> None:
     Args:
         backend: A callable matching the :class:`LockBackend` protocol, i.e.
             ``backend(name, *, timeout) -> contextmanager``. Pass ``None`` to
-            restore the built-in default (Redis/file selection).
+            clear the override, falling back to the ``CREWAI_LOCK_FACTORY``
+            env path if set, otherwise the built-in Redis/file default.
     """
     global _backend
     _backend = backend
-
-
-def reset_lock_backend() -> None:
-    """Clear the in-process override.
-
-    Backend resolution falls back to the ``CREWAI_LOCK_FACTORY`` env path if
-    set, otherwise the built-in Redis/file default.
-    """
-    set_lock_backend(None)
 
 
 def get_lock_backend() -> LockBackend:

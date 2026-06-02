@@ -27,9 +27,9 @@ def reset_backend(monkeypatch):
     """Ensure backend overrides never leak across tests."""
     monkeypatch.setattr(lock_store, "_LOCK_FACTORY_SPEC", None)
     lock_store._env_lock_factory.cache_clear()
-    lock_store.reset_lock_backend()
+    lock_store.set_lock_backend(None)
     yield
-    lock_store.reset_lock_backend()
+    lock_store.set_lock_backend(None)
     lock_store._env_lock_factory.cache_clear()
 
 
@@ -107,7 +107,7 @@ def test_reset_restores_default_backend():
         yield
 
     lock_store.set_lock_backend(fake_backend)
-    lock_store.reset_lock_backend()
+    lock_store.set_lock_backend(None)
 
     with mock.patch("portalocker.Lock") as mock_lock:
         with lock("after_reset"):
@@ -233,7 +233,7 @@ def test_env_factory_used_after_reset(monkeypatch):
 
     _install_env_factory(monkeypatch, env_backend)
     lock_store.set_lock_backend(code_backend)
-    lock_store.reset_lock_backend()
+    lock_store.set_lock_backend(None)
 
     with lock("after_reset_env"):
         pass
