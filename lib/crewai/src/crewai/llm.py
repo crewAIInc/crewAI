@@ -288,6 +288,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "hosted_vllm",
     "cerebras",
     "dashscope",
+    "orcarouter",
 ]
 
 
@@ -376,6 +377,7 @@ class LLM(BaseLLM):
                 "hosted_vllm": "hosted_vllm",
                 "cerebras": "cerebras",
                 "dashscope": "dashscope",
+                "orcarouter": "orcarouter",
             }
 
             canonical_provider = provider_mapping.get(prefix.lower())
@@ -494,6 +496,10 @@ class LLM(BaseLLM):
             # OpenRouter uses org/model format but accepts anything
             return True
 
+        if provider == "orcarouter":
+            # OrcaRouter uses org/model format (e.g. openai/gpt-5) but accepts anything
+            return True
+
         return False
 
     @classmethod
@@ -600,6 +606,7 @@ class LLM(BaseLLM):
             "hosted_vllm",
             "cerebras",
             "dashscope",
+            "orcarouter",
         }
         if provider in openai_compatible_providers:
             from crewai.llms.providers.openai_compatible.completion import (

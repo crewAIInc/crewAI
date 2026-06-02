@@ -89,6 +89,16 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         base_url_env="DASHSCOPE_BASE_URL",
         api_key_required=True,
     ),
+    "orcarouter": ProviderConfig(
+        base_url="https://api.orcarouter.ai/v1",
+        api_key_env="ORCAROUTER_API_KEY",
+        base_url_env="ORCAROUTER_API_BASE_URL",
+        default_headers={
+            "HTTP-Referer": "https://crewai.com",
+            "X-Title": "crewai",
+        },
+        api_key_required=True,
+    ),
 }
 
 
@@ -125,6 +135,7 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         - hosted_vllm: vLLM server (https://github.com/vllm-project/vllm)
         - cerebras: Cerebras (https://cerebras.ai)
         - dashscope: Alibaba Dashscope/Qwen (https://dashscope.aliyun.com)
+        - orcarouter: OrcaRouter (https://www.orcarouter.ai)
 
     Example:
         # Using provider prefix
