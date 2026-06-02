@@ -231,19 +231,14 @@ class TraceCollectionListener(BaseEventListener):
 
         @event_bus.on(FlowStartedEvent)
         def on_flow_started(source: Any, event: FlowStartedEvent) -> None:
-            # Nested flows (e.g. AgentExecutor inside a conversational Flow) must
-            # not re-claim an open session batch owned by the parent kickoff.
-            if (
-                self.batch_manager.defer_session_finalization
-                and self.batch_manager.is_batch_initialized()
-                and self.batch_manager.batch_owner_type == "flow"
-            ):
-                self._handle_trace_event("flow_started", source, event)
-                return
-            # If batch was already initialized by a concurrent action event
-            # (race condition), initialize_batch() returns early but
-            # batch_owner_type is still correctly set to "flow".
-            self._initialize_flow_batch(source, event)
+            # Only the first execution to open the session batch owns it. A flow
+            # that starts while a batch already exists is nested -- inside a crew
+            # (e.g. an agent's Flow-based executor), a conversational Flow, or a
+            # parent flow -- and must NOT re-claim ownership. Re-claiming would
+            # mark batch_owner_type="flow" and cause the nested flow to finalize
+            # the parent's batch prematurely when it completes.
+            if not self.batch_manager.is_batch_initialized():
+                self._initialize_flow_batch(source, event)
             self._handle_trace_event("flow_started", source, event)
 
         @event_bus.on(MethodExecutionStartedEvent)
