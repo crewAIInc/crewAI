@@ -93,6 +93,7 @@ from crewai.utilities.agent_utils import (
     track_delegation_if_needed,
 )
 from crewai.utilities.constants import TRAINING_DATA_FILE
+from crewai.utilities.file_store import get_all_files
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.planning_types import (
     PlanStep,
@@ -2982,12 +2983,21 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         training_handler.save(training_data)
 
     def _inject_files_from_inputs(self, inputs: dict[str, Any]) -> None:
-        """Inject files from inputs into the last user message.
+        """Inject files into the last user message.
 
         Args:
             inputs: Input dictionary that may contain a 'files' key.
         """
-        files = inputs.get("files")
+        files: dict[str, Any] = {}
+
+        if self.crew and self.task:
+            stored_files = get_all_files(self.crew.id, self.task.id)
+            if stored_files:
+                files.update(stored_files)
+
+        if inputs.get("files"):
+            files.update(inputs["files"])
+
         if not files:
             return
 
