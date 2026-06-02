@@ -156,6 +156,44 @@ class TestSnowflakeRequests:
 
         assert messages == [{"role": "user", "content": "Write a summary."}]
 
+    def test_claude_model_normalizes_stringified_tool_calls_with_results(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        _snowflake_env(monkeypatch)
+        llm = SnowflakeCompletion(model="claude-sonnet-4-5")
+
+        messages = llm._format_messages(
+            [
+                {"role": "user", "content": "Use the tools."},
+                {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [
+                        "{'id': 'toolu_1', 'type': 'function', 'function': {'name': \"'search_the_internet_with_serper'\", 'arguments': '\\\'{\"search_query\":\"CrewAI tools\"}\\\''}}",
+                        "{'id': 'toolu_2', 'type': 'function', 'function': {'name': \"'search_the_internet_with_serper'\", 'arguments': '\\\'{\"search_query\":\"CrewAI demos\"}\\\''}}",
+                    ],
+                },
+                {
+                    "role": "tool",
+                    "tool_call_id": "toolu_1",
+                    "name": "search_the_internet_with_serper",
+                    "content": "result 1",
+                },
+                {
+                    "role": "tool",
+                    "tool_call_id": "toolu_2",
+                    "name": "search_the_internet_with_serper",
+                    "content": "result 2",
+                },
+            ]
+        )
+
+        assert messages[-2] == {"role": "user", "content": "Use the tools."}
+        assert messages[-1]["role"] == "user"
+        assert "result 1" in messages[-1]["content"]
+        assert "result 2" in messages[-1]["content"]
+        assert all("tool_calls" not in message for message in messages)
+
     def test_claude_model_removes_dangling_tool_call_without_result(
         self, monkeypatch: pytest.MonkeyPatch
     ):
@@ -209,14 +247,10 @@ class TestSnowflakeRequests:
             ]
         )
 
-        assert messages[-3]["role"] == "assistant"
-        assert messages[-3]["tool_calls"][0]["id"] == "call_1"
-        assert messages[-2] == {
-            "role": "tool",
-            "tool_call_id": "call_1",
-            "content": "result",
-        }
+        assert messages[-2] == {"role": "user", "content": "Use the tool."}
         assert messages[-1]["role"] == "user"
+        assert "result" in messages[-1]["content"]
+        assert all("tool_calls" not in message for message in messages)
 
     def test_claude_model_drops_unrelated_tool_results_from_preserved_pair(
         self, monkeypatch: pytest.MonkeyPatch
@@ -251,16 +285,11 @@ class TestSnowflakeRequests:
             ]
         )
 
-        assert messages[-3]["role"] == "assistant"
-        assert messages[-2] == {
-            "role": "tool",
-            "tool_call_id": "call_1",
-            "content": "valid result",
-        }
-        assert all(
-            message.get("tool_call_id") != "unrelated_call" for message in messages
-        )
+        assert messages[-2] == {"role": "user", "content": "Use the tool."}
         assert messages[-1]["role"] == "user"
+        assert "valid result" in messages[-1]["content"]
+        assert "unrelated result" not in messages[-1]["content"]
+        assert all("tool_call_id" not in message for message in messages)
 
     def test_claude_model_removes_dangling_tool_use_content_block(
         self, monkeypatch: pytest.MonkeyPatch
@@ -327,26 +356,16 @@ class TestSnowflakeRequests:
             ]
         )
 
-        assert messages[-3] == {"role": "user", "content": "Use the tool."}
-        assert messages[-2]["role"] == "assistant"
-        assert messages[-2]["content"] == [
-            {
-                "toolUse": {
-                    "toolUseId": "tooluse_1",
-                    "name": "lookup",
-                    "input": {},
-                }
-            }
-        ]
+        assert messages[-2] == {"role": "user", "content": "Use the tool."}
         assert messages[-1]["role"] == "user"
-        assert messages[-1]["content"] == [
-            {
-                "toolResult": {
-                    "toolUseId": "tooluse_1",
-                    "content": [{"text": "result"}],
-                }
-            }
-        ]
+        assert "toolResult" in messages[-1]["content"]
+        assert all(
+            not (
+                message.get("role") == "assistant"
+                and isinstance(message.get("content"), list)
+            )
+            for message in messages
+        )
 
     def test_claude_model_maps_max_tokens_to_max_completion_tokens(
         self, monkeypatch: pytest.MonkeyPatch

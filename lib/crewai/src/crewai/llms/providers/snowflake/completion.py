@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import os
 from typing import Any, Literal
 
@@ -133,6 +134,9 @@ class SnowflakeCompletion(OpenAICompletion):
     def _format_messages(self, messages: str | list[LLMMessage]) -> list[LLMMessage]:
         formatted_messages = super()._format_messages(messages)
         if self._is_claude_model():
+            formatted_messages = self._normalize_stringified_tool_calls(
+                formatted_messages
+            )
             formatted_messages = self._remove_incomplete_claude_tool_uses(
                 formatted_messages
             )
@@ -142,6 +146,41 @@ class SnowflakeCompletion(OpenAICompletion):
     def _is_claude_model(self) -> bool:
         model = self.model.lower()
         return model.startswith(("claude-", "anthropic."))
+
+    @staticmethod
+    def _normalize_stringified_tool_calls(
+        messages: list[LLMMessage],
+    ) -> list[LLMMessage]:
+        normalized_messages: list[LLMMessage] = []
+        for message in messages:
+            tool_calls = message.get("tool_calls")
+            if not isinstance(tool_calls, list) or not tool_calls:
+                normalized_messages.append(message)
+                continue
+
+            normalized_tool_calls: list[Any] = []
+            changed = False
+            for tool_call in tool_calls:
+                if isinstance(tool_call, str):
+                    try:
+                        parsed_tool_call = ast.literal_eval(tool_call)
+                    except (ValueError, SyntaxError):
+                        normalized_tool_calls.append(tool_call)
+                        continue
+                    if isinstance(parsed_tool_call, dict):
+                        normalized_tool_calls.append(parsed_tool_call)
+                        changed = True
+                        continue
+                normalized_tool_calls.append(tool_call)
+
+            if changed:
+                normalized_message = dict(message)
+                normalized_message["tool_calls"] = normalized_tool_calls
+                normalized_messages.append(normalized_message)  # type: ignore[arg-type]
+            else:
+                normalized_messages.append(message)
+
+        return normalized_messages
 
     @staticmethod
     def _remove_incomplete_claude_tool_uses(
@@ -181,17 +220,39 @@ class SnowflakeCompletion(OpenAICompletion):
                 lookahead += 1
 
             if expected_ids.issubset(tool_result_ids):
-                sanitized.append(message)
-                sanitized.extend(
-                    tool_message
-                    for tool_message in messages[index + 1 : lookahead]
-                    if SnowflakeCompletion._extract_claude_tool_result_ids(tool_message)
-                    & expected_ids
+                summary = SnowflakeCompletion._summarize_tool_results(
+                    messages[index + 1 : lookahead], expected_ids
                 )
+                if summary:
+                    sanitized.append({"role": "user", "content": summary})
 
             index = lookahead
 
         return sanitized
+
+    @staticmethod
+    def _summarize_tool_results(
+        messages: list[LLMMessage], expected_ids: set[str]
+    ) -> str:
+        summaries: list[str] = []
+        for message in messages:
+            result_ids = SnowflakeCompletion._extract_claude_tool_result_ids(message)
+            if not result_ids & expected_ids:
+                continue
+
+            name = message.get("name") or "tool"
+            content = message.get("content")
+            if isinstance(content, str):
+                summaries.append(f"{name}: {content}")
+            elif isinstance(content, list):
+                summaries.append(f"{name}: {content}")
+
+        if not summaries:
+            return ""
+
+        return "Tool results from previous tool calls:\n" + "\n".join(
+            f"- {summary}" for summary in summaries
+        )
 
     @staticmethod
     def _extract_claude_tool_use_ids(message: LLMMessage) -> set[str]:
