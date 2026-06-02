@@ -262,6 +262,92 @@ class TestSnowflakeRequests:
         )
         assert messages[-1]["role"] == "user"
 
+    def test_claude_model_removes_dangling_tool_use_content_block(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        _snowflake_env(monkeypatch)
+        llm = SnowflakeCompletion(model="claude-sonnet-4-5")
+
+        messages = llm._format_messages(
+            [
+                {"role": "user", "content": "Use the tool."},
+                {
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "toolUse": {
+                                "toolUseId": "tooluse_1",
+                                "name": "lookup",
+                                "input": {},
+                            }
+                        }
+                    ],
+                },
+                {"role": "user", "content": "Continue."},
+            ]
+        )
+
+        assert messages == [
+            {"role": "user", "content": "Use the tool."},
+            {"role": "user", "content": "Continue."},
+        ]
+
+    def test_claude_model_preserves_complete_tool_use_content_block_pair(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        _snowflake_env(monkeypatch)
+        llm = SnowflakeCompletion(model="claude-sonnet-4-5")
+
+        messages = llm._format_messages(
+            [
+                {"role": "user", "content": "Use the tool."},
+                {
+                    "role": "assistant",
+                    "content": [
+                        {
+                            "toolUse": {
+                                "toolUseId": "tooluse_1",
+                                "name": "lookup",
+                                "input": {},
+                            }
+                        }
+                    ],
+                },
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "toolResult": {
+                                "toolUseId": "tooluse_1",
+                                "content": [{"text": "result"}],
+                            }
+                        }
+                    ],
+                },
+            ]
+        )
+
+        assert messages[-3] == {"role": "user", "content": "Use the tool."}
+        assert messages[-2]["role"] == "assistant"
+        assert messages[-2]["content"] == [
+            {
+                "toolUse": {
+                    "toolUseId": "tooluse_1",
+                    "name": "lookup",
+                    "input": {},
+                }
+            }
+        ]
+        assert messages[-1]["role"] == "user"
+        assert messages[-1]["content"] == [
+            {
+                "toolResult": {
+                    "toolUseId": "tooluse_1",
+                    "content": [{"text": "result"}],
+                }
+            }
+        ]
+
     def test_claude_model_maps_max_tokens_to_max_completion_tokens(
         self, monkeypatch: pytest.MonkeyPatch
     ):

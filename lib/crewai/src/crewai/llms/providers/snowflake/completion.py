@@ -162,30 +162,22 @@ class SnowflakeCompletion(OpenAICompletion):
 
         while index < len(messages):
             message = messages[index]
-            tool_calls = message.get("tool_calls") or []
-            if message.get("role") != "assistant" or not tool_calls:
-                sanitized.append(message)
-                index += 1
-                continue
-
-            expected_ids = {
-                tool_call.get("id")
-                for tool_call in tool_calls
-                if isinstance(tool_call, dict) and tool_call.get("id")
-            }
-            if not expected_ids:
+            expected_ids = SnowflakeCompletion._extract_claude_tool_use_ids(message)
+            if message.get("role") != "assistant" or not expected_ids:
                 sanitized.append(message)
                 index += 1
                 continue
 
             tool_result_ids: set[str] = set()
             lookahead = index + 1
-            while (
-                lookahead < len(messages) and messages[lookahead].get("role") == "tool"
-            ):
-                tool_call_id = messages[lookahead].get("tool_call_id")
-                if isinstance(tool_call_id, str):
-                    tool_result_ids.add(tool_call_id)
+            while lookahead < len(
+                messages
+            ) and SnowflakeCompletion._is_tool_result_message(messages[lookahead]):
+                tool_result_ids.update(
+                    SnowflakeCompletion._extract_claude_tool_result_ids(
+                        messages[lookahead]
+                    )
+                )
                 lookahead += 1
 
             if expected_ids.issubset(tool_result_ids):
@@ -193,13 +185,55 @@ class SnowflakeCompletion(OpenAICompletion):
                 sanitized.extend(
                     tool_message
                     for tool_message in messages[index + 1 : lookahead]
-                    if tool_message.get("role") == "tool"
-                    and tool_message.get("tool_call_id") in expected_ids
+                    if SnowflakeCompletion._extract_claude_tool_result_ids(tool_message)
+                    & expected_ids
                 )
 
             index = lookahead
 
         return sanitized
+
+    @staticmethod
+    def _extract_claude_tool_use_ids(message: LLMMessage) -> set[str]:
+        tool_calls = message.get("tool_calls") or []
+        ids = {
+            tool_call.get("id")
+            for tool_call in tool_calls
+            if isinstance(tool_call, dict) and isinstance(tool_call.get("id"), str)
+        }
+
+        content = message.get("content")
+        if isinstance(content, list):
+            for block in content:
+                if isinstance(block, dict) and isinstance(block.get("toolUse"), dict):
+                    tool_use_id = block["toolUse"].get("toolUseId")
+                    if isinstance(tool_use_id, str):
+                        ids.add(tool_use_id)
+        return ids
+
+    @staticmethod
+    def _extract_claude_tool_result_ids(message: LLMMessage) -> set[str]:
+        ids: set[str] = set()
+        tool_call_id = message.get("tool_call_id")
+        if isinstance(tool_call_id, str):
+            ids.add(tool_call_id)
+
+        content = message.get("content")
+        if isinstance(content, list):
+            for block in content:
+                if isinstance(block, dict) and isinstance(
+                    block.get("toolResult"), dict
+                ):
+                    tool_use_id = block["toolResult"].get("toolUseId")
+                    if isinstance(tool_use_id, str):
+                        ids.add(tool_use_id)
+        return ids
+
+    @staticmethod
+    def _is_tool_result_message(message: LLMMessage) -> bool:
+        return message.get("role") == "tool" or bool(
+            SnowflakeCompletion._extract_claude_tool_result_ids(message)
+        )
 
     @staticmethod
     def _ensure_claude_conversation_ends_with_user(
