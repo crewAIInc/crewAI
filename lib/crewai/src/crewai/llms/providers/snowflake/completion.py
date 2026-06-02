@@ -190,7 +190,12 @@ class SnowflakeCompletion(OpenAICompletion):
 
             if expected_ids.issubset(tool_result_ids):
                 sanitized.append(message)
-                sanitized.extend(messages[index + 1 : lookahead])
+                sanitized.extend(
+                    tool_message
+                    for tool_message in messages[index + 1 : lookahead]
+                    if tool_message.get("role") == "tool"
+                    and tool_message.get("tool_call_id") in expected_ids
+                )
 
             index = lookahead
 

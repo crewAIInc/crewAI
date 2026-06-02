@@ -218,6 +218,50 @@ class TestSnowflakeRequests:
         }
         assert messages[-1]["role"] == "user"
 
+    def test_claude_model_drops_unrelated_tool_results_from_preserved_pair(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        _snowflake_env(monkeypatch)
+        llm = SnowflakeCompletion(model="claude-sonnet-4-5")
+
+        messages = llm._format_messages(
+            [
+                {"role": "user", "content": "Use the tool."},
+                {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": "call_1",
+                            "type": "function",
+                            "function": {"name": "lookup", "arguments": "{}"},
+                        }
+                    ],
+                },
+                {
+                    "role": "tool",
+                    "tool_call_id": "call_1",
+                    "content": "valid result",
+                },
+                {
+                    "role": "tool",
+                    "tool_call_id": "unrelated_call",
+                    "content": "unrelated result",
+                },
+            ]
+        )
+
+        assert messages[-3]["role"] == "assistant"
+        assert messages[-2] == {
+            "role": "tool",
+            "tool_call_id": "call_1",
+            "content": "valid result",
+        }
+        assert all(
+            message.get("tool_call_id") != "unrelated_call" for message in messages
+        )
+        assert messages[-1]["role"] == "user"
+
     def test_claude_model_maps_max_tokens_to_max_completion_tokens(
         self, monkeypatch: pytest.MonkeyPatch
     ):
