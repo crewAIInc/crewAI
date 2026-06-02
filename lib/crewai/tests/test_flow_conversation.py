@@ -21,7 +21,6 @@ from crewai.experimental import (
     ConversationConfig,
     ConversationMessage,
     ConversationState,
-    ConversationalFlow,
     RouterConfig,
 )
 from crewai.flow import Flow, ChatState, listen, start
@@ -35,6 +34,16 @@ from crewai.flow.conversation import (
 )
 from crewai.state import CheckpointConfig
 from crewai.utilities.types import LLMMessage
+
+
+class ConversationalFlow(Flow[ConversationState]):
+    """Test base: a ``Flow[ConversationState]`` with conversational mode enabled.
+
+    Mirrors the documented ``class MyChat(Flow): conversational = True`` pattern
+    so the conversational subclasses below stay terse.
+    """
+
+    conversational = True
 
 
 class SimpleChatFlow(Flow[ChatState]):

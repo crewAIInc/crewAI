@@ -244,7 +244,7 @@ Do **not** use `@human_feedback` for follow-up chat lines unless a human must ap
 
 Opt into the conversational chat graph by setting `conversational = True` on a `Flow` subclass. The base `Flow` then ships a built-in `@start` / `@router` / `converse_turn` / `end_conversation` graph, manages `state.messages`, drives the router LLM, and keeps the trace batch open across turns. You write the **custom routes**; the framework owns the rest.
 
-Use this when you want a multi-turn chat with an LLM-driven router and per-route handlers without wiring the lifecycle yourself. Use `Flow[ChatState]` (the lower-level pattern above) when you need full control. `crewai.experimental.ConversationalFlow` still works as a one-line alias for `Flow[ConversationState]` with `conversational = True` — kept for legacy imports, prefer the explicit form in new code.
+Use this when you want a multi-turn chat with an LLM-driven router and per-route handlers without wiring the lifecycle yourself. Use `Flow[ChatState]` (the lower-level pattern above) when you need full control.
 
 ### Quick example
 

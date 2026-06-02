@@ -50,7 +50,7 @@ def __getattr__(name: str) -> Any:
     Eager re-exports would deadlock when ``Flow`` itself is the consumer that
     triggered ``crewai.experimental.__init__`` (``Flow`` imports types from
     :mod:`crewai.experimental.conversational`). Callers like
-    ``from crewai.experimental import ConversationalFlow`` still work — the
+    ``from crewai.experimental import AgentExecutor`` still work — the
     real import just runs lazily, after the original loader finishes.
     """
     if name in _LAZY_FROM_AGENT_EXECUTOR:
@@ -70,26 +70,6 @@ def __getattr__(name: str) -> Any:
             globals()[attr] = getattr(_evaluation_mod, attr)
         return globals()[name]
 
-    if name == "ConversationalFlow":
-        from crewai.flow.flow import Flow
-
-        class ConversationalFlow(Flow[ConversationState]):
-            """Alias for ``Flow[ConversationState]`` with ``conversational = True``.
-
-            Equivalent to::
-
-                class MyChat(Flow):
-                    conversational = True
-
-            Prefer the explicit ``Flow`` + ``conversational = True`` pattern in
-            new code; this alias exists for ergonomics and legacy imports.
-            """
-
-            conversational = True
-
-        globals()[name] = ConversationalFlow
-        return ConversationalFlow
-
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
@@ -103,7 +83,6 @@ __all__ = [
     "ConversationEvent",
     "ConversationMessage",
     "ConversationState",
-    "ConversationalFlow",
     "CrewAgentExecutorFlow",  # Deprecated alias for AgentExecutor
     "EvaluationScore",
     "EvaluationTraceCallback",
