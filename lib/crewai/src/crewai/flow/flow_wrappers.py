@@ -18,6 +18,17 @@ R = TypeVar("R")
 FlowConditionType: TypeAlias = Literal["OR", "AND"]
 SimpleFlowCondition: TypeAlias = tuple[FlowConditionType, list[FlowMethodName]]
 
+__all__ = [
+    "FlowCondition",
+    "FlowConditionType",
+    "FlowConditions",
+    "FlowMethod",
+    "ListenMethod",
+    "RouterMethod",
+    "SimpleFlowCondition",
+    "StartMethod",
+]
+
 
 class FlowCondition(TypedDict, total=False):
     """Type definition for flow trigger conditions.
@@ -73,10 +84,12 @@ class FlowMethod(Generic[P, R]):
         # Preserve flow-related attributes from wrapped method (e.g., from @human_feedback)
         for attr in [
             "__is_router__",
-            "__router_paths__",
+            "__router_emit__",
             "__human_feedback_config__",
             "__conversational_only__",  # gates registration on Flow.conversational
-            "_hf_llm",  # Live LLM object for HITL resume
+            "__flow_persistence_config__",
+            "__flow_method_definition__",
+            "_human_feedback_llm",  # Live LLM object for HITL resume
         ]:
             if hasattr(meth, attr):
                 setattr(self, attr, getattr(meth, attr))
@@ -166,3 +179,4 @@ class RouterMethod(FlowMethod[P, R]):
     __trigger_methods__: list[FlowMethodName] | None = None
     __condition_type__: FlowConditionType | None = None
     __trigger_condition__: FlowCondition | None = None
+    __router_emit__: list[str] | None = None

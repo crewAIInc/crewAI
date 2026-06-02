@@ -1,9 +1,9 @@
-"""Flow runtime: the Flow execution engine, its metaclass, and state proxies.
+"""Flow Runtime: the engine that executes a Flow.
 
-Holds the Flow class (kickoff/resume/listener dispatch), the FlowMeta
-metaclass (Pydantic model construction; structural extraction is delegated to
-``flow_definition.extract_flow_definition``), and the thread-safe state
-proxies. The authoring decorators live in ``crewai.flow.dsl``.
+Provides the ``Flow`` class (kickoff/resume/listener dispatch), the
+``FlowMeta`` metaclass, and the thread-safe state proxies. Flows
+authored with the Python DSL (see ``dsl``) are described by a Flow
+Structure (see ``flow_definition``) and executed here.
 """
 
 from __future__ import annotations
@@ -90,18 +90,18 @@ from crewai.experimental.conversational import (
 )
 from crewai.experimental.conversational_mixin import _ConversationalMixin
 from crewai.flow.constants import AND_CONDITION, OR_CONDITION
-from crewai.flow.flow_context import current_flow_id, current_flow_request_id
-from crewai.flow.flow_definition import (
+from crewai.flow.dsl import (
     _extract_all_methods,
     _extract_all_methods_recursive,
     _normalize_condition,
+    build_flow_definition,
     extract_flow_definition,
-    get_possible_return_constants,
     is_flow_condition_dict,
     is_flow_method,
-    is_flow_method_name,
     is_simple_flow_condition,
 )
+from crewai.flow.flow_context import current_flow_id, current_flow_request_id
+from crewai.flow.flow_definition import FlowDefinition
 from crewai.flow.flow_wrappers import (
     FlowCondition,
     FlowMethod,
@@ -601,7 +601,7 @@ class FlowMeta(ModelMetaclass):
 
         cls = super().__new__(mcs, name, bases, namespace)
 
-        start_methods, listeners, routers, router_paths = extract_flow_definition(
+        start_methods, listeners, routers, router_emit = extract_flow_definition(
             namespace
         )
 
@@ -631,8 +631,8 @@ class FlowMeta(ModelMetaclass):
             start_methods = [m for m in start_methods if not _is_conv_only(m)]
             listeners = {k: v for k, v in listeners.items() if not _is_conv_only(k)}
             routers = {r for r in routers if not _is_conv_only(r)}
-            router_paths = {
-                k: v for k, v in router_paths.items() if not _is_conv_only(k)
+            router_emit = {
+                k: v for k, v in router_emit.items() if not _is_conv_only(k)
             }
 
         # 2. Harvest conversational-only methods from base classes when this
@@ -670,21 +670,16 @@ class FlowMeta(ModelMetaclass):
 
                         if getattr(attr_value, "__is_router__", False):
                             routers.add(attr_name)
-                            paths = getattr(attr_value, "__router_paths__", None)
-                            if paths:
-                                router_paths[attr_name] = paths
-                            else:
-                                possible_returns = get_possible_return_constants(
-                                    attr_value
-                                )
-                                router_paths[attr_name] = (
-                                    possible_returns if possible_returns else []
-                                )
+                            emit = getattr(attr_value, "__router_emit__", None)
+                            router_emit[attr_name] = list(emit) if emit else []
 
         cls._start_methods = start_methods  # type: ignore[attr-defined]
         cls._listeners = listeners  # type: ignore[attr-defined]
         cls._routers = routers  # type: ignore[attr-defined]
-        cls._router_paths = router_paths  # type: ignore[attr-defined]
+        cls._router_emit = router_emit  # type: ignore[attr-defined]
+        # The static FlowDefinition is built lazily (on first access via
+        # ``Flow.flow_definition()`` or visualization), not at class-definition
+        # time, to avoid AST parsing and diagnostic logging on every import.
 
         return cls
 
@@ -704,7 +699,8 @@ class Flow(_ConversationalMixin, BaseModel, Generic[T], metaclass=FlowMeta):
     _start_methods: ClassVar[list[FlowMethodName]] = []
     _listeners: ClassVar[dict[FlowMethodName, SimpleFlowCondition | FlowCondition]] = {}
     _routers: ClassVar[set[FlowMethodName]] = set()
-    _router_paths: ClassVar[dict[FlowMethodName, list[FlowMethodName]]] = {}
+    _router_emit: ClassVar[dict[FlowMethodName, list[FlowMethodName]]] = {}
+    _flow_definition: ClassVar[FlowDefinition | None] = None
 
     # === EXPERIMENTAL: conversational mode ===
     # When ``conversational = True`` on a subclass, the built-in conversational
@@ -740,6 +736,15 @@ class Flow(_ConversationalMixin, BaseModel, Generic[T], metaclass=FlowMeta):
     }
 
     entity_type: Literal["flow"] = "flow"
+
+    @classmethod
+    def flow_definition(cls) -> FlowDefinition:
+        """Return the static Flow Definition built from this Flow class."""
+        flow_definition = cls.__dict__.get("_flow_definition")
+        if flow_definition is None:
+            flow_definition = build_flow_definition(cls)
+            cls._flow_definition = flow_definition
+        return flow_definition
 
     initial_state: Annotated[  # type: ignore[type-arg]
         type[BaseModel] | type[dict] | dict[str, Any] | BaseModel | None,
@@ -1466,7 +1471,7 @@ class Flow(_ConversationalMixin, BaseModel, Generic[T], metaclass=FlowMeta):
         llm = None
         method = self._methods.get(FlowMethodName(context.method_name))
         if method is not None:
-            live_llm = getattr(method, "_hf_llm", None)
+            live_llm = getattr(method, "_human_feedback_llm", None)
             if live_llm is not None:
                 from crewai.llms.base_llm import BaseLLM as BaseLLMClass
 
@@ -2841,7 +2846,7 @@ class Flow(_ConversationalMixin, BaseModel, Generic[T], metaclass=FlowMeta):
         Returns:
             True if the condition is satisfied, False otherwise
         """
-        if is_flow_method_name(condition):
+        if isinstance(condition, str):
             return condition == trigger_method
 
         if is_flow_condition_dict(condition):
