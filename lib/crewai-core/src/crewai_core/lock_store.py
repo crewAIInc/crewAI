@@ -2,9 +2,8 @@
 
 The locking backend is resolved in this order of precedence:
 
-1. A backend registered in-process via :func:`set_lock_backend` (or scoped
-   with the :func:`lock_backend` context manager). Best for tests and runtime
-   wiring.
+1. A backend registered in-process via :func:`set_lock_backend`. Best for
+   tests and runtime wiring.
 2. A backend named by the ``CREWAI_LOCK_FACTORY`` environment variable, in
    ``"module:callable"`` form (e.g. ``"my_pkg.locks:lock"``). The import path
    is resolved lazily and cached. Best for deployment-driven selection, since
@@ -202,21 +201,6 @@ def get_lock_backend() -> LockBackend:
     precedence.
     """
     return _active_backend()
-
-
-@contextmanager
-def lock_backend(backend: LockBackend) -> Iterator[None]:
-    """Temporarily override the locking backend within a ``with`` block.
-
-    The previous backend (custom or default) is restored on exit.
-    """
-    global _backend
-    previous = _backend
-    _backend = backend
-    try:
-        yield
-    finally:
-        _backend = previous
 
 
 @contextmanager

@@ -127,38 +127,6 @@ def test_get_lock_backend_reflects_override():
     assert lock_store.get_lock_backend() is fake_backend
 
 
-def test_lock_backend_context_manager_is_scoped():
-    seen = []
-
-    @contextmanager
-    def fake_backend(name, *, timeout):
-        seen.append(name)
-        yield
-
-    with lock_store.lock_backend(fake_backend):
-        with lock("scoped"):
-            pass
-
-    assert seen == ["scoped"]
-    # Override is restored after the block.
-    assert lock_store.get_lock_backend() is lock_store._default_lock
-
-
-def test_lock_backend_context_manager_restores_previous_override():
-    @contextmanager
-    def outer_backend(name, *, timeout):
-        yield
-
-    @contextmanager
-    def inner_backend(name, *, timeout):
-        yield
-
-    lock_store.set_lock_backend(outer_backend)
-    with lock_store.lock_backend(inner_backend):
-        assert lock_store.get_lock_backend() is inner_backend
-    assert lock_store.get_lock_backend() is outer_backend
-
-
 # CREWAI_LOCK_FACTORY env import-path
 
 
