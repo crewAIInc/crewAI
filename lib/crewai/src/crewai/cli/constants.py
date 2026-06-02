@@ -332,10 +332,9 @@ MODELS: dict[str, list[str]] = {
         "sambanova/Meta-Llama-3.2-1B-Instruct",
     ],
     "minimax": [
+        "minimax/MiniMax-M3",
         "minimax/MiniMax-M2.7",
         "minimax/MiniMax-M2.7-highspeed",
-        "minimax/MiniMax-M2.5",
-        "minimax/MiniMax-M2.5-highspeed",
     ],
 }
 

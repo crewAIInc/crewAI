@@ -299,10 +299,9 @@ LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "ai21.jamba-instruct-v1:0": 256000,
     "mistral.mistral-7b-instruct-v0:2": 32000,
     # minimax
+    "MiniMax-M3": 524288,
     "MiniMax-M2.7": 204800,
     "MiniMax-M2.7-highspeed": 204800,
-    "MiniMax-M2.5": 204800,
-    "MiniMax-M2.5-highspeed": 204800,
     "mistral.mixtral-8x7b-instruct-v0:1": 32000,
     # mistral
     "mistral-tiny": 32768,
