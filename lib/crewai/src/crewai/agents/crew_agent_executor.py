@@ -69,6 +69,7 @@ from crewai.utilities.agent_utils import (
     track_delegation_if_needed,
 )
 from crewai.utilities.constants import TRAINING_DATA_FILE
+from crewai.utilities.file_injection import get_auto_injected_files
 from crewai.utilities.file_store import aget_all_files, get_all_files
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.string_utils import sanitize_tool_name
@@ -266,6 +267,10 @@ class CrewAgentExecutor(BaseAgentExecutor):
         if not files:
             return
 
+        files = get_auto_injected_files(files, self.llm)
+        if not files:
+            return
+
         for i in range(len(self.messages) - 1, -1, -1):
             msg = self.messages[i]
             if msg.get("role") == "user":
@@ -294,6 +299,10 @@ class CrewAgentExecutor(BaseAgentExecutor):
         if inputs and inputs.get("files"):
             files.update(inputs["files"])
 
+        if not files:
+            return
+
+        files = get_auto_injected_files(files, self.llm)
         if not files:
             return
 

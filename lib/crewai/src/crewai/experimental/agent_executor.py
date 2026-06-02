@@ -93,6 +93,7 @@ from crewai.utilities.agent_utils import (
     track_delegation_if_needed,
 )
 from crewai.utilities.constants import TRAINING_DATA_FILE
+from crewai.utilities.file_injection import get_auto_injected_files
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.planning_types import (
     PlanStep,
@@ -2988,6 +2989,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             inputs: Input dictionary that may contain a 'files' key.
         """
         files = inputs.get("files")
+        if not files:
+            return
+
+        files = get_auto_injected_files(files, self.llm)
         if not files:
             return
 
