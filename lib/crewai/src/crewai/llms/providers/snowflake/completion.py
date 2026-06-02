@@ -257,11 +257,13 @@ class SnowflakeCompletion(OpenAICompletion):
     @staticmethod
     def _extract_claude_tool_use_ids(message: LLMMessage) -> set[str]:
         tool_calls = message.get("tool_calls") or []
-        ids = {
-            tool_call.get("id")
-            for tool_call in tool_calls
-            if isinstance(tool_call, dict) and isinstance(tool_call.get("id"), str)
-        }
+        ids: set[str] = set()
+        for tool_call in tool_calls:
+            if not isinstance(tool_call, dict):
+                continue
+            tool_call_id = tool_call.get("id")
+            if isinstance(tool_call_id, str):
+                ids.add(tool_call_id)
 
         content = message.get("content")
         if isinstance(content, list):
