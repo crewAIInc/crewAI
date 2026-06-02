@@ -195,6 +195,6 @@ class PickleHandler:
         with store_lock(f"file:{os.path.realpath(self.file_path)}"):
             try:
                 with open(self.file_path, "rb") as file:
-                    return _RestrictedUnpickler(file).load()  # noqa: S301
+                    return _RestrictedUnpickler(file).load()
             except (FileNotFoundError, EOFError):
                 return {}
