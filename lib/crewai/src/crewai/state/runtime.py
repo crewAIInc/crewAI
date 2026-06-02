@@ -112,7 +112,6 @@ def _migrate(data: dict[str, Any]) -> dict[str, Any]:
             current,
         )
 
-    # --- migrations in version order ---
     if stored < Version("1.14.6"):
         for entity in data.get("entities") or []:
             _backfill_discriminators(entity)

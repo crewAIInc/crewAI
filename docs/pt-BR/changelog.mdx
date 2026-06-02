@@ -4,6 +4,77 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="28 mai 2026">
+  ## v1.14.6
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.6)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Aprimorar StdioTransport para evitar vazamento de variáveis de ambiente
+  - Aprimorar a configuração de planejamento e o manuseio de observações
+  - Declarar env_vars no DatabricksQueryTool
+  - Adicionar documentação do Agente Control Plane
+
+  ### Correções de Bugs
+  - Corrigir vazamentos de saída estruturada em loops de chamada de ferramenta
+  - Remover callbacks e estado de adaptador que não podem ser retornados em checkpoint
+  - Serializar campos type[BaseModel] como esquema JSON em checkpoint
+  - Evitar tarefa órfã task_started na restauração de escopo de retomar
+  - Permitir que AgentExecutor restaure a partir de checkpoint
+  - Corrigir erro de digitação de mongodb para pymongo em package_dependencies
+
+  ### Documentação
+  - Adicionar bloco de navegação de documentação ACP (Beta) às páginas do Agente Control Plane
+  - Remover referências a processos consensuais da página de processos
+  - Reestruturar a página de checkpointing
+  - Documentar passo de instalação do pacote administrativo único
+  - Migrar Secrets Manager / Workload Identity de replicated-config
+  - Remover expressões JSX `{" "}` que quebram a renderização de `<Steps>`
+
+  ### Refatoração
+  - Mover Skills Repository para experimental + CREWAI_EXPERIMENTAL gate
+
+  ## Contribuidores
+
+  @akaKuruma, @alex-clawd, @github-actions[bot], @greysonlalonde, @heitorado, @iris-clawd, @lorenzejay, @lucasgomide, @mattatcha, @thiagomoretto, @vinibrsl
+
+</Update>
+
+<Update label="27 mai 2026">
+  ## v1.14.6a2
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.6a2)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Aprimorar `StdioTransport` para evitar vazamento de variáveis de ambiente
+  - Aprimorar a configuração de planejamento e o manuseio de observações
+  - Declarar `env_vars` em `DatabricksQueryTool`
+  - Adicionar documentação do Controle de Agentes
+
+  ### Correções de Bugs
+  - Corrigir vazamentos de saída estruturada em loops de chamada de ferramentas
+  - Remover callbacks e estado de adaptadores que não podem ser revertidos em checkpoints
+  - Serializar campos `type[BaseModel]` como esquema JSON em checkpoints
+  - Evitar `task_started` órfão na restauração do escopo de retomar
+  - Permitir que `AgentExecutor` restaure a partir de checkpoints
+  - Corrigir erro de digitação do MongoDB para `pymongo` nas dependências do pacote
+
+  ### Documentação
+  - Reestruturar a página de checkpoints
+  - Documentar o passo de instalação do pacote administrativo único
+  - Migrar Secrets Manager / Workload Identity de replicated-config
+  - Remover a entrada do Repositório de Habilidades do changelog
+
+  ## Contribuidores
+
+  @github-actions[bot], @greysonlalonde, @heitorado, @iris-clawd, @lorenzejay, @lucasgomide, @mattatcha, @thiagomoretto, @vinibrsl
+
+</Update>
+
 <Update label="21 mai 2026">
   ## v1.14.6a1
 
@@ -12,7 +83,6 @@ mode: "wide"
   ## O que Mudou
 
   ### Recursos
-  - Adicionar Repositório de Habilidades com registro, cache, CLI e integração SDK
   - Gerar notas de versão categorizadas para empresas
 
   ### Correções de Bugs

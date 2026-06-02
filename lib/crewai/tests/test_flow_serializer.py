@@ -37,21 +37,18 @@ class TestSimpleLinearFlow:
         assert structure["description"] == "A simple linear flow for testing."
         assert len(structure["methods"]) == 3
 
-        # Check method types
         method_map = {m["name"]: m for m in structure["methods"]}
 
         assert method_map["begin"]["type"] == "start"
         assert method_map["process"]["type"] == "listen"
         assert method_map["finalize"]["type"] == "listen"
 
-        # Check edges
         assert len(structure["edges"]) == 2
 
         edge_pairs = [(e["from_method"], e["to_method"]) for e in structure["edges"]]
         assert ("begin", "process") in edge_pairs
         assert ("process", "finalize") in edge_pairs
 
-        # All edges should be listen type
         for edge in structure["edges"]:
             assert edge["edge_type"] == "listen"
             assert edge["condition"] is None
@@ -87,17 +84,14 @@ class TestRouterFlow:
 
         method_map = {m["name"]: m for m in structure["methods"]}
 
-        # Check method types
         assert method_map["init"]["type"] == "start"
         assert method_map["decide"]["type"] == "router"
         assert method_map["handle_a"]["type"] == "listen"
         assert method_map["handle_b"]["type"] == "listen"
 
-        # Check router paths
         assert "path_a" in method_map["decide"]["router_paths"]
         assert "path_b" in method_map["decide"]["router_paths"]
 
-        # Check edges
         # Should have: init -> decide (listen), decide -> handle_a (route), decide -> handle_b (route)
         listen_edges = [e for e in structure["edges"] if e["edge_type"] == "listen"]
         route_edges = [e for e in structure["edges"] if e["edge_type"] == "route"]
@@ -111,7 +105,6 @@ class TestRouterFlow:
         assert "handle_a" in route_targets
         assert "handle_b" in route_targets
 
-        # Check route conditions
         route_conditions = {e["to_method"]: e["condition"] for e in route_edges}
         assert route_conditions["handle_a"] == "path_a"
         assert route_conditions["handle_b"] == "path_b"
@@ -146,15 +139,12 @@ class TestAndOrConditions:
         assert method_map["step_b"]["type"] == "start"
         assert method_map["converge"]["type"] == "listen"
 
-        # Check condition type
         assert method_map["converge"]["condition_type"] == "AND"
 
-        # Check trigger methods
         triggers = method_map["converge"]["trigger_methods"]
         assert "step_a" in triggers
         assert "step_b" in triggers
 
-        # Check edges - should have 2 edges to converge
         converge_edges = [e for e in structure["edges"] if e["to_method"] == "converge"]
         assert len(converge_edges) == 2
 
@@ -268,10 +258,8 @@ class TestHumanFeedbackMethods:
         assert set(method_map["review"]["router_paths"]) == {"approved", "needs_changes", "cancelled"}
         assert method_map["review"]["has_human_feedback"] is True
 
-        # Should have listen edge: generate -> review
         assert ("generate", "review", None) in edge_set
 
-        # Should have route edges from review to each listener
         assert ("review", "handle_approved", "approved") in edge_set
         assert ("review", "handle_changes", "needs_changes") in edge_set
         assert ("review", "handle_cancelled", "cancelled") in edge_set
@@ -286,8 +274,6 @@ class TestCrewReferences:
         class FlowWithCrew(Flow):
             @start()
             def run_crew(self):
-                # Simulating crew usage pattern
-                # result = MyCrew().crew().kickoff()
                 return "result"
 
             @listen(run_crew)
@@ -299,7 +285,6 @@ class TestCrewReferences:
         method_map = {m["name"]: m for m in structure["methods"]}
 
         # Note: Since the actual .crew() call is in a comment/string,
-        # the detection might not trigger. In real code it would.
         # We're testing the mechanism exists.
         assert "has_crew" in method_map["run_crew"]
         assert "has_crew" in method_map["no_crew"]
@@ -357,12 +342,10 @@ class TestTypedStateSchema:
         assert "message" in field_names
         assert "items" in field_names
 
-        # Check types
         field_map = {f["name"]: f for f in fields}
         assert "int" in field_map["counter"]["type"]
         assert "str" in field_map["message"]["type"]
 
-        # Check defaults
         assert field_map["counter"]["default"] == 0
         assert field_map["message"]["default"] == ""
 
@@ -529,7 +512,6 @@ class TestEdgeCases:
 
         method_map = {m["name"]: m for m in structure["methods"]}
 
-        # Should have triggers for a, b, and c
         triggers = method_map["complex_trigger"]["trigger_methods"]
         assert len(triggers) == 3
         assert "a" in triggers
@@ -598,10 +580,8 @@ class TestEdgeGeneration:
 
         structure = flow_structure(ComplexFlow)
 
-        # Build edge map for easier checking
         edges = structure["edges"]
 
-        # Check listen edges
         listen_edges = [(e["from_method"], e["to_method"]) for e in edges if e["edge_type"] == "listen"]
 
         assert ("entry", "step_1") in listen_edges
@@ -609,7 +589,6 @@ class TestEdgeGeneration:
         assert ("left_path", "converge") in listen_edges
         assert ("right_path", "converge") in listen_edges
 
-        # Check route edges
         route_edges = [(e["from_method"], e["to_method"], e["condition"]) for e in edges if e["edge_type"] == "route"]
 
         assert ("branch", "left_path", "left") in route_edges
@@ -643,7 +622,6 @@ class TestEdgeGeneration:
 
         route_edges = [e for e in structure["edges"] if e["edge_type"] == "route"]
 
-        # Should have 3 route edges
         assert len(route_edges) == 3
 
         conditions = {e["to_method"]: e["condition"] for e in route_edges}
@@ -742,11 +720,9 @@ class TestJsonSerializable:
 
         structure = flow_structure(SerializableFlow)
 
-        # Should not raise
         json_str = json.dumps(structure)
         assert json_str is not None
 
-        # Should round-trip
         parsed = json.loads(json_str)
         assert parsed["name"] == "SerializableFlow"
         assert len(parsed["methods"]) > 0
@@ -790,28 +766,24 @@ class TestFlowInheritance:
 
         assert structure["name"] == "FlowB"
 
-        # Check all methods are present (from both parent and child)
         method_names = {m["name"] for m in structure["methods"]}
         assert "parent_start" in method_names
         assert "parent_process" in method_names
         assert "child_continue" in method_names
         assert "child_finalize" in method_names
 
-        # Check method types
         method_map = {m["name"]: m for m in structure["methods"]}
         assert method_map["parent_start"]["type"] == "start"
         assert method_map["parent_process"]["type"] == "listen"
         assert method_map["child_continue"]["type"] == "listen"
         assert method_map["child_finalize"]["type"] == "listen"
 
-        # Check edges defined in child class exist
         edge_pairs = [(e["from_method"], e["to_method"]) for e in structure["edges"]]
         assert ("parent_process", "child_continue") in edge_pairs
         assert ("child_continue", "child_finalize") in edge_pairs
 
         # KNOWN LIMITATION: Edges defined in parent class (parent_start -> parent_process)
         # are NOT propagated to child's _listeners registry by FlowMeta.
-        # The edge (parent_start, parent_process) will NOT be in edge_pairs.
         # This is a FlowMeta limitation, not a serializer bug.
 
     def test_child_flow_can_override_parent_method(self):
@@ -829,7 +801,6 @@ class TestFlowInheritance:
         class ExtendedFlow(BaseFlow):
             @listen(BaseFlow.begin)
             def process(self):
-                # Override parent's process method
                 return "extended process"
 
             @listen(process)

@@ -113,9 +113,7 @@ def test_crew_emits_start_kickoff_event(
     mock_telemetry.task_started = Mock(return_value=mock_span)
     mock_telemetry.task_ended = Mock(return_value=mock_span)
 
-    # Patch the Telemetry class to return our mock
     with patch("crewai.events.event_listener.Telemetry", return_value=mock_telemetry):
-        # Now when Crew creates EventListener, it will use our mocked telemetry
         crew = Crew(agents=[base_agent], tasks=[base_task], name="TestCrew")
         crew.kickoff()
     wait_for_event_handlers()
@@ -724,16 +722,13 @@ def test_flow_method_execution_started_includes_unstructured_state():
         "Timeout waiting for method execution started event"
     )
 
-    # Find the events for each method
     begin_event = next(e for e in received_events if e.method_name == "begin")
     process_event = next(e for e in received_events if e.method_name == "process")
 
-    # Verify state is included and is a dict
     assert begin_event.state is not None
     assert isinstance(begin_event.state, dict)
-    assert "id" in begin_event.state  # Auto-generated ID
+    assert "id" in begin_event.state
 
-    # Verify state from begin method is captured in process event
     assert process_event.state is not None
     assert isinstance(process_event.state, dict)
     assert process_event.state["counter"] == 1
@@ -781,7 +776,7 @@ def test_flow_method_execution_started_includes_structured_state():
 
     assert begin_event.state is not None
     assert isinstance(begin_event.state, dict)
-    assert begin_event.state["counter"] == 0  # Initial state
+    assert begin_event.state["counter"] == 0
     assert begin_event.state["message"] == ""
     assert begin_event.state["items"] == []
 
@@ -835,7 +830,6 @@ def test_flow_method_execution_finished_includes_serialized_state():
     assert begin_finished.state["completed"] is False
     assert begin_finished.result == "started"
 
-    # Verify process finished event has final state and result
     assert process_finished.state is not None
     assert isinstance(process_finished.state, dict)
     assert process_finished.state["result"] == "process done"
@@ -954,19 +948,14 @@ def test_llm_emits_stream_chunk_events():
         if len(received_chunks) >= 1:
             event_received.set()
 
-    # Create an LLM with streaming enabled
     llm = LLM(model="gpt-4o", stream=True)
 
-    # Call the LLM with a simple message
     response = llm.call("Tell me a short joke")
 
-    # Wait for at least one chunk
     assert event_received.wait(timeout=5), "Timeout waiting for stream chunks"
 
-    # Verify that we received chunks
     assert len(received_chunks) > 0
 
-    # Verify that concatenating all chunks equals the final response
     assert "".join(received_chunks) == response
 
 
@@ -979,16 +968,12 @@ def test_llm_no_stream_chunks_when_streaming_disabled():
     def handle_stream_chunk(source, event):
         received_chunks.append(event.chunk)
 
-    # Create an LLM with streaming disabled
     llm = LLM(model="gpt-4o", stream=False)
 
-    # Call the LLM with a simple message
     response = llm.call("Tell me a short joke")
 
-    # Verify that we didn't receive any chunks
     assert len(received_chunks) == 0
 
-    # Verify we got a response
     assert response and isinstance(response, str)
 
 
@@ -1005,13 +990,10 @@ def test_streaming_fallback_to_non_streaming():
         if len(received_chunks) >= 2:
             event_received.set()
 
-    # Create an LLM with streaming enabled
     llm = LLM(model="gpt-4o", stream=True)
 
-    # Store original methods
     original_call = llm.call
 
-    # Create a mock call method that handles the streaming error
     def mock_call(messages, tools=None, callbacks=None, available_functions=None):
         nonlocal fallback_called
         # Emit a couple of chunks to simulate partial streaming
@@ -1024,17 +1006,14 @@ def test_streaming_fallback_to_non_streaming():
         # Return a response as if fallback succeeded
         return "Fallback response after streaming error"
 
-    # Replace the call method with our mock
     llm.call = mock_call
 
     try:
-        # Call the LLM
         response = llm.call("Tell me a short joke")
         wait_for_event_handlers()
 
         assert event_received.wait(timeout=5), "Timeout waiting for stream chunks"
 
-        # Verify that we received some chunks
         assert len(received_chunks) == 2
         assert received_chunks[0] == "Test chunk 1"
         assert received_chunks[1] == "Test chunk 2"
@@ -1046,7 +1025,6 @@ def test_streaming_fallback_to_non_streaming():
         assert response == "Fallback response after streaming error"
 
     finally:
-        # Restore the original method
         llm.call = original_call
 
 
@@ -1062,39 +1040,30 @@ def test_streaming_empty_response_handling():
         if len(received_chunks) >= 3:
             event_received.set()
 
-    # Create an LLM with streaming enabled
     llm = LLM(model="gpt-3.5-turbo", stream=True)
 
-    # Store original methods
     original_call = llm.call
 
     # Create a mock call method that simulates empty chunks
     def mock_call(messages, tools=None, callbacks=None, available_functions=None):
-        # Emit a few empty chunks
         for _ in range(3):
             crewai_event_bus.emit(llm, event=LLMStreamChunkEvent(chunk="", response_id="id", call_id="test-call-id"))
 
-        # Return the default message for empty responses
         return "I apologize, but I couldn't generate a proper response. Please try again or rephrase your request."
 
-    # Replace the call method with our mock
     llm.call = mock_call
 
     try:
-        # Call the LLM - this should handle empty response
         response = llm.call("Tell me a short joke")
 
         assert event_received.wait(timeout=5), "Timeout waiting for empty chunks"
 
-        # Verify that we received empty chunks
         assert len(received_chunks) == 3
         assert all(chunk == "" for chunk in received_chunks)
 
-        # Verify the response is the default message for empty responses
         assert "I apologize" in response and "couldn't generate" in response
 
     finally:
-        # Restore the original method
         llm.call = original_call
 
 
@@ -1312,7 +1281,6 @@ def test_llm_emits_event_with_lite_agent():
     assert set(all_agent_id) == {str(agent.id)}
 
 
-# ----------- CALL_ID CORRELATION TESTS -----------
 
 
 @pytest.mark.vcr()
@@ -1377,7 +1345,6 @@ def test_streaming_chunks_share_call_id_with_call():
     llm.call("Say hi")
 
     with condition:
-        # Wait for at least started, some chunks, and completed
         success = condition.wait_for(lambda: len(events) >= 3, timeout=10)
     assert success, "Timeout waiting for streaming events"
 
@@ -1411,7 +1378,6 @@ def test_separate_llm_calls_have_different_call_ids():
     assert call_ids[0] != call_ids[1]
 
 
-# ----------- HUMAN FEEDBACK EVENTS -----------
 
 
 @patch("builtins.input", return_value="looks good")

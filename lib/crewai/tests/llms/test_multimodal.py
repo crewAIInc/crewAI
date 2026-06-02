@@ -9,7 +9,6 @@ import pytest
 from crewai.llm import LLM
 from crewai_files import ImageFile, PDFFile, TextFile, format_multimodal_content
 
-# Check for optional provider dependencies
 try:
     from crewai.llms.providers.anthropic.completion import AnthropicCompletion
     HAS_ANTHROPIC = True
@@ -184,7 +183,6 @@ class TestOpenAIMultimodal:
         assert result[0]["type"] == "image_url"
         url = result[0]["image_url"]["url"]
         assert url.startswith("data:image/png;base64,")
-        # Verify base64 content
         b64_data = url.split(",")[1]
         assert base64.b64decode(b64_data) == MINIMAL_PNG
 
@@ -359,12 +357,12 @@ class TestMultipleFilesFormatting:
         files = {
             "chart": ImageFile(source=MINIMAL_PNG),
             "doc": PDFFile(source=MINIMAL_PDF),  # Not supported by OpenAI
-            "text": TextFile(source=b"hello"),  # Not supported
+            "text": TextFile(source=b"hello"),
         }
 
         result = format_multimodal_content(files, getattr(llm, "provider", None) or llm.model)
 
-        assert len(result) == 1  # Only image supported
+        assert len(result) == 1
 
     def test_format_empty_files_dict(self) -> None:
         """Test empty files dict returns empty list."""

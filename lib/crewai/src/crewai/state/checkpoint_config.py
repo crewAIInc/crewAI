@@ -12,12 +12,10 @@ from crewai.state.provider.sqlite_provider import SqliteProvider
 
 
 CheckpointEventType = Literal[
-    # Task
     "task_started",
     "task_completed",
     "task_failed",
     "task_evaluation",
-    # Crew
     "crew_kickoff_started",
     "crew_kickoff_completed",
     "crew_kickoff_failed",
@@ -28,7 +26,6 @@ CheckpointEventType = Literal[
     "crew_test_completed",
     "crew_test_failed",
     "crew_test_result",
-    # Agent
     "agent_execution_started",
     "agent_execution_completed",
     "agent_execution_error",
@@ -38,7 +35,6 @@ CheckpointEventType = Literal[
     "agent_evaluation_started",
     "agent_evaluation_completed",
     "agent_evaluation_failed",
-    # Flow
     "flow_created",
     "flow_started",
     "flow_finished",
@@ -51,24 +47,20 @@ CheckpointEventType = Literal[
     "human_feedback_received",
     "flow_input_requested",
     "flow_input_received",
-    # LLM
     "llm_call_started",
     "llm_call_completed",
     "llm_call_failed",
     "llm_stream_chunk",
     "llm_thinking_chunk",
-    # LLM Guardrail
     "llm_guardrail_started",
     "llm_guardrail_completed",
     "llm_guardrail_failed",
-    # Tool
     "tool_usage_started",
     "tool_usage_finished",
     "tool_usage_error",
     "tool_validate_input_error",
     "tool_selection_error",
     "tool_execution_error",
-    # Memory
     "memory_save_started",
     "memory_save_completed",
     "memory_save_failed",
@@ -78,18 +70,15 @@ CheckpointEventType = Literal[
     "memory_retrieval_started",
     "memory_retrieval_completed",
     "memory_retrieval_failed",
-    # Knowledge
     "knowledge_search_query_started",
     "knowledge_search_query_completed",
     "knowledge_query_started",
     "knowledge_query_completed",
     "knowledge_query_failed",
     "knowledge_search_query_failed",
-    # Reasoning
     "agent_reasoning_started",
     "agent_reasoning_completed",
     "agent_reasoning_failed",
-    # MCP
     "mcp_connection_started",
     "mcp_connection_completed",
     "mcp_connection_failed",
@@ -97,23 +86,19 @@ CheckpointEventType = Literal[
     "mcp_tool_execution_completed",
     "mcp_tool_execution_failed",
     "mcp_config_fetch_failed",
-    # Observation
     "step_observation_started",
     "step_observation_completed",
     "step_observation_failed",
     "plan_refinement",
     "plan_replan_triggered",
     "goal_achieved_early",
-    # Skill
     "skill_discovery_started",
     "skill_discovery_completed",
     "skill_loaded",
     "skill_activated",
     "skill_load_failed",
-    # Logging
     "agent_logs_started",
     "agent_logs_execution",
-    # A2A
     "a2a_delegation_started",
     "a2a_delegation_completed",
     "a2a_conversation_started",
@@ -145,13 +130,11 @@ CheckpointEventType = Literal[
     "a2a_context_idle",
     "a2a_context_completed",
     "a2a_context_pruned",
-    # System
     "SIGTERM",
     "SIGINT",
     "SIGHUP",
     "SIGTSTP",
     "SIGCONT",
-    # Env
     "cc_env",
     "codex_env",
     "cursor_env",

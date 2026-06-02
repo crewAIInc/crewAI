@@ -11,7 +11,6 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 
 if TYPE_CHECKING:
-    # Import types for type checking only
     from snowflake.connector.connection import (
         SnowflakeConnection,
     )
@@ -29,7 +28,6 @@ try:
 except ImportError:
     SNOWFLAKE_AVAILABLE = False
 
-# Configure logging
 logger = logging.getLogger(__name__)
 
 # Cache for query results
@@ -257,7 +255,6 @@ class SnowflakeSearchTool(BaseTool):
     ) -> Any:
         """Execute the search query."""
         try:
-            # Override database/schema if provided
             if database:
                 await self._execute_query(f"USE DATABASE {database}")
             if snowflake_schema:
@@ -284,7 +281,6 @@ class SnowflakeSearchTool(BaseTool):
 
 
 try:
-    # Only rebuild if the class hasn't been initialized yet
     if not hasattr(SnowflakeSearchTool, "_model_rebuilt"):
         SnowflakeSearchTool.model_rebuild()
         SnowflakeSearchTool._model_rebuilt = True

@@ -27,11 +27,6 @@ def _is_escape_hatch_enabled() -> bool:
     return os.environ.get(_UNSAFE_PATHS_ENV, "").lower() in ("true", "1", "yes")
 
 
-# ---------------------------------------------------------------------------
-# File path validation
-# ---------------------------------------------------------------------------
-
-
 def validate_file_path(path: str, base_dir: str | None = None) -> str:
     """Validate that a file path is safe to read.
 
@@ -100,10 +95,6 @@ def validate_directory_path(path: str, base_dir: str | None = None) -> str:
         raise ValueError(f"Path '{validated}' is not a directory.")
     return validated
 
-
-# ---------------------------------------------------------------------------
-# URL validation
-# ---------------------------------------------------------------------------
 
 # Private and reserved IP ranges that should not be accessed
 _BLOCKED_IPV4_NETWORKS = [
@@ -185,7 +176,6 @@ def validate_url(url: str) -> str:
     if not parsed.hostname:
         raise ValueError(f"URL has no hostname: '{url}'")
 
-    # Resolve DNS and check IPs
     try:
         addrinfos = socket.getaddrinfo(
             parsed.hostname, parsed.port or (443 if parsed.scheme == "https" else 80)

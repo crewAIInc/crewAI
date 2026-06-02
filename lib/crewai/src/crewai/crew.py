@@ -557,7 +557,6 @@ class Crew(FlowTrackable, BaseModel):
             stack.append((self._kickoff_event_id, "crew_kickoff_started"))
         restore_event_scope(tuple(stack))
 
-        # Restore last_event_id and emission counter from the record
         last_event_id: str | None = None
         max_seq = 0
         for node in state.event_record.nodes.values():
@@ -616,7 +615,6 @@ class Crew(FlowTrackable, BaseModel):
             self._cache_handler = CacheHandler()
         event_listener = EventListener()
 
-        # Determine and set tracing state once for this execution
         tracing_enabled = should_enable_tracing(override=self.tracing)
         set_tracing_enabled(tracing_enabled)
 
@@ -644,7 +642,6 @@ class Crew(FlowTrackable, BaseModel):
         """
         from crewai.memory.utils import sanitize_scope_name
 
-        # Compute sanitized crew name for root_scope
         crew_name = sanitize_scope_name(self.name or "crew")
         crew_root_scope = f"/crew/{crew_name}"
 
@@ -750,7 +747,6 @@ class Crew(FlowTrackable, BaseModel):
         """Validates that the crew ends with at most one asynchronous task."""
         final_async_task_count = 0
 
-        # Traverse tasks backward
         for task in reversed(self.tasks):
             if task.async_execution:
                 final_async_task_count += 1
@@ -840,7 +836,7 @@ class Crew(FlowTrackable, BaseModel):
             if isinstance(task.context, list):
                 for context_task in task.context:
                     if id(context_task) not in task_indices:
-                        continue  # Skip context tasks not in the main tasks list
+                        continue
                     if task_indices[id(context_task)] > task_indices[id(task)]:
                         raise ValueError(
                             f"Task '{task.description}' has a context dependency "
@@ -1043,7 +1039,6 @@ class Crew(FlowTrackable, BaseModel):
             )
             raise
         finally:
-            # Ensure all background memory saves complete before returning
             if self._memory is not None and hasattr(self._memory, "drain_writes"):
                 self._memory.drain_writes()
             clear_files(self.id)
@@ -1595,7 +1590,6 @@ class Crew(FlowTrackable, BaseModel):
     def _prepare_tools(
         self, agent: BaseAgent, task: Task, tools: list[BaseTool]
     ) -> list[BaseTool]:
-        # Add delegation tools if agent allows delegation
         if hasattr(agent, "allow_delegation") and getattr(
             agent, "allow_delegation", False
         ):
@@ -1610,7 +1604,6 @@ class Crew(FlowTrackable, BaseModel):
             elif agent:
                 tools = self._add_delegation_tools(task, tools)
 
-        # Add code execution tools if agent allows code execution
         if hasattr(agent, "allow_code_execution") and getattr(
             agent, "allow_code_execution", False
         ):
@@ -1630,7 +1623,6 @@ class Crew(FlowTrackable, BaseModel):
         if agent and (hasattr(agent, "mcps") and getattr(agent, "mcps", None)):
             tools = self._add_mcp_tools(task, tools)
 
-        # Add memory tools if memory is available (agent or crew level)
         resolved_memory = getattr(agent, "memory", None) or self._memory
         if resolved_memory is not None:
             tools = self._add_memory_tools(tools, resolved_memory)
@@ -1654,7 +1646,6 @@ class Crew(FlowTrackable, BaseModel):
             def is_auto_injected(content_type: str) -> bool:
                 return any(content_type.startswith(t) for t in supported_types)
 
-            # Only add read_file tool if there are files that need it
             files_needing_tool = {
                 name: f
                 for name, f in files.items()
@@ -1679,17 +1670,14 @@ class Crew(FlowTrackable, BaseModel):
         if not new_tools:
             return existing_tools
 
-        # Create mapping of tool names to new tools
         new_tool_map = {sanitize_tool_name(tool.name): tool for tool in new_tools}
 
-        # Remove any existing tools that will be replaced
         tools = [
             tool
             for tool in existing_tools
             if sanitize_tool_name(tool.name) not in new_tool_map
         ]
 
-        # Add all new tools
         tools.extend(new_tools)
 
         return tools
@@ -1702,7 +1690,6 @@ class Crew(FlowTrackable, BaseModel):
     ) -> list[BaseTool]:
         if hasattr(task_agent, "get_delegation_tools"):
             delegation_tools = task_agent.get_delegation_tools(agents)
-            # Cast delegation_tools to the expected type for _merge_tools
             return self._merge_tools(tools, delegation_tools)
         return tools
 
@@ -1742,7 +1729,6 @@ class Crew(FlowTrackable, BaseModel):
     ) -> list[BaseTool]:
         if hasattr(agent, "get_code_execution_tools"):
             code_tools = agent.get_code_execution_tools()
-            # Cast code_tools to the expected type for _merge_tools
             return self._merge_tools(tools, cast(list[BaseTool], code_tools))
         return tools
 
@@ -1847,7 +1833,6 @@ class Crew(FlowTrackable, BaseModel):
         if not task_outputs:
             raise ValueError("No task outputs available to create crew output.")
 
-        # Filter out empty outputs and get the last valid one as the main output
         valid_outputs = [t for t in task_outputs if t.raw]
         if not valid_outputs:
             raise ValueError("No valid task outputs available to create crew output.")
@@ -1975,13 +1960,11 @@ class Crew(FlowTrackable, BaseModel):
         placeholder_pattern = re.compile(r"\{(.+?)}")
         required_inputs: set[str] = set()
 
-        # Scan tasks for inputs
         for task in self.tasks:
             # description and expected_output might contain e.g. {topic}, {user_name}
             text = f"{task.description or ''} {task.expected_output or ''}"
             required_inputs.update(placeholder_pattern.findall(text))
 
-        # Scan agents for inputs
         for agent in self.agents:
             # role, goal, backstory might have placeholders like {role_detail}, etc.
             text = f"{agent.role or ''} {agent.goal or ''} {agent.backstory or ''}"
@@ -2086,7 +2069,6 @@ class Crew(FlowTrackable, BaseModel):
 
                 total_usage_metrics.add_usage_metrics(llm_usage)
             else:
-                # fallback litellm
                 if hasattr(agent, "_token_process"):
                     token_sum = agent._token_process.get_summary()
                     total_usage_metrics.add_usage_metrics(token_sum)
@@ -2114,7 +2096,6 @@ class Crew(FlowTrackable, BaseModel):
         Uses concurrent.futures for concurrent execution.
         """
         try:
-            # Create LLM instance and ensure it's of type LLM for CrewEvaluator
             llm_instance = create_llm(eval_llm)
             if not llm_instance:
                 raise ValueError("Failed to create LLM instance.")
@@ -2273,13 +2254,11 @@ class Crew(FlowTrackable, BaseModel):
         def knowledge_reset(memory: Any) -> Any:
             return self.reset_knowledge(memory)
 
-        # Get knowledge for agents
         agent_knowledges = [
             getattr(agent, "knowledge", None)
             for agent in self.agents
             if getattr(agent, "knowledge", None) is not None
         ]
-        # Get knowledge for crew and agents
         crew_knowledge = getattr(self, "knowledge", None)
         crew_and_agent_knowledges = (
             [crew_knowledge] if crew_knowledge is not None else []

@@ -39,7 +39,6 @@ class CustomLLM(BaseLLM):
         """
         self.call_count += 1
 
-        # If input is a string, convert to proper message format
         if isinstance(messages, str):
             messages = [{"role": "user", "content": messages}]
 
@@ -48,7 +47,6 @@ class CustomLLM(BaseLLM):
             if isinstance(message["content"], str):
                 message["content"] = [{"type": "text", "text": message["content"]}]
 
-        # Return predefined response in expected format
         if "Thought:" in str(messages):
             return f"Thought: I will say hi\nFinal Answer: {self.response}"
         return self.response
@@ -86,17 +84,14 @@ def test_custom_llm_implementation():
     """Test that a custom LLM implementation works with create_llm."""
     custom_llm = CustomLLM(response="The answer is 42")
 
-    # Test that create_llm returns the custom LLM instance directly
     result_llm = create_llm(custom_llm)
 
     assert result_llm is custom_llm
 
-    # Test calling the custom LLM
     response = result_llm.call(
         "What is the answer to life, the universe, and everything?"
     )
 
-    # Verify that the response from the custom LLM was used
     assert "42" in response
 
 
@@ -126,9 +121,7 @@ def test_custom_llm_within_crew():
 
     result = crew.kickoff()
 
-    # Assert the LLM was called
     assert custom_llm.call_count > 0
-    # Assert we got a response
     assert "Hello!" in result.raw
 
 
@@ -136,11 +129,9 @@ def test_custom_llm_message_formatting():
     """Test that the custom LLM properly formats messages"""
     custom_llm = CustomLLM(response="Test response", model="test-model")
 
-    # Test with string input
     result = custom_llm.call("Test message")
     assert result == "Test response"
 
-    # Test with message list
     messages = [
         {"role": "system", "content": "System message"},
         {"role": "user", "content": "User message"},
@@ -180,7 +171,6 @@ class JWTAuthLLM(BaseLLM):
             }
         )
         # In a real implementation, this would use the JWT token to authenticate
-        # with an external service
         return "Response from JWT-authenticated LLM"
 
     def supports_function_calling(self) -> bool:
@@ -203,27 +193,21 @@ def test_custom_llm_with_jwt_auth():
     """Test a custom LLM implementation with JWT authentication."""
     jwt_llm = JWTAuthLLM(jwt_token="example.jwt.token")
 
-    # Test that create_llm returns the JWT-authenticated LLM instance directly
     result_llm = create_llm(jwt_llm)
 
     assert result_llm is jwt_llm
 
-    # Test calling the JWT-authenticated LLM
     response = result_llm.call("Test message")
 
-    # Verify that the JWT-authenticated LLM was called
     assert len(jwt_llm.calls) > 0
-    # Verify that the response from the JWT-authenticated LLM was used
     assert response == "Response from JWT-authenticated LLM"
 
 
 def test_jwt_auth_llm_validation():
     """Test that JWT token validation works correctly."""
-    # Test with invalid JWT token (empty string)
     with pytest.raises(ValueError, match="Invalid JWT token"):
         JWTAuthLLM(jwt_token="")
 
-    # Test with invalid JWT token (non-string)
     with pytest.raises(ValueError, match="Invalid JWT token"):
         JWTAuthLLM(jwt_token=None)
 
@@ -287,7 +271,6 @@ class TimeoutHandlingLLM(BaseLLM):
                 # Simulate a failure if fail_count > 0
                 if self.fail_count > 0:
                     self.fail_count -= 1
-                    # If we've used all retries, raise an error
                     if attempt == self.max_retries - 1:
                         raise TimeoutError(
                             f"LLM request failed after {self.max_retries} attempts"
@@ -296,7 +279,6 @@ class TimeoutHandlingLLM(BaseLLM):
                     continue
                 # Success on first attempt
                 return "First attempt response"
-            # This is a retry attempt (attempt > 0)
             # Always record retry attempts
             self.calls.append(
                 {
@@ -311,7 +293,6 @@ class TimeoutHandlingLLM(BaseLLM):
             # Simulate a failure if fail_count > 0
             if self.fail_count > 0:
                 self.fail_count -= 1
-                # If we've used all retries, raise an error
                 if attempt == self.max_retries - 1:
                     raise TimeoutError(
                         f"LLM request failed after {self.max_retries} attempts"
@@ -351,20 +332,17 @@ class TimeoutHandlingLLM(BaseLLM):
 
 def test_timeout_handling_llm():
     """Test a custom LLM implementation with timeout handling and retry logic."""
-    # Test successful first attempt
     llm = TimeoutHandlingLLM()
     response = llm.call("Test message")
     assert response == "First attempt response"
     assert len(llm.calls) == 1
 
-    # Test successful retry
     llm = TimeoutHandlingLLM()
     llm.fail_count = 1  # Fail once, then succeed
     response = llm.call("Test message")
     assert response == "Response after retry"
     assert len(llm.calls) == 2  # Initial call + successful retry call
 
-    # Test failure after all retries
     llm = TimeoutHandlingLLM(max_retries=2)
     llm.fail_count = 2  # Fail twice, which is all retries
     with pytest.raises(TimeoutError, match="LLM request failed after 2 attempts"):
