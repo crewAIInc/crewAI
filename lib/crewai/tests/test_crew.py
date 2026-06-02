@@ -3010,6 +3010,23 @@ def test__setup_for_training(researcher, writer):
         assert agent.allow_delegation is False
 
 
+def test_crew_trained_agents_file_is_preserved_on_copy(researcher):
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        agent=researcher,
+    )
+    crew = Crew(
+        agents=[researcher],
+        tasks=[task],
+        trained_agents_file="custom_trained_agents.pkl",
+    )
+
+    cloned_crew = crew.copy()
+
+    assert cloned_crew.trained_agents_file == "custom_trained_agents.pkl"
+
+
 @pytest.mark.vcr()
 def test_replay_feature(researcher, writer):
     list_ideas = Task(
