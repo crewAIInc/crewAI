@@ -133,12 +133,73 @@ class SnowflakeCompletion(OpenAICompletion):
     def _format_messages(self, messages: str | list[LLMMessage]) -> list[LLMMessage]:
         formatted_messages = super()._format_messages(messages)
         if self._is_claude_model():
+            formatted_messages = self._remove_incomplete_claude_tool_uses(
+                formatted_messages
+            )
             return self._ensure_claude_conversation_ends_with_user(formatted_messages)
         return formatted_messages
 
     def _is_claude_model(self) -> bool:
         model = self.model.lower()
         return model.startswith(("claude-", "anthropic."))
+
+    @staticmethod
+    def _remove_incomplete_claude_tool_uses(
+        messages: list[LLMMessage],
+    ) -> list[LLMMessage]:
+        """Drop dangling Claude tool-use turns before sending to Snowflake.
+
+        Snowflake-hosted Claude models reject histories where an assistant tool
+        use is not accompanied by matching tool results. CrewAI may retry or
+        summarize after an interrupted tool cycle, leaving an assistant
+        ``tool_calls`` message in history without every corresponding
+        ``role='tool'`` result. OpenAI-family models tolerate that more often,
+        but Claude through Snowflake returns:
+        "Each 'toolUse' block must be accompanied with a matching 'toolResult' block."
+        """
+        sanitized: list[LLMMessage] = []
+        index = 0
+
+        while index < len(messages):
+            message = messages[index]
+            tool_calls = message.get("tool_calls") or []
+            if message.get("role") != "assistant" or not tool_calls:
+                sanitized.append(message)
+                index += 1
+                continue
+
+            expected_ids = {
+                tool_call.get("id")
+                for tool_call in tool_calls
+                if isinstance(tool_call, dict) and tool_call.get("id")
+            }
+            if not expected_ids:
+                sanitized.append(message)
+                index += 1
+                continue
+
+            tool_result_ids: set[str] = set()
+            lookahead = index + 1
+            while (
+                lookahead < len(messages) and messages[lookahead].get("role") == "tool"
+            ):
+                tool_call_id = messages[lookahead].get("tool_call_id")
+                if isinstance(tool_call_id, str):
+                    tool_result_ids.add(tool_call_id)
+                lookahead += 1
+
+            if expected_ids.issubset(tool_result_ids):
+                sanitized.append(message)
+                sanitized.extend(
+                    tool_message
+                    for tool_message in messages[index + 1 : lookahead]
+                    if tool_message.get("role") == "tool"
+                    and tool_message.get("tool_call_id") in expected_ids
+                )
+
+            index = lookahead
+
+        return sanitized
 
     @staticmethod
     def _ensure_claude_conversation_ends_with_user(
