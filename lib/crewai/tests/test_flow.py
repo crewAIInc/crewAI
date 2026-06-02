@@ -161,6 +161,87 @@ def test_flow_with_or_condition():
     )
 
 
+def test_or_listener_fires_once_across_parallel_starts():
+    """Parallel ``@start`` paths feeding ``or_`` must not double-fire the listener."""
+    fire_count = 0
+
+    class ParallelOrFlow(Flow):
+        @start()
+        async def fast_start(self):
+            return "fast"
+
+        @start()
+        async def slow_start(self):
+            await asyncio.sleep(0.2)
+            return "slow"
+
+        @listen(or_(fast_start, slow_start))
+        def handler(self):
+            nonlocal fire_count
+            fire_count += 1
+
+    asyncio.run(ParallelOrFlow().kickoff_async())
+
+    assert fire_count == 1
+
+
+def test_or_listener_re_arms_across_router_loop():
+    """Regression for #5972: multi-source ``or_`` re-fires on each router emission."""
+    fire_count = 0
+
+    class CyclicOrFlow(Flow):
+        iteration = 0
+
+        @start()
+        def kick(self):
+            return "kick"
+
+        @router(kick)
+        def initial_router(self):
+            return "SignalA"
+
+        @listen(or_("SignalA", "SignalB"))
+        def handler(self):
+            nonlocal fire_count
+            fire_count += 1
+
+        @router(handler)
+        def loop_router(self):
+            self.iteration += 1
+            return "stop" if self.iteration >= 3 else "SignalB"
+
+    CyclicOrFlow().kickoff()
+
+    assert fire_count == 3
+
+
+def test_or_listener_does_not_double_fire_across_chained_routers():
+    """Chained routers within one dispatch wave must not re-fire the same ``or_`` listener."""
+    fire_count = 0
+
+    class ChainedRouterOrFlow(Flow):
+        @start()
+        def kick(self):
+            return "kick"
+
+        @router(kick)
+        def router_a(self):
+            return "SignalA"
+
+        @router("SignalA")
+        def router_b(self):
+            return "SignalB"
+
+        @listen(or_("SignalA", "SignalB"))
+        def handler(self):
+            nonlocal fire_count
+            fire_count += 1
+
+    ChainedRouterOrFlow().kickoff()
+
+    assert fire_count == 1
+
+
 def test_flow_with_router():
     """Test a flow that uses a router method to determine the next step."""
     execution_order = []
