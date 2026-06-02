@@ -358,7 +358,8 @@ class TestSnowflakeRequests:
 
         assert messages[-2] == {"role": "user", "content": "Use the tool."}
         assert messages[-1]["role"] == "user"
-        assert "toolResult" in messages[-1]["content"]
+        assert "result" in messages[-1]["content"]
+        assert "toolResult" not in messages[-1]["content"]
         assert all(
             not (
                 message.get("role") == "assistant"

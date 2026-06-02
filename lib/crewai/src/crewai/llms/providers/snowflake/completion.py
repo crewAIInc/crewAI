@@ -245,7 +245,8 @@ class SnowflakeCompletion(OpenAICompletion):
             if isinstance(content, str):
                 summaries.append(f"{name}: {content}")
             elif isinstance(content, list):
-                summaries.append(f"{name}: {content}")
+                extracted_text = SnowflakeCompletion._extract_tool_result_text(content)
+                summaries.append(f"{name}: {extracted_text or content}")
 
         if not summaries:
             return ""
@@ -253,6 +254,22 @@ class SnowflakeCompletion(OpenAICompletion):
         return "Tool results from previous tool calls:\n" + "\n".join(
             f"- {summary}" for summary in summaries
         )
+
+    @staticmethod
+    def _extract_tool_result_text(content: list[Any]) -> str:
+        texts: list[str] = []
+        for item in content:
+            if not isinstance(item, dict) or not isinstance(
+                item.get("toolResult"), dict
+            ):
+                continue
+            result_content = item["toolResult"].get("content", [])
+            texts.extend(
+                str(inner["text"])
+                for inner in result_content
+                if isinstance(inner, dict) and "text" in inner
+            )
+        return " ".join(texts)
 
     @staticmethod
     def _extract_claude_tool_use_ids(message: LLMMessage) -> set[str]:
