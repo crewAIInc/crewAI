@@ -486,6 +486,93 @@ class LockedDictProxy(dict, Generic[T]):  # type: ignore[type-arg]
         return not self.__eq__(other)
 
 
+class LockedModelProxy:
+    """Lock-guarded proxy for a nested Pydantic ``BaseModel`` held in flow state.
+
+    ``StateProxy`` wraps ``list`` and ``dict`` attributes so that mutations on
+    nested containers acquire the flow state lock. Pydantic ``BaseModel``
+    instances were previously returned unwrapped (the ``return value`` fall
+    through), so ``flow.state.profile.name = "x"`` mutated the model attribute
+    entirely outside the lock. When parallel listeners mutate nested-model
+    attributes, those writes race and corrupt state silently. This proxy closes
+    that gap by routing every attribute read/write on the wrapped model through
+    the same lock, recursively wrapping nested lists, dicts, and models.
+    """
+
+    __slots__ = ("_lock", "_model")
+
+    def __init__(self, model: BaseModel, lock: threading.Lock) -> None:
+        """Wrap ``model``, guarding all attribute access with ``lock``.
+
+        Args:
+            model: The nested Pydantic model held in the flow's state.
+            lock: The shared flow-state lock that serializes access to the
+                state tree. The same lock instance is propagated to every
+                nested proxy so the whole subtree is guarded by one lock.
+        """
+        object.__setattr__(self, "_model", model)
+        object.__setattr__(self, "_lock", lock)
+
+    def __getattr__(self, name: str) -> Any:
+        """Read ``name`` from the wrapped model while holding the lock.
+
+        The attribute is fetched under the flow-state lock, then re-wrapped so
+        deeper mutations stay synchronized: ``list`` -> :class:`LockedListProxy`,
+        ``dict`` -> :class:`LockedDictProxy`, and ``BaseModel`` ->
+        :class:`LockedModelProxy` (recursively). Scalars are returned as-is.
+
+        Args:
+            name: Attribute name to read from the wrapped model.
+
+        Returns:
+            The attribute value, wrapped in the matching lock-aware proxy when
+            it is a list, dict, or nested ``BaseModel``; otherwise the raw value.
+        """
+        lock = object.__getattribute__(self, "_lock")
+        model = object.__getattribute__(self, "_model")
+        with lock:
+            value = getattr(model, name)
+
+        if isinstance(value, list):
+            return LockedListProxy(value, lock)
+        if isinstance(value, dict):
+            return LockedDictProxy(value, lock)
+        if isinstance(value, BaseModel):
+            return LockedModelProxy(value, lock)
+        return value
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        """Write ``name`` on the wrapped model while holding the lock.
+
+        The private ``_model`` / ``_lock`` slots are assigned directly (they
+        carry no shared state and must be settable before the lock exists);
+        every other attribute write acquires the flow-state lock before mutating
+        the wrapped model, so concurrent listeners cannot interleave writes. A
+        value read back through a proxy (``LockedListProxy`` / ``LockedDictProxy``
+        / ``LockedModelProxy``) is unwrapped to its native object first, so a
+        proxy wrapper is never persisted inside the model.
+
+        Args:
+            name: Attribute name to set on the wrapped model.
+            value: Value to assign.
+        """
+        if name in ("_model", "_lock"):
+            object.__setattr__(self, name, value)
+            return
+
+        if isinstance(value, LockedListProxy):
+            value = value._list
+        elif isinstance(value, LockedDictProxy):
+            value = value._dict
+        elif isinstance(value, LockedModelProxy):
+            value = object.__getattribute__(value, "_model")
+
+        lock = object.__getattribute__(self, "_lock")
+        model = object.__getattribute__(self, "_model")
+        with lock:
+            setattr(model, name, value)
+
+
 class StateProxy(Generic[T]):
     """Proxy that provides thread-safe access to flow state.
 
@@ -506,6 +593,8 @@ class StateProxy(Generic[T]):
             return LockedListProxy(value, lock)
         if isinstance(value, dict):
             return LockedDictProxy(value, lock)
+        if isinstance(value, BaseModel):
+            return LockedModelProxy(value, lock)
         return value
 
     def __setattr__(self, name: str, value: Any) -> None:
@@ -516,6 +605,8 @@ class StateProxy(Generic[T]):
                 value = value._list
             elif isinstance(value, LockedDictProxy):
                 value = value._dict
+            elif isinstance(value, LockedModelProxy):
+                value = object.__getattribute__(value, "_model")
             with object.__getattribute__(self, "_proxy_lock"):
                 setattr(object.__getattribute__(self, "_proxy_state"), name, value)
 
