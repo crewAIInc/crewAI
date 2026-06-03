@@ -62,6 +62,8 @@ from crewai.events.types.crew_events import (
     CrewKickoffStartedEvent,
 )
 from crewai.events.types.flow_events import (
+    ConversationMessageAddedEvent,
+    ConversationRouteSelectedEvent,
     FlowCreatedEvent,
     FlowFinishedEvent,
     FlowPlotEvent,
@@ -254,6 +256,18 @@ class TraceCollectionListener(BaseEventListener):
         @event_bus.on(MethodExecutionFailedEvent)
         def on_method_failed(source: Any, event: MethodExecutionFailedEvent) -> None:
             self._handle_trace_event("method_execution_failed", source, event)
+
+        @event_bus.on(ConversationMessageAddedEvent)
+        def on_conversation_message_added(
+            source: Any, event: ConversationMessageAddedEvent
+        ) -> None:
+            self._handle_trace_event("conversation_message_added", source, event)
+
+        @event_bus.on(ConversationRouteSelectedEvent)
+        def on_conversation_route_selected(
+            source: Any, event: ConversationRouteSelectedEvent
+        ) -> None:
+            self._handle_trace_event("conversation_route_selected", source, event)
 
         @event_bus.on(FlowFinishedEvent)
         def on_flow_finished(source: Any, event: FlowFinishedEvent) -> None:

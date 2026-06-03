@@ -11,6 +11,8 @@ from pydantic import BaseModel
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
 from crewai.events.types.flow_events import (
+    ConversationMessageAddedEvent,
+    ConversationRouteSelectedEvent,
     FlowStartedEvent,
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
@@ -420,6 +422,56 @@ class TestConversationalFlow:
         }
         assert any(message["content"] == "prior findings" for message in messages)
         assert any(message["content"] == "summarize findings" for message in messages)
+
+    def test_conversational_turn_emits_message_and_route_events(self) -> None:
+        class ResearchRoute(BaseModel):
+            intent: Literal["research", "converse", "end"]
+
+        router_llm = MagicMock()
+        router_llm.call.return_value = ResearchRoute(intent="converse")
+        chat_llm = MagicMock()
+        chat_llm.call.return_value = "hello back"
+
+        @ConversationConfig(
+            llm=chat_llm,
+            router=RouterConfig(
+                response_format=ResearchRoute,
+                llm=router_llm,
+                routes=["research"],
+            ),
+        )
+        class RoutedFlow(ConversationalFlow):
+            @listen("research")
+            def run_research(self) -> str:
+                self.append_assistant_message("researched")
+                return "researched"
+
+        messages: list[ConversationMessageAddedEvent] = []
+        routes: list[ConversationRouteSelectedEvent] = []
+
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(ConversationMessageAddedEvent)
+            def capture_message(_: Any, event: ConversationMessageAddedEvent) -> None:
+                messages.append(event)
+
+            @crewai_event_bus.on(ConversationRouteSelectedEvent)
+            def capture_route(_: Any, event: ConversationRouteSelectedEvent) -> None:
+                routes.append(event)
+
+            flow = RoutedFlow()
+            flow.handle_turn("just chat")
+            crewai_event_bus.flush()
+
+        assert [(event.role, event.content) for event in messages] == [
+            ("user", "just chat"),
+            ("assistant", "hello back"),
+        ]
+        assert [event.message_index for event in messages] == [0, 1]
+        assert len(routes) == 1
+        assert routes[0].route == "converse"
+        assert routes[0].user_message == "just chat"
+        assert routes[0].session_id == messages[0].session_id
 
     def test_builtin_end_marks_conversation_ended(self) -> None:
         class ResearchRoute(BaseModel):
