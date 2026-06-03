@@ -1996,16 +1996,62 @@ class LLM(BaseLLM):
 
     @staticmethod
     def _usage_to_dict(usage: Any) -> dict[str, Any] | None:
+        """Convert a provider usage object to a plain dict and flatten the
+        cache/reasoning sub-counts that LiteLLM nests under provider-specific
+        shapes into the top-level keys the rest of the pipeline expects.
+
+        LiteLLM hands back provider usage as-is, so cache-read, cache-creation
+        and reasoning tokens may live in nested objects (e.g.
+        ``prompt_tokens_details.cached_tokens``) or under Anthropic-style keys
+        (``cache_read_input_tokens``). Downstream span mapping only reads the
+        flat ``cached_prompt_tokens`` / ``reasoning_tokens`` /
+        ``cache_creation_tokens`` keys, so we surface them here.
+
+        Only those derived buckets are populated; ``prompt_tokens`` /
+        ``completion_tokens`` / ``total_tokens`` are left untouched. Extraction
+        precedence mirrors ``BaseLLM._track_token_usage_internal``.
+        """
         if usage is None:
             return None
         if isinstance(usage, dict):
-            return usage
-        if isinstance(usage, BaseModel):
-            result: dict[str, Any] = usage.model_dump()
-            return result
-        if hasattr(usage, "__dict__"):
-            return {k: v for k, v in vars(usage).items() if not k.startswith("_")}
-        return None
+            data: dict[str, Any] = dict(usage)
+        elif isinstance(usage, BaseModel):
+            data = usage.model_dump()
+        elif hasattr(usage, "__dict__"):
+            data = {k: v for k, v in vars(usage).items() if not k.startswith("_")}
+        else:
+            return None
+
+        def _nested(container: Any, key: str) -> Any:
+            if isinstance(container, dict):
+                return container.get(key)
+            return getattr(container, key, None)
+
+        prompt_details = data.get("prompt_tokens_details")
+        completion_details = data.get("completion_tokens_details")
+
+        cached_prompt_tokens = (
+            data.get("cached_tokens")
+            or data.get("cached_prompt_tokens")
+            or data.get("cache_read_input_tokens")
+            or _nested(prompt_details, "cached_tokens")
+        )
+        if cached_prompt_tokens is not None:
+            data["cached_prompt_tokens"] = cached_prompt_tokens
+
+        reasoning_tokens = data.get("reasoning_tokens") or _nested(
+            completion_details, "reasoning_tokens"
+        )
+        if reasoning_tokens is not None:
+            data["reasoning_tokens"] = reasoning_tokens
+
+        cache_creation_tokens = data.get("cache_creation_tokens") or data.get(
+            "cache_creation_input_tokens"
+        )
+        if cache_creation_tokens is not None:
+            data["cache_creation_tokens"] = cache_creation_tokens
+
+        return data
 
     def _handle_emit_call_events(
         self,
