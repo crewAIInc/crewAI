@@ -62,6 +62,7 @@ class TraceBatchManager:
         self._pending_events_lock = Lock()
         self._pending_events_cv = Condition(self._pending_events_lock)
         self._pending_events_count = 0
+        self._finalize_lock = Lock()
 
         self.is_current_batch_ephemeral = False
         self.trace_batch_id: str | None = None
@@ -353,7 +354,8 @@ class TraceBatchManager:
                     self.trace_batch_id, "Error sending events to backend"
                 )
                 return None
-        self._finalize_backend_batch(events_sent_count)
+        if not self._finalize_backend_batch(events_sent_count):
+            return None
 
         finalized_batch = self.current_batch
 
@@ -370,76 +372,81 @@ class TraceBatchManager:
 
         return finalized_batch
 
-    def _finalize_backend_batch(self, events_count: int = 0) -> None:
+    def _finalize_backend_batch(self, events_count: int = 0) -> bool:
         """Send batch finalization to backend
 
         Args:
             events_count: Number of events that were successfully sent
         """
-        if self._batch_finalized or not self.plus_api or not self.trace_batch_id:
-            return
+        with self._finalize_lock:
+            batch_id = self.trace_batch_id
+            is_ephemeral = self.is_current_batch_ephemeral
+            if self._batch_finalized or not self.plus_api or not batch_id:
+                return True
 
-        try:
-            payload: TraceFinalizePayload = {
-                "status": "completed",
-                "duration_ms": self.calculate_duration("execution"),
-                "final_event_count": events_count,
-            }
+            try:
+                payload: TraceFinalizePayload = {
+                    "status": "completed",
+                    "duration_ms": self.calculate_duration("execution"),
+                    "final_event_count": events_count,
+                }
 
-            response = (
-                self.plus_api.finalize_ephemeral_trace_batch(
-                    self.trace_batch_id, payload
-                )
-                if self.is_current_batch_ephemeral
-                else self.plus_api.finalize_trace_batch(self.trace_batch_id, payload)
-            )
-
-            if response.status_code == 200:
-                self._batch_finalized = True
-                access_code = response.json().get("access_code", None)
-                console = Console()
-                settings = Settings()
-                base_url = settings.enterprise_base_url or DEFAULT_CREWAI_ENTERPRISE_URL
-                return_link = (
-                    f"{base_url}/crewai_plus/trace_batches/{self.trace_batch_id}"
-                    if not self.is_current_batch_ephemeral and access_code is None
-                    else f"{base_url}/crewai_plus/ephemeral_trace_batches/{self.trace_batch_id}?access_code={access_code}"
+                response = (
+                    self.plus_api.finalize_ephemeral_trace_batch(batch_id, payload)
+                    if is_ephemeral
+                    else self.plus_api.finalize_trace_batch(batch_id, payload)
                 )
 
-                if self.is_current_batch_ephemeral:
-                    self.ephemeral_trace_url = return_link
+                if response.status_code == 200:
+                    self._batch_finalized = True
+                    access_code = response.json().get("access_code", None)
+                    console = Console()
+                    settings = Settings()
+                    base_url = (
+                        settings.enterprise_base_url or DEFAULT_CREWAI_ENTERPRISE_URL
+                    )
+                    return_link = (
+                        f"{base_url}/crewai_plus/trace_batches/{batch_id}"
+                        if not is_ephemeral and access_code is None
+                        else f"{base_url}/crewai_plus/ephemeral_trace_batches/{batch_id}?access_code={access_code}"
+                    )
 
-                message_parts = [
-                    f"✅ Trace batch finalized with session ID: {self.trace_batch_id}",
-                    "",
-                    f"🔗 View here: {return_link}",
-                ]
+                    if is_ephemeral:
+                        self.ephemeral_trace_url = return_link
 
-                if access_code:
-                    message_parts.append(f"🔑 Access Code: {access_code}")
+                    message_parts = [
+                        f"✅ Trace batch finalized with session ID: {batch_id}",
+                        "",
+                        f"🔗 View here: {return_link}",
+                    ]
 
-                panel = Panel(
-                    "\n".join(message_parts),
-                    title="Trace Batch Finalization",
-                    border_style="green",
-                )
-                if not should_auto_collect_first_time_traces():
-                    console.print(panel)
+                    if access_code:
+                        message_parts.append(f"🔑 Access Code: {access_code}")
 
-            else:
+                    panel = Panel(
+                        "\n".join(message_parts),
+                        title="Trace Batch Finalization",
+                        border_style="green",
+                    )
+                    if not should_auto_collect_first_time_traces():
+                        console.print(panel)
+                    return True
+
                 logger.error(
                     f"❌ Failed to finalize trace batch: {response.status_code} - {response.text}"
                 )
-                self._mark_batch_as_failed(self.trace_batch_id, response.text)
+                self._mark_batch_as_failed(batch_id, response.text)
+                return False
 
-        except Exception as e:
-            logger.error(f"❌ Error finalizing trace batch: {e}")
-            try:
-                self._mark_batch_as_failed(self.trace_batch_id, str(e))
-            except Exception:
-                logger.debug(
-                    "Could not mark trace batch as failed (network unavailable)"
-                )
+            except Exception as e:
+                logger.error(f"❌ Error finalizing trace batch: {e}")
+                try:
+                    self._mark_batch_as_failed(batch_id, str(e))
+                except Exception:
+                    logger.debug(
+                        "Could not mark trace batch as failed (network unavailable)"
+                    )
+                return False
 
     def _cleanup_batch_data(self) -> None:
         """Clean up batch data after successful finalization to free memory"""

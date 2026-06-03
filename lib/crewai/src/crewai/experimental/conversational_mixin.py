@@ -86,15 +86,22 @@ class _ConversationalMixin:
         _pending_intents: Sequence[str] | None
         _pending_intent_llm: str | BaseLLM | None
 
-        def _clear_or_listeners(self) -> None: ...
+        def _clear_or_listeners(self) -> None:
+            pass
+
         def _collapse_to_outcome(
             self,
             feedback: str,
             outcomes: tuple[str, ...],
             llm: str | BaseLLM | Any,
-        ) -> str: ...
-        def _copy_and_serialize_state(self) -> dict[str, Any]: ...
-        def kickoff(self, *args: Any, **kwargs: Any) -> Any: ...
+        ) -> str:
+            pass
+
+        def _copy_and_serialize_state(self) -> dict[str, Any]:
+            pass
+
+        def kickoff(self, *args: Any, **kwargs: Any) -> Any:
+            pass
 
     @start()
     @_conversational_only

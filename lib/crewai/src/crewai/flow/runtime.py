@@ -2621,18 +2621,17 @@ class Flow(_ConversationalMixin, BaseModel, Generic[T], metaclass=FlowMeta):
             finished_event_id: str | None = None
             # MethodExecution events always fire even when console panels are
             # suppressed; tracing depends on them.
-            if True:
-                finished_event = MethodExecutionFinishedEvent(
-                    type="method_execution_finished",
-                    method_name=method_name,
-                    flow_name=self.name or self.__class__.__name__,
-                    state=self._copy_and_serialize_state(),
-                    result=result,
-                )
-                finished_event_id = finished_event.event_id
-                future = crewai_event_bus.emit(self, finished_event)
-                if future:
-                    self._event_futures.append(future)
+            finished_event = MethodExecutionFinishedEvent(
+                type="method_execution_finished",
+                method_name=method_name,
+                flow_name=self.name or self.__class__.__name__,
+                state=self._copy_and_serialize_state(),
+                result=result,
+            )
+            finished_event_id = finished_event.event_id
+            future = crewai_event_bus.emit(self, finished_event)
+            if future:
+                self._event_futures.append(future)
 
             return result, finished_event_id
         except Exception as e:

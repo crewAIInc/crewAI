@@ -6,8 +6,7 @@ from typing import Any, Literal
 from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
-import pytest
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.listeners.tracing.trace_listener import TraceCollectionListener
@@ -31,7 +30,6 @@ from crewai.flow.conversation import (
     normalize_kickoff_inputs,
     prepare_conversational_turn,
 )
-from crewai.utilities.types import LLMMessage
 
 
 class ConversationalFlow(Flow[ConversationState]):
