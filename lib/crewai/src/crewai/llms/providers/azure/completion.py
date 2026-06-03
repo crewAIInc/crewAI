@@ -1140,6 +1140,12 @@ class AzureCompletion(BaseLLM):
         stream_response_id: str | None = None
         for update in self._get_sync_client().complete(**params):
             if isinstance(update, StreamingChatCompletionsUpdate):
+                chunk_finish, chunk_id = self._extract_finish_reason_and_id(update)
+                if chunk_finish:
+                    stream_finish_reason = chunk_finish
+                if chunk_id:
+                    stream_response_id = chunk_id
+
                 if update.usage:
                     usage = update.usage
                     usage_data = {
@@ -1148,12 +1154,6 @@ class AzureCompletion(BaseLLM):
                         "total_tokens": usage.total_tokens,
                     }
                     continue
-
-                chunk_finish, chunk_id = self._extract_finish_reason_and_id(update)
-                if chunk_finish:
-                    stream_finish_reason = chunk_finish
-                if chunk_id:
-                    stream_response_id = chunk_id
 
                 full_response = self._process_streaming_update(
                     update=update,
@@ -1219,6 +1219,12 @@ class AzureCompletion(BaseLLM):
         stream = await self._get_async_client().complete(**params)
         async for update in stream:
             if isinstance(update, StreamingChatCompletionsUpdate):
+                chunk_finish, chunk_id = self._extract_finish_reason_and_id(update)
+                if chunk_finish:
+                    stream_finish_reason = chunk_finish
+                if chunk_id:
+                    stream_response_id = chunk_id
+
                 if hasattr(update, "usage") and update.usage:
                     usage = update.usage
                     usage_data = {
@@ -1227,12 +1233,6 @@ class AzureCompletion(BaseLLM):
                         "total_tokens": getattr(usage, "total_tokens", 0),
                     }
                     continue
-
-                chunk_finish, chunk_id = self._extract_finish_reason_and_id(update)
-                if chunk_finish:
-                    stream_finish_reason = chunk_finish
-                if chunk_id:
-                    stream_response_id = chunk_id
 
                 full_response = self._process_streaming_update(
                     update=update,
