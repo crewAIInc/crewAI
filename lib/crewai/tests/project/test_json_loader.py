@@ -8,6 +8,7 @@ import sys
 
 import pytest
 
+from crewai.llms.base_llm import BaseLLM
 from crewai.project.json_loader import (
     JSONProjectValidationError,
     find_json_project_file,
@@ -100,6 +101,55 @@ class TestLoadAgent:
 
         agent = load_agent(agent_file)
         assert agent.role == "Coder"
+
+    def test_load_agent_with_llm_config_object(self, tmp_path: Path):
+        agent_def = {
+            "role": "Coder",
+            "goal": "Write code",
+            "backstory": "Expert coder.",
+            "llm": {
+                "model": "llama3",
+                "provider": "ollama",
+                "temperature": 0.2,
+                "base_url": "http://localhost:11434",
+            },
+        }
+        agent_file = tmp_path / "agent.json"
+        agent_file.write_text(json.dumps(agent_def))
+
+        agent = load_agent(agent_file)
+
+        assert isinstance(agent.llm, BaseLLM)
+        assert agent.llm.model == "llama3"
+        assert agent.llm.provider == "ollama"
+        assert agent.llm.temperature == 0.2
+        assert agent.llm.base_url == "http://localhost:11434/v1"
+
+    def test_load_agent_with_planning_config_llm_object(self, tmp_path: Path):
+        agent_def = {
+            "role": "Planner",
+            "goal": "Plan work",
+            "backstory": "Expert planner.",
+            "llm": "ollama/llama3",
+            "planning_config": {
+                "reasoning_effort": "high",
+                "llm": {
+                    "model": "deepseek-chat",
+                    "provider": "deepseek",
+                    "api_key": "test-key",
+                },
+            },
+        }
+        agent_file = tmp_path / "agent.json"
+        agent_file.write_text(json.dumps(agent_def))
+
+        agent = load_agent(agent_file)
+
+        assert agent.planning_config is not None
+        assert isinstance(agent.planning_config.llm, BaseLLM)
+        assert agent.planning_config.llm.model == "deepseek-chat"
+        assert agent.planning_config.llm.provider == "deepseek"
+        assert agent.planning_config.llm.api_key == "test-key"
 
     def test_load_agent_with_settings_block(self, tmp_path: Path):
         agent_def = {

@@ -14,7 +14,11 @@ from crewai_cli.user_data import (
     is_tracing_enabled,
     update_user_data,
 )
-from crewai_cli.utils import build_env_with_all_tool_credentials, read_toml
+from crewai_cli.utils import (
+    build_env_with_all_tool_credentials,
+    enable_prompt_line_editing,
+    read_toml,
+)
 
 
 def _get_cli_version() -> str:
@@ -88,8 +92,9 @@ def create(
             raise SystemExit(0)
         click.echo()
     if not name:
+        enable_prompt_line_editing()
         name = click.prompt(
-            click.style(f"Name of your {type}", fg="cyan", bold=True),
+            click.style(f"  Name of your {type}", fg="cyan", bold=True),
             prompt_suffix=click.style(" › ", fg="bright_white"),  # noqa: RUF001
         )
     if type == "crew":

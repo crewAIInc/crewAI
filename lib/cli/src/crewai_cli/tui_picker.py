@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import suppress
 import sys
 
 import click
@@ -94,7 +95,7 @@ def _draw_multi(labels: list[str], cursor: int, selected: set[int], *, clear: bo
         sys.stdout.write(f"\033[{total}A")
     sys.stdout.write(f"\033[2K{hint}\n")
     for i, label in enumerate(labels):
-        check = f"{_CORAL}[×]{_RESET}" if i in selected else "[ ]"
+        check = f"{_CORAL}[x]{_RESET}" if i in selected else "[ ]"
         arrow = f"{_CORAL}→{_RESET} " if i == cursor else "  "
         bold = f"{_BOLD}{label}{_RESET}" if i == cursor else label
         sys.stdout.write(f"\033[2K    {arrow}{check} {bold}\n")
@@ -183,12 +184,10 @@ def _numbered_select_multi(labels: list[str]) -> list[int]:
         return []
     indices = []
     for part in raw.split(","):
-        try:
+        with suppress(ValueError):
             num = int(part.strip())
             if 1 <= num <= len(labels):
                 indices.append(num - 1)
-        except ValueError:
-            pass
     return sorted(set(indices))
 
 
@@ -222,7 +221,7 @@ def pick(title: str, options: list[tuple[str, str]]) -> str | None:
     if idx < 0:
         return None
 
-    value, desc = options[idx]
+    value, _desc = options[idx]
     click.secho(f"  ✔ {value}", fg="green")
     return value
 

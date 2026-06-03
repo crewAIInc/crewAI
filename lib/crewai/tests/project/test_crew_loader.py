@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from crewai.llms.base_llm import BaseLLM
 from crewai.project.json_loader import JSONProjectError, JSONProjectValidationError
 from crewai.project.crew_loader import load_crew
 
@@ -137,6 +138,53 @@ class TestLoadCrew:
         crew, _ = load_crew(crew_file)
         from crewai import Process
         assert crew.process == Process.hierarchical
+
+    def test_crew_accepts_llm_config_objects(self, tmp_path: Path):
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(agents_dir, "worker", llm="ollama/llama3")
+
+        crew_def = {
+            "name": "llm_config_crew",
+            "agents": ["worker"],
+            "tasks": [
+                {
+                    "name": "work",
+                    "description": "Do work",
+                    "expected_output": "Work done",
+                    "agent": "worker",
+                }
+            ],
+            "process": "hierarchical",
+            "manager_llm": {
+                "model": "llama3",
+                "provider": "ollama",
+                "base_url": "http://localhost:11434",
+            },
+            "planning_llm": {
+                "model": "deepseek-chat",
+                "provider": "deepseek",
+                "api_key": "test-key",
+            },
+            "chat_llm": {
+                "model": "openrouter/anthropic/claude-3-opus",
+                "api_key": "test-key",
+            },
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        crew, _ = load_crew(crew_file)
+
+        assert isinstance(crew.manager_llm, BaseLLM)
+        assert crew.manager_llm.model == "llama3"
+        assert crew.manager_llm.provider == "ollama"
+        assert crew.manager_llm.base_url == "http://localhost:11434/v1"
+        assert isinstance(crew.planning_llm, BaseLLM)
+        assert crew.planning_llm.model == "deepseek-chat"
+        assert crew.planning_llm.provider == "deepseek"
+        assert isinstance(crew.chat_llm, BaseLLM)
+        assert crew.chat_llm.model == "anthropic/claude-3-opus"
+        assert crew.chat_llm.provider == "openrouter"
 
     def test_crew_accepts_public_crew_config_fields(self, tmp_path: Path):
         agents_dir = tmp_path / "agents"

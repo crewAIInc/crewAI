@@ -6,6 +6,7 @@ from unittest import mock
 
 import pytest
 from click.testing import CliRunner
+import crewai_cli.create_json_crew as json_crew
 from crewai_cli.create_crew import create_crew, create_folder_structure
 from crewai_cli.create_json_crew import _default_model_for_provider, create_json_crew
 
@@ -348,6 +349,65 @@ def test_env_vars_are_uppercased_in_env_file(
     assert "MODEL=" in content
 
 
+def test_json_wizard_defaults_to_sequential_and_memory_enabled(monkeypatch):
+    monkeypatch.setattr(
+        json_crew,
+        "_wizard_agent",
+        lambda **_: {
+            "name": "researcher",
+            "role": "Researcher",
+            "goal": "Research",
+            "backstory": "Researcher",
+            "llm": "openai/gpt-5.5",
+            "tools": [],
+            "planning": False,
+            "allow_delegation": False,
+        },
+    )
+    monkeypatch.setattr(
+        json_crew,
+        "_wizard_task",
+        lambda **_: {
+            "name": "research_task",
+            "description": "Research",
+            "expected_output": "Findings",
+            "agent": "researcher",
+            "context": [],
+        },
+    )
+
+    def confirm(label: str, default: bool = False) -> bool:
+        if label == "Enable crew memory?":
+            return default
+        return False
+
+    monkeypatch.setattr(json_crew, "_confirm", confirm)
+    monkeypatch.setattr(json_crew.click, "prompt", lambda *_, **__: "")
+    monkeypatch.setattr(
+        json_crew,
+        "pick_one",
+        lambda *_args, **_kwargs: pytest.fail("process should not be prompted"),
+    )
+
+    _agents, _tasks, settings = json_crew._wizard_agents_and_tasks(
+        skip_provider=True,
+        default_llm="openai/gpt-5.5",
+    )
+
+    assert settings == {"process": "sequential", "memory": True, "inputs": {}}
+
+
+def test_json_wizard_shows_interpolation_hint(capsys):
+    json_crew._show_interpolation_hint("tasks")
+
+    output = capsys.readouterr().out
+    assert "{placeholder}" in output
+    assert "dynamic values" in output
+    assert "{topic}" not in output
+    assert "Description >" not in output
+    assert '"description"' not in output
+
+
 def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     with mock.patch(
@@ -373,7 +433,6 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
                     "expected_output": "Findings",
                     "agent": "researcher",
                     "context": [],
-                    "output_file": None,
                 }
             ],
             {"process": "sequential", "memory": False, "inputs": {}},
@@ -402,14 +461,33 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
     assert "Docs: https://docs.crewai.com/concepts/crews" in crew_template
     assert '"manager_agent": "researcher"' in crew_template
     assert '"output_log_file": "crew.log"' in crew_template
+    assert "Crew-level LLM fields also accept object form" in crew_template
+    assert '"chat_llm": {"model": "llama3", "provider": "ollama"' in (
+        crew_template
+    )
+    assert "Use {placeholder} in agent or task text" in crew_template
+    assert "`crewai run` prompts for any placeholders" in crew_template
+    assert "Use {placeholder} inputs here" in crew_template
 
     agent_template = (
         tmp_path / "json_crew" / "agents" / "researcher.jsonc"
     ).read_text()
+    assert "You can use {placeholder} inputs in role, goal, or backstory" in (
+        agent_template
+    )
+    assert '"role": "Senior {industry} Researcher"' in agent_template
     assert "Optional agent-level guardrail" in agent_template
     assert '"guardrail_max_retries": 2' in agent_template
     assert "Docs: https://docs.crewai.com/concepts/agents" in agent_template
     assert '"reasoning": true' in agent_template
+    assert "For custom endpoints or deployment-based providers" in agent_template
+    assert '"deployment_name": "my-deployment", "provider": "azure"' in (
+        agent_template
+    )
+    assert '"planning_config": {' in agent_template
+    assert '"llm": {"model": "deepseek-chat", "provider": "deepseek"}' in (
+        agent_template
+    )
     assert '"knowledge_sources": []' in agent_template
 
 

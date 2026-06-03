@@ -8,10 +8,12 @@ import sys
 from typing import Any
 
 import click
+from rich.console import Console
+from rich.text import Text
 
 from crewai_cli.constants import ENV_VARS
 from crewai_cli.tui_picker import pick_many, pick_one
-from crewai_cli.utils import load_env_vars, write_env_file
+from crewai_cli.utils import enable_prompt_line_editing, load_env_vars, write_env_file
 
 
 # ── Provider / model data ───────────────────────────────────────
@@ -166,6 +168,7 @@ _FLAT_TOOLS: list[tuple[str, str]] = [
 
 
 def _prompt_text(label: str, default: str = "") -> str:
+    click.echo()
     return click.prompt(
         click.style(f"  {label}", fg="cyan"),
         default=default,
@@ -175,10 +178,31 @@ def _prompt_text(label: str, default: str = "") -> str:
 
 
 def _confirm(label: str, default: bool = False) -> bool:
+    click.echo()
     return click.confirm(
         click.style(f"  {label}", fg="cyan"),
         default=default,
         prompt_suffix=click.style(" > ", fg="bright_white"),
+    )
+
+
+def _success(message: str, *, bold: bool = False, dim: bool = False) -> None:
+    click.echo()
+    click.secho(f"  ✔ {message}", fg="green", bold=bold, dim=dim)
+
+
+def _highlight_placeholders(text: str) -> Text:
+    highlighted = Text(text, style="dim")
+    highlighted.highlight_regex(r"\{[A-Za-z_][A-Za-z0-9_]*\}", style="bold cyan")
+    return highlighted
+
+
+def _show_interpolation_hint(kind: str) -> None:
+    console = Console()
+    console.print(
+        _highlight_placeholders(
+            "  Tip: Use {placeholder} for dynamic values you want to change later."
+        )
     )
 
 
@@ -192,7 +216,6 @@ def _wizard_agent(
     """Interactive wizard for one agent. Returns agent dict or None if skipped."""
     click.echo()
     click.secho(f"  Agent {agent_num}", fg="cyan", bold=True)
-    click.echo()
 
     role = _prompt_text("Role")
     if not role:
@@ -211,7 +234,7 @@ def _wizard_agent(
     # LLM model
     if preset_llm:
         llm = preset_llm
-        click.secho(f"  ✔ {llm}", fg="green")
+        _success(llm)
     elif skip_provider:
         llm = last_llm or "openai/gpt-4o"
     elif last_llm:
@@ -224,7 +247,7 @@ def _wizard_agent(
             llm = _select_model()
         else:
             llm = last_llm
-        click.secho(f"  ✔ {llm}", fg="green")
+        _success(llm)
     else:
         llm = _select_model()
 
@@ -238,9 +261,9 @@ def _wizard_agent(
             _FLAT_TOOLS[idx][0] for idx in selected_indices if idx < len(_FLAT_TOOLS)
         )
     if tools:
-        click.secho(f"  ✔ {len(tools)} tool{'s' if len(tools) != 1 else ''}", fg="green")
+        _success(f"{len(tools)} tool{'s' if len(tools) != 1 else ''}")
     else:
-        click.secho("  ✔ No tools", dim=True)
+        _success("No tools", dim=True)
 
     # Planning
     planning = _confirm("Enable step-by-step planning?", default=False)
@@ -268,7 +291,6 @@ def _wizard_task(
     """Interactive wizard for one task. Returns task dict or None if skipped."""
     click.echo()
     click.secho(f"  Task {task_num}", fg="cyan", bold=True)
-    click.echo()
 
     description = _prompt_text("Description")
     if not description:
@@ -286,10 +308,10 @@ def _wizard_task(
     # Agent assignment
     if len(agent_names) == 1:
         assigned_agent = agent_names[0]
-        click.secho(f"  ✔ Agent: {assigned_agent}", fg="green")
     else:
         a_idx = pick_one("Assign to agent:", agent_names)
         assigned_agent = agent_names[max(a_idx, 0)]
+        _success(f"Agent: {assigned_agent}")
 
     # Context dependencies
     context: list[str] = []
@@ -304,10 +326,7 @@ def _wizard_task(
             if i < len(prior_task_names)
         ]
         if context:
-            click.secho(f"  ✔ Context: {', '.join(context)}", fg="green")
-
-    # Output file
-    output_file = _prompt_text("Output file (leave empty to skip)", default="")
+            _success(f"Context: {', '.join(context)}")
 
     return {
         "name": name,
@@ -315,7 +334,6 @@ def _wizard_task(
         "expected_output": expected_output,
         "agent": assigned_agent,
         "context": context,
-        "output_file": output_file or None,
     }
 
 
@@ -331,6 +349,7 @@ def _wizard_agents_and_tasks(
     click.echo()
     click.secho("  Step 1/3 — Agents", fg="cyan", bold=True)
     click.secho("  Define the AI agents in your crew.", dim=True)
+    _show_interpolation_hint("agents")
 
     while True:
         last_llm = agents[-1]["llm"] if agents else None
@@ -346,8 +365,7 @@ def _wizard_agents_and_tasks(
             continue
         if agent is not None:
             agents.append(agent)
-            click.echo()
-            click.secho(f"  ✔ '{agent['role']}' added", fg="green", bold=True)
+            _success(f"{agent['role']} added", bold=True)
 
         if not _confirm("Add another agent?", default=False):
             break
@@ -356,6 +374,7 @@ def _wizard_agents_and_tasks(
     click.echo()
     click.secho("  Step 2/3 — Tasks", fg="cyan", bold=True)
     click.secho("  Define what your agents should do.", dim=True)
+    _show_interpolation_hint("tasks")
 
     agent_names = [a["name"] for a in agents]
     task_names: list[str] = []
@@ -372,8 +391,7 @@ def _wizard_agents_and_tasks(
         if task is not None:
             tasks.append(task)
             task_names.append(task["name"])
-            click.echo()
-            click.secho(f"  ✔ '{task['name']}' added", fg="green", bold=True)
+            _success(f"Task {len(tasks)} added", bold=True)
 
         if not _confirm("Add another task?", default=False):
             break
@@ -382,38 +400,13 @@ def _wizard_agents_and_tasks(
     click.echo()
     click.secho("  Step 3/3 — Settings", fg="cyan", bold=True)
 
-    process_labels = [
-        "Sequential  (tasks run in order)",
-        "Hierarchical  (manager delegates tasks)",
-    ]
-    p_idx = pick_one("Execution process:", process_labels)
-    process = "hierarchical" if p_idx == 1 else "sequential"
-
-    memory = _confirm("Enable crew memory?", default=False)
-
-    # Default inputs
-    click.echo()
-    click.secho("  Default inputs (key=value, empty line to finish):", dim=True)
-    inputs: dict[str, str] = {}
-    while True:
-        raw = click.prompt(
-            click.style("  ", fg="cyan"),
-            default="",
-            show_default=False,
-            prompt_suffix=click.style("> ", fg="bright_white"),
-        ).strip()
-        if not raw:
-            break
-        if "=" in raw:
-            k, v = raw.split("=", 1)
-            inputs[k.strip()] = v.strip()
-        else:
-            click.secho("  Format: key=value", fg="yellow")
+    process = "sequential"
+    memory = _confirm("Enable crew memory?", default=True)
 
     crew_settings = {
         "process": process,
         "memory": memory,
-        "inputs": inputs,
+        "inputs": {},
     }
 
     return agents, tasks, crew_settings
@@ -472,8 +465,9 @@ def _agent_to_jsonc(agent: dict[str, Any]) -> str:
 
     return f"""\
 {{
-  // Agent's role title — appears in prompts and logs
-  // Supports {{placeholder}} interpolation from crew inputs
+  // Agent's role title — appears in prompts and logs.
+  // You can use {{placeholder}} inputs in role, goal, or backstory.
+  // Example: "role": "Senior {{industry}} Researcher"
   "role": {json.dumps(agent["role"])},
 
   // The agent's primary objective
@@ -484,6 +478,9 @@ def _agent_to_jsonc(agent: dict[str, Any]) -> str:
 
   // LLM model in provider/model format
   // Examples: "openai/gpt-4o", "anthropic/claude-sonnet-4-6", "ollama/llama3.3"
+  // For custom endpoints or deployment-based providers, replace with:
+  // "llm": {{"model": "llama3", "provider": "ollama", "base_url": "http://localhost:11434"}},
+  // "llm": {{"deployment_name": "my-deployment", "provider": "azure", "api_version": "2024-10-21"}},
   "llm": {json.dumps(agent["llm"])},
 
   // Override LLM used specifically for tool/function calling
@@ -503,6 +500,10 @@ def _agent_to_jsonc(agent: dict[str, Any]) -> str:
   // Docs: https://docs.crewai.com/concepts/agents
   // "reasoning": true,
   // "max_reasoning_attempts": 3,
+  // "planning_config": {{
+  //   "reasoning_effort": "medium",
+  //   "llm": {{"model": "deepseek-chat", "provider": "deepseek"}}
+  // }},
   // "multimodal": false,
   // "allow_code_execution": false,
   // "code_execution_mode": "safe",
@@ -528,6 +529,7 @@ def _task_to_json_fragment(task: dict[str, Any]) -> str:
     lines.append(f'      "name": {json.dumps(task["name"])},')
     lines.append('')
     lines.append('      // What the task should accomplish')
+    lines.append('      // Use {placeholder} inputs here; crewai run prompts for missing values')
     lines.append(f'      "description": {json.dumps(task["description"])},')
     lines.append('')
     lines.append('      // Clear definition of what the output should look like')
@@ -630,6 +632,9 @@ def _crew_to_jsonc(
   // LLM for the manager agent (required when process is "hierarchical")
   // "manager_llm": "openai/gpt-4o",
 
+  // Crew-level LLM fields also accept object form for custom endpoints
+  // "chat_llm": {{"model": "llama3", "provider": "ollama", "base_url": "http://localhost:11434"}},
+
   // Advanced crew options:
   // Docs: https://docs.crewai.com/concepts/crews
   // "manager_agent": "{agents[0]['name']}",
@@ -643,8 +648,10 @@ def _crew_to_jsonc(
   // "tracing": false,
   // "security_config": {{}},
 
-  // Default input values — interpolated into {{placeholder}} strings
-  // in agent roles/goals/backstories and task descriptions
+  // Optional runtime input defaults.
+  // Use {{placeholder}} in agent or task text, for example:
+  // "description": "Research {{topic}} and write a brief"
+  // `crewai run` prompts for any placeholders missing from this object.
   "inputs": {inputs_json}
 }}
 """
@@ -768,6 +775,8 @@ def create_json_crew(
     import re
     import shutil
 
+    enable_prompt_line_editing()
+
     name = name.rstrip("/")
     if not name.strip():
         raise ValueError("Project name cannot be empty")
@@ -856,6 +865,6 @@ def create_json_crew(
     click.echo()
     click.secho("  Customize your crew:", fg="cyan")
     click.echo("    agents/*.jsonc    Define agent roles, goals, and LLMs")
-    click.echo("    crew.jsonc        Configure tasks, process, and inputs")
+    click.echo("    crew.jsonc        Configure tasks and optional input defaults")
     click.echo("    tools/            Add custom tools (Python)")
     click.echo()

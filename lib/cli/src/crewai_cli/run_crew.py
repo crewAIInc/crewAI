@@ -1,13 +1,20 @@
+from contextlib import nullcontext
 from enum import Enum
 from pathlib import Path
+import re
 import subprocess
+from typing import Any
 
 import click
 from crewai.project.json_loader import find_crew_json_file
 from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
 from packaging import version
 
-from crewai_cli.utils import build_env_with_all_tool_credentials, read_toml
+from crewai_cli.utils import (
+    build_env_with_all_tool_credentials,
+    enable_prompt_line_editing,
+    read_toml,
+)
 from crewai_cli.version import get_crewai_version
 
 
@@ -16,9 +23,117 @@ class CrewType(Enum):
     FLOW = "flow"
 
 
+_INPUT_PLACEHOLDER_RE = re.compile(r"(?<!{){([A-Za-z_][A-Za-z0-9_]*)}(?!})")
+
+
 def _has_json_crew() -> bool:
     """Check if this is a JSON-defined crew project."""
     return find_crew_json_file() is not None
+
+
+def _extract_input_placeholders(text: str | None) -> set[str]:
+    if not text:
+        return set()
+    return set(_INPUT_PLACEHOLDER_RE.findall(text))
+
+
+def _missing_input_names(crew: Any, inputs: dict[str, Any]) -> list[str]:
+    """Return input placeholders used by a crew but not provided as defaults."""
+    placeholders: set[str] = set()
+
+    for agent in getattr(crew, "agents", []) or []:
+        placeholders.update(_extract_input_placeholders(getattr(agent, "role", None)))
+        placeholders.update(_extract_input_placeholders(getattr(agent, "goal", None)))
+        placeholders.update(
+            _extract_input_placeholders(getattr(agent, "backstory", None))
+        )
+
+    for task in getattr(crew, "tasks", []) or []:
+        placeholders.update(
+            _extract_input_placeholders(getattr(task, "description", None))
+        )
+        placeholders.update(
+            _extract_input_placeholders(getattr(task, "expected_output", None))
+        )
+        placeholders.update(_extract_input_placeholders(getattr(task, "output_file", None)))
+
+    return sorted(name for name in placeholders if name not in inputs)
+
+
+def _prompt_for_missing_inputs(crew: Any, default_inputs: dict[str, Any]) -> dict[str, Any]:
+    """Ask for runtime values for placeholders that lack default inputs."""
+    inputs = dict(default_inputs or {})
+    missing = _missing_input_names(crew, inputs)
+    if not missing:
+        return inputs
+
+    enable_prompt_line_editing()
+
+    click.echo()
+    click.secho("  Runtime inputs", fg="cyan", bold=True)
+    click.secho(
+        "  Values for {placeholder} references in your agents and tasks.",
+        dim=True,
+    )
+
+    for name in missing:
+        inputs[name] = click.prompt(
+            click.style(f"  {name}", fg="cyan"),
+            prompt_suffix=click.style(" > ", fg="bright_white"),
+        )
+
+    return inputs
+
+
+def _json_loading_status(message: str):
+    from rich.console import Console
+    from rich.text import Text
+
+    console = Console()
+    if not console.is_terminal:
+        return nullcontext()
+    return console.status(
+        Text(f"  {message}", style="bold #1F7982"),
+        spinner="dots",
+    )
+
+
+def _load_json_crew(crew_path: Path) -> tuple[Any, dict[str, Any]]:
+    from crewai.project.crew_loader import load_crew
+
+    return load_crew(crew_path)
+
+
+def _load_json_crew_with_inputs(crew_path: Path) -> tuple[Any, dict[str, Any]]:
+    crew, default_inputs = _load_json_crew(crew_path)
+    return crew, _prompt_for_missing_inputs(crew, default_inputs)
+
+
+def _load_json_crew_for_tui(crew_path: Path) -> tuple[type[Any], Any, dict[str, Any], list[str], list[str]]:
+    with _json_loading_status("Preparing crew..."):
+        from crewai_cli.crew_run_tui import CrewRunApp
+
+        crew, default_inputs = _load_json_crew(crew_path)
+        _prepare_json_crew_for_tui(crew)
+        task_names = [
+            getattr(task, "name", "") or getattr(task, "description", "")[:40] or "Task"
+            for task in crew.tasks
+        ]
+        agent_names = [
+            getattr(agent, "role", "") or getattr(agent, "name", "") or "Agent"
+            for agent in crew.agents
+        ]
+
+    return CrewRunApp, crew, default_inputs, task_names, agent_names
+
+
+def _prepare_json_crew_for_tui(crew: Any) -> None:
+    """Apply the same quiet/streaming setup used by the TUI JSON loader."""
+    crew.verbose = False
+    for agent in crew.agents:
+        agent.verbose = False
+        if hasattr(agent, "llm") and hasattr(agent.llm, "stream"):
+            agent.llm.stream = True
 
 
 def _run_json_crew(daemon: bool = False) -> None:
@@ -36,10 +151,19 @@ def _run_json_crew(daemon: bool = False) -> None:
     if daemon:
         return _run_json_crew_daemon(crew_path)
 
-    from crewai_cli.crew_run_tui import CrewRunApp
+    crew_run_app_cls, crew, default_inputs, task_names, agent_names = (
+        _load_json_crew_for_tui(crew_path)
+    )
+    runtime_inputs = _prompt_for_missing_inputs(crew, default_inputs)
 
-    app = CrewRunApp()
-    app._crew_json_path = crew_path
+    app = crew_run_app_cls(
+        crew_name=crew.name or "Crew",
+        total_tasks=len(crew.tasks),
+        agent_names=agent_names,
+        task_names=task_names,
+    )
+    app._crew = crew
+    app._default_inputs = runtime_inputs
 
     app.run()
 
@@ -55,7 +179,6 @@ def _run_json_crew_daemon(crew_path: Path) -> None:
     """Run a JSON crew in daemon mode — plain console output, no TUI."""
     import time
 
-    from crewai.project.crew_loader import load_crew
     from rich.console import Console
     from rich.text import Text
 
@@ -63,7 +186,7 @@ def _run_json_crew_daemon(crew_path: Path) -> None:
     teal = "#1F7982"
     red = "#FF5A50"
 
-    crew, default_inputs = load_crew(crew_path)
+    crew, runtime_inputs = _load_json_crew_with_inputs(crew_path)
 
     console.print(
         Text(
@@ -75,7 +198,7 @@ def _run_json_crew_daemon(crew_path: Path) -> None:
 
     start = time.time()
     try:
-        result = crew.kickoff(inputs=default_inputs)
+        result = crew.kickoff(inputs=runtime_inputs)
         elapsed = time.time() - start
         console.print()
         console.print(Text(f"  ✔ Completed in {elapsed:.1f}s", style=f"bold {teal}"))
