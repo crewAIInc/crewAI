@@ -20,14 +20,23 @@ from crewai.rag.embeddings.providers.oracle.oracle_provider import OracleProvide
 class FakeCursor:
     """Minimal Oracle cursor test double."""
 
-    def __init__(self, rows: list[tuple[str]] | None = None):
+    def __init__(
+        self,
+        rows: list[tuple[str]] | None = None,
+        execute_side_effects: list[Exception | None] | None = None,
+    ):
         self.rows = rows or []
+        self.execute_side_effects = list(execute_side_effects or [])
         self.executed: list[tuple[str, Any, dict[str, Any]]] = []
         self.closed = False
         self.inputsizes: tuple[Any, ...] | None = None
 
     def execute(self, sql: str, params: Any = None, **kwargs: Any) -> None:
         self.executed.append((sql, params, kwargs))
+        if self.execute_side_effects:
+            side_effect = self.execute_side_effects.pop(0)
+            if side_effect is not None:
+                raise side_effect
 
     def setinputsizes(self, *args: Any) -> None:
         self.inputsizes = args
@@ -161,13 +170,59 @@ class TestOracleProvider:
         assert len(embeddings) == 2
         assert embeddings[0].tolist() == pytest.approx([0.1, 0.2])
         assert embeddings[1].tolist() == pytest.approx([0.3, 0.4])
-        assert fake_oracledb.defaults.fetch_lobs is False
+        assert fake_oracledb.defaults.fetch_lobs is True
         assert fake_conn.vector_array_type.newobject_calls
-        proxy_call, embed_call = fake_conn.cursor().executed
+        proxy_call, embed_call, cleanup_call = fake_conn.cursor().executed
         assert "utl_http.set_proxy" in proxy_call[0]
         assert "dbms_vector_chain.utl_to_embeddings" in embed_call[0]
+        assert "utl_http.set_proxy(NULL)" in cleanup_call[0]
         assert fake_conn.cursor().inputsizes == (None, fake_oracledb.DB_TYPE_JSON)
         assert fake_conn.cursor().closed is True
+
+    def test_oracle_embedding_restores_fetch_lobs_when_call_fails(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        fake_cursor = FakeCursor(execute_side_effects=[RuntimeError("embedding failed")])
+        fake_conn = FakeConnection(cursor=fake_cursor)
+        fake_oracledb = FakeOracleModule()
+        monkeypatch.setitem(sys.modules, "oracledb", fake_oracledb)
+
+        embedder = OracleEmbeddingFunction(
+            conn=fake_conn,
+            embedding_params={"provider": "database", "model": "demo_model"},
+        )
+
+        with pytest.raises(RuntimeError, match="embedding failed"):
+            embedder(["hello"])
+
+        assert fake_oracledb.defaults.fetch_lobs is True
+        assert fake_cursor.closed is True
+
+    def test_oracle_embedding_proxy_cleanup_error_preserves_original_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ):
+        fake_cursor = FakeCursor(
+            execute_side_effects=[
+                None,
+                RuntimeError("embedding failed"),
+                RuntimeError("cleanup failed"),
+            ]
+        )
+        fake_conn = FakeConnection(cursor=fake_cursor)
+        fake_oracledb = FakeOracleModule()
+        monkeypatch.setitem(sys.modules, "oracledb", fake_oracledb)
+
+        embedder = OracleEmbeddingFunction(
+            conn=fake_conn,
+            embedding_params={"provider": "database", "model": "demo_model"},
+            proxy="http://proxy.example:8080",
+        )
+
+        with pytest.raises(RuntimeError, match="embedding failed"):
+            embedder(["hello"])
+
+        assert "utl_http.set_proxy(NULL)" in fake_cursor.executed[-1][0]
+        assert fake_cursor.closed is True
 
     def test_build_embedder_connects_with_connection_params(self, monkeypatch: pytest.MonkeyPatch):
         fake_cursor = FakeCursor(rows=[_embedding_row([1.0, 2.0, 3.0])])

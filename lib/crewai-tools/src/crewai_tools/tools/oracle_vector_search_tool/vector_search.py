@@ -77,11 +77,15 @@ def _normalize_json_value(value: Any) -> Any:
     return value
 
 
-def _quote_identifier(name: str) -> str:
-    name = name.strip()
-    if not _IDENTIFIER_RE.fullmatch(name):
-        raise ValueError(f"Identifier '{name}' is not valid for Oracle SQL.")
+def _is_sequence(value: Any) -> bool:
+    return isinstance(value, Iterable) and not isinstance(value, (str, bytes))
 
+
+def _is_nested_sequence(value: Any) -> bool:
+    return _is_sequence(value) and all(_is_sequence(item) for item in value)
+
+
+def _split_identifier_parts(name: str) -> list[str]:
     parts: list[str] = []
     current = []
     in_quotes = False
@@ -97,9 +101,16 @@ def _quote_identifier(name: str) -> str:
         current.append(char)
     if current:
         parts.append("".join(current))
+    return parts
+
+
+def _quote_identifier(name: str) -> str:
+    name = name.strip()
+    if not _IDENTIFIER_RE.fullmatch(name):
+        raise ValueError(f"Identifier '{name}' is not valid for Oracle SQL.")
 
     quoted_parts = []
-    for part in parts:
+    for part in _split_identifier_parts(name):
         stripped = part.strip()
         if stripped.startswith('"') and stripped.endswith('"'):
             quoted_parts.append(stripped)
@@ -480,27 +491,16 @@ class OracleVectorSearchTool(BaseTool):
         global ORACLEDB_AVAILABLE, oracledb
 
         if not ORACLEDB_AVAILABLE:
-            import click
-
-            if click.confirm(
-                "The 'oracledb' package is required to use OracleVectorSearchTool. Would you like to install it?"
-            ):
-                import subprocess
-
-                subprocess.run(["uv", "add", "oracledb"], check=True)  # noqa: S607
-                try:
-                    import oracledb as installed_oracledb
-                except ImportError as exc:
-                    raise ImportError(
-                        "The 'oracledb' package is required to use OracleVectorSearchTool. Please install it with: uv add oracledb"
-                    ) from exc
-
-                oracledb = installed_oracledb
-                ORACLEDB_AVAILABLE = True
-            else:
+            try:
+                import oracledb as installed_oracledb
+            except ImportError as exc:
                 raise ImportError(
-                    "The 'oracledb' package is required to use OracleVectorSearchTool. Please install it with: uv add oracledb"
-                )
+                    "The 'oracledb' package is required to use "
+                    "OracleVectorSearchTool. Please install it with: uv add oracledb"
+                ) from exc
+
+            oracledb = installed_oracledb
+            ORACLEDB_AVAILABLE = True
 
         if self.client is None:
             connect_params = dict(self.oracle_config.connection_kwargs)
@@ -527,6 +527,14 @@ class OracleVectorSearchTool(BaseTool):
 
     def _embed_texts(self, texts: list[str]) -> list[list[float]]:
         if self.embedding_function is not None:
+            try:
+                embeddings = self.embedding_function(texts)  # type: ignore[arg-type]
+            except (AttributeError, TypeError):
+                embeddings = None
+            else:
+                if _is_nested_sequence(embeddings) and len(embeddings) == len(texts):
+                    return list(embeddings)
+
             return [self.embedding_function(text) for text in texts]
         return [
             item.embedding
@@ -548,40 +556,49 @@ class OracleVectorSearchTool(BaseTool):
                 return False
             raise
 
-    def _index_exists(self, index_name: str, table_name: str | None = None) -> bool:
+    def _index_exists(
+        self,
+        index_name: str,
+        table_name: str | None = None,
+        owner: str | None = None,
+    ) -> bool:
         index_name_no_quotes = index_name.replace('"', "")
         table_name_no_quotes = table_name.replace('"', "") if table_name else None
+        owner_no_quotes = owner.replace('"', "") if owner else None
         query = """
             SELECT index_name
             FROM all_indexes
             WHERE index_name = :idx_name
         """
+        params = {"idx_name": index_name_no_quotes}
         if table_name_no_quotes:
             query += " AND table_name = :table_name"
+            params["table_name"] = table_name_no_quotes
+        if owner_no_quotes:
+            query += " AND owner = :idx_owner"
+            params["idx_owner"] = owner_no_quotes
 
         with _get_connection(self.client) as connection:
             with connection.cursor() as cursor:
-                if table_name_no_quotes:
-                    cursor.execute(
-                        query,
-                        idx_name=index_name_no_quotes,
-                        table_name=table_name_no_quotes,
-                    )
-                else:
-                    cursor.execute(query, idx_name=index_name_no_quotes)
+                cursor.execute(query, **params)
                 return cursor.fetchone() is not None
 
     def table_exists(self) -> bool:
         return self._table_exists(_quote_identifier(self.oracle_config.table_name))
 
     def vector_index_exists(self, index_name: str | None = None) -> bool:
+        quoted_table_name = _quote_identifier(self.oracle_config.table_name)
+        table_parts = _split_identifier_parts(quoted_table_name)
+        table_name = table_parts[-1]
+        owner = table_parts[0] if len(table_parts) > 1 else None
         effective_index_name = index_name or self.oracle_config.index_name
         if effective_index_name is None:
-            base_name = self.oracle_config.table_name.split(".")[-1].replace('"', "")
+            base_name = table_name.replace('"', "")
             effective_index_name = f"{base_name}_HNSW_IDX"
         return self._index_exists(
             _quote_identifier(effective_index_name),
-            _quote_identifier(self.oracle_config.table_name).split(".")[-1],
+            table_name,
+            owner,
         )
 
     def create_table(self) -> None:

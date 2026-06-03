@@ -4,7 +4,7 @@ from decimal import Decimal
 import os
 from pathlib import Path
 import sys
-from types import ModuleType, SimpleNamespace
+from types import SimpleNamespace
 from typing import Any
 import uuid
 
@@ -701,6 +701,31 @@ def test_module_handles_missing_oracledb_import(monkeypatch):
     assert module.oracledb is Any
 
 
+def test_setup_oracle_missing_oracledb_raises_without_prompt(monkeypatch):
+    import builtins
+
+    original_import = builtins.__import__
+
+    def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "oracledb":
+            raise ImportError("missing oracledb")
+        return original_import(name, globals, locals, fromlist, level)
+
+    def fail_confirm(*args, **kwargs):
+        raise AssertionError("OracleVectorSearchTool prompted for installation")
+
+    monkeypatch.setattr(vs, "ORACLEDB_AVAILABLE", False)
+    monkeypatch.setitem(sys.modules, "click", SimpleNamespace(confirm=fail_confirm))
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+
+    with pytest.raises(ImportError, match="uv add oracledb"):
+        OracleVectorSearchTool(
+            oracle_config=OracleVectorSearchConfig(table_name="docs_vectors"),
+            client=FakeConnection(),
+            embedding_function=lambda _: [1.0],
+        )
+
+
 def test_helper_functions_cover_error_paths():
     assert vs._read_lob_if_needed(FakeLob("hello")) == "hello"
     assert vs._normalize_json_value([{"a": vs.Decimal("1.5")}]) == [{"a": 1.5}]
@@ -857,31 +882,9 @@ def test_extract_oracle_error_code_handles_missing_code():
     assert vs._extract_oracle_error_code(Exception("boom")) is None
 
 
-def test_setup_oracle_handles_missing_dependency_decline(monkeypatch):
-    click_module = ModuleType("click")
-    click_module.confirm = lambda message: False
-    monkeypatch.setitem(sys.modules, "click", click_module)
-    monkeypatch.setattr(vs, "ORACLEDB_AVAILABLE", False)
-
-    with pytest.raises(ImportError, match="Please install it"):
-        OracleVectorSearchTool(
-            oracle_config=OracleVectorSearchConfig(table_name="docs_vectors"),
-            client=FakeConnection(),
-            embedding_function=lambda _: [1.0],
-            dimensions=1,
-        )
-
-
-def test_setup_oracle_handles_missing_dependency_accept(monkeypatch):
+def test_setup_oracle_imports_installed_dependency(monkeypatch):
     original_oracledb = vs.oracledb
     fake_oracledb = FakeOracleModule()
-    click_module = ModuleType("click")
-    click_module.confirm = lambda message: True
-    subprocess_module = ModuleType("subprocess")
-    calls = []
-    subprocess_module.run = lambda cmd, check: calls.append((cmd, check))
-    monkeypatch.setitem(sys.modules, "click", click_module)
-    monkeypatch.setitem(sys.modules, "subprocess", subprocess_module)
     monkeypatch.setitem(sys.modules, "oracledb", fake_oracledb)
     monkeypatch.setattr(vs, "ORACLEDB_AVAILABLE", False)
 
@@ -893,7 +896,7 @@ def test_setup_oracle_handles_missing_dependency_accept(monkeypatch):
             dimensions=1,
         )
 
-        assert calls == [(["uv", "add", "oracledb"], True)]
+        assert tool.client is not None
         assert vs.oracledb is fake_oracledb
         assert vs.ORACLEDB_AVAILABLE is True
     finally:
@@ -1146,6 +1149,21 @@ def test_embed_texts_uses_openai_client():
     assert tool._embed_texts(["a", "bb"]) == [[0.1, 0.2], [0.3, 0.4]]
 
 
+def test_embed_texts_accepts_batch_embedding_function():
+    calls = []
+
+    def batch_embed(texts: list[str]) -> list[list[float]]:
+        if isinstance(texts, str):
+            raise TypeError("batch embedding requires a list of texts")
+        calls.append(list(texts))
+        return [[float(len(text))] for text in texts]
+
+    tool = make_tool(embedding_function=batch_embed, dimensions=1)
+
+    assert tool._embed_texts(["a", "bb"]) == [[1.0], [2.0]]
+    assert calls == [["a", "bb"]]
+
+
 def test_table_exists_reraises_non_942_errors():
     cursor = FakeCursor(execute_side_effects=[FakeOracleError(1111)])
     tool = make_tool(client=FakeConnection([cursor]))
@@ -1167,6 +1185,26 @@ def test_vector_index_exists_uses_default_name():
     tool = make_tool(client=FakeConnection([cursor]))
 
     assert tool.vector_index_exists() is True
+
+
+def test_vector_index_exists_filters_schema_qualified_table_owner():
+    cursor = FakeCursor(fetchone_result=("DOCS_VEC_IDX",))
+    tool = make_tool(
+        client=FakeConnection([cursor]),
+        oracle_config=OracleVectorSearchConfig(
+            table_name="APP_SCHEMA.docs_vectors",
+            index_name="DOCS_VEC_IDX",
+        ),
+    )
+
+    assert tool.vector_index_exists() is True
+    executed_sql, _, params = cursor.executed[0]
+    assert "owner = :idx_owner" in executed_sql
+    assert params == {
+        "idx_name": "DOCS_VEC_IDX",
+        "table_name": "docs_vectors",
+        "idx_owner": "APP_SCHEMA",
+    }
 
 
 def test_create_table_returns_early_when_table_exists():

@@ -23,6 +23,8 @@ uv add crewai-tools --extra oracledb
 ## Example
 
 ```python
+import os
+
 from crewai_tools import (
     OracleVectorSearchConfig,
     OracleVectorSearchQueryConfig,
@@ -68,6 +70,8 @@ results = tool._run(
 Using a custom embedding function:
 
 ```python
+import os
+
 tool = OracleVectorSearchTool(
     oracle_config=OracleVectorSearchConfig(
         user=os.environ["ORACLE_DB_USERNAME"],
@@ -82,6 +86,8 @@ tool = OracleVectorSearchTool(
 Passing additional `oracledb.connect()` options:
 
 ```python
+import os
+
 tool = OracleVectorSearchTool(
     oracle_config=OracleVectorSearchConfig(
         user=os.environ["ORACLE_DB_USERNAME"],
@@ -100,6 +106,10 @@ tool = OracleVectorSearchTool(
 Using a caller-managed connection pool:
 
 ```python
+import os
+
+import oracledb
+
 pool = oracledb.create_pool(
     user=os.environ["ORACLE_DB_USERNAME"],
     password=os.environ["ORACLE_DB_SECRET"],

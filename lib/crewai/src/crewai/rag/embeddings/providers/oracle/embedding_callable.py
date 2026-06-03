@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from contextlib import suppress
 from typing import Any
 
 from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
@@ -46,6 +47,7 @@ class OracleEmbeddingFunction(EmbeddingFunction[Documents]):
             raise ValueError("Oracle embeddings input cannot be empty.")
 
         cursor = None
+        previous_fetch_lobs = self._oracledb.defaults.fetch_lobs
         try:
             # Return strings/bytes for JSON payloads instead of locators.
             self._oracledb.defaults.fetch_lobs = False
@@ -75,7 +77,11 @@ class OracleEmbeddingFunction(EmbeddingFunction[Documents]):
                 embeddings.append(json.loads(parsed["embed_vector"]))
             return embeddings
         finally:
+            self._oracledb.defaults.fetch_lobs = previous_fetch_lobs
             if cursor is not None:
+                if self._proxy and not self._owns_connection:
+                    with suppress(Exception):
+                        cursor.execute("begin utl_http.set_proxy(NULL); end;")
                 cursor.close()
 
     def __del__(self) -> None:
