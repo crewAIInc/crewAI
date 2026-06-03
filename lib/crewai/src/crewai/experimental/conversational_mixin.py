@@ -764,31 +764,33 @@ class _ConversationalMixin:
         )
         from crewai.events.types.flow_events import FlowFinishedEvent
 
-        last_output = self._method_outputs[-1] if self._method_outputs else None
-
-        # Restore the original flow_started scope (stashed during the first
-        # turn's kickoff) so the event bus pairs this flow_finished with its
-        # opener instead of warning about an empty scope stack.
+        # Only emit the session-end event when a deferred flow_started is
+        # actually pending. ``_deferred_flow_started_event_id`` is set only by
+        # deferred kickoffs; when finalization was not deferred, each per-turn
+        # kickoff already emitted its own flow_finished, so emitting here would
+        # duplicate the session-end event and confuse tracing. Restoring the
+        # stashed scope also pairs this flow_finished with its opener instead
+        # of warning about an empty scope stack.
         started_id = getattr(self, "_deferred_flow_started_event_id", None)
         if started_id:
+            last_output = self._method_outputs[-1] if self._method_outputs else None
             restore_event_scope(((started_id, "flow_started"),))
-        try:
-            crewai_event_bus.emit(
-                self,
-                FlowFinishedEvent(
-                    type="flow_finished",
-                    flow_name=self.name or self.__class__.__name__,
-                    result=last_output,
-                    state=self._copy_and_serialize_state(),
-                ),
-            )
-        except Exception:
-            logger.warning(
-                "FlowFinishedEvent emission failed during finalize_session_traces",
-                exc_info=True,
-            )
-        finally:
-            if started_id:
+            try:
+                crewai_event_bus.emit(
+                    self,
+                    FlowFinishedEvent(
+                        type="flow_finished",
+                        flow_name=self.name or self.__class__.__name__,
+                        result=last_output,
+                        state=self._copy_and_serialize_state(),
+                    ),
+                )
+            except Exception:
+                logger.warning(
+                    "FlowFinishedEvent emission failed during finalize_session_traces",
+                    exc_info=True,
+                )
+            finally:
                 restore_event_scope(())
                 object.__setattr__(self, "_deferred_flow_started_event_id", None)
 

@@ -26,13 +26,11 @@ from crewai.experimental import (
 from crewai.flow import Flow, ChatState, listen, start
 from crewai.flow.flow_context import current_flow_id, current_flow_name
 from crewai.flow.conversation import (
-    ConversationalConfig,
     append_message,
     get_conversation_messages,
     normalize_kickoff_inputs,
     prepare_conversational_turn,
 )
-from crewai.state import CheckpointConfig
 from crewai.utilities.types import LLMMessage
 
 
@@ -101,59 +99,6 @@ class TestIntentPerTurn:
         assert flow.state.last_intent is None
 
 
-class TestKickoffConversational:
-    @pytest.mark.xfail(reason="kickoff(user_message=...) kwargs are out of scope — use handle_turn() instead", strict=False)
-    def test_kickoff_user_message_hydrates_state(self) -> None:
-        flow = SimpleChatFlow()
-        flow.kickoff(user_message="track my order", session_id="session-abc")
-
-        assert flow.state.last_user_message == "track my order"
-        assert any(
-            m.get("role") == "user" and m.get("content") == "track my order"
-            for m in flow.state.messages
-        )
-        assert flow.state.id == "session-abc"
-
-    @pytest.mark.xfail(reason="kickoff(user_message=...) kwargs are out of scope — use handle_turn() instead", strict=False)
-    def test_kickoff_classifies_intent_when_configured(self) -> None:
-        flow = SimpleChatFlow()
-
-        with patch.object(
-            flow,
-            "_collapse_to_outcome",
-            return_value="order",
-        ) as mock_collapse:
-            flow.kickoff(
-                user_message="where is my package",
-                session_id="s1",
-                intents=["order", "help"],
-                intent_llm="gpt-4o-mini",
-            )
-
-        mock_collapse.assert_called_once()
-        assert flow.state.last_intent == "order"
-
-    @pytest.mark.xfail(reason="kickoff(user_message=...) kwargs are out of scope — use handle_turn() instead", strict=False)
-    def test_ask_appends_to_messages(self) -> None:
-        class AskFlow(Flow[ChatState]):
-            input_provider = MagicMock()
-            input_provider.request_input = MagicMock(return_value="user reply")
-
-            @start()
-            def begin(self):
-                self.ask("Prompt:")
-                return "ok"
-
-        flow = AskFlow()
-        flow._state = ChatState()
-        flow.kickoff()
-
-        assert any(
-            m.get("role") == "user" and m.get("content") == "user reply"
-            for m in flow.state.messages
-        )
-
-
 class TestClassifyIntent:
     def test_uses_collapse_with_context(self) -> None:
         flow = SimpleChatFlow()
@@ -174,11 +119,14 @@ class TestClassifyIntent:
 
 
 class TestConversationalFlow:
-    @pytest.mark.xfail(reason="deferred-trace API was stripped by main's flow.py split; tracking the re-port separately", strict=False)
-    def test_deferred_multi_turn_trace_keeps_event_sequence_continuous(
-        self,
-    ) -> None:
-        @ConversationConfig()
+    def test_deferred_multi_turn_emits_single_flow_finished(self) -> None:
+        """A deferred multi-turn session lands as one trace: exactly one
+        ``FlowFinishedEvent`` is emitted at ``finalize_session_traces()``, not
+        one per turn. (Each turn still opens its own ``flow_started``.)
+        """
+        from crewai.events.types.flow_events import FlowFinishedEvent
+
+        @ConversationConfig(defer_trace_finalization=True)
         class TraceFlow(ConversationalFlow):
             def route_turn(self, context: dict[str, Any]) -> str | None:
                 return "work"
@@ -189,109 +137,26 @@ class TestConversationalFlow:
                 self.append_assistant_message(reply)
                 return reply
 
-        events: list[Any] = []
+        flow = TraceFlow()
+        finished: list[FlowFinishedEvent] = []
         with crewai_event_bus.scoped_handlers():
 
-            @crewai_event_bus.on(FlowStartedEvent)
-            def capture_flow_started(source: Any, event: Any) -> None:
-                events.append(event)
+            @crewai_event_bus.on(FlowFinishedEvent)
+            def capture(_: Any, event: FlowFinishedEvent) -> None:
+                finished.append(event)
 
-            @crewai_event_bus.on(MethodExecutionStartedEvent)
-            def capture_method_started(source: Any, event: Any) -> None:
-                events.append(event)
-
-            @crewai_event_bus.on(MethodExecutionFinishedEvent)
-            def capture_method_finished(source: Any, event: Any) -> None:
-                events.append(event)
-
-            flow = TraceFlow()
             flow.handle_turn("research apple stock")
             flow.handle_turn("research google stock")
+            crewai_event_bus.flush()
+            assert finished == [], "deferred turns must not emit per-turn flow_finished"
+
             flow.finalize_session_traces()
             crewai_event_bus.flush()
 
-        flow_started_events = [
-            event for event in events if isinstance(event, FlowStartedEvent)
-        ]
-        method_events = [
-            event
-            for event in events
-            if isinstance(
-                event, MethodExecutionStartedEvent | MethodExecutionFinishedEvent
-            )
-        ]
-        sequences = [
-            event.emission_sequence
-            for event in events
-            if event.emission_sequence is not None
-        ]
-        assert len(flow_started_events) == 1
-        assert len(sequences) == len(set(sequences))
-        assert all(
-            event.parent_event_id == flow_started_events[0].event_id
-            for event in method_events
+        assert len(finished) == 1, (
+            "a deferred session must emit exactly one flow_finished at finalize"
         )
 
-    @pytest.mark.xfail(reason="deferred-trace API was stripped by main's flow.py split; tracking the re-port separately", strict=False)
-    def test_handle_turn_defers_trace_until_session_finalize(self) -> None:
-        from crewai.events.listeners.tracing.trace_batch_manager import TraceBatch
-
-        @ConversationConfig()
-        class TraceFlow(ConversationalFlow):
-            def route_turn(self, context: dict[str, Any]) -> str | None:
-                return "work"
-
-            @listen("work")
-            def do_work(self) -> str:
-                self.append_assistant_message("done")
-                return "done"
-
-        flow = TraceFlow()
-        listener = TraceCollectionListener()
-        listener.batch_manager.current_batch = TraceBatch()
-        listener.batch_manager.batch_owner_type = "flow"
-        listener.batch_manager._batch_finalized = False
-        try:
-            with patch.object(flow, "_finalize_flow_trace_batch") as mock_finalize:
-                flow.handle_turn("hello")
-
-                assert flow.defer_trace_finalization is True
-                assert flow._should_defer_trace_finalization() is True
-                mock_finalize.assert_called_once_with()
-
-                flow.finalize_session_traces()
-
-            assert mock_finalize.call_args_list[-1] == ((), {"force": True})
-        finally:
-            listener.batch_manager.current_batch = None
-            listener.batch_manager.batch_owner_type = None
-            listener.batch_manager.defer_session_finalization = False
-            listener.batch_manager._batch_finalized = False
-
-    @pytest.mark.xfail(reason="kickoff(user_message=...) kwargs are out of scope — use handle_turn() instead", strict=False)
-    def test_handle_turn_delegates_to_restored_checkpoint_flow(self) -> None:
-        class CheckpointFlow(ConversationalFlow):
-            pass
-
-        flow = CheckpointFlow()
-        mock_restored = MagicMock(spec=CheckpointFlow)
-        mock_restored.kickoff.return_value = "restored reply"
-
-        cfg = CheckpointConfig(restore_from="/path/to/conversation_cp.json")
-        with patch.object(CheckpointFlow, "from_checkpoint", return_value=mock_restored):
-            result = flow.handle_turn("resume this chat", from_checkpoint=cfg)
-
-        mock_restored.kickoff.assert_called_once_with(
-            inputs={
-                "id": flow.state.id,
-                "user_message": "resume this chat",
-            },
-            input_files=None,
-            user_message="resume this chat",
-            session_id=flow.state.id,
-        )
-        assert mock_restored.checkpoint.restore_from is None
-        assert result == "restored reply"
 
     def test_handle_turn_routes_to_listener_and_records_public_result(self) -> None:
         @ConversationConfig(default_intents=["research"], intent_llm="gpt-4o-mini")
@@ -1116,6 +981,49 @@ class TestConversationalFlow:
             "the event bus pairs flow_finished with its opener"
         )
 
+    def test_finalize_session_traces_is_noop_when_not_deferred(self) -> None:
+        """Without deferral, ``finalize_session_traces()`` must not re-emit.
+
+        Each per-turn ``handle_turn()`` already emits its own
+        ``flow_finished``; a defensive ``try/finally`` call to
+        ``finalize_session_traces()`` at session end must not emit a second,
+        unpaired session-end event (which would confuse tracing).
+        """
+        from crewai.events.types.flow_events import FlowFinishedEvent
+
+        @ConversationConfig(defer_trace_finalization=False)
+        class PlainFlow(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "work"
+
+            @listen("work")
+            def do_work(self) -> str:
+                self.append_assistant_message("worked")
+                return "worked"
+
+        flow = PlainFlow()  # finalization NOT deferred
+
+        # A non-deferred turn closes itself (no flow_started stashed for later).
+        flow.handle_turn("turn 1")
+        crewai_event_bus.flush()
+        assert getattr(flow, "_deferred_flow_started_event_id", None) is None
+
+        # Capture only what finalize_session_traces emits.
+        finished_events: list[FlowFinishedEvent] = []
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(FlowFinishedEvent)
+            def capture(_: Any, event: FlowFinishedEvent) -> None:
+                finished_events.append(event)
+
+            flow.finalize_session_traces()
+            crewai_event_bus.flush()
+
+        assert finished_events == [], (
+            "finalize_session_traces must be a no-op when finalization was not "
+            "deferred — it should not emit a duplicate flow_finished"
+        )
+
 
 class TestFlowTracingWhenSuppressed:
     def test_flow_started_emitted_when_panel_events_suppressed(self) -> None:
@@ -1196,59 +1104,24 @@ class TestFlowTracingWhenSuppressed:
 
 
 class TestDeferTraceFinalization:
-    @pytest.mark.xfail(reason="deferred-trace API was stripped by main's flow.py split; tracking the re-port separately", strict=False)
-    def test_conversational_kickoff_enables_defer_flag(self) -> None:
-        class ChatFlow(Flow[ChatState]):
-            conversational_config = ConversationalConfig(
-                defer_trace_finalization=True
-            )
+    def test_conversation_config_drives_defer_flag(self) -> None:
+        """``ConversationConfig(defer_trace_finalization=...)`` controls whether
+        a conversational subclass defers per-turn trace finalization."""
 
-            @start()
-            def begin(self) -> str:
-                return "ok"
+        @ConversationConfig(defer_trace_finalization=True)
+        class DeferOn(ConversationalFlow):
+            pass
 
-        flow = ChatFlow()
-        flow._configure_conversational_kickoff(
-            user_message="hi",
-            session_id="sess-trace",
-        )
-        assert flow.defer_trace_finalization is True
-        assert flow._should_defer_trace_finalization() is True
+        @ConversationConfig(defer_trace_finalization=False)
+        class DeferOff(ConversationalFlow):
+            pass
 
-    @pytest.mark.xfail(reason="deferred-trace API was stripped by main's flow.py split; tracking the re-port separately", strict=False)
-    def test_finalize_skipped_until_forced(self) -> None:
-        flow = SimpleChatFlow()
-        flow.defer_trace_finalization = True
+        assert DeferOn()._should_defer_trace_finalization() is True
+        assert DeferOff()._should_defer_trace_finalization() is False
 
-        listener = TraceCollectionListener()
-        listener.batch_manager.batch_owner_type = "flow"
-        listener.first_time_handler.is_first_time = False
-
-        with patch.object(listener.batch_manager, "finalize_batch") as mock_finalize:
-            flow._finalize_flow_trace_batch()
-            mock_finalize.assert_not_called()
-
-            flow._finalize_flow_trace_batch(force=True)
-            mock_finalize.assert_called_once()
 
 
 class TestDeferredFlowLifecycleEvents:
-    @pytest.mark.xfail(reason="deferred-trace API was stripped by main's flow.py split; tracking the re-port separately", strict=False)
-    def test_deferred_kickoff_skips_per_turn_flow_finished(self) -> None:
-        class ChatFlow(Flow[ChatState]):
-            conversational_config = ConversationalConfig(
-                defer_trace_finalization=True
-            )
-
-            @start()
-            def begin(self) -> str:
-                return "ok"
-
-        flow = ChatFlow()
-        with patch.object(flow, "_emit_flow_finished_async") as mock_finished:
-            flow.kickoff(user_message="hi", session_id="sess-lifecycle")
-            mock_finished.assert_not_called()
-
     def test_flow_finished_without_flow_started_warns(self, capsys) -> None:
         from crewai.events.event_bus import crewai_event_bus
         from crewai.events.event_context import restore_event_scope
@@ -1273,41 +1146,6 @@ class TestDeferredFlowLifecycleEvents:
         captured = capsys.readouterr().out
         assert "flow_finished" in captured
         assert "Missing starting event" in captured
-
-    @pytest.mark.xfail(reason="deferred-trace API was stripped by main's flow.py split; tracking the re-port separately", strict=False)
-    def test_finalize_session_restores_flow_started_scope(self, capsys) -> None:
-        from crewai.events.listeners.tracing.trace_batch_manager import TraceBatch
-
-        class ChatFlow(Flow[ChatState]):
-            conversational_config = ConversationalConfig(
-                defer_trace_finalization=True
-            )
-
-            @start()
-            def begin(self) -> str:
-                return "ok"
-
-        flow = ChatFlow()
-        flow.defer_trace_finalization = True
-        object.__setattr__(flow, "_conversation_trace_started", True)
-        object.__setattr__(flow, "_conversation_flow_started_event_id", "start-evt-1")
-        flow._method_outputs.append("ok")
-
-        listener = TraceCollectionListener()
-        listener.batch_manager.batch_owner_type = "flow"
-        listener.batch_manager.current_batch = TraceBatch(
-            execution_metadata={"execution_type": "flow", "flow_name": "ChatFlow"},
-        )
-        listener.batch_manager.defer_session_finalization = True
-        listener.batch_manager._batch_finalized = False
-
-        with patch.object(flow, "_finalize_flow_trace_batch") as mock_finalize:
-            flow.finalize_session_traces()
-
-        captured = capsys.readouterr().out
-        assert "Missing starting event" not in captured
-        mock_finalize.assert_called_once_with(force=True)
-        assert listener.batch_manager.defer_session_finalization is False
 
     def test_finalize_batch_is_idempotent(self) -> None:
         from crewai.events.listeners.tracing.trace_batch_manager import TraceBatchManager
@@ -1342,30 +1180,48 @@ class TestDeferredFlowLifecycleEvents:
             assert mock_finalize_api.call_count == 1
             assert bm._batch_finalized is True
 
-    @pytest.mark.xfail(reason="deferred-trace API was stripped by main's flow.py split; tracking the re-port separately", strict=False)
-    def test_finalize_session_is_idempotent_after_batch_cleared(self) -> None:
-        class ChatFlow(Flow[ChatState]):
-            @start()
-            def begin(self) -> str:
-                return "ok"
+    def test_finalize_session_traces_is_idempotent(self) -> None:
+        """Calling ``finalize_session_traces()`` twice emits flow_finished once.
 
-        flow = ChatFlow()
-        flow.defer_trace_finalization = True
-        object.__setattr__(flow, "_conversation_trace_started", True)
+        The stashed ``_deferred_flow_started_event_id`` is cleared after the
+        first call, so a second call (e.g. a defensive ``try/finally``) does
+        not re-emit a session-end event.
+        """
+        from crewai.events.types.flow_events import FlowFinishedEvent
 
+        @ConversationConfig(defer_trace_finalization=True)
+        class DeferredFlow(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "work"
+
+            @listen("work")
+            def do_work(self) -> str:
+                self.append_assistant_message("worked")
+                return "worked"
+
+        flow = DeferredFlow()
         listener = TraceCollectionListener()
-        listener.batch_manager.current_batch = None
-        listener.batch_manager.batch_owner_type = None
-        listener.batch_manager.trace_batch_id = None
-        listener.batch_manager._batch_finalized = True
+        listener.batch_manager.batch_owner_type = "flow"
+        listener.first_time_handler.is_first_time = False
 
-        with patch.object(flow, "_emit_flow_finished_sync") as mock_finished:
-            with patch.object(flow, "_finalize_flow_trace_batch") as mock_finalize:
-                flow.finalize_session_traces()
-                flow.finalize_session_traces()
+        finished: list[FlowFinishedEvent] = []
+        with crewai_event_bus.scoped_handlers():
 
-        mock_finished.assert_not_called()
-        mock_finalize.assert_not_called()
+            @crewai_event_bus.on(FlowFinishedEvent)
+            def capture(_: Any, event: FlowFinishedEvent) -> None:
+                finished.append(event)
+
+            with patch.object(listener.batch_manager, "finalize_batch"):
+                flow.handle_turn("hi")
+                crewai_event_bus.flush()
+                flow.finalize_session_traces()
+                flow.finalize_session_traces()  # second call must be a no-op
+                crewai_event_bus.flush()
+
+        assert len(finished) == 1, (
+            "finalize_session_traces must emit flow_finished exactly once, even "
+            "when called more than once"
+        )
 
     def test_sigint_skips_deferred_session_batch(self) -> None:
         from crewai.events.listeners.tracing.trace_batch_manager import TraceBatch
@@ -1414,25 +1270,6 @@ class TestNestedCrewTracing:
                 mock_finalize.assert_not_called()
         finally:
             current_flow_id.reset(token)
-
-    @pytest.mark.xfail(reason="deferred-trace API was stripped by main's flow.py split; tracking the re-port separately", strict=False)
-    def test_finalize_flow_trace_batch_respects_defer_session_flag(self) -> None:
-        """Nested Flow kickoffs (e.g. AgentExecutor) must not finalize a deferred session batch."""
-
-        class InnerFlow(Flow[ChatState]):
-            @start()
-            def begin(self) -> str:
-                return "ok"
-
-        listener = TraceCollectionListener()
-        listener.batch_manager.batch_owner_type = "flow"
-        listener.batch_manager.defer_session_finalization = True
-        listener.first_time_handler.is_first_time = False
-
-        inner = InnerFlow()
-        with patch.object(listener.batch_manager, "finalize_batch") as mock_finalize:
-            inner._finalize_flow_trace_batch()
-        mock_finalize.assert_not_called()
 
     def test_flow_owned_batch_skips_finalize_without_flow_context(self) -> None:
         from crewai.events.listeners.tracing.trace_listener import (
