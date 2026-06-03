@@ -84,6 +84,11 @@ from crewai.events.types.flow_events import (
     MethodExecutionPausedEvent,
     MethodExecutionStartedEvent,
 )
+from crewai.experimental.conversational import (
+    ConversationConfig,
+    ConversationState,
+)
+from crewai.experimental.conversational_mixin import _ConversationalMixin
 from crewai.flow.constants import AND_CONDITION, OR_CONDITION
 from crewai.flow.flow_context import current_flow_id, current_flow_request_id
 from crewai.flow.flow_definition import (
@@ -91,6 +96,7 @@ from crewai.flow.flow_definition import (
     _extract_all_methods_recursive,
     _normalize_condition,
     extract_flow_definition,
+    get_possible_return_constants,
     is_flow_condition_dict,
     is_flow_method,
     is_flow_method_name,
@@ -141,6 +147,16 @@ from crewai.utilities.streaming import (
     signal_end,
     signal_error,
 )
+from crewai.utilities.types import LLMMessage
+
+
+# Runtime alias so Pydantic can resolve the ``execution_context`` field's
+# annotation in subclass modules without those modules needing to import
+# ``crewai.context.ExecutionContext`` themselves. The real class is brought
+# in under ``TYPE_CHECKING`` above for static analysis. We can't import it at
+# runtime because ``crewai.context`` is loaded mid-initialization when this
+# module is imported through ``crewai.__init__`` (circular).
+ExecutionContext = Any  # type: ignore[assignment,misc]
 
 
 logger = logging.getLogger(__name__)
@@ -589,6 +605,82 @@ class FlowMeta(ModelMetaclass):
             namespace
         )
 
+        # === EXPERIMENTAL: conversational gating ===
+        # The built-in conversational graph (``conversation_start``,
+        # ``route_conversation``, ``converse_turn``, ``end_conversation``,
+        # ``answer_from_history_turn``) lives on ``Flow`` itself, decorated
+        # with ``@_conversational_only``. We don't want those methods to
+        # register on non-chat flows. The opt-in is ``conversational = True``
+        # on the subclass; otherwise the methods exist as inert attributes.
+        is_conversational = bool(namespace.get("conversational", False))
+        if not is_conversational:
+            for base in bases:
+                if getattr(base, "conversational", False):
+                    is_conversational = True
+                    break
+
+        # 1. Strip conversational-only methods that landed in the namespace
+        # extraction when this class isn't conversational. Applies to ``Flow``
+        # itself (its own namespace declares the conversational methods).
+        if not is_conversational:
+
+            def _is_conv_only(attr_name: str) -> bool:
+                attr_value = namespace.get(attr_name)
+                return bool(getattr(attr_value, "__conversational_only__", False))
+
+            start_methods = [m for m in start_methods if not _is_conv_only(m)]
+            listeners = {k: v for k, v in listeners.items() if not _is_conv_only(k)}
+            routers = {r for r in routers if not _is_conv_only(r)}
+            router_paths = {
+                k: v for k, v in router_paths.items() if not _is_conv_only(k)
+            }
+
+        # 2. Harvest conversational-only methods from base classes when this
+        # subclass opts in. (extract_flow_definition only scans the current
+        # namespace; without this step, ``class MyChat(Flow): conversational
+        # = True`` would have an empty graph.)
+        if is_conversational:
+            already_registered: set[str] = set(start_methods) | set(listeners.keys())
+            for base in bases:
+                for attr_name in dir(base):
+                    if attr_name.startswith("_") or attr_name in already_registered:
+                        continue
+                    attr_value = getattr(base, attr_name, None)
+                    if not is_flow_method(attr_value):
+                        continue
+                    if not getattr(attr_value, "__conversational_only__", False):
+                        continue
+                    already_registered.add(attr_name)
+
+                    if hasattr(attr_value, "__is_start_method__"):
+                        start_methods.append(attr_name)
+
+                    trigger_methods = getattr(attr_value, "__trigger_methods__", None)
+                    if trigger_methods is not None:
+                        condition_type = getattr(
+                            attr_value, "__condition_type__", OR_CONDITION
+                        )
+                        trigger_condition = getattr(
+                            attr_value, "__trigger_condition__", None
+                        )
+                        if trigger_condition is not None:
+                            listeners[attr_name] = trigger_condition
+                        else:
+                            listeners[attr_name] = (condition_type, trigger_methods)
+
+                        if getattr(attr_value, "__is_router__", False):
+                            routers.add(attr_name)
+                            paths = getattr(attr_value, "__router_paths__", None)
+                            if paths:
+                                router_paths[attr_name] = paths
+                            else:
+                                possible_returns = get_possible_return_constants(
+                                    attr_value
+                                )
+                                router_paths[attr_name] = (
+                                    possible_returns if possible_returns else []
+                                )
+
         cls._start_methods = start_methods  # type: ignore[attr-defined]
         cls._listeners = listeners  # type: ignore[attr-defined]
         cls._routers = routers  # type: ignore[attr-defined]
@@ -597,7 +689,7 @@ class FlowMeta(ModelMetaclass):
         return cls
 
 
-class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
+class Flow(_ConversationalMixin, BaseModel, Generic[T], metaclass=FlowMeta):
     """Base class for all flows.
 
     type parameter T must be either dict[str, Any] or a subclass of BaseModel."""
@@ -613,6 +705,39 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     _listeners: ClassVar[dict[FlowMethodName, SimpleFlowCondition | FlowCondition]] = {}
     _routers: ClassVar[set[FlowMethodName]] = set()
     _router_paths: ClassVar[dict[FlowMethodName, list[FlowMethodName]]] = {}
+
+    # === EXPERIMENTAL: conversational mode ===
+    # When ``conversational = True`` on a subclass, the built-in conversational
+    # graph (``conversation_start`` -> ``route_conversation`` -> ``converse_turn``
+    # / ``end_conversation`` / ``answer_from_history_turn``) registers and
+    # ``handle_turn`` becomes the chat entry point. When ``False`` (default),
+    # the methods exist as inert attributes and never register or fire —
+    # non-chat flows pay no runtime cost.
+    #
+    # ⚠ EXPERIMENTAL FEATURE. The whole conversational surface
+    # (``conversational`` ClassVar, ``handle_turn``, ``ConversationConfig``,
+    # ``RouterConfig``, ``ConversationState``, the built-in graph + helpers)
+    # lives under ``crewai.experimental`` and may change shape before
+    # graduating. Pin your CrewAI version if you depend on specific
+    # behavior, and watch the changelog for breaking updates.
+    conversational: ClassVar[bool] = False
+    conversational_config: ClassVar[ConversationConfig | None] = None
+    builtin_routes: ClassVar[tuple[str, ...]] = ("converse", "end")
+    internal_routes: ClassVar[tuple[str, ...]] = (
+        "answer_from_history",
+        "conversation_start",
+    )
+    builtin_route_descriptions: ClassVar[dict[str, str]] = {
+        "converse": (
+            "Ordinary chat, follow-ups, summaries, clarifications, and "
+            "questions answerable from prior conversation history."
+        ),
+        "end": ("User signals the conversation is finished (goodbye, exit, done)."),
+        "answer_from_history": (
+            "Answer directly from prior conversation history without invoking "
+            "tools, agents, or custom routes."
+        ),
+    }
 
     entity_type: Literal["flow"] = "flow"
 
@@ -639,6 +764,15 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         ),
     ] = Field(default=None)
     suppress_flow_events: bool = Field(default=False)
+    defer_trace_finalization: bool = Field(
+        default=False,
+        description=(
+            "When True, skip per-kickoff ``FlowFinishedEvent`` + trace-batch "
+            "finalization. ``finalize_session_traces()`` does the final emit "
+            "+ finalize. Use for multi-turn chat sessions where every "
+            "``handle_turn()`` is a turn within one logical trace."
+        ),
+    )
     human_feedback_history: list[HumanFeedbackResult] = Field(default_factory=list)
     last_human_feedback: HumanFeedbackResult | None = Field(default=None)
 
@@ -769,6 +903,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     _human_feedback_method_outputs: dict[str, Any] = PrivateAttr(default_factory=dict)
     _input_history: list[InputHistoryEntry] = PrivateAttr(default_factory=list)
     _state: Any = PrivateAttr(default=None)
+    _conversation_messages: list[LLMMessage] = PrivateAttr(default_factory=list)
+    _pending_user_message: str | dict[str, Any] | None = PrivateAttr(default=None)
+    _pending_intents: Sequence[str] | None = PrivateAttr(default=None)
+    _pending_intent_llm: str | "BaseLLM" | None = PrivateAttr(default=None)
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:  # type: ignore[override]
         class _FlowGeneric(cls):  # type: ignore[valid-type,misc]
@@ -821,13 +959,48 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             flow_name = sanitize_scope_name(self.name or self.__class__.__name__)
             self.memory = Memory(root_scope=f"/flow/{flow_name}")
 
-        for method_name in dir(self):
-            if not method_name.startswith("_"):
-                method = getattr(self, method_name)
-                if is_flow_method(method):
-                    if not hasattr(method, "__self__"):
-                        method = method.__get__(self, self.__class__)
-                    self._methods[method.__name__] = method
+        # Build the runtime method lookup. ``_start_methods`` / ``_listeners`` /
+        # ``_routers`` are populated by ``FlowMeta.__new__`` and are the source
+        # of truth for which slots are flow methods — including slots a
+        # subclass overrode without re-decorating. Walk those slots first so
+        # the override (which may be a plain function) still gets bound here.
+        registered_slots: set[str] = set()
+        registered_slots.update(getattr(type(self), "_start_methods", []))
+        registered_slots.update(getattr(type(self), "_listeners", {}).keys())
+        registered_slots.update(getattr(type(self), "_routers", set()))
+        for method_name in registered_slots:
+            method = getattr(self, method_name, None)
+            if method is None:
+                continue
+            if not hasattr(method, "__self__"):
+                method = method.__get__(self, self.__class__)
+            self._methods[FlowMethodName(method_name)] = method
+
+        # Also pick up any leftover flow-decorated attributes that aren't
+        # already registered (defensive — preserves the prior catch-all scan).
+        # We walk the MRO's class ``__dict__`` rather than ``dir(self)`` +
+        # ``getattr`` so we don't trigger ``@property`` descriptors (those
+        # would run user code mid-init, before state is set up — e.g. a
+        # user property accessing ``self.state.messages`` would crash).
+        # Conversational-only methods are skipped on non-chat flows.
+        is_conversational = getattr(type(self), "conversational", False)
+        seen_in_dict: set[str] = set()
+        for klass in type(self).__mro__:
+            for method_name, raw in klass.__dict__.items():
+                if method_name.startswith("_") or method_name in self._methods:
+                    continue
+                if method_name in seen_in_dict:
+                    continue
+                seen_in_dict.add(method_name)
+                if not is_flow_method(raw):
+                    continue
+                if (
+                    getattr(raw, "__conversational_only__", False)
+                    and not is_conversational
+                ):
+                    continue
+                bound = raw.__get__(self, self.__class__)
+                self._methods[FlowMethodName(method_name)] = bound
 
     def recall(self, query: str, **kwargs: Any) -> Any:
         """Recall relevant memories. Delegates to this flow's memory.
@@ -1458,6 +1631,18 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         """
         init_state = self.initial_state
 
+        # Conversational subclasses default to ``ConversationState`` if the
+        # user didn't supply an explicit type parameter (``Flow[...]``) or an
+        # ``initial_state``. This makes ``class MyChat(Flow): conversational
+        # = True`` work without forcing every user to import and parameterize
+        # ``ConversationState`` themselves.
+        if (
+            init_state is None
+            and getattr(type(self), "conversational", False)
+            and not hasattr(self, "_initial_state_t")
+        ):
+            return cast(T, ConversationState())
+
         if init_state is None and hasattr(self, "_initial_state_t"):
             state_type = self._initial_state_t
             if isinstance(state_type, type):
@@ -2011,30 +2196,51 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 if filtered_inputs:
                     self._initialize_state(filtered_inputs)
 
+            # Conversational hook: apply the pending user message AFTER state
+            # restore so it survives ``self.persistence.load_state(...)``.
+            # ``handle_turn`` stashes the message on ``self._pending_user_message``
+            # before calling ``kickoff``; this drains it.
+            if (
+                getattr(type(self), "conversational", False)
+                and self._pending_user_message is not None
+            ):
+                self._apply_pending_conversational_turn()
+
             if get_current_parent_id() is None:
                 reset_emission_counter()
                 reset_last_event_id()
 
-            if not self.suppress_flow_events:
-                future = crewai_event_bus.emit(
-                    self,
-                    FlowStartedEvent(
-                        type="flow_started",
-                        flow_name=self.name or self.__class__.__name__,
-                        inputs=inputs,
-                    ),
+            # ``FlowStartedEvent`` always fires — ``suppress_flow_events``
+            # only hides the Rich console panel (and the textual log line
+            # below), it doesn't gate observability events. Tracing /
+            # downstream listeners still need to see flow_started.
+            started_event = FlowStartedEvent(
+                type="flow_started",
+                flow_name=self.name or self.__class__.__name__,
+                inputs=inputs,
+            )
+            future = crewai_event_bus.emit(self, started_event)
+            if future:
+                try:
+                    await asyncio.wrap_future(future)
+                except Exception:
+                    logger.warning("FlowStartedEvent handler failed", exc_info=True)
+            # Stash the started event id so a deferred
+            # ``finalize_session_traces()`` can restore the event scope
+            # before emitting ``FlowFinishedEvent`` (otherwise the bus
+            # warns "Ending event 'flow_finished' emitted with empty
+            # scope stack").
+            if self._should_defer_trace_finalization():
+                object.__setattr__(
+                    self, "_deferred_flow_started_event_id", started_event.event_id
                 )
-                if future:
-                    try:
-                        await asyncio.wrap_future(future)
-                    except Exception:
-                        logger.warning("FlowStartedEvent handler failed", exc_info=True)
+            if not self.suppress_flow_events:
                 self._log_flow_event(
                     f"Flow started with ID: {self.flow_id}", color="bold magenta"
                 )
 
-            # After FlowStarted (when not suppressed): env events must not pre-empt
-            # trace batch init with implicit "crew" execution_type.
+            # After FlowStarted: env events must not pre-empt trace batch init
+            # with implicit "crew" execution_type.
             get_env_context()
 
             if inputs is not None and "id" not in inputs:
@@ -2061,11 +2267,21 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     if unconditional_starts
                     else self._start_methods
                 )
-                tasks = [
-                    self._execute_start_method(start_method)
-                    for start_method in starts_to_execute
-                ]
-                await asyncio.gather(*tasks)
+                if getattr(type(self), "conversational", False):
+                    # Conversational mode: run @start methods sequentially so
+                    # user setup (e.g. permission loading) completes before
+                    # the router fires. ``_start_methods`` preserves
+                    # declaration + harvest order, with ``conversation_start``
+                    # at the end — its router decision only runs after every
+                    # user start finishes.
+                    for start_method in starts_to_execute:
+                        await self._execute_start_method(start_method)
+                else:
+                    tasks = [
+                        self._execute_start_method(start_method)
+                        for start_method in starts_to_execute
+                    ]
+                    await asyncio.gather(*tasks)
             except Exception as e:
                 # Check if flow was paused for human feedback
                 from crewai.flow.async_feedback.types import HumanFeedbackPending
@@ -2133,7 +2349,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 )
                 self._event_futures.clear()
 
-            if not self.suppress_flow_events:
+            # When ``defer_trace_finalization`` is set, skip both per-turn
+            # ``FlowFinishedEvent`` AND trace-batch finalization. The caller
+            # invokes ``finalize_session_traces()`` once at session end to
+            # close out the whole conversation as one trace. The flag is
+            # read from EITHER the instance attribute (set by user code) OR
+            # the class-level ``ConversationConfig.defer_trace_finalization``.
+            if not self._should_defer_trace_finalization():
                 future = crewai_event_bus.emit(
                     self,
                     FlowFinishedEvent(
@@ -2151,7 +2373,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                             "FlowFinishedEvent handler failed", exc_info=True
                         )
 
-            if not self.suppress_flow_events:
                 trace_listener = TraceCollectionListener()
                 if trace_listener.batch_manager.batch_owner_type == "flow":
                     if trace_listener.first_time_handler.is_first_time:
@@ -2343,19 +2564,20 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 kwargs or {}
             )
 
-            if not self.suppress_flow_events:
-                future = crewai_event_bus.emit(
-                    self,
-                    MethodExecutionStartedEvent(
-                        type="method_execution_started",
-                        method_name=method_name,
-                        flow_name=self.name or self.__class__.__name__,
-                        params=dumped_params,
-                        state=self._copy_and_serialize_state(),
-                    ),
-                )
-                if future:
-                    self._event_futures.append(future)
+            # MethodExecution events always fire — ``suppress_flow_events``
+            # only hides the Rich console panel, not observability events.
+            future = crewai_event_bus.emit(
+                self,
+                MethodExecutionStartedEvent(
+                    type="method_execution_started",
+                    method_name=method_name,
+                    flow_name=self.name or self.__class__.__name__,
+                    params=dumped_params,
+                    state=self._copy_and_serialize_state(),
+                ),
+            )
+            if future:
+                self._event_futures.append(future)
 
             # Set method name in context so ask() can read it without
             # stack inspection.  Must happen before copy_context() so the
@@ -2397,18 +2619,19 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self._completed_methods.add(method_name)
 
             finished_event_id: str | None = None
-            if not self.suppress_flow_events:
-                finished_event = MethodExecutionFinishedEvent(
-                    type="method_execution_finished",
-                    method_name=method_name,
-                    flow_name=self.name or self.__class__.__name__,
-                    state=self._copy_and_serialize_state(),
-                    result=result,
-                )
-                finished_event_id = finished_event.event_id
-                future = crewai_event_bus.emit(self, finished_event)
-                if future:
-                    self._event_futures.append(future)
+            # MethodExecution events always fire even when console panels are
+            # suppressed; tracing depends on them.
+            finished_event = MethodExecutionFinishedEvent(
+                type="method_execution_finished",
+                method_name=method_name,
+                flow_name=self.name or self.__class__.__name__,
+                state=self._copy_and_serialize_state(),
+                result=result,
+            )
+            finished_event_id = finished_event.event_id
+            future = crewai_event_bus.emit(self, finished_event)
+            if future:
+                self._event_futures.append(future)
 
             return result, finished_event_id
         except Exception as e:
