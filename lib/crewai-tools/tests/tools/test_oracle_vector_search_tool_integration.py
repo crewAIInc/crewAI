@@ -103,7 +103,7 @@ def test_oracle_vector_search_tool_with_real_connection(
         inserted_ids = tool.add_texts(
             [
                 "CrewAI integrates with Oracle vector search.",
-                "This unrelated text is about cooking pasta.",
+                "This reference note mentions vector indexing only.",
             ],
             metadatas=[
                 {"source": "docs", "topic": "oracle", "priority": 5},
@@ -218,7 +218,7 @@ def test_oracle_vector_search_tool_with_real_connection_batch_embedding(
         tool.add_texts(
             [
                 "CrewAI integrates with Oracle vector search.",
-                "This unrelated text is about cooking pasta.",
+                "This reference note mentions vector indexing only.",
             ],
             metadatas=[
                 {"source": "docs"},
