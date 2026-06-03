@@ -1,0 +1,453 @@
+---
+title: 대화형 Flow
+description: 턴마다 kickoff, 메시지 기록, 의도 라우팅, 트레이싱, WebSocket 브리지로 멀티턴 채팅 앱을 만듭니다.
+icon: comments
+mode: "wide"
+---
+
+## 개요
+
+대화형 앱은 각 사용자 입력을 **동일한 세션 id**로 **새 flow 실행**으로 처리합니다. CrewAI는 메시지 기록, 선택적 의도 분류, 지연 트레이싱, UI 브리지를 제공하며, `Flow`에 별도 `chat()` API는 없습니다.
+
+| 개념 | 구현 |
+|------|------|
+| 세션 id | `kickoff(session_id=...)` → `inputs["id"]` → `state.id` |
+| 사용자 입력 | `kickoff(user_message=...)`가 그래프 실행 전 `state.messages`에 추가 |
+| 턴 완료 | `FlowFinished`는 **이번 실행**만 의미; 다음 `kickoff`로 대화 계속 |
+| 세션 전체 트레이스 | `ConversationalConfig(defer_trace_finalization=True)` + `finalize_session_traces()` |
+
+## 단일 진입점: `kickoff`
+
+모든 사용자 메시지에 **`flow.kickoff(user_message=..., session_id=...)`**를 사용하세요 (REST, WebSocket, CLI). `Flow`에 커스텀 `chat()` 래퍼를 만들지 마세요.
+
+| API | 용도 |
+|-----|------|
+| `kickoff(user_message=..., session_id=...)` | 각 사용자 메시지 |
+| `kickoff_async(...)` | 동일 파라미터; 네이티브 async 진입 |
+| `ask()` | 한 스텝 **내부** 블로킹 프롬프트 (마법사, 확인) |
+| `@human_feedback` | **스텝 출력** 승인/거부 — 다음 채팅 줄이 아님 |
+| `ChatSession.handle_turn(...)` | `kickoff` 위의 전송 계층 (SSE / WebSocket) |
+
+## 빠른 시작
+
+```python
+from uuid import uuid4
+
+from crewai.flow import (
+    ChatState,
+    ConversationalConfig,
+    Flow,
+    listen,
+    or_,
+    persist,
+    router,
+    start,
+)
+from crewai.flow.persistence import SQLiteFlowPersistence
+
+
+class SupportFlow(Flow[ChatState]):
+    conversational_config = ConversationalConfig(
+        default_intents=["order", "help", "goodbye"],
+        intent_llm="gpt-4o-mini",
+        defer_trace_finalization=True,
+    )
+
+    @start()
+    def bootstrap(self):
+        if not self.state.session_ready:
+            self.state.session_ready = True
+        return "ready"
+
+    @router(bootstrap)
+    def route(self):
+        # default_intents 설정 시 prepare_conversational_turn에서 last_intent 설정
+        return self.state.last_intent or "help"
+
+    @listen("order")
+    def handle_order(self):
+        reply = "주문이 배송 중입니다."
+        self.append_message("assistant", reply)
+        return reply
+
+    @listen("help")
+    def handle_help(self):
+        reply = "무엇을 도와드릴까요?"
+        self.append_message("assistant", reply)
+        return reply
+
+    @listen("goodbye")
+    def handle_goodbye(self):
+        reply = "안녕히 가세요!"
+        self.append_message("assistant", reply)
+        return reply
+
+    @persist(SQLiteFlowPersistence("support.db"))
+    @listen(or_(handle_order, handle_help, handle_goodbye))
+    def finalize(self):
+        return self.state.model_dump()
+
+
+session_id = str(uuid4())
+flow = SupportFlow()
+
+flow.kickoff(user_message="주문 어디까지 왔나요?", session_id=session_id)
+flow.kickoff(user_message="반품은 어떻게 하나요?", session_id=session_id)
+flow.finalize_session_traces()  # 전체 대화에 대한 단일 trace 링크
+```
+
+## 턴 생명주기
+
+`user_message`가 있는 각 `kickoff`는 다음 파이프라인을 실행합니다:
+
+1. **`_configure_conversational_kickoff`** — `session_id` / `user_message`를 `inputs`에 병합, `ConversationalConfig` 적용, 설정 시 지연 트레이싱 활성화.
+2. **상태 복원** — `inputs["id"]`가 있고 `@persist`가 설정되면 최신 스냅샷 로드.
+3. **`FlowStarted`** — 지연 세션의 첫 턴에서만 발생.
+4. **`prepare_conversational_turn`** — 사용자 메시지를 `state.messages`에 추가, `last_user_message` 설정, `last_intent` 초기화, `intents` / `default_intents` + `intent_llm` 설정 시 분류.
+5. **그래프 실행** — `@start` → `@router` → `@listen` 핸들러.
+6. **실행 종료** — 지연 활성화 시 턴별 `flow_finished` 및 trace 종료 **건너뜀**; 중첩 `Agent.kickoff()` / crew도 부모 batch를 닫지 않음.
+
+핸들러는 **`append_message("assistant", reply)`**를 호출해 다음 턴의 `conversation_messages`에 어시스턴트 응답이 포함되게 하세요. 사용자 입력은 kickoff 시 이미 저장됩니다 — 핸들러에서 다시 추가하지 마세요.
+
+## `ConversationalConfig` (클래스 수준 기본값)
+
+`Flow` 서브클래스에 `conversational_config: ClassVar[ConversationalConfig | None]`로 설정합니다.
+
+| 필드 | 기본값 | 목적 |
+|------|--------|------|
+| `default_intents` | `None` | kickoff 전 자동 분류용 outcome 라벨 |
+| `intent_llm` | `None` | 분류용 모델 (intent 사용 시 필수) |
+| `interactive_prompt` | `"You: "` | `kickoff(interactive=True)` 프롬프트 |
+| `interactive_timeout` | `None` | 대화형 모드 줄 단위 타임아웃 |
+| `exit_commands` | `exit`, `quit` | 대화형 모드 종료 단어 |
+| `defer_trace_finalization` | `True` | 턴 간 하나의 trace batch 유지 |
+
+`intents=` 및 `intent_llm=` 키워드로 kickoff마다 재정의할 수 있습니다.
+
+## `ChatState` (권장 persist 형태)
+
+```python
+from crewai.flow import ChatState
+
+
+class MyChatState(ChatState):
+    # 상속: id, messages, last_user_message, last_intent, session_ready
+    research_turn_count: int = 0
+    custom_flag: bool = False
+```
+
+| 필드 | 역할 |
+|------|------|
+| `id` | 세션 UUID (`session_id` / `inputs["id"]`와 동일) |
+| `messages` | LLM 기록용 `{role, content}` 리스트 |
+| `last_user_message` | 이번 턴의 최신 사용자 입력 |
+| `last_intent` | 분류 후 라우트 라벨 (사용 시) |
+| `session_ready` | 일회성 bootstrap 플래그 |
+
+`ConversationalInputs`는 `kickoff(inputs={...})`용 `TypedDict`: `id`, `user_message`, `last_intent`.
+
+## `Flow` 대화 API
+
+### `kickoff` / `kickoff_async` 파라미터
+
+| 파라미터 | 목적 |
+|----------|------|
+| `user_message` | 이번 턴 텍스트 (또는 `{"role": "user", "content": "..."}`) |
+| `session_id` | 대화 UUID → `inputs["id"]` / `state.id` |
+| `intents` | kickoff 전 `classify_intent`용 outcome 라벨 |
+| `intent_llm` | 분류 LLM (`intents`와 함께 필수) |
+| `interactive` | `ask()` CLI 루프 (로컬 데모 전용) |
+| `interactive_prompt` | 대화형 모드 프롬프트 |
+| `interactive_timeout` | 줄 단위 `ask()` 타임아웃 |
+| `exit_commands` | 대화형 모드 종료 단어 |
+| `inputs` | 추가 상태 필드 |
+| `restore_from_state_id` | 다른 persist flow에서 fork 복원 |
+
+### 인스턴스 속성
+
+| 속성 | 목적 |
+|------|------|
+| `conversational_config` | 클래스 수준 `ConversationalConfig` |
+| `defer_trace_finalization` | 인스턴스 플래그; kickoff 시 config에서 자동 설정 |
+| `suppress_flow_events` | 콘솔 flow 패널 숨김; **트레이싱은 계속 기록** |
+| `stream` | 스트리밍; `ChatSession.handle_turn(..., stream=True)`와 함께 |
+
+### 메서드 및 프로퍼티
+
+| 이름 | 설명 |
+|------|------|
+| `append_message(role, content, **extra)` | `state.messages`에 추가 |
+| `conversation_messages` | LLM 호출용 읽기 전용 기록 |
+| `classify_intent(text, outcomes, *, llm, context=None)` | outcome 매핑 (`@human_feedback`와 동일 collapse) |
+| `receive_user_message(text, *, outcomes=None, llm=None)` | 사용자 메시지 추가; 선택적 `last_intent` |
+| `finalize_session_traces()` | 지연 `flow_finished` 발생 및 세션 trace batch 종료 |
+| `_should_defer_trace_finalization()` | 턴별 trace 종료 지연 여부 |
+| `input_history` | `ask()` 프롬프트/응답 감사 기록 |
+
+### 모듈 헬퍼 (`crewai.flow.conversation`)
+
+테스트 또는 커스텀 오케스트레이션용:
+
+| 함수 | 설명 |
+|------|------|
+| `normalize_kickoff_inputs(...)` | 대화 kwargs를 `inputs`에 병합 |
+| `get_conversation_messages(flow)` | 상태 또는 내부 버퍼에서 메시지 읽기 |
+| `append_message(flow, ...)` | 인스턴스 메서드와 동일 |
+| `prepare_conversational_turn(flow, ...)` | 턴 수화 (보통 kickoff가 호출) |
+| `receive_user_message(flow, ...)` | 인스턴스 메서드와 동일 |
+| `set_state_field(flow, name, value)` | dict 또는 Pydantic 상태 필드 설정 |
+| `get_conversational_config(flow)` | 클래스 `conversational_config` 읽기 |
+| `input_history_to_messages(entries)` | `input_history`를 LLM 메시지 형식으로 |
+
+## 의도 라우팅 패턴
+
+### A. `ConversationalConfig`로 사전 분류 (가장 단순)
+
+`default_intents`와 `intent_llm` 설정. 각 kickoff가 `@router` 전에 분류; `route()`에서 `self.state.last_intent` 읽기.
+
+### B. `@router` 내부에서 분류 (풍부한 프롬프트)
+
+`default_intents=None`으로 kickoff는 메시지만 추가. `route()`에서 커스텀 프롬프트로 `classify_intent` 호출:
+
+```python
+@router(bootstrap)
+def route(self):
+    intent = self.classify_intent(
+        self._routing_prompt(self.state.last_user_message),
+        ("GREETING", "ORDER", "RESEARCH", "GOODBYE"),
+        llm=self.conversational_config.intent_llm or "gpt-4o-mini",
+    )
+    self.state.last_intent = intent
+    return intent
+```
+
+웹 리서치나 다단계 tool이 필요하면 **`@listen("RESEARCH")`** 등에서 `Agent.kickoff()`와 tool 사용 — 단순 `LLM.call()` 대신.
+
+## flow가 끝났지만 사용자는 계속 대화할 때
+
+`FlowFinished`는 **이번 그래프 실행**이 완료됨을 의미합니다. 같은 `session_id`로 또 다른 `kickoff`로 대화가 이어집니다. `@persist`가 `messages`, 플래그, 컨텍스트를 복원합니다.
+
+**Persist 패턴:** 전체 `Flow` 클래스보다 **단일 종료 스텝**(예: `finalize`)에 `@persist`를 두는 것이 좋습니다. 클래스 수준 persist는 매 메서드 후 저장하며, `load_state`는 최신 행을 사용해 같은 턴의 핸들러 업데이트를 놓칠 수 있습니다.
+
+후속 채팅 줄에 `@human_feedback`를 쓰지 마세요. 특정 스텝 출력을 사람이 승인해야 할 때만 사용하세요.
+
+## 대화형 `Flow` (실험적)
+
+<Warning>
+  **실험적 기능입니다.** 대화형 `Flow`의 API 표면(`conversational = True`,
+  `handle_turn`, `ConversationConfig`, `RouterConfig`, `ConversationState`,
+  내장 그래프와 헬퍼)은 `crewai.experimental` 하위에 있으며 정식 출시
+  전까지 변경될 수 있습니다. 특정 동작에 의존한다면 CrewAI 버전을 고정하고
+  변경 사항이 있는지 changelog를 확인하세요. 피드백과 이슈 환영합니다.
+</Warning>
+
+`Flow` 서브클래스에 `conversational = True`를 지정하면 대화형 챗 그래프가 활성화됩니다. 베이스 `Flow`가 `@start` / `@router` / `converse_turn` / `end_conversation` 그래프를 노출하고, `state.messages`를 관리하며, router LLM을 구동하고, 턴 간 trace 배치를 열린 상태로 유지합니다. 여러분은 **커스텀 라우트**만 작성하면 되고, 나머지는 프레임워크가 담당합니다.
+
+LLM 기반 라우터와 라우트별 핸들러로 멀티턴 챗을 만들고 싶지만 라이프사이클을 직접 배선하고 싶지 않을 때 사용하세요. 완전한 제어가 필요하면 위의 `Flow[ChatState]`로 내려가세요.
+
+### 빠른 예제
+
+```python
+from crewai import LLM, Flow
+from crewai.flow import listen
+from crewai.experimental.conversational import (
+    ConversationConfig,
+    ConversationState,
+    RouterConfig,
+)
+
+
+ROUTER_LLM = LLM(model="gpt-4o-mini")
+
+
+@ConversationConfig(
+    system_prompt="A multi-agent assistant for ordinary chat and tool-backed tasks.",
+    llm=ROUTER_LLM,
+    router=RouterConfig(),  # 라우트 + 설명은 @listen 핸들러에서 자동 발견
+)
+class SupportFlow(Flow[ConversationState]):
+    conversational = True
+
+    @listen("INTERNET_SEARCH")
+    def handle_internet_search(self) -> str:
+        """Fresh web research, current news, real-time lookups."""
+        ...
+        self.append_assistant_message(reply)
+        return reply
+
+    @listen("CREWAI_DOCS")
+    def handle_crewai_docs(self) -> str:
+        """Look up the CrewAI documentation for framework/API questions."""
+        ...
+        self.append_assistant_message(reply)
+        return reply
+
+
+flow = SupportFlow()
+try:
+    flow.handle_turn("뭘 할 수 있어?")                # converse(빌트인)로 라우팅
+    flow.handle_turn("AI 뉴스를 웹에서 찾아줘.")        # INTERNET_SEARCH로 라우팅
+    flow.handle_turn("첫 번째 결과를 요약해줘.")        # 다시 converse로 라우팅
+finally:
+    flow.finalize_session_traces()
+```
+
+### `ConversationConfig`
+
+클래스 단위의 챗 기본값을 부착하는 클래스 데코레이터입니다.
+
+| 필드 | 기본값 | 목적 |
+|------|--------|------|
+| `system_prompt` | i18n `slices.conversational_system_prompt` | 빌트인 `converse_turn`이 사용하는 system 메시지. 빈 문자열(`""`)을 전달하면 system 메시지를 끕니다. |
+| `llm` | `None` | 대화용 LLM (빌트인 `converse_turn`이 사용하고 router 폴백도 됨). |
+| `router` | `None` | LLM 기반 라우팅을 위한 `RouterConfig`. 없으면 항상 `converse`로 떨어집니다. |
+| `answer_from_history_prompt` | 프레임워크 기본값 | 선택적인 `answer_from_history` 라우트용 system 메시지. |
+| `answer_from_history_llm` | `None` | 설정되면 `answer_from_history` 단축 경로가 활성화됩니다. |
+| `intent_llm` | `None` | 레거시 `intents=`/`default_intents` 사전 분류용 LLM. |
+| `default_intents` | `None` | 레거시 사전 분류용 outcome 레이블. |
+| `visible_agent_outputs` | `None` | `"all"` 또는 `append_agent_result()` 결과를 사용자에게 공개로 승격할 에이전트 이름 목록. |
+| `defer_trace_finalization` | `True` | `handle_turn()` 호출들 사이에서 하나의 trace 배치를 열어 둡니다. |
+
+### `RouterConfig`와 자동 생성되는 라우트 카탈로그
+
+```python
+RouterConfig(
+    prompt="선택적인 도메인 프레이밍 (정책, 톤, 페르소나).",
+    response_format=MyRoute,        # 선택; 없으면 자동 생성
+    llm=ROUTER_LLM,                  # ConversationConfig.llm으로 폴백
+    routes=["INTERNET_SEARCH", "CREWAI_DOCS"],   # 선택; 리스너에서 추론
+    route_descriptions={
+        "INTERNET_SEARCH": "이 라우트만 docstring 대신 사용할 설명.",
+    },
+    default_intent="converse",       # LLM 호출 실패 또는 LLM 없음일 때 사용
+    fallback_intent="converse",      # LLM이 잘못된 라우트를 반환할 때 사용
+    intent_field="intent",
+)
+```
+
+router에 전달되는 프롬프트는 자동으로 만들어집니다. 각 라우트의 설명은 다음 우선순위로 결정됩니다:
+
+1. `RouterConfig.route_descriptions[label]` — 명시적 오버라이드.
+2. `Flow.builtin_route_descriptions[label]` — `converse`, `end`, `answer_from_history`용 프레임워크 캐닝 텍스트 (router LLM용으로 다듬어진 문구).
+3. `@listen(label)` 핸들러 docstring의 첫 줄(비어있지 않은 줄).
+4. 빈 문자열 (라우트만 카탈로그에 등장하고 설명은 없음).
+
+실제 사용에서 **새 라우트를 추가하는 방법은 `@listen("X")` + 한 줄짜리 docstring**입니다:
+
+```python
+@listen("INTERNET_SEARCH")
+def handle_internet_search(self) -> str:
+    """Fresh web research, current news, real-time lookups."""
+    ...
+```
+
+…그러면 router LLM은 다음을 봅니다:
+
+```
+Routes:
+- CREWAI_DOCS: Look up the CrewAI documentation for framework/API questions.
+- INTERNET_SEARCH: Fresh web research, current news, real-time lookups.
+- converse: Ordinary chat, follow-ups, summaries, clarifications…
+- end: User signals the conversation is finished (goodbye, exit, done).
+```
+
+`RouterConfig.prompt`는 **도메인 프레이밍** (어시스턴트 페르소나, 비즈니스 규칙, 톤)을 위한 자리입니다. 라우트 카탈로그는 자동 생성되니 `prompt` 안에 라우트 목록을 넣지 마세요. 핸들러를 추가하는 순간 동기화가 깨집니다.
+
+### 빌트인 라우트
+
+| 라우트 | 핸들러 | 목적 |
+|--------|--------|------|
+| `converse` | `converse_turn` | 기본 챗 핸들러. system prompt + 정식 메시지 히스토리와 함께 `ConversationConfig.llm`을 호출합니다. |
+| `end` | `end_conversation` | `state.ended = True`로 설정하고 종료 응답을 보냅니다. |
+| `answer_from_history` | `answer_from_history_turn` | 선택적. `ConversationConfig.answer_from_history_llm`이 설정되어 있고 메시지를 히스토리만으로 답할 수 있을 때 라우팅됩니다. |
+
+서브클래스에 같은 이름의 핸들러를 정의하면 어떤 것이든 오버라이드할 수 있습니다.
+
+### `handle_turn()` 시맨틱
+
+`flow.handle_turn(message)`는 한 턴을 실행합니다:
+
+1. 그래프가 다시 실행되도록 턴 단위 실행 추적(`_completed_methods`, `_method_outputs`)을 초기화합니다 — 이게 없으면 동일 인스턴스에서 반복 `kickoff` 호출 시 `Flow.kickoff_async`가 `inputs={"id": ...}`를 체크포인트 복원으로 간주해 2번째 턴부터 단락 회로가 발생합니다.
+2. 사용자 메시지를 `state.messages`에 추가하고 `current_user_message` / `last_user_message`를 설정합니다. `last_intent`는 **이전 턴 값이 유지**되어 router LLM이 신호로 활용할 수 있습니다.
+3. `conversation_start` → `route_conversation` → 선택된 `@listen` 핸들러 순으로 실행됩니다.
+4. router는 결정을 `state.last_intent`에 저장합니다 (다음 턴의 router 컨텍스트에서 보입니다).
+5. 핸들러가 문자열을 반환했지만 `append_assistant_message`를 직접 호출하지 않았다면, `handle_turn`이 대신 추가해 줍니다.
+
+`flow.kickoff(user_message=..., session_id=...)`를 직접 호출해도 동일한 reset/run 로직이 동작합니다. `handle_turn`은 그 위에 얹은 편의 래퍼입니다.
+
+### 커스텀 router 동작
+
+매 라우팅 결정마다 사이드 이펙트(이벤트 버스 셋업, 텔레메트리)를 실행하려면 `route_turn`을 오버라이드하세요:
+
+```python
+class SupportFlow(Flow[ConversationState]):
+    conversational = True
+
+    def route_turn(self, context: dict[str, Any]) -> str | None:
+        self.event_bus = MyBus(self)
+        return super().route_turn(context)
+```
+
+LLM router를 우회해 프로그램적으로 라우트를 선택하려면 `route_turn`에서 문자열을 반환하세요. `None`을 반환하면 `_route_with_config(...)`로 떨어집니다.
+
+### `append_assistant_message`와 `append_agent_result`
+
+`@listen(label)` 핸들러 안에서 두 가지 중 선택하세요:
+
+- `self.append_assistant_message(text)` — 사용자에게 보이는 어시스턴트 턴을 `state.messages`에 추가합니다. 다음 턴의 `converse_turn`이 이 내용을 보게 됩니다.
+- `self.append_agent_result(agent_name, result, visibility="private")` — 구조화된 이벤트를 `state.events`에, 스레드를 `state.agent_threads[agent_name]`에 기록합니다. public 가시성은 자동으로 `append_assistant_message`도 호출합니다. 정식 히스토리를 더럽히지 말아야 할 임시 작업에는 private을 쓰세요.
+
+`ConversationConfig.visible_agent_outputs`로 특정 에이전트의 private 결과를 전역적으로 public으로 승격할 수 있습니다 (`"all"` 또는 이름 리스트).
+
+## 턴 간 트레이싱
+
+`defer_trace_finalization=True` (`ConversationalConfig` 기본값):
+
+- 채팅 세션 전체에 **하나의 trace batch**.
+- 첫 턴에만 **`flow_started`**; `finalize_session_traces()`에서 **`flow_finished`** 한 번.
+- 턴별 `kickoff`는 “Trace batch finalized”를 출력하지 않음.
+- **중첩 작업** (`Agent.kickoff()`, crew, Exa tool)은 **부모** batch에 추가; 내부 `AgentExecutor` flow가 세션 batch를 조기 종료하지 않음.
+
+```python
+try:
+    while True:
+        line = input("You: ").strip()
+        if not line:
+            break
+        flow.kickoff(user_message=line, session_id=session_id)
+finally:
+    flow.finalize_session_traces()
+```
+
+지연 활성화 시 `ChatSession.close()`가 `finalize_session_traces()`를 호출합니다.
+
+`suppress_flow_events=True`는 Rich 콘솔 패널만 숨깁니다. trace 및 method 이벤트는 계속 발생합니다.
+
+### 대화형 `Flow` trace 수명 주기
+
+실험적 [대화형 `Flow`](#대화형-flow-실험적)는 동일한 tracing 수명 주기를 따릅니다. `defer_trace_finalization` 기본값이 `True`이므로 각 `handle_turn()`이 세션 trace를 열어 둡니다. 세션 끝에서 항상 finalize하세요 — REPL/루프를 `try/finally`로 감싸고 종료 시 `flow.finalize_session_traces()`를 호출하세요. 호출하지 않으면 batch가 열린 채 남아 마지막 대화가 export되지 않을 수 있습니다.
+
+## 스트리밍
+
+`Flow` 클래스에 `stream = True`. `kickoff(...)`가 표준 이벤트 버스를 통해 `assistant_delta` 등 이벤트를 발생시킵니다.
+
+## import
+
+```python
+from crewai.flow import (
+    ChatState,
+    ConversationalConfig,
+    ConversationalInputs,
+    Flow,
+    listen,
+    persist,
+    router,
+    start,
+)
+```
+
+## 참고
+
+- [Flow 상태 관리 마스터하기](/ko/guides/flows/mastering-flow-state)
+- [첫 Flow 만들기](/ko/guides/flows/first-flow)
+- 데모: `lib/crewai/runner_conversational_flow_simple.py`

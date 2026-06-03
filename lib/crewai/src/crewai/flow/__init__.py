@@ -4,6 +4,11 @@ from crewai.flow.async_feedback import (
     HumanFeedbackProvider,
     PendingFeedbackContext,
 )
+from crewai.flow.conversation import (
+    ChatState,
+    ConversationalConfig,
+    ConversationalInputs,
+)
 from crewai.flow.flow import Flow, and_, listen, or_, router, start
 from crewai.flow.flow_config import flow_config
 from crewai.flow.flow_serializer import flow_structure
@@ -18,7 +23,10 @@ from crewai.flow.visualization import (
 
 
 __all__ = [
+    "ChatState",
     "ConsoleProvider",
+    "ConversationalConfig",
+    "ConversationalInputs",
     "Flow",
     "FlowStructure",
     "HumanFeedbackPending",
