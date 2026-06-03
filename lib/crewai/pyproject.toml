@@ -138,6 +138,9 @@ torchvision = [
 crewai-files = { workspace = true }
 
 
+[project.scripts]
+crewai = "crewai_cli.cli:crewai"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
