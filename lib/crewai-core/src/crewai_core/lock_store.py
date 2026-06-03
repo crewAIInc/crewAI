@@ -62,9 +62,7 @@ class LockBackend(Protocol):
     own namespacing.
     """
 
-    def __call__(
-        self, name: str, *, timeout: float
-    ) -> AbstractContextManager[None]:
+    def __call__(self, name: str, *, timeout: float) -> AbstractContextManager[None]:
         raise NotImplementedError
 
 
