@@ -1376,6 +1376,10 @@ class GeminiCompletion(BaseLLM):
 
         return int(1048576 * CONTEXT_WINDOW_USAGE_RATIO)  # 1M tokens default
 
+    def _effective_max_tokens(self) -> int | float | None:
+        """Gemini caps generation via ``max_output_tokens``."""
+        return self.max_output_tokens or self.max_tokens
+
     @staticmethod
     def _extract_finish_reason_and_id(
         response: Any,

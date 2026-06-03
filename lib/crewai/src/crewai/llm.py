@@ -2094,6 +2094,10 @@ class LLM(BaseLLM):
             ),
         )
 
+    def _effective_max_tokens(self) -> int | float | None:
+        """LiteLLM sends ``max_tokens or max_completion_tokens`` as the cap."""
+        return self.max_tokens or self.max_completion_tokens
+
     @staticmethod
     def _extract_finish_reason_and_response_id(
         response_or_chunk: Any,

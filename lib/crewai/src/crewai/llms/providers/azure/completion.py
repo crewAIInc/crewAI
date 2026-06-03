@@ -1314,6 +1314,10 @@ class AzureCompletion(BaseLLM):
 
         return int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
 
+    def _effective_max_tokens(self) -> int | float | None:
+        """Azure reasoning/newer chat models cap via ``max_completion_tokens``."""
+        return self.max_tokens or self.max_completion_tokens
+
     @staticmethod
     def _extract_finish_reason_and_id(
         response_or_update: Any,

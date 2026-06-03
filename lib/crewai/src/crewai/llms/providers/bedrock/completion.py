@@ -1050,6 +1050,9 @@ class BedrockCompletion(BaseLLM):
                                     result = response_model.model_validate(
                                         function_args
                                     )
+                                    # contentBlockStop fires before messageStop sets
+                                    # stream_finish_reason; structured output always
+                                    # completes via the tool-call path.
                                     self._emit_call_completed_event(
                                         response=result.model_dump_json(),
                                         call_type=LLMCallType.LLM_CALL,
@@ -1057,7 +1060,8 @@ class BedrockCompletion(BaseLLM):
                                         from_agent=from_agent,
                                         messages=messages,
                                         usage=usage_data,
-                                        finish_reason=stream_finish_reason,
+                                        finish_reason=stream_finish_reason
+                                        or "tool_use",
                                         response_id=response_id,
                                     )
                                     return result  # type: ignore[return-value]
@@ -1644,6 +1648,9 @@ class BedrockCompletion(BaseLLM):
                                     result = response_model.model_validate(
                                         function_args
                                     )
+                                    # contentBlockStop fires before messageStop sets
+                                    # stream_finish_reason; structured output always
+                                    # completes via the tool-call path.
                                     self._emit_call_completed_event(
                                         response=result.model_dump_json(),
                                         call_type=LLMCallType.LLM_CALL,
@@ -1651,7 +1658,8 @@ class BedrockCompletion(BaseLLM):
                                         from_agent=from_agent,
                                         messages=messages,
                                         usage=usage_data,
-                                        finish_reason=stream_finish_reason,
+                                        finish_reason=stream_finish_reason
+                                        or "tool_use",
                                         response_id=response_id,
                                     )
                                     return result  # type: ignore[return-value]

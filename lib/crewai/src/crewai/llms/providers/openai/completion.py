@@ -2425,6 +2425,10 @@ class OpenAICompletion(BaseLLM):
 
         return int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
 
+    def _effective_max_tokens(self) -> int | float | None:
+        """Newer OpenAI chat models cap via ``max_completion_tokens``."""
+        return self.max_tokens or self.max_completion_tokens
+
     @staticmethod
     def _extract_chat_finish_reason_and_id(
         response: Any,

@@ -471,6 +471,16 @@ class BaseLLM(BaseModel, ABC):
         """
         return None
 
+    def _effective_max_tokens(self) -> int | float | None:
+        """Token cap actually sent to the provider, for start-event telemetry.
+
+        Defaults to ``self.max_tokens``. Providers that cap generation through a
+        differently named field (e.g. ``max_completion_tokens`` on OpenAI/Azure,
+        ``max_output_tokens`` on Gemini) override this so ``LLMCallStartedEvent``
+        reports the real limit instead of ``None``.
+        """
+        return self.max_tokens
+
     def _emit_call_started_event(
         self,
         messages: str | list[LLMMessage],
@@ -497,7 +507,7 @@ class BaseLLM(BaseModel, ABC):
         if top_p is None:
             top_p = self.top_p
         if max_tokens is None:
-            max_tokens = self.max_tokens
+            max_tokens = self._effective_max_tokens()
         if stream is None:
             stream = self.stream
         if seed is None:

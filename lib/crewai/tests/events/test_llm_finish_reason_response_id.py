@@ -289,6 +289,36 @@ class TestBaseLLMSamplingParamFields:
         assert llm.stop == ["A"]
 
 
+class TestEffectiveMaxTokensTelemetry:
+    def test_base_defaults_to_max_tokens(self, mock_emit):
+        llm = _StubLLM(model="test-model", max_tokens=256)
+
+        llm._emit_call_started_event(messages="hi")
+
+        event = mock_emit.call_args[1]["event"]
+        assert event.max_tokens == 256
+
+    def test_openai_surfaces_max_completion_tokens(self, mock_emit):
+        from crewai.llms.providers.openai.completion import OpenAICompletion
+
+        llm = LLM(model="gpt-4o", max_completion_tokens=512)
+        assert isinstance(llm, OpenAICompletion)
+        assert llm.max_tokens is None
+
+        llm._emit_call_started_event(messages="hi")
+
+        event = mock_emit.call_args[1]["event"]
+        assert event.max_tokens == 512
+
+    def test_explicit_max_tokens_takes_precedence(self, mock_emit):
+        llm = LLM(model="gpt-4o", max_tokens=128, max_completion_tokens=512)
+
+        llm._emit_call_started_event(messages="hi")
+
+        event = mock_emit.call_args[1]["event"]
+        assert event.max_tokens == 128
+
+
 class TestStreamingDictChunkResponseIdPropagation:
     # Regression: PR #5945 coderabbitai feedback. The streaming loop only
     # extracted ``chunk.id`` for ``ModelResponseBase`` instances; dict-shaped
