@@ -123,6 +123,9 @@ oxylabs = [
 mongodb = [
     "pymongo>=4.13"
 ]
+oracledb = [
+    "oracledb>=2.2.0"
+]
 mysql = [
     "pymysql>=1.1.1"
 ]

@@ -105,6 +105,12 @@ from crewai_tools.tools.mongodb_vector_search_tool import (
     MongoDBVectorSearchConfig,
     MongoDBVectorSearchTool,
 )
+from crewai_tools.tools.oracle_vector_search_tool import (
+    OracleToolSchema,
+    OracleVectorSearchConfig,
+    OracleVectorSearchQueryConfig,
+    OracleVectorSearchTool,
+)
 from crewai_tools.tools.multion_tool.multion_tool import MultiOnTool
 from crewai_tools.tools.mysql_search_tool.mysql_search_tool import MySQLSearchTool
 from crewai_tools.tools.nl2sql.nl2sql_tool import NL2SQLTool
@@ -262,6 +268,10 @@ __all__ = [
     "MongoDBToolSchema",
     "MongoDBVectorSearchConfig",
     "MongoDBVectorSearchTool",
+    "OracleToolSchema",
+    "OracleVectorSearchConfig",
+    "OracleVectorSearchQueryConfig",
+    "OracleVectorSearchTool",
     "MultiOnTool",
     "MySQLSearchTool",
     "NL2SQLTool",

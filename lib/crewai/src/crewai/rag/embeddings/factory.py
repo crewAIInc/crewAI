@@ -74,6 +74,10 @@ if TYPE_CHECKING:
     from crewai.rag.embeddings.providers.onnx.types import ONNXProviderSpec
     from crewai.rag.embeddings.providers.openai.types import OpenAIProviderSpec
     from crewai.rag.embeddings.providers.openclip.types import OpenCLIPProviderSpec
+    from crewai.rag.embeddings.providers.oracle.embedding_callable import (
+        OracleEmbeddingFunction,
+    )
+    from crewai.rag.embeddings.providers.oracle.types import OracleProviderSpec
     from crewai.rag.embeddings.providers.roboflow.types import RoboflowProviderSpec
     from crewai.rag.embeddings.providers.sentence_transformer.types import (
         SentenceTransformerProviderSpec,
@@ -102,6 +106,7 @@ PROVIDER_PATHS = {
     "onnx": "crewai.rag.embeddings.providers.onnx.onnx_provider.ONNXProvider",
     "openai": "crewai.rag.embeddings.providers.openai.openai_provider.OpenAIProvider",
     "openclip": "crewai.rag.embeddings.providers.openclip.openclip_provider.OpenCLIPProvider",
+    "oracle": "crewai.rag.embeddings.providers.oracle.oracle_provider.OracleProvider",
     "roboflow": "crewai.rag.embeddings.providers.roboflow.roboflow_provider.RoboflowProvider",
     "sentence-transformer": "crewai.rag.embeddings.providers.sentence_transformer.sentence_transformer_provider.SentenceTransformerProvider",
     "text2vec": "crewai.rag.embeddings.providers.text2vec.text2vec_provider.Text2VecProvider",
@@ -156,6 +161,10 @@ def build_embedder_from_dict(
 
 @overload
 def build_embedder_from_dict(spec: OllamaProviderSpec) -> OllamaEmbeddingFunction: ...
+
+
+@overload
+def build_embedder_from_dict(spec: OracleProviderSpec) -> OracleEmbeddingFunction: ...
 
 
 @overload
@@ -295,6 +304,10 @@ def build_embedder(spec: HuggingFaceProviderSpec) -> HuggingFaceEmbeddingFunctio
 
 @overload
 def build_embedder(spec: OllamaProviderSpec) -> OllamaEmbeddingFunction: ...
+
+
+@overload
+def build_embedder(spec: OracleProviderSpec) -> OracleEmbeddingFunction: ...
 
 
 @overload

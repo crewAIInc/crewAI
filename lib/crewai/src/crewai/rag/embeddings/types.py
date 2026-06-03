@@ -21,6 +21,7 @@ from crewai.rag.embeddings.providers.ollama.types import OllamaProviderSpec
 from crewai.rag.embeddings.providers.onnx.types import ONNXProviderSpec
 from crewai.rag.embeddings.providers.openai.types import OpenAIProviderSpec
 from crewai.rag.embeddings.providers.openclip.types import OpenCLIPProviderSpec
+from crewai.rag.embeddings.providers.oracle.types import OracleProviderSpec
 from crewai.rag.embeddings.providers.roboflow.types import RoboflowProviderSpec
 from crewai.rag.embeddings.providers.sentence_transformer.types import (
     SentenceTransformerProviderSpec,
@@ -42,6 +43,7 @@ ProviderSpec: TypeAlias = (
     | ONNXProviderSpec
     | OpenAIProviderSpec
     | OpenCLIPProviderSpec
+    | OracleProviderSpec
     | RoboflowProviderSpec
     | SentenceTransformerProviderSpec
     | Text2VecProviderSpec
@@ -64,6 +66,7 @@ AllowedEmbeddingProviders = Literal[
     "onnx",
     "openai",
     "openclip",
+    "oracle",
     "roboflow",
     "sentence-transformer",
     "text2vec",
