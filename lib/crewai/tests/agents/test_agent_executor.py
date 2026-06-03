@@ -142,6 +142,8 @@ class TestAgentExecutor:
         crew_id = uuid4()
         task_id = uuid4()
         stored_file = TextFile(source=b"stored content")
+        local_file = TextFile(source=b"local content")
+        inputs = {"files": {"local": local_file}}
         executor = _build_executor(
             crew=SimpleNamespace(id=crew_id),
             task=SimpleNamespace(id=task_id),
@@ -158,10 +160,13 @@ class TestAgentExecutor:
                 side_effect=AssertionError("sync file store should not be called"),
             ),
         ):
-            await executor._ainject_files_from_inputs({})
+            await executor._ainject_files_from_inputs(inputs)
 
         async_get_files.assert_awaited_once_with(crew_id, task_id)
-        assert executor.state.messages[0]["files"] == {"document": stored_file}
+        assert executor.state.messages[0]["files"] == {
+            "document": stored_file,
+            "local": local_file,
+        }
 
     @pytest.fixture
     def mock_dependencies(self):
