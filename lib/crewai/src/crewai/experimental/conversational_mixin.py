@@ -16,7 +16,7 @@ Import surface:
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from enum import Enum
 import json
 import logging
@@ -242,6 +242,59 @@ class _ConversationalMixin:
         ):
             self.append_assistant_message(self._stringify_result(result))
         return result
+
+    def chat(
+        self,
+        *,
+        session_id: str | None = None,
+        prompt: str = "\nYou: ",
+        assistant_prefix: str = "\nAssistant: ",
+        exit_commands: Sequence[str] = ("exit", "quit"),
+        input_fn: Callable[[str], str] = input,
+        output_fn: Callable[[str], None] = print,
+        skip_empty: bool = True,
+        defer_trace_finalization: bool = True,
+        **handle_turn_kwargs: Any,
+    ) -> None:
+        """Run an interactive terminal chat loop for a conversational Flow.
+
+        ``chat()`` is a convenience wrapper around ``handle_turn()`` for local
+        REPLs. For web apps, tests, and custom transports, call
+        ``handle_turn()`` directly. The input/output callables are injectable so
+        callers can customize prompts or exercise the loop without patching
+        builtins.
+        """
+        if not getattr(type(self), "conversational", False):
+            raise ValueError("Flow.chat() is only available on conversational flows")
+
+        exit_set = {command.lower() for command in exit_commands}
+        previous_defer = getattr(self, "defer_trace_finalization", False)
+        if defer_trace_finalization:
+            self.defer_trace_finalization = True
+
+        try:
+            while True:
+                try:
+                    message = input_fn(prompt).strip()
+                except (EOFError, KeyboardInterrupt):
+                    output_fn("")
+                    break
+
+                if message.lower() in exit_set:
+                    break
+                if skip_empty and not message:
+                    continue
+
+                result = self.handle_turn(
+                    message,
+                    session_id=session_id,
+                    **handle_turn_kwargs,
+                )
+                output_fn(f"{assistant_prefix}{result}")
+        finally:
+            self.finalize_session_traces()
+            if defer_trace_finalization:
+                self.defer_trace_finalization = previous_defer
 
     def build_router_context(self) -> dict[str, Any]:
         """Build context used by the routing policy for the current turn."""
