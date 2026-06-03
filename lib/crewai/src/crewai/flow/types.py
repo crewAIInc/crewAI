@@ -22,7 +22,6 @@ P = ParamSpec("P")
 R = TypeVar("R", covariant=True)
 
 FlowMethodName = NewType("FlowMethodName", str)
-FlowRouteName = NewType("FlowRouteName", str)
 PendingListenerKey = NewType(
     "PendingListenerKey",
     Annotated[str, "nested flow conditions use 'listener_name:object_id'"],

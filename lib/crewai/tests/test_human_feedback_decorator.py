@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from crewai.flow import Flow, human_feedback, listen, start
+from crewai.flow import Flow, human_feedback, listen, persist, start
 from crewai.flow.human_feedback import (
     HumanFeedbackConfig,
     HumanFeedbackResult,
@@ -79,7 +79,7 @@ class TestHumanFeedbackValidation:
 
         assert hasattr(test_method, "__human_feedback_config__")
         assert test_method.__is_router__ is True
-        assert test_method.__router_paths__ == ["approve", "reject"]
+        assert test_method.__router_emit__ == ["approve", "reject"]
 
     def test_valid_configuration_without_routing(self):
         """Test that valid configuration without routing doesn't raise."""
@@ -90,6 +90,22 @@ class TestHumanFeedbackValidation:
 
         assert hasattr(test_method, "__human_feedback_config__")
         assert not hasattr(test_method, "__is_router__") or not test_method.__is_router__
+
+    def test_persist_preserves_human_feedback_llm_attribute(self):
+        """Test @persist preserves the live LLM stashed by @human_feedback."""
+        llm = object()
+
+        @persist()
+        @human_feedback(
+            message="Review this:",
+            emit=["approve", "reject"],
+            llm=llm,
+        )
+        def test_method(self):
+            return "output"
+
+        assert hasattr(test_method, "_human_feedback_llm")
+        assert test_method._human_feedback_llm is llm
 
 
 class TestHumanFeedbackConfig:
@@ -189,7 +205,7 @@ class TestDecoratorAttributePreservation:
             return "output"
 
         assert review_method.__is_router__ is True
-        assert review_method.__router_paths__ == ["approved", "rejected"]
+        assert review_method.__router_emit__ == ["approved", "rejected"]
 
 
 class TestAsyncSupport:
