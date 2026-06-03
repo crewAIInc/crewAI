@@ -631,9 +631,7 @@ class FlowMeta(ModelMetaclass):
             start_methods = [m for m in start_methods if not _is_conv_only(m)]
             listeners = {k: v for k, v in listeners.items() if not _is_conv_only(k)}
             routers = {r for r in routers if not _is_conv_only(r)}
-            router_emit = {
-                k: v for k, v in router_emit.items() if not _is_conv_only(k)
-            }
+            router_emit = {k: v for k, v in router_emit.items() if not _is_conv_only(k)}
 
         # 2. Harvest conversational-only methods from base classes when this
         # subclass opts in. (extract_flow_definition only scans the current

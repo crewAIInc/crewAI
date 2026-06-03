@@ -897,9 +897,7 @@ def _iter_flow_methods(flow_class: type) -> dict[str, Any]:
         if field_name in methods or field_name.startswith("_"):
             continue
         default = getattr(field, "default", None)
-        if is_flow_method(default) and _should_include_flow_method(
-            flow_class, default
-        ):
+        if is_flow_method(default) and _should_include_flow_method(flow_class, default):
             methods[field_name] = default
     return methods
 
