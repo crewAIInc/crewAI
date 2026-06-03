@@ -4,6 +4,38 @@ description: "تحديثات المنتج والتحسينات وإصلاحات 
 icon: "clock"
 mode: "wide"
 ---
+<Update label="3 يونيو 2026">
+  ## v1.14.7a1
+
+  [عرض الإصدار على GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.7a1)
+
+  ## ما الذي تغير
+
+  ### الميزات
+  - إضافة دعم ملفات الوكلاء المدربين
+  - إضافة مزود LLM الأصلي لـ Snowflake Cortex
+  - إضافة دليل تكامل Databricks
+  - إضافة دليل تكامل Snowflake
+
+  ### إصلاحات الأخطاء
+  - إصلاح CLI عن طريق استعادة `[project.scripts]` في حزمة crewai لتثبيت أداة UV
+  - حل مشكلات موثوقية إدخال الملفات
+  - إصلاح تاريخ نتائج الأدوات غير المكتملة في Snowflake Claude
+  - التعامل مع استدعاءات الأدوات الممثلة كسلاسل لـ Snowflake Claude
+  - إعادة تفعيل مستمعي `or_` متعدد المصادر عبر دورات مدفوعة بالموجه
+
+  ### الأداء
+  - تحسين سرعة استيراد crewai عن طريق تحميل استيرادات docling بشكل كسول
+
+  ### إعادة هيكلة
+  - تقسيم `flow.py` إلى DSL، تعريف، وتشغيل
+
+  ## المساهمون
+
+  @Luzk, @alex-clawd, @devin-ai-integration[bot], @greysonlalonde, @jessemiller, @lorenzejay, @vinibrsl
+
+</Update>
+
 <Update label="28 مايو 2026">
   ## v1.14.6
 
