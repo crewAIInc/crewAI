@@ -78,8 +78,9 @@ def lock(name: str, *, timeout: float = _DEFAULT_TIMEOUT) -> Iterator[None]:
     """Acquire a named lock, yielding while it is held.
 
     Args:
-        name: A human-readable lock name (e.g. ``"chromadb_init"``).
-              Automatically namespaced to avoid collisions.
+        name: A human-readable lock name (e.g. ``"chromadb_init"``). The
+              built-in default namespaces it to avoid collisions; a custom
+              backend receives it verbatim.
         timeout: Maximum seconds to wait for the lock before raising.
     """
     # Snapshot the global once: a concurrent set_lock_backend() must not turn
