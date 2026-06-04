@@ -9,9 +9,9 @@ from crewai.flow.conversation import (
     ConversationalConfig,
     ConversationalInputs,
 )
+from crewai.flow.dsl import HumanFeedbackResult, human_feedback
 from crewai.flow.flow import Flow, and_, listen, or_, router, start
 from crewai.flow.flow_config import flow_config
-from crewai.flow.human_feedback import HumanFeedbackResult, human_feedback
 from crewai.flow.input_provider import InputProvider, InputResponse
 from crewai.flow.persistence import persist
 from crewai.flow.visualization import (
