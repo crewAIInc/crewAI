@@ -7,7 +7,7 @@ mode: "wide"
 
 ## نظرة عامة
 
-تعامل التطبيقات المحادثية مع كل سطر من المستخدم كـ **تشغيل flow جديد** بنفس **معرّف الجلسة**. توفر CrewAI مساعدات لسجل الرسائل وتصنيف النية الاختياري وتأجيل التتبع وجسور الواجهة — دون API منفصل `chat()` على `Flow`.
+تعامل التطبيقات المحادثية مع كل سطر من المستخدم كـ **تشغيل flow جديد** بنفس **معرّف الجلسة**. توفر CrewAI مساعدات لسجل الرسائل وتصنيف النية الاختياري وتأجيل التتبع وجسور الواجهة، إضافة إلى REPL محلي `flow.chat()` للتدفقات المحادثية.
 
 | المفهوم | التنفيذ |
 |---------|---------|
@@ -16,13 +16,15 @@ mode: "wide"
 | اكتمال الجولة | `FlowFinished` لهذا **التشغيل** فقط؛ تستمر المحادثة في `kickoff` التالي |
 | تتبع الجلسة | `ConversationalConfig(defer_trace_finalization=True)` + `finalize_session_traces()` |
 
-## نقطة دخول واحدة: `kickoff`
+## واجهات الجولات
 
-استخدم **`flow.kickoff(user_message=..., session_id=...)`** لكل رسالة مستخدم (REST أو WebSocket أو CLI). لا تنشئ غلاف `chat()` مخصصاً على `Flow`.
+استخدم **`flow.kickoff(user_message=..., session_id=...)`** أو **`flow.handle_turn(...)`** لكل رسالة مستخدم من REST أو WebSocket أو الاختبارات أو الواجهات المخصصة. استخدم **`flow.chat()`** عندما تريد حلقة دردشة محلية في الطرفية لـ `Flow` محادثي.
 
 | API | الاستخدام |
 |-----|-----------|
 | `kickoff(user_message=..., session_id=...)` | كل رسالة مستخدم |
+| `handle_turn(message, session_id=...)` | غلاف مريح لجولة واحدة في `Flow` محادثي |
+| `chat()` | REPL محلي في الطرفية لـ `Flow` محادثي |
 | `kickoff_async(...)` | نفس المعاملات؛ دخول async أصلي |
 | `ask()` | مطالبة حاجزة **داخل** خطوة واحدة |
 | `@human_feedback` | الموافقة/الرفض على **مخرجات خطوة** — وليس السطر التالي |
@@ -290,6 +292,15 @@ finally:
     flow.finalize_session_traces()
 ```
 
+للدردشة المحلية في الطرفية، استخدم `chat()`:
+
+```python
+def kickoff() -> None:
+    SupportFlow().chat()
+```
+
+يلف `chat()` استدعاءات `handle_turn()` داخل REPL، ويخرج عند `exit` / `quit`، ويتجاهل الأسطر الفارغة افتراضياً، ويستدعي `finalize_session_traces()` عند انتهاء الجلسة.
+
 ### `ConversationConfig`
 
 مزخرف صنف يُلحق افتراضيات الدردشة على مستوى الصنف.
@@ -373,6 +384,36 @@ Routes:
 
 يمكنك أيضاً استدعاء `flow.kickoff(user_message=..., session_id=...)` مباشرةً — نفس منطق الإعادة والتشغيل يعمل. `handle_turn` هو الغلاف المريح.
 
+### `chat()` للـ REPL المحلي
+
+`flow.chat()` هو غلاف الطرفية الجاهز فوق `handle_turn()`:
+
+```python
+flow = SupportFlow()
+flow.chat()
+```
+
+يتولى الحلقة المحلية الشائعة:
+
+1. يطلب رسالة من المستخدم.
+2. يتوقف عند `exit` / `quit` أو `EOFError` أو `KeyboardInterrupt`.
+3. يستدعي `handle_turn(message, session_id=...)`.
+4. يطبع نتيجة المساعد.
+5. ينهي traces الجلسة المؤجلة داخل كتلة `finally`.
+
+خصص سلوك الطرفية عبر I/O قابل للحقن:
+
+```python
+flow.chat(
+    session_id="demo-session",
+    prompt="You: ",
+    assistant_prefix="Assistant: ",
+    exit_commands=("exit", "quit", "bye"),
+)
+```
+
+لتطبيقات الويب والـ workers الخلفية والاختبارات ووسائط النقل المخصصة، استمر في استخدام `handle_turn()` مباشرةً.
+
 ### سلوك موجّه مخصص
 
 لتشغيل آثار جانبية (إعداد ناقل أحداث، قياس عن بُعد) في كل قرار توجيه، تجاوز `route_turn`:
@@ -407,17 +448,10 @@ class SupportFlow(Flow[ConversationState]):
 - **العمل المتداخل** (`Agent.kickoff()`, crews, Exa) يُلحق بدفعة **الأب**؛ flow داخلي من `AgentExecutor` لا يغلق دفعة الجلسة مبكراً.
 
 ```python
-try:
-    while True:
-        line = input("You: ").strip()
-        if not line:
-            break
-        flow.kickoff(user_message=line, session_id=session_id)
-finally:
-    flow.finalize_session_traces()
+flow.chat(session_id=session_id)
 ```
 
-`ChatSession.close()` يستدعي `finalize_session_traces()` عند التأجيل.
+`flow.chat()` يستدعي `finalize_session_traces()` نيابةً عنك. عندما تملك الحلقة عبر `handle_turn()` أو `kickoff(...)`، استدعِ `finalize_session_traces()` عند انتهاء الجلسة.
 
 `suppress_flow_events=True` يخفي لوحات Rich فقط؛ أحداث trace والـ methods تُصدر.
 

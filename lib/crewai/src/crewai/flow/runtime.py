@@ -706,16 +706,16 @@ class Flow(_ConversationalMixin, BaseModel, Generic[T], metaclass=FlowMeta):
     # When ``conversational = True`` on a subclass, the built-in conversational
     # graph (``conversation_start`` -> ``route_conversation`` -> ``converse_turn``
     # / ``end_conversation`` / ``answer_from_history_turn``) registers and
-    # ``handle_turn`` becomes the chat entry point. When ``False`` (default),
-    # the methods exist as inert attributes and never register or fire —
-    # non-chat flows pay no runtime cost.
+    # ``handle_turn`` / ``chat`` become the chat entry points. When ``False``
+    # (default), the methods exist as inert attributes and never register or
+    # fire — non-chat flows pay no runtime cost.
     #
     # ⚠ EXPERIMENTAL FEATURE. The whole conversational surface
-    # (``conversational`` ClassVar, ``handle_turn``, ``ConversationConfig``,
-    # ``RouterConfig``, ``ConversationState``, the built-in graph + helpers)
-    # lives under ``crewai.experimental`` and may change shape before
-    # graduating. Pin your CrewAI version if you depend on specific
-    # behavior, and watch the changelog for breaking updates.
+    # (``conversational`` ClassVar, ``handle_turn``, ``chat``,
+    # ``ConversationConfig``, ``RouterConfig``, ``ConversationState``, the
+    # built-in graph + helpers) lives under ``crewai.experimental`` and may
+    # change shape before graduating. Pin your CrewAI version if you depend on
+    # specific behavior, and watch the changelog for breaking updates.
     conversational: ClassVar[bool] = False
     conversational_config: ClassVar[ConversationConfig | None] = None
     builtin_routes: ClassVar[tuple[str, ...]] = ("converse", "end")
