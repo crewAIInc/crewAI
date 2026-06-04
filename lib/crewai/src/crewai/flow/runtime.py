@@ -90,15 +90,17 @@ from crewai.experimental.conversational import (
 )
 from crewai.experimental.conversational_mixin import _ConversationalMixin
 from crewai.flow.constants import AND_CONDITION, OR_CONDITION
-from crewai.flow.dsl import (
+from crewai.flow.dsl._conditions import (
     _extract_all_methods,
     _extract_all_methods_recursive,
     _normalize_condition,
+    is_flow_condition_dict,
+    is_simple_flow_condition,
+)
+from crewai.flow.dsl._utils import (
     build_flow_definition,
     extract_flow_definition,
-    is_flow_condition_dict,
     is_flow_method,
-    is_simple_flow_condition,
 )
 from crewai.flow.flow_context import current_flow_id, current_flow_request_id
 from crewai.flow.flow_definition import FlowDefinition
