@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 
 try:
-    from firecrawl import FirecrawlApp  # type: ignore[import-untyped]
+    from firecrawl import Firecrawl  # type: ignore[import-untyped]
 
     FIRECRAWL_AVAILABLE = True
 except ImportError:
@@ -80,9 +80,9 @@ class FirecrawlSearchTool(BaseTool):
 
     def _initialize_firecrawl(self) -> None:
         try:
-            from firecrawl import FirecrawlApp
+            from firecrawl import Firecrawl
 
-            self._firecrawl = FirecrawlApp(api_key=self.api_key)
+            self._firecrawl = Firecrawl(api_key=self.api_key)
         except ImportError:
             import click
 
@@ -93,9 +93,9 @@ class FirecrawlSearchTool(BaseTool):
 
                 try:
                     subprocess.run(["uv", "add", "firecrawl-py"], check=True)  # noqa: S607
-                    from firecrawl import FirecrawlApp
+                    from firecrawl import Firecrawl
 
-                    self._firecrawl = FirecrawlApp(api_key=self.api_key)
+                    self._firecrawl = Firecrawl(api_key=self.api_key)
                 except subprocess.CalledProcessError as e:
                     raise ImportError("Failed to install firecrawl-py package") from e
             else:
@@ -108,7 +108,7 @@ class FirecrawlSearchTool(BaseTool):
         query: str,
     ) -> Any:
         if not self._firecrawl:
-            raise RuntimeError("FirecrawlApp not properly initialized")
+            raise RuntimeError("Firecrawl client not properly initialized")
 
         return self._firecrawl.search(
             query=query,
@@ -117,7 +117,7 @@ class FirecrawlSearchTool(BaseTool):
 
 
 try:
-    from firecrawl import FirecrawlApp  # noqa: F401
+    from firecrawl import Firecrawl  # noqa: F401
 
     if not getattr(FirecrawlSearchTool, "_model_rebuilt", False):
         FirecrawlSearchTool.model_rebuild()

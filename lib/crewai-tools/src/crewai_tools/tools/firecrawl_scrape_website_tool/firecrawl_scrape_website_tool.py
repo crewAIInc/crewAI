@@ -9,7 +9,7 @@ from crewai_tools.security.safe_path import validate_url
 
 
 try:
-    from firecrawl import FirecrawlApp  # type: ignore[import-untyped]
+    from firecrawl import Firecrawl  # type: ignore[import-untyped]
 
     FIRECRAWL_AVAILABLE = True
 except ImportError:
@@ -84,7 +84,7 @@ class FirecrawlScrapeWebsiteTool(BaseTool):
     def __init__(self, api_key: str | None = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         try:
-            from firecrawl import FirecrawlApp
+            from firecrawl import Firecrawl
         except ImportError:
             import click
 
@@ -95,25 +95,25 @@ class FirecrawlScrapeWebsiteTool(BaseTool):
 
                 subprocess.run(["uv", "add", "firecrawl-py"], check=True)  # noqa: S607
                 from firecrawl import (
-                    FirecrawlApp,
+                    Firecrawl,
                 )
             else:
                 raise ImportError(
                     "`firecrawl-py` package not found, please run `uv add firecrawl-py`"
                 ) from None
 
-        self._firecrawl = FirecrawlApp(api_key=api_key)
+        self._firecrawl = Firecrawl(api_key=api_key)
 
     def _run(self, url: str) -> Any:
         if not self._firecrawl:
-            raise RuntimeError("FirecrawlApp not properly initialized")
+            raise RuntimeError("Firecrawl client not properly initialized")
 
         url = validate_url(url)
         return self._firecrawl.scrape(url=url, **self.config)
 
 
 try:
-    from firecrawl import FirecrawlApp  # noqa: F401
+    from firecrawl import Firecrawl  # noqa: F401
 
     if not getattr(FirecrawlScrapeWebsiteTool, "_model_rebuilt", False):
         FirecrawlScrapeWebsiteTool.model_rebuild()
