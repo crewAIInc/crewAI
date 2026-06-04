@@ -25,7 +25,15 @@ def test_flow_public_exports_are_explicit():
     assert "FlowDefinitionDiagnostic" not in flow_package.__all__
     assert "build_flow_definition" not in flow_package.__all__
     assert "flow_structure" not in flow_package.__all__
-    assert set(flow_dsl.__all__) == {"and_", "listen", "or_", "router", "start"}
+    assert set(flow_dsl.__all__) == {
+        "HumanFeedbackResult",
+        "and_",
+        "human_feedback",
+        "listen",
+        "or_",
+        "router",
+        "start",
+    }
     assert set(flow_definition.__all__) == {
         "FlowConfigDefinition",
         "FlowDefinition",
