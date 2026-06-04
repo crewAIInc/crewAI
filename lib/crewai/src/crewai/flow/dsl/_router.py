@@ -8,12 +8,14 @@ from typing import (
     Any,
     Literal,
     Union,
+    cast,
     get_args,
     get_origin,
     get_type_hints,
 )
 
 from crewai.flow.dsl._conditions import _definition_condition_from_runtime
+from crewai.flow.dsl._types import FlowMethodDecorator, FlowTrigger
 from crewai.flow.dsl._utils import (
     P,
     R,
@@ -21,7 +23,7 @@ from crewai.flow.dsl._utils import (
     _set_trigger_metadata,
 )
 from crewai.flow.flow_definition import FlowMethodDefinition
-from crewai.flow.flow_wrappers import FlowCondition, RouterMethod
+from crewai.flow.flow_wrappers import RouterMethod
 
 
 def _unwrap_function(function: Any) -> Any:
@@ -93,10 +95,10 @@ def _normalize_router_emit(value: Sequence[Any] | str) -> list[str]:
 
 
 def router(
-    condition: str | FlowCondition | Callable[..., Any],
+    condition: FlowTrigger,
     *,
     emit: Sequence[str] | str | None = None,
-) -> Callable[[Callable[P, R]], RouterMethod[P, R]]:
+) -> FlowMethodDecorator:
     """Creates a routing method that directs flow execution based on conditions.
 
     This decorator marks a method as a router, which can dynamically determine
@@ -105,15 +107,15 @@ def router(
 
     Args:
         condition: Specifies when the router should execute. Can be:
-            - str: Name of a method that triggers this router
+            - str: Route label or method name that triggers this router
             - FlowCondition: Result from or_() or and_(), including nested conditions
-            - Callable[..., Any]: A method reference that triggers this router
+            - Flow method reference: A method whose completion triggers this router
         emit: Optional explicit router output events for static FlowDefinition
             and visualization. If omitted, Literal/Enum return annotations are
             used when available.
 
     Returns:
-        A decorator function that wraps the method as a router and preserves its signature.
+        A flow method decorator that preserves the decorated method's static signature.
 
     Raises:
         ValueError: If the condition format is invalid.
@@ -161,4 +163,4 @@ def router(
             wrapper.__router_emit__ = router_events
         return wrapper
 
-    return decorator
+    return cast(FlowMethodDecorator, decorator)
