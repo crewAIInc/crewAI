@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 import json
 import logging
 from typing import Any, ParamSpec, TypeVar
@@ -16,6 +16,7 @@ from crewai.flow.dsl._conditions import (
     _runtime_listener_condition_from_definition,
     is_flow_condition_dict,
 )
+from crewai.flow.dsl._types import FlowTrigger
 from crewai.flow.flow_definition import (
     FlowConfigDefinition,
     FlowDefinition,
@@ -27,7 +28,6 @@ from crewai.flow.flow_definition import (
     FlowStateDefinition,
 )
 from crewai.flow.flow_wrappers import (
-    FlowCondition,
     FlowMethod,
     ListenMethod,
     RouterMethod,
@@ -67,7 +67,7 @@ def _flow_method_names(values: Sequence[Any]) -> list[FlowMethodName]:
 
 def _set_trigger_metadata(
     wrapper: StartMethod[P, R] | ListenMethod[P, R] | RouterMethod[P, R],
-    condition: str | FlowCondition | Callable[..., Any],
+    condition: FlowTrigger,
 ) -> None:
     if isinstance(condition, str):
         wrapper.__trigger_methods__ = [FlowMethodName(condition)]

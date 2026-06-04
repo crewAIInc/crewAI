@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
+from typing import cast
 
 from crewai.flow.dsl._conditions import _definition_condition_from_runtime
+from crewai.flow.dsl._types import FlowMethodDecorator, FlowTrigger
 from crewai.flow.dsl._utils import (
     P,
     R,
@@ -11,12 +12,10 @@ from crewai.flow.dsl._utils import (
     _set_trigger_metadata,
 )
 from crewai.flow.flow_definition import FlowMethodDefinition
-from crewai.flow.flow_wrappers import FlowCondition, ListenMethod
+from crewai.flow.flow_wrappers import ListenMethod
 
 
-def listen(
-    condition: str | FlowCondition | Callable[..., Any],
-) -> Callable[[Callable[P, R]], ListenMethod[P, R]]:
+def listen(condition: FlowTrigger) -> FlowMethodDecorator:
     """Creates a listener that executes when specified conditions are met.
 
     This decorator sets up a method to execute in response to other method
@@ -24,10 +23,11 @@ def listen(
     conditions.
 
     Args:
-        condition: Specifies when the listener should execute.
+        condition: Route label, method reference, or condition returned by
+            or_() / and_() that triggers the listener.
 
     Returns:
-        A decorator function that wraps the method as a flow listener and preserves its signature.
+        A flow method decorator that preserves the decorated method's static signature.
 
     Raises:
         ValueError: If the condition format is invalid.
@@ -52,4 +52,4 @@ def listen(
         _set_trigger_metadata(wrapper, condition)
         return wrapper
 
-    return decorator
+    return cast(FlowMethodDecorator, decorator)

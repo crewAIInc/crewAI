@@ -2846,7 +2846,7 @@ class Flow(_ConversationalMixin, BaseModel, Generic[T], metaclass=FlowMeta):
 
     def _evaluate_condition(
         self,
-        condition: FlowMethodName | FlowCondition,
+        condition: str | FlowMethodName | FlowCondition,
         trigger_method: FlowMethodName,
         listener_name: FlowMethodName,
     ) -> bool:
