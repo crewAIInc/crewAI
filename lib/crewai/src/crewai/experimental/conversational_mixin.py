@@ -290,7 +290,7 @@ class _ConversationalMixin:
                     session_id=session_id,
                     **handle_turn_kwargs,
                 )
-                output_fn(f"{assistant_prefix}{result}")
+                output_fn(f"{assistant_prefix}{self._stringify_result(result)}")
         finally:
             self.finalize_session_traces()
             if defer_trace_finalization:
