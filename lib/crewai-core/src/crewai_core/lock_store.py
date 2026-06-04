@@ -82,8 +82,11 @@ def lock(name: str, *, timeout: float = _DEFAULT_TIMEOUT) -> Iterator[None]:
               Automatically namespaced to avoid collisions.
         timeout: Maximum seconds to wait for the lock before raising.
     """
-    if _backend is not None:
-        with _backend(name, timeout=timeout):
+    # Snapshot the global once: a concurrent set_lock_backend() must not turn
+    # the check-then-call into calling ``None``.
+    backend = _backend
+    if backend is not None:
+        with backend(name, timeout=timeout):
             yield
         return
 
