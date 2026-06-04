@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from enum import Enum
 import json
 from typing import Any, TypeAlias
 import uuid
@@ -20,6 +21,7 @@ def to_serializable(
     max_depth: int = 5,
     _current_depth: int = 0,
     _ancestors: set[int] | None = None,
+    context: dict[str, Any] | None = None,
 ) -> Serializable:
     """Converts a Python object into a JSON-compatible representation.
 
@@ -33,6 +35,9 @@ def to_serializable(
         max_depth: Maximum recursion depth. Defaults to 5.
         _current_depth: Current recursion depth (for internal use).
         _ancestors: Set of ancestor object ids for cycle detection (for internal use).
+        context: Optional context dict passed to Pydantic's model_dump(context=...).
+            Field serializers on the model can inspect this to customize output
+            (e.g. context={"trace": True} for lightweight trace serialization).
 
     Returns:
         Serializable: A JSON-compatible structure.
@@ -48,6 +53,15 @@ def to_serializable(
 
     if isinstance(obj, (str, int, float, bool, type(None))):
         return obj
+    if isinstance(obj, Enum):
+        return to_serializable(
+            obj.value,
+            exclude=exclude,
+            max_depth=max_depth,
+            _current_depth=_current_depth,
+            _ancestors=_ancestors,
+            context=context,
+        )
     if isinstance(obj, uuid.UUID):
         return str(obj)
     if isinstance(obj, (date, datetime)):
@@ -66,6 +80,7 @@ def to_serializable(
                 max_depth=max_depth,
                 _current_depth=_current_depth + 1,
                 _ancestors=new_ancestors,
+                context=context,
             )
             for item in obj
         ]
@@ -77,17 +92,24 @@ def to_serializable(
                 max_depth=max_depth,
                 _current_depth=_current_depth + 1,
                 _ancestors=new_ancestors,
+                context=context,
             )
             for key, value in obj.items()
             if key not in exclude
         }
     if isinstance(obj, BaseModel):
         try:
+            dump_kwargs: dict[str, Any] = {}
+            if exclude:
+                dump_kwargs["exclude"] = exclude
+            if context is not None:
+                dump_kwargs["context"] = context
             return to_serializable(
-                obj=obj.model_dump(exclude=exclude),
+                obj=obj.model_dump(**dump_kwargs),
                 max_depth=max_depth,
                 _current_depth=_current_depth + 1,
                 _ancestors=new_ancestors,
+                context=context,
             )
         except Exception:
             try:
@@ -97,12 +119,30 @@ def to_serializable(
                         max_depth=max_depth,
                         _current_depth=_current_depth + 1,
                         _ancestors=new_ancestors,
+                        context=context,
                     )
                     for k, v in obj.__dict__.items()
                     if k not in (exclude or set())
                 }
             except Exception:
                 return repr(obj)
+    if callable(obj):
+        return repr(obj)
+    if hasattr(obj, "__dict__"):
+        try:
+            return {
+                _to_serializable_key(k): to_serializable(
+                    v,
+                    max_depth=max_depth,
+                    _current_depth=_current_depth + 1,
+                    _ancestors=new_ancestors,
+                    context=context,
+                )
+                for k, v in obj.__dict__.items()
+                if not k.startswith("_")
+            }
+        except Exception:
+            return repr(obj)
     return repr(obj)
 
 
