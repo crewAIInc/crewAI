@@ -1,8 +1,11 @@
+import logging
 from typing import Any, Dict, List
 
 from crewai.memory.long_term.long_term_memory_item import LongTermMemoryItem
 from crewai.memory.memory import Memory
 from crewai.memory.storage.ltm_sqlite_storage import LTMSQLiteStorage
+
+logger = logging.getLogger(__name__)
 
 
 class LongTermMemory(Memory):
@@ -20,6 +23,15 @@ class LongTermMemory(Memory):
         super().__init__(storage)
 
     def save(self, item: LongTermMemoryItem) -> None:  # type: ignore # BUG?: Signature of "save" incompatible with supertype "Memory"
+        if self.memory_guard is not None:
+            content = f"{item.task} {item.agent} {item.expected_output}"
+            if not self.memory_guard(content):
+                logger.warning(
+                    "Memory guard blocked a long-term memory write (agent=%s).",
+                    item.agent,
+                )
+                return
+
         metadata = item.metadata
         metadata.update({"agent": item.agent, "expected_output": item.expected_output})
         self.storage.save(  # type: ignore # BUG?: Unexpected keyword argument "task_description","score","datetime" for "save" of "Storage"

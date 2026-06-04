@@ -117,6 +117,12 @@ class Crew(BaseModel):
         default=None,
         description="Configuration for the memory to be used for the crew.",
     )
+    memory_guard: Optional[Callable[[str], bool]] = Field(
+        default=None,
+        description="A callable that validates memory content before persistence. "
+        "Receives the content string and returns True to allow the write or False to block it. "
+        "Applied to all memory types (short-term, long-term, entity, user).",
+    )
     short_term_memory: Optional[InstanceOf[ShortTermMemory]] = Field(
         default=None,
         description="An Instance of the ShortTermMemory to be used by the Crew",
@@ -278,6 +284,13 @@ class Crew(BaseModel):
                 )
             else:
                 self._user_memory = None
+
+            if self.memory_guard is not None:
+                self._short_term_memory.memory_guard = self.memory_guard
+                self._long_term_memory.memory_guard = self.memory_guard
+                self._entity_memory.memory_guard = self.memory_guard
+                if self._user_memory is not None:
+                    self._user_memory.memory_guard = self.memory_guard
         return self
 
     @model_validator(mode="after")
