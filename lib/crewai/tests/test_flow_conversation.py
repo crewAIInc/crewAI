@@ -941,6 +941,39 @@ class TestConversationalFlow:
             "defer_trace_finalization=True must skip per-turn finalize"
         )
 
+    def test_deferred_conversation_emits_one_flow_started(self) -> None:
+        """Deferred conversational sessions emit one flow_started for the session."""
+        from crewai.events.types.flow_events import FlowStartedEvent
+
+        @ConversationConfig(defer_trace_finalization=True)
+        class DeferredFlow(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "work"
+
+            @listen("work")
+            def do_work(self) -> str:
+                self.append_assistant_message("worked")
+                return "worked"
+
+        flow = DeferredFlow()
+        started_events: list[FlowStartedEvent] = []
+
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(FlowStartedEvent)
+            def capture(_: Any, event: FlowStartedEvent) -> None:
+                started_events.append(event)
+
+            flow.handle_turn("turn 1")
+            flow.handle_turn("turn 2")
+            flow.handle_turn("turn 3")
+            crewai_event_bus.flush()
+
+        assert len(started_events) == 1, (
+            "deferred conversational traces should emit one session-level "
+            "flow_started event, not one per turn"
+        )
+
     def test_finalize_session_traces_emits_finished_and_finalizes_batch(self) -> None:
         """``finalize_session_traces()`` emits one ``FlowFinishedEvent`` + one ``finalize_batch``.
 
