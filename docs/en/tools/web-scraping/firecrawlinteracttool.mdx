@@ -1,0 +1,41 @@
+---
+title: Firecrawl Interact
+description: The `FirecrawlInteractTool` runs an autonomous Firecrawl browser agent that navigates and interacts with web pages to accomplish a task.
+icon: fire-flame
+mode: "wide"
+---
+
+# `FirecrawlInteractTool`
+
+## Description
+
+[Firecrawl](https://firecrawl.dev) is a platform for crawling and converting any website into clean markdown or structured data. The interact tool runs an autonomous browser **agent** that navigates and interacts with pages to accomplish a natural-language task, then returns the result.
+
+## Installation
+
+- Get an API key from [firecrawl.dev](https://firecrawl.dev) and set it in environment variables (`FIRECRAWL_API_KEY`).
+- Install the [Firecrawl SDK](https://github.com/firecrawl/firecrawl) along with `crewai[tools]` package:
+
+```shell
+pip install firecrawl-py 'crewai[tools]'
+```
+
+## Example
+
+Utilize the FirecrawlInteractTool as follows to let your agent act on the web:
+
+```python Code
+from crewai_tools import FirecrawlInteractTool
+
+tool = FirecrawlInteractTool()
+result = tool.run(
+    prompt="Go to news.ycombinator.com and return the titles of the top 3 stories",
+)
+```
+
+## Arguments
+
+- `prompt`: Required. A natural-language description of the task for the agent to carry out.
+- `urls`: Optional. A list of URLs to start from or constrain the agent to.
+- `config`: Optional. A dictionary of [Firecrawl v2 agent options](https://docs.firecrawl.dev/api-reference/endpoint/agent) passed directly to the SDK — for example `model` (`spark-1-mini` / `spark-1-pro`), `max_credits`, `strict_constrain_to_urls`, `poll_interval`, and `timeout`.
+- `api_key`: Optional. Your Firecrawl API key. Defaults to the `FIRECRAWL_API_KEY` environment variable.

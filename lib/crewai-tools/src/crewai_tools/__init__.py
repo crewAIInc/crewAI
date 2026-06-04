@@ -85,6 +85,9 @@ from crewai_tools.tools.files_compressor_tool.files_compressor_tool import (
 from crewai_tools.tools.firecrawl_crawl_website_tool.firecrawl_crawl_website_tool import (
     FirecrawlCrawlWebsiteTool,
 )
+from crewai_tools.tools.firecrawl_interact_tool.firecrawl_interact_tool import (
+    FirecrawlInteractTool,
+)
 from crewai_tools.tools.firecrawl_scrape_website_tool.firecrawl_scrape_website_tool import (
     FirecrawlScrapeWebsiteTool,
 )
@@ -263,6 +266,7 @@ __all__ = [
     "FileReadTool",
     "FileWriterTool",
     "FirecrawlCrawlWebsiteTool",
+    "FirecrawlInteractTool",
     "FirecrawlScrapeWebsiteTool",
     "FirecrawlSearchTool",
     "GenerateCrewaiAutomationTool",
