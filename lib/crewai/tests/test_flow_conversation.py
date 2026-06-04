@@ -858,6 +858,86 @@ class TestConversationalFlow:
         flow.handle_turn("anything")
         assert flow.state.messages[-1].content == "worked"
 
+    def test_chat_runs_repl_over_handle_turn_and_finalizes(self) -> None:
+        @ConversationConfig(defer_trace_finalization=False)
+        class MyChat(ConversationalFlow):
+            turns: int = 0
+
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "work"
+
+            @listen("work")
+            def do_work(self) -> str:
+                self.turns += 1
+                reply = f"worked: {self.state.current_user_message}"
+                self.append_assistant_message(reply)
+                return reply
+
+        flow = MyChat()
+        inputs = iter(["first", "", "second", "quit"])
+        prompts: list[str] = []
+        outputs: list[str] = []
+
+        def input_fn(prompt: str) -> str:
+            prompts.append(prompt)
+            return next(inputs)
+
+        with patch.object(flow, "finalize_session_traces") as mock_finalize:
+            flow.chat(
+                session_id="session-1",
+                input_fn=input_fn,
+                output_fn=outputs.append,
+            )
+
+        assert flow.turns == 2
+        assert prompts == ["\nYou: ", "\nYou: ", "\nYou: ", "\nYou: "]
+        assert outputs == [
+            "\nAssistant: worked: first",
+            "\nAssistant: worked: second",
+        ]
+        mock_finalize.assert_called_once_with()
+        assert flow.defer_trace_finalization is False
+
+    def test_chat_stringifies_repl_output_like_conversation_helpers(self) -> None:
+        class RawResult:
+            raw = "raw assistant output"
+
+        @ConversationConfig(defer_trace_finalization=False)
+        class MyChat(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "work"
+
+            @listen("work")
+            def do_work(self) -> RawResult:
+                return RawResult()
+
+        flow = MyChat()
+        inputs = iter(["first", "quit"])
+        outputs: list[str] = []
+
+        with patch.object(flow, "finalize_session_traces"):
+            flow.chat(
+                input_fn=lambda _: next(inputs),
+                output_fn=outputs.append,
+            )
+
+        assert outputs == ["\nAssistant: raw assistant output"]
+
+    def test_chat_rejects_non_conversational_flows(self) -> None:
+        class PlainFlow(Flow):
+            @start()
+            def begin(self) -> str:
+                return "done"
+
+        flow = PlainFlow()
+
+        try:
+            flow.chat(input_fn=lambda _: "quit")
+        except ValueError as exc:
+            assert "conversational flows" in str(exc)
+        else:
+            raise AssertionError("Flow.chat() should reject regular flows")
+
     def test_defer_trace_finalization_skips_per_turn_finalize(self) -> None:
         """``defer_trace_finalization = True`` suppresses per-turn ``finalize_batch``.
 
