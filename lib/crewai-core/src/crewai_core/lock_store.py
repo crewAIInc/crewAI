@@ -43,9 +43,12 @@ _backend: LockBackend | None = None
 
 
 def set_lock_backend(backend: LockBackend | None) -> None:
-    """Replace the locking backend used by :func:`lock`.
+    """Replace the process-wide locking backend used by :func:`lock`.
 
-    Pass ``None`` to restore the built-in Redis/file default.
+    Intended for one-time setup at startup. Pass ``None`` to restore the
+    built-in Redis/file default. In-flight :func:`lock` calls keep the backend
+    they started with, but swapping backends while other threads acquire locks
+    is otherwise unsynchronised.
     """
     global _backend
     _backend = backend
