@@ -7,7 +7,7 @@ mode: "wide"
 
 ## 개요
 
-대화형 앱은 각 사용자 입력을 **동일한 세션 id**로 **새 flow 실행**으로 처리합니다. CrewAI는 메시지 기록, 선택적 의도 분류, 지연 트레이싱, UI 브리지를 제공하며, `Flow`에 별도 `chat()` API는 없습니다.
+대화형 앱은 각 사용자 입력을 **동일한 세션 id**로 **새 flow 실행**으로 처리합니다. CrewAI는 메시지 기록, 선택적 의도 분류, 지연 트레이싱, UI 브리지, 그리고 대화형 flow용 로컬 `flow.chat()` REPL을 제공합니다.
 
 | 개념 | 구현 |
 |------|------|
@@ -16,13 +16,15 @@ mode: "wide"
 | 턴 완료 | `FlowFinished`는 **이번 실행**만 의미; 다음 `kickoff`로 대화 계속 |
 | 세션 전체 트레이스 | `ConversationalConfig(defer_trace_finalization=True)` + `finalize_session_traces()` |
 
-## 단일 진입점: `kickoff`
+## 턴 API
 
-모든 사용자 메시지에 **`flow.kickoff(user_message=..., session_id=...)`**를 사용하세요 (REST, WebSocket, CLI). `Flow`에 커스텀 `chat()` 래퍼를 만들지 마세요.
+REST, WebSocket, 테스트, 커스텀 UI에서 오는 모든 사용자 메시지에는 **`flow.kickoff(user_message=..., session_id=...)`** 또는 **`flow.handle_turn(...)`**를 사용하세요. 대화형 `Flow`를 로컬 터미널 채팅 루프로 실행하고 싶을 때는 **`flow.chat()`**을 사용하세요.
 
 | API | 용도 |
 |-----|------|
 | `kickoff(user_message=..., session_id=...)` | 각 사용자 메시지 |
+| `handle_turn(message, session_id=...)` | 대화형 `Flow`용 한 턴 편의 래퍼 |
+| `chat()` | 대화형 `Flow`용 로컬 터미널 REPL |
 | `kickoff_async(...)` | 동일 파라미터; 네이티브 async 진입 |
 | `ask()` | 한 스텝 **내부** 블로킹 프롬프트 (마법사, 확인) |
 | `@human_feedback` | **스텝 출력** 승인/거부 — 다음 채팅 줄이 아님 |
@@ -292,6 +294,15 @@ finally:
     flow.finalize_session_traces()
 ```
 
+로컬 터미널 채팅에는 `chat()`을 사용하세요:
+
+```python
+def kickoff() -> None:
+    SupportFlow().chat()
+```
+
+`chat()`은 `handle_turn()`을 REPL로 감싸고, `exit` / `quit`에서 종료하며, 기본적으로 빈 줄을 건너뛰고, 세션이 끝날 때 `finalize_session_traces()`를 호출합니다.
+
 ### `ConversationConfig`
 
 클래스 단위의 챗 기본값을 부착하는 클래스 데코레이터입니다.
@@ -375,6 +386,36 @@ Routes:
 
 `flow.kickoff(user_message=..., session_id=...)`를 직접 호출해도 동일한 reset/run 로직이 동작합니다. `handle_turn`은 그 위에 얹은 편의 래퍼입니다.
 
+### 로컬 REPL용 `chat()`
+
+`flow.chat()`은 `handle_turn()` 위에 얹은 바로 쓸 수 있는 터미널 래퍼입니다:
+
+```python
+flow = SupportFlow()
+flow.chat()
+```
+
+일반적인 로컬 루프를 처리합니다:
+
+1. 사용자 메시지를 입력받습니다.
+2. `exit` / `quit`, `EOFError`, `KeyboardInterrupt`에서 멈춥니다.
+3. `handle_turn(message, session_id=...)`를 호출합니다.
+4. 어시스턴트 결과를 출력합니다.
+5. `finally` 블록에서 지연된 세션 trace를 finalize합니다.
+
+주입 가능한 I/O로 터미널 동작을 커스터마이즈할 수 있습니다:
+
+```python
+flow.chat(
+    session_id="demo-session",
+    prompt="You: ",
+    assistant_prefix="Assistant: ",
+    exit_commands=("exit", "quit", "bye"),
+)
+```
+
+웹 앱, 백그라운드 worker, 테스트, 커스텀 transport에서는 계속 `handle_turn()`을 직접 사용하세요.
+
 ### 커스텀 router 동작
 
 매 라우팅 결정마다 사이드 이펙트(이벤트 버스 셋업, 텔레메트리)를 실행하려면 `route_turn`을 오버라이드하세요:
@@ -409,17 +450,10 @@ LLM router를 우회해 프로그램적으로 라우트를 선택하려면 `rout
 - **중첩 작업** (`Agent.kickoff()`, crew, Exa tool)은 **부모** batch에 추가; 내부 `AgentExecutor` flow가 세션 batch를 조기 종료하지 않음.
 
 ```python
-try:
-    while True:
-        line = input("You: ").strip()
-        if not line:
-            break
-        flow.kickoff(user_message=line, session_id=session_id)
-finally:
-    flow.finalize_session_traces()
+flow.chat(session_id=session_id)
 ```
 
-지연 활성화 시 `ChatSession.close()`가 `finalize_session_traces()`를 호출합니다.
+`flow.chat()`이 `finalize_session_traces()`를 대신 호출합니다. `handle_turn()`이나 `kickoff(...)`로 직접 루프를 소유하는 경우, 세션이 끝날 때 `finalize_session_traces()`를 호출하세요.
 
 `suppress_flow_events=True`는 Rich 콘솔 패널만 숨깁니다. trace 및 method 이벤트는 계속 발생합니다.
 
