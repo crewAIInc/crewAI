@@ -952,6 +952,61 @@ In this section, you'll find detailed examples that help you select, configure, 
     ```
   </Accordion>
 
+  <Accordion title="NVIDIA Nemotron">
+    NVIDIA Nemotron models are designed for demanding agentic workloads, including complex reasoning, long-context analysis, tool use, multilingual tasks, and high-stakes RAG.
+
+    The `NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4` model is a frontier-scale open-weight model from NVIDIA with 550B total parameters and 55B active parameters. It uses a LatentMoE architecture that combines Mamba-2, MoE, Attention, and Multi-Token Prediction (MTP), and supports context lengths up to 1M tokens.
+
+    <Info>
+      `NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4` is a very large model. NVIDIA lists minimum serving requirements of 4x GB200, 4x B200, 4x GB300, 4x B300, or 8x H100 GPUs. For most CrewAI users, the recommended path is to use NVIDIA NIM or another OpenAI-compatible hosted endpoint rather than running it locally.
+    </Info>
+
+    **Hosted NVIDIA NIM usage:**
+    ```toml Code
+    NVIDIA_API_KEY=<your-api-key>
+    ```
+
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="nvidia_nim/nvidia/nvidia-nemotron-3-ultra-550b-a55b",
+        temperature=0.2,
+        max_tokens=4096,
+    )
+    ```
+
+    **Self-hosted OpenAI-compatible endpoint:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="openai/nvidia-nemotron-3-ultra-550b-a55b-nvfp4",
+        base_url="https://your-nemotron-endpoint.example.com/v1",
+        api_key="your-api-key",
+        temperature=0.2,
+        max_tokens=4096,
+    )
+    ```
+
+    **Model details:**
+
+    | Model | Context Window | Best For |
+    |-------|----------------|----------|
+    | `nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4` | Up to 1M tokens | Frontier reasoning, complex agentic workflows, long-context analysis, tool use, multilingual reasoning, and high-stakes RAG |
+
+    **Supported languages:** English, French, Spanish, Italian, German, Japanese, Korean, Hindi, Brazilian Portuguese, and Chinese.
+
+    **Reasoning mode:** Nemotron 3 Ultra supports configurable reasoning via its chat template using `enable_thinking=True` or `enable_thinking=False`. If you are using a hosted endpoint, check your provider's documentation for how that flag is exposed.
+
+    For model details, license, and deployment guidance, see the [NVIDIA Nemotron 3 Ultra model card](https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4).
+
+    **Note:** Hosted NVIDIA NIM usage uses LiteLLM. Add it as a dependency to your project:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
   <Accordion title="Local NVIDIA NIM Deployed using WSL2">
 
     NVIDIA NIM enables you to run powerful LLMs locally on your Windows machine using WSL2 (Windows Subsystem for Linux).
