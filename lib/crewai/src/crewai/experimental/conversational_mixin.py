@@ -479,7 +479,7 @@ class _ConversationalMixin:
                 session_id=state.id,
                 route=route,
                 user_message=state.current_user_message,
-                message_index=max(len(state.messages) - 1, 0),
+                message_index=(len(state.messages) - 1) if state.messages else None,
                 previous_intent=previous_intent,
             ),
         )

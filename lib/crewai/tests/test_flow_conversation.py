@@ -1036,13 +1036,22 @@ class TestConversationalFlow:
                 return "worked"
 
         flow = DeferredFlow()
+        observed_events: list[str] = []
         started_events: list[FlowStartedEvent] = []
 
         with crewai_event_bus.scoped_handlers():
 
             @crewai_event_bus.on(FlowStartedEvent)
             def capture(_: Any, event: FlowStartedEvent) -> None:
+                observed_events.append(event.type)
                 started_events.append(event)
+
+            @crewai_event_bus.on(ConversationMessageAddedEvent)
+            def capture_message(
+                _: Any, event: ConversationMessageAddedEvent
+            ) -> None:
+                if event.role == "user":
+                    observed_events.append(event.type)
 
             flow.handle_turn("turn 1")
             flow.handle_turn("turn 2")
@@ -1053,6 +1062,30 @@ class TestConversationalFlow:
             "deferred conversational traces should emit one session-level "
             "flow_started event, not one per turn"
         )
+        assert observed_events[0] == "flow_started"
+        assert observed_events[1] == "conversation_message_added"
+
+    def test_route_event_uses_no_message_index_for_empty_transcript(self) -> None:
+        """Route events do not reference index zero when no message exists."""
+
+        @ConversationConfig()
+        class DeferredFlow(ConversationalFlow):
+            pass
+
+        flow = DeferredFlow()
+        route_events: list[ConversationRouteSelectedEvent] = []
+
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(ConversationRouteSelectedEvent)
+            def capture(_: Any, event: ConversationRouteSelectedEvent) -> None:
+                route_events.append(event)
+
+            flow._emit_conversation_route_selected("converse")
+            crewai_event_bus.flush()
+
+        assert len(route_events) == 1
+        assert route_events[0].message_index is None
 
     def test_finalize_session_traces_emits_finished_and_finalizes_batch(self) -> None:
         """``finalize_session_traces()`` emits one ``FlowFinishedEvent`` + one ``finalize_batch``.
