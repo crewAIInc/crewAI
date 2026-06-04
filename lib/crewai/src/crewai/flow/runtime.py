@@ -2202,16 +2202,6 @@ class Flow(_ConversationalMixin, BaseModel, Generic[T], metaclass=FlowMeta):
                 if filtered_inputs:
                     self._initialize_state(filtered_inputs)
 
-            # Conversational hook: apply the pending user message AFTER state
-            # restore so it survives ``self.persistence.load_state(...)``.
-            # ``handle_turn`` stashes the message on ``self._pending_user_message``
-            # before calling ``kickoff``; this drains it.
-            if (
-                getattr(type(self), "conversational", False)
-                and self._pending_user_message is not None
-            ):
-                self._apply_pending_conversational_turn()
-
             defer_trace_finalization = self._should_defer_trace_finalization()
             deferred_started_event_id = self._deferred_flow_started_event_id
             should_emit_flow_started = not (
@@ -2261,6 +2251,17 @@ class Flow(_ConversationalMixin, BaseModel, Generic[T], metaclass=FlowMeta):
             # After FlowStarted: env events must not pre-empt trace batch init
             # with implicit "crew" execution_type.
             get_env_context()
+
+            # Conversational hook: apply the pending user message AFTER state
+            # restore and AFTER flow scope initialization, so transcript events
+            # are parented under the current conversation trace.
+            # ``handle_turn`` stashes the message on ``self._pending_user_message``
+            # before calling ``kickoff``; this drains it.
+            if (
+                getattr(type(self), "conversational", False)
+                and self._pending_user_message is not None
+            ):
+                self._apply_pending_conversational_turn()
 
             if inputs is not None and "id" not in inputs:
                 self._initialize_state(inputs)

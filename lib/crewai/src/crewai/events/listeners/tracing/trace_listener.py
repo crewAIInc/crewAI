@@ -261,13 +261,13 @@ class TraceCollectionListener(BaseEventListener):
         def on_conversation_message_added(
             source: Any, event: ConversationMessageAddedEvent
         ) -> None:
-            self._handle_trace_event("conversation_message_added", source, event)
+            self._handle_action_event("conversation_message_added", source, event)
 
         @event_bus.on(ConversationRouteSelectedEvent)
         def on_conversation_route_selected(
             source: Any, event: ConversationRouteSelectedEvent
         ) -> None:
-            self._handle_trace_event("conversation_route_selected", source, event)
+            self._handle_action_event("conversation_route_selected", source, event)
 
         @event_bus.on(FlowFinishedEvent)
         def on_flow_finished(source: Any, event: FlowFinishedEvent) -> None:
