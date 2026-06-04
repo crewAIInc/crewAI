@@ -142,7 +142,7 @@ def _validate_output_file_path(
         return value
 
     if value.startswith("/") and not preserve_absolute:
-        return value[1:]
+        return value.lstrip("/")
     return value
 
 
@@ -1041,7 +1041,9 @@ Follow these guidelines:
                 self.output_file = _validate_output_file_path(
                     interpolated_output_file,
                     allow_templates=False,
-                    preserve_absolute=Path(str(self._original_output_file)).is_absolute(),
+                    preserve_absolute=Path(
+                        str(self._original_output_file)
+                    ).is_absolute(),
                 )
             except (KeyError, ValueError) as e:
                 raise ValueError(f"Error interpolating output_file path: {e!s}") from e
