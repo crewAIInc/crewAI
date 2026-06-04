@@ -6,6 +6,7 @@ These tests validate that:
 2. Extensions round-trip through JSON without validation failures
 3. GovernanceOutcome links back to a decision via decision_id
 4. Unknown extension payloads are preserved without modification
+5. Error outcomes carry error_type and error_message
 
 No vendor imports. No external dependencies beyond stdlib.
 """
@@ -102,6 +103,14 @@ FIXTURE_OUTCOME: GovernanceOutcome = {
     "completed_at": "2026-06-03T14:10:02Z",
 }
 
+FIXTURE_OUTCOME_ERROR: GovernanceOutcome = {
+    "decision_id": "d-002",
+    "outcome": "error",
+    "error_type": "ToolExecutionError",
+    "error_message": "Connection refused: database host unreachable",
+    "completed_at": "2026-06-03T14:01:03Z",
+}
+
 FIXTURE_UNKNOWN_EXTENSION: GovernanceDecision = {
     "decision_id": "d-006",
     "agent_id": "test-agent",
@@ -184,6 +193,14 @@ def test_outcome_links_back_to_decision() -> None:
     assert "completed_at" in FIXTURE_OUTCOME
 
 
+def test_error_outcome_has_error_fields() -> None:
+    """Error outcome carries error_type and error_message."""
+    assert FIXTURE_OUTCOME_ERROR["outcome"] == "error"
+    assert FIXTURE_OUTCOME_ERROR["error_type"] is not None
+    assert FIXTURE_OUTCOME_ERROR["error_message"] is not None
+    assert FIXTURE_OUTCOME_ERROR["decision_id"] == FIXTURE_DENY["decision_id"]
+
+
 def test_all_fixtures_json_serializable() -> None:
     """Every fixture round-trips through JSON without error."""
     fixtures: list[dict[str, Any]] = [
@@ -193,6 +210,7 @@ def test_all_fixtures_json_serializable() -> None:
         FIXTURE_ALLOW_WITH_EXTENSION,
         FIXTURE_REVISE,
         FIXTURE_OUTCOME,
+        FIXTURE_OUTCOME_ERROR,
         FIXTURE_UNKNOWN_EXTENSION,
     ]
     for fixture in fixtures:
