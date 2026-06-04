@@ -10,12 +10,13 @@ siblings.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from typing import Any
 
 from typing_extensions import TypeIs
 
 from crewai.flow.constants import AND_CONDITION, OR_CONDITION
+from crewai.flow.dsl._types import FlowTrigger
 from crewai.flow.flow_definition import FlowDefinitionCondition
 from crewai.flow.flow_wrappers import (
     FlowCondition,
@@ -23,6 +24,10 @@ from crewai.flow.flow_wrappers import (
     SimpleFlowCondition,
 )
 from crewai.flow.types import FlowMethodName
+
+
+def _is_non_string_sequence(value: Any) -> bool:
+    return isinstance(value, Sequence) and not isinstance(value, (str, bytes))
 
 
 def is_simple_flow_condition(obj: Any) -> TypeIs[SimpleFlowCondition]:
@@ -46,7 +51,7 @@ def is_flow_condition_dict(obj: Any) -> TypeIs[FlowCondition]:
 
     if "conditions" in obj:
         conditions = obj["conditions"]
-        if not isinstance(conditions, list):
+        if not _is_non_string_sequence(conditions):
             return False
         for cond in conditions:
             if not (
@@ -57,7 +62,10 @@ def is_flow_condition_dict(obj: Any) -> TypeIs[FlowCondition]:
 
     if "methods" in obj:
         methods = obj["methods"]
-        if not (isinstance(methods, list) and all(isinstance(m, str) for m in methods)):
+        if not (
+            _is_non_string_sequence(methods)
+            and all(isinstance(m, str) for m in methods)
+        ):
             return False
 
     allowed_keys = {"type", "conditions", "methods"}
@@ -83,9 +91,12 @@ def _normalize_condition(
         if "conditions" in condition:
             return condition
         if "methods" in condition:
-            return {"type": condition["type"], "conditions": condition["methods"]}
+            normalized_methods: list[str | FlowMethodName | FlowCondition] = list(
+                condition["methods"]
+            )
+            return {"type": condition["type"], "conditions": normalized_methods}
         return condition
-    if isinstance(condition, list) and all(
+    if _is_non_string_sequence(condition) and all(
         isinstance(item, str) or is_flow_condition_dict(item) for item in condition
     ):
         return {"type": OR_CONDITION, "conditions": condition}
@@ -141,9 +152,7 @@ def _extract_all_methods(
     return []
 
 
-def _condition_trigger(
-    condition: str | FlowCondition | Callable[..., Any],
-) -> FlowMethodName | FlowCondition:
+def _condition_trigger(condition: FlowTrigger) -> FlowMethodName | FlowCondition:
     if isinstance(condition, str):
         return FlowMethodName(condition)
     if is_flow_condition_dict(condition):
@@ -155,7 +164,7 @@ def _condition_trigger(
 
 
 def _condition_triggers(
-    conditions: Sequence[str | FlowCondition | Callable[..., Any]],
+    conditions: Sequence[FlowTrigger],
     error_message: str,
 ) -> FlowConditions:
     try:
@@ -184,21 +193,22 @@ def _definition_condition_from_runtime(condition: Any) -> FlowDefinitionConditio
     return str(condition)
 
 
-def or_(*conditions: str | FlowCondition | Callable[..., Any]) -> FlowCondition:
-    """Combines multiple conditions with OR logic for flow control.
+def or_(*triggers: FlowTrigger) -> FlowCondition:
+    """Combine multiple triggers with OR logic for flow control.
 
-    Creates a condition that is satisfied when any of the specified conditions
+    Creates a condition that is satisfied when any of the specified triggers
     are met. This is used with @start, @listen, or @router decorators to create
     complex triggering conditions.
 
     Args:
-        conditions: Variable number of conditions that can be method names, existing condition dictionaries, or method references.
+        triggers: Route labels, method references, or existing conditions
+            returned by or_() / and_().
 
     Returns:
-        A condition dictionary with format {"type": "OR", "conditions": list_of_conditions} where each condition can be a string (method name) or a nested dict
+        A condition dictionary with format {"type": "OR", "conditions": list_of_triggers}.
 
     Raises:
-        ValueError: If condition format is invalid.
+        ValueError: If a trigger format is invalid.
 
     Examples:
         >>> @listen(or_("success", "timeout"))
@@ -209,26 +219,27 @@ def or_(*conditions: str | FlowCondition | Callable[..., Any]) -> FlowCondition:
         >>> def handle_nested(self):
         ...     pass
     """
-    processed_triggers = _condition_triggers(conditions, "Invalid condition in or_()")
+    processed_triggers = _condition_triggers(triggers, "Invalid trigger in or_()")
     return {"type": OR_CONDITION, "conditions": processed_triggers}
 
 
-def and_(*conditions: str | FlowCondition | Callable[..., Any]) -> FlowCondition:
-    """Combines multiple conditions with AND logic for flow control.
+def and_(*triggers: FlowTrigger) -> FlowCondition:
+    """Combine multiple triggers with AND logic for flow control.
 
-    Creates a condition that is satisfied only when all specified conditions
+    Creates a condition that is satisfied only when all specified triggers
     are met. This is used with @start, @listen, or @router decorators to create
     complex triggering conditions.
 
     Args:
-        *conditions: Variable number of conditions that can be method names, existing condition dictionaries, or method references.
+        triggers: Route labels, method references, or existing conditions
+            returned by or_() / and_().
 
     Returns:
         A condition dictionary with format {"type": "AND", "conditions": list_of_conditions}
-        where each condition can be a string (method name) or a nested dict
+        where each condition can be a route label, method name, or nested condition.
 
     Raises:
-        ValueError: If any condition is invalid.
+        ValueError: If any trigger is invalid.
 
     Examples:
         >>> @listen(and_("validated", "processed"))
@@ -239,7 +250,7 @@ def and_(*conditions: str | FlowCondition | Callable[..., Any]) -> FlowCondition
         >>> def handle_nested(self):
         ...     pass
     """
-    processed_triggers = _condition_triggers(conditions, "Invalid condition in and_()")
+    processed_triggers = _condition_triggers(triggers, "Invalid trigger in and_()")
     return {"type": AND_CONDITION, "conditions": processed_triggers}
 
 

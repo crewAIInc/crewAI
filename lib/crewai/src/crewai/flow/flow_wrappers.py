@@ -37,16 +37,16 @@ class FlowCondition(TypedDict, total=False):
 
     Attributes:
         type: The type of the condition.
-        conditions: A list of conditions types.
-        methods: A list of methods.
+        conditions: A sequence of route labels, method names, or nested conditions.
+        methods: A legacy sequence of route labels or method names.
     """
 
     type: Required[FlowConditionType]
-    conditions: Sequence[FlowMethodName | FlowCondition]
-    methods: list[FlowMethodName]
+    conditions: Sequence[str | FlowMethodName | FlowCondition]
+    methods: Sequence[str | FlowMethodName]
 
 
-FlowConditions: TypeAlias = list[FlowMethodName | FlowCondition]
+FlowConditions: TypeAlias = Sequence[str | FlowMethodName | FlowCondition]
 
 
 class FlowMethod(Generic[P, R]):

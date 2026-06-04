@@ -31,7 +31,7 @@ PendingListenerKey = NewType(
 class FlowMethodCallable(Protocol[P, R]):
     """A callable that can be used as a flow method reference."""
 
-    __name__: FlowMethodName
+    __name__: str
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R: ...
 

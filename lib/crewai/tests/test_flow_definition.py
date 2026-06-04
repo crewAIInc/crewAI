@@ -14,6 +14,7 @@ import crewai.flow.dsl as flow_dsl
 import crewai.flow.flow_definition as flow_definition
 import crewai.flow.visualization.builder as visualization_builder
 from crewai.flow import Flow, and_, human_feedback, listen, or_, persist, router, start
+from crewai.flow.dsl._conditions import is_flow_condition_dict
 
 
 def test_flow_public_exports_are_explicit():
@@ -46,6 +47,20 @@ def test_flow_public_exports_are_explicit():
     }
     assert "build_flow_structure" in flow_visualization.__all__
     assert "calculate_node_levels" not in flow_visualization.__all__
+
+
+def test_flow_condition_dict_accepts_non_string_sequences():
+    condition = {
+        "type": "OR",
+        "conditions": (
+            "approved",
+            {"type": "AND", "methods": ("validated", "processed")},
+        ),
+    }
+
+    assert is_flow_condition_dict(condition)
+    assert not is_flow_condition_dict({"type": "OR", "conditions": "approved"})
+    assert not is_flow_condition_dict({"type": "OR", "methods": b"approved"})
 
 
 def test_private_flow_helpers_do_not_have_docstrings():
