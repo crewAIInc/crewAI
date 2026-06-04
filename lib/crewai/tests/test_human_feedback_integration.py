@@ -778,14 +778,14 @@ class TestEdgeCases:
 class TestLLMConfigPreservation:
     """Tests that LLM config is preserved through @human_feedback serialization.
 
-    PR #4970 introduced _hf_llm stashing so the live LLM object survives
+    PR #4970 introduced _human_feedback_llm stashing so the live LLM object survives
     decorator wrapping for same-process resume. The serialization path
     (_serialize_llm_for_context / _deserialize_llm_from_context) preserves
     config for cross-process resume.
     """
 
-    def test_hf_llm_stashed_on_wrapper_with_llm_instance(self):
-        """Test that passing an LLM instance stashes it on the wrapper as _hf_llm."""
+    def test_human_feedback_llm_stashed_on_wrapper_with_llm_instance(self):
+        """Test that passing an LLM instance stashes it on the wrapper as _human_feedback_llm."""
         from crewai.llm import LLM
 
         llm_instance = LLM(model="gpt-4o-mini", temperature=0.42)
@@ -801,11 +801,11 @@ class TestLLMConfigPreservation:
                 return "content"
 
         method = ConfigFlow.review
-        assert hasattr(method, "_hf_llm"), "_hf_llm not found on wrapper"
-        assert method._hf_llm is llm_instance, "_hf_llm is not the same object"
+        assert hasattr(method, "_human_feedback_llm"), "_human_feedback_llm not found on wrapper"
+        assert method._human_feedback_llm is llm_instance, "_human_feedback_llm is not the same object"
 
-    def test_hf_llm_preserved_on_listen_method(self):
-        """Test that _hf_llm is preserved when @human_feedback is on a @listen method."""
+    def test_human_feedback_llm_preserved_on_listen_method(self):
+        """Test that _human_feedback_llm is preserved when @human_feedback is on a @listen method."""
         from crewai.llm import LLM
 
         llm_instance = LLM(model="gpt-4o-mini", temperature=0.7)
@@ -825,11 +825,11 @@ class TestLLMConfigPreservation:
                 return "content"
 
         method = ListenConfigFlow.review
-        assert hasattr(method, "_hf_llm")
-        assert method._hf_llm is llm_instance
+        assert hasattr(method, "_human_feedback_llm")
+        assert method._human_feedback_llm is llm_instance
 
-    def test_hf_llm_accessible_on_instance(self):
-        """Test that _hf_llm survives Flow instantiation (bound method access)."""
+    def test_human_feedback_llm_accessible_on_instance(self):
+        """Test that _human_feedback_llm survives Flow instantiation (bound method access)."""
         from crewai.llm import LLM
 
         llm_instance = LLM(model="gpt-4o-mini", temperature=0.42)
@@ -846,8 +846,8 @@ class TestLLMConfigPreservation:
 
         flow = InstanceFlow()
         instance_method = flow.review
-        assert hasattr(instance_method, "_hf_llm")
-        assert instance_method._hf_llm is llm_instance
+        assert hasattr(instance_method, "_human_feedback_llm")
+        assert instance_method._human_feedback_llm is llm_instance
 
     def test_serialize_llm_preserves_config_fields(self):
         """Test that _serialize_llm_for_context captures temperature, base_url, etc."""
