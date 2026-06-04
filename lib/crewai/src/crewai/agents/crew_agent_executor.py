@@ -870,6 +870,8 @@ class CrewAgentExecutor(BaseAgentExecutor):
         if parse_error is not None:
             return parse_error
 
+        args_dict = self._resolve_file_references(args_dict)
+
         if original_tool is None:
             for tool in self.original_tools or []:
                 if sanitize_tool_name(tool.name) == func_name:
@@ -977,9 +979,20 @@ class CrewAgentExecutor(BaseAgentExecutor):
                             tool=func_name, input=input_str, output=raw_result
                         )
 
-                result = (
-                    str(raw_result) if not isinstance(raw_result, str) else raw_result
+                from crewai.tools.tool_file_reference import (
+                    ToolFileReference,
+                    auto_store_if_binary,
                 )
+
+                raw_result = auto_store_if_binary(raw_result)
+                if isinstance(raw_result, ToolFileReference):
+                    result = raw_result.placeholder()
+                else:
+                    result = (
+                        str(raw_result)
+                        if not isinstance(raw_result, str)
+                        else raw_result
+                    )
             except Exception as e:
                 result = f"Error executing tool: {e}"
                 if self.task:
@@ -1042,6 +1055,27 @@ class CrewAgentExecutor(BaseAgentExecutor):
             "from_cache": from_cache,
             "original_tool": original_tool,
         }
+
+    @staticmethod
+    def _resolve_file_references(args: dict[str, Any] | None) -> dict[str, Any] | None:
+        """Replace file reference IDs in tool arguments with base64-encoded data."""
+        if not args:
+            return args
+
+        import base64
+
+        from crewai.tools.tool_file_reference import _UUID_RE, tool_file_store
+
+        resolved = {}
+        for key, value in args.items():
+            if isinstance(value, str):
+                match = _UUID_RE.fullmatch(value.strip())
+                if match and tool_file_store.has(match.group()):
+                    data = tool_file_store.resolve(match.group())
+                    resolved[key] = base64.b64encode(data).decode("ascii")
+                    continue
+            resolved[key] = value
+        return resolved
 
     def _append_tool_result_and_check_finality(
         self, execution_result: dict[str, Any]

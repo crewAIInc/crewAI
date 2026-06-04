@@ -680,8 +680,18 @@ class ToolUsage:
         return result
 
     def _format_result(self, result: Any) -> str:
+        from crewai.tools.tool_file_reference import (
+            ToolFileReference,
+            auto_store_if_binary,
+        )
+
         if self.task:
             self.task.used_tools += 1
+
+        result = auto_store_if_binary(result)
+        if isinstance(result, ToolFileReference):
+            result = result.placeholder()
+
         if self._should_remember_format():
             result = self._remember_format(result=result)
         return str(result)

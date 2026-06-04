@@ -36,6 +36,7 @@ from crewai.tools.structured_tool import (
     _serialize_schema,
     build_schema_hint,
 )
+from crewai.tools.tool_file_reference import ToolFileReference, tool_file_store
 from crewai.types.callback import SerializableCallable, _resolve_dotted_path
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name

@@ -1047,6 +1047,9 @@ class Crew(FlowTrackable, BaseModel):
             if self._memory is not None and hasattr(self._memory, "drain_writes"):
                 self._memory.drain_writes()
             clear_files(self.id)
+            from crewai.tools.tool_file_reference import tool_file_store
+
+            tool_file_store.clear()
             detach(token)
 
     def _post_kickoff(self, result: CrewOutput) -> CrewOutput:
@@ -1255,6 +1258,9 @@ class Crew(FlowTrackable, BaseModel):
             raise
         finally:
             clear_files(self.id)
+            from crewai.tools.tool_file_reference import tool_file_store
+
+            tool_file_store.clear()
             detach(token)
 
     async def akickoff_for_each(
