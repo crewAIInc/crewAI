@@ -98,6 +98,7 @@ class _Entry:
     artifact: FileArtifact
     scope_id: str | None
     expires_at: float | None
+    obj_id: int
 
 
 class _ArtifactStore:
@@ -106,11 +107,17 @@ class _ArtifactStore:
     Entries are keyed by an opaque uuid (never by user-supplied content), so
     concurrent crews cannot collide. Cleanup is per-scope -- clearing one crew's
     artifacts never touches another's -- with a TTL prune as a backstop.
+
+    Storing the same :class:`FileArtifact` instance again under the same scope
+    reuses its handle rather than minting a duplicate. The tool-result cache
+    hands back the same object on every cache hit, so this keeps repeated cached
+    calls from stacking identical byte copies in memory.
     """
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._entries: dict[str, _Entry] = {}
+        self._handle_by_obj: dict[int, str] = {}
 
     def store(
         self,
@@ -118,14 +125,29 @@ class _ArtifactStore:
         scope_id: str | None = None,
         ttl: int = DEFAULT_ARTIFACT_TTL,
     ) -> str:
-        handle_id = str(uuid4())
+        norm_scope = str(scope_id) if scope_id is not None else None
+        obj_id = id(artifact)
+        expires_at = (time.monotonic() + ttl) if ttl > 0 else None
         with self._lock:
             self._prune_locked()
+            existing = self._handle_by_obj.get(obj_id)
+            if existing is not None:
+                entry = self._entries.get(existing)
+                if (
+                    entry is not None
+                    and entry.artifact is artifact
+                    and entry.scope_id == norm_scope
+                ):
+                    entry.expires_at = expires_at
+                    return f"{_HANDLE_SCHEME}://{existing}"
+            handle_id = str(uuid4())
             self._entries[handle_id] = _Entry(
                 artifact=artifact,
-                scope_id=str(scope_id) if scope_id is not None else None,
-                expires_at=(time.monotonic() + ttl) if ttl > 0 else None,
+                scope_id=norm_scope,
+                expires_at=expires_at,
+                obj_id=obj_id,
             )
+            self._handle_by_obj[obj_id] = handle_id
         return f"{_HANDLE_SCHEME}://{handle_id}"
 
     def resolve(self, handle_id: str) -> FileArtifact | None:
@@ -134,7 +156,7 @@ class _ArtifactStore:
             if entry is None:
                 return None
             if entry.expires_at is not None and entry.expires_at <= time.monotonic():
-                del self._entries[handle_id]
+                self._delete_locked(handle_id)
                 return None
             return entry.artifact
 
@@ -144,7 +166,7 @@ class _ArtifactStore:
             for handle_id in [
                 hid for hid, entry in self._entries.items() if entry.scope_id == scope
             ]:
-                del self._entries[handle_id]
+                self._delete_locked(handle_id)
 
     def _prune_locked(self) -> None:
         """Drop entries whose per-entry TTL has elapsed. Caller holds the lock."""
@@ -154,7 +176,13 @@ class _ArtifactStore:
             for hid, entry in self._entries.items()
             if entry.expires_at is not None and entry.expires_at <= now
         ]:
-            del self._entries[handle_id]
+            self._delete_locked(handle_id)
+
+    def _delete_locked(self, handle_id: str) -> None:
+        """Remove an entry and its object-identity mapping. Caller holds lock."""
+        entry = self._entries.pop(handle_id, None)
+        if entry is not None and self._handle_by_obj.get(entry.obj_id) == handle_id:
+            del self._handle_by_obj[entry.obj_id]
 
 
 _store: Final[_ArtifactStore] = _ArtifactStore()

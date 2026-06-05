@@ -67,6 +67,15 @@ class TestStoreArtifact:
         h2 = _handle_in(store_artifact(FileArtifact(data=b"a")))
         assert h1 != h2
 
+    def test_restoring_same_instance_reuses_handle(self) -> None:
+        # The tool-result cache hands back the same FileArtifact on every cache
+        # hit; re-storing it must reuse the handle, not stack duplicate copies.
+        artifact = FileArtifact(data=b"payload" * 1000)
+        h1 = _handle_in(store_artifact(artifact, scope_id="s"))
+        h2 = _handle_in(store_artifact(artifact, scope_id="s"))
+        assert h1 == h2
+        assert len(_store._entries) == 1
+
     def test_placeholder_escapes_quotes_in_metadata(self) -> None:
         artifact = FileArtifact(data=b"x", filename='a".pptx', mime_type='m"/x')
         placeholder = store_artifact(artifact)
