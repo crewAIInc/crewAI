@@ -1,0 +1,485 @@
+---
+title: تدفقات المحادثة
+description: أنشئ تطبيقات دردشة متعددة الجولات مع kickoff لكل جولة وسجل الرسائل وتوجيه النية والتتبع وجسور WebSocket.
+icon: comments
+mode: "wide"
+---
+
+## نظرة عامة
+
+تعامل التطبيقات المحادثية مع كل سطر من المستخدم كـ **تشغيل flow جديد** بنفس **معرّف الجلسة**. توفر CrewAI مساعدات لسجل الرسائل وتصنيف النية الاختياري وتأجيل التتبع وجسور الواجهة، إضافة إلى REPL محلي `flow.chat()` للتدفقات المحادثية.
+
+| المفهوم | التنفيذ |
+|---------|---------|
+| معرّف الجلسة | `kickoff(session_id=...)` → `inputs["id"]` → `state.id` |
+| سطر المستخدم | `kickoff(user_message=...)` يُضاف إلى `state.messages` قبل تشغيل الرسم |
+| اكتمال الجولة | `FlowFinished` لهذا **التشغيل** فقط؛ تستمر المحادثة في `kickoff` التالي |
+| تتبع الجلسة | `ConversationalConfig(defer_trace_finalization=True)` + `finalize_session_traces()` |
+
+## واجهات الجولات
+
+استخدم **`flow.kickoff(user_message=..., session_id=...)`** أو **`flow.handle_turn(...)`** لكل رسالة مستخدم من REST أو WebSocket أو الاختبارات أو الواجهات المخصصة. استخدم **`flow.chat()`** عندما تريد حلقة دردشة محلية في الطرفية لـ `Flow` محادثي.
+
+| API | الاستخدام |
+|-----|-----------|
+| `kickoff(user_message=..., session_id=...)` | كل رسالة مستخدم |
+| `handle_turn(message, session_id=...)` | غلاف مريح لجولة واحدة في `Flow` محادثي |
+| `chat()` | REPL محلي في الطرفية لـ `Flow` محادثي |
+| `kickoff_async(...)` | نفس المعاملات؛ دخول async أصلي |
+| `ask()` | مطالبة حاجزة **داخل** خطوة واحدة |
+| `@human_feedback` | الموافقة/الرفض على **مخرجات خطوة** — وليس السطر التالي |
+| `ChatSession.handle_turn(...)` | طبقة نقل فوق `kickoff` |
+
+## بداية سريعة
+
+```python
+from uuid import uuid4
+
+from crewai.flow import (
+    ChatState,
+    ConversationalConfig,
+    Flow,
+    listen,
+    or_,
+    persist,
+    router,
+    start,
+)
+from crewai.flow.persistence import SQLiteFlowPersistence
+
+
+class SupportFlow(Flow[ChatState]):
+    conversational_config = ConversationalConfig(
+        default_intents=["order", "help", "goodbye"],
+        intent_llm="gpt-4o-mini",
+        defer_trace_finalization=True,
+    )
+
+    @start()
+    def bootstrap(self):
+        if not self.state.session_ready:
+            self.state.session_ready = True
+        return "ready"
+
+    @router(bootstrap)
+    def route(self):
+        return self.state.last_intent or "help"
+
+    @listen("order")
+    def handle_order(self):
+        reply = "طلبك في الطريق."
+        self.append_message("assistant", reply)
+        return reply
+
+    @listen("help")
+    def handle_help(self):
+        reply = "كيف يمكنني المساعدة؟"
+        self.append_message("assistant", reply)
+        return reply
+
+    @listen("goodbye")
+    def handle_goodbye(self):
+        reply = "وداعاً!"
+        self.append_message("assistant", reply)
+        return reply
+
+    @persist(SQLiteFlowPersistence("support.db"))
+    @listen(or_(handle_order, handle_help, handle_goodbye))
+    def finalize(self):
+        return self.state.model_dump()
+
+
+session_id = str(uuid4())
+flow = SupportFlow()
+
+flow.kickoff(user_message="أين طلبي؟", session_id=session_id)
+flow.kickoff(user_message="وماذا عن الإرجاع؟", session_id=session_id)
+flow.finalize_session_traces()
+```
+
+## دورة حياة الجولة
+
+كل `kickoff` مع `user_message` يشغّل:
+
+1. **`_configure_conversational_kickoff`** — دمج `session_id` / `user_message` في `inputs` وتطبيق `ConversationalConfig`.
+2. **استعادة الحالة** — عند وجود `inputs["id"]` و`@persist`.
+3. **`FlowStarted`** — في أول جولة للجلسة المؤجلة فقط.
+4. **`prepare_conversational_turn`** — إضافة رسالة المستخدم و`last_user_message` وتصنيف اختياري.
+5. **تنفيذ الرسم** — `@start` → `@router` → معالجات `@listen`.
+6. **نهاية التشغيل** — يُتخطى `flow_finished` والتتبع لكل جولة عند التأجيل؛ `Agent.kickoff()` / crews لا تغلق دفعة الأب.
+
+استدعِ **`append_message("assistant", reply)`** في المعالجات. سطر المستخدم محفوظ عند kickoff — لا تُضفه مرة أخرى.
+
+## `ConversationalConfig` (افتراضيات على مستوى الصنف)
+
+عيّن على صنف `Flow` كـ `conversational_config: ClassVar[ConversationalConfig | None]`.
+
+| الحقل | الافتراضي | الغرض |
+|-------|-----------|--------|
+| `default_intents` | `None` | تسميات outcome للتصنيف التلقائي قبل kickoff |
+| `intent_llm` | `None` | نموذج التصنيف (مطلوب عند وجود intents) |
+| `interactive_prompt` | `"You: "` | مطالبة `kickoff(interactive=True)` |
+| `interactive_timeout` | `None` | مهلة لكل سطر في الوضع التفاعلي |
+| `exit_commands` | `exit`, `quit` | كلمات إنهاء الوضع التفاعلي |
+| `defer_trace_finalization` | `True` | إبقاء دفعة trace واحدة مفتوحة بين الجولات |
+
+يمكن التجاوز لكل kickoff عبر `intents=` و`intent_llm=`.
+
+## `ChatState` (شكل الحالة الموصى به للحفظ)
+
+```python
+from crewai.flow import ChatState
+
+
+class MyChatState(ChatState):
+    # موروث: id, messages, last_user_message, last_intent, session_ready
+    research_turn_count: int = 0
+    custom_flag: bool = False
+```
+
+| الحقل | الدور |
+|-------|------|
+| `id` | UUID الجلسة (مثل `session_id` / `inputs["id"]`) |
+| `messages` | قائمة `{role, content}` لسجل LLM |
+| `last_user_message` | آخر سطر مستخدم في هذه الجولة |
+| `last_intent` | تسمية المسار بعد التصنيف (إن وُجد) |
+| `session_ready` | علم bootstrap لمرة واحدة |
+
+`ConversationalInputs` هو `TypedDict` لـ `kickoff(inputs={...})`: `id`, `user_message`, `last_intent`.
+
+## API المحادثة على `Flow`
+
+### معاملات `kickoff` / `kickoff_async`
+
+| المعامل | الغرض |
+|---------|--------|
+| `user_message` | نص هذه الجولة (أو `{"role": "user", "content": "..."}`) |
+| `session_id` | UUID المحادثة → `inputs["id"]` / `state.id` |
+| `intents` | تسميات outcome لـ `classify_intent` قبل kickoff |
+| `intent_llm` | LLM للتصنيف (مطلوب مع `intents`) |
+| `interactive` | حلقة CLI عبر `ask()` (للعروض المحلية فقط) |
+| `interactive_prompt` | مطالبة الوضع التفاعلي |
+| `interactive_timeout` | مهلة `ask()` لكل سطر |
+| `exit_commands` | كلمات إنهاء الوضع التفاعلي |
+| `inputs` | حقول حالة إضافية |
+| `restore_from_state_id` | استنساخ من flow محفوظ آخر |
+
+### سمات المثيل
+
+| السمة | الغرض |
+|-------|--------|
+| `conversational_config` | افتراضيات `ConversationalConfig` على مستوى الصنف |
+| `defer_trace_finalization` | علم المثيل؛ يُضبط تلقائياً من config عند kickoff |
+| `suppress_flow_events` | يخفي لوحات console؛ **التتبع يُسجّل** |
+| `stream` | بث؛ مع `ChatSession.handle_turn(..., stream=True)` |
+
+### طرق وخصائص
+
+| الاسم | الوصف |
+|------|--------|
+| `append_message(role, content, **extra)` | إضافة إلى `state.messages` |
+| `conversation_messages` | سجل للقراءة فقط لاستدعاءات LLM |
+| `classify_intent(text, outcomes, *, llm, context=None)` | تعيين outcome |
+| `receive_user_message(text, *, outcomes=None, llm=None)` | إضافة رسالة مستخدم؛ `last_intent` اختياري |
+| `finalize_session_traces()` | إصدار `flow_finished` المؤجل وإنهاء دفعة trace |
+| `_should_defer_trace_finalization()` | هل يُؤجل إنهاء trace لكل جولة |
+| `input_history` | سجل تدقيق مطالبات وردود `ask()` |
+
+### مساعدات الوحدة (`crewai.flow.conversation`)
+
+| الدالة | الوصف |
+|--------|--------|
+| `normalize_kickoff_inputs(...)` | دمج kwargs المحادثة في `inputs` |
+| `get_conversation_messages(flow)` | قراءة الرسائل من الحالة أو المخزن |
+| `append_message(flow, ...)` | مثل طريقة المثيل |
+| `prepare_conversational_turn(flow, ...)` | تهيئة الجولة (عادةً kickoff يستدعيها) |
+| `receive_user_message(flow, ...)` | مثل طريقة المثيل |
+| `set_state_field(flow, name, value)` | تعيين حقل dict أو Pydantic |
+| `get_conversational_config(flow)` | قراءة `conversational_config` |
+| `input_history_to_messages(entries)` | تحويل `input_history` لصيغة رسائل LLM |
+
+## أنماط توجيه النية
+
+### أ. تصنيف مسبق عبر `ConversationalConfig` (الأبسط)
+
+عيّن `default_intents` و`intent_llm`. كل kickoff يصنّف قبل `@router`؛ اقرأ `self.state.last_intent` في `route()`.
+
+### ب. تصنيف داخل `@router` (مطالبات أغنى)
+
+عيّن `default_intents=None` ليضيف kickoff الرسالة فقط. في `route()` استدعِ `classify_intent`:
+
+```python
+@router(bootstrap)
+def route(self):
+    intent = self.classify_intent(
+        self._routing_prompt(self.state.last_user_message),
+        ("GREETING", "ORDER", "RESEARCH", "GOODBYE"),
+        llm=self.conversational_config.intent_llm or "gpt-4o-mini",
+    )
+    self.state.last_intent = intent
+    return intent
+```
+
+للبحث على الويب أو أدوات متعددة الخطوات استخدم **`@listen("RESEARCH")`** مع `Agent.kickoff()` وأدوات — وليس `LLM.call()` فقط.
+
+## عندما ينتهي الـ flow ويستمر المستخدم
+
+`FlowFinished` يعني أن **تنفيذ الرسم هذا** اكتمل. تستمر المحادثة بـ `kickoff` آخر ونفس `session_id`. `@persist` يستعيد `messages` والأعلام والسياق.
+
+**نمط الحفظ:** يُفضّل `@persist` على **خطوة نهائية واحدة** (مثل `finalize`) وليس على صنف `Flow` بالكامل. الحفظ على مستوى الصنف بعد كل method قد يفقد تحديثات المعالجات في نفس الجولة.
+
+لا تستخدم `@human_feedback` لأسطر المتابعة في الدردشة إلا عند الحاجة لموافقة بشرية على مخرجات خطوة محددة.
+
+## `Flow` المحادثاتي (تجريبي)
+
+<Warning>
+  **ميزة تجريبية.** سطح `Flow` المحادثاتي (`conversational = True`،
+  `handle_turn`، `ConversationConfig`، `RouterConfig`،
+  `ConversationState`، الرسم البياني المدمج والمساعدات) يقع تحت
+  `crewai.experimental` وقد يتغير شكله قبل التخرج. ثبّت إصدار CrewAI إذا
+  كنت تعتمد على سلوك محدد، وراقب changelog للتحديثات الكاسرة. الملاحظات
+  والمشاكل مرحب بها.
+</Warning>
+
+فعّل الرسم المحادثاتي بتعيين `conversational = True` على صنف فرعي من `Flow`. عندئذٍ يُظهر `Flow` الأساسي رسم `@start` / `@router` / `converse_turn` / `end_conversation` مدمجاً، ويدير `state.messages`، ويُشغّل LLM التوجيه، ويبقي دفعة trace مفتوحة عبر الجولات. أنت تكتب **المسارات المخصصة** فقط؛ والإطار يتولى الباقي.
+
+استخدمه عندما تريد دردشة متعددة الجولات مع موجّه قائم على LLM ومعالجات لكل مسار دون توصيل دورة الحياة يدوياً. استخدم `Flow[ChatState]` (النمط الأدنى مستوى في الأعلى) عندما تحتاج تحكماً كاملاً.
+
+### مثال سريع
+
+```python
+from crewai import LLM, Flow
+from crewai.flow import listen
+from crewai.experimental.conversational import (
+    ConversationConfig,
+    ConversationState,
+    RouterConfig,
+)
+
+
+ROUTER_LLM = LLM(model="gpt-4o-mini")
+
+
+@ConversationConfig(
+    system_prompt="A multi-agent assistant for ordinary chat and tool-backed tasks.",
+    llm=ROUTER_LLM,
+    router=RouterConfig(),  # المسارات + الأوصاف تُكتشف تلقائياً من معالجات @listen
+)
+class SupportFlow(Flow[ConversationState]):
+    conversational = True
+
+    @listen("INTERNET_SEARCH")
+    def handle_internet_search(self) -> str:
+        """Fresh web research, current news, real-time lookups."""
+        ...
+        self.append_assistant_message(reply)
+        return reply
+
+    @listen("CREWAI_DOCS")
+    def handle_crewai_docs(self) -> str:
+        """Look up the CrewAI documentation for framework/API questions."""
+        ...
+        self.append_assistant_message(reply)
+        return reply
+
+
+flow = SupportFlow()
+try:
+    flow.handle_turn("ماذا يمكنك أن تفعل؟")                   # يوجَّه إلى converse (مدمج)
+    flow.handle_turn("ابحث في الويب عن أخبار الذكاء الاصطناعي.")  # يوجَّه إلى INTERNET_SEARCH
+    flow.handle_turn("لخص النتيجة الأولى.")                    # يعود إلى converse
+finally:
+    flow.finalize_session_traces()
+```
+
+للدردشة المحلية في الطرفية، استخدم `chat()`:
+
+```python
+def kickoff() -> None:
+    SupportFlow().chat()
+```
+
+يلف `chat()` استدعاءات `handle_turn()` داخل REPL، ويخرج عند `exit` / `quit`، ويتجاهل الأسطر الفارغة افتراضياً، ويستدعي `finalize_session_traces()` عند انتهاء الجلسة.
+
+### `ConversationConfig`
+
+مزخرف صنف يُلحق افتراضيات الدردشة على مستوى الصنف.
+
+| الحقل | الافتراضي | الغرض |
+|-------|-----------|-------|
+| `system_prompt` | `slices.conversational_system_prompt` من i18n | رسالة system يستخدمها `converse_turn` المدمج. مرر `""` للتعطيل التام. |
+| `llm` | `None` | LLM المحادثة (يستخدمه `converse_turn` وكاحتياطي للموجّه). |
+| `router` | `None` | `RouterConfig` للتوجيه عبر LLM. بدونه، يسقط الـ flow دائماً إلى `converse`. |
+| `answer_from_history_prompt` | افتراضي الإطار | رسالة system للمسار الاختياري `answer_from_history`. |
+| `answer_from_history_llm` | `None` | يُفعّل الاختصار `answer_from_history` عند تعيينه. |
+| `intent_llm` | `None` | LLM لمسار التصنيف المسبق القديم `intents=`/`default_intents`. |
+| `default_intents` | `None` | تسميات النتائج للتصنيف المسبق القديم. |
+| `visible_agent_outputs` | `None` | `"all"` أو قائمة بأسماء الـ agents الذين تُرفع مخرجاتهم من `append_agent_result()` إلى رسائل عامة. |
+| `defer_trace_finalization` | `True` | يبقي دفعة trace واحدة مفتوحة عبر استدعاءات `handle_turn()`. |
+
+### `RouterConfig` وفهرس المسارات المُولَّد تلقائياً
+
+```python
+RouterConfig(
+    prompt="تأطير اختياري للنطاق (سياسة، صوت، شخصية).",
+    response_format=MyRoute,        # اختياري؛ يُولَّد تلقائياً عند الإغفال
+    llm=ROUTER_LLM,                  # يسقط إلى ConversationConfig.llm
+    routes=["INTERNET_SEARCH", "CREWAI_DOCS"],   # اختياري؛ يُستنتج من المستمعين
+    route_descriptions={
+        "INTERNET_SEARCH": "تجاوز الـ docstring لهذا المسار فقط.",
+    },
+    default_intent="converse",       # يُستخدم عند فشل LLM أو غيابه
+    fallback_intent="converse",      # يُستخدم عندما يعيد LLM مساراً غير صالح
+    intent_field="intent",
+)
+```
+
+تُبنى رسالة الموجّه إلى LLM تلقائياً. لكل مسار يختار الإطار وصفاً بهذا الترتيب من الأولوية:
+
+1. `RouterConfig.route_descriptions[label]` — تجاوز صريح.
+2. `Flow.builtin_route_descriptions[label]` — نص جاهز من الإطار لـ `converse` و`end` و`answer_from_history` (مصاغ لـ LLM التوجيه).
+3. أول سطر غير فارغ من docstring معالج `@listen(label)`.
+4. فارغ (المسار يظهر في الفهرس بلا وصف).
+
+عملياً، **إضافة مسار جديد = `@listen("X")` + docstring من سطر واحد**:
+
+```python
+@listen("INTERNET_SEARCH")
+def handle_internet_search(self) -> str:
+    """Fresh web research, current news, real-time lookups."""
+    ...
+```
+
+…وسيرى LLM التوجيه:
+
+```
+Routes:
+- CREWAI_DOCS: Look up the CrewAI documentation for framework/API questions.
+- INTERNET_SEARCH: Fresh web research, current news, real-time lookups.
+- converse: Ordinary chat, follow-ups, summaries, clarifications…
+- end: User signals the conversation is finished (goodbye, exit, done).
+```
+
+`RouterConfig.prompt` مخصص لـ **تأطير النطاق** (شخصية المساعد، قواعد العمل، النبرة). فهرس المسارات يُبنى تلقائياً — لا تُدرج المسارات في `prompt`؛ سيختل التزامن لحظة إضافة معالج جديد.
+
+### المسارات المدمجة
+
+| المسار | المعالج | الغرض |
+|--------|---------|-------|
+| `converse` | `converse_turn` | معالج الدردشة الافتراضي. يستدعي `ConversationConfig.llm` بـ system prompt + التاريخ القانوني للرسائل. |
+| `end` | `end_conversation` | يضبط `state.ended = True` ويُصدر رد إنهاء. |
+| `answer_from_history` | `answer_from_history_turn` | اختياري. يُوجَّه إليه عندما يكون `ConversationConfig.answer_from_history_llm` مُعيَّناً ويمكن الإجابة على الرسالة من التاريخ فقط. |
+
+يمكنك تجاوز أي من هذه بتعريف معالج بنفس الاسم في الصنف الفرعي.
+
+### دلالات `handle_turn()`
+
+`flow.handle_turn(message)` يُشغّل جولة واحدة:
+
+1. يعيد ضبط تعقّب التنفيذ لكل جولة (`_completed_methods`, `_method_outputs`) ليُعاد تشغيل الرسم — بدون ذلك، استدعاءات `kickoff` المتكررة على نفس النسخة ستُحدث دائرة قصر من الجولة الثانية لأن `Flow.kickoff_async` يعتبر `inputs={"id": ...}` استعادة من نقطة تفتيش.
+2. يُلحق رسالة المستخدم بـ `state.messages` ويضبط `current_user_message` / `last_user_message`. يُحافَظ على `last_intent` **من الجولة السابقة** كي يستخدمها LLM التوجيه كإشارة.
+3. يُشغّل `conversation_start` → `route_conversation` → معالج `@listen` المختار.
+4. يخزّن الموجّه قراره في `state.last_intent` (يكون مرئياً لسياق التوجيه في الجولة التالية).
+5. إذا أعاد معالجك سلسلة نصية ولم يستدعِ `append_assistant_message`، فإن `handle_turn` يُلحقها نيابةً عنك.
+
+يمكنك أيضاً استدعاء `flow.kickoff(user_message=..., session_id=...)` مباشرةً — نفس منطق الإعادة والتشغيل يعمل. `handle_turn` هو الغلاف المريح.
+
+### `chat()` للـ REPL المحلي
+
+`flow.chat()` هو غلاف الطرفية الجاهز فوق `handle_turn()`:
+
+```python
+flow = SupportFlow()
+flow.chat()
+```
+
+يتولى الحلقة المحلية الشائعة:
+
+1. يطلب رسالة من المستخدم.
+2. يتوقف عند `exit` / `quit` أو `EOFError` أو `KeyboardInterrupt`.
+3. يستدعي `handle_turn(message, session_id=...)`.
+4. يطبع نتيجة المساعد.
+5. ينهي traces الجلسة المؤجلة داخل كتلة `finally`.
+
+خصص سلوك الطرفية عبر I/O قابل للحقن:
+
+```python
+flow.chat(
+    session_id="demo-session",
+    prompt="You: ",
+    assistant_prefix="Assistant: ",
+    exit_commands=("exit", "quit", "bye"),
+)
+```
+
+لتطبيقات الويب والـ workers الخلفية والاختبارات ووسائط النقل المخصصة، استمر في استخدام `handle_turn()` مباشرةً.
+
+### سلوك موجّه مخصص
+
+لتشغيل آثار جانبية (إعداد ناقل أحداث، قياس عن بُعد) في كل قرار توجيه، تجاوز `route_turn`:
+
+```python
+class SupportFlow(Flow[ConversationState]):
+    conversational = True
+
+    def route_turn(self, context: dict[str, Any]) -> str | None:
+        self.event_bus = MyBus(self)
+        return super().route_turn(context)
+```
+
+لتجاوز موجّه LLM واختيار مسار برمجياً، أعد سلسلة نصية من `route_turn`؛ إعادة `None` تسقط إلى `_route_with_config(...)`.
+
+### `append_assistant_message` و`append_agent_result`
+
+داخل معالج `@listen(label)`، اختر:
+
+- `self.append_assistant_message(text)` — يضيف جولة مساعد مرئية للمستخدم إلى `state.messages`. سيراها `converse_turn` في الجولة التالية.
+- `self.append_agent_result(agent_name, result, visibility="private")` — يسجّل حدثاً منظماً في `state.events` وموضوعاً في `state.agent_threads[agent_name]`. الرؤية العامة تستدعي `append_assistant_message` أيضاً. استخدم النتائج الخاصة للعمل الجانبي الذي يجب ألا يلوث التاريخ القانوني.
+
+يمكن لـ `ConversationConfig.visible_agent_outputs` رفع النتائج الخاصة لـ agents محددين إلى عامة عالمياً (`"all"` أو قائمة بالأسماء).
+
+## التتبع عبر الجولات
+
+مع `defer_trace_finalization=True` (افتراضي في `ConversationalConfig`):
+
+- **دفعة trace واحدة** لجلسة الدردشة.
+- **`flow_started`** في الجولة الأولى فقط؛ **`flow_finished`** مرة في `finalize_session_traces()`.
+- **`kickoff` لكل جولة** لا يطبع "Trace batch finalized".
+- **العمل المتداخل** (`Agent.kickoff()`, crews, Exa) يُلحق بدفعة **الأب**؛ flow داخلي من `AgentExecutor` لا يغلق دفعة الجلسة مبكراً.
+
+```python
+flow.chat(session_id=session_id)
+```
+
+`flow.chat()` يستدعي `finalize_session_traces()` نيابةً عنك. عندما تملك الحلقة عبر `handle_turn()` أو `kickoff(...)`، استدعِ `finalize_session_traces()` عند انتهاء الجلسة.
+
+`suppress_flow_events=True` يخفي لوحات Rich فقط؛ أحداث trace والـ methods تُصدر.
+
+### دورة حياة trace لـ `Flow` المحادثاتي
+
+يستخدم [`Flow` المحادثاتي](#flow-المحادثاتي-تجريبي) التجريبي نفس دورة حياة tracing: `defer_trace_finalization` افتراضياً `True`، فيبقي كل `handle_turn()` أثر الجلسة مفتوحاً. أنهِ دوماً عند نهاية الجلسة — لُف حلقتك بـ `try/finally` واستدعِ `flow.finalize_session_traces()` عند الخروج. بدون ذلك، تبقى الدفعة مفتوحة وقد لا تُصدَّر آخر محادثة أبداً.
+
+## البث
+
+اضبط `stream = True` على صنف `Flow`. عندئذٍ يُصدر `kickoff(...)` أحداث `assistant_delta` (وما يرتبط بها) عبر ناقل الأحداث القياسي.
+
+## الاستيراد
+
+```python
+from crewai.flow import (
+    ChatState,
+    ConversationalConfig,
+    ConversationalInputs,
+    Flow,
+    listen,
+    persist,
+    router,
+    start,
+)
+```
+
+## مراجع
+
+- [إتقان إدارة حالة Flow](/ar/guides/flows/mastering-flow-state)
+- [أنشئ أول Flow](/ar/guides/flows/first-flow)
+- Demo: `lib/crewai/runner_conversational_flow_simple.py` — REPL بسيط مع `RESEARCH` ووكيل Exa

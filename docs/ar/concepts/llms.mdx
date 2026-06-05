@@ -107,7 +107,7 @@ mode: "wide"
 </Tabs>
 
 <Info>
-  يوفر CrewAI تكاملات SDK أصلية لـ OpenAI و Anthropic و Google (Gemini API) و Azure و AWS Bedrock -- لا حاجة لتثبيت إضافي بخلاف الملحقات الخاصة بالمزود (مثل `uv add "crewai[openai]"`).
+  يوفر CrewAI تكاملات SDK أصلية لـ OpenAI و Anthropic و Google (Gemini API) و Azure و AWS Bedrock و Snowflake Cortex -- لا حاجة لتثبيت إضافي بخلاف الملحقات الخاصة بالمزود (مثل `uv add "crewai[openai]"`).
 
   جميع المزودين الآخرين مدعومون بواسطة **LiteLLM**. إذا كنت تخطط لاستخدام أي منهم، أضفه كتبعية لمشروعك:
   ```bash
@@ -289,6 +289,55 @@ mode: "wide"
     ```bash
     uv add 'crewai[litellm]'
     ```
+  </Accordion>
+
+  <Accordion title="Snowflake Cortex">
+    يوفر CrewAI تكاملًا أصليًا مع Snowflake Cortex REST API عبر endpoint Chat Completions المتوافق مع OpenAI. تستخدم نماذج `snowflake/...` هذا المسار بدون fallback إلى LiteLLM. يدعم Snowflake Cortex في CrewAI حاليًا Chat Completions فقط، لذلك استخدم وضع `api` الافتراضي ولا تضبط `api="responses"`.
+
+    ```toml Code
+    # Required
+    SNOWFLAKE_PAT=<your-programmatic-access-token>
+    SNOWFLAKE_ACCOUNT_URL=https://<account-identifier>.snowflakecomputing.com
+
+    # Alternative account configuration
+    SNOWFLAKE_ACCOUNT=<account-identifier>
+    ```
+
+    **الاستخدام الأساسي:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="snowflake/openai-gpt-4.1",
+        temperature=0.7,
+        max_completion_tokens=1024,
+    )
+    ```
+
+    **نماذج Claude على Cortex:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="snowflake/claude-sonnet-4-5",
+        max_completion_tokens=1024,
+        stream=True,
+    )
+    ```
+
+    **متغيرات البيئة المدعومة:**
+    - `SNOWFLAKE_PAT` أو `SNOWFLAKE_TOKEN` أو `SNOWFLAKE_JWT`: الرمز المستخدم كاعتماد Bearer
+    - `SNOWFLAKE_ACCOUNT_URL`: عنوان URL الكامل لحساب Snowflake
+    - `SNOWFLAKE_ACCOUNT` أو `SNOWFLAKE_ACCOUNT_ID` أو `SNOWFLAKE_ACCOUNT_IDENTIFIER`: معرف الحساب المستخدم لبناء URL
+
+    تستخدم طلبات Snowflake REST الدور الافتراضي للمستخدم. تأكد من أن هذا الدور لديه `SNOWFLAKE.CORTEX_USER` أو `SNOWFLAKE.CORTEX_REST_API_USER`. لا يتطلب endpoint Cortex REST Chat Completions معاملات database أو schema أو warehouse أو role صريح.
+
+    **الميزات:**
+    - اختيار provider أصلي باستخدام `model="snowflake/<model-name>"`
+    - Chat Completions مع streaming وبدونه فقط؛ `api="responses"` غير مدعوم
+    - تتبع استخدام الرموز
+    - استدعاء الدوال لنماذج OpenAI و Claude المستضافة في Snowflake
+    - إزالة assistant prefill النهائي غير الصالح تلقائيًا لنماذج Claude في Snowflake
   </Accordion>
 
   <Accordion title="Anthropic">

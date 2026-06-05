@@ -472,7 +472,7 @@ class Agent(BaseAgent):
 
         for item in items:
             if isinstance(item, str):
-                from crewai.skills.registry import (
+                from crewai.experimental.skills.registry import (
                     is_registry_ref,
                     parse_registry_ref,
                     resolve_registry_ref,
@@ -1219,9 +1219,17 @@ class Agent(BaseAgent):
 
     def _use_trained_data(self, task_prompt: str) -> str:
         """Use trained data for the agent task prompt to improve output."""
-        trained_file = os.getenv(
-            CREWAI_TRAINED_AGENTS_FILE_ENV, TRAINED_AGENTS_DATA_FILE
+        crew_trained_agents_file = (
+            getattr(self.crew, "trained_agents_file", None)
+            if self.crew and not isinstance(self.crew, str)
+            else None
         )
+        trained_file = (
+            os.fspath(crew_trained_agents_file)
+            if crew_trained_agents_file
+            else os.getenv(CREWAI_TRAINED_AGENTS_FILE_ENV, TRAINED_AGENTS_DATA_FILE)
+        )
+
         if data := CrewTrainingHandler(trained_file).load():
             if trained_data_output := data.get(self.role):
                 task_prompt += (

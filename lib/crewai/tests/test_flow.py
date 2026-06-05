@@ -161,6 +161,87 @@ def test_flow_with_or_condition():
     )
 
 
+def test_or_listener_fires_once_across_parallel_starts():
+    """Parallel ``@start`` paths feeding ``or_`` must not double-fire the listener."""
+    fire_count = 0
+
+    class ParallelOrFlow(Flow):
+        @start()
+        async def fast_start(self):
+            return "fast"
+
+        @start()
+        async def slow_start(self):
+            await asyncio.sleep(0.2)
+            return "slow"
+
+        @listen(or_(fast_start, slow_start))
+        def handler(self):
+            nonlocal fire_count
+            fire_count += 1
+
+    asyncio.run(ParallelOrFlow().kickoff_async())
+
+    assert fire_count == 1
+
+
+def test_or_listener_re_arms_across_router_loop():
+    """Regression for #5972: multi-source ``or_`` re-fires on each router emission."""
+    fire_count = 0
+
+    class CyclicOrFlow(Flow):
+        iteration = 0
+
+        @start()
+        def kick(self):
+            return "kick"
+
+        @router(kick)
+        def initial_router(self):
+            return "SignalA"
+
+        @listen(or_("SignalA", "SignalB"))
+        def handler(self):
+            nonlocal fire_count
+            fire_count += 1
+
+        @router(handler)
+        def loop_router(self):
+            self.iteration += 1
+            return "stop" if self.iteration >= 3 else "SignalB"
+
+    CyclicOrFlow().kickoff()
+
+    assert fire_count == 3
+
+
+def test_or_listener_does_not_double_fire_across_chained_routers():
+    """Chained routers within one dispatch wave must not re-fire the same ``or_`` listener."""
+    fire_count = 0
+
+    class ChainedRouterOrFlow(Flow):
+        @start()
+        def kick(self):
+            return "kick"
+
+        @router(kick)
+        def router_a(self):
+            return "SignalA"
+
+        @router("SignalA")
+        def router_b(self):
+            return "SignalB"
+
+        @listen(or_("SignalA", "SignalB"))
+        def handler(self):
+            nonlocal fire_count
+            fire_count += 1
+
+    ChainedRouterOrFlow().kickoff()
+
+    assert fire_count == 1
+
+
 def test_flow_with_router():
     """Test a flow that uses a router method to determine the next step."""
     execution_order = []
@@ -1079,9 +1160,9 @@ def test_router_cascade_chain():
         @router(process_level_1)
         def router_level_2(self):
             execution_order.append("router_level_2")
-            return "level_2_path"
+            return "level_2_event"
 
-        @listen("level_2_path")
+        @listen("level_2_event")
         def process_level_2(self):
             execution_order.append("process_level_2")
             self.state["level"] = 3
@@ -1090,9 +1171,9 @@ def test_router_cascade_chain():
         @router(process_level_2)
         def router_level_3(self):
             execution_order.append("router_level_3")
-            return "final_path"
+            return "final_event"
 
-        @listen("final_path")
+        @listen("final_event")
         def finalize(self):
             execution_order.append("finalize")
             return "complete"
@@ -1180,14 +1261,14 @@ def test_complex_and_or_branching():
     assert execution_order.index("final") > execution_order.index("branch_2b")
 
 
-def test_conditional_router_paths_exclusivity():
-    """Test that only the returned router path activates, not all paths."""
+def test_conditional_router_events_exclusivity():
+    """Test that only the returned router event activates, not all events."""
     execution_order = []
 
     class ConditionalRouterFlow(Flow):
         def __init__(self):
             super().__init__()
-            self.state["condition"] = "take_path_b"
+            self.state["condition"] = "take_event_b"
 
         @start()
         def begin(self):
@@ -1196,33 +1277,33 @@ def test_conditional_router_paths_exclusivity():
         @router(begin)
         def decision_point(self):
             execution_order.append("decision_point")
-            if self.state["condition"] == "take_path_a":
-                return "path_a"
-            elif self.state["condition"] == "take_path_b":
-                return "path_b"
+            if self.state["condition"] == "take_event_a":
+                return "event_a"
+            elif self.state["condition"] == "take_event_b":
+                return "event_b"
             else:
-                return "path_c"
+                return "event_c"
 
-        @listen("path_a")
-        def handle_path_a(self):
-            execution_order.append("handle_path_a")
+        @listen("event_a")
+        def handle_event_a(self):
+            execution_order.append("handle_event_a")
 
-        @listen("path_b")
-        def handle_path_b(self):
-            execution_order.append("handle_path_b")
+        @listen("event_b")
+        def handle_event_b(self):
+            execution_order.append("handle_event_b")
 
-        @listen("path_c")
-        def handle_path_c(self):
-            execution_order.append("handle_path_c")
+        @listen("event_c")
+        def handle_event_c(self):
+            execution_order.append("handle_event_c")
 
     flow = ConditionalRouterFlow()
     flow.kickoff()
 
     assert "begin" in execution_order
     assert "decision_point" in execution_order
-    assert "handle_path_b" in execution_order
-    assert "handle_path_a" not in execution_order
-    assert "handle_path_c" not in execution_order
+    assert "handle_event_b" in execution_order
+    assert "handle_event_a" not in execution_order
+    assert "handle_event_c" not in execution_order
 
 
 def test_state_consistency_across_parallel_branches():

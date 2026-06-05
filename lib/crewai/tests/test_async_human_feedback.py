@@ -569,13 +569,13 @@ class TestFlowResumeWithFeedback:
 
             flow = TestFlow.from_pending("async-direct-test", persistence)
 
-            with patch("crewai.flow.flow.crewai_event_bus.emit"):
+            with patch("crewai.flow.runtime.crewai_event_bus.emit"):
                 result = await flow.resume_async("async feedback")
 
             assert flow.last_human_feedback is not None
             assert flow.last_human_feedback.feedback == "async feedback"
 
-    @patch("crewai.flow.flow.crewai_event_bus.emit")
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
     def test_resume_basic(self, mock_emit: MagicMock) -> None:
         """Test basic resume functionality."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -615,7 +615,7 @@ class TestFlowResumeWithFeedback:
 
             assert persistence.load_pending_feedback("resume-test-123") is None
 
-    @patch("crewai.flow.flow.crewai_event_bus.emit")
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
     def test_resume_routing(self, mock_emit: MagicMock) -> None:
         """Test resume with routing."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -697,7 +697,7 @@ class TestAsyncHumanFeedbackIntegration:
         assert hasattr(method, "__human_feedback_config__")
         assert method.__human_feedback_config__.provider is not None
 
-    @patch("crewai.flow.flow.crewai_event_bus.emit")
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
     def test_async_provider_pauses_flow(self, mock_emit: MagicMock) -> None:
         """Test that async provider pauses flow execution."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -743,7 +743,7 @@ class TestAsyncHumanFeedbackIntegration:
             persisted = persistence.load_pending_feedback(flow_id)
             assert persisted is not None
 
-    @patch("crewai.flow.flow.crewai_event_bus.emit")
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
     def test_full_async_flow_cycle(self, mock_emit: MagicMock) -> None:
         """Test complete async flow: start -> pause -> resume."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -804,7 +804,7 @@ class TestAsyncHumanFeedbackIntegration:
 class TestAutoPersistence:
     """Tests for automatic persistence when no persistence is provided."""
 
-    @patch("crewai.flow.flow.crewai_event_bus.emit")
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
     def test_auto_persistence_when_none_provided(self, mock_emit: MagicMock) -> None:
         """Test that persistence is auto-created when HumanFeedbackPending is raised."""
 
@@ -925,7 +925,7 @@ class TestCollapseToOutcomeJsonParsing:
 class TestLLMObjectPreservedInContext:
     """Tests that BaseLLM objects have their model string preserved in PendingFeedbackContext."""
 
-    @patch("crewai.flow.flow.crewai_event_bus.emit")
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
     def test_basellm_object_model_string_survives_roundtrip(self, mock_emit: MagicMock) -> None:
         """Test that when llm is a BaseLLM object, its model string is stored in context
         so that outcome collapsing works after async pause/resume.
@@ -1012,7 +1012,7 @@ class TestLLMObjectPreservedInContext:
             call_kwargs = mock_collapse.call_args
             assert call_kwargs.kwargs["feedback"] == "this looks good, proceed!"
             assert call_kwargs.kwargs["outcomes"] == ["needs_changes", "approved"]
-            # LLM should be a live object (from _hf_llm) or reconstructed, not None
+            # LLM should be a live object (from _human_feedback_llm) or reconstructed, not None
             assert call_kwargs.kwargs["llm"] is not None
             assert getattr(call_kwargs.kwargs["llm"], "model", None) == "gemini-2.0-flash"
             assert flow2.last_human_feedback.outcome == "approved"
@@ -1125,7 +1125,7 @@ class TestAsyncHumanFeedbackEdgeCases:
 
             flow = TestFlow.from_pending("default-test", persistence)
 
-            with patch("crewai.flow.flow.crewai_event_bus.emit"):
+            with patch("crewai.flow.runtime.crewai_event_bus.emit"):
                 result = flow.resume("")
 
             assert flow.last_human_feedback.outcome == "approved"
@@ -1159,7 +1159,7 @@ class TestAsyncHumanFeedbackEdgeCases:
 
             flow = TestFlow.from_pending("no-feedback-test", persistence)
 
-            with patch("crewai.flow.flow.crewai_event_bus.emit"):
+            with patch("crewai.flow.runtime.crewai_event_bus.emit"):
                 result = flow.resume()
 
             assert flow.last_human_feedback.outcome == "approved"
@@ -1171,8 +1171,8 @@ class TestAsyncHumanFeedbackEdgeCases:
 class TestLiveLLMPreservationOnResume:
     """Tests for preserving the full LLM config across HITL resume."""
 
-    def test_hf_llm_attribute_set_on_wrapper_with_basellm(self) -> None:
-        """Test that _hf_llm is set on the wrapper when llm is a BaseLLM instance."""
+    def test_human_feedback_llm_attribute_set_on_wrapper_with_basellm(self) -> None:
+        """Test that _human_feedback_llm is set on the wrapper when llm is a BaseLLM instance."""
         from crewai.llms.base_llm import BaseLLM
 
         mock_llm = MagicMock(spec=BaseLLM)
@@ -1191,11 +1191,11 @@ class TestLiveLLMPreservationOnResume:
         flow = TestFlow()
         method = flow._methods.get("review")
         assert method is not None
-        assert hasattr(method, "_hf_llm")
-        assert method._hf_llm is mock_llm
+        assert hasattr(method, "_human_feedback_llm")
+        assert method._human_feedback_llm is mock_llm
 
-    def test_hf_llm_attribute_set_on_wrapper_with_string(self) -> None:
-        """Test that _hf_llm is set on the wrapper even when llm is a string."""
+    def test_human_feedback_llm_attribute_set_on_wrapper_with_string(self) -> None:
+        """Test that _human_feedback_llm is set on the wrapper even when llm is a string."""
 
         class TestFlow(Flow):
             @start()
@@ -1210,10 +1210,10 @@ class TestLiveLLMPreservationOnResume:
         flow = TestFlow()
         method = flow._methods.get("review")
         assert method is not None
-        assert hasattr(method, "_hf_llm")
-        assert method._hf_llm == "gpt-4o-mini"
+        assert hasattr(method, "_human_feedback_llm")
+        assert method._human_feedback_llm == "gpt-4o-mini"
 
-    @patch("crewai.flow.flow.crewai_event_bus.emit")
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
     def test_resume_async_uses_live_basellm_over_serialized_string(
         self, mock_emit: MagicMock
     ) -> None:
@@ -1277,20 +1277,20 @@ class TestLiveLLMPreservationOnResume:
                 flow.resume("looks good!")
 
             # NOT the serialized string. The live_llm was captured at class definition
-            # time and stored on the method wrapper as _hf_llm.
+            # time and stored on the method wrapper as _human_feedback_llm.
             assert len(captured_llm) == 1
-            # (which is stored on the method's _hf_llm attribute)
+            # (which is stored on the method's _human_feedback_llm attribute)
             method = flow._methods.get("review")
             assert method is not None
-            assert captured_llm[0] is method._hf_llm
+            assert captured_llm[0] is method._human_feedback_llm
             # And verify it's a BaseLLM instance, not a string
             assert isinstance(captured_llm[0], BaseLLM)
 
-    @patch("crewai.flow.flow.crewai_event_bus.emit")
-    def test_resume_async_falls_back_to_serialized_string_when_no_hf_llm(
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
+    def test_resume_async_falls_back_to_serialized_string_when_no_human_feedback_llm(
         self, mock_emit: MagicMock
     ) -> None:
-        """Test that resume_async falls back to context.llm when _hf_llm is not available.
+        """Test that resume_async falls back to context.llm when _human_feedback_llm is not available.
 
         This ensures backward compatibility with flows that were paused before this fix.
         """
@@ -1325,10 +1325,10 @@ class TestLiveLLMPreservationOnResume:
 
             flow = TestFlow.from_pending("fallback-test", persistence)
 
-            # Remove _hf_llm to simulate old decorator without this attribute
+            # Remove _human_feedback_llm to simulate old decorator without this attribute
             method = flow._methods.get("review")
-            if hasattr(method, "_hf_llm"):
-                delattr(method, "_hf_llm")
+            if hasattr(method, "_human_feedback_llm"):
+                delattr(method, "_human_feedback_llm")
 
             captured_llm = []
 
@@ -1344,11 +1344,11 @@ class TestLiveLLMPreservationOnResume:
             assert isinstance(captured_llm[0], BaseLLMClass)
             assert captured_llm[0].model == "gpt-4o-mini"
 
-    @patch("crewai.flow.flow.crewai_event_bus.emit")
-    def test_resume_async_uses_string_from_context_when_hf_llm_is_string(
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
+    def test_resume_async_uses_string_from_context_when_human_feedback_llm_is_string(
         self, mock_emit: MagicMock
     ) -> None:
-        """Test that when _hf_llm is a string (not BaseLLM), we still use context.llm.
+        """Test that when _human_feedback_llm is a string (not BaseLLM), we still use context.llm.
 
         String LLM values offer no benefit over the serialized context.llm,
         so we don't prefer them.
@@ -1385,7 +1385,7 @@ class TestLiveLLMPreservationOnResume:
             flow = TestFlow.from_pending("string-llm-test", persistence)
 
             method = flow._methods.get("review")
-            assert method._hf_llm == "gpt-4o-mini"
+            assert method._human_feedback_llm == "gpt-4o-mini"
 
             captured_llm = []
 
@@ -1396,14 +1396,14 @@ class TestLiveLLMPreservationOnResume:
             with patch.object(flow, "_collapse_to_outcome", side_effect=capture_llm):
                 flow.resume("looks good!")
 
-            # _hf_llm is a string, so resume deserializes context.llm into an LLM instance
+            # _human_feedback_llm is a string, so resume deserializes context.llm into an LLM instance
             assert len(captured_llm) == 1
             from crewai.llms.base_llm import BaseLLM as BaseLLMClass
             assert isinstance(captured_llm[0], BaseLLMClass)
             assert captured_llm[0].model == "gpt-4o-mini"
 
-    def test_hf_llm_set_for_async_wrapper(self) -> None:
-        """Test that _hf_llm is set on async wrapper functions."""
+    def test_human_feedback_llm_set_for_async_wrapper(self) -> None:
+        """Test that _human_feedback_llm is set on async wrapper functions."""
         import asyncio
         from crewai.llms.base_llm import BaseLLM
 
@@ -1423,5 +1423,5 @@ class TestLiveLLMPreservationOnResume:
         flow = TestFlow()
         method = flow._methods.get("async_review")
         assert method is not None
-        assert hasattr(method, "_hf_llm")
-        assert method._hf_llm is mock_llm
+        assert hasattr(method, "_human_feedback_llm")
+        assert method._human_feedback_llm is mock_llm

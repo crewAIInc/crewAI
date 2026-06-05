@@ -106,7 +106,7 @@ Existem diferentes locais no código do CrewAI onde você pode especificar o mod
 </Tabs>
 
 <Info>
-  O CrewAI oferece integrações nativas via SDK para OpenAI, Anthropic, Google (Gemini API), Azure e AWS Bedrock — sem necessidade de instalação extra além dos extras específicos do provedor (ex.: `uv add "crewai[openai]"`).
+  O CrewAI oferece integrações nativas via SDK para OpenAI, Anthropic, Google (Gemini API), Azure, AWS Bedrock e Snowflake Cortex — sem necessidade de instalação extra além dos extras específicos do provedor (ex.: `uv add "crewai[openai]"`).
 
   Todos os outros provedores são alimentados pelo **LiteLLM**. Se você planeja usar algum deles, adicione-o como dependência ao seu projeto:
   ```bash
@@ -228,6 +228,55 @@ Nesta seção, você encontrará exemplos detalhados que ajudam a selecionar, co
     ```bash
     uv add 'crewai[litellm]'
     ```
+  </Accordion>
+
+  <Accordion title="Snowflake Cortex">
+    O CrewAI oferece integração nativa com a API REST do Snowflake Cortex pelo endpoint Chat Completions compatível com OpenAI. Isso evita fallback para LiteLLM em modelos `snowflake/...`. Atualmente, o Snowflake Cortex no CrewAI oferece suporte apenas a Chat Completions, então use o modo `api` padrão e não defina `api="responses"`.
+
+    ```toml Code
+    # Obrigatório
+    SNOWFLAKE_PAT=<your-programmatic-access-token>
+    SNOWFLAKE_ACCOUNT_URL=https://<account-identifier>.snowflakecomputing.com
+
+    # Configuração alternativa da conta
+    SNOWFLAKE_ACCOUNT=<account-identifier>
+    ```
+
+    **Uso básico:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="snowflake/openai-gpt-4.1",
+        temperature=0.7,
+        max_completion_tokens=1024,
+    )
+    ```
+
+    **Modelos Claude no Cortex:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="snowflake/claude-sonnet-4-5",
+        max_completion_tokens=1024,
+        stream=True,
+    )
+    ```
+
+    **Variáveis de ambiente suportadas:**
+    - `SNOWFLAKE_PAT`, `SNOWFLAKE_TOKEN` ou `SNOWFLAKE_JWT`: token usado como credencial Bearer
+    - `SNOWFLAKE_ACCOUNT_URL`: URL completa da conta Snowflake
+    - `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_ACCOUNT_ID` ou `SNOWFLAKE_ACCOUNT_IDENTIFIER`: identificador da conta usado para montar a URL
+
+    As requisições REST do Snowflake usam a role padrão do usuário. Garanta que essa role tenha `SNOWFLAKE.CORTEX_USER` ou `SNOWFLAKE.CORTEX_REST_API_USER`. Parâmetros de banco de dados, schema, warehouse e role explícita não são exigidos pelo endpoint Cortex REST Chat Completions.
+
+    **Recursos:**
+    - Seleção nativa com `model="snowflake/<model-name>"`
+    - Chat Completions com e sem streaming apenas; `api="responses"` não é compatível
+    - Rastreamento de uso de tokens
+    - Chamadas de função para modelos OpenAI e Claude hospedados no Snowflake
+    - Remoção automática de prefill final de assistant inválido para modelos Claude no Snowflake
   </Accordion>
 
   <Accordion title="Anthropic">

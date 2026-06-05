@@ -7,9 +7,11 @@ flow methods, routing logic, and error handling.
 from __future__ import annotations
 
 import asyncio
+from types import SimpleNamespace
 import time
 from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
+from uuid import uuid4
 
 import pytest
 from pydantic import BaseModel
@@ -64,6 +66,8 @@ from crewai.events.types.tool_usage_events import (
 from crewai.tools.tool_types import ToolResult
 from crewai.utilities.step_execution_context import StepExecutionContext
 from crewai.utilities.planning_types import TodoItem
+from crewai.utilities.file_store import clear_files, clear_task_files, store_files
+from crewai_files import TextFile
 
 class TestAgentExecutorState:
     """Test AgentExecutorState Pydantic model."""
@@ -111,6 +115,58 @@ class TestAgentExecutor:
 
     class StructuredResult(BaseModel):
         value: str
+
+    def test_inject_files_from_crew_task_store(self):
+        """Crew-level input_files should attach to the LLM user message."""
+        crew_id = uuid4()
+        task_id = uuid4()
+        stored_file = TextFile(source=b"stored content")
+        executor = _build_executor(
+            crew=SimpleNamespace(id=crew_id),
+            task=SimpleNamespace(id=task_id),
+        )
+        executor.state.messages = [{"role": "user", "content": "Analyze this file"}]
+
+        try:
+            store_files(crew_id, {"document": stored_file})
+            executor._inject_files_from_inputs({})
+        finally:
+            clear_files(crew_id)
+            clear_task_files(task_id)
+
+        assert executor.state.messages[0]["files"] == {"document": stored_file}
+
+    @pytest.mark.asyncio
+    async def test_ainject_files_from_crew_task_store_uses_async_store(self):
+        """Async file injection should not call the sync file store helper."""
+        crew_id = uuid4()
+        task_id = uuid4()
+        stored_file = TextFile(source=b"stored content")
+        local_file = TextFile(source=b"local content")
+        inputs = {"files": {"local": local_file}}
+        executor = _build_executor(
+            crew=SimpleNamespace(id=crew_id),
+            task=SimpleNamespace(id=task_id),
+        )
+        executor.state.messages = [{"role": "user", "content": "Analyze this file"}]
+
+        with (
+            patch(
+                "crewai.experimental.agent_executor.aget_all_files",
+                new=AsyncMock(return_value={"document": stored_file}),
+            ) as async_get_files,
+            patch(
+                "crewai.experimental.agent_executor.get_all_files",
+                side_effect=AssertionError("sync file store should not be called"),
+            ),
+        ):
+            await executor._ainject_files_from_inputs(inputs)
+
+        async_get_files.assert_awaited_once_with(crew_id, task_id)
+        assert executor.state.messages[0]["files"] == {
+            "document": stored_file,
+            "local": local_file,
+        }
 
     @pytest.fixture
     def mock_dependencies(self):

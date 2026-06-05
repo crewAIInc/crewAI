@@ -1067,6 +1067,62 @@ def test_agent_use_trained_data_honors_env_var(crew_training_handler, monkeypatc
     )
 
 
+@patch("crewai.agent.core.CrewTrainingHandler")
+def test_agent_use_trained_data_prefers_crew_trained_agents_file(
+    crew_training_handler, monkeypatch
+):
+    monkeypatch.setenv("CREWAI_TRAINED_AGENTS_FILE", "env_trained.pkl")
+    agent = Agent(
+        role="researcher",
+        goal="test goal",
+        backstory="test backstory",
+    )
+    task = Task(
+        description="Research the topic",
+        expected_output="A short report",
+        agent=agent,
+    )
+    crew = Crew(agents=[agent], tasks=[task], trained_agents_file="crew_trained.pkl")
+    agent.crew = crew
+    crew_training_handler.return_value.load.return_value = {}
+
+    agent._use_trained_data(task_prompt="What is 1 + 1?")
+
+    crew_training_handler.assert_has_calls(
+        [mock.call("crew_trained.pkl"), mock.call().load()]
+    )
+
+
+@patch("crewai.agent.core.CrewTrainingHandler")
+def test_agent_use_trained_data_accepts_crew_trained_agents_file_path(
+    crew_training_handler, tmp_path
+):
+    agent = Agent(
+        role="researcher",
+        goal="test goal",
+        backstory="test backstory",
+    )
+    task = Task(
+        description="Research the topic",
+        expected_output="A short report",
+        agent=agent,
+    )
+    trained_agents_file = tmp_path / "crew_trained.pkl"
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+        trained_agents_file=trained_agents_file,
+    )
+    agent.crew = crew
+    crew_training_handler.return_value.load.return_value = {}
+
+    agent._use_trained_data(task_prompt="What is 1 + 1?")
+
+    crew_training_handler.assert_has_calls(
+        [mock.call(str(trained_agents_file)), mock.call().load()]
+    )
+
+
 def test_agent_use_trained_data_skips_load_when_file_missing(tmp_path, monkeypatch):
     monkeypatch.setenv(
         "CREWAI_TRAINED_AGENTS_FILE", str(tmp_path / "does_not_exist.pkl")

@@ -4,6 +4,76 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="03 jun 2026">
+  ## v1.14.7a1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.7a1)
+
+  ## O Que Mudou
+
+  ### Funcionalidades
+  - Adicionar suporte a arquivos de agentes treinados da equipe
+  - Adicionar provedor nativo Snowflake Cortex LLM
+  - Adicionar guia de integração com Databricks
+  - Adicionar guia de integração com Snowflake
+
+  ### Correções de Bugs
+  - Corrigir CLI restaurando `[project.scripts]` no pacote crewai para instalação da ferramenta UV
+  - Resolver problemas de confiabilidade na entrada de arquivos
+  - Corrigir históricos de resultados de ferramentas incompletos no Snowflake Claude
+  - Lidar com chamadas de ferramentas em formato de string para Snowflake Claude
+  - Re-armar ouvintes `or_` de múltiplas fontes em ciclos controlados por roteadores
+
+  ### Desempenho
+  - Melhorar a velocidade de importação do crewai através do carregamento preguiçoso de importações do docling
+
+  ### Refatoração
+  - Dividir `flow.py` em DSL, definição e tempo de execução
+
+  ## Contributors
+
+  @Luzk, @alex-clawd, @devin-ai-integration[bot], @greysonlalonde, @jessemiller, @lorenzejay, @vinibrsl
+
+</Update>
+
+<Update label="28 mai 2026">
+  ## v1.14.6
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.6)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Aprimorar StdioTransport para evitar vazamento de variáveis de ambiente
+  - Aprimorar a configuração de planejamento e o manuseio de observações
+  - Declarar env_vars no DatabricksQueryTool
+  - Adicionar documentação do Agente Control Plane
+
+  ### Correções de Bugs
+  - Corrigir vazamentos de saída estruturada em loops de chamada de ferramenta
+  - Remover callbacks e estado de adaptador que não podem ser retornados em checkpoint
+  - Serializar campos type[BaseModel] como esquema JSON em checkpoint
+  - Evitar tarefa órfã task_started na restauração de escopo de retomar
+  - Permitir que AgentExecutor restaure a partir de checkpoint
+  - Corrigir erro de digitação de mongodb para pymongo em package_dependencies
+
+  ### Documentação
+  - Adicionar bloco de navegação de documentação ACP (Beta) às páginas do Agente Control Plane
+  - Remover referências a processos consensuais da página de processos
+  - Reestruturar a página de checkpointing
+  - Documentar passo de instalação do pacote administrativo único
+  - Migrar Secrets Manager / Workload Identity de replicated-config
+  - Remover expressões JSX `{" "}` que quebram a renderização de `<Steps>`
+
+  ### Refatoração
+  - Mover Skills Repository para experimental + CREWAI_EXPERIMENTAL gate
+
+  ## Contribuidores
+
+  @akaKuruma, @alex-clawd, @github-actions[bot], @greysonlalonde, @heitorado, @iris-clawd, @lorenzejay, @lucasgomide, @mattatcha, @thiagomoretto, @vinibrsl
+
+</Update>
+
 <Update label="27 mai 2026">
   ## v1.14.6a2
 
