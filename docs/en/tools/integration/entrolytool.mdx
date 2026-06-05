@@ -1,0 +1,114 @@
+---
+title: "Entroly Context Optimization"
+description: "Reduce LLM API costs by 70-95% for CrewAI multi-agent workflows with local context compression"
+icon: "compress"
+---
+
+# Entroly Context Optimization for CrewAI
+
+[Entroly](https://github.com/juyterman1000/entroly) is a local context compression engine that reduces input tokens by 70-95% for LLM API calls. It sits as a transparent proxy between your CrewAI agents and the LLM provider, compressing context while maintaining answer quality.
+
+## Why Use Entroly with CrewAI
+
+Multi-agent CrewAI workflows multiply token costs because each agent independently sends large context windows to the LLM. Entroly addresses this by:
+
+- **Compressing input context** — 70-95% fewer input tokens on large codebases
+- **Cache alignment** — Keeps context prefixes byte-stable across requests so provider cache discounts apply (Anthropic: 90% off, OpenAI: 50% off)
+- **Multi-agent budget allocation** — Nash-KKT equilibrium splits the token budget optimally across agents
+- **Hallucination guard** — WITNESS checks each agent's output against supplied evidence at $0
+
+## Installation
+
+```bash
+pip install entroly
+```
+
+## Quick Setup (Proxy Mode)
+
+The simplest integration: run Entroly as a local proxy and point CrewAI at it.
+
+```bash
+# Start the proxy
+entroly proxy
+```
+
+```python
+import os
+from crewai import Agent, Task, Crew
+
+# Point your LLM provider at the Entroly proxy
+os.environ["OPENAI_BASE_URL"] = "http://localhost:9377/v1"
+# or for Anthropic:
+# os.environ["ANTHROPIC_BASE_URL"] = "http://localhost:9377"
+
+# Use CrewAI as normal — Entroly compresses context transparently
+researcher = Agent(
+    role="Senior Researcher",
+    goal="Find and analyze relevant information",
+    backstory="Expert at finding key insights in large codebases",
+    verbose=True,
+)
+
+writer = Agent(
+    role="Technical Writer",
+    goal="Create clear documentation from research findings",
+    backstory="Skilled at turning complex analysis into readable docs",
+    verbose=True,
+)
+
+research_task = Task(
+    description="Analyze the project structure and identify key components",
+    expected_output="A structured analysis of the codebase",
+    agent=researcher,
+)
+
+writing_task = Task(
+    description="Write documentation based on the research",
+    expected_output="Clear technical documentation",
+    agent=writer,
+)
+
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, writing_task],
+    verbose=True,
+)
+
+result = crew.kickoff()
+```
+
+## Library Mode
+
+For programmatic control, use Entroly's Python SDK directly:
+
+```python
+from entroly import compress_messages
+
+# Compress messages before sending to the LLM
+compressed = compress_messages(messages, budget=30000)
+```
+
+## Dashboard
+
+Monitor your savings in real-time:
+
+```bash
+entroly dashboard
+# Opens http://localhost:9378 with live token savings metrics
+```
+
+## Key Features
+
+| Feature | Benefit |
+|---|---|
+| **Context compression** | 70-95% fewer input tokens |
+| **Cache alignment** | Captures provider cache discounts |
+| **WITNESS hallucination guard** | $0 evidence-grounding check |
+| **Multi-agent budget allocation** | Optimal token split across agents |
+| **Local-first** | No code sent for analysis |
+
+## Resources
+
+- [GitHub Repository](https://github.com/juyterman1000/entroly)
+- [Documentation](https://github.com/juyterman1000/entroly#readme)
+- [Benchmark Results](https://github.com/juyterman1000/entroly/tree/main/benchmarks/results)
