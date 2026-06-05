@@ -270,7 +270,20 @@ class ToolUsage:
         error_event_emitted = False
 
         try:
-            if self.tools_handler and self.tools_handler.cache:
+            # Check cross-retry idempotency store (independent of cache config)
+            if self.tools_handler and calling.arguments:
+                idem_args: dict[str, object] = (
+                    calling.arguments
+                    if isinstance(calling.arguments, dict)
+                    else {}
+                )
+                result = self.tools_handler.get_idempotent_result(
+                    sanitize_tool_name(calling.tool_name), idem_args
+                )
+                from_cache = result is not None
+
+            # Fall back to cache handler if configured
+            if result is None and self.tools_handler and self.tools_handler.cache:
                 input_str = ""
                 if calling.arguments:
                     if isinstance(calling.arguments, dict):
@@ -501,7 +514,20 @@ class ToolUsage:
         error_event_emitted = False
 
         try:
-            if self.tools_handler and self.tools_handler.cache:
+            # Check cross-retry idempotency store (independent of cache config)
+            if self.tools_handler and calling.arguments:
+                idem_args: dict[str, object] = (
+                    calling.arguments
+                    if isinstance(calling.arguments, dict)
+                    else {}
+                )
+                result = self.tools_handler.get_idempotent_result(
+                    sanitize_tool_name(calling.tool_name), idem_args
+                )
+                from_cache = result is not None
+
+            # Fall back to cache handler if configured
+            if result is None and self.tools_handler and self.tools_handler.cache:
                 input_str = ""
                 if calling.arguments:
                     if isinstance(calling.arguments, dict):
