@@ -61,6 +61,8 @@ if TYPE_CHECKING:
         CrewTrainStartedEvent,
     )
     from crewai.events.types.flow_events import (
+        ConversationMessageAddedEvent,
+        ConversationRouteSelectedEvent,
         FlowCreatedEvent,
         FlowEvent,
         FlowFinishedEvent,
@@ -176,6 +178,8 @@ _LAZY_EVENT_MAPPING: dict[str, str] = {
     "CrewTrainCompletedEvent": "crewai.events.types.crew_events",
     "CrewTrainFailedEvent": "crewai.events.types.crew_events",
     "CrewTrainStartedEvent": "crewai.events.types.crew_events",
+    "ConversationMessageAddedEvent": "crewai.events.types.flow_events",
+    "ConversationRouteSelectedEvent": "crewai.events.types.flow_events",
     "FlowCreatedEvent": "crewai.events.types.flow_events",
     "FlowEvent": "crewai.events.types.flow_events",
     "FlowFinishedEvent": "crewai.events.types.flow_events",
@@ -291,6 +295,8 @@ __all__ = [
     "CheckpointRestoreStartedEvent",
     "CheckpointStartedEvent",
     "CircularDependencyError",
+    "ConversationMessageAddedEvent",
+    "ConversationRouteSelectedEvent",
     "CrewKickoffCompletedEvent",
     "CrewKickoffFailedEvent",
     "CrewKickoffStartedEvent",
