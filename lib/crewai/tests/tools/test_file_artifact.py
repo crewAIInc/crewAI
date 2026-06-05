@@ -100,6 +100,16 @@ class TestResolveArtifactHandles:
         resolved = resolve_artifact_handles(handle)
         assert base64.b64decode(resolved) == data
 
+    def test_resolves_handle_with_uppercased_hex(self) -> None:
+        # A model may echo the handle with uppercase uuid hex; lookup must still
+        # hit the lowercase-keyed store.
+        data = b"upper-case-payload" * 100
+        handle = _handle_in(store_artifact(FileArtifact(data=data)))
+        scheme, _, hex_part = handle.rpartition("/")
+        upper = f"{scheme}/{hex_part.upper()}"
+        assert upper != handle
+        assert base64.b64decode(resolve_artifact_handles(upper)) == data
+
     def test_resolves_handle_inside_dict(self) -> None:
         data = b"binary-payload" * 1000
         handle = _handle_in(store_artifact(FileArtifact(data=data)))

@@ -187,7 +187,10 @@ def resolve_artifact_handles(value: Any) -> Any:
             return value
 
         def _sub(match: re.Match[str]) -> str:
-            artifact = _store.resolve(match.group(1))
+            # Store keys are lowercase uuid4 strings; the regex matches hex
+            # case-insensitively, so normalize before lookup in case the model
+            # echoed the handle with uppercase hex.
+            artifact = _store.resolve(match.group(1).lower())
             return artifact.as_base64() if artifact is not None else match.group(0)
 
         return _HANDLE_RE.sub(_sub, value)
