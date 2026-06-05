@@ -1767,7 +1767,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             return parse_error
         args_dict: dict[str, Any] = parsed_args or {}
 
-        scope_id = artifact_scope_id(self.crew, self.task)
+        scope_id = artifact_scope_id(
+            self.crew or getattr(self.agent, "crew", None), self.task
+        )
 
         # Get agent_key for event tracking
         agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"

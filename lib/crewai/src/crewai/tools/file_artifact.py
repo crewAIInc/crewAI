@@ -96,7 +96,7 @@ class FileArtifact:
 class _Entry:
     artifact: FileArtifact
     scope_id: str | None
-    stored_at: float
+    expires_at: float | None
 
 
 class _ArtifactStore:
@@ -119,18 +119,23 @@ class _ArtifactStore:
     ) -> str:
         handle_id = str(uuid4())
         with self._lock:
-            self._prune_locked(ttl)
+            self._prune_locked()
             self._entries[handle_id] = _Entry(
                 artifact=artifact,
                 scope_id=str(scope_id) if scope_id is not None else None,
-                stored_at=time.monotonic(),
+                expires_at=(time.monotonic() + ttl) if ttl > 0 else None,
             )
         return f"{_HANDLE_SCHEME}://{handle_id}"
 
     def resolve(self, handle_id: str) -> FileArtifact | None:
         with self._lock:
             entry = self._entries.get(handle_id)
-        return entry.artifact if entry is not None else None
+            if entry is None:
+                return None
+            if entry.expires_at is not None and entry.expires_at <= time.monotonic():
+                del self._entries[handle_id]
+                return None
+            return entry.artifact
 
     def clear_scope(self, scope_id: str) -> None:
         scope = str(scope_id)
@@ -140,12 +145,13 @@ class _ArtifactStore:
             ]:
                 del self._entries[handle_id]
 
-    def _prune_locked(self, ttl: int) -> None:
-        if ttl <= 0:
-            return
-        cutoff = time.monotonic() - ttl
+    def _prune_locked(self) -> None:
+        """Drop entries whose per-entry TTL has elapsed. Caller holds the lock."""
+        now = time.monotonic()
         for handle_id in [
-            hid for hid, entry in self._entries.items() if entry.stored_at < cutoff
+            hid
+            for hid, entry in self._entries.items()
+            if entry.expires_at is not None and entry.expires_at <= now
         ]:
             del self._entries[handle_id]
 

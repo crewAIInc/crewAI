@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import re
+import time
 
 import pytest
 
@@ -284,17 +285,33 @@ class TestNativeExecutorWiring:
 
 
 class TestTtlPrune:
+    @staticmethod
+    def _expire(handle: str) -> None:
+        """Force a stored handle's per-entry TTL into the past."""
+        entry = _store._entries[handle.rsplit("/", 1)[-1]]
+        entry.expires_at = time.monotonic() - 1
+
+    def test_expired_handle_does_not_resolve(self) -> None:
+        handle = _handle_in(store_artifact(FileArtifact(data=b"old"), ttl=3600))
+        self._expire(handle)
+        # An expired handle is enforced on lookup, not just on the next write.
+        assert resolve_artifact_handles(handle) == handle
+
+    def test_short_ttl_store_does_not_evict_long_ttl_entries(self) -> None:
+        keep = _handle_in(store_artifact(FileArtifact(data=b"keep"), ttl=3600))
+        # A later short-TTL store must prune only by each entry's own expiry,
+        # never by the current call's ttl.
+        store_artifact(FileArtifact(data=b"tiny"), ttl=1)
+        assert base64.b64decode(resolve_artifact_handles(keep)) == b"keep"
+
     def test_expired_entries_are_pruned_on_next_store(self) -> None:
         stale = _handle_in(store_artifact(FileArtifact(data=b"old"), ttl=3600))
-        stale_id = stale.rsplit("/", 1)[-1]
-        # Force the entry to look old, then trigger a prune via another store.
-        _store._entries[stale_id].stored_at -= 7200
+        self._expire(stale)
         store_artifact(FileArtifact(data=b"new"), ttl=3600)
-        assert resolve_artifact_handles(stale) == stale
+        assert stale.rsplit("/", 1)[-1] not in _store._entries
 
-    def test_ttl_zero_disables_pruning(self) -> None:
+    def test_ttl_zero_never_expires(self) -> None:
         handle = _handle_in(store_artifact(FileArtifact(data=b"keep"), ttl=0))
-        handle_id = handle.rsplit("/", 1)[-1]
-        _store._entries[handle_id].stored_at -= 99999
+        assert _store._entries[handle.rsplit("/", 1)[-1]].expires_at is None
         store_artifact(FileArtifact(data=b"another"), ttl=0)
         assert base64.b64decode(resolve_artifact_handles(handle)) == b"keep"
