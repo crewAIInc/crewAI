@@ -172,6 +172,10 @@ info = "Commits must follow Conventional Commits 1.0.0."
 [tool.uv]
 exclude-newer = "3 days"
 
+# aiohttp 3.14.0 (fixes GHSA-jg22-mg44-37j8, GHSA-hg6j-4rv6-33pg) released 2026-06-01,
+# inside the 3-day exclude-newer window; allow it explicitly so the override below resolves.
+exclude-newer-package = { aiohttp = "2026-06-02T00:00:00Z" }
+
 # composio-core pins rich<14 but textual requires rich>=14.
 # onnxruntime 1.24+ dropped Python 3.10 wheels; cap it so qdrant[fastembed] resolves on 3.10.
 # fastembed 0.7.x and docling 2.63 cap pillow<12; the removed APIs don't affect them.
@@ -190,6 +194,7 @@ exclude-newer = "3 days"
 # pip <26.1.1 has GHSA-58qw-9mgm-455v (archive handling); OSV considers 26.1.1 unaffected.
 # paramiko <5.0.0 has GHSA-r374-rxx8-8654 (SHA-1 in rsakey.py); OSV considers 5.0.0 unaffected. Transitive via composio-core.
 # starlette <1.0.1 has PYSEC-2026-161 (missing Host header validation poisons request.url.path, bypassing path-based auth). Transitive via fastapi.
+# aiohttp <3.14.0 has GHSA-jg22-mg44-37j8 and GHSA-hg6j-4rv6-33pg; force 3.14.0+. Transitive.
 # litellm 1.83.8+ hard-pins openai==2.24.0, missing openai.types.responses used by crewai;
 # override to >=2.30.0 (the version litellm 1.83.7 used) until upstream relaxes the pin.
 override-dependencies = [
@@ -211,6 +216,7 @@ override-dependencies = [
     "pip>=26.1.1",
     "paramiko>=5.0.0",
     "starlette>=1.0.1",
+    "aiohttp>=3.14.0",
 ]
 
 [tool.uv.workspace]
