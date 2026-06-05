@@ -117,7 +117,11 @@ class _ArtifactStore:
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._entries: dict[str, _Entry] = {}
-        self._handle_by_obj: dict[int, str] = {}
+        # (id(artifact), scope) -> handle, so re-storing the same instance under
+        # the same scope reuses its handle. Keying on the scope too means storing
+        # an object under a different scope gets its own handle and its own
+        # cleanup entry rather than overwriting the first.
+        self._handle_by_obj: dict[tuple[int, str | None], str] = {}
 
     def store(
         self,
@@ -126,18 +130,14 @@ class _ArtifactStore:
         ttl: int = DEFAULT_ARTIFACT_TTL,
     ) -> str:
         norm_scope = str(scope_id) if scope_id is not None else None
-        obj_id = id(artifact)
+        obj_key = (id(artifact), norm_scope)
         expires_at = (time.monotonic() + ttl) if ttl > 0 else None
         with self._lock:
             self._prune_locked()
-            existing = self._handle_by_obj.get(obj_id)
+            existing = self._handle_by_obj.get(obj_key)
             if existing is not None:
                 entry = self._entries.get(existing)
-                if (
-                    entry is not None
-                    and entry.artifact is artifact
-                    and entry.scope_id == norm_scope
-                ):
+                if entry is not None and entry.artifact is artifact:
                     entry.expires_at = expires_at
                     return f"{_HANDLE_SCHEME}://{existing}"
             handle_id = str(uuid4())
@@ -145,9 +145,9 @@ class _ArtifactStore:
                 artifact=artifact,
                 scope_id=norm_scope,
                 expires_at=expires_at,
-                obj_id=obj_id,
+                obj_id=id(artifact),
             )
-            self._handle_by_obj[obj_id] = handle_id
+            self._handle_by_obj[obj_key] = handle_id
         return f"{_HANDLE_SCHEME}://{handle_id}"
 
     def resolve(self, handle_id: str) -> FileArtifact | None:
@@ -181,8 +181,8 @@ class _ArtifactStore:
     def _delete_locked(self, handle_id: str) -> None:
         """Remove an entry and its object-identity mapping. Caller holds lock."""
         entry = self._entries.pop(handle_id, None)
-        if entry is not None and self._handle_by_obj.get(entry.obj_id) == handle_id:
-            del self._handle_by_obj[entry.obj_id]
+        if entry is not None:
+            self._handle_by_obj.pop((entry.obj_id, entry.scope_id), None)
 
 
 _store: Final[_ArtifactStore] = _ArtifactStore()

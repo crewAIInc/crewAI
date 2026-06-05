@@ -26,8 +26,10 @@ _HANDLE = re.compile(r"crewai\+file://[0-9a-fA-F-]{36}")
 def _clear_store():
     """Keep the process-local store empty between tests."""
     _store._entries.clear()
+    _store._handle_by_obj.clear()
     yield
     _store._entries.clear()
+    _store._handle_by_obj.clear()
 
 
 def _handle_in(text: str) -> str:
@@ -75,6 +77,21 @@ class TestStoreArtifact:
         h2 = _handle_in(store_artifact(artifact, scope_id="s"))
         assert h1 == h2
         assert len(_store._entries) == 1
+
+    def test_same_instance_different_scope_gets_own_handle_and_cleans_up(self) -> None:
+        # Storing one instance under two scopes must not orphan a mapping:
+        # each scope keeps its own handle, and clearing one leaves the other.
+        artifact = FileArtifact(data=b"x" * 100)
+        h_a = _handle_in(store_artifact(artifact, scope_id="A"))
+        h_b = _handle_in(store_artifact(artifact, scope_id="B"))
+        assert h_a != h_b
+        clear_artifact_scope("A")
+        assert resolve_artifact_handles(h_a) == h_a  # A cleared
+        assert base64.b64decode(resolve_artifact_handles(h_b)) == b"x" * 100
+        # No dangling object-identity mapping for the cleared scope.
+        assert (id(artifact), "A") not in _store._handle_by_obj
+        clear_artifact_scope("B")
+        assert _store._handle_by_obj == {}
 
     def test_placeholder_escapes_quotes_in_metadata(self) -> None:
         artifact = FileArtifact(data=b"x", filename='a".pptx', mime_type='m"/x')
