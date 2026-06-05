@@ -1939,6 +1939,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     color="red",
                 )
 
+        # An after_tool_call hook may have replaced the result with a
+        # FileArtifact; keep those bytes out of the message and events too.
+        result = store_if_artifact(result, scope_id)
+
         if not error_event_emitted:
             crewai_event_bus.emit(
                 self,

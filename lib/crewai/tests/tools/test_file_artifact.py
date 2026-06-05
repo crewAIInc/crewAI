@@ -314,6 +314,39 @@ class TestNativeExecutorWiring:
         assert base64.b64decode(captured["content"]) == payload
 
 
+class TestAfterHookArtifact:
+    """An after_tool_call hook that returns a FileArtifact must still be stored."""
+
+    def test_hook_returned_artifact_is_replaced_by_handle(self) -> None:
+        from crewai.hooks.tool_hooks import (
+            register_after_tool_call_hook,
+            unregister_after_tool_call_hook,
+        )
+        from crewai.tools import BaseTool, FileArtifact
+
+        payload = bytes(range(256)) * 50
+
+        class Echo(BaseTool):
+            name: str = "echo"
+            description: str = "Echo"
+
+            def _run(self) -> str:
+                return "plain text"
+
+        def hook(_context):
+            return FileArtifact(data=payload, filename="hook.bin")
+
+        register_after_tool_call_hook(hook)
+        try:
+            run = _experimental_executor_runner([Echo()])
+            result = run("echo", "{}")["result"]
+        finally:
+            unregister_after_tool_call_hook(hook)
+
+        assert base64.b64encode(payload).decode() not in result
+        assert _HANDLE.search(result) is not None
+
+
 class TestTtlPrune:
     @staticmethod
     def _expire(handle: str) -> None:
