@@ -70,6 +70,11 @@ from crewai.hooks.types import (
     BeforeLLMCallHookType,
 )
 from crewai.tools.base_tool import BaseTool
+from crewai.tools.file_artifact import (
+    artifact_scope_id,
+    resolve_artifact_handles,
+    store_if_artifact,
+)
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.utilities.agent_utils import (
     _llm_stop_words_applied,
@@ -1762,6 +1767,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             return parse_error
         args_dict: dict[str, Any] = parsed_args or {}
 
+        scope_id = artifact_scope_id(self.crew, self.task)
+
         # Get agent_key for event tracking
         agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
 
@@ -1794,6 +1801,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 tool=func_name, input=input_str
             )
             if cached_result is not None:
+                cached_result = store_if_artifact(cached_result, scope_id)
                 result = (
                     str(cached_result)
                     if not isinstance(cached_result, str)
@@ -1859,7 +1867,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             if func_name in self._available_functions:
                 try:
                     tool_func = self._available_functions[func_name]
-                    raw_result = tool_func(**args_dict)
+                    invoke_args = (
+                        resolve_artifact_handles(args_dict) if args_dict else {}
+                    )
+                    raw_result = tool_func(**invoke_args)
 
                     # Add to cache after successful execution (before string conversion)
                     if self.tools_handler and self.tools_handler.cache:
@@ -1874,6 +1885,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                             )
 
                     # Convert to string for message
+                    raw_result = store_if_artifact(raw_result, scope_id)
                     result = (
                         str(raw_result)
                         if not isinstance(raw_result, str)

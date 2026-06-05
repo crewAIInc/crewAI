@@ -863,6 +863,13 @@ class CrewAgentExecutor(BaseAgentExecutor):
             ToolUsageFinishedEvent,
             ToolUsageStartedEvent,
         )
+        from crewai.tools.file_artifact import (
+            artifact_scope_id,
+            resolve_artifact_handles,
+            store_if_artifact,
+        )
+
+        scope_id = artifact_scope_id(self.crew, self.task)
 
         args_dict, parse_error = parse_tool_call_args(
             func_args, func_name, call_id, original_tool
@@ -896,6 +903,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 tool=func_name, input=input_str
             )
             if cached_result is not None:
+                cached_result = store_if_artifact(cached_result, scope_id)
                 result = (
                     str(cached_result)
                     if not isinstance(cached_result, str)
@@ -960,7 +968,8 @@ class CrewAgentExecutor(BaseAgentExecutor):
             result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
         elif not from_cache and func_name in available_functions:
             try:
-                raw_result = available_functions[func_name](**(args_dict or {}))
+                invoke_args = resolve_artifact_handles(args_dict) if args_dict else {}
+                raw_result = available_functions[func_name](**invoke_args)
 
                 if self.tools_handler and self.tools_handler.cache:
                     should_cache = True
@@ -977,6 +986,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                             tool=func_name, input=input_str, output=raw_result
                         )
 
+                raw_result = store_if_artifact(raw_result, scope_id)
                 result = (
                     str(raw_result) if not isinstance(raw_result, str) else raw_result
                 )

@@ -22,6 +22,7 @@ from crewai.events.types.tool_usage_events import (
     ToolValidateInputErrorEvent,
 )
 from crewai.telemetry.telemetry import Telemetry
+from crewai.tools.file_artifact import artifact_scope_id, resolve_artifact_handles
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_calling import InstructorToolCalling, ToolCalling
 from crewai.utilities.agent_utils import (
@@ -327,12 +328,12 @@ class ToolUsage:
                                 if k in acceptable_args
                             }
                             result = await tool.ainvoke(
-                                input=arguments, config=fingerprint_config
+                                input=resolve_artifact_handles(arguments), config=fingerprint_config
                             )
                         except Exception:
                             arguments = calling.arguments
                             result = await tool.ainvoke(
-                                input=arguments, config=fingerprint_config
+                                input=resolve_artifact_handles(arguments), config=fingerprint_config
                             )
                     else:
                         result = await tool.ainvoke(input={}, config=fingerprint_config)
@@ -558,12 +559,12 @@ class ToolUsage:
                                 if k in acceptable_args
                             }
                             result = tool.invoke(
-                                input=arguments, config=fingerprint_config
+                                input=resolve_artifact_handles(arguments), config=fingerprint_config
                             )
                         except Exception:
                             arguments = calling.arguments
                             result = tool.invoke(
-                                input=arguments, config=fingerprint_config
+                                input=resolve_artifact_handles(arguments), config=fingerprint_config
                             )
                     else:
                         result = tool.invoke(input={}, config=fingerprint_config)
@@ -679,9 +680,17 @@ class ToolUsage:
 
         return result
 
+    @property
+    def _artifact_scope_id(self) -> Any | None:
+        """Execution id used to scope out-of-band file artifacts for cleanup."""
+        return artifact_scope_id(getattr(self.agent, "crew", None), self.task)
+
     def _format_result(self, result: Any) -> str:
+        from crewai.tools.file_artifact import store_if_artifact
+
         if self.task:
             self.task.used_tools += 1
+        result = store_if_artifact(result, self._artifact_scope_id)
         if self._should_remember_format():
             result = self._remember_format(result=result)
         return str(result)

@@ -116,6 +116,7 @@ from crewai.tasks.task_output import TaskOutput
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.tools.agent_tools.read_file_tool import ReadFileTool
 from crewai.tools.base_tool import BaseTool
+from crewai.tools.file_artifact import clear_artifact_scope
 from crewai.types.callback import SerializableCallable
 from crewai.types.streaming import CrewStreamingOutput
 from crewai.types.usage_metrics import UsageMetrics
@@ -1047,6 +1048,7 @@ class Crew(FlowTrackable, BaseModel):
             if self._memory is not None and hasattr(self._memory, "drain_writes"):
                 self._memory.drain_writes()
             clear_files(self.id)
+            clear_artifact_scope(self.id)
             detach(token)
 
     def _post_kickoff(self, result: CrewOutput) -> CrewOutput:
@@ -1255,6 +1257,7 @@ class Crew(FlowTrackable, BaseModel):
             raise
         finally:
             clear_files(self.id)
+            clear_artifact_scope(self.id)
             detach(token)
 
     async def akickoff_for_each(
