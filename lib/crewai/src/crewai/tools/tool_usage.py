@@ -687,7 +687,7 @@ class ToolUsage:
     @property
     def _artifact_scope_id(self) -> Any | None:
         """Execution id used to scope out-of-band file artifacts for cleanup."""
-        return artifact_scope_id(getattr(self.agent, "crew", None), self.task)
+        return artifact_scope_id(task=self.task, agent=self.agent)
 
     def _format_result(self, result: Any) -> str:
         from crewai.tools.file_artifact import store_if_artifact

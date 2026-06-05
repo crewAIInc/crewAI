@@ -75,6 +75,15 @@ class TestStoreArtifact:
         assert 'filename="a\'.pptx"' in placeholder
         assert _HANDLE.search(placeholder) is not None
 
+    def test_placeholder_neutralizes_bracket_and_newlines(self) -> None:
+        artifact = FileArtifact(data=b"x", filename="a]b\nc.bin")
+        placeholder = store_artifact(artifact)
+        first_line = placeholder.splitlines()[0]
+        # The closing bracket and newline can't appear inside the attributes,
+        # so the bracketed segment stays a single, well-formed line.
+        assert first_line.count("]") == 1 and first_line.endswith("]")
+        assert _HANDLE.search(placeholder) is not None
+
 
 class TestArtifactScopeId:
     class _Obj:
@@ -92,6 +101,18 @@ class TestArtifactScopeId:
 
     def test_none_when_neither_present(self) -> None:
         assert artifact_scope_id(None, None) is None
+
+    def test_falls_back_to_agent_crew(self) -> None:
+        # Native executors may have crew=None while the agent carries the crew;
+        # the helper must still resolve the crew id so cleanup scopes align.
+        agent = self._Obj(None)
+        agent.crew = self._Obj("crew-from-agent")
+        assert artifact_scope_id(None, self._Obj("task"), agent) == "crew-from-agent"
+
+    def test_explicit_crew_beats_agent_crew(self) -> None:
+        agent = self._Obj(None)
+        agent.crew = self._Obj("agent-crew")
+        assert artifact_scope_id(self._Obj("direct-crew"), None, agent) == "direct-crew"
 
 
 class TestResolveArtifactHandles:

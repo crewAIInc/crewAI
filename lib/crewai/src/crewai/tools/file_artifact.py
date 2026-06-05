@@ -78,9 +78,10 @@ class FileArtifact:
 
     def _placeholder(self, handle: str) -> str:
         """Build the model-facing text that stands in for the bytes."""
-        # Quote-escape so a filename/mime containing `"` can't break the brackets.
-        filename = self.filename.replace('"', "'")
-        mime_type = self.mime_type.replace('"', "'")
+        # Neutralize characters that would break the single-line bracketed
+        # attribute list (quotes, the closing bracket, newlines).
+        filename = _sanitize_attr(self.filename)
+        mime_type = _sanitize_attr(self.mime_type)
         return (
             f'[FileArtifact filename="{filename}" '
             f'mime_type="{mime_type}" size={_human_size(self.size_bytes)} '
@@ -224,24 +225,38 @@ def clear_artifact_scope(scope_id: Any) -> None:
     _store.clear_scope(scope_id)
 
 
-def artifact_scope_id(crew: Any | None, task: Any | None) -> Any | None:
+def artifact_scope_id(
+    crew: Any | None = None,
+    task: Any | None = None,
+    agent: Any | None = None,
+) -> Any | None:
     """Pick the execution id used to scope a tool's file artifacts for cleanup.
 
     Prefer the crew id -- it matches the id ``Crew`` passes to
-    :func:`clear_artifact_scope` when a run ends -- then the task id, then
-    ``None`` (TTL-only cleanup). Centralized so the two executors and the ReAct
-    path can't drift in how they derive the scope.
+    :func:`clear_artifact_scope` when a run ends -- falling back to the agent's
+    crew, then the task id, then ``None`` (TTL-only cleanup). Centralized, and
+    given the agent fallback, so every tool-execution path derives the scope the
+    same way and can't drift.
     """
+    if crew is None:
+        crew = getattr(agent, "crew", None)
     crew_id = getattr(crew, "id", None)
     if crew_id is not None:
         return crew_id
     return getattr(task, "id", None)
 
 
+def _sanitize_attr(text: str) -> str:
+    """Strip characters that would break the bracketed placeholder display."""
+    return (
+        text.replace('"', "'").replace("]", ")").replace("\n", " ").replace("\r", " ")
+    )
+
+
 def _human_size(size_bytes: int) -> str:
     size = float(size_bytes)
-    for unit in ("B", "KB", "MB", "GB"):
-        if size < 1024 or unit == "GB":
+    for unit in ("B", "KB", "MB", "GB", "TB", "PB"):
+        if size < 1024 or unit == "PB":
             return f"{int(size)} {unit}" if unit == "B" else f"{size:.1f} {unit}"
         size /= 1024
-    return f"{size:.1f} GB"
+    return f"{size:.1f} PB"

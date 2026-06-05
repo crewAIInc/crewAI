@@ -27,6 +27,11 @@ from crewai.agents.parser import (
 from crewai.llms.base_llm import BaseLLM, call_stop_override
 from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
+from crewai.tools.file_artifact import (
+    artifact_scope_id,
+    resolve_artifact_handles,
+    store_if_artifact,
+)
 from crewai.tools.structured_tool import CrewStructuredTool
 from crewai.tools.tool_types import ToolResult
 from crewai.utilities.errors import AgentRepositoryError
@@ -1416,6 +1421,7 @@ def execute_single_native_tool_call(
         args_dict = func_args
 
     agent_key = getattr(agent, "key", "unknown") if agent else "unknown"
+    scope_id = artifact_scope_id(crew, task, agent)
 
     original_tool: BaseTool | None = None
     for tool in original_tools:
@@ -1430,6 +1436,7 @@ def execute_single_native_tool_call(
     if tools_handler and tools_handler.cache:
         cached_result = tools_handler.cache.read(tool=func_name, input=input_str)
         if cached_result is not None:
+            cached_result = store_if_artifact(cached_result, scope_id)
             result = (
                 str(cached_result)
                 if not isinstance(cached_result, str)
@@ -1481,7 +1488,8 @@ def execute_single_native_tool_call(
         if func_name in available_functions:
             try:
                 tool_func = available_functions[func_name]
-                raw_result = tool_func(**args_dict)
+                invoke_args = resolve_artifact_handles(args_dict) if args_dict else {}
+                raw_result = tool_func(**invoke_args)
 
                 if tools_handler and tools_handler.cache:
                     should_cache = True
@@ -1494,6 +1502,7 @@ def execute_single_native_tool_call(
                             tool=func_name, input=input_str, output=raw_result
                         )
 
+                raw_result = store_if_artifact(raw_result, scope_id)
                 result = (
                     str(raw_result) if not isinstance(raw_result, str) else raw_result
                 )

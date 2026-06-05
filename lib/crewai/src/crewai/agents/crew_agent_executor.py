@@ -869,9 +869,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
             store_if_artifact,
         )
 
-        scope_id = artifact_scope_id(
-            self.crew or getattr(self.agent, "crew", None), self.task
-        )
+        scope_id = artifact_scope_id(self.crew, self.task, self.agent)
 
         args_dict, parse_error = parse_tool_call_args(
             func_args, func_name, call_id, original_tool
