@@ -49,6 +49,11 @@ def _ensure_handlers_registered() -> None:
         if _handlers_registered:
             return
         _register_all_handlers(crewai_event_bus)
+        # Arm RuntimeState recording: from here on the bus must capture the
+        # entity tree + event record so a checkpoint can serialize the run.
+        # Until a checkpoint config is resolved, recording stays off to avoid
+        # an unbounded leak on the process-global bus.
+        crewai_event_bus.enable_recording()
         _handlers_registered = True
 
 

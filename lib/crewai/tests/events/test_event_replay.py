@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from typing import Any
 from unittest.mock import patch
 
@@ -132,6 +133,12 @@ class TestFlowResumeReplaysEvents:
             def step_c(self) -> str:
                 return "c"
 
+        # The event record (which replay reads from) is only populated when
+        # recording is armed. In production a resume arms it by restoring the
+        # RuntimeState from a checkpoint (``from_checkpoint`` ->
+        # ``set_runtime_state``); here we arm it directly and let flow1 record
+        # live, then resume flow2 against that record.
+        crewai_event_bus.enable_recording()
         if crewai_event_bus.runtime_state is not None:
             crewai_event_bus.runtime_state.event_record.clear()
 
@@ -163,3 +170,75 @@ class TestFlowResumeReplaysEvents:
         assert captured_finished.count("step_a") == 1
         assert captured_finished.count("step_b") == 1
         assert captured_finished.count("step_c") == 1
+
+
+@contextmanager
+def _isolated_recording_state() -> Any:
+    """Snapshot and fully restore the singleton bus recording state.
+
+    Restores all three coupled fields (``_recording_enabled``,
+    ``_runtime_state``, ``_registered_entity_ids``) so a test that pokes the
+    process-global bus can't leak an inconsistent state — e.g. a populated
+    ``_runtime_state`` with an emptied id set — into later tests.
+    """
+    prev_enabled = crewai_event_bus._recording_enabled
+    prev_state = crewai_event_bus._runtime_state
+    prev_ids = crewai_event_bus._registered_entity_ids
+    try:
+        yield
+    finally:
+        crewai_event_bus._recording_enabled = prev_enabled
+        crewai_event_bus._runtime_state = prev_state
+        crewai_event_bus._registered_entity_ids = prev_ids
+
+
+class TestRecordingGate:
+    """RuntimeState recording is armed only when checkpoint/replay needs it.
+
+    The bus is a process-global singleton; recording every event into its
+    ``RuntimeState`` unconditionally leaks linearly across kickoffs in a
+    long-lived process. Recording stays off until a checkpoint config is
+    resolved (or a state is restored), so the common "construct, kickoff,
+    discard" loop allocates nothing.
+    """
+
+    def test_plain_flow_does_not_record_when_recording_disarmed(self) -> None:
+        from crewai.flow.flow import Flow, listen, start
+
+        class EchoFlow(Flow):
+            @start()
+            def begin(self) -> str:
+                return "begin"
+
+            @listen(begin)
+            def finish(self, _: Any) -> str:
+                return "finish"
+
+        with _isolated_recording_state():
+            # Force a clean, never-checkpointed process state. (Another test in
+            # the same process may have armed recording via a checkpoint config.)
+            crewai_event_bus.reset_runtime_state()
+            crewai_event_bus._recording_enabled = False
+
+            for _ in range(5):
+                EchoFlow().kickoff(inputs={"payload": "x" * 1000})
+            # No checkpointing configured -> nothing recorded -> no leak.
+            assert crewai_event_bus.runtime_state is None
+
+    def test_armed_flow_records_into_runtime_state(self) -> None:
+        from crewai.flow.flow import Flow, start
+
+        class OneStep(Flow):
+            @start()
+            def begin(self) -> str:
+                return "begin"
+
+        with _isolated_recording_state():
+            crewai_event_bus.reset_runtime_state()
+            crewai_event_bus.enable_recording()
+
+            OneStep().kickoff()
+            state = crewai_event_bus.runtime_state
+            assert state is not None
+            assert len(state.root) == 1
+            assert len(state.event_record.nodes) > 0

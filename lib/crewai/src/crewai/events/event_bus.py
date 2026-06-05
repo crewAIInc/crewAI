@@ -117,6 +117,7 @@ class CrewAIEventsBus:
     _executor_initialized: bool
     _has_pending_events: bool
     _runtime_state: RuntimeState | None
+    _recording_enabled: bool
 
     def __new__(cls) -> Self:
         """Create or return the singleton instance.
@@ -153,6 +154,14 @@ class CrewAIEventsBus:
         self._has_pending_events = False
         self._runtime_state: RuntimeState | None = None
         self._registered_entity_ids: set[int] = set()
+        # The RuntimeState recorder (entity root + event_record) exists solely
+        # to serialize a run for checkpoint/replay. It is only ever read back
+        # by the checkpoint/fork/resume machinery, so we leave it disabled
+        # until something actually needs it. Recording it unconditionally on a
+        # process-global singleton is an unbounded leak in long-lived processes
+        # that run many kickoffs. Armed by ``enable_recording()`` (called when
+        # a checkpoint config is resolved) and by ``set_runtime_state()``.
+        self._recording_enabled: bool = False
 
     def _ensure_executor_initialized(self) -> None:
         """Lazily initialize the thread pool executor and event loop.
@@ -270,11 +279,46 @@ class CrewAIEventsBus:
 
         return decorator
 
+    def enable_recording(self) -> None:
+        """Arm RuntimeState recording for this process.
+
+        Until armed, the bus does not register entities or record events into a
+        ``RuntimeState`` — that recorder feeds checkpoint/replay only and is
+        wasted work (and an unbounded leak on a long-lived singleton) when no
+        checkpointing is configured. Called when a ``CheckpointConfig`` is
+        resolved on a Crew/Flow/Agent (see
+        ``crewai.state.checkpoint_listener``) and by :meth:`set_runtime_state`.
+        Idempotent.
+        """
+        with self._instance_lock:
+            self._recording_enabled = True
+
     def set_runtime_state(self, state: RuntimeState) -> None:
         """Set the RuntimeState that will be passed to event handlers."""
         with self._instance_lock:
             self._runtime_state = state
             self._registered_entity_ids = {id(e) for e in state.root}
+            self._recording_enabled = True
+
+    def reset_runtime_state(self) -> None:
+        """Drop the recorded ``RuntimeState`` and registered entity ids.
+
+        When recording is armed (checkpointing configured, or a state was
+        restored via :meth:`set_runtime_state`), the bus records every emitted
+        event into a process-global ``RuntimeState`` — the entity ``root`` list
+        plus the ``event_record`` — so checkpoint/replay can reconstruct a run.
+        Because the bus is a process-global singleton, that record grows
+        without bound across successive ``kickoff`` calls in a long-lived
+        process (worker, request handler, scheduler). Embedders that checkpoint
+        but never replay in-process can call this between runs to bound memory.
+
+        This clears the recorded data but leaves recording armed, so subsequent
+        runs still record. Safe to call when no state is attached. Do not call
+        mid-run or while a pending checkpoint/replay depends on the record.
+        """
+        with self._instance_lock:
+            self._runtime_state = None
+            self._registered_entity_ids = set()
 
     @property
     def runtime_state(self) -> RuntimeState | None:
@@ -464,17 +508,31 @@ class CrewAIEventsBus:
                 await self._acall_handlers(source, event, level_async)
 
     def _register_source(self, source: Any) -> None:
-        """Register the source entity in RuntimeState if applicable."""
+        """Register the source entity in RuntimeState if applicable.
+
+        No-op unless recording is armed (see :meth:`enable_recording`): the
+        RuntimeState entity list is only read by checkpoint/replay.
+        """
         if (
-            getattr(source, "entity_type", None) in ("flow", "crew", "agent")
+            self._recording_enabled
+            and getattr(source, "entity_type", None) in ("flow", "crew", "agent")
             and id(source) not in self._registered_entity_ids
         ):
             self.register_entity(source)
 
     def _record_event(self, event: BaseEvent) -> None:
-        """Add an event to the RuntimeState event record."""
-        if self._runtime_state is not None:
-            self._runtime_state.event_record.add(event)
+        """Add an event to the RuntimeState event record.
+
+        No-op unless recording is armed (see :meth:`enable_recording`): the
+        event record is only read by checkpoint/replay.
+        """
+        if not self._recording_enabled:
+            return
+        # Read once: a concurrent reset_runtime_state() can null _runtime_state
+        # between the check and the deref.
+        state = self._runtime_state
+        if state is not None:
+            state.event_record.add(event)
 
     def _prepare_event(self, source: Any, event: BaseEvent) -> None:
         """Register source, set scope/sequence metadata, and record the event.
