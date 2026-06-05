@@ -11,95 +11,83 @@ mode: "wide"
 
 | المفهوم | التنفيذ |
 |---------|---------|
-| معرّف الجلسة | `kickoff(session_id=...)` → `inputs["id"]` → `state.id` |
-| سطر المستخدم | `kickoff(user_message=...)` يُضاف إلى `state.messages` قبل تشغيل الرسم |
-| اكتمال الجولة | `FlowFinished` لهذا **التشغيل** فقط؛ تستمر المحادثة في `kickoff` التالي |
-| تتبع الجلسة | `ConversationalConfig(defer_trace_finalization=True)` + `finalize_session_traces()` |
+| معرّف الجلسة | `handle_turn(..., session_id=...)` → `kickoff(inputs={"id": ...})` → `state.id` |
+| سطر المستخدم | `handle_turn(message)` يضيف الرسالة إلى `state.messages` قبل تشغيل الرسم |
+| اكتمال الجولة | `FlowFinished` لهذا **التشغيل** فقط؛ تستمر المحادثة في `handle_turn` التالي |
+| تتبع الجلسة | `ConversationConfig(defer_trace_finalization=True)` + `finalize_session_traces()` |
 
 ## واجهات الجولات
 
-استخدم **`flow.kickoff(user_message=..., session_id=...)`** أو **`flow.handle_turn(...)`** لكل رسالة مستخدم من REST أو WebSocket أو الاختبارات أو الواجهات المخصصة. استخدم **`flow.chat()`** عندما تريد حلقة دردشة محلية في الطرفية لـ `Flow` محادثي.
+استخدم **`flow.handle_turn(message, session_id=...)`** لكل رسالة مستخدم من REST أو WebSocket أو الاختبارات أو الواجهات المخصصة. استخدم **`flow.chat()`** عندما تريد حلقة دردشة محلية في الطرفية لـ `Flow` محادثي.
+
+لا يقبل `Flow.kickoff()` الوسيطين `user_message=` أو `session_id=`. في التدفقات المحادثية، يخزن `handle_turn()` الرسالة المعلقة ويستدعي داخلياً `kickoff(inputs={"id": session_id})`.
 
 | API | الاستخدام |
 |-----|-----------|
-| `kickoff(user_message=..., session_id=...)` | كل رسالة مستخدم |
 | `handle_turn(message, session_id=...)` | غلاف مريح لجولة واحدة في `Flow` محادثي |
 | `chat()` | REPL محلي في الطرفية لـ `Flow` محادثي |
-| `kickoff_async(...)` | نفس المعاملات؛ دخول async أصلي |
+| `kickoff(inputs={...})` | تشغيل متقدم للـ flow بدون معالجة جولة محادثية |
 | `ask()` | مطالبة حاجزة **داخل** خطوة واحدة |
 | `@human_feedback` | الموافقة/الرفض على **مخرجات خطوة** — وليس السطر التالي |
-| `ChatSession.handle_turn(...)` | طبقة نقل فوق `kickoff` |
+| `ChatSession.handle_turn(...)` | طبقة نقل فوق `handle_turn` |
 
 ## بداية سريعة
 
 ```python
 from uuid import uuid4
 
-from crewai.flow import (
-    ChatState,
-    ConversationalConfig,
-    Flow,
-    listen,
-    or_,
-    persist,
-    router,
-    start,
+from crewai import Flow
+from crewai.flow import listen
+from crewai.experimental.conversational import (
+    ConversationConfig,
+    ConversationState,
 )
-from crewai.flow.persistence import SQLiteFlowPersistence
 
 
-class SupportFlow(Flow[ChatState]):
-    conversational_config = ConversationalConfig(
-        default_intents=["order", "help", "goodbye"],
-        intent_llm="gpt-4o-mini",
-        defer_trace_finalization=True,
-    )
+@ConversationConfig(defer_trace_finalization=True)
+class SupportFlow(Flow[ConversationState]):
+    conversational = True
 
-    @start()
-    def bootstrap(self):
-        if not self.state.session_ready:
-            self.state.session_ready = True
-        return "ready"
-
-    @router(bootstrap)
-    def route(self):
-        return self.state.last_intent or "help"
+    def route_turn(self, context):
+        message = (self.state.current_user_message or "").lower()
+        if "طلب" in message or "order" in message:
+            return "order"
+        if "وداع" in message or "goodbye" in message:
+            return "goodbye"
+        return "help"
 
     @listen("order")
     def handle_order(self):
         reply = "طلبك في الطريق."
-        self.append_message("assistant", reply)
+        self.append_assistant_message(reply)
         return reply
 
     @listen("help")
     def handle_help(self):
         reply = "كيف يمكنني المساعدة؟"
-        self.append_message("assistant", reply)
+        self.append_assistant_message(reply)
         return reply
 
     @listen("goodbye")
     def handle_goodbye(self):
         reply = "وداعاً!"
-        self.append_message("assistant", reply)
+        self.append_assistant_message(reply)
         return reply
-
-    @persist(SQLiteFlowPersistence("support.db"))
-    @listen(or_(handle_order, handle_help, handle_goodbye))
-    def finalize(self):
-        return self.state.model_dump()
 
 
 session_id = str(uuid4())
 flow = SupportFlow()
 
-flow.kickoff(user_message="أين طلبي؟", session_id=session_id)
-flow.kickoff(user_message="وماذا عن الإرجاع؟", session_id=session_id)
-flow.finalize_session_traces()
+try:
+    flow.handle_turn("أين طلبي؟", session_id=session_id)
+    flow.handle_turn("وماذا عن الإرجاع؟", session_id=session_id)
+finally:
+    flow.finalize_session_traces()
 ```
 
 ## دورة حياة الجولة
 
-كل `kickoff` مع `user_message` يشغّل:
+كل `handle_turn` يشغّل:
 
 1. **`_configure_conversational_kickoff`** — دمج `session_id` / `user_message` في `inputs` وتطبيق `ConversationalConfig`.
 2. **استعادة الحالة** — عند وجود `inputs["id"]` و`@persist`.
@@ -108,7 +96,7 @@ flow.finalize_session_traces()
 5. **تنفيذ الرسم** — `@start` → `@router` → معالجات `@listen`.
 6. **نهاية التشغيل** — يُتخطى `flow_finished` والتتبع لكل جولة عند التأجيل؛ `Agent.kickoff()` / crews لا تغلق دفعة الأب.
 
-استدعِ **`append_message("assistant", reply)`** في المعالجات. سطر المستخدم محفوظ عند kickoff — لا تُضفه مرة أخرى.
+استدعِ **`append_assistant_message(reply)`** في المعالجات. سطر المستخدم محفوظ عبر `handle_turn` — لا تُضفه مرة أخرى.
 
 ## `ConversationalConfig` (افتراضيات على مستوى الصنف)
 
@@ -382,7 +370,7 @@ Routes:
 4. يخزّن الموجّه قراره في `state.last_intent` (يكون مرئياً لسياق التوجيه في الجولة التالية).
 5. إذا أعاد معالجك سلسلة نصية ولم يستدعِ `append_assistant_message`، فإن `handle_turn` يُلحقها نيابةً عنك.
 
-يمكنك أيضاً استدعاء `flow.kickoff(user_message=..., session_id=...)` مباشرةً — نفس منطق الإعادة والتشغيل يعمل. `handle_turn` هو الغلاف المريح.
+استدعِ `handle_turn()` لرسائل الدردشة. استدعاء `kickoff(inputs={"id": ...})` مباشرةً يشغل الرسم بدون غلاف الجولة المحادثية.
 
 ### `chat()` للـ REPL المحلي
 
