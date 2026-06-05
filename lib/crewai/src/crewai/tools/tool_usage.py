@@ -328,12 +328,14 @@ class ToolUsage:
                                 if k in acceptable_args
                             }
                             result = await tool.ainvoke(
-                                input=resolve_artifact_handles(arguments), config=fingerprint_config
+                                input=resolve_artifact_handles(arguments),
+                                config=fingerprint_config,
                             )
                         except Exception:
                             arguments = calling.arguments
                             result = await tool.ainvoke(
-                                input=resolve_artifact_handles(arguments), config=fingerprint_config
+                                input=resolve_artifact_handles(arguments),
+                                config=fingerprint_config,
                             )
                     else:
                         result = await tool.ainvoke(input={}, config=fingerprint_config)
@@ -559,12 +561,14 @@ class ToolUsage:
                                 if k in acceptable_args
                             }
                             result = tool.invoke(
-                                input=resolve_artifact_handles(arguments), config=fingerprint_config
+                                input=resolve_artifact_handles(arguments),
+                                config=fingerprint_config,
                             )
                         except Exception:
                             arguments = calling.arguments
                             result = tool.invoke(
-                                input=resolve_artifact_handles(arguments), config=fingerprint_config
+                                input=resolve_artifact_handles(arguments),
+                                config=fingerprint_config,
                             )
                     else:
                         result = tool.invoke(input={}, config=fingerprint_config)

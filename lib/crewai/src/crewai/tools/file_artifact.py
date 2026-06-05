@@ -136,9 +136,7 @@ class _ArtifactStore:
         scope = str(scope_id)
         with self._lock:
             for handle_id in [
-                hid
-                for hid, entry in self._entries.items()
-                if entry.scope_id == scope
+                hid for hid, entry in self._entries.items() if entry.scope_id == scope
             ]:
                 del self._entries[handle_id]
 
