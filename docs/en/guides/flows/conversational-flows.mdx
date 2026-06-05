@@ -7,7 +7,7 @@ mode: "wide"
 
 ## Overview
 
-Conversational apps treat each user line as a **new flow run** with the **same session id**. CrewAI adds helpers for message history, optional intent classification, deferred tracing, and UI bridges — without a separate `chat()` API on `Flow`.
+Conversational apps treat each user line as a **new flow run** with the **same session id**. CrewAI adds helpers for message history, optional intent classification, deferred tracing, UI bridges, and a local `flow.chat()` REPL for conversational flows.
 
 | Concept | Implementation |
 |---------|----------------|
@@ -16,13 +16,15 @@ Conversational apps treat each user line as a **new flow run** with the **same s
 | Turn complete | `FlowFinished` for **this run** only; chat continues on the next `kickoff` |
 | Full-session trace | `ConversationalConfig(defer_trace_finalization=True)` + `finalize_session_traces()` |
 
-## One entry point: `kickoff`
+## Turn APIs
 
-Use **`flow.kickoff(user_message=..., session_id=...)`** for every user message (REST, WebSocket, CLI). Do not add a custom `chat()` wrapper on `Flow`.
+Use **`flow.kickoff(user_message=..., session_id=...)`** or **`flow.handle_turn(...)`** for every user message from REST, WebSocket, tests, and custom UIs. Use **`flow.chat()`** when you want a local terminal chat loop for a conversational `Flow`.
 
 | API | Use for |
 |-----|---------|
 | `kickoff(user_message=..., session_id=...)` | Each user message |
+| `handle_turn(message, session_id=...)` | Ergonomic one-turn wrapper for conversational `Flow` |
+| `chat()` | Local terminal REPL for conversational `Flow` |
 | `kickoff_async(...)` | Same parameters; native async entry |
 | `ask()` | Blocking prompt **inside** one step (wizard, clarification) |
 | `@human_feedback` | Approve/reject **a step output** — not the next chat line |
@@ -293,6 +295,15 @@ finally:
     flow.finalize_session_traces()
 ```
 
+For a local terminal chat, use `chat()`:
+
+```python
+def kickoff() -> None:
+    SupportFlow().chat()
+```
+
+`chat()` wraps `handle_turn()` in a REPL, exits on `exit` / `quit`, skips blank lines by default, and calls `finalize_session_traces()` when the session ends.
+
 ### `ConversationConfig`
 
 Class decorator that attaches per-class chat defaults.
@@ -376,6 +387,36 @@ You can override any of these by defining a same-named handler in your subclass.
 
 You can also call `flow.kickoff(user_message=..., session_id=...)` directly — the same reset/run logic fires. `handle_turn` is the ergonomic wrapper.
 
+### `chat()` for local REPLs
+
+`flow.chat()` is the batteries-included terminal wrapper around `handle_turn()`:
+
+```python
+flow = SupportFlow()
+flow.chat()
+```
+
+It handles the common local loop:
+
+1. Prompts for a user message.
+2. Stops on `exit` / `quit`, `EOFError`, or `KeyboardInterrupt`.
+3. Calls `handle_turn(message, session_id=...)`.
+4. Prints the assistant result.
+5. Finalizes deferred session traces in a `finally` block.
+
+Customize the terminal behavior with injectable I/O:
+
+```python
+flow.chat(
+    session_id="demo-session",
+    prompt="You: ",
+    assistant_prefix="Assistant: ",
+    exit_commands=("exit", "quit", "bye"),
+)
+```
+
+For web apps, background workers, tests, and custom transports, keep using `handle_turn()` directly.
+
 ### Custom router behavior
 
 To run side effects (event bus setup, telemetry) on every routing decision, override `route_turn`:
@@ -410,17 +451,12 @@ With `defer_trace_finalization=True` (default in `ConversationalConfig`):
 - **Nested work** (`Agent.kickoff()`, crews, Exa tools) appends to the **parent** batch; inner `AgentExecutor` flows do not close the session batch early.
 
 ```python
-try:
-    while True:
-        line = input("You: ").strip()
-        if not line:
-            break
-        flow.kickoff(user_message=line, session_id=session_id)
-finally:
-    flow.finalize_session_traces()
+flow.chat(session_id=session_id)
 ```
 
-`ChatSession.close()` calls `finalize_session_traces()` when deferral is enabled.
+`flow.chat()` calls `finalize_session_traces()` for you. When you own the loop
+with `handle_turn()` or `kickoff(...)`, call `finalize_session_traces()` when
+the session ends.
 
 `suppress_flow_events=True` only hides Rich console panels; trace and method events still emit for observability.
 
