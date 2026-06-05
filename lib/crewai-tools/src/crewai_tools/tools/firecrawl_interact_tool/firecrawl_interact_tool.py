@@ -17,6 +17,7 @@ except ImportError:
 
 
 class FirecrawlInteractToolSchema(BaseModel):
+    """Input schema for the Firecrawl interact tool."""
     prompt: str = Field(
         description="Natural-language description of the task for the Firecrawl agent to carry out by navigating and interacting with web pages"
     )
@@ -77,6 +78,7 @@ class FirecrawlInteractTool(BaseTool):
     )
 
     def __init__(self, api_key: str | None = None, **kwargs: Any) -> None:
+        """Initialize the tool and its Firecrawl v2 client."""
         super().__init__(**kwargs)
         try:
             from firecrawl import Firecrawl
@@ -88,18 +90,19 @@ class FirecrawlInteractTool(BaseTool):
             ):
                 import subprocess
 
-                subprocess.run(["uv", "add", "firecrawl-py"], check=True)  # noqa: S607
+                subprocess.run(["uv", "add", "firecrawl-py>=4.0.0,<5"], check=True)  # noqa: S607
                 from firecrawl import (
                     Firecrawl,
                 )
             else:
                 raise ImportError(
-                    "`firecrawl-py` package not found, please run `uv add firecrawl-py`"
+                    "`firecrawl-py` package not found, please run `uv add 'firecrawl-py>=4.0.0,<5'`"
                 ) from None
 
         self._firecrawl = Firecrawl(api_key=api_key)
 
     def _run(self, prompt: str, urls: list[str] | None = None) -> Any:
+        """Run the Firecrawl browser agent for the prompt and return the result."""
         if not self._firecrawl:
             raise RuntimeError("Firecrawl client not properly initialized")
 

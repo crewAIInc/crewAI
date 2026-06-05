@@ -9,7 +9,7 @@
 - Get an API key from [firecrawl.dev](https://firecrawl.dev) and set it in environment variables (`FIRECRAWL_API_KEY`).
 - Install the [Firecrawl SDK](https://github.com/firecrawl/firecrawl) along with `crewai[tools]` package:
 
-```
+```shell
 pip install firecrawl-py 'crewai[tools]'
 ```
 

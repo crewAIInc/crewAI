@@ -15,6 +15,7 @@ except ImportError:
 
 
 class FirecrawlSearchToolSchema(BaseModel):
+    """Input schema for the Firecrawl search tool."""
     query: str = Field(description="Search query")
 
 
@@ -74,11 +75,13 @@ class FirecrawlSearchTool(BaseTool):
     )
 
     def __init__(self, api_key: str | None = None, **kwargs: Any) -> None:
+        """Initialize the tool and its Firecrawl v2 client."""
         super().__init__(**kwargs)
         self.api_key = api_key
         self._initialize_firecrawl()
 
     def _initialize_firecrawl(self) -> None:
+        """Import firecrawl-py (installing it on demand if missing) and build the client."""
         try:
             from firecrawl import Firecrawl
 
@@ -92,7 +95,7 @@ class FirecrawlSearchTool(BaseTool):
                 import subprocess
 
                 try:
-                    subprocess.run(["uv", "add", "firecrawl-py"], check=True)  # noqa: S607
+                    subprocess.run(["uv", "add", "firecrawl-py>=4.0.0,<5"], check=True)  # noqa: S607
                     from firecrawl import Firecrawl
 
                     self._firecrawl = Firecrawl(api_key=self.api_key)
@@ -100,13 +103,14 @@ class FirecrawlSearchTool(BaseTool):
                     raise ImportError("Failed to install firecrawl-py package") from e
             else:
                 raise ImportError(
-                    "`firecrawl-py` package not found, please run `uv add firecrawl-py`"
+                    "`firecrawl-py` package not found, please run `uv add 'firecrawl-py>=4.0.0,<5'`"
                 ) from None
 
     def _run(
         self,
         query: str,
     ) -> Any:
+        """Run a Firecrawl web search for the query and return the results."""
         if not self._firecrawl:
             raise RuntimeError("Firecrawl client not properly initialized")
 
