@@ -16,6 +16,12 @@ The handle is namespaced (``crewai+file://``) so resolution only ever fires on
 tokens this module minted, never on arbitrary user data. Stored bytes are scoped
 to a crew/task execution id and cleared when that execution finishes; a TTL prune
 is the safety net for runs that never call :func:`clear_artifact_scope`.
+
+Limitation: handles are ephemeral and scoped to a single run. A handle only
+resolves while its run's artifacts are live. If a placeholder's text is persisted
+(conversation memory, a checkpoint) and a *later* run echoes that handle, it will
+no longer resolve and the literal token is passed through unchanged -- so binary
+producer->consumer chains must complete within one run.
 """
 
 from __future__ import annotations
