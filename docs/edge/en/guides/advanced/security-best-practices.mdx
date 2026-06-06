@@ -73,6 +73,8 @@ When `allow_delegation=True`, an agent can route work to other agents. That can 
 - Pair delegation with clear task constraints and bounded execution
 
 ```python
+from crewai import Agent
+
 coordinator = Agent(
     role="Coordinator",
     goal="Route specialized tasks",
