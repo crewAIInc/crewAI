@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 from pydantic import BaseModel, PrivateAttr, model_validator
 from typing_extensions import Self
 
+from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
@@ -783,6 +784,8 @@ class AzureCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         usage: dict[str, Any] | None = None,
+        finish_reason: str | None = None,
+        response_id: str | None = None,
     ) -> BaseModel:
         """Validate content against response model and emit completion event.
 
@@ -792,6 +795,8 @@ class AzureCompletion(BaseLLM):
             params: Completion parameters containing messages
             from_task: Task that initiated the call
             from_agent: Agent that initiated the call
+            finish_reason: Raw provider finish reason.
+            response_id: Raw provider response id.
 
         Returns:
             Validated Pydantic model instance
@@ -809,6 +814,8 @@ class AzureCompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=params["messages"],
                 usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
 
             return structured_data
@@ -848,6 +855,8 @@ class AzureCompletion(BaseLLM):
         usage = self._extract_azure_token_usage(response)
         self._track_token_usage_internal(usage)
 
+        finish_reason, response_id = self._extract_finish_reason_and_id(response)
+
         # Without available_functions, return tool_calls so the caller (executor) handles execution
         if message.tool_calls and not available_functions:
             self._emit_call_completed_event(
@@ -857,6 +866,8 @@ class AzureCompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=params["messages"],
                 usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
             return list(message.tool_calls)
 
@@ -892,6 +903,8 @@ class AzureCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
 
         content = self._apply_stop_words(content)
@@ -903,6 +916,8 @@ class AzureCompletion(BaseLLM):
             from_agent=from_agent,
             messages=params["messages"],
             usage=usage,
+            finish_reason=finish_reason,
+            response_id=response_id,
         )
 
         return self._invoke_after_llm_call_hooks(
@@ -1011,6 +1026,8 @@ class AzureCompletion(BaseLLM):
         from_task: Any | None = None,
         from_agent: Any | None = None,
         response_model: type[BaseModel] | None = None,
+        finish_reason: str | None = None,
+        response_id: str | None = None,
     ) -> str | Any:
         """Finalize streaming response with usage tracking, tool execution, and events.
 
@@ -1039,6 +1056,8 @@ class AzureCompletion(BaseLLM):
                 from_task=from_task,
                 from_agent=from_agent,
                 usage=usage_data,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
 
         # Without available_functions, return tool calls in OpenAI-compatible format for the executor
@@ -1061,6 +1080,8 @@ class AzureCompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=params["messages"],
                 usage=usage_data,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
             return formatted_tool_calls
 
@@ -1094,6 +1115,8 @@ class AzureCompletion(BaseLLM):
             from_agent=from_agent,
             messages=params["messages"],
             usage=usage_data,
+            finish_reason=finish_reason,
+            response_id=response_id,
         )
 
         return self._invoke_after_llm_call_hooks(
@@ -1113,8 +1136,16 @@ class AzureCompletion(BaseLLM):
         tool_calls: dict[int, dict[str, Any]] = {}
 
         usage_data: dict[str, Any] | None = None
+        stream_finish_reason: str | None = None
+        stream_response_id: str | None = None
         for update in self._get_sync_client().complete(**params):
             if isinstance(update, StreamingChatCompletionsUpdate):
+                chunk_finish, chunk_id = self._extract_finish_reason_and_id(update)
+                if chunk_finish:
+                    stream_finish_reason = chunk_finish
+                if chunk_id:
+                    stream_response_id = chunk_id
+
                 if update.usage:
                     usage = update.usage
                     usage_data = {
@@ -1141,6 +1172,8 @@ class AzureCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             response_model=response_model,
+            finish_reason=stream_finish_reason,
+            response_id=stream_response_id,
         )
 
     async def _ahandle_completion(
@@ -1180,10 +1213,18 @@ class AzureCompletion(BaseLLM):
         tool_calls: dict[int, dict[str, Any]] = {}
 
         usage_data: dict[str, Any] | None = None
+        stream_finish_reason: str | None = None
+        stream_response_id: str | None = None
 
         stream = await self._get_async_client().complete(**params)
         async for update in stream:
             if isinstance(update, StreamingChatCompletionsUpdate):
+                chunk_finish, chunk_id = self._extract_finish_reason_and_id(update)
+                if chunk_finish:
+                    stream_finish_reason = chunk_finish
+                if chunk_id:
+                    stream_response_id = chunk_id
+
                 if hasattr(update, "usage") and update.usage:
                     usage = update.usage
                     usage_data = {
@@ -1210,6 +1251,8 @@ class AzureCompletion(BaseLLM):
             from_task=from_task,
             from_agent=from_agent,
             response_model=response_model,
+            finish_reason=stream_finish_reason,
+            response_id=stream_response_id,
         )
 
     def supports_function_calling(self) -> bool:
@@ -1270,6 +1313,19 @@ class AzureCompletion(BaseLLM):
                 return int(size * CONTEXT_WINDOW_USAGE_RATIO)
 
         return int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
+
+    def _effective_max_tokens(self) -> int | float | None:
+        """Azure reasoning/newer chat models cap via ``max_completion_tokens``."""
+        return self.max_tokens or self.max_completion_tokens
+
+    @staticmethod
+    def _extract_finish_reason_and_id(
+        response_or_update: Any,
+    ) -> tuple[str | None, str | None]:
+        """Azure ``ChatCompletions`` / ``StreamingChatCompletionsUpdate``
+        share the choices-shape; delegate to the shared extractor.
+        """
+        return extract_choices_finish_reason_and_id(response_or_update)
 
     @staticmethod
     def _extract_azure_token_usage(response: ChatCompletions) -> dict[str, Any]:

@@ -222,6 +222,8 @@ To enable tracing later, do any one of these:
             return
         self.batch_manager.batch_owner_type = None
         self.batch_manager.batch_owner_id = None
+        self.batch_manager.defer_session_finalization = False
+        self.batch_manager._batch_finalized = False
         self.batch_manager.current_batch = None
         self.batch_manager.event_buffer.clear()
         self.batch_manager.trace_batch_id = None

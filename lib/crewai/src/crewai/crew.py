@@ -179,6 +179,7 @@ class Crew(FlowTrackable, BaseModel):
         max_rpm: Maximum number of requests per minute for the crew execution to
             be respected.
         prompt_file: Path to the prompt json file to be used for the crew.
+        trained_agents_file: Path to trained agent suggestions loaded during inference.
         id: A unique identifier for the crew instance.
         task_callback: Callback to be executed after each task for every agents
             execution.
@@ -305,6 +306,13 @@ class Crew(FlowTrackable, BaseModel):
     prompt_file: str | None = Field(
         default=None,
         description="Path to the prompt json file to be used for the crew.",
+    )
+    trained_agents_file: str | Path | None = Field(
+        default=None,
+        description=(
+            "Path to a trained-agents pickle produced by train(). "
+            "When set, agents load suggestions from this file during inference."
+        ),
     )
     output_log_file: bool | str | None = Field(
         default=None,

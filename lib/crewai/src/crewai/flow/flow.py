@@ -3,8 +3,8 @@
 The implementation now lives in three modules, split by concern:
 
 - ``crewai.flow.dsl`` -- authoring decorators (``@start`` / ``@listen`` /
-  ``@router``, ``or_`` / ``and_``)
-- ``crewai.flow.flow_definition`` -- the structural model extracted from the DSL
+  ``@router``, ``or_`` / ``and_``) and Python Flow class projection
+- ``crewai.flow.flow_definition`` -- the serializable Flow Definition contract
 - ``crewai.flow.runtime`` -- the Flow execution engine and state
 
 Prefer importing from those modules in new code; this module preserves the
