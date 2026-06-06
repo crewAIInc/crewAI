@@ -4,6 +4,138 @@ description: "CrewAI의 제품 업데이트, 개선 사항 및 버그 수정"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="2026년 6월 5일">
+  ## v1.14.7a2
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.7a2)
+
+  ## 변경 사항
+
+  ### 기능
+  - 대화 흐름 추적 지원 추가.
+  - `handle_turn`을 활용하도록 대화 흐름 문서 업데이트.
+  - LLM 이벤트에서 실제 `finish_reason`, 샘플링 매개변수 및 `response.id` 표시.
+  - 라우트 인식 데코레이터로서 DSL 트리거 유형 지정.
+  - 대화 흐름을 위한 채팅 API 구현.
+  - 잠금 저장소에서 백엔드 잠금 오버라이드 가능하게 설정.
+  - 흐름 DSL 모놀리스를 집중된 데코레이터 모듈로 분할.
+  - `_usage_to_dict`에서 LiteLLM 캐시/추론 사용 하위 카운트 평탄화.
+  - 흐름 DSL 메타데이터에서 `FlowDefinition` 구축.
+
+  ### 문서
+  - NVIDIA Nemotron LLM 가이드 추가.
+  - 모노레포 배포 문서화.
+  - v1.14.7a1에 대한 변경 로그 및 버전 업데이트.
+
+  ## 기여자
+
+  @alex-clawd, @gvieira, @lorenzejay, @lucasgomide, @mattatcha, @vinibrsl
+
+</Update>
+
+<Update label="2026년 6월 3일">
+  ## v1.14.7a1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.7a1)
+
+  ## 변경 사항
+
+  ### 기능
+  - 승무원 교육을 받은 에이전트 파일 지원 추가
+  - 네이티브 Snowflake Cortex LLM 공급자 추가
+  - Databricks 통합 가이드 추가
+  - Snowflake 통합 가이드 추가
+
+  ### 버그 수정
+  - UV 도구 설치를 위한 crewai 패키지에서 `[project.scripts]` 복원하여 CLI 수정
+  - 파일 입력 신뢰성 문제 해결
+  - Snowflake Claude에서 불완전한 도구 결과 기록 수정
+  - Snowflake Claude를 위한 문자열화된 도구 호출 처리
+  - 라우터 주도 사이클 전반에 걸쳐 다중 소스 `or_` 리스너 재장착
+
+  ### 성능
+  - docling 가져오기를 지연 로딩하여 crewai 가져오기 속도 개선
+
+  ### 리팩토링
+  - `flow.py`를 DSL, 정의 및 런타임으로 분할
+
+  ## 기여자
+
+  @Luzk, @alex-clawd, @devin-ai-integration[bot], @greysonlalonde, @jessemiller, @lorenzejay, @vinibrsl
+
+</Update>
+
+<Update label="2026년 5월 28일">
+  ## v1.14.6
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.6)
+
+  ## 변경 사항
+
+  ### 기능
+  - 환경 변수 유출을 방지하기 위해 StdioTransport 강화
+  - 계획 구성 및 관찰 처리 개선
+  - DatabricksQueryTool에서 env_vars 선언
+  - 에이전트 제어 평면 문서 추가
+
+  ### 버그 수정
+  - 도구 호출 루프에서 구조화된 출력 유출 수정
+  - 체크포인트에서 원형으로 돌아갈 수 없는 콜백 및 어댑터 상태 제거
+  - 체크포인트에서 type[BaseModel] 필드를 JSON 스키마로 직렬화
+  - 복원 범위 복원 시 고아 task_started 방지
+  - AgentExecutor가 체크포인트에서 복원할 수 있도록 허용
+  - package_dependencies에서 mongodb 오타를 pymongo로 수정
+
+  ### 문서
+  - 에이전트 제어 평면 페이지에 ACP (Beta) 문서 탐색 블록 추가
+  - 프로세스 페이지에서 합의 프로세스 참조 제거
+  - 체크포인트 페이지 구조 재편성
+  - 일회성 관리자 패키지 설치 단계 문서화
+  - Secrets Manager / Workload Identity를 replicated-config에서 마이그레이션
+  - `<Steps>` 렌더링을 방해하는 `{" "}` JSX 표현 제거
+
+  ### 리팩토링
+  - Skills Repository를 실험적 + CREWAI_EXPERIMENTAL 게이트로 이동
+
+  ## 기여자
+
+  @akaKuruma, @alex-clawd, @github-actions[bot], @greysonlalonde, @heitorado, @iris-clawd, @lorenzejay, @lucasgomide, @mattatcha, @thiagomoretto, @vinibrsl
+
+</Update>
+
+<Update label="2026년 5월 27일">
+  ## v1.14.6a2
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.6a2)
+
+  ## 변경 사항
+
+  ### 기능
+  - 환경 변수 유출을 방지하기 위해 `StdioTransport` 개선
+  - 계획 구성 및 관찰 처리 개선
+  - `DatabricksQueryTool`에서 `env_vars` 선언
+  - 에이전트 제어 평면 문서 추가
+
+  ### 버그 수정
+  - 도구 호출 루프에서 구조화된 출력 유출 수정
+  - 체크포인팅에서 원형으로 돌아갈 수 없는 콜백 및 어댑터 상태 제거
+  - 체크포인팅에서 `type[BaseModel]` 필드를 JSON 스키마로 직렬화
+  - 복원 범위 복원 시 고아 `task_started` 방지
+  - `AgentExecutor`가 체크포인트에서 복원할 수 있도록 허용
+  - 패키지 종속성에서 MongoDB 오타를 `pymongo`로 수정
+
+  ### 문서
+  - 체크포인팅 페이지 구조 재편성
+  - 일회성 관리자 패키지 설치 단계 문서화
+  - 복제된 구성에서 비밀 관리자 / 작업 부하 ID 마이그레이션
+  - 변경 로그에서 기술 리포지토리 항목 제거
+
+  ## 기여자
+
+  @github-actions[bot], @greysonlalonde, @heitorado, @iris-clawd, @lorenzejay, @lucasgomide, @mattatcha, @thiagomoretto, @vinibrsl
+
+</Update>
+
 <Update label="2026년 5월 21일">
   ## v1.14.6a1
 
@@ -12,7 +144,6 @@ mode: "wide"
   ## 변경 사항
 
   ### 기능
-  - 레지스트리, 캐시, CLI 및 SDK 통합이 포함된 기술 저장소 추가
   - 기업용으로 분류된 릴리스 노트 생성
 
   ### 버그 수정

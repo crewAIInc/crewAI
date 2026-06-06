@@ -27,13 +27,11 @@ def add_agent_fingerprint_to_span(
         add_attribute_fn: Function to add attributes to the span.
     """
     if agent:
-        # Try to get fingerprint directly
         if hasattr(agent, "fingerprint") and agent.fingerprint:
             add_attribute_fn(span, "agent_fingerprint", agent.fingerprint.uuid_str)
             if hasattr(agent, "role"):
                 add_attribute_fn(span, "agent_role", agent.role)
         else:
-            # Try to get fingerprint using getattr (for cases where it might not be directly accessible)
             agent_fingerprint = getattr(
                 getattr(agent, "fingerprint", None), "uuid_str", None
             )

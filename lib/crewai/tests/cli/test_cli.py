@@ -6,10 +6,10 @@ have moved to lib/cli/tests/test_cli.py.
 
 from unittest import mock
 
-import pytest
 from click.testing import CliRunner
-from crewai_cli.cli import reset_memories
 from crewai.crew import Crew
+from crewai_cli.cli import reset_memories
+import pytest
 
 
 @pytest.fixture
@@ -102,7 +102,6 @@ def test_reset_kickoff_outputs(mock_get_crews, runner):
 
 def test_reset_multiple_legacy_flags_collapsed_to_single_memory_reset(mock_get_crews, runner):
     result = runner.invoke(reset_memories, ["-s", "-l"])
-    # Both legacy flags collapse to a single --memory reset
     assert "deprecated" in result.output.lower()
     call_count = 0
     for crew in mock_get_crews.return_value:
@@ -145,7 +144,6 @@ def test_reset_memory_from_many_crews(mock_get_crews, runner):
 
     mock_get_crews.return_value = crews
 
-    # Run the command
     result = runner.invoke(reset_memories, ["--knowledge"])
 
     call_count = 0

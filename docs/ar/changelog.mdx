@@ -4,6 +4,138 @@ description: "تحديثات المنتج والتحسينات وإصلاحات 
 icon: "clock"
 mode: "wide"
 ---
+<Update label="5 يونيو 2026">
+  ## v1.14.7a2
+
+  [عرض الإصدار على GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.7a2)
+
+  ## ما الذي تغير
+
+  ### الميزات
+  - إضافة دعم تتبع تدفقات المحادثة.
+  - تحديث وثائق تدفق المحادثة لاستخدام `handle_turn`.
+  - عرض السبب الحقيقي لإنهاء المحادثة، ومعلمات العينة، و`response.id` في أحداث LLM.
+  - تصنيف مشغلات DSL كزخارف واعية بالمسار.
+  - تنفيذ واجهة برمجة التطبيقات للدردشة لتدفقات المحادثة.
+  - جعل قفل الخلفية قابلاً للتجاوز في متجر القفل.
+  - تقسيم أحادي تدفق DSL إلى وحدات زخرفية مركزة.
+  - تسطيح استخدام ذاكرة التخزين المؤقت LiteLLM/أعداد الأسباب الفرعية في `_usage_to_dict`.
+  - بناء `FlowDefinition` من بيانات التعريف الخاصة بتدفق DSL.
+
+  ### الوثائق
+  - إضافة دليل NVIDIA Nemotron LLM.
+  - توثيق عمليات نشر المونوريبو.
+  - تحديث سجل التغييرات والإصدار لـ v1.14.7a1.
+
+  ## المساهمون
+
+  @alex-clawd, @gvieira, @lorenzejay, @lucasgomide, @mattatcha, @vinibrsl
+
+</Update>
+
+<Update label="3 يونيو 2026">
+  ## v1.14.7a1
+
+  [عرض الإصدار على GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.7a1)
+
+  ## ما الذي تغير
+
+  ### الميزات
+  - إضافة دعم ملفات الوكلاء المدربين
+  - إضافة مزود LLM الأصلي لـ Snowflake Cortex
+  - إضافة دليل تكامل Databricks
+  - إضافة دليل تكامل Snowflake
+
+  ### إصلاحات الأخطاء
+  - إصلاح CLI عن طريق استعادة `[project.scripts]` في حزمة crewai لتثبيت أداة UV
+  - حل مشكلات موثوقية إدخال الملفات
+  - إصلاح تاريخ نتائج الأدوات غير المكتملة في Snowflake Claude
+  - التعامل مع استدعاءات الأدوات الممثلة كسلاسل لـ Snowflake Claude
+  - إعادة تفعيل مستمعي `or_` متعدد المصادر عبر دورات مدفوعة بالموجه
+
+  ### الأداء
+  - تحسين سرعة استيراد crewai عن طريق تحميل استيرادات docling بشكل كسول
+
+  ### إعادة هيكلة
+  - تقسيم `flow.py` إلى DSL، تعريف، وتشغيل
+
+  ## المساهمون
+
+  @Luzk, @alex-clawd, @devin-ai-integration[bot], @greysonlalonde, @jessemiller, @lorenzejay, @vinibrsl
+
+</Update>
+
+<Update label="28 مايو 2026">
+  ## v1.14.6
+
+  [عرض الإصدار على GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.6)
+
+  ## ما الذي تغير
+
+  ### الميزات
+  - تحسين StdioTransport لمنع تسرب متغيرات البيئة
+  - تعزيز تكوين التخطيط ومعالجة الملاحظات
+  - إعلان env_vars على DatabricksQueryTool
+  - إضافة وثائق خطة التحكم في الوكيل
+
+  ### إصلاحات الأخطاء
+  - إصلاح تسرب المخرجات المنظمة في حلقات استدعاء الأدوات
+  - حذف ردود الاستدعاء غير القابلة للعودة وحالة المحول في نقطة التحقق
+  - تسلسل الحقول من النوع [BaseModel] كـ JSON schema في نقطة التحقق
+  - تجنب مهمة orphan task_started عند استعادة نطاق الاستئناف
+  - السماح لـ AgentExecutor بالاستعادة من نقطة التحقق
+  - تصحيح خطأ الكتابة من mongodb إلى pymongo في package_dependencies
+
+  ### الوثائق
+  - إضافة كتلة تنقل وثائق ACP (بيتا) إلى صفحات خطة التحكم في الوكيل
+  - إزالة المراجع إلى العمليات التوافقية من صفحة العمليات
+  - إعادة هيكلة صفحة نقاط التحقق
+  - توثيق خطوة تثبيت حزمة الإدارة لمرة واحدة
+  - نقل Secrets Manager / Workload Identity من replicated-config
+  - إزالة تعبيرات `{" "}` JSX التي تكسر عرض `<Steps>`
+
+  ### إعادة الهيكلة
+  - نقل مستودع المهارات إلى experimental + CREWAI_EXPERIMENTAL gate
+
+  ## المساهمون
+
+  @akaKuruma, @alex-clawd, @github-actions[bot], @greysonlalonde, @heitorado, @iris-clawd, @lorenzejay, @lucasgomide, @mattatcha, @thiagomoretto, @vinibrsl
+
+</Update>
+
+<Update label="27 مايو 2026">
+  ## v1.14.6a2
+
+  [عرض الإصدار على GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.6a2)
+
+  ## ما الذي تغير
+
+  ### الميزات
+  - تحسين `StdioTransport` لمنع تسرب متغيرات البيئة
+  - تحسين تكوين التخطيط ومعالجة المراقبة
+  - إعلان `env_vars` على `DatabricksQueryTool`
+  - إضافة وثائق خطة التحكم بالوكيل
+
+  ### إصلاحات الأخطاء
+  - إصلاح تسرب المخرجات المنظمة في حلقات استدعاء الأدوات
+  - حذف الاستدعاءات غير القابلة للعودة وحالة المحول في نقاط التحقق
+  - تسلسل حقول `type[BaseModel]` كـ JSON schema في نقاط التحقق
+  - تجنب `task_started` اليتيمة عند استعادة نطاق الاستئناف
+  - السماح لـ `AgentExecutor` بالاستعادة من نقطة تحقق
+  - تصحيح خطأ مطبعي في MongoDB إلى `pymongo` في تبعيات الحزمة
+
+  ### الوثائق
+  - إعادة هيكلة صفحة نقاط التحقق
+  - توثيق خطوة تثبيت حزمة الإدارة لمرة واحدة
+  - نقل Secrets Manager / Workload Identity من replicated-config
+  - إزالة إدخال Skills Repository من سجل التغييرات
+
+  ## المساهمون
+
+  @github-actions[bot], @greysonlalonde, @heitorado, @iris-clawd, @lorenzejay, @lucasgomide, @mattatcha, @thiagomoretto, @vinibrsl
+
+</Update>
+
 <Update label="21 مايو 2026">
   ## v1.14.6a1
 
@@ -12,7 +144,6 @@ mode: "wide"
   ## ما الذي تغير
 
   ### الميزات
-  - إضافة مستودع المهارات مع التسجيل، التخزين المؤقت، واجهة سطر الأوامر، وتكامل SDK
   - توليد ملاحظات إصدار مصنفة للمؤسسات
 
   ### إصلاحات الأخطاء

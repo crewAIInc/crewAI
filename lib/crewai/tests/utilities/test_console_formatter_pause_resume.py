@@ -23,7 +23,6 @@ class TestConsoleFormatterPauseResume:
         formatter = ConsoleFormatter()
         formatter._streaming_live = None
 
-        # Should not raise
         formatter.pause_live_updates()
 
         assert formatter._streaming_live is None
@@ -39,14 +38,12 @@ class TestConsoleFormatterPauseResume:
         mock_live.stop.assert_called_once()
         assert formatter._streaming_live is None
 
-        # Second pause should not error (no session to stop)
         formatter.pause_live_updates()
 
     def test_resume_is_safe(self):
         """Test resume method exists and doesn't error."""
         formatter = ConsoleFormatter()
 
-        # Should not raise
         formatter.resume_live_updates()
 
     def test_streaming_after_pause_resume_creates_new_session(self):
@@ -86,7 +83,6 @@ class TestConsoleFormatterPauseResume:
             mock_live_instance = MagicMock()
             mock_live_class.return_value = mock_live_instance
 
-            # Start streaming
             formatter.handle_llm_stream_chunk("chunk 1", call_type=None)
             assert formatter._streaming_live == mock_live_instance
 
@@ -98,7 +94,6 @@ class TestConsoleFormatterPauseResume:
             # Resume (no-op)
             formatter.resume_live_updates()
 
-            # Create a new mock for the next session
             mock_live_instance_2 = MagicMock()
             mock_live_class.return_value = mock_live_instance_2
 

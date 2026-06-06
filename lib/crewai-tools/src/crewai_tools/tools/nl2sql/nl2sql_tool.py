@@ -80,7 +80,6 @@ _AS_PAREN_RE = re.compile(r"\bAS\s*\(", re.IGNORECASE)
 
 def _iter_as_paren_matches(stmt: str) -> Iterator[re.Match[str]]:
     """Yield regex matches for ``AS\\s*(`` outside of string literals."""
-    # Build a set of character positions that are inside string literals.
     in_string: set[int] = set()
     i = 0
     while i < len(stmt):
@@ -124,7 +123,6 @@ def _skip_string_literal(stmt: str, pos: int) -> int:
     i = pos + 1
     while i < len(stmt):
         if stmt[i] == quote_char:
-            # Check for escaped quote ('')
             if i + 1 < len(stmt) and stmt[i + 1] == quote_char:
                 i += 2
                 continue
@@ -290,9 +288,7 @@ class NL2SQLTool(BaseTool):
         self.tables = tables
         self.columns = data
 
-    # ------------------------------------------------------------------
     # Query validation
-    # ------------------------------------------------------------------
 
     def _validate_query(self, sql_query: str) -> None:
         """Raise ValueError if *sql_query* is not permitted under the current config.
@@ -323,7 +319,6 @@ class NL2SQLTool(BaseTool):
 
         # EXPLAIN ANALYZE / EXPLAIN ANALYSE actually *executes* the underlying
         # query.  Resolve the real command so write operations are caught.
-        # Handles both space-separated ("EXPLAIN ANALYZE DELETE …") and
         # parenthesized ("EXPLAIN (ANALYZE) DELETE …", "EXPLAIN (ANALYZE, VERBOSE) DELETE …").
         # EXPLAIN ANALYZE actually executes the underlying query — resolve the
         # real command so write operations are caught.
@@ -332,10 +327,8 @@ class NL2SQLTool(BaseTool):
             if resolved:
                 command = resolved
 
-        # WITH starts a CTE.  Read-only CTEs are fine; writable CTEs
         # (e.g. WITH d AS (DELETE …) SELECT …) must be blocked in read-only mode.
         if command == "WITH":
-            # Check for write commands inside CTE bodies.
             write_found = _detect_writable_cte(stmt)
             if write_found:
                 found = write_found
@@ -352,7 +345,6 @@ class NL2SQLTool(BaseTool):
                 )
                 return
 
-            # Check the main query after the CTE definitions.
             main_query = _extract_main_query_after_cte(stmt)
             if main_query:
                 main_cmd = main_query.split()[0].upper().rstrip(";")
@@ -404,9 +396,7 @@ class NL2SQLTool(BaseTool):
         first_token = stripped.split()[0] if stripped.split() else ""
         return first_token.upper().rstrip(";")
 
-    # ------------------------------------------------------------------
     # Schema introspection helpers
-    # ------------------------------------------------------------------
 
     def _fetch_available_tables(self) -> list[dict[str, Any]] | str:
         return self.execute_sql(
@@ -428,9 +418,7 @@ class NL2SQLTool(BaseTool):
             params={"table_name": table_name},
         )
 
-    # ------------------------------------------------------------------
     # Core execution
-    # ------------------------------------------------------------------
 
     def _run(self, sql_query: str) -> list[dict[str, Any]] | str:
         try:
@@ -497,7 +485,6 @@ class NL2SQLTool(BaseTool):
         try:
             result = session.execute(text(sql_query), params or {})
 
-            # Only commit when the operation actually mutates state
             if self.allow_dml and is_write:
                 session.commit()
 

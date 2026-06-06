@@ -1,31 +1,82 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
+from functools import cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, NamedTuple, cast
 from urllib.parse import urlparse
 
-
-try:
-    from docling.datamodel.base_models import InputFormat
-    from docling.document_converter import DocumentConverter
-    from docling.exceptions import ConversionError
-    from docling_core.transforms.chunker.hierarchical_chunker import HierarchicalChunker
-    from docling_core.types.doc.document import DoclingDocument
-
-    DOCLING_AVAILABLE = True
-except ImportError:
-    DOCLING_AVAILABLE = False
-    # Provide type stubs for when docling is not available
-    if TYPE_CHECKING:
-        from docling.document_converter import DocumentConverter
-        from docling_core.types.doc.document import DoclingDocument
-
-from pydantic import Field
+from pydantic import Field, model_validator
+from typing_extensions import Self
 
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.utilities.constants import KNOWLEDGE_DIRECTORY
 from crewai.utilities.logger import Logger
+
+
+if TYPE_CHECKING:
+    from docling.document_converter import DocumentConverter
+    from docling_core.types.doc.document import DoclingDocument
+
+
+_DOCLING_IMPORT_ERROR = (
+    "The docling package is required to use CrewDoclingSource. "
+    "Please install it using: uv add docling"
+)
+
+
+class _DoclingModules(NamedTuple):
+    """Lazily-imported docling symbols used by ``CrewDoclingSource``."""
+
+    input_format: Any
+    document_converter: Any
+    conversion_error: type[BaseException]
+    hierarchical_chunker: Any
+
+
+@cache
+def _import_docling() -> _DoclingModules:
+    """Import docling submodules lazily and cache the result.
+
+    Raises:
+        ImportError: If the docling package is not installed.
+    """
+    try:
+        from docling.datamodel.base_models import InputFormat
+        from docling.document_converter import DocumentConverter
+        from docling.exceptions import ConversionError
+        from docling_core.transforms.chunker.hierarchical_chunker import (
+            HierarchicalChunker,
+        )
+    except ImportError as e:
+        raise ImportError(_DOCLING_IMPORT_ERROR) from e
+    return _DoclingModules(
+        input_format=InputFormat,
+        document_converter=DocumentConverter,
+        conversion_error=ConversionError,
+        hierarchical_chunker=HierarchicalChunker,
+    )
+
+
+def _build_default_document_converter() -> DocumentConverter:
+    """Construct the default ``DocumentConverter`` with crewAI's allowed formats."""
+    docling = _import_docling()
+    input_format = docling.input_format
+    return cast(
+        "DocumentConverter",
+        docling.document_converter(
+            allowed_formats=[
+                input_format.MD,
+                input_format.ASCIIDOC,
+                input_format.PDF,
+                input_format.DOCX,
+                input_format.HTML,
+                input_format.IMAGE,
+                input_format.XLSX,
+                input_format.PPTX,
+            ]
+        ),
+    )
 
 
 class CrewDoclingSource(BaseKnowledgeSource):
@@ -35,13 +86,11 @@ class CrewDoclingSource(BaseKnowledgeSource):
     any additional dependencies and follows the docling package as the source of truth.
     """
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        if not DOCLING_AVAILABLE:
-            raise ImportError(
-                "The docling package is required to use CrewDoclingSource. "
-                "Please install it using: uv add docling"
-            )
-        super().__init__(*args, **kwargs)
+    @model_validator(mode="before")
+    @classmethod
+    def _ensure_docling_available(cls, data: Any) -> Any:
+        _import_docling()
+        return data
 
     _logger: Logger = Logger(verbose=True)
 
@@ -50,23 +99,11 @@ class CrewDoclingSource(BaseKnowledgeSource):
     file_paths: list[Path | str] = Field(default_factory=list)
     chunks: list[str] = Field(default_factory=list)
     safe_file_paths: list[Path | str] = Field(default_factory=list)
-    content: list[DoclingDocument] = Field(default_factory=list)
-    document_converter: DocumentConverter = Field(
-        default_factory=lambda: DocumentConverter(
-            allowed_formats=[
-                InputFormat.MD,
-                InputFormat.ASCIIDOC,
-                InputFormat.PDF,
-                InputFormat.DOCX,
-                InputFormat.HTML,
-                InputFormat.IMAGE,
-                InputFormat.XLSX,
-                InputFormat.PPTX,
-            ]
-        )
-    )
+    content: list[Any] = Field(default_factory=list)
+    document_converter: Any = Field(default_factory=_build_default_document_converter)
 
-    def model_post_init(self, _: Any) -> None:
+    @model_validator(mode="after")
+    def _load_sources(self) -> Self:
         if self.file_path:
             self._logger.log(
                 "warning",
@@ -76,11 +113,13 @@ class CrewDoclingSource(BaseKnowledgeSource):
             self.file_paths = self.file_path
         self.safe_file_paths = self.validate_content()
         self.content = self._load_content()
+        return self
 
     def _load_content(self) -> list[DoclingDocument]:
+        conversion_error = _import_docling().conversion_error
         try:
             return self._convert_source_to_docling_documents()
-        except ConversionError as e:
+        except conversion_error as e:
             self._logger.log(
                 "error",
                 f"Error loading content: {e}. Supported formats: {self.document_converter.allowed_formats}",
@@ -113,7 +152,7 @@ class CrewDoclingSource(BaseKnowledgeSource):
         return [result.document for result in conv_results_iter]
 
     def _chunk_doc(self, doc: DoclingDocument) -> Iterator[str]:
-        chunker = HierarchicalChunker()
+        chunker = _import_docling().hierarchical_chunker()
         for chunk in chunker.chunk(doc):
             yield chunk.text
 
@@ -136,7 +175,6 @@ class CrewDoclingSource(BaseKnowledgeSource):
                     else:
                         raise FileNotFoundError(f"File not found: {local_path}")
             else:
-                # this is an instance of Path
                 processed_paths.append(path)
         return processed_paths
 
@@ -147,7 +185,7 @@ class CrewDoclingSource(BaseKnowledgeSource):
                 [
                     result.scheme in ("http", "https"),
                     result.netloc,
-                    len(result.netloc.split(".")) >= 2,  # Ensure domain has TLD
+                    len(result.netloc.split(".")) >= 2,
                 ]
             )
         except Exception:

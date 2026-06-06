@@ -23,7 +23,6 @@ from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.llm_events import (
     LLMCallCompletedEvent,
     LLMCallFailedEvent,
-    LLMCallStartedEvent,
     LLMCallType,
     LLMStreamChunkEvent,
 )
@@ -32,6 +31,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
 from crewai.llms.base_llm import (
     BaseLLM,
     JsonResponseFormat,
@@ -114,7 +114,6 @@ MAX_CONTEXT: Final[int] = 2097152  # Current max from gemini-1.5-pro
 ANTHROPIC_PREFIXES: Final[tuple[str, str, str]] = ("anthropic/", "claude-", "claude/")
 
 LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
-    # openai
     "gpt-4": 8192,
     "gpt-4o": 128000,
     "gpt-4o-mini": 200000,
@@ -126,7 +125,6 @@ LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "o1-mini": 128000,
     "o3-mini": 200000,
     "o4-mini": 200000,
-    # gemini
     "gemini-3-pro-preview": 1048576,
     "gemini-2.0-flash": 1048576,
     "gemini-2.0-flash-thinking-exp-01-21": 32768,
@@ -141,9 +139,7 @@ LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "gemini/gemma-3-4b-it": 128000,
     "gemini/gemma-3-12b-it": 128000,
     "gemini/gemma-3-27b-it": 128000,
-    # deepseek
     "deepseek-chat": 128000,
-    # groq
     "gemma2-9b-it": 8192,
     "gemma-7b-it": 8192,
     "llama3-groq-70b-8192-tool-use-preview": 8192,
@@ -159,7 +155,6 @@ LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "mixtral-8x7b-32768": 32768,
     "llama-3.3-70b-versatile": 128000,
     "llama-3.3-70b-instruct": 128000,
-    # sambanova
     "Meta-Llama-3.3-70B-Instruct": 131072,
     "QwQ-32B-Preview": 8192,
     "Qwen2.5-72B-Instruct": 8192,
@@ -171,11 +166,9 @@ LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "Llama-3.2-11B-Vision-Instruct": 16384,
     "Meta-Llama-3.2-3B-Instruct": 4096,
     "Meta-Llama-3.2-1B-Instruct": 16384,
-    # bedrock
     "us.amazon.nova-pro-v1:0": 300000,
     "us.amazon.nova-micro-v1:0": 128000,
     "us.amazon.nova-lite-v1:0": 300000,
-    # Claude 4 models
     "us.anthropic.claude-opus-4-7": 1000000,
     "us.anthropic.claude-sonnet-4-6": 1000000,
     "us.anthropic.claude-opus-4-6-v1": 1000000,
@@ -203,7 +196,6 @@ LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "eu.anthropic.claude-3-5-sonnet-20240620-v1:0": 200000,
     "eu.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
     "eu.anthropic.claude-3-haiku-20240307-v1:0": 200000,
-    # Claude 4 EU
     "eu.anthropic.claude-opus-4-7": 1000000,
     "eu.anthropic.claude-sonnet-4-6": 1000000,
     "eu.anthropic.claude-opus-4-6-v1": 1000000,
@@ -219,7 +211,6 @@ LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "apac.anthropic.claude-3-5-sonnet-20241022-v2:0": 200000,
     "apac.anthropic.claude-3-sonnet-20240229-v1:0": 200000,
     "apac.anthropic.claude-3-haiku-20240307-v1:0": 200000,
-    # Claude 4 APAC
     "apac.anthropic.claude-opus-4-7": 1000000,
     "apac.anthropic.claude-sonnet-4-6": 1000000,
     "apac.anthropic.claude-opus-4-6-v1": 1000000,
@@ -264,7 +255,6 @@ LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "ai21.jamba-instruct-v1:0": 256000,
     "mistral.mistral-7b-instruct-v0:2": 32000,
     "mistral.mixtral-8x7b-instruct-v0:1": 32000,
-    # mistral
     "mistral-tiny": 32768,
     "mistral-small-latest": 32768,
     "mistral-medium-latest": 32768,
@@ -291,7 +281,6 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "gemini",
     "bedrock",
     "aws",
-    # OpenAI-compatible providers
     "openrouter",
     "deepseek",
     "ollama",
@@ -299,6 +288,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "hosted_vllm",
     "cerebras",
     "dashscope",
+    "snowflake",
 ]
 
 
@@ -380,7 +370,6 @@ class LLM(BaseLLM):
                 "gemini": "gemini",
                 "bedrock": "bedrock",
                 "aws": "bedrock",
-                # OpenAI-compatible providers
                 "openrouter": "openrouter",
                 "deepseek": "deepseek",
                 "ollama": "ollama",
@@ -388,6 +377,7 @@ class LLM(BaseLLM):
                 "hosted_vllm": "hosted_vllm",
                 "cerebras": "cerebras",
                 "dashscope": "dashscope",
+                "snowflake": "snowflake",
             }
 
             canonical_provider = provider_mapping.get(prefix.lower())
@@ -421,7 +411,6 @@ class LLM(BaseLLM):
             except Exception as e:
                 raise ImportError(f"Error importing native provider: {e}") from e
 
-        # FALLBACK to LiteLLM
         if not LITELLM_AVAILABLE:
             native_list = ", ".join(SUPPORTED_NATIVE_PROVIDERS)
             error_msg = (
@@ -507,6 +496,9 @@ class LLM(BaseLLM):
             # OpenRouter uses org/model format but accepts anything
             return True
 
+        if provider == "snowflake":
+            return True
+
         return False
 
     @classmethod
@@ -542,7 +534,6 @@ class LLM(BaseLLM):
             # azure does not provide a list of available models, determine a better way to handle this
             return True
 
-        # Fallback to pattern matching for models not in constants
         return cls._matches_provider_pattern(model, provider)
 
     @classmethod
@@ -606,7 +597,11 @@ class LLM(BaseLLM):
 
             return BedrockCompletion
 
-        # OpenAI-compatible providers
+        if provider == "snowflake":
+            from crewai.llms.providers.snowflake.completion import SnowflakeCompletion
+
+            return SnowflakeCompletion
+
         openai_compatible_providers = {
             "openrouter",
             "deepseek",
@@ -672,15 +667,12 @@ class LLM(BaseLLM):
         Returns:
             Dict[str, Any]: Parameters for the completion call
         """
-        # --- 1) Format messages according to provider requirements
         if isinstance(messages, str):
             messages = [{"role": "user", "content": messages}]
-        # --- 1a) Process any file attachments into multimodal content
         if not skip_file_processing:
             messages = self._process_message_files(messages)
         formatted_messages = self._format_messages_for_provider(messages)
 
-        # --- 2) Prepare the parameters for the completion call
         params = {
             "model": self.model,
             "messages": formatted_messages,
@@ -709,7 +701,6 @@ class LLM(BaseLLM):
             **self.additional_params,
         }
 
-        # Remove None values from params
         return {k: v for k, v in params.items() if v is not None}
 
     def _handle_streaming_response(
@@ -737,43 +728,51 @@ class LLM(BaseLLM):
         Raises:
             Exception: If no content is received from the streaming response
         """
-        # --- 1) Initialize response tracking
         full_response = ""
         last_chunk = None
         chunk_count = 0
         usage_info = None
+        # Tracked across the loop: LiteLLM with include_usage emits a final
+        # usage-only chunk with empty choices, so the post-loop last_chunk has
+        # no finish_reason. Capture both incrementally instead.
+        stream_finish_reason: str | None = None
+        stream_response_id: str | None = None
 
         accumulated_tool_args: defaultdict[int, AccumulatedToolArgs] = defaultdict(
             AccumulatedToolArgs
         )
 
-        # --- 2) Make sure stream is set to True and include usage metrics
         params["stream"] = True
         params["stream_options"] = {"include_usage": True}
 
         try:
-            # --- 3) Process each chunk in the stream
             for chunk in litellm.completion(**params):
                 chunk_count += 1
                 last_chunk = chunk
 
-                # Extract content from the chunk
                 chunk_content = None
                 response_id = None
 
                 if isinstance(chunk, ModelResponseBase):
                     response_id = chunk.id
+                elif isinstance(chunk, dict):
+                    response_id = chunk.get("id")
 
-                # Safely extract content from various chunk formats
+                chunk_finish, chunk_id = self._extract_finish_reason_and_response_id(
+                    chunk
+                )
+                if chunk_finish:
+                    stream_finish_reason = chunk_finish
+                if chunk_id and not stream_response_id:
+                    stream_response_id = chunk_id
+
                 try:
-                    # Try to access choices safely
                     choices = None
                     if isinstance(chunk, dict) and "choices" in chunk:
                         choices = chunk["choices"]
                     elif isinstance(chunk, ModelResponseStream):
                         choices = chunk.choices
 
-                    # Try to extract usage information if available
                     # NOTE: usage is a pydantic extra field on ModelResponseBase,
                     # so it must be accessed via model_extra.
                     if isinstance(chunk, dict) and "usage" in chunk:
@@ -784,29 +783,23 @@ class LLM(BaseLLM):
                     if choices and len(choices) > 0:
                         choice = choices[0]
 
-                        # Handle different delta formats
                         delta = None
                         if isinstance(choice, dict) and "delta" in choice:
                             delta = choice["delta"]
                         elif isinstance(choice, LiteLLMStreamingChoices):
                             delta = choice.delta
 
-                        # Extract content from delta
                         if delta:
-                            # Handle dict format
                             if isinstance(delta, dict):
                                 if "content" in delta and delta["content"] is not None:
                                     chunk_content = delta["content"]
-                            # Handle object format
                             elif isinstance(delta, LiteLLMDelta):
                                 chunk_content = delta.content
 
-                            # Handle case where content might be None or empty
                             if chunk_content is None and isinstance(delta, dict):
                                 # Some models might send empty content chunks
                                 chunk_content = ""
 
-                            # Enable tool calls using streaming
                             if "tool_calls" in delta:
                                 tool_calls = delta["tool_calls"]
                                 if tool_calls:
@@ -826,9 +819,7 @@ class LLM(BaseLLM):
                     logging.debug(f"Error extracting content from chunk: {e}")
                     logging.debug(f"Chunk format: {type(chunk)}, content: {chunk}")
 
-                # Only add non-None content to the response
                 if chunk_content is not None:
-                    # Add the chunk content to the full response
                     full_response += chunk_content
 
                     crewai_event_bus.emit(
@@ -842,16 +833,13 @@ class LLM(BaseLLM):
                             call_id=get_current_call_id(),
                         ),
                     )
-            # --- 4) Fallback to non-streaming if no content received
             if not full_response.strip() and chunk_count == 0:
                 logging.warning(
                     "No chunks received in streaming response, falling back to non-streaming"
                 )
                 non_streaming_params = params.copy()
                 non_streaming_params["stream"] = False
-                non_streaming_params.pop(
-                    "stream_options", None
-                )  # Remove stream_options for non-streaming call
+                non_streaming_params.pop("stream_options", None)
                 return self._handle_non_streaming_response(
                     non_streaming_params,
                     callbacks,
@@ -860,14 +848,12 @@ class LLM(BaseLLM):
                     from_agent,
                 )
 
-            # --- 5) Handle empty response with chunks
             if not full_response.strip() and chunk_count > 0:
                 logging.warning(
                     f"Received {chunk_count} chunks but no content was extracted"
                 )
                 if last_chunk is not None:
                     try:
-                        # Try to extract content from the last chunk's message
                         choices = None
                         if isinstance(last_chunk, dict) and "choices" in last_chunk:
                             choices = last_chunk["choices"]
@@ -877,7 +863,6 @@ class LLM(BaseLLM):
                         if choices and len(choices) > 0:
                             choice = choices[0]
 
-                            # Try to get content from message
                             message = None
                             if isinstance(choice, dict) and "message" in choice:
                                 message = choice["message"]
@@ -902,13 +887,11 @@ class LLM(BaseLLM):
                             f"Last chunk format: {type(last_chunk)}, content: {last_chunk}"
                         )
 
-            # --- 6) If still empty, raise an error instead of using a default response
             if not full_response.strip() and len(accumulated_tool_args) == 0:
                 raise Exception(
                     "No content received from streaming response. Received empty chunks or failed to extract content."
                 )
 
-            # --- 7) Check for tool calls in the final response
             tool_calls = None
             try:
                 if last_chunk:
@@ -935,7 +918,6 @@ class LLM(BaseLLM):
             except Exception as e:
                 logging.debug(f"Error checking for tool calls: {e}")
 
-            # Track token usage and log callbacks if available in streaming mode
             if usage_info:
                 self._track_token_usage_internal(usage_info)
             self._handle_streaming_callbacks(callbacks, usage_info, last_chunk)
@@ -955,6 +937,11 @@ class LLM(BaseLLM):
                 if tool_calls_list:
                     return tool_calls_list
 
+            finish_reason, response_id_last = (
+                stream_finish_reason,
+                stream_response_id,
+            )
+
             if not tool_calls or not available_functions:
                 if response_model and self.is_litellm:
                     instructor_instance = InternalInstructor(
@@ -972,6 +959,8 @@ class LLM(BaseLLM):
                         from_agent=from_agent,
                         messages=params["messages"],
                         usage=usage_dict,
+                        finish_reason=finish_reason,
+                        response_id=response_id_last,
                     )
                     return structured_response
 
@@ -983,15 +972,15 @@ class LLM(BaseLLM):
                     from_agent=from_agent,
                     messages=params["messages"],
                     usage=usage_dict,
+                    finish_reason=finish_reason,
+                    response_id=response_id_last,
                 )
                 return full_response
 
-            # --- 9) Handle tool calls if present
             tool_result = self._handle_tool_call(tool_calls, available_functions)
             if tool_result is not None:
                 return tool_result
 
-            # --- 10) Emit completion event and return response
             usage_dict = self._usage_to_dict(usage_info)
             self._handle_emit_call_events(
                 response=full_response,
@@ -1000,14 +989,14 @@ class LLM(BaseLLM):
                 from_agent=from_agent,
                 messages=params["messages"],
                 usage=usage_dict,
+                finish_reason=finish_reason,
+                response_id=response_id_last,
             )
             return full_response
 
         except LLMContextLengthExceededError:
-            # Re-raise our own context length error
             raise
         except Exception as e:
-            # Check if this is a context window error and convert to our exception type
             error_msg = str(e)
             if LLMContextLengthExceededError._is_context_limit_error(error_msg):
                 raise LLMContextLengthExceededError(error_msg) from e
@@ -1015,6 +1004,10 @@ class LLM(BaseLLM):
             logging.error(f"Error in streaming response: {e!s}")
             if full_response.strip():
                 logging.warning(f"Returning partial response despite error: {e!s}")
+                finish_reason, response_id_last = (
+                    stream_finish_reason,
+                    stream_response_id,
+                )
                 self._handle_emit_call_events(
                     response=full_response,
                     call_type=LLMCallType.LLM_CALL,
@@ -1022,6 +1015,8 @@ class LLM(BaseLLM):
                     from_agent=from_agent,
                     messages=params["messages"],
                     usage=self._usage_to_dict(usage_info),
+                    finish_reason=finish_reason,
+                    response_id=response_id_last,
                 )
                 return full_response
 
@@ -1101,9 +1096,7 @@ class LLM(BaseLLM):
         if callbacks and len(callbacks) > 0:
             for callback in callbacks:
                 if isinstance(callback, TokenCalcHandler):
-                    # Use the usage_info we've been tracking
                     if not usage_info:
-                        # Try to get usage from the last chunk if we haven't already
                         try:
                             if last_chunk:
                                 if (
@@ -1152,7 +1145,6 @@ class LLM(BaseLLM):
         Returns:
             str: The response text
         """
-        # --- 1) Handle response_model with InternalInstructor for LiteLLM
         if response_model and self.is_litellm:
             from crewai.utilities.internal_instructor import InternalInstructor
 
@@ -1160,7 +1152,6 @@ class LLM(BaseLLM):
             if not messages:
                 raise ValueError("Messages are required when using response_model")
 
-            # Combine all message content for InternalInstructor
             combined_content = "\n\n".join(
                 f"{msg['role'].upper()}: {msg['content']}" for msg in messages
             )
@@ -1197,10 +1188,8 @@ class LLM(BaseLLM):
                     self._track_token_usage_internal(usage_info)
 
         except LLMContextLengthExceededError:
-            # Re-raise our own context length error
             raise
         except Exception as e:
-            # Check if this is a context window error and convert to our exception type
             error_msg = str(e)
             if LLMContextLengthExceededError._is_context_limit_error(error_msg):
                 raise LLMContextLengthExceededError(error_msg) from e
@@ -1212,7 +1201,10 @@ class LLM(BaseLLM):
             else None
         )
 
-        # --- 2) Handle structured output response (when response_model is provided)
+        finish_reason, response_id = self._extract_finish_reason_and_response_id(
+            response
+        )
+
         if response_model is not None:
             # When using instructor/response_model, litellm returns a Pydantic model instance
             if isinstance(response, BaseModel):
@@ -1224,15 +1216,15 @@ class LLM(BaseLLM):
                     from_agent=from_agent,
                     messages=params["messages"],
                     usage=response_usage,
+                    finish_reason=finish_reason,
+                    response_id=response_id,
                 )
                 return structured_response
 
-        # --- 3) Extract response message and content (standard response)
         response_message = cast(Choices, cast(ModelResponse, response).choices)[
             0
         ].message
         text_response = response_message.content or ""
-        # --- 3) Handle callbacks with usage info
         if callbacks and len(callbacks) > 0:
             for callback in callbacks:
                 if isinstance(callback, TokenCalcHandler):
@@ -1249,14 +1241,11 @@ class LLM(BaseLLM):
                             start_time=0,
                             end_time=0,
                         )
-        # --- 4) Check for tool calls
         tool_calls = response_message.tool_calls or []
 
-        # --- 5) If there are tool calls but no available functions, return the tool calls
         if tool_calls and not available_functions:
             return tool_calls
 
-        # --- 6) If there are no tool calls to execute, return the text response directly
         if not tool_calls and text_response:
             self._handle_emit_call_events(
                 response=text_response,
@@ -1265,10 +1254,11 @@ class LLM(BaseLLM):
                 from_agent=from_agent,
                 messages=params["messages"],
                 usage=response_usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
             return text_response
 
-        # --- 7) Handle tool calls if present (execute when available_functions provided)
         if tool_calls and available_functions:
             tool_result = self._handle_tool_call(
                 tool_calls, available_functions, from_task, from_agent
@@ -1276,7 +1266,6 @@ class LLM(BaseLLM):
             if tool_result is not None:
                 return tool_result
 
-        # --- 8) If tool call handling didn't return a result, emit completion event and return text response
         self._handle_emit_call_events(
             response=text_response,
             call_type=LLMCallType.LLM_CALL,
@@ -1284,6 +1273,8 @@ class LLM(BaseLLM):
             from_agent=from_agent,
             messages=params["messages"],
             usage=response_usage,
+            finish_reason=finish_reason,
+            response_id=response_id,
         )
         return text_response
 
@@ -1348,10 +1339,8 @@ class LLM(BaseLLM):
                     self._track_token_usage_internal(usage_info)
 
         except LLMContextLengthExceededError:
-            # Re-raise our own context length error
             raise
         except Exception as e:
-            # Check if this is a context window error and convert to our exception type
             error_msg = str(e)
             if LLMContextLengthExceededError._is_context_limit_error(error_msg):
                 raise LLMContextLengthExceededError(error_msg) from e
@@ -1361,6 +1350,10 @@ class LLM(BaseLLM):
             response.model_extra.get("usage")
             if isinstance(response, ModelResponseBase) and response.model_extra
             else None
+        )
+
+        finish_reason, response_id = self._extract_finish_reason_and_response_id(
+            response
         )
 
         if response_model is not None:
@@ -1373,6 +1366,8 @@ class LLM(BaseLLM):
                     from_agent=from_agent,
                     messages=params["messages"],
                     usage=response_usage,
+                    finish_reason=finish_reason,
+                    response_id=response_id,
                 )
                 return structured_response
 
@@ -1411,10 +1406,11 @@ class LLM(BaseLLM):
                 from_agent=from_agent,
                 messages=params["messages"],
                 usage=response_usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
             return text_response
 
-        # Handle tool calls if present (execute when available_functions provided)
         if tool_calls and available_functions:
             tool_result = self._handle_tool_call(
                 tool_calls, available_functions, from_task, from_agent
@@ -1429,6 +1425,8 @@ class LLM(BaseLLM):
             from_agent=from_agent,
             messages=params["messages"],
             usage=response_usage,
+            finish_reason=finish_reason,
+            response_id=response_id,
         )
         return text_response
 
@@ -1466,12 +1464,29 @@ class LLM(BaseLLM):
         params["stream"] = True
         params["stream_options"] = {"include_usage": True}
         response_id = None
+        # See sync sibling: incrementally track finish_reason/response_id so the
+        # usage-only final chunk doesn't wipe them.
+        stream_finish_reason: str | None = None
+        stream_response_id: str | None = None
 
         try:
             async for chunk in await litellm.acompletion(**params):
                 chunk_count += 1
                 chunk_content = None
-                response_id = chunk.id if isinstance(chunk, ModelResponseBase) else None
+                if isinstance(chunk, ModelResponseBase):
+                    response_id = chunk.id
+                elif isinstance(chunk, dict):
+                    response_id = chunk.get("id")
+                else:
+                    response_id = None
+
+                chunk_finish, chunk_id = self._extract_finish_reason_and_response_id(
+                    chunk
+                )
+                if chunk_finish:
+                    stream_finish_reason = chunk_finish
+                if chunk_id and not stream_response_id:
+                    stream_response_id = chunk_id
 
                 try:
                     choices = None
@@ -1579,6 +1594,10 @@ class LLM(BaseLLM):
                         return tool_calls_list
 
             usage_dict = self._usage_to_dict(usage_info)
+            finish_reason, response_id_last = (
+                stream_finish_reason,
+                stream_response_id,
+            )
             self._handle_emit_call_events(
                 response=full_response,
                 call_type=LLMCallType.LLM_CALL,
@@ -1586,14 +1605,14 @@ class LLM(BaseLLM):
                 from_agent=from_agent,
                 messages=params.get("messages"),
                 usage=usage_dict,
+                finish_reason=finish_reason,
+                response_id=response_id_last,
             )
             return full_response
 
         except LLMContextLengthExceededError:
-            # Re-raise our own context length error
             raise
         except Exception as e:
-            # Check if this is a context window error and convert to our exception type
             error_msg = str(e)
             if LLMContextLengthExceededError._is_context_limit_error(error_msg):
                 raise LLMContextLengthExceededError(error_msg) from e
@@ -1601,6 +1620,10 @@ class LLM(BaseLLM):
             if chunk_count == 0:
                 raise
             if full_response:
+                finish_reason, response_id_last = (
+                    stream_finish_reason,
+                    stream_response_id,
+                )
                 self._handle_emit_call_events(
                     response=full_response,
                     call_type=LLMCallType.LLM_CALL,
@@ -1608,6 +1631,8 @@ class LLM(BaseLLM):
                     from_agent=from_agent,
                     messages=params.get("messages"),
                     usage=self._usage_to_dict(usage_info),
+                    finish_reason=finish_reason,
+                    response_id=response_id_last,
                 )
                 return full_response
             raise
@@ -1630,19 +1655,15 @@ class LLM(BaseLLM):
         Returns:
             The result of the tool call, or None if no tool call was made
         """
-        # --- 1) Validate tool calls and available functions
         if not tool_calls or not available_functions:
             return None
 
-        # --- 2) Extract function name from first tool call
         tool_call = tool_calls[0]
         function_name = sanitize_tool_name(tool_call.function.name)
-        function_args = {}  # Initialize to empty dict to avoid unbound variable
+        function_args = {}
 
-        # --- 3) Check if function is available
         if function_name in available_functions:
             try:
-                # --- 3.1) Parse function arguments
                 function_args = json.loads(tool_call.function.arguments)
                 fn = available_functions[function_name]
 
@@ -1671,7 +1692,6 @@ class LLM(BaseLLM):
                     ),
                 )
 
-                # --- 3.3) Emit success event
                 self._handle_emit_call_events(
                     response=result,
                     call_type=LLMCallType.TOOL_CALL,
@@ -1680,10 +1700,7 @@ class LLM(BaseLLM):
                 )
                 return result
             except Exception as e:
-                # --- 3.4) Handle execution errors
-                fn = available_functions.get(
-                    function_name, lambda: None
-                )  # Ensure fn is always a callable
+                fn = available_functions.get(function_name, lambda: None)
                 logging.error(f"Error executing function '{function_name}': {e}")
                 crewai_event_bus.emit(
                     self,
@@ -1742,28 +1759,20 @@ class LLM(BaseLLM):
             ValueError: If response format is not supported
             LLMContextLengthExceededError: If input exceeds model's context limit
         """
-        with llm_call_context() as call_id:
-            crewai_event_bus.emit(
-                self,
-                event=LLMCallStartedEvent(
-                    messages=messages,
-                    tools=tools,
-                    callbacks=callbacks,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    model=self.model,
-                    call_id=call_id,
-                ),
+        with llm_call_context():
+            self._emit_call_started_event(
+                messages=messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
             )
 
-            # --- 2) Validate parameters before proceeding with the call
             self._validate_call_params()
 
-            # --- 3) Convert string messages to proper format if needed
             if isinstance(messages, str):
                 messages = [{"role": "user", "content": messages}]
-            # --- 4) Handle O1 model special case (system messages not supported)
             if "o1" in self.model.lower():
                 for message in messages:
                     if message.get("role") == "system":
@@ -1773,14 +1782,11 @@ class LLM(BaseLLM):
             if not self._invoke_before_llm_call_hooks(messages, from_agent):
                 raise ValueError("LLM call blocked by before_llm_call hook")
 
-            # --- 5) Set up callbacks if provided
             with suppress_warnings():
                 if callbacks and len(callbacks) > 0:
                     self.set_callbacks(callbacks)
                 try:
-                    # --- 6) Prepare parameters for the completion call
                     params = self._prepare_completion_params(messages, tools)
-                    # --- 7) Make the completion call and handle response
                     if self.stream:
                         result = self._handle_streaming_response(
                             params=params,
@@ -1892,19 +1898,14 @@ class LLM(BaseLLM):
             ValueError: If response format is not supported
             LLMContextLengthExceededError: If input exceeds model's context limit
         """
-        with llm_call_context() as call_id:
-            crewai_event_bus.emit(
-                self,
-                event=LLMCallStartedEvent(
-                    messages=messages,
-                    tools=tools,
-                    callbacks=callbacks,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    model=self.model,
-                    call_id=call_id,
-                ),
+        with llm_call_context():
+            self._emit_call_started_event(
+                messages=messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
             )
 
             self._validate_call_params()
@@ -1912,7 +1913,6 @@ class LLM(BaseLLM):
             if isinstance(messages, str):
                 messages = [{"role": "user", "content": messages}]
 
-            # Process file attachments asynchronously before preparing params
             messages = await self._aprocess_message_files(messages)
 
             if "o1" in self.model.lower():
@@ -1996,16 +1996,62 @@ class LLM(BaseLLM):
 
     @staticmethod
     def _usage_to_dict(usage: Any) -> dict[str, Any] | None:
+        """Convert a provider usage object to a plain dict and flatten the
+        cache/reasoning sub-counts that LiteLLM nests under provider-specific
+        shapes into the top-level keys the rest of the pipeline expects.
+
+        LiteLLM hands back provider usage as-is, so cache-read, cache-creation
+        and reasoning tokens may live in nested objects (e.g.
+        ``prompt_tokens_details.cached_tokens``) or under Anthropic-style keys
+        (``cache_read_input_tokens``). Downstream span mapping only reads the
+        flat ``cached_prompt_tokens`` / ``reasoning_tokens`` /
+        ``cache_creation_tokens`` keys, so we surface them here.
+
+        Only those derived buckets are populated; ``prompt_tokens`` /
+        ``completion_tokens`` / ``total_tokens`` are left untouched. Extraction
+        precedence mirrors ``BaseLLM._track_token_usage_internal``.
+        """
         if usage is None:
             return None
         if isinstance(usage, dict):
-            return usage
-        if isinstance(usage, BaseModel):
-            result: dict[str, Any] = usage.model_dump()
-            return result
-        if hasattr(usage, "__dict__"):
-            return {k: v for k, v in vars(usage).items() if not k.startswith("_")}
-        return None
+            data: dict[str, Any] = dict(usage)
+        elif isinstance(usage, BaseModel):
+            data = usage.model_dump()
+        elif hasattr(usage, "__dict__"):
+            data = {k: v for k, v in vars(usage).items() if not k.startswith("_")}
+        else:
+            return None
+
+        def _nested(container: Any, key: str) -> Any:
+            if isinstance(container, dict):
+                return container.get(key)
+            return getattr(container, key, None)
+
+        prompt_details = data.get("prompt_tokens_details")
+        completion_details = data.get("completion_tokens_details")
+
+        cached_prompt_tokens = (
+            data.get("cached_tokens")
+            or data.get("cached_prompt_tokens")
+            or data.get("cache_read_input_tokens")
+            or _nested(prompt_details, "cached_tokens")
+        )
+        if cached_prompt_tokens is not None:
+            data["cached_prompt_tokens"] = cached_prompt_tokens
+
+        reasoning_tokens = data.get("reasoning_tokens") or _nested(
+            completion_details, "reasoning_tokens"
+        )
+        if reasoning_tokens is not None:
+            data["reasoning_tokens"] = reasoning_tokens
+
+        cache_creation_tokens = data.get("cache_creation_tokens") or data.get(
+            "cache_creation_input_tokens"
+        )
+        if cache_creation_tokens is not None:
+            data["cache_creation_tokens"] = cache_creation_tokens
+
+        return data
 
     def _handle_emit_call_events(
         self,
@@ -2015,6 +2061,8 @@ class LLM(BaseLLM):
         from_agent: BaseAgent | None = None,
         messages: str | list[LLMMessage] | None = None,
         usage: dict[str, Any] | None = None,
+        finish_reason: str | None = None,
+        response_id: str | None = None,
     ) -> None:
         """Handle the events for the LLM call.
 
@@ -2025,6 +2073,10 @@ class LLM(BaseLLM):
             from_agent: Optional agent object
             messages: Optional messages object
             usage: Optional token usage data
+            finish_reason: Raw provider finish reason (e.g. "stop", "length",
+                "tool_calls"). Optional; downstream telemetry coerces to the
+                OTel GenAI enum.
+            response_id: Raw provider response identifier. Optional.
         """
         crewai_event_bus.emit(
             self,
@@ -2037,8 +2089,23 @@ class LLM(BaseLLM):
                 model=self.model,
                 call_id=get_current_call_id(),
                 usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             ),
         )
+
+    def _effective_max_tokens(self) -> int | float | None:
+        """LiteLLM sends ``max_tokens or max_completion_tokens`` as the cap."""
+        return self.max_tokens or self.max_completion_tokens
+
+    @staticmethod
+    def _extract_finish_reason_and_response_id(
+        response_or_chunk: Any,
+    ) -> tuple[str | None, str | None]:
+        """LiteLLM responses/chunks share the choices-shape with OpenAI/Azure;
+        delegate to the shared extractor.
+        """
+        return extract_choices_finish_reason_and_id(response_or_chunk)
 
     def _process_message_files(self, messages: list[LLMMessage]) -> list[LLMMessage]:
         """Process files attached to messages and format for provider.
@@ -2159,18 +2226,15 @@ class LLM(BaseLLM):
         if messages is None:
             raise TypeError("Messages cannot be None")
 
-        # Validate message format first
         for msg in messages:
             if not isinstance(msg, dict) or "role" not in msg or "content" not in msg:
                 raise TypeError(
                     "Invalid message format. Each message must be a dict with 'role' and 'content' keys"
                 )
 
-        # Handle O1 models specially
         if "o1" in self.model.lower():
             formatted_messages = []
             for msg in messages:
-                # Convert system messages to assistant messages
                 if msg["role"] == "system":
                     formatted_messages.append(
                         {"role": "assistant", "content": msg["content"]}
@@ -2181,7 +2245,6 @@ class LLM(BaseLLM):
 
         # Handle Mistral models - they require the last message to have a role of 'user' or 'tool'
         if "mistral" in self.model.lower():
-            # Check if the last message has a role of 'assistant'
             if messages and messages[-1]["role"] == "assistant":
                 return [*messages, {"role": "user", "content": "Please continue."}]  # type: ignore[list-item]
             return messages  # type: ignore[return-value]
@@ -2195,13 +2258,11 @@ class LLM(BaseLLM):
         ):
             return [*messages, {"role": "user", "content": ""}]  # type: ignore[list-item]
 
-        # Handle Anthropic models
         if not self.is_anthropic:
             return messages  # type: ignore[return-value]
 
         # Anthropic requires messages to start with 'user' role
         if not messages or messages[0]["role"] == "system":
-            # If first message is system or empty, add a placeholder user message
             return [{"role": "user", "content": "."}, *messages]  # type: ignore[list-item]
 
         return messages  # type: ignore[return-value]
@@ -2230,7 +2291,6 @@ class LLM(BaseLLM):
         Native providers have their own validation.
         """
         if not LITELLM_AVAILABLE or supports_response_schema is None:
-            # When litellm is not available, skip validation
             # (this path should only be reached for litellm fallback models)
             return
 
@@ -2299,7 +2359,6 @@ class LLM(BaseLLM):
         min_context = 1024
         max_context = 2097152  # Current max from gemini-1.5-pro
 
-        # Validate all context window sizes
         for key, value in LLM_CONTEXT_WINDOW_SIZES.items():
             if value < min_context or value > max_context:
                 raise ValueError(
@@ -2324,7 +2383,6 @@ class LLM(BaseLLM):
         don't use litellm callbacks - they emit events via base_llm.py.
         """
         if not LITELLM_AVAILABLE:
-            # When litellm is not available, callbacks are still stored
             # but not registered with litellm globals
             return
 
@@ -2363,7 +2421,6 @@ class LLM(BaseLLM):
         `litellm.failure_callback` to ["langfuse"].
         """
         if not LITELLM_AVAILABLE:
-            # When litellm is not available, env callbacks have no effect
             return
 
         with suppress_warnings():
@@ -2417,7 +2474,6 @@ class LLM(BaseLLM):
             ]
         }
 
-        # Create a new instance with the same parameters
         return LLM(
             model=self.model,
             is_litellm=self.is_litellm,
@@ -2481,7 +2537,6 @@ class LLM(BaseLLM):
             ]
         }
 
-        # Create a new instance with the same parameters
         return LLM(
             model=self.model,
             is_litellm=self.is_litellm,
@@ -2524,45 +2579,33 @@ class LLM(BaseLLM):
             True if the model likely supports images.
         """
         vision_prefixes = (
-            # OpenAI — GPT-4 vision models
             "gpt-4o",
             "gpt-4-turbo",
             "gpt-4-vision",
             "gpt-4.1",
-            # OpenAI — GPT-5 family (all variants support multimodal)
             "gpt-5",
-            # OpenAI — o-series reasoning models with vision
-            # o1, o3, o4, o4-mini support multimodal
             # o1-mini, o1-preview, o3-mini are text-only — handled via exclusion below
             "o1",
             "o3",
             "o4-mini",
             "o4",
-            # Anthropic — Claude 3+ models support vision
             "claude-3",
             "claude-4",
             "claude-sonnet-4",
             "claude-opus-4",
             "claude-haiku-4",
-            # Google — all Gemini models support multimodal
             "gemini",
-            # xAI — Grok models support vision
             "grok",
-            # Mistral — Pixtral vision model
             "pixtral",
-            # Open-source vision models
             "llava",
-            # Alibaba — Qwen vision-language models
             "qwen-vl",
             "qwen2-vl",
             "qwen3-vl",
         )
-        # Text-only models that would otherwise match vision prefixes
         text_only_models = ("o3-mini", "o1-mini", "o1-preview")
 
         model_lower = self.model.lower()
 
-        # Check exclusion first
         if any(
             model_lower.startswith(m) or f"/{m}" in model_lower
             for m in text_only_models

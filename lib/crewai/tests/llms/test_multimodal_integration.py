@@ -290,7 +290,7 @@ class TestBedrockMultimodalIntegration:
     @pytest.mark.vcr()
     def test_describe_image(self, test_image_bytes: bytes) -> None:
         """Test Bedrock Claude can describe an image."""
-        llm = LLM(model="bedrock/anthropic.claude-3-haiku-20240307-v1:0")
+        llm = LLM(model="bedrock/us.anthropic.claude-sonnet-4-6")
         files = {"image": ImageFile(source=test_image_bytes)}
 
         messages = _build_multimodal_message(
@@ -308,7 +308,7 @@ class TestBedrockMultimodalIntegration:
     @pytest.mark.vcr()
     def test_analyze_pdf(self) -> None:
         """Test Bedrock Claude can analyze a PDF."""
-        llm = LLM(model="bedrock/anthropic.claude-3-haiku-20240307-v1:0")
+        llm = LLM(model="bedrock/us.anthropic.claude-sonnet-4-6")
         files = {"document": PDFFile(source=MINIMAL_PDF)}
 
         messages = _build_multimodal_message(
@@ -660,7 +660,6 @@ class TestAnthropicFileUploadIntegration:
             files,
         )
 
-        # Verify we're using file_id, not base64
         assert len(content_blocks) == 1
         source = content_blocks[0].get("source", {})
         assert source.get("type") == "file", (
@@ -696,7 +695,6 @@ class TestOpenAIResponsesFileUploadIntegration:
             files,
         )
 
-        # Verify we're using file_id with input_image type
         assert len(content_blocks) == 1
         block = content_blocks[0]
         assert block.get("type") == "input_image", (
@@ -719,7 +717,6 @@ class TestOpenAIResponsesFileUploadIntegration:
 
         content_blocks = format_multimodal_content(files, "openai", api="responses")
 
-        # Verify content blocks use Responses API format
         assert len(content_blocks) == 1
         block = content_blocks[0]
         assert block.get("type") == "input_image", (
@@ -754,7 +751,6 @@ class TestOpenAIResponsesFileUploadIntegration:
             files, "openai", api="responses", prefer_upload=True
         )
 
-        # Verify content blocks use file_id from upload
         assert len(content_blocks) == 1
         block = content_blocks[0]
         assert block.get("type") == "input_image", (
