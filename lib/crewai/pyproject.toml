@@ -8,8 +8,8 @@ authors = [
 ]
 requires-python = ">=3.10, <3.14"
 dependencies = [
-    "crewai-core==1.14.6",
-    "crewai-cli==1.14.6",
+    "crewai-core==1.14.7a2",
+    "crewai-cli==1.14.7a2",
     # Core Dependencies
     "pydantic>=2.11.9,<2.13",
     "openai>=2.30.0,<3",
@@ -54,7 +54,7 @@ Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
 tools = [
-    "crewai-tools==1.14.6",
+    "crewai-tools==1.14.7a2",
 ]
 embeddings = [
     "tiktoken>=0.8.0,<0.13"
@@ -137,6 +137,9 @@ torchvision = [
 ]
 crewai-files = { workspace = true }
 
+
+[project.scripts]
+crewai = "crewai_cli.cli:crewai"
 
 [build-system]
 requires = ["hatchling"]

@@ -172,7 +172,7 @@ Flows are ideal when:
 
 ```python
 # Example: Customer Support Flow with structured processing
-from crewai.flow.flow import Flow, listen, router, start
+from crewai.flow.flow import Flow, listen, or_, router, start
 from pydantic import BaseModel
 from typing import List, Dict
 
@@ -238,7 +238,7 @@ class CustomerSupportFlow(Flow[SupportTicketState]):
 
     # Additional category handlers...
 
-    @listen("billing", "account_access", "technical_issue", "feature_request", "other")
+    @listen(or_("billing", "account_access", "technical_issue", "feature_request", "other"))
     def resolve_ticket(self, resolution_info):
         # Final resolution step
         self.state.resolution = f"Issue resolved: {resolution_info}"
