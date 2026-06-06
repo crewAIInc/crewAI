@@ -555,7 +555,9 @@ class _ConversationalMixin:
         if state_permissions is None:
             return False
 
-        return all(permission in state_permissions for permission in required_permissions)
+        return all(
+            permission in state_permissions for permission in required_permissions
+        )
 
     def classify_intent(
         self,
