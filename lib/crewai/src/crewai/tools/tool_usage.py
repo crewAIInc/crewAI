@@ -270,14 +270,16 @@ class ToolUsage:
         error_event_emitted = False
 
         try:
-            # Check cross-retry idempotency store (independent of cache config)
-            if self.tools_handler and calling.arguments:
+            # Check cross-retry idempotency store (independent of cache config).
+            # Use claim_idempotent_result for an atomic check-and-claim to
+            # prevent duplicate execution from overlapping retries.
+            if self.tools_handler and calling.arguments is not None:
                 idem_args: dict[str, object] = (
                     calling.arguments
                     if isinstance(calling.arguments, dict)
                     else {}
                 )
-                result = self.tools_handler.get_idempotent_result(
+                result = self.tools_handler.claim_idempotent_result(
                     sanitize_tool_name(calling.tool_name), idem_args
                 )
                 from_cache = result is not None
@@ -514,14 +516,16 @@ class ToolUsage:
         error_event_emitted = False
 
         try:
-            # Check cross-retry idempotency store (independent of cache config)
-            if self.tools_handler and calling.arguments:
+            # Check cross-retry idempotency store (independent of cache config).
+            # Use claim_idempotent_result for an atomic check-and-claim to
+            # prevent duplicate execution from overlapping retries.
+            if self.tools_handler and calling.arguments is not None:
                 idem_args: dict[str, object] = (
                     calling.arguments
                     if isinstance(calling.arguments, dict)
                     else {}
                 )
-                result = self.tools_handler.get_idempotent_result(
+                result = self.tools_handler.claim_idempotent_result(
                     sanitize_tool_name(calling.tool_name), idem_args
                 )
                 from_cache = result is not None
