@@ -107,7 +107,7 @@ There are different places in CrewAI code where you can specify the model to use
 </Tabs>
 
 <Info>
-  CrewAI provides native SDK integrations for OpenAI, Anthropic, Google (Gemini API), Azure, and AWS Bedrock — no extra install needed beyond the provider-specific extras (e.g. `uv add "crewai[openai]"`).
+  CrewAI provides native SDK integrations for OpenAI, Anthropic, Google (Gemini API), Azure, AWS Bedrock, and Snowflake Cortex — no extra install needed beyond the provider-specific extras (e.g. `uv add "crewai[openai]"`).
 
   All other providers are powered by **LiteLLM**. If you plan to use any of them, add it as a dependency to your project:
   ```bash
@@ -289,6 +289,55 @@ In this section, you'll find detailed examples that help you select, configure, 
     ```bash
     uv add 'crewai[litellm]'
     ```
+  </Accordion>
+
+  <Accordion title="Snowflake Cortex">
+    CrewAI provides native integration with the Snowflake Cortex REST API through its OpenAI-compatible Chat Completions endpoint. This avoids LiteLLM fallback for `snowflake/...` models. Snowflake Cortex currently supports Chat Completions only in CrewAI, so use the default `api` mode and do not set `api="responses"`.
+
+    ```toml Code
+    # Required
+    SNOWFLAKE_PAT=<your-programmatic-access-token>
+    SNOWFLAKE_ACCOUNT_URL=https://<account-identifier>.snowflakecomputing.com
+
+    # Alternative account configuration
+    SNOWFLAKE_ACCOUNT=<account-identifier>
+    ```
+
+    **Basic Usage:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="snowflake/openai-gpt-4.1",
+        temperature=0.7,
+        max_completion_tokens=1024,
+    )
+    ```
+
+    **Claude Models on Cortex:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="snowflake/claude-sonnet-4-5",
+        max_completion_tokens=1024,
+        stream=True,
+    )
+    ```
+
+    **Supported Environment Variables:**
+    - `SNOWFLAKE_PAT`, `SNOWFLAKE_TOKEN`, or `SNOWFLAKE_JWT`: token used as the Bearer credential
+    - `SNOWFLAKE_ACCOUNT_URL`: full Snowflake account URL
+    - `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_ACCOUNT_ID`, or `SNOWFLAKE_ACCOUNT_IDENTIFIER`: account identifier used to build the account URL
+
+    Snowflake REST requests use the user's default Snowflake role. Make sure that role has `SNOWFLAKE.CORTEX_USER` or `SNOWFLAKE.CORTEX_REST_API_USER`. Database, schema, warehouse, and explicit role parameters are not required by the Cortex REST Chat Completions endpoint.
+
+    **Features:**
+    - Native provider selection with `model="snowflake/<model-name>"`
+    - Streaming and non-streaming Chat Completions only; `api="responses"` is not supported
+    - Token usage tracking
+    - Function calling for Snowflake-hosted OpenAI and Claude models
+    - Automatic removal of invalid trailing assistant prefill for Snowflake Claude models
   </Accordion>
 
   <Accordion title="Anthropic">
@@ -898,6 +947,61 @@ In this section, you'll find detailed examples that help you select, configure, 
     | baichuan-inc/baichuan2-13b-chat                                  | 4,096 tokens   | Support Chinese and English chat, coding, math, instruction following, solving quizzes |
 
     **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
+
+  <Accordion title="NVIDIA Nemotron">
+    NVIDIA Nemotron models are designed for demanding agentic workloads, including complex reasoning, long-context analysis, tool use, multilingual tasks, and high-stakes RAG.
+
+    The `NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4` model is a frontier-scale open-weight model from NVIDIA with 550B total parameters and 55B active parameters. It uses a LatentMoE architecture that combines Mamba-2, MoE, Attention, and Multi-Token Prediction (MTP), and supports context lengths up to 1M tokens.
+
+    <Info>
+      `NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4` is a very large model. NVIDIA lists minimum serving requirements of 4x GB200, 4x B200, 4x GB300, 4x B300, or 8x H100 GPUs. For most CrewAI users, the recommended path is to use NVIDIA NIM or another OpenAI-compatible hosted endpoint rather than running it locally.
+    </Info>
+
+    **Hosted NVIDIA NIM usage:**
+    ```toml Code
+    NVIDIA_API_KEY=<your-api-key>
+    ```
+
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="nvidia_nim/nvidia/nvidia-nemotron-3-ultra-550b-a55b",
+        temperature=0.2,
+        max_tokens=4096,
+    )
+    ```
+
+    **Self-hosted OpenAI-compatible endpoint:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="openai/nvidia-nemotron-3-ultra-550b-a55b-nvfp4",
+        base_url="https://your-nemotron-endpoint.example.com/v1",
+        api_key="your-api-key",
+        temperature=0.2,
+        max_tokens=4096,
+    )
+    ```
+
+    **Model details:**
+
+    | Model | Context Window | Best For |
+    |-------|----------------|----------|
+    | `nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4` | Up to 1M tokens | Frontier reasoning, complex agentic workflows, long-context analysis, tool use, multilingual reasoning, and high-stakes RAG |
+
+    **Supported languages:** English, French, Spanish, Italian, German, Japanese, Korean, Hindi, Brazilian Portuguese, and Chinese.
+
+    **Reasoning mode:** Nemotron 3 Ultra supports configurable reasoning via its chat template using `enable_thinking=True` or `enable_thinking=False`. If you are using a hosted endpoint, check your provider's documentation for how that flag is exposed.
+
+    For model details, license, and deployment guidance, see the [NVIDIA Nemotron 3 Ultra model card](https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4).
+
+    **Note:** Hosted NVIDIA NIM usage uses LiteLLM. Add it as a dependency to your project:
     ```bash
     uv add 'crewai[litellm]'
     ```

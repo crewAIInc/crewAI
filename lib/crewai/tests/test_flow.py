@@ -1160,9 +1160,9 @@ def test_router_cascade_chain():
         @router(process_level_1)
         def router_level_2(self):
             execution_order.append("router_level_2")
-            return "level_2_path"
+            return "level_2_event"
 
-        @listen("level_2_path")
+        @listen("level_2_event")
         def process_level_2(self):
             execution_order.append("process_level_2")
             self.state["level"] = 3
@@ -1171,9 +1171,9 @@ def test_router_cascade_chain():
         @router(process_level_2)
         def router_level_3(self):
             execution_order.append("router_level_3")
-            return "final_path"
+            return "final_event"
 
-        @listen("final_path")
+        @listen("final_event")
         def finalize(self):
             execution_order.append("finalize")
             return "complete"
@@ -1261,14 +1261,14 @@ def test_complex_and_or_branching():
     assert execution_order.index("final") > execution_order.index("branch_2b")
 
 
-def test_conditional_router_paths_exclusivity():
-    """Test that only the returned router path activates, not all paths."""
+def test_conditional_router_events_exclusivity():
+    """Test that only the returned router event activates, not all events."""
     execution_order = []
 
     class ConditionalRouterFlow(Flow):
         def __init__(self):
             super().__init__()
-            self.state["condition"] = "take_path_b"
+            self.state["condition"] = "take_event_b"
 
         @start()
         def begin(self):
@@ -1277,33 +1277,33 @@ def test_conditional_router_paths_exclusivity():
         @router(begin)
         def decision_point(self):
             execution_order.append("decision_point")
-            if self.state["condition"] == "take_path_a":
-                return "path_a"
-            elif self.state["condition"] == "take_path_b":
-                return "path_b"
+            if self.state["condition"] == "take_event_a":
+                return "event_a"
+            elif self.state["condition"] == "take_event_b":
+                return "event_b"
             else:
-                return "path_c"
+                return "event_c"
 
-        @listen("path_a")
-        def handle_path_a(self):
-            execution_order.append("handle_path_a")
+        @listen("event_a")
+        def handle_event_a(self):
+            execution_order.append("handle_event_a")
 
-        @listen("path_b")
-        def handle_path_b(self):
-            execution_order.append("handle_path_b")
+        @listen("event_b")
+        def handle_event_b(self):
+            execution_order.append("handle_event_b")
 
-        @listen("path_c")
-        def handle_path_c(self):
-            execution_order.append("handle_path_c")
+        @listen("event_c")
+        def handle_event_c(self):
+            execution_order.append("handle_event_c")
 
     flow = ConditionalRouterFlow()
     flow.kickoff()
 
     assert "begin" in execution_order
     assert "decision_point" in execution_order
-    assert "handle_path_b" in execution_order
-    assert "handle_path_a" not in execution_order
-    assert "handle_path_c" not in execution_order
+    assert "handle_event_b" in execution_order
+    assert "handle_event_a" not in execution_order
+    assert "handle_event_c" not in execution_order
 
 
 def test_state_consistency_across_parallel_branches():

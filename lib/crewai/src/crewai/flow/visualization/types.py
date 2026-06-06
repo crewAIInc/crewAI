@@ -1,6 +1,11 @@
 """Type definitions for Flow structure visualization."""
 
-from typing import Any, TypedDict
+from typing import Any
+
+from typing_extensions import Required, TypedDict
+
+
+__all__ = ["FlowStructure", "NodeMetadata", "StructureEdge"]
 
 
 class NodeMetadata(TypedDict, total=False):
@@ -8,19 +13,12 @@ class NodeMetadata(TypedDict, total=False):
 
     type: str
     is_router: bool
-    router_paths: list[str]
+    router_events: list[str]
     condition_type: str | None
     trigger_condition_type: str | None
     trigger_methods: list[str]
     trigger_condition: dict[str, Any] | None
-    method_signature: dict[str, Any]
-    source_code: str
-    source_lines: list[str]
-    source_start_line: int
-    source_file: str
-    class_signature: str
     class_name: str
-    class_line_number: int
 
 
 class StructureEdge(TypedDict, total=False):
@@ -29,8 +27,8 @@ class StructureEdge(TypedDict, total=False):
     source: str
     target: str
     condition_type: str | None
-    is_router_path: bool
-    router_path_label: str
+    is_router_event: Required[bool]
+    router_event: str | None
 
 
 class FlowStructure(TypedDict):
