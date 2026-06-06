@@ -4,6 +4,35 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="05 jun 2026">
+  ## v1.14.7a2
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.7a2)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar suporte a rastreamentos de fluxo de conversa.
+  - Atualizar a documentação do fluxo de conversa para utilizar `handle_turn`.
+  - Exibir o real `finish_reason`, parâmetros de amostragem e `response.id` em eventos LLM.
+  - Tipar os gatilhos DSL como decoradores cientes de rota.
+  - Implementar API de chat para fluxos de conversa.
+  - Tornar o backend de bloqueio substituível no armazenamento de bloqueios.
+  - Dividir o monólito DSL de fluxo em módulos de decoradores focados.
+  - Achatar os subcontagens de uso de cache/razão do LiteLLM em `_usage_to_dict`.
+  - Construir `FlowDefinition` a partir dos metadados do Flow DSL.
+
+  ### Documentação
+  - Adicionar guia do LLM NVIDIA Nemotron.
+  - Documentar implantações de monorepo.
+  - Atualizar changelog e versão para v1.14.7a1.
+
+  ## Contribuidores
+
+  @alex-clawd, @gvieira, @lorenzejay, @lucasgomide, @mattatcha, @vinibrsl
+
+</Update>
+
 <Update label="03 jun 2026">
   ## v1.14.7a1
 
