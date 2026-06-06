@@ -1047,8 +1047,8 @@ def test_openai_responses_api_last_response_id_property():
     assert llm.last_response_id is None
 
     # Simulate setting the internal value
-    llm._last_response_id = "resp_test_123"
-    assert llm.last_response_id == "resp_test_123"
+llm._last_response_id = "resp_test_123"
+assert llm.last_response_id == "resp_test_123"  # Ensure the assertion is correct
 
 
 def test_openai_responses_api_reset_chain():
