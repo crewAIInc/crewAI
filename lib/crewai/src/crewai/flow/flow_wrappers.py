@@ -87,6 +87,7 @@ class FlowMethod(Generic[P, R]):
             "__router_emit__",
             "__human_feedback_config__",
             "__conversational_only__",  # gates registration on Flow.conversational
+            "__route_permissions__",  # conversational route access control
             "__flow_persistence_config__",
             "__flow_method_definition__",
             "_human_feedback_llm",  # Live LLM object for HITL resume

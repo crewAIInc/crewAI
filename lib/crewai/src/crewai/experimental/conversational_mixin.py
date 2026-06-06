@@ -358,8 +358,8 @@ class _ConversationalMixin:
 
         Pass an explicit ``RouterConfig`` only to override the routing prompt,
         supply per-route descriptions, or change the default/fallback intent.
-        Override this method to bypass the LLM router entirely (e.g.,
-        permission gates before the LLM decision).
+        Use ``RouterConfig.route_permissions`` for route-level access control.
+        Override this method to bypass the LLM router entirely.
         """
         config = self._conversation_config
         if config is None:
@@ -539,6 +539,24 @@ class _ConversationalMixin:
             cast("Flow[Any]", self), text, outcomes=outcomes, llm=llm
         )
 
+    def can_access_route(
+        self,
+        required_permissions: Sequence[str],
+    ) -> bool:
+        """Return whether the current turn may use a protected route.
+
+        By default, this checks for a ``permissions`` collection on state. Apps
+        with richer auth models can override this method instead of overriding
+        ``route_turn``.
+        """
+        state_permissions = getattr(cast(Any, self.state), "permissions", None)
+        if state_permissions is None and isinstance(self.state, dict):
+            state_permissions = self.state.get("permissions")
+        if state_permissions is None:
+            return False
+
+        return all(permission in state_permissions for permission in required_permissions)
+
     def classify_intent(
         self,
         text: str,
@@ -659,7 +677,41 @@ class _ConversationalMixin:
         if valid_labels and intent not in valid_labels:
             return router_config.fallback_intent or router_config.default_intent
 
+        if not self._can_access_router_intent(intent, router_config):
+            return router_config.permission_denied_route
+
         return intent
+
+    def _can_access_router_intent(
+        self,
+        intent: str,
+        router_config: RouterConfig,
+    ) -> bool:
+        required_permissions = self._route_required_permissions(
+            intent,
+            router_config,
+        )
+        if not required_permissions:
+            return True
+        return self.can_access_route(required_permissions)
+
+    def _route_required_permissions(
+        self,
+        route: str,
+        router_config: RouterConfig,
+    ) -> tuple[str, ...]:
+        permissions = (router_config.route_permissions or {}).get(route)
+        if permissions is None:
+            handler_name = self._listener_methods_by_route().get(route)
+            if handler_name is None:
+                return ()
+            handler = getattr(type(self), handler_name, None)
+            permissions = getattr(handler, "__route_permissions__", None)
+            if permissions is None:
+                return ()
+        if isinstance(permissions, str):
+            return (permissions,)
+        return tuple(permissions)
 
     def _default_router_llm(self, router_config: RouterConfig) -> Any | None:
         config = self._conversation_config
@@ -732,13 +784,7 @@ class _ConversationalMixin:
         self,
         router_config: RouterConfig | None,
     ) -> dict[str, str]:
-        label_to_method: dict[str, str] = {}
-        for listener_name, condition in self._listeners.items():
-            if isinstance(condition, tuple):
-                _, trigger_labels = condition
-                for trigger_label in trigger_labels:
-                    label_to_method.setdefault(str(trigger_label), str(listener_name))
-
+        label_to_method = self._listener_methods_by_route()
         routes = self._effective_routes(router_config)
         overrides = (
             router_config.route_descriptions
@@ -794,6 +840,15 @@ class _ConversationalMixin:
                 labels.update(str(method) for method in methods)
         return labels
 
+    def _listener_methods_by_route(self) -> dict[str, str]:
+        label_to_method: dict[str, str] = {}
+        for listener_name, condition in self._listeners.items():
+            if isinstance(condition, tuple):
+                _, trigger_labels = condition
+                for trigger_label in trigger_labels:
+                    label_to_method.setdefault(str(trigger_label), str(listener_name))
+        return label_to_method
+
     def _effective_routes(self, router_config: RouterConfig | None = None) -> set[str]:
         custom_routes = set(router_config.routes or ()) if router_config else set()
         if not custom_routes:
@@ -802,6 +857,8 @@ class _ConversationalMixin:
                 - set(self.builtin_routes)
                 - set(self.internal_routes)
             )
+            if router_config is not None:
+                custom_routes.discard(router_config.permission_denied_route)
         return custom_routes | set(self.builtin_routes)
 
     def _default_conversation_llm(self) -> Any | None:
