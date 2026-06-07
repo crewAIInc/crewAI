@@ -39,6 +39,13 @@ LOGICNODES_REGISTRY = "0x4c60B817beeD72aa570B964243eE6DD463faaE22"
 BASE_MAINNET_RPC = "https://mainnet.base.org"
 CHAIN_ID = 8453
 
+
+class _GateError(RuntimeError):
+    """Raised when a strict LogicNodes gate intentionally fails (node not
+    active / registry empty). Distinct from infrastructure errors (wrong
+    chain, RPC failure) so non-strict callers swallow infra errors but
+    strict callers still see gate failures."""
+
 # Minimal ABI for the read paths we use (matches the deployed contract exactly).
 _REGISTRY_ABI = [
     {
@@ -164,7 +171,7 @@ def requireLogicNodes(
         if node_id is not None:
             ok = is_node_active(node_id, rpc_url, registry)
             if not ok and strict:
-                raise RuntimeError(
+                raise _GateError(
                     f"Node {node_id} is not active on LogicNodes registry "
                     f"{registry}. Register at https://logicnodes.io"
                 )
@@ -173,12 +180,12 @@ def requireLogicNodes(
         count = get_node_count(rpc_url, registry)
         ok = count > 0
         if not ok and strict:
-            raise RuntimeError(
+            raise _GateError(
                 "LogicNodes registry is reachable but currently has no "
                 "registered nodes. See https://logicnodes.io"
             )
         return ok
-    except RuntimeError:
+    except _GateError:
         raise
     except Exception as exc:  # network / import errors
         if strict:
