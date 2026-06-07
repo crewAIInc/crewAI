@@ -3099,9 +3099,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         answer = self.state.current_answer
         if not isinstance(answer, AgentFinish):
-            raise RuntimeError(
-                "Agent execution ended without reaching a final answer."
-            )
+            raise RuntimeError("Agent execution ended without reaching a final answer.")
         return answer
 
     async def _ainvoke_loop(self) -> AgentFinish:
@@ -3121,9 +3119,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         answer = self.state.current_answer
         if not isinstance(answer, AgentFinish):
-            raise RuntimeError(
-                "Agent execution ended without reaching a final answer."
-            )
+            raise RuntimeError("Agent execution ended without reaching a final answer.")
         return answer
 
     def _format_feedback_message(self, feedback: str) -> LLMMessage:
