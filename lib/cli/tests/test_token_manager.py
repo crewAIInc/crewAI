@@ -146,7 +146,6 @@ class TestAtomicFileOperations(unittest.TestCase):
         self.temp_dir = tempfile.mkdtemp()
         self.original_get_path = TokenManager._get_secure_storage_path
 
-        # Patch to use temp directory
         def mock_get_path() -> Path:
             return Path(self.temp_dir)
 
@@ -182,7 +181,6 @@ class TestAtomicFileOperations(unittest.TestCase):
         mock_get_key.return_value = Fernet.generate_key()
         tm = TokenManager()
 
-        # Create file first
         file_path = Path(self.temp_dir) / "test.txt"
         file_path.write_bytes(b"original")
 
@@ -231,7 +229,6 @@ class TestAtomicFileOperations(unittest.TestCase):
 
         tm._atomic_write_secure_file("test.txt", b"content")
 
-        # Check no temp files remain
         temp_files = list(Path(self.temp_dir).glob(".test.txt.*"))
         self.assertEqual(len(temp_files), 0)
 
@@ -285,7 +282,6 @@ class TestAtomicFileOperations(unittest.TestCase):
         mock_get_key.return_value = Fernet.generate_key()
         tm = TokenManager()
 
-        # Should not raise
         tm._delete_secure_file("nonexistent.txt")
 
 

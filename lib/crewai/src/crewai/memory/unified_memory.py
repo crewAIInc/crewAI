@@ -63,6 +63,8 @@ class Memory(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
+    memory_kind: Literal["memory"] = "memory"
+
     llm: Annotated[BaseLLM | str, PlainValidator(_passthrough)] = Field(
         default="gpt-4o-mini",
         description="LLM for analysis (model name or BaseLLM instance).",
@@ -164,7 +166,6 @@ class Memory(BaseModel):
         object.__setattr__(
             new, "__pydantic_extra__", _copy.deepcopy(self.__pydantic_extra__, memo)
         )
-        # Private attrs: create fresh pool/lock instead of deepcopying
         private = {}
         for k, v in (self.__pydantic_private__ or {}).items():
             if isinstance(v, (ThreadPoolExecutor, threading.Lock)):
@@ -261,10 +262,6 @@ class Memory(BaseModel):
                     f"Docs: {self._MEMORY_DOCS_URL}"
                 ) from e
         return self._embedder_instance
-
-    # ------------------------------------------------------------------
-    # Background write queue
-    # ------------------------------------------------------------------
 
     def _submit_save(self, fn: Any, *args: Any, **kwargs: Any) -> Future[Any]:
         """Submit a save operation to the background thread pool.
@@ -447,7 +444,6 @@ class Memory(BaseModel):
             start = time.perf_counter()
 
             # Submit through the save pool for proper serialization,
-            # then immediately wait for the result.
             future = self._submit_save(
                 self._encode_batch,
                 [content],
@@ -674,12 +670,10 @@ class Memory(BaseModel):
         # so that the search sees all persisted records.
         self.drain_writes()
 
-        # Apply root_scope as default scope_prefix for read isolation
         effective_scope = scope
         if effective_scope is None and self.root_scope:
             effective_scope = self.root_scope
         elif effective_scope is not None and self.root_scope:
-            # Nest provided scope under root
             effective_scope = join_scope_paths(self.root_scope, effective_scope)
 
         _source = "unified_memory"
@@ -707,7 +701,6 @@ class Memory(BaseModel):
                         limit=limit,
                         min_score=0.0,
                     )
-                    # Privacy filter
                     if not include_private:
                         raw = [
                             (r, s)
@@ -746,7 +739,6 @@ class Memory(BaseModel):
                 )
                 results = flow.state.final_results
 
-            # Update last_accessed for recalled records
             if results:
                 try:
                     touch = getattr(self._storage, "touch_records", None)

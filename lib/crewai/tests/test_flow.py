@@ -161,6 +161,87 @@ def test_flow_with_or_condition():
     )
 
 
+def test_or_listener_fires_once_across_parallel_starts():
+    """Parallel ``@start`` paths feeding ``or_`` must not double-fire the listener."""
+    fire_count = 0
+
+    class ParallelOrFlow(Flow):
+        @start()
+        async def fast_start(self):
+            return "fast"
+
+        @start()
+        async def slow_start(self):
+            await asyncio.sleep(0.2)
+            return "slow"
+
+        @listen(or_(fast_start, slow_start))
+        def handler(self):
+            nonlocal fire_count
+            fire_count += 1
+
+    asyncio.run(ParallelOrFlow().kickoff_async())
+
+    assert fire_count == 1
+
+
+def test_or_listener_re_arms_across_router_loop():
+    """Regression for #5972: multi-source ``or_`` re-fires on each router emission."""
+    fire_count = 0
+
+    class CyclicOrFlow(Flow):
+        iteration = 0
+
+        @start()
+        def kick(self):
+            return "kick"
+
+        @router(kick)
+        def initial_router(self):
+            return "SignalA"
+
+        @listen(or_("SignalA", "SignalB"))
+        def handler(self):
+            nonlocal fire_count
+            fire_count += 1
+
+        @router(handler)
+        def loop_router(self):
+            self.iteration += 1
+            return "stop" if self.iteration >= 3 else "SignalB"
+
+    CyclicOrFlow().kickoff()
+
+    assert fire_count == 3
+
+
+def test_or_listener_does_not_double_fire_across_chained_routers():
+    """Chained routers within one dispatch wave must not re-fire the same ``or_`` listener."""
+    fire_count = 0
+
+    class ChainedRouterOrFlow(Flow):
+        @start()
+        def kick(self):
+            return "kick"
+
+        @router(kick)
+        def router_a(self):
+            return "SignalA"
+
+        @router("SignalA")
+        def router_b(self):
+            return "SignalB"
+
+        @listen(or_("SignalA", "SignalB"))
+        def handler(self):
+            nonlocal fire_count
+            fire_count += 1
+
+    ChainedRouterOrFlow().kickoff()
+
+    assert fire_count == 1
+
+
 def test_flow_with_router():
     """Test a flow that uses a router method to determine the next step."""
     execution_order = []
@@ -250,7 +331,7 @@ def test_flow_restart():
 
     flow = RestartableFlow()
     flow.kickoff()
-    flow.kickoff()  # Restart the flow
+    flow.kickoff()
 
     assert execution_order == ["step_1", "step_2", "step_1", "step_2"]
 
@@ -285,12 +366,9 @@ def test_flow_uuid_unstructured():
         @start()
         def first_method(self):
             nonlocal initial_id
-            # Verify ID is automatically generated
             assert "id" in self.state
             assert isinstance(self.state["id"], str)
-            # Store initial ID for comparison
             initial_id = self.state["id"]
-            # Add some data to trigger state update
             self.state["data"] = "example"
 
         @listen(first_method)
@@ -298,15 +376,12 @@ def test_flow_uuid_unstructured():
             # Ensure the ID persists after state updates
             assert "id" in self.state
             assert self.state["id"] == initial_id
-            # Update state again to verify ID preservation
             self.state["more_data"] = "test"
             assert self.state["id"] == initial_id
 
     flow = UUIDUnstructuredFlow()
     flow.kickoff()
-    # Verify ID persists after flow completion
     assert flow.state["id"] == initial_id
-    # Verify UUID format (36 characters, including hyphens)
     assert len(flow.state["id"]) == 36
 
 
@@ -322,12 +397,9 @@ def test_flow_uuid_structured():
         @start()
         def first_method(self):
             nonlocal initial_id
-            # Verify ID is automatically generated and accessible as attribute
             assert hasattr(self.state, "id")
             assert isinstance(self.state.id, str)
-            # Store initial ID for comparison
             initial_id = self.state.id
-            # Update some fields to trigger state changes
             self.state.counter += 1
             self.state.message = "updated"
 
@@ -336,18 +408,14 @@ def test_flow_uuid_structured():
             # Ensure the ID persists after state updates
             assert hasattr(self.state, "id")
             assert self.state.id == initial_id
-            # Update state again to verify ID preservation
             self.state.counter += 1
             self.state.message = "final"
             assert self.state.id == initial_id
 
     flow = UUIDStructuredFlow()
     flow.kickoff()
-    # Verify ID persists after flow completion
     assert flow.state.id == initial_id
-    # Verify UUID format (36 characters, including hyphens)
     assert len(flow.state.id) == 36
-    # Verify other state fields were properly updated
     assert flow.state.counter == 2
     assert flow.state.message == "final"
 
@@ -401,7 +469,6 @@ def test_router_with_multiple_conditions():
     assert "router_and" in execution_order
     assert "log_final_step" in execution_order
 
-    # Check that the AND router triggered after both relevant steps:
     assert execution_order.index("router_and") > execution_order.index(
         "handle_next_step_or_event"
     )
@@ -437,7 +504,6 @@ def test_unstructured_flow_event_emission():
 
         @listen(finish_poem)
         def save_poem_to_database(self):
-            # A method without args/kwargs to ensure events are sent correctly
             return "roses are red\nviolets are blue"
 
     flow = PoemFlow()
@@ -473,7 +539,6 @@ def test_unstructured_flow_event_emission():
 
     assert all_events_received.wait(timeout=5), "Timeout waiting for all flow events"
 
-    # Sort events by timestamp to ensure deterministic order
     # (async handlers may append out of order)
     with lock:
         received_events.sort(key=lambda e: e.timestamp)
@@ -483,7 +548,6 @@ def test_unstructured_flow_event_emission():
     assert received_events[0].inputs == {"separator": ", "}
     assert isinstance(received_events[0].timestamp, datetime)
 
-    # All subsequent events are MethodExecutionStartedEvent
     for event in received_events[1:-1]:
         assert isinstance(event, MethodExecutionStartedEvent)
         assert event.flow_name == "PoemFlow"
@@ -705,7 +769,6 @@ def test_structured_flow_event_emission():
 
     assert all_events_received.wait(timeout=5), "Timeout waiting for all flow events"
 
-    # Sort events by timestamp to ensure deterministic order
     with lock:
         received_events.sort(key=lambda e: e.timestamp)
 
@@ -792,7 +855,6 @@ def test_stateless_flow_event_emission():
 
     assert all_events_received.wait(timeout=5), "Timeout waiting for all flow events"
 
-    # Sort events by timestamp to ensure deterministic order
     with lock:
         received_events.sort(key=lambda e: e.timestamp)
 
@@ -910,11 +972,9 @@ def test_multiple_routers_from_same_trigger():
     flow = MultiRouterFlow()
     flow.kickoff()
 
-    # Verify all methods were called
     assert "scan_medical" in execution_order
     assert "diagnose_conditions" in execution_order
 
-    # Verify all routers were called
     assert "diabetes_router" in execution_order
     assert "hypertension_router" in execution_order
     assert "anemia_router" in execution_order
@@ -924,12 +984,10 @@ def test_multiple_routers_from_same_trigger():
     assert "hypertension_analysis" in execution_order
     assert "anemia_analysis" in execution_order
 
-    # Verify execution order constraints
     assert execution_order.index("diagnose_conditions") > execution_order.index(
         "scan_medical"
     )
 
-    # All routers should execute after diagnose_conditions
     assert execution_order.index("diabetes_router") > execution_order.index(
         "diagnose_conditions"
     )
@@ -940,7 +998,6 @@ def test_multiple_routers_from_same_trigger():
         "diagnose_conditions"
     )
 
-    # All analyses should execute after their respective routers
     assert execution_order.index("diabetes_analysis") > execution_order.index(
         "diabetes_router"
     )
@@ -1015,7 +1072,6 @@ def test_nested_and_or_conditions():
     flow = NestedConditionFlow()
     flow.kickoff()
 
-    # Verify execution happened
     assert "method_1" in execution_order
     assert "method_2" in execution_order
     assert "method_3" in execution_order
@@ -1028,7 +1084,6 @@ def test_nested_and_or_conditions():
     # Critical assertion: method_7 should only execute AFTER both method_6 AND method_4
     # Since b_condition was returned, method_6 triggers on b_condition
     # method_7 requires: (a_condition AND method_6) OR (method_6 AND method_4)
-    # The second condition (method_6 AND method_4) should be the one that triggers
     assert execution_order.index("method_7") > execution_order.index("method_6")
     assert execution_order.index("method_7") > execution_order.index("method_4")
 
@@ -1064,10 +1119,8 @@ def test_diamond_dependency_pattern():
     flow = DiamondFlow()
     flow.kickoff()
 
-    # Start should execute first
     assert execution_order[0] == "start"
 
-    # Both paths should execute after start
     assert "path_a" in execution_order
     assert "path_b" in execution_order
     assert execution_order.index("path_a") > execution_order.index("start")
@@ -1107,9 +1160,9 @@ def test_router_cascade_chain():
         @router(process_level_1)
         def router_level_2(self):
             execution_order.append("router_level_2")
-            return "level_2_path"
+            return "level_2_event"
 
-        @listen("level_2_path")
+        @listen("level_2_event")
         def process_level_2(self):
             execution_order.append("process_level_2")
             self.state["level"] = 3
@@ -1118,9 +1171,9 @@ def test_router_cascade_chain():
         @router(process_level_2)
         def router_level_3(self):
             execution_order.append("router_level_3")
-            return "final_path"
+            return "final_event"
 
-        @listen("final_path")
+        @listen("final_event")
         def finalize(self):
             execution_order.append("finalize")
             return "complete"
@@ -1181,7 +1234,6 @@ def test_complex_and_or_branching():
     flow = ComplexBranchingFlow()
     flow.kickoff()
 
-    # Verify all branches executed
     assert "init" in execution_order
     assert "branch_1a" in execution_order
     assert "branch_1b" in execution_order
@@ -1190,7 +1242,6 @@ def test_complex_and_or_branching():
     assert "branch_2b" in execution_order
     assert "final" in execution_order
 
-    # Verify order constraints
     assert execution_order.index("branch_2a") > execution_order.index("branch_1a")
     assert execution_order.index("branch_2a") > execution_order.index("branch_1b")
 
@@ -1210,14 +1261,14 @@ def test_complex_and_or_branching():
     assert execution_order.index("final") > execution_order.index("branch_2b")
 
 
-def test_conditional_router_paths_exclusivity():
-    """Test that only the returned router path activates, not all paths."""
+def test_conditional_router_events_exclusivity():
+    """Test that only the returned router event activates, not all events."""
     execution_order = []
 
     class ConditionalRouterFlow(Flow):
         def __init__(self):
             super().__init__()
-            self.state["condition"] = "take_path_b"
+            self.state["condition"] = "take_event_b"
 
         @start()
         def begin(self):
@@ -1226,34 +1277,33 @@ def test_conditional_router_paths_exclusivity():
         @router(begin)
         def decision_point(self):
             execution_order.append("decision_point")
-            if self.state["condition"] == "take_path_a":
-                return "path_a"
-            elif self.state["condition"] == "take_path_b":
-                return "path_b"
+            if self.state["condition"] == "take_event_a":
+                return "event_a"
+            elif self.state["condition"] == "take_event_b":
+                return "event_b"
             else:
-                return "path_c"
+                return "event_c"
 
-        @listen("path_a")
-        def handle_path_a(self):
-            execution_order.append("handle_path_a")
+        @listen("event_a")
+        def handle_event_a(self):
+            execution_order.append("handle_event_a")
 
-        @listen("path_b")
-        def handle_path_b(self):
-            execution_order.append("handle_path_b")
+        @listen("event_b")
+        def handle_event_b(self):
+            execution_order.append("handle_event_b")
 
-        @listen("path_c")
-        def handle_path_c(self):
-            execution_order.append("handle_path_c")
+        @listen("event_c")
+        def handle_event_c(self):
+            execution_order.append("handle_event_c")
 
     flow = ConditionalRouterFlow()
     flow.kickoff()
 
-    # Should only execute path_b, not path_a or path_c
     assert "begin" in execution_order
     assert "decision_point" in execution_order
-    assert "handle_path_b" in execution_order
-    assert "handle_path_a" not in execution_order
-    assert "handle_path_c" not in execution_order
+    assert "handle_event_b" in execution_order
+    assert "handle_event_a" not in execution_order
+    assert "handle_event_c" not in execution_order
 
 
 def test_state_consistency_across_parallel_branches():
@@ -1280,14 +1330,12 @@ def test_state_consistency_across_parallel_branches():
         @listen(init)
         def branch_a(self):
             execution_order.append("branch_a")
-            # Read counter value
             self.state["branch_a_value"] = self.state["counter"]
             self.state["counter"] += 1
 
         @listen(init)
         def branch_b(self):
             execution_order.append("branch_b")
-            # Read counter value
             self.state["branch_b_value"] = self.state["counter"]
             self.state["counter"] += 5
 
@@ -1337,14 +1385,11 @@ def test_deeply_nested_conditions():
     flow = DeeplyNestedFlow()
     flow.kickoff()
 
-    # All start methods should execute
     assert "a" in execution_order
     assert "b" in execution_order
     assert "c" in execution_order
     assert "d" in execution_order
 
-    # Result should execute after at least one AND condition is satisfied
-    # With or_(and_(a, b), and_(c, d)), result fires when EITHER:
     # - Both a AND b have completed, OR
     # - Both c AND d have completed
     assert "result" in execution_order
@@ -1713,11 +1758,10 @@ def test_cyclic_flow_or_listeners_fire_every_iteration():
         f"got {len(loop_back_events)} fires: {execution_order}"
     )
 
-    # Verify alternating handlers
     handler_a_events = [e for e in execution_order if e.startswith("handler_a_")]
     handler_b_events = [e for e in execution_order if e.startswith("handler_b_")]
     assert len(handler_a_events) == 2  # iterations 1 and 3
-    assert len(handler_b_events) == 1  # iteration 2
+    assert len(handler_b_events) == 1
 
 
 def test_cyclic_flow_multiple_or_listeners_fire_every_iteration():
@@ -1830,13 +1874,11 @@ def test_cyclic_flow_works_with_persist_and_id_input():
     assert "finish" in execution_order, (
         f"Flow should have reached 'finish', got: {execution_order}"
     )
-    # The router fires max_iterations+1 times (3 cycles + the final "exit")
     classify_events = [e for e in execution_order if e.startswith("classify_")]
     assert len(classify_events) == 4, (
         f"'classify' should fire 4 times (3 cycles + exit), "
         f"got {len(classify_events)}: {execution_order}"
     )
-    # The other methods fire once per "type_a" cycle
     for method in ["handle", "send", "capture"]:
         events = [e for e in execution_order if e.startswith(f"{method}_")]
         assert len(events) == 3, (

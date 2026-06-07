@@ -4,6 +4,271 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="05 jun 2026">
+  ## v1.14.7a2
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.7a2)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar suporte a rastreamentos de fluxo de conversa.
+  - Atualizar a documentação do fluxo de conversa para utilizar `handle_turn`.
+  - Exibir o real `finish_reason`, parâmetros de amostragem e `response.id` em eventos LLM.
+  - Tipar os gatilhos DSL como decoradores cientes de rota.
+  - Implementar API de chat para fluxos de conversa.
+  - Tornar o backend de bloqueio substituível no armazenamento de bloqueios.
+  - Dividir o monólito DSL de fluxo em módulos de decoradores focados.
+  - Achatar os subcontagens de uso de cache/razão do LiteLLM em `_usage_to_dict`.
+  - Construir `FlowDefinition` a partir dos metadados do Flow DSL.
+
+  ### Documentação
+  - Adicionar guia do LLM NVIDIA Nemotron.
+  - Documentar implantações de monorepo.
+  - Atualizar changelog e versão para v1.14.7a1.
+
+  ## Contribuidores
+
+  @alex-clawd, @gvieira, @lorenzejay, @lucasgomide, @mattatcha, @vinibrsl
+
+</Update>
+
+<Update label="03 jun 2026">
+  ## v1.14.7a1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.7a1)
+
+  ## O Que Mudou
+
+  ### Funcionalidades
+  - Adicionar suporte a arquivos de agentes treinados da equipe
+  - Adicionar provedor nativo Snowflake Cortex LLM
+  - Adicionar guia de integração com Databricks
+  - Adicionar guia de integração com Snowflake
+
+  ### Correções de Bugs
+  - Corrigir CLI restaurando `[project.scripts]` no pacote crewai para instalação da ferramenta UV
+  - Resolver problemas de confiabilidade na entrada de arquivos
+  - Corrigir históricos de resultados de ferramentas incompletos no Snowflake Claude
+  - Lidar com chamadas de ferramentas em formato de string para Snowflake Claude
+  - Re-armar ouvintes `or_` de múltiplas fontes em ciclos controlados por roteadores
+
+  ### Desempenho
+  - Melhorar a velocidade de importação do crewai através do carregamento preguiçoso de importações do docling
+
+  ### Refatoração
+  - Dividir `flow.py` em DSL, definição e tempo de execução
+
+  ## Contributors
+
+  @Luzk, @alex-clawd, @devin-ai-integration[bot], @greysonlalonde, @jessemiller, @lorenzejay, @vinibrsl
+
+</Update>
+
+<Update label="28 mai 2026">
+  ## v1.14.6
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.6)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Aprimorar StdioTransport para evitar vazamento de variáveis de ambiente
+  - Aprimorar a configuração de planejamento e o manuseio de observações
+  - Declarar env_vars no DatabricksQueryTool
+  - Adicionar documentação do Agente Control Plane
+
+  ### Correções de Bugs
+  - Corrigir vazamentos de saída estruturada em loops de chamada de ferramenta
+  - Remover callbacks e estado de adaptador que não podem ser retornados em checkpoint
+  - Serializar campos type[BaseModel] como esquema JSON em checkpoint
+  - Evitar tarefa órfã task_started na restauração de escopo de retomar
+  - Permitir que AgentExecutor restaure a partir de checkpoint
+  - Corrigir erro de digitação de mongodb para pymongo em package_dependencies
+
+  ### Documentação
+  - Adicionar bloco de navegação de documentação ACP (Beta) às páginas do Agente Control Plane
+  - Remover referências a processos consensuais da página de processos
+  - Reestruturar a página de checkpointing
+  - Documentar passo de instalação do pacote administrativo único
+  - Migrar Secrets Manager / Workload Identity de replicated-config
+  - Remover expressões JSX `{" "}` que quebram a renderização de `<Steps>`
+
+  ### Refatoração
+  - Mover Skills Repository para experimental + CREWAI_EXPERIMENTAL gate
+
+  ## Contribuidores
+
+  @akaKuruma, @alex-clawd, @github-actions[bot], @greysonlalonde, @heitorado, @iris-clawd, @lorenzejay, @lucasgomide, @mattatcha, @thiagomoretto, @vinibrsl
+
+</Update>
+
+<Update label="27 mai 2026">
+  ## v1.14.6a2
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.6a2)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Aprimorar `StdioTransport` para evitar vazamento de variáveis de ambiente
+  - Aprimorar a configuração de planejamento e o manuseio de observações
+  - Declarar `env_vars` em `DatabricksQueryTool`
+  - Adicionar documentação do Controle de Agentes
+
+  ### Correções de Bugs
+  - Corrigir vazamentos de saída estruturada em loops de chamada de ferramentas
+  - Remover callbacks e estado de adaptadores que não podem ser revertidos em checkpoints
+  - Serializar campos `type[BaseModel]` como esquema JSON em checkpoints
+  - Evitar `task_started` órfão na restauração do escopo de retomar
+  - Permitir que `AgentExecutor` restaure a partir de checkpoints
+  - Corrigir erro de digitação do MongoDB para `pymongo` nas dependências do pacote
+
+  ### Documentação
+  - Reestruturar a página de checkpoints
+  - Documentar o passo de instalação do pacote administrativo único
+  - Migrar Secrets Manager / Workload Identity de replicated-config
+  - Remover a entrada do Repositório de Habilidades do changelog
+
+  ## Contribuidores
+
+  @github-actions[bot], @greysonlalonde, @heitorado, @iris-clawd, @lorenzejay, @lucasgomide, @mattatcha, @thiagomoretto, @vinibrsl
+
+</Update>
+
+<Update label="21 mai 2026">
+  ## v1.14.6a1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.6a1)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Gerar notas de versão categorizadas para empresas
+
+  ### Correções de Bugs
+  - Fortalecer a serialização de RuntimeState entre os campos da entidade
+  - Atualizar idna para 3.15 para resolver problema de segurança GHSA-65pc-fj4g-8rjx
+  - Remover expressões JSX `{" "}` que quebram a renderização de `<Steps>`
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.14.5
+
+  ## Contribuidores
+
+  @akaKuruma, @alex-clawd, @greysonlalonde
+
+</Update>
+
+<Update label="19 mai 2026">
+  ## v1.14.5
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.5)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Deprecar `CrewAgentExecutor`, definir agentes Crew como `AgentExecutor`
+  - Melhorar ferramentas do sandbox Daytona
+  - Adicionar parâmetro de início `restore_from_state_id`
+  - Adicionar destaques ao `ExaSearchTool`, renomeando de `EXASearchTool`
+
+  ### Correções de Bugs
+  - Corrigir vazamento de memória em `git.py` usando `cached_property`
+  - Exibir chamadas de ferramentas transmitidas quando `available_functions` está ausente
+  - Garantir eventos de carregamento de `skills` para rastros
+  - Corrigir caminho do endpoint de status de `/{kickoff_id}/status` para `/status/{kickoff_id}`
+  - Restaurar bloco de código ausente no guia de primeiro fluxo em pt-BR
+  - Impedir que `result_as_answer` retorne mensagens de bloqueio de hook ou de erro como resposta final
+  - Preservar saídas de tarefas durante o descarregamento assíncrono em lote
+  - Sempre restaurar `task.output_pydantic` no bloco finally
+  - Lidar com entrada de `BaseModel` em `convert_to_model`
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.14.5
+  - Adicionar guia de migração de atualização OSS & crew-to-flow
+  - Documentar variáveis de ambiente adicionais para devtools
+  - Adicionar documentação para `TavilyGetResearch`
+
+  ### Refatoração
+  - Extrair CLI para o pacote autônomo `crewai-cli`
+
+  ## Contribuidores
+
+  @NIK-TIGER-BILL, @akaKuruma, @cgoeppinger, @github-actions[bot], @greysonlalonde, @heitorado, @irfaan101, @iris-clawd, @lorenzejay, @manisrinivasan2k1, @minasami-pr, @mislavivanda, @theCyberTech, @theishangoswami, @wishhyt
+
+</Update>
+
+<Update label="18 mai 2026">
+  ## v1.14.5a7
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.5a7)
+
+  ## O que Mudou
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.14.5a6
+
+  ### Mudanças Quebradoras
+  - Depreciar o campo function_calling_llm
+
+  ## Contributors
+
+  @greysonlalonde, @heitorado
+
+</Update>
+
+<Update label="15 mai 2026">
+  ## v1.14.5a6
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.5a6)
+
+  ## O que mudou
+
+  ### Correções de Bugs
+  - Corrigir chamadas de ferramentas transmitidas quando available_functions está ausente
+  - Atualizar a dependência langsmith para a versão >=0.8.0 para resolver GHSA-3644-q5cj-c5c7
+  - Resolver espaços reservados de blocos de código não traduzidos na documentação em português brasileiro
+
+  ### Documentação
+  - Adicionar documentação para TavilyGetResearch
+  - Atualizar changelog e versão para v1.14.5a5
+
+  ## Contributors
+
+  @greysonlalonde, @heitorado, @iris-clawd, @lorenzejay, @manisrinivasan2k1
+
+</Update>
+
+<Update label="13 mai 2026">
+  ## v1.14.5a5
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.5a5)
+
+  ## O Que Mudou
+
+  ### Recursos
+  - Deprecar CrewAgentExecutor, definir agentes Crew como AgentExecutor
+  - Melhorar ferramentas de sandbox Daytona
+
+  ### Correções de Bugs
+  - Corrigir bloco de código ausente no guia de primeiro fluxo em pt-BR
+  - Registrar falhas de pré-revisão e destilação HITL, adicionar learn_strict
+  - Corrigir urllib3 para vulnerabilidades de segurança
+  - Corrigir gitpython e langchain-core; ignorar CVE paramiko não corrigido
+  - Atualizar todos os pacotes de workspace publicados no bloqueio/sincronização uv
+
+  ### Documentação
+  - Adicionar guia de migração de `inputs.id` para `restoreFromStateId`
+  - Adicionar guia de atualização OSS e migração de crew para flow
+  - Atualizar changelog e versão para v1.14.5a4
+
+  ## Contribuidores
+
+  @akaKuruma, @greysonlalonde, @iris-clawd, @lorenzejay, @mislavivanda
+
+</Update>
+
 <Update label="09 mai 2026">
   ## v1.14.5a4
 

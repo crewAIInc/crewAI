@@ -13,7 +13,6 @@ from crewai.agents.agent_builder.utilities.base_token_process import TokenProces
 from crewai.utilities.logger_utils import suppress_warnings
 
 
-# Check if litellm is available for callback integration
 try:
     from litellm.integrations.custom_logger import CustomLogger as LiteLLMCustomLogger
 

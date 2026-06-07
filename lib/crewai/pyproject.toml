@@ -8,8 +8,8 @@ authors = [
 ]
 requires-python = ">=3.10, <3.14"
 dependencies = [
-    "crewai-core==1.14.5a4",
-    "crewai-cli==1.14.5a4",
+    "crewai-core==1.14.7a2",
+    "crewai-cli==1.14.7a2",
     # Core Dependencies
     "pydantic>=2.11.9,<2.13",
     "openai>=2.30.0,<3",
@@ -27,9 +27,9 @@ dependencies = [
     "openpyxl~=3.1.5",
     # Authentication and Security
     "python-dotenv>=1.2.2,<2",
-    "pyjwt>=2.9.0,<3",
+    "pyjwt>=2.13.0,<3",
     # Configuration and Utils
-    "click~=8.1.7",
+    "click>=8.1.7,<9",
     "appdirs~=1.4.4",
     "jsonref~=1.1.0",
     "json-repair~=0.25.2",
@@ -54,7 +54,7 @@ Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
 tools = [
-    "crewai-tools==1.14.5a4",
+    "crewai-tools==1.14.7a2",
 ]
 embeddings = [
     "tiktoken>=0.8.0,<0.13"
@@ -105,7 +105,7 @@ a2a = [
      "aiocache[redis,memcached]~=0.12.3",
 ]
 file-processing = [
-    "crewai-files==1.14.5a4",
+    "crewai-files",
 ]
 qdrant-edge = [
     "qdrant-edge-py>=0.6.0",
@@ -137,6 +137,9 @@ torchvision = [
 ]
 crewai-files = { workspace = true }
 
+
+[project.scripts]
+crewai = "crewai_cli.cli:crewai"
 
 [build-system]
 requires = ["hatchling"]

@@ -78,17 +78,13 @@ class Prompts(BaseModel):
             A dictionary containing the constructed prompt(s).
         """
         slices: list[COMPONENTS] = ["role_playing"]
-        # When using native tool calling with tools, use native_tools instructions
-        # When using ReAct pattern with tools, use tools instructions
-        # When no tools are available, use no_tools instructions
         if self.has_tools:
             if not self.use_native_tool_calling:
                 slices.append("tools")
         else:
             slices.append("no_tools")
-        system: str = self._build_prompt(slices)
+        system: str = self._build_prompt(slices) + self._build_skill_block()
 
-        # Determine which task slice to use:
         task_slice: COMPONENTS
         if self.use_native_tool_calling:
             task_slice = "native_task"
@@ -106,7 +102,7 @@ class Prompts(BaseModel):
             return SystemPromptResult(
                 system=system,
                 user=self._build_prompt([task_slice]),
-                prompt=self._build_prompt(slices),
+                prompt=self._build_prompt(slices) + self._build_skill_block(),
             )
         return StandardPromptResult(
             prompt=self._build_prompt(
@@ -115,7 +111,26 @@ class Prompts(BaseModel):
                 self.prompt_template,
                 self.response_template,
             )
+            + self._build_skill_block()
         )
+
+    def _build_skill_block(self) -> str:
+        """Render the agent's activated skills as a stable XML block.
+
+        Skills are agent-scoped (do not change per task), so they live in the
+        system prompt where prompt-cache prefixes can survive across calls.
+        """
+        skills = getattr(self.agent, "skills", None)
+        if not skills:
+            return ""
+
+        from crewai.skills.loader import format_skill_context
+        from crewai.skills.models import Skill
+
+        sections = [format_skill_context(s) for s in skills if isinstance(s, Skill)]
+        if not sections:
+            return ""
+        return "\n\n<skills>\n" + "\n\n".join(sections) + "\n</skills>"
 
     def _build_prompt(
         self,
@@ -137,13 +152,11 @@ class Prompts(BaseModel):
         """
         prompt: str
         if not system_template or not prompt_template:
-            # If any of the required templates are missing, fall back to the default format
             prompt_parts: list[str] = [
                 I18N_DEFAULT.slice(component) for component in components
             ]
             prompt = "".join(prompt_parts)
         else:
-            # All templates are provided, use them
             template_parts: list[str] = [
                 I18N_DEFAULT.slice(component)
                 for component in components
@@ -155,7 +168,6 @@ class Prompts(BaseModel):
             prompt = prompt_template.replace(
                 "{{ .Prompt }}", "".join(I18N_DEFAULT.slice("task"))
             )
-            # Handle missing response_template
             if response_template:
                 response: str = response_template.split("{{ .Response }}")[0]
                 prompt = f"{system}\n{prompt}\n{response}"

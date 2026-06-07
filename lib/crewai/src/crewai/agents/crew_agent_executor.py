@@ -14,6 +14,7 @@ import contextvars
 import inspect
 import logging
 from typing import TYPE_CHECKING, Annotated, Any, Literal, cast
+import warnings
 
 from crewai_core.printer import PRINTER
 from pydantic import (
@@ -138,6 +139,13 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
+        warnings.warn(
+            "CrewAgentExecutor is deprecated and will be removed in a future release.\n"
+            "Agents inside Crews now use AgentExecutor (crewai.experimental.AgentExecutor) by default.\n"
+            "To suppress this warning, migrate to AgentExecutor.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if not self.before_llm_call_hooks:
             self.before_llm_call_hooks.extend(get_before_llm_call_hooks())
         if not self.after_llm_call_hooks:
@@ -166,6 +174,8 @@ class CrewAgentExecutor(BaseAgentExecutor):
         if provider.setup_messages(cast(ExecutorContext, cast(object, self))):
             return
 
+        from crewai.llms.cache import mark_cache_breakpoint
+
         if self.prompt is not None and "system" in self.prompt:
             system_prompt = self._format_prompt(
                 cast(str, self.prompt.get("system", "")), inputs
@@ -173,11 +183,22 @@ class CrewAgentExecutor(BaseAgentExecutor):
             user_prompt = self._format_prompt(
                 cast(str, self.prompt.get("user", "")), inputs
             )
-            self.messages.append(format_message_for_llm(system_prompt, role="system"))
-            self.messages.append(format_message_for_llm(user_prompt))
+            # Cache breakpoints: end-of-system caches the per-agent stable
+            # prefix; end-of-user caches the per-task stable prefix across
+            # ReAct-loop iterations.
+            self.messages.append(
+                mark_cache_breakpoint(
+                    format_message_for_llm(system_prompt, role="system")
+                )
+            )
+            self.messages.append(
+                mark_cache_breakpoint(format_message_for_llm(user_prompt))
+            )
         elif self.prompt is not None:
             user_prompt = self._format_prompt(self.prompt.get("prompt", ""), inputs)
-            self.messages.append(format_message_for_llm(user_prompt))
+            self.messages.append(
+                mark_cache_breakpoint(format_message_for_llm(user_prompt))
+            )
 
         provider.post_setup_messages(cast(ExecutorContext, cast(object, self)))
 
@@ -329,6 +350,10 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
+                effective_response_model = (
+                    None if self.original_tools else self.response_model
+                )
+
                 answer = get_llm_response(
                     llm=cast("BaseLLM", self.llm),
                     messages=self.messages,
@@ -336,11 +361,11 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     printer=PRINTER,
                     from_task=self.task,
                     from_agent=self.agent,
-                    response_model=self.response_model,
+                    response_model=effective_response_model,
                     executor_context=self,
                     verbose=self.agent.verbose,
                 )
-                if self.response_model is not None:
+                if effective_response_model is not None:
                     try:
                         if isinstance(answer, BaseModel):
                             output_json = answer.model_dump_json()
@@ -481,7 +506,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     available_functions=None,
                     from_task=self.task,
                     from_agent=self.agent,
-                    response_model=self.response_model,
+                    response_model=None,
                     executor_context=self,
                     verbose=self.agent.verbose,
                 )
@@ -1104,7 +1129,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
         Returns:
             Final answer from the agent.
         """
-        # Check if model supports native function calling
         use_native_tools = (
             hasattr(self.llm, "supports_function_calling")
             and callable(getattr(self.llm, "supports_function_calling", None))
@@ -1115,7 +1139,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
         if use_native_tools:
             return await self._ainvoke_loop_native_tools()
 
-        # Fall back to ReAct text-based pattern
         return await self._ainvoke_loop_react()
 
     async def _ainvoke_loop_react(self) -> AgentFinish:
@@ -1140,6 +1163,10 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
+                effective_response_model = (
+                    None if self.original_tools else self.response_model
+                )
+
                 answer = await aget_llm_response(
                     llm=cast("BaseLLM", self.llm),
                     messages=self.messages,
@@ -1147,12 +1174,12 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     printer=PRINTER,
                     from_task=self.task,
                     from_agent=self.agent,
-                    response_model=self.response_model,
+                    response_model=effective_response_model,
                     executor_context=self,
                     verbose=self.agent.verbose,
                 )
 
-                if self.response_model is not None:
+                if effective_response_model is not None:
                     try:
                         if isinstance(answer, BaseModel):
                             output_json = answer.model_dump_json()
@@ -1260,7 +1287,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
         Returns:
             Final answer from the agent.
         """
-        # Convert tools to OpenAI schema format
         if not self.original_tools:
             return await self._ainvoke_loop_native_no_tools()
 
@@ -1293,7 +1319,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     available_functions=None,
                     from_task=self.task,
                     from_agent=self.agent,
-                    response_model=self.response_model,
+                    response_model=None,
                     executor_context=self,
                     verbose=self.agent.verbose,
                 )

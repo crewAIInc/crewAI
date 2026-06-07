@@ -74,10 +74,8 @@ def clear_all_global_hooks() -> dict[str, tuple[int, int]]:
 
 
 __all__ = [
-    # Context classes
     "LLMCallHookContext",
     "ToolCallHookContext",
-    # Decorators
     "after_llm_call",
     "after_tool_call",
     "before_llm_call",
@@ -87,19 +85,15 @@ __all__ = [
     "clear_all_global_hooks",
     "clear_all_llm_call_hooks",
     "clear_all_tool_call_hooks",
-    # Clear hooks
     "clear_before_llm_call_hooks",
     "clear_before_tool_call_hooks",
     "get_after_llm_call_hooks",
     "get_after_tool_call_hooks",
-    # Get hooks
     "get_before_llm_call_hooks",
     "get_before_tool_call_hooks",
     "register_after_llm_call_hook",
     "register_after_tool_call_hook",
-    # LLM Hook registration
     "register_before_llm_call_hook",
-    # Tool Hook registration
     "register_before_tool_call_hook",
     "unregister_after_llm_call_hook",
     "unregister_after_tool_call_hook",

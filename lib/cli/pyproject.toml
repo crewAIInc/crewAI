@@ -8,14 +8,14 @@ authors = [
 ]
 requires-python = ">=3.10, <3.14"
 dependencies = [
-    "crewai-core==1.14.5a4",
-    "click~=8.1.7",
+    "crewai-core==1.14.7a2",
+    "click>=8.1.7,<9",
     "pydantic>=2.11.9,<2.13",
     "pydantic-settings~=2.10.1",
     "appdirs~=1.4.4",
     "cryptography>=42.0",
     "httpx~=0.28.1",
-    "pyjwt>=2.9.0,<3",
+    "pyjwt>=2.13.0,<3",
     "rich>=13.7.1",
     "tomli~=2.0.2",
     "tomli-w~=1.1.0",

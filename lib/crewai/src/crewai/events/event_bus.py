@@ -149,7 +149,6 @@ class CrewAIEventsBus:
         ] = {}
         self._execution_plan_cache: dict[type[BaseEvent], ExecutionPlan] = {}
         self._console = ConsoleFormatter()
-        # Lazy initialization flags - executor and loop created on first emit
         self._executor_initialized = False
         self._has_pending_events = False
         self._runtime_state: RuntimeState | None = None
@@ -551,13 +550,10 @@ class CrewAIEventsBus:
             sync_handlers = self._sync_handlers.get(event_type, frozenset())
             async_handlers = self._async_handlers.get(event_type, frozenset())
 
-        # Skip executor initialization if no handlers exist for this event
         if not sync_handlers and not async_handlers:
             return None
 
-        # Lazily initialize executor and event loop only when handlers exist
         self._ensure_executor_initialized()
-        # Track that we have pending events for flush optimization
         self._has_pending_events = True
 
         if has_dependencies:
@@ -684,7 +680,6 @@ class CrewAIEventsBus:
         Returns:
             True if all handlers completed, False if timeout occurred.
         """
-        # Skip flush entirely if no events were ever emitted
         if not self._has_pending_events:
             return True
 
@@ -698,7 +693,6 @@ class CrewAIEventsBus:
 
         done, not_done = wait_futures(futures_to_wait, timeout=timeout)
 
-        # Check for exceptions in completed futures
         errors = [
             future.exception() for future in done if future.exception() is not None
         ]
@@ -847,7 +841,6 @@ class CrewAIEventsBus:
 
         with self._rwlock.w_locked():
             self._shutting_down = True
-            # Check if executor was ever initialized (lazy init optimization)
             if not self._executor_initialized:
                 return
             loop = getattr(self, "_loop", None)

@@ -2912,12 +2912,6 @@
       "humanized_name": "Search a CSV's content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -3903,7 +3897,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -3964,12 +3961,6 @@
       "humanized_name": "Search a Code Docs content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -4955,7 +4946,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -5641,12 +5635,6 @@
       "humanized_name": "Search a DOCX's content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -6632,7 +6620,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -6821,7 +6812,26 @@
     },
     {
       "description": "Execute SQL queries against Databricks workspace tables and return the results. Provide a 'query' parameter with the SQL query to execute.",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "Databricks workspace URL (use with DATABRICKS_TOKEN, or set DATABRICKS_CONFIG_PROFILE instead).",
+          "name": "DATABRICKS_HOST",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Databricks personal access token (pair with DATABRICKS_HOST).",
+          "name": "DATABRICKS_TOKEN",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Databricks CLI profile name (alternative to DATABRICKS_HOST/TOKEN).",
+          "name": "DATABRICKS_CONFIG_PROFILE",
+          "required": false
+        }
+      ],
       "humanized_name": "Databricks SQL Query",
       "init_params_schema": {
         "$defs": {
@@ -7184,7 +7194,7 @@
       }
     },
     {
-      "description": "Perform filesystem operations inside a Daytona sandbox: read a file, write content to a path, append content to an existing file, list a directory, delete a path, make a directory, or fetch file metadata. For files larger than a few KB, create the file with action='write' and empty content, then send the body via multiple 'append' calls of ~4KB each to stay within tool-call payload limits.",
+      "description": "Perform filesystem operations inside a Daytona sandbox: read, write, append, list, delete, mkdir, info, exists, move, find (content grep), search (filename glob), chmod (permissions/owner/group), and replace (bulk find-and-replace across files). For files larger than a few KB, create the file with action='write' and empty content, then send the body via multiple 'append' calls of ~4KB each to stay within tool-call payload limits.",
       "env_vars": [
         {
           "default": null,
@@ -7334,9 +7344,127 @@
         "daytona"
       ],
       "run_params_schema": {
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "enum": [
+                    "read",
+                    "write",
+                    "append",
+                    "list",
+                    "delete",
+                    "mkdir",
+                    "info",
+                    "exists",
+                    "move",
+                    "find",
+                    "search",
+                    "chmod"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "path"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "append"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "content"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "move"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "destination"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "enum": [
+                    "find",
+                    "search"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "pattern"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "replace"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "paths",
+                "pattern",
+                "replacement"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "chmod"
+                }
+              }
+            },
+            "then": {
+              "anyOf": [
+                {
+                  "required": [
+                    "mode"
+                  ]
+                },
+                {
+                  "required": [
+                    "owner"
+                  ]
+                },
+                {
+                  "required": [
+                    "group"
+                  ]
+                }
+              ]
+            }
+          }
+        ],
         "properties": {
           "action": {
-            "description": "The filesystem action to perform: 'read' (returns file contents), 'write' (create or replace a file with content), 'append' (append content to an existing file \u2014 use this for writing large files in chunks to avoid hitting tool-call size limits), 'list' (lists a directory), 'delete' (removes a file/dir), 'mkdir' (creates a directory), 'info' (returns file metadata).",
+            "description": "The filesystem action to perform: 'read' (returns file contents); 'write' (create or replace a file with content); 'append' (append content to an existing file \u2014 use this for writing large files in chunks to avoid hitting tool-call size limits); 'list' (lists a directory); 'delete' (removes a file/dir); 'mkdir' (creates a directory); 'info' (returns file metadata); 'exists' (returns whether a path exists); 'move' (rename or relocate a file/dir; requires 'destination'); 'find' (grep file CONTENTS recursively; requires 'pattern'); 'search' (find files by NAME pattern; requires 'pattern'); 'chmod' (change permissions/owner/group; pass at least one of 'mode', 'owner', 'group'); 'replace' (find-and-replace text across files; requires 'paths', 'pattern', and 'replacement').",
             "enum": [
               "read",
               "write",
@@ -7344,7 +7472,13 @@
               "list",
               "delete",
               "mkdir",
-              "info"
+              "info",
+              "exists",
+              "move",
+              "find",
+              "search",
+              "chmod",
+              "replace"
             ],
             "title": "Action",
             "type": "string"
@@ -7368,27 +7502,122 @@
             "description": "Content to write or append. If omitted for 'write', an empty file is created. For files larger than a few KB, prefer one 'write' with empty content followed by multiple 'append' calls of ~4KB each to stay within tool-call payload limits.",
             "title": "Content"
           },
+          "destination": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "For action='move': absolute destination path.",
+            "title": "Destination"
+          },
+          "group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "For action='chmod': new file group.",
+            "title": "Group"
+          },
           "mode": {
-            "default": "0755",
-            "description": "For action='mkdir': octal permission string (default 0755).",
-            "title": "Mode",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Octal permission string. For 'mkdir' it sets the new directory permissions (defaults to '0755' if omitted). For 'chmod' it sets the target's mode (e.g. '755' to make a script executable). Ignored for other actions.",
+            "title": "Mode"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "For action='chmod': new file owner (user name).",
+            "title": "Owner"
           },
           "path": {
-            "description": "Absolute path inside the sandbox.",
-            "title": "Path",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Absolute path inside the sandbox. Required for all actions except 'replace' (which uses 'paths' instead).",
+            "title": "Path"
+          },
+          "paths": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "For action='replace': list of absolute file paths in which to replace 'pattern' with 'replacement'.",
+            "title": "Paths"
+          },
+          "pattern": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "For 'find': substring matched against file CONTENTS. For 'search': glob-style pattern matched against file NAMES (e.g. '*.py'). For 'replace': text to replace inside files.",
+            "title": "Pattern"
           },
           "recursive": {
             "default": false,
             "description": "For action='delete': remove directories recursively.",
             "title": "Recursive",
             "type": "boolean"
+          },
+          "replacement": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "For action='replace': replacement text for 'pattern'.",
+            "title": "Replacement"
           }
         },
         "required": [
-          "action",
-          "path"
+          "action"
         ],
         "title": "DaytonaFileToolSchema",
         "type": "object"
@@ -7688,12 +7917,6 @@
       "humanized_name": "Search a directory's content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -8679,7 +8902,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -10524,12 +10750,6 @@
       "humanized_name": "Search a github repo's content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -11515,7 +11735,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -11803,12 +12026,6 @@
       "humanized_name": "Search a JSON's content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -12794,7 +13011,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -13078,12 +13298,6 @@
       "humanized_name": "Search a MDX's content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -14069,7 +14283,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -14414,7 +14631,7 @@
       },
       "name": "MongoDBVectorSearchTool",
       "package_dependencies": [
-        "mongdb"
+        "pymongo"
       ],
       "run_params_schema": {
         "description": "Input for MongoDBTool.",
@@ -14536,12 +14753,6 @@
       "humanized_name": "Search a database's table content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -15527,7 +15738,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -15727,21 +15941,6 @@
               "description"
             ],
             "title": "EnvVar",
-            "type": "object"
-          },
-          "JsonResponseFormat": {
-            "description": "Response format requesting raw JSON output (e.g. ``{\"type\": \"json_object\"}``).",
-            "properties": {
-              "type": {
-                "const": "json_object",
-                "title": "Type",
-                "type": "string"
-              }
-            },
-            "required": [
-              "type"
-            ],
-            "title": "JsonResponseFormat",
             "type": "object"
           },
           "LLM": {
@@ -15972,16 +16171,6 @@
                 "title": "Reasoning Effort"
               },
               "response_format": {
-                "anyOf": [
-                  {
-                    "$ref": "#/$defs/JsonResponseFormat"
-                  },
-                  {},
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
                 "title": "Response Format"
               },
               "seed": {
@@ -16969,12 +17158,6 @@
       "humanized_name": "Search a PDF's content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -17960,7 +18143,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -18668,12 +18854,6 @@
       "humanized_name": "Knowledge base",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -19659,7 +19839,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -20756,12 +20939,6 @@
       "humanized_name": "Job Search",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -21747,7 +21924,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -22224,12 +22404,6 @@
       "humanized_name": "Webpage to Markdown",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -23215,7 +23389,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -24069,12 +24246,6 @@
       "humanized_name": "Search a txt's content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -25060,7 +25231,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -25989,12 +26163,6 @@
       "humanized_name": "Search in a specific website",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -26980,7 +27148,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -27041,12 +27212,6 @@
       "humanized_name": "Search a XML's content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -28032,7 +28197,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -28093,12 +28261,6 @@
       "humanized_name": "Search a Youtube Channels content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -29084,7 +29246,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -29145,12 +29310,6 @@
       "humanized_name": "Search a Youtube Video content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -30136,7 +30295,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",

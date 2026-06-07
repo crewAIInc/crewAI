@@ -1,6 +1,6 @@
 from pathlib import Path
 from types import ModuleType
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import Field, field_validator
 
@@ -12,10 +12,9 @@ from crewai.utilities.logger import Logger
 class ExcelKnowledgeSource(BaseKnowledgeSource):
     """A knowledge source that stores and queries Excel file content using embeddings."""
 
-    # override content to be a dict of file paths to sheet names to csv content
-
     _logger: Logger = Logger(verbose=True)
 
+    source_type: Literal["excel"] = "excel"
     file_path: Path | list[Path] | str | list[str] | None = Field(
         default=None,
         description="[Deprecated] The path to the file. Use file_paths instead.",
@@ -33,7 +32,6 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
         cls, v: Path | list[Path] | str | list[str] | None, info: Any
     ) -> Path | list[Path] | str | list[str] | None:
         """Validate that at least one of file_path or file_paths is provided."""
-        # Single check if both are None, O(1) instead of nested conditions
         if (
             v is None
             and info.data.get(
@@ -58,7 +56,6 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
         if self.file_paths is None:
             raise ValueError("Your source must be provided with a file_paths: []")
 
-        # Convert single path to list
         path_list: list[Path | str] = (
             [self.file_paths]
             if isinstance(self.file_paths, (str, Path))
@@ -150,8 +147,6 @@ class ExcelKnowledgeSource(BaseKnowledgeSource):
         Add Excel file content to the knowledge source, chunk it, compute embeddings,
         and save the embeddings.
         """
-        # Convert dictionary values to a single string if content is a dictionary
-        # Updated to account for .xlsx workbooks with multiple tabs/sheets
         content_str = ""
         for value in self.content.values():
             if isinstance(value, dict):

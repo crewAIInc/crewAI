@@ -138,6 +138,36 @@ def restore_event_scope(stack: tuple[tuple[str, str], ...]) -> None:
     _event_id_stack.set(stack)
 
 
+def resume_task_scope(task_id: str) -> bool:
+    """Push the latest recorded ``task_started`` scope for a task.
+
+    Args:
+        task_id: The task identifier to look up in the active event record.
+
+    Returns:
+        ``True`` if a prior scope was pushed; ``False`` otherwise.
+    """
+    from crewai.events.event_bus import crewai_event_bus
+
+    state = crewai_event_bus._runtime_state
+    if state is None:
+        return False
+    latest_event_id: str | None = None
+    latest_seq = -1
+    for node in list(state.event_record.nodes.values()):
+        ev = node.event
+        if ev.type != "task_started" or ev.task_id != task_id:
+            continue
+        seq = ev.emission_sequence or 0
+        if seq > latest_seq:
+            latest_seq = seq
+            latest_event_id = ev.event_id
+    if latest_event_id is None:
+        return False
+    push_event_scope(latest_event_id, "task_started")
+    return True
+
+
 def push_event_scope(event_id: str, event_type: str = "") -> None:
     """Push an event ID and type onto the scope stack."""
     config = _event_context_config.get() or _default_config

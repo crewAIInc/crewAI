@@ -40,7 +40,6 @@ class _MCPToolResult(NamedTuple):
     is_error: bool
 
 
-# MCP Connection timeout constants (in seconds)
 MCP_CONNECTION_TIMEOUT = 30  # Increased for slow servers
 MCP_TOOL_EXECUTION_TIMEOUT = 30
 MCP_DISCOVERY_TIMEOUT = 30  # Increased for slow servers
@@ -48,7 +47,6 @@ MCP_MAX_RETRIES = 3
 
 _T = TypeVar("_T")
 
-# Simple in-memory cache for MCP tool schemas (duration: 5 minutes)
 _mcp_schema_cache: dict[str, tuple[list[dict[str, Any]], float]] = {}
 _cache_ttl = 300  # 5 minutes
 
@@ -96,7 +94,6 @@ class MCPClient:
         self.discovery_timeout = discovery_timeout
         self.max_retries = max_retries
         self.cache_tools_list = cache_tools_list
-        # self._logger = logger or logging.getLogger(__name__)
         self._session: Any = None
         self._initialized = False
         self._exit_stack = AsyncExitStack()
@@ -152,11 +149,9 @@ class MCPClient:
         if self.connected:
             return self
 
-        # Get server info for events
         server_name, server_url, transport_type = self._get_server_info()
         is_reconnect = self._was_connected
 
-        # Emit connection started event
         started_at = datetime.now()
         crewai_event_bus.emit(
             self,
@@ -177,16 +172,14 @@ class MCPClient:
             # Always enter transport context via exit stack (it handles already-connected state)
             await self._exit_stack.enter_async_context(self.transport)
 
-            # Create ClientSession with transport streams
             self._session = ClientSession(
                 self.transport.read_stream,
                 self.transport.write_stream,
             )
 
-            # Enter the session's async context manager via exit stack
             await self._exit_stack.enter_async_context(self._session)
 
-            # Initialize the session (required by MCP protocol)
+            # MCP protocol requires session.initialize() before any other request
             try:
                 await asyncio.wait_for(
                     self._session.initialize(),
@@ -391,23 +384,19 @@ class MCPClient:
         if not self.connected:
             await self.connect()
 
-        # Check cache if enabled
         use_cache = use_cache if use_cache is not None else self.cache_tools_list
         if use_cache:
             cache_key = self._get_cache_key("tools")
             if cache_key in _mcp_schema_cache:
                 cached_data, cache_time = _mcp_schema_cache[cache_key]
                 if time.time() - cache_time < _cache_ttl:
-                    # Logger removed - return cached data
                     return cached_data
 
-        # List tools with timeout and retries
         tools = await self._retry_operation(
             self._list_tools_impl,
             timeout=self.discovery_timeout,
         )
 
-        # Cache results if enabled
         if use_cache:
             cache_key = self._get_cache_key("tools")
             _mcp_schema_cache[cache_key] = (tools, time.time())
@@ -449,10 +438,8 @@ class MCPClient:
         arguments = arguments or {}
         cleaned_arguments = self._clean_tool_arguments(arguments)
 
-        # Get server info for events
         server_name, server_url, transport_type = self._get_server_info()
 
-        # Emit tool execution started event
         started_at = datetime.now()
         crewai_event_bus.emit(
             self,
@@ -542,34 +529,28 @@ class MCPClient:
         cleaned: dict[str, Any] = {}
 
         for key, value in arguments.items():
-            # Skip None values
             if value is None:
                 continue
 
-            # Fix sources array format: convert ["web"] to [{"type": "web"}]
+            # Normalize sources from ["web"] to [{"type": "web"}]
             if key == "sources" and isinstance(value, list):
                 fixed_sources = []
                 for item in value:
                     if isinstance(item, str):
-                        # Convert string to object format
                         fixed_sources.append({"type": item})
                     elif isinstance(item, dict):
-                        # Already in correct format
                         fixed_sources.append(item)
                     else:
-                        # Keep as is if unknown format
                         fixed_sources.append(item)
                 if fixed_sources:
                     cleaned[key] = fixed_sources
                 continue
 
-            # Recursively clean nested dictionaries
             if isinstance(value, dict):
                 nested_cleaned = self._clean_tool_arguments(value)
                 if nested_cleaned:  # Only add if not empty
                     cleaned[key] = nested_cleaned
             elif isinstance(value, list):
-                # Clean list items
                 cleaned_list = []
                 for item in value:
                     if isinstance(item, dict):
@@ -581,7 +562,6 @@ class MCPClient:
                 if cleaned_list:
                     cleaned[key] = cleaned_list
             else:
-                # Keep primitive values
                 cleaned[key] = value
 
         return cleaned
@@ -597,7 +577,6 @@ class MCPClient:
 
         is_error = getattr(result, "isError", False) or False
 
-        # Extract result content
         if hasattr(result, "content") and result.content:
             if isinstance(result.content, list) and len(result.content) > 0:
                 content_item = result.content[0]
