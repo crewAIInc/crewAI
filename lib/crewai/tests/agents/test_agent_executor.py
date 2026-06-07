@@ -220,6 +220,18 @@ class TestAgentExecutor:
         assert executor.max_iter == 10
         assert executor.use_stop_words is True
 
+    def test_ask_for_human_input_proxies_state(self, mock_dependencies):
+        """Human-input providers should access the executor flag directly."""
+        executor = _build_executor(**mock_dependencies)
+
+        executor.ask_for_human_input = True
+        assert executor.state.ask_for_human_input is True
+        assert executor.ask_for_human_input is True
+
+        executor.ask_for_human_input = False
+        assert executor.state.ask_for_human_input is False
+        assert executor.ask_for_human_input is False
+
     def test_initialize_reasoning(self, mock_dependencies):
         """Test flow entry point."""
         with patch.object(

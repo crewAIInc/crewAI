@@ -279,6 +279,16 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         """Set state messages."""
         self._state.messages = value
 
+    @property  # type: ignore[misc]
+    def ask_for_human_input(self) -> bool:
+        """Compatibility property - returns human-input state flag."""
+        return bool(self._state.ask_for_human_input)
+
+    @ask_for_human_input.setter
+    def ask_for_human_input(self, value: bool) -> None:
+        """Set human-input state flag."""
+        self._state.ask_for_human_input = value
+
     @start()
     def generate_plan(self) -> None:
         """Generate execution plan if planning is enabled.
