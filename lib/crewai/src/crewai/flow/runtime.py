@@ -90,15 +90,17 @@ from crewai.experimental.conversational import (
 )
 from crewai.experimental.conversational_mixin import _ConversationalMixin
 from crewai.flow.constants import AND_CONDITION, OR_CONDITION
-from crewai.flow.dsl import (
+from crewai.flow.dsl._conditions import (
     _extract_all_methods,
     _extract_all_methods_recursive,
     _normalize_condition,
+    is_flow_condition_dict,
+    is_simple_flow_condition,
+)
+from crewai.flow.dsl._utils import (
     build_flow_definition,
     extract_flow_definition,
-    is_flow_condition_dict,
     is_flow_method,
-    is_simple_flow_condition,
 )
 from crewai.flow.flow_context import current_flow_id, current_flow_request_id
 from crewai.flow.flow_definition import FlowDefinition
@@ -704,16 +706,16 @@ class Flow(_ConversationalMixin, BaseModel, Generic[T], metaclass=FlowMeta):
     # When ``conversational = True`` on a subclass, the built-in conversational
     # graph (``conversation_start`` -> ``route_conversation`` -> ``converse_turn``
     # / ``end_conversation`` / ``answer_from_history_turn``) registers and
-    # ``handle_turn`` becomes the chat entry point. When ``False`` (default),
-    # the methods exist as inert attributes and never register or fire —
-    # non-chat flows pay no runtime cost.
+    # ``handle_turn`` / ``chat`` become the chat entry points. When ``False``
+    # (default), the methods exist as inert attributes and never register or
+    # fire — non-chat flows pay no runtime cost.
     #
     # ⚠ EXPERIMENTAL FEATURE. The whole conversational surface
-    # (``conversational`` ClassVar, ``handle_turn``, ``ConversationConfig``,
-    # ``RouterConfig``, ``ConversationState``, the built-in graph + helpers)
-    # lives under ``crewai.experimental`` and may change shape before
-    # graduating. Pin your CrewAI version if you depend on specific
-    # behavior, and watch the changelog for breaking updates.
+    # (``conversational`` ClassVar, ``handle_turn``, ``chat``,
+    # ``ConversationConfig``, ``RouterConfig``, ``ConversationState``, the
+    # built-in graph + helpers) lives under ``crewai.experimental`` and may
+    # change shape before graduating. Pin your CrewAI version if you depend on
+    # specific behavior, and watch the changelog for breaking updates.
     conversational: ClassVar[bool] = False
     conversational_config: ClassVar[ConversationConfig | None] = None
     builtin_routes: ClassVar[tuple[str, ...]] = ("converse", "end")
@@ -910,6 +912,7 @@ class Flow(_ConversationalMixin, BaseModel, Generic[T], metaclass=FlowMeta):
     _pending_user_message: str | dict[str, Any] | None = PrivateAttr(default=None)
     _pending_intents: Sequence[str] | None = PrivateAttr(default=None)
     _pending_intent_llm: str | "BaseLLM" | None = PrivateAttr(default=None)
+    _deferred_flow_started_event_id: str | None = PrivateAttr(default=None)
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:  # type: ignore[override]
         class _FlowGeneric(cls):  # type: ignore[valid-type,misc]
@@ -2199,8 +2202,59 @@ class Flow(_ConversationalMixin, BaseModel, Generic[T], metaclass=FlowMeta):
                 if filtered_inputs:
                     self._initialize_state(filtered_inputs)
 
+            defer_trace_finalization = self._should_defer_trace_finalization()
+            deferred_started_event_id = self._deferred_flow_started_event_id
+            should_emit_flow_started = not (
+                defer_trace_finalization and deferred_started_event_id
+            )
+
+            if (
+                defer_trace_finalization
+                and deferred_started_event_id
+                and get_current_parent_id() is None
+            ):
+                restore_event_scope(((deferred_started_event_id, "flow_started"),))
+            elif get_current_parent_id() is None:
+                reset_emission_counter()
+                reset_last_event_id()
+
+            if should_emit_flow_started:
+                # In normal flows, each kickoff owns its own flow lifecycle.
+                # Deferred conversational sessions are different: the first
+                # turn opens the flow scope and later turns reuse it until
+                # ``finalize_session_traces()`` emits the single finish event.
+                started_event = FlowStartedEvent(
+                    type="flow_started",
+                    flow_name=self.name or self.__class__.__name__,
+                    inputs=inputs,
+                )
+                future = crewai_event_bus.emit(self, started_event)
+                if future:
+                    try:
+                        await asyncio.wrap_future(future)
+                    except Exception:
+                        logger.warning("FlowStartedEvent handler failed", exc_info=True)
+                # Stash the started event id so a deferred
+                # ``finalize_session_traces()`` can restore the event scope
+                # before emitting ``FlowFinishedEvent`` (otherwise the bus
+                # warns "Ending event 'flow_finished' emitted with empty
+                # scope stack").
+                if defer_trace_finalization:
+                    object.__setattr__(
+                        self, "_deferred_flow_started_event_id", started_event.event_id
+                    )
+                if not self.suppress_flow_events:
+                    self._log_flow_event(
+                        f"Flow started with ID: {self.flow_id}", color="bold magenta"
+                    )
+
+            # After FlowStarted: env events must not pre-empt trace batch init
+            # with implicit "crew" execution_type.
+            get_env_context()
+
             # Conversational hook: apply the pending user message AFTER state
-            # restore so it survives ``self.persistence.load_state(...)``.
+            # restore and AFTER flow scope initialization, so transcript events
+            # are parented under the current conversation trace.
             # ``handle_turn`` stashes the message on ``self._pending_user_message``
             # before calling ``kickoff``; this drains it.
             if (
@@ -2208,43 +2262,6 @@ class Flow(_ConversationalMixin, BaseModel, Generic[T], metaclass=FlowMeta):
                 and self._pending_user_message is not None
             ):
                 self._apply_pending_conversational_turn()
-
-            if get_current_parent_id() is None:
-                reset_emission_counter()
-                reset_last_event_id()
-
-            # ``FlowStartedEvent`` always fires — ``suppress_flow_events``
-            # only hides the Rich console panel (and the textual log line
-            # below), it doesn't gate observability events. Tracing /
-            # downstream listeners still need to see flow_started.
-            started_event = FlowStartedEvent(
-                type="flow_started",
-                flow_name=self.name or self.__class__.__name__,
-                inputs=inputs,
-            )
-            future = crewai_event_bus.emit(self, started_event)
-            if future:
-                try:
-                    await asyncio.wrap_future(future)
-                except Exception:
-                    logger.warning("FlowStartedEvent handler failed", exc_info=True)
-            # Stash the started event id so a deferred
-            # ``finalize_session_traces()`` can restore the event scope
-            # before emitting ``FlowFinishedEvent`` (otherwise the bus
-            # warns "Ending event 'flow_finished' emitted with empty
-            # scope stack").
-            if self._should_defer_trace_finalization():
-                object.__setattr__(
-                    self, "_deferred_flow_started_event_id", started_event.event_id
-                )
-            if not self.suppress_flow_events:
-                self._log_flow_event(
-                    f"Flow started with ID: {self.flow_id}", color="bold magenta"
-                )
-
-            # After FlowStarted: env events must not pre-empt trace batch init
-            # with implicit "crew" execution_type.
-            get_env_context()
 
             if inputs is not None and "id" not in inputs:
                 self._initialize_state(inputs)
@@ -2830,7 +2847,7 @@ class Flow(_ConversationalMixin, BaseModel, Generic[T], metaclass=FlowMeta):
 
     def _evaluate_condition(
         self,
-        condition: FlowMethodName | FlowCondition,
+        condition: str | FlowMethodName | FlowCondition,
         trigger_method: FlowMethodName,
         listener_name: FlowMethodName,
     ) -> bool:

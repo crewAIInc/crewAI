@@ -7,98 +7,87 @@ mode: "wide"
 
 ## 개요
 
-대화형 앱은 각 사용자 입력을 **동일한 세션 id**로 **새 flow 실행**으로 처리합니다. CrewAI는 메시지 기록, 선택적 의도 분류, 지연 트레이싱, UI 브리지를 제공하며, `Flow`에 별도 `chat()` API는 없습니다.
+대화형 앱은 각 사용자 입력을 **동일한 세션 id**로 **새 flow 실행**으로 처리합니다. CrewAI는 메시지 기록, 선택적 의도 분류, 지연 트레이싱, UI 브리지, 그리고 대화형 flow용 로컬 `flow.chat()` REPL을 제공합니다.
 
 | 개념 | 구현 |
 |------|------|
-| 세션 id | `kickoff(session_id=...)` → `inputs["id"]` → `state.id` |
-| 사용자 입력 | `kickoff(user_message=...)`가 그래프 실행 전 `state.messages`에 추가 |
-| 턴 완료 | `FlowFinished`는 **이번 실행**만 의미; 다음 `kickoff`로 대화 계속 |
-| 세션 전체 트레이스 | `ConversationalConfig(defer_trace_finalization=True)` + `finalize_session_traces()` |
+| 세션 id | `handle_turn(..., session_id=...)` → `kickoff(inputs={"id": ...})` → `state.id` |
+| 사용자 입력 | `handle_turn(message)`가 그래프 실행 전 `state.messages`에 추가 |
+| 턴 완료 | `FlowFinished`는 **이번 실행**만 의미; 다음 `handle_turn`로 대화 계속 |
+| 세션 전체 트레이스 | `ConversationConfig(defer_trace_finalization=True)` + `finalize_session_traces()` |
 
-## 단일 진입점: `kickoff`
+## 턴 API
 
-모든 사용자 메시지에 **`flow.kickoff(user_message=..., session_id=...)`**를 사용하세요 (REST, WebSocket, CLI). `Flow`에 커스텀 `chat()` 래퍼를 만들지 마세요.
+REST, WebSocket, 테스트, 커스텀 UI에서 오는 모든 사용자 메시지에는 **`flow.handle_turn(message, session_id=...)`**를 사용하세요. 대화형 `Flow`를 로컬 터미널 채팅 루프로 실행하고 싶을 때는 **`flow.chat()`**을 사용하세요.
+
+`Flow.kickoff()`는 `user_message=` 또는 `session_id=` 키워드 인자를 받지 않습니다. 대화형 flow에서는 `handle_turn()`이 보류 중인 메시지를 저장하고 내부적으로 `kickoff(inputs={"id": session_id})`를 호출합니다.
 
 | API | 용도 |
 |-----|------|
-| `kickoff(user_message=..., session_id=...)` | 각 사용자 메시지 |
-| `kickoff_async(...)` | 동일 파라미터; 네이티브 async 진입 |
+| `handle_turn(message, session_id=...)` | 대화형 `Flow`용 한 턴 편의 래퍼 |
+| `chat()` | 대화형 `Flow`용 로컬 터미널 REPL |
+| `kickoff(inputs={...})` | 대화형 턴 처리 없이 flow를 직접 실행 |
 | `ask()` | 한 스텝 **내부** 블로킹 프롬프트 (마법사, 확인) |
 | `@human_feedback` | **스텝 출력** 승인/거부 — 다음 채팅 줄이 아님 |
-| `ChatSession.handle_turn(...)` | `kickoff` 위의 전송 계층 (SSE / WebSocket) |
+| `ChatSession.handle_turn(...)` | `handle_turn` 위의 전송 계층 (SSE / WebSocket) |
 
 ## 빠른 시작
 
 ```python
 from uuid import uuid4
 
-from crewai.flow import (
-    ChatState,
-    ConversationalConfig,
-    Flow,
-    listen,
-    or_,
-    persist,
-    router,
-    start,
+from crewai import Flow
+from crewai.flow import listen
+from crewai.experimental.conversational import (
+    ConversationConfig,
+    ConversationState,
 )
-from crewai.flow.persistence import SQLiteFlowPersistence
 
 
-class SupportFlow(Flow[ChatState]):
-    conversational_config = ConversationalConfig(
-        default_intents=["order", "help", "goodbye"],
-        intent_llm="gpt-4o-mini",
-        defer_trace_finalization=True,
-    )
+@ConversationConfig(defer_trace_finalization=True)
+class SupportFlow(Flow[ConversationState]):
+    conversational = True
 
-    @start()
-    def bootstrap(self):
-        if not self.state.session_ready:
-            self.state.session_ready = True
-        return "ready"
-
-    @router(bootstrap)
-    def route(self):
-        # default_intents 설정 시 prepare_conversational_turn에서 last_intent 설정
-        return self.state.last_intent or "help"
+    def route_turn(self, context):
+        message = self.state.current_user_message or ""
+        if "주문" in message or "order" in message.lower():
+            return "order"
+        if "안녕" in message or "goodbye" in message.lower():
+            return "goodbye"
+        return "help"
 
     @listen("order")
     def handle_order(self):
         reply = "주문이 배송 중입니다."
-        self.append_message("assistant", reply)
+        self.append_assistant_message(reply)
         return reply
 
     @listen("help")
     def handle_help(self):
         reply = "무엇을 도와드릴까요?"
-        self.append_message("assistant", reply)
+        self.append_assistant_message(reply)
         return reply
 
     @listen("goodbye")
     def handle_goodbye(self):
         reply = "안녕히 가세요!"
-        self.append_message("assistant", reply)
+        self.append_assistant_message(reply)
         return reply
-
-    @persist(SQLiteFlowPersistence("support.db"))
-    @listen(or_(handle_order, handle_help, handle_goodbye))
-    def finalize(self):
-        return self.state.model_dump()
 
 
 session_id = str(uuid4())
 flow = SupportFlow()
 
-flow.kickoff(user_message="주문 어디까지 왔나요?", session_id=session_id)
-flow.kickoff(user_message="반품은 어떻게 하나요?", session_id=session_id)
-flow.finalize_session_traces()  # 전체 대화에 대한 단일 trace 링크
+try:
+    flow.handle_turn("주문 어디까지 왔나요?", session_id=session_id)
+    flow.handle_turn("반품은 어떻게 하나요?", session_id=session_id)
+finally:
+    flow.finalize_session_traces()  # 전체 대화에 대한 단일 trace 링크
 ```
 
 ## 턴 생명주기
 
-`user_message`가 있는 각 `kickoff`는 다음 파이프라인을 실행합니다:
+각 `handle_turn`은 다음 파이프라인을 실행합니다:
 
 1. **`_configure_conversational_kickoff`** — `session_id` / `user_message`를 `inputs`에 병합, `ConversationalConfig` 적용, 설정 시 지연 트레이싱 활성화.
 2. **상태 복원** — `inputs["id"]`가 있고 `@persist`가 설정되면 최신 스냅샷 로드.
@@ -107,7 +96,7 @@ flow.finalize_session_traces()  # 전체 대화에 대한 단일 trace 링크
 5. **그래프 실행** — `@start` → `@router` → `@listen` 핸들러.
 6. **실행 종료** — 지연 활성화 시 턴별 `flow_finished` 및 trace 종료 **건너뜀**; 중첩 `Agent.kickoff()` / crew도 부모 batch를 닫지 않음.
 
-핸들러는 **`append_message("assistant", reply)`**를 호출해 다음 턴의 `conversation_messages`에 어시스턴트 응답이 포함되게 하세요. 사용자 입력은 kickoff 시 이미 저장됩니다 — 핸들러에서 다시 추가하지 마세요.
+핸들러는 **`append_assistant_message(reply)`**를 호출해 다음 턴의 `conversation_messages`에 어시스턴트 응답이 포함되게 하세요. 사용자 입력은 `handle_turn`이 이미 저장합니다 — 핸들러에서 다시 추가하지 마세요.
 
 ## `ConversationalConfig` (클래스 수준 기본값)
 
@@ -292,6 +281,15 @@ finally:
     flow.finalize_session_traces()
 ```
 
+로컬 터미널 채팅에는 `chat()`을 사용하세요:
+
+```python
+def kickoff() -> None:
+    SupportFlow().chat()
+```
+
+`chat()`은 `handle_turn()`을 REPL로 감싸고, `exit` / `quit`에서 종료하며, 기본적으로 빈 줄을 건너뛰고, 세션이 끝날 때 `finalize_session_traces()`를 호출합니다.
+
 ### `ConversationConfig`
 
 클래스 단위의 챗 기본값을 부착하는 클래스 데코레이터입니다.
@@ -373,7 +371,37 @@ Routes:
 4. router는 결정을 `state.last_intent`에 저장합니다 (다음 턴의 router 컨텍스트에서 보입니다).
 5. 핸들러가 문자열을 반환했지만 `append_assistant_message`를 직접 호출하지 않았다면, `handle_turn`이 대신 추가해 줍니다.
 
-`flow.kickoff(user_message=..., session_id=...)`를 직접 호출해도 동일한 reset/run 로직이 동작합니다. `handle_turn`은 그 위에 얹은 편의 래퍼입니다.
+채팅 메시지에는 `handle_turn()`을 호출하세요. `kickoff(inputs={"id": ...})`를 직접 호출하면 대화형 턴 래퍼 없이 flow 그래프가 실행됩니다.
+
+### 로컬 REPL용 `chat()`
+
+`flow.chat()`은 `handle_turn()` 위에 얹은 바로 쓸 수 있는 터미널 래퍼입니다:
+
+```python
+flow = SupportFlow()
+flow.chat()
+```
+
+일반적인 로컬 루프를 처리합니다:
+
+1. 사용자 메시지를 입력받습니다.
+2. `exit` / `quit`, `EOFError`, `KeyboardInterrupt`에서 멈춥니다.
+3. `handle_turn(message, session_id=...)`를 호출합니다.
+4. 어시스턴트 결과를 출력합니다.
+5. `finally` 블록에서 지연된 세션 trace를 finalize합니다.
+
+주입 가능한 I/O로 터미널 동작을 커스터마이즈할 수 있습니다:
+
+```python
+flow.chat(
+    session_id="demo-session",
+    prompt="You: ",
+    assistant_prefix="Assistant: ",
+    exit_commands=("exit", "quit", "bye"),
+)
+```
+
+웹 앱, 백그라운드 worker, 테스트, 커스텀 transport에서는 계속 `handle_turn()`을 직접 사용하세요.
 
 ### 커스텀 router 동작
 
@@ -409,17 +437,10 @@ LLM router를 우회해 프로그램적으로 라우트를 선택하려면 `rout
 - **중첩 작업** (`Agent.kickoff()`, crew, Exa tool)은 **부모** batch에 추가; 내부 `AgentExecutor` flow가 세션 batch를 조기 종료하지 않음.
 
 ```python
-try:
-    while True:
-        line = input("You: ").strip()
-        if not line:
-            break
-        flow.kickoff(user_message=line, session_id=session_id)
-finally:
-    flow.finalize_session_traces()
+flow.chat(session_id=session_id)
 ```
 
-지연 활성화 시 `ChatSession.close()`가 `finalize_session_traces()`를 호출합니다.
+`flow.chat()`이 `finalize_session_traces()`를 대신 호출합니다. `handle_turn()`이나 `kickoff(...)`로 직접 루프를 소유하는 경우, 세션이 끝날 때 `finalize_session_traces()`를 호출하세요.
 
 `suppress_flow_events=True`는 Rich 콘솔 패널만 숨깁니다. trace 및 method 이벤트는 계속 발생합니다.
 

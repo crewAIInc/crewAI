@@ -337,7 +337,7 @@ class RecallFlow(Flow[RecallState]):
     @router(re_search)
     def re_decide_depth(self) -> str:
         """Re-evaluate depth after re-search. Same logic as decide_depth."""
-        return self.decide_depth()  # type: ignore[call-arg]
+        return self.decide_depth()
 
     @listen("synthesize")
     def synthesize_results(self) -> list[MemoryMatch]:

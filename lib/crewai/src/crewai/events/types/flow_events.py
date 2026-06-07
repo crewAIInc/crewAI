@@ -166,6 +166,31 @@ class FlowInputReceivedEvent(FlowEvent):
     type: Literal["flow_input_received"] = "flow_input_received"
 
 
+class ConversationMessageAddedEvent(FlowEvent):
+    """Event emitted when a conversational Flow records a message.
+
+    This gives trace consumers a first-class transcript signal instead of
+    requiring them to inspect the full method state payload.
+    """
+
+    session_id: str
+    role: Literal["user", "assistant", "system", "tool"]
+    content: Any
+    message_index: int
+    type: Literal["conversation_message_added"] = "conversation_message_added"
+
+
+class ConversationRouteSelectedEvent(FlowEvent):
+    """Event emitted when a conversational Flow selects a route for a turn."""
+
+    session_id: str
+    route: str
+    user_message: str | None = None
+    message_index: int | None = None
+    previous_intent: str | None = None
+    type: Literal["conversation_route_selected"] = "conversation_route_selected"
+
+
 class HumanFeedbackRequestedEvent(FlowEvent):
     """Event emitted when human feedback is requested.
 

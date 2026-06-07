@@ -16,7 +16,7 @@ Import surface:
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from enum import Enum
 import json
 import logging
@@ -24,6 +24,11 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast
 
 from pydantic import BaseModel, Field, create_model
 
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.flow_events import (
+    ConversationMessageAddedEvent,
+    ConversationRouteSelectedEvent,
+)
 from crewai.experimental.conversational import (
     AgentMessage,
     ConversationConfig,
@@ -122,19 +127,36 @@ class _ConversationalMixin:
         """Route the current turn to a listener label."""
         state = cast(ConversationState, self.state)
         context = self.build_router_context()
+        previous_intent = state.last_intent
         configured_route = self.route_turn(context)
         if configured_route:
             state.last_intent = configured_route
+            self._emit_conversation_route_selected(
+                configured_route,
+                previous_intent=previous_intent,
+            )
             return configured_route
 
         if state.last_intent:
+            self._emit_conversation_route_selected(
+                state.last_intent,
+                previous_intent=previous_intent,
+            )
             return state.last_intent
 
         if self.can_answer_from_history(context):
             state.last_intent = "answer_from_history"
+            self._emit_conversation_route_selected(
+                "answer_from_history",
+                previous_intent=previous_intent,
+            )
             return "answer_from_history"
 
         state.last_intent = "converse"
+        self._emit_conversation_route_selected(
+            "converse",
+            previous_intent=previous_intent,
+        )
         return "converse"
 
     @listen("converse")
@@ -242,6 +264,59 @@ class _ConversationalMixin:
         ):
             self.append_assistant_message(self._stringify_result(result))
         return result
+
+    def chat(
+        self,
+        *,
+        session_id: str | None = None,
+        prompt: str = "\nYou: ",
+        assistant_prefix: str = "\nAssistant: ",
+        exit_commands: Sequence[str] = ("exit", "quit"),
+        input_fn: Callable[[str], str] = input,
+        output_fn: Callable[[str], None] = print,
+        skip_empty: bool = True,
+        defer_trace_finalization: bool = True,
+        **handle_turn_kwargs: Any,
+    ) -> None:
+        """Run an interactive terminal chat loop for a conversational Flow.
+
+        ``chat()`` is a convenience wrapper around ``handle_turn()`` for local
+        REPLs. For web apps, tests, and custom transports, call
+        ``handle_turn()`` directly. The input/output callables are injectable so
+        callers can customize prompts or exercise the loop without patching
+        builtins.
+        """
+        if not getattr(type(self), "conversational", False):
+            raise ValueError("Flow.chat() is only available on conversational flows")
+
+        exit_set = {command.lower() for command in exit_commands}
+        previous_defer = getattr(self, "defer_trace_finalization", False)
+        if defer_trace_finalization:
+            self.defer_trace_finalization = True
+
+        try:
+            while True:
+                try:
+                    message = input_fn(prompt).strip()
+                except (EOFError, KeyboardInterrupt):
+                    output_fn("")
+                    break
+
+                if message.lower() in exit_set:
+                    break
+                if skip_empty and not message:
+                    continue
+
+                result = self.handle_turn(
+                    message,
+                    session_id=session_id,
+                    **handle_turn_kwargs,
+                )
+                output_fn(f"{assistant_prefix}{self._stringify_result(result)}")
+        finally:
+            self.finalize_session_traces()
+            if defer_trace_finalization:
+                self.defer_trace_finalization = previous_defer
 
     def build_router_context(self) -> dict[str, Any]:
         """Build context used by the routing policy for the current turn."""
@@ -353,12 +428,60 @@ class _ConversationalMixin:
         metadata: dict[str, Any] | None = None,
     ) -> None:
         """Append a final user-visible assistant message."""
-        cast(ConversationState, self.state).messages.append(
+        state = cast(ConversationState, self.state)
+        state.messages.append(
             ConversationMessage(
                 role="assistant",
                 content=content,
                 metadata=metadata or {},
             )
+        )
+        self._emit_conversation_message_added(
+            role="assistant",
+            content=content,
+            message_index=len(state.messages) - 1,
+        )
+
+    def _emit_conversation_message_added(
+        self,
+        *,
+        role: Literal["user", "assistant", "system", "tool"],
+        content: Any,
+        message_index: int,
+    ) -> None:
+        """Emit a compact transcript event for conversational trace views."""
+        state = cast(ConversationState, self.state)
+        crewai_event_bus.emit(
+            self,
+            ConversationMessageAddedEvent(
+                type="conversation_message_added",
+                flow_name=self.name or self.__class__.__name__,
+                session_id=state.id,
+                role=role,
+                content=content,
+                message_index=message_index,
+            ),
+        )
+
+    def _emit_conversation_route_selected(
+        self,
+        route: str,
+        *,
+        previous_intent: str | None = None,
+    ) -> None:
+        """Emit the conversational routing decision for the current turn."""
+        state = cast(ConversationState, self.state)
+        crewai_event_bus.emit(
+            self,
+            ConversationRouteSelectedEvent(
+                type="conversation_route_selected",
+                flow_name=self.name or self.__class__.__name__,
+                session_id=state.id,
+                route=route,
+                user_message=state.current_user_message,
+                message_index=(len(state.messages) - 1) if state.messages else None,
+                previous_intent=previous_intent,
+            ),
         )
 
     def append_message(
@@ -394,6 +517,11 @@ class _ConversationalMixin:
         if self.conversational:
             state = cast(ConversationState, self.state)
             state.messages.append(ConversationMessage(role="user", content=text))
+            self._emit_conversation_message_added(
+                role="user",
+                content=text,
+                message_index=len(state.messages) - 1,
+            )
             state.current_user_message = text
             state.last_user_message = text
             if outcomes and llm is not None:

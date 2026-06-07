@@ -7,98 +7,87 @@ mode: "wide"
 
 ## Visão geral
 
-Apps conversacionais tratam cada linha do usuário como uma **nova execução do flow** com o **mesmo id de sessão**. A CrewAI oferece helpers para histórico de mensagens, classificação opcional de intenção, tracing adiado e pontes para UI — sem uma API `chat()` separada em `Flow`.
+Apps conversacionais tratam cada linha do usuário como uma **nova execução do flow** com o **mesmo id de sessão**. A CrewAI oferece helpers para histórico de mensagens, classificação opcional de intenção, tracing adiado, pontes para UI e um REPL local `flow.chat()` para flows conversacionais.
 
 | Conceito | Implementação |
 |---------|----------------|
-| Id de sessão | `kickoff(session_id=...)` → `inputs["id"]` → `state.id` |
-| Linha do usuário | `kickoff(user_message=...)` acrescenta em `state.messages` antes do grafo rodar |
-| Fim do turno | `FlowFinished` só para **esta execução**; o chat segue no próximo `kickoff` |
-| Trace da sessão | `ConversationalConfig(defer_trace_finalization=True)` + `finalize_session_traces()` |
+| Id de sessão | `handle_turn(..., session_id=...)` → `kickoff(inputs={"id": ...})` → `state.id` |
+| Linha do usuário | `handle_turn(message)` acrescenta em `state.messages` antes do grafo rodar |
+| Fim do turno | `FlowFinished` só para **esta execução**; o chat segue no próximo `handle_turn` |
+| Trace da sessão | `ConversationConfig(defer_trace_finalization=True)` + `finalize_session_traces()` |
 
-## Um ponto de entrada: `kickoff`
+## APIs de turno
 
-Use **`flow.kickoff(user_message=..., session_id=...)`** para cada mensagem (REST, WebSocket, CLI). Não crie um wrapper `chat()` customizado em `Flow`.
+Use **`flow.handle_turn(message, session_id=...)`** para cada mensagem de usuário em REST, WebSocket, testes e UIs customizadas. Use **`flow.chat()`** quando quiser um loop de chat local no terminal para um `Flow` conversacional.
+
+`Flow.kickoff()` não aceita os argumentos nomeados `user_message=` ou `session_id=`. Para flows conversacionais, `handle_turn()` guarda a mensagem pendente e chama `kickoff(inputs={"id": session_id})` internamente.
 
 | API | Uso |
 |-----|-----|
-| `kickoff(user_message=..., session_id=...)` | Cada mensagem do usuário |
-| `kickoff_async(...)` | Mesmos parâmetros; entrada async nativa |
+| `handle_turn(message, session_id=...)` | Wrapper ergonômico de um turno para `Flow` conversacional |
+| `chat()` | REPL local no terminal para `Flow` conversacional |
+| `kickoff(inputs={...})` | Execução avançada do flow sem tratamento de turno conversacional |
 | `ask()` | Prompt bloqueante **dentro** de um passo (wizard, esclarecimento) |
 | `@human_feedback` | Aprovar/rejeitar **saída de um passo** — não a próxima linha do chat |
-| `ChatSession.handle_turn(...)` | Camada de transporte sobre `kickoff` (SSE / WebSocket) |
+| `ChatSession.handle_turn(...)` | Camada de transporte sobre `handle_turn` (SSE / WebSocket) |
 
 ## Início rápido
 
 ```python
 from uuid import uuid4
 
-from crewai.flow import (
-    ChatState,
-    ConversationalConfig,
-    Flow,
-    listen,
-    or_,
-    persist,
-    router,
-    start,
+from crewai import Flow
+from crewai.flow import listen
+from crewai.experimental.conversational import (
+    ConversationConfig,
+    ConversationState,
 )
-from crewai.flow.persistence import SQLiteFlowPersistence
 
 
-class SupportFlow(Flow[ChatState]):
-    conversational_config = ConversationalConfig(
-        default_intents=["order", "help", "goodbye"],
-        intent_llm="gpt-4o-mini",
-        defer_trace_finalization=True,
-    )
+@ConversationConfig(defer_trace_finalization=True)
+class SupportFlow(Flow[ConversationState]):
+    conversational = True
 
-    @start()
-    def bootstrap(self):
-        if not self.state.session_ready:
-            self.state.session_ready = True
-        return "ready"
-
-    @router(bootstrap)
-    def route(self):
-        # last_intent definido em prepare_conversational_turn quando default_intents está setado
-        return self.state.last_intent or "help"
+    def route_turn(self, context):
+        message = (self.state.current_user_message or "").lower()
+        if "pedido" in message or "order" in message:
+            return "order"
+        if "tchau" in message or "goodbye" in message:
+            return "goodbye"
+        return "help"
 
     @listen("order")
     def handle_order(self):
         reply = "Seu pedido está a caminho."
-        self.append_message("assistant", reply)
+        self.append_assistant_message(reply)
         return reply
 
     @listen("help")
     def handle_help(self):
         reply = "Como posso ajudar?"
-        self.append_message("assistant", reply)
+        self.append_assistant_message(reply)
         return reply
 
     @listen("goodbye")
     def handle_goodbye(self):
         reply = "Até logo!"
-        self.append_message("assistant", reply)
+        self.append_assistant_message(reply)
         return reply
-
-    @persist(SQLiteFlowPersistence("support.db"))
-    @listen(or_(handle_order, handle_help, handle_goodbye))
-    def finalize(self):
-        return self.state.model_dump()
 
 
 session_id = str(uuid4())
 flow = SupportFlow()
 
-flow.kickoff(user_message="Onde está meu pedido?", session_id=session_id)
-flow.kickoff(user_message="E as devoluções?", session_id=session_id)
-flow.finalize_session_traces()  # um link de trace para o chat inteiro
+try:
+    flow.handle_turn("Onde está meu pedido?", session_id=session_id)
+    flow.handle_turn("E as devoluções?", session_id=session_id)
+finally:
+    flow.finalize_session_traces()  # um link de trace para o chat inteiro
 ```
 
 ## Ciclo de vida do turno
 
-Cada `kickoff` com `user_message` executa este pipeline:
+Cada `handle_turn` executa este pipeline:
 
 1. **`_configure_conversational_kickoff`** — mescla `session_id` / `user_message` em `inputs`, aplica `ConversationalConfig`, habilita tracing adiado quando configurado.
 2. **Restauração de estado** — se `inputs["id"]` existe e `@persist` está configurado, carrega o snapshot mais recente.
@@ -107,7 +96,7 @@ Cada `kickoff` com `user_message` executa este pipeline:
 5. **Execução do grafo** — `@start` → `@router` → handlers `@listen`.
 6. **Fim da execução** — `flow_finished` por turno e finalização de trace são **ignorados** com adiamento; `Agent.kickoff()` / crews aninhados também não fecham o batch pai.
 
-Os handlers devem chamar **`append_message("assistant", reply)`** para que o próximo turno inclua a resposta do assistente. A linha do usuário já é salva no kickoff — não acrescente de novo nos handlers.
+Os handlers devem chamar **`append_assistant_message(reply)`** para que o próximo turno inclua a resposta do assistente. A linha do usuário já é salva por `handle_turn` — não acrescente de novo nos handlers.
 
 ## `ConversationalConfig` (padrões em nível de classe)
 
@@ -293,6 +282,15 @@ finally:
     flow.finalize_session_traces()
 ```
 
+Para um chat local no terminal, use `chat()`:
+
+```python
+def kickoff() -> None:
+    SupportFlow().chat()
+```
+
+`chat()` envolve `handle_turn()` em um REPL, sai com `exit` / `quit`, ignora linhas em branco por padrão e chama `finalize_session_traces()` quando a sessão termina.
+
 ### `ConversationConfig`
 
 Decorador de classe que anexa os defaults de chat por classe.
@@ -374,7 +372,37 @@ Você pode sobrescrever qualquer uma definindo um handler com o mesmo nome na su
 4. O router grava sua decisão em `state.last_intent` (visível para o contexto de routing do próximo turno).
 5. Se seu handler retornou uma string e ainda não chamou `append_assistant_message`, `handle_turn` anexa para você.
 
-Você também pode chamar `flow.kickoff(user_message=..., session_id=...)` diretamente — a mesma lógica de reset/run é acionada. `handle_turn` é o wrapper ergonômico.
+Chame `handle_turn()` para mensagens de chat. Chamar `kickoff(inputs={"id": ...})` diretamente executa o grafo sem aplicar o wrapper de turno conversacional.
+
+### `chat()` para REPLs locais
+
+`flow.chat()` é o wrapper de terminal pronto para uso em cima de `handle_turn()`:
+
+```python
+flow = SupportFlow()
+flow.chat()
+```
+
+Ele cobre o loop local comum:
+
+1. Solicita uma mensagem do usuário.
+2. Para com `exit` / `quit`, `EOFError` ou `KeyboardInterrupt`.
+3. Chama `handle_turn(message, session_id=...)`.
+4. Imprime o resultado do assistente.
+5. Finaliza traces de sessão adiados em um bloco `finally`.
+
+Customize o comportamento do terminal com I/O injetável:
+
+```python
+flow.chat(
+    session_id="demo-session",
+    prompt="You: ",
+    assistant_prefix="Assistant: ",
+    exit_commands=("exit", "quit", "bye"),
+)
+```
+
+Para apps web, workers em background, testes e transportes customizados, continue usando `handle_turn()` diretamente.
 
 ### Comportamento customizado do router
 
@@ -410,17 +438,10 @@ Com `defer_trace_finalization=True` (padrão em `ConversationalConfig`):
 - **Trabalho aninhado** (`Agent.kickoff()`, crews, tools Exa) acrescenta ao batch **pai**; flows internos de `AgentExecutor` não fecham o batch da sessão cedo.
 
 ```python
-try:
-    while True:
-        line = input("You: ").strip()
-        if not line:
-            break
-        flow.kickoff(user_message=line, session_id=session_id)
-finally:
-    flow.finalize_session_traces()
+flow.chat(session_id=session_id)
 ```
 
-`ChatSession.close()` chama `finalize_session_traces()` quando o adiamento está habilitado.
+`flow.chat()` chama `finalize_session_traces()` para você. Quando você controla o loop com `handle_turn()` ou `kickoff(...)`, chame `finalize_session_traces()` quando a sessão terminar.
 
 `suppress_flow_events=True` só oculta painéis do console; eventos de trace e método ainda são emitidos.
 
