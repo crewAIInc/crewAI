@@ -291,6 +291,42 @@ class TestLLMIntegration:
             assert llm.max_tokens == 1000
 
 
+class TestDeepseekResponseFormat:
+    """Tests for skipping response_format on DeepSeek."""
+
+    def test_response_format_omitted_for_deepseek_provider(self):
+        """Test that response_format is removed from params for Deepseek provider."""
+        completion = OpenAICompatibleCompletion(
+            model="deepseek-chat",
+            provider="deepseek",
+            api_key="test-key",
+            response_format={"type": "json_object"},
+        )
+        params = completion._prepare_completion_params([{"role": "user", "content": "hi"}])
+        assert "response_format" not in params
+
+    def test_response_format_omitted_for_deepseek_model(self):
+        """Test that response_format is removed when model name contains deepseek."""
+        completion = OpenAICompatibleCompletion(
+            model="openrouter/deepseek/deepseek-chat",
+            provider="openrouter",
+            api_key="test-key",
+            response_format={"type": "json_object"},
+        )
+        params = completion._prepare_completion_params([{"role": "user", "content": "hi"}])
+        assert "response_format" not in params
+
+    def test_response_format_kept_for_other_providers(self):
+        """Test that response_format is kept for non-Deepseek providers."""
+        completion = OpenAICompatibleCompletion(
+            model="llama3",
+            provider="ollama",
+            response_format={"type": "json_object"},
+        )
+        params = completion._prepare_completion_params([{"role": "user", "content": "hi"}])
+        assert "response_format" in params
+
+
 class TestCallMocking:
     """Tests for mocking the call method."""
 

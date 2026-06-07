@@ -261,3 +261,14 @@ class OpenAICompatibleCompletion(OpenAICompletion):
             Whether the model supports function calling.
         """
         return super().supports_function_calling()
+
+    def _prepare_completion_params(self, *args, **kwargs) -> dict[str, Any]:
+        """Prepare parameters for OpenAI chat completion.
+
+        Skips ``response_format`` for providers that do not support it
+        (e.g. DeepSeek), avoiding a 400 error from the API.
+        """
+        params = super()._prepare_completion_params(*args, **kwargs)
+        if self.provider == "deepseek" or "deepseek" in self.model.lower():
+            params.pop("response_format", None)
+        return params
