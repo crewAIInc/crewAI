@@ -279,6 +279,16 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         """Set state messages."""
         self._state.messages = value
 
+    @property
+    def ask_for_human_input(self) -> bool:
+        """Compatibility property - delegates to state for ExecutorContext protocol."""
+        return self._state.ask_for_human_input  # type: ignore[no-any-return]
+
+    @ask_for_human_input.setter
+    def ask_for_human_input(self, value: bool) -> None:
+        """Set state ask_for_human_input."""
+        self._state.ask_for_human_input = value
+
     @start()
     def generate_plan(self) -> None:
         """Generate execution plan if planning is enabled.
@@ -3069,6 +3079,60 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         provider = get_provider()
         return await provider.handle_feedback_async(
             formatted_answer, cast("AsyncExecutorContext", self)
+        )
+
+    def _invoke_loop(self) -> AgentFinish:
+        """Re-run the agent execution loop (used by human feedback providers).
+
+        Resets iteration bookkeeping and re-runs the Flow so the agent can
+        incorporate human feedback into a new answer.
+
+        Returns:
+            Final answer from the agent.
+        """
+        self.state.iterations = 0
+        self.state.current_answer = None
+        self.state.is_finished = False
+        self._finalize_called = False
+
+        self.kickoff()
+
+        answer = self.state.current_answer
+        if not isinstance(answer, AgentFinish):
+            raise RuntimeError("Agent execution ended without reaching a final answer.")
+        return answer
+
+    async def _ainvoke_loop(self) -> AgentFinish:
+        """Re-run the agent execution loop asynchronously.
+
+        Async counterpart of ``_invoke_loop`` for async human feedback flows.
+
+        Returns:
+            Final answer from the agent.
+        """
+        self.state.iterations = 0
+        self.state.current_answer = None
+        self.state.is_finished = False
+        self._finalize_called = False
+
+        await self.kickoff_async()
+
+        answer = self.state.current_answer
+        if not isinstance(answer, AgentFinish):
+            raise RuntimeError("Agent execution ended without reaching a final answer.")
+        return answer
+
+    def _format_feedback_message(self, feedback: str) -> LLMMessage:
+        """Format human feedback as a message for the LLM.
+
+        Args:
+            feedback: User feedback string.
+
+        Returns:
+            Formatted message dict.
+        """
+        return format_message_for_llm(
+            I18N_DEFAULT.slice("feedback_instructions").format(feedback=feedback)
         )
 
     def _is_training_mode(self) -> bool:
