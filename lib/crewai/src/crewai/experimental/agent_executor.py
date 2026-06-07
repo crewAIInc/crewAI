@@ -282,7 +282,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     @property  # type: ignore[misc]
     def ask_for_human_input(self) -> bool:
         """Compatibility property - delegates to state for ExecutorContext protocol."""
-        return self._state.ask_for_human_input
+        return self._state.ask_for_human_input  # type: ignore[no-any-return]
 
     @ask_for_human_input.setter
     def ask_for_human_input(self, value: bool) -> None:
