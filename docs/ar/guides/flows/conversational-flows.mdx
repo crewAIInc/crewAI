@@ -354,7 +354,7 @@ Routes:
 
 ### أذونات المسارات
 
-استخدم `@listen(..., required_permissions=[...])` لحماية المسارات بعد أن يختار الموجّه مساراً صالحاً. يتحقق المفوّض الافتراضي من مجموعة `permissions` في `self.state`؛ وتُعاد الجولات المرفوضة إلى `permission_denied`.
+استخدم `@listen(..., required_permissions=[...])` لحماية المسارات بعد أن يختار الموجّه مسارًا صالحًا. يتحقق المفوّض الافتراضي من مجموعة `permissions` في `self.state`؛ وتُعاد الجولات المرفوضة إلى `permission_denied`.
 
 ```python
 from crewai import Flow
@@ -402,7 +402,7 @@ class SupportFlow(Flow[AppState]):
         return reply
 ```
 
-استخدم `RouterConfig.route_permissions` عندما تحتاج إلى تكوين الأذونات بعيداً عن المعالجات. للتفويض المخصص، تجاوز `can_access_route(required_permissions)` بدلاً من تجاوز `route_turn`.
+استخدم `RouterConfig.route_permissions` عندما تحتاج إلى تكوين الأذونات بعيدًا عن المعالجات. للتفويض المخصص، تجاوز `can_access_route(required_permissions)` بدلًا من تجاوز `route_turn`.
 
 ### المسارات المدمجة
 

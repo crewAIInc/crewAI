@@ -891,6 +891,7 @@ class TestConversationalFlow:
                 return "denied"
 
         flow = PermissionFlow()
+        flow._state = PermissionState()
         result = flow.handle_turn("research CrewAI")
 
         assert result == "denied"
@@ -929,6 +930,7 @@ class TestConversationalFlow:
                 return "denied"
 
         flow = PermissionFlow()
+        flow._state = PermissionState()
         result = flow.handle_turn("research CrewAI")
 
         assert result == "researched"
@@ -970,10 +972,65 @@ class TestConversationalFlow:
         assert result == "admin report"
         assert flow.state.last_intent == "admin"
 
-    def test_router_infers_permissions_from_listener_metadata(self) -> None:
-        class PermissionState(ConversationState):
-            permissions: set[str] = Field(default_factory=set)
+    def test_router_permissions_gate_protected_default_intent(self) -> None:
+        @ConversationConfig(
+            router=RouterConfig(
+                routes=["admin"],
+                route_permissions={"admin": "admin"},
+                default_intent="admin",
+            ),
+        )
+        class PermissionFlow(ConversationalFlow):
+            @listen("admin")
+            def run_admin(self) -> str:
+                self.append_assistant_message("admin report")
+                return "admin report"
 
+            @listen("permission_denied")
+            def deny(self) -> str:
+                self.append_assistant_message("denied")
+                return "denied"
+
+        flow = PermissionFlow()
+        result = flow.handle_turn("show audit")
+
+        assert result == "denied"
+        assert flow.state.last_intent == "permission_denied"
+
+    def test_router_permissions_gate_protected_fallback_intent(self) -> None:
+        class Route(BaseModel):
+            intent: str
+
+        router_llm = MagicMock()
+        router_llm.call.return_value = Route(intent="unknown")
+
+        @ConversationConfig(
+            router=RouterConfig(
+                response_format=Route,
+                llm=router_llm,
+                routes=["admin"],
+                route_permissions={"admin": "admin"},
+                fallback_intent="admin",
+            ),
+        )
+        class PermissionFlow(ConversationalFlow):
+            @listen("admin")
+            def run_admin(self) -> str:
+                self.append_assistant_message("admin report")
+                return "admin report"
+
+            @listen("permission_denied")
+            def deny(self) -> str:
+                self.append_assistant_message("denied")
+                return "denied"
+
+        flow = PermissionFlow()
+        result = flow.handle_turn("something unexpected")
+
+        assert result == "denied"
+        assert flow.state.last_intent == "permission_denied"
+
+    def test_router_infers_permissions_from_listener_metadata(self) -> None:
         router_llm = MagicMock()
 
         @ConversationConfig(
@@ -981,7 +1038,7 @@ class TestConversationalFlow:
                 llm=router_llm,
             ),
         )
-        class PermissionFlow(Flow[PermissionState]):
+        class PermissionFlow(Flow[ConversationState]):
             conversational = True
 
             @listen("research", required_permissions=["web_search"])
@@ -1006,6 +1063,14 @@ class TestConversationalFlow:
 
         assert result == "denied"
         assert flow.state.last_intent == "permission_denied"
+
+    def test_listener_required_permissions_reject_empty_values(self) -> None:
+        try:
+            listen("research", required_permissions=["web_search", ""])(lambda: None)
+        except ValueError as exc:
+            assert "non-empty strings" in str(exc)
+        else:
+            raise AssertionError("empty permission names should be rejected")
 
     def test_conversational_flow_auto_defaults_to_conversation_state(self) -> None:
         """``class C(Flow): conversational = True`` resolves state to ConversationState.

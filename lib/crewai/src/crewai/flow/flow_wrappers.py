@@ -171,6 +171,7 @@ class ListenMethod(FlowMethod[P, R]):
     __trigger_methods__: list[FlowMethodName] | None = None
     __condition_type__: FlowConditionType | None = None
     __trigger_condition__: FlowCondition | None = None
+    __route_permissions__: tuple[str, ...] | None = None
 
 
 class RouterMethod(FlowMethod[P, R]):

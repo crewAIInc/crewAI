@@ -659,7 +659,10 @@ class _ConversationalMixin:
     ) -> str | None:
         router_llm = self._default_router_llm(router_config)
         if router_llm is None:
-            return router_config.default_intent
+            return self._route_or_permission_denied(
+                router_config.default_intent,
+                router_config,
+            )
 
         try:
             llm = self._coerce_llm(router_llm)
@@ -670,19 +673,36 @@ class _ConversationalMixin:
             )
             intent = self._extract_router_intent(response, router_config.intent_field)
         except Exception:
-            return router_config.fallback_intent or router_config.default_intent
+            return self._route_or_permission_denied(
+                router_config.fallback_intent or router_config.default_intent,
+                router_config,
+            )
 
         if intent is None:
-            return router_config.fallback_intent or router_config.default_intent
+            return self._route_or_permission_denied(
+                router_config.fallback_intent or router_config.default_intent,
+                router_config,
+            )
 
         valid_labels = self._effective_routes(router_config)
         if valid_labels and intent not in valid_labels:
-            return router_config.fallback_intent or router_config.default_intent
+            return self._route_or_permission_denied(
+                router_config.fallback_intent or router_config.default_intent,
+                router_config,
+            )
 
-        if not self._can_access_router_intent(intent, router_config):
+        return self._route_or_permission_denied(intent, router_config)
+
+    def _route_or_permission_denied(
+        self,
+        route: str | None,
+        router_config: RouterConfig,
+    ) -> str | None:
+        if route is None:
+            return None
+        if not self._can_access_router_intent(route, router_config):
             return router_config.permission_denied_route
-
-        return intent
+        return route
 
     def _can_access_router_intent(
         self,

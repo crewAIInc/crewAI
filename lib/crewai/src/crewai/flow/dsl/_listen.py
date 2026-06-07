@@ -64,6 +64,11 @@ def listen(
             )
             if not permissions:
                 raise ValueError("required_permissions must not be empty")
+            if any(
+                not isinstance(permission, str) or not permission.strip()
+                for permission in permissions
+            ):
+                raise ValueError("required_permissions must contain non-empty strings")
             wrapper.__route_permissions__ = permissions
         return wrapper
 
