@@ -279,7 +279,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         """Set state messages."""
         self._state.messages = value
 
-    @property  # type: ignore[misc]
+    @property
     def ask_for_human_input(self) -> bool:
         """Compatibility property - delegates to state for ExecutorContext protocol."""
         return self._state.ask_for_human_input  # type: ignore[no-any-return]
