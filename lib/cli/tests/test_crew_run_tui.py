@@ -8,6 +8,8 @@ from crewai.events.types.observation_events import (
     GoalAchievedEarlyEvent,
     PlanRefinementEvent,
     PlanReplanTriggeredEvent,
+    PlanStepCompletedEvent,
+    PlanStepStartedEvent,
     StepObservationCompletedEvent,
     StepObservationFailedEvent,
     StepObservationStartedEvent,
@@ -108,6 +110,66 @@ def test_step_observation_events_update_the_explicit_step() -> None:
     }
 
 
+def test_plan_step_lifecycle_events_update_the_explicit_step() -> None:
+    app = _app_with_plan()
+    app._subscribe()
+    try:
+        _emit_event(
+            PlanStepStartedEvent(
+                agent_role="Agent",
+                step_number=2,
+                step_description="Second",
+            )
+        )
+
+        assert app._plan_step_status == {
+            1: "pending",
+            2: "active",
+            3: "pending",
+        }
+
+        _emit_event(
+            PlanStepCompletedEvent(
+                agent_role="Agent",
+                step_number=2,
+                step_description="Second",
+                success=True,
+                result="done",
+            )
+        )
+    finally:
+        app._unsubscribe()
+
+    assert app._plan_step_status == {
+        1: "pending",
+        2: "done",
+        3: "pending",
+    }
+
+
+def test_failed_plan_step_lifecycle_event_marks_exact_step_failed() -> None:
+    app = _app_with_plan()
+    app._subscribe()
+    try:
+        _emit_event(
+            PlanStepCompletedEvent(
+                agent_role="Agent",
+                step_number=2,
+                step_description="Second",
+                success=False,
+                error="Step failed",
+            )
+        )
+    finally:
+        app._unsubscribe()
+
+    assert app._plan_step_status == {
+        1: "pending",
+        2: "failed",
+        3: "pending",
+    }
+
+
 def test_tool_usage_events_do_not_advance_plan_steps() -> None:
     app = _app_with_plan()
     app._subscribe()
@@ -146,19 +208,12 @@ def test_next_tool_does_not_mark_unfinished_tool_successful() -> None:
     app = _app_with_plan()
     app._subscribe()
     try:
-        future = crewai_event_bus.emit(
-            None,
+        _emit_event(
             ToolUsageStartedEvent(tool_name="search", tool_args={"query": "CrewAI"}),
         )
-        if future:
-            future.result(timeout=5)
-
-        future = crewai_event_bus.emit(
-            None,
+        _emit_event(
             ToolUsageStartedEvent(tool_name="scrape", tool_args={"url": "https://x"}),
         )
-        if future:
-            future.result(timeout=5)
     finally:
         app._unsubscribe()
 
@@ -168,6 +223,11 @@ def test_next_tool_does_not_mark_unfinished_tool_successful() -> None:
         "No result received before the next tool started"
     )
     assert app._log_entries[1]["status"] == "running"
+    assert app._plan_step_status == {
+        1: "pending",
+        2: "pending",
+        3: "pending",
+    }
 
 
 def test_internal_reasoning_function_call_is_hidden_from_activity_log() -> None:
@@ -215,86 +275,41 @@ def test_internal_reasoning_function_call_is_hidden_from_activity_log() -> None:
     assert app._current_task_steps == []
 
 
-def test_failed_tool_attempt_prevents_matching_plan_step_from_becoming_done() -> None:
+def test_tool_failure_does_not_override_successful_plan_step_completion() -> None:
     app = _app_with_plan()
-    app._plan["steps"][0]["description"] = (
-        "Use `search_the_internet_with_serper` to find official sources"
-    )
     app._subscribe()
     try:
+        _emit_event(
+            PlanStepStartedEvent(
+                agent_role="Agent",
+                step_number=1,
+                step_description="First",
+            )
+        )
         _emit_event(
             ToolUsageStartedEvent(
                 tool_name="search_the_internet_with_serper",
                 tool_args={"search_query": "CrewAI release"},
+                plan_step_number=1,
+                plan_step_description="First",
             )
         )
         _emit_event(
             ToolUsageErrorEvent(
                 tool_name="search_the_internet_with_serper",
                 tool_args={"search_query": "CrewAI release"},
+                plan_step_number=1,
+                plan_step_description="First",
                 error="No results",
             )
         )
         _emit_event(
-            StepObservationCompletedEvent(
+            PlanStepCompletedEvent(
                 agent_role="Agent",
                 step_number=1,
                 step_description="First",
-                step_completed_successfully=True,
-            )
-        )
-    finally:
-        app._unsubscribe()
-
-    assert app._plan_step_status == {
-        1: "failed",
-        2: "pending",
-        3: "pending",
-    }
-
-
-def test_successful_retry_allows_matching_plan_step_to_complete() -> None:
-    app = _app_with_plan()
-    app._plan["steps"][0]["description"] = (
-        "Use `search_the_internet_with_serper` to find official sources"
-    )
-    app._subscribe()
-    try:
-        _emit_event(
-            ToolUsageStartedEvent(
-                tool_name="search_the_internet_with_serper",
-                tool_args={"search_query": "first query"},
-            )
-        )
-        _emit_event(
-            ToolUsageErrorEvent(
-                tool_name="search_the_internet_with_serper",
-                tool_args={"search_query": "first query"},
-                error="No results",
-            )
-        )
-        _emit_event(
-            ToolUsageStartedEvent(
-                tool_name="search_the_internet_with_serper",
-                tool_args={"search_query": "second query"},
-            )
-        )
-        now = datetime.now()
-        _emit_event(
-            ToolUsageFinishedEvent(
-                tool_name="search_the_internet_with_serper",
-                tool_args={"search_query": "second query"},
-                started_at=now,
-                finished_at=now,
-                output="Found official source",
-            )
-        )
-        _emit_event(
-            StepObservationCompletedEvent(
-                agent_role="Agent",
-                step_number=1,
-                step_description="First",
-                step_completed_successfully=True,
+                success=True,
+                result="Recovered with another source",
             )
         )
     finally:
@@ -307,14 +322,43 @@ def test_successful_retry_allows_matching_plan_step_to_complete() -> None:
     }
 
 
-def test_starting_next_plan_tool_marks_previous_all_failed_step_failed() -> None:
+def test_tool_event_step_metadata_is_stored_in_activity_log() -> None:
     app = _app_with_plan()
-    app._plan["steps"][0]["description"] = (
-        "Use `search_the_internet_with_serper` to find official sources"
-    )
-    app._plan["steps"][1]["description"] = (
-        "Use `read_website_content` to read the official source"
-    )
+    app._subscribe()
+    try:
+        _emit_event(
+            ToolUsageStartedEvent(
+                tool_name="search_the_internet_with_serper",
+                tool_args={"search_query": "CrewAI release"},
+                plan_step_number=2,
+                plan_step_description="Second",
+            )
+        )
+        now = datetime.now()
+        _emit_event(
+            ToolUsageFinishedEvent(
+                tool_name="search_the_internet_with_serper",
+                tool_args={"search_query": "CrewAI release"},
+                plan_step_number=2,
+                plan_step_description="Second",
+                started_at=now,
+                finished_at=now,
+                output="Found official source",
+            )
+        )
+    finally:
+        app._unsubscribe()
+
+    assert app._log_entries[0]["plan_step_number"] == 2
+    assert app._plan_step_status == {
+        1: "pending",
+        2: "pending",
+        3: "pending",
+    }
+
+
+def test_starting_next_tool_does_not_infer_plan_step_progress() -> None:
+    app = _app_with_plan()
     app._subscribe()
     try:
         _emit_event(
@@ -339,9 +383,11 @@ def test_starting_next_plan_tool_marks_previous_all_failed_step_failed() -> None
     finally:
         app._unsubscribe()
 
+    assert app._log_entries[0]["status"] == "error"
+    assert app._log_entries[1]["status"] == "running"
     assert app._plan_step_status == {
-        1: "failed",
-        2: "active",
+        1: "pending",
+        2: "pending",
         3: "pending",
     }
 

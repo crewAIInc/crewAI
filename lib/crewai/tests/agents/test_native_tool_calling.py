@@ -17,6 +17,7 @@ import pytest
 from pydantic import BaseModel, Field
 
 from crewai import Agent, Crew, Task
+from crewai.agents.parser import AgentFinish
 from crewai.events import crewai_event_bus
 from crewai.hooks import register_after_tool_call_hook, register_before_tool_call_hook
 from crewai.hooks.tool_hooks import ToolCallHookContext
@@ -1195,6 +1196,50 @@ class TestNativeToolCallingJsonParseError:
         )
 
         assert result["result"] == "ran: print(1)"
+
+    def test_native_tool_loop_falls_back_when_provider_rejects_tools(self) -> None:
+        """Unsupported native tools errors should continue through ReAct."""
+
+        class SearchTool(BaseTool):
+            name: str = "search"
+            description: str = "Search for information"
+
+            def _run(self, query: str) -> str:
+                return f"result for {query}"
+
+        executor = self._make_executor([SearchTool()])
+        executor.llm = Mock()
+        executor.messages = [{"role": "user", "content": "Search for CrewAI"}]
+        executor.callbacks = []
+        executor.iterations = 0
+        executor.max_iter = 3
+        executor.request_within_rpm_limit = None
+        executor.respect_context_window = False
+
+        fallback_finish = AgentFinish(
+            thought="done",
+            output="final",
+            text="Final Answer: final",
+        )
+        with (
+            patch(
+                "crewai.agents.crew_agent_executor.get_llm_response",
+                side_effect=RuntimeError(
+                    "registry.ollama.ai/library/mariner:latest does not support tools"
+                ),
+            ),
+            patch.object(
+                executor,
+                "_invoke_loop_react",
+                return_value=fallback_finish,
+            ) as react_loop,
+        ):
+            result = executor._invoke_loop_native_tools()
+
+        assert result is fallback_finish
+        react_loop.assert_called_once()
+        assert "Native tool calling is unavailable" in executor.messages[-1]["content"]
+        assert "Action Input" in executor.messages[-1]["content"]
 
     def test_dict_args_bypass_json_parsing(self) -> None:
         """When func_args is already a dict, no JSON parsing occurs."""

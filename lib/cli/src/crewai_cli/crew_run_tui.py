@@ -499,7 +499,6 @@ FooterKey .footer-key--key {
 
         self._plan: dict[str, Any] | None = None
         self._plan_step_status: dict[int, str] = {}
-        self._plan_step_tool_outcomes: dict[int, dict[str, int]] = {}
         self._awaiting_replan = False
 
         self._status = "starting"
@@ -1323,7 +1322,6 @@ FooterKey .footer-key--key {
                                 for s in data["steps"]
                                 if "step_number" in s
                             }
-                            self._plan_step_tool_outcomes = {}
                             self._awaiting_replan = False
                     except (ValueError, KeyError):
                         pass
@@ -1334,65 +1332,7 @@ FooterKey .footer-key--key {
         if not self._plan or step_number not in self._plan_step_status:
             return
 
-        if status == "active":
-            for sn, current in list(self._plan_step_status.items()):
-                if sn != step_number and current == "active":
-                    self._plan_step_status[sn] = (
-                        "failed"
-                        if self._plan_step_has_only_failed_tools(sn)
-                        else "pending"
-                    )
-
         self._plan_step_status[step_number] = status
-
-    def _find_plan_step_for_tool(self, tool_name: str) -> int | None:
-        """Find the first unfinished plan step whose description names this tool."""
-        if not self._plan:
-            return None
-
-        steps = self._plan.get("steps")
-        if not isinstance(steps, list):
-            return None
-
-        normalized_tool = tool_name.lower()
-        spaced_tool = normalized_tool.replace("_", " ")
-        for wanted_status in ("active", "pending"):
-            for step in steps:
-                if not isinstance(step, dict):
-                    continue
-                step_number = step.get("step_number")
-                if not isinstance(step_number, int):
-                    continue
-                if self._plan_step_status.get(step_number) != wanted_status:
-                    continue
-                description = str(step.get("description", "")).lower()
-                if normalized_tool in description or spaced_tool in description:
-                    return step_number
-        return None
-
-    def _record_plan_step_tool_outcome(
-        self, step_number: int | None, outcome: str
-    ) -> None:
-        if step_number is None:
-            return
-
-        outcomes = self._plan_step_tool_outcomes.setdefault(
-            step_number, {"success": 0, "error": 0}
-        )
-        outcomes[outcome] = outcomes.get(outcome, 0) + 1
-
-    def _plan_step_has_only_failed_tools(self, step_number: int) -> bool:
-        outcomes = self._plan_step_tool_outcomes.get(step_number)
-        if not outcomes:
-            return False
-        return outcomes.get("error", 0) > 0 and outcomes.get("success", 0) == 0
-
-    def _plan_step_completion_status(self, step_number: int) -> str:
-        return (
-            "failed"
-            if self._plan_step_has_only_failed_tools(step_number)
-            else "done"
-        )
 
     def _mark_plan_goal_achieved(self, step_number: int | None = None) -> None:
         """Collapse early-goal/skipped plan steps into completed UI state."""
@@ -1467,8 +1407,6 @@ FooterKey .footer-key--key {
                         if payload.get("step_completed_successfully") is True
                         else "failed"
                     )
-                    if status == "done":
-                        status = self._plan_step_completion_status(step_number)
                     self._set_plan_step_status(step_number, status)
                     if payload.get("goal_already_achieved") is True:
                         self._mark_plan_goal_achieved(step_number)
@@ -1525,6 +1463,8 @@ FooterKey .footer-key--key {
             GoalAchievedEarlyEvent,
             PlanRefinementEvent,
             PlanReplanTriggeredEvent,
+            PlanStepCompletedEvent,
+            PlanStepStartedEvent,
             StepObservationCompletedEvent,
             StepObservationFailedEvent,
             StepObservationStartedEvent,
@@ -1561,7 +1501,6 @@ FooterKey .footer-key--key {
                 self._is_streaming = False
                 self._plan = None
                 self._plan_step_status = {}
-                self._plan_step_tool_outcomes = {}
                 self._awaiting_replan = False
                 self._plan_tools_used = []
 
@@ -1687,8 +1626,6 @@ FooterKey .footer-key--key {
                 status = (
                     "done" if event.step_completed_successfully else "failed"
                 )
-                if status == "done":
-                    status = self._plan_step_completion_status(event.step_number)
                 self._set_plan_step_status(event.step_number, status)
 
         self._register_handler(
@@ -1700,10 +1637,7 @@ FooterKey .footer-key--key {
             source: Any, event: StepObservationFailedEvent
         ) -> None:
             with self._lock:
-                self._set_plan_step_status(
-                    event.step_number,
-                    self._plan_step_completion_status(event.step_number),
-                )
+                self._set_plan_step_status(event.step_number, "done")
 
         self._register_handler(StepObservationFailedEvent, on_step_observation_failed)
 
@@ -1711,13 +1645,27 @@ FooterKey .footer-key--key {
         def on_plan_refinement(source: Any, event: PlanRefinementEvent) -> None:
             with self._lock:
                 if event.step_number:
-                    self._set_plan_step_status(
-                        event.step_number,
-                        self._plan_step_completion_status(event.step_number),
-                    )
+                    self._set_plan_step_status(event.step_number, "done")
                 self._apply_plan_refinements(event.refinements)
 
         self._register_handler(PlanRefinementEvent, on_plan_refinement)
+
+        @crewai_event_bus.on(PlanStepStartedEvent)
+        def on_plan_step_started(source: Any, event: PlanStepStartedEvent) -> None:
+            with self._lock:
+                self._set_plan_step_status(event.step_number, "active")
+
+        self._register_handler(PlanStepStartedEvent, on_plan_step_started)
+
+        @crewai_event_bus.on(PlanStepCompletedEvent)
+        def on_plan_step_completed(source: Any, event: PlanStepCompletedEvent) -> None:
+            with self._lock:
+                self._set_plan_step_status(
+                    event.step_number,
+                    "done" if event.success else "failed",
+                )
+
+        self._register_handler(PlanStepCompletedEvent, on_plan_step_completed)
 
         @crewai_event_bus.on(PlanReplanTriggeredEvent)
         def on_plan_replan_triggered(
@@ -1767,12 +1715,9 @@ FooterKey .footer-key--key {
                         entry["status"] = "timeout"
                         entry["error"] = "No result received before the next tool started"
                         entry["duration"] = now - entry["start_time"]
-                        self._record_plan_step_tool_outcome(
-                            entry.get("plan_step_number"), "error"
-                        )
-                plan_step_number = self._find_plan_step_for_tool(event.tool_name)
-                if plan_step_number is not None:
-                    self._set_plan_step_status(plan_step_number, "active")
+                plan_step_number = getattr(event, "plan_step_number", None)
+                if not isinstance(plan_step_number, int):
+                    plan_step_number = None
                 self._current_task_steps.append(
                     {
                         "type": "tool",
@@ -1840,9 +1785,6 @@ FooterKey .footer-key--key {
                         entry["result"] = result_str
                         entry["duration"] = time.time() - entry["start_time"]
                         entry["from_cache"] = from_cache
-                        self._record_plan_step_tool_outcome(
-                            entry.get("plan_step_number"), "success"
-                        )
                         break
             self._replace_step("green", f"✔ {event.tool_name}")
 
@@ -1877,9 +1819,6 @@ FooterKey .footer-key--key {
                         entry["status"] = "error"
                         entry["error"] = str(event.error) if event.error else None
                         entry["duration"] = time.time() - entry["start_time"]
-                        self._record_plan_step_tool_outcome(
-                            entry.get("plan_step_number"), "error"
-                        )
                         self._log_expanded.add(idx)
                         break
             self._replace_step("red", f"✘ {event.tool_name}", error_text)

@@ -408,6 +408,69 @@ def test_json_wizard_shows_interpolation_hint(capsys):
     assert '"description"' not in output
 
 
+def test_json_wizard_agent_attribute_prompts_are_compact(monkeypatch):
+    prompt_calls: list[tuple[str, bool]] = []
+    prompt_values = {
+        "Role": "Senior Dev Rel",
+        "Goal": "Draft content",
+        "Backstory": "Knows developer communities",
+    }
+
+    def prompt_text(
+        label: str,
+        default: str = "",
+        *,
+        spacing_before: bool = True,
+    ) -> str:
+        prompt_calls.append((label, spacing_before))
+        return prompt_values[label]
+
+    monkeypatch.setattr(json_crew, "_prompt_text", prompt_text)
+    monkeypatch.setattr(json_crew, "_select_model", lambda: "openai/gpt-5.5")
+    monkeypatch.setattr(json_crew, "pick_many", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr(json_crew, "_confirm", lambda *_args, **_kwargs: False)
+
+    agent = json_crew._wizard_agent(agent_num=1, existing_names=[])
+
+    assert agent is not None
+    assert prompt_calls == [
+        ("Role", False),
+        ("Goal", False),
+        ("Backstory", False),
+    ]
+
+
+def test_json_wizard_task_attribute_prompts_are_compact(monkeypatch):
+    prompt_calls: list[tuple[str, bool]] = []
+    prompt_values = {
+        "Description": "Research latest release",
+        "Expected output": "Release summary",
+    }
+
+    def prompt_text(
+        label: str,
+        default: str = "",
+        *,
+        spacing_before: bool = True,
+    ) -> str:
+        prompt_calls.append((label, spacing_before))
+        return prompt_values[label]
+
+    monkeypatch.setattr(json_crew, "_prompt_text", prompt_text)
+
+    task = json_crew._wizard_task(
+        task_num=1,
+        agent_names=["senior_dev_rel"],
+        prior_task_names=[],
+    )
+
+    assert task is not None
+    assert prompt_calls == [
+        ("Description", False),
+        ("Expected output", False),
+    ]
+
+
 def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     with mock.patch(

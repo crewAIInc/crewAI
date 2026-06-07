@@ -167,8 +167,14 @@ _FLAT_TOOLS: list[tuple[str, str]] = [
 # ── Interactive wizard ─────────────────────────────────────────
 
 
-def _prompt_text(label: str, default: str = "") -> str:
-    click.echo()
+def _prompt_text(
+    label: str,
+    default: str = "",
+    *,
+    spacing_before: bool = True,
+) -> str:
+    if spacing_before:
+        click.echo()
     return click.prompt(
         click.style(f"  {label}", fg="cyan"),
         default=default,
@@ -217,7 +223,7 @@ def _wizard_agent(
     click.echo()
     click.secho(f"  Agent {agent_num}", fg="cyan", bold=True)
 
-    role = _prompt_text("Role")
+    role = _prompt_text("Role", spacing_before=False)
     if not role:
         return None
 
@@ -227,9 +233,9 @@ def _wizard_agent(
     while name_default in existing_names:
         name_default += "_2"
 
-    goal = _prompt_text("Goal")
+    goal = _prompt_text("Goal", spacing_before=False)
 
-    backstory = _prompt_text("Backstory")
+    backstory = _prompt_text("Backstory", spacing_before=False)
 
     # LLM model
     if preset_llm:
@@ -292,7 +298,7 @@ def _wizard_task(
     click.echo()
     click.secho(f"  Task {task_num}", fg="cyan", bold=True)
 
-    description = _prompt_text("Description")
+    description = _prompt_text("Description", spacing_before=False)
     if not description:
         return None
 
@@ -303,7 +309,7 @@ def _wizard_task(
         name = name.replace(ch, "")
     name = name + "_task"
 
-    expected_output = _prompt_text("Expected output")
+    expected_output = _prompt_text("Expected output", spacing_before=False)
 
     # Agent assignment
     if len(agent_names) == 1:

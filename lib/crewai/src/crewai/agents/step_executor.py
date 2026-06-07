@@ -35,6 +35,7 @@ from crewai.utilities.agent_utils import (
     execute_single_native_tool_call,
     extract_task_section,
     format_message_for_llm,
+    is_native_tool_calling_unsupported_error,
     is_tool_call_list,
     process_llm_response,
     setup_native_tools,
@@ -153,6 +154,7 @@ class StepExecutor:
             if self._use_native_tools:
                 result_text = self._execute_native(
                     messages,
+                    todo,
                     tool_calls_made,
                     max_step_iterations=max_step_iterations,
                     step_timeout=step_timeout,
@@ -161,6 +163,7 @@ class StepExecutor:
             else:
                 result_text = self._execute_text_parsed(
                     messages,
+                    todo,
                     tool_calls_made,
                     max_step_iterations=max_step_iterations,
                     step_timeout=step_timeout,
@@ -176,6 +179,31 @@ class StepExecutor:
                 execution_time=elapsed,
             )
         except Exception as e:
+            if self._use_native_tools and is_native_tool_calling_unsupported_error(e):
+                try:
+                    self._use_native_tools = False
+                    self._openai_tools = []
+                    self._available_functions = {}
+                    messages = self._build_isolated_messages(todo, context)
+                    result_text = self._execute_text_parsed(
+                        messages,
+                        todo,
+                        tool_calls_made,
+                        max_step_iterations=max_step_iterations,
+                        step_timeout=step_timeout,
+                        start_time=start_time,
+                    )
+                    self._validate_expected_tool_usage(todo, tool_calls_made)
+                    elapsed = time.monotonic() - start_time
+                    return StepResult(
+                        success=True,
+                        result=result_text,
+                        tool_calls_made=tool_calls_made,
+                        execution_time=elapsed,
+                    )
+                except Exception as fallback_error:
+                    e = fallback_error
+
             elapsed = time.monotonic() - start_time
             return StepResult(
                 success=False,
@@ -272,6 +300,7 @@ class StepExecutor:
     def _execute_text_parsed(
         self,
         messages: list[LLMMessage],
+        todo: TodoItem,
         tool_calls_made: list[str],
         max_step_iterations: int = 15,
         step_timeout: int | None = None,
@@ -310,7 +339,7 @@ class StepExecutor:
 
             if isinstance(formatted, AgentAction):
                 tool_calls_made.append(formatted.tool)
-                tool_result = self._execute_text_tool_with_events(formatted)
+                tool_result = self._execute_text_tool_with_events(formatted, todo)
                 last_tool_result = tool_result
                 messages.append({"role": "assistant", "content": answer_str})
                 messages.append(self._build_observation_message(tool_result))
@@ -320,7 +349,9 @@ class StepExecutor:
 
         return last_tool_result
 
-    def _execute_text_tool_with_events(self, formatted: AgentAction) -> str:
+    def _execute_text_tool_with_events(
+        self, formatted: AgentAction, todo: TodoItem
+    ) -> str:
         """Execute text-parsed tool calls with tool usage events."""
         args_dict = self._parse_tool_args(formatted.tool_input)
         agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
@@ -333,6 +364,8 @@ class StepExecutor:
                 from_agent=self.agent,
                 from_task=self.task,
                 agent_key=agent_key,
+                plan_step_number=todo.step_number,
+                plan_step_description=todo.description,
             ),
         )
 
@@ -368,6 +401,8 @@ class StepExecutor:
                     from_agent=self.agent,
                     from_task=self.task,
                     agent_key=agent_key,
+                    plan_step_number=todo.step_number,
+                    plan_step_description=todo.description,
                     error=e,
                 ),
             )
@@ -382,6 +417,8 @@ class StepExecutor:
                 from_agent=self.agent,
                 from_task=self.task,
                 agent_key=agent_key,
+                plan_step_number=todo.step_number,
+                plan_step_description=todo.description,
                 started_at=started_at,
                 finished_at=datetime.now(),
             ),
@@ -474,6 +511,7 @@ class StepExecutor:
     def _execute_native(
         self,
         messages: list[LLMMessage],
+        todo: TodoItem,
         tool_calls_made: list[str],
         max_step_iterations: int = 15,
         step_timeout: int | None = None,
@@ -513,7 +551,7 @@ class StepExecutor:
 
             if isinstance(answer, list) and answer and is_tool_call_list(answer):
                 result = self._execute_native_tool_calls(
-                    answer, messages, tool_calls_made
+                    answer, messages, todo, tool_calls_made
                 )
                 accumulated_results.append(result)
                 continue
@@ -526,6 +564,7 @@ class StepExecutor:
         self,
         tool_calls: list[Any],
         messages: list[LLMMessage],
+        todo: TodoItem,
         tool_calls_made: list[str],
     ) -> str:
         """Execute a batch of native tool calls and return their results.
@@ -551,6 +590,8 @@ class StepExecutor:
                 event_source=self,
                 printer=PRINTER,
                 verbose=bool(self.agent and self.agent.verbose),
+                plan_step_number=todo.step_number,
+                plan_step_description=todo.description,
             )
 
             if call_result.func_name:
