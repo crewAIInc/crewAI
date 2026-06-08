@@ -318,6 +318,8 @@ RouterConfig(
     route_descriptions={
         "INTERNET_SEARCH": "Sobrescreve a docstring só desta rota.",
     },
+    route_permissions={"INTERNET_SEARCH": "web_search"},  # override opcional
+    permission_denied_route="permission_denied",  # padrão
     default_intent="converse",       # usado quando a chamada ao LLM falha ou não há LLM
     fallback_intent="converse",      # usado quando o LLM retorna rota inválida
     intent_field="intent",
@@ -351,6 +353,58 @@ Routes:
 ```
 
 `RouterConfig.prompt` é para **enquadramento de domínio** (persona do assistente, regras de negócio, voz). O catálogo de rotas é auto-gerado — não liste rotas em `prompt`; elas vão sair de sincronia assim que você adicionar um handler.
+
+### Permissões de rota
+
+Use `@listen(..., required_permissions=[...])` para proteger rotas depois que o router selecionar uma rota válida. O autorizador padrão verifica uma coleção `permissions` em `self.state`; turnos negados redirecionam para `permission_denied`.
+
+```python
+from crewai import Flow
+from crewai.experimental.conversational import (
+    ConversationConfig,
+    ConversationState,
+    RouterConfig,
+)
+from crewai.flow import listen, start
+from pydantic import Field
+
+
+class AppState(ConversationState):
+    permissions: set[str] = Field(default_factory=set)
+
+
+@ConversationConfig(
+    router=RouterConfig(
+        prompt="Envie buscas web para INTERNET_SEARCH e auditorias para ADMIN_REPORT.",
+    ),
+)
+class SupportFlow(Flow[AppState]):
+    conversational = True
+
+    @start()
+    def load_permissions(self) -> None:
+        if self.state.session_ready:
+            return
+
+        self.state.permissions = {"web_search"}
+        self.state.session_ready = True
+
+    @listen("INTERNET_SEARCH", required_permissions=["web_search"])
+    def internet_search(self) -> str:
+        ...
+
+    @listen("ADMIN_REPORT", required_permissions=["admin"])
+    def admin_report(self) -> str:
+        ...
+
+    @listen("permission_denied")
+    def deny(self) -> str:
+        reply = "Você não tem permissão para essa ação."
+        self.append_assistant_message(reply)
+        return reply
+```
+
+Use `RouterConfig.route_permissions` quando as permissões precisarem ser configuradas fora dos handlers. Para autorização customizada, sobrescreva `can_access_route(required_permissions)` em vez de sobrescrever `route_turn`.
 
 ### Rotas embutidas
 

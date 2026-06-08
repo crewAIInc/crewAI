@@ -316,6 +316,8 @@ RouterConfig(
     route_descriptions={
         "INTERNET_SEARCH": "تجاوز الـ docstring لهذا المسار فقط.",
     },
+    route_permissions={"INTERNET_SEARCH": "web_search"},  # تجاوز اختياري
+    permission_denied_route="permission_denied",  # الافتراضي
     default_intent="converse",       # يُستخدم عند فشل LLM أو غيابه
     fallback_intent="converse",      # يُستخدم عندما يعيد LLM مساراً غير صالح
     intent_field="intent",
@@ -349,6 +351,58 @@ Routes:
 ```
 
 `RouterConfig.prompt` مخصص لـ **تأطير النطاق** (شخصية المساعد، قواعد العمل، النبرة). فهرس المسارات يُبنى تلقائياً — لا تُدرج المسارات في `prompt`؛ سيختل التزامن لحظة إضافة معالج جديد.
+
+### أذونات المسارات
+
+استخدم `@listen(..., required_permissions=[...])` لحماية المسارات بعد أن يختار الموجّه مسارًا صالحًا. يتحقق المفوّض الافتراضي من مجموعة `permissions` في `self.state`؛ وتُعاد الجولات المرفوضة إلى `permission_denied`.
+
+```python
+from crewai import Flow
+from crewai.experimental.conversational import (
+    ConversationConfig,
+    ConversationState,
+    RouterConfig,
+)
+from crewai.flow import listen, start
+from pydantic import Field
+
+
+class AppState(ConversationState):
+    permissions: set[str] = Field(default_factory=set)
+
+
+@ConversationConfig(
+    router=RouterConfig(
+        prompt="أرسل بحث الويب إلى INTERNET_SEARCH وطلبات التدقيق إلى ADMIN_REPORT.",
+    ),
+)
+class SupportFlow(Flow[AppState]):
+    conversational = True
+
+    @start()
+    def load_permissions(self) -> None:
+        if self.state.session_ready:
+            return
+
+        self.state.permissions = {"web_search"}
+        self.state.session_ready = True
+
+    @listen("INTERNET_SEARCH", required_permissions=["web_search"])
+    def internet_search(self) -> str:
+        ...
+
+    @listen("ADMIN_REPORT", required_permissions=["admin"])
+    def admin_report(self) -> str:
+        ...
+
+    @listen("permission_denied")
+    def deny(self) -> str:
+        reply = "ليست لديك صلاحية لتنفيذ هذا الإجراء."
+        self.append_assistant_message(reply)
+        return reply
+```
+
+استخدم `RouterConfig.route_permissions` عندما تحتاج إلى تكوين الأذونات بعيدًا عن المعالجات. للتفويض المخصص، تجاوز `can_access_route(required_permissions)` بدلًا من تجاوز `route_turn`.
 
 ### المسارات المدمجة
 

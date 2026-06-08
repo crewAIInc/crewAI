@@ -54,8 +54,11 @@ class RouterConfig:
     ``route_descriptions`` overrides the per-route descriptions used to build
     the router LLM's "available routes" catalog. Routes without an entry fall
     back to the handler's docstring first line (or, for built-in routes, the
-    framework's canned description). ``prompt`` is reserved for domain
-    policy/voice, not the route catalog — that's auto-built.
+    framework's canned description). ``route_permissions`` maps protected route
+    labels to one or more permission names; alternatively, pass
+    ``required_permissions`` to ``@listen(...)``. Denied turns redirect to
+    ``permission_denied_route``. ``prompt`` is reserved for domain policy/voice,
+    not the route catalog — that's auto-built.
     """
 
     prompt: str | None = None
@@ -63,6 +66,8 @@ class RouterConfig:
     llm: Any | None = None
     routes: Sequence[str] | None = None
     route_descriptions: dict[str, str] | None = None
+    route_permissions: dict[str, str | Sequence[str]] | None = None
+    permission_denied_route: str = "permission_denied"
     default_intent: str | None = "converse"
     fallback_intent: str | None = "converse"
     intent_field: str = "intent"

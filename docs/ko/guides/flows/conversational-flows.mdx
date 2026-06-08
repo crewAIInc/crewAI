@@ -317,6 +317,8 @@ RouterConfig(
     route_descriptions={
         "INTERNET_SEARCH": "이 라우트만 docstring 대신 사용할 설명.",
     },
+    route_permissions={"INTERNET_SEARCH": "web_search"},  # 선택적 오버라이드
+    permission_denied_route="permission_denied",  # 기본값
     default_intent="converse",       # LLM 호출 실패 또는 LLM 없음일 때 사용
     fallback_intent="converse",      # LLM이 잘못된 라우트를 반환할 때 사용
     intent_field="intent",
@@ -350,6 +352,58 @@ Routes:
 ```
 
 `RouterConfig.prompt`는 **도메인 프레이밍** (어시스턴트 페르소나, 비즈니스 규칙, 톤)을 위한 자리입니다. 라우트 카탈로그는 자동 생성되니 `prompt` 안에 라우트 목록을 넣지 마세요. 핸들러를 추가하는 순간 동기화가 깨집니다.
+
+### 라우트 권한
+
+router가 유효한 라우트를 선택한 뒤 보호된 라우트를 게이트하려면 `@listen(..., required_permissions=[...])`를 사용하세요. 기본 authorizer는 `self.state`의 `permissions` 컬렉션을 확인합니다. 거부된 턴은 `permission_denied`로 리다이렉트됩니다.
+
+```python
+from crewai import Flow
+from crewai.experimental.conversational import (
+    ConversationConfig,
+    ConversationState,
+    RouterConfig,
+)
+from crewai.flow import listen, start
+from pydantic import Field
+
+
+class AppState(ConversationState):
+    permissions: set[str] = Field(default_factory=set)
+
+
+@ConversationConfig(
+    router=RouterConfig(
+        prompt="웹 조회는 INTERNET_SEARCH로, 감사 요청은 ADMIN_REPORT로 보내세요.",
+    ),
+)
+class SupportFlow(Flow[AppState]):
+    conversational = True
+
+    @start()
+    def load_permissions(self) -> None:
+        if self.state.session_ready:
+            return
+
+        self.state.permissions = {"web_search"}
+        self.state.session_ready = True
+
+    @listen("INTERNET_SEARCH", required_permissions=["web_search"])
+    def internet_search(self) -> str:
+        ...
+
+    @listen("ADMIN_REPORT", required_permissions=["admin"])
+    def admin_report(self) -> str:
+        ...
+
+    @listen("permission_denied")
+    def deny(self) -> str:
+        reply = "이 작업을 수행할 권한이 없습니다."
+        self.append_assistant_message(reply)
+        return reply
+```
+
+권한을 핸들러 밖에서 구성해야 한다면 `RouterConfig.route_permissions`를 사용하세요. 커스텀 인증에는 `route_turn`을 오버라이드하는 대신 `can_access_route(required_permissions)`를 오버라이드하세요.
 
 ### 빌트인 라우트
 
