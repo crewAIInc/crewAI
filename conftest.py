@@ -13,39 +13,80 @@ from dotenv import load_dotenv
 import pytest
 
 
-def _patch_aiohttp_streams_for_vcr() -> None:
-    """Restore ``aiohttp.streams.AsyncStreamReaderMixin`` for vcrpy compatibility.
+def _patch_vcrpy_aiohttp_compat() -> None:
+    """Keep vcrpy's aiohttp stub working under aiohttp 3.14.0.
 
-    aiohttp 3.14.0 (pulled in to fix GHSA-jg22-mg44-37j8 and GHSA-hg6j-4rv6-33pg)
-    folded ``AsyncStreamReaderMixin`` into ``StreamReader`` and removed the standalone
-    class. vcrpy's aiohttp stub still subclasses it, so importing vcr's patch machinery
-    raises ``AttributeError`` at collection time. Re-add an equivalent mixin so the stub
-    imports cleanly; the methods mirror the originals and delegate to the same iterators.
+    aiohttp 3.14.0 (pulled in to fix GHSA-jg22-mg44-37j8 and GHSA-hg6j-4rv6-33pg):
+      * removed ``aiohttp.streams.AsyncStreamReaderMixin`` (folded into ``StreamReader``),
+        which vcrpy's ``MockStream`` still subclasses -- vcr's patch machinery then raises
+        ``AttributeError`` at collection time; and
+      * added a required ``stream_writer`` keyword-only arg to ``ClientResponse.__init__``,
+        which vcrpy's ``MockClientResponse`` does not pass -- raising ``TypeError`` at
+        cassette playback.
+
+    Restore the mixin, then rebuild ``MockClientResponse``'s ``super().__init__`` call from
+    the live ``ClientResponse`` signature (defaulting every required keyword-only arg to
+    ``None``, mirroring vcrpy's original call) so it also survives future aiohttp additions.
     """
-    from aiohttp import streams
+    import asyncio
+    import inspect
 
-    if hasattr(streams, "AsyncStreamReaderMixin"):
+    from aiohttp import streams
+    from aiohttp.client_reqrep import ClientResponse
+
+    if not hasattr(streams, "AsyncStreamReaderMixin"):
+
+        class AsyncStreamReaderMixin:
+            __slots__ = ()
+
+            def __aiter__(self) -> streams.AsyncStreamIterator[bytes]:
+                return streams.AsyncStreamIterator(self.readline)  # type: ignore[attr-defined]
+
+            def iter_chunked(self, n: int) -> streams.AsyncStreamIterator[bytes]:
+                return streams.AsyncStreamIterator(lambda: self.read(n))  # type: ignore[attr-defined]
+
+            def iter_any(self) -> streams.AsyncStreamIterator[bytes]:
+                return streams.AsyncStreamIterator(self.readany)  # type: ignore[attr-defined]
+
+            def iter_chunks(self) -> streams.ChunkTupleAsyncStreamIterator:
+                return streams.ChunkTupleAsyncStreamIterator(self)  # type: ignore[arg-type]
+
+        streams.AsyncStreamReaderMixin = AsyncStreamReaderMixin  # type: ignore[attr-defined]
+
+    # Importing the stub builds MockStream/MockClientResponse, so it must run after the
+    # mixin is restored above.
+    import vcr.stubs.aiohttp_stubs as aiohttp_stubs  # type: ignore[import-untyped]
+
+    if getattr(aiohttp_stubs.MockClientResponse, "_crewai_aiohttp_patched", False):
         return
 
-    class AsyncStreamReaderMixin:
-        __slots__ = ()
+    keyword_only = [
+        name
+        for name, param in inspect.signature(ClientResponse.__init__).parameters.items()
+        if param.kind is inspect.Parameter.KEYWORD_ONLY
+    ]
 
-        def __aiter__(self) -> streams.AsyncStreamIterator[bytes]:
-            return streams.AsyncStreamIterator(self.readline)  # type: ignore[attr-defined]
+    class _NullStreamWriter:
+        # aiohttp 3.14.0 reads stream_writer.output_size in the "request already
+        # sent" branch (writer is None), so None is not enough -- supply a stub.
+        output_size = 0
 
-        def iter_chunked(self, n: int) -> streams.AsyncStreamIterator[bytes]:
-            return streams.AsyncStreamIterator(lambda: self.read(n))  # type: ignore[attr-defined]
+    def _mock_client_response_init(
+        self: Any, method: str, url: Any, request_info: Any = None
+    ) -> None:
+        kwargs: dict[str, Any] = dict.fromkeys(keyword_only)
+        kwargs["request_info"] = request_info
+        if "loop" in kwargs:
+            kwargs["loop"] = asyncio.get_event_loop()
+        if "stream_writer" in kwargs:
+            kwargs["stream_writer"] = _NullStreamWriter()
+        ClientResponse.__init__(self, method, url, **kwargs)
 
-        def iter_any(self) -> streams.AsyncStreamIterator[bytes]:
-            return streams.AsyncStreamIterator(self.readany)  # type: ignore[attr-defined]
-
-        def iter_chunks(self) -> streams.ChunkTupleAsyncStreamIterator:
-            return streams.ChunkTupleAsyncStreamIterator(self)  # type: ignore[arg-type]
-
-    streams.AsyncStreamReaderMixin = AsyncStreamReaderMixin  # type: ignore[attr-defined]
+    aiohttp_stubs.MockClientResponse.__init__ = _mock_client_response_init
+    aiohttp_stubs.MockClientResponse._crewai_aiohttp_patched = True
 
 
-_patch_aiohttp_streams_for_vcr()
+_patch_vcrpy_aiohttp_compat()
 
 from vcr.request import Request  # type: ignore[import-untyped]  # noqa: E402
 
