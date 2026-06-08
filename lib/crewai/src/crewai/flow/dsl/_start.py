@@ -9,7 +9,6 @@ from crewai.flow.dsl._utils import (
     P,
     R,
     _set_flow_method_definition,
-    _set_trigger_metadata,
 )
 from crewai.flow.flow_definition import FlowMethodDefinition
 from crewai.flow.flow_wrappers import StartMethod
@@ -61,7 +60,6 @@ def start(
                     start=_definition_condition_from_runtime(condition)
                 ),
             )
-            _set_trigger_metadata(wrapper, condition)
         else:
             _set_flow_method_definition(wrapper, FlowMethodDefinition(start=True))
         return wrapper
