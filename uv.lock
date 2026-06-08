@@ -13,7 +13,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-06-05T22:58:34.350001Z"
+exclude-newer = "2026-06-05T23:12:55.724128Z"
 exclude-newer-span = "P3D"
 
 [manifest]
@@ -26,7 +26,7 @@ members = [
     "crewai-tools",
 ]
 overrides = [
-    { name = "aiohttp", specifier = ">=3.13.5" },
+    { name = "aiohttp", specifier = ">=3.14.0" },
     { name = "authlib", specifier = ">=1.6.12" },
     { name = "cryptography", specifier = ">=46.0.7" },
     { name = "docling-core", specifier = ">=2.74.1" },

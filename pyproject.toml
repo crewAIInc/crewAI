@@ -188,7 +188,7 @@ exclude-newer = "3 days"
 # langsmith <0.8.0 has GHSA-3644-q5cj-c5c7 (public prompt manifest deserialization, SSRF/secret disclosure); force 0.8.0+.
 # authlib <1.6.12 has GHSA-jj8c-mmj3-mmgv (CSRF bypass in cache-based state storage) and PYSEC-2026-188.
 # pip 26.1.1 has PYSEC-2026-196; force 26.1.2+.
-# aiohttp 3.13.4 has GHSA-jg22-mg44-37j8, GHSA-hg6j-4rv6-33pg; force 3.13.5+.
+# aiohttp <=3.13.x has GHSA-jg22-mg44-37j8, GHSA-hg6j-4rv6-33pg; fixed in 3.14.0; force 3.14.0+.
 # docling-core 2.74.0 has GHSA-j5xp-7m2f-49jv, GHSA-jmmv-h3mp-59v8; force 2.74.1+.
 # pip <26.1.1 has GHSA-58qw-9mgm-455v (archive handling); OSV considers 26.1.1 unaffected.
 # paramiko <5.0.0 has GHSA-r374-rxx8-8654 (SHA-1 in rsakey.py); OSV considers 5.0.0 unaffected. Transitive via composio-core.
@@ -212,7 +212,7 @@ override-dependencies = [
     "langsmith>=0.8.0,<1",
     "authlib>=1.6.12",
     "pip>=26.1.2",
-    "aiohttp>=3.13.5",
+    "aiohttp>=3.14.0",
     "docling-core>=2.74.1",
     "pydantic-settings>=2.14.0",
     "paramiko>=5.0.0",
