@@ -1,29 +1,27 @@
 """Tests for TokenManager with atomic file operations."""
 
+from datetime import datetime, timedelta
 import json
-import os
+from pathlib import Path
 import tempfile
 import unittest
-from datetime import datetime, timedelta
-from pathlib import Path
 from unittest.mock import patch
 
+from crewai_core.token_manager import TokenManager
 from cryptography.fernet import Fernet
-
-from crewai.cli.shared.token_manager import TokenManager
 
 
 class TestTokenManager(unittest.TestCase):
     """Test cases for TokenManager."""
 
-    @patch("crewai.cli.shared.token_manager.TokenManager._get_or_create_key")
+    @patch("crewai_core.token_manager.TokenManager._get_or_create_key")
     def setUp(self, mock_get_key: unittest.mock.MagicMock) -> None:
         """Set up test fixtures."""
         mock_get_key.return_value = Fernet.generate_key()
         self.token_manager = TokenManager()
 
-    @patch("crewai.cli.shared.token_manager.TokenManager._read_secure_file")
-    @patch("crewai.cli.shared.token_manager.TokenManager._get_or_create_key")
+    @patch("crewai_core.token_manager.TokenManager._read_secure_file")
+    @patch("crewai_core.token_manager.TokenManager._get_or_create_key")
     def test_get_or_create_key_existing(
         self,
         mock_get_or_create: unittest.mock.MagicMock,
@@ -45,7 +43,7 @@ class TestTokenManager(unittest.TestCase):
         with (
             patch.object(self.token_manager, "_read_secure_file", return_value=None) as mock_read,
             patch.object(self.token_manager, "_atomic_create_secure_file", return_value=True) as mock_atomic_create,
-            patch("crewai.cli.shared.token_manager.Fernet.generate_key", return_value=mock_key) as mock_generate,
+            patch("crewai_core.token_manager.Fernet.generate_key", return_value=mock_key) as mock_generate,
         ):
             result = self.token_manager._get_or_create_key()
 
@@ -62,14 +60,14 @@ class TestTokenManager(unittest.TestCase):
         with (
             patch.object(self.token_manager, "_read_secure_file", side_effect=[None, their_key]) as mock_read,
             patch.object(self.token_manager, "_atomic_create_secure_file", return_value=False) as mock_atomic_create,
-            patch("crewai.cli.shared.token_manager.Fernet.generate_key", return_value=our_key),
+            patch("crewai_core.token_manager.Fernet.generate_key", return_value=our_key),
         ):
             result = self.token_manager._get_or_create_key()
 
             self.assertEqual(result, their_key)
             self.assertEqual(mock_read.call_count, 2)
 
-    @patch("crewai.cli.shared.token_manager.TokenManager._atomic_write_secure_file")
+    @patch("crewai_core.token_manager.TokenManager._atomic_write_secure_file")
     def test_save_tokens(
         self, mock_write: unittest.mock.MagicMock
     ) -> None:
@@ -88,7 +86,7 @@ class TestTokenManager(unittest.TestCase):
         expiration = datetime.fromisoformat(data["expiration"])
         self.assertEqual(expiration, datetime.fromtimestamp(expires_at))
 
-    @patch("crewai.cli.shared.token_manager.TokenManager._read_secure_file")
+    @patch("crewai_core.token_manager.TokenManager._read_secure_file")
     def test_get_token_valid(
         self, mock_read: unittest.mock.MagicMock
     ) -> None:
@@ -103,7 +101,7 @@ class TestTokenManager(unittest.TestCase):
 
         self.assertEqual(result, access_token)
 
-    @patch("crewai.cli.shared.token_manager.TokenManager._read_secure_file")
+    @patch("crewai_core.token_manager.TokenManager._read_secure_file")
     def test_get_token_expired(
         self, mock_read: unittest.mock.MagicMock
     ) -> None:
@@ -118,7 +116,7 @@ class TestTokenManager(unittest.TestCase):
 
         self.assertIsNone(result)
 
-    @patch("crewai.cli.shared.token_manager.TokenManager._read_secure_file")
+    @patch("crewai_core.token_manager.TokenManager._read_secure_file")
     def test_get_token_not_found(
         self, mock_read: unittest.mock.MagicMock
     ) -> None:
@@ -129,7 +127,7 @@ class TestTokenManager(unittest.TestCase):
 
         self.assertIsNone(result)
 
-    @patch("crewai.cli.shared.token_manager.TokenManager._delete_secure_file")
+    @patch("crewai_core.token_manager.TokenManager._delete_secure_file")
     def test_clear_tokens(
         self, mock_delete: unittest.mock.MagicMock
     ) -> None:
@@ -147,7 +145,6 @@ class TestAtomicFileOperations(unittest.TestCase):
         self.temp_dir = tempfile.mkdtemp()
         self.original_get_path = TokenManager._get_secure_storage_path
 
-        # Patch to use temp directory
         def mock_get_path() -> Path:
             return Path(self.temp_dir)
 
@@ -159,7 +156,7 @@ class TestAtomicFileOperations(unittest.TestCase):
         import shutil
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
-    @patch("crewai.cli.shared.token_manager.TokenManager._get_or_create_key")
+    @patch("crewai_core.token_manager.TokenManager._get_or_create_key")
     def test_atomic_create_new_file(
         self, mock_get_key: unittest.mock.MagicMock
     ) -> None:
@@ -175,7 +172,7 @@ class TestAtomicFileOperations(unittest.TestCase):
         self.assertEqual(file_path.read_bytes(), b"content")
         self.assertEqual(file_path.stat().st_mode & 0o777, 0o600)
 
-    @patch("crewai.cli.shared.token_manager.TokenManager._get_or_create_key")
+    @patch("crewai_core.token_manager.TokenManager._get_or_create_key")
     def test_atomic_create_existing_file(
         self, mock_get_key: unittest.mock.MagicMock
     ) -> None:
@@ -183,7 +180,6 @@ class TestAtomicFileOperations(unittest.TestCase):
         mock_get_key.return_value = Fernet.generate_key()
         tm = TokenManager()
 
-        # Create file first
         file_path = Path(self.temp_dir) / "test.txt"
         file_path.write_bytes(b"original")
 
@@ -192,7 +188,7 @@ class TestAtomicFileOperations(unittest.TestCase):
         self.assertFalse(result)
         self.assertEqual(file_path.read_bytes(), b"original")
 
-    @patch("crewai.cli.shared.token_manager.TokenManager._get_or_create_key")
+    @patch("crewai_core.token_manager.TokenManager._get_or_create_key")
     def test_atomic_write_new_file(
         self, mock_get_key: unittest.mock.MagicMock
     ) -> None:
@@ -207,7 +203,7 @@ class TestAtomicFileOperations(unittest.TestCase):
         self.assertEqual(file_path.read_bytes(), b"content")
         self.assertEqual(file_path.stat().st_mode & 0o777, 0o600)
 
-    @patch("crewai.cli.shared.token_manager.TokenManager._get_or_create_key")
+    @patch("crewai_core.token_manager.TokenManager._get_or_create_key")
     def test_atomic_write_overwrites(
         self, mock_get_key: unittest.mock.MagicMock
     ) -> None:
@@ -222,7 +218,7 @@ class TestAtomicFileOperations(unittest.TestCase):
 
         self.assertEqual(file_path.read_bytes(), b"new content")
 
-    @patch("crewai.cli.shared.token_manager.TokenManager._get_or_create_key")
+    @patch("crewai_core.token_manager.TokenManager._get_or_create_key")
     def test_atomic_write_no_temp_file_on_success(
         self, mock_get_key: unittest.mock.MagicMock
     ) -> None:
@@ -232,11 +228,10 @@ class TestAtomicFileOperations(unittest.TestCase):
 
         tm._atomic_write_secure_file("test.txt", b"content")
 
-        # Check no temp files remain
         temp_files = list(Path(self.temp_dir).glob(".test.txt.*"))
         self.assertEqual(len(temp_files), 0)
 
-    @patch("crewai.cli.shared.token_manager.TokenManager._get_or_create_key")
+    @patch("crewai_core.token_manager.TokenManager._get_or_create_key")
     def test_read_secure_file_exists(
         self, mock_get_key: unittest.mock.MagicMock
     ) -> None:
@@ -251,7 +246,7 @@ class TestAtomicFileOperations(unittest.TestCase):
 
         self.assertEqual(result, b"content")
 
-    @patch("crewai.cli.shared.token_manager.TokenManager._get_or_create_key")
+    @patch("crewai_core.token_manager.TokenManager._get_or_create_key")
     def test_read_secure_file_not_exists(
         self, mock_get_key: unittest.mock.MagicMock
     ) -> None:
@@ -263,7 +258,7 @@ class TestAtomicFileOperations(unittest.TestCase):
 
         self.assertIsNone(result)
 
-    @patch("crewai.cli.shared.token_manager.TokenManager._get_or_create_key")
+    @patch("crewai_core.token_manager.TokenManager._get_or_create_key")
     def test_delete_secure_file_exists(
         self, mock_get_key: unittest.mock.MagicMock
     ) -> None:
@@ -278,7 +273,7 @@ class TestAtomicFileOperations(unittest.TestCase):
 
         self.assertFalse(file_path.exists())
 
-    @patch("crewai.cli.shared.token_manager.TokenManager._get_or_create_key")
+    @patch("crewai_core.token_manager.TokenManager._get_or_create_key")
     def test_delete_secure_file_not_exists(
         self, mock_get_key: unittest.mock.MagicMock
     ) -> None:
@@ -286,7 +281,6 @@ class TestAtomicFileOperations(unittest.TestCase):
         mock_get_key.return_value = Fernet.generate_key()
         tm = TokenManager()
 
-        # Should not raise
         tm._delete_secure_file("nonexistent.txt")
 
 

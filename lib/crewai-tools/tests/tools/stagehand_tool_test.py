@@ -28,13 +28,11 @@ class MockStagehandUtils:
 @pytest.fixture(scope="module", autouse=True)
 def mock_stagehand_modules():
     """Mock stagehand modules at the start of this test module."""
-    # Store original modules if they exist
     original_modules = {}
     for module_name in ["stagehand", "stagehand.schemas", "stagehand.utils"]:
         if module_name in sys.modules:
             original_modules[module_name] = sys.modules[module_name]
 
-    # Create and inject mock modules
     mock_stagehand = MockStagehandModule()
     mock_stagehand_schemas = MockStagehandSchemas()
     mock_stagehand_utils = MockStagehandUtils()
@@ -43,7 +41,6 @@ def mock_stagehand_modules():
     sys.modules["stagehand.schemas"] = mock_stagehand_schemas
     sys.modules["stagehand.utils"] = mock_stagehand_utils
 
-    # Import after mocking
     from crewai_tools.tools.stagehand_tool.stagehand_tool import (
         StagehandResult,
         StagehandTool,
@@ -142,10 +139,8 @@ def test_stagehand_tool_initialization():
 )
 def test_act_command(mock_run, stagehand_tool):
     """Test the 'act' command functionality."""
-    # Setup mock
     mock_run.return_value = "Action result: Action completed successfully"
 
-    # Run the tool
     result = stagehand_tool._run(
         instruction="Click the submit button", command_type="act"
     )
@@ -160,10 +155,8 @@ def test_act_command(mock_run, stagehand_tool):
 )
 def test_navigate_command(mock_run, stagehand_tool):
     """Test the 'navigate' command functionality."""
-    # Setup mock
     mock_run.return_value = "Successfully navigated to https://example.com"
 
-    # Run the tool
     result = stagehand_tool._run(
         instruction="Go to example.com",
         url="https://example.com",
@@ -179,12 +172,10 @@ def test_navigate_command(mock_run, stagehand_tool):
 )
 def test_extract_command(mock_run, stagehand_tool):
     """Test the 'extract' command functionality."""
-    # Setup mock
     mock_run.return_value = (
         'Extracted data: {"data": "Extracted content", "metadata": {"source": "test"}}'
     )
 
-    # Run the tool
     result = stagehand_tool._run(
         instruction="Extract all product names and prices", command_type="extract"
     )
@@ -199,10 +190,8 @@ def test_extract_command(mock_run, stagehand_tool):
 )
 def test_observe_command(mock_run, stagehand_tool):
     """Test the 'observe' command functionality."""
-    # Setup mock
     mock_run.return_value = "Element 1: Button element\nSuggested action: click\nElement 2: Input field\nSuggested action: type"
 
-    # Run the tool
     result = stagehand_tool._run(
         instruction="Find all interactive elements", command_type="observe"
     )
@@ -219,10 +208,8 @@ def test_observe_command(mock_run, stagehand_tool):
 )
 def test_error_handling(mock_run, stagehand_tool):
     """Test error handling in the tool."""
-    # Setup mock
     mock_run.return_value = "Error: Browser automation error"
 
-    # Run the tool
     result = stagehand_tool._run(
         instruction="Click a non-existent button", command_type="act"
     )
@@ -234,7 +221,6 @@ def test_error_handling(mock_run, stagehand_tool):
 
 def test_initialization_parameters():
     """Test that the StagehandTool initializes with the correct parameters."""
-    # Create tool with custom parameters
     tool = StagehandTool(
         api_key="custom_api_key",
         project_id="custom_project_id",
@@ -260,7 +246,6 @@ def test_initialization_parameters():
 
 def test_close_method():
     """Test that the close method cleans up resources correctly."""
-    # Create the tool with testing mode
     tool = StagehandTool(
         api_key="test_api_key",
         project_id="test_project_id",
@@ -268,14 +253,11 @@ def test_close_method():
         _testing=True,
     )
 
-    # Setup mock stagehand instance
     tool._stagehand = MagicMock()
     tool._stagehand.close = MagicMock()  # Non-async mock
     tool._page = MagicMock()
 
-    # Call the close method
     tool.close()
 
-    # Verify resources were cleaned up
     assert tool._stagehand is None
     assert tool._page is None

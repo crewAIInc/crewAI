@@ -54,6 +54,14 @@ These tools enable your agents to search the web, research topics, and find info
     Extract structured content from web pages using the Tavily API.
   </Card>
 
+  <Card title="Tavily Research Tool" icon="flask" href="/en/tools/search-research/tavilyresearchtool">
+    Run multi-step research tasks and get cited reports using the Tavily Research API.
+  </Card>
+
+  <Card title="Tavily Get Research Tool" icon="clipboard-list" href="/en/tools/search-research/tavilygetresearchtool">
+    Retrieve the status and results of an existing Tavily research task.
+  </Card>
+
   <Card title="Arxiv Paper Tool" icon="box-archive" href="/en/tools/search-research/arxivpapertool">
     Search arXiv and optionally download PDFs.
   </Card>
@@ -76,7 +84,15 @@ These tools enable your agents to search the web, research topics, and find info
 - **Academic Research**: Find scholarly articles and technical papers
 
 ```python
-from crewai_tools import SerperDevTool, GitHubSearchTool, YoutubeVideoSearchTool, TavilySearchTool, TavilyExtractorTool
+from crewai_tools import (
+    GitHubSearchTool,
+    SerperDevTool,
+    TavilyExtractorTool,
+    TavilyGetResearchTool,
+    TavilyResearchTool,
+    TavilySearchTool,
+    YoutubeVideoSearchTool,
+)
 
 # Create research tools
 web_search = SerperDevTool()
@@ -84,11 +100,21 @@ code_search = GitHubSearchTool()
 video_research = YoutubeVideoSearchTool()
 tavily_search = TavilySearchTool()
 content_extractor = TavilyExtractorTool()
+tavily_research = TavilyResearchTool()
+tavily_get_research = TavilyGetResearchTool()
 
 # Add to your agent
 agent = Agent(
     role="Research Analyst",
-    tools=[web_search, code_search, video_research, tavily_search, content_extractor],
+    tools=[
+        web_search,
+        code_search,
+        video_research,
+        tavily_search,
+        content_extractor,
+        tavily_research,
+        tavily_get_research,
+    ],
     goal="Gather comprehensive information on any topic"
 )
 ```

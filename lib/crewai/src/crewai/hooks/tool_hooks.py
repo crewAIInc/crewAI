@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from crewai_core.printer import PRINTER
+
 from crewai.events.event_listener import event_listener
 from crewai.hooks.types import (
     AfterToolCallHookCallable,
@@ -9,7 +11,6 @@ from crewai.hooks.types import (
     BeforeToolCallHookCallable,
     BeforeToolCallHookType,
 )
-from crewai.utilities.printer import Printer
 
 
 if TYPE_CHECKING:
@@ -100,23 +101,21 @@ class ToolCallHookContext:
             ...     return None  # Allow execution
         """
 
-        printer = Printer()
         event_listener.formatter.pause_live_updates()
 
         try:
-            printer.print(content=f"\n{prompt}", color="bold_yellow")
-            printer.print(content=default_message, color="cyan")
+            PRINTER.print(content=f"\n{prompt}", color="bold_yellow")
+            PRINTER.print(content=default_message, color="cyan")
             response = input().strip()
 
             if response:
-                printer.print(content="\nProcessing your input...", color="cyan")
+                PRINTER.print(content="\nProcessing your input...", color="cyan")
 
             return response
         finally:
             event_listener.formatter.resume_live_updates()
 
 
-# Global hook registries
 _before_tool_call_hooks: list[BeforeToolCallHookType | BeforeToolCallHookCallable] = []
 _after_tool_call_hooks: list[AfterToolCallHookType | AfterToolCallHookCallable] = []
 

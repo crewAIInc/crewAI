@@ -24,7 +24,6 @@ if TYPE_CHECKING:
     from crewai.agent.core import Agent
     from crewai.task import Task
     from crewai.tools.base_tool import BaseTool
-    from crewai.utilities.i18n import I18N
 
 
 def handle_reasoning(agent: Agent, task: Task) -> None:
@@ -40,7 +39,6 @@ def handle_reasoning(agent: Agent, task: Task) -> None:
         agent: The agent performing the task.
         task: The task to execute.
     """
-    # Check if planning is enabled using the planning_enabled property
     if not getattr(agent, "planning_enabled", False):
         return
 
@@ -59,46 +57,50 @@ def handle_reasoning(agent: Agent, task: Task) -> None:
         agent._logger.log("error", f"Error during planning: {e!s}")
 
 
-def build_task_prompt_with_schema(task: Task, task_prompt: str, i18n: I18N) -> str:
+def build_task_prompt_with_schema(task: Task, task_prompt: str) -> str:
     """Build task prompt with JSON/Pydantic schema instructions if applicable.
 
     Args:
         task: The task being executed.
         task_prompt: The initial task prompt.
-        i18n: Internationalization instance.
 
     Returns:
         The task prompt potentially augmented with schema instructions.
     """
+    from crewai.utilities.i18n import I18N_DEFAULT
+
     if (task.output_json or task.output_pydantic) and not task.response_model:
         if task.output_json:
             schema_dict = generate_model_description(task.output_json)
             schema = json.dumps(schema_dict["json_schema"]["schema"], indent=2)
-            task_prompt += "\n" + i18n.slice("formatted_task_instructions").format(
-                output_format=schema
-            )
+            task_prompt += "\n" + I18N_DEFAULT.slice(
+                "formatted_task_instructions"
+            ).format(output_format=schema)
         elif task.output_pydantic:
             schema_dict = generate_model_description(task.output_pydantic)
             schema = json.dumps(schema_dict["json_schema"]["schema"], indent=2)
-            task_prompt += "\n" + i18n.slice("formatted_task_instructions").format(
-                output_format=schema
-            )
+            task_prompt += "\n" + I18N_DEFAULT.slice(
+                "formatted_task_instructions"
+            ).format(output_format=schema)
     return task_prompt
 
 
-def format_task_with_context(task_prompt: str, context: str | None, i18n: I18N) -> str:
+def format_task_with_context(task_prompt: str, context: str | None) -> str:
     """Format task prompt with context if provided.
 
     Args:
         task_prompt: The task prompt.
         context: Optional context string.
-        i18n: Internationalization instance.
 
     Returns:
         The task prompt formatted with context if provided.
     """
+    from crewai.utilities.i18n import I18N_DEFAULT
+
     if context:
-        return i18n.slice("task_with_context").format(task=task_prompt, context=context)
+        return I18N_DEFAULT.slice("task_with_context").format(
+            task=task_prompt, context=context
+        )
     return task_prompt
 
 
@@ -209,30 +211,6 @@ def _combine_knowledge_context(agent: Agent) -> str:
     crew_ctx = agent.crew_knowledge_context or ""
     separator = "\n" if agent_ctx and crew_ctx else ""
     return agent_ctx + separator + crew_ctx
-
-
-def append_skill_context(agent: Agent, task_prompt: str) -> str:
-    """Append activated skill context sections to the task prompt.
-
-    Args:
-        agent: The agent with optional skills.
-        task_prompt: The current task prompt.
-
-    Returns:
-        The task prompt with skill context appended.
-    """
-    if not agent.skills:
-        return task_prompt
-
-    from crewai.skills.loader import format_skill_context
-    from crewai.skills.models import Skill
-
-    skill_sections = [
-        format_skill_context(s) for s in agent.skills if isinstance(s, Skill)
-    ]
-    if skill_sections:
-        task_prompt += "\n\n" + "\n\n".join(skill_sections)
-    return task_prompt
 
 
 def apply_training_data(agent: Agent, task_prompt: str) -> str:

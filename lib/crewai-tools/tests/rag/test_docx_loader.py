@@ -14,7 +14,7 @@ class TestDOCXLoader:
         mock_doc.paragraphs = [
             Mock(text="First paragraph"),
             Mock(text="Second paragraph"),
-            Mock(text="   "),  # Blank paragraph
+            Mock(text="   "),
         ]
         mock_doc.tables = []
         mock_docx_class.return_value = mock_doc

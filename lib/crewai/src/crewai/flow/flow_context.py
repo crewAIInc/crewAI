@@ -18,3 +18,7 @@ current_flow_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
 current_flow_method_name: contextvars.ContextVar[str] = contextvars.ContextVar(
     "flow_method_name", default="unknown"
 )
+
+current_flow_name: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "flow_name", default=None
+)

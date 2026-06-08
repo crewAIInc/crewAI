@@ -32,6 +32,7 @@ from crewai.events.types.agent_events import (
 from crewai.tools import BaseTool
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.utilities import Logger
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.import_utils import require
 
 
@@ -59,7 +60,10 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
     _openai_agent: OpenAIAgentProtocol = PrivateAttr()
     _logger: Logger = PrivateAttr(default_factory=Logger)
     _active_thread: str | None = PrivateAttr(default=None)
-    function_calling_llm: Any = Field(default=None)
+    function_calling_llm: Any = Field(
+        default=None,
+        deprecated="function_calling_llm is deprecated and will be removed in a future release.",
+    )
     step_callback: Any = Field(default=None)
     _tool_adapter: OpenAIAgentToolAdapter = PrivateAttr()
     _converter_adapter: OpenAIConverterAdapter = PrivateAttr()
@@ -133,7 +137,7 @@ class OpenAIAgentAdapter(BaseAgentAdapter):
         try:
             task_prompt: str = task.prompt()
             if context:
-                task_prompt = self.i18n.slice("task_with_context").format(
+                task_prompt = I18N_DEFAULT.slice("task_with_context").format(
                     task=task_prompt, context=context
                 )
             crewai_event_bus.emit(

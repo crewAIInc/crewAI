@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
 
+from crewai_core.printer import PRINTER
+
 from crewai.events.event_listener import event_listener
 from crewai.hooks.types import (
     AfterLLMCallHookCallable,
@@ -9,7 +11,6 @@ from crewai.hooks.types import (
     BeforeLLMCallHookCallable,
     BeforeLLMCallHookType,
 )
-from crewai.utilities.printer import Printer
 
 
 if TYPE_CHECKING:
@@ -78,18 +79,15 @@ class LLMCallHookContext:
             crew: Optional crew reference (for direct LLM calls when executor is None)
         """
         if executor is not None:
-            # Existing path: extract from executor
             self.executor = executor
             self.messages = executor.messages
             self.llm = executor.llm
             self.iterations = executor.iterations
-            # Handle CrewAgentExecutor vs LiteAgent differences
             if hasattr(executor, "agent"):
                 self.agent = executor.agent
                 self.task = cast("CrewAgentExecutor", executor).task
                 self.crew = cast("CrewAgentExecutor", executor).crew
             else:
-                # LiteAgent case - is the agent itself, doesn't have task/crew
                 self.agent = (
                     executor.original_agent
                     if hasattr(executor, "original_agent")
@@ -98,7 +96,6 @@ class LLMCallHookContext:
                 self.task = None
                 self.crew = None
         else:
-            # New path: direct LLM call with explicit parameters
             self.executor = None
             self.messages = messages or []
             self.llm = llm
@@ -138,16 +135,15 @@ class LLMCallHookContext:
             ...             print("LLM call skipped by user")
         """
 
-        printer = Printer()
         event_listener.formatter.pause_live_updates()
 
         try:
-            printer.print(content=f"\n{prompt}", color="bold_yellow")
-            printer.print(content=default_message, color="cyan")
+            PRINTER.print(content=f"\n{prompt}", color="bold_yellow")
+            PRINTER.print(content=default_message, color="cyan")
             response = input().strip()
 
             if response:
-                printer.print(content="\nProcessing your input...", color="cyan")
+                PRINTER.print(content="\nProcessing your input...", color="cyan")
 
             return response
         finally:

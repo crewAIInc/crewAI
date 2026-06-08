@@ -35,7 +35,7 @@ info:
 
     1. **Discover inputs** using `GET /inputs`
     2. **Start execution** using `POST /kickoff`
-    3. **Monitor progress** using `GET /{kickoff_id}/status`
+    3. **Monitor progress** using `GET /status/{kickoff_id}`
   version: 1.0.0
   contact:
     name: CrewAI Support
@@ -207,7 +207,7 @@ paths:
         "500":
           $ref: "#/components/responses/ServerError"
 
-  /{kickoff_id}/status:
+  /status/{kickoff_id}:
     get:
       summary: Get Execution Status
       description: |

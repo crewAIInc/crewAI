@@ -6,7 +6,7 @@ from pydantic import Field
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.task import Task
 from crewai.tools.base_tool import BaseTool
-from crewai.utilities.i18n import I18N, get_i18n
+from crewai.utilities.i18n import I18N_DEFAULT
 
 
 logger = logging.getLogger(__name__)
@@ -16,9 +16,6 @@ class BaseAgentTool(BaseTool):
     """Base class for agent-related tools"""
 
     agents: list[BaseAgent] = Field(description="List of available agents")
-    i18n: I18N = Field(
-        default_factory=get_i18n, description="Internationalization settings"
-    )
 
     def sanitize_agent_name(self, name: str) -> str:
         """
@@ -34,9 +31,7 @@ class BaseAgentTool(BaseTool):
         """
         if not name:
             return ""
-        # Normalize all whitespace (including newlines) to single spaces
         normalized = " ".join(name.split())
-        # Remove quotes and convert to lowercase
         return normalized.replace('"', "").casefold()
 
     @staticmethod
@@ -73,7 +68,6 @@ class BaseAgentTool(BaseTool):
             # have difficulty producing valid JSON.
             # As a result, we end up with invalid JSON that is truncated like this:
             # {"task": "....", "coworker": "....
-            # when it should look like this:
             # {"task": "....", "coworker": "...."}
             sanitized_name = self.sanitize_agent_name(agent_name)
             logger.debug(
@@ -92,8 +86,7 @@ class BaseAgentTool(BaseTool):
                 f"Found {len(agent)} matching agents for role '{sanitized_name}'"
             )
         except (AttributeError, ValueError) as e:
-            # Handle specific exceptions that might occur during role name processing
-            return self.i18n.errors("agent_tool_unexisting_coworker").format(
+            return I18N_DEFAULT.errors("agent_tool_unexisting_coworker").format(
                 coworkers="\n".join(
                     [
                         f"- {self.sanitize_agent_name(agent.role)}"
@@ -104,8 +97,7 @@ class BaseAgentTool(BaseTool):
             )
 
         if not agent:
-            # No matching agent found after sanitization
-            return self.i18n.errors("agent_tool_unexisting_coworker").format(
+            return I18N_DEFAULT.errors("agent_tool_unexisting_coworker").format(
                 coworkers="\n".join(
                     [
                         f"- {self.sanitize_agent_name(agent.role)}"
@@ -120,15 +112,13 @@ class BaseAgentTool(BaseTool):
             task_with_assigned_agent = Task(
                 description=task,
                 agent=selected_agent,
-                expected_output=selected_agent.i18n.slice("manager_request"),
-                i18n=selected_agent.i18n,
+                expected_output=I18N_DEFAULT.slice("manager_request"),
             )
             logger.debug(
                 f"Created task for agent '{self.sanitize_agent_name(selected_agent.role)}': {task}"
             )
             return selected_agent.execute_task(task_with_assigned_agent, context)
         except Exception as e:
-            # Handle task creation or execution errors
-            return self.i18n.errors("agent_tool_execution_error").format(
+            return I18N_DEFAULT.errors("agent_tool_execution_error").format(
                 agent_role=self.sanitize_agent_name(selected_agent.role), error=str(e)
             )

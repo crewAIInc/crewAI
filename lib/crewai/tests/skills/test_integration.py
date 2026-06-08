@@ -4,8 +4,10 @@ from pathlib import Path
 
 import pytest
 
+from crewai import Agent
 from crewai.skills.loader import activate_skill, discover_skills, format_skill_context
 from crewai.skills.models import INSTRUCTIONS, METADATA
+from crewai.utilities.prompts import Prompts
 
 
 def _create_skill_dir(parent: Path, name: str, body: str = "Body.") -> Path:
@@ -32,7 +34,7 @@ class TestSkillDiscoveryAndActivation:
         assert activated.instructions == "Use this skill."
 
         context = format_skill_context(activated)
-        assert "## Skill: my-skill" in context
+        assert '<skill name="my-skill">' in context
         assert "Use this skill." in context
 
     def test_filter_by_skill_names(self, tmp_path: Path) -> None:
@@ -76,3 +78,25 @@ class TestSkillDiscoveryAndActivation:
             all_skills.extend(discover_skills(search_path))
         names = {s.name for s in all_skills}
         assert names == {"skill-a", "skill-b"}
+
+    def test_agent_preserves_metadata_for_discovered_skills(self, tmp_path: Path) -> None:
+        _create_skill_dir(tmp_path, "travel", body="Use this skill for travel planning.")
+        discovered = discover_skills(tmp_path)
+
+        agent = Agent(
+            role="Travel Advisor",
+            goal="Provide personalized travel suggestions.",
+            backstory="An experienced travel consultant.",
+            skills=discovered,
+        )
+
+        assert agent.skills is not None
+        assert agent.skills[0].disclosure_level == METADATA
+        assert agent.skills[0].instructions is None
+
+        result = Prompts(agent=agent, has_tools=False, use_system_prompt=True).task_execution()
+        system = getattr(result, "system", "") or result.prompt
+        assert '<skill name="travel">' in system
+        assert "Skill travel" in system
+        # METADATA-level skills must not leak full instructions into the prompt
+        assert "Use this skill for travel planning." not in system

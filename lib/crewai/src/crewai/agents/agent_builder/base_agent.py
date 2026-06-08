@@ -28,22 +28,24 @@ from crewai.agents.agent_builder.base_agent_executor import BaseAgentExecutor
 from crewai.agents.agent_builder.utilities.base_token_process import TokenProcess
 from crewai.agents.cache.cache_handler import CacheHandler
 from crewai.agents.tools_handler import ToolsHandler
-from crewai.knowledge.knowledge import Knowledge
+from crewai.events.base_events import set_emission_counter
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.event_context import restore_event_scope, set_last_event_id
+from crewai.knowledge.knowledge import Knowledge, _resolve_knowledge_sources
 from crewai.knowledge.knowledge_config import KnowledgeConfig
 from crewai.knowledge.source.base_knowledge_source import BaseKnowledgeSource
 from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.llms.base_llm import BaseLLM
 from crewai.mcp.config import MCPServerConfig
-from crewai.memory.memory_scope import MemoryScope, MemorySlice
+from crewai.memory.memory_scope import MemoryScope, MemorySlice, _ensure_memory_kind
 from crewai.memory.unified_memory import Memory
 from crewai.rag.embeddings.types import EmbedderConfig
 from crewai.security.security_config import SecurityConfig
 from crewai.skills.models import Skill
-from crewai.state.checkpoint_config import CheckpointConfig
+from crewai.state.checkpoint_config import CheckpointConfig, _coerce_checkpoint
 from crewai.tools.base_tool import BaseTool, Tool
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.config import process_config
-from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.logger import Logger
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.string_utils import interpolate_only
@@ -52,7 +54,7 @@ from crewai.utilities.string_utils import interpolate_only
 if TYPE_CHECKING:
     from crewai.context import ExecutionContext
     from crewai.crew import Crew
-    from crewai.state.provider.core import BaseProvider
+    from crewai.state.runtime import RuntimeState
 
 
 def _validate_crew_ref(value: Any) -> Any:
@@ -125,6 +127,13 @@ def _validate_executor_ref(value: Any) -> Any:
     return value
 
 
+def _serialize_executor_ref(value: Any) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    result: dict[str, Any] = value.model_dump(mode="json")
+    return result
+
+
 def _serialize_llm_ref(value: Any) -> dict[str, Any] | None:
     if value is None:
         return None
@@ -179,7 +188,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         agent_executor: An instance of the CrewAgentExecutor class.
         llm (Any): Language model that will run the agent.
         crew (Any): Crew to which the agent belongs.
-        i18n (I18N): Internationalization settings.
+
         cache_handler ([CacheHandler]): An instance of the CacheHandler class.
         tools_handler ([ToolsHandler]): An instance of the ToolsHandler class.
         max_tokens: Maximum number of tokens for the agent to generate in a response.
@@ -221,6 +230,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     _original_goal: str | None = PrivateAttr(default=None)
     _original_backstory: str | None = PrivateAttr(default=None)
     _token_process: TokenProcess = PrivateAttr(default_factory=TokenProcess)
+    _kickoff_event_id: str | None = PrivateAttr(default=None)
     id: UUID4 = Field(default_factory=uuid.uuid4, frozen=True)
     role: str = Field(description="Role of the agent")
     goal: str = Field(description="Objective of the agent")
@@ -248,14 +258,13 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     max_iter: int = Field(
         default=25, description="Maximum iterations for an agent to execute a task"
     )
-    agent_executor: SerializeAsAny[BaseAgentExecutor] | None = Field(
-        default=None, description="An instance of the CrewAgentExecutor class."
-    )
-
-    @field_validator("agent_executor", mode="before")
-    @classmethod
-    def _validate_agent_executor(cls, v: Any) -> Any:
-        return _validate_executor_ref(v)
+    agent_executor: Annotated[
+        SerializeAsAny[BaseAgentExecutor] | None,
+        BeforeValidator(_validate_executor_ref),
+        PlainSerializer(
+            _serialize_executor_ref, return_type=dict | None, when_used="json"
+        ),
+    ] = Field(default=None, description="An instance of the CrewAgentExecutor class.")
 
     llm: Annotated[
         str | BaseLLM | None,
@@ -269,9 +278,6 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             _serialize_crew_ref, return_type=str | None, when_used="always"
         ),
     ] = Field(default=None, description="Crew to which the agent belongs.")
-    i18n: I18N = Field(
-        default_factory=get_i18n, description="Internationalization settings."
-    )
     cache_handler: CacheHandler | None = Field(
         default=None, description="An instance of the CacheHandler class."
     )
@@ -288,7 +294,10 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     knowledge: Knowledge | None = Field(
         default=None, description="Knowledge for the agent."
     )
-    knowledge_sources: list[BaseKnowledgeSource] | None = Field(
+    knowledge_sources: Annotated[
+        list[BaseKnowledgeSource] | None,
+        BeforeValidator(_resolve_knowledge_sources),
+    ] = Field(
         default=None,
         description="Knowledge sources for the agent.",
     )
@@ -300,7 +309,10 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         default_factory=SecurityConfig,
         description="Security configuration for the agent, including fingerprinting.",
     )
-    checkpoint: CheckpointConfig | bool | None = Field(
+    checkpoint: Annotated[
+        CheckpointConfig | bool | None,
+        BeforeValidator(_coerce_checkpoint),
+    ] = Field(
         default=None,
         description="Automatic checkpointing configuration. "
         "True for defaults, False to opt out, None to inherit.",
@@ -323,7 +335,14 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         default=None,
         description="List of MCP server references. Supports 'https://server.com/path' for external servers and bare slugs like 'notion' for connected MCP integrations. Use '#tool_name' suffix for specific tools.",
     )
-    memory: bool | Memory | MemoryScope | MemorySlice | None = Field(
+    memory: Annotated[
+        bool
+        | Annotated[
+            Memory | MemoryScope | MemorySlice, Field(discriminator="memory_kind")
+        ]
+        | None,
+        BeforeValidator(_ensure_memory_kind),
+    ] = Field(
         default=None,
         description=(
             "Enable agent memory. Pass True for default Memory(), "
@@ -331,41 +350,127 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             "If not set, falls back to crew memory."
         ),
     )
-    skills: list[Path | Skill] | None = Field(
+    skills: list[Path | Skill | str] | None = Field(
         default=None,
-        description="Agent Skills. Accepts paths for discovery or pre-loaded Skill objects.",
+        description="Agent Skills. Accepts paths for discovery, pre-loaded Skill objects, or '@org/name' registry refs.",
         min_length=1,
     )
     execution_context: ExecutionContext | None = Field(default=None)
+    checkpoint_kickoff_event_id: str | None = Field(default=None)
 
     @classmethod
-    def from_checkpoint(
-        cls, path: str, *, provider: BaseProvider | None = None
-    ) -> Self:
-        """Restore an Agent from a checkpoint file."""
+    def from_checkpoint(cls, config: CheckpointConfig) -> Self:
+        """Restore an Agent from a checkpoint, ready to resume via kickoff().
+
+        Args:
+            config: Checkpoint configuration with ``restore_from`` set to
+                the path of the checkpoint to load.
+
+        Returns:
+            An Agent instance. Call kickoff() to resume execution.
+        """
         from crewai.context import apply_execution_context
-        from crewai.state.provider.json_provider import JsonProvider
         from crewai.state.runtime import RuntimeState
 
-        state = RuntimeState.from_checkpoint(
-            path,
-            provider=provider or JsonProvider(),
-            context={"from_checkpoint": True},
-        )
+        state = RuntimeState.from_checkpoint(config, context={"from_checkpoint": True})
+        crewai_event_bus.set_runtime_state(state)
         for entity in state.root:
             if isinstance(entity, cls):
                 if entity.execution_context is not None:
                     apply_execution_context(entity.execution_context)
-                if entity.agent_executor is not None:
-                    entity.agent_executor.agent = entity
-                    entity.agent_executor._resuming = True
+                entity._restore_runtime(state)
                 return entity
-        raise ValueError(f"No {cls.__name__} found in checkpoint: {path}")
+        raise ValueError(
+            f"No {cls.__name__} found in checkpoint: {config.restore_from}"
+        )
+
+    @classmethod
+    def fork(cls, config: CheckpointConfig, branch: str | None = None) -> Self:
+        """Fork an Agent from a checkpoint, creating a new execution branch.
+
+        Args:
+            config: Checkpoint configuration with ``restore_from`` set.
+            branch: Branch label for the fork. Auto-generated if not provided.
+
+        Returns:
+            An Agent instance on the new branch. Call kickoff() to run.
+        """
+        agent = cls.from_checkpoint(config)
+        state = crewai_event_bus._runtime_state
+        if state is None:
+            raise RuntimeError("Cannot fork: no runtime state on the event bus.")
+        state.fork(branch)
+        return agent
+
+    def _restore_runtime(self, state: RuntimeState) -> None:
+        """Re-create runtime objects after restoring from a checkpoint.
+
+        Args:
+            state: The RuntimeState containing the event record.
+        """
+        if self.agent_executor is not None:
+            self.agent_executor.agent = self
+            self.agent_executor._resuming = True
+        if self.checkpoint_kickoff_event_id is not None:
+            self._kickoff_event_id = self.checkpoint_kickoff_event_id
+        self._rebind_memory_view()
+        self._restore_event_scope(state)
+
+    def _rebind_memory_view(self) -> None:
+        """Reattach a fresh ``Memory`` to a restored ``MemoryScope``/``MemorySlice``.
+
+        Checkpoint JSON omits the live ``Memory`` dependency, so scoped
+        memory views raise ``RuntimeError`` on first use after restore.
+        """
+        if (
+            isinstance(self.memory, MemoryScope | MemorySlice)
+            and self.memory._memory is None
+        ):
+            self.memory.bind(Memory())
+
+    def _restore_event_scope(self, state: RuntimeState) -> None:
+        """Rebuild the event scope stack from the checkpoint's event record.
+
+        Args:
+            state: The RuntimeState containing the event record.
+        """
+        stack: list[tuple[str, str]] = []
+        kickoff_id = self._kickoff_event_id
+        if kickoff_id:
+            stack.append((kickoff_id, "lite_agent_execution_started"))
+
+        restore_event_scope(tuple(stack))
+
+        last_event_id: str | None = None
+        max_seq = 0
+        for node in state.event_record.nodes.values():
+            seq = node.event.emission_sequence or 0
+            if seq > max_seq:
+                max_seq = seq
+                last_event_id = node.event.event_id
+        if last_event_id is not None:
+            set_last_event_id(last_event_id)
+        if max_seq > 0:
+            set_emission_counter(max_seq)
 
     @model_validator(mode="before")
     @classmethod
     def process_model_config(cls, values: Any) -> dict[str, Any]:
         return process_config(values, cls)
+
+    @field_validator("skills", mode="before")
+    @classmethod
+    def coerce_skill_strings(cls, skills: Any) -> Any:
+        """Coerce plain path strings to Path objects; keep @-prefixed refs as str."""
+        if not isinstance(skills, list):
+            return skills
+        result = []
+        for item in skills:
+            if isinstance(item, str) and not item.startswith("@"):
+                result.append(Path(item))
+            else:
+                result.append(item)
+        return result
 
     @field_validator("tools")
     @classmethod
@@ -386,7 +491,6 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             if isinstance(tool, BaseTool):
                 processed_tools.append(tool)
             elif all(hasattr(tool, attr) for attr in required_attrs):
-                # Tool has the required attributes, create a Tool instance
                 processed_tools.append(Tool.from_langchain(tool))
             else:
                 raise ValueError(
@@ -451,14 +555,12 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
 
     @model_validator(mode="after")
     def validate_and_set_attributes(self) -> Self:
-        # Validate required fields
         for field in ["role", "goal", "backstory"]:
             if getattr(self, field) is None:
                 raise ValueError(
                     f"{field} must be provided either directly or through config"
                 )
 
-        # Set private attributes
         self._logger = Logger(verbose=self.verbose)
         if self.max_rpm and not self._rpm_controller:
             self._rpm_controller = RPMController(
@@ -467,7 +569,6 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         if not self._token_process:
             self._token_process = TokenProcess()
 
-        # Initialize security_config if not provided
         if self.security_config is None:
             self.security_config = SecurityConfig()
 
@@ -569,14 +670,11 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             "actions",
         }
 
-        # Copy llm
         existing_llm = shallow_copy(self.llm)
         copied_knowledge = shallow_copy(self.knowledge)
         copied_knowledge_storage = shallow_copy(self.knowledge_storage)
-        # Properly copy knowledge sources if they exist
         existing_knowledge_sources = None
         if self.knowledge_sources:
-            # Create a shared storage instance for all knowledge sources
             shared_storage = (
                 self.knowledge_sources[0].storage if self.knowledge_sources else None
             )
@@ -588,7 +686,6 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
                     if hasattr(source, "model_copy")
                     else shallow_copy(source)
                 )
-                # Ensure all copied sources use the same storage instance
                 copied_source.storage = shared_storage
                 existing_knowledge_sources.append(copied_source)
 

@@ -60,6 +60,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from functools import wraps
+import logging
 from typing import TYPE_CHECKING, Any, TypeVar
 
 from pydantic import BaseModel, Field
@@ -73,16 +74,14 @@ if TYPE_CHECKING:
     from crewai.llms.base_llm import BaseLLM
 
 
+logger = logging.getLogger(__name__)
+
 F = TypeVar("F", bound=Callable[..., Any])
+
+__all__ = ["HumanFeedbackResult", "human_feedback"]
 
 
 def _serialize_llm_for_context(llm: Any) -> dict[str, Any] | str | None:
-    """Serialize a BaseLLM object to a dict preserving full config.
-
-    Delegates to ``llm.to_config_dict()`` when available (BaseLLM and
-    subclasses). Falls back to extracting the model string with provider
-    prefix for unknown LLM types.
-    """
     to_config: Callable[[], dict[str, Any]] | None = getattr(
         llm, "to_config_dict", None
     )
@@ -100,13 +99,6 @@ def _serialize_llm_for_context(llm: Any) -> dict[str, Any] | str | None:
 def _deserialize_llm_from_context(
     llm_data: dict[str, Any] | str | None,
 ) -> BaseLLM | None:
-    """Reconstruct an LLM instance from serialized context data.
-
-    Handles both the new dict format (with full config) and the legacy
-    string format (model name only) for backward compatibility.
-
-    Returns a BaseLLM instance, or None if llm_data is None.
-    """
     if llm_data is None:
         return None
 
@@ -188,6 +180,7 @@ class HumanFeedbackConfig:
     provider: HumanFeedbackProvider | None = None
     learn: bool = False
     learn_source: str = "hitl"
+    learn_strict: bool = False
 
 
 class HumanFeedbackMethod(FlowMethod[Any, Any]):
@@ -198,12 +191,12 @@ class HumanFeedbackMethod(FlowMethod[Any, Any]):
 
     Attributes:
         __is_router__: True when emit is specified, enabling router behavior.
-        __router_paths__: List of possible outcomes when acting as a router.
+        __router_emit__: List of possible outcomes when acting as a router.
         __human_feedback_config__: The HumanFeedbackConfig for this method.
     """
 
     __is_router__: bool = False
-    __router_paths__: list[str] | None = None
+    __router_emit__: list[str] | None = None
     __human_feedback_config__: HumanFeedbackConfig | None = None
 
 
@@ -228,7 +221,7 @@ class DistilledLessons(BaseModel):
     )
 
 
-def human_feedback(
+def _build_human_feedback_runtime_decorator(
     message: str,
     emit: Sequence[str] | None = None,
     llm: str | BaseLLM | None = "gpt-4o-mini",
@@ -237,96 +230,8 @@ def human_feedback(
     provider: HumanFeedbackProvider | None = None,
     learn: bool = False,
     learn_source: str = "hitl",
+    learn_strict: bool = False,
 ) -> Callable[[F], F]:
-    """Decorator for Flow methods that require human feedback.
-
-    This decorator wraps a Flow method to:
-    1. Execute the method and capture its output
-    2. Display the output to the human with a feedback request
-    3. Collect the human's free-form feedback
-    4. Optionally collapse the feedback to a predefined outcome using an LLM
-    5. Store the result for access by downstream methods
-
-    When `emit` is specified, the decorator acts as a router, and the
-    collapsed outcome triggers the appropriate @listen decorated method.
-
-    Supports both synchronous (blocking) and asynchronous (non-blocking)
-    feedback collection through the `provider` parameter. If no provider
-    is specified, defaults to synchronous console input.
-
-    Args:
-        message: The message shown to the human when requesting feedback.
-            This should clearly explain what kind of feedback is expected.
-        emit: Optional sequence of outcome strings. When provided, the
-            human's feedback will be collapsed to one of these outcomes
-            using the specified LLM. The outcome then triggers @listen
-            methods that match.
-        llm: The LLM model to use for collapsing feedback to outcomes.
-            Required when emit is specified. Can be a model string
-            like "gpt-4o-mini" or a BaseLLM instance.
-        default_outcome: The outcome to use when the human provides no
-            feedback (empty input). Must be one of the emit values
-            if emit is specified.
-        metadata: Optional metadata for enterprise integrations. This is
-            passed through to the HumanFeedbackResult and can be used
-            by enterprise forks for features like Slack/Teams integration.
-        provider: Optional HumanFeedbackProvider for custom feedback
-            collection. Use this for async workflows that integrate with
-            external systems like Slack, Teams, or webhooks. When the
-            provider raises HumanFeedbackPending, the flow pauses and
-            can be resumed later with Flow.resume().
-
-    Returns:
-        A decorator function that wraps the method with human feedback
-        collection logic.
-
-    Raises:
-        ValueError: If emit is specified but llm is not provided.
-        ValueError: If default_outcome is specified but emit is not.
-        ValueError: If default_outcome is not in the emit list.
-        HumanFeedbackPending: When an async provider pauses execution.
-
-    Example:
-        Basic feedback without routing:
-        ```python
-        @start()
-        @human_feedback(message="Please review this output:")
-        def generate_content(self):
-            return "Generated content..."
-        ```
-
-        With routing based on feedback:
-        ```python
-        @start()
-        @human_feedback(
-            message="Review and approve or reject:",
-            emit=["approved", "rejected", "needs_revision"],
-            llm="gpt-4o-mini",
-            default_outcome="needs_revision",
-        )
-        def review_document(self):
-            return document_content
-
-
-        @listen("approved")
-        def publish(self):
-            print(f"Publishing: {self.last_human_feedback.output}")
-        ```
-
-        Async feedback with custom provider:
-        ```python
-        @start()
-        @human_feedback(
-            message="Review this content:",
-            emit=["approved", "rejected"],
-            llm="gpt-4o-mini",
-            provider=SlackProvider(channel="#reviews"),
-        )
-        def generate_content(self):
-            return "Content to review..."
-        ```
-    """
-    # Validation at decoration time
     if emit is not None:
         if not llm:
             raise ValueError(
@@ -344,22 +249,12 @@ def human_feedback(
         raise ValueError("default_outcome requires emit to be specified.")
 
     def decorator(func: F) -> F:
-        """Inner decorator that wraps the function."""
-
-        # -- HITL learning helpers (only used when learn=True) --------
-
         def _get_hitl_prompt(key: str) -> str:
-            """Read a HITL prompt from the i18n translations."""
-            from crewai.utilities.i18n import get_i18n
+            from crewai.utilities.i18n import I18N_DEFAULT
 
-            return get_i18n().slice(key)
+            return I18N_DEFAULT.slice(key)
 
         def _resolve_llm_instance() -> Any:
-            """Resolve the ``llm`` parameter to a BaseLLM instance.
-
-            Uses the SAME model specified in the decorator so pre-review,
-            distillation, and outcome collapsing all share one model.
-            """
             if llm is None:
                 from crewai.llm import LLM
 
@@ -373,7 +268,6 @@ def human_feedback(
         def _pre_review_with_lessons(
             flow_instance: Flow[Any], method_output: Any
         ) -> Any:
-            """Recall past HITL lessons and use LLM to pre-review the output."""
             try:
                 mem = flow_instance.memory
                 if mem is None:
@@ -404,12 +298,23 @@ def human_feedback(
                 reviewed = llm_inst.call(messages)
                 return reviewed if isinstance(reviewed, str) else str(reviewed)
             except Exception:
-                return method_output  # fallback to raw output on any failure
+                if learn_strict:
+                    logger.warning(
+                        "HITL pre-review failed for %s; re-raising (learn_strict=True)",
+                        func.__name__,
+                        exc_info=True,
+                    )
+                    raise
+                logger.warning(
+                    "HITL pre-review failed for %s; falling back to raw output",
+                    func.__name__,
+                    exc_info=True,
+                )
+                return method_output
 
         def _distill_and_store_lessons(
             flow_instance: Flow[Any], method_output: Any, raw_feedback: str
         ) -> None:
-            """Extract generalizable lessons from output + feedback, store in memory."""
             try:
                 mem = flow_instance.memory
                 if mem is None:
@@ -446,15 +351,23 @@ def human_feedback(
 
                 if lessons:
                     mem.remember_many(lessons, source=learn_source)  # type: ignore[union-attr]
-            except Exception:  # noqa: S110
-                pass  # non-critical: don't fail the flow because lesson storage failed
-
-        # -- Core feedback helpers ------------------------------------
+            except Exception:
+                if learn_strict:
+                    logger.warning(
+                        "HITL lesson distillation failed for %s; re-raising (learn_strict=True)",
+                        func.__name__,
+                        exc_info=True,
+                    )
+                    raise
+                logger.warning(
+                    "HITL lesson distillation failed for %s; no lessons stored",
+                    func.__name__,
+                    exc_info=True,
+                )
 
         def _build_feedback_context(
             flow_instance: Flow[Any], method_output: Any
         ) -> tuple[Any, Any]:
-            """Build the PendingFeedbackContext and resolve the effective provider."""
             from crewai.flow.async_feedback.types import PendingFeedbackContext
 
             context = PendingFeedbackContext(
@@ -478,7 +391,6 @@ def human_feedback(
             return context, effective_provider
 
         def _request_feedback(flow_instance: Flow[Any], method_output: Any) -> str:
-            """Request feedback using provider or default console (sync)."""
             context, effective_provider = _build_feedback_context(
                 flow_instance, method_output
             )
@@ -504,7 +416,6 @@ def human_feedback(
         async def _request_feedback_async(
             flow_instance: Flow[Any], method_output: Any
         ) -> str:
-            """Request feedback, awaiting the provider if it returns a coroutine."""
             context, effective_provider = _build_feedback_context(
                 flow_instance, method_output
             )
@@ -528,16 +439,12 @@ def human_feedback(
             method_output: Any,
             raw_feedback: str,
         ) -> HumanFeedbackResult | str:
-            """Process feedback and return result or outcome."""
-            # Determine outcome
             collapsed_outcome: str | None = None
 
             if not raw_feedback.strip():
-                # Empty feedback
                 if default_outcome:
                     collapsed_outcome = default_outcome
                 elif emit:
-                    # No default and no feedback - use first outcome
                     collapsed_outcome = emit[0]
             elif emit:
                 if llm is not None:
@@ -549,7 +456,6 @@ def human_feedback(
                 else:
                     collapsed_outcome = emit[0]
 
-            # Create result
             result = HumanFeedbackResult(
                 output=method_output,
                 feedback=raw_feedback,
@@ -559,7 +465,6 @@ def human_feedback(
                 metadata=metadata or {},
             )
 
-            # Store in flow instance
             flow_instance.human_feedback_history.append(result)
             flow_instance.last_human_feedback = result
 
@@ -571,19 +476,17 @@ def human_feedback(
             return result
 
         if asyncio.iscoroutinefunction(func):
-            # Async wrapper
+
             @wraps(func)
             async def async_wrapper(self: Flow[Any], *args: Any, **kwargs: Any) -> Any:
                 method_output = await func(self, *args, **kwargs)
 
-                # Pre-review: apply past HITL lessons before human sees it
                 if learn and getattr(self, "memory", None) is not None:
                     method_output = _pre_review_with_lessons(self, method_output)
 
                 raw_feedback = await _request_feedback_async(self, method_output)
                 result = _process_feedback(self, method_output, raw_feedback)
 
-                # Distill: extract lessons from output + feedback, store in memory
                 if (
                     learn
                     and getattr(self, "memory", None) is not None
@@ -591,10 +494,10 @@ def human_feedback(
                 ):
                     _distill_and_store_lessons(self, method_output, raw_feedback)
 
-                # Stash the real method output for final flow result when emit is set
-                # (result is the collapsed outcome string for routing, but we want to
-                # preserve the actual method output as the flow's final result)
-                # Uses per-method dict for concurrency safety and to handle None returns
+                # Stash the real method output for final flow result when emit is set:
+                # result is the collapsed outcome string for routing, but we preserve the
+                # actual method output as the flow's final result. Uses per-method dict for
+                # concurrency safety and to handle None returns.
                 if emit:
                     self._human_feedback_method_outputs[func.__name__] = method_output
 
@@ -602,19 +505,17 @@ def human_feedback(
 
             wrapper: Any = async_wrapper
         else:
-            # Sync wrapper
+
             @wraps(func)
             def sync_wrapper(self: Flow[Any], *args: Any, **kwargs: Any) -> Any:
                 method_output = func(self, *args, **kwargs)
 
-                # Pre-review: apply past HITL lessons before human sees it
                 if learn and getattr(self, "memory", None) is not None:
                     method_output = _pre_review_with_lessons(self, method_output)
 
                 raw_feedback = _request_feedback(self, method_output)
                 result = _process_feedback(self, method_output, raw_feedback)
 
-                # Distill: extract lessons from output + feedback, store in memory
                 if (
                     learn
                     and getattr(self, "memory", None) is not None
@@ -622,10 +523,10 @@ def human_feedback(
                 ):
                     _distill_and_store_lessons(self, method_output, raw_feedback)
 
-                # Stash the real method output for final flow result when emit is set
-                # (result is the collapsed outcome string for routing, but we want to
-                # preserve the actual method output as the flow's final result)
-                # Uses per-method dict for concurrency safety and to handle None returns
+                # Stash the real method output for final flow result when emit is set:
+                # result is the collapsed outcome string for routing, but we preserve the
+                # actual method output as the flow's final result. Uses per-method dict for
+                # concurrency safety and to handle None returns.
                 if emit:
                     self._human_feedback_method_outputs[func.__name__] = method_output
 
@@ -633,42 +534,33 @@ def human_feedback(
 
             wrapper = sync_wrapper
 
-        # Preserve existing Flow decorator attributes
-        for attr in [
-            "__is_start_method__",
-            "__trigger_methods__",
-            "__condition_type__",
-            "__trigger_condition__",
-            "__is_flow_method__",
-        ]:
-            if hasattr(func, attr):
-                setattr(wrapper, attr, getattr(func, attr))
-
-        # Add human feedback specific attributes (create config inline to avoid race conditions)
-        wrapper.__human_feedback_config__ = HumanFeedbackConfig(
-            message=message,
-            emit=emit,
-            llm=llm,
-            default_outcome=default_outcome,
-            metadata=metadata,
-            provider=provider,
-            learn=learn,
-            learn_source=learn_source,
-        )
-        wrapper.__is_flow_method__ = True
-
-        if emit:
-            wrapper.__is_router__ = True
-            wrapper.__router_paths__ = list(emit)
-
-        # Stash the live LLM object for HITL resume to retrieve.
-        # When a flow pauses for human feedback and later resumes (possibly in a
-        # different process), the serialized context only contains a model string.
-        # By storing the original LLM on the wrapper, resume_async can retrieve
-        # the fully-configured LLM (with credentials, project, safety_settings, etc.)
-        # instead of creating a bare LLM from just the model string.
-        wrapper._hf_llm = llm
-
         return wrapper  # type: ignore[no-any-return]
 
     return decorator
+
+
+def human_feedback(
+    message: str,
+    emit: Sequence[str] | None = None,
+    llm: str | BaseLLM | None = "gpt-4o-mini",
+    default_outcome: str | None = None,
+    metadata: dict[str, Any] | None = None,
+    provider: HumanFeedbackProvider | None = None,
+    learn: bool = False,
+    learn_source: str = "hitl",
+    learn_strict: bool = False,
+) -> Callable[[F], F]:
+    """Compatibility import path for the Flow human-feedback DSL decorator."""
+    from crewai.flow.dsl._human_feedback import human_feedback as dsl_human_feedback
+
+    return dsl_human_feedback(
+        message=message,
+        emit=emit,
+        llm=llm,
+        default_outcome=default_outcome,
+        metadata=metadata,
+        provider=provider,
+        learn=learn,
+        learn_source=learn_source,
+        learn_strict=learn_strict,
+    )

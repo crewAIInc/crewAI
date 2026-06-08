@@ -94,7 +94,6 @@ class TestTodoItem:
         assert todo.result is None
         # ID should be auto-generated
         assert todo.id is not None
-        # Verify it's a valid UUID
         UUID(todo.id)
 
     def test_todo_item_with_all_fields(self):
@@ -258,7 +257,6 @@ class TestTodoList:
 
     def test_mark_running_does_nothing_for_missing(self, sample_todo_list):
         """Test mark_running handles missing step gracefully."""
-        # Should not raise an error
         sample_todo_list.mark_running(99)
 
     def test_mark_completed(self, sample_todo_list):
@@ -277,12 +275,10 @@ class TestTodoList:
 
     def test_mark_completed_does_nothing_for_missing(self, sample_todo_list):
         """Test mark_completed handles missing step gracefully."""
-        # Should not raise an error
         sample_todo_list.mark_completed(99, result="Some result")
 
     def test_todo_list_workflow(self):
         """Test a complete workflow through TodoList."""
-        # Create a todo list with 3 items
         todo_list = TodoList(
             items=[
                 TodoItem(
@@ -308,7 +304,6 @@ class TestTodoList:
         assert todo_list.completed_count == 0
         assert todo_list.is_complete is False
 
-        # Start first task
         todo_list.mark_running(1)
         assert todo_list.current_todo.step_number == 1
         assert todo_list.next_pending.step_number == 2
@@ -318,12 +313,10 @@ class TestTodoList:
         assert todo_list.current_todo is None
         assert todo_list.completed_count == 1
 
-        # Start and complete second task
         todo_list.mark_running(2)
         todo_list.mark_completed(2, result="Analysis complete")
         assert todo_list.completed_count == 2
 
-        # Start and complete third task
         todo_list.mark_running(3)
         todo_list.mark_completed(3, result="Report generated")
 

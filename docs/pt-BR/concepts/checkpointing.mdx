@@ -1,232 +1,423 @@
 ---
 title: Checkpointing
-description: Salve automaticamente o estado de execucao para que crews, flows e agentes possam retomar apos falhas.
+description: Salve automaticamente o estado de execução para que crews, flows e agentes possam retomar após falhas.
 icon: floppy-disk
 mode: "wide"
 ---
 
-<Warning>
-O checkpointing esta em versao inicial. As APIs podem mudar em versoes futuras.
-</Warning>
+O checkpointing salva um snapshot do estado de execução durante uma execução para que uma crew, flow ou agente possa retomar após uma falha ou ser bifurcado em uma branch alternativa.
 
-## Visao Geral
+<CardGroup cols={2}>
+  <Card title="Explicação" icon="lightbulb" href="#explicacao">
+    Como o checkpointing funciona: eventos, armazenamento e herança.
+  </Card>
+  <Card title="Tutorial" icon="graduation-cap" href="#tutorial-retomar-uma-crew-com-falha">
+    Um passo a passo de 5 minutos: executar, interromper, retomar.
+  </Card>
+  <Card title="Guias de uso" icon="screwdriver-wrench" href="#guias-de-uso">
+    Receitas focadas em tarefas para fluxos comuns.
+  </Card>
+  <Card title="Referência" icon="book" href="#referencia">
+    `CheckpointConfig`, eventos, provedores e CLI.
+  </Card>
+</CardGroup>
 
-O checkpointing salva automaticamente o estado de execucao durante uma execucao. Se uma crew, flow ou agente falhar no meio da execucao, voce pode restaurar a partir do ultimo checkpoint e retomar sem reexecutar o trabalho ja concluido.
+## Explicação
 
-## Inicio Rapido
+### O que é um checkpoint
 
-```python
-from crewai import Crew, CheckpointConfig
+Um checkpoint captura tudo o que o CrewAI precisa para recriar uma execução em andamento: o estado completo da crew, flow ou agente — configuração, memória e fontes de conhecimento dos agentes, progresso das tarefas, saídas intermediárias, estado interno e atributos — junto com os inputs do kickoff, o histórico de eventos até aquele ponto e um ID de linhagem que liga o checkpoint à execução de origem.
 
-crew = Crew(
-    agents=[...],
-    tasks=[...],
-    checkpoint=True,  # usa padroes: ./.checkpoints, em task_completed
-)
-result = crew.kickoff()
-```
+Restaurar reconstrói esse estado e continua. Tarefas concluídas são puladas, memória e conhecimento são reidratados, e o trabalho downstream roda contra as mesmas saídas que a execução original produziu. Fazer fork executa a mesma restauração sob uma nova linhagem, para que a nova branch e a execução original gravem checkpoints lado a lado sem sobrescrever uma a outra.
 
-Os arquivos de checkpoint sao gravados em `./.checkpoints/` apos cada tarefa concluida.
+### Quando os checkpoints são gravados
 
-## Configuracao
+O checkpointing é orientado a eventos. O runtime se inscreve nos eventos selecionados em `on_events` e grava um checkpoint sempre que um é disparado. O padrão `task_completed` produz um checkpoint por tarefa finalizada — um equilíbrio razoável entre granularidade e uso de disco. Eventos de alta frequência como `llm_call_completed` estão disponíveis para recuperação mais granular, mas gravam muito mais arquivos.
 
-Use `CheckpointConfig` para controle total:
+### Armazenamento
 
-```python
-from crewai import Crew, CheckpointConfig
+Dois provedores acompanham o CrewAI:
 
-crew = Crew(
-    agents=[...],
-    tasks=[...],
-    checkpoint=CheckpointConfig(
-        directory="./my_checkpoints",
-        on_events=["task_completed", "crew_kickoff_completed"],
-        max_checkpoints=5,
-    ),
-)
-```
+- `JsonProvider` grava um arquivo por checkpoint. Legível e fácil de inspecionar.
+- `SqliteProvider` grava em um único banco SQLite. Melhor para checkpointing de alta frequência.
 
-### Campos do CheckpointConfig
-
-| Campo | Tipo | Padrao | Descricao |
-|:------|:-----|:-------|:----------|
-| `directory` | `str` | `"./.checkpoints"` | Caminho para os arquivos de checkpoint |
-| `on_events` | `list[str]` | `["task_completed"]` | Tipos de evento que acionam um checkpoint |
-| `provider` | `BaseProvider` | `JsonProvider()` | Backend de armazenamento |
-| `max_checkpoints` | `int \| None` | `None` | Maximo de arquivos a manter; os mais antigos sao removidos primeiro |
-
-### Heranca e Desativacao
-
-O campo `checkpoint` em Crew, Flow e Agent aceita `CheckpointConfig`, `True`, `False` ou `None`:
-
-| Valor | Comportamento |
-|:------|:--------------|
-| `None` (padrao) | Herda do pai. Um agente herda a configuracao da crew. |
-| `True` | Ativa com padroes. |
-| `False` | Desativacao explicita. Interrompe a heranca do pai. |
-| `CheckpointConfig(...)` | Configuracao personalizada. |
-
-```python
-crew = Crew(
-    agents=[
-        Agent(role="Researcher", ...),                  # herda checkpoint da crew
-        Agent(role="Writer", ..., checkpoint=False),     # desativado, sem checkpoints
-    ],
-    tasks=[...],
-    checkpoint=True,
-)
-```
-
-## Retomando a partir de um Checkpoint
-
-```python
-# Restaurar e retomar
-crew = Crew.from_checkpoint("./my_checkpoints/20260407T120000_abc123.json")
-result = crew.kickoff()  # retoma a partir da ultima tarefa concluida
-```
-
-A crew restaurada pula tarefas ja concluidas e retoma a partir da primeira incompleta.
-
-## Funciona em Crew, Flow e Agent
-
-### Crew
-
-```python
-crew = Crew(
-    agents=[researcher, writer],
-    tasks=[research_task, write_task, review_task],
-    checkpoint=CheckpointConfig(directory="./crew_cp"),
-)
-```
-
-Gatilho padrao: `task_completed` (um checkpoint por tarefa finalizada).
-
-### Flow
-
-```python
-from crewai.flow.flow import Flow, start, listen
-from crewai import CheckpointConfig
-
-class MyFlow(Flow):
-    @start()
-    def step_one(self):
-        return "data"
-
-    @listen(step_one)
-    def step_two(self, data):
-        return process(data)
-
-flow = MyFlow(
-    checkpoint=CheckpointConfig(
-        directory="./flow_cp",
-        on_events=["method_execution_finished"],
-    ),
-)
-result = flow.kickoff()
-
-# Retomar
-flow = MyFlow.from_checkpoint("./flow_cp/20260407T120000_abc123.json")
-result = flow.kickoff()
-```
-
-### Agent
-
-```python
-agent = Agent(
-    role="Researcher",
-    goal="Research topics",
-    backstory="Expert researcher",
-    checkpoint=CheckpointConfig(
-        directory="./agent_cp",
-        on_events=["lite_agent_execution_completed"],
-    ),
-)
-result = agent.kickoff(messages=[{"role": "user", "content": "Research AI trends"}])
-```
-
-## Provedores de Armazenamento
-
-O CrewAI inclui dois provedores de armazenamento para checkpoints.
-
-### JsonProvider (padrao)
-
-Grava cada checkpoint como um arquivo JSON separado.
-
-```python
-from crewai import Crew, CheckpointConfig
-from crewai.state import JsonProvider
-
-crew = Crew(
-    agents=[...],
-    tasks=[...],
-    checkpoint=CheckpointConfig(
-        directory="./my_checkpoints",
-        provider=JsonProvider(),
-        max_checkpoints=5,
-    ),
-)
-```
-
-### SqliteProvider
-
-Armazena todos os checkpoints em um unico arquivo SQLite.
-
-```python
-from crewai import Crew, CheckpointConfig
-from crewai.state import SqliteProvider
-
-crew = Crew(
-    agents=[...],
-    tasks=[...],
-    checkpoint=CheckpointConfig(
-        directory="./.checkpoints.db",
-        provider=SqliteProvider(max_checkpoints=50),
-    ),
-)
-```
+Ambos removem os checkpoints mais antigos quando `max_checkpoints` está definido.
 
 <Note>
-Ao usar `SqliteProvider`, o campo `directory` e o caminho do arquivo de banco de dados, nao um diretorio.
+Gravações de checkpoint automáticas (acionadas por evento) são best-effort: uma falha é registrada em log e a execução continua. Chamadas manuais a `state.checkpoint()` e `state.acheckpoint()` relançam a exceção.
 </Note>
 
-## Tipos de Evento
+### Modelo de herança
 
-O campo `on_events` aceita qualquer combinacao de strings de tipo de evento. Escolhas comuns:
+`Crew`, `Flow` e `Agent` aceitam um argumento `checkpoint`. Filhos herdam do pai a menos que definam seu próprio valor ou passem `False` para desativar. Ative o checkpointing uma vez na crew e todos os agentes participam, ou exclua um agente seletivamente.
 
-| Caso de Uso | Eventos |
-|:------------|:--------|
-| Apos cada tarefa (Crew) | `["task_completed"]` |
-| Apos cada metodo do flow | `["method_execution_finished"]` |
-| Apos execucao do agente | `["agent_execution_completed"]`, `["lite_agent_execution_completed"]` |
-| Apenas na conclusao da crew | `["crew_kickoff_completed"]` |
-| Apos cada chamada LLM | `["llm_call_completed"]` |
-| Em tudo | `["*"]` |
+## Tutorial: Retomar uma crew com falha
+
+Este passo a passo leva cerca de 5 minutos. Você executará uma crew de duas tarefas, a interromperá no meio e a retomará a partir do checkpoint salvo.
+
+<Steps>
+  <Step title="Crie a crew com checkpointing ativado">
+    ```python
+    from crewai import Agent, Crew, Task
+
+    researcher = Agent(role="Researcher", goal="Research", backstory="Expert")
+    writer = Agent(role="Writer", goal="Write", backstory="Expert")
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[
+            Task(description="Research AI trends", agent=researcher, expected_output="bullets"),
+            Task(description="Write a summary", agent=writer, expected_output="paragraph"),
+        ],
+        checkpoint=True,
+    )
+    ```
+  </Step>
+  <Step title="Execute e interrompa após a primeira tarefa">
+    ```python
+    result = crew.kickoff()
+    ```
+
+    Pressione `Ctrl+C` após a primeira tarefa concluir. Em `./.checkpoints/`, um arquivo `<timestamp>_<uuid>.json` é o checkpoint.
+  </Step>
+  <Step title="Retome a partir do checkpoint">
+    ```python
+    from crewai import CheckpointConfig
+
+    result = crew.kickoff(
+        from_checkpoint=CheckpointConfig(
+            restore_from="./.checkpoints/<timestamp>_<uuid>.json",
+        ),
+    )
+    ```
+
+    A tarefa de pesquisa é pulada, o escritor executa contra a saída de pesquisa salva e a crew finaliza.
+  </Step>
+</Steps>
+
+## Guias de uso
+
+<AccordionGroup>
+  <Accordion title="Ativar checkpointing com padrões" icon="play">
+    ```python
+    crew = Crew(agents=[...], tasks=[...], checkpoint=True)
+    ```
+
+    Grava em `./.checkpoints/` em cada `task_completed`.
+  </Accordion>
+
+  <Accordion title="Personalizar armazenamento e frequência" icon="sliders">
+    ```python
+    from crewai import Crew, CheckpointConfig
+
+    crew = Crew(
+        agents=[...],
+        tasks=[...],
+        checkpoint=CheckpointConfig(
+            location="./my_checkpoints",
+            on_events=["task_completed", "crew_kickoff_completed"],
+            max_checkpoints=5,
+        ),
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="Escolher um provedor de armazenamento" icon="database">
+    <CodeGroup>
+    ```python JsonProvider
+    from crewai import Crew, CheckpointConfig
+    from crewai.state import JsonProvider
+
+    crew = Crew(
+        agents=[...],
+        tasks=[...],
+        checkpoint=CheckpointConfig(
+            location="./my_checkpoints",
+            provider=JsonProvider(),
+            max_checkpoints=5,
+        ),
+    )
+    ```
+    ```python SqliteProvider
+    from crewai import Crew, CheckpointConfig
+    from crewai.state import SqliteProvider
+
+    crew = Crew(
+        agents=[...],
+        tasks=[...],
+        checkpoint=CheckpointConfig(
+            location="./.checkpoints.db",
+            provider=SqliteProvider(),
+            max_checkpoints=50,
+        ),
+    )
+    ```
+    </CodeGroup>
+
+    <Tip>
+    O SQLite ativa o modo journal WAL para leituras concorrentes. Prefira-o para checkpointing de alta frequência.
+    </Tip>
+  </Accordion>
+
+  <Accordion title="Desativar um agente específico" icon="user-slash">
+    ```python
+    crew = Crew(
+        agents=[
+            Agent(role="Researcher", ...),
+            Agent(role="Writer", ..., checkpoint=False),
+        ],
+        tasks=[...],
+        checkpoint=True,
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="Fazer fork em uma nova branch" icon="code-branch">
+    `fork()` restaura um checkpoint sob uma nova linhagem para que a nova execução não colida com a original.
+
+    ```python
+    config = CheckpointConfig(restore_from="./my_checkpoints/<file>.json")
+    crew = Crew.fork(config, branch="experiment-a")
+    result = crew.kickoff(inputs={"strategy": "aggressive"})
+    ```
+
+    O label `branch` é opcional; um é gerado se omitido.
+  </Accordion>
+
+  <Accordion title="Checkpoint em Crew, Flow ou Agent" icon="cubes">
+    <Tabs>
+      <Tab title="Crew">
+        ```python
+        crew = Crew(
+            agents=[researcher, writer],
+            tasks=[research_task, write_task, review_task],
+            checkpoint=CheckpointConfig(location="./crew_cp"),
+        )
+        ```
+
+        Gatilho padrão: `task_completed`.
+      </Tab>
+      <Tab title="Flow">
+        ```python
+        from crewai.flow.flow import Flow, start, listen
+        from crewai import CheckpointConfig
+
+        class MyFlow(Flow):
+            @start()
+            def step_one(self):
+                return "data"
+
+            @listen(step_one)
+            def step_two(self, data):
+                return process(data)
+
+        flow = MyFlow(
+            checkpoint=CheckpointConfig(
+                location="./flow_cp",
+                on_events=["method_execution_finished"],
+            ),
+        )
+        result = flow.kickoff()
+        ```
+      </Tab>
+      <Tab title="Agent">
+        ```python
+        agent = Agent(
+            role="Researcher",
+            goal="Research topics",
+            backstory="Expert researcher",
+            checkpoint=CheckpointConfig(
+                location="./agent_cp",
+                on_events=["lite_agent_execution_completed"],
+            ),
+        )
+        result = agent.kickoff(messages=[{"role": "user", "content": "Research AI trends"}])
+        ```
+      </Tab>
+    </Tabs>
+  </Accordion>
+
+  <Accordion title="Gravar um checkpoint manualmente" icon="code">
+    Registre um handler em qualquer evento e chame `state.checkpoint()`.
+
+    <CodeGroup>
+    ```python Sync
+    from __future__ import annotations
+
+    from typing import TYPE_CHECKING, Any
+
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.types.llm_events import LLMCallCompletedEvent
+
+    if TYPE_CHECKING:
+        from crewai.state.runtime import RuntimeState
+
+
+    @crewai_event_bus.on(LLMCallCompletedEvent)
+    def on_llm_done(source: Any, event: LLMCallCompletedEvent, state: RuntimeState) -> None:
+        path = state.checkpoint("./my_checkpoints")
+        print(f"Checkpoint salvo: {path}")
+    ```
+    ```python Async
+    from __future__ import annotations
+
+    from typing import TYPE_CHECKING, Any
+
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.types.llm_events import LLMCallCompletedEvent
+
+    if TYPE_CHECKING:
+        from crewai.state.runtime import RuntimeState
+
+
+    @crewai_event_bus.on(LLMCallCompletedEvent)
+    async def on_llm_done_async(source: Any, event: LLMCallCompletedEvent, state: RuntimeState) -> None:
+        path = await state.acheckpoint("./my_checkpoints")
+        print(f"Checkpoint salvo: {path}")
+    ```
+    </CodeGroup>
+
+    Um argumento `state` é fornecido automaticamente quando o handler recebe três parâmetros. Veja [Event Listeners](/pt-BR/concepts/event-listener) para o catálogo completo de eventos.
+  </Accordion>
+
+  <Accordion title="Navegar, retomar e fazer fork pela CLI" icon="terminal">
+    ```bash
+    crewai checkpoint
+    crewai checkpoint --location ./my_checkpoints
+    crewai checkpoint --location ./.checkpoints.db
+    ```
+
+    <Frame caption="Árvore de checkpoints — branches e forks aninham sob seu pai.">
+      <img src="/images/checkpoint-tui-tree.png" alt="Checkpoint TUI tree view" />
+    </Frame>
+
+    O painel esquerdo agrupa checkpoints por branch; forks aninham sob seu pai. Selecionar um checkpoint abre o painel de detalhes com metadados, estado da entidade e progresso das tarefas. **Resume** continua a execução; **Fork** inicia uma nova branch.
+
+    <Frame caption="Aba de visão geral — metadados, estado da entidade e resumo da execução.">
+      <img src="/images/checkpoint-tui-detail-overview.png" alt="Checkpoint detail overview tab" />
+    </Frame>
+
+    O painel de detalhes expõe duas áreas editáveis:
+
+    - **Inputs** — os inputs originais do kickoff, preenchidos e editáveis.
+
+      <Frame>
+        <img src="/images/checkpoint-tui-detail-inputs.png" alt="Editable kickoff inputs" />
+      </Frame>
+
+    - **Saídas das tarefas** — saídas das tarefas concluídas. Editar uma saída e pressionar **Fork** invalida tarefas downstream para que sejam reexecutadas com o contexto modificado.
+
+      <Frame>
+        <img src="/images/checkpoint-tui-detail-tasks.png" alt="Editable task outputs" />
+      </Frame>
+
+    <Frame caption="Tela de fork — confirme uma nova branch a partir do checkpoint selecionado.">
+      <img src="/images/checkpoint-tui-details-fork.png" alt="Fork confirmation panel" />
+    </Frame>
+
+    <Tip>
+    Útil para exploração de cenários: fork, ajuste, observe.
+    </Tip>
+  </Accordion>
+
+  <Accordion title="Inspecionar checkpoints sem a TUI" icon="magnifying-glass">
+    ```bash
+    crewai checkpoint list ./my_checkpoints
+    crewai checkpoint info ./my_checkpoints/<file>.json
+    crewai checkpoint info ./.checkpoints.db
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Referência
+
+### `CheckpointConfig`
+
+<ParamField path="location" type="str" default='"./.checkpoints"'>
+  Destino do armazenamento. Diretório para `JsonProvider`, caminho de arquivo de banco para `SqliteProvider`.
+</ParamField>
+
+<ParamField path="on_events" type='list[CheckpointEventType | Literal["*"]]' default='["task_completed"]'>
+  Tipos de evento que disparam um checkpoint. `CheckpointEventType` é um `Literal` — seu type checker autocompleta e rejeita valores não suportados. Veja [tipos de evento](#tipos-de-evento) para a lista completa.
+</ParamField>
+
+<ParamField path="provider" type="BaseProvider" default="JsonProvider()">
+  Backend de armazenamento. `JsonProvider` ou `SqliteProvider`.
+</ParamField>
+
+<ParamField path="max_checkpoints" type="int | None" default="None">
+  Máximo de checkpoints a reter. Os mais antigos são removidos após cada gravação.
+</ParamField>
+
+<ParamField path="restore_from" type="Path | str | None" default="None">
+  Checkpoint a restaurar quando passado via `from_checkpoint`.
+</ParamField>
+
+### Valores do campo `checkpoint`
+
+Aceito por `Crew`, `Flow` e `Agent`.
+
+<ParamField path="None" type="padrão">
+  Herda do pai.
+</ParamField>
+
+<ParamField path="True" type="bool">
+  Ativa com padrões.
+</ParamField>
+
+<ParamField path="False" type="bool">
+  Desativação explícita. Interrompe a herança.
+</ParamField>
+
+<ParamField path="CheckpointConfig(...)" type="CheckpointConfig">
+  Configuração personalizada.
+</ParamField>
+
+### Tipos de evento
+
+`on_events` aceita qualquer combinação de valores `CheckpointEventType`. O padrão `["task_completed"]` grava um checkpoint por tarefa finalizada; `["*"]` corresponde a todos os eventos.
 
 <Warning>
-Usar `["*"]` ou eventos de alta frequencia como `llm_call_completed` gravara muitos arquivos de checkpoint e pode impactar o desempenho. Use `max_checkpoints` para limitar o uso de disco.
+`["*"]` e eventos de alta frequência como `llm_call_completed` gravam muitos checkpoints e podem degradar o desempenho. Combine com `max_checkpoints`.
 </Warning>
 
-## Checkpointing Manual
+<Expandable title="Todos os eventos suportados">
 
-Para controle total, registre seu proprio handler de evento e chame `state.checkpoint()` diretamente:
+- **Task** — `task_started`, `task_completed`, `task_failed`, `task_evaluation`
+- **Crew** — `crew_kickoff_started`, `crew_kickoff_completed`, `crew_kickoff_failed`, `crew_train_started`, `crew_train_completed`, `crew_train_failed`, `crew_test_started`, `crew_test_completed`, `crew_test_failed`, `crew_test_result`
+- **Agent** — `agent_execution_started`, `agent_execution_completed`, `agent_execution_error`, `lite_agent_execution_started`, `lite_agent_execution_completed`, `lite_agent_execution_error`, `agent_evaluation_started`, `agent_evaluation_completed`, `agent_evaluation_failed`
+- **Flow** — `flow_created`, `flow_started`, `flow_finished`, `flow_paused`, `method_execution_started`, `method_execution_finished`, `method_execution_failed`, `method_execution_paused`, `human_feedback_requested`, `human_feedback_received`, `flow_input_requested`, `flow_input_received`
+- **LLM** — `llm_call_started`, `llm_call_completed`, `llm_call_failed`, `llm_stream_chunk`, `llm_thinking_chunk`
+- **LLM Guardrail** — `llm_guardrail_started`, `llm_guardrail_completed`, `llm_guardrail_failed`
+- **Tool** — `tool_usage_started`, `tool_usage_finished`, `tool_usage_error`, `tool_validate_input_error`, `tool_selection_error`, `tool_execution_error`
+- **Memory** — `memory_save_started`, `memory_save_completed`, `memory_save_failed`, `memory_query_started`, `memory_query_completed`, `memory_query_failed`, `memory_retrieval_started`, `memory_retrieval_completed`, `memory_retrieval_failed`
+- **Knowledge** — `knowledge_search_query_started`, `knowledge_search_query_completed`, `knowledge_query_started`, `knowledge_query_completed`, `knowledge_query_failed`, `knowledge_search_query_failed`
+- **Reasoning** — `agent_reasoning_started`, `agent_reasoning_completed`, `agent_reasoning_failed`
+- **MCP** — `mcp_connection_started`, `mcp_connection_completed`, `mcp_connection_failed`, `mcp_tool_execution_started`, `mcp_tool_execution_completed`, `mcp_tool_execution_failed`, `mcp_config_fetch_failed`
+- **Observation** — `step_observation_started`, `step_observation_completed`, `step_observation_failed`, `plan_refinement`, `plan_replan_triggered`, `goal_achieved_early`
+- **Skill** — `skill_discovery_started`, `skill_discovery_completed`, `skill_loaded`, `skill_activated`, `skill_load_failed`
+- **Logging** — `agent_logs_started`, `agent_logs_execution`
+- **A2A** — `a2a_delegation_started`, `a2a_delegation_completed`, `a2a_conversation_started`, `a2a_conversation_completed`, `a2a_message_sent`, `a2a_response_received`, `a2a_polling_started`, `a2a_polling_status`, `a2a_push_notification_registered`, `a2a_push_notification_received`, `a2a_push_notification_sent`, `a2a_push_notification_timeout`, `a2a_streaming_started`, `a2a_streaming_chunk`, `a2a_agent_card_fetched`, `a2a_authentication_failed`, `a2a_artifact_received`, `a2a_connection_error`, `a2a_server_task_started`, `a2a_server_task_completed`, `a2a_server_task_canceled`, `a2a_server_task_failed`, `a2a_parallel_delegation_started`, `a2a_parallel_delegation_completed`, `a2a_transport_negotiated`, `a2a_content_type_negotiated`, `a2a_context_created`, `a2a_context_expired`, `a2a_context_idle`, `a2a_context_completed`, `a2a_context_pruned`
+- **Sinais de sistema** — `SIGTERM`, `SIGINT`, `SIGHUP`, `SIGTSTP`, `SIGCONT`
+- **Wildcard** — `"*"` corresponde a todos os eventos.
 
-```python
-from crewai.events.event_bus import crewai_event_bus
-from crewai.events.types.llm_events import LLMCallCompletedEvent
+</Expandable>
 
-# Handler sincrono
-@crewai_event_bus.on(LLMCallCompletedEvent)
-def on_llm_done(source, event, state):
-    path = state.checkpoint("./my_checkpoints")
-    print(f"Checkpoint salvo: {path}")
+### Provedores de armazenamento
 
-# Handler assincrono
-@crewai_event_bus.on(LLMCallCompletedEvent)
-async def on_llm_done_async(source, event, state):
-    path = await state.acheckpoint("./my_checkpoints")
-    print(f"Checkpoint salvo: {path}")
-```
+<ParamField path="JsonProvider" type="provider">
+  Um arquivo por checkpoint, nomeado `<timestamp>_<uuid>.json` dentro de `location`.
+</ParamField>
 
-O argumento `state` e o `RuntimeState` passado automaticamente pelo barramento de eventos quando seu handler aceita 3 parametros. Voce pode registrar handlers em qualquer tipo de evento listado na documentacao de [Event Listeners](/pt-BR/concepts/event-listener).
+<ParamField path="SqliteProvider" type="provider">
+  Arquivo de banco único em `location` com journaling WAL.
+</ParamField>
 
-O checkpointing e best-effort: se uma gravacao de checkpoint falhar, o erro e registrado no log, mas a execucao continua sem interrupcao.
+### CLI
+
+| Comando | Propósito |
+|:--------|:----------|
+| `crewai checkpoint` | Inicia a TUI; detecta o armazenamento automaticamente. |
+| `crewai checkpoint --location <path>` | Inicia a TUI em uma localização específica. |
+| `crewai checkpoint list <path>` | Lista checkpoints. |
+| `crewai checkpoint info <path>` | Inspeciona um arquivo de checkpoint ou a entrada mais recente em um banco SQLite. |

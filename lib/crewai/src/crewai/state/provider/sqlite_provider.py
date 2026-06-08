@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 import sqlite3
+from typing import Literal
 import uuid
 
 import aiosqlite
@@ -16,15 +17,20 @@ _CREATE_TABLE = """
 CREATE TABLE IF NOT EXISTS checkpoints (
     id TEXT PRIMARY KEY,
     created_at TEXT NOT NULL,
+    parent_id TEXT,
+    branch TEXT NOT NULL DEFAULT 'main',
     data JSONB NOT NULL
 )
 """
 
-_INSERT = "INSERT INTO checkpoints (id, created_at, data) VALUES (?, ?, jsonb(?))"
+_INSERT = (
+    "INSERT INTO checkpoints (id, created_at, parent_id, branch, data) "
+    "VALUES (?, ?, ?, ?, jsonb(?))"
+)
 _SELECT = "SELECT json(data) FROM checkpoints WHERE id = ?"
 _PRUNE = """
-DELETE FROM checkpoints WHERE rowid NOT IN (
-    SELECT rowid FROM checkpoints ORDER BY rowid DESC LIMIT ?
+DELETE FROM checkpoints WHERE branch = ? AND rowid NOT IN (
+    SELECT rowid FROM checkpoints WHERE branch = ? ORDER BY rowid DESC LIMIT ?
 )
 """
 
@@ -43,58 +49,79 @@ def _make_id() -> tuple[str, str]:
 class SqliteProvider(BaseProvider):
     """Persists runtime state checkpoints in a SQLite database.
 
-    The ``directory`` argument to ``checkpoint`` / ``acheckpoint`` is
-    used as the database path (e.g. ``"./.checkpoints.db"``).
-
-    Args:
-        max_checkpoints: Maximum number of checkpoints to retain.
-            Oldest rows are pruned after each write. None keeps all.
+    The ``location`` argument to ``checkpoint`` / ``acheckpoint`` is
+    used as the database file path.
     """
 
-    def __init__(self, max_checkpoints: int | None = None) -> None:
-        self.max_checkpoints = max_checkpoints
+    provider_type: Literal["sqlite"] = "sqlite"
 
-    def checkpoint(self, data: str, directory: str) -> str:
+    def checkpoint(
+        self,
+        data: str,
+        location: str,
+        *,
+        parent_id: str | None = None,
+        branch: str = "main",
+    ) -> str:
         """Write a checkpoint to the SQLite database.
 
         Args:
             data: The serialized JSON string to persist.
-            directory: Path to the SQLite database file.
+            location: Path to the SQLite database file.
+            parent_id: ID of the parent checkpoint for lineage tracking.
+            branch: Branch label for this checkpoint.
 
         Returns:
             A location string in the format ``"db_path#checkpoint_id"``.
         """
         checkpoint_id, ts = _make_id()
-        Path(directory).parent.mkdir(parents=True, exist_ok=True)
-        with sqlite3.connect(directory) as conn:
+        Path(location).parent.mkdir(parents=True, exist_ok=True)
+        with sqlite3.connect(location) as conn:
             conn.execute("PRAGMA journal_mode=WAL")
             conn.execute(_CREATE_TABLE)
-            conn.execute(_INSERT, (checkpoint_id, ts, data))
-            if self.max_checkpoints is not None:
-                conn.execute(_PRUNE, (self.max_checkpoints,))
+            conn.execute(_INSERT, (checkpoint_id, ts, parent_id, branch, data))
             conn.commit()
-        return f"{directory}#{checkpoint_id}"
+        return f"{location}#{checkpoint_id}"
 
-    async def acheckpoint(self, data: str, directory: str) -> str:
+    async def acheckpoint(
+        self,
+        data: str,
+        location: str,
+        *,
+        parent_id: str | None = None,
+        branch: str = "main",
+    ) -> str:
         """Write a checkpoint to the SQLite database asynchronously.
 
         Args:
             data: The serialized JSON string to persist.
-            directory: Path to the SQLite database file.
+            location: Path to the SQLite database file.
+            parent_id: ID of the parent checkpoint for lineage tracking.
+            branch: Branch label for this checkpoint.
 
         Returns:
             A location string in the format ``"db_path#checkpoint_id"``.
         """
         checkpoint_id, ts = _make_id()
-        Path(directory).parent.mkdir(parents=True, exist_ok=True)
-        async with aiosqlite.connect(directory) as db:
+        Path(location).parent.mkdir(parents=True, exist_ok=True)
+        async with aiosqlite.connect(location) as db:
             await db.execute("PRAGMA journal_mode=WAL")
             await db.execute(_CREATE_TABLE)
-            await db.execute(_INSERT, (checkpoint_id, ts, data))
-            if self.max_checkpoints is not None:
-                await db.execute(_PRUNE, (self.max_checkpoints,))
+            await db.execute(_INSERT, (checkpoint_id, ts, parent_id, branch, data))
             await db.commit()
-        return f"{directory}#{checkpoint_id}"
+        return f"{location}#{checkpoint_id}"
+
+    def prune(self, location: str, max_keep: int, *, branch: str = "main") -> int:
+        """Remove oldest checkpoint rows beyond *max_keep* on a branch."""
+        with sqlite3.connect(location) as conn:
+            cursor = conn.execute(_PRUNE, (branch, branch, max_keep))
+            removed: int = cursor.rowcount
+            conn.commit()
+        return max(removed, 0)
+
+    def extract_id(self, location: str) -> str:
+        """Extract the checkpoint ID from a ``db_path#id`` string."""
+        return location.rsplit("#", 1)[1]
 
     def from_checkpoint(self, location: str) -> str:
         """Read a checkpoint from the SQLite database.

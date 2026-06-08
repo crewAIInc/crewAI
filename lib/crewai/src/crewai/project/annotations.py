@@ -213,11 +213,9 @@ def crew(
         instantiated_agents: list[Agent] = []
         agent_roles: set[str] = set()
 
-        # Use the preserved task and agent information
         tasks = self.__crew_metadata__["original_tasks"].items()
         agents = self.__crew_metadata__["original_agents"].items()
 
-        # Instantiate tasks in order
         for _, task_method in tasks:
             task_instance = _call_method(task_method, self)
             instantiated_tasks.append(task_instance)
@@ -226,7 +224,6 @@ def crew(
                 instantiated_agents.append(agent_instance)
                 agent_roles.add(agent_instance.role)
 
-        # Instantiate agents not included by tasks
         for _, agent_method in agents:
             agent_instance = _call_method(agent_method, self)
             if agent_instance.role not in agent_roles:
@@ -237,6 +234,8 @@ def crew(
         self.tasks = instantiated_tasks
 
         crew_instance: Crew = _call_method(meth, self, *args, **kwargs)
+        if "name" not in crew_instance.model_fields_set:
+            crew_instance.name = getattr(self, "_crew_name", None) or crew_instance.name
 
         def callback_wrapper(
             hook: Callable[Concatenate[CrewInstance, P2], R2], instance: CrewInstance

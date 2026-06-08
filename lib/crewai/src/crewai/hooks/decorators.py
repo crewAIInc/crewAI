@@ -5,6 +5,8 @@ from functools import wraps
 import inspect
 from typing import TYPE_CHECKING, Any, TypeVar, overload
 
+from crewai.utilities.string_utils import sanitize_tool_name
+
 
 if TYPE_CHECKING:
     from crewai.hooks.llm_hooks import LLMCallHookContext
@@ -37,6 +39,9 @@ def _create_hook_decorator(
         tools: list[str] | None = None,
         agents: list[str] | None = None,
     ) -> Callable[..., Any]:
+        if tools:
+            tools = [sanitize_tool_name(t) for t in tools]
+
         def decorator(f: Callable[..., Any]) -> Callable[..., Any]:
             setattr(f, marker_attribute, True)
 

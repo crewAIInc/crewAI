@@ -23,7 +23,6 @@ from crewai.mcp.config import (
     MCPServerSSE,
     MCPServerStdio,
 )
-from crewai.mcp.transports.base import BaseTransport
 from crewai.mcp.transports.http import HTTPTransport
 from crewai.mcp.transports.sse import SSETransport
 from crewai.mcp.transports.stdio import StdioTransport
@@ -196,7 +195,7 @@ class MCPToolResolver:
                 get_platform_integration_token,
             )
 
-            from crewai.cli.plus_api import PlusAPI
+            from crewai.plus_api import PlusAPI
 
             plus_api = PlusAPI(api_key=get_platform_integration_token())
             response = plus_api.get_mcp_configs(slugs)
@@ -286,7 +285,7 @@ class MCPToolResolver:
         independent transport so that parallel tool executions never share
         state.
         """
-        transport: BaseTransport
+        transport: StdioTransport | HTTPTransport | SSETransport
         if isinstance(mcp_config, MCPServerStdio):
             transport = StdioTransport(
                 command=mcp_config.command,
@@ -374,6 +373,7 @@ class MCPToolResolver:
                             "MCP connection failed due to event loop cleanup issues. "
                             "This may be due to authentication errors or server unavailability."
                         ) from e
+                    raise
                 except asyncio.CancelledError as e:
                     raise ConnectionError(
                         "MCP connection was cancelled. This may indicate an authentication "
@@ -401,6 +401,13 @@ class MCPToolResolver:
                         filtered_tools.append(tool)
                 tools_list = filtered_tools
 
+            if not tools_list:
+                self._logger.log(
+                    "warning",
+                    f"No tools discovered from MCP server: {server_name}",
+                )
+                return cast(list[BaseTool], []), []
+
             def _client_factory() -> MCPClient:
                 transport, _ = self._create_transport(mcp_config)
                 return MCPClient(
@@ -417,9 +424,18 @@ class MCPToolResolver:
 
                 args_schema = None
                 if tool_def.get("inputSchema"):
-                    args_schema = self._json_schema_to_pydantic(
-                        tool_name, tool_def["inputSchema"]
-                    )
+                    try:
+                        args_schema = self._json_schema_to_pydantic(
+                            tool_name, tool_def["inputSchema"]
+                        )
+                    except Exception as e:
+                        self._logger.log(
+                            "warning",
+                            f"Failed to build args schema for MCP tool "
+                            f"'{tool_name}': {e}. Registering tool without a "
+                            "typed schema.",
+                        )
+                        args_schema = None
 
                 tool_schema = {
                     "description": tool_def.get("description", ""),

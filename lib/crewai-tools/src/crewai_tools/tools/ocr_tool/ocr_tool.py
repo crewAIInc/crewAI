@@ -11,6 +11,8 @@ from crewai.tools.base_tool import BaseTool
 from crewai.utilities.types import LLMMessage
 from pydantic import BaseModel, Field
 
+from crewai_tools.security.safe_path import validate_file_path
+
 
 class OCRToolSchema(BaseModel):
     """Input schema for Optical Character Recognition Tool.
@@ -98,5 +100,6 @@ class OCRTool(BaseTool):
         Returns:
             str: Base64-encoded image data as a UTF-8 string.
         """
+        image_path = validate_file_path(image_path)
         with open(image_path, "rb") as image_file:
             return base64.b64encode(image_file.read()).decode()

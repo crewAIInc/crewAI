@@ -30,6 +30,17 @@ from crewai.events.types.agent_events import (
     AgentExecutionStartedEvent,
     LiteAgentExecutionCompletedEvent,
 )
+from crewai.events.types.checkpoint_events import (
+    CheckpointCompletedEvent,
+    CheckpointFailedEvent,
+    CheckpointForkCompletedEvent,
+    CheckpointForkStartedEvent,
+    CheckpointPrunedEvent,
+    CheckpointRestoreCompletedEvent,
+    CheckpointRestoreFailedEvent,
+    CheckpointRestoreStartedEvent,
+    CheckpointStartedEvent,
+)
 from crewai.events.types.crew_events import (
     CrewKickoffCompletedEvent,
     CrewKickoffFailedEvent,
@@ -42,6 +53,8 @@ from crewai.events.types.crew_events import (
     CrewTrainStartedEvent,
 )
 from crewai.events.types.flow_events import (
+    ConversationMessageAddedEvent,
+    ConversationRouteSelectedEvent,
     FlowFinishedEvent,
     FlowStartedEvent,
     MethodExecutionFailedEvent,
@@ -143,6 +156,8 @@ EventTypes = (
     | TaskStartedEvent
     | TaskCompletedEvent
     | TaskFailedEvent
+    | ConversationMessageAddedEvent
+    | ConversationRouteSelectedEvent
     | FlowStartedEvent
     | FlowFinishedEvent
     | MethodExecutionStartedEvent
@@ -183,4 +198,13 @@ EventTypes = (
     | MCPToolExecutionCompletedEvent
     | MCPToolExecutionFailedEvent
     | MCPConfigFetchFailedEvent
+    | CheckpointStartedEvent
+    | CheckpointCompletedEvent
+    | CheckpointFailedEvent
+    | CheckpointForkStartedEvent
+    | CheckpointForkCompletedEvent
+    | CheckpointRestoreStartedEvent
+    | CheckpointRestoreCompletedEvent
+    | CheckpointRestoreFailedEvent
+    | CheckpointPrunedEvent
 )

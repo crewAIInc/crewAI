@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import os
-from typing import Any, Literal, cast
+from typing import Annotated, Any, Literal, cast
 
 from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
 from crewai.rag.embeddings.factory import build_embedder
@@ -8,10 +8,13 @@ from crewai.rag.embeddings.types import ProviderSpec
 from crewai.tools import BaseTool
 from pydantic import (
     BaseModel,
+    BeforeValidator,
     ConfigDict,
     Field,
+    PlainSerializer,
     TypeAdapter,
     ValidationError,
+    WithJsonSchema,
     field_validator,
     model_validator,
 )
@@ -100,6 +103,26 @@ class Adapter(BaseModel, ABC):
         """Add content to the knowledge base."""
 
 
+def _resolve_adapter(value: Any) -> Any:
+    """Validate the ``adapter`` field, returning a placeholder for dict/None input.
+
+    Adapter state is not round-tripped; the ``_ensure_adapter`` post-validator
+    rebuilds a fresh adapter from the tool's ``config``.
+    """
+    if isinstance(value, Adapter):
+        return value
+    if value is None or isinstance(value, dict):
+        return RagTool._AdapterPlaceholder()
+    return value
+
+
+def _serialize_adapter(adapter: Any, info: Any) -> Any:
+    """Serialize the ``adapter`` field, dropping runtime state from the payload."""
+    if not isinstance(adapter, Adapter):
+        return adapter
+    return None
+
+
 class RagTool(BaseTool):
     class _AdapterPlaceholder(Adapter):
         def query(
@@ -123,7 +146,12 @@ class RagTool(BaseTool):
     similarity_threshold: float = 0.6
     limit: int = 5
     collection_name: str = "rag_tool_collection"
-    adapter: Adapter = Field(default_factory=_AdapterPlaceholder)
+    adapter: Annotated[
+        Adapter,
+        BeforeValidator(_resolve_adapter),
+        PlainSerializer(_serialize_adapter, when_used="json"),
+        WithJsonSchema({"type": ["object", "null"]}),
+    ] = Field(default_factory=_AdapterPlaceholder)
     config: RagToolConfig = Field(
         default_factory=RagToolConfig,
         description="Configuration format accepted by RagTool.",
@@ -251,7 +279,7 @@ class RagTool(BaseTool):
         # unauthorized file reads and SSRF.
         from urllib.parse import urlparse
 
-        from crewai_tools.utilities.safe_path import validate_file_path, validate_url
+        from crewai_tools.security.safe_path import validate_file_path, validate_url
 
         def _check_url(value: str, label: str) -> None:
             try:
@@ -259,9 +287,9 @@ class RagTool(BaseTool):
             except ValueError as e:
                 raise ValueError(f"Blocked unsafe {label}: {e}") from e
 
-        def _check_path(value: str, label: str) -> None:
+        def _check_path(value: str, label: str) -> str:
             try:
-                validate_file_path(value)
+                return validate_file_path(value)
             except ValueError as e:
                 raise ValueError(f"Blocked unsafe {label}: {e}") from e
 
@@ -298,21 +326,32 @@ class RagTool(BaseTool):
                 or os.path.isabs(source_ref)
             ):
                 try:
-                    validate_file_path(source_ref)
+                    resolved_ref = validate_file_path(source_ref)
                 except ValueError as e:
                     raise ValueError(f"Blocked unsafe file path: {e}") from e
+                # Use the resolved path to prevent symlink TOCTOU
+                if isinstance(arg, dict):
+                    arg = {**arg}
+                    if "source" in arg:
+                        arg["source"] = resolved_ref
+                    elif "content" in arg:
+                        arg["content"] = resolved_ref
+                else:
+                    arg = resolved_ref
 
             validated_args.append(arg)
 
         # Validate keyword path/URL arguments — these are equally user-controlled
         # and must not bypass the checks applied to positional args.
         if "path" in kwargs and kwargs.get("path") is not None:
-            _check_path(str(kwargs["path"]), "path")
+            kwargs["path"] = _check_path(str(kwargs["path"]), "path")
         if "file_path" in kwargs and kwargs.get("file_path") is not None:
-            _check_path(str(kwargs["file_path"]), "file_path")
+            kwargs["file_path"] = _check_path(str(kwargs["file_path"]), "file_path")
 
         if "directory_path" in kwargs and kwargs.get("directory_path") is not None:
-            _check_path(str(kwargs["directory_path"]), "directory_path")
+            kwargs["directory_path"] = _check_path(
+                str(kwargs["directory_path"]), "directory_path"
+            )
 
         if "url" in kwargs and kwargs.get("url") is not None:
             _check_url(str(kwargs["url"]), "url")

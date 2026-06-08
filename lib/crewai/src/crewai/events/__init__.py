@@ -6,111 +6,20 @@ This module provides the event infrastructure that allows users to:
 - Build custom logging and analytics
 - Extend CrewAI with custom event handlers
 - Declare handler dependencies for ordered execution
+
+Event type classes are lazy-loaded on first access to avoid importing
+~12 Pydantic model modules (and their transitive deps) at package init time.
 """
 
 from __future__ import annotations
 
+import importlib
 from typing import TYPE_CHECKING, Any
 
 from crewai.events.base_event_listener import BaseEventListener
 from crewai.events.depends import Depends
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.handler_graph import CircularDependencyError
-from crewai.events.types.crew_events import (
-    CrewKickoffCompletedEvent,
-    CrewKickoffFailedEvent,
-    CrewKickoffStartedEvent,
-    CrewTestCompletedEvent,
-    CrewTestFailedEvent,
-    CrewTestResultEvent,
-    CrewTestStartedEvent,
-    CrewTrainCompletedEvent,
-    CrewTrainFailedEvent,
-    CrewTrainStartedEvent,
-)
-from crewai.events.types.flow_events import (
-    FlowCreatedEvent,
-    FlowEvent,
-    FlowFinishedEvent,
-    FlowPlotEvent,
-    FlowStartedEvent,
-    HumanFeedbackReceivedEvent,
-    HumanFeedbackRequestedEvent,
-    MethodExecutionFailedEvent,
-    MethodExecutionFinishedEvent,
-    MethodExecutionStartedEvent,
-)
-from crewai.events.types.knowledge_events import (
-    KnowledgeQueryCompletedEvent,
-    KnowledgeQueryFailedEvent,
-    KnowledgeQueryStartedEvent,
-    KnowledgeRetrievalCompletedEvent,
-    KnowledgeRetrievalStartedEvent,
-    KnowledgeSearchQueryFailedEvent,
-)
-from crewai.events.types.llm_events import (
-    LLMCallCompletedEvent,
-    LLMCallFailedEvent,
-    LLMCallStartedEvent,
-    LLMStreamChunkEvent,
-)
-from crewai.events.types.llm_guardrail_events import (
-    LLMGuardrailCompletedEvent,
-    LLMGuardrailStartedEvent,
-)
-from crewai.events.types.logging_events import (
-    AgentLogsExecutionEvent,
-    AgentLogsStartedEvent,
-)
-from crewai.events.types.mcp_events import (
-    MCPConfigFetchFailedEvent,
-    MCPConnectionCompletedEvent,
-    MCPConnectionFailedEvent,
-    MCPConnectionStartedEvent,
-    MCPToolExecutionCompletedEvent,
-    MCPToolExecutionFailedEvent,
-    MCPToolExecutionStartedEvent,
-)
-from crewai.events.types.memory_events import (
-    MemoryQueryCompletedEvent,
-    MemoryQueryFailedEvent,
-    MemoryQueryStartedEvent,
-    MemoryRetrievalCompletedEvent,
-    MemoryRetrievalFailedEvent,
-    MemoryRetrievalStartedEvent,
-    MemorySaveCompletedEvent,
-    MemorySaveFailedEvent,
-    MemorySaveStartedEvent,
-)
-from crewai.events.types.reasoning_events import (
-    AgentReasoningCompletedEvent,
-    AgentReasoningFailedEvent,
-    AgentReasoningStartedEvent,
-    ReasoningEvent,
-)
-from crewai.events.types.skill_events import (
-    SkillActivatedEvent,
-    SkillDiscoveryCompletedEvent,
-    SkillDiscoveryStartedEvent,
-    SkillEvent,
-    SkillLoadFailedEvent,
-    SkillLoadedEvent,
-)
-from crewai.events.types.task_events import (
-    TaskCompletedEvent,
-    TaskEvaluationEvent,
-    TaskFailedEvent,
-    TaskStartedEvent,
-)
-from crewai.events.types.tool_usage_events import (
-    ToolExecutionErrorEvent,
-    ToolSelectionErrorEvent,
-    ToolUsageErrorEvent,
-    ToolUsageEvent,
-    ToolUsageFinishedEvent,
-    ToolUsageStartedEvent,
-    ToolValidateInputErrorEvent,
-)
 
 
 if TYPE_CHECKING:
@@ -125,6 +34,239 @@ if TYPE_CHECKING:
         LiteAgentExecutionErrorEvent,
         LiteAgentExecutionStartedEvent,
     )
+    from crewai.events.types.checkpoint_events import (
+        CheckpointBaseEvent,
+        CheckpointCompletedEvent,
+        CheckpointFailedEvent,
+        CheckpointForkBaseEvent,
+        CheckpointForkCompletedEvent,
+        CheckpointForkStartedEvent,
+        CheckpointPrunedEvent,
+        CheckpointRestoreBaseEvent,
+        CheckpointRestoreCompletedEvent,
+        CheckpointRestoreFailedEvent,
+        CheckpointRestoreStartedEvent,
+        CheckpointStartedEvent,
+    )
+    from crewai.events.types.crew_events import (
+        CrewKickoffCompletedEvent,
+        CrewKickoffFailedEvent,
+        CrewKickoffStartedEvent,
+        CrewTestCompletedEvent,
+        CrewTestFailedEvent,
+        CrewTestResultEvent,
+        CrewTestStartedEvent,
+        CrewTrainCompletedEvent,
+        CrewTrainFailedEvent,
+        CrewTrainStartedEvent,
+    )
+    from crewai.events.types.flow_events import (
+        ConversationMessageAddedEvent,
+        ConversationRouteSelectedEvent,
+        FlowCreatedEvent,
+        FlowEvent,
+        FlowFinishedEvent,
+        FlowPlotEvent,
+        FlowStartedEvent,
+        HumanFeedbackReceivedEvent,
+        HumanFeedbackRequestedEvent,
+        MethodExecutionFailedEvent,
+        MethodExecutionFinishedEvent,
+        MethodExecutionStartedEvent,
+    )
+    from crewai.events.types.knowledge_events import (
+        KnowledgeQueryCompletedEvent,
+        KnowledgeQueryFailedEvent,
+        KnowledgeQueryStartedEvent,
+        KnowledgeRetrievalCompletedEvent,
+        KnowledgeRetrievalStartedEvent,
+        KnowledgeSearchQueryFailedEvent,
+    )
+    from crewai.events.types.llm_events import (
+        LLMCallCompletedEvent,
+        LLMCallFailedEvent,
+        LLMCallStartedEvent,
+        LLMStreamChunkEvent,
+    )
+    from crewai.events.types.llm_guardrail_events import (
+        LLMGuardrailCompletedEvent,
+        LLMGuardrailStartedEvent,
+    )
+    from crewai.events.types.logging_events import (
+        AgentLogsExecutionEvent,
+        AgentLogsStartedEvent,
+    )
+    from crewai.events.types.mcp_events import (
+        MCPConfigFetchFailedEvent,
+        MCPConnectionCompletedEvent,
+        MCPConnectionFailedEvent,
+        MCPConnectionStartedEvent,
+        MCPToolExecutionCompletedEvent,
+        MCPToolExecutionFailedEvent,
+        MCPToolExecutionStartedEvent,
+    )
+    from crewai.events.types.memory_events import (
+        MemoryQueryCompletedEvent,
+        MemoryQueryFailedEvent,
+        MemoryQueryStartedEvent,
+        MemoryRetrievalCompletedEvent,
+        MemoryRetrievalFailedEvent,
+        MemoryRetrievalStartedEvent,
+        MemorySaveCompletedEvent,
+        MemorySaveFailedEvent,
+        MemorySaveStartedEvent,
+    )
+    from crewai.events.types.reasoning_events import (
+        AgentReasoningCompletedEvent,
+        AgentReasoningFailedEvent,
+        AgentReasoningStartedEvent,
+        ReasoningEvent,
+    )
+    from crewai.events.types.skill_events import (
+        SkillActivatedEvent,
+        SkillDiscoveryCompletedEvent,
+        SkillDiscoveryStartedEvent,
+        SkillEvent,
+        SkillLoadFailedEvent,
+        SkillLoadedEvent,
+    )
+    from crewai.events.types.task_events import (
+        TaskCompletedEvent,
+        TaskEvaluationEvent,
+        TaskFailedEvent,
+        TaskStartedEvent,
+    )
+    from crewai.events.types.tool_usage_events import (
+        ToolExecutionErrorEvent,
+        ToolSelectionErrorEvent,
+        ToolUsageErrorEvent,
+        ToolUsageEvent,
+        ToolUsageFinishedEvent,
+        ToolUsageStartedEvent,
+        ToolValidateInputErrorEvent,
+    )
+
+_LAZY_EVENT_MAPPING: dict[str, str] = {
+    "AgentEvaluationCompletedEvent": "crewai.events.types.agent_events",
+    "AgentEvaluationFailedEvent": "crewai.events.types.agent_events",
+    "AgentEvaluationStartedEvent": "crewai.events.types.agent_events",
+    "AgentExecutionCompletedEvent": "crewai.events.types.agent_events",
+    "AgentExecutionErrorEvent": "crewai.events.types.agent_events",
+    "AgentExecutionStartedEvent": "crewai.events.types.agent_events",
+    "LiteAgentExecutionCompletedEvent": "crewai.events.types.agent_events",
+    "LiteAgentExecutionErrorEvent": "crewai.events.types.agent_events",
+    "LiteAgentExecutionStartedEvent": "crewai.events.types.agent_events",
+    "CheckpointBaseEvent": "crewai.events.types.checkpoint_events",
+    "CheckpointCompletedEvent": "crewai.events.types.checkpoint_events",
+    "CheckpointFailedEvent": "crewai.events.types.checkpoint_events",
+    "CheckpointForkBaseEvent": "crewai.events.types.checkpoint_events",
+    "CheckpointForkCompletedEvent": "crewai.events.types.checkpoint_events",
+    "CheckpointForkStartedEvent": "crewai.events.types.checkpoint_events",
+    "CheckpointPrunedEvent": "crewai.events.types.checkpoint_events",
+    "CheckpointRestoreBaseEvent": "crewai.events.types.checkpoint_events",
+    "CheckpointRestoreCompletedEvent": "crewai.events.types.checkpoint_events",
+    "CheckpointRestoreFailedEvent": "crewai.events.types.checkpoint_events",
+    "CheckpointRestoreStartedEvent": "crewai.events.types.checkpoint_events",
+    "CheckpointStartedEvent": "crewai.events.types.checkpoint_events",
+    "CrewKickoffCompletedEvent": "crewai.events.types.crew_events",
+    "CrewKickoffFailedEvent": "crewai.events.types.crew_events",
+    "CrewKickoffStartedEvent": "crewai.events.types.crew_events",
+    "CrewTestCompletedEvent": "crewai.events.types.crew_events",
+    "CrewTestFailedEvent": "crewai.events.types.crew_events",
+    "CrewTestResultEvent": "crewai.events.types.crew_events",
+    "CrewTestStartedEvent": "crewai.events.types.crew_events",
+    "CrewTrainCompletedEvent": "crewai.events.types.crew_events",
+    "CrewTrainFailedEvent": "crewai.events.types.crew_events",
+    "CrewTrainStartedEvent": "crewai.events.types.crew_events",
+    "ConversationMessageAddedEvent": "crewai.events.types.flow_events",
+    "ConversationRouteSelectedEvent": "crewai.events.types.flow_events",
+    "FlowCreatedEvent": "crewai.events.types.flow_events",
+    "FlowEvent": "crewai.events.types.flow_events",
+    "FlowFinishedEvent": "crewai.events.types.flow_events",
+    "FlowPlotEvent": "crewai.events.types.flow_events",
+    "FlowStartedEvent": "crewai.events.types.flow_events",
+    "HumanFeedbackReceivedEvent": "crewai.events.types.flow_events",
+    "HumanFeedbackRequestedEvent": "crewai.events.types.flow_events",
+    "MethodExecutionFailedEvent": "crewai.events.types.flow_events",
+    "MethodExecutionFinishedEvent": "crewai.events.types.flow_events",
+    "MethodExecutionStartedEvent": "crewai.events.types.flow_events",
+    "KnowledgeQueryCompletedEvent": "crewai.events.types.knowledge_events",
+    "KnowledgeQueryFailedEvent": "crewai.events.types.knowledge_events",
+    "KnowledgeQueryStartedEvent": "crewai.events.types.knowledge_events",
+    "KnowledgeRetrievalCompletedEvent": "crewai.events.types.knowledge_events",
+    "KnowledgeRetrievalStartedEvent": "crewai.events.types.knowledge_events",
+    "KnowledgeSearchQueryFailedEvent": "crewai.events.types.knowledge_events",
+    "LLMCallCompletedEvent": "crewai.events.types.llm_events",
+    "LLMCallFailedEvent": "crewai.events.types.llm_events",
+    "LLMCallStartedEvent": "crewai.events.types.llm_events",
+    "LLMStreamChunkEvent": "crewai.events.types.llm_events",
+    "LLMGuardrailCompletedEvent": "crewai.events.types.llm_guardrail_events",
+    "LLMGuardrailStartedEvent": "crewai.events.types.llm_guardrail_events",
+    "AgentLogsExecutionEvent": "crewai.events.types.logging_events",
+    "AgentLogsStartedEvent": "crewai.events.types.logging_events",
+    "MCPConfigFetchFailedEvent": "crewai.events.types.mcp_events",
+    "MCPConnectionCompletedEvent": "crewai.events.types.mcp_events",
+    "MCPConnectionFailedEvent": "crewai.events.types.mcp_events",
+    "MCPConnectionStartedEvent": "crewai.events.types.mcp_events",
+    "MCPToolExecutionCompletedEvent": "crewai.events.types.mcp_events",
+    "MCPToolExecutionFailedEvent": "crewai.events.types.mcp_events",
+    "MCPToolExecutionStartedEvent": "crewai.events.types.mcp_events",
+    "MemoryQueryCompletedEvent": "crewai.events.types.memory_events",
+    "MemoryQueryFailedEvent": "crewai.events.types.memory_events",
+    "MemoryQueryStartedEvent": "crewai.events.types.memory_events",
+    "MemoryRetrievalCompletedEvent": "crewai.events.types.memory_events",
+    "MemoryRetrievalFailedEvent": "crewai.events.types.memory_events",
+    "MemoryRetrievalStartedEvent": "crewai.events.types.memory_events",
+    "MemorySaveCompletedEvent": "crewai.events.types.memory_events",
+    "MemorySaveFailedEvent": "crewai.events.types.memory_events",
+    "MemorySaveStartedEvent": "crewai.events.types.memory_events",
+    "AgentReasoningCompletedEvent": "crewai.events.types.reasoning_events",
+    "AgentReasoningFailedEvent": "crewai.events.types.reasoning_events",
+    "AgentReasoningStartedEvent": "crewai.events.types.reasoning_events",
+    "ReasoningEvent": "crewai.events.types.reasoning_events",
+    "SkillActivatedEvent": "crewai.events.types.skill_events",
+    "SkillDiscoveryCompletedEvent": "crewai.events.types.skill_events",
+    "SkillDiscoveryStartedEvent": "crewai.events.types.skill_events",
+    "SkillEvent": "crewai.events.types.skill_events",
+    "SkillLoadFailedEvent": "crewai.events.types.skill_events",
+    "SkillLoadedEvent": "crewai.events.types.skill_events",
+    "TaskCompletedEvent": "crewai.events.types.task_events",
+    "TaskEvaluationEvent": "crewai.events.types.task_events",
+    "TaskFailedEvent": "crewai.events.types.task_events",
+    "TaskStartedEvent": "crewai.events.types.task_events",
+    "ToolExecutionErrorEvent": "crewai.events.types.tool_usage_events",
+    "ToolSelectionErrorEvent": "crewai.events.types.tool_usage_events",
+    "ToolUsageErrorEvent": "crewai.events.types.tool_usage_events",
+    "ToolUsageEvent": "crewai.events.types.tool_usage_events",
+    "ToolUsageFinishedEvent": "crewai.events.types.tool_usage_events",
+    "ToolUsageStartedEvent": "crewai.events.types.tool_usage_events",
+    "ToolValidateInputErrorEvent": "crewai.events.types.tool_usage_events",
+}
+
+_extension_exports: dict[str, Any] = {}
+
+
+def __getattr__(name: str) -> Any:
+    """Lazy import for event types and registered extensions."""
+    if name in _LAZY_EVENT_MAPPING:
+        module_path = _LAZY_EVENT_MAPPING[name]
+        module = importlib.import_module(module_path)
+        val = getattr(module, name)
+        globals()[name] = val  # cache for subsequent access
+        return val
+
+    if name in _extension_exports:
+        value = _extension_exports[name]
+        if isinstance(value, str):
+            module_path, _, attr_name = value.rpartition(".")
+            if module_path:
+                module = importlib.import_module(module_path)
+                return getattr(module, attr_name)
+            return importlib.import_module(value)
+        return value
+
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)
 
 
 __all__ = [
@@ -140,7 +282,21 @@ __all__ = [
     "AgentReasoningFailedEvent",
     "AgentReasoningStartedEvent",
     "BaseEventListener",
+    "CheckpointBaseEvent",
+    "CheckpointCompletedEvent",
+    "CheckpointFailedEvent",
+    "CheckpointForkBaseEvent",
+    "CheckpointForkCompletedEvent",
+    "CheckpointForkStartedEvent",
+    "CheckpointPrunedEvent",
+    "CheckpointRestoreBaseEvent",
+    "CheckpointRestoreCompletedEvent",
+    "CheckpointRestoreFailedEvent",
+    "CheckpointRestoreStartedEvent",
+    "CheckpointStartedEvent",
     "CircularDependencyError",
+    "ConversationMessageAddedEvent",
+    "ConversationRouteSelectedEvent",
     "CrewKickoffCompletedEvent",
     "CrewKickoffFailedEvent",
     "CrewKickoffStartedEvent",
@@ -214,42 +370,3 @@ __all__ = [
     "_extension_exports",
     "crewai_event_bus",
 ]
-
-_AGENT_EVENT_MAPPING = {
-    "AgentEvaluationCompletedEvent": "crewai.events.types.agent_events",
-    "AgentEvaluationFailedEvent": "crewai.events.types.agent_events",
-    "AgentEvaluationStartedEvent": "crewai.events.types.agent_events",
-    "AgentExecutionCompletedEvent": "crewai.events.types.agent_events",
-    "AgentExecutionErrorEvent": "crewai.events.types.agent_events",
-    "AgentExecutionStartedEvent": "crewai.events.types.agent_events",
-    "LiteAgentExecutionCompletedEvent": "crewai.events.types.agent_events",
-    "LiteAgentExecutionErrorEvent": "crewai.events.types.agent_events",
-    "LiteAgentExecutionStartedEvent": "crewai.events.types.agent_events",
-}
-
-_extension_exports: dict[str, Any] = {}
-
-
-def __getattr__(name: str) -> Any:
-    """Lazy import for agent events and registered extensions."""
-    if name in _AGENT_EVENT_MAPPING:
-        import importlib
-
-        module_path = _AGENT_EVENT_MAPPING[name]
-        module = importlib.import_module(module_path)
-        return getattr(module, name)
-
-    if name in _extension_exports:
-        import importlib
-
-        value = _extension_exports[name]
-        if isinstance(value, str):
-            module_path, _, attr_name = value.rpartition(".")
-            if module_path:
-                module = importlib.import_module(module_path)
-                return getattr(module, attr_name)
-            return importlib.import_module(value)
-        return value
-
-    msg = f"module {__name__!r} has no attribute {name!r}"
-    raise AttributeError(msg)

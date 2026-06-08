@@ -1,13 +1,13 @@
 """Trace collection listener for orchestrating trace collection."""
 
+from datetime import datetime, timezone
 import os
 from typing import Any, ClassVar
 import uuid
 
 from typing_extensions import Self
 
-from crewai.cli.authentication.token import AuthError, get_auth_token
-from crewai.cli.version import get_crewai_version
+from crewai.auth.token import AuthError, get_auth_token
 from crewai.events.base_event_listener import BaseEventListener
 from crewai.events.base_events import BaseEvent
 from crewai.events.event_bus import CrewAIEventsBus
@@ -61,13 +61,9 @@ from crewai.events.types.crew_events import (
     CrewKickoffFailedEvent,
     CrewKickoffStartedEvent,
 )
-from crewai.events.types.env_events import (
-    CCEnvEvent,
-    CodexEnvEvent,
-    CursorEnvEvent,
-    DefaultEnvEvent,
-)
 from crewai.events.types.flow_events import (
+    ConversationMessageAddedEvent,
+    ConversationRouteSelectedEvent,
     FlowCreatedEvent,
     FlowFinishedEvent,
     FlowPlotEvent,
@@ -115,6 +111,13 @@ from crewai.events.types.reasoning_events import (
     AgentReasoningFailedEvent,
     AgentReasoningStartedEvent,
 )
+from crewai.events.types.skill_events import (
+    SkillActivatedEvent,
+    SkillDiscoveryCompletedEvent,
+    SkillDiscoveryStartedEvent,
+    SkillLoadFailedEvent,
+    SkillLoadedEvent,
+)
 from crewai.events.types.system_events import SignalEvent, on_signal
 from crewai.events.types.task_events import (
     TaskCompletedEvent,
@@ -127,6 +130,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageStartedEvent,
 )
 from crewai.events.utils.console_formatter import ConsoleFormatter
+from crewai.version import get_crewai_version
 
 
 class TraceCollectionListener(BaseEventListener):
@@ -212,7 +216,6 @@ class TraceCollectionListener(BaseEventListener):
             self._listeners_setup = True
             return
 
-        self._register_env_event_handlers(crewai_event_bus)
         self._register_flow_event_handlers(crewai_event_bus)
         self._register_context_event_handlers(crewai_event_bus)
         self._register_action_event_handlers(crewai_event_bus)
@@ -220,25 +223,6 @@ class TraceCollectionListener(BaseEventListener):
         self._register_system_event_handlers(crewai_event_bus)
 
         self._listeners_setup = True
-
-    def _register_env_event_handlers(self, event_bus: CrewAIEventsBus) -> None:
-        """Register handlers for environment context events."""
-
-        @event_bus.on(CCEnvEvent)
-        def on_cc_env(source: Any, event: CCEnvEvent) -> None:
-            self._handle_action_event("cc_env", source, event)
-
-        @event_bus.on(CodexEnvEvent)
-        def on_codex_env(source: Any, event: CodexEnvEvent) -> None:
-            self._handle_action_event("codex_env", source, event)
-
-        @event_bus.on(CursorEnvEvent)
-        def on_cursor_env(source: Any, event: CursorEnvEvent) -> None:
-            self._handle_action_event("cursor_env", source, event)
-
-        @event_bus.on(DefaultEnvEvent)
-        def on_default_env(source: Any, event: DefaultEnvEvent) -> None:
-            self._handle_action_event("default_env", source, event)
 
     def _register_flow_event_handlers(self, event_bus: CrewAIEventsBus) -> None:
         """Register handlers for flow events."""
@@ -249,11 +233,14 @@ class TraceCollectionListener(BaseEventListener):
 
         @event_bus.on(FlowStartedEvent)
         def on_flow_started(source: Any, event: FlowStartedEvent) -> None:
-            # Always call _initialize_flow_batch to claim ownership.
-            # If batch was already initialized by a concurrent action event
-            # (race condition), initialize_batch() returns early but
-            # batch_owner_type is still correctly set to "flow".
-            self._initialize_flow_batch(source, event)
+            # Only the first execution to open the session batch owns it. A flow
+            # that starts while a batch already exists is nested -- inside a crew
+            # (e.g. an agent's Flow-based executor), a conversational Flow, or a
+            # parent flow -- and must NOT re-claim ownership. Re-claiming would
+            # mark batch_owner_type="flow" and cause the nested flow to finalize
+            # the parent's batch prematurely when it completes.
+            if not self.batch_manager.is_batch_initialized():
+                self._initialize_flow_batch(source, event)
             self._handle_trace_event("flow_started", source, event)
 
         @event_bus.on(MethodExecutionStartedEvent)
@@ -270,6 +257,18 @@ class TraceCollectionListener(BaseEventListener):
         def on_method_failed(source: Any, event: MethodExecutionFailedEvent) -> None:
             self._handle_trace_event("method_execution_failed", source, event)
 
+        @event_bus.on(ConversationMessageAddedEvent)
+        def on_conversation_message_added(
+            source: Any, event: ConversationMessageAddedEvent
+        ) -> None:
+            self._handle_action_event("conversation_message_added", source, event)
+
+        @event_bus.on(ConversationRouteSelectedEvent)
+        def on_conversation_route_selected(
+            source: Any, event: ConversationRouteSelectedEvent
+        ) -> None:
+            self._handle_action_event("conversation_route_selected", source, event)
+
         @event_bus.on(FlowFinishedEvent)
         def on_flow_finished(source: Any, event: FlowFinishedEvent) -> None:
             self._handle_trace_event("flow_finished", source, event)
@@ -283,18 +282,20 @@ class TraceCollectionListener(BaseEventListener):
 
         @event_bus.on(CrewKickoffStartedEvent)
         def on_crew_started(source: Any, event: CrewKickoffStartedEvent) -> None:
-            if self.batch_manager.batch_owner_type != "flow":
-                # Always call _initialize_crew_batch to claim ownership.
-                # If batch was already initialized by a concurrent action event
-                # (race condition with DefaultEnvEvent), initialize_batch() returns
-                # early but batch_owner_type is still correctly set to "crew".
-                # Skip only when a parent flow already owns the batch.
+            # Nested crew inside Flow.kickoff: never claim an existing flow session batch.
+            if not self._nested_in_flow_execution() and (
+                not self.batch_manager.is_batch_initialized()
+            ):
                 self._initialize_crew_batch(source, event)
             self._handle_trace_event("crew_kickoff_started", source, event)
 
         @event_bus.on(CrewKickoffCompletedEvent)
         def on_crew_completed(source: Any, event: CrewKickoffCompletedEvent) -> None:
             self._handle_trace_event("crew_kickoff_completed", source, event)
+            if self.batch_manager.defer_session_finalization:
+                return
+            if self._nested_in_flow_execution():
+                return
             if self.batch_manager.batch_owner_type == "crew":
                 if self.first_time_handler.is_first_time:
                     self.first_time_handler.mark_events_collected()
@@ -305,10 +306,14 @@ class TraceCollectionListener(BaseEventListener):
         @event_bus.on(CrewKickoffFailedEvent)
         def on_crew_failed(source: Any, event: CrewKickoffFailedEvent) -> None:
             self._handle_trace_event("crew_kickoff_failed", source, event)
+            if self.batch_manager.defer_session_finalization:
+                return
+            if self._nested_in_flow_execution():
+                return
             if self.first_time_handler.is_first_time:
                 self.first_time_handler.mark_events_collected()
                 self.first_time_handler.handle_execution_completion()
-            else:
+            elif self.batch_manager.batch_owner_type == "crew":
                 self.batch_manager.finalize_batch()
 
         @event_bus.on(TaskStartedEvent)
@@ -493,7 +498,6 @@ class TraceCollectionListener(BaseEventListener):
         ) -> None:
             self._handle_action_event("agent_reasoning_failed", source, event)
 
-        # Observation events (Plan-and-Execute)
         @event_bus.on(StepObservationStartedEvent)
         def on_step_observation_started(
             source: Any, event: StepObservationStartedEvent
@@ -555,6 +559,30 @@ class TraceCollectionListener(BaseEventListener):
             source: Any, event: KnowledgeQueryFailedEvent
         ) -> None:
             self._handle_action_event("knowledge_query_failed", source, event)
+
+        @event_bus.on(SkillDiscoveryStartedEvent)
+        def on_skill_discovery_started(
+            source: Any, event: SkillDiscoveryStartedEvent
+        ) -> None:
+            self._handle_action_event("skill_discovery_started", source, event)
+
+        @event_bus.on(SkillDiscoveryCompletedEvent)
+        def on_skill_discovery_completed(
+            source: Any, event: SkillDiscoveryCompletedEvent
+        ) -> None:
+            self._handle_action_event("skill_discovery_completed", source, event)
+
+        @event_bus.on(SkillLoadedEvent)
+        def on_skill_loaded(source: Any, event: SkillLoadedEvent) -> None:
+            self._handle_action_event("skill_loaded", source, event)
+
+        @event_bus.on(SkillActivatedEvent)
+        def on_skill_activated(source: Any, event: SkillActivatedEvent) -> None:
+            self._handle_action_event("skill_activated", source, event)
+
+        @event_bus.on(SkillLoadFailedEvent)
+        def on_skill_load_failed(source: Any, event: SkillLoadFailedEvent) -> None:
+            self._handle_action_event("skill_load_failed", source, event)
 
     def _register_a2a_event_handlers(self, event_bus: CrewAIEventsBus) -> None:
         """Register handlers for A2A (Agent-to-Agent) events."""
@@ -703,8 +731,32 @@ class TraceCollectionListener(BaseEventListener):
         @on_signal
         def handle_signal(source: Any, event: SignalEvent) -> None:
             """Flush trace batch on system signals to prevent data loss."""
-            if self.batch_manager.is_batch_initialized():
-                self.batch_manager.finalize_batch()
+            if not self.batch_manager.is_batch_initialized():
+                return
+            # Multi-turn flows defer batch finalization to finalize_session_traces().
+            if self.batch_manager.defer_session_finalization:
+                return
+            self.batch_manager.finalize_batch()
+
+    @staticmethod
+    def _is_inside_active_flow_context() -> bool:
+        """True when ``kickoff_async`` has set ``current_flow_id`` (nested crew)."""
+        from crewai.flow.flow_context import current_flow_id
+
+        return current_flow_id.get() is not None
+
+    def _flow_owns_trace_batch(self) -> bool:
+        """True when an in-flight conversational flow already owns the trace batch."""
+        if self.batch_manager.batch_owner_type == "flow":
+            return True
+        batch = self.batch_manager.current_batch
+        if batch is not None:
+            return batch.execution_metadata.get("execution_type") == "flow"
+        return False
+
+    def _nested_in_flow_execution(self) -> bool:
+        """True when a crew runs inside a flow session (context or batch ownership)."""
+        return self._is_inside_active_flow_context() or self._flow_owns_trace_batch()
 
     def _initialize_crew_batch(self, source: Any, event: BaseEvent) -> None:
         """Initialize trace batch.
@@ -724,6 +776,33 @@ class TraceCollectionListener(BaseEventListener):
         self.batch_manager.batch_owner_id = getattr(source, "id", str(uuid.uuid4()))
 
         self._initialize_batch(user_context, execution_metadata)
+
+    def _try_initialize_flow_batch_from_context(self, event: Any) -> bool:
+        """Claim a flow trace batch when an action event fires inside kickoff.
+
+        When ``suppress_flow_events=True``, console panels are hidden but
+        ``FlowStartedEvent`` and method lifecycle events still emit; if no
+        batch exists yet, LLM/tool events must not fall back to implicit crew
+        batches.
+        """
+        from crewai.flow.flow_context import current_flow_id, current_flow_name
+
+        flow_id = current_flow_id.get()
+        if flow_id is None:
+            return False
+
+        started_at = getattr(event, "timestamp", None) or datetime.now(timezone.utc)
+        user_context = self._get_user_context()
+        execution_metadata = {
+            "flow_name": current_flow_name.get() or "Unknown Flow",
+            "execution_start": started_at,
+            "crewai_version": get_crewai_version(),
+            "execution_type": "flow",
+        }
+        self.batch_manager.batch_owner_type = "flow"
+        self.batch_manager.batch_owner_id = flow_id
+        self._initialize_batch(user_context, execution_metadata)
+        return True
 
     def _initialize_flow_batch(self, source: Any, event: BaseEvent) -> None:
         """Initialize trace batch for Flow execution.
@@ -789,12 +868,19 @@ class TraceCollectionListener(BaseEventListener):
             event: Event object.
         """
         if not self.batch_manager.is_batch_initialized():
-            user_context = self._get_user_context()
-            execution_metadata = {
-                "crew_name": getattr(source, "name", "Unknown Crew"),
-                "crewai_version": get_crewai_version(),
-            }
-            self._initialize_batch(user_context, execution_metadata)
+            if self._try_initialize_flow_batch_from_context(event):
+                pass
+            elif not self._nested_in_flow_execution():
+                user_context = self._get_user_context()
+                execution_metadata = {
+                    "crew_name": getattr(source, "name", "Unknown Crew"),
+                    "crewai_version": get_crewai_version(),
+                }
+                self.batch_manager.batch_owner_type = "crew"
+                self.batch_manager.batch_owner_id = getattr(
+                    source, "id", str(uuid.uuid4())
+                )
+                self._initialize_batch(user_context, execution_metadata)
 
         self.batch_manager.begin_event_processing()
         try:

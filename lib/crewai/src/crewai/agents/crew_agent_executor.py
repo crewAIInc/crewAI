@@ -14,7 +14,9 @@ import contextvars
 import inspect
 import logging
 from typing import TYPE_CHECKING, Annotated, Any, Literal, cast
+import warnings
 
+from crewai_core.printer import PRINTER
 from pydantic import (
     AliasChoices,
     BaseModel,
@@ -49,6 +51,7 @@ from crewai.hooks.tool_hooks import (
 )
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.agent_utils import (
+    _llm_stop_words_applied,
     aget_llm_response,
     convert_tools_to_openai_schema,
     enforce_rpm_limit,
@@ -67,7 +70,7 @@ from crewai.utilities.agent_utils import (
 )
 from crewai.utilities.constants import TRAINING_DATA_FILE
 from crewai.utilities.file_store import aget_all_files, get_all_files
-from crewai.utilities.i18n import I18N, get_i18n
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
 from crewai.utilities.tool_utils import (
@@ -134,22 +137,19 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
     model_config = ConfigDict(arbitrary_types_allowed=True, populate_by_name=True)
 
-    def __init__(self, i18n: I18N | None = None, **kwargs: Any) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        self._i18n = i18n or get_i18n()
+        warnings.warn(
+            "CrewAgentExecutor is deprecated and will be removed in a future release.\n"
+            "Agents inside Crews now use AgentExecutor (crewai.experimental.AgentExecutor) by default.\n"
+            "To suppress this warning, migrate to AgentExecutor.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         if not self.before_llm_call_hooks:
             self.before_llm_call_hooks.extend(get_before_llm_call_hooks())
         if not self.after_llm_call_hooks:
             self.after_llm_call_hooks.extend(get_after_llm_call_hooks())
-        if self.llm and not isinstance(self.llm, str):
-            existing_stop = getattr(self.llm, "stop", [])
-            self.llm.stop = list(
-                set(
-                    existing_stop + self.stop
-                    if isinstance(existing_stop, list)
-                    else self.stop
-                )
-            )
 
     @property
     def use_stop_words(self) -> bool:
@@ -174,6 +174,8 @@ class CrewAgentExecutor(BaseAgentExecutor):
         if provider.setup_messages(cast(ExecutorContext, cast(object, self))):
             return
 
+        from crewai.llms.cache import mark_cache_breakpoint
+
         if self.prompt is not None and "system" in self.prompt:
             system_prompt = self._format_prompt(
                 cast(str, self.prompt.get("system", "")), inputs
@@ -181,11 +183,22 @@ class CrewAgentExecutor(BaseAgentExecutor):
             user_prompt = self._format_prompt(
                 cast(str, self.prompt.get("user", "")), inputs
             )
-            self.messages.append(format_message_for_llm(system_prompt, role="system"))
-            self.messages.append(format_message_for_llm(user_prompt))
+            # Cache breakpoints: end-of-system caches the per-agent stable
+            # prefix; end-of-user caches the per-task stable prefix across
+            # ReAct-loop iterations.
+            self.messages.append(
+                mark_cache_breakpoint(
+                    format_message_for_llm(system_prompt, role="system")
+                )
+            )
+            self.messages.append(
+                mark_cache_breakpoint(format_message_for_llm(user_prompt))
+            )
         elif self.prompt is not None:
             user_prompt = self._format_prompt(self.prompt.get("prompt", ""), inputs)
-            self.messages.append(format_message_for_llm(user_prompt))
+            self.messages.append(
+                mark_cache_breakpoint(format_message_for_llm(user_prompt))
+            )
 
         provider.post_setup_messages(cast(ExecutorContext, cast(object, self)))
 
@@ -201,6 +214,8 @@ class CrewAgentExecutor(BaseAgentExecutor):
         if self._resuming:
             self._resuming = False
         else:
+            self.messages = []
+            self.iterations = 0
             self._setup_messages(inputs)
             self._inject_multimodal_files(inputs)
 
@@ -208,21 +223,22 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
         self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
 
-        try:
-            formatted_answer = self._invoke_loop()
-        except AssertionError:
-            if self.agent.verbose:
-                self._printer.print(
-                    content="Agent failed to reach a final answer. This is likely a bug - please report it.",
-                    color="red",
-                )
-            raise
-        except Exception as e:
-            handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
-            raise
+        with _llm_stop_words_applied(self.llm, self):
+            try:
+                formatted_answer = self._invoke_loop()
+            except AssertionError:
+                if self.agent.verbose:
+                    PRINTER.print(
+                        content="Agent failed to reach a final answer. This is likely a bug - please report it.",
+                        color="red",
+                    )
+                raise
+            except Exception as e:
+                handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
+                raise
 
-        if self.ask_for_human_input:
-            formatted_answer = self._handle_human_feedback(formatted_answer)
+            if self.ask_for_human_input:
+                formatted_answer = self._handle_human_feedback(formatted_answer)
 
         self._save_to_memory(formatted_answer)
         return {"output": formatted_answer.output}
@@ -296,7 +312,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
         Returns:
             Final answer from the agent.
         """
-        # Check if model supports native function calling
         use_native_tools = (
             hasattr(self.llm, "supports_function_calling")
             and callable(getattr(self.llm, "supports_function_calling", None))
@@ -307,7 +322,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
         if use_native_tools:
             return self._invoke_loop_native_tools()
 
-        # Fall back to ReAct text-based pattern
         return self._invoke_loop_react()
 
     def _invoke_loop_react(self) -> AgentFinish:
@@ -326,8 +340,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 if has_reached_max_iterations(self.iterations, self.max_iter):
                     formatted_answer = handle_max_iterations_exceeded(
                         formatted_answer,
-                        printer=self._printer,
-                        i18n=self._i18n,
+                        printer=PRINTER,
                         messages=self.messages,
                         llm=cast("BaseLLM", self.llm),
                         callbacks=self.callbacks,
@@ -337,19 +350,22 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
+                effective_response_model = (
+                    None if self.original_tools else self.response_model
+                )
+
                 answer = get_llm_response(
                     llm=cast("BaseLLM", self.llm),
                     messages=self.messages,
                     callbacks=self.callbacks,
-                    printer=self._printer,
+                    printer=PRINTER,
                     from_task=self.task,
                     from_agent=self.agent,
-                    response_model=self.response_model,
+                    response_model=effective_response_model,
                     executor_context=self,
                     verbose=self.agent.verbose,
                 )
-                # breakpoint()
-                if self.response_model is not None:
+                if effective_response_model is not None:
                     try:
                         if isinstance(answer, BaseModel):
                             output_json = answer.model_dump_json()
@@ -366,7 +382,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
                                 text=answer,
                             )
                     except ValidationError:
-                        # If validation fails, convert BaseModel to JSON string for parsing
                         answer_str = (
                             answer.model_dump_json()
                             if isinstance(answer, BaseModel)
@@ -376,14 +391,12 @@ class CrewAgentExecutor(BaseAgentExecutor):
                             answer_str, self.use_stop_words
                         )  # type: ignore[assignment]
                 else:
-                    # When no response_model, answer should be a string
                     answer_str = str(answer) if not isinstance(answer, str) else answer
                     formatted_answer = process_llm_response(
                         answer_str, self.use_stop_words
                     )  # type: ignore[assignment]
 
                 if isinstance(formatted_answer, AgentAction):
-                    # Extract agent fingerprint if available
                     fingerprint_context = {}
                     if (
                         self.agent
@@ -400,7 +413,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         agent_action=formatted_answer,
                         fingerprint_context=fingerprint_context,
                         tools=self.tools,
-                        i18n=self._i18n,
                         agent_key=self.agent.key if self.agent else None,
                         agent_role=self.agent.role if self.agent else None,
                         tools_handler=self.tools_handler,
@@ -422,34 +434,28 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     messages=self.messages,
                     iterations=self.iterations,
                     log_error_after=self.log_error_after,
-                    printer=self._printer,
+                    printer=PRINTER,
                     verbose=self.agent.verbose,
                 )
 
             except Exception as e:
                 if e.__class__.__module__.startswith("litellm"):
-                    # Do not retry on litellm errors
                     raise e
                 if is_context_length_exceeded(e):
                     handle_context_length(
                         respect_context_window=self.respect_context_window,
-                        printer=self._printer,
+                        printer=PRINTER,
                         messages=self.messages,
                         llm=cast("BaseLLM", self.llm),
                         callbacks=self.callbacks,
-                        i18n=self._i18n,
                         verbose=self.agent.verbose,
                     )
                     continue
-                handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
+                handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
                 raise e
             finally:
                 self.iterations += 1
 
-        # During the invoke loop, formatted_answer alternates between AgentAction
-        # (when the agent is using tools) and eventually becomes AgentFinish
-        # (when the agent reaches a final answer). This check confirms we've
-        # reached a final answer and helps type checking understand this transition.
         if not isinstance(formatted_answer, AgentFinish):
             raise RuntimeError(
                 "Agent execution ended without reaching a final answer. "
@@ -468,9 +474,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
         Returns:
             Final answer from the agent.
         """
-        # Convert tools to OpenAI schema format
         if not self.original_tools:
-            # No tools available, fall back to simple LLM call
             return self._invoke_loop_native_no_tools()
 
         openai_tools, available_functions, self._tool_name_mapping = (
@@ -482,8 +486,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 if has_reached_max_iterations(self.iterations, self.max_iter):
                     formatted_answer = handle_max_iterations_exceeded(
                         None,
-                        printer=self._printer,
-                        i18n=self._i18n,
+                        printer=PRINTER,
                         messages=self.messages,
                         llm=cast("BaseLLM", self.llm),
                         callbacks=self.callbacks,
@@ -494,50 +497,40 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
-                # Call LLM with native tools
-                # Pass available_functions=None so the LLM returns tool_calls
-                # without executing them. The executor handles tool execution
-                # via _handle_native_tool_calls to properly manage message history.
                 answer = get_llm_response(
                     llm=cast("BaseLLM", self.llm),
                     messages=self.messages,
                     callbacks=self.callbacks,
-                    printer=self._printer,
+                    printer=PRINTER,
                     tools=openai_tools,
                     available_functions=None,
                     from_task=self.task,
                     from_agent=self.agent,
-                    response_model=self.response_model,
+                    response_model=None,
                     executor_context=self,
                     verbose=self.agent.verbose,
                 )
 
-                # Check if the response is a list of tool calls
                 if (
                     isinstance(answer, list)
                     and answer
                     and self._is_tool_call_list(answer)
                 ):
-                    # Handle tool calls - execute tools and add results to messages
                     tool_finish = self._handle_native_tool_calls(
                         answer, available_functions
                     )
-                    # If tool has result_as_answer=True, return immediately
                     if tool_finish is not None:
                         return tool_finish
-                    # Continue loop to let LLM analyze results and decide next steps
                     continue
 
-                # Text or other response - handle as potential final answer
                 if isinstance(answer, str):
-                    # Text response - this is the final answer
                     formatted_answer = AgentFinish(
                         thought="",
                         output=answer,
                         text=answer,
                     )
                     self._invoke_step_callback(formatted_answer)
-                    self._append_message(answer)  # Save final answer to messages
+                    self._append_message(answer)
                     self._show_logs(formatted_answer)
                     return formatted_answer
 
@@ -553,14 +546,13 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     self._show_logs(formatted_answer)
                     return formatted_answer
 
-                # Unexpected response type, treat as final answer
                 formatted_answer = AgentFinish(
                     thought="",
                     output=str(answer),
                     text=str(answer),
                 )
                 self._invoke_step_callback(formatted_answer)
-                self._append_message(str(answer))  # Save final answer to messages
+                self._append_message(str(answer))
                 self._show_logs(formatted_answer)
                 return formatted_answer
 
@@ -570,15 +562,14 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 if is_context_length_exceeded(e):
                     handle_context_length(
                         respect_context_window=self.respect_context_window,
-                        printer=self._printer,
+                        printer=PRINTER,
                         messages=self.messages,
                         llm=cast("BaseLLM", self.llm),
                         callbacks=self.callbacks,
-                        i18n=self._i18n,
                         verbose=self.agent.verbose,
                     )
                     continue
-                handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
+                handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
                 raise e
             finally:
                 self.iterations += 1
@@ -595,7 +586,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
             llm=cast("BaseLLM", self.llm),
             messages=self.messages,
             callbacks=self.callbacks,
-            printer=self._printer,
+            printer=PRINTER,
             from_task=self.task,
             from_agent=self.agent,
             response_model=self.response_model,
@@ -632,12 +623,10 @@ class CrewAgentExecutor(BaseAgentExecutor):
         if not response:
             return False
         first_item = response[0]
-        # OpenAI-style
         if hasattr(first_item, "function") or (
             isinstance(first_item, dict) and "function" in first_item
         ):
             return True
-        # Anthropic-style (object with attributes)
         if (
             hasattr(first_item, "type")
             and getattr(first_item, "type", None) == "tool_use"
@@ -645,14 +634,12 @@ class CrewAgentExecutor(BaseAgentExecutor):
             return True
         if hasattr(first_item, "name") and hasattr(first_item, "input"):
             return True
-        # Bedrock-style (dict with name and input keys)
         if (
             isinstance(first_item, dict)
             and "name" in first_item
             and "input" in first_item
         ):
             return True
-        # Gemini-style
         if hasattr(first_item, "function_call") and first_item.function_call:
             return True
         return False
@@ -711,8 +698,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 for _, func_name, _ in parsed_calls
             )
 
-            # Preserve historical sequential behavior for result_as_answer batches.
-            # Also avoid threading around usage counters for max_usage_count tools.
             if has_result_as_answer_in_batch or has_max_usage_count_in_batch:
                 logger.debug(
                     "Skipping parallel native execution because batch includes result_as_answer or max_usage_count tool"
@@ -770,7 +755,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     if tool_finish:
                         return tool_finish
 
-                reasoning_prompt = self._i18n.slice("post_tool_reasoning")
+                reasoning_prompt = I18N_DEFAULT.slice("post_tool_reasoning")
                 reasoning_message: LLMMessage = {
                     "role": "user",
                     "content": reasoning_prompt,
@@ -778,7 +763,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 self.messages.append(reasoning_message)
                 return None
 
-        # Sequential behavior: process only first tool call, then force reflection.
         call_id, func_name, func_args = parsed_calls[0]
         self._append_assistant_tool_calls_message([(call_id, func_name, func_args)])
 
@@ -794,7 +778,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
         if tool_finish:
             return tool_finish
 
-        reasoning_prompt = self._i18n.slice("post_tool_reasoning")
+        reasoning_prompt = I18N_DEFAULT.slice("post_tool_reasoning")
         reasoning_message = {
             "role": "user",
             "content": reasoning_prompt,
@@ -832,7 +816,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
             func_name = sanitize_tool_name(
                 func_info.get("name", "") or tool_call.get("name", "")
             )
-            func_args = func_info.get("arguments", "{}") or tool_call.get("input", {})
+            func_args = func_info.get("arguments") or tool_call.get("input", {})
             return call_id, func_name, func_args
         return None
 
@@ -965,7 +949,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     break
         except Exception as hook_error:
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=f"Error in before_tool_call hook: {hook_error}",
                     color="red",
                 )
@@ -1031,7 +1015,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     after_hook_context.tool_result = result
         except Exception as hook_error:
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content=f"Error in after_tool_call hook: {hook_error}",
                     color="red",
                 )
@@ -1078,7 +1062,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
         if self.agent and self.agent.verbose:
             cache_info = " (from cache)" if from_cache else ""
-            self._printer.print(
+            PRINTER.print(
                 content=f"Tool {func_name} executed with result{cache_info}: {result[:200]}...",
                 color="green",
             )
@@ -1107,6 +1091,8 @@ class CrewAgentExecutor(BaseAgentExecutor):
         if self._resuming:
             self._resuming = False
         else:
+            self.messages = []
+            self.iterations = 0
             self._setup_messages(inputs)
             await self._ainject_multimodal_files(inputs)
 
@@ -1114,21 +1100,22 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
         self.ask_for_human_input = bool(inputs.get("ask_for_human_input", False))
 
-        try:
-            formatted_answer = await self._ainvoke_loop()
-        except AssertionError:
-            if self.agent.verbose:
-                self._printer.print(
-                    content="Agent failed to reach a final answer. This is likely a bug - please report it.",
-                    color="red",
-                )
-            raise
-        except Exception as e:
-            handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
-            raise
+        with _llm_stop_words_applied(self.llm, self):
+            try:
+                formatted_answer = await self._ainvoke_loop()
+            except AssertionError:
+                if self.agent.verbose:
+                    PRINTER.print(
+                        content="Agent failed to reach a final answer. This is likely a bug - please report it.",
+                        color="red",
+                    )
+                raise
+            except Exception as e:
+                handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
+                raise
 
-        if self.ask_for_human_input:
-            formatted_answer = await self._ahandle_human_feedback(formatted_answer)
+            if self.ask_for_human_input:
+                formatted_answer = await self._ahandle_human_feedback(formatted_answer)
 
         self._save_to_memory(formatted_answer)
         return {"output": formatted_answer.output}
@@ -1142,7 +1129,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
         Returns:
             Final answer from the agent.
         """
-        # Check if model supports native function calling
         use_native_tools = (
             hasattr(self.llm, "supports_function_calling")
             and callable(getattr(self.llm, "supports_function_calling", None))
@@ -1153,7 +1139,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
         if use_native_tools:
             return await self._ainvoke_loop_native_tools()
 
-        # Fall back to ReAct text-based pattern
         return await self._ainvoke_loop_react()
 
     async def _ainvoke_loop_react(self) -> AgentFinish:
@@ -1168,8 +1153,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 if has_reached_max_iterations(self.iterations, self.max_iter):
                     formatted_answer = handle_max_iterations_exceeded(
                         formatted_answer,
-                        printer=self._printer,
-                        i18n=self._i18n,
+                        printer=PRINTER,
                         messages=self.messages,
                         llm=cast("BaseLLM", self.llm),
                         callbacks=self.callbacks,
@@ -1179,19 +1163,23 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
+                effective_response_model = (
+                    None if self.original_tools else self.response_model
+                )
+
                 answer = await aget_llm_response(
                     llm=cast("BaseLLM", self.llm),
                     messages=self.messages,
                     callbacks=self.callbacks,
-                    printer=self._printer,
+                    printer=PRINTER,
                     from_task=self.task,
                     from_agent=self.agent,
-                    response_model=self.response_model,
+                    response_model=effective_response_model,
                     executor_context=self,
                     verbose=self.agent.verbose,
                 )
 
-                if self.response_model is not None:
+                if effective_response_model is not None:
                     try:
                         if isinstance(answer, BaseModel):
                             output_json = answer.model_dump_json()
@@ -1208,7 +1196,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
                                 text=answer,
                             )
                     except ValidationError:
-                        # If validation fails, convert BaseModel to JSON string for parsing
                         answer_str = (
                             answer.model_dump_json()
                             if isinstance(answer, BaseModel)
@@ -1218,7 +1205,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
                             answer_str, self.use_stop_words
                         )  # type: ignore[assignment]
                 else:
-                    # When no response_model, answer should be a string
                     answer_str = str(answer) if not isinstance(answer, str) else answer
                     formatted_answer = process_llm_response(
                         answer_str, self.use_stop_words
@@ -1241,7 +1227,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
                         agent_action=formatted_answer,
                         fingerprint_context=fingerprint_context,
                         tools=self.tools,
-                        i18n=self._i18n,
                         agent_key=self.agent.key if self.agent else None,
                         agent_role=self.agent.role if self.agent else None,
                         tools_handler=self.tools_handler,
@@ -1263,7 +1248,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     messages=self.messages,
                     iterations=self.iterations,
                     log_error_after=self.log_error_after,
-                    printer=self._printer,
+                    printer=PRINTER,
                     verbose=self.agent.verbose,
                 )
 
@@ -1273,15 +1258,14 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 if is_context_length_exceeded(e):
                     handle_context_length(
                         respect_context_window=self.respect_context_window,
-                        printer=self._printer,
+                        printer=PRINTER,
                         messages=self.messages,
                         llm=cast("BaseLLM", self.llm),
                         callbacks=self.callbacks,
-                        i18n=self._i18n,
                         verbose=self.agent.verbose,
                     )
                     continue
-                handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
+                handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
                 raise e
             finally:
                 self.iterations += 1
@@ -1303,7 +1287,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
         Returns:
             Final answer from the agent.
         """
-        # Convert tools to OpenAI schema format
         if not self.original_tools:
             return await self._ainvoke_loop_native_no_tools()
 
@@ -1316,8 +1299,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 if has_reached_max_iterations(self.iterations, self.max_iter):
                     formatted_answer = handle_max_iterations_exceeded(
                         None,
-                        printer=self._printer,
-                        i18n=self._i18n,
+                        printer=PRINTER,
                         messages=self.messages,
                         llm=cast("BaseLLM", self.llm),
                         callbacks=self.callbacks,
@@ -1328,49 +1310,39 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
                 enforce_rpm_limit(self.request_within_rpm_limit)
 
-                # Call LLM with native tools
-                # Pass available_functions=None so the LLM returns tool_calls
-                # without executing them. The executor handles tool execution
-                # via _handle_native_tool_calls to properly manage message history.
                 answer = await aget_llm_response(
                     llm=cast("BaseLLM", self.llm),
                     messages=self.messages,
                     callbacks=self.callbacks,
-                    printer=self._printer,
+                    printer=PRINTER,
                     tools=openai_tools,
                     available_functions=None,
                     from_task=self.task,
                     from_agent=self.agent,
-                    response_model=self.response_model,
+                    response_model=None,
                     executor_context=self,
                     verbose=self.agent.verbose,
                 )
-                # Check if the response is a list of tool calls
                 if (
                     isinstance(answer, list)
                     and answer
                     and self._is_tool_call_list(answer)
                 ):
-                    # Handle tool calls - execute tools and add results to messages
                     tool_finish = self._handle_native_tool_calls(
                         answer, available_functions
                     )
-                    # If tool has result_as_answer=True, return immediately
                     if tool_finish is not None:
                         return tool_finish
-                    # Continue loop to let LLM analyze results and decide next steps
                     continue
 
-                # Text or other response - handle as potential final answer
                 if isinstance(answer, str):
-                    # Text response - this is the final answer
                     formatted_answer = AgentFinish(
                         thought="",
                         output=answer,
                         text=answer,
                     )
                     await self._ainvoke_step_callback(formatted_answer)
-                    self._append_message(answer)  # Save final answer to messages
+                    self._append_message(answer)
                     self._show_logs(formatted_answer)
                     return formatted_answer
 
@@ -1386,14 +1358,13 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     self._show_logs(formatted_answer)
                     return formatted_answer
 
-                # Unexpected response type, treat as final answer
                 formatted_answer = AgentFinish(
                     thought="",
                     output=str(answer),
                     text=str(answer),
                 )
                 await self._ainvoke_step_callback(formatted_answer)
-                self._append_message(str(answer))  # Save final answer to messages
+                self._append_message(str(answer))
                 self._show_logs(formatted_answer)
                 return formatted_answer
 
@@ -1403,15 +1374,14 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 if is_context_length_exceeded(e):
                     handle_context_length(
                         respect_context_window=self.respect_context_window,
-                        printer=self._printer,
+                        printer=PRINTER,
                         messages=self.messages,
                         llm=cast("BaseLLM", self.llm),
                         callbacks=self.callbacks,
-                        i18n=self._i18n,
                         verbose=self.agent.verbose,
                     )
                     continue
-                handle_unknown_error(self._printer, e, verbose=self.agent.verbose)
+                handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
                 raise e
             finally:
                 self.iterations += 1
@@ -1428,7 +1398,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
             llm=cast("BaseLLM", self.llm),
             messages=self.messages,
             callbacks=self.callbacks,
-            printer=self._printer,
+            printer=PRINTER,
             from_task=self.task,
             from_agent=self.agent,
             response_model=self.response_model,
@@ -1465,8 +1435,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
         Returns:
             Updated action or final answer.
         """
-        # Special case for add_image_tool
-        add_image_tool = self._i18n.tools("add_image")
+        add_image_tool = I18N_DEFAULT.tools("add_image")
         if (
             isinstance(add_image_tool, dict)
             and formatted_answer.tool.casefold().strip()
@@ -1576,7 +1545,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
         if train_iteration is None or not isinstance(train_iteration, int):
             if self.agent.verbose:
-                self._printer.print(
+                PRINTER.print(
                     content="Invalid or missing train iteration. Cannot save training data.",
                     color="red",
                 )
@@ -1585,22 +1554,19 @@ class CrewAgentExecutor(BaseAgentExecutor):
         training_handler = CrewTrainingHandler(TRAINING_DATA_FILE)
         training_data = training_handler.load() or {}
 
-        # Initialize or retrieve agent's training data
         agent_training_data = training_data.get(agent_id, {})
 
         if human_feedback is not None:
-            # Save initial output and human feedback
             agent_training_data[train_iteration] = {
                 "initial_output": result.output,
                 "human_feedback": human_feedback,
             }
         else:
-            # Save improved output
             if train_iteration in agent_training_data:
                 agent_training_data[train_iteration]["improved_output"] = result.output
             else:
                 if self.agent.verbose:
-                    self._printer.print(
+                    PRINTER.print(
                         content=(
                             f"No existing training data for agent {agent_id} and iteration "
                             f"{train_iteration}. Cannot save improved output."
@@ -1609,7 +1575,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     )
                 return
 
-        # Update the training data and save
         training_data[agent_id] = agent_training_data
         training_handler.save(training_data)
 
@@ -1672,5 +1637,5 @@ class CrewAgentExecutor(BaseAgentExecutor):
             Formatted message dict.
         """
         return format_message_for_llm(
-            self._i18n.slice("feedback_instructions").format(feedback=feedback)
+            I18N_DEFAULT.slice("feedback_instructions").format(feedback=feedback)
         )

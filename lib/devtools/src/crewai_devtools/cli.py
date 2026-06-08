@@ -1,5 +1,6 @@
 """Development tools for version bumping and git automation."""
 
+from collections.abc import Mapping
 import os
 from pathlib import Path
 import re
@@ -18,6 +19,7 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.prompt import Confirm
+import tomlkit
 
 from crewai_devtools.docs_check import docs_check
 from crewai_devtools.prompts import RELEASE_NOTES_PROMPT, TRANSLATE_RELEASE_NOTES_PROMPT
@@ -26,6 +28,33 @@ from crewai_devtools.prompts import RELEASE_NOTES_PROMPT, TRANSLATE_RELEASE_NOTE
 load_dotenv()
 
 console = Console()
+
+
+def _resume_hint(message: str) -> None:
+    """Print a boxed resume hint after a failure."""
+    console.print()
+    console.print(
+        Panel(
+            message,
+            title="[bold yellow]How to resume[/bold yellow]",
+            border_style="yellow",
+            padding=(1, 2),
+        )
+    )
+
+
+def _print_release_error(e: BaseException) -> None:
+    """Print a release error with stderr if available."""
+    if isinstance(e, KeyboardInterrupt):
+        raise
+    if isinstance(e, SystemExit):
+        return
+    if isinstance(e, subprocess.CalledProcessError):
+        console.print(f"[red]Error running command:[/red] {e}")
+        if e.stderr:
+            console.print(e.stderr)
+    else:
+        console.print(f"[red]Error:[/red] {e}")
 
 
 def run_command(cmd: list[str], cwd: Path | None = None) -> str:
@@ -126,6 +155,117 @@ def check_git_clean() -> None:
         sys.exit(1)
 
 
+def _branch_exists_local(branch: str, cwd: Path | None = None) -> bool:
+    try:
+        subprocess.run(  # noqa: S603
+            ["git", "show-ref", "--verify", "--quiet", f"refs/heads/{branch}"],  # noqa: S607
+            cwd=cwd,
+            check=True,
+            capture_output=True,
+        )
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+
+def _branch_exists_remote(branch: str, cwd: Path | None = None) -> bool:
+    try:
+        output = run_command(["git", "ls-remote", "--heads", "origin", branch], cwd=cwd)
+        return bool(output.strip())
+    except subprocess.CalledProcessError:
+        return False
+
+
+def _open_pr_url_for_branch(branch: str, cwd: Path | None = None) -> str | None:
+    """Return URL of open PR for branch, or None if no open PR exists."""
+    try:
+        url = run_command(
+            [
+                "gh",
+                "pr",
+                "list",
+                "--head",
+                branch,
+                "--state",
+                "open",
+                "--json",
+                "url",
+                "--jq",
+                ".[0].url // empty",
+            ],
+            cwd=cwd,
+        )
+        return url or None
+    except subprocess.CalledProcessError:
+        return None
+
+
+def create_or_reset_branch(branch: str, cwd: Path | None = None) -> None:
+    """Create ``branch`` from current HEAD, resetting any stale copy.
+
+    If the branch exists locally or on origin, prompts the user to
+    choose between resetting it or aborting. If an open PR exists on
+    the branch, the prompt surfaces the PR URL and includes a
+    close-and-reset option so in-flight work isn't silently clobbered.
+
+    Raises:
+        SystemExit: If the user declines to reset.
+    """
+    local_exists = _branch_exists_local(branch, cwd=cwd)
+    remote_exists = _branch_exists_remote(branch, cwd=cwd)
+    open_pr = _open_pr_url_for_branch(branch, cwd=cwd) if remote_exists else None
+
+    if local_exists or remote_exists:
+        if open_pr:
+            console.print(
+                f"\n[yellow]![/yellow] Branch [bold]{branch}[/bold] already has an open PR: {open_pr}"
+            )
+            prompt = "Close the PR, reset the branch, and continue?"
+        else:
+            where = []
+            if local_exists:
+                where.append("local")
+            if remote_exists:
+                where.append("remote")
+            console.print(
+                f"\n[yellow]![/yellow] Branch [bold]{branch}[/bold] already exists ({', '.join(where)}) with no open PR"
+            )
+            prompt = "Delete it and recreate?"
+
+        if not Confirm.ask(prompt, default=False):
+            console.print("[red]Aborted.[/red]")
+            sys.exit(1)
+
+        if open_pr:
+            console.print(f"Closing PR {open_pr}...")
+            run_command(
+                ["gh", "pr", "close", branch, "--delete-branch"],
+                cwd=cwd,
+            )
+            # `gh pr close --delete-branch` removes the remote branch
+            # and, when checked out, the local branch too.
+            local_exists = _branch_exists_local(branch, cwd=cwd)
+            remote_exists = False
+
+        if local_exists:
+            current = run_command(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=cwd
+            ).strip()
+            if current == branch:
+                console.print(
+                    f"[yellow]![/yellow] Currently on {branch}, switching to main before delete"
+                )
+                run_command(["git", "checkout", "main"], cwd=cwd)
+            console.print(f"[yellow]![/yellow] Deleting local branch {branch}")
+            run_command(["git", "branch", "-D", branch], cwd=cwd)
+
+        if remote_exists:
+            console.print(f"[yellow]![/yellow] Deleting remote branch {branch}")
+            run_command(["git", "push", "origin", "--delete", branch], cwd=cwd)
+
+    run_command(["git", "checkout", "-b", branch], cwd=cwd)
+
+
 def update_version_in_file(file_path: Path, new_version: str) -> bool:
     """Update __version__ attribute in a Python file.
 
@@ -169,24 +309,26 @@ def update_pyproject_version(file_path: Path, new_version: str) -> bool:
     if not file_path.exists():
         return False
 
-    content = file_path.read_text()
-    new_content = re.sub(
-        r'^(version\s*=\s*")[^"]+(")',
-        rf"\g<1>{new_version}\2",
-        content,
-        count=1,
-        flags=re.MULTILINE,
-    )
-    if new_content != content:
-        file_path.write_text(new_content)
-        return True
-    return False
+    doc = tomlkit.parse(file_path.read_text())
+    project = doc.get("project")
+    if project is None:
+        return False
+    old_version = project.get("version")
+    if old_version is None or old_version == new_version:
+        return False
+
+    project["version"] = new_version
+    file_path.write_text(tomlkit.dumps(doc))
+    return True
 
 
 _DEFAULT_WORKSPACE_PACKAGES: Final[list[str]] = [
     "crewai",
-    "crewai-tools",
+    "crewai-cli",
+    "crewai-core",
     "crewai-devtools",
+    "crewai-files",
+    "crewai-tools",
 ]
 
 
@@ -214,8 +356,19 @@ def update_pyproject_dependencies(
 
     workspace_packages = _DEFAULT_WORKSPACE_PACKAGES + (extra_packages or [])
 
+    current_extra: str | None = None
+    extra_header = re.compile(r"^\s*([A-Za-z0-9_-]+)\s*=\s*\[")
+
     for i, line in enumerate(lines):
+        match = extra_header.match(line)
+        if match:
+            current_extra = match.group(1)
+        elif line.strip().startswith("]"):
+            current_extra = None
+
         for pkg in workspace_packages:
+            if pkg == "crewai-files" and current_extra == "file-processing":
+                continue
             if f"{pkg}==" in line:
                 stripped = line.lstrip()
                 indent = line[: len(line) - len(stripped)]
@@ -264,11 +417,9 @@ def add_docs_version(docs_json_path: Path, version: str) -> bool:
         if not versions:
             continue
 
-        # Skip if this version already exists for this language
         if any(v.get("version") == version_label for v in versions):
             continue
 
-        # Find the current default and copy its tabs
         default_version = next(
             (v for v in versions if v.get("default")),
             versions[0],
@@ -280,10 +431,7 @@ def add_docs_version(docs_json_path: Path, version: str) -> bool:
             "tabs": default_version.get("tabs", []),
         }
 
-        # Remove default flag from old default
         default_version.pop("default", None)
-
-        # Insert new version at the beginning
         versions.insert(0, new_version)
         updated = True
 
@@ -473,6 +621,14 @@ def update_changelog(
     return True
 
 
+def _is_crewai_dep(spec: str) -> bool:
+    """Return True if *spec* is a ``crewai`` or ``crewai[...]`` dependency."""
+    if not spec.startswith("crewai"):
+        return False
+    rest = spec[6:]
+    return len(rest) > 0 and rest[0] in ("[", "=", ">", "<", "~", "!")
+
+
 def _pin_crewai_deps(content: str, version: str) -> str:
     """Replace crewai dependency version pins in a pyproject.toml string.
 
@@ -486,15 +642,28 @@ def _pin_crewai_deps(content: str, version: str) -> str:
     Returns:
         Transformed content.
     """
-    return re.sub(
-        r'"crewai(\[tools\])?(==|>=)[^"]*"',
-        lambda m: f'"crewai{(m.group(1) or "")!s}=={version}"',
-        content,
-    )
+    doc = tomlkit.parse(content)
+    for key in ("dependencies", "optional-dependencies"):
+        deps = doc.get("project", {}).get(key)
+        if deps is None:
+            continue
+        dep_lists = deps.values() if isinstance(deps, Mapping) else [deps]
+        for dep_list in dep_lists:
+            for i, dep in enumerate(dep_list):
+                s = str(dep)
+                if not _is_crewai_dep(s) or ("==" not in s and ">=" not in s):
+                    continue
+                extras = s[6 : s.index("]") + 1] if "[" in s[6:7] else ""
+                dep_list[i] = f"crewai{extras}=={version}"
+    return tomlkit.dumps(doc)
 
 
 def update_template_dependencies(templates_dir: Path, new_version: str) -> list[Path]:
     """Update crewai dependency versions in CLI template pyproject.toml files.
+
+    Uses simple string replacement instead of TOML parsing because
+    template files contain Jinja placeholders (``{{folder_name}}``)
+    that are not valid TOML.
 
     Args:
         templates_dir: Path to the CLI templates directory.
@@ -503,10 +672,13 @@ def update_template_dependencies(templates_dir: Path, new_version: str) -> list[
     Returns:
         List of paths that were updated.
     """
+    import re
+
+    pattern = re.compile(r"(crewai(?:\[[\w,]+\])?)(?:==|>=)[^\s\"']+")
     updated = []
     for pyproject in templates_dir.rglob("pyproject.toml"):
         content = pyproject.read_text()
-        new_content = _pin_crewai_deps(content, new_version)
+        new_content = pattern.sub(rf"\1=={new_version}", content)
         if new_content != content:
             pyproject.write_text(new_content)
             updated.append(pyproject)
@@ -572,18 +744,23 @@ def _is_prerelease(version: str) -> bool:
     return any(indicator in v for indicator in _PRERELEASE_INDICATORS)
 
 
-def get_commits_from_last_tag(tag_name: str, version: str) -> tuple[str, str]:
+def get_commits_from_last_tag(
+    tag_name: str, version: str, cwd: Path | None = None
+) -> tuple[str, str]:
     """Get commits from the last tag, excluding current version.
 
     Args:
         tag_name: Current tag name (e.g., "v1.0.0").
         version: Current version (e.g., "1.0.0").
+        cwd: Directory to run git commands in (defaults to current).
 
     Returns:
         Tuple of (commit_range, commits) where commits is newline-separated.
     """
     try:
-        all_tags = run_command(["git", "tag", "--sort=-version:refname"]).split("\n")
+        all_tags = run_command(
+            ["git", "tag", "--sort=-version:refname"], cwd=cwd
+        ).split("\n")
         prev_tags = [t for t in all_tags if t and t != tag_name and t != f"v{version}"]
 
         if not _is_prerelease(version):
@@ -592,38 +769,45 @@ def get_commits_from_last_tag(tag_name: str, version: str) -> tuple[str, str]:
         if prev_tags:
             last_tag = prev_tags[0]
             commit_range = f"{last_tag}..HEAD"
-            commits = run_command(["git", "log", commit_range, "--pretty=format:%s"])
+            commits = run_command(
+                ["git", "log", commit_range, "--pretty=format:%s"], cwd=cwd
+            )
         else:
             commit_range = "HEAD"
-            commits = run_command(["git", "log", "--pretty=format:%s"])
+            commits = run_command(["git", "log", "--pretty=format:%s"], cwd=cwd)
     except subprocess.CalledProcessError:
         commit_range = "HEAD"
-        commits = run_command(["git", "log", "--pretty=format:%s"])
+        commits = run_command(["git", "log", "--pretty=format:%s"], cwd=cwd)
 
     return commit_range, commits
 
 
-def get_github_contributors(commit_range: str) -> list[str]:
+def get_github_contributors(
+    commit_range: str,
+    repo: str = "crewAIInc/crewAI",
+    cwd: Path | None = None,
+) -> list[str]:
     """Get GitHub usernames from commit range using GitHub API.
 
     Args:
         commit_range: Git commit range (e.g., "abc123..HEAD").
+        repo: GitHub repo in ``owner/name`` form to resolve commits against.
+        cwd: Directory to run git commands in (defaults to current).
 
     Returns:
         List of GitHub usernames sorted alphabetically.
     """
     try:
-        # Get GitHub token from gh CLI
         try:
             gh_token = run_command(["gh", "auth", "token"])
         except subprocess.CalledProcessError:
             gh_token = None
 
         g = Github(login_or_token=gh_token) if gh_token else Github()
-        github_repo = g.get_repo("crewAIInc/crewAI")
+        github_repo = g.get_repo(repo)
 
         commit_shas = run_command(
-            ["git", "log", commit_range, "--pretty=format:%H"]
+            ["git", "log", commit_range, "--pretty=format:%H"], cwd=cwd
         ).split("\n")
 
         contributors = set()
@@ -653,11 +837,6 @@ def get_github_contributors(commit_range: str) -> list[str]:
             f"[yellow]Warning:[/yellow] Could not fetch GitHub contributors: {e}"
         )
         return []
-
-
-# ---------------------------------------------------------------------------
-# Shared workflow helpers
-# ---------------------------------------------------------------------------
 
 
 def _poll_pr_until_merged(
@@ -739,8 +918,7 @@ def _update_all_versions(
             "[yellow]Warning:[/yellow] No __version__ attributes found to update"
         )
 
-    # Update CLI template pyproject.toml files
-    templates_dir = lib_dir / "crewai" / "src" / "crewai" / "cli" / "templates"
+    templates_dir = lib_dir / "cli" / "src" / "crewai_cli" / "templates"
     if templates_dir.exists():
         if dry_run:
             for tpl in templates_dir.rglob("pyproject.toml"):
@@ -769,8 +947,25 @@ def _generate_release_notes(
     version: str,
     tag_name: str,
     no_edit: bool,
+    cwd: Path | None = None,
+    gh_repo: str = "crewAIInc/crewAI",
+    openai_client: OpenAI | None = None,
+    bump_already_done: bool = True,
 ) -> tuple[str, OpenAI, bool]:
     """Generate, display, and optionally edit release notes.
+
+    Args:
+        version: Version being released.
+        tag_name: Tag name for the release.
+        no_edit: Skip the interactive edit prompt.
+        cwd: Directory to run git commands in (defaults to current).
+        gh_repo: GitHub repo (``owner/name``) for resolving contributors.
+        openai_client: Reuse an existing OpenAI client if provided.
+        bump_already_done: True when the ``feat: bump versions to <version>``
+            commit for the current release is already in history (the real
+            release path). False in previews where no bump exists yet — the
+            most recent bump commit is the *previous* version and must be
+            used as the range start.
 
     Returns:
         Tuple of (release_notes, openai_client, is_prerelease).
@@ -786,7 +981,8 @@ def _generate_release_notes(
                     "log",
                     "--grep=^feat: bump versions to",
                     "--format=%H %s",
-                ]
+                ],
+                cwd=cwd,
             )
             bump_entries = [
                 line for line in prev_bump_output.strip().split("\n") if line.strip()
@@ -794,7 +990,8 @@ def _generate_release_notes(
 
             is_stable = not _is_prerelease(version)
             prev_commit = None
-            for entry in bump_entries[1:]:
+            scan_entries = bump_entries[1:] if bump_already_done else bump_entries
+            for entry in scan_entries:
                 bump_ver = entry.split("feat: bump versions to", 1)[-1].strip()
                 if is_stable and _is_prerelease(bump_ver):
                     continue
@@ -804,7 +1001,7 @@ def _generate_release_notes(
             if prev_commit:
                 commit_range = f"{prev_commit}..HEAD"
                 commits = run_command(
-                    ["git", "log", commit_range, "--pretty=format:%s"]
+                    ["git", "log", commit_range, "--pretty=format:%s"], cwd=cwd
                 )
 
                 commit_lines = [
@@ -814,14 +1011,21 @@ def _generate_release_notes(
                 ]
                 commits = "\n".join(commit_lines)
             else:
-                commit_range, commits = get_commits_from_last_tag(tag_name, version)
+                commit_range, commits = get_commits_from_last_tag(
+                    tag_name, version, cwd=cwd
+                )
 
         except subprocess.CalledProcessError:
-            commit_range, commits = get_commits_from_last_tag(tag_name, version)
+            commit_range, commits = get_commits_from_last_tag(
+                tag_name, version, cwd=cwd
+            )
 
-        github_contributors = get_github_contributors(commit_range)
+        github_contributors = get_github_contributors(
+            commit_range, repo=gh_repo, cwd=cwd
+        )
 
-        openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        if openai_client is None:
+            openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
         if commits.strip():
             contributors_section = ""
@@ -941,7 +1145,7 @@ def _update_docs_and_create_pr(
 
         if docs_files_staged:
             docs_branch = f"docs/changelog-v{version}"
-            run_command(["git", "checkout", "-b", docs_branch])
+            create_or_reset_branch(docs_branch)
             for f in docs_files_staged:
                 run_command(["git", "add", f])
             run_command(
@@ -1049,10 +1253,20 @@ _ENTERPRISE_EXTRA_PACKAGES: Final[tuple[str, ...]] = tuple(
     for p in os.getenv("ENTERPRISE_EXTRA_PACKAGES", "").split(",")
     if p.strip()
 )
+_ENTERPRISE_WORKFLOW_PATHS: Final[tuple[str, ...]] = tuple(
+    p.strip()
+    for p in os.getenv("ENTERPRISE_WORKFLOW_PATHS", "").split(",")
+    if p.strip()
+)
 
 
 def _update_enterprise_crewai_dep(pyproject_path: Path, version: str) -> bool:
-    """Update the crewai[tools] pin in an enterprise pyproject.toml.
+    """Update crewai pins in an enterprise pyproject.toml.
+
+    Pins ``crewai`` / ``crewai[extras]`` via ``_pin_crewai_deps`` and
+    additionally pins any dashed ``crewai-*`` packages configured via
+    ``ENTERPRISE_EXTRA_PACKAGES`` (e.g. ``crewai-enterprise``), which
+    ``_pin_crewai_deps`` does not cover.
 
     Args:
         pyproject_path: Path to the pyproject.toml file.
@@ -1064,15 +1278,140 @@ def _update_enterprise_crewai_dep(pyproject_path: Path, version: str) -> bool:
     if not pyproject_path.exists():
         return False
 
+    changed = False
     content = pyproject_path.read_text()
     new_content = _pin_crewai_deps(content, version)
     if new_content != content:
         pyproject_path.write_text(new_content)
-        return True
-    return False
+        changed = True
+
+    if update_pyproject_dependencies(
+        pyproject_path, version, extra_packages=list(_ENTERPRISE_EXTRA_PACKAGES)
+    ):
+        changed = True
+
+    return changed
+
+
+def _update_workflow_crewai_pins(workflow_path: Path, version: str) -> bool:
+    """Rewrite ``crewai[extras]==<old>`` pins in a single workflow file.
+
+    Operates line-by-line on the raw file via ``_repin_crewai_install``
+    so only version numbers change and all formatting is preserved.
+
+    Args:
+        workflow_path: Path to a workflow YAML file.
+        version: New crewai version string.
+
+    Returns:
+        True if the file was modified.
+    """
+    if not workflow_path.exists():
+        return False
+
+    raw = workflow_path.read_text()
+    lines = raw.splitlines(keepends=True)
+    changed = False
+    for i, line in enumerate(lines):
+        if "crewai[" not in line:
+            continue
+        new_line = _repin_crewai_install(line, version)
+        if new_line != line:
+            lines[i] = new_line
+            changed = True
+
+    if not changed:
+        return False
+    workflow_path.write_text("".join(lines))
+    return True
+
+
+def _update_enterprise_workflows(repo_dir: Path, version: str) -> list[Path]:
+    """Update crewai version pins in enterprise CI workflow files.
+
+    Args:
+        repo_dir: Root of the cloned enterprise repo.
+        version: New crewai version string.
+
+    Returns:
+        List of workflow paths that were modified.
+    """
+    updated: list[Path] = []
+    for rel_path in _ENTERPRISE_WORKFLOW_PATHS:
+        workflow = repo_dir / rel_path
+        if _update_workflow_crewai_pins(workflow, version):
+            updated.append(workflow)
+    return updated
+
+
+def _update_repo_workflows_crewai_pins(repo_dir: Path, version: str) -> list[Path]:
+    """Update crewai pins across all GitHub workflow files in a repo.
+
+    Args:
+        repo_dir: Root of the cloned repo.
+        version: New crewai version string.
+
+    Returns:
+        List of workflow paths that were modified.
+    """
+    workflows_dir = repo_dir / ".github" / "workflows"
+    if not workflows_dir.exists():
+        return []
+
+    updated: list[Path] = []
+    for workflow in sorted(workflows_dir.iterdir()):
+        if workflow.suffix not in (".yml", ".yaml"):
+            continue
+        if _update_workflow_crewai_pins(workflow, version):
+            updated.append(workflow)
+    return updated
+
+
+def _repin_crewai_install(run_value: str, version: str) -> str:
+    """Rewrite ``crewai[extras]==old`` pins in a shell command string.
+
+    Splits on the known ``crewai[`` prefix and reconstructs the pin
+    with the new version, avoiding regex.
+
+    Args:
+        run_value: The ``run:`` string from a workflow step.
+        version: New version to pin to.
+
+    Returns:
+        The updated string.
+    """
+    result: list[str] = []
+    remainder = run_value
+    marker = "crewai["
+    while marker in remainder:
+        before, _, after = remainder.partition(marker)
+        result.append(before)
+        bracket_end = after.index("]")
+        extras = after[:bracket_end]
+        rest = after[bracket_end + 1 :]
+        if rest.startswith("=="):
+            ver_start = 2
+            ver_end = ver_start
+            while ver_end < len(rest) and rest[ver_end] not in ('"', "'", " ", "\n"):
+                ver_end += 1
+            result.append(f"crewai[{extras}]=={version}")
+            remainder = rest[ver_end:]
+        else:
+            result.append(f"crewai[{extras}]")
+            remainder = rest
+    result.append(remainder)
+    return "".join(result)
 
 
 _DEPLOYMENT_TEST_REPO: Final[str] = "crewAIInc/crew_deployment_test"
+
+_PUBLISHED_WORKSPACE_PACKAGES: Final[tuple[str, ...]] = (
+    "crewai",
+    "crewai-cli",
+    "crewai-core",
+    "crewai-files",
+    "crewai-tools",
+)
 
 _PYPI_POLL_INTERVAL: Final[int] = 15
 _PYPI_POLL_TIMEOUT: Final[int] = 600
@@ -1081,8 +1420,10 @@ _PYPI_POLL_TIMEOUT: Final[int] = 600
 def _update_deployment_test_repo(version: str, is_prerelease: bool) -> None:
     """Update the deployment test repo to pin the new crewai version.
 
-    Clones the repo, updates the crewai[tools] pin in pyproject.toml,
-    regenerates the lockfile, commits, and pushes directly to main.
+    Clones the repo, updates the crewai[tools] pin in pyproject.toml
+    and any crewai[extras] pins in .github/workflows, regenerates the
+    lockfile, commits to a branch, pushes, opens a PR against main,
+    then polls until the PR is merged (or closed).
 
     Args:
         version: New crewai version string.
@@ -1099,55 +1440,87 @@ def _update_deployment_test_repo(version: str, is_prerelease: bool) -> None:
 
         pyproject = repo_dir / "pyproject.toml"
         content = pyproject.read_text()
-        new_content = re.sub(
-            r'"crewai\[tools\]==[^"]+"',
-            f'"crewai[tools]=={version}"',
-            content,
-        )
-        if new_content == content:
+        new_content = _pin_crewai_deps(content, version)
+        pyproject_changed = new_content != content
+        if pyproject_changed:
+            pyproject.write_text(new_content)
+            console.print(f"[green]✓[/green] Updated crewai[tools] pin to {version}")
+        else:
             console.print(
                 "[yellow]Warning:[/yellow] No crewai[tools] pin found to update"
             )
+
+        updated_workflows = _update_repo_workflows_crewai_pins(repo_dir, version)
+        for wf in updated_workflows:
+            console.print(
+                f"[green]✓[/green] Updated crewai pin in {wf.relative_to(repo_dir)}"
+            )
+
+        if not pyproject_changed and not updated_workflows:
+            console.print("[yellow]Nothing to update; skipping commit and PR.[/yellow]")
             return
-        pyproject.write_text(new_content)
-        console.print(f"[green]✓[/green] Updated crewai[tools] pin to {version}")
 
-        lock_cmd = [
-            "uv",
-            "lock",
-            "--refresh-package",
-            "crewai",
-            "--refresh-package",
-            "crewai-tools",
+        paths_to_add: list[str] = [
+            str(wf.relative_to(repo_dir)) for wf in updated_workflows
         ]
-        if is_prerelease:
-            lock_cmd.append("--prerelease=allow")
 
-        max_retries = 10
-        for attempt in range(1, max_retries + 1):
-            try:
-                run_command(lock_cmd, cwd=repo_dir)
-                break
-            except subprocess.CalledProcessError:
-                if attempt == max_retries:
+        if pyproject_changed:
+            lock_cmd = ["uv", "lock"]
+            for pkg in _PUBLISHED_WORKSPACE_PACKAGES:
+                lock_cmd.extend(["--refresh-package", pkg])
+            if is_prerelease:
+                lock_cmd.append("--prerelease=allow")
+
+            max_retries = 10
+            for attempt in range(1, max_retries + 1):
+                try:
+                    run_command(lock_cmd, cwd=repo_dir)
+                    break
+                except subprocess.CalledProcessError:
+                    if attempt == max_retries:
+                        console.print(
+                            f"[red]Error:[/red] uv lock failed after {max_retries} attempts"
+                        )
+                        raise
                     console.print(
-                        f"[red]Error:[/red] uv lock failed after {max_retries} attempts"
+                        f"[yellow]uv lock failed (attempt {attempt}/{max_retries}),"
+                        f" retrying in {_PYPI_POLL_INTERVAL}s...[/yellow]"
                     )
-                    raise
-                console.print(
-                    f"[yellow]uv lock failed (attempt {attempt}/{max_retries}),"
-                    f" retrying in {_PYPI_POLL_INTERVAL}s...[/yellow]"
-                )
-                time.sleep(_PYPI_POLL_INTERVAL)
-        console.print("[green]✓[/green] Lockfile updated")
+                    time.sleep(_PYPI_POLL_INTERVAL)
+            console.print("[green]✓[/green] Lockfile updated")
+            paths_to_add.extend(["pyproject.toml", "uv.lock"])
 
-        run_command(["git", "add", "pyproject.toml", "uv.lock"], cwd=repo_dir)
+        branch = f"chore/bump-crewai-v{version}"
+        create_or_reset_branch(branch, cwd=repo_dir)
+
+        run_command(["git", "add", *paths_to_add], cwd=repo_dir)
         run_command(
             ["git", "commit", "-m", f"chore: bump crewai to {version}"],
             cwd=repo_dir,
         )
-        run_command(["git", "push"], cwd=repo_dir)
-        console.print(f"[green]✓[/green] Pushed to {_DEPLOYMENT_TEST_REPO}")
+        run_command(["git", "push", "-u", "origin", branch], cwd=repo_dir)
+        console.print(f"[green]✓[/green] Pushed branch {branch}")
+
+        pr_url = run_command(
+            [
+                "gh",
+                "pr",
+                "create",
+                "--base",
+                "main",
+                "--head",
+                branch,
+                "--title",
+                f"chore: bump crewai to {version}",
+                "--body",
+                "",
+            ],
+            cwd=repo_dir,
+        )
+        console.print(f"[green]✓[/green] Opened PR on {_DEPLOYMENT_TEST_REPO}")
+        console.print(f"[cyan]PR URL:[/cyan] {pr_url.strip()}")
+
+        _wait_for_pr_merged(branch, repo_dir)
 
 
 def _wait_for_pypi(package: str, version: str) -> None:
@@ -1179,7 +1552,44 @@ def _wait_for_pypi(package: str, version: str) -> None:
     sys.exit(1)
 
 
-def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> None:
+_PR_MERGE_POLL_INTERVAL: Final[int] = 30
+
+
+def _wait_for_pr_merged(branch: str, cwd: Path) -> None:
+    """Poll a PR until it is merged, exiting on close-without-merge.
+
+    Args:
+        branch: Head branch name of the PR to watch.
+        cwd: Working directory of the cloned repo (so ``gh`` resolves
+            the right remote).
+
+    Raises:
+        SystemExit: If the PR is closed without being merged.
+    """
+    console.print(f"[cyan]Waiting for PR on branch {branch} to be merged...[/cyan]")
+    while True:
+        state = run_command(
+            ["gh", "pr", "view", branch, "--json", "state", "--jq", ".state"],
+            cwd=cwd,
+        ).strip()
+        if state == "MERGED":
+            console.print(f"[green]✓[/green] PR for {branch} merged")
+            return
+        if state == "CLOSED":
+            console.print(
+                f"[red]Error:[/red] PR for {branch} was closed without merging"
+            )
+            sys.exit(1)
+        time.sleep(_PR_MERGE_POLL_INTERVAL)
+
+
+def _release_enterprise(
+    version: str,
+    is_prerelease: bool,
+    dry_run: bool,
+    no_edit: bool = False,
+    openai_client: OpenAI | None = None,
+) -> None:
     """Clone the enterprise repo, bump versions, and create a release PR.
 
     Expects ENTERPRISE_REPO, ENTERPRISE_VERSION_DIRS, and
@@ -1189,6 +1599,8 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
         version: New version string.
         is_prerelease: Whether this is a pre-release version.
         dry_run: Show what would be done without making changes.
+        no_edit: Skip the interactive release-notes edit prompt.
+        openai_client: Reuse OpenAI client from earlier phases if available.
     """
     if (
         not _ENTERPRISE_REPO
@@ -1206,7 +1618,6 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
     )
 
     if dry_run:
-        console.print(f"[dim][DRY RUN][/dim] Would clone {enterprise_repo}")
         for d in _ENTERPRISE_VERSION_DIRS:
             console.print(f"[dim][DRY RUN][/dim] Would update versions in {d}")
         console.print(
@@ -1217,6 +1628,26 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
             "[dim][DRY RUN][/dim] Would create bump PR, wait for merge, "
             "then tag and release"
         )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_dir = Path(tmp) / enterprise_repo.split("/")[-1]
+            console.print(f"\nCloning {enterprise_repo} (read-only preview)...")
+            run_command(["gh", "repo", "clone", enterprise_repo, str(repo_dir)])
+            console.print(f"[green]✓[/green] Cloned {enterprise_repo}")
+
+            _generate_release_notes(
+                version,
+                version,
+                no_edit,
+                cwd=repo_dir,
+                gh_repo=enterprise_repo,
+                openai_client=openai_client,
+                bump_already_done=False,
+            )
+            console.print(
+                "[dim][DRY RUN][/dim] Would tag and create GitHub release "
+                "with the notes above"
+            )
         return
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -1225,7 +1656,6 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
         run_command(["gh", "repo", "clone", enterprise_repo, str(repo_dir)])
         console.print(f"[green]✓[/green] Cloned {enterprise_repo}")
 
-        # --- bump versions ---
         for rel_dir in _ENTERPRISE_VERSION_DIRS:
             pkg_dir = repo_dir / rel_dir
             if not pkg_dir.exists():
@@ -1255,26 +1685,23 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
                         f"{pyproject.relative_to(repo_dir)}"
                     )
 
-        # --- update crewai[tools] pin ---
         enterprise_pyproject = repo_dir / enterprise_dep_path
         if _update_enterprise_crewai_dep(enterprise_pyproject, version):
             console.print(
                 f"[green]✓[/green] Updated crewai[tools] dep in {enterprise_dep_path}"
             )
 
+        for wf in _update_enterprise_workflows(repo_dir, version):
+            console.print(
+                f"[green]✓[/green] Updated crewai pin in {wf.relative_to(repo_dir)}"
+            )
+
         _wait_for_pypi("crewai", version)
 
         console.print("\nSyncing workspace...")
-        sync_cmd = [
-            "uv",
-            "sync",
-            "--refresh-package",
-            "crewai",
-            "--refresh-package",
-            "crewai-tools",
-            "--refresh-package",
-            "crewai-files",
-        ]
+        sync_cmd = ["uv", "sync"]
+        for pkg in _PUBLISHED_WORKSPACE_PACKAGES:
+            sync_cmd.extend(["--refresh-package", pkg])
         if is_prerelease:
             sync_cmd.append("--prerelease=allow")
 
@@ -1296,9 +1723,8 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
                 time.sleep(_PYPI_POLL_INTERVAL)
         console.print("[green]✓[/green] Workspace synced")
 
-        # --- branch, commit, push, PR ---
         branch_name = f"feat/bump-version-{version}"
-        run_command(["git", "checkout", "-b", branch_name], cwd=repo_dir)
+        create_or_reset_branch(branch_name, cwd=repo_dir)
         run_command(["git", "add", "."], cwd=repo_dir)
         run_command(
             ["git", "commit", "-m", f"feat: bump versions to {version}"],
@@ -1330,13 +1756,22 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
 
         _poll_pr_until_merged(branch_name, "enterprise bump PR", repo=enterprise_repo)
 
-        # --- tag and release ---
         run_command(["git", "checkout", "main"], cwd=repo_dir)
         run_command(["git", "pull"], cwd=repo_dir)
 
         tag_name = version
+
+        release_notes, _, _ = _generate_release_notes(
+            version,
+            tag_name,
+            no_edit,
+            cwd=repo_dir,
+            gh_repo=enterprise_repo,
+            openai_client=openai_client,
+        )
+
         run_command(
-            ["git", "tag", "-a", tag_name, "-m", f"Release {version}"],
+            ["git", "tag", "-a", tag_name, "-m", release_notes],
             cwd=repo_dir,
         )
         run_command(["git", "push", "origin", tag_name], cwd=repo_dir)
@@ -1352,7 +1787,7 @@ def _release_enterprise(version: str, is_prerelease: bool, dry_run: bool) -> Non
             "--title",
             tag_name,
             "--notes",
-            f"Release {version}",
+            release_notes,
         ]
         if is_prerelease:
             gh_cmd.append("--prerelease")
@@ -1372,7 +1807,6 @@ def _trigger_pypi_publish(tag_name: str, wait: bool = False) -> None:
         tag_name: The release tag to publish.
         wait: Block until the workflow run completes.
     """
-    # Capture the latest run ID before triggering so we can detect the new one
     prev_run_id = ""
     if wait:
         try:
@@ -1447,11 +1881,6 @@ def _trigger_pypi_publish(tag_name: str, wait: bool = False) -> None:
         console.print("[green]✓[/green] PyPI publish workflow completed")
 
 
-# ---------------------------------------------------------------------------
-# CLI commands
-# ---------------------------------------------------------------------------
-
-
 @click.group()
 def cli() -> None:
     """Development tools for version bumping and git automation."""
@@ -1503,17 +1932,19 @@ def bump(version: str, dry_run: bool, no_push: bool, no_commit: bool) -> None:
         for pkg in packages:
             console.print(f"  - {pkg.name}")
 
-        console.print(f"\nUpdating version to {version}...")
-        _update_all_versions(cwd, lib_dir, version, packages, dry_run)
-
         if no_commit:
+            console.print(f"\nUpdating version to {version}...")
+            _update_all_versions(cwd, lib_dir, version, packages, dry_run)
             console.print("\nSkipping git operations (--no-commit flag set)")
         else:
             branch_name = f"feat/bump-version-{version}"
             if not dry_run:
                 console.print(f"\nCreating branch {branch_name}...")
-                run_command(["git", "checkout", "-b", branch_name])
+                create_or_reset_branch(branch_name)
                 console.print("[green]✓[/green] Branch created")
+
+                console.print(f"\nUpdating version to {version}...")
+                _update_all_versions(cwd, lib_dir, version, packages, dry_run)
 
                 console.print("\nCommitting changes...")
                 run_command(["git", "add", "."])
@@ -1530,6 +1961,8 @@ def bump(version: str, dry_run: bool, no_push: bool, no_commit: bool) -> None:
                 console.print(
                     f"[dim][DRY RUN][/dim] Would create branch: {branch_name}"
                 )
+                console.print(f"\nUpdating version to {version}...")
+                _update_all_versions(cwd, lib_dir, version, packages, dry_run)
                 console.print(
                     f"[dim][DRY RUN][/dim] Would commit: feat: bump versions to {version}"
                 )
@@ -1653,7 +2086,7 @@ def tag(dry_run: bool, no_edit: bool) -> None:
             console.print("[green]✓[/green] main branch up to date")
 
         release_notes, openai_client, is_prerelease = _generate_release_notes(
-            version, tag_name, no_edit
+            version, tag_name, no_edit, bump_already_done=True
         )
 
         docs_branch = _update_docs_and_create_pr(
@@ -1719,69 +2152,87 @@ def release(
         skip_enterprise: Skip the enterprise release phase.
         skip_to_enterprise: Skip phases 1 & 2, run only the enterprise release phase.
     """
-    try:
-        check_gh_installed()
+    flags: list[str] = []
+    if no_edit:
+        flags.append("--no-edit")
+    if skip_enterprise:
+        flags.append("--skip-enterprise")
+    flag_suffix = (" " + " ".join(flags)) if flags else ""
+    enterprise_hint = (
+        ""
+        if skip_enterprise
+        else f"\n\nThen release enterprise:\n\n"
+        f"  devtools release {version} --skip-to-enterprise"
+    )
 
-        if skip_enterprise and skip_to_enterprise:
+    check_gh_installed()
+
+    if skip_enterprise and skip_to_enterprise:
+        console.print(
+            "[red]Error:[/red] Cannot use both --skip-enterprise "
+            "and --skip-to-enterprise"
+        )
+        sys.exit(1)
+
+    if not skip_enterprise or skip_to_enterprise:
+        missing: list[str] = []
+        if not _ENTERPRISE_REPO:
+            missing.append("ENTERPRISE_REPO")
+        if not _ENTERPRISE_VERSION_DIRS:
+            missing.append("ENTERPRISE_VERSION_DIRS")
+        if not _ENTERPRISE_CREWAI_DEP_PATH:
+            missing.append("ENTERPRISE_CREWAI_DEP_PATH")
+        if missing:
             console.print(
-                "[red]Error:[/red] Cannot use both --skip-enterprise "
-                "and --skip-to-enterprise"
+                f"[red]Error:[/red] Missing required environment variable(s): "
+                f"{', '.join(missing)}\n"
+                f"Set them or pass --skip-enterprise to skip the enterprise release."
             )
             sys.exit(1)
 
-        if not skip_enterprise or skip_to_enterprise:
-            missing: list[str] = []
-            if not _ENTERPRISE_REPO:
-                missing.append("ENTERPRISE_REPO")
-            if not _ENTERPRISE_VERSION_DIRS:
-                missing.append("ENTERPRISE_VERSION_DIRS")
-            if not _ENTERPRISE_CREWAI_DEP_PATH:
-                missing.append("ENTERPRISE_CREWAI_DEP_PATH")
-            if missing:
-                console.print(
-                    f"[red]Error:[/red] Missing required environment variable(s): "
-                    f"{', '.join(missing)}\n"
-                    f"Set them or pass --skip-enterprise to skip the enterprise release."
-                )
-                sys.exit(1)
+    cwd = Path.cwd()
+    lib_dir = cwd / "lib"
 
-        cwd = Path.cwd()
-        lib_dir = cwd / "lib"
+    is_prerelease = _is_prerelease(version)
 
-        is_prerelease = _is_prerelease(version)
-
-        if skip_to_enterprise:
-            _release_enterprise(version, is_prerelease, dry_run)
-            console.print(
-                f"\n[green]✓[/green] Enterprise release [bold]{version}[/bold] complete!"
+    if skip_to_enterprise:
+        try:
+            _release_enterprise(version, is_prerelease, dry_run, no_edit=no_edit)
+        except BaseException as e:
+            _print_release_error(e)
+            _resume_hint(
+                f"Fix the issue, then re-run:\n\n"
+                f"  devtools release {version} --skip-to-enterprise"
             )
-            return
-
-        if not dry_run:
-            console.print("Checking git status...")
-            check_git_clean()
-            console.print("[green]✓[/green] Working directory is clean")
-        else:
-            console.print("[dim][DRY RUN][/dim] Would check git status")
-
-        packages = get_packages(lib_dir)
-
-        console.print(f"\nFound {len(packages)} package(s) to update:")
-        for pkg in packages:
-            console.print(f"  - {pkg.name}")
-
-        # --- Phase 1: Bump versions ---
+            sys.exit(1)
         console.print(
-            f"\n[bold cyan]Phase 1: Bumping versions to {version}[/bold cyan]"
+            f"\n[green]✓[/green] Enterprise release [bold]{version}[/bold] complete!"
         )
+        return
 
-        _update_all_versions(cwd, lib_dir, version, packages, dry_run)
+    if not dry_run:
+        console.print("Checking git status...")
+        check_git_clean()
+        console.print("[green]✓[/green] Working directory is clean")
+    else:
+        console.print("[dim][DRY RUN][/dim] Would check git status")
 
+    packages = get_packages(lib_dir)
+
+    console.print(f"\nFound {len(packages)} package(s) to update:")
+    for pkg in packages:
+        console.print(f"  - {pkg.name}")
+
+    console.print(f"\n[bold cyan]Phase 1: Bumping versions to {version}[/bold cyan]")
+
+    try:
         branch_name = f"feat/bump-version-{version}"
         if not dry_run:
             console.print(f"\nCreating branch {branch_name}...")
-            run_command(["git", "checkout", "-b", branch_name])
+            create_or_reset_branch(branch_name)
             console.print("[green]✓[/green] Branch created")
+
+            _update_all_versions(cwd, lib_dir, version, packages, dry_run)
 
             console.print("\nCommitting changes...")
             run_command(["git", "add", "."])
@@ -1812,18 +2263,24 @@ def release(
             _poll_pr_until_merged(branch_name, "bump PR")
         else:
             console.print(f"[dim][DRY RUN][/dim] Would create branch: {branch_name}")
+            _update_all_versions(cwd, lib_dir, version, packages, dry_run)
             console.print(
                 f"[dim][DRY RUN][/dim] Would commit: feat: bump versions to {version}"
             )
             console.print(
                 "[dim][DRY RUN][/dim] Would push branch, create PR, and wait for merge"
             )
-
-        # --- Phase 2: Tag and release ---
-        console.print(
-            f"\n[bold cyan]Phase 2: Tagging and releasing {version}[/bold cyan]"
+    except BaseException as e:
+        _print_release_error(e)
+        _resume_hint(
+            f"Phase 1 failed. Fix the issue, then re-run:\n\n"
+            f"  devtools release {version}{flag_suffix}"
         )
+        sys.exit(1)
 
+    console.print(f"\n[bold cyan]Phase 2: Tagging and releasing {version}[/bold cyan]")
+
+    try:
         tag_name = version
 
         if not dry_run:
@@ -1836,7 +2293,7 @@ def release(
             console.print("[green]✓[/green] main branch up to date")
 
         release_notes, openai_client, is_prerelease = _generate_release_notes(
-            version, tag_name, no_edit
+            version, tag_name, no_edit, bump_already_done=not dry_run
         )
 
         docs_branch = _update_docs_and_create_pr(
@@ -1850,22 +2307,63 @@ def release(
 
         if not dry_run:
             _create_tag_and_release(tag_name, release_notes, is_prerelease)
+    except BaseException as e:
+        _print_release_error(e)
+        _resume_hint(
+            "Phase 2 failed before PyPI publish. The bump PR is already merged.\n"
+            "Fix the issue, then resume with:\n\n"
+            "  devtools tag"
+            f"\n\nAfter tagging, publish to PyPI and update deployment test:\n\n"
+            f"  gh workflow run publish.yml -f release_tag={version}"
+            f"{enterprise_hint}"
+        )
+        sys.exit(1)
+
+    try:
+        if not dry_run:
             _trigger_pypi_publish(tag_name, wait=True)
+    except BaseException as e:
+        _print_release_error(e)
+        _resume_hint(
+            f"Phase 2 failed at PyPI publish. Tag and GitHub release already exist.\n"
+            f"Retry PyPI publish manually:\n\n"
+            f"  gh workflow run publish.yml -f release_tag={version}"
+            f"{enterprise_hint}"
+        )
+        sys.exit(1)
+
+    try:
+        if not dry_run:
             _update_deployment_test_repo(version, is_prerelease)
-
-        if not skip_enterprise:
-            _release_enterprise(version, is_prerelease, dry_run)
-
-        console.print(f"\n[green]✓[/green] Release [bold]{version}[/bold] complete!")
-
-    except subprocess.CalledProcessError as e:
-        console.print(f"[red]Error running command:[/red] {e}")
-        if e.stderr:
-            console.print(e.stderr)
+    except BaseException as e:
+        _print_release_error(e)
+        _resume_hint(
+            f"Phase 2 failed updating deployment test repo. "
+            f"Tag, release, and PyPI are done.\n"
+            f"Fix the issue and update {_DEPLOYMENT_TEST_REPO} manually."
+            f"{enterprise_hint}"
+        )
         sys.exit(1)
-    except Exception as e:
-        console.print(f"[red]Error:[/red] {e}")
-        sys.exit(1)
+
+    if not skip_enterprise:
+        try:
+            _release_enterprise(
+                version,
+                is_prerelease,
+                dry_run,
+                no_edit=no_edit,
+                openai_client=openai_client,
+            )
+        except BaseException as e:
+            _print_release_error(e)
+            _resume_hint(
+                f"Phase 3 (enterprise) failed. Phases 1 & 2 completed successfully.\n"
+                f"Fix the issue, then resume:\n\n"
+                f"  devtools release {version} --skip-to-enterprise"
+            )
+            sys.exit(1)
+
+    console.print(f"\n[green]✓[/green] Release [bold]{version}[/bold] complete!")
 
 
 cli.add_command(bump)

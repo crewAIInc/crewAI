@@ -35,10 +35,8 @@ def _create_bedrock_mocks():
     mock_client.converse.return_value = default_response
     mock_client.converse_stream.return_value = {'stream': []}
 
-    # Configure the mock session instance to return the mock client
     mock_session_instance.client.return_value = mock_client
 
-    # Configure the mock Session class to return the mock session instance
     mock_session_class.return_value = mock_session_instance
 
     return mock_session_class, mock_client
@@ -47,7 +45,6 @@ def _create_bedrock_mocks():
 @pytest.fixture(autouse=True)
 def mock_aws_credentials():
     """Mock AWS credentials and boto3 Session for tests only if real credentials are not set."""
-    # If real AWS credentials exist, don't mock - allow real API calls
     if "AWS_ACCESS_KEY_ID" in os.environ and "AWS_SECRET_ACCESS_KEY" in os.environ:
         yield None, None
         return
@@ -81,10 +78,8 @@ def mock_aws_credentials():
             mock_client.converse.return_value = default_response
             mock_client.converse_stream.return_value = {'stream': []}
 
-            # Configure the mock session instance to return the mock client
             mock_session_instance.client.return_value = mock_client
 
-            # Configure the mock Session class to return the mock session instance
             mock_session_class.return_value = mock_session_instance
 
             yield mock_session_class, mock_client
@@ -145,19 +140,15 @@ def test_bedrock_completion_module_is_imported():
     """
     module_name = "crewai.llms.providers.bedrock.completion"
 
-    # Remove module from cache if it exists
     if module_name in sys.modules:
         del sys.modules[module_name]
 
-    # Create LLM instance - this should trigger the import
     LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
-    # Verify the module was imported
     assert module_name in sys.modules
     completion_mod = sys.modules[module_name]
     assert isinstance(completion_mod, types.ModuleType)
 
-    # Verify the class exists in the module
     assert hasattr(completion_mod, 'BedrockCompletion')
 
 
@@ -169,7 +160,6 @@ def test_native_bedrock_raises_error_when_initialization_fails():
     but fails to instantiate, we raise an ImportError instead of silently falling back.
     This provides clearer error messages to users about missing dependencies.
     """
-    # Mock the _get_native_provider to return a failing class
     with patch('crewai.llm.LLM._get_native_provider') as mock_get_provider:
 
         class FailingCompletion:
@@ -178,11 +168,9 @@ def test_native_bedrock_raises_error_when_initialization_fails():
 
         mock_get_provider.return_value = FailingCompletion
 
-        # This should raise ImportError with clear message
         with pytest.raises(ImportError) as excinfo:
             LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
-        # Verify the error message is helpful
         assert "Error importing native provider" in str(excinfo.value)
         assert "Native AWS Bedrock SDK failed" in str(excinfo.value)
 
@@ -234,7 +222,6 @@ def test_bedrock_completion_call():
     """
     llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
-    # Mock the call method on the instance
     with patch.object(llm, 'call', return_value="Hello! I'm Claude on Bedrock, ready to help.") as mock_call:
         result = llm.call("Hello, how are you?")
 
@@ -246,13 +233,10 @@ def test_bedrock_completion_called_during_crew_execution():
     """
     Test that BedrockCompletion.call is actually invoked when running a crew
     """
-    # Create the LLM instance first
     bedrock_llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
-    # Mock the call method on the specific instance
     with patch.object(bedrock_llm, 'call', return_value="Tokyo has 14 million people.") as mock_call:
 
-        # Create agent with explicit LLM configuration
         agent = Agent(
             role="Research Assistant",
             goal="Find population info",
@@ -269,7 +253,6 @@ def test_bedrock_completion_called_during_crew_execution():
         crew = Crew(agents=[agent], tasks=[task])
         result = crew.kickoff()
 
-        # Verify mock was called
         assert mock_call.called
         assert "14 million" in str(result)
 
@@ -279,10 +262,8 @@ def test_bedrock_completion_call_arguments():
     """
     Test that BedrockCompletion.call is invoked with correct arguments
     """
-    # Create LLM instance first
     bedrock_llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
-    # Mock the instance method
     with patch.object(bedrock_llm, 'call') as mock_call:
         mock_call.return_value = "Task completed successfully."
 
@@ -290,7 +271,7 @@ def test_bedrock_completion_call_arguments():
             role="Test Agent",
             goal="Complete a simple task",
             backstory="You are a test agent.",
-            llm=bedrock_llm  # Use same instance
+            llm=bedrock_llm
         )
 
         task = Task(
@@ -302,18 +283,14 @@ def test_bedrock_completion_call_arguments():
         crew = Crew(agents=[agent], tasks=[task])
         crew.kickoff()
 
-        # Verify call was made
         assert mock_call.called
 
-        # Check the arguments passed to the call method
         call_args = mock_call.call_args
         assert call_args is not None
 
-        # The first argument should be the messages
-        messages = call_args[0][0]  # First positional argument
+        messages = call_args[0][0]
         assert isinstance(messages, (str, list))
 
-        # Verify that the task description appears in the messages
         if isinstance(messages, str):
             assert "hello world" in messages.lower()
         elif isinstance(messages, list):
@@ -325,10 +302,8 @@ def test_multiple_bedrock_calls_in_crew():
     """
     Test that BedrockCompletion.call is invoked multiple times for multiple tasks
     """
-    # Create LLM instance first
     bedrock_llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
-    # Mock the instance method
     with patch.object(bedrock_llm, 'call') as mock_call:
         mock_call.return_value = "Task completed."
 
@@ -336,7 +311,7 @@ def test_multiple_bedrock_calls_in_crew():
             role="Multi-task Agent",
             goal="Complete multiple tasks",
             backstory="You can handle multiple tasks.",
-            llm=bedrock_llm  # Use same instance
+            llm=bedrock_llm
         )
 
         task1 = Task(
@@ -357,12 +332,10 @@ def test_multiple_bedrock_calls_in_crew():
         )
         crew.kickoff()
 
-        # Verify multiple calls were made
         assert mock_call.call_count >= 2  # At least one call per task
 
-        # Verify each call had proper arguments
         for call in mock_call.call_args_list:
-            assert len(call[0]) > 0  # Has positional arguments
+            assert len(call[0]) > 0
             messages = call[0][0]
             assert messages is not None
 
@@ -377,10 +350,8 @@ def test_bedrock_completion_with_tools():
         """A sample tool for testing"""
         return f"Tool result for: {query}"
 
-    # Create LLM instance first
     bedrock_llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
-    # Mock the instance method
     with patch.object(bedrock_llm, 'call') as mock_call:
         mock_call.return_value = "Task completed with tools."
 
@@ -388,7 +359,7 @@ def test_bedrock_completion_with_tools():
             role="Tool User",
             goal="Use tools to complete tasks",
             backstory="You can use tools.",
-            llm=bedrock_llm,  # Use same instance
+            llm=bedrock_llm,
             tools=[sample_tool]
         )
 
@@ -416,7 +387,6 @@ def test_bedrock_raises_error_when_model_not_found(bedrock_mocks):
     """Test that BedrockCompletion raises appropriate error when model not found"""
     from botocore.exceptions import ClientError
 
-    # Get the mock client from the fixture
     _, mock_client = bedrock_mocks
 
     error_response = {
@@ -442,7 +412,6 @@ def test_bedrock_aws_credentials_configuration():
     aws_region_name = "us-east-1"
 
 
-    # Test with environment variables
     with patch.dict(os.environ, {
         "AWS_ACCESS_KEY_ID": aws_access_key_id,
         "AWS_SECRET_ACCESS_KEY": aws_secret_access_key,
@@ -468,7 +437,6 @@ def test_bedrock_aws_credentials_configuration():
         assert isinstance(llm, BedrockCompletion)
         assert llm.region_name == aws_region_name
 
-    # Test with explicit credentials
     llm_explicit = LLM(
         model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
         aws_access_key_id="explicit-key",
@@ -483,7 +451,6 @@ def test_bedrock_model_capabilities():
     """
     Test that model capabilities are correctly identified
     """
-    # Test Claude model
     llm_claude = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
     from crewai.llms.providers.bedrock.completion import BedrockCompletion
     assert isinstance(llm_claude, BedrockCompletion)
@@ -511,10 +478,8 @@ def test_bedrock_inference_config():
     from crewai.llms.providers.bedrock.completion import BedrockCompletion
     assert isinstance(llm, BedrockCompletion)
 
-    # Test config preparation
     config = llm._get_inference_config()
 
-    # Verify config has the expected parameters
     assert 'temperature' in config
     assert config['temperature'] == 0.7
     assert 'topP' in config
@@ -555,15 +520,13 @@ def test_bedrock_context_window_size():
     """
     Test that Bedrock models return correct context window sizes
     """
-    # Test Claude 3.5 Sonnet
     llm_claude = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
     context_size_claude = llm_claude.get_context_window_size()
     assert context_size_claude > 150000  # Should be substantial (200K tokens with ratio)
 
-    # Test Titan
     llm_titan = LLM(model="bedrock/amazon.titan-text-express-v1")
     context_size_titan = llm_titan.get_context_window_size()
-    assert context_size_titan > 5000  # Should have 8K context window
+    assert context_size_titan > 5000
 
 
 def test_bedrock_message_formatting():
@@ -572,7 +535,6 @@ def test_bedrock_message_formatting():
     """
     llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
-    # Test message formatting
     test_messages = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": "Hello"},
@@ -586,11 +548,9 @@ def test_bedrock_message_formatting():
     assert system_message == "You are a helpful assistant."
 
     # Remaining messages should be in Converse format
-    assert len(formatted_messages) >= 3  # Should have user, assistant, user messages
+    assert len(formatted_messages) >= 3
 
-    # First message should be user role
     assert formatted_messages[0]["role"] == "user"
-    # Second should be assistant
     assert formatted_messages[1]["role"] == "assistant"
 
     # Messages should have content array with text
@@ -602,11 +562,9 @@ def test_bedrock_streaming_parameter():
     """
     Test that streaming parameter is properly handled
     """
-    # Test non-streaming
     llm_no_stream = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0", stream=False)
     assert llm_no_stream.stream == False
 
-    # Test streaming
     llm_stream = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0", stream=True)
     assert llm_stream.stream == True
 
@@ -617,7 +575,6 @@ def test_bedrock_tool_conversion():
     """
     llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
-    # Mock tool in CrewAI format
     crewai_tools = [{
         "type": "function",
         "function": {
@@ -633,7 +590,6 @@ def test_bedrock_tool_conversion():
         }
     }]
 
-    # Test tool conversion
     bedrock_tools = llm._format_tools_for_converse(crewai_tools)
 
     assert len(bedrock_tools) == 1
@@ -650,7 +606,6 @@ def test_bedrock_environment_variable_credentials(bedrock_mocks):
     """
     mock_session_class, _ = bedrock_mocks
 
-    # Reset the mock to clear any previous calls
     mock_session_class.reset_mock()
 
     with patch.dict(os.environ, {
@@ -659,9 +614,7 @@ def test_bedrock_environment_variable_credentials(bedrock_mocks):
     }):
         llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
-        # Verify Session was called with environment credentials
         assert mock_session_class.called
-        # Get the most recent call - Session is called as Session(...)
         call_kwargs = mock_session_class.call_args[1] if mock_session_class.call_args else {}
         assert call_kwargs.get('aws_access_key_id') == "test-access-key-123"
         assert call_kwargs.get('aws_secret_access_key') == "test-secret-key-456"
@@ -694,10 +647,8 @@ def test_bedrock_token_usage_tracking():
 
         result = llm.call("Hello")
 
-        # Verify the response
         assert result == "test response"
 
-        # Verify token usage was tracked
         assert llm._token_usage['prompt_tokens'] == 50
         assert llm._token_usage['completion_tokens'] == 25
         assert llm._token_usage['total_tokens'] == 75
@@ -709,10 +660,8 @@ def test_bedrock_tool_use_conversation_flow():
     """
     from unittest.mock import Mock
 
-    # Create BedrockCompletion instance
     llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
-    # Mock tool function
     def mock_weather_tool(location: str) -> str:
         return f"The weather in {location} is sunny and 75°F"
 
@@ -720,7 +669,6 @@ def test_bedrock_tool_use_conversation_flow():
 
     # Mock the Bedrock client responses
     with patch.object(llm._client, 'converse') as mock_converse:
-        # First response: tool use request
         tool_use_response = {
             'output': {
                 'message': {
@@ -743,7 +691,6 @@ def test_bedrock_tool_use_conversation_flow():
             }
         }
 
-        # Second response: final answer after tool execution
         final_response = {
             'output': {
                 'message': {
@@ -760,17 +707,14 @@ def test_bedrock_tool_use_conversation_flow():
             }
         }
 
-        # Configure mock to return different responses on successive calls
         mock_converse.side_effect = [tool_use_response, final_response]
 
-        # Test the call
         messages = [{"role": "user", "content": "What's the weather like in San Francisco?"}]
         result = llm.call(
             messages=messages,
             available_functions=available_functions
         )
 
-        # Verify the final response contains the weather information
         assert "sunny" in result.lower() or "75" in result
 
         # Verify that the API was called twice (once for tool use, once for final answer)
@@ -783,7 +727,6 @@ def test_bedrock_handles_cohere_conversation_requirements():
     """
     llm = LLM(model="bedrock/cohere.command-r-plus-v1:0")
 
-    # Test message formatting with conversation ending in assistant message
     test_messages = [
         {"role": "user", "content": "Hello"},
         {"role": "assistant", "content": "Hi there!"}
@@ -804,7 +747,6 @@ def test_bedrock_client_error_handling():
 
     llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
-    # Test ValidationException
     with patch.object(llm._client, 'converse') as mock_converse:
         error_response = {
             'Error': {
@@ -818,7 +760,6 @@ def test_bedrock_client_error_handling():
             llm.call("Hello")
         assert "validation" in str(exc_info.value).lower()
 
-    # Test ThrottlingException
     with patch.object(llm._client, 'converse') as mock_converse:
         error_response = {
             'Error': {
@@ -837,17 +778,14 @@ def test_bedrock_stop_sequences_sync():
     """Test that stop and stop_sequences attributes stay synchronized."""
     llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
 
-    # Test setting stop as a list
     llm.stop = ["\nObservation:", "\nThought:"]
     assert list(llm.stop_sequences) == ["\nObservation:", "\nThought:"]
     assert llm.stop == ["\nObservation:", "\nThought:"]
 
-    # Test setting stop as a string
     llm.stop = "\nFinal Answer:"
     assert list(llm.stop_sequences) == ["\nFinal Answer:"]
     assert llm.stop == ["\nFinal Answer:"]
 
-    # Test setting stop as None
     llm.stop = None
     assert list(llm.stop_sequences) == []
     assert llm.stop == []
@@ -860,7 +798,6 @@ def test_bedrock_stop_sequences_sent_to_api():
     # Set stop sequences via the stop attribute (simulating CrewAgentExecutor)
     llm.stop = ["\nObservation:", "\nThought:"]
 
-    # Patch the API call to capture parameters without making real call
     with patch.object(llm._client, 'converse') as mock_converse:
         mock_response = {
             'output': {
@@ -879,16 +816,13 @@ def test_bedrock_stop_sequences_sent_to_api():
 
         llm.call("Say hello in one word")
 
-        # Verify stop_sequences were passed to the API in the inference config
         call_kwargs = mock_converse.call_args[1]
         assert "inferenceConfig" in call_kwargs
         assert "stopSequences" in call_kwargs["inferenceConfig"]
         assert call_kwargs["inferenceConfig"]["stopSequences"] == ["\nObservation:", "\nThought:"]
 
 
-# =============================================================================
 # Agent Kickoff Structured Output Tests
-# =============================================================================
 
 
 @pytest.mark.vcr()
@@ -910,7 +844,7 @@ def test_bedrock_agent_kickoff_structured_output_without_tools():
         role="Analyst",
         goal="Provide structured analysis on topics",
         backstory="You are an expert analyst who provides clear, structured insights.",
-        llm=LLM(model="bedrock/anthropic.claude-3-sonnet-20240229-v1:0"),
+        llm=LLM(model="bedrock/us.anthropic.claude-sonnet-4-6"),
         tools=[],
         verbose=True,
     )
@@ -952,7 +886,7 @@ def test_bedrock_agent_kickoff_structured_output_with_tools():
         role="Calculator",
         goal="Perform calculations using available tools",
         backstory="You are a calculator assistant that uses tools to compute results.",
-        llm=LLM(model="bedrock/anthropic.claude-3-sonnet-20240229-v1:0"),
+        llm=LLM(model="bedrock/us.anthropic.claude-sonnet-4-6"),
         tools=[add_numbers],
         verbose=True,
     )
@@ -1069,7 +1003,6 @@ def test_bedrock_parallel_tool_results_grouped():
 
     converse_msgs, system_msg = llm._format_messages_for_converse(messages)
 
-    # Find the user message that contains toolResult blocks
     tool_result_messages = [
         m for m in converse_msgs
         if m.get("role") == "user"
@@ -1088,7 +1021,6 @@ def test_bedrock_parallel_tool_results_grouped():
         f"Expected 2 toolResult blocks in grouped message, got {len(tool_results)}"
     )
 
-    # Verify the tool use IDs match
     tool_use_ids = {
         block["toolResult"]["toolUseId"] for block in tool_results
     }
@@ -1175,3 +1107,81 @@ def test_bedrock_tool_results_not_merged_across_assistant_messages():
     )
     assert tool_result_messages[0]["content"][0]["toolResult"]["toolUseId"] == "call_a"
     assert tool_result_messages[1]["content"][0]["toolResult"]["toolUseId"] == "call_b"
+
+
+def test_bedrock_cached_token_tracking():
+    """Test that cached tokens (cacheReadInputTokenCount) are tracked for Bedrock."""
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    with patch.object(llm._client, 'converse') as mock_converse:
+        mock_response = {
+            'output': {
+                'message': {
+                    'role': 'assistant',
+                    'content': [{'text': 'test response'}]
+                }
+            },
+            'usage': {
+                'inputTokens': 100,
+                'outputTokens': 50,
+                'totalTokens': 150,
+                'cacheReadInputTokenCount': 30,
+            }
+        }
+        mock_converse.return_value = mock_response
+
+        result = llm.call("Hello")
+        assert result == "test response"
+        assert llm._token_usage['prompt_tokens'] == 100
+        assert llm._token_usage['completion_tokens'] == 50
+        assert llm._token_usage['total_tokens'] == 150
+        assert llm._token_usage['cached_prompt_tokens'] == 30
+
+
+def test_bedrock_cached_token_alternate_key():
+    """Test that the alternate key cacheReadInputTokens also works."""
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    with patch.object(llm._client, 'converse') as mock_converse:
+        mock_response = {
+            'output': {
+                'message': {
+                    'role': 'assistant',
+                    'content': [{'text': 'test response'}]
+                }
+            },
+            'usage': {
+                'inputTokens': 80,
+                'outputTokens': 40,
+                'totalTokens': 120,
+                'cacheReadInputTokens': 25,
+            }
+        }
+        mock_converse.return_value = mock_response
+
+        llm.call("Hello")
+        assert llm._token_usage['cached_prompt_tokens'] == 25
+
+
+def test_bedrock_no_cache_tokens_defaults_to_zero():
+    """Test that missing cache token keys default to zero."""
+    llm = LLM(model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0")
+
+    with patch.object(llm._client, 'converse') as mock_converse:
+        mock_response = {
+            'output': {
+                'message': {
+                    'role': 'assistant',
+                    'content': [{'text': 'test response'}]
+                }
+            },
+            'usage': {
+                'inputTokens': 60,
+                'outputTokens': 30,
+                'totalTokens': 90,
+            }
+        }
+        mock_converse.return_value = mock_response
+
+        llm.call("Hello")
+        assert llm._token_usage['cached_prompt_tokens'] == 0

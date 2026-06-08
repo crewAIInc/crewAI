@@ -288,6 +288,76 @@ class TestAsyncAgentExecutor:
         assert max_concurrent > 1, f"Expected concurrent execution, max concurrent was {max_concurrent}"
 
 
+class TestExecutorStateResetBetweenInvocations:
+    """Regression tests: executor state must reset across sequential invocations."""
+
+    def test_invoke_resets_messages_and_iterations(
+        self, executor: CrewAgentExecutor
+    ) -> None:
+        executor.messages = [{"role": "assistant", "content": "leftover from task 1"}]
+        executor.iterations = 7
+
+        with patch.object(
+            executor,
+            "_invoke_loop",
+            return_value=AgentFinish(thought="", output="ok", text="ok"),
+        ), patch.object(executor, "_show_start_logs"), patch.object(
+            executor, "_save_to_memory"
+        ):
+            executor.invoke({"input": "task 2", "tool_names": "", "tools": ""})
+
+        assert executor.iterations == 0
+        assert all(
+            "leftover from task 1" not in (m.get("content") or "")
+            for m in executor.messages
+        )
+
+    @pytest.mark.asyncio
+    async def test_ainvoke_resets_messages_and_iterations(
+        self, executor: CrewAgentExecutor
+    ) -> None:
+        executor.messages = [{"role": "assistant", "content": "leftover from task 1"}]
+        executor.iterations = 7
+
+        with patch.object(
+            executor,
+            "_ainvoke_loop",
+            new_callable=AsyncMock,
+            return_value=AgentFinish(thought="", output="ok", text="ok"),
+        ), patch.object(executor, "_show_start_logs"), patch.object(
+            executor, "_save_to_memory"
+        ):
+            await executor.ainvoke({"input": "task 2", "tool_names": "", "tools": ""})
+
+        assert executor.iterations == 0
+        assert all(
+            "leftover from task 1" not in (m.get("content") or "")
+            for m in executor.messages
+        )
+
+    def test_invoke_preserves_state_when_resuming(
+        self, executor: CrewAgentExecutor
+    ) -> None:
+        executor.messages = [{"role": "assistant", "content": "in-flight context"}]
+        executor.iterations = 4
+        executor._resuming = True
+
+        with patch.object(
+            executor,
+            "_invoke_loop",
+            return_value=AgentFinish(thought="", output="ok", text="ok"),
+        ), patch.object(executor, "_show_start_logs"), patch.object(
+            executor, "_save_to_memory"
+        ):
+            executor.invoke({"input": "resumed", "tool_names": "", "tools": ""})
+
+        assert executor.iterations == 4
+        assert any(
+            "in-flight context" in (m.get("content") or "") for m in executor.messages
+        )
+        assert executor._resuming is False
+
+
 class TestInvokeStepCallback:
     """Tests for _invoke_step_callback with sync and async callbacks."""
 
@@ -324,7 +394,6 @@ class TestInvokeStepCallback:
         executor.step_callback = None
         answer = AgentFinish(thought="thinking", output="test", text="final")
 
-        # Should not raise
         executor._invoke_step_callback(answer)
 
 
@@ -335,7 +404,7 @@ class TestAsyncLLMResponseHelper:
     async def test_aget_llm_response_calls_acall(self) -> None:
         """Test that aget_llm_response calls llm.acall."""
         from crewai.utilities.agent_utils import aget_llm_response
-        from crewai.utilities.printer import Printer
+        from crewai_core.printer import Printer
 
         mock_llm = MagicMock()
         mock_llm.acall = AsyncMock(return_value="LLM response")
@@ -354,7 +423,7 @@ class TestAsyncLLMResponseHelper:
     async def test_aget_llm_response_raises_on_empty_response(self) -> None:
         """Test that aget_llm_response raises ValueError on empty response."""
         from crewai.utilities.agent_utils import aget_llm_response
-        from crewai.utilities.printer import Printer
+        from crewai_core.printer import Printer
 
         mock_llm = MagicMock()
         mock_llm.acall = AsyncMock(return_value="")
@@ -371,7 +440,7 @@ class TestAsyncLLMResponseHelper:
     async def test_aget_llm_response_propagates_exceptions(self) -> None:
         """Test that aget_llm_response propagates LLM exceptions."""
         from crewai.utilities.agent_utils import aget_llm_response
-        from crewai.utilities.printer import Printer
+        from crewai_core.printer import Printer
 
         mock_llm = MagicMock()
         mock_llm.acall = AsyncMock(side_effect=RuntimeError("LLM error"))

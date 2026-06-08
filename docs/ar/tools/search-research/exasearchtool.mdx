@@ -1,11 +1,11 @@
 ---
 title: "أداة بحث Exa"
-description: "ابحث في الويب باستخدام Exa Search API للعثور على النتائج الأكثر صلة لأي استعلام، مع خيارات لمحتوى الصفحة الكامل والمقتطفات والملخصات."
+description: "ابحث في الويب باستخدام Exa Search API للعثور على النتائج الأكثر صلة لأي استعلام، مع خيارات لمحتوى الصفحة الكامل والمقتطفات."
 icon: "magnifying-glass"
 mode: "wide"
 ---
 
-تتيح أداة `EXASearchTool` لوكلاء CrewAI البحث في الويب باستخدام [Exa](https://exa.ai/) search API. تُرجع النتائج الأكثر صلة لأي استعلام، مع خيارات لمحتوى الصفحة الكامل والملخصات المولّدة بالذكاء الاصطناعي.
+تتيح أداة `ExaSearchTool` لوكلاء CrewAI البحث في الويب باستخدام [Exa](https://exa.ai/) search API. تُرجع النتائج الأكثر صلة لأي استعلام، مع خيارات لمحتوى الصفحة الكامل والمقتطفات الموفرة للرموز.
 
 ## التثبيت
 
@@ -27,15 +27,15 @@ export EXA_API_KEY='your_exa_api_key'
 
 ## مثال على الاستخدام
 
-إليك كيفية استخدام `EXASearchTool` مع وكيل CrewAI:
+إليك كيفية استخدام `ExaSearchTool` مع وكيل CrewAI:
 
 ```python
 import os
 from crewai import Agent, Task, Crew
-from crewai_tools import EXASearchTool
+from crewai_tools import ExaSearchTool
 
 # Initialize the tool
-exa_tool = EXASearchTool()
+exa_tool = ExaSearchTool()
 
 # Create an agent that uses the tool
 researcher = Agent(
@@ -66,11 +66,11 @@ print(result)
 
 ## خيارات التكوين
 
-تقبل أداة `EXASearchTool` المعاملات التالية أثناء التهيئة:
+تقبل أداة `ExaSearchTool` المعاملات التالية أثناء التهيئة:
 
 - `type` (str، اختياري): نوع البحث المستخدم. الافتراضي هو `"auto"`. الخيارات: `"auto"`، `"instant"`، `"fast"`، `"deep"`.
+- `highlights` (bool أو dict، اختياري): إرجاع مقتطفات موفرة للرموز أكثر صلة بالاستعلام بدلاً من الصفحة الكاملة. الافتراضي هو `True`. مرر قاموسًا مثل `{"max_characters": 4000}` للتكوين، أو `False` للتعطيل.
 - `content` (bool، اختياري): ما إذا كان يجب تضمين محتوى الصفحة الكامل في النتائج. الافتراضي هو `False`.
-- `summary` (bool، اختياري): ما إذا كان يجب تضمين ملخصات مولّدة بالذكاء الاصطناعي لكل نتيجة. يتطلب `content=True`. الافتراضي هو `False`.
 - `api_key` (str، اختياري): مفتاح Exa API الخاص بك. يعود إلى متغير البيئة `EXA_API_KEY` إذا لم يتم تقديمه.
 - `base_url` (str، اختياري): عنوان URL مخصص لخادم API. يعود إلى متغير البيئة `EXA_BASE_URL` إذا لم يتم تقديمه.
 
@@ -86,25 +86,52 @@ print(result)
 يمكنك تكوين الأداة بمعاملات مخصصة للحصول على نتائج أغنى:
 
 ```python
-# Get full page content with AI summaries
-exa_tool = EXASearchTool(
-    content=True,
-    summary=True,
+# Use 'deep' for thorough, multi-step searches
+exa_tool = ExaSearchTool(
+    highlights=True,
     type="deep"
 )
 
 # Use it in an agent
 agent = Agent(
     role="Deep Researcher",
-    goal="Conduct thorough research with full content and summaries",
+    goal="Conduct thorough research",
     tools=[exa_tool]
 )
 ```
 
+## استخدام Exa عبر MCP
+
+يمكنك أيضًا ربط وكيلك بخادم MCP المستضاف من Exa. مرّر مفتاح API الخاص بك عبر ترويسة `x-api-key`:
+
+```python
+from crewai import Agent
+from crewai.mcp import MCPServerHTTP
+
+agent = Agent(
+    role="Research Analyst",
+    goal="Find and analyze information on the web",
+    backstory="Expert researcher with access to Exa's tools",
+    mcps=[
+        MCPServerHTTP(
+            url="https://mcp.exa.ai/mcp",
+            headers={"x-api-key": "YOUR_EXA_API_KEY"},
+        ),
+    ],
+)
+```
+
+احصل على مفتاح API من [لوحة تحكم Exa](https://dashboard.exa.ai/api-keys). لمزيد من المعلومات حول MCP في CrewAI، راجع [نظرة عامة على MCP](/ar/mcp/overview).
+
 ## الميزات
 
+- **مقتطفات موفرة للرموز**: الحصول على المقتطفات الأكثر صلة من كل نتيجة، باستخدام رموز أقل بكثير من النص الكامل
 - **البحث الدلالي**: العثور على نتائج بناءً على المعنى، وليس الكلمات المفتاحية فقط
 - **استرجاع المحتوى الكامل**: الحصول على النص الكامل لصفحات الويب مع نتائج البحث
-- **ملخصات الذكاء الاصطناعي**: الحصول على ملخصات موجزة مولّدة بالذكاء الاصطناعي لكل نتيجة
 - **تصفية التاريخ**: تقييد النتائج لفترات زمنية محددة باستخدام فلاتر تاريخ النشر
 - **تصفية النطاقات**: تقييد عمليات البحث على نطاقات محددة
+
+## موارد
+
+- [توثيق Exa](https://exa.ai/docs)
+- [لوحة تحكم Exa — إدارة مفاتيح API والاستخدام](https://dashboard.exa.ai)

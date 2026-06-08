@@ -61,9 +61,84 @@ class TestUsageToDict:
     def test_none_returns_none(self):
         assert LLM._usage_to_dict(None) is None
 
-    def test_dict_passes_through(self):
+    def test_dict_without_nested_shapes_is_returned_unchanged(self):
         usage = {"prompt_tokens": 10, "total_tokens": 30}
-        assert LLM._usage_to_dict(usage) is usage
+        result = LLM._usage_to_dict(usage)
+        assert result == usage
+        # The input dict is copied, not mutated, so derived keys are not added.
+        assert "cached_prompt_tokens" not in result
+
+    @pytest.mark.parametrize(
+        ("usage", "expected"),
+        [
+            pytest.param(
+                {"prompt_tokens": 100, "prompt_tokens_details": {"cached_tokens": 40}},
+                {"cached_prompt_tokens": 40},
+                id="openai-nested-cached-tokens",
+            ),
+            pytest.param(
+                {"prompt_tokens": 100, "cached_tokens": 30},
+                {"cached_prompt_tokens": 30},
+                id="flat-cached-tokens",
+            ),
+            pytest.param(
+                {"input_tokens": 100, "cache_read_input_tokens": 25},
+                {"cached_prompt_tokens": 25},
+                id="anthropic-cache-read-input-tokens",
+            ),
+            pytest.param(
+                {
+                    "completion_tokens": 200,
+                    "completion_tokens_details": {"reasoning_tokens": 60},
+                },
+                {"reasoning_tokens": 60},
+                id="openai-nested-reasoning-tokens",
+            ),
+            pytest.param(
+                {"input_tokens": 100, "cache_creation_input_tokens": 70},
+                {"cache_creation_tokens": 70},
+                id="anthropic-cache-creation-input-tokens",
+            ),
+            pytest.param(
+                {
+                    "prompt_tokens": 100,
+                    "completion_tokens": 200,
+                    "prompt_tokens_details": {"cached_tokens": 40},
+                    "completion_tokens_details": {"reasoning_tokens": 60},
+                    "cache_creation_input_tokens": 10,
+                },
+                {
+                    "cached_prompt_tokens": 40,
+                    "reasoning_tokens": 60,
+                    "cache_creation_tokens": 10,
+                },
+                id="all-buckets-from-nested-shapes",
+            ),
+        ],
+    )
+    def test_normalizes_nested_litellm_buckets(self, usage, expected):
+        result = LLM._usage_to_dict(usage)
+        for key, value in expected.items():
+            assert result[key] == value
+
+    def test_does_not_alter_core_token_counts(self):
+        usage = {
+            "prompt_tokens": 100,
+            "completion_tokens": 200,
+            "total_tokens": 300,
+            "prompt_tokens_details": {"cached_tokens": 40},
+        }
+        result = LLM._usage_to_dict(usage)
+        assert result["prompt_tokens"] == 100
+        assert result["completion_tokens"] == 200
+        assert result["total_tokens"] == 300
+
+    def test_absent_buckets_are_not_added(self):
+        usage = {"prompt_tokens": 100, "completion_tokens": 200, "total_tokens": 300}
+        result = LLM._usage_to_dict(usage)
+        assert "cached_prompt_tokens" not in result
+        assert "reasoning_tokens" not in result
+        assert "cache_creation_tokens" not in result
 
     def test_pydantic_model_uses_model_dump(self):
         class Usage(BaseModel):
@@ -174,3 +249,51 @@ class TestEmitCallCompletedEventPassesUsage:
         event = mock_emit.call_args[1]["event"]
         assert isinstance(event, LLMCallCompletedEvent)
         assert event.usage is None
+
+class TestUsageMetricsNewFields:
+    def test_add_usage_metrics_aggregates_reasoning_and_cache_creation(self):
+        from crewai.types.usage_metrics import UsageMetrics
+
+        metrics1 = UsageMetrics(
+            total_tokens=100,
+            prompt_tokens=60,
+            completion_tokens=40,
+            cached_prompt_tokens=10,
+            reasoning_tokens=15,
+            cache_creation_tokens=5,
+            successful_requests=1,
+        )
+        metrics2 = UsageMetrics(
+            total_tokens=200,
+            prompt_tokens=120,
+            completion_tokens=80,
+            cached_prompt_tokens=20,
+            reasoning_tokens=25,
+            cache_creation_tokens=10,
+            successful_requests=1,
+        )
+
+        metrics1.add_usage_metrics(metrics2)
+
+        assert metrics1.total_tokens == 300
+        assert metrics1.prompt_tokens == 180
+        assert metrics1.completion_tokens == 120
+        assert metrics1.cached_prompt_tokens == 30
+        assert metrics1.reasoning_tokens == 40
+        assert metrics1.cache_creation_tokens == 15
+        assert metrics1.successful_requests == 2
+
+    def test_new_fields_default_to_zero(self):
+        from crewai.types.usage_metrics import UsageMetrics
+
+        metrics = UsageMetrics()
+        assert metrics.reasoning_tokens == 0
+        assert metrics.cache_creation_tokens == 0
+
+    def test_model_dump_includes_new_fields(self):
+        from crewai.types.usage_metrics import UsageMetrics
+
+        metrics = UsageMetrics(reasoning_tokens=10, cache_creation_tokens=5)
+        dumped = metrics.model_dump()
+        assert dumped["reasoning_tokens"] == 10
+        assert dumped["cache_creation_tokens"] == 5

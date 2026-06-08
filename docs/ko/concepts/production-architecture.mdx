@@ -146,6 +146,14 @@ class ProductionFlow(Flow[AppState]):
     # ...
 ```
 
+기본적으로, `@persist`는 `kickoff(inputs={"id": <uuid>})`가 제공될 때 플로우를 재개하여 동일한 `flow_uuid` 기록을 확장합니다. 영속된 플로우를 새 계보로 **포크**하려면 — 이전 실행에서 상태를 하이드레이트하지만 새로운 `state.id` 아래에 기록 — `restore_from_state_id`를 전달하세요:
+
+```python
+flow.kickoff(restore_from_state_id="<previous-run-state-id>")
+```
+
+새 실행은 새로운 `state.id`(자동 생성, 또는 `inputs["id"]`가 고정된 경우 그 값)를 받아 `@persist` 기록이 원본의 기록을 확장하지 않도록 합니다. `from_checkpoint`와 결합하면 `ValueError`가 발생합니다; 하나의 하이드레이션 소스를 선택하세요.
+
 ## 요약
 
 - **Flow로 시작하세요.**

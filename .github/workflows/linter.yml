@@ -6,14 +6,31 @@ permissions:
   contents: read
 
 jobs:
-  lint:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: dorny/paths-filter@d1c1ffe0248fe513906c8e24db8ea791d46f8590 # v3
+        id: filter
+        with:
+          filters: |
+            code:
+              - '!docs/**'
+              - '!**/*.md'
+
+  lint-run:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Restore global uv cache
         id: cache-restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             ~/.cache/uv
@@ -24,7 +41,7 @@ jobs:
             uv-main-py3.11-
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
         with:
           version: "0.11.3"
           python-version: "3.11"
@@ -41,10 +58,30 @@ jobs:
 
       - name: Save uv caches
         if: steps.cache-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             ~/.cache/uv
             ~/.local/share/uv
             .venv
           key: uv-main-py3.11-${{ hashFiles('uv.lock') }}
+
+  # Summary job to provide single status for branch protection
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    needs: [changes, lint-run]
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          if [ "${{ needs.changes.outputs.code }}" != "true" ]; then
+            echo "Docs-only change, skipping lint"
+            exit 0
+          fi
+          if [ "${{ needs.lint-run.result }}" == "success" ]; then
+            echo "Lint passed"
+          else
+            echo "Lint failed"
+            exit 1
+          fi

@@ -81,16 +81,9 @@
             ],
             "default": null,
             "title": "Mind Name"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "AIMindTool",
         "type": "object"
       },
@@ -168,20 +161,13 @@
             "title": "Save Dir",
             "type": "string"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "use_title_as_filename": {
             "default": false,
             "title": "Use Title As Filename",
             "type": "boolean"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "ArxivPaperTool",
         "type": "object"
       },
@@ -297,16 +283,9 @@
             "default": "https://api.search.brave.com/res/v1/images/search",
             "title": "Search Url",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "BraveImageSearchTool",
         "type": "object"
       },
@@ -488,16 +467,9 @@
             "default": "https://api.search.brave.com/res/v1/llm/context",
             "title": "Search Url",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "BraveLLMContextTool",
         "type": "object"
       },
@@ -775,16 +747,9 @@
             "default": "https://api.search.brave.com/res/v1/local/descriptions",
             "title": "Search Url",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "BraveLocalPOIsDescriptionTool",
         "type": "object"
       },
@@ -896,16 +861,9 @@
             "default": "https://api.search.brave.com/res/v1/local/pois",
             "title": "Search Url",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "BraveLocalPOIsTool",
         "type": "object"
       },
@@ -1062,16 +1020,9 @@
             "default": "https://api.search.brave.com/res/v1/news/search",
             "title": "Search Url",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "BraveNewsSearchTool",
         "type": "object"
       },
@@ -1344,16 +1295,9 @@
             "default": "https://api.search.brave.com/res/v1/web/search",
             "title": "Search Url",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "BraveSearchTool",
         "type": "object"
       },
@@ -1729,16 +1673,9 @@
             "default": "https://api.search.brave.com/res/v1/videos/search",
             "title": "Search Url",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "BraveVideoSearchTool",
         "type": "object"
       },
@@ -1999,16 +1936,9 @@
             "default": "https://api.search.brave.com/res/v1/web/search",
             "title": "Search Url",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "BraveWebSearchTool",
         "type": "object"
       },
@@ -2380,11 +2310,6 @@
             "title": "Format",
             "type": "string"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "url": {
             "anyOf": [
               {
@@ -2410,9 +2335,7 @@
             "title": "Zipcode"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "BrightDataDatasetTool",
         "type": "object"
       },
@@ -2590,20 +2513,13 @@
             "default": null,
             "title": "Search Type"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "zone": {
             "default": "",
             "title": "Zone",
             "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "BrightDataSearchTool",
         "type": "object"
       },
@@ -2774,11 +2690,6 @@
             "title": "Format",
             "type": "string"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "url": {
             "anyOf": [
               {
@@ -2797,9 +2708,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "BrightDataWebUnlockerTool",
         "type": "object"
       },
@@ -2972,16 +2881,9 @@
             ],
             "default": false,
             "title": "Text Content"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "BrowserbaseLoadTool",
         "type": "object"
       },
@@ -3010,12 +2912,6 @@
       "humanized_name": "Search a CSV's content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -4001,7 +3897,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -4026,16 +3925,9 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "CSVSearchTool",
         "type": "object"
       },
@@ -4069,12 +3961,6 @@
       "humanized_name": "Search a Code Docs content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -5060,7 +4946,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -5085,16 +4974,9 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "CodeDocsSearchTool",
         "type": "object"
       },
@@ -5172,18 +5054,8 @@
           }
         },
         "description": "Wrapper for composio tools.",
-        "properties": {
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "name",
-          "description",
-          "tool_type"
-        ],
+        "properties": {},
+        "required": [],
         "title": "ComposioTool",
         "type": "object"
       },
@@ -5246,16 +5118,10 @@
           "contextual_client": {
             "default": null,
             "title": "Contextual Client"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
-          "api_key",
-          "tool_type"
+          "api_key"
         ],
         "title": "ContextualAICreateAgentTool",
         "type": "object"
@@ -5348,16 +5214,10 @@
           "api_key": {
             "title": "Api Key",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
-          "api_key",
-          "tool_type"
+          "api_key"
         ],
         "title": "ContextualAIParseTool",
         "type": "object"
@@ -5475,16 +5335,10 @@
           "contextual_client": {
             "default": null,
             "title": "Contextual Client"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
-          "api_key",
-          "tool_type"
+          "api_key"
         ],
         "title": "ContextualAIQueryTool",
         "type": "object"
@@ -5575,16 +5429,10 @@
           "api_key": {
             "title": "Api Key",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
-          "api_key",
-          "tool_type"
+          "api_key"
         ],
         "title": "ContextualAIRerankTool",
         "type": "object"
@@ -5751,11 +5599,6 @@
             "description": "Specify whether the index is scoped. Is True by default.",
             "title": "Scoped Index",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
@@ -5763,8 +5606,7 @@
           "collection_name",
           "scope_name",
           "bucket_name",
-          "index_name",
-          "tool_type"
+          "index_name"
         ],
         "title": "CouchbaseFTSVectorSearchTool",
         "type": "object"
@@ -5793,12 +5635,6 @@
       "humanized_name": "Search a DOCX's content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -6784,7 +6620,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -6809,16 +6648,9 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "DOCXSearchTool",
         "type": "object"
       },
@@ -6954,16 +6786,9 @@
             ],
             "default": "1024x1024",
             "title": "Size"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "DallETool",
         "type": "object"
       },
@@ -6987,7 +6812,26 @@
     },
     {
       "description": "Execute SQL queries against Databricks workspace tables and return the results. Provide a 'query' parameter with the SQL query to execute.",
-      "env_vars": [],
+      "env_vars": [
+        {
+          "default": null,
+          "description": "Databricks workspace URL (use with DATABRICKS_TOKEN, or set DATABRICKS_CONFIG_PROFILE instead).",
+          "name": "DATABRICKS_HOST",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Databricks personal access token (pair with DATABRICKS_HOST).",
+          "name": "DATABRICKS_TOKEN",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Databricks CLI profile name (alternative to DATABRICKS_HOST/TOKEN).",
+          "name": "DATABRICKS_CONFIG_PROFILE",
+          "required": false
+        }
+      ],
       "humanized_name": "Databricks SQL Query",
       "init_params_schema": {
         "$defs": {
@@ -7064,16 +6908,9 @@
             ],
             "default": null,
             "title": "Default Warehouse Id"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "DatabricksQueryTool",
         "type": "object"
       },
@@ -7150,6 +6987,853 @@
       }
     },
     {
+      "description": "Execute a shell command inside a Daytona sandbox and return the exit code and combined output. Use this to run builds, package installs, git operations, or any one-off shell command.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Daytona sandbox service",
+          "name": "DAYTONA_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Daytona API base URL (optional)",
+          "name": "DAYTONA_API_URL",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Daytona target region (optional)",
+          "name": "DAYTONA_TARGET",
+          "required": false
+        }
+      ],
+      "humanized_name": "Daytona Sandbox Exec",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Run a shell command inside a Daytona sandbox.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daytona API key. Falls back to DAYTONA_API_KEY env var.",
+            "required": false,
+            "title": "Api Key"
+          },
+          "api_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daytona API URL override. Falls back to DAYTONA_API_URL env var.",
+            "required": false,
+            "title": "Api Url"
+          },
+          "create_params": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional kwargs forwarded to CreateSandboxFromSnapshotParams when creating a sandbox (e.g. language, snapshot, env_vars, labels).",
+            "title": "Create Params"
+          },
+          "persistent": {
+            "default": false,
+            "description": "If True, reuse one sandbox across all calls to this tool instance and delete it at process exit. Default False creates and deletes a fresh sandbox per call.",
+            "title": "Persistent",
+            "type": "boolean"
+          },
+          "sandbox_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attach to an existing sandbox by id or name instead of creating a new one. The tool will never delete a sandbox it did not create.",
+            "title": "Sandbox Id"
+          },
+          "sandbox_timeout": {
+            "default": 60.0,
+            "description": "Timeout in seconds for sandbox create/delete operations.",
+            "title": "Sandbox Timeout",
+            "type": "number"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daytona target region. Falls back to DAYTONA_TARGET env var.",
+            "required": false,
+            "title": "Target"
+          }
+        },
+        "required": [],
+        "title": "DaytonaExecTool",
+        "type": "object"
+      },
+      "name": "DaytonaExecTool",
+      "package_dependencies": [
+        "daytona"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "command": {
+            "description": "Shell command to execute in the sandbox.",
+            "title": "Command",
+            "type": "string"
+          },
+          "cwd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Working directory to run the command in. Defaults to the sandbox work dir.",
+            "title": "Cwd"
+          },
+          "env": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional environment variables to set for this command.",
+            "title": "Env"
+          },
+          "timeout": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum seconds to wait for the command to finish.",
+            "title": "Timeout"
+          }
+        },
+        "required": [
+          "command"
+        ],
+        "title": "DaytonaExecToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Perform filesystem operations inside a Daytona sandbox: read, write, append, list, delete, mkdir, info, exists, move, find (content grep), search (filename glob), chmod (permissions/owner/group), and replace (bulk find-and-replace across files). For files larger than a few KB, create the file with action='write' and empty content, then send the body via multiple 'append' calls of ~4KB each to stay within tool-call payload limits.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Daytona sandbox service",
+          "name": "DAYTONA_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Daytona API base URL (optional)",
+          "name": "DAYTONA_API_URL",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Daytona target region (optional)",
+          "name": "DAYTONA_TARGET",
+          "required": false
+        }
+      ],
+      "humanized_name": "Daytona Sandbox Files",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Read, write, and manage files inside a Daytona sandbox.\n\nNotes:\n  - Most useful with `persistent=True` or an explicit `sandbox_id`. With the\n    default ephemeral mode, files disappear when this tool call finishes.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daytona API key. Falls back to DAYTONA_API_KEY env var.",
+            "required": false,
+            "title": "Api Key"
+          },
+          "api_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daytona API URL override. Falls back to DAYTONA_API_URL env var.",
+            "required": false,
+            "title": "Api Url"
+          },
+          "create_params": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional kwargs forwarded to CreateSandboxFromSnapshotParams when creating a sandbox (e.g. language, snapshot, env_vars, labels).",
+            "title": "Create Params"
+          },
+          "persistent": {
+            "default": false,
+            "description": "If True, reuse one sandbox across all calls to this tool instance and delete it at process exit. Default False creates and deletes a fresh sandbox per call.",
+            "title": "Persistent",
+            "type": "boolean"
+          },
+          "sandbox_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attach to an existing sandbox by id or name instead of creating a new one. The tool will never delete a sandbox it did not create.",
+            "title": "Sandbox Id"
+          },
+          "sandbox_timeout": {
+            "default": 60.0,
+            "description": "Timeout in seconds for sandbox create/delete operations.",
+            "title": "Sandbox Timeout",
+            "type": "number"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daytona target region. Falls back to DAYTONA_TARGET env var.",
+            "required": false,
+            "title": "Target"
+          }
+        },
+        "required": [],
+        "title": "DaytonaFileTool",
+        "type": "object"
+      },
+      "name": "DaytonaFileTool",
+      "package_dependencies": [
+        "daytona"
+      ],
+      "run_params_schema": {
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "enum": [
+                    "read",
+                    "write",
+                    "append",
+                    "list",
+                    "delete",
+                    "mkdir",
+                    "info",
+                    "exists",
+                    "move",
+                    "find",
+                    "search",
+                    "chmod"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "path"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "append"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "content"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "move"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "destination"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "enum": [
+                    "find",
+                    "search"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "pattern"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "replace"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "paths",
+                "pattern",
+                "replacement"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "const": "chmod"
+                }
+              }
+            },
+            "then": {
+              "anyOf": [
+                {
+                  "required": [
+                    "mode"
+                  ]
+                },
+                {
+                  "required": [
+                    "owner"
+                  ]
+                },
+                {
+                  "required": [
+                    "group"
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "properties": {
+          "action": {
+            "description": "The filesystem action to perform: 'read' (returns file contents); 'write' (create or replace a file with content); 'append' (append content to an existing file \u2014 use this for writing large files in chunks to avoid hitting tool-call size limits); 'list' (lists a directory); 'delete' (removes a file/dir); 'mkdir' (creates a directory); 'info' (returns file metadata); 'exists' (returns whether a path exists); 'move' (rename or relocate a file/dir; requires 'destination'); 'find' (grep file CONTENTS recursively; requires 'pattern'); 'search' (find files by NAME pattern; requires 'pattern'); 'chmod' (change permissions/owner/group; pass at least one of 'mode', 'owner', 'group'); 'replace' (find-and-replace text across files; requires 'paths', 'pattern', and 'replacement').",
+            "enum": [
+              "read",
+              "write",
+              "append",
+              "list",
+              "delete",
+              "mkdir",
+              "info",
+              "exists",
+              "move",
+              "find",
+              "search",
+              "chmod",
+              "replace"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "binary": {
+            "default": false,
+            "description": "For 'write': treat content as base64 and upload raw bytes. For 'read': return contents as base64 instead of decoded utf-8.",
+            "title": "Binary",
+            "type": "boolean"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Content to write or append. If omitted for 'write', an empty file is created. For files larger than a few KB, prefer one 'write' with empty content followed by multiple 'append' calls of ~4KB each to stay within tool-call payload limits.",
+            "title": "Content"
+          },
+          "destination": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "For action='move': absolute destination path.",
+            "title": "Destination"
+          },
+          "group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "For action='chmod': new file group.",
+            "title": "Group"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Octal permission string. For 'mkdir' it sets the new directory permissions (defaults to '0755' if omitted). For 'chmod' it sets the target's mode (e.g. '755' to make a script executable). Ignored for other actions.",
+            "title": "Mode"
+          },
+          "owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "For action='chmod': new file owner (user name).",
+            "title": "Owner"
+          },
+          "path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Absolute path inside the sandbox. Required for all actions except 'replace' (which uses 'paths' instead).",
+            "title": "Path"
+          },
+          "paths": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "For action='replace': list of absolute file paths in which to replace 'pattern' with 'replacement'.",
+            "title": "Paths"
+          },
+          "pattern": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "For 'find': substring matched against file CONTENTS. For 'search': glob-style pattern matched against file NAMES (e.g. '*.py'). For 'replace': text to replace inside files.",
+            "title": "Pattern"
+          },
+          "recursive": {
+            "default": false,
+            "description": "For action='delete': remove directories recursively.",
+            "title": "Recursive",
+            "type": "boolean"
+          },
+          "replacement": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "For action='replace': replacement text for 'pattern'.",
+            "title": "Replacement"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "DaytonaFileToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Execute a block of Python code inside a Daytona sandbox and return the exit code, captured stdout, and any produced artifacts. Use this for data processing, quick scripts, or analysis that should run in an isolated environment.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Daytona sandbox service",
+          "name": "DAYTONA_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Daytona API base URL (optional)",
+          "name": "DAYTONA_API_URL",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "Daytona target region (optional)",
+          "name": "DAYTONA_TARGET",
+          "required": false
+        }
+      ],
+      "humanized_name": "Daytona Sandbox Python",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Run Python source inside a Daytona sandbox.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daytona API key. Falls back to DAYTONA_API_KEY env var.",
+            "required": false,
+            "title": "Api Key"
+          },
+          "api_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daytona API URL override. Falls back to DAYTONA_API_URL env var.",
+            "required": false,
+            "title": "Api Url"
+          },
+          "create_params": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional kwargs forwarded to CreateSandboxFromSnapshotParams when creating a sandbox (e.g. language, snapshot, env_vars, labels).",
+            "title": "Create Params"
+          },
+          "persistent": {
+            "default": false,
+            "description": "If True, reuse one sandbox across all calls to this tool instance and delete it at process exit. Default False creates and deletes a fresh sandbox per call.",
+            "title": "Persistent",
+            "type": "boolean"
+          },
+          "sandbox_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attach to an existing sandbox by id or name instead of creating a new one. The tool will never delete a sandbox it did not create.",
+            "title": "Sandbox Id"
+          },
+          "sandbox_timeout": {
+            "default": 60.0,
+            "description": "Timeout in seconds for sandbox create/delete operations.",
+            "title": "Sandbox Timeout",
+            "type": "number"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Daytona target region. Falls back to DAYTONA_TARGET env var.",
+            "required": false,
+            "title": "Target"
+          }
+        },
+        "required": [],
+        "title": "DaytonaPythonTool",
+        "type": "object"
+      },
+      "name": "DaytonaPythonTool",
+      "package_dependencies": [
+        "daytona"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "argv": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional argv passed to the script (forwarded as params.argv).",
+            "title": "Argv"
+          },
+          "code": {
+            "description": "Python source to execute inside the sandbox.",
+            "title": "Code",
+            "type": "string"
+          },
+          "env": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional environment variables for the run (forwarded as params.env).",
+            "title": "Env"
+          },
+          "timeout": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum seconds to wait for the code to finish.",
+            "title": "Timeout"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "DaytonaPythonToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that can be used to recursively list a directory's content.",
       "env_vars": [],
       "humanized_name": "List files in directory",
@@ -7203,16 +7887,9 @@
             ],
             "default": null,
             "title": "Directory"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "DirectoryReadTool",
         "type": "object"
       },
@@ -7240,12 +7917,6 @@
       "humanized_name": "Search a directory's content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -8231,7 +8902,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -8256,16 +8930,9 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "DirectorySearchTool",
         "type": "object"
       },
@@ -8294,7 +8961,669 @@
       }
     },
     {
-      "description": "Search the internet using Exa",
+      "description": "Execute a shell command inside an E2B sandbox and return the exit code, stdout, and stderr. Use this to run builds, package installs, git operations, or any one-off shell command.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for E2B sandbox service",
+          "name": "E2B_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "E2B API domain (optional)",
+          "name": "E2B_DOMAIN",
+          "required": false
+        }
+      ],
+      "humanized_name": "E2B Sandbox Exec",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Run a shell command inside an E2B sandbox.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "format": "password",
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "E2B API key. Falls back to E2B_API_KEY env var.",
+            "required": false,
+            "title": "Api Key"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "E2B API domain override. Falls back to E2B_DOMAIN env var.",
+            "required": false,
+            "title": "Domain"
+          },
+          "envs": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Environment variables to set inside the sandbox at create time.",
+            "title": "Envs"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Metadata key-value pairs to attach to the sandbox at create time.",
+            "title": "Metadata"
+          },
+          "persistent": {
+            "default": false,
+            "description": "If True, reuse one sandbox across all calls to this tool instance and kill it at process exit. Default False creates and kills a fresh sandbox per call.",
+            "title": "Persistent",
+            "type": "boolean"
+          },
+          "sandbox_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attach to an existing sandbox by id instead of creating a new one. The tool will never kill a sandbox it did not create.",
+            "title": "Sandbox Id"
+          },
+          "sandbox_timeout": {
+            "default": 300,
+            "description": "Idle timeout in seconds after which E2B auto-kills the sandbox. Applied at create time and when attaching via sandbox_id.",
+            "title": "Sandbox Timeout",
+            "type": "integer"
+          },
+          "template": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional template/snapshot name or id to create the sandbox from. Defaults to E2B's base template when omitted.",
+            "title": "Template"
+          }
+        },
+        "required": [],
+        "title": "E2BExecTool",
+        "type": "object"
+      },
+      "name": "E2BExecTool",
+      "package_dependencies": [
+        "e2b"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "command": {
+            "description": "Shell command to execute in the sandbox.",
+            "title": "Command",
+            "type": "string"
+          },
+          "cwd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Working directory to run the command in. Defaults to the sandbox home dir.",
+            "title": "Cwd"
+          },
+          "envs": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional environment variables to set for this command.",
+            "title": "Envs"
+          },
+          "timeout": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum seconds to wait for the command to finish.",
+            "title": "Timeout"
+          }
+        },
+        "required": [
+          "command"
+        ],
+        "title": "E2BExecToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Perform filesystem operations inside an E2B sandbox: read a file, write content to a path, append content to an existing file, list a directory, delete a path, make a directory, fetch file metadata, or check whether a path exists. For files larger than a few KB, create the file with action='write' and empty content, then send the body via multiple 'append' calls of ~4KB each to stay within tool-call payload limits.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for E2B sandbox service",
+          "name": "E2B_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "E2B API domain (optional)",
+          "name": "E2B_DOMAIN",
+          "required": false
+        }
+      ],
+      "humanized_name": "E2B Sandbox Files",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Read, write, and manage files inside an E2B sandbox.\n\nNotes:\n  - Most useful with `persistent=True` or an explicit `sandbox_id`. With\n    the default ephemeral mode, files disappear when this tool call\n    finishes.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "format": "password",
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "E2B API key. Falls back to E2B_API_KEY env var.",
+            "required": false,
+            "title": "Api Key"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "E2B API domain override. Falls back to E2B_DOMAIN env var.",
+            "required": false,
+            "title": "Domain"
+          },
+          "envs": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Environment variables to set inside the sandbox at create time.",
+            "title": "Envs"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Metadata key-value pairs to attach to the sandbox at create time.",
+            "title": "Metadata"
+          },
+          "persistent": {
+            "default": false,
+            "description": "If True, reuse one sandbox across all calls to this tool instance and kill it at process exit. Default False creates and kills a fresh sandbox per call.",
+            "title": "Persistent",
+            "type": "boolean"
+          },
+          "sandbox_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attach to an existing sandbox by id instead of creating a new one. The tool will never kill a sandbox it did not create.",
+            "title": "Sandbox Id"
+          },
+          "sandbox_timeout": {
+            "default": 300,
+            "description": "Idle timeout in seconds after which E2B auto-kills the sandbox. Applied at create time and when attaching via sandbox_id.",
+            "title": "Sandbox Timeout",
+            "type": "integer"
+          },
+          "template": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional template/snapshot name or id to create the sandbox from. Defaults to E2B's base template when omitted.",
+            "title": "Template"
+          }
+        },
+        "required": [],
+        "title": "E2BFileTool",
+        "type": "object"
+      },
+      "name": "E2BFileTool",
+      "package_dependencies": [
+        "e2b"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "action": {
+            "description": "The filesystem action to perform: 'read' (returns file contents), 'write' (create or replace a file with content), 'append' (append content to an existing file \u2014 use this for writing large files in chunks to avoid hitting tool-call size limits), 'list' (lists a directory), 'delete' (removes a file/dir), 'mkdir' (creates a directory), 'info' (returns file metadata), 'exists' (returns a boolean for whether the path exists).",
+            "enum": [
+              "read",
+              "write",
+              "append",
+              "list",
+              "delete",
+              "mkdir",
+              "info",
+              "exists"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "binary": {
+            "default": false,
+            "description": "For 'write'/'append': treat content as base64 and upload raw bytes. For 'read': return contents as base64 instead of decoded utf-8.",
+            "title": "Binary",
+            "type": "boolean"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Content to write or append. If omitted for 'write', an empty file is created. For files larger than a few KB, prefer one 'write' with empty content followed by multiple 'append' calls of ~4KB each to stay within tool-call payload limits.",
+            "title": "Content"
+          },
+          "depth": {
+            "default": 1,
+            "description": "For action='list': how many levels deep to recurse (default 1).",
+            "title": "Depth",
+            "type": "integer"
+          },
+          "path": {
+            "description": "Absolute path inside the sandbox.",
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "path"
+        ],
+        "title": "E2BFileToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Execute a block of Python code inside an E2B code interpreter sandbox and return captured stdout, stderr, the final expression value, and any rich results (charts, dataframes). Use this for data processing, quick scripts, or analysis that should run in an isolated environment.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for E2B sandbox service",
+          "name": "E2B_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "E2B API domain (optional)",
+          "name": "E2B_DOMAIN",
+          "required": false
+        }
+      ],
+      "humanized_name": "E2B Sandbox Python",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Run Python code inside an E2B code interpreter sandbox.\n\nUses `e2b_code_interpreter`, which runs cells in a persistent Jupyter-style\nkernel so state (imports, variables) carries across calls when\n`persistent=True`.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "format": "password",
+                "type": "string",
+                "writeOnly": true
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "E2B API key. Falls back to E2B_API_KEY env var.",
+            "required": false,
+            "title": "Api Key"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "E2B API domain override. Falls back to E2B_DOMAIN env var.",
+            "required": false,
+            "title": "Domain"
+          },
+          "envs": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Environment variables to set inside the sandbox at create time.",
+            "title": "Envs"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Metadata key-value pairs to attach to the sandbox at create time.",
+            "title": "Metadata"
+          },
+          "persistent": {
+            "default": false,
+            "description": "If True, reuse one sandbox across all calls to this tool instance and kill it at process exit. Default False creates and kills a fresh sandbox per call.",
+            "title": "Persistent",
+            "type": "boolean"
+          },
+          "sandbox_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Attach to an existing sandbox by id instead of creating a new one. The tool will never kill a sandbox it did not create.",
+            "title": "Sandbox Id"
+          },
+          "sandbox_timeout": {
+            "default": 300,
+            "description": "Idle timeout in seconds after which E2B auto-kills the sandbox. Applied at create time and when attaching via sandbox_id.",
+            "title": "Sandbox Timeout",
+            "type": "integer"
+          },
+          "template": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional template/snapshot name or id to create the sandbox from. Defaults to E2B's base template when omitted.",
+            "title": "Template"
+          }
+        },
+        "required": [],
+        "title": "E2BPythonTool",
+        "type": "object"
+      },
+      "name": "E2BPythonTool",
+      "package_dependencies": [
+        "e2b_code_interpreter"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "code": {
+            "description": "Python source to execute inside the sandbox.",
+            "title": "Code",
+            "type": "string"
+          },
+          "envs": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional environment variables for the run.",
+            "title": "Envs"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Override the execution language (e.g. 'python', 'r', 'javascript'). Defaults to Python when omitted.",
+            "title": "Language"
+          },
+          "timeout": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Maximum seconds to wait for the code to finish.",
+            "title": "Timeout"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "E2BPythonToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Search the web with Exa, the fastest and most accurate web search API.",
       "env_vars": [
         {
           "default": null,
@@ -8309,7 +9638,226 @@
           "required": false
         }
       ],
-      "humanized_name": "EXASearchTool",
+      "humanized_name": "ExaSearchTool",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Deprecated alias for :class:`ExaSearchTool`. Kept for backwards compatibility.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "API key for Exa services",
+            "required": false,
+            "title": "Api Key"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "API server url",
+            "required": false,
+            "title": "Base Url"
+          },
+          "client": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Client"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": false,
+            "title": "Content"
+          },
+          "highlights": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": true,
+            "title": "Highlights"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": false,
+            "title": "Summary"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "auto",
+            "title": "Type"
+          }
+        },
+        "required": [],
+        "title": "EXASearchTool",
+        "type": "object"
+      },
+      "name": "EXASearchTool",
+      "package_dependencies": [
+        "exa_py"
+      ],
+      "run_params_schema": {
+        "properties": {
+          "end_published_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "End date for the search",
+            "title": "End Published Date"
+          },
+          "include_domains": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "List of domains to include in the search",
+            "title": "Include Domains"
+          },
+          "search_query": {
+            "description": "Mandatory search query you want to use to search the internet",
+            "title": "Search Query",
+            "type": "string"
+          },
+          "start_published_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Start date for the search",
+            "title": "Start Published Date"
+          }
+        },
+        "required": [
+          "search_query"
+        ],
+        "title": "ExaBaseToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "Search the web with Exa, the fastest and most accurate web search API.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Exa services",
+          "name": "EXA_API_KEY",
+          "required": false
+        },
+        {
+          "default": null,
+          "description": "API url for the Exa services",
+          "name": "EXA_BASE_URL",
+          "required": false
+        }
+      ],
+      "humanized_name": "ExaSearchTool",
       "init_params_schema": {
         "$defs": {
           "EnvVar": {
@@ -8391,11 +9939,31 @@
                 "type": "boolean"
               },
               {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
                 "type": "null"
               }
             ],
             "default": false,
             "title": "Content"
+          },
+          "highlights": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": true,
+            "title": "Highlights"
           },
           "summary": {
             "anyOf": [
@@ -8403,16 +9971,15 @@
                 "type": "boolean"
               },
               {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
                 "type": "null"
               }
             ],
             "default": false,
             "title": "Summary"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           },
           "type": {
             "anyOf": [
@@ -8427,13 +9994,11 @@
             "title": "Type"
           }
         },
-        "required": [
-          "tool_type"
-        ],
-        "title": "EXASearchTool",
+        "required": [],
+        "title": "ExaSearchTool",
         "type": "object"
       },
-      "name": "EXASearchTool",
+      "name": "ExaSearchTool",
       "package_dependencies": [
         "exa_py"
       ],
@@ -8490,7 +10055,7 @@
         "required": [
           "search_query"
         ],
-        "title": "EXABaseToolSchema",
+        "title": "ExaBaseToolSchema",
         "type": "object"
       }
     },
@@ -8536,16 +10101,8 @@
             "type": "object"
           }
         },
-        "properties": {
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "tool_type"
-        ],
+        "properties": {},
+        "required": [],
         "title": "FileCompressorTool",
         "type": "object"
       },
@@ -8647,16 +10204,9 @@
             ],
             "default": null,
             "title": "File Path"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "FileReadTool",
         "type": "object"
       },
@@ -8746,16 +10296,8 @@
             "type": "object"
           }
         },
-        "properties": {
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "tool_type"
-        ],
+        "properties": {},
+        "required": [],
         "title": "FileWriterTool",
         "type": "object"
       },
@@ -8878,16 +10420,9 @@
               }
             ],
             "title": "Config"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "FirecrawlCrawlWebsiteTool",
         "type": "object"
       },
@@ -8977,16 +10512,9 @@
             "additionalProperties": true,
             "title": "Config",
             "type": "object"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "FirecrawlScrapeWebsiteTool",
         "type": "object"
       },
@@ -9083,16 +10611,9 @@
               }
             ],
             "title": "Config"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "FirecrawlSearchTool",
         "type": "object"
       },
@@ -9187,16 +10708,9 @@
             ],
             "description": "The user's Personal Access Token to access CrewAI AMP API. If not provided, it will be loaded from the environment variable CREWAI_PERSONAL_ACCESS_TOKEN.",
             "title": "Personal Access Token"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "GenerateCrewaiAutomationTool",
         "type": "object"
       },
@@ -9236,12 +10750,6 @@
       "humanized_name": "Search a github repo's content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -10227,7 +11735,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -10264,16 +11775,10 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
-          "gh_token",
-          "tool_type"
+          "gh_token"
         ],
         "title": "GithubSearchTool",
         "type": "object"
@@ -10383,16 +11888,9 @@
             ],
             "default": null,
             "title": "Hyperbrowser"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "HyperbrowserLoadTool",
         "type": "object"
       },
@@ -10495,17 +11993,11 @@
             "default": 600,
             "title": "Max Polling Time",
             "type": "integer"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
           "crew_api_url",
-          "crew_bearer_token",
-          "tool_type"
+          "crew_bearer_token"
         ],
         "title": "InvokeCrewAIAutomationTool",
         "type": "object"
@@ -10534,12 +12026,6 @@
       "humanized_name": "Search a JSON's content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -11525,7 +13011,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -11550,16 +13039,9 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "JSONSearchTool",
         "type": "object"
       },
@@ -11649,11 +13131,6 @@
             "title": "Headers",
             "type": "object"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "website_url": {
             "anyOf": [
               {
@@ -11667,9 +13144,7 @@
             "title": "Website Url"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "JinaScrapeWebsiteTool",
         "type": "object"
       },
@@ -11740,16 +13215,8 @@
             "type": "object"
           }
         },
-        "properties": {
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "tool_type"
-        ],
+        "properties": {},
+        "required": [],
         "title": "LinkupSearchTool",
         "type": "object"
       },
@@ -11809,18 +13276,10 @@
         "properties": {
           "llama_index_tool": {
             "title": "Llama Index Tool"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
-          "name",
-          "description",
-          "llama_index_tool",
-          "tool_type"
+          "llama_index_tool"
         ],
         "title": "LlamaIndexTool",
         "type": "object"
@@ -11839,12 +13298,6 @@
       "humanized_name": "Search a MDX's content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -12830,7 +14283,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -12855,16 +14311,9 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "MDXSearchTool",
         "type": "object"
       },
@@ -12976,20 +14425,12 @@
             "description": "UUID of the Agent Handler Tool Pack to use",
             "title": "Tool Pack Id",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
-          "name",
-          "description",
           "tool_pack_id",
           "registered_user_id",
-          "tool_name",
-          "tool_type"
+          "tool_name"
         ],
         "title": "MergeAgentHandlerTool",
         "type": "object"
@@ -13173,11 +14614,6 @@
             "title": "Text Key",
             "type": "string"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "vector_index_name": {
             "default": "vector_index",
             "description": "Name of the Atlas Search vector index",
@@ -13188,15 +14624,14 @@
         "required": [
           "database_name",
           "collection_name",
-          "connection_string",
-          "tool_type"
+          "connection_string"
         ],
         "title": "MongoDBVectorSearchTool",
         "type": "object"
       },
       "name": "MongoDBVectorSearchTool",
       "package_dependencies": [
-        "mongdb"
+        "pymongo"
       ],
       "run_params_schema": {
         "description": "Input for MongoDBTool.",
@@ -13296,16 +14731,9 @@
             ],
             "default": null,
             "title": "Session Id"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "MultiOnTool",
         "type": "object"
       },
@@ -13325,12 +14753,6 @@
       "humanized_name": "Search a database's table content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -14316,7 +15738,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -14346,16 +15771,10 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
-          "db_uri",
-          "tool_type"
+          "db_uri"
         ],
         "title": "MySQLSearchTool",
         "type": "object"
@@ -14379,7 +15798,7 @@
       }
     },
     {
-      "description": "Converts natural language to SQL queries and executes them.",
+      "description": "Converts natural language to SQL queries and executes them against a database. Read-only by default \u2014 only SELECT/SHOW/DESCRIBE/EXPLAIN queries (and read-only CTEs) are allowed unless configured with allow_dml=True.",
       "env_vars": [],
       "humanized_name": "NL2SQLTool",
       "init_params_schema": {
@@ -14420,7 +15839,14 @@
             "type": "object"
           }
         },
+        "description": "Tool that converts natural language to SQL and executes it against a database.\n\nBy default the tool operates in **read-only mode**: only SELECT, SHOW,\nDESCRIBE, EXPLAIN, and read-only CTEs (WITH \u2026 SELECT) are permitted.  Write\noperations (INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, \u2026) are\nblocked unless ``allow_dml=True`` is set explicitly or the environment\nvariable ``CREWAI_NL2SQL_ALLOW_DML=true`` is present.\n\nWritable CTEs (``WITH d AS (DELETE \u2026) SELECT \u2026``) and\n``EXPLAIN ANALYZE <write-stmt>`` are treated as write operations and are\nblocked in read-only mode.\n\nThe ``_fetch_all_available_columns`` helper uses parameterised queries so\nthat table names coming from the database catalogue cannot be used as an\ninjection vector.",
         "properties": {
+          "allow_dml": {
+            "default": false,
+            "description": "When False (default) only read statements are permitted. Set to True to allow INSERT/UPDATE/DELETE/DROP and other write operations.",
+            "title": "Allow DML",
+            "type": "boolean"
+          },
           "columns": {
             "additionalProperties": {
               "anyOf": [
@@ -14451,16 +15877,10 @@
             },
             "title": "Tables",
             "type": "array"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
-          "db_uri",
-          "tool_type"
+          "db_uri"
         ],
         "title": "NL2SQLTool",
         "type": "object"
@@ -14521,21 +15941,6 @@
               "description"
             ],
             "title": "EnvVar",
-            "type": "object"
-          },
-          "JsonResponseFormat": {
-            "description": "Response format requesting raw JSON output (e.g. ``{\"type\": \"json_object\"}``).",
-            "properties": {
-              "type": {
-                "const": "json_object",
-                "title": "Type",
-                "type": "string"
-              }
-            },
-            "required": [
-              "type"
-            ],
-            "title": "JsonResponseFormat",
             "type": "object"
           },
           "LLM": {
@@ -14766,16 +16171,6 @@
                 "title": "Reasoning Effort"
               },
               "response_format": {
-                "anyOf": [
-                  {
-                    "$ref": "#/$defs/JsonResponseFormat"
-                  },
-                  {},
-                  {
-                    "type": "null"
-                  }
-                ],
-                "default": null,
                 "title": "Response Format"
               },
               "seed": {
@@ -14869,16 +16264,9 @@
         "properties": {
           "llm": {
             "$ref": "#/$defs/LLM"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "OCRTool",
         "type": "object"
       },
@@ -15075,17 +16463,11 @@
           },
           "oxylabs_api": {
             "title": "Oxylabs Api"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
           "oxylabs_api",
-          "config",
-          "tool_type"
+          "config"
         ],
         "title": "OxylabsAmazonProductScraperTool",
         "type": "object"
@@ -15310,17 +16692,11 @@
           },
           "oxylabs_api": {
             "title": "Oxylabs Api"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
           "oxylabs_api",
-          "config",
-          "tool_type"
+          "config"
         ],
         "title": "OxylabsAmazonSearchScraperTool",
         "type": "object"
@@ -15558,17 +16934,11 @@
           },
           "oxylabs_api": {
             "title": "Oxylabs Api"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
           "oxylabs_api",
-          "config",
-          "tool_type"
+          "config"
         ],
         "title": "OxylabsGoogleSearchScraperTool",
         "type": "object"
@@ -15754,17 +17124,11 @@
           },
           "oxylabs_api": {
             "title": "Oxylabs Api"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
           "oxylabs_api",
-          "config",
-          "tool_type"
+          "config"
         ],
         "title": "OxylabsUniversalScraperTool",
         "type": "object"
@@ -15794,12 +17158,6 @@
       "humanized_name": "Search a PDF's content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -16785,7 +18143,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -16822,16 +18183,9 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "PDFSearchTool",
         "type": "object"
       },
@@ -16913,16 +18267,9 @@
             "default": "https://api.parallel.ai/v1beta/search",
             "title": "Search Url",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "ParallelSearchTool",
         "type": "object"
       },
@@ -17081,16 +18428,9 @@
             },
             "title": "Evaluators",
             "type": "array"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "PatronusEvalTool",
         "type": "object"
       },
@@ -17156,17 +18496,11 @@
           "evaluator": {
             "title": "Evaluator",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
           "evaluator",
-          "evaluated_model_gold_answer",
-          "tool_type"
+          "evaluated_model_gold_answer"
         ],
         "title": "PatronusLocalEvaluatorTool",
         "type": "object"
@@ -17272,16 +18606,9 @@
             },
             "title": "Evaluators",
             "type": "array"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "PatronusPredefinedCriteriaEvalTool",
         "type": "object"
       },
@@ -17470,16 +18797,10 @@
             "description": "Base package path for Qdrant. Will dynamically import client and models.",
             "title": "Qdrant Package",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
-          "qdrant_config",
-          "tool_type"
+          "qdrant_config"
         ],
         "title": "QdrantVectorSearchTool",
         "type": "object"
@@ -17533,12 +18854,6 @@
       "humanized_name": "Knowledge base",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -18524,7 +19839,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -18549,16 +19867,9 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "RagTool",
         "type": "object"
       },
@@ -18654,11 +19965,6 @@
             ],
             "title": "Headers"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "website_url": {
             "anyOf": [
               {
@@ -18672,9 +19978,7 @@
             "title": "Website Url"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "ScrapeElementFromWebsiteTool",
         "type": "object"
       },
@@ -18774,11 +20078,6 @@
             ],
             "title": "Headers"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "website_url": {
             "anyOf": [
               {
@@ -18792,9 +20091,7 @@
             "title": "Website Url"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "ScrapeWebsiteTool",
         "type": "object"
       },
@@ -18884,11 +20181,6 @@
             "title": "Enable Logging",
             "type": "boolean"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "user_prompt": {
             "anyOf": [
               {
@@ -18914,9 +20206,7 @@
             "title": "Website Url"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "ScrapegraphScrapeTool",
         "type": "object"
       },
@@ -19017,16 +20307,9 @@
             ],
             "default": null,
             "title": "Scrapfly"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "ScrapflyScrapeWebsiteTool",
         "type": "object"
       },
@@ -19184,11 +20467,6 @@
             "default": false,
             "title": "Return Html"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "wait_time": {
             "anyOf": [
               {
@@ -19214,9 +20492,7 @@
             "title": "Website Url"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "SeleniumScrapingTool",
         "type": "object"
       },
@@ -19306,16 +20582,9 @@
             ],
             "default": null,
             "title": "Client"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "SerpApiGoogleSearchTool",
         "type": "object"
       },
@@ -19411,16 +20680,9 @@
             ],
             "default": null,
             "title": "Client"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "SerpApiGoogleShoppingTool",
         "type": "object"
       },
@@ -19562,16 +20824,9 @@
             "default": "search",
             "title": "Search Type",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "SerperDevTool",
         "type": "object"
       },
@@ -19642,16 +20897,8 @@
             "type": "object"
           }
         },
-        "properties": {
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "tool_type"
-        ],
+        "properties": {},
+        "required": [],
         "title": "SerperScrapeWebsiteTool",
         "type": "object"
       },
@@ -19692,12 +20939,6 @@
       "humanized_name": "Job Search",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -20683,7 +21924,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -20739,16 +21983,9 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "SerplyJobSearchTool",
         "type": "object"
       },
@@ -20862,16 +22099,9 @@
             "default": "https://api.serply.io/v1/news/",
             "title": "Search Url",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "SerplyNewsSearchTool",
         "type": "object"
       },
@@ -20985,16 +22215,9 @@
             "default": "https://api.serply.io/v1/scholar/",
             "title": "Search Url",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "SerplyScholarSearchTool",
         "type": "object"
       },
@@ -21144,16 +22367,9 @@
             "default": "https://api.serply.io/v1/search/",
             "title": "Search Url",
             "type": "string"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "SerplyWebSearchTool",
         "type": "object"
       },
@@ -21188,12 +22404,6 @@
       "humanized_name": "Webpage to Markdown",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -22179,7 +23389,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -22234,16 +23447,9 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "SerplyWebpageToMarkdownTool",
         "type": "object"
       },
@@ -22384,16 +23590,9 @@
             ],
             "default": null,
             "title": "Connection Pool"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "SingleStoreSearchTool",
         "type": "object"
       },
@@ -22604,16 +23803,10 @@
             "description": "Delay between retries in seconds",
             "title": "Retry Delay",
             "type": "number"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
         "required": [
-          "config",
-          "tool_type"
+          "config"
         ],
         "title": "SnowflakeSearchTool",
         "type": "object"
@@ -22800,11 +23993,6 @@
             "default": null,
             "title": "Spider"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "website_url": {
             "anyOf": [
               {
@@ -22818,9 +24006,7 @@
             "title": "Website Url"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "SpiderTool",
         "type": "object"
       },
@@ -22983,11 +24169,6 @@
             "default": "https://api.stagehand.browserbase.com/v1",
             "title": "Server Url"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "use_simplified_dom": {
             "default": true,
             "title": "Use Simplified Dom",
@@ -23004,9 +24185,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "StagehandTool",
         "type": "object"
       },
@@ -23067,12 +24246,6 @@
       "humanized_name": "Search a txt's content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -24058,7 +25231,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -24084,11 +25260,6 @@
             "title": "Summarize",
             "type": "boolean"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "txt": {
             "anyOf": [
               {
@@ -24102,9 +25273,7 @@
             "title": "Txt"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "TXTSearchTool",
         "type": "object"
       },
@@ -24251,16 +25420,9 @@
             "description": "The timeout for the extraction request in seconds.",
             "title": "Timeout",
             "type": "integer"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "TavilyExtractorTool",
         "type": "object"
       },
@@ -24291,6 +25453,243 @@
           "urls"
         ],
         "title": "TavilyExtractorToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "A tool that retrieves the status and results of an existing Tavily research task by request ID. It returns Tavily responses as JSON.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Tavily research service",
+          "name": "TAVILY_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Tavily Get Research",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Tool that uses the Tavily Research status endpoint to retrieve results.",
+        "properties": {},
+        "required": [],
+        "title": "TavilyGetResearchTool",
+        "type": "object"
+      },
+      "name": "TavilyGetResearchTool",
+      "package_dependencies": [
+        "tavily-python"
+      ],
+      "run_params_schema": {
+        "description": "Input schema for TavilyGetResearchTool.",
+        "properties": {
+          "request_id": {
+            "description": "Existing Tavily research request ID to fetch status and results for.",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_id"
+        ],
+        "title": "TavilyGetResearchToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "A tool that creates Tavily research tasks and can stream research progress and results. It returns Tavily responses as JSON or SSE chunks.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for Tavily research service",
+          "name": "TAVILY_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Tavily Research",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Tool that uses the Tavily Research API to create research tasks.",
+        "properties": {
+          "citation_format": {
+            "default": "numbered",
+            "description": "Default citation format for Tavily research results.",
+            "enum": [
+              "numbered",
+              "mla",
+              "apa",
+              "chicago"
+            ],
+            "title": "Citation Format",
+            "type": "string"
+          },
+          "model": {
+            "default": "auto",
+            "description": "Default model used for new Tavily research tasks.",
+            "enum": [
+              "mini",
+              "pro",
+              "auto"
+            ],
+            "title": "Model",
+            "type": "string"
+          },
+          "output_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Default JSON Schema used to structure research output.",
+            "title": "Output Schema"
+          },
+          "stream": {
+            "default": false,
+            "description": "Whether new Tavily research tasks should stream responses by default.",
+            "title": "Stream",
+            "type": "boolean"
+          }
+        },
+        "required": [],
+        "title": "TavilyResearchTool",
+        "type": "object"
+      },
+      "name": "TavilyResearchTool",
+      "package_dependencies": [
+        "tavily-python"
+      ],
+      "run_params_schema": {
+        "description": "Input schema for TavilyResearchTool.",
+        "properties": {
+          "citation_format": {
+            "default": "numbered",
+            "description": "Citation format for the research report.",
+            "enum": [
+              "numbered",
+              "mla",
+              "apa",
+              "chicago"
+            ],
+            "title": "Citation Format",
+            "type": "string"
+          },
+          "input": {
+            "description": "The research task or question to investigate.",
+            "title": "Input",
+            "type": "string"
+          },
+          "model": {
+            "default": "auto",
+            "description": "The model used by the Tavily research agent.",
+            "enum": [
+              "mini",
+              "pro",
+              "auto"
+            ],
+            "title": "Model",
+            "type": "string"
+          },
+          "output_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional JSON Schema that structures the research output.",
+            "title": "Output Schema"
+          },
+          "stream": {
+            "default": false,
+            "description": "Whether to stream research progress and results as SSE chunks.",
+            "title": "Stream",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "input"
+        ],
+        "title": "TavilyResearchToolSchema",
         "type": "object"
       }
     },
@@ -24507,11 +25906,6 @@
             "title": "Timeout",
             "type": "integer"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "topic": {
             "default": "general",
             "description": "The topic to focus the search on.",
@@ -24524,9 +25918,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "TavilySearchTool",
         "type": "object"
       },
@@ -24600,16 +25992,8 @@
           }
         },
         "description": "Tool for analyzing images using vision models.\n\nArgs:\n    llm: Optional LLM instance to use\n    model: Model identifier to use if no LLM is provided",
-        "properties": {
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "tool_type"
-        ],
+        "properties": {},
+        "required": [],
         "title": "VisionTool",
         "type": "object"
       },
@@ -24731,11 +26115,6 @@
             "default": null,
             "title": "Query"
           },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
-          },
           "vectorizer": {
             "title": "Vectorizer"
           },
@@ -24753,8 +26132,7 @@
         "required": [
           "collection_name",
           "weaviate_cluster_url",
-          "weaviate_api_key",
-          "tool_type"
+          "weaviate_api_key"
         ],
         "title": "WeaviateVectorSearchTool",
         "type": "object"
@@ -24785,12 +26163,6 @@
       "humanized_name": "Search in a specific website",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -25776,7 +27148,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -25801,16 +27176,9 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "WebsiteSearchTool",
         "type": "object"
       },
@@ -25844,12 +27212,6 @@
       "humanized_name": "Search a XML's content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -26835,7 +28197,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -26860,16 +28225,9 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "XMLSearchTool",
         "type": "object"
       },
@@ -26903,12 +28261,6 @@
       "humanized_name": "Search a Youtube Channels content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -27894,7 +29246,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -27919,16 +29274,9 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "YoutubeChannelSearchTool",
         "type": "object"
       },
@@ -27962,12 +29310,6 @@
       "humanized_name": "Search a Youtube Video content",
       "init_params_schema": {
         "$defs": {
-          "Adapter": {
-            "description": "Abstract base class for RAG adapters.",
-            "properties": {},
-            "title": "Adapter",
-            "type": "object"
-          },
           "AzureProviderConfig": {
             "description": "Configuration for Azure provider.",
             "properties": {
@@ -28953,7 +30295,10 @@
         },
         "properties": {
           "adapter": {
-            "$ref": "#/$defs/Adapter"
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "collection_name": {
             "default": "rag_tool_collection",
@@ -28978,16 +30323,9 @@
             "default": false,
             "title": "Summarize",
             "type": "boolean"
-          },
-          "tool_type": {
-            "readOnly": true,
-            "title": "Tool Type",
-            "type": "string"
           }
         },
-        "required": [
-          "tool_type"
-        ],
+        "required": [],
         "title": "YoutubeVideoSearchTool",
         "type": "object"
       },

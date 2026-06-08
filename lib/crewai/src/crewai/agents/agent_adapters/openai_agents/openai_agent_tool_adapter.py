@@ -99,12 +99,10 @@ class OpenAIAgentToolAdapter(BaseToolAdapter):
                 Returns:
                     Tool execution result.
                 """
-                # Get the parameter name from the schema
                 param_name: str = next(
                     iter(tool.args_schema.model_json_schema()["properties"].keys())
                 )
 
-                # Handle different argument types
                 args_dict: dict[str, Any]
                 if isinstance(arguments, dict):
                     args_dict = arguments
@@ -116,16 +114,13 @@ class OpenAIAgentToolAdapter(BaseToolAdapter):
                 else:
                     args_dict = {param_name: str(arguments)}
 
-                # Run the tool with the processed arguments
                 output: Any | Awaitable[Any] = tool._run(**args_dict)
 
-                # Await if the tool returned a coroutine
                 if inspect.isawaitable(output):
                     result: Any = await output
                 else:
                     result = output
 
-                # Ensure the result is JSON serializable
                 if isinstance(result, (dict, list, str, int, float, bool, type(None))):
                     return result
                 return str(result)

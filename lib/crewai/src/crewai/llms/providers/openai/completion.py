@@ -29,14 +29,19 @@ from openai.types.responses import (
 from pydantic import BaseModel, PrivateAttr, model_validator
 
 from crewai.events.types.llm_events import LLMCallType
+from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
 from crewai.llms.base_llm import BaseLLM, JsonResponseFormat, llm_call_context
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
+from crewai.llms.providers.utils.common import safe_tool_conversion
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
-from crewai.utilities.pydantic_schema_utils import generate_model_description
+from crewai.utilities.pydantic_schema_utils import (
+    generate_model_description,
+    sanitize_tool_params_for_openai_strict,
+)
 from crewai.utilities.types import LLMMessage
 
 
@@ -243,7 +248,6 @@ class OpenAICompletion(BaseLLM):
         if not data.get("provider"):
             data["provider"] = "openai"
         data["api_key"] = data.get("api_key") or os.getenv("OPENAI_API_KEY")
-        # Extract api_base from kwargs if present
         if "api_base" not in data:
             data["api_base"] = None
         model = data.get("model", "gpt-4o")
@@ -253,22 +257,40 @@ class OpenAICompletion(BaseLLM):
 
     @model_validator(mode="after")
     def _init_clients(self) -> OpenAICompletion:
+        """Eagerly build clients when the API key is available, otherwise
+        defer so ``LLM(model="openai/...")`` can be constructed at module
+        import time even before deployment env vars are set.
+        """
+        try:
+            self._client = self._build_sync_client()
+            self._async_client = self._build_async_client()
+        except ValueError:
+            pass
+        return self
+
+    def _build_sync_client(self) -> Any:
         client_config = self._get_client_params()
         if self.interceptor:
             transport = HTTPTransport(interceptor=self.interceptor)
-            http_client = httpx.Client(transport=transport)
-            client_config["http_client"] = http_client
+            client_config["http_client"] = httpx.Client(transport=transport)
+        return OpenAI(**client_config)
 
-        self._client = OpenAI(**client_config)
-
-        async_client_config = self._get_client_params()
+    def _build_async_client(self) -> Any:
+        client_config = self._get_client_params()
         if self.interceptor:
-            async_transport = AsyncHTTPTransport(interceptor=self.interceptor)
-            async_http_client = httpx.AsyncClient(transport=async_transport)
-            async_client_config["http_client"] = async_http_client
+            transport = AsyncHTTPTransport(interceptor=self.interceptor)
+            client_config["http_client"] = httpx.AsyncClient(transport=transport)
+        return AsyncOpenAI(**client_config)
 
-        self._async_client = AsyncOpenAI(**async_client_config)
-        return self
+    def _get_sync_client(self) -> Any:
+        if self._client is None:
+            self._client = self._build_sync_client()
+        return self._client
+
+    def _get_async_client(self) -> Any:
+        if self._async_client is None:
+            self._async_client = self._build_async_client()
+        return self._async_client
 
     @property
     def last_response_id(self) -> str | None:
@@ -311,7 +333,6 @@ class OpenAICompletion(BaseLLM):
     def to_config_dict(self) -> dict[str, Any]:
         """Extend base config with OpenAI-specific fields."""
         config = super().to_config_dict()
-        # Client-level params (from OpenAI SDK)
         if self.organization:
             config["organization"] = self.organization
         if self.project:
@@ -320,7 +341,6 @@ class OpenAICompletion(BaseLLM):
             config["timeout"] = self.timeout
         if self.max_retries != 2:
             config["max_retries"] = self.max_retries
-        # Completion params
         if self.top_p is not None:
             config["top_p"] = self.top_p
         if self.frequency_penalty is not None:
@@ -643,7 +663,6 @@ class OpenAICompletion(BaseLLM):
         for message in messages:
             if message.get("role") == "system":
                 content = message.get("content", "")
-                # System messages should always have string content
                 content_str = content if isinstance(content, str) else str(content)
                 if instructions:
                     instructions = f"{instructions}\n\n{content_str}"
@@ -652,7 +671,7 @@ class OpenAICompletion(BaseLLM):
             else:
                 input_messages.append(message)
 
-        # Prepare input with optional reasoning items for ZDR chaining
+        # Prepend reasoning items for ZDR (zero-data-retention) chaining when configured
         final_input: list[Any] = []
         if self.auto_chain_reasoning and self._last_reasoning_items:
             final_input.extend(self._last_reasoning_items)
@@ -678,7 +697,6 @@ class OpenAICompletion(BaseLLM):
         elif self.auto_chain and self._last_response_id:
             params["previous_response_id"] = self._last_response_id
 
-        # Handle include parameter with auto_chain_reasoning support
         include_items: list[str] = list(self.include) if self.include else []
         if self.auto_chain_reasoning:
             if "reasoning.encrypted_content" not in include_items:
@@ -764,8 +782,6 @@ class OpenAICompletion(BaseLLM):
             "function": {"name": "...", "description": "...", "parameters": {...}}
         }
         """
-        from crewai.llms.providers.utils.common import safe_tool_conversion
-
         responses_tools = []
 
         for tool in tools:
@@ -797,13 +813,11 @@ class OpenAICompletion(BaseLLM):
     ) -> str | ResponsesAPIResult | Any:
         """Handle non-streaming Responses API call."""
         try:
-            response: Response = self._client.responses.create(**params)
+            response: Response = self._get_sync_client().responses.create(**params)
 
-            # Track response ID for auto-chaining
             if self.auto_chain and response.id:
                 self._last_response_id = response.id
 
-            # Track reasoning items for ZDR auto-chaining
             if self.auto_chain_reasoning:
                 reasoning_items = self._extract_reasoning_items(response)
                 if reasoning_items:
@@ -812,7 +826,10 @@ class OpenAICompletion(BaseLLM):
             usage = self._extract_responses_token_usage(response)
             self._track_token_usage_internal(usage)
 
-            # If parse_tool_outputs is enabled, return structured result
+            finish_reason, response_id = self._extract_responses_finish_reason_and_id(
+                response
+            )
+
             if self.parse_tool_outputs:
                 parsed_result = self._extract_builtin_tool_outputs(response)
                 parsed_result.text = self._apply_stop_words(parsed_result.text)
@@ -824,6 +841,8 @@ class OpenAICompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=params.get("input", []),
                     usage=usage,
+                    finish_reason=finish_reason,
+                    response_id=response_id,
                 )
 
                 return parsed_result
@@ -837,6 +856,8 @@ class OpenAICompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=params.get("input", []),
                     usage=usage,
+                    finish_reason=finish_reason,
+                    response_id=response_id,
                 )
                 return function_calls
 
@@ -875,6 +896,8 @@ class OpenAICompletion(BaseLLM):
                         from_agent=from_agent,
                         messages=params.get("input", []),
                         usage=usage,
+                        finish_reason=finish_reason,
+                        response_id=response_id,
                     )
                     return structured_result
                 except ValueError as e:
@@ -889,6 +912,8 @@ class OpenAICompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=params.get("input", []),
                 usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
 
             content = self._invoke_after_llm_call_hooks(
@@ -933,13 +958,13 @@ class OpenAICompletion(BaseLLM):
     ) -> str | ResponsesAPIResult | Any:
         """Handle async non-streaming Responses API call."""
         try:
-            response: Response = await self._async_client.responses.create(**params)
+            response: Response = await self._get_async_client().responses.create(
+                **params
+            )
 
-            # Track response ID for auto-chaining
             if self.auto_chain and response.id:
                 self._last_response_id = response.id
 
-            # Track reasoning items for ZDR auto-chaining
             if self.auto_chain_reasoning:
                 reasoning_items = self._extract_reasoning_items(response)
                 if reasoning_items:
@@ -948,7 +973,10 @@ class OpenAICompletion(BaseLLM):
             usage = self._extract_responses_token_usage(response)
             self._track_token_usage_internal(usage)
 
-            # If parse_tool_outputs is enabled, return structured result
+            finish_reason, response_id = self._extract_responses_finish_reason_and_id(
+                response
+            )
+
             if self.parse_tool_outputs:
                 parsed_result = self._extract_builtin_tool_outputs(response)
                 parsed_result.text = self._apply_stop_words(parsed_result.text)
@@ -960,6 +988,8 @@ class OpenAICompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=params.get("input", []),
                     usage=usage,
+                    finish_reason=finish_reason,
+                    response_id=response_id,
                 )
 
                 return parsed_result
@@ -973,6 +1003,8 @@ class OpenAICompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=params.get("input", []),
                     usage=usage,
+                    finish_reason=finish_reason,
+                    response_id=response_id,
                 )
                 return function_calls
 
@@ -1011,6 +1043,8 @@ class OpenAICompletion(BaseLLM):
                         from_agent=from_agent,
                         messages=params.get("input", []),
                         usage=usage,
+                        finish_reason=finish_reason,
+                        response_id=response_id,
                     )
                     return structured_result
                 except ValueError as e:
@@ -1025,6 +1059,8 @@ class OpenAICompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=params.get("input", []),
                 usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
 
         except NotFoundError as e:
@@ -1069,7 +1105,7 @@ class OpenAICompletion(BaseLLM):
         final_response: Response | None = None
         usage: dict[str, Any] | None = None
 
-        stream = self._client.responses.create(**params)
+        stream = self._get_sync_client().responses.create(**params)
         response_id_stream = None
 
         for event in stream:
@@ -1102,10 +1138,8 @@ class OpenAICompletion(BaseLLM):
 
             elif event.type == "response.completed":
                 final_response = event.response
-                # Track response ID for auto-chaining
                 if self.auto_chain and event.response and event.response.id:
                     self._last_response_id = event.response.id
-                # Track reasoning items for ZDR auto-chaining
                 if self.auto_chain_reasoning and event.response:
                     reasoning_items = self._extract_reasoning_items(event.response)
                     if reasoning_items:
@@ -1114,7 +1148,12 @@ class OpenAICompletion(BaseLLM):
                     usage = self._extract_responses_token_usage(event.response)
                     self._track_token_usage_internal(usage)
 
-        # If parse_tool_outputs is enabled, return structured result
+        finish_reason, response_id = (
+            self._extract_responses_finish_reason_and_id(final_response)
+            if final_response is not None
+            else (None, response_id_stream)
+        )
+
         if self.parse_tool_outputs and final_response:
             parsed_result = self._extract_builtin_tool_outputs(final_response)
             parsed_result.text = self._apply_stop_words(parsed_result.text)
@@ -1126,6 +1165,8 @@ class OpenAICompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=params.get("input", []),
                 usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
 
             return parsed_result
@@ -1163,6 +1204,8 @@ class OpenAICompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=params.get("input", []),
                     usage=usage,
+                    finish_reason=finish_reason,
+                    response_id=response_id,
                 )
                 return structured_result
             except ValueError as e:
@@ -1177,6 +1220,8 @@ class OpenAICompletion(BaseLLM):
             from_agent=from_agent,
             messages=params.get("input", []),
             usage=usage,
+            finish_reason=finish_reason,
+            response_id=response_id,
         )
 
         return self._invoke_after_llm_call_hooks(
@@ -1197,7 +1242,7 @@ class OpenAICompletion(BaseLLM):
         final_response: Response | None = None
         usage: dict[str, Any] | None = None
 
-        stream = await self._async_client.responses.create(**params)
+        stream = await self._get_async_client().responses.create(**params)
         response_id_stream = None
 
         async for event in stream:
@@ -1230,10 +1275,8 @@ class OpenAICompletion(BaseLLM):
 
             elif event.type == "response.completed":
                 final_response = event.response
-                # Track response ID for auto-chaining
                 if self.auto_chain and event.response and event.response.id:
                     self._last_response_id = event.response.id
-                # Track reasoning items for ZDR auto-chaining
                 if self.auto_chain_reasoning and event.response:
                     reasoning_items = self._extract_reasoning_items(event.response)
                     if reasoning_items:
@@ -1242,7 +1285,12 @@ class OpenAICompletion(BaseLLM):
                     usage = self._extract_responses_token_usage(event.response)
                     self._track_token_usage_internal(usage)
 
-        # If parse_tool_outputs is enabled, return structured result
+        finish_reason, response_id = (
+            self._extract_responses_finish_reason_and_id(final_response)
+            if final_response is not None
+            else (None, response_id_stream)
+        )
+
         if self.parse_tool_outputs and final_response:
             parsed_result = self._extract_builtin_tool_outputs(final_response)
             parsed_result.text = self._apply_stop_words(parsed_result.text)
@@ -1254,6 +1302,8 @@ class OpenAICompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=params.get("input", []),
                 usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
 
             return parsed_result
@@ -1291,6 +1341,8 @@ class OpenAICompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=params.get("input", []),
                     usage=usage,
+                    finish_reason=finish_reason,
+                    response_id=response_id,
                 )
                 return structured_result
             except ValueError as e:
@@ -1305,6 +1357,8 @@ class OpenAICompletion(BaseLLM):
             from_agent=from_agent,
             messages=params.get("input", []),
             usage=usage,
+            finish_reason=finish_reason,
+            response_id=response_id,
         )
 
         return full_response
@@ -1324,18 +1378,22 @@ class OpenAICompletion(BaseLLM):
         ]
 
     def _extract_responses_token_usage(self, response: Response) -> dict[str, Any]:
-        """Extract token usage from Responses API response."""
+        """Extract token usage and response metadata from Responses API response."""
         if response.usage:
-            result = {
+            result: dict[str, Any] = {
                 "prompt_tokens": response.usage.input_tokens,
                 "completion_tokens": response.usage.output_tokens,
                 "total_tokens": response.usage.total_tokens,
             }
-            # Extract cached prompt tokens from input_tokens_details
             input_details = getattr(response.usage, "input_tokens_details", None)
             if input_details:
                 result["cached_prompt_tokens"] = (
                     getattr(input_details, "cached_tokens", 0) or 0
+                )
+            output_details = getattr(response.usage, "output_tokens_details", None)
+            if output_details:
+                result["reasoning_tokens"] = (
+                    getattr(output_details, "reasoning_tokens", 0) or 0
                 )
             return result
         return {"total_tokens": 0}
@@ -1525,7 +1583,6 @@ class OpenAICompletion(BaseLLM):
             params["tools"] = self._convert_tools_for_interference(tools)
             params["tool_choice"] = "auto"
 
-        # Filter out CrewAI-specific parameters that shouldn't go to the API
         crewai_specific_params = {
             "callbacks",
             "available_functions",
@@ -1544,11 +1601,6 @@ class OpenAICompletion(BaseLLM):
         self, tools: list[dict[str, BaseTool]]
     ) -> list[dict[str, Any]]:
         """Convert CrewAI tool format to OpenAI function calling format."""
-        from crewai.llms.providers.utils.common import safe_tool_conversion
-        from crewai.utilities.pydantic_schema_utils import (
-            force_additional_properties_false,
-        )
-
         openai_tools = []
 
         for tool in tools:
@@ -1567,8 +1619,9 @@ class OpenAICompletion(BaseLLM):
                 params_dict = (
                     parameters if isinstance(parameters, dict) else dict(parameters)
                 )
-                params_dict = force_additional_properties_false(params_dict)
-                openai_tool["function"]["parameters"] = params_dict
+                openai_tool["function"]["parameters"] = (
+                    sanitize_tool_params_for_openai_strict(params_dict)
+                )
 
             openai_tools.append(openai_tool)
         return openai_tools
@@ -1587,7 +1640,7 @@ class OpenAICompletion(BaseLLM):
                 parse_params = {
                     k: v for k, v in params.items() if k != "response_format"
                 }
-                parsed_response = self._client.beta.chat.completions.parse(
+                parsed_response = self._get_sync_client().beta.chat.completions.parse(
                     **parse_params,
                     response_format=response_model,
                 )
@@ -1599,6 +1652,9 @@ class OpenAICompletion(BaseLLM):
                 usage = self._extract_openai_token_usage(parsed_response)
                 self._track_token_usage_internal(usage)
 
+                parsed_finish_reason, parsed_response_id = (
+                    self._extract_chat_finish_reason_and_id(parsed_response)
+                )
                 parsed_object = parsed_response.choices[0].message.parsed
                 if parsed_object:
                     self._emit_call_completed_event(
@@ -1608,10 +1664,14 @@ class OpenAICompletion(BaseLLM):
                         from_agent=from_agent,
                         messages=params["messages"],
                         usage=usage,
+                        finish_reason=parsed_finish_reason,
+                        response_id=parsed_response_id,
                     )
                     return parsed_object
 
-            response: ChatCompletion = self._client.chat.completions.create(**params)
+            response: ChatCompletion = self._get_sync_client().chat.completions.create(
+                **params
+            )
 
             usage = self._extract_openai_token_usage(response)
 
@@ -1619,9 +1679,11 @@ class OpenAICompletion(BaseLLM):
 
             choice: Choice = response.choices[0]
             message = choice.message
+            finish_reason, response_id = self._extract_chat_finish_reason_and_id(
+                response
+            )
 
-            # If there are tool_calls but no available_functions, return the tool_calls
-            # This allows the caller (e.g., executor) to handle tool execution
+            # Without available_functions, return tool_calls so the caller (executor) handles execution
             if message.tool_calls and not available_functions:
                 self._emit_call_completed_event(
                     response=list(message.tool_calls),
@@ -1630,10 +1692,11 @@ class OpenAICompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=params["messages"],
                     usage=usage,
+                    finish_reason=finish_reason,
+                    response_id=response_id,
                 )
                 return list(message.tool_calls)
 
-            # If there are tool_calls and available_functions, execute the tools
             if message.tool_calls and available_functions:
                 tool_call = message.tool_calls[0]
                 if not isinstance(tool_call, ChatCompletionMessageFunctionToolCall):
@@ -1671,6 +1734,8 @@ class OpenAICompletion(BaseLLM):
                         from_agent=from_agent,
                         messages=params["messages"],
                         usage=usage,
+                        finish_reason=finish_reason,
+                        response_id=response_id,
                     )
                     return structured_result
                 except ValueError as e:
@@ -1685,6 +1750,8 @@ class OpenAICompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=params["messages"],
                 usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
 
             if usage.get("total_tokens", 0) > 0:
@@ -1708,7 +1775,6 @@ class OpenAICompletion(BaseLLM):
             )
             raise ConnectionError(error_msg) from e
         except Exception as e:
-            # Handle context length exceeded and other errors
             if is_context_length_exceeded(e):
                 logging.error(f"Context window exceeded: {e}")
                 raise LLMContextLengthExceededError(str(e)) from e
@@ -1731,6 +1797,8 @@ class OpenAICompletion(BaseLLM):
         available_functions: dict[str, Any] | None = None,
         from_task: Any | None = None,
         from_agent: Any | None = None,
+        finish_reason: str | None = None,
+        response_id: str | None = None,
     ) -> str | list[dict[str, Any]]:
         """Finalize a streaming response with usage tracking, tool call handling, and events.
 
@@ -1742,6 +1810,9 @@ class OpenAICompletion(BaseLLM):
             available_functions: Available functions for tool calling.
             from_task: Task that initiated the call.
             from_agent: Agent that initiated the call.
+            finish_reason: Raw provider finish reason (e.g. "stop", "length",
+                "tool_calls") extracted from the last streaming chunk.
+            response_id: Raw provider response id from any chunk.
 
         Returns:
             Tool calls list when tools were invoked without available_functions,
@@ -1771,6 +1842,8 @@ class OpenAICompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=params["messages"],
                 usage=usage_data,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
             return tool_calls_list
 
@@ -1814,6 +1887,8 @@ class OpenAICompletion(BaseLLM):
             from_agent=from_agent,
             messages=params["messages"],
             usage=usage_data,
+            finish_reason=finish_reason,
+            response_id=response_id,
         )
 
         return full_response
@@ -1838,7 +1913,7 @@ class OpenAICompletion(BaseLLM):
             }
 
             stream: ChatCompletionStream[BaseModel]
-            with self._client.beta.chat.completions.stream(
+            with self._get_sync_client().beta.chat.completions.stream(
                 **parse_params, response_format=response_model
             ) as stream:
                 for chunk in stream:
@@ -1858,6 +1933,9 @@ class OpenAICompletion(BaseLLM):
                 if final_completion:
                     usage = self._extract_openai_token_usage(final_completion)
                     self._track_token_usage_internal(usage)
+                    parsed_finish_reason, parsed_response_id = (
+                        self._extract_chat_finish_reason_and_id(final_completion)
+                    )
                     if final_completion.choices:
                         parsed_result = final_completion.choices[0].message.parsed
                         if parsed_result:
@@ -1868,6 +1946,8 @@ class OpenAICompletion(BaseLLM):
                                 from_agent=from_agent,
                                 messages=params["messages"],
                                 usage=usage,
+                                finish_reason=parsed_finish_reason,
+                                response_id=parsed_response_id,
                             )
                             return parsed_result
 
@@ -1875,15 +1955,19 @@ class OpenAICompletion(BaseLLM):
             return ""
 
         completion_stream: Stream[ChatCompletionChunk] = (
-            self._client.chat.completions.create(**params)
+            self._get_sync_client().chat.completions.create(**params)
         )
 
         usage_data: dict[str, Any] | None = None
+        stream_finish_reason: str | None = None
+        stream_response_id: str | None = None
 
         for completion_chunk in completion_stream:
             response_id_stream = (
                 completion_chunk.id if hasattr(completion_chunk, "id") else None
             )
+            if response_id_stream:
+                stream_response_id = response_id_stream
 
             if hasattr(completion_chunk, "usage") and completion_chunk.usage:
                 usage_data = self._extract_openai_token_usage(completion_chunk)
@@ -1894,6 +1978,9 @@ class OpenAICompletion(BaseLLM):
 
             choice = completion_chunk.choices[0]
             chunk_delta: ChoiceDelta = choice.delta
+            chunk_finish = getattr(choice, "finish_reason", None)
+            if chunk_finish:
+                stream_finish_reason = chunk_finish
 
             if chunk_delta.content:
                 full_response += chunk_delta.content
@@ -1951,6 +2038,8 @@ class OpenAICompletion(BaseLLM):
             available_functions=available_functions,
             from_task=from_task,
             from_agent=from_agent,
+            finish_reason=stream_finish_reason,
+            response_id=stream_response_id,
         )
         if isinstance(result, str):
             return self._invoke_after_llm_call_hooks(
@@ -1972,9 +2061,11 @@ class OpenAICompletion(BaseLLM):
                 parse_params = {
                     k: v for k, v in params.items() if k != "response_format"
                 }
-                parsed_response = await self._async_client.beta.chat.completions.parse(
-                    **parse_params,
-                    response_format=response_model,
+                parsed_response = (
+                    await self._get_async_client().beta.chat.completions.parse(
+                        **parse_params,
+                        response_format=response_model,
+                    )
                 )
                 math_reasoning = parsed_response.choices[0].message
 
@@ -1984,6 +2075,9 @@ class OpenAICompletion(BaseLLM):
                 usage = self._extract_openai_token_usage(parsed_response)
                 self._track_token_usage_internal(usage)
 
+                parsed_finish_reason, parsed_response_id = (
+                    self._extract_chat_finish_reason_and_id(parsed_response)
+                )
                 parsed_object = parsed_response.choices[0].message.parsed
                 if parsed_object:
                     self._emit_call_completed_event(
@@ -1993,11 +2087,13 @@ class OpenAICompletion(BaseLLM):
                         from_agent=from_agent,
                         messages=params["messages"],
                         usage=usage,
+                        finish_reason=parsed_finish_reason,
+                        response_id=parsed_response_id,
                     )
                     return parsed_object
 
-            response: ChatCompletion = await self._async_client.chat.completions.create(
-                **params
+            response: ChatCompletion = (
+                await self._get_async_client().chat.completions.create(**params)
             )
 
             usage = self._extract_openai_token_usage(response)
@@ -2006,9 +2102,11 @@ class OpenAICompletion(BaseLLM):
 
             choice: Choice = response.choices[0]
             message = choice.message
+            finish_reason, response_id = self._extract_chat_finish_reason_and_id(
+                response
+            )
 
-            # If there are tool_calls but no available_functions, return the tool_calls
-            # This allows the caller (e.g., executor) to handle tool execution
+            # Without available_functions, return tool_calls so the caller (executor) handles execution
             if message.tool_calls and not available_functions:
                 self._emit_call_completed_event(
                     response=list(message.tool_calls),
@@ -2017,10 +2115,11 @@ class OpenAICompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=params["messages"],
                     usage=usage,
+                    finish_reason=finish_reason,
+                    response_id=response_id,
                 )
                 return list(message.tool_calls)
 
-            # If there are tool_calls and available_functions, execute the tools
             if message.tool_calls and available_functions:
                 from openai.types.chat.chat_completion_message_function_tool_call import (
                     ChatCompletionMessageFunctionToolCall,
@@ -2062,6 +2161,8 @@ class OpenAICompletion(BaseLLM):
                         from_agent=from_agent,
                         messages=params["messages"],
                         usage=usage,
+                        finish_reason=finish_reason,
+                        response_id=response_id,
                     )
                     return structured_result
                 except ValueError as e:
@@ -2076,6 +2177,8 @@ class OpenAICompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=params["messages"],
                 usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
 
             if usage.get("total_tokens", 0) > 0:
@@ -2123,12 +2226,16 @@ class OpenAICompletion(BaseLLM):
         if response_model:
             completion_stream: AsyncIterator[
                 ChatCompletionChunk
-            ] = await self._async_client.chat.completions.create(**params)
+            ] = await self._get_async_client().chat.completions.create(**params)
 
             accumulated_content = ""
             usage_data: dict[str, Any] | None = None
+            parsed_stream_finish_reason: str | None = None
+            parsed_stream_response_id: str | None = None
             async for chunk in completion_stream:
                 response_id_stream = chunk.id if hasattr(chunk, "id") else None
+                if response_id_stream:
+                    parsed_stream_response_id = response_id_stream
 
                 if hasattr(chunk, "usage") and chunk.usage:
                     usage_data = self._extract_openai_token_usage(chunk)
@@ -2139,6 +2246,9 @@ class OpenAICompletion(BaseLLM):
 
                 choice = chunk.choices[0]
                 delta: ChoiceDelta = choice.delta
+                chunk_finish = getattr(choice, "finish_reason", None)
+                if chunk_finish:
+                    parsed_stream_finish_reason = chunk_finish
 
                 if delta.content:
                     accumulated_content += delta.content
@@ -2162,6 +2272,8 @@ class OpenAICompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=params["messages"],
                     usage=usage_data,
+                    finish_reason=parsed_stream_finish_reason,
+                    response_id=parsed_stream_response_id,
                 )
 
                 return parsed_object
@@ -2174,17 +2286,23 @@ class OpenAICompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=params["messages"],
                     usage=usage_data,
+                    finish_reason=parsed_stream_finish_reason,
+                    response_id=parsed_stream_response_id,
                 )
                 return accumulated_content
 
         stream: AsyncIterator[
             ChatCompletionChunk
-        ] = await self._async_client.chat.completions.create(**params)
+        ] = await self._get_async_client().chat.completions.create(**params)
 
         usage_data = None
+        stream_finish_reason: str | None = None
+        stream_response_id: str | None = None
 
         async for chunk in stream:
             response_id_stream = chunk.id if hasattr(chunk, "id") else None
+            if response_id_stream:
+                stream_response_id = response_id_stream
 
             if hasattr(chunk, "usage") and chunk.usage:
                 usage_data = self._extract_openai_token_usage(chunk)
@@ -2195,6 +2313,9 @@ class OpenAICompletion(BaseLLM):
 
             choice = chunk.choices[0]
             chunk_delta: ChoiceDelta = choice.delta
+            chunk_finish = getattr(choice, "finish_reason", None)
+            if chunk_finish:
+                stream_finish_reason = chunk_finish
 
             if chunk_delta.content:
                 full_response += chunk_delta.content
@@ -2252,6 +2373,8 @@ class OpenAICompletion(BaseLLM):
             available_functions=available_functions,
             from_task=from_task,
             from_agent=from_agent,
+            finish_reason=stream_finish_reason,
+            response_id=stream_response_id,
         )
 
     def supports_function_calling(self) -> bool:
@@ -2296,30 +2419,58 @@ class OpenAICompletion(BaseLLM):
             "o4-mini": 200000,
         }
 
-        # Find the best match for the model name
         for model_prefix, size in context_windows.items():
             if self.model.startswith(model_prefix):
                 return int(size * CONTEXT_WINDOW_USAGE_RATIO)
 
-        # Default context window size
         return int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
+
+    def _effective_max_tokens(self) -> int | float | None:
+        """Newer OpenAI chat models cap via ``max_completion_tokens``."""
+        return self.max_tokens or self.max_completion_tokens
+
+    @staticmethod
+    def _extract_chat_finish_reason_and_id(
+        response: Any,
+    ) -> tuple[str | None, str | None]:
+        """ChatCompletion / ChatCompletionChunk share the choices-shape;
+        delegate to the shared extractor.
+        """
+        return extract_choices_finish_reason_and_id(response)
+
+    @staticmethod
+    def _extract_responses_finish_reason_and_id(
+        response: Any,
+    ) -> tuple[str | None, str | None]:
+        """Extract finish_reason and response_id from an OpenAI Responses
+        API ``Response`` object. The Responses API exposes ``status`` rather
+        than ``finish_reason``; we forward the raw status value.
+        """
+        return (
+            getattr(response, "status", None),
+            getattr(response, "id", None),
+        )
 
     def _extract_openai_token_usage(
         self, response: ChatCompletion | ChatCompletionChunk
     ) -> dict[str, Any]:
-        """Extract token usage from OpenAI ChatCompletion or ChatCompletionChunk response."""
+        """Extract token usage and response metadata from OpenAI ChatCompletion."""
         if hasattr(response, "usage") and response.usage:
             usage = response.usage
-            result = {
+            result: dict[str, Any] = {
                 "prompt_tokens": getattr(usage, "prompt_tokens", 0),
                 "completion_tokens": getattr(usage, "completion_tokens", 0),
                 "total_tokens": getattr(usage, "total_tokens", 0),
             }
-            # Extract cached prompt tokens from prompt_tokens_details
             prompt_details = getattr(usage, "prompt_tokens_details", None)
             if prompt_details:
                 result["cached_prompt_tokens"] = (
                     getattr(prompt_details, "cached_tokens", 0) or 0
+                )
+            completion_details = getattr(usage, "completion_tokens_details", None)
+            if completion_details:
+                result["reasoning_tokens"] = (
+                    getattr(completion_details, "reasoning_tokens", 0) or 0
                 )
             return result
         return {"total_tokens": 0}
@@ -2328,7 +2479,6 @@ class OpenAICompletion(BaseLLM):
         """Format messages for OpenAI API."""
         base_formatted = super()._format_messages(messages)
 
-        # Apply OpenAI-specific formatting
         formatted_messages: list[LLMMessage] = []
 
         for message in base_formatted:
@@ -2371,8 +2521,8 @@ class OpenAICompletion(BaseLLM):
             from crewai_files.uploaders.openai import OpenAIFileUploader
 
             return OpenAIFileUploader(
-                client=self._client,
-                async_client=self._async_client,
+                client=self._get_sync_client(),
+                async_client=self._get_async_client(),
             )
         except ImportError:
             return None

@@ -1,7 +1,7 @@
-# EXASearchTool Documentation
+# ExaSearchTool Documentation
 
 ## Description
-This tool is designed to perform a semantic search for a specified query from a text's content across the internet. It utilizes the `https://exa.ai/` API to fetch and display the most relevant search results based on the query provided by the user.
+This tool lets CrewAI agents search the web using [Exa](https://exa.ai/), the fastest and most accurate web search API. By default the tool returns token-efficient highlights of the most relevant results for any query; you can also opt in to full page content.
 
 ## Installation
 To incorporate this tool into your project, follow the installation instructions below:
@@ -10,21 +10,23 @@ uv add crewai[tools] exa_py
 ```
 
 ## Example
-The following example demonstrates how to initialize the tool and execute a search with a given query:
+The following example demonstrates how to initialize the tool and run a search:
 
 ```python
-from crewai_tools import EXASearchTool
+from crewai_tools import ExaSearchTool
 
-# Initialize the tool for internet searching capabilities
-tool = EXASearchTool(api_key="your_api_key")
+# Default: results with token-efficient highlights
+tool = ExaSearchTool(api_key="your_api_key", highlights=True)
 ```
 
 ## Steps to Get Started
-To effectively use the `EXASearchTool`, follow these steps:
+To effectively use the `ExaSearchTool`, follow these steps:
 
 1. **Package Installation**: Confirm that the `crewai[tools]` package is installed in your Python environment.
-2. **API Key Acquisition**: Acquire a `https://exa.ai/` API key by registering for a free account at `https://exa.ai/`.
-3. **Environment Configuration**: Store your obtained API key in an environment variable named `EXA_API_KEY` to facilitate its use by the tool.
+2. **API Key Acquisition**: Get an Exa API key from the [Exa dashboard](https://dashboard.exa.ai/api-keys).
+3. **Environment Configuration**: Store your API key in an environment variable named `EXA_API_KEY` so the tool can pick it up automatically.
 
-## Conclusion
-By integrating the `EXASearchTool` into Python projects, users gain the ability to conduct real-time, relevant searches across the internet directly from their applications. By adhering to the setup and usage guidelines provided, incorporating this tool into projects is streamlined and straightforward.
+For details on choosing between highlights and full content, see the [Exa search best practices](https://exa.ai/docs/reference/search-best-practices).
+
+## Note
+`EXASearchTool` is a deprecated alias for `ExaSearchTool`. Existing imports continue to work but emit a deprecation warning; please migrate to `ExaSearchTool`.

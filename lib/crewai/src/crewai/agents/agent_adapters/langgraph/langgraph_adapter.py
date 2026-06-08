@@ -33,6 +33,7 @@ from crewai.tools.base_tool import BaseTool
 from crewai.types.callback import SerializableCallable
 from crewai.utilities import Logger
 from crewai.utilities.converter import Converter
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.import_utils import require
 
 
@@ -50,7 +51,10 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
     _graph: Any = PrivateAttr(default=None)
     _memory: Any = PrivateAttr(default=None)
     _max_iterations: int = PrivateAttr(default=10)
-    function_calling_llm: Any = Field(default=None)
+    function_calling_llm: Any = Field(
+        default=None,
+        deprecated="function_calling_llm is deprecated and will be removed in a future release.",
+    )
     step_callback: SerializableCallable | None = Field(default=None)
 
     model: str = Field(default="gpt-4o")
@@ -186,7 +190,7 @@ class LangGraphAgentAdapter(BaseAgentAdapter):
             task_prompt = task.prompt() if hasattr(task, "prompt") else str(task)
 
             if context:
-                task_prompt = self.i18n.slice("task_with_context").format(
+                task_prompt = I18N_DEFAULT.slice("task_with_context").format(
                     task=task_prompt, context=context
                 )
 

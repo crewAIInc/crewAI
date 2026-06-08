@@ -5,6 +5,7 @@ from collections.abc import Generator
 import gzip
 import os
 from pathlib import Path
+import re
 import tempfile
 from typing import Any
 
@@ -20,8 +21,25 @@ except ModuleNotFoundError:
 
 
 env_test_path = Path(__file__).parent / ".env.test"
-load_dotenv(env_test_path, override=True)
-load_dotenv(override=True)
+
+load_dotenv(env_test_path, override=False)
+load_dotenv(override=False)
+
+BEDROCK_HOST_PLACEHOLDER = "bedrock-runtime.vcr.amazonaws.com"
+_BEDROCK_HOST_RE = re.compile(r"^bedrock-runtime\.[a-z0-9-]+\.amazonaws\.com$")
+
+
+def _normalize_bedrock_host(host: str) -> str:
+    if _BEDROCK_HOST_RE.match(host):
+        return BEDROCK_HOST_PLACEHOLDER
+    return host
+
+
+def bedrock_host_matcher(r1: Request, r2: Request) -> bool:  # type: ignore[no-any-unimported]
+    """Match Bedrock requests across AWS regions (CI uses us-east-1, local may use us-west-2)."""
+    return _normalize_bedrock_host(r1.host or "") == _normalize_bedrock_host(
+        r2.host or ""
+    )
 
 
 def _patched_make_vcr_request(httpx_request: Any, **kwargs: Any) -> Any:
@@ -54,12 +72,13 @@ _original_from_serialized_response = getattr(
 )
 
 if _original_from_serialized_response is not None:
+    _from_serialized: Any = _original_from_serialized_response
 
     def _patched_from_serialized_response(
         request: Any, serialized_response: Any, history: Any = None
     ) -> Any:
         """Patched version that ensures response._content is properly set."""
-        response = _original_from_serialized_response(request, serialized_response, history)
+        response = _from_serialized(request, serialized_response, history)
         # Explicitly set _content to avoid ResponseNotRead errors
         # The content was passed to the constructor but the mocked read() prevents
         # proper initialization of the internal state
@@ -187,6 +206,7 @@ HEADERS_TO_FILTER = {
     "anthropic-ratelimit-tokens-remaining": "ANTHROPIC-RATELIMIT-TOKENS-REMAINING-XXX",
     "anthropic-ratelimit-tokens-reset": "ANTHROPIC-RATELIMIT-TOKENS-RESET-XXX",
     "x-amz-date": "X-AMZ-DATE-XXX",
+    "x-amz-security-token": "X-AMZ-SECURITY-TOKEN-XXX",
     "amz-sdk-invocation-id": "AMZ-SDK-INVOCATION-ID-XXX",
     "accept-encoding": "ACCEPT-ENCODING-XXX",
     "x-amzn-requestid": "X-AMZN-REQUESTID-XXX",
@@ -211,6 +231,10 @@ def _filter_request_headers(request: Request) -> Request:  # type: ignore[no-any
         placeholder_host = "fake-azure-endpoint.openai.azure.com"
         request.uri = request.uri.replace(original_host, placeholder_host)
 
+    # Normalize Bedrock regional endpoints so cassettes work in any AWS region.
+    if request.host and _BEDROCK_HOST_RE.match(request.host):
+        request.uri = request.uri.replace(request.host, BEDROCK_HOST_PLACEHOLDER)
+
     return request
 
 
@@ -226,6 +250,11 @@ def _filter_response_headers(response: dict[str, Any]) -> dict[str, Any] | None:
     content_length = headers.get("content-length", headers.get("Content-Length", []))
 
     if body == "" or body == b"" or content_length == ["0"]:
+        return None
+
+    status_code = response.get("status", {}).get("code")
+    if isinstance(status_code, int) and status_code >= 400:
+        # Avoid persisting auth/model errors when re-recording without valid AWS creds.
         return None
 
     for encoding_header in ["Content-Encoding", "content-encoding"]:
@@ -255,7 +284,8 @@ def vcr_cassette_dir(request: Any) -> str:
 
     for parent in test_file.parents:
         if (
-            parent.name in ("crewai", "crewai-tools", "crewai-files")
+            parent.name
+            in ("crewai", "crewai-tools", "crewai-files", "cli", "crewai-core")
             and parent.parent.name == "lib"
         ):
             package_root = parent
@@ -275,6 +305,11 @@ def vcr_cassette_dir(request: Any) -> str:
     cassette_dir.mkdir(parents=True, exist_ok=True)
 
     return str(cassette_dir)
+
+
+def pytest_recording_configure(vcr: Any, config: Any) -> None:
+    """Register custom VCR matchers for each test cassette session."""
+    vcr.register_matcher("bedrock_host", bedrock_host_matcher)
 
 
 @pytest.fixture(scope="module")

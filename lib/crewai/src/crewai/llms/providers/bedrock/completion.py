@@ -12,6 +12,7 @@ from typing_extensions import Required
 
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM, llm_call_context
+from crewai.llms.providers.utils.common import safe_tool_conversion
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
@@ -68,7 +69,6 @@ def _preprocess_structured_data(
     import re
     from typing import get_origin
 
-    # Get model field annotations
     model_fields = response_model.model_fields
 
     processed_data = dict(data)
@@ -79,17 +79,14 @@ def _preprocess_structured_data(
 
         value = processed_data[field_name]
 
-        # Check if the field expects a list type
         annotation = field_info.annotation
         origin = get_origin(annotation)
 
-        # Handle list[X] or List[X] types
         is_list_type = origin is list or (
             origin is not None and str(origin).startswith("list")
         )
 
         if is_list_type and isinstance(value, str):
-            # Try to parse markdown-style bullet points or numbered lists
             lines = value.strip().split("\n")
             parsed_items = []
 
@@ -98,8 +95,7 @@ def _preprocess_structured_data(
                 if not line:
                     continue
 
-                # Remove common bullet point prefixes
-                # Matches: "- item", "* item", "• item", "1. item", "1) item"
+                # Strip common list markers: "- item", "* item", "• item", "1. item", "1) item"
                 cleaned = re.sub(r"^[-*•]\s*", "", line)
                 cleaned = re.sub(r"^\d+[.)]\s*", "", cleaned)
                 cleaned = cleaned.strip()
@@ -265,11 +261,9 @@ class BedrockCompletion(BaseLLM):
                 "Interceptors are currently supported for OpenAI and Anthropic providers only."
             )
 
-        # Force provider to bedrock
         data.pop("provider", None)
         data["provider"] = "bedrock"
 
-        # Normalize stop_sequences from stop kwarg
         popped = data.pop("stop_sequences", None)
         seqs = popped if popped is not None else (data.get("stop") or [])
         if isinstance(seqs, str):
@@ -278,7 +272,6 @@ class BedrockCompletion(BaseLLM):
             seqs = list(seqs)
         data["stop"] = seqs
 
-        # Resolve env vars
         data["aws_access_key_id"] = data.get("aws_access_key_id") or os.getenv(
             "AWS_ACCESS_KEY_ID"
         )
@@ -302,6 +295,22 @@ class BedrockCompletion(BaseLLM):
 
     @model_validator(mode="after")
     def _init_clients(self) -> BedrockCompletion:
+        """Eagerly build the sync client when AWS credentials resolve,
+        otherwise defer so ``LLM(model="bedrock/...")`` can be constructed
+        at module import time even before deployment env vars are set.
+
+        Only credential/SDK errors are caught — programming errors like
+        ``TypeError`` or ``AttributeError`` propagate so real bugs aren't
+        silently swallowed.
+        """
+        try:
+            self._client = self._build_sync_client()
+        except (BotoCoreError, ClientError, ValueError) as e:
+            logging.debug("Deferring Bedrock client construction: %s", e)
+        self._async_exit_stack = AsyncExitStack() if AIOBOTOCORE_AVAILABLE else None
+        return self
+
+    def _build_sync_client(self) -> Any:
         config = Config(
             read_timeout=300,
             retries={"max_attempts": 3, "mode": "adaptive"},
@@ -313,9 +322,17 @@ class BedrockCompletion(BaseLLM):
             aws_session_token=self.aws_session_token,
             region_name=self.region_name,
         )
-        self._client = session.client("bedrock-runtime", config=config)
-        self._async_exit_stack = AsyncExitStack() if AIOBOTOCORE_AVAILABLE else None
-        return self
+        return session.client("bedrock-runtime", config=config)
+
+    def _get_sync_client(self) -> Any:
+        if self._client is None:
+            self._client = self._build_sync_client()
+        return self._client
+
+    def _get_async_client(self) -> Any:
+        """Async client is set up separately by ``_ensure_async_client``
+        using ``aiobotocore`` inside an exit stack."""
+        return self._async_client
 
     def to_config_dict(self) -> dict[str, Any]:
         """Extend base config with Bedrock-specific fields."""
@@ -347,7 +364,6 @@ class BedrockCompletion(BaseLLM):
 
         with llm_call_context():
             try:
-                # Emit call started event
                 self._emit_call_started_event(
                     messages=messages,
                     tools=tools,
@@ -357,7 +373,6 @@ class BedrockCompletion(BaseLLM):
                     from_agent=from_agent,
                 )
 
-                # Format messages for Converse API
                 formatted_messages, system_message = self._format_messages_for_converse(
                     messages
                 )
@@ -367,20 +382,17 @@ class BedrockCompletion(BaseLLM):
                 ):
                     raise ValueError("LLM call blocked by before_llm_call hook")
 
-                # Prepare request body
                 body: BedrockConverseRequestBody = {
                     "inferenceConfig": self._get_inference_config(),
                 }
 
-                # Add system message if present
                 if system_message:
                     body["system"] = cast(
                         "list[SystemContentBlockTypeDef]",
                         cast(object, [{"text": system_message}]),
                     )
 
-                # Add tool config if present or if messages contain tool content
-                # Bedrock requires toolConfig when messages have toolUse/toolResult
+                # Bedrock requires toolConfig when messages contain toolUse/toolResult
                 if tools:
                     tool_config: ToolConfigurationTypeDef = {
                         "tools": cast(
@@ -390,7 +402,6 @@ class BedrockCompletion(BaseLLM):
                     }
                     body["toolConfig"] = tool_config
                 elif self._messages_contain_tool_content(formatted_messages):
-                    # Create minimal toolConfig from tool history in messages
                     tools_from_history = self._extract_tools_from_message_history(
                         formatted_messages
                     )
@@ -400,7 +411,6 @@ class BedrockCompletion(BaseLLM):
                             cast(object, {"tools": tools_from_history}),
                         )
 
-                # Add optional advanced features if configured
                 if self.guardrail_config:
                     guardrail_config: GuardrailConfigurationTypeDef = cast(
                         "GuardrailConfigurationTypeDef",
@@ -510,8 +520,7 @@ class BedrockCompletion(BaseLLM):
                         cast(object, [{"text": system_message}]),
                     )
 
-                # Add tool config if present or if messages contain tool content
-                # Bedrock requires toolConfig when messages have toolUse/toolResult
+                # Bedrock requires toolConfig when messages contain toolUse/toolResult
                 if tools:
                     tool_config: ToolConfigurationTypeDef = {
                         "tools": cast(
@@ -521,7 +530,6 @@ class BedrockCompletion(BaseLLM):
                     }
                     body["toolConfig"] = tool_config
                 elif self._messages_contain_tool_content(formatted_messages):
-                    # Create minimal toolConfig from tool history in messages
                     tools_from_history = self._extract_tools_from_message_history(
                         formatted_messages
                     )
@@ -655,7 +663,7 @@ class BedrockCompletion(BaseLLM):
                     raise ValueError(f"Invalid message format at index {i}")
 
             # Call Bedrock Converse API with proper error handling
-            response = self._client.converse(
+            response = self._get_sync_client().converse(
                 modelId=self.model_id,
                 messages=cast(
                     "Sequence[MessageTypeDef | MessageOutputTypeDef]",
@@ -669,7 +677,7 @@ class BedrockCompletion(BaseLLM):
             if usage:
                 self._track_token_usage_internal(usage)
 
-            stop_reason = response.get("stopReason")
+            stop_reason, response_id = self._extract_finish_reason_and_id(response)
             if stop_reason:
                 logging.debug(f"Response stop reason: {stop_reason}")
                 if stop_reason == "max_tokens":
@@ -708,6 +716,8 @@ class BedrockCompletion(BaseLLM):
                                 from_agent=from_agent,
                                 messages=messages,
                                 usage=usage,
+                                finish_reason=stop_reason,
+                                response_id=response_id,
                             )
                             return result
                         except Exception as e:
@@ -718,7 +728,6 @@ class BedrockCompletion(BaseLLM):
                             logging.error(error_msg)
                             raise ValueError(error_msg) from e
 
-            # Filter out structured_output from tool_uses returned to executor
             non_structured_output_tool_uses = [
                 tu for tu in tool_uses if tu.get("name") != STRUCTURED_OUTPUT_TOOL_NAME
             ]
@@ -731,18 +740,17 @@ class BedrockCompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=messages,
                     usage=usage,
+                    finish_reason=stop_reason,
+                    response_id=response_id,
                 )
                 return non_structured_output_tool_uses
 
-            # Process content blocks and handle tool use correctly
             text_content = ""
 
             for content_block in content:
-                # Handle text content
                 if "text" in content_block:
                     text_content += content_block["text"]
 
-                # Handle tool use - corrected structure according to AWS API docs
                 elif "toolUse" in content_block and available_functions:
                     tool_use_block = content_block["toolUse"]
                     tool_use_id = tool_use_block.get("toolUseId")
@@ -756,7 +764,6 @@ class BedrockCompletion(BaseLLM):
                         f"Tool use requested: {function_name} with ID {tool_use_id}"
                     )
 
-                    # Execute the tool
                     tool_result = self._handle_tool_execution(
                         function_name=function_name,
                         function_args=function_args,
@@ -796,10 +803,8 @@ class BedrockCompletion(BaseLLM):
                             response_model,
                         )
 
-            # Apply stop sequences if configured
             text_content = self._apply_stop_words(text_content)
 
-            # Validate final response
             if not text_content or text_content.strip() == "":
                 logging.warning("Extracted empty text content from Bedrock response")
                 text_content = "I apologize, but I couldn't generate a proper response. Please try again."
@@ -811,6 +816,8 @@ class BedrockCompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=messages,
                 usage=usage,
+                finish_reason=stop_reason,
+                response_id=response_id,
             )
 
             return self._invoke_after_llm_call_hooks(
@@ -820,16 +827,13 @@ class BedrockCompletion(BaseLLM):
             )
 
         except ClientError as e:
-            # Handle all AWS ClientError exceptions as per documentation
             error_code = e.response.get("Error", {}).get("Code", "Unknown")
             error_msg = e.response.get("Error", {}).get("Message", str(e))
 
-            # Log the specific error for debugging
             logging.error(f"AWS Bedrock ClientError ({error_code}): {error_msg}")
 
-            # Handle specific error codes as documented
             if error_code == "ValidationException":
-                # This is the error we're seeing with Cohere
+                # Cohere returns this when conversation alternation is broken
                 if "last turn" in error_msg and "user message" in error_msg:
                     raise ValueError(
                         f"Conversation format error: {error_msg}. Check message alternation."
@@ -867,7 +871,6 @@ class BedrockCompletion(BaseLLM):
             logging.error(error_msg)
             raise ConnectionError(error_msg) from e
         except Exception as e:
-            # Catch any other unexpected errors
             error_msg = f"Unexpected error in Bedrock converse call: {e}"
             logging.error(error_msg)
             raise RuntimeError(error_msg) from e
@@ -944,7 +947,7 @@ class BedrockCompletion(BaseLLM):
         usage_data: dict[str, Any] | None = None
 
         try:
-            response = self._client.converse_stream(
+            response = self._get_sync_client().converse_stream(
                 modelId=self.model_id,
                 messages=cast(
                     "Sequence[MessageTypeDef | MessageOutputTypeDef]",
@@ -954,7 +957,9 @@ class BedrockCompletion(BaseLLM):
             )
 
             stream = response.get("stream")
-            response_id = None
+            _, stream_response_id = self._extract_finish_reason_and_id(response)
+            response_id = stream_response_id
+            stream_finish_reason: str | None = None
             if stream:
                 for event in stream:
                     if "messageStart" in event:
@@ -1045,6 +1050,9 @@ class BedrockCompletion(BaseLLM):
                                     result = response_model.model_validate(
                                         function_args
                                     )
+                                    # contentBlockStop fires before messageStop sets
+                                    # stream_finish_reason; structured output always
+                                    # completes via the tool-call path.
                                     self._emit_call_completed_event(
                                         response=result.model_dump_json(),
                                         call_type=LLMCallType.LLM_CALL,
@@ -1052,6 +1060,9 @@ class BedrockCompletion(BaseLLM):
                                         from_agent=from_agent,
                                         messages=messages,
                                         usage=usage_data,
+                                        finish_reason=stream_finish_reason
+                                        or "tool_use",
+                                        response_id=response_id,
                                     )
                                     return result  # type: ignore[return-value]
                                 except Exception as e:
@@ -1105,6 +1116,7 @@ class BedrockCompletion(BaseLLM):
                             tool_use_id = None
                     elif "messageStop" in event:
                         stop_reason = event["messageStop"].get("stopReason")
+                        stream_finish_reason = stop_reason
                         logging.debug(f"Streaming message stopped: {stop_reason}")
                         if stop_reason == "max_tokens":
                             logging.warning(
@@ -1150,6 +1162,8 @@ class BedrockCompletion(BaseLLM):
             from_agent=from_agent,
             messages=messages,
             usage=usage_data,
+            finish_reason=stream_finish_reason,
+            response_id=response_id,
         )
 
         return full_response
@@ -1265,7 +1279,7 @@ class BedrockCompletion(BaseLLM):
             if usage:
                 self._track_token_usage_internal(usage)
 
-            stop_reason = response.get("stopReason")
+            stop_reason, response_id = self._extract_finish_reason_and_id(response)
             if stop_reason:
                 logging.debug(f"Response stop reason: {stop_reason}")
                 if stop_reason == "max_tokens":
@@ -1303,6 +1317,8 @@ class BedrockCompletion(BaseLLM):
                                 from_agent=from_agent,
                                 messages=messages,
                                 usage=usage,
+                                finish_reason=stop_reason,
+                                response_id=response_id,
                             )
                             return result
                         except Exception as e:
@@ -1313,7 +1329,6 @@ class BedrockCompletion(BaseLLM):
                             logging.error(error_msg)
                             raise ValueError(error_msg) from e
 
-            # Filter out structured_output from tool_uses returned to executor
             non_structured_output_tool_uses = [
                 tu for tu in tool_uses if tu.get("name") != STRUCTURED_OUTPUT_TOOL_NAME
             ]
@@ -1326,6 +1341,8 @@ class BedrockCompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=messages,
                     usage=usage,
+                    finish_reason=stop_reason,
+                    response_id=response_id,
                 )
                 return non_structured_output_tool_uses
 
@@ -1401,6 +1418,8 @@ class BedrockCompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=messages,
                 usage=usage,
+                finish_reason=stop_reason,
+                response_id=response_id,
             )
 
             return text_content
@@ -1535,7 +1554,9 @@ class BedrockCompletion(BaseLLM):
             )
 
             stream = response.get("stream")
-            response_id = None
+            _, stream_response_id = self._extract_finish_reason_and_id(response)
+            response_id = stream_response_id
+            stream_finish_reason: str | None = None
             if stream:
                 async for event in stream:
                     if "messageStart" in event:
@@ -1627,6 +1648,9 @@ class BedrockCompletion(BaseLLM):
                                     result = response_model.model_validate(
                                         function_args
                                     )
+                                    # contentBlockStop fires before messageStop sets
+                                    # stream_finish_reason; structured output always
+                                    # completes via the tool-call path.
                                     self._emit_call_completed_event(
                                         response=result.model_dump_json(),
                                         call_type=LLMCallType.LLM_CALL,
@@ -1634,6 +1658,9 @@ class BedrockCompletion(BaseLLM):
                                         from_agent=from_agent,
                                         messages=messages,
                                         usage=usage_data,
+                                        finish_reason=stream_finish_reason
+                                        or "tool_use",
+                                        response_id=response_id,
                                     )
                                     return result  # type: ignore[return-value]
                                 except Exception as e:
@@ -1691,6 +1718,7 @@ class BedrockCompletion(BaseLLM):
 
                     elif "messageStop" in event:
                         stop_reason = event["messageStop"].get("stopReason")
+                        stream_finish_reason = stop_reason
                         logging.debug(f"Streaming message stopped: {stop_reason}")
                         if stop_reason == "max_tokens":
                             logging.warning(
@@ -1737,6 +1765,8 @@ class BedrockCompletion(BaseLLM):
             from_agent=from_agent,
             messages=messages,
             usage=usage_data,
+            finish_reason=stream_finish_reason,
+            response_id=response_id,
         )
 
         return self._invoke_after_llm_call_hooks(
@@ -1768,7 +1798,7 @@ class BedrockCompletion(BaseLLM):
             tool_call_id = message.get("tool_call_id")
 
             if role == "system":
-                # Extract system message - Converse API handles it separately
+                # Converse API handles system messages separately
                 if system_message:
                     system_message += f"\n\n{content}"
                 else:
@@ -1810,12 +1840,9 @@ class BedrockCompletion(BaseLLM):
                         {"role": "assistant", "content": bedrock_content}
                     )
                 else:
-                    # Convert to Converse API format with proper content structure
                     if isinstance(content, list):
-                        # Already formatted as multimodal content blocks
                         converse_messages.append({"role": role, "content": content})
                     else:
-                        # String content - wrap in text block
                         text_content = content if content else ""
                         converse_messages.append(
                             {"role": role, "content": [{"text": text_content}]}
@@ -1948,8 +1975,6 @@ class BedrockCompletion(BaseLLM):
         tools: list[dict[str, Any]],
     ) -> list[ConverseToolTypeDef]:
         """Convert CrewAI tools to Converse API format following AWS specification."""
-        from crewai.llms.providers.utils.common import safe_tool_conversion
-
         converse_tools: list[ConverseToolTypeDef] = []
 
         for tool in tools:
@@ -1997,6 +2022,25 @@ class BedrockCompletion(BaseLLM):
 
         return config
 
+    @staticmethod
+    def _extract_finish_reason_and_id(
+        response: Any,
+    ) -> tuple[str | None, str | None]:
+        """Extract raw finish_reason (``stopReason``) from a Bedrock Converse
+        response dict. Defensive — returns (None, None) on any failure.
+
+        Bedrock Converse has no model-level response id; ResponseMetadata.RequestId
+        is an AWS infra trace id (semantically different from OpenAI's chatcmpl-XXX),
+        so we omit response_id rather than mislead downstream telemetry consumers.
+        """
+        finish_reason: str | None = None
+        try:
+            if isinstance(response, dict):
+                finish_reason = response.get("stopReason")
+        except (AttributeError, KeyError, TypeError, IndexError):
+            finish_reason = None
+        return finish_reason, None
+
     def _handle_client_error(self, e: ClientError) -> str:
         """Handle AWS ClientError with specific error codes and return error message."""
         error_code = e.response.get("Error", {}).get("Code", "Unknown")
@@ -2025,11 +2069,18 @@ class BedrockCompletion(BaseLLM):
         input_tokens = usage.get("inputTokens", 0)
         output_tokens = usage.get("outputTokens", 0)
         total_tokens = usage.get("totalTokens", input_tokens + output_tokens)
+        raw_cached = (
+            usage.get("cacheReadInputTokenCount")
+            or usage.get("cacheReadInputTokens")
+            or 0
+        )
+        cached_tokens = raw_cached if isinstance(raw_cached, int) else 0
 
         self._token_usage["prompt_tokens"] += input_tokens
         self._token_usage["completion_tokens"] += output_tokens
         self._token_usage["total_tokens"] += total_tokens
         self._token_usage["successful_requests"] += 1
+        self._token_usage["cached_prompt_tokens"] += cached_tokens
 
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""
@@ -2043,8 +2094,10 @@ class BedrockCompletion(BaseLLM):
         """Get the context window size for the model."""
         from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
 
-        # Context window sizes for common Bedrock models
         context_windows = {
+            "anthropic.claude-sonnet-4": 200000,
+            "anthropic.claude-opus-4": 200000,
+            "anthropic.claude-haiku-4": 200000,
             "anthropic.claude-3-5-sonnet": 200000,
             "anthropic.claude-3-5-haiku": 200000,
             "anthropic.claude-3-opus": 200000,
@@ -2061,12 +2114,10 @@ class BedrockCompletion(BaseLLM):
             "deepseek.r1": 32768,
         }
 
-        # Find the best match for the model name
         for model_prefix, size in context_windows.items():
             if self.model.startswith(model_prefix):
                 return int(size * CONTEXT_WINDOW_USAGE_RATIO)
 
-        # Default context window size
         return int(8192 * CONTEXT_WINDOW_USAGE_RATIO)
 
     def supports_multimodal(self) -> bool:

@@ -1,8 +1,7 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field, PrivateAttr
-
-from crewai.utilities.printer import ColoredText, Printer, PrinterColor
+from crewai_core.printer import PRINTER, ColoredText, PrinterColor
+from pydantic import BaseModel, Field
 
 
 class Logger(BaseModel):
@@ -14,7 +13,6 @@ class Logger(BaseModel):
         default="bold_yellow",
         description="Default color for log messages",
     )
-    _printer: Printer = PrivateAttr(default_factory=Printer)
 
     def log(self, level: str, message: str, color: PrinterColor | None = None) -> None:
         """Log a message with timestamp if verbose mode is enabled.
@@ -26,7 +24,7 @@ class Logger(BaseModel):
         """
         if self.verbose:
             timestamp: str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            self._printer.print(
+            PRINTER.print(
                 [
                     ColoredText(f"\n[{timestamp}]", "cyan"),
                     ColoredText(f"[{level.upper()}]: ", "yellow"),

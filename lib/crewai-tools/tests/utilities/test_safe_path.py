@@ -6,16 +6,12 @@ import os
 
 import pytest
 
-from crewai_tools.utilities.safe_path import (
+from crewai_tools.security.safe_path import (
     validate_directory_path,
     validate_file_path,
     validate_url,
 )
 
-
-# ---------------------------------------------------------------------------
-# File path validation
-# ---------------------------------------------------------------------------
 
 class TestValidateFilePath:
     """Tests for validate_file_path."""
@@ -52,7 +48,6 @@ class TestValidateFilePath:
     def test_rejects_symlink_escape(self, tmp_path):
         """Reject symlinks that point outside base_dir."""
         link = tmp_path / "sneaky_link"
-        # Create a symlink pointing to /etc/passwd
         os.symlink("/etc/passwd", str(link))
         with pytest.raises(ValueError, match="outside the allowed directory"):
             validate_file_path("sneaky_link", str(tmp_path))
@@ -89,10 +84,6 @@ class TestValidateDirectoryPath:
         with pytest.raises(ValueError, match="outside the allowed directory"):
             validate_directory_path("../../", str(tmp_path))
 
-
-# ---------------------------------------------------------------------------
-# URL validation
-# ---------------------------------------------------------------------------
 
 class TestValidateUrl:
     """Tests for validate_url."""

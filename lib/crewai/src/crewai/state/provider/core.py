@@ -1,63 +1,92 @@
-"""Base protocol for state providers."""
+"""Base class for state providers."""
 
 from __future__ import annotations
 
-from typing import Any, Protocol, runtime_checkable
+from abc import ABC, abstractmethod
 
-from pydantic import GetCoreSchemaHandler
-from pydantic_core import CoreSchema, core_schema
+from pydantic import BaseModel
 
 
-@runtime_checkable
-class BaseProvider(Protocol):
-    """Interface for persisting and restoring runtime state checkpoints.
+class BaseProvider(BaseModel, ABC):
+    """Base class for persisting and restoring runtime state checkpoints.
 
     Implementations handle the storage backend — filesystem, cloud, database,
     etc. — while ``RuntimeState`` handles serialization.
     """
 
-    @classmethod
-    def __get_pydantic_core_schema__(
-        cls, source_type: Any, handler: GetCoreSchemaHandler
-    ) -> CoreSchema:
-        """Allow Pydantic to validate any ``BaseProvider`` instance."""
+    provider_type: str = "base"
 
-        def _validate(v: Any) -> BaseProvider:
-            if isinstance(v, BaseProvider):
-                return v
-            raise TypeError(f"Expected a BaseProvider instance, got {type(v)}")
-
-        return core_schema.no_info_plain_validator_function(
-            _validate,
-            serialization=core_schema.plain_serializer_function_ser_schema(
-                lambda v: type(v).__name__, info_arg=False
-            ),
-        )
-
-    def checkpoint(self, data: str, directory: str) -> str:
+    @abstractmethod
+    def checkpoint(
+        self,
+        data: str,
+        location: str,
+        *,
+        parent_id: str | None = None,
+        branch: str = "main",
+    ) -> str:
         """Persist a snapshot synchronously.
 
         Args:
             data: The serialized string to persist.
-            directory: Logical destination: path, bucket prefix, etc.
+            location: Storage destination (directory, file path, URI, etc.).
+            parent_id: ID of the parent checkpoint for lineage tracking.
+            branch: Branch label for this checkpoint.
 
         Returns:
-            A location identifier for the saved checkpoint, such as a file path or URI.
+            A location identifier for the saved checkpoint.
         """
         ...
 
-    async def acheckpoint(self, data: str, directory: str) -> str:
+    @abstractmethod
+    async def acheckpoint(
+        self,
+        data: str,
+        location: str,
+        *,
+        parent_id: str | None = None,
+        branch: str = "main",
+    ) -> str:
         """Persist a snapshot asynchronously.
 
         Args:
             data: The serialized string to persist.
-            directory: Logical destination: path, bucket prefix, etc.
+            location: Storage destination (directory, file path, URI, etc.).
+            parent_id: ID of the parent checkpoint for lineage tracking.
+            branch: Branch label for this checkpoint.
 
         Returns:
-            A location identifier for the saved checkpoint, such as a file path or URI.
+            A location identifier for the saved checkpoint.
         """
         ...
 
+    @abstractmethod
+    def prune(self, location: str, max_keep: int, *, branch: str = "main") -> int:
+        """Remove old checkpoints, keeping at most *max_keep* per branch.
+
+        Args:
+            location: The storage destination passed to ``checkpoint``.
+            max_keep: Maximum number of checkpoints to retain.
+            branch: Only prune checkpoints on this branch.
+
+        Returns:
+            The number of checkpoints removed.
+        """
+        ...
+
+    @abstractmethod
+    def extract_id(self, location: str) -> str:
+        """Extract the checkpoint ID from a location string.
+
+        Args:
+            location: The identifier returned by a previous ``checkpoint`` call.
+
+        Returns:
+            The checkpoint ID.
+        """
+        ...
+
+    @abstractmethod
     def from_checkpoint(self, location: str) -> str:
         """Read a snapshot synchronously.
 
@@ -69,6 +98,7 @@ class BaseProvider(Protocol):
         """
         ...
 
+    @abstractmethod
     async def afrom_checkpoint(self, location: str) -> str:
         """Read a snapshot asynchronously.
 

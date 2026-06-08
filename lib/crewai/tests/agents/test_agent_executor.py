@@ -7,11 +7,14 @@ flow methods, routing logic, and error handling.
 from __future__ import annotations
 
 import asyncio
+from types import SimpleNamespace
 import time
 from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
+from uuid import uuid4
 
 import pytest
+from pydantic import BaseModel
 
 from crewai.agents.tools_handler import ToolsHandler as _ToolsHandler
 from crewai.agents.step_executor import StepExecutor
@@ -48,10 +51,6 @@ def _build_executor(**kwargs: Any) -> AgentExecutor:
     executor._last_context_error = None
     executor._step_executor = None
     executor._planner_observer = None
-    from crewai.utilities.printer import Printer
-    executor._printer = Printer()
-    from crewai.utilities.i18n import get_i18n
-    executor._i18n = kwargs.get("i18n") or get_i18n()
     return executor
 from crewai.agents.planner_observer import PlannerObserver
 from crewai.experimental.agent_executor import (
@@ -67,6 +66,8 @@ from crewai.events.types.tool_usage_events import (
 from crewai.tools.tool_types import ToolResult
 from crewai.utilities.step_execution_context import StepExecutionContext
 from crewai.utilities.planning_types import TodoItem
+from crewai.utilities.file_store import clear_files, clear_task_files, store_files
+from crewai_files import TextFile
 
 class TestAgentExecutorState:
     """Test AgentExecutorState Pydantic model."""
@@ -111,6 +112,61 @@ class TestAgentExecutorState:
 
 class TestAgentExecutor:
     """Test AgentExecutor class."""
+
+    class StructuredResult(BaseModel):
+        value: str
+
+    def test_inject_files_from_crew_task_store(self):
+        """Crew-level input_files should attach to the LLM user message."""
+        crew_id = uuid4()
+        task_id = uuid4()
+        stored_file = TextFile(source=b"stored content")
+        executor = _build_executor(
+            crew=SimpleNamespace(id=crew_id),
+            task=SimpleNamespace(id=task_id),
+        )
+        executor.state.messages = [{"role": "user", "content": "Analyze this file"}]
+
+        try:
+            store_files(crew_id, {"document": stored_file})
+            executor._inject_files_from_inputs({})
+        finally:
+            clear_files(crew_id)
+            clear_task_files(task_id)
+
+        assert executor.state.messages[0]["files"] == {"document": stored_file}
+
+    @pytest.mark.asyncio
+    async def test_ainject_files_from_crew_task_store_uses_async_store(self):
+        """Async file injection should not call the sync file store helper."""
+        crew_id = uuid4()
+        task_id = uuid4()
+        stored_file = TextFile(source=b"stored content")
+        local_file = TextFile(source=b"local content")
+        inputs = {"files": {"local": local_file}}
+        executor = _build_executor(
+            crew=SimpleNamespace(id=crew_id),
+            task=SimpleNamespace(id=task_id),
+        )
+        executor.state.messages = [{"role": "user", "content": "Analyze this file"}]
+
+        with (
+            patch(
+                "crewai.experimental.agent_executor.aget_all_files",
+                new=AsyncMock(return_value={"document": stored_file}),
+            ) as async_get_files,
+            patch(
+                "crewai.experimental.agent_executor.get_all_files",
+                side_effect=AssertionError("sync file store should not be called"),
+            ),
+        ):
+            await executor._ainject_files_from_inputs(inputs)
+
+        async_get_files.assert_awaited_once_with(crew_id, task_id)
+        assert executor.state.messages[0]["files"] == {
+            "document": stored_file,
+            "local": local_file,
+        }
 
     @pytest.fixture
     def mock_dependencies(self):
@@ -219,6 +275,49 @@ class TestAgentExecutor:
 
         assert result == "check_iteration"
 
+    def test_call_llm_and_parse_does_not_pass_response_model_with_tools(
+        self, mock_dependencies
+    ):
+        """Structured output should not be requested during ReAct tool loops."""
+        executor = _build_executor(
+            **mock_dependencies,
+            original_tools=[Mock()],
+            response_model=self.StructuredResult,
+            callbacks=[],
+        )
+        executor.state.messages = [{"role": "user", "content": "Use a tool"}]
+
+        with patch(
+            "crewai.experimental.agent_executor.get_llm_response",
+            return_value="Thought: done\nFinal Answer: complete",
+        ) as get_llm_response_mock:
+            result = executor.call_llm_and_parse()
+
+        assert result == "parsed"
+        assert get_llm_response_mock.call_args.kwargs["response_model"] is None
+
+    def test_call_llm_native_tools_does_not_pass_response_model_with_tools(
+        self, mock_dependencies
+    ):
+        """Structured output should not be requested during native tool calls."""
+        executor = _build_executor(
+            **mock_dependencies,
+            original_tools=[Mock()],
+            response_model=self.StructuredResult,
+            callbacks=[],
+        )
+        executor._openai_tools = [{"type": "function", "function": {"name": "lookup"}}]
+        executor.state.messages = [{"role": "user", "content": "Use a tool"}]
+
+        with patch(
+            "crewai.experimental.agent_executor.get_llm_response",
+            return_value="complete",
+        ) as get_llm_response_mock:
+            result = executor.call_llm_native_tools()
+
+        assert result == "native_finished"
+        assert get_llm_response_mock.call_args.kwargs["response_model"] is None
+
     def test_finalize_success(self, mock_dependencies):
         """Test finalize with valid AgentFinish."""
         with patch.object(AgentExecutor, "_show_logs") as mock_show_logs:
@@ -242,7 +341,6 @@ class TestAgentExecutor:
 
         result = executor.finalize()
 
-        # Should return "skipped" and not set is_finished
         assert result == "skipped"
         assert executor.state.is_finished is False
 
@@ -377,7 +475,6 @@ class TestAgentExecutor:
         mock_dependencies["step_callback"] = None
         executor = _build_executor(**mock_dependencies)
 
-        # Should not raise error
         executor._invoke_step_callback(
             AgentFinish(thought="thinking", output="test", text="final")
         )
@@ -695,7 +792,6 @@ class TestFlowInvoke:
         """Test successful invoke without human feedback."""
         executor = _build_executor(**mock_dependencies)
 
-        # Mock kickoff to set the final answer in state
         def mock_kickoff_side_effect():
             executor.state.current_answer = AgentFinish(
                 thought="final thinking", output="Final result", text="complete"
@@ -938,7 +1034,6 @@ class TestNativeToolExecution:
         executor.state.todos = TodoList(items=[])
         assert executor.check_native_todo_completion() == "todo_not_satisfied"
 
-        # With a current todo that has tool_to_use → satisfied
         running = TodoItem(
             step_number=1,
             description="Use the expected tool",
@@ -948,12 +1043,23 @@ class TestNativeToolExecution:
         executor.state.todos = TodoList(items=[running])
         assert executor.check_native_todo_completion() == "todo_satisfied"
 
-        # With a current todo without tool_to_use → still satisfied
         running.tool_to_use = None
         assert executor.check_native_todo_completion() == "todo_satisfied"
 
 
 class TestPlannerObserver:
+    def test_heuristic_observation_reflects_step_success(self):
+        from crewai.agents.planner_observer import PlannerObserver
+
+        ok = PlannerObserver.heuristic_observation(step_success=True, result="42")
+        assert ok.step_completed_successfully is True
+        assert ok.needs_full_replan is False
+
+        failed = PlannerObserver.heuristic_observation(
+            step_success=False, result="Error: timeout"
+        )
+        assert failed.step_completed_successfully is False
+
     def test_observe_fallback_is_conservative_on_llm_error(self):
         llm = Mock()
         llm.call.side_effect = RuntimeError("llm unavailable")
@@ -1008,10 +1114,8 @@ class TestAgentExecutorPlanning:
             verbose=False,
         )
 
-        # Execute kickoff with a simple task
         result = agent.kickoff("What is 2 + 2?")
 
-        # Verify result
         assert result is not None
         assert "4" in str(result)
 
@@ -1032,10 +1136,8 @@ class TestAgentExecutorPlanning:
             verbose=False,
         )
 
-        # Execute kickoff
         result = agent.kickoff("What is 3 + 3?")
 
-        # Verify we get a result
         assert result is not None
         assert "6" in str(result)
 
@@ -1052,13 +1154,12 @@ class TestAgentExecutorPlanning:
             goal="Help solve simple math problems",
             backstory="A helpful assistant",
             llm=llm,
-            planning=False,  # Explicitly disable planning
+            planning=False,
             verbose=False,
         )
 
         result = agent.kickoff("What is 5 + 5?")
 
-        # Should still complete successfully
         assert result is not None
         assert "10" in str(result)
 
@@ -1081,7 +1182,6 @@ class TestAgentExecutorPlanning:
                 verbose=False,
             )
 
-        # Should have planning_config created from reasoning=True
         assert agent.planning_config is not None
         assert agent.planning_enabled is True
 
@@ -1103,7 +1203,6 @@ class TestAgentExecutorPlanning:
             verbose=False,
         )
 
-        # Track executor for inspection
         executor_ref = [None]
         original_invoke = AgentExecutor.invoke
 
@@ -1114,10 +1213,8 @@ class TestAgentExecutorPlanning:
         with patch.object(AgentExecutor, "invoke", capture_executor):
             result = agent.kickoff("What is 7 + 7?")
 
-        # Verify result
         assert result is not None
 
-        # If we captured an executor, check its state
         if executor_ref[0] is not None:
             # After planning, state should have plan info
             assert hasattr(executor_ref[0].state, "plan")
@@ -1149,7 +1246,6 @@ class TestAgentExecutorPlanning:
             verbose=False,
         )
 
-        # Track the plan that gets generated
         captured_plan = [None]
         original_invoke = AgentExecutor.invoke
 
@@ -1164,13 +1260,10 @@ class TestAgentExecutorPlanning:
                 "Show your work for each step."
             )
 
-        # Verify we got a result with step outputs
         assert result is not None
         result_str = str(result)
-        # Should contain at least some mathematical content from the steps
         assert "prime" in result_str.lower() or "2" in result_str or "10" in result_str
 
-        # Verify a plan was generated
         assert captured_plan[0] is not None
 
     @pytest.mark.vcr()
@@ -1213,7 +1306,6 @@ class TestAgentExecutorPlanning:
 
         assert result is not None
         result_str = str(result)
-        # Should contain conversion-related content
         assert "212" in result_str or "210" in result_str or "Fahrenheit" in result_str or "celsius" in result_str.lower()
 
         # Plan should exist
@@ -1302,10 +1394,8 @@ class TestResponseFormatWithKickoff:
         )
 
         assert result is not None
-        # The synthesis step should have produced structured output
         assert result.pydantic is not None
         assert isinstance(result.pydantic, ResearchSummary)
-        # Verify the structured fields are populated
         assert len(result.pydantic.topic) > 0
         assert len(result.pydantic.key_findings) >= 1
         assert len(result.pydantic.conclusion) > 0
@@ -1336,19 +1426,93 @@ class TestResponseFormatWithKickoff:
 class TestReasoningEffort:
     """Test reasoning_effort levels in PlanningConfig.
 
-    - low:  observe() runs (validates step success), but skip decide/replan/refine
+    - low:  heuristic observation (no LLM), skip decide/replan/refine
     - medium: observe() runs, replan on failure only (mocked)
     - high: full observation pipeline with decide/replan/refine/goal-achieved
     """
 
+    def test_should_observe_steps_respects_config(self):
+        """observe_steps and reasoning_effort gate PlannerObserver LLM calls."""
+        from crewai.agent.planning_config import PlanningConfig
+        from crewai.experimental.agent_executor import AgentExecutor
+
+        executor = Mock(spec=AgentExecutor)
+        executor._should_observe_steps = (
+            AgentExecutor._should_observe_steps.__get__(executor)
+        )
+        executor.agent = Mock()
+
+        executor.agent.planning_config = PlanningConfig(reasoning_effort="low")
+        assert executor._should_observe_steps() is False
+
+        executor.agent.planning_config = PlanningConfig(
+            reasoning_effort="low", observe_steps=True
+        )
+        assert executor._should_observe_steps() is True
+
+        executor.agent.planning_config = PlanningConfig(
+            reasoning_effort="high", observe_steps=False
+        )
+        assert executor._should_observe_steps() is False
+
+        executor.agent.planning_config = PlanningConfig(reasoning_effort="medium")
+        assert executor._should_observe_steps() is True
+
+        executor.agent.planning_config = None
+        assert executor._should_observe_steps() is True
+
+    def test_reasoning_effort_low_skips_planner_observer_llm(self):
+        """Low effort must not call PlannerObserver.observe (no per-step LLM)."""
+        from crewai.agent.planning_config import PlanningConfig
+        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.utilities.planning_types import TodoItem, TodoList
+
+        executor = Mock(spec=AgentExecutor)
+        executor.agent = Mock()
+        executor.agent.planning_config = PlanningConfig(reasoning_effort="low")
+        executor.state = Mock()
+        executor.state.execution_log = [
+            {"type": "step_execution", "step_number": 1, "success": True},
+        ]
+
+        executor._should_observe_steps = (
+            AgentExecutor._should_observe_steps.__get__(executor)
+        )
+        executor._step_success_from_log = (
+            AgentExecutor._step_success_from_log.__get__(executor)
+        )
+        executor._observe_completed_step = (
+            AgentExecutor._observe_completed_step.__get__(executor)
+        )
+        executor._ensure_planner_observer = Mock()
+
+        todo = TodoItem(
+            step_number=1,
+            description="Step one",
+            status="running",
+            result="done",
+        )
+        executor.state.todos = TodoList(items=[todo])
+
+        observation = executor._observe_completed_step(
+            completed_step=todo,
+            result="done",
+            all_completed=[],
+            remaining_todos=[],
+        )
+
+        executor._ensure_planner_observer.assert_not_called()
+        assert observation.step_completed_successfully is True
+
     @pytest.mark.vcr()
     def test_reasoning_effort_low_skips_decide_and_replan(self):
-        """Low effort: observe runs but decide/replan/refine are never called.
+        """Low effort: heuristic observe, no decide/replan/refine LLM pipeline.
 
         Verifies that with reasoning_effort='low':
         1. The agent produces a correct result
-        2. The observation phase still runs (observations are stored)
+        2. Observations are still stored (heuristic path)
         3. The decide_next_action/refine/replan pipeline is bypassed
+        4. Per-step observation did not use the PlannerObserver LLM
         """
         from crewai import Agent, PlanningConfig
         from crewai.llm import LLM
@@ -1369,7 +1533,6 @@ class TestReasoningEffort:
             verbose=False,
         )
 
-        # Capture the executor to inspect state after execution
         executor_ref = [None]
         original_invoke = AgentExecutor.invoke
 
@@ -1386,25 +1549,23 @@ class TestReasoningEffort:
         assert result is not None
         assert "10" in str(result)
 
-        # Verify observations were still collected (observe() ran)
         executor = executor_ref[0]
         if executor is not None and executor.state.todos.items:
             assert len(executor.state.observations) > 0, (
-                "Low effort should still run observe() to validate steps"
+                "Low effort should still record heuristic observations"
             )
 
-            # Verify no replan was triggered
             assert executor.state.replan_count == 0, (
                 "Low effort should never trigger replanning"
             )
 
-            # Check execution log for reasoning_effort annotation
             observation_logs = [
                 log for log in executor.state.execution_log
                 if log.get("type") == "observation"
             ]
             for log in observation_logs:
                 assert log.get("reasoning_effort") == "low"
+                assert log.get("llm_observation") is False
 
     @pytest.mark.vcr()
     def test_reasoning_effort_high_runs_full_observation_pipeline(self):
@@ -1451,14 +1612,12 @@ class TestReasoningEffort:
         assert result is not None
         assert "10" in str(result)
 
-        # Verify observations were collected
         executor = executor_ref[0]
         if executor is not None and executor.state.todos.items:
             assert len(executor.state.observations) > 0, (
                 "High effort should run observe() on every step"
             )
 
-            # Check execution log shows high reasoning_effort
             observation_logs = [
                 log for log in executor.state.execution_log
                 if log.get("type") == "observation"
@@ -1480,7 +1639,6 @@ class TestReasoningEffort:
             TodoList,
         )
 
-        # --- Build a minimal mock executor with medium effort ---
         executor = Mock(spec=AgentExecutor)
         executor.agent = Mock()
         executor.agent.verbose = False
@@ -1491,9 +1649,7 @@ class TestReasoningEffort:
         executor.handle_step_observed_medium = (
             AgentExecutor.handle_step_observed_medium.__get__(executor)
         )
-        executor._printer = Mock()
 
-        # --- Case 1: step succeeded → should return "continue_plan" ---
         success_todo = TodoItem(
             step_number=1,
             description="Calculate something",
@@ -1506,7 +1662,6 @@ class TestReasoningEffort:
             remaining_plan_still_valid=True,
         )
 
-        # Set up state
         todo_list = TodoList(items=[success_todo])
         executor.state = Mock()
         executor.state.todos = todo_list
@@ -1518,7 +1673,6 @@ class TestReasoningEffort:
         )
         assert success_todo.status == "completed"
 
-        # --- Case 2: step failed → should return "replan_now" ---
         failed_todo = TodoItem(
             step_number=2,
             description="Divide by zero",
@@ -1558,11 +1712,9 @@ class TestReasoningEffort:
         executor.agent.planning_config = Mock()
         executor.agent.planning_config.reasoning_effort = "low"
 
-        # Bind the real method
         executor.handle_step_observed_low = (
             AgentExecutor.handle_step_observed_low.__get__(executor)
         )
-        executor._printer = Mock()
 
         todo = TodoItem(
             step_number=1,
@@ -1578,6 +1730,47 @@ class TestReasoningEffort:
         assert route == "continue_plan"
         assert todo.status == "completed"
         assert todo.result == "Done successfully"
+
+    def test_reasoning_effort_low_marks_failed_steps_failed_without_replan(self):
+        """Low effort records failed heuristic observations without replanning."""
+        from crewai.experimental.agent_executor import AgentExecutor
+        from crewai.utilities.planning_types import (
+            StepObservation,
+            TodoItem,
+            TodoList,
+        )
+
+        executor = Mock(spec=AgentExecutor)
+        executor.agent = Mock()
+        executor.agent.verbose = False
+        executor.agent.planning_config = Mock()
+        executor.agent.planning_config.reasoning_effort = "low"
+        executor.handle_step_observed_low = (
+            AgentExecutor.handle_step_observed_low.__get__(executor)
+        )
+
+        todo = TodoItem(
+            step_number=1,
+            description="Do something",
+            status="running",
+            result="Error: tool failed",
+        )
+        todo_list = TodoList(items=[todo])
+        executor.state = Mock()
+        executor.state.todos = todo_list
+        executor.state.observations = {
+            1: StepObservation(
+                step_completed_successfully=False,
+                key_information_learned="",
+                remaining_plan_still_valid=True,
+                needs_full_replan=False,
+            )
+        }
+
+        route = executor.handle_step_observed_low()
+        assert route == "continue_plan"
+        assert todo.status == "failed"
+        assert todo.result == "Error: tool failed"
 
     def test_planning_config_reasoning_effort_default_is_medium(self):
         """Verify PlanningConfig defaults reasoning_effort to 'medium'
@@ -1595,7 +1788,6 @@ class TestReasoningEffort:
         with pytest.raises(ValidationError):
             PlanningConfig(reasoning_effort="ultra")
 
-        # Valid values should work
         for level in ("low", "medium", "high"):
             config = PlanningConfig(reasoning_effort=level)
             assert config.reasoning_effort == level
@@ -1757,9 +1949,7 @@ class TestObserverResponseParsing:
         assert observation.replan_reason == "build system is misconfigured"
 
 
-# =========================================================================
 # Max Iterations Routing
-# =========================================================================
 
 
 class TestMaxIterationsRouting:
@@ -1797,9 +1987,7 @@ class TestMaxIterationsRouting:
         assert result == "continue_reasoning_native"
 
 
-# =========================================================================
 # Native Tool Call Edge Cases
-# =========================================================================
 
 
 class TestNativeToolCallMaxUsage:
@@ -1815,9 +2003,7 @@ class TestNativeToolCallMaxUsage:
         assert 'result = f"Tool \'{func_name}\' has reached its maximum usage limit' in source
 
 
-# =========================================================================
 # Executor State Reset on Re-invoke
-# =========================================================================
 
 
 class TestExecutorStateReset:
@@ -1847,9 +2033,7 @@ class TestExecutorStateReset:
         )
 
 
-# =========================================================================
 # Plan Generation Isolation
-# =========================================================================
 
 
 class TestPlanGenerationIsolation:
@@ -1869,9 +2053,7 @@ class TestPlanGenerationIsolation:
         )
 
 
-# =========================================================================
 # Todo Status Tracking
-# =========================================================================
 
 
 class TestTodoStatusTracking:
@@ -1912,9 +2094,7 @@ class TestTodoStatusTracking:
         assert len(completed) == 0
 
 
-# =========================================================================
 # TodoList Result Handling
-# =========================================================================
 
 
 class TestTodoResultHandling:
@@ -1954,9 +2134,7 @@ class TestTodoResultHandling:
         assert item.result == "existing", "None result should not overwrite existing"
 
 
-# =========================================================================
 # Dependency Resolution with Failed Steps
-# =========================================================================
 
 
 class TestDependencyResolutionWithFailures:
@@ -2000,9 +2178,7 @@ class TestDependencyResolutionWithFailures:
         assert len(ready) == 1, "Downstream todo should be ready when dep is failed"
 
 
-# =========================================================================
 # PlanningConfig Defaults
-# =========================================================================
 
 
 class TestPlanningConfigDefaults:
@@ -2026,9 +2202,7 @@ class TestPlanningConfigDefaults:
         assert config.reasoning_effort == "medium"
 
 
-# =========================================================================
 # Vision Image Format Contract
-# =========================================================================
 
 
 class TestVisionImageFormatContract:

@@ -11,9 +11,13 @@ from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM, JsonResponseFormat, llm_call_context
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
+from crewai.llms.providers.utils.common import safe_tool_conversion
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
+)
+from crewai.utilities.pydantic_schema_utils import (
+    sanitize_tool_params_for_anthropic_strict,
 )
 from crewai.utilities.types import LLMMessage
 
@@ -189,16 +193,41 @@ class AnthropicCompletion(BaseLLM):
 
     @model_validator(mode="after")
     def _init_clients(self) -> AnthropicCompletion:
-        self._client = Anthropic(**self._get_client_params())
+        """Eagerly build clients when the API key is available, otherwise
+        defer so ``LLM(model="anthropic/...")`` can be constructed at module
+        import time even before deployment env vars are set.
+        """
+        try:
+            self._client = self._build_sync_client()
+            self._async_client = self._build_async_client()
+        except ValueError:
+            pass
+        return self
 
-        async_client_params = self._get_client_params()
+    def _build_sync_client(self) -> Any:
+        return Anthropic(**self._get_client_params())
+
+    def _build_async_client(self) -> Any:
+        # Skip the sync httpx.Client that `_get_client_params` would
+        # otherwise construct under `interceptor`; we attach an async one
+        # below and would leak the sync one if both were built.
+        async_client_params = self._get_client_params(include_http_client=False)
         if self.interceptor:
             async_transport = AsyncHTTPTransport(interceptor=self.interceptor)
-            async_http_client = httpx.AsyncClient(transport=async_transport)
-            async_client_params["http_client"] = async_http_client
+            async_client_params["http_client"] = httpx.AsyncClient(
+                transport=async_transport
+            )
+        return AsyncAnthropic(**async_client_params)
 
-        self._async_client = AsyncAnthropic(**async_client_params)
-        return self
+    def _get_sync_client(self) -> Any:
+        if self._client is None:
+            self._client = self._build_sync_client()
+        return self._client
+
+    def _get_async_client(self) -> Any:
+        if self._async_client is None:
+            self._async_client = self._build_async_client()
+        return self._async_client
 
     def to_config_dict(self) -> dict[str, Any]:
         """Extend base config with Anthropic-specific fields."""
@@ -213,8 +242,15 @@ class AnthropicCompletion(BaseLLM):
             config["timeout"] = self.timeout
         return config
 
-    def _get_client_params(self) -> dict[str, Any]:
-        """Get client parameters."""
+    def _get_client_params(self, include_http_client: bool = True) -> dict[str, Any]:
+        """Get client parameters.
+
+        Args:
+            include_http_client: When True (default) and an interceptor is
+                set, attach a sync ``httpx.Client``. The async builder
+                passes ``False`` so it can attach its own async client
+                without leaking a sync one.
+        """
 
         if self.api_key is None:
             self.api_key = os.getenv("ANTHROPIC_API_KEY")
@@ -228,7 +264,7 @@ class AnthropicCompletion(BaseLLM):
             "max_retries": self.max_retries,
         }
 
-        if self.interceptor:
+        if include_http_client and self.interceptor:
             transport = HTTPTransport(interceptor=self.interceptor)
             http_client = httpx.Client(transport=transport)
             client_params["http_client"] = http_client  # type: ignore[assignment]
@@ -263,7 +299,6 @@ class AnthropicCompletion(BaseLLM):
         """
         with llm_call_context():
             try:
-                # Emit call started event
                 self._emit_call_started_event(
                     messages=messages,
                     tools=tools,
@@ -273,7 +308,6 @@ class AnthropicCompletion(BaseLLM):
                     from_agent=from_agent,
                 )
 
-                # Format messages for Anthropic
                 formatted_messages, system_message = (
                     self._format_messages_for_anthropic(messages)
                 )
@@ -283,14 +317,12 @@ class AnthropicCompletion(BaseLLM):
                 ):
                     raise ValueError("LLM call blocked by before_llm_call hook")
 
-                # Prepare completion parameters
                 completion_params = self._prepare_completion_params(
                     formatted_messages, system_message, tools, available_functions
                 )
 
                 effective_response_model = response_model or self.response_format
 
-                # Handle streaming vs non-streaming
                 if self.stream:
                     return self._handle_streaming_completion(
                         completion_params,
@@ -389,7 +421,7 @@ class AnthropicCompletion(BaseLLM):
     def _prepare_completion_params(
         self,
         messages: list[LLMMessage],
-        system_message: str | None = None,
+        system_message: str | list[dict[str, Any]] | None = None,
         tools: list[dict[str, Any]] | None = None,
         available_functions: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
@@ -412,11 +444,9 @@ class AnthropicCompletion(BaseLLM):
             "stream": self.stream,
         }
 
-        # Add system message if present
         if system_message:
             params["system"] = system_message
 
-        # Add optional parameters if set
         if self.temperature is not None:
             params["temperature"] = self.temperature
         if self.top_p is not None:
@@ -424,7 +454,6 @@ class AnthropicCompletion(BaseLLM):
         if self.stop_sequences:
             params["stop_sequences"] = self.stop_sequences
 
-        # Handle tools for Claude 3+
         if tools and self.supports_tools:
             converted_tools = self._convert_tools_for_interference(tools)
 
@@ -462,7 +491,6 @@ class AnthropicCompletion(BaseLLM):
         anthropic_tools = []
 
         for tool in tools:
-            # Pass through tool search tool definitions unchanged
             tool_type = tool.get("type", "")
             if tool_type in TOOL_SEARCH_TOOL_TYPES:
                 anthropic_tools.append(tool)
@@ -473,10 +501,8 @@ class AnthropicCompletion(BaseLLM):
                 continue
 
             try:
-                from crewai.llms.providers.utils.common import safe_tool_conversion
-
                 name, description, parameters = safe_tool_conversion(tool, "Anthropic")
-            except (ImportError, KeyError, ValueError) as e:
+            except (KeyError, ValueError) as e:
                 logging.error(f"Error converting tool to Anthropic format: {e}")
                 raise e
 
@@ -485,14 +511,24 @@ class AnthropicCompletion(BaseLLM):
                 "description": description,
             }
 
+            func_info = tool.get("function", {})
+            strict_enabled = bool(func_info.get("strict"))
+
             if parameters and isinstance(parameters, dict):
-                anthropic_tool["input_schema"] = parameters
+                anthropic_tool["input_schema"] = (
+                    sanitize_tool_params_for_anthropic_strict(parameters)
+                    if strict_enabled
+                    else parameters
+                )
             else:
                 anthropic_tool["input_schema"] = {
                     "type": "object",
                     "properties": {},
                     "required": [],
                 }
+
+            if strict_enabled:
+                anthropic_tool["strict"] = True
 
             anthropic_tools.append(anthropic_tool)
 
@@ -516,7 +552,6 @@ class AnthropicCompletion(BaseLLM):
         if self.tool_search is None:
             return tools
 
-        # Check if a tool search tool is already present (user passed one manually)
         has_search_tool = any(
             t.get("type", "") in TOOL_SEARCH_TOOL_TYPES for t in tools
         )
@@ -524,23 +559,19 @@ class AnthropicCompletion(BaseLLM):
         result: list[dict[str, Any]] = []
 
         if not has_search_tool:
-            # Map config type to API type identifier
             type_map = {
                 "regex": "tool_search_tool_regex_20251119",
                 "bm25": "tool_search_tool_bm25_20251119",
             }
             tool_type = type_map[self.tool_search.type]
-            # Tool search tool names follow the convention: tool_search_tool_{variant}
             tool_name = f"tool_search_tool_{self.tool_search.type}"
             result.append({"type": tool_type, "name": tool_name})
 
         for tool in tools:
-            # Don't modify tool search tools
             if tool.get("type", "") in TOOL_SEARCH_TOOL_TYPES:
                 result.append(tool)
                 continue
 
-            # Mark regular tools as deferred if not already set
             if "defer_loading" not in tool:
                 tool = {**tool, "defer_loading": True}
             result.append(tool)
@@ -621,7 +652,7 @@ class AnthropicCompletion(BaseLLM):
 
     def _format_messages_for_anthropic(
         self, messages: str | list[LLMMessage]
-    ) -> tuple[list[LLMMessage], str | None]:
+    ) -> tuple[list[LLMMessage], str | list[dict[str, Any]] | None]:
         """Format messages for Anthropic API.
 
         Anthropic has specific requirements:
@@ -635,9 +666,51 @@ class AnthropicCompletion(BaseLLM):
             messages: Input messages
 
         Returns:
-            Tuple of (formatted_messages, system_message)
+            Tuple of (formatted_messages, system_message). `system_message` is
+            a list of content blocks (with cache_control stamped) when any
+            system message in the input carried a cache_breakpoint flag;
+            otherwise a plain string for backwards compatibility.
         """
-        # Use base class formatting first
+        from crewai.llms.cache import CACHE_BREAKPOINT_KEY
+
+        # Read cache_breakpoint flags from raw input BEFORE super strips them.
+        # We track the CONTENT of marked user/assistant messages so we can
+        # locate the corresponding block in formatted_messages — Anthropic
+        # rewrites tool results into user messages, so positional indices
+        # do not survive the conversion. We must stamp the original stable
+        # message (typically the initial task prompt), not whatever happens
+        # to be the trailing user-role block after tool_result expansion.
+        cache_system = False
+        cache_match_contents: list[str] = []
+        if not isinstance(messages, str):
+            for m in messages:
+                if not (isinstance(m, dict) and m.get(CACHE_BREAKPOINT_KEY)):
+                    continue
+                role = m.get("role")
+                if role == "system":
+                    cache_system = True
+                    continue
+                if role != "user":
+                    # Only user messages survive Anthropic's role-coalescing
+                    # in a stable, addressable position. Markers on assistant
+                    # or tool messages have no reliable stamp target after
+                    # tool_result expansion, so we ignore them.
+                    continue
+                raw_content = m.get("content")
+                if isinstance(raw_content, str) and raw_content:
+                    cache_match_contents.append(raw_content)
+                    continue
+                if isinstance(raw_content, list):
+                    # Pull text from a single-text-block list so callers that
+                    # pre-format content blocks still match cleanly.
+                    text_blocks = [
+                        b.get("text")
+                        for b in raw_content
+                        if isinstance(b, dict) and b.get("type") == "text"
+                    ]
+                    if len(text_blocks) == 1 and isinstance(text_blocks[0], str):
+                        cache_match_contents.append(text_blocks[0])
+
         base_formatted = super()._format_messages(messages)
 
         formatted_messages: list[LLMMessage] = []
@@ -665,14 +738,12 @@ class AnthropicCompletion(BaseLLM):
                 }
                 pending_tool_results.append(tool_result)
             elif role == "assistant":
-                # First, flush any pending tool results as a user message
                 if pending_tool_results:
                     formatted_messages.append(
                         {"role": "user", "content": pending_tool_results}
                     )
                     pending_tool_results = []
 
-                # Handle assistant message with tool_calls (convert to Anthropic format)
                 tool_calls = message.get("tool_calls", [])
                 if tool_calls:
                     assistant_content: list[dict[str, Any]] = []
@@ -711,7 +782,6 @@ class AnthropicCompletion(BaseLLM):
                         LLMMessage(role="assistant", content=content_str)
                     )
             else:
-                # User message - first flush any pending tool results
                 if pending_tool_results:
                     formatted_messages.append(
                         {"role": "user", "content": pending_tool_results}
@@ -732,19 +802,71 @@ class AnthropicCompletion(BaseLLM):
                         LLMMessage(role=role_str, content=content_str)
                     )
 
-        # Flush any remaining pending tool results
         if pending_tool_results:
             formatted_messages.append({"role": "user", "content": pending_tool_results})
 
-        # Ensure first message is from user (Anthropic requirement)
+        # Anthropic requires the first message to come from "user"
         if not formatted_messages:
-            # If no messages, add a default user message
             formatted_messages.append({"role": "user", "content": "Hello"})
         elif formatted_messages[0]["role"] != "user":
-            # If first message is not from user, insert a user message at the beginning
             formatted_messages.insert(0, {"role": "user", "content": "Hello"})
 
-        return formatted_messages, system_message
+        # Stamp cache_control on the message(s) whose original content was
+        # marked. We scan formatted_messages in order and stamp the first
+        # match per marked content — Anthropic permits up to 4 cache
+        # breakpoints per request, which is more than enough for our usage.
+        # Matching by content (rather than position) handles the ReAct
+        # case where tool_result blocks get expanded into trailing user
+        # messages: the stable initial-task prompt still maps cleanly.
+        for needle in cache_match_contents:
+            for fm in formatted_messages:
+                if fm.get("role") != "user":
+                    continue
+                content = fm.get("content")
+                if isinstance(content, str) and content == needle:
+                    self._stamp_cache_control_on_message(fm)
+                    break
+                if isinstance(content, list):
+                    fm_texts: list[str] = [
+                        b.get("text", "")
+                        for b in content
+                        if isinstance(b, dict) and b.get("type") == "text"
+                    ]
+                    if len(fm_texts) == 1 and fm_texts[0] == needle:
+                        self._stamp_cache_control_on_message(fm)
+                        break
+
+        # Convert system to content-block form when caching is requested.
+        system_payload: str | list[dict[str, Any]] | None = system_message
+        if system_message and cache_system:
+            system_payload = [
+                {
+                    "type": "text",
+                    "text": system_message,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ]
+
+        return formatted_messages, system_payload
+
+    @staticmethod
+    def _stamp_cache_control_on_message(message: LLMMessage) -> None:
+        """Stamp cache_control on the last content block of an Anthropic message."""
+        msg = cast(dict[str, Any], message)
+        content = msg.get("content")
+        if isinstance(content, str):
+            msg["content"] = [
+                {
+                    "type": "text",
+                    "text": content,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ]
+            return
+        if isinstance(content, list) and content:
+            last = content[-1]
+            if isinstance(last, dict):
+                last["cache_control"] = {"type": "ephemeral"}
 
     def _handle_completion(
         self,
@@ -786,11 +908,11 @@ class AnthropicCompletion(BaseLLM):
         try:
             if betas:
                 params["betas"] = betas
-                response = self._client.beta.messages.create(
+                response = self._get_sync_client().beta.messages.create(
                     **params, extra_body=extra_body
                 )
             else:
-                response = self._client.messages.create(**params)
+                response = self._get_sync_client().messages.create(**params)
 
         except Exception as e:
             if is_context_length_exceeded(e):
@@ -800,6 +922,8 @@ class AnthropicCompletion(BaseLLM):
 
         usage = self._extract_anthropic_token_usage(response)
         self._track_token_usage_internal(usage)
+
+        finish_reason, response_id = self._extract_finish_reason_and_id(response)
 
         if _is_pydantic_model_class(response_model) and response.content:
             if use_native_structured_output:
@@ -813,6 +937,8 @@ class AnthropicCompletion(BaseLLM):
                             from_agent=from_agent,
                             messages=params["messages"],
                             usage=usage,
+                            finish_reason=finish_reason,
+                            response_id=response_id,
                         )
                         return structured_data
             else:
@@ -829,6 +955,8 @@ class AnthropicCompletion(BaseLLM):
                             from_agent=from_agent,
                             messages=params["messages"],
                             usage=usage,
+                            finish_reason=finish_reason,
+                            response_id=response_id,
                         )
                         return structured_data
 
@@ -841,9 +969,8 @@ class AnthropicCompletion(BaseLLM):
             ]
 
             if tool_uses:
-                # If no available_functions, return tool calls for executor to handle
-                # This allows the executor to manage tool execution with proper
-                # message history and post-tool reasoning prompts
+                # Without available_functions, return tool calls so the executor can
+                # manage execution with proper message history and post-tool reasoning prompts
                 if not available_functions:
                     self._emit_call_completed_event(
                         response=list(tool_uses),
@@ -852,6 +979,8 @@ class AnthropicCompletion(BaseLLM):
                         from_agent=from_agent,
                         messages=params["messages"],
                         usage=usage,
+                        finish_reason=finish_reason,
+                        response_id=response_id,
                     )
                     return list(tool_uses)
 
@@ -884,6 +1013,8 @@ class AnthropicCompletion(BaseLLM):
             from_agent=from_agent,
             messages=params["messages"],
             usage=usage,
+            finish_reason=finish_reason,
+            response_id=response_id,
         )
 
         if usage.get("total_tokens", 0) > 0:
@@ -938,9 +1069,11 @@ class AnthropicCompletion(BaseLLM):
         current_tool_calls: dict[int, dict[str, Any]] = {}
 
         stream_context = (
-            self._client.beta.messages.stream(**stream_params, extra_body=extra_body)
+            self._get_sync_client().beta.messages.stream(
+                **stream_params, extra_body=extra_body
+            )
             if betas
-            else self._client.messages.stream(**stream_params)
+            else self._get_sync_client().messages.stream(**stream_params)
         )
         with stream_context as stream:
             response_id = None
@@ -1024,6 +1157,10 @@ class AnthropicCompletion(BaseLLM):
         usage = self._extract_anthropic_token_usage(final_message)
         self._track_token_usage_internal(usage)
 
+        finish_reason, final_response_id = self._extract_finish_reason_and_id(
+            final_message
+        )
+
         if _is_pydantic_model_class(response_model):
             if use_native_structured_output:
                 structured_data = response_model.model_validate_json(full_response)
@@ -1034,6 +1171,8 @@ class AnthropicCompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=params["messages"],
                     usage=usage,
+                    finish_reason=finish_reason,
+                    response_id=final_response_id,
                 )
                 return structured_data
             for block in final_message.content:
@@ -1049,6 +1188,8 @@ class AnthropicCompletion(BaseLLM):
                         from_agent=from_agent,
                         messages=params["messages"],
                         usage=usage,
+                        finish_reason=finish_reason,
+                        response_id=final_response_id,
                     )
                     return structured_data
 
@@ -1063,7 +1204,6 @@ class AnthropicCompletion(BaseLLM):
                 if not available_functions:
                     return list(tool_uses)
 
-                # Execute first tool and return result directly
                 result = self._execute_first_tool(
                     tool_uses, available_functions, from_task, from_agent
                 )
@@ -1079,6 +1219,8 @@ class AnthropicCompletion(BaseLLM):
             from_agent=from_agent,
             messages=params["messages"],
             usage=usage,
+            finish_reason=finish_reason,
+            response_id=final_response_id,
         )
 
         return self._invoke_after_llm_call_hooks(
@@ -1186,7 +1328,6 @@ class AnthropicCompletion(BaseLLM):
 
         follow_up_params = params.copy()
 
-        # Add Claude's tool use response to conversation
         assistant_content: list[
             ThinkingBlock | ToolUseBlock | TextBlock | dict[str, Any]
         ] = []
@@ -1208,20 +1349,18 @@ class AnthropicCompletion(BaseLLM):
 
         assistant_message = {"role": "assistant", "content": assistant_content}
 
-        # Add user message with tool results
         user_message = {"role": "user", "content": tool_results}
 
-        # Update messages for follow-up call
         follow_up_params["messages"] = params["messages"] + [
             assistant_message,
             user_message,
         ]
 
         try:
-            # Send tool results back to Claude for final response
-            final_response: Message = self._client.messages.create(**follow_up_params)
+            final_response: Message = self._get_sync_client().messages.create(
+                **follow_up_params
+            )
 
-            # Track token usage for follow-up call
             follow_up_usage = self._extract_anthropic_token_usage(final_response)
             self._track_token_usage_internal(follow_up_usage)
 
@@ -1242,7 +1381,10 @@ class AnthropicCompletion(BaseLLM):
 
             final_content = self._apply_stop_words(final_content)
 
-            # Emit completion event for the final response
+            finish_reason, final_response_id = self._extract_finish_reason_and_id(
+                final_response
+            )
+
             self._emit_call_completed_event(
                 response=final_content,
                 call_type=LLMCallType.LLM_CALL,
@@ -1250,9 +1392,10 @@ class AnthropicCompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=follow_up_params["messages"],
                 usage=follow_up_usage,
+                finish_reason=finish_reason,
+                response_id=final_response_id,
             )
 
-            # Log combined token usage
             total_usage = {
                 "input_tokens": follow_up_usage.get("input_tokens", 0),
                 "output_tokens": follow_up_usage.get("output_tokens", 0),
@@ -1270,7 +1413,7 @@ class AnthropicCompletion(BaseLLM):
                 raise LLMContextLengthExceededError(str(e)) from e
 
             logging.error(f"Tool follow-up conversation failed: {e}")
-            # Fallback: return the first tool result if follow-up fails
+            # Fallback to first tool result when follow-up fails
             if tool_results:
                 return cast(str, tool_results[0]["content"])
             raise e
@@ -1315,11 +1458,11 @@ class AnthropicCompletion(BaseLLM):
         try:
             if betas:
                 params["betas"] = betas
-                response = await self._async_client.beta.messages.create(
+                response = await self._get_async_client().beta.messages.create(
                     **params, extra_body=extra_body
                 )
             else:
-                response = await self._async_client.messages.create(**params)
+                response = await self._get_async_client().messages.create(**params)
 
         except Exception as e:
             if is_context_length_exceeded(e):
@@ -1329,6 +1472,8 @@ class AnthropicCompletion(BaseLLM):
 
         usage = self._extract_anthropic_token_usage(response)
         self._track_token_usage_internal(usage)
+
+        finish_reason, response_id = self._extract_finish_reason_and_id(response)
 
         if _is_pydantic_model_class(response_model) and response.content:
             if use_native_structured_output:
@@ -1342,6 +1487,8 @@ class AnthropicCompletion(BaseLLM):
                             from_agent=from_agent,
                             messages=params["messages"],
                             usage=usage,
+                            finish_reason=finish_reason,
+                            response_id=response_id,
                         )
                         return structured_data
             else:
@@ -1358,6 +1505,8 @@ class AnthropicCompletion(BaseLLM):
                             from_agent=from_agent,
                             messages=params["messages"],
                             usage=usage,
+                            finish_reason=finish_reason,
+                            response_id=response_id,
                         )
                         return structured_data
 
@@ -1370,7 +1519,6 @@ class AnthropicCompletion(BaseLLM):
             ]
 
             if tool_uses:
-                # If no available_functions, return tool calls for executor to handle
                 if not available_functions:
                     self._emit_call_completed_event(
                         response=list(tool_uses),
@@ -1379,6 +1527,8 @@ class AnthropicCompletion(BaseLLM):
                         from_agent=from_agent,
                         messages=params["messages"],
                         usage=usage,
+                        finish_reason=finish_reason,
+                        response_id=response_id,
                     )
                     return list(tool_uses)
 
@@ -1403,6 +1553,8 @@ class AnthropicCompletion(BaseLLM):
             from_agent=from_agent,
             messages=params["messages"],
             usage=usage,
+            finish_reason=finish_reason,
+            response_id=response_id,
         )
 
         if usage.get("total_tokens", 0) > 0:
@@ -1453,11 +1605,11 @@ class AnthropicCompletion(BaseLLM):
         current_tool_calls: dict[int, dict[str, Any]] = {}
 
         stream_context = (
-            self._async_client.beta.messages.stream(
+            self._get_async_client().beta.messages.stream(
                 **stream_params, extra_body=extra_body
             )
             if betas
-            else self._async_client.messages.stream(**stream_params)
+            else self._get_async_client().messages.stream(**stream_params)
         )
         async with stream_context as stream:
             response_id = None
@@ -1531,6 +1683,10 @@ class AnthropicCompletion(BaseLLM):
         usage = self._extract_anthropic_token_usage(final_message)
         self._track_token_usage_internal(usage)
 
+        finish_reason, final_response_id = self._extract_finish_reason_and_id(
+            final_message
+        )
+
         if _is_pydantic_model_class(response_model):
             if use_native_structured_output:
                 structured_data = response_model.model_validate_json(full_response)
@@ -1541,6 +1697,8 @@ class AnthropicCompletion(BaseLLM):
                     from_agent=from_agent,
                     messages=params["messages"],
                     usage=usage,
+                    finish_reason=finish_reason,
+                    response_id=final_response_id,
                 )
                 return structured_data
             for block in final_message.content:
@@ -1556,6 +1714,8 @@ class AnthropicCompletion(BaseLLM):
                         from_agent=from_agent,
                         messages=params["messages"],
                         usage=usage,
+                        finish_reason=finish_reason,
+                        response_id=final_response_id,
                     )
                     return structured_data
 
@@ -1585,6 +1745,8 @@ class AnthropicCompletion(BaseLLM):
             from_agent=from_agent,
             messages=params["messages"],
             usage=usage,
+            finish_reason=finish_reason,
+            response_id=final_response_id,
         )
 
         return full_response
@@ -1622,7 +1784,7 @@ class AnthropicCompletion(BaseLLM):
         ]
 
         try:
-            final_response: Message = await self._async_client.messages.create(
+            final_response: Message = await self._get_async_client().messages.create(
                 **follow_up_params
             )
 
@@ -1637,6 +1799,10 @@ class AnthropicCompletion(BaseLLM):
 
             final_content = self._apply_stop_words(final_content)
 
+            finish_reason, final_response_id = self._extract_finish_reason_and_id(
+                final_response
+            )
+
             self._emit_call_completed_event(
                 response=final_content,
                 call_type=LLMCallType.LLM_CALL,
@@ -1644,6 +1810,8 @@ class AnthropicCompletion(BaseLLM):
                 from_agent=from_agent,
                 messages=follow_up_params["messages"],
                 usage=follow_up_usage,
+                finish_reason=finish_reason,
+                response_id=final_response_id,
             )
 
             total_usage = {
@@ -1679,7 +1847,6 @@ class AnthropicCompletion(BaseLLM):
         """Get the context window size for the model."""
         from crewai.llm import CONTEXT_WINDOW_USAGE_RATIO
 
-        # Context window sizes for Anthropic models
         context_windows = {
             "claude-3-5-sonnet": 200000,
             "claude-3-5-haiku": 200000,
@@ -1692,30 +1859,47 @@ class AnthropicCompletion(BaseLLM):
             "claude-instant": 100000,
         }
 
-        # Find the best match for the model name
         for model_prefix, size in context_windows.items():
             if self.model.startswith(model_prefix):
                 return int(size * CONTEXT_WINDOW_USAGE_RATIO)
 
-        # Default context window size for Claude models
         return int(200000 * CONTEXT_WINDOW_USAGE_RATIO)
+
+    @staticmethod
+    def _extract_finish_reason_and_id(
+        message: Any,
+    ) -> tuple[str | None, str | None]:
+        """Extract raw finish_reason and response_id from an Anthropic
+        ``Message`` / ``BetaMessage``. Anthropic exposes ``stop_reason`` (e.g.
+        ``"end_turn"``, ``"max_tokens"``, ``"tool_use"``); we forward it raw
+        and let downstream telemetry map to the OTel GenAI enum.
+        """
+        return (
+            getattr(message, "stop_reason", None),
+            getattr(message, "id", None),
+        )
 
     @staticmethod
     def _extract_anthropic_token_usage(
         response: Message | BetaMessage,
     ) -> dict[str, Any]:
-        """Extract token usage from Anthropic response."""
+        """Extract token usage and response metadata from Anthropic response."""
         if hasattr(response, "usage") and response.usage:
             usage = response.usage
             input_tokens = getattr(usage, "input_tokens", 0)
             output_tokens = getattr(usage, "output_tokens", 0)
             cache_read_tokens = getattr(usage, "cache_read_input_tokens", 0) or 0
-            return {
+            cache_creation_tokens = (
+                getattr(usage, "cache_creation_input_tokens", 0) or 0
+            )
+            result: dict[str, Any] = {
                 "input_tokens": input_tokens,
                 "output_tokens": output_tokens,
                 "total_tokens": input_tokens + output_tokens,
                 "cached_prompt_tokens": cache_read_tokens,
+                "cache_creation_tokens": cache_creation_tokens,
             }
+            return result
         return {"total_tokens": 0}
 
     def supports_multimodal(self) -> bool:
@@ -1745,8 +1929,8 @@ class AnthropicCompletion(BaseLLM):
             from crewai_files.uploaders.anthropic import AnthropicFileUploader
 
             return AnthropicFileUploader(
-                client=self._client,
-                async_client=self._async_client,
+                client=self._get_sync_client(),
+                async_client=self._get_async_client(),
             )
         except ImportError:
             return None

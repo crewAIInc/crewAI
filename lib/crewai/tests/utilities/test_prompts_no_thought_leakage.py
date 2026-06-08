@@ -36,19 +36,15 @@ class TestNoToolsPromptGeneration:
 
         result = prompts.task_execution()
 
-        # Verify it's a SystemPromptResult with system and user keys
         assert "system" in result
         assert "user" in result
         assert "prompt" in result
 
-        # The user prompt should NOT contain "Thought:" (ReAct format)
         assert "Thought:" not in result["user"]
 
-        # The user prompt should NOT mention tools
         assert "use the tools available" not in result["user"]
         assert "tools available" not in result["user"].lower()
 
-        # The system prompt should NOT contain ReAct format instructions
         assert "Thought:" not in result["system"]
         assert "Final Answer:" not in result["system"]
 
@@ -68,7 +64,6 @@ class TestNoToolsPromptGeneration:
 
         result = prompts.task_execution()
 
-        # Should contain the role playing info
         assert "Language Detector" in result["system"]
 
         # User prompt should be simple with just the task
@@ -91,7 +86,6 @@ class TestNoToolsPromptGeneration:
 
         result = prompts.task_execution()
 
-        # With tools and ReAct, the prompt SHOULD contain Thought:
         assert "Thought:" in result["user"]
 
     def test_native_tools_uses_native_task_slice(self) -> None:
@@ -113,7 +107,6 @@ class TestNoToolsPromptGeneration:
         # Native tool calling should NOT have Thought: in user prompt
         assert "Thought:" not in result["user"]
 
-        # Should NOT have emotional manipulation
         assert "your job depends on it" not in result["user"]
 
 
@@ -170,7 +163,7 @@ class TestRealLLMNoThoughtLeakage:
             role="Language Detector",
             goal="Detect the language of text",
             backstory="You are an expert linguist who can identify languages.",
-            tools=[],  # No tools
+            tools=[],
             llm=LLM(model="gpt-4o-mini"),
             verbose=False,
         )
@@ -187,13 +180,11 @@ class TestRealLLMNoThoughtLeakage:
         assert result is not None
         assert result.raw is not None
 
-        # The output should NOT start with "Thought:" or contain ReAct artifacts
         output = str(result.raw)
         assert not output.strip().startswith("Thought:")
         assert "Final Answer:" not in output
         assert "I now can give a great answer" not in output
 
-        # Should contain an actual answer about the language
         assert any(
             lang in output.lower()
             for lang in ["english", "en", "language"]
@@ -223,11 +214,9 @@ class TestRealLLMNoThoughtLeakage:
         assert result is not None
         output = str(result.raw).strip().lower()
 
-        # Output should be clean - just the classification
         assert not output.startswith("thought:")
         assert "final answer:" not in output
 
-        # Should contain the actual classification
         assert any(
             sentiment in output
             for sentiment in ["positive", "negative", "neutral"]

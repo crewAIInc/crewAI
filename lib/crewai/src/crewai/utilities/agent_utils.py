@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 import concurrent.futures
+import contextlib
 import contextvars
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -11,6 +12,8 @@ import json
 import re
 from typing import TYPE_CHECKING, Any, Final, Literal, TypedDict
 
+from crewai_core.printer import PRINTER, ColoredText, Printer
+from crewai_core.settings import Settings
 from pydantic import BaseModel
 from rich.console import Console
 
@@ -21,8 +24,7 @@ from crewai.agents.parser import (
     OutputParserError,
     parse,
 )
-from crewai.cli.config import Settings
-from crewai.llms.base_llm import BaseLLM
+from crewai.llms.base_llm import BaseLLM, call_stop_override
 from crewai.tools import BaseTool as CrewAITool
 from crewai.tools.base_tool import BaseTool
 from crewai.tools.structured_tool import CrewStructuredTool
@@ -31,8 +33,7 @@ from crewai.utilities.errors import AgentRepositoryError
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
 )
-from crewai.utilities.i18n import I18N
-from crewai.utilities.printer import ColoredText, Printer
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.pydantic_schema_utils import generate_model_description
 from crewai.utilities.string_utils import sanitize_tool_name
 from crewai.utilities.token_counter_callback import TokenCalcHandler
@@ -168,7 +169,6 @@ def convert_tools_to_openai_schema(
     tool_name_mapping: dict[str, BaseTool | CrewStructuredTool] = {}
 
     for tool in tools:
-        # Get the JSON schema for tool parameters
         parameters: dict[str, Any] = {}
         if hasattr(tool, "args_schema") and tool.args_schema is not None:
             try:
@@ -176,13 +176,11 @@ def convert_tools_to_openai_schema(
                     tool.args_schema, strip_null_types=False
                 )
                 parameters = schema_output.get("json_schema", {}).get("schema", {})
-                # Remove title and description from schema root as they're redundant
                 parameters.pop("title", None)
                 parameters.pop("description", None)
             except Exception:
                 parameters = {}
 
-        # Extract original description from formatted description
         # BaseTool formats description as "Tool Name: ...\nTool Arguments: ...\nTool Description: {original}"
         description = tool.description
         if "Tool Description:" in description:
@@ -238,6 +236,38 @@ def extract_task_section(text: str) -> str:
     return text
 
 
+def _executor_stop_words(
+    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
+) -> list[str]:
+    """Return the executor's stop words, regardless of which field name it uses."""
+    if executor_context is None:
+        return []
+    stops = getattr(executor_context, "stop", None)
+    if stops is None:
+        stops = getattr(executor_context, "stop_words", None)
+    return list(stops) if stops else []
+
+
+@contextlib.contextmanager
+def _llm_stop_words_applied(
+    llm: LLM | BaseLLM,
+    executor_context: CrewAgentExecutor | AgentExecutor | LiteAgent | None,
+) -> Iterator[None]:
+    """Apply the executor's stop words to the LLM for the duration of one call.
+
+    Uses :func:`crewai.llms.base_llm.call_stop_override` so the LLM's stop
+    field is never mutated. Safe under concurrent execution: the override is
+    propagated via a :class:`contextvars.ContextVar` and is scoped to this
+    call's task / thread context.
+    """
+    extra = _executor_stop_words(executor_context)
+    if not extra or not isinstance(llm, BaseLLM) or set(extra).issubset(llm.stop):
+        yield
+        return
+    with call_stop_override(llm, list(set(llm.stop + extra))):
+        yield
+
+
 def has_reached_max_iterations(iterations: int, max_iterations: int) -> bool:
     """Check if the maximum number of iterations has been reached.
 
@@ -254,7 +284,6 @@ def has_reached_max_iterations(iterations: int, max_iterations: int) -> bool:
 def handle_max_iterations_exceeded(
     formatted_answer: AgentAction | AgentFinish | None,
     printer: Printer,
-    i18n: I18N,
     messages: list[LLMMessage],
     llm: LLM | BaseLLM,
     callbacks: list[TokenCalcHandler],
@@ -265,7 +294,6 @@ def handle_max_iterations_exceeded(
     Args:
         formatted_answer: The last formatted answer from the agent.
         printer: Printer instance for output.
-        i18n: I18N instance for internationalization.
         messages: List of messages to send to the LLM.
         llm: The LLM instance to call.
         callbacks: List of callbacks for the LLM call.
@@ -282,14 +310,13 @@ def handle_max_iterations_exceeded(
 
     if formatted_answer and hasattr(formatted_answer, "text"):
         assistant_message = (
-            formatted_answer.text + f"\n{i18n.errors('force_final_answer')}"
+            formatted_answer.text + f"\n{I18N_DEFAULT.errors('force_final_answer')}"
         )
     else:
-        assistant_message = i18n.errors("force_final_answer")
+        assistant_message = I18N_DEFAULT.errors("force_final_answer")
 
     messages.append(format_message_for_llm(assistant_message, role="assistant"))
 
-    # Perform one more LLM call to get the final answer
     answer = llm.call(
         messages,
         callbacks=callbacks,
@@ -305,7 +332,6 @@ def handle_max_iterations_exceeded(
 
     formatted = format_answer(answer=answer)
 
-    # If format_answer returned an AgentAction, convert it to AgentFinish
     if isinstance(formatted, AgentFinish):
         return formatted
     return AgentFinish(
@@ -461,18 +487,15 @@ def get_llm_response(
     """
     messages = _prepare_llm_call(executor_context, messages, printer, verbose=verbose)
 
-    try:
-        answer = llm.call(
-            messages,
-            tools=tools,
-            callbacks=callbacks,
-            available_functions=available_functions,
-            from_task=from_task,
-            from_agent=from_agent,
-            response_model=response_model,
-        )
-    except Exception as e:
-        raise e
+    answer = llm.call(
+        messages,
+        tools=tools,
+        callbacks=callbacks,
+        available_functions=available_functions,
+        from_task=from_task,
+        from_agent=from_agent,
+        response_model=response_model,
+    )
 
     return _validate_and_finalize_llm_response(
         answer, executor_context, printer, verbose=verbose
@@ -517,18 +540,15 @@ async def aget_llm_response(
     """
     messages = _prepare_llm_call(executor_context, messages, printer, verbose=verbose)
 
-    try:
-        answer = await llm.acall(
-            messages,
-            tools=tools,
-            callbacks=callbacks,
-            available_functions=available_functions,
-            from_task=from_task,
-            from_agent=from_agent,
-            response_model=response_model,
-        )
-    except Exception as e:
-        raise e
+    answer = await llm.acall(
+        messages,
+        tools=tools,
+        callbacks=callbacks,
+        available_functions=available_functions,
+        from_task=from_task,
+        from_agent=from_agent,
+        response_model=response_model,
+    )
 
     return _validate_and_finalize_llm_response(
         answer, executor_context, printer, verbose=verbose
@@ -549,7 +569,6 @@ def process_llm_response(
     """
     if not use_stop_words:
         try:
-            # Preliminary parsing to check for errors.
             format_answer(answer)
         except OutputParserError as e:
             if FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE in e.error:
@@ -687,7 +706,6 @@ def handle_context_length(
     messages: list[LLMMessage],
     llm: LLM | BaseLLM,
     callbacks: list[TokenCalcHandler],
-    i18n: I18N,
     verbose: bool = True,
 ) -> None:
     """Handle context length exceeded by either summarizing or raising an error.
@@ -698,7 +716,6 @@ def handle_context_length(
         messages: List of messages to summarize
         llm: LLM instance for summarization
         callbacks: List of callbacks for LLM
-        i18n: I18N instance for messages
 
     Raises:
         SystemExit: If context length is exceeded and user opts not to summarize
@@ -710,7 +727,7 @@ def handle_context_length(
                 color="yellow",
             )
         summarize_messages(
-            messages=messages, llm=llm, callbacks=callbacks, i18n=i18n, verbose=verbose
+            messages=messages, llm=llm, callbacks=callbacks, verbose=verbose
         )
     else:
         if verbose:
@@ -755,7 +772,6 @@ def _format_messages_for_summary(messages: list[LLMMessage]) -> str:
 
         content = msg.get("content")
         if content is None:
-            # Check for tool_calls on assistant messages with no content
             tool_calls = msg.get("tool_calls")
             if tool_calls:
                 tool_names = []
@@ -771,7 +787,6 @@ def _format_messages_for_summary(messages: list[LLMMessage]) -> str:
             else:
                 content = ""
         elif isinstance(content, list):
-            # Multimodal content blocks — extract text parts
             text_parts = [
                 block.get("text", "")
                 for block in content
@@ -826,8 +841,6 @@ def _split_messages_into_chunks(
 
         msg_tokens = _estimate_token_count(msg_text)
 
-        # If adding this message would exceed the limit and we already have
-        # messages in the current chunk, start a new chunk
         if current_chunk and (current_tokens + msg_tokens) > max_tokens:
             chunks.append(current_chunk)
             current_chunk = []
@@ -863,7 +876,6 @@ async def _asummarize_chunks(
     chunks: list[list[LLMMessage]],
     llm: LLM | BaseLLM,
     callbacks: list[TokenCalcHandler],
-    i18n: I18N,
 ) -> list[SummaryContent]:
     """Summarize multiple message chunks concurrently using asyncio.
 
@@ -871,7 +883,6 @@ async def _asummarize_chunks(
         chunks: List of message chunks to summarize.
         llm: LLM instance (must support ``acall``).
         callbacks: List of callbacks for the LLM.
-        i18n: I18N instance for prompt templates.
 
     Returns:
         Ordered list of summary contents, one per chunk.
@@ -881,10 +892,10 @@ async def _asummarize_chunks(
         conversation_text = _format_messages_for_summary(chunk)
         summarization_messages = [
             format_message_for_llm(
-                i18n.slice("summarizer_system_message"), role="system"
+                I18N_DEFAULT.slice("summarizer_system_message"), role="system"
             ),
             format_message_for_llm(
-                i18n.slice("summarize_instruction").format(
+                I18N_DEFAULT.slice("summarize_instruction").format(
                     conversation=conversation_text
                 ),
             ),
@@ -901,7 +912,6 @@ def summarize_messages(
     messages: list[LLMMessage],
     llm: LLM | BaseLLM,
     callbacks: list[TokenCalcHandler],
-    i18n: I18N,
     verbose: bool = True,
 ) -> None:
     """Summarize messages to fit within context window.
@@ -917,46 +927,39 @@ def summarize_messages(
         messages: List of messages to summarize (modified in-place)
         llm: LLM instance for summarization
         callbacks: List of callbacks for LLM
-        i18n: I18N instance for messages
         verbose: Whether to print progress.
     """
-    # 1. Extract & preserve file attachments from user messages
     preserved_files: dict[str, Any] = {}
     for msg in messages:
         if msg.get("role") == "user" and msg.get("files"):
             preserved_files.update(msg["files"])
 
-    # 2. Extract system messages — never summarize them
     system_messages = [m for m in messages if m.get("role") == "system"]
     non_system_messages = [m for m in messages if m.get("role") != "system"]
 
-    # If there are only system messages (or no non-system messages), nothing to summarize
     if not non_system_messages:
         return
 
-    # 3. Split non-system messages into chunks at message boundaries
     max_tokens = llm.get_context_window_size()
     chunks = _split_messages_into_chunks(non_system_messages, max_tokens)
 
-    # 4. Summarize each chunk with role-labeled formatting
     total_chunks = len(chunks)
 
     if total_chunks <= 1:
-        # Single chunk — no benefit from async overhead
         summarized_contents: list[SummaryContent] = []
         for idx, chunk in enumerate(chunks, 1):
             if verbose:
-                Printer().print(
+                PRINTER.print(
                     content=f"Summarizing {idx}/{total_chunks}...",
                     color="yellow",
                 )
             conversation_text = _format_messages_for_summary(chunk)
             summarization_messages = [
                 format_message_for_llm(
-                    i18n.slice("summarizer_system_message"), role="system"
+                    I18N_DEFAULT.slice("summarizer_system_message"), role="system"
                 ),
                 format_message_for_llm(
-                    i18n.slice("summarize_instruction").format(
+                    I18N_DEFAULT.slice("summarize_instruction").format(
                         conversation=conversation_text
                     ),
                 ),
@@ -965,15 +968,12 @@ def summarize_messages(
             extracted = _extract_summary_tags(str(summary))
             summarized_contents.append({"content": extracted})
     else:
-        # Multiple chunks — summarize in parallel via asyncio
         if verbose:
-            Printer().print(
+            PRINTER.print(
                 content=f"Summarizing {total_chunks} chunks in parallel...",
                 color="yellow",
             )
-        coro = _asummarize_chunks(
-            chunks=chunks, llm=llm, callbacks=callbacks, i18n=i18n
-        )
+        coro = _asummarize_chunks(chunks=chunks, llm=llm, callbacks=callbacks)
         if is_inside_event_loop():
             ctx = contextvars.copy_context()
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
@@ -983,12 +983,11 @@ def summarize_messages(
 
     merged_summary = "\n\n".join(content["content"] for content in summarized_contents)
 
-    # 6. Reconstruct messages: [system messages...] + [summary user message]
     messages.clear()
     messages.extend(system_messages)
 
     summary_message = format_message_for_llm(
-        i18n.slice("summary").format(merged_summary=merged_summary)
+        I18N_DEFAULT.slice("summary").format(merged_summary=merged_summary)
     )
     if preserved_files:
         summary_message["files"] = preserved_files
@@ -1017,7 +1016,6 @@ def show_agent_logs(
     agent_role = agent_role.partition("\n")[0]
 
     if formatted_answer is None:
-        # Start logs
         printer.print(
             content=[
                 ColoredText("# Agent: ", "bold_purple"),
@@ -1032,7 +1030,6 @@ def show_agent_logs(
                 ]
             )
     else:
-        # Execution logs
         printer.print(
             content=[
                 ColoredText("\n\n# Agent: ", "bold_purple"),
@@ -1114,8 +1111,8 @@ def load_agent_from_repository(from_repository: str) -> dict[str, Any]:
         if callable(_create_plus_client_hook):
             client = _create_plus_client_hook()
         else:
-            from crewai.cli.authentication.token import get_auth_token
-            from crewai.cli.plus_api import PlusAPI
+            from crewai.auth.token import get_auth_token
+            from crewai.plus_api import PlusAPI
 
             client = PlusAPI(api_key=get_auth_token())
         _print_current_organization()
@@ -1165,7 +1162,6 @@ DELEGATION_TOOL_NAMES: Final[frozenset[str]] = frozenset(
 )
 
 
-# native tool calling tracking for delegation
 def track_delegation_if_needed(
     tool_name: str,
     tool_args: dict[str, Any],
@@ -1411,7 +1407,6 @@ def execute_single_native_tool_call(
 
     call_id, func_name, func_args = info
 
-    # Parse arguments
     if isinstance(func_args, str):
         try:
             args_dict = json.loads(func_args)
@@ -1422,14 +1417,12 @@ def execute_single_native_tool_call(
 
     agent_key = getattr(agent, "key", "unknown") if agent else "unknown"
 
-    # Find original tool for cache_function and result_as_answer
     original_tool: BaseTool | None = None
     for tool in original_tools:
         if sanitize_tool_name(tool.name) == func_name:
             original_tool = tool
             break
 
-    # Check cache
     from_cache = False
     input_str = json.dumps(args_dict) if args_dict else ""
     result = "Tool not found"
@@ -1444,7 +1437,6 @@ def execute_single_native_tool_call(
             )
             from_cache = True
 
-    # Emit tool started event
     started_at = datetime.now()
     crewai_event_bus.emit(
         event_source,
@@ -1459,14 +1451,12 @@ def execute_single_native_tool_call(
 
     track_delegation_if_needed(func_name, args_dict, task)
 
-    # Find structured tool for hooks
     structured_tool: CrewStructuredTool | None = None
     for structured in structured_tools or []:
         if sanitize_tool_name(structured.name) == func_name:
             structured_tool = structured
             break
 
-    # Before hooks
     hook_blocked = False
     before_hook_context = ToolCallHookContext(
         tool_name=func_name,
@@ -1493,7 +1483,6 @@ def execute_single_native_tool_call(
                 tool_func = available_functions[func_name]
                 raw_result = tool_func(**args_dict)
 
-                # Cache result
                 if tools_handler and tools_handler.cache:
                     should_cache = True
                     if original_tool:
@@ -1525,7 +1514,6 @@ def execute_single_native_tool_call(
                 )
                 error_event_emitted = True
 
-    # After hooks
     after_hook_context = ToolCallHookContext(
         tool_name=func_name,
         tool_input=args_dict,
@@ -1544,7 +1532,6 @@ def execute_single_native_tool_call(
     except Exception:  # noqa: S110
         pass
 
-    # Emit tool finished event (only if error event wasn't already emitted)
     if not error_event_emitted:
         crewai_event_bus.emit(
             event_source,
@@ -1560,7 +1547,6 @@ def execute_single_native_tool_call(
             ),
         )
 
-    # Build tool result message
     tool_message: LLMMessage = {
         "role": "tool",
         "tool_call_id": call_id,
@@ -1575,11 +1561,12 @@ def execute_single_native_tool_call(
             color="green",
         )
 
-    # Check result_as_answer
     is_result_as_answer = bool(
         original_tool
         and hasattr(original_tool, "result_as_answer")
         and original_tool.result_as_answer
+        and not error_event_emitted
+        and not hook_blocked
     )
 
     return NativeToolCallResult(
@@ -1700,7 +1687,6 @@ def _setup_after_llm_call_hooks(
 
         original_messages = executor_context.messages
 
-        # For Pydantic models, serialize to JSON for hooks
         if isinstance(answer, BaseModel):
             pydantic_answer = answer
             hook_response: str = pydantic_answer.model_dump_json()
@@ -1738,9 +1724,7 @@ def _setup_after_llm_call_hooks(
             else:
                 executor_context.messages = []
 
-        # If hooks modified the response, update answer accordingly
         if pydantic_answer is not None:
-            # For Pydantic models, reparse the JSON if it was modified
             if hook_response != original_json:
                 try:
                     model_class: type[BaseModel] = type(pydantic_answer)
@@ -1752,7 +1736,6 @@ def _setup_after_llm_call_hooks(
                             color="yellow",
                         )
         else:
-            # For string responses, use the hook-modified response
             answer = hook_response
 
     return answer

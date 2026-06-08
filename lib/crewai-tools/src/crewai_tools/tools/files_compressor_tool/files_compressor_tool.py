@@ -5,6 +5,8 @@ import zipfile
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
+from crewai_tools.security.safe_path import validate_file_path
+
 
 class FileCompressorToolInput(BaseModel):
     """Input schema for FileCompressorTool."""
@@ -40,11 +42,14 @@ class FileCompressorTool(BaseTool):
         overwrite: bool = False,
         format: str = "zip",
     ) -> str:
+        input_path = validate_file_path(input_path)
         if not os.path.exists(input_path):
             return f"Input path '{input_path}' does not exist."
 
         if not output_path:
             output_path = self._generate_output_path(input_path, format)
+
+        output_path = validate_file_path(output_path)
 
         format_extension = {
             "zip": ".zip",
@@ -88,11 +93,9 @@ class FileCompressorTool(BaseTool):
     def _generate_output_path(input_path: str, format: str) -> str:
         """Generates output path based on input path and format."""
         if os.path.isfile(input_path):
-            base_name = os.path.splitext(os.path.basename(input_path))[
-                0
-            ]  # Remove extension
+            base_name = os.path.splitext(os.path.basename(input_path))[0]
         else:
-            base_name = os.path.basename(os.path.normpath(input_path))  # Directory name
+            base_name = os.path.basename(os.path.normpath(input_path))
         return os.path.join(os.getcwd(), f"{base_name}.{format}")
 
     @staticmethod

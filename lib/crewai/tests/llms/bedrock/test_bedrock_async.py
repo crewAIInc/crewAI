@@ -6,7 +6,6 @@ cannot be played back properly in CI.
 """
 
 import pytest
-import tiktoken
 
 from crewai.llm import LLM
 
@@ -18,7 +17,7 @@ SKIP_REASON = "VCR does not support aiobotocore async HTTP client"
 @pytest.mark.skip(reason=SKIP_REASON)
 async def test_bedrock_async_basic_call():
     """Test basic async call with Bedrock."""
-    llm = LLM(model="bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0")
+    llm = LLM(model="bedrock/us.anthropic.claude-sonnet-4-6")
 
     result = await llm.acall("Say hello")
 
@@ -32,7 +31,7 @@ async def test_bedrock_async_basic_call():
 @pytest.mark.skip(reason=SKIP_REASON)
 async def test_bedrock_async_with_temperature():
     """Test async call with temperature parameter."""
-    llm = LLM(model="bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0", temperature=0.1)
+    llm = LLM(model="bedrock/us.anthropic.claude-sonnet-4-6", temperature=0.1)
 
     result = await llm.acall("Say the word 'test' once")
 
@@ -45,15 +44,13 @@ async def test_bedrock_async_with_temperature():
 @pytest.mark.skip(reason=SKIP_REASON)
 async def test_bedrock_async_with_max_tokens():
     """Test async call with max_tokens parameter."""
-    llm = LLM(model="bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0", max_tokens=10)
+    llm = LLM(model="bedrock/us.anthropic.claude-sonnet-4-6", max_tokens=10)
 
     result = await llm.acall("Write a very long story about a dragon.")
 
     assert result is not None
     assert isinstance(result, str)
-    encoder = tiktoken.get_encoding("cl100k_base")
-    token_count = len(encoder.encode(result))
-    assert token_count <= 10
+    assert len(result.split()) <= 10
 
 
 @pytest.mark.vcr()
@@ -61,7 +58,7 @@ async def test_bedrock_async_with_max_tokens():
 @pytest.mark.skip(reason=SKIP_REASON)
 async def test_bedrock_async_with_system_message():
     """Test async call with system message."""
-    llm = LLM(model="bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0")
+    llm = LLM(model="bedrock/us.anthropic.claude-sonnet-4-6")
 
     messages = [
         {"role": "system", "content": "You are a helpful assistant."},
@@ -79,7 +76,7 @@ async def test_bedrock_async_with_system_message():
 @pytest.mark.skip(reason=SKIP_REASON)
 async def test_bedrock_async_conversation():
     """Test async call with conversation history."""
-    llm = LLM(model="bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0")
+    llm = LLM(model="bedrock/us.anthropic.claude-sonnet-4-6")
 
     messages = [
         {"role": "user", "content": "My name is Alice."},
@@ -98,7 +95,7 @@ async def test_bedrock_async_conversation():
 @pytest.mark.skip(reason=SKIP_REASON)
 async def test_bedrock_async_multiple_calls():
     """Test making multiple async calls in sequence."""
-    llm = LLM(model="bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0")
+    llm = LLM(model="bedrock/us.anthropic.claude-sonnet-4-6")
 
     result1 = await llm.acall("What is 1+1?")
     result2 = await llm.acall("What is 2+2?")
@@ -115,10 +112,9 @@ async def test_bedrock_async_multiple_calls():
 async def test_bedrock_async_with_parameters():
     """Test async call with multiple parameters."""
     llm = LLM(
-        model="bedrock/us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+        model="bedrock/us.anthropic.claude-sonnet-4-6",
         temperature=0.7,
         max_tokens=100,
-        top_p=0.9
     )
 
     result = await llm.acall("Tell me a short fact")

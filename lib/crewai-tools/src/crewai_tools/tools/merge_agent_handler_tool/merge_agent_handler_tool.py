@@ -91,7 +91,6 @@ class MergeAgentHandlerTool(BaseTool):
         if params:
             payload["params"] = params
 
-        # Log the full payload for debugging
         logger.debug(f"MCP Request to {url}: {json.dumps(payload, indent=2)}")
 
         try:
@@ -99,7 +98,6 @@ class MergeAgentHandlerTool(BaseTool):
             response.raise_for_status()
             result = response.json()
 
-            # Handle JSON-RPC error responses
             if "error" in result:
                 error_msg = result["error"].get("message", "Unknown error")
                 error_code = result["error"].get("code", -1)
@@ -119,20 +117,16 @@ class MergeAgentHandlerTool(BaseTool):
     def _run(self, **kwargs: Any) -> Any:
         """Execute the Agent Handler tool with the given arguments."""
         try:
-            # Log what we're about to send
             logger.info(f"Executing {self.tool_name} with arguments: {kwargs}")
 
-            # Make the tool call via MCP
             result = self._make_mcp_request(
                 method="tools/call",
                 params={"name": self.tool_name, "arguments": kwargs},
             )
 
-            # Extract the actual result from the MCP response
             if "result" in result and "content" in result["result"]:
                 content = result["result"]["content"]
                 if content and len(content) > 0:
-                    # Parse the text content (it's JSON-encoded)
                     text_content = content[0].get("text", "")
                     try:
                         return json.loads(text_content)
@@ -176,10 +170,8 @@ class MergeAgentHandlerTool(BaseTool):
             ...     registered_user_id="91b2b905-e866-40c8-8be2-efe53827a0aa",
             ... )
         """
-        # Create an empty args schema model (proper BaseModel subclass)
         empty_args_schema = create_model(f"{tool_name.replace('__', '_').title()}Args")
 
-        # Initialize session and get tool schema
         instance = cls(
             name=tool_name,
             description=f"Execute {tool_name} via Agent Handler",
@@ -191,7 +183,6 @@ class MergeAgentHandlerTool(BaseTool):
             **kwargs,
         )
 
-        # Try to fetch the actual tool schema from Agent Handler
         try:
             result = instance._make_mcp_request(method="tools/list")
             if "result" in result and "tools" in result["result"]:
@@ -222,7 +213,6 @@ class MergeAgentHandlerTool(BaseTool):
                                     field_type: Any = Any
                                     field_default: Any = ...
 
-                                    # Map JSON schema types to Python types
                                     json_type = field_schema.get("type", "string")
                                     if json_type == "string":
                                         field_type = str
@@ -237,7 +227,6 @@ class MergeAgentHandlerTool(BaseTool):
                                     elif json_type == "object":
                                         field_type = dict[str, Any]
 
-                                    # Make field optional if not required
                                     if field_name not in required:
                                         field_type = field_type | None
                                         field_default = None
@@ -303,7 +292,6 @@ class MergeAgentHandlerTool(BaseTool):
             ...     tool_names=["linear__create_issue", "linear__get_issues"],
             ... )
         """
-        # Create a temporary instance to fetch the tool list
         temp_instance = cls(
             name="temp",
             description="temp",
@@ -315,7 +303,6 @@ class MergeAgentHandlerTool(BaseTool):
         )
 
         try:
-            # Fetch available tools
             result = temp_instance._make_mcp_request(method="tools/list")
 
             if "result" not in result or "tools" not in result["result"]:
@@ -325,13 +312,11 @@ class MergeAgentHandlerTool(BaseTool):
 
             available_tools = result["result"]["tools"]
 
-            # Filter tools if specific names were requested
             if tool_names:
                 available_tools = [
                     t for t in available_tools if t.get("name") in tool_names
                 ]
 
-                # Check if all requested tools were found
                 found_names = {t.get("name") for t in available_tools}
                 missing_names = set(tool_names) - found_names
                 if missing_names:
@@ -339,7 +324,6 @@ class MergeAgentHandlerTool(BaseTool):
                         f"The following tools were not found in the Tool Pack: {missing_names}"
                     )
 
-            # Create tool instances
             tools = []
             for tool_schema in available_tools:
                 tool_name = tool_schema.get("name")

@@ -42,17 +42,14 @@ sys.modules["couchbase.options"] = mock_couchbase.options
 sys.modules["couchbase.vector_search"] = mock_couchbase.vector_search
 sys.modules["couchbase.exceptions"] = mock_couchbase.exceptions
 
-# Now import the tool
 from crewai_tools.tools.couchbase_tool.couchbase_tool import (
     CouchbaseFTSVectorSearchTool,
 )
 
 
-# --- Test Fixtures ---
 @pytest.fixture(autouse=True)
 def reset_global_mocks():
     """Reset call counts for globally defined mocks before each test."""
-    # Reset the specific mock causing the issue
     mock_couchbase.vector_search.VectorQuery.reset_mock()
     # It's good practice to also reset other related global mocks
     # that might be called in your tests to prevent similar issues:
@@ -67,7 +64,6 @@ def ensure_couchbase_mocks():
     # This fixture ensures our mocks are in place regardless of import order
     original_modules = {}
 
-    # Store any existing modules
     for module_name in [
         "couchbase",
         "couchbase.search",
@@ -105,7 +101,6 @@ def mock_cluster():
     collection = MagicMock()
     scope_search_index_manager = MagicMock()
 
-    # Setup mock return values for checks
     cluster.buckets.return_value = bucket_manager
     cluster.search_indexes.return_value = search_index_manager
     cluster.bucket.return_value = bucket
@@ -113,10 +108,8 @@ def mock_cluster():
     scope.collection.return_value = collection
     scope.search_indexes.return_value = scope_search_index_manager
 
-    # Mock bucket existence check
     bucket_manager.get_bucket.return_value = True
 
-    # Mock scope/collection existence check
     mock_scope_spec = MagicMock()
     mock_scope_spec.name = "test_scope"
     mock_collection_spec = MagicMock()
@@ -124,7 +117,6 @@ def mock_cluster():
     mock_scope_spec.collections = [mock_collection_spec]
     bucket.collections.return_value.get_all_scopes.return_value = [mock_scope_spec]
 
-    # Mock index existence check
     mock_index_def = MagicMock()
     mock_index_def.name = "test_index"
     scope_search_index_manager.get_all_indexes.return_value = [mock_index_def]
@@ -157,7 +149,6 @@ def tool_config(mock_cluster, mock_embedding_function):
 
 @pytest.fixture
 def couchbase_tool(tool_config):
-    # Patch COUCHBASE_AVAILABLE to True for these tests
     with patch(
         "crewai_tools.tools.couchbase_tool.couchbase_tool.COUCHBASE_AVAILABLE", True
     ):
@@ -175,9 +166,6 @@ def mock_search_iter():
     mock_row2.fields = {"id": "doc2", "text": "content 2", "test_embedding": [0.2] * 10}
     mock_iter.rows.return_value = [mock_row1, mock_row2]
     return mock_iter
-
-
-# --- Test Cases ---
 
 
 def test_initialization_success(couchbase_tool, tool_config):
@@ -247,7 +235,6 @@ def test_run_success_scoped_index(
     query = "find relevant documents"
     # expected_embedding = mock_embedding_function(query)
 
-    # Mock the scope search method
     couchbase_tool._scope.search = MagicMock(return_value=mock_search_iter)
     # Mock the VectorQuery/VectorSearch/SearchRequest creation using runtime patching
     with (
@@ -277,28 +264,21 @@ def test_run_success_scoped_index(
 
         result = couchbase_tool._run(query=query)
 
-        # Check embedding function call
         tool_config["embedding_function"].assert_called_once_with(query)
 
-        # Check VectorQuery call
         mock_vq.assert_called_once_with(
             tool_config["embedding_key"],
             mock_embedding_function.return_value,
             tool_config["limit"],
         )
-        # Check VectorSearch call
         mock_vs.from_vector_query.assert_called_once_with(mock_vector_query)
-        # Check SearchRequest creation
         mock_sr.create.assert_called_once_with(mock_vector_search)
-        # Check SearchOptions creation
         mock_so.assert_called_once_with(limit=tool_config["limit"], fields=["*"])
 
-        # Check that scope search was called correctly
         couchbase_tool._scope.search.assert_called_once_with(
             tool_config["index_name"], mock_search_req, mock_search_options
         )
 
-    # Check cluster search was NOT called
     couchbase_tool.cluster.search.assert_not_called()
 
     # Check result format (simple check for JSON structure)
@@ -320,7 +300,6 @@ def test_run_success_global_index(
     query = "find global documents"
     # expected_embedding = mock_embedding_function(query)
 
-    # Mock the cluster search method
     couchbase_tool.cluster.search = MagicMock(return_value=mock_search_iter)
     # Mock the VectorQuery/VectorSearch/SearchRequest creation using runtime patching
     with (
@@ -350,28 +329,22 @@ def test_run_success_global_index(
 
         result = couchbase_tool._run(query=query)
 
-        # Check embedding function call
         tool_config["embedding_function"].assert_called_once_with(query)
 
-        # Check VectorQuery/Search call
         mock_vq.assert_called_once_with(
             tool_config["embedding_key"],
             mock_embedding_function.return_value,
             tool_config["limit"],
         )
         mock_sr.create.assert_called_once_with(mock_vector_search)
-        # Check SearchOptions creation
         mock_so.assert_called_once_with(limit=tool_config["limit"], fields=["*"])
 
-        # Check that cluster search was called correctly
         couchbase_tool.cluster.search.assert_called_once_with(
             tool_config["index_name"], mock_search_req, mock_search_options
         )
 
-    # Check scope search was NOT called
     couchbase_tool._scope.search.assert_not_called()
 
-    # Check result format
     assert '"id": "doc1"' in result
     assert '"id": "doc2"' in result
 

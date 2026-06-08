@@ -52,6 +52,7 @@ from crewai.telemetry.utils import (
     add_crew_attributes,
     close_span,
 )
+from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.logger_utils import suppress_warnings
 from crewai.utilities.string_utils import sanitize_tool_name
 
@@ -140,7 +141,7 @@ class Telemetry:
                 e,
                 (SystemExit, KeyboardInterrupt, GeneratorExit, asyncio.CancelledError),
             ):
-                raise  # Re-raise the exception to not interfere with system signals
+                raise
             self.ready = False
 
     @classmethod
@@ -284,14 +285,12 @@ class Telemetry:
             self._add_attribute(span, "crew_number_of_tasks", len(crew.tasks))
             self._add_attribute(span, "crew_number_of_agents", len(crew.agents))
 
-            # Add additional fingerprint metadata if available
             if hasattr(crew, "fingerprint") and crew.fingerprint:
                 self._add_attribute(
                     span,
                     "crew_fingerprint_created_at",
                     crew.fingerprint.created_at.isoformat(),
                 )
-                # Add fingerprint metadata if it exists
                 if hasattr(crew.fingerprint, "metadata") and crew.fingerprint.metadata:
                     self._add_attribute(
                         span,
@@ -314,7 +313,7 @@ class Telemetry:
                                 "verbose?": agent.verbose,
                                 "max_iter": agent.max_iter,
                                 "max_rpm": agent.max_rpm,
-                                "i18n": agent.i18n.prompt_file,
+                                "i18n": I18N_DEFAULT.prompt_file,
                                 "function_calling_llm": (
                                     getattr(
                                         getattr(agent, "function_calling_llm", None),
@@ -336,7 +335,6 @@ class Telemetry:
                                     sanitize_tool_name(tool.name)
                                     for tool in agent.tools or []
                                 ],
-                                # Add agent fingerprint data if sharing crew details
                                 "fingerprint": (
                                     getattr(
                                         getattr(agent, "fingerprint", None),
@@ -386,7 +384,6 @@ class Telemetry:
                                     sanitize_tool_name(tool.name)
                                     for tool in task.tools or []
                                 ],
-                                # Add task fingerprint data if sharing crew details
                                 "fingerprint": (
                                     task.fingerprint.uuid_str
                                     if hasattr(task, "fingerprint") and task.fingerprint
@@ -501,7 +498,6 @@ class Telemetry:
                     "task_fingerprint_created_at",
                     task.fingerprint.created_at.isoformat(),
                 )
-                # Add fingerprint metadata if it exists
                 if hasattr(task.fingerprint, "metadata") and task.fingerprint.metadata:
                     self._add_attribute(
                         created_span,
@@ -509,7 +505,6 @@ class Telemetry:
                         json.dumps(task.fingerprint.metadata),
                     )
 
-            # Add agent fingerprint if task has an assigned agent
             if hasattr(task, "agent") and task.agent:
                 add_agent_fingerprint_to_span(
                     created_span, task.agent, self._add_attribute
@@ -532,7 +527,6 @@ class Telemetry:
             if hasattr(task, "fingerprint") and task.fingerprint:
                 self._add_attribute(span, "task_fingerprint", task.fingerprint.uuid_str)
 
-            # Add agent fingerprint if task has an assigned agent
             if hasattr(task, "agent") and task.agent:
                 add_agent_fingerprint_to_span(span, task.agent, self._add_attribute)
 
@@ -559,7 +553,6 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            # Ensure fingerprint data is present on completion span
             if hasattr(task, "fingerprint") and task.fingerprint:
                 self._add_attribute(span, "task_fingerprint", task.fingerprint.uuid_str)
 
@@ -624,7 +617,6 @@ class Telemetry:
             if llm:
                 self._add_attribute(span, "llm", llm.model)
 
-            # Add agent fingerprint data if available
             add_agent_fingerprint_to_span(span, agent, self._add_attribute)
             close_span(span)
 
@@ -655,7 +647,6 @@ class Telemetry:
             if tool_name:
                 self._add_attribute(span, "tool_name", tool_name)
 
-            # Add agent fingerprint data if available
             add_agent_fingerprint_to_span(span, agent, self._add_attribute)
             close_span(span)
 
@@ -844,7 +835,7 @@ class Telemetry:
                             "verbose?": agent.verbose,
                             "max_iter": agent.max_iter,
                             "max_rpm": agent.max_rpm,
-                            "i18n": agent.i18n.prompt_file,
+                            "i18n": I18N_DEFAULT.prompt_file,
                             "llm": agent.llm.model
                             if isinstance(agent.llm, BaseLLM)
                             else str(agent.llm),
@@ -1054,6 +1045,23 @@ class Telemetry:
             span = tracer.start_span("Feature Usage")
             self._add_attribute(span, "crewai_version", version("crewai"))
             self._add_attribute(span, "feature", feature)
+            close_span(span)
+
+        self._safe_telemetry_operation(_operation)
+
+    def template_installed_span(self, template_name: str) -> None:
+        """Records when a template is downloaded and installed.
+
+        Args:
+            template_name: Name of the template that was installed
+                (without the template_ prefix).
+        """
+
+        def _operation() -> None:
+            tracer = trace.get_tracer("crewai.telemetry")
+            span = tracer.start_span("Template Installed")
+            self._add_attribute(span, "crewai_version", version("crewai"))
+            self._add_attribute(span, "template_name", template_name)
             close_span(span)
 
         self._safe_telemetry_operation(_operation)
