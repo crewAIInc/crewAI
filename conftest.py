@@ -11,7 +11,43 @@ from typing import Any
 
 from dotenv import load_dotenv
 import pytest
-from vcr.request import Request  # type: ignore[import-untyped]
+
+
+def _patch_aiohttp_streams_for_vcr() -> None:
+    """Restore ``aiohttp.streams.AsyncStreamReaderMixin`` for vcrpy compatibility.
+
+    aiohttp 3.14.0 (pulled in to fix GHSA-jg22-mg44-37j8 and GHSA-hg6j-4rv6-33pg)
+    folded ``AsyncStreamReaderMixin`` into ``StreamReader`` and removed the standalone
+    class. vcrpy's aiohttp stub still subclasses it, so importing vcr's patch machinery
+    raises ``AttributeError`` at collection time. Re-add an equivalent mixin so the stub
+    imports cleanly; the methods mirror the originals and delegate to the same iterators.
+    """
+    from aiohttp import streams
+
+    if hasattr(streams, "AsyncStreamReaderMixin"):
+        return
+
+    class AsyncStreamReaderMixin:
+        __slots__ = ()
+
+        def __aiter__(self) -> streams.AsyncStreamIterator[bytes]:
+            return streams.AsyncStreamIterator(self.readline)  # type: ignore[attr-defined]
+
+        def iter_chunked(self, n: int) -> streams.AsyncStreamIterator[bytes]:
+            return streams.AsyncStreamIterator(lambda: self.read(n))  # type: ignore[attr-defined]
+
+        def iter_any(self) -> streams.AsyncStreamIterator[bytes]:
+            return streams.AsyncStreamIterator(self.readany)  # type: ignore[attr-defined]
+
+        def iter_chunks(self) -> streams.ChunkTupleAsyncStreamIterator:
+            return streams.ChunkTupleAsyncStreamIterator(self)  # type: ignore[arg-type]
+
+    streams.AsyncStreamReaderMixin = AsyncStreamReaderMixin  # type: ignore[attr-defined]
+
+
+_patch_aiohttp_streams_for_vcr()
+
+from vcr.request import Request  # type: ignore[import-untyped]  # noqa: E402
 
 
 try:
