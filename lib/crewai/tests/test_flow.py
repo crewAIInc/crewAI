@@ -272,6 +272,37 @@ def test_flow_with_router():
     assert execution_order == ["start_method", "router", "step_if_true"]
 
 
+def test_start_runtime_uses_flow_definition_without_legacy_start_metadata():
+    execution_order = []
+
+    class DefinitionStartFlow(Flow):
+        @start()
+        def begin(self):
+            execution_order.append("begin")
+            return "begin"
+
+        @router(begin)
+        def route(self):
+            execution_order.append("route")
+            return "branch_event"
+
+        @start("branch_event")
+        def branch(self):
+            execution_order.append("branch")
+            return "branch"
+
+        @listen(branch)
+        def done(self):
+            execution_order.append("done")
+
+    assert not hasattr(DefinitionStartFlow.__dict__["begin"], "__is_start_method__")
+    assert not hasattr(DefinitionStartFlow.__dict__["branch"], "__trigger_methods__")
+
+    DefinitionStartFlow().kickoff()
+
+    assert execution_order == ["begin", "route", "branch", "done"]
+
+
 def test_async_flow():
     """Test an asynchronous flow."""
     execution_order = []

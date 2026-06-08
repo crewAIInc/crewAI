@@ -67,7 +67,6 @@ def _stamp_persistence_metadata(
 
 
 _PRESERVED_FLOW_ATTRS: Final[tuple[str, ...]] = (
-    "__is_start_method__",
     "__trigger_methods__",
     "__condition_type__",
     "__trigger_condition__",
@@ -211,11 +210,11 @@ def persist(
                 for name, method in target.__dict__.items()
                 if callable(method)
                 and (
-                    hasattr(method, "__is_start_method__")
-                    or hasattr(method, "__trigger_methods__")
+                    hasattr(method, "__trigger_methods__")
                     or hasattr(method, "__condition_type__")
                     or hasattr(method, "__is_flow_method__")
                     or hasattr(method, "__is_router__")
+                    or hasattr(method, "__flow_method_definition__")
                 )
             }
 
