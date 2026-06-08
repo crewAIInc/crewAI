@@ -205,6 +205,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
     after_llm_call_hooks: list[AfterLLMCallHookType | AfterLLMCallHookCallable] = Field(
         default_factory=list, exclude=True
     )
+    ask_for_human_input: bool = Field(default=False, exclude=True)
 
     _console: Console = PrivateAttr(default_factory=Console)
     _last_parser_error: OutputParserError | None = PrivateAttr(default=None)
@@ -2787,7 +2788,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
             self._inject_files_from_inputs(inputs)
 
-            self.state.ask_for_human_input = bool(
+            self.ask_for_human_input = bool(
                 inputs.get("ask_for_human_input", False)
             )
 
@@ -2801,7 +2802,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                         "Agent execution ended without reaching a final answer."
                     )
 
-                if self.state.ask_for_human_input:
+                if self.ask_for_human_input:
                     formatted_answer = self._handle_human_feedback(formatted_answer)
 
             self._save_to_memory(formatted_answer)
@@ -2893,7 +2894,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
             await self._ainject_files_from_inputs(inputs)
 
-            self.state.ask_for_human_input = bool(
+            self.ask_for_human_input = bool(
                 inputs.get("ask_for_human_input", False)
             )
 
@@ -2907,7 +2908,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                         "Agent execution ended without reaching a final answer."
                     )
 
-                if self.state.ask_for_human_input:
+                if self.ask_for_human_input:
                     formatted_answer = await self._ahandle_human_feedback(
                         formatted_answer
                     )
