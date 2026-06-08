@@ -158,11 +158,6 @@ class FlowMethod(Generic[P, R]):
 class StartMethod(FlowMethod[P, R]):
     """Wrapper for methods marked as flow start points."""
 
-    __is_start_method__: bool = True
-    __trigger_methods__: list[FlowMethodName] | None = None
-    __condition_type__: FlowConditionType | None = None
-    __trigger_condition__: FlowCondition | None = None
-
 
 class ListenMethod(FlowMethod[P, R]):
     """Wrapper for methods marked as flow listeners."""

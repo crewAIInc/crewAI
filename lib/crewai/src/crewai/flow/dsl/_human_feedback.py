@@ -27,7 +27,6 @@ def _stamp_human_feedback_metadata(
     config: HumanFeedbackConfig,
 ) -> None:
     for attr in [
-        "__is_start_method__",
         "__trigger_methods__",
         "__condition_type__",
         "__trigger_condition__",

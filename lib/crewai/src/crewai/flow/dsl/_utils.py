@@ -31,7 +31,6 @@ from crewai.flow.flow_wrappers import (
     FlowMethod,
     ListenMethod,
     RouterMethod,
-    StartMethod,
 )
 from crewai.flow.types import FlowMethodName
 
@@ -48,7 +47,6 @@ def is_flow_method(obj: Any) -> TypeIs[FlowMethod[Any, Any]]:
     """Check if the object carries Flow method wrapper metadata."""
     return (
         hasattr(obj, "__is_flow_method__")
-        or hasattr(obj, "__is_start_method__")
         or hasattr(obj, "__trigger_methods__")
         or hasattr(obj, "__is_router__")
         or hasattr(obj, _FLOW_METHOD_DEFINITION_ATTR)
@@ -66,7 +64,7 @@ def _flow_method_names(values: Sequence[Any]) -> list[FlowMethodName]:
 
 
 def _set_trigger_metadata(
-    wrapper: StartMethod[P, R] | ListenMethod[P, R] | RouterMethod[P, R],
+    wrapper: ListenMethod[P, R] | RouterMethod[P, R],
     condition: FlowTrigger,
 ) -> None:
     if isinstance(condition, str):
@@ -98,7 +96,7 @@ def _set_trigger_metadata(
 
 
 def _set_flow_method_definition(
-    wrapper: StartMethod[P, R] | ListenMethod[P, R] | RouterMethod[P, R],
+    wrapper: FlowMethod[P, R],
     definition: FlowMethodDefinition,
 ) -> None:
     setattr(wrapper, _FLOW_METHOD_DEFINITION_ATTR, definition)
@@ -256,20 +254,11 @@ def _condition_from_method_metadata(method: Any) -> FlowDefinitionCondition | No
 
 
 def _flow_method_definition_from_legacy_metadata(method: Any) -> FlowMethodDefinition:
-    is_start = bool(getattr(method, "__is_start_method__", False))
     is_router = bool(getattr(method, "__is_router__", False))
     condition = _condition_from_method_metadata(method)
 
-    if not is_start:
-        start_value: bool | FlowDefinitionCondition | None = None
-    elif condition is not None:
-        start_value = condition
-    else:
-        start_value = True
-
     definition = FlowMethodDefinition(
-        start=start_value,
-        listen=condition if not is_start else None,
+        listen=condition,
         router=is_router,
     )
 
@@ -373,7 +362,7 @@ def _build_method_definition(
 
 def _iter_flow_methods(flow_class: type) -> dict[str, Any]:
     methods: dict[str, Any] = {}
-    for attr_name in dir(flow_class):
+    for attr_name in flow_class.__dict__:
         if attr_name.startswith("_"):
             continue
         try:
@@ -448,20 +437,17 @@ def extract_flow_definition(
     namespace: dict[str, Any],
 ) -> tuple[list[str], dict[str, Any], set[str], dict[str, Any]]:
     """Extract the structural flow registries from a Python class namespace."""
-    start_methods = []
-    listeners = {}
-    router_emit = {}
-    routers = set()
+    start_methods: list[str] = []
+    listeners: dict[str, Any] = {}
+    router_emit: dict[str, Any] = {}
+    routers: set[str] = set()
 
     for attr_name, attr_value in namespace.items():
         if is_flow_method(attr_value):
             method_definition = _get_flow_method_definition(attr_value)
             if method_definition is not None:
-                if method_definition.is_start:
-                    start_methods.append(attr_name)
-
                 condition = _definition_trigger_condition(method_definition)
-                if condition is not None:
+                if condition is not None and not method_definition.is_start:
                     listeners[attr_name] = _runtime_listener_condition_from_definition(
                         condition
                     )
@@ -483,9 +469,6 @@ def extract_flow_definition(
                     else:
                         router_emit[attr_name] = []
                 continue
-
-            if hasattr(attr_value, "__is_start_method__"):
-                start_methods.append(attr_name)
 
             if (
                 hasattr(attr_value, "__trigger_methods__")
@@ -511,19 +494,5 @@ def extract_flow_definition(
                         router_emit[attr_name] = attr_value.__router_emit__
                     else:
                         router_emit[attr_name] = []
-
-            if (
-                hasattr(attr_value, "__is_start_method__")
-                and hasattr(attr_value, "__is_router__")
-                and attr_value.__is_router__
-            ):
-                routers.add(attr_name)
-                if (
-                    hasattr(attr_value, "__router_emit__")
-                    and attr_value.__router_emit__
-                ):
-                    router_emit[attr_name] = attr_value.__router_emit__
-                else:
-                    router_emit[attr_name] = []
 
     return start_methods, listeners, routers, router_emit
