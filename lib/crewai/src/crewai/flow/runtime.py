@@ -1252,7 +1252,9 @@ class Flow(_ConversationalMixin, BaseModel, Generic[T], metaclass=FlowMeta):
         Args:
             flow_id: The unique identifier of the paused flow (from state.id)
             persistence: The persistence backend where the state was saved.
-                If not provided, defaults to SQLiteFlowPersistence().
+                If not provided, uses ``default_flow_persistence()`` (the
+                registered factory when present, else the built-in SQLite
+                fallback).
             **kwargs: Additional keyword arguments passed to the Flow constructor
 
         Returns:
@@ -1274,9 +1276,9 @@ class Flow(_ConversationalMixin, BaseModel, Generic[T], metaclass=FlowMeta):
             ```
         """
         if persistence is None:
-            from crewai.flow.persistence import SQLiteFlowPersistence
+            from crewai.flow.persistence.factory import default_flow_persistence
 
-            persistence = SQLiteFlowPersistence()
+            persistence = default_flow_persistence()
 
         loaded = persistence.load_pending_feedback(flow_id)
         if loaded is None:
@@ -1463,7 +1465,7 @@ class Flow(_ConversationalMixin, BaseModel, Generic[T], metaclass=FlowMeta):
 
         self._pending_feedback_context = None
 
-        if self.persistence:
+        if self.persistence is not None:
             self.persistence.clear_pending_feedback(context.flow_id)
 
         crewai_event_bus.emit(
@@ -1505,9 +1507,9 @@ class Flow(_ConversationalMixin, BaseModel, Generic[T], metaclass=FlowMeta):
                 self._pending_feedback_context = e.context
 
                 if self.persistence is None:
-                    from crewai.flow.persistence import SQLiteFlowPersistence
+                    from crewai.flow.persistence.factory import default_flow_persistence
 
-                    self.persistence = SQLiteFlowPersistence()
+                    self.persistence = default_flow_persistence()
 
                 state_data = (
                     self._state
@@ -2244,9 +2246,11 @@ class Flow(_ConversationalMixin, BaseModel, Generic[T], metaclass=FlowMeta):
                 if isinstance(e, HumanFeedbackPending):
                     # Auto-save pending feedback (create default persistence if needed)
                     if self.persistence is None:
-                        from crewai.flow.persistence import SQLiteFlowPersistence
+                        from crewai.flow.persistence.factory import (
+                            default_flow_persistence,
+                        )
 
-                        self.persistence = SQLiteFlowPersistence()
+                        self.persistence = default_flow_persistence()
 
                     state_data = (
                         self._state
@@ -2597,9 +2601,9 @@ class Flow(_ConversationalMixin, BaseModel, Generic[T], metaclass=FlowMeta):
                 e.context.method_name = method_name
 
                 if self.persistence is None:
-                    from crewai.flow.persistence import SQLiteFlowPersistence
+                    from crewai.flow.persistence.factory import default_flow_persistence
 
-                    self.persistence = SQLiteFlowPersistence()
+                    self.persistence = default_flow_persistence()
 
                 # Emit paused event (not failed)
                 if not self.suppress_flow_events:
