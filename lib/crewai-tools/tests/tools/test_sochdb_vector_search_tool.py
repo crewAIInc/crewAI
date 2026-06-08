@@ -1,4 +1,6 @@
 import json
+import os
+from unittest.mock import patch
 
 import crewai_tools.tools as tools
 from crewai_tools import SochDBConfig, SochDBVectorSearchTool
@@ -67,6 +69,44 @@ def test_sochdb_vector_search_tool_successful_query() -> None:
     assert fake_client.calls[0]["namespace"] == "crew"
     assert fake_client.calls[0]["k"] == 2
     assert fake_client.calls[0]["filter"] == {"topic": "deployment"}
+
+
+def test_sochdb_vector_search_tool_custom_embedding_does_not_require_openai_key() -> None:
+    fake_client = FakeSochDBClient()
+    tool = SochDBVectorSearchTool(
+        sochdb_config=SochDBConfig(
+            grpc_address="studio.agentslab.host:50053",
+            collection_name="knowledge",
+        ),
+        client=fake_client,
+        custom_embedding_fn=lambda text: [0.4, 0.5, 0.6],
+    )
+
+    with patch.dict(os.environ, {}, clear=True):
+        results = json.loads(tool._run(query="custom embedding query"))
+
+    assert len(results) == 1
+    assert fake_client.calls[0]["query"] == [0.4, 0.5, 0.6]
+    assert tool.env_vars[0].required is False
+
+
+def test_sochdb_vector_search_tool_requires_openai_key_without_custom_embedding() -> None:
+    tool = SochDBVectorSearchTool(
+        sochdb_config=SochDBConfig(
+            grpc_address="studio.agentslab.host:50053",
+            collection_name="knowledge",
+        ),
+        client=FakeSochDBClient(),
+    )
+
+    with patch.dict(os.environ, {}, clear=True):
+        try:
+            tool._embed_query("default embedding query")
+        except ValueError as exc:
+            assert "OPENAI_API_KEY" in str(exc)
+            assert "custom_embedding_fn" in str(exc)
+        else:
+            raise AssertionError("Expected ValueError when OPENAI_API_KEY is missing")
 
 
 def test_sochdb_vector_search_tool_requires_object_filter() -> None:

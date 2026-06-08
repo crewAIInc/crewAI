@@ -45,7 +45,7 @@ class SochDBVectorSearchTool(BaseTool):
             EnvVar(
                 name="OPENAI_API_KEY",
                 description="API key for OpenAI embeddings",
-                required=True,
+                required=False,
             )
         ]
     )
@@ -79,9 +79,16 @@ class SochDBVectorSearchTool(BaseTool):
         if self.custom_embedding_fn:
             return list(self.custom_embedding_fn(query))
 
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError(
+                "OPENAI_API_KEY environment variable is required when "
+                "custom_embedding_fn is not provided"
+            )
+
         return (
             __import__("openai")
-            .Client(api_key=os.getenv("OPENAI_API_KEY"))
+            .Client(api_key=api_key)
             .embeddings.create(input=[query], model=self.embedding_model)
             .data[0]
             .embedding
