@@ -65,7 +65,7 @@ class SochDBVectorSearchTool(BaseTool):
     client: Any | None = None
 
     @model_validator(mode="after")
-    def _setup_sochdb(self) -> "SochDBVectorSearchTool":
+    def _setup_sochdb(self) -> SochDBVectorSearchTool:
         if self.client is not None:
             return self
 

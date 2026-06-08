@@ -1,5 +1,6 @@
 import json
 
+import crewai_tools.tools as tools
 from crewai_tools import SochDBConfig, SochDBVectorSearchTool
 
 
@@ -85,3 +86,29 @@ def test_sochdb_vector_search_tool_requires_object_filter() -> None:
         assert "JSON object" in str(exc)
     else:
         raise AssertionError("Expected ValueError for non-object metadata_filter_json")
+
+
+def test_sochdb_vector_search_tool_is_exported_from_tools_package() -> None:
+    assert tools.SochDBConfig is SochDBConfig
+    assert tools.SochDBVectorSearchTool is SochDBVectorSearchTool
+    assert "SochDBConfig" in tools.__all__
+    assert "SochDBVectorSearchTool" in tools.__all__
+
+
+def test_sochdb_vector_search_tool_builds_default_client() -> None:
+    class FakeSochDBPackage:
+        class SochDBClient:
+            def __init__(self, grpc_address: str) -> None:
+                self.grpc_address = grpc_address
+
+    tool = SochDBVectorSearchTool(
+        sochdb_config=SochDBConfig(
+            grpc_address="studio.agentslab.host:50053",
+            collection_name="knowledge",
+        ),
+        sochdb_package=FakeSochDBPackage,
+        custom_embedding_fn=lambda text: [0.1],
+    )
+
+    assert isinstance(tool.client, FakeSochDBPackage.SochDBClient)
+    assert tool.client.grpc_address == "studio.agentslab.host:50053"
