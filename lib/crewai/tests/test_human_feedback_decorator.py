@@ -173,7 +173,9 @@ class TestDecoratorAttributePreservation:
         flow = TestFlow()
         method = flow._methods.get("my_start_method")
         assert method is not None
-        assert hasattr(method, "__is_start_method__") or "my_start_method" in flow._start_methods
+        fragment = getattr(method, "__flow_method_definition__", None)
+        assert fragment is not None
+        assert fragment.start is True
 
     def test_preserves_listen_method_attributes(self):
         """Test that @human_feedback preserves @listen decorator attributes."""
