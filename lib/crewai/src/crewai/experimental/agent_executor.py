@@ -259,6 +259,16 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         """Get thread-safe state proxy."""
         return StateProxy(self._state, self._state_lock)  # type: ignore[return-value]
 
+    @property
+    def ask_for_human_input(self) -> bool:
+        """Whether the executor should request human feedback."""
+        return bool(self._state.ask_for_human_input)
+
+    @ask_for_human_input.setter
+    def ask_for_human_input(self, value: bool) -> None:
+        """Update the human feedback flag stored in executor state."""
+        self._state.ask_for_human_input = value
+
     @property  # type: ignore[misc]
     def iterations(self) -> int:
         """Compatibility property for mixin - returns state iterations."""

@@ -18,6 +18,7 @@ from pydantic import BaseModel
 
 from crewai.agents.tools_handler import ToolsHandler as _ToolsHandler
 from crewai.agents.step_executor import StepExecutor
+from crewai.core.providers.human_input import SyncHumanInputProvider
 
 
 def _build_executor(**kwargs: Any) -> AgentExecutor:
@@ -115,6 +116,29 @@ class TestAgentExecutor:
 
     class StructuredResult(BaseModel):
         value: str
+
+    def test_ask_for_human_input_delegates_to_state(self):
+        """ExecutorContext compatibility should read and write the state flag."""
+        executor = _build_executor()
+
+        executor.state.ask_for_human_input = True
+        assert executor.ask_for_human_input is True
+
+        executor.ask_for_human_input = False
+        assert executor.state.ask_for_human_input is False
+
+    def test_human_input_provider_can_update_executor_state_flag(self):
+        """Human input providers should be able to mutate the executor context."""
+        executor = _build_executor(crew=None)
+        executor.state.ask_for_human_input = True
+        answer = AgentFinish(thought="done", output="final", text="final")
+
+        result = SyncHumanInputProvider()._handle_regular_feedback(
+            answer, "", executor
+        )
+
+        assert result is answer
+        assert executor.state.ask_for_human_input is False
 
     def test_inject_files_from_crew_task_store(self):
         """Crew-level input_files should attach to the LLM user message."""
