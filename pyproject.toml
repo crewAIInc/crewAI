@@ -187,6 +187,9 @@ exclude-newer = "3 days"
 # urllib3 <2.7.0 has GHSA-qccp-gfcp-xxvc (ProxyManager cross-origin redirect leaks Authorization/Cookie) and GHSA-mf9v-mfxr-j63j (streaming decompression-bomb bypass); force 2.7.0+.
 # langsmith <0.8.0 has GHSA-3644-q5cj-c5c7 (public prompt manifest deserialization, SSRF/secret disclosure); force 0.8.0+.
 # authlib <1.6.12 has GHSA-jj8c-mmj3-mmgv (CSRF bypass in cache-based state storage) and PYSEC-2026-188.
+# pip 26.1.1 has PYSEC-2026-196; force 26.1.2+.
+# aiohttp 3.13.4 has GHSA-jg22-mg44-37j8, GHSA-hg6j-4rv6-33pg; force 3.13.5+.
+# docling-core 2.74.0 has GHSA-j5xp-7m2f-49jv, GHSA-jmmv-h3mp-59v8; force 2.74.1+.
 # pip <26.1.1 has GHSA-58qw-9mgm-455v (archive handling); OSV considers 26.1.1 unaffected.
 # paramiko <5.0.0 has GHSA-r374-rxx8-8654 (SHA-1 in rsakey.py); OSV considers 5.0.0 unaffected. Transitive via composio-core.
 # starlette <1.0.1 has PYSEC-2026-161 (missing Host header validation poisons request.url.path, bypassing path-based auth). Transitive via fastapi.
@@ -208,7 +211,10 @@ override-dependencies = [
     "gitpython>=3.1.50,<4",
     "langsmith>=0.8.0,<1",
     "authlib>=1.6.12",
-    "pip>=26.1.1",
+    "pip>=26.1.2",
+    "aiohttp>=3.13.5",
+    "docling-core>=2.74.1",
+    "pydantic-settings>=2.14.0",
     "paramiko>=5.0.0",
     "starlette>=1.0.1",
 ]
