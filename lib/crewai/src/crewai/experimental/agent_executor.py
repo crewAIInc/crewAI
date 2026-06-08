@@ -134,7 +134,6 @@ class AgentExecutorState(BaseModel):
     iterations: int = Field(default=0)
     current_answer: AgentAction | AgentFinish | None = Field(default=None)
     is_finished: bool = Field(default=False)
-    ask_for_human_input: bool = Field(default=False)
     use_native_tools: bool = Field(default=False)
     pending_tool_calls: list[Any] = Field(default_factory=list)
     plan: str | None = Field(default=None, description="Generated execution plan")
