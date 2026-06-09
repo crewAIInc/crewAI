@@ -68,6 +68,10 @@ openpyxl = [
 mem0 = ["mem0ai>=2.0.0,<3"]
 docling = [
     "docling~=2.97.0",
+    # docling 2.97 split into docling-slim; the chunker package (HierarchicalChunker)
+    # now eagerly imports code-chunking submodules that need tree-sitter/semchunk,
+    # which only the docling-core[chunking] extra provides.
+    "docling-core[chunking]>=2.74.1",
 ]
 qdrant = [
     "qdrant-client[fastembed]~=1.14.3",

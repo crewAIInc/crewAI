@@ -213,7 +213,9 @@ override-dependencies = [
     "authlib>=1.6.12",
     "pip>=26.1.2",
     "aiohttp>=3.14.0",
-    "docling-core>=2.74.1",
+    # [chunking] carried here because override-dependencies replace the whole
+    # requirement; without it the docling extra's chunking deps get stripped.
+    "docling-core[chunking]>=2.74.1",
     "pydantic-settings>=2.14.0",
     "paramiko>=5.0.0",
     "starlette>=1.0.1",
