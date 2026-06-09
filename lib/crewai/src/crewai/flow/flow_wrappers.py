@@ -39,10 +39,10 @@ class FlowCondition(TypedDict, total=False):
     """
 
     type: Required[FlowConditionType]
-    conditions: Sequence[str | FlowMethodName | FlowCondition]
+    conditions: Sequence[str | FlowCondition]
 
 
-FlowConditions: TypeAlias = Sequence[str | FlowMethodName | FlowCondition]
+FlowConditions: TypeAlias = Sequence[str | FlowCondition]
 
 
 class FlowMethod(Generic[P, R]):

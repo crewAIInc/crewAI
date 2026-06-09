@@ -3,10 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import cast
 
-from crewai.flow.dsl._conditions import (
-    _condition_trigger,
-    _definition_condition_from_runtime,
-)
+from crewai.flow.dsl._conditions import _to_definition_condition
 from crewai.flow.dsl._types import FlowMethodDecorator, FlowTrigger
 from crewai.flow.dsl._utils import (
     P,
@@ -43,14 +40,12 @@ def listen(condition: FlowTrigger) -> FlowMethodDecorator:
         >>> def handle_completion(self):
         ...     pass
     """
-    _condition_trigger(condition)
 
     def decorator(func: Callable[P, R]) -> ListenMethod[P, R]:
         wrapper = ListenMethod(func)
 
         _set_flow_method_definition(
-            wrapper,
-            FlowMethodDefinition(listen=_definition_condition_from_runtime(condition)),
+            wrapper, FlowMethodDefinition(listen=_to_definition_condition(condition))
         )
         return wrapper
 

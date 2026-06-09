@@ -161,6 +161,27 @@ def test_flow_with_or_condition():
     )
 
 
+def test_flow_executes_and_condition_with_single_branch_or():
+    class NestedConditionFlow(Flow):
+        @start()
+        def event_a(self):
+            return "a"
+
+        @listen(event_a)
+        def event_b(self):
+            return "b"
+
+        @router(event_b)
+        def emit_event_c(self):
+            return "event_c"
+
+        @listen(and_(event_a, event_b, or_("event_c")))
+        def event_d(self):
+            return "done"
+
+    assert NestedConditionFlow().kickoff() == "done"
+
+
 def test_or_listener_fires_once_across_parallel_starts():
     """Parallel ``@start`` paths feeding ``or_`` must not double-fire the listener."""
     fire_count = 0
