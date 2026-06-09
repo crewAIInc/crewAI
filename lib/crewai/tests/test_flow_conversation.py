@@ -1272,7 +1272,11 @@ class TestFlowTracingWhenSuppressed:
 
         assert started == ["QuietFlow"]
 
-    def test_method_execution_emitted_when_panel_events_suppressed(self) -> None:
+    def test_method_execution_suppressed_when_flow_events_suppressed(self) -> None:
+        """``suppress_flow_events=True`` silences MethodExecution events so
+        infrastructure flows (AgentExecutor, memory) don't emit one trace span
+        per internal control-flow method."""
+
         class QuietFlow(Flow[ChatState]):
             suppress_flow_events = True
 
@@ -1294,8 +1298,8 @@ class TestFlowTracingWhenSuppressed:
         with patch.object(crewai_event_bus, "emit", side_effect=track_emit):
             QuietFlow().kickoff()
 
-        assert started == ["begin"]
-        assert finished == ["begin"]
+        assert started == []
+        assert finished == []
 
     def test_llm_action_inside_flow_claims_flow_trace_batch(self) -> None:
         listener = TraceCollectionListener()

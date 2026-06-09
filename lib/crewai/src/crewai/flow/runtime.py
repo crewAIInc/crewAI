@@ -1403,16 +1403,17 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if self.persistence is not None:
             self.persistence.clear_pending_feedback(context.flow_id)
 
-        crewai_event_bus.emit(
-            self,
-            MethodExecutionFinishedEvent(
-                type="method_execution_finished",
-                flow_name=self.name or self.__class__.__name__,
-                method_name=context.method_name,
-                result=collapsed_outcome if emit else result,
-                state=self._state,
-            ),
-        )
+        if not self.suppress_flow_events:
+            crewai_event_bus.emit(
+                self,
+                MethodExecutionFinishedEvent(
+                    type="method_execution_finished",
+                    flow_name=self.name or self.__class__.__name__,
+                    method_name=context.method_name,
+                    result=collapsed_outcome if emit else result,
+                    state=self._state,
+                ),
+            )
 
         # Clear resumption flag before triggering listeners
         # This allows methods to re-execute in loops (e.g., implement_changes → suggest_changes → implement_changes)
@@ -2451,20 +2452,19 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 kwargs or {}
             )
 
-            # MethodExecution events always fire — ``suppress_flow_events``
-            # only hides the Rich console panel, not observability events.
-            future = crewai_event_bus.emit(
-                self,
-                MethodExecutionStartedEvent(
-                    type="method_execution_started",
-                    method_name=method_name,
-                    flow_name=self.name or self.__class__.__name__,
-                    params=dumped_params,
-                    state=self._copy_and_serialize_state(),
-                ),
-            )
-            if future:
-                self._event_futures.append(future)
+            if not self.suppress_flow_events:
+                future = crewai_event_bus.emit(
+                    self,
+                    MethodExecutionStartedEvent(
+                        type="method_execution_started",
+                        method_name=method_name,
+                        flow_name=self.name or self.__class__.__name__,
+                        params=dumped_params,
+                        state=self._copy_and_serialize_state(),
+                    ),
+                )
+                if future:
+                    self._event_futures.append(future)
 
             # Set method name in context so ask() can read it without
             # stack inspection.  Must happen before copy_context() so the
@@ -2506,19 +2506,18 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self._completed_methods.add(method_name)
 
             finished_event_id: str | None = None
-            # MethodExecution events always fire even when console panels are
-            # suppressed; tracing depends on them.
-            finished_event = MethodExecutionFinishedEvent(
-                type="method_execution_finished",
-                method_name=method_name,
-                flow_name=self.name or self.__class__.__name__,
-                state=self._copy_and_serialize_state(),
-                result=result,
-            )
-            finished_event_id = finished_event.event_id
-            future = crewai_event_bus.emit(self, finished_event)
-            if future:
-                self._event_futures.append(future)
+            if not self.suppress_flow_events:
+                finished_event = MethodExecutionFinishedEvent(
+                    type="method_execution_finished",
+                    method_name=method_name,
+                    flow_name=self.name or self.__class__.__name__,
+                    state=self._copy_and_serialize_state(),
+                    result=result,
+                )
+                finished_event_id = finished_event.event_id
+                future = crewai_event_bus.emit(self, finished_event)
+                if future:
+                    self._event_futures.append(future)
 
             return result, finished_event_id
         except Exception as e:
