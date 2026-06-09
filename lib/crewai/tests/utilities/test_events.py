@@ -838,6 +838,74 @@ def test_flow_method_execution_finished_includes_serialized_state():
     assert final_output == "final_result"
 
 
+def test_suppress_flow_events_silences_method_lifecycle_events():
+    """``suppress_flow_events=True`` emits no MethodExecution* events on the
+    bus (used by infrastructure flows like AgentExecutor so their control-flow
+    methods don't pollute traces), while default flows still emit them."""
+    captured: list[tuple[str, str]] = []
+
+    class SuppressedFlow(Flow):
+        suppress_flow_events: bool = True
+
+        @start()
+        def begin(self):
+            return "started"
+
+        @listen("begin")
+        def process(self):
+            return "done"
+
+    class ControlFlow(Flow):
+        @start()
+        def begin(self):
+            return "started"
+
+        @listen("begin")
+        def process(self):
+            return "done"
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(MethodExecutionStartedEvent)
+        def _on_started(source, event):
+            captured.append(("started", type(source).__name__))
+
+        @crewai_event_bus.on(MethodExecutionFinishedEvent)
+        def _on_finished(source, event):
+            captured.append(("finished", type(source).__name__))
+
+        SuppressedFlow().kickoff()
+        wait_for_event_handlers()
+        assert [e for e in captured if e[1] == "SuppressedFlow"] == [], (
+            "suppress_flow_events=True must emit no MethodExecution* events"
+        )
+
+        captured.clear()
+        ControlFlow().kickoff()
+        wait_for_event_handlers()
+        control = [e for e in captured if e[1] == "ControlFlow"]
+        assert ("started", "ControlFlow") in control
+        assert ("finished", "ControlFlow") in control
+
+
+def test_infrastructure_flows_suppress_flow_events_by_default():
+    """Pin the infra flows that must stay silent in traces.
+
+    The gating in ``_execute_method`` only helps if these flows actually set
+    ``suppress_flow_events=True``; without this guard, removing the flag from
+    AgentExecutor would silently bring back the verbose per-method trace spans.
+    """
+    from crewai.experimental.agent_executor import AgentExecutor
+    from crewai.memory.encoding_flow import EncodingFlow
+    from crewai.memory.recall_flow import RecallFlow
+
+    assert AgentExecutor.model_fields["suppress_flow_events"].default is True
+
+    for flow_cls in (EncodingFlow, RecallFlow):
+        flow = flow_cls(storage=None, llm=None, embedder=None)
+        assert flow.suppress_flow_events is True
+
+
 @pytest.mark.vcr()
 def test_llm_emits_call_started_event():
     started_events: list[LLMCallStartedEvent] = []
