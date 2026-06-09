@@ -111,7 +111,7 @@ if LITELLM_AVAILABLE:
 
 MIN_CONTEXT: Final[int] = 1024
 MAX_CONTEXT: Final[int] = 2097152  # Current max from gemini-1.5-pro
-ANTHROPIC_PREFIXES: Final[tuple[str, str, str]] = ("anthropic/", "claude-", "claude/")
+ANTHROPIC_PREFIXES: Final[tuple[str, str, str, str]] = ("anthropic/", "claude-", "claude/", "anthropic--")
 
 LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "gpt-4": 8192,
