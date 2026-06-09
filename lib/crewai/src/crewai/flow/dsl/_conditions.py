@@ -21,23 +21,12 @@ from crewai.flow.flow_definition import FlowDefinitionCondition
 from crewai.flow.flow_wrappers import (
     FlowCondition,
     FlowConditions,
-    SimpleFlowCondition,
 )
 from crewai.flow.types import FlowMethodName
 
 
 def _is_non_string_sequence(value: Any) -> bool:
     return isinstance(value, Sequence) and not isinstance(value, (str, bytes))
-
-
-def is_simple_flow_condition(obj: Any) -> TypeIs[SimpleFlowCondition]:
-    """Check if the object is a ``(condition_type, methods)`` tuple."""
-    return (
-        isinstance(obj, tuple)
-        and len(obj) == 2
-        and isinstance(obj[0], str)
-        and isinstance(obj[1], list)
-    )
 
 
 def is_flow_condition_dict(obj: Any) -> TypeIs[FlowCondition]:
@@ -49,30 +38,18 @@ def is_flow_condition_dict(obj: Any) -> TypeIs[FlowCondition]:
     if type_value not in ("AND", "OR"):
         return False
 
-    if "conditions" in obj:
-        conditions = obj["conditions"]
-        if not _is_non_string_sequence(conditions):
-            return False
-        for cond in conditions:
-            if not (
-                isinstance(cond, str)
-                or (isinstance(cond, dict) and is_flow_condition_dict(cond))
-            ):
-                return False
-
-    if "methods" in obj:
-        methods = obj["methods"]
-        if not (
-            _is_non_string_sequence(methods)
-            and all(isinstance(m, str) for m in methods)
-        ):
-            return False
-
-    allowed_keys = {"type", "conditions", "methods"}
-    if not set(obj).issubset(allowed_keys):
+    if set(obj) != {"type", "conditions"}:
         return False
 
-    return True
+    conditions = obj["conditions"]
+    if not _is_non_string_sequence(conditions):
+        return False
+
+    return all(
+        isinstance(condition, str)
+        or (isinstance(condition, dict) and is_flow_condition_dict(condition))
+        for condition in conditions
+    )
 
 
 def _method_reference_name(value: Any) -> FlowMethodName | None:
@@ -88,13 +65,6 @@ def _normalize_condition(
     if isinstance(condition, str):
         return {"type": OR_CONDITION, "conditions": [FlowMethodName(condition)]}
     if is_flow_condition_dict(condition):
-        if "conditions" in condition:
-            return condition
-        if "methods" in condition:
-            normalized_methods: list[str | FlowMethodName | FlowCondition] = list(
-                condition["methods"]
-            )
-            return {"type": condition["type"], "conditions": normalized_methods}
         return condition
     if _is_non_string_sequence(condition) and all(
         isinstance(item, str) or is_flow_condition_dict(item) for item in condition
@@ -102,54 +72,6 @@ def _normalize_condition(
         return {"type": OR_CONDITION, "conditions": condition}
 
     raise ValueError(f"Cannot normalize condition: {condition}")
-
-
-def _extract_all_methods_recursive(
-    condition: str | FlowCondition | dict[str, Any] | list[Any],
-    flow: Any | None = None,
-) -> list[FlowMethodName]:
-    if isinstance(condition, str):
-        if flow is not None:
-            if condition in flow._methods:
-                return [FlowMethodName(condition)]
-            return []
-        return [FlowMethodName(condition)]
-    if is_flow_condition_dict(condition):
-        normalized = _normalize_condition(condition)
-        methods = []
-        for sub_cond in normalized.get("conditions", []):
-            methods.extend(_extract_all_methods_recursive(sub_cond, flow))
-        return methods
-    if isinstance(condition, list):
-        methods = []
-        for item in condition:
-            methods.extend(_extract_all_methods_recursive(item, flow))
-        return methods
-    return []
-
-
-def _extract_all_methods(
-    condition: str | FlowCondition | dict[str, Any] | list[Any],
-) -> list[FlowMethodName]:
-    if isinstance(condition, str):
-        return [FlowMethodName(condition)]
-    if is_flow_condition_dict(condition):
-        normalized = _normalize_condition(condition)
-        cond_type = normalized.get("type", OR_CONDITION)
-
-        if cond_type == AND_CONDITION:
-            return [
-                FlowMethodName(sub_cond)
-                for sub_cond in normalized.get("conditions", [])
-                if isinstance(sub_cond, str)
-            ]
-        return []
-    if isinstance(condition, list):
-        methods = []
-        for item in condition:
-            methods.extend(_extract_all_methods(item))
-        return methods
-    return []
 
 
 def _condition_trigger(condition: FlowTrigger) -> FlowMethodName | FlowCondition:
@@ -252,36 +174,3 @@ def and_(*triggers: FlowTrigger) -> FlowCondition:
     """
     processed_triggers = _condition_triggers(triggers, "Invalid trigger in and_()")
     return {"type": AND_CONDITION, "conditions": processed_triggers}
-
-
-def _runtime_condition_from_definition(
-    condition: FlowDefinitionCondition,
-) -> FlowMethodName | FlowCondition:
-    if isinstance(condition, str):
-        return FlowMethodName(condition)
-    if is_flow_condition_dict(condition):
-        return condition
-
-    if "and" in condition:
-        return {
-            "type": AND_CONDITION,
-            "conditions": [
-                _runtime_condition_from_definition(item)
-                for item in condition.get("and", [])
-            ],
-        }
-    return {
-        "type": OR_CONDITION,
-        "conditions": [
-            _runtime_condition_from_definition(item) for item in condition.get("or", [])
-        ],
-    }
-
-
-def _runtime_listener_condition_from_definition(
-    condition: FlowDefinitionCondition,
-) -> SimpleFlowCondition | FlowCondition:
-    runtime_condition = _runtime_condition_from_definition(condition)
-    if isinstance(runtime_condition, str):
-        return (OR_CONDITION, [FlowMethodName(str(runtime_condition))])
-    return runtime_condition

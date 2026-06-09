@@ -27,13 +27,8 @@ def _stamp_human_feedback_metadata(
     config: HumanFeedbackConfig,
 ) -> None:
     for attr in [
-        "__trigger_methods__",
-        "__condition_type__",
-        "__trigger_condition__",
         "__is_flow_method__",
         "__flow_persistence_config__",
-        "__is_router__",
-        "__router_emit__",
         "__flow_method_definition__",
     ]:
         if hasattr(func, attr):
@@ -43,8 +38,6 @@ def _stamp_human_feedback_metadata(
     wrapper.__is_flow_method__ = True
 
     if config.emit:
-        wrapper.__is_router__ = True
-        wrapper.__router_emit__ = list(config.emit)
         fragment = getattr(wrapper, "__flow_method_definition__", None)
         if isinstance(fragment, FlowMethodDefinition):
             wrapper.__flow_method_definition__ = fragment.model_copy(

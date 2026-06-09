@@ -14,13 +14,15 @@ from typing import (
     get_type_hints,
 )
 
-from crewai.flow.dsl._conditions import _definition_condition_from_runtime
+from crewai.flow.dsl._conditions import (
+    _condition_trigger,
+    _definition_condition_from_runtime,
+)
 from crewai.flow.dsl._types import FlowMethodDecorator, FlowTrigger
 from crewai.flow.dsl._utils import (
     P,
     R,
     _set_flow_method_definition,
-    _set_trigger_metadata,
 )
 from crewai.flow.flow_definition import FlowMethodDefinition
 from crewai.flow.flow_wrappers import RouterMethod
@@ -137,6 +139,7 @@ def router(
         >>> def explicit_routing(self):
         ...     return "SUCCESS"
     """
+    _condition_trigger(condition)
 
     def decorator(func: Callable[P, R]) -> RouterMethod[P, R]:
         wrapper = RouterMethod(func)
@@ -154,13 +157,6 @@ def router(
                 emit=router_events or None,
             ),
         )
-
-        _set_trigger_metadata(wrapper, condition)
-
-        if emit is not None:
-            wrapper.__router_emit__ = router_events
-        elif router_events:
-            wrapper.__router_emit__ = router_events
         return wrapper
 
     return cast(FlowMethodDecorator, decorator)
