@@ -71,13 +71,28 @@ def _patch_vcrpy_aiohttp_compat() -> None:
         # sent" branch (writer is None), so None is not enough -- supply a stub.
         output_size = 0
 
+    fallback_loop: list[asyncio.AbstractEventLoop] = []
+
+    def _resolve_loop() -> asyncio.AbstractEventLoop:
+        # MockClientResponse is normally built inside aiohttp's running loop, so
+        # prefer that. In a sync context there is no running loop; avoid
+        # asyncio.get_event_loop(), which on 3.12+ emits a DeprecationWarning
+        # (and can RuntimeError) when no current loop is set. Use one cached
+        # loop instead -- the mock only stores it and calls loop.get_debug().
+        try:
+            return asyncio.get_running_loop()
+        except RuntimeError:
+            if not fallback_loop:
+                fallback_loop.append(asyncio.new_event_loop())
+            return fallback_loop[0]
+
     def _mock_client_response_init(
         self: Any, method: str, url: Any, request_info: Any = None
     ) -> None:
         kwargs: dict[str, Any] = dict.fromkeys(keyword_only)
         kwargs["request_info"] = request_info
         if "loop" in kwargs:
-            kwargs["loop"] = asyncio.get_event_loop()
+            kwargs["loop"] = _resolve_loop()
         if "stream_writer" in kwargs:
             kwargs["stream_writer"] = _NullStreamWriter()
         ClientResponse.__init__(self, method, url, **kwargs)
