@@ -221,6 +221,7 @@ def test_flow_definition_includes_conversational_builtins_when_enabled():
 
     assert definition.conversational is not None
     assert definition.conversational.enabled is True
+    assert definition.conversational.defer_trace_finalization is True
     assert definition.conversational.builtin_routes == ["converse", "end"]
     assert "conversation_start" in methods
     assert "route_conversation" in methods

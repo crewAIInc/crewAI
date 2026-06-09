@@ -1333,6 +1333,12 @@ class TestFlowTracingWhenSuppressed:
 
 
 class TestDeferTraceFinalization:
+    def test_bare_conversational_flow_defers_by_default(self) -> None:
+        class BareChat(ConversationalFlow):
+            pass
+
+        assert BareChat()._should_defer_trace_finalization() is True
+
     def test_conversation_config_drives_defer_flag(self) -> None:
         """``ConversationConfig(defer_trace_finalization=...)`` controls whether
         a conversational subclass defers per-turn trace finalization."""
