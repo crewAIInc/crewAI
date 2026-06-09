@@ -2,8 +2,9 @@ import json
 import os
 from unittest.mock import patch
 
-import crewai_tools.tools as tools
 from crewai_tools import SochDBConfig, SochDBVectorSearchTool
+import crewai_tools.tools as tools
+import pytest
 
 
 class FakeDocument:
@@ -87,7 +88,12 @@ def test_sochdb_vector_search_tool_custom_embedding_does_not_require_openai_key(
 
     assert len(results) == 1
     assert fake_client.calls[0]["query"] == [0.4, 0.5, 0.6]
-    assert tool.env_vars[0].required is False
+    openai_key_var = next(
+        (env_var for env_var in tool.env_vars if env_var.name == "OPENAI_API_KEY"),
+        None,
+    )
+    assert openai_key_var is not None, "OPENAI_API_KEY should be in env_vars"
+    assert openai_key_var.required is False
 
 
 def test_sochdb_vector_search_tool_requires_openai_key_without_custom_embedding() -> None:
@@ -100,13 +106,11 @@ def test_sochdb_vector_search_tool_requires_openai_key_without_custom_embedding(
     )
 
     with patch.dict(os.environ, {}, clear=True):
-        try:
+        with pytest.raises(ValueError) as excinfo:
             tool._embed_query("default embedding query")
-        except ValueError as exc:
-            assert "OPENAI_API_KEY" in str(exc)
-            assert "custom_embedding_fn" in str(exc)
-        else:
-            raise AssertionError("Expected ValueError when OPENAI_API_KEY is missing")
+
+    assert "OPENAI_API_KEY" in str(excinfo.value)
+    assert "custom_embedding_fn" in str(excinfo.value)
 
 
 def test_sochdb_vector_search_tool_requires_object_filter() -> None:
@@ -120,12 +124,8 @@ def test_sochdb_vector_search_tool_requires_object_filter() -> None:
         custom_embedding_fn=lambda text: [0.1, 0.2, 0.3],
     )
 
-    try:
+    with pytest.raises(ValueError, match="JSON object"):
         tool._run(query="test", metadata_filter_json='["bad"]')
-    except ValueError as exc:
-        assert "JSON object" in str(exc)
-    else:
-        raise AssertionError("Expected ValueError for non-object metadata_filter_json")
 
 
 def test_sochdb_vector_search_tool_is_exported_from_tools_package() -> None:
