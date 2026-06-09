@@ -169,9 +169,6 @@ class TestConversationalFlow:
         )
 
 
-    @pytest.mark.skip(
-        reason="Experimental conversational registry behavior is out of scope for the definition-first start migration."
-    )
     def test_handle_turn_routes_to_listener_and_records_public_result(self) -> None:
         @ConversationConfig(default_intents=["research"], intent_llm="gpt-4o-mini")
         class ResearchFlow(ConversationalFlow):
@@ -595,9 +592,6 @@ class TestConversationalFlow:
         assert result == "legacy-searched"
         assert flow.state.last_intent == "search"
 
-    @pytest.mark.skip(
-        reason="Experimental conversational sequential-start behavior is out of scope for the definition-first start migration."
-    )
     def test_user_start_methods_run_sequentially_before_router_in_conversational_mode(
         self,
     ) -> None:
@@ -649,9 +643,6 @@ class TestConversationalFlow:
         assert "attach_bus" in order  # still fires every turn
         assert "route_turn" in order
 
-    @pytest.mark.skip(
-        reason="Experimental inherited conversational start registration is out of scope for the definition-first start migration."
-    )
     def test_subclass_can_override_conversation_start_without_redecorating(
         self,
     ) -> None:
