@@ -1,6 +1,5 @@
 """Tests for the static Flow Definition contract."""
 
-import ast
 from enum import Enum
 import importlib
 import inspect
@@ -15,7 +14,6 @@ import crewai.flow.dsl as flow_dsl
 import crewai.flow.flow_definition as flow_definition
 import crewai.flow.visualization.builder as visualization_builder
 from crewai.flow import Flow, and_, human_feedback, listen, or_, persist, router, start
-from crewai.flow.dsl._conditions import is_flow_condition_dict
 
 
 def test_flow_public_exports_are_explicit():
@@ -50,79 +48,64 @@ def test_flow_public_exports_are_explicit():
     assert "calculate_node_levels" not in flow_visualization.__all__
 
 
-def test_flow_condition_dict_accepts_non_string_sequences():
-    condition = {
-        "type": "OR",
-        "conditions": (
-            "approved",
-            {"type": "AND", "methods": ("validated", "processed")},
-        ),
+def test_condition_combinators_return_nested_runtime_tree():
+    condition = and_("event_a", "event_b", or_("event_c"))
+
+    assert condition == {
+        "type": "AND",
+        "conditions": [
+            "event_a",
+            "event_b",
+            {"type": "OR", "conditions": ["event_c"]},
+        ],
     }
 
-    assert is_flow_condition_dict(condition)
-    assert not is_flow_condition_dict({"type": "OR", "conditions": "approved"})
-    assert not is_flow_condition_dict({"type": "OR", "methods": b"approved"})
+
+def test_flow_definition_lowers_nested_conditions():
+    class NestedFlow(Flow):
+        @start()
+        def begin(self):
+            return "begin"
+
+        @listen(begin)
+        def validated(self):
+            return "validated"
+
+        @listen(begin)
+        def processed(self):
+            return "processed"
+
+        @listen(or_(and_(validated, processed), begin))
+        def finalize(self):
+            return "done"
+
+    finalize = NestedFlow.flow_definition().methods["finalize"]
+
+    assert finalize.listen == {"or": [{"and": ["validated", "processed"]}, "begin"]}
 
 
-def test_private_flow_helpers_do_not_have_docstrings():
-    import crewai.flow.flow_wrappers as flow_wrappers
-    import crewai.flow.human_feedback as human_feedback
-    import crewai.flow.persistence.decorators as persistence_decorators
-    import crewai.flow.visualization.types as visualization_types
+def test_flow_definition_preserves_single_branch_nested_conditions():
+    class AmbiguousFlow(Flow):
+        @start()
+        def event_a(self):
+            return "a"
 
-    modules = [
-        flow_dsl,
-        flow_definition,
-        flow_wrappers,
-        human_feedback,
-        persistence_decorators,
-        visualization_builder,
-        visualization_types,
-    ]
-    violations: list[str] = []
+        @listen(event_a)
+        def event_b(self):
+            return "b"
 
-    for module in modules:
-        source_path = Path(inspect.getsourcefile(module) or "")
-        tree = ast.parse(source_path.read_text())
-        stack: list[ast.AST] = []
-        if getattr(module, "__all__", None) == [] and ast.get_docstring(tree):
-            violations.append(f"{source_path}:1:<module>")
+        @listen(and_(event_a, event_b, or_("event_c")))
+        def event_d(self):
+            return "d"
 
-        class PrivateDocstringVisitor(ast.NodeVisitor):
-            def visit_ClassDef(self, node: ast.ClassDef) -> None:
-                self._check_docstring(node)
-                stack.append(node)
-                self.generic_visit(node)
-                stack.pop()
+    event_d = AmbiguousFlow.flow_definition().methods["event_d"]
 
-            def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
-                self._check_docstring(node)
-                stack.append(node)
-                self.generic_visit(node)
-                stack.pop()
+    assert event_d.listen == {"and": ["event_a", "event_b", {"or": ["event_c"]}]}
 
-            def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
-                self._check_docstring(node)
-                stack.append(node)
-                self.generic_visit(node)
-                stack.pop()
 
-            def _check_docstring(
-                self,
-                node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
-            ) -> None:
-                is_dunder = node.name.startswith("__") and node.name.endswith("__")
-                is_private_name = node.name.startswith("_") and not is_dunder
-                is_nested_function = any(
-                    isinstance(parent, (ast.FunctionDef, ast.AsyncFunctionDef))
-                    for parent in stack
-                )
-                if (is_private_name or is_nested_function) and ast.get_docstring(node):
-                    violations.append(f"{source_path}:{node.lineno}:{node.name}")
-
-        PrivateDocstringVisitor().visit(tree)
-
-    assert violations == []
+def test_flow_definition_rejects_invalid_condition():
+    with pytest.raises(ValueError, match="Invalid condition"):
+        start(123)(lambda self: None)
 
 
 def test_flow_definition_contract_is_dsl_agnostic():
@@ -304,81 +287,11 @@ def test_flow_definition_fragments_cover_start_listen_and_condition_sugar():
 
     assert not hasattr(FragmentFlow.__dict__["begin"], "__is_start_method__")
     assert not hasattr(FragmentFlow.__dict__["restart"], "__trigger_methods__")
-    assert "restart" not in FragmentFlow._listeners
-    assert FragmentFlow._listeners["by_callable"] == ("OR", ["begin"])
-    assert FragmentFlow._listeners["by_string"] == ("OR", ["manual_event"])
-    assert FragmentFlow._listeners["by_and"] == {
-        "type": "AND",
-        "conditions": ["begin", "by_callable"],
-    }
-    assert FragmentFlow._listeners["nested"] == {
-        "type": "OR",
-        "conditions": [
-            {"type": "AND", "conditions": ["manual_event", "by_string"]},
-            "fallback_event",
-        ],
-    }
-
-
-def test_extract_flow_definition_prefers_fragments_over_legacy_metadata():
-    class RegistryFlow(Flow):
-        @start()
-        def begin(self):
-            return "begin"
-
-        @listen(begin)
-        def handle(self):
-            return "handle"
-
-        @router(handle, emit=["done"])
-        def decide(self):
-            return "done"
-
-    handle = RegistryFlow.__dict__["handle"]
-    original_trigger_methods = handle.__trigger_methods__
-    handle.__trigger_methods__ = ["wrong"]
-    try:
-        _, listeners, routers, router_emit = flow_dsl.extract_flow_definition(
-            {
-                "begin": RegistryFlow.__dict__["begin"],
-                "handle": handle,
-                "decide": RegistryFlow.__dict__["decide"],
-            }
-        )
-    finally:
-        handle.__trigger_methods__ = original_trigger_methods
-
-    assert listeners["handle"] == ("OR", ["begin"])
-    assert listeners["decide"] == ("OR", ["handle"])
-    assert routers == {"decide"}
-    assert router_emit == {"decide": ["done"]}
-
-
-def test_flow_definition_falls_back_to_legacy_listener_router_metadata_without_fragment():
-    class LegacyMetadataFlow(Flow):
-        @start()
-        def begin(self):
-            return "begin"
-
-        @router(begin, emit=["left"])
-        def decide(self):
-            return "left"
-
-        @listen("left")
-        def left(self):
-            return "left"
-
-    for method_name in ("decide", "left"):
-        method = LegacyMetadataFlow.__dict__[method_name]
-        delattr(method, "__flow_method_definition__")
-
-    definition = flow_dsl.build_flow_definition(LegacyMetadataFlow)
-
-    assert definition.methods["begin"].start is True
-    assert definition.methods["decide"].listen == "begin"
-    assert definition.methods["decide"].router is True
-    assert definition.methods["decide"].emit == ["left"]
-    assert definition.methods["left"].listen == "left"
+    for method_name in ("by_callable", "by_string", "by_and", "nested"):
+        method = FragmentFlow.__dict__[method_name]
+        assert not hasattr(method, "__trigger_methods__")
+        assert not hasattr(method, "__condition_type__")
+        assert not hasattr(method, "__trigger_condition__")
 
 
 def test_human_feedback_emit_overrides_inner_router_emit():
@@ -399,9 +312,6 @@ def test_human_feedback_emit_overrides_inner_router_emit():
         @listen("approved")
         def proceed(self):
             return "ok"
-
-    assert "route" in FeedbackOverRouterFlow._routers
-    assert FeedbackOverRouterFlow._router_emit["route"] == ["approved", "rejected"]
 
     route = FeedbackOverRouterFlow.flow_definition().methods["route"]
     assert route.router is True

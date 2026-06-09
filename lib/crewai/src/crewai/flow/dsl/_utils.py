@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
 import json
 import logging
 from typing import Any, ParamSpec, TypeVar
@@ -8,19 +7,9 @@ from typing import Any, ParamSpec, TypeVar
 from pydantic import BaseModel
 from typing_extensions import TypeIs
 
-from crewai.flow.constants import AND_CONDITION, OR_CONDITION
-from crewai.flow.dsl._conditions import (
-    _definition_condition_from_runtime,
-    _extract_all_methods,
-    _method_reference_name,
-    _runtime_listener_condition_from_definition,
-    is_flow_condition_dict,
-)
-from crewai.flow.dsl._types import FlowTrigger
 from crewai.flow.flow_definition import (
     FlowConfigDefinition,
     FlowDefinition,
-    FlowDefinitionCondition,
     FlowDefinitionDiagnostic,
     FlowHumanFeedbackDefinition,
     FlowMethodDefinition,
@@ -29,10 +18,7 @@ from crewai.flow.flow_definition import (
 )
 from crewai.flow.flow_wrappers import (
     FlowMethod,
-    ListenMethod,
-    RouterMethod,
 )
-from crewai.flow.types import FlowMethodName
 
 
 P = ParamSpec("P")
@@ -45,11 +31,8 @@ _FLOW_METHOD_DEFINITION_ATTR = "__flow_method_definition__"
 
 def is_flow_method(obj: Any) -> TypeIs[FlowMethod[Any, Any]]:
     """Check if the object carries Flow method wrapper metadata."""
-    return (
-        hasattr(obj, "__is_flow_method__")
-        or hasattr(obj, "__trigger_methods__")
-        or hasattr(obj, "__is_router__")
-        or hasattr(obj, _FLOW_METHOD_DEFINITION_ATTR)
+    return hasattr(obj, "__is_flow_method__") or hasattr(
+        obj, _FLOW_METHOD_DEFINITION_ATTR
     )
 
 
@@ -57,42 +40,6 @@ def _should_include_flow_method(flow_class: type, method: Any) -> bool:
     if getattr(method, "__conversational_only__", False):
         return bool(getattr(flow_class, "conversational", False))
     return True
-
-
-def _flow_method_names(values: Sequence[Any]) -> list[FlowMethodName]:
-    return [FlowMethodName(str(value)) for value in values]
-
-
-def _set_trigger_metadata(
-    wrapper: ListenMethod[P, R] | RouterMethod[P, R],
-    condition: FlowTrigger,
-) -> None:
-    if isinstance(condition, str):
-        wrapper.__trigger_methods__ = [FlowMethodName(condition)]
-        wrapper.__condition_type__ = OR_CONDITION
-        return
-
-    if is_flow_condition_dict(condition):
-        if "conditions" in condition:
-            wrapper.__trigger_condition__ = condition
-            wrapper.__trigger_methods__ = _extract_all_methods(condition)
-            wrapper.__condition_type__ = condition["type"]
-            return
-        if "methods" in condition:
-            wrapper.__trigger_methods__ = _flow_method_names(condition["methods"])
-            wrapper.__condition_type__ = condition["type"]
-            return
-        raise ValueError("Condition dict must contain 'conditions' or 'methods'")
-
-    method_name = _method_reference_name(condition)
-    if method_name is not None:
-        wrapper.__trigger_methods__ = [method_name]
-        wrapper.__condition_type__ = OR_CONDITION
-        return
-
-    raise ValueError(
-        "Condition must be a method, string, or a result of or_() or and_()"
-    )
 
 
 def _set_flow_method_definition(
@@ -236,48 +183,6 @@ def _build_config_definition(
     return FlowConfigDefinition(**values)
 
 
-def _condition_from_method_metadata(method: Any) -> FlowDefinitionCondition | None:
-    trigger_condition = getattr(method, "__trigger_condition__", None)
-    if trigger_condition is not None:
-        return _definition_condition_from_runtime(trigger_condition)
-
-    trigger_methods = getattr(method, "__trigger_methods__", None)
-    if trigger_methods is None:
-        return None
-    condition_type = getattr(method, "__condition_type__", OR_CONDITION)
-    method_names = [str(method_name) for method_name in trigger_methods]
-    if condition_type == AND_CONDITION:
-        return {"and": method_names}
-    if len(method_names) == 1:
-        return method_names[0]
-    return {"or": method_names}
-
-
-def _flow_method_definition_from_legacy_metadata(method: Any) -> FlowMethodDefinition:
-    is_router = bool(getattr(method, "__is_router__", False))
-    condition = _condition_from_method_metadata(method)
-
-    definition = FlowMethodDefinition(
-        listen=condition,
-        router=is_router,
-    )
-
-    router_emit = getattr(method, "__router_emit__", None)
-    if router_emit:
-        definition.emit = [str(value) for value in router_emit]
-    return definition
-
-
-def _definition_trigger_condition(
-    method_definition: FlowMethodDefinition,
-) -> FlowDefinitionCondition | None:
-    if method_definition.listen is not None:
-        return method_definition.listen
-    if isinstance(method_definition.start, (str, dict)):
-        return method_definition.start
-    return None
-
-
 def _build_human_feedback_definition(
     method: Any,
     diagnostics: list[FlowDefinitionDiagnostic],
@@ -332,12 +237,9 @@ def _build_method_definition(
 ) -> FlowMethodDefinition:
     fragment = _get_flow_method_definition(method)
     if fragment is None:
-        method_definition = _flow_method_definition_from_legacy_metadata(method)
+        method_definition = FlowMethodDefinition()
     else:
         method_definition = fragment.model_copy(deep=True)
-
-    if bool(getattr(method, "__is_router__", False)):
-        method_definition.router = True
 
     human_feedback = _build_human_feedback_definition(
         method, diagnostics, f"{path}.human_feedback"
@@ -351,11 +253,6 @@ def _build_method_definition(
     method_definition.persist = _build_persistence_definition(
         method, diagnostics, f"{path}.persist"
     )
-
-    router_emit = getattr(method, "__router_emit__", None)
-    if router_emit and not (human_feedback and human_feedback.emit):
-        if not method_definition.emit:
-            method_definition.emit = [str(value) for value in router_emit]
 
     return method_definition
 
@@ -431,68 +328,3 @@ def build_flow_definition(
 ) -> FlowDefinition:
     """Build a FlowDefinition from a Python Flow class."""
     return _build_flow_definition_from_class(flow_class, namespace)
-
-
-def extract_flow_definition(
-    namespace: dict[str, Any],
-) -> tuple[list[str], dict[str, Any], set[str], dict[str, Any]]:
-    """Extract the structural flow registries from a Python class namespace."""
-    start_methods: list[str] = []
-    listeners: dict[str, Any] = {}
-    router_emit: dict[str, Any] = {}
-    routers: set[str] = set()
-
-    for attr_name, attr_value in namespace.items():
-        if is_flow_method(attr_value):
-            method_definition = _get_flow_method_definition(attr_value)
-            if method_definition is not None:
-                condition = _definition_trigger_condition(method_definition)
-                if condition is not None and not method_definition.is_start:
-                    listeners[attr_name] = _runtime_listener_condition_from_definition(
-                        condition
-                    )
-
-                is_router = method_definition.router or bool(
-                    getattr(attr_value, "__is_router__", False)
-                )
-                if is_router:
-                    routers.add(attr_name)
-                    if method_definition.emit:
-                        router_emit[attr_name] = [
-                            str(value) for value in method_definition.emit
-                        ]
-                    elif (
-                        hasattr(attr_value, "__router_emit__")
-                        and attr_value.__router_emit__
-                    ):
-                        router_emit[attr_name] = attr_value.__router_emit__
-                    else:
-                        router_emit[attr_name] = []
-                continue
-
-            if (
-                hasattr(attr_value, "__trigger_methods__")
-                and attr_value.__trigger_methods__ is not None
-            ):
-                methods = attr_value.__trigger_methods__
-                condition_type = getattr(attr_value, "__condition_type__", OR_CONDITION)
-
-                if (
-                    hasattr(attr_value, "__trigger_condition__")
-                    and attr_value.__trigger_condition__ is not None
-                ):
-                    listeners[attr_name] = attr_value.__trigger_condition__
-                else:
-                    listeners[attr_name] = (condition_type, methods)
-
-                if hasattr(attr_value, "__is_router__") and attr_value.__is_router__:
-                    routers.add(attr_name)
-                    if (
-                        hasattr(attr_value, "__router_emit__")
-                        and attr_value.__router_emit__
-                    ):
-                        router_emit[attr_name] = attr_value.__router_emit__
-                    else:
-                        router_emit[attr_name] = []
-
-    return start_methods, listeners, routers, router_emit
