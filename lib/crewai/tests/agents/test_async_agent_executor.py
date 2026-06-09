@@ -103,6 +103,47 @@ class TestAsyncAgentExecutor:
 
         assert result == {"output": expected_output}
 
+    def test_show_logs_displays_final_answer_for_human_input(
+        self, executor: CrewAgentExecutor
+    ) -> None:
+        """Human feedback prompts must show the final answer under review."""
+        executor.ask_for_human_input = True
+        executor.agent.verbose = False
+
+        with patch("crewai.agents.crew_agent_executor.crewai_event_bus.emit") as emit:
+            emit.return_value = None
+            executor._show_logs(
+                AgentFinish(
+                    thought="Done",
+                    output="The sky is blue.",
+                    text="Final Answer: The sky is blue.",
+                )
+            )
+
+        event = emit.call_args.args[1]
+        assert event.verbose is True
+
+    def test_show_logs_keeps_non_final_human_input_logs_non_verbose(
+        self, executor: CrewAgentExecutor
+    ) -> None:
+        """Human feedback should not enable all intermediate logs."""
+        executor.ask_for_human_input = True
+        executor.agent.verbose = False
+
+        with patch("crewai.agents.crew_agent_executor.crewai_event_bus.emit") as emit:
+            emit.return_value = None
+            executor._show_logs(
+                AgentAction(
+                    thought="Need a tool",
+                    tool="search",
+                    tool_input="query",
+                    text="Action: search",
+                )
+            )
+
+        event = emit.call_args.args[1]
+        assert event.verbose is False
+
     @pytest.mark.asyncio
     async def test_ainvoke_loop_calls_aget_llm_response(
         self, executor: CrewAgentExecutor
