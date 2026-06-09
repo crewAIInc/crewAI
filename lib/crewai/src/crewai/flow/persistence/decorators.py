@@ -35,7 +35,7 @@ from crewai_core.printer import PRINTER
 from pydantic import BaseModel
 
 from crewai.flow.persistence.base import FlowPersistence
-from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
+from crewai.flow.persistence.factory import default_flow_persistence
 
 
 if TYPE_CHECKING:
@@ -171,7 +171,9 @@ def persist(
 
     Args:
         persistence: Optional FlowPersistence implementation to use.
-                    If not provided, uses SQLiteFlowPersistence.
+                    If not provided, uses ``default_flow_persistence()`` (the
+                    registered factory when present, else the built-in SQLite
+                    fallback).
         verbose: Whether to log persistence operations. Defaults to False.
 
     Returns:
@@ -190,7 +192,9 @@ def persist(
     """
 
     def decorator(target: type | Callable[..., T]) -> type | Callable[..., T]:
-        actual_persistence = persistence or SQLiteFlowPersistence()
+        actual_persistence = (
+            persistence if persistence is not None else default_flow_persistence()
+        )
 
         if isinstance(target, type):
             _stamp_persistence_metadata(target, actual_persistence, verbose)
