@@ -204,7 +204,12 @@ class Memory(BaseModel):
         )
 
         if isinstance(self.storage, str):
-            if self.storage == "qdrant-edge":
+            from crewai.memory.storage.factory import resolve_memory_storage
+
+            custom = resolve_memory_storage(self.storage)
+            if custom is not None:
+                self._storage = custom
+            elif self.storage == "qdrant-edge":
                 from crewai.memory.storage.qdrant_edge_storage import QdrantEdgeStorage
 
                 self._storage = QdrantEdgeStorage()
