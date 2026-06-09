@@ -78,8 +78,9 @@ class TestHumanFeedbackValidation:
             return "output"
 
         assert hasattr(test_method, "__human_feedback_config__")
-        assert test_method.__is_router__ is True
-        assert test_method.__router_emit__ == ["approve", "reject"]
+        assert test_method.__human_feedback_config__.emit == ["approve", "reject"]
+        assert not hasattr(test_method, "__is_router__")
+        assert not hasattr(test_method, "__router_emit__")
 
     def test_valid_configuration_without_routing(self):
         """Test that valid configuration without routing doesn't raise."""
@@ -89,7 +90,7 @@ class TestHumanFeedbackValidation:
             return "output"
 
         assert hasattr(test_method, "__human_feedback_config__")
-        assert not hasattr(test_method, "__is_router__") or not test_method.__is_router__
+        assert not hasattr(test_method, "__is_router__")
 
     def test_persist_preserves_human_feedback_llm_attribute(self):
         """Test @persist preserves the live LLM stashed by @human_feedback."""
@@ -177,8 +178,8 @@ class TestDecoratorAttributePreservation:
         assert fragment is not None
         assert fragment.start is True
 
-    def test_preserves_listen_method_attributes(self):
-        """Test that @human_feedback preserves @listen decorator attributes."""
+    def test_preserves_listen_method_definition(self):
+        """Test that @human_feedback preserves the @listen method definition."""
 
         class TestFlow(Flow):
             @start()
@@ -191,12 +192,14 @@ class TestDecoratorAttributePreservation:
                 return "review output"
 
         flow = TestFlow()
-        assert "review" in flow._listeners or any(
-            "review" in str(v) for v in flow._listeners.values()
-        )
+        method = flow._methods.get("review")
+        assert method is not None
+        fragment = getattr(method, "__flow_method_definition__", None)
+        assert fragment is not None
+        assert fragment.listen == "begin"
 
-    def test_sets_router_attributes_when_emit_specified(self):
-        """Test that router attributes are set when emit is specified."""
+    def test_emit_is_stored_on_human_feedback_config(self):
+        """Test that emit outcomes are stored on human feedback config."""
 
         @human_feedback(
             message="Review:",
@@ -206,8 +209,12 @@ class TestDecoratorAttributePreservation:
         def review_method(self):
             return "output"
 
-        assert review_method.__is_router__ is True
-        assert review_method.__router_emit__ == ["approved", "rejected"]
+        assert review_method.__human_feedback_config__.emit == [
+            "approved",
+            "rejected",
+        ]
+        assert not hasattr(review_method, "__is_router__")
+        assert not hasattr(review_method, "__router_emit__")
 
 
 class TestAsyncSupport:
