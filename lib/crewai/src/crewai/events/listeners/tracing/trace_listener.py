@@ -780,10 +780,11 @@ class TraceCollectionListener(BaseEventListener):
     def _try_initialize_flow_batch_from_context(self, event: Any) -> bool:
         """Claim a flow trace batch when an action event fires inside kickoff.
 
-        When ``suppress_flow_events=True``, console panels are hidden but
-        ``FlowStartedEvent`` and method lifecycle events still emit; if no
-        batch exists yet, LLM/tool events must not fall back to implicit crew
-        batches.
+        When ``suppress_flow_events=True`` (infrastructure flows such as
+        ``AgentExecutor`` and the memory flows), flow and method lifecycle
+        events are not emitted, so the batch is claimed from the flow context
+        (``current_flow_id``) to keep LLM/tool events from falling back to an
+        implicit crew batch.
         """
         from crewai.flow.flow_context import current_flow_id, current_flow_name
 
