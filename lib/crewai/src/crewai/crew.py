@@ -7,7 +7,6 @@ from copy import copy as shallow_copy
 from hashlib import md5
 import json
 from pathlib import Path
-import re
 from typing import (
     TYPE_CHECKING,
     Annotated,
@@ -142,7 +141,10 @@ from crewai.utilities.streaming import (
     signal_end,
     signal_error,
 )
-from crewai.utilities.string_utils import sanitize_tool_name
+from crewai.utilities.string_utils import (
+    extract_template_variables,
+    sanitize_tool_name,
+)
 from crewai.utilities.task_output_storage_handler import TaskOutputStorageHandler
 from crewai.utilities.training_handler import CrewTrainingHandler
 
@@ -1960,20 +1962,24 @@ class Crew(FlowTrackable, BaseModel):
         Scans each task's 'description' + 'expected_output', and each agent's
         'role', 'goal', and 'backstory'.
 
+        Only placeholders that interpolation can actually fill are returned;
+        non-identifier expressions such as ``{x if x else "y"}`` are ignored so
+        they are not surfaced as required inputs (matching interpolation
+        behavior, see :func:`extract_template_variables`).
+
         Returns a set of all discovered placeholder names.
         """
-        placeholder_pattern = re.compile(r"\{(.+?)}")
         required_inputs: set[str] = set()
 
         for task in self.tasks:
             # description and expected_output might contain e.g. {topic}, {user_name}
             text = f"{task.description or ''} {task.expected_output or ''}"
-            required_inputs.update(placeholder_pattern.findall(text))
+            required_inputs.update(extract_template_variables(text))
 
         for agent in self.agents:
             # role, goal, backstory might have placeholders like {role_detail}, etc.
             text = f"{agent.role or ''} {agent.goal or ''} {agent.backstory or ''}"
-            required_inputs.update(placeholder_pattern.findall(text))
+            required_inputs.update(extract_template_variables(text))
 
         return required_inputs
 

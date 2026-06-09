@@ -3895,6 +3895,29 @@ def test_fetch_inputs():
     )
 
 
+def test_fetch_inputs_ignores_non_identifier_placeholders():
+    agent = Agent(
+        role="Report writer",
+        goal="Write a report for {company_name}.",
+        backstory="Expert reporter.",
+    )
+
+    task = Task(
+        description=(
+            'Greet {company_name if company_name else "Individual Client"} '
+            "and summarize {search_period}."
+        ),
+        expected_output="A summary for {company_name}.",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+
+    # Only the simple {company_name} placeholders are returned; the inline conditional
+    # expression (which interpolation cannot fill) is ignored.
+    assert crew.fetch_inputs() == {"company_name", "search_period"}
+
+
 @pytest.mark.vcr()
 def test_task_tools_preserve_code_execution_tools():
     """

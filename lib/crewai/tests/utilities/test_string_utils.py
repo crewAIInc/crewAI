@@ -1,7 +1,45 @@
 from typing import Any, Dict, List, Union
 
 import pytest
-from crewai.utilities.string_utils import interpolate_only
+from crewai.utilities.string_utils import (
+    extract_template_variables,
+    interpolate_only,
+)
+
+
+class TestExtractTemplateVariables:
+    """Tests for extract_template_variables in string_utils.py."""
+
+    def test_extracts_simple_identifiers(self):
+        assert extract_template_variables("Hi {name}, see {topic}.") == [
+            "name",
+            "topic",
+        ]
+
+    def test_allows_underscores_and_hyphens(self):
+        assert extract_template_variables("{user_name} {role-detail}") == [
+            "user_name",
+            "role-detail",
+        ]
+
+    def test_ignores_inline_expressions(self):
+        text = '{company_name if company_name else "Individual Client"}'
+        assert extract_template_variables(text) == []
+
+    def test_ignores_json_like_braces(self):
+        assert extract_template_variables('{"key": "value"}') == []
+
+    def test_matches_what_interpolation_fills(self):
+        text = 'Use {topic} and {x if x else "y"}.'
+        variables = extract_template_variables(text)
+        assert variables == ["topic"]
+        # interpolation fills exactly the extracted variable and leaves the rest
+        result = interpolate_only(text, {"topic": "AI"})
+        assert result == 'Use AI and {x if x else "y"}.'
+
+    @pytest.mark.parametrize("value", [None, ""])
+    def test_handles_empty_input(self, value):
+        assert extract_template_variables(value) == []
 
 
 class TestInterpolateOnly:

@@ -23,6 +23,26 @@ def _duplicate_separator_pattern(separator: str) -> re.Pattern[str]:
     return re.compile(f"(?:{re.escape(separator)}){{2,}}")
 
 
+def extract_template_variables(input_string: str | None) -> list[str]:
+    """Return the template variable names referenced in a string.
+
+    Only recognizes placeholders that interpolation can actually fill, i.e.
+    ``{name}`` where ``name`` starts with a letter/underscore and contains only
+    letters, numbers, underscores, and hyphens. Expressions such as
+    ``{x if x else "y"}`` or JSON snippets are intentionally ignored so they are
+    never treated as required inputs.
+
+    Args:
+        input_string: The string to scan. May be ``None`` or empty.
+
+    Returns:
+        The matched variable names, in order of appearance (with duplicates).
+    """
+    if not input_string:
+        return []
+    return _VARIABLE_PATTERN.findall(input_string)
+
+
 def sanitize_tool_name(name: str, max_length: int = _MAX_TOOL_NAME_LENGTH) -> str:
     """Sanitize tool name for LLM provider compatibility.
 
