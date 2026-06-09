@@ -14,13 +14,12 @@ from typing import (
     get_type_hints,
 )
 
-from crewai.flow.dsl._conditions import _definition_condition_from_runtime
+from crewai.flow.dsl._conditions import _to_definition_condition
 from crewai.flow.dsl._types import FlowMethodDecorator, FlowTrigger
 from crewai.flow.dsl._utils import (
     P,
     R,
     _set_flow_method_definition,
-    _set_trigger_metadata,
 )
 from crewai.flow.flow_definition import FlowMethodDefinition
 from crewai.flow.flow_wrappers import RouterMethod
@@ -149,18 +148,11 @@ def router(
         _set_flow_method_definition(
             wrapper,
             FlowMethodDefinition(
-                listen=_definition_condition_from_runtime(condition),
+                listen=_to_definition_condition(condition),
                 router=True,
                 emit=router_events or None,
             ),
         )
-
-        _set_trigger_metadata(wrapper, condition)
-
-        if emit is not None:
-            wrapper.__router_emit__ = router_events
-        elif router_events:
-            wrapper.__router_emit__ = router_events
         return wrapper
 
     return cast(FlowMethodDecorator, decorator)

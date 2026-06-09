@@ -161,6 +161,27 @@ def test_flow_with_or_condition():
     )
 
 
+def test_flow_executes_and_condition_with_single_branch_or():
+    class NestedConditionFlow(Flow):
+        @start()
+        def event_a(self):
+            return "a"
+
+        @listen(event_a)
+        def event_b(self):
+            return "b"
+
+        @router(event_b)
+        def emit_event_c(self):
+            return "event_c"
+
+        @listen(and_(event_a, event_b, or_("event_c")))
+        def event_d(self):
+            return "done"
+
+    assert NestedConditionFlow().kickoff() == "done"
+
+
 def test_or_listener_fires_once_across_parallel_starts():
     """Parallel ``@start`` paths feeding ``or_`` must not double-fire the listener."""
     fire_count = 0
@@ -301,6 +322,90 @@ def test_start_runtime_uses_flow_definition_without_legacy_start_metadata():
     DefinitionStartFlow().kickoff()
 
     assert execution_order == ["begin", "route", "branch", "done"]
+
+
+def test_listen_runtime_uses_flow_definition_without_legacy_listener_metadata():
+    execution_order = []
+
+    class DefinitionListenFlow(Flow):
+        @start()
+        def begin(self):
+            execution_order.append("begin")
+
+        @listen(begin)
+        def by_callable(self):
+            execution_order.append("by_callable")
+
+        @listen(and_(begin, by_callable))
+        def by_and(self):
+            execution_order.append("by_and")
+
+        @listen(or_(and_(begin, by_callable), "fallback"))
+        def nested(self):
+            execution_order.append("nested")
+
+    for method_name in ("by_callable", "by_and", "nested"):
+        method = DefinitionListenFlow.__dict__[method_name]
+        assert not hasattr(method, "__trigger_methods__")
+        assert not hasattr(method, "__condition_type__")
+        assert not hasattr(method, "__trigger_condition__")
+
+    DefinitionListenFlow().kickoff()
+
+    assert execution_order[0] == "begin"
+    assert {"by_callable", "by_and", "nested"}.issubset(execution_order)
+
+
+def test_router_runtime_uses_flow_definition_without_legacy_router_metadata():
+    execution_order = []
+
+    class DefinitionRouterFlow(Flow):
+        @start()
+        def begin(self):
+            execution_order.append("begin")
+            return "begin"
+
+        @router(begin, emit=["go_left"])
+        def decide(self):
+            execution_order.append("decide")
+            return "go_left"
+
+        @listen("go_left")
+        def handle_left(self):
+            execution_order.append("handle_left")
+
+    route = DefinitionRouterFlow.__dict__["decide"]
+    assert not hasattr(route, "__is_router__")
+    assert not hasattr(route, "__router_emit__")
+    assert not hasattr(route, "__trigger_methods__")
+    assert not hasattr(route, "__condition_type__")
+    assert not hasattr(route, "__trigger_condition__")
+
+    DefinitionRouterFlow().kickoff()
+
+    assert execution_order == ["begin", "decide", "handle_left"]
+
+
+def test_router_falsy_result_emits_runtime_event():
+    execution_order = []
+
+    class FalsyRouterResultFlow(Flow):
+        @start()
+        def begin(self):
+            execution_order.append("begin")
+
+        @router(begin)
+        def decide(self):
+            execution_order.append("decide")
+            return 0
+
+        @listen("0")
+        def handle_zero(self):
+            execution_order.append("handle_zero")
+
+    FalsyRouterResultFlow().kickoff()
+
+    assert execution_order == ["begin", "decide", "handle_zero"]
 
 
 def test_async_flow():
@@ -1434,6 +1539,43 @@ def test_deeply_nested_conditions():
     and_ab_satisfied = result_idx > a_idx and result_idx > b_idx
     and_cd_satisfied = result_idx > c_idx and result_idx > d_idx
     assert and_ab_satisfied or and_cd_satisfied
+
+
+def test_or_branch_does_not_leave_stale_and_state():
+    """or_() over nested and_() branches must not leave stale pending AND state.
+
+    Regression: evaluating an or_() condition stopped at the first branch that was
+    satisfied, so a later and_() branch that the *same* trigger would have completed
+    never cleared its pending state. On the next cycle that trigger alone then
+    spuriously re-satisfied the whole condition. Both branches share the final
+    event ``x`` here, so the shared trigger that completes branch ``(a AND x)`` also
+    completes branch ``(c AND x)`` and both must be cleared together.
+    """
+
+    class StaleStateFlow(Flow):
+        @start()
+        def begin(self):
+            pass
+
+        @listen(or_(and_("a", "x"), and_("c", "x")))
+        def joined(self):
+            pass
+
+    flow = StaleStateFlow()
+    condition = type(flow)._listen_condition("joined")
+
+    def fires(trigger):
+        return flow._evaluate_condition(condition, trigger, "joined")
+
+    # First cycle: "a" then "c" arrive, then the shared "x" completes (a AND x).
+    assert fires("a") is False
+    assert fires("c") is False
+    assert fires("x") is True
+
+    # Next cycle: "x" alone must NOT re-satisfy the condition. The "c" from the
+    # previous cycle was consumed when "joined" fired, so neither branch is half
+    # complete and "x" by itself is insufficient.
+    assert fires("x") is False
 
 
 def test_mixed_sync_async_execution_order():

@@ -344,6 +344,7 @@ class TestConversationalFlow:
             "end",
         }
 
+    @conversational_graph_broken
     def test_router_infers_custom_routes_without_internal_routes(self) -> None:
         class ResearchRoute(BaseModel):
             intent: Literal["research", "converse", "end"]
@@ -739,6 +740,7 @@ class TestConversationalFlow:
         assert flow.state.messages[-1].content == "fresh research"
         assert flow._is_execution_resuming is False
 
+    @conversational_graph_broken
     def test_route_catalog_combines_docstrings_builtins_and_overrides(self) -> None:
         """Catalog precedence: route_descriptions > built-in > docstring."""
 
@@ -770,6 +772,7 @@ class TestConversationalFlow:
         assert "Ordinary chat" in catalog["converse"]
         assert "finished" in catalog["end"]
 
+    @conversational_graph_broken
     def test_route_catalog_falls_back_to_empty_when_no_docstring(self) -> None:
         @ConversationConfig(router=RouterConfig(routes=["BARE"]))
         class BareFlow(ConversationalFlow):

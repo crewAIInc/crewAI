@@ -5,15 +5,7 @@ the Flow system.
 """
 
 from datetime import datetime
-from typing import (
-    Annotated,
-    Any,
-    NewType,
-    ParamSpec,
-    Protocol,
-    TypeVar,
-    TypedDict,
-)
+from typing import Annotated, Any, NewType, ParamSpec, Protocol, TypeVar, TypedDict
 
 from typing_extensions import NotRequired, Required
 

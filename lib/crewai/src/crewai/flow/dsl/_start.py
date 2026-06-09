@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import cast
 
-from crewai.flow.dsl._conditions import _definition_condition_from_runtime
+from crewai.flow.dsl._conditions import _to_definition_condition
 from crewai.flow.dsl._types import FlowMethodDecorator, FlowTrigger
 from crewai.flow.dsl._utils import (
     P,
@@ -56,9 +56,7 @@ def start(
         if condition is not None:
             _set_flow_method_definition(
                 wrapper,
-                FlowMethodDefinition(
-                    start=_definition_condition_from_runtime(condition)
-                ),
+                FlowMethodDefinition(start=_to_definition_condition(condition)),
             )
         else:
             _set_flow_method_definition(wrapper, FlowMethodDefinition(start=True))
