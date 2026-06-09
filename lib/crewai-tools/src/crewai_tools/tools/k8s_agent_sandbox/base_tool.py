@@ -16,7 +16,7 @@ class K8sBaseTool(BaseTool):
     name: str = "K8sBaseTool"
     description: str = "Basic tool definition"
 
-    template: str = Field(description="Agent sandbox template name")
+    warmpool: str = Field(description="Agent sandbox warmpool name")
     namespace: str = Field(default="default", description="K8s namespace")
 
 
@@ -51,10 +51,31 @@ class K8sBaseTool(BaseTool):
         cls._sdk_cache["k8s_agent_sandbox.SandboxClient"] = SandboxClient
         return SandboxClient
 
+    @classmethod
+    def _import_sandbox_local_tunnel_connection_config_class(cls) -> Any:
+        """Returns the Sandbox Client that is used to communicate with k8s."""
+        cached = cls._sdk_cache.get("k8s_agent_sandbox.models.SandboxLocalTunnelConnectionConfig")
+        if cached is not None:
+            return cached
+        try:
+            from k8s_agent_sandbox.models import SandboxLocalTunnelConnectionConfig  # type: ignore[import-untyped]
+        except ImportError as exc:
+            raise ImportError(
+                "The 'k8s_agent_sandbox' package is required for k8s_agent_sandbox sandbox tools."
+            ) from exc
+        cls._sdk_cache["k8s_agent_sandbox.models.SandboxLocalTunnelConnectionConfig"] = SandboxLocalTunnelConnectionConfig
+        return SandboxLocalTunnelConnectionConfig
+
     def _get_sandbox(self) -> tuple[Any, bool]:
         """Return (sandbox, should_kill_after_use)."""
         SandboxClient = self._import_sandbox_client_class()
-        client = SandboxClient()
+        SandboxLocalTunnelConnectionConfig = self._import_sandbox_local_tunnel_connection_config_class()
+
+        client = SandboxClient(
+            connection_config=SandboxLocalTunnelConnectionConfig(
+              router_namespace=self.namespace
+            )
+        )
 
         if self.claim_name:
             return client.get_sandbox(self.claim_name), False
@@ -63,8 +84,8 @@ class K8sBaseTool(BaseTool):
             with self._lock:
                 if self._persistent_sandbox is None:
                     self._persistent_sandbox = client.create_sandbox(
-                        template=self.template,
-                        namespace=self.namespace
+                        warmpool=self.warmpool,
+                        namespace=self.namespace,
                     )
                     if not self._cleanup_registered:
                         atexit.register(self.close)
@@ -72,8 +93,8 @@ class K8sBaseTool(BaseTool):
                 return self._persistent_sandbox, False
 
         sandbox = client.create_sandbox(
-            template=self.template,
-            namespace=self.namespace
+            warmpool=self.warmpool,
+            namespace=self.namespace,
         )
         return sandbox, True
 
