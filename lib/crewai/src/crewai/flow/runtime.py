@@ -85,7 +85,12 @@ from crewai.events.types.flow_events import (
     MethodExecutionStartedEvent,
 )
 from crewai.flow.dsl._utils import build_flow_definition
-from crewai.flow.flow_context import current_flow_id, current_flow_request_id
+from crewai.flow.flow_context import (
+    current_flow_defer_trace_finalization,
+    current_flow_id,
+    current_flow_name,
+    current_flow_request_id,
+)
 from crewai.flow.flow_definition import (
     FlowDefinition,
     FlowDefinitionCondition,
@@ -1514,7 +1519,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
             self._event_futures.clear()
 
-        if not self.suppress_flow_events:
+        if (
+            not self.suppress_flow_events
+            and not self._should_defer_trace_finalization()
+        ):
             future = crewai_event_bus.emit(
                 self,
                 FlowFinishedEvent(
@@ -1531,7 +1539,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     logger.warning("FlowFinishedEvent handler failed", exc_info=True)
 
             trace_listener = TraceCollectionListener()
-            if trace_listener.batch_manager.batch_owner_type == "flow":
+            if (
+                trace_listener.batch_manager.batch_owner_type == "flow"
+                and current_flow_id.get() == self.flow_id
+                and not trace_listener.batch_manager.defer_session_finalization
+                and not current_flow_defer_trace_finalization.get()
+            ):
                 if trace_listener.first_time_handler.is_first_time:
                     trace_listener.first_time_handler.mark_events_collected()
                     trace_listener.first_time_handler.handle_execution_completion()
@@ -2020,9 +2033,19 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         flow_token = attach(ctx)
 
         flow_id_token = None
+        flow_name_token = None
+        flow_defer_trace_finalization_token = None
         request_id_token = None
         if current_flow_id.get() is None:
             flow_id_token = current_flow_id.set(self.flow_id)
+            flow_name_token = current_flow_name.set(
+                self.name or self.__class__.__name__
+            )
+            flow_defer_trace_finalization_token = (
+                current_flow_defer_trace_finalization.set(
+                    self._should_defer_trace_finalization()
+                )
+            )
         if current_flow_request_id.get() is None:
             request_id_token = current_flow_request_id.set(self.flow_id)
 
@@ -2117,6 +2140,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             should_emit_flow_started = not (
                 defer_trace_finalization and deferred_started_event_id
             )
+            if current_flow_id.get() == self.flow_id:
+                TraceCollectionListener().batch_manager.defer_session_finalization = (
+                    defer_trace_finalization
+                )
 
             if (
                 defer_trace_finalization
@@ -2290,7 +2317,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         )
 
                 trace_listener = TraceCollectionListener()
-                if trace_listener.batch_manager.batch_owner_type == "flow":
+                if (
+                    trace_listener.batch_manager.batch_owner_type == "flow"
+                    and current_flow_id.get() == self.flow_id
+                    and not trace_listener.batch_manager.defer_session_finalization
+                    and not current_flow_defer_trace_finalization.get()
+                ):
                     if trace_listener.first_time_handler.is_first_time:
                         trace_listener.first_time_handler.mark_events_collected()
                         trace_listener.first_time_handler.handle_execution_completion()
@@ -2304,6 +2336,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 self.memory.drain_writes()
             if request_id_token is not None:
                 current_flow_request_id.reset(request_id_token)
+            if flow_defer_trace_finalization_token is not None:
+                current_flow_defer_trace_finalization.reset(
+                    flow_defer_trace_finalization_token
+                )
+            if flow_name_token is not None:
+                current_flow_name.reset(flow_name_token)
             if flow_id_token is not None:
                 current_flow_id.reset(flow_id_token)
             detach(flow_token)
