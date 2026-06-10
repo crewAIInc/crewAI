@@ -259,8 +259,9 @@ class RecallFlow(Flow[RecallState]):
                 candidates = []
         if not candidates:
             candidates = [scope_prefix]
-        self.state.candidate_scopes = candidates[:20]
-        return self.state.candidate_scopes
+        selected_scopes = candidates[:20]
+        self.state.candidate_scopes = selected_scopes
+        return selected_scopes
 
     @listen(filter_and_chunk)
     def search_chunks(self) -> list[Any]:
@@ -368,9 +369,10 @@ class RecallFlow(Flow[RecallState]):
                         )
                     )
         matches.sort(key=lambda m: m.score, reverse=True)
-        self.state.final_results = matches[: self.state.limit]
+        final_results = matches[: self.state.limit]
+        self.state.final_results = final_results
 
         if self.state.evidence_gaps and self.state.final_results:
             self.state.final_results[0].evidence_gaps = list(self.state.evidence_gaps)
 
-        return self.state.final_results
+        return final_results

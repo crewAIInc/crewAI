@@ -16,6 +16,11 @@ from typing import Any, Literal as TypingLiteral
 from pydantic import BaseModel, ConfigDict, Field
 import yaml
 
+from crewai.flow.conversational_definition import (
+    FlowConversationalDefinition,
+    FlowConversationalRouterDefinition,
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +28,8 @@ FlowDefinitionCondition = str | dict[str, Any]
 
 __all__ = [
     "FlowConfigDefinition",
+    "FlowConversationalDefinition",
+    "FlowConversationalRouterDefinition",
     "FlowDefinition",
     "FlowDefinitionCondition",
     "FlowDefinitionDiagnostic",
@@ -115,6 +122,7 @@ class FlowDefinition(BaseModel):
     state: FlowStateDefinition | None = None
     config: FlowConfigDefinition = Field(default_factory=FlowConfigDefinition)
     persist: FlowPersistenceDefinition | None = None
+    conversational: FlowConversationalDefinition | None = None
     methods: dict[str, FlowMethodDefinition] = Field(default_factory=dict)
     diagnostics: list[FlowDefinitionDiagnostic] = Field(default_factory=list)
 
