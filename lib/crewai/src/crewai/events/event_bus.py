@@ -281,6 +281,12 @@ class CrewAIEventsBus:
         """The RuntimeState currently attached to the bus, if any."""
         return self._runtime_state
 
+    def reset_runtime_state(self) -> None:
+        """Detach the RuntimeState and clear the entity registry."""
+        with self._instance_lock:
+            self._runtime_state = None
+            self._registered_entity_ids = set()
+
     def register_entity(self, entity: Any) -> None:
         """Add an entity to the RuntimeState, creating it if needed.
 
