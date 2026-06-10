@@ -1519,7 +1519,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             )
             self._event_futures.clear()
 
-        if not self.suppress_flow_events and not self._should_defer_trace_finalization():
+        if (
+            not self.suppress_flow_events
+            and not self._should_defer_trace_finalization()
+        ):
             future = crewai_event_bus.emit(
                 self,
                 FlowFinishedEvent(

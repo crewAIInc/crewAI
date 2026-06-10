@@ -77,7 +77,7 @@ def _iter_condition_labels(condition: Any) -> set[str]:
 def _conversation_start_router(func: Callable[..., Any]) -> Any:
     wrapper = start()(func)
     _set_flow_method_definition(
-        wrapper,
+        cast(Any, wrapper),
         FlowMethodDefinition(start=True, router=True),
     )
     return wrapper
