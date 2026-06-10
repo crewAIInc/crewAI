@@ -223,10 +223,11 @@ def test_flow_definition_includes_conversational_builtins_when_enabled():
     assert definition.conversational.enabled is True
     assert definition.conversational.defer_trace_finalization is True
     assert definition.conversational.builtin_routes == ["converse", "end"]
-    assert "conversation_start" in methods
+    assert "conversation_start" not in methods
     assert "route_conversation" in methods
     assert "converse_turn" in methods
-    assert methods["conversation_start"].start is True
+    assert methods["route_conversation"].start is True
+    assert methods["route_conversation"].router is True
 
 
 def test_flow_definition_serializes_conversational_config():
@@ -260,7 +261,7 @@ def test_flow_definition_serializes_conversational_config():
     assert conversational.router.fallback_intent == "end"
 
 
-def test_flow_definition_preserves_undecorated_conversational_override():
+def test_flow_definition_uses_collapsed_conversational_router_start():
     class ChatFlow(Flow):
         conversational = True
 
@@ -269,8 +270,10 @@ def test_flow_definition_preserves_undecorated_conversational_override():
 
     methods = ChatFlow.flow_definition().methods
 
-    assert methods["conversation_start"].start is True
+    assert "conversation_start" not in methods
     assert "route_conversation" in methods
+    assert methods["route_conversation"].start is True
+    assert methods["route_conversation"].router is True
 
 
 def test_flow_definition_serializes_human_feedback_metadata():
