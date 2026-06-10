@@ -313,7 +313,7 @@ def _build_conversational_definition(
     internal_routes = getattr(
         flow_class,
         "internal_routes",
-        ("answer_from_history", "conversation_start"),
+        ("answer_from_history",),
     )
     if config is None:
         return FlowConversationalDefinition(

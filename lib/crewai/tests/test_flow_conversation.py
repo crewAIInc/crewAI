@@ -598,9 +598,9 @@ class TestConversationalFlow:
         """Conversational flows: user ``@start`` methods finish before router fires.
 
         Non-chat flows run ``@start`` methods in parallel via ``asyncio.gather``,
-        which would race with ``conversation_start`` and let the router fire
+        which would race with ``route_conversation`` and let the router fire
         before user setup finished. In conversational mode the framework runs
-        them sequentially, with ``conversation_start`` last.
+        them sequentially, with ``route_conversation`` last.
         """
         order: list[str] = []
 
@@ -643,15 +643,10 @@ class TestConversationalFlow:
         assert "attach_bus" in order  # still fires every turn
         assert "route_turn" in order
 
-    def test_subclass_can_override_conversation_start_without_redecorating(
+    def test_subclass_can_override_conversation_start_helper(
         self,
     ) -> None:
-        """Overriding an inherited ``@start`` method must not unregister it.
-
-        Before the metaclass fix, subclasses had to re-apply ``@start()`` on
-        every override or the parent's ``conversation_start`` would silently
-        drop out of the start registry — leaving the flow with nothing to fire.
-        """
+        """The compatibility helper remains overridable without adding a Flow node."""
 
         bootstrap_calls: list[str] = []
 
@@ -673,6 +668,10 @@ class TestConversationalFlow:
         flow.handle_turn("hi")
 
         assert bootstrap_calls == ["ran"]
+        assert "conversation_start" not in BootstrapFlow.flow_definition().methods
+        route_definition = BootstrapFlow.flow_definition().methods["route_conversation"]
+        assert route_definition.start is True
+        assert route_definition.router is True
         assert flow.state.messages[-1].content == "worked"
 
     @conversational_graph_broken
