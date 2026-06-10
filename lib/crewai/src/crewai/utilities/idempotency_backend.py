@@ -55,6 +55,16 @@ class IdempotencyBackend(ABC):
         ...
 
     @abstractmethod
+    def release(self, key: str) -> None:
+        """Release an in-progress claim without publishing a result.
+
+        Call this when the caller that won the claim fails before calling
+        :meth:`set`, so that subsequent callers are not blocked by a stale
+        in-progress marker.
+        """
+        ...
+
+    @abstractmethod
     def clear(self) -> None:
         """Remove all stored entries (e.g. at the start of a fresh task)."""
         ...
@@ -102,3 +112,13 @@ class MemoryIdempotencyBackend(IdempotencyBackend):
     def clear(self) -> None:
         with self._lock:
             self._store.clear()
+
+    def release(self, key: str) -> None:
+        """Remove the in-progress marker for *key* without storing a result.
+
+        Only clears the entry if it is currently ``_IN_PROGRESS`` — completed
+        results are left untouched to preserve idempotency.
+        """
+        with self._lock:
+            if self._store.get(key) == _IN_PROGRESS:
+                del self._store[key]

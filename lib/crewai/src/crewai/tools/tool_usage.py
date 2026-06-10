@@ -308,7 +308,7 @@ class ToolUsage:
                     else {}
                 )
                 result = self.tools_handler.claim_idempotent_result(
-                    sanitize_tool_name(calling.tool_name), idem_args
+                    calling.tool_name, idem_args
                 )
                 from_cache = result is not None
 
@@ -574,7 +574,7 @@ class ToolUsage:
                     else {}
                 )
                 result = self.tools_handler.claim_idempotent_result(
-                    sanitize_tool_name(calling.tool_name), idem_args
+                    calling.tool_name, idem_args
                 )
                 from_cache = result is not None
 

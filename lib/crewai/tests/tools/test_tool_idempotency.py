@@ -134,12 +134,14 @@ class TestToolsHandlerIdempotency:
         result = handler.claim_idempotent_result("add", {"x": 1})
         assert result is None  # claim succeeded, caller must execute
 
-    def test_claim_idempotent_prevents_double_claim(self) -> None:
+    def test_claim_idempotent_narrows_race_window(self) -> None:
         handler = ToolsHandler()
-        # First claim succeeds
+        # First claim succeeds (caller must execute)
         result1 = handler.claim_idempotent_result("add", {"x": 1})
         assert result1 is None
-        # Second claim sees in-progress, returns None (falls through)
+        # Second claim sees in-progress, returns None (falls through to execution).
+        # This narrows the race window rather than strictly preventing double
+        # execution — both callers receive None so both may execute.
         result2 = handler.claim_idempotent_result("add", {"x": 1})
         assert result2 is None  # not yet completed
 
@@ -186,6 +188,9 @@ class TestToolsHandlerIdempotency:
             def clear(self) -> None:
                 self._store.clear()
 
+            def release(self, key: str) -> None:
+                self._store.pop(key, None)
+
         backend = CountingBackend()
         handler.set_idempotency_backend(backend)
         handler.set_idempotent_result("tool", {}, "result")
@@ -208,6 +213,7 @@ class TestToolUsageIdempotency:
         tool.description = "Add numbers"
         tool.max_usage_count = None
         tool.current_usage_count = 0
+        tool.format_output_for_agent.side_effect = str
         tool.args_schema = MagicMock()
         tool.args_schema.model_json_schema.return_value = {
             "properties": {"x": {}, "y": {}}
@@ -240,6 +246,7 @@ class TestToolUsageIdempotency:
         tool.description = "Add numbers"
         tool.max_usage_count = None
         tool.current_usage_count = 0
+        tool.format_output_for_agent.side_effect = str
         tool.args_schema = MagicMock()
         tool.args_schema.model_json_schema.return_value = {
             "properties": {"x": {}, "y": {}}
@@ -272,6 +279,7 @@ class TestToolUsageIdempotency:
         tool.description = "Add numbers"
         tool.max_usage_count = None
         tool.current_usage_count = 0
+        tool.format_output_for_agent.side_effect = str
         tool.args_schema = MagicMock()
         tool.args_schema.model_json_schema.return_value = {
             "properties": {"x": {}, "y": {}}
@@ -306,6 +314,7 @@ class TestToolUsageIdempotency:
         tool.description = "No-op tool"
         tool.max_usage_count = None
         tool.current_usage_count = 0
+        tool.format_output_for_agent.side_effect = str
         tool.args_schema = MagicMock()
         tool.args_schema.model_json_schema.return_value = {"properties": {}}
 
@@ -337,6 +346,7 @@ class TestToolUsageIdempotency:
         tool.description = "No-op tool"
         tool.max_usage_count = None
         tool.current_usage_count = 0
+        tool.format_output_for_agent.side_effect = str
         tool.args_schema = MagicMock()
         tool.args_schema.model_json_schema.return_value = {"properties": {}}
         tool.ainvoke = AsyncMock(return_value="fresh")

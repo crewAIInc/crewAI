@@ -68,11 +68,24 @@ class ToolsHandler(BaseModel):
     ) -> str | None:
         """Atomically try to claim the execution slot for this tool call.
 
-        Returns the stored result if already completed, or ``None`` if the
-        caller should proceed with execution (the claim has been recorded).
+        There are three possible outcomes based on the backend's ``claim()``
+        return value:
 
-        Two concurrent callers for the same key will never both receive
-        ``None`` — one will get the result and the other will get ``None``.
+        * **(claimed, result) == (True, None)** — the caller owns the claim
+          and **must** execute the tool, then call :meth:`set_idempotent_result`
+          to publish the result.  This method returns ``None``.
+        * **(claimed, result) == (False, <value>)** — another caller already
+          completed this key; *result* is the final output.  This method
+          returns the stored result so the caller can skip execution.
+        * **(claimed, result) == (False, None)** — another caller has claimed
+          the key but has not yet published a result (still in progress).
+          This method returns ``None`` so the caller falls through to normal
+          execution; the race window is narrowed to a brief in-progress
+          interval.
+
+        Returns:
+            The previously stored result if this tool call already completed,
+            or ``None`` if the caller should proceed with execution.
         """
         key = self._idempotency_key(tool_name, arguments)
         claimed, result = self._get_backend().claim(key)
@@ -123,9 +136,7 @@ class ToolsHandler(BaseModel):
                 if isinstance(calling.arguments, dict)
                 else {}
             )
-            self.set_idempotent_result(
-                sanitize_tool_name(calling.tool_name), arguments, output
-            )
+            self.set_idempotent_result(calling.tool_name, arguments, output)
 
         if self.cache and should_cache and calling.tool_name != CacheTools().name:
             input_str = ""
