@@ -678,6 +678,34 @@ class TestConversationalFlow:
         assert route_definition.router is True
         assert flow.state.messages[-1].content == "worked"
 
+    def test_legacy_decorated_conversation_start_runs_once_per_turn(
+        self,
+    ) -> None:
+        """Legacy ``@start`` overrides are not invoked again by the router."""
+
+        bootstrap_calls: list[str] = []
+
+        @ConversationConfig()
+        class BootstrapFlow(ConversationalFlow):
+            @start()
+            def conversation_start(self) -> str | None:
+                bootstrap_calls.append("ran")
+                return super().conversation_start()
+
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "work"
+
+            @listen("work")
+            def do_work(self) -> str:
+                self.append_assistant_message("worked")
+                return "worked"
+
+        flow = BootstrapFlow()
+        flow.handle_turn("hi")
+
+        assert bootstrap_calls == ["ran"]
+        assert flow.state.messages[-1].content == "worked"
+
     @conversational_graph_broken
     def test_handle_turn_reruns_graph_after_prior_turn_completed(self) -> None:
         """Multi-turn must not flip ``_is_execution_resuming`` and short-circuit.
@@ -1494,6 +1522,21 @@ class TestDeferredFlowLifecycleEvents:
         assert listener.batch_manager.defer_session_finalization is True
 
         flow.finalize_session_traces()
+
+        assert listener.batch_manager.defer_session_finalization is False
+
+    def test_non_deferred_flow_kickoff_clears_stale_trace_manager_flag(
+        self,
+    ) -> None:
+        class PlainTraceFlow(Flow[ChatState]):
+            @start()
+            def begin(self) -> str:
+                return "done"
+
+        listener = TraceCollectionListener()
+        listener.batch_manager.defer_session_finalization = True
+
+        PlainTraceFlow().kickoff()
 
         assert listener.batch_manager.defer_session_finalization is False
 

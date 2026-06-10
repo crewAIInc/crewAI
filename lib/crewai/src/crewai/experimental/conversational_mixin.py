@@ -160,7 +160,10 @@ class _ConversationalMixin:
     @_conversational_only
     def route_conversation(self) -> str:
         """Route the current turn to a listener label."""
-        self.conversation_start()
+        if "conversation_start" not in {
+            str(method_name) for method_name in self._completed_methods
+        }:
+            self.conversation_start()
         state = cast(ConversationState, self.state)
         context = self.build_router_context()
         previous_intent = state.last_intent

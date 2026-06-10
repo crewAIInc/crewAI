@@ -2137,9 +2137,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             should_emit_flow_started = not (
                 defer_trace_finalization and deferred_started_event_id
             )
-            if defer_trace_finalization:
+            if current_flow_id.get() == self.flow_id:
                 TraceCollectionListener().batch_manager.defer_session_finalization = (
-                    True
+                    defer_trace_finalization
                 )
 
             if (
