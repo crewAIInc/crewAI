@@ -26,7 +26,11 @@ from crewai.experimental import (
     RouterConfig,
 )
 from crewai.flow import Flow, ChatState, listen, start
-from crewai.flow.flow_context import current_flow_id, current_flow_name
+from crewai.flow.flow_context import (
+    current_flow_defer_trace_finalization,
+    current_flow_id,
+    current_flow_name,
+)
 from crewai.flow.conversation import (
     append_message,
     get_conversation_messages,
@@ -1470,6 +1474,29 @@ class TestDeferredFlowLifecycleEvents:
                     listener.batch_manager.finalize_batch()
             mock_finalize.assert_not_called()
 
+    def test_deferred_flow_kickoff_marks_trace_manager_session_deferred(
+        self,
+    ) -> None:
+        class DeferredTraceFlow(Flow[ChatState]):
+            @start()
+            def begin(self) -> str:
+                return "done"
+
+        listener = TraceCollectionListener()
+        listener.batch_manager.defer_session_finalization = False
+
+        flow = DeferredTraceFlow()
+        flow.defer_trace_finalization = True
+
+        with patch.object(listener.batch_manager, "finalize_batch"):
+            flow.kickoff()
+
+        assert listener.batch_manager.defer_session_finalization is True
+
+        flow.finalize_session_traces()
+
+        assert listener.batch_manager.defer_session_finalization is False
+
 
 class TestNestedCrewTracing:
     def test_is_inside_active_flow_context_when_kickoff_running(self) -> None:
@@ -1523,3 +1550,130 @@ class TestNestedCrewTracing:
             elif listener.batch_manager.batch_owner_type == "crew":
                 listener.batch_manager.finalize_batch()
             mock_finalize.assert_not_called()
+
+    def test_lazy_flow_batch_from_context_preserves_deferred_parent(self) -> None:
+        from crewai.events.listeners.tracing.trace_listener import (
+            TraceCollectionListener,
+        )
+
+        listener = TraceCollectionListener()
+        listener.batch_manager.current_batch = None
+        listener.batch_manager.batch_owner_type = None
+        listener.batch_manager.batch_owner_id = None
+        listener.batch_manager.defer_session_finalization = False
+        listener.batch_manager.event_buffer.clear()
+
+        flow_id_token = current_flow_id.set("parent-flow-id")
+        flow_name_token = current_flow_name.set("ParentChatFlow")
+        defer_token = current_flow_defer_trace_finalization.set(True)
+        try:
+            initialized = listener._try_initialize_flow_batch_from_context(
+                type("Event", (), {"timestamp": None})()
+            )
+
+            assert initialized is True
+            assert listener.batch_manager.batch_owner_type == "flow"
+            assert listener.batch_manager.batch_owner_id == "parent-flow-id"
+            assert listener.batch_manager.defer_session_finalization is True
+            assert listener.batch_manager.current_batch is not None
+            assert (
+                listener.batch_manager.current_batch.execution_metadata[
+                    "execution_type"
+                ]
+                == "flow"
+            )
+            assert (
+                listener.batch_manager.current_batch.execution_metadata["flow_name"]
+                == "ParentChatFlow"
+            )
+        finally:
+            current_flow_defer_trace_finalization.reset(defer_token)
+            current_flow_name.reset(flow_name_token)
+            current_flow_id.reset(flow_id_token)
+            listener.batch_manager.current_batch = None
+            listener.batch_manager.batch_owner_type = None
+            listener.batch_manager.batch_owner_id = None
+            listener.batch_manager.trace_batch_id = None
+            listener.batch_manager.defer_session_finalization = False
+            listener.batch_manager.event_buffer.clear()
+
+    def test_nested_agent_executor_flow_does_not_finalize_parent_batch(
+        self,
+    ) -> None:
+        from crewai import Agent, Crew, Task
+        from crewai.llms.base_llm import BaseLLM
+
+        class StaticLLM(BaseLLM):
+            def __init__(self) -> None:
+                super().__init__(model="debug-static-llm", provider="debug")
+
+            def call(
+                self,
+                messages: Any,
+                tools: Any = None,
+                callbacks: Any = None,
+                available_functions: Any = None,
+                from_task: Any = None,
+                from_agent: Any = None,
+                response_model: Any = None,
+            ) -> str:
+                return (
+                    "Thought: I can answer directly.\n"
+                    "Final Answer: nested crew result"
+                )
+
+        class NestedCrewFlow(Flow[ChatState]):
+            defer_trace_finalization = True
+            tracing = True
+
+            @start()
+            def begin(self) -> str:
+                return "run_nested_crew"
+
+            @listen(begin)
+            def run_nested_crew(self, _: str) -> str:
+                agent = Agent(
+                    role="Debug Agent",
+                    goal="Return a short deterministic result",
+                    backstory="Used only for trace finalization debugging.",
+                    llm=StaticLLM(),
+                    verbose=False,
+                )
+                task = Task(
+                    description="Return the deterministic nested crew result.",
+                    expected_output="nested crew result",
+                    agent=agent,
+                )
+                return Crew(agents=[agent], tasks=[task], verbose=False).kickoff().raw
+
+        listener = TraceCollectionListener()
+        listener.batch_manager.current_batch = None
+        listener.batch_manager.batch_owner_type = None
+        listener.batch_manager.batch_owner_id = None
+        listener.batch_manager.trace_batch_id = None
+        listener.batch_manager.defer_session_finalization = False
+        listener.batch_manager.event_buffer.clear()
+        listener.first_time_handler.is_first_time = False
+
+        def initialize_backend_batch(*_: Any, **__: Any) -> None:
+            listener.batch_manager.trace_batch_id = "debug-trace-batch"
+
+        flow = NestedCrewFlow()
+
+        with (
+            patch.object(
+                listener.batch_manager,
+                "_initialize_backend_batch",
+                side_effect=initialize_backend_batch,
+            ),
+            patch.object(listener.batch_manager, "finalize_batch") as mock_finalize,
+        ):
+            flow.kickoff()
+            crewai_event_bus.flush()
+            flow.kickoff()
+            crewai_event_bus.flush()
+
+            assert mock_finalize.call_count == 0, (
+                "nested AgentExecutor flows inside a deferred parent Flow must "
+                "not finalize the parent trace batch"
+            )

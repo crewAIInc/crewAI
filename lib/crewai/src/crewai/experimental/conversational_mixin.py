@@ -1053,12 +1053,15 @@ class _ConversationalMixin:
 
         trace_listener = TraceCollectionListener()
         batch_manager = trace_listener.batch_manager
-        if batch_manager.batch_owner_type == "flow":
-            if trace_listener.first_time_handler.is_first_time:
-                trace_listener.first_time_handler.mark_events_collected()
-                trace_listener.first_time_handler.handle_execution_completion()
-            else:
-                batch_manager.finalize_batch()
+        try:
+            if batch_manager.batch_owner_type == "flow":
+                if trace_listener.first_time_handler.is_first_time:
+                    trace_listener.first_time_handler.mark_events_collected()
+                    trace_listener.first_time_handler.handle_execution_completion()
+                else:
+                    batch_manager.finalize_batch()
+        finally:
+            batch_manager.defer_session_finalization = False
 
 
 __all__ = ["_ConversationalMixin"]
