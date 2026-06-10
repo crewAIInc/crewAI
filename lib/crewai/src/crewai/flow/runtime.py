@@ -96,6 +96,7 @@ from crewai.flow.flow_definition import (
     FlowDefinition,
     FlowDefinitionCondition,
     FlowMethodDefinition,
+    FlowStateDefinition,
 )
 from crewai.flow.flow_wrappers import (
     FlowMethod,
@@ -186,6 +187,54 @@ def _resolve_handler(ref: str) -> Callable[..., Any]:
             f"{type(target).__name__}"
         )
     return cast(Callable[..., Any], target)
+
+
+def _build_definition_state_model(
+    state_definition: FlowStateDefinition,
+) -> BaseModel | None:
+    kwargs = (
+        dict(state_definition.default)
+        if isinstance(state_definition.default, dict)
+        else {}
+    )
+
+    model_class: type[BaseModel] | None = None
+    if state_definition.ref:
+        try:
+            resolved = _resolve_handler(state_definition.ref)
+        except Exception:
+            logger.warning(
+                "Could not import state ref %r", state_definition.ref, exc_info=True
+            )
+        else:
+            if isinstance(resolved, type) and issubclass(resolved, BaseModel):
+                model_class = resolved
+            else:
+                logger.warning(
+                    "State ref %r is not a pydantic model", state_definition.ref
+                )
+
+    if model_class is None and state_definition.json_schema:
+        from crewai.utilities.pydantic_schema_utils import create_model_from_schema
+
+        try:
+            model_class = create_model_from_schema(state_definition.json_schema)
+        except Exception:
+            logger.warning(
+                "Could not build a state model from the declared json_schema",
+                exc_info=True,
+            )
+
+    if model_class is None:
+        return None
+
+    if not issubclass(model_class, FlowState):
+
+        class StateWithId(FlowState, model_class):  # type: ignore[misc, valid-type]
+            pass
+
+        model_class = StateWithId
+    return model_class(**kwargs)
 
 
 def _iter_condition_events(condition: FlowDefinitionCondition) -> Iterator[str]:
@@ -718,10 +767,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         """Build a runnable Flow directly from a definition; no subclass required."""
         return cls.model_validate({}, context={"flow_definition": definition})
 
-    @property
-    def _flow_name(self) -> str:
-        return self.name or self._definition.name
-
     def _start_method_names(self) -> list[FlowMethodName]:
         return [
             FlowMethodName(method_name)
@@ -959,6 +1004,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         self._initialize_runtime_extension_attrs()
 
         self._definition = definition or type(self).flow_definition()
+        if self.name and self.name != self._definition.name:
+            self._definition = self._definition.model_copy(update={"name": self.name})
         methods = (
             self._handler_bound_methods()
             if definition is not None
@@ -979,7 +1026,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 self,
                 FlowCreatedEvent(
                     type="flow_created",
-                    flow_name=self._flow_name,
+                    flow_name=self._definition.name,
                 ),
             )
 
@@ -989,7 +1036,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if self.memory is None and not getattr(self, "_skip_auto_memory", False):
             from crewai.memory.utils import sanitize_scope_name
 
-            flow_name = sanitize_scope_name(self._flow_name)
+            flow_name = sanitize_scope_name(self._definition.name)
             self.memory = Memory(root_scope=f"/flow/{flow_name}")
 
         self._methods.update(methods)
@@ -1427,7 +1474,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 self,
                 FlowStartedEvent(
                     type="flow_started",
-                    flow_name=self._flow_name,
+                    flow_name=self._definition.name,
                     inputs=None,
                 ),
             )
@@ -1503,7 +1550,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 self,
                 MethodExecutionFinishedEvent(
                     type="method_execution_finished",
-                    flow_name=self._flow_name,
+                    flow_name=self._definition.name,
                     method_name=context.method_name,
                     result=collapsed_outcome if emit else result,
                     state=self._state,
@@ -1557,7 +1604,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     self,
                     FlowPausedEvent(
                         type="flow_paused",
-                        flow_name=self._flow_name,
+                        flow_name=self._definition.name,
                         flow_id=e.context.flow_id,
                         method_name=e.context.method_name,
                         state=self._copy_and_serialize_state(),
@@ -1588,7 +1635,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 self,
                 FlowFinishedEvent(
                     type="flow_finished",
-                    flow_name=self._flow_name,
+                    flow_name=self._definition.name,
                     result=final_result,
                     state=self._copy_and_serialize_state(),
                 ),
@@ -1654,7 +1701,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     return cast(T, {"id": str(uuid4())})
 
         if init_state is None:
-            return cast(T, {"id": str(uuid4())})
+            return cast(T, self._create_definition_state())
 
         if isinstance(init_state, type):
             state_class = init_state
@@ -1695,6 +1742,34 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         raise TypeError(
             f"Initial state must be dict or BaseModel, got {type(self.initial_state)}"
         )
+
+    def _create_definition_state(self) -> dict[str, Any] | BaseModel:
+        state_definition = self._definition.state
+        if state_definition is None:
+            return {"id": str(uuid4())}
+        if state_definition.type in ("pydantic", "json_schema"):
+            state = _build_definition_state_model(state_definition)
+            if state is not None:
+                return state
+            logger.error(
+                "Flow %r declares %s state but neither ref nor json_schema "
+                "produced a model; falling back to dict state",
+                self._definition.name,
+                state_definition.type,
+            )
+        elif state_definition.type == "unknown":
+            logger.warning(
+                "Flow %r declares state of unknown type; falling back to dict state",
+                self._definition.name,
+            )
+        dict_state: dict[str, Any] = (
+            dict(state_definition.default)
+            if isinstance(state_definition.default, dict)
+            else {}
+        )
+        if "id" not in dict_state:
+            dict_state["id"] = str(uuid4())
+        return dict_state
 
     def _copy_state(self) -> T:
         """Create a copy of the current state.
@@ -2231,7 +2306,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 # explicit finalization call closes the batch.
                 started_event = FlowStartedEvent(
                     type="flow_started",
-                    flow_name=self._flow_name,
+                    flow_name=self._definition.name,
                     inputs=inputs,
                 )
                 future = crewai_event_bus.emit(self, started_event)
@@ -2323,7 +2398,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         self,
                         FlowPausedEvent(
                             type="flow_paused",
-                            flow_name=self._flow_name,
+                            flow_name=self._definition.name,
                             flow_id=e.context.flow_id,
                             method_name=e.context.method_name,
                             state=self._copy_and_serialize_state(),
@@ -2373,7 +2448,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     self,
                     FlowFinishedEvent(
                         type="flow_finished",
-                        flow_name=self._flow_name,
+                        flow_name=self._definition.name,
                         result=final_output,
                         state=self._copy_and_serialize_state(),
                     ),
@@ -2459,7 +2534,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             MethodExecutionFinishedEvent,
             MethodExecutionFailedEvent,
         )
-        flow_name = self._flow_name
+        flow_name = self._definition.name
         nodes = sorted(
             (
                 n
@@ -2597,7 +2672,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     MethodExecutionStartedEvent(
                         type="method_execution_started",
                         method_name=method_name,
-                        flow_name=self._flow_name,
+                        flow_name=self._definition.name,
                         params=dumped_params,
                         state=self._copy_and_serialize_state(),
                     ),
@@ -2649,7 +2724,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 finished_event = MethodExecutionFinishedEvent(
                     type="method_execution_finished",
                     method_name=method_name,
-                    flow_name=self._flow_name,
+                    flow_name=self._definition.name,
                     state=self._copy_and_serialize_state(),
                     result=result,
                 )
@@ -2678,7 +2753,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         MethodExecutionPausedEvent(
                             type="method_execution_paused",
                             method_name=method_name,
-                            flow_name=self._flow_name,
+                            flow_name=self._definition.name,
                             state=self._copy_and_serialize_state(),
                             flow_id=e.context.flow_id,
                             message=e.context.message,
@@ -2694,7 +2769,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     MethodExecutionFailedEvent(
                         type="method_execution_failed",
                         method_name=method_name,
-                        flow_name=self._flow_name,
+                        flow_name=self._definition.name,
                         error=e,
                     ),
                 )
@@ -3101,7 +3176,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self,
             FlowInputRequestedEvent(
                 type="flow_input_requested",
-                flow_name=self._flow_name,
+                flow_name=self._definition.name,
                 method_name=method_name,
                 message=message,
                 metadata=metadata,
@@ -3168,7 +3243,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self,
             FlowInputReceivedEvent(
                 type="flow_input_received",
-                flow_name=self._flow_name,
+                flow_name=self._definition.name,
                 method_name=method_name,
                 message=message,
                 response=response,
@@ -3206,7 +3281,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self,
             HumanFeedbackRequestedEvent(
                 type="human_feedback_requested",
-                flow_name=self._flow_name,
+                flow_name=self._definition.name,
                 method_name="",  # Will be set by decorator if needed
                 output=output,
                 message=message,
@@ -3235,7 +3310,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 self,
                 HumanFeedbackReceivedEvent(
                     type="human_feedback_received",
-                    flow_name=self._flow_name,
+                    flow_name=self._definition.name,
                     method_name="",  # Will be set by decorator if needed
                     feedback=feedback,
                     outcome=None,  # Will be determined after collapsing
@@ -3410,7 +3485,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self,
             FlowPlotEvent(
                 type="flow_plot",
-                flow_name=self._flow_name,
+                flow_name=self._definition.name,
             ),
         )
         structure = build_flow_structure(cast(Any, self))

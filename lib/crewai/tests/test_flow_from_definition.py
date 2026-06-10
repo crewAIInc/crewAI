@@ -8,6 +8,7 @@ from crewai.events.types.flow_events import (
     MethodExecutionStartedEvent,
 )
 from crewai.flow import Flow, and_, listen, or_, router, start
+from crewai.flow.flow import FlowState
 from crewai.flow.flow_definition import FlowDefinition
 
 
@@ -163,6 +164,142 @@ methods:
 """
 
 
+class CounterState(FlowState):
+    count: int = 0
+    label: str = "none"
+
+
+class PydanticStateFlow(Flow[CounterState]):
+    @start()
+    def begin(self):
+        self.state.count += 1
+        return self.state.count
+
+    @listen(begin)
+    def finish(self):
+        self.state.label = f"count={self.state.count}"
+        return self.state.label
+
+
+PYDANTIC_STATE_YAML = f"""
+schema: crewai.flow/v1
+name: PydanticStateFlow
+state:
+  type: pydantic
+  ref: {__name__}:CounterState
+methods:
+  begin:
+    handler: {__name__}:PydanticStateFlow.begin
+    start: true
+  finish:
+    handler: {__name__}:PydanticStateFlow.finish
+    listen: begin
+"""
+
+PYDANTIC_STATE_OVERLAY_YAML = f"""
+schema: crewai.flow/v1
+name: PydanticStateFlow
+state:
+  type: pydantic
+  ref: {__name__}:CounterState
+  default:
+    count: 5
+methods:
+  begin:
+    handler: {__name__}:PydanticStateFlow.begin
+    start: true
+  finish:
+    handler: {__name__}:PydanticStateFlow.finish
+    listen: begin
+"""
+
+JSON_SCHEMA_STATE_YAML = f"""
+schema: crewai.flow/v1
+name: JsonSchemaStateFlow
+state:
+  type: json_schema
+  json_schema:
+    title: CounterState
+    type: object
+    properties:
+      count:
+        type: integer
+        default: 0
+      label:
+        type: string
+        default: none
+methods:
+  begin:
+    handler: {__name__}:PydanticStateFlow.begin
+    start: true
+  finish:
+    handler: {__name__}:PydanticStateFlow.finish
+    listen: begin
+"""
+
+PYDANTIC_REF_WITH_SCHEMA_FALLBACK_YAML = f"""
+schema: crewai.flow/v1
+name: SchemaFallbackFlow
+state:
+  type: pydantic
+  ref: definitely_not_a_module_xyz:MissingState
+  json_schema:
+    title: CounterState
+    type: object
+    properties:
+      count:
+        type: integer
+        default: 0
+      label:
+        type: string
+        default: none
+methods:
+  begin:
+    handler: {__name__}:PydanticStateFlow.begin
+    start: true
+  finish:
+    handler: {__name__}:PydanticStateFlow.finish
+    listen: begin
+"""
+
+UNRESOLVABLE_STATE_YAML = f"""
+schema: crewai.flow/v1
+name: UnresolvableStateFlow
+state:
+  type: pydantic
+  ref: definitely_not_a_module_xyz:MissingState
+methods:
+  begin:
+    handler: {__name__}:ChainFlow.begin
+    start: true
+"""
+
+DICT_STATE_YAML = f"""
+schema: crewai.flow/v1
+name: DictStateFlow
+state:
+  type: dict
+  default:
+    count: 5
+methods:
+  begin:
+    handler: {__name__}:ChainFlow.begin
+    start: true
+"""
+
+UNKNOWN_STATE_YAML = f"""
+schema: crewai.flow/v1
+name: UnknownStateFlow
+state:
+  type: unknown
+  ref: somewhere:Something
+methods:
+  begin:
+    handler: {__name__}:ChainFlow.begin
+    start: true
+"""
+
+
 def _run_with_events(flow, inputs=None):
     events = []
     with crewai_event_bus.scoped_handlers():
@@ -183,7 +320,7 @@ def _run_with_events(flow, inputs=None):
 
 
 def _state_without_id(flow):
-    snapshot = dict(flow.state)
+    snapshot = dict(flow.state.model_dump())
     snapshot.pop("id", None)
     return snapshot
 
@@ -293,3 +430,79 @@ def test_flow_definition_stamps_handler_refs():
 
     assert definition.methods["begin"].handler == f"{__name__}:ChainFlow.begin"
     assert definition.methods["shout"].handler == f"{__name__}:ChainFlow.shout"
+
+
+def test_pydantic_state_from_ref_parity():
+    flow, result = assert_parity(PydanticStateFlow, PYDANTIC_STATE_YAML)
+    assert result == "count=1"
+    assert flow.state.count == 1
+    assert flow.state.label == "count=1"
+    assert flow.state.id
+
+
+def test_pydantic_state_default_overlay():
+    flow = Flow.from_definition(FlowDefinition.from_yaml(PYDANTIC_STATE_OVERLAY_YAML))
+    result = flow.kickoff()
+    assert result == "count=6"
+    assert flow.state.count == 6
+
+
+def test_json_schema_state():
+    flow = Flow.from_definition(FlowDefinition.from_yaml(JSON_SCHEMA_STATE_YAML))
+    result = flow.kickoff()
+    assert result == "count=1"
+    assert flow.state.count == 1
+    assert flow.state.label == "count=1"
+    assert flow.state.id
+
+
+def test_json_schema_state_validates_inputs():
+    flow = Flow.from_definition(FlowDefinition.from_yaml(JSON_SCHEMA_STATE_YAML))
+    with pytest.raises(ValueError, match="Invalid inputs"):
+        flow.kickoff(inputs={"count": "not-a-number"})
+
+
+def test_pydantic_state_falls_back_to_json_schema_when_ref_unimportable():
+    flow = Flow.from_definition(
+        FlowDefinition.from_yaml(PYDANTIC_REF_WITH_SCHEMA_FALLBACK_YAML)
+    )
+    result = flow.kickoff()
+    assert result == "count=1"
+    assert flow.state.count == 1
+
+
+def test_pydantic_state_without_ref_or_schema_falls_back_to_dict(caplog):
+    with caplog.at_level("ERROR"):
+        flow = Flow.from_definition(FlowDefinition.from_yaml(UNRESOLVABLE_STATE_YAML))
+    assert "falling back to dict state" in caplog.text
+
+    result = flow.kickoff()
+    assert result == "hello"
+    assert flow.state["begin_ran"] is True
+    assert flow.state["id"]
+
+
+def test_dict_state_is_a_copy_of_default_plus_id():
+    definition = FlowDefinition.from_yaml(DICT_STATE_YAML)
+
+    flow = Flow.from_definition(definition)
+    assert flow.state["count"] == 5
+    assert flow.state["id"]
+    flow.kickoff()
+    assert flow.state["begin_ran"] is True
+
+    second = Flow.from_definition(definition)
+    assert second.state["count"] == 5
+    assert "begin_ran" not in second.state.model_dump()
+    assert second.state["id"] != flow.state["id"]
+    assert definition.state.default == {"count": 5}
+
+
+def test_unknown_state_type_falls_back_to_dict(caplog):
+    with caplog.at_level("WARNING"):
+        flow = Flow.from_definition(FlowDefinition.from_yaml(UNKNOWN_STATE_YAML))
+    assert "falling back to dict state" in caplog.text
+
+    result = flow.kickoff()
+    assert result == "hello"
+    assert flow.state["begin_ran"] is True

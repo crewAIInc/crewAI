@@ -52,8 +52,9 @@ class FlowDefinitionDiagnostic(BaseModel):
 class FlowStateDefinition(BaseModel):
     """Static description of a Flow state contract."""
 
-    type: TypingLiteral["dict", "pydantic", "unknown"] = "dict"
+    type: TypingLiteral["dict", "pydantic", "json_schema", "unknown"] = "dict"
     ref: str | None = None
+    json_schema: dict[str, Any] | None = None
     default: Any = None
 
 
