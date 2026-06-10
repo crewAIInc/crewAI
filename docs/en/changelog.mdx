@@ -4,6 +4,110 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="Jun 09, 2026">
+  ## v1.14.7a4
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.7a4)
+
+  ## What's Changed
+
+  ### Features
+  - Migrate @listen/@router runtime to read from FlowDefinition
+  - Add pluggable default backends for memory, knowledge, rag, and flow
+
+  ### Documentation
+  - Update changelog and version for v1.14.7a3
+
+  ## Contributors
+
+  @greysonlalonde, @mattatcha, @vinibrsl
+
+</Update>
+
+<Update label="Jun 08, 2026">
+  ## v1.14.7a3
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.7a3)
+
+  ## What's Changed
+
+  ### Bug Fixes
+  - Fix exposure of `ask_for_human_input` on experimental `AgentExecutor`
+  - Resolve pip-audit CVEs for `aiohttp`, `docling`, `docling-core`, and `pip`
+
+  ### Refactoring
+  - Migrate `@start` to read from `FlowDefinition`
+
+  ### Documentation
+  - Update changelog and version for v1.14.7a2
+
+  ## Contributors
+
+  @greysonlalonde, @lorenzejay, @vinibrsl
+
+</Update>
+
+<Update label="Jun 05, 2026">
+  ## v1.14.7a2
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.7a2)
+
+  ## What's Changed
+
+  ### Features
+  - Add conversational flow traces support.
+  - Update conversational flow documentation to utilize `handle_turn`.
+  - Surface real `finish_reason`, sampling parameters, and `response.id` in LLM events.
+  - Type DSL triggers as route-aware decorators.
+  - Implement chat API for conversational flows.
+  - Make locking backend overridable in lock store.
+  - Split flow DSL monolith into focused decorator modules.
+  - Flatten LiteLLM cache/reasoning usage sub-counts in `_usage_to_dict`.
+  - Build `FlowDefinition` from Flow DSL metadata.
+
+  ### Documentation
+  - Add NVIDIA Nemotron LLM guide.
+  - Document monorepo deployments.
+  - Update changelog and version for v1.14.7a1.
+
+  ## Contributors
+
+  @alex-clawd, @gvieira, @lorenzejay, @lucasgomide, @mattatcha, @vinibrsl
+
+</Update>
+
+<Update label="Jun 03, 2026">
+  ## v1.14.7a1
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.7a1)
+
+  ## What's Changed
+
+  ### Features
+  - Add crew trained agents file support
+  - Add native Snowflake Cortex LLM provider
+  - Add Databricks integration guide
+  - Add Snowflake integration guide
+
+  ### Bug Fixes
+  - Fix CLI by restoring `[project.scripts]` in crewai package for UV tool install
+  - Resolve file input reliability issues
+  - Fix incomplete tool result histories in Snowflake Claude
+  - Handle stringified tool calls for Snowflake Claude
+  - Re-arm multi-source `or_` listeners across router-driven cycles
+
+  ### Performance
+  - Improve crewai import speed by lazy-loading docling imports
+
+  ### Refactoring
+  - Split `flow.py` into DSL, definition, and runtime
+
+  ## Contributors
+
+  @Luzk, @alex-clawd, @devin-ai-integration[bot], @greysonlalonde, @jessemiller, @lorenzejay, @vinibrsl
+
+</Update>
+
 <Update label="May 28, 2026">
   ## v1.14.6
 

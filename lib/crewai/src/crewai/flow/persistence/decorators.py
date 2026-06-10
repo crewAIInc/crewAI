@@ -28,13 +28,14 @@ import asyncio
 from collections.abc import Callable
 import functools
 import logging
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, Final, TypeVar, cast
 
 from crewai_core.printer import PRINTER
 from pydantic import BaseModel
 
 from crewai.flow.persistence.base import FlowPersistence
-from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
+from crewai.flow.persistence.factory import default_flow_persistence
 
 
 if TYPE_CHECKING:
@@ -44,12 +45,33 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
+__all__ = ["PersistenceDecorator", "persist"]
+
 LOG_MESSAGES: Final[dict[str, str]] = {
     "save_state": "Saving flow state to memory for ID: {}",
     "save_error": "Failed to persist state for method {}: {}",
     "state_missing": "Flow instance has no state",
     "id_missing": "Flow state must have an 'id' field for persistence",
 }
+
+
+def _stamp_persistence_metadata(
+    target: Any,
+    persistence: FlowPersistence,
+    verbose: bool,
+) -> None:
+    target.__flow_persistence_config__ = SimpleNamespace(
+        persistence=persistence,
+        verbose=verbose,
+    )
+
+
+_PRESERVED_FLOW_ATTRS: Final[tuple[str, ...]] = (
+    "__human_feedback_config__",
+    "__flow_persistence_config__",
+    "__flow_method_definition__",
+    "_human_feedback_llm",
+)
 
 
 class PersistenceDecorator:
@@ -144,7 +166,9 @@ def persist(
 
     Args:
         persistence: Optional FlowPersistence implementation to use.
-                    If not provided, uses SQLiteFlowPersistence.
+                    If not provided, uses ``default_flow_persistence()`` (the
+                    registered factory when present, else the built-in SQLite
+                    fallback).
         verbose: Whether to log persistence operations. Defaults to False.
 
     Returns:
@@ -163,10 +187,12 @@ def persist(
     """
 
     def decorator(target: type | Callable[..., T]) -> type | Callable[..., T]:
-        """Decorator that handles both class and method decoration."""
-        actual_persistence = persistence or SQLiteFlowPersistence()
+        actual_persistence = (
+            persistence if persistence is not None else default_flow_persistence()
+        )
 
         if isinstance(target, type):
+            _stamp_persistence_metadata(target, actual_persistence, verbose)
             original_init = target.__init__  # type: ignore[misc]
 
             @functools.wraps(original_init)
@@ -183,11 +209,8 @@ def persist(
                 for name, method in target.__dict__.items()
                 if callable(method)
                 and (
-                    hasattr(method, "__is_start_method__")
-                    or hasattr(method, "__trigger_methods__")
-                    or hasattr(method, "__condition_type__")
-                    or hasattr(method, "__is_flow_method__")
-                    or hasattr(method, "__is_router__")
+                    hasattr(method, "__is_flow_method__")
+                    or hasattr(method, "__flow_method_definition__")
                 )
             }
 
@@ -211,12 +234,7 @@ def persist(
 
                     wrapped = create_async_wrapper(name, method)
 
-                    for attr in [
-                        "__is_start_method__",
-                        "__trigger_methods__",
-                        "__condition_type__",
-                        "__is_router__",
-                    ]:
+                    for attr in _PRESERVED_FLOW_ATTRS:
                         if hasattr(method, attr):
                             setattr(wrapped, attr, getattr(method, attr))
                     wrapped.__is_flow_method__ = True  # type: ignore[attr-defined]
@@ -239,12 +257,7 @@ def persist(
 
                     wrapped = create_sync_wrapper(name, method)
 
-                    for attr in [
-                        "__is_start_method__",
-                        "__trigger_methods__",
-                        "__condition_type__",
-                        "__is_router__",
-                    ]:
+                    for attr in _PRESERVED_FLOW_ATTRS:
                         if hasattr(method, attr):
                             setattr(wrapped, attr, getattr(method, attr))
                     wrapped.__is_flow_method__ = True  # type: ignore[attr-defined]
@@ -254,6 +267,7 @@ def persist(
             return target
         method = target
         method.__is_flow_method__ = True  # type: ignore[attr-defined]
+        _stamp_persistence_metadata(method, actual_persistence, verbose)
 
         if asyncio.iscoroutinefunction(method):
 
@@ -271,15 +285,13 @@ def persist(
                 )
                 return cast(T, result)
 
-            for attr in [
-                "__is_start_method__",
-                "__trigger_methods__",
-                "__condition_type__",
-                "__is_router__",
-            ]:
+            for attr in _PRESERVED_FLOW_ATTRS:
                 if hasattr(method, attr):
                     setattr(method_async_wrapper, attr, getattr(method, attr))
             method_async_wrapper.__is_flow_method__ = True  # type: ignore[attr-defined]
+            _stamp_persistence_metadata(
+                method_async_wrapper, actual_persistence, verbose
+            )
             return cast(Callable[..., T], method_async_wrapper)
 
         @functools.wraps(method)
@@ -290,15 +302,11 @@ def persist(
             )
             return result
 
-        for attr in [
-            "__is_start_method__",
-            "__trigger_methods__",
-            "__condition_type__",
-            "__is_router__",
-        ]:
+        for attr in _PRESERVED_FLOW_ATTRS:
             if hasattr(method, attr):
                 setattr(method_sync_wrapper, attr, getattr(method, attr))
         method_sync_wrapper.__is_flow_method__ = True  # type: ignore[attr-defined]
+        _stamp_persistence_metadata(method_sync_wrapper, actual_persistence, verbose)
         return cast(Callable[..., T], method_sync_wrapper)
 
     return decorator
