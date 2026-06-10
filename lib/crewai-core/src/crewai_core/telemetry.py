@@ -27,7 +27,7 @@ from opentelemetry.sdk.trace.export import (
     BatchSpanProcessor,
     SpanExportResult,
 )
-from opentelemetry.trace import Span, Status, StatusCode
+from opentelemetry.trace import ProxyTracerProvider, Span, Status, StatusCode
 from typing_extensions import Self
 
 
@@ -149,6 +149,10 @@ class Telemetry:
         if self.ready and not self.trace_set:
             try:
                 with suppress_warnings():
+                    existing_provider = trace.get_tracer_provider()
+                    if not isinstance(existing_provider, ProxyTracerProvider):
+                        self.trace_set = True
+                        return
                     trace.set_tracer_provider(self.provider)
                     self.trace_set = True
             except Exception as e:
