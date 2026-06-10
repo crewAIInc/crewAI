@@ -113,7 +113,7 @@ class _ConversationalMixin:
         name: str | None
         _completed_methods: set[Any]
         _method_outputs: list[Any]
-        _pending_and_listeners: dict[Any, Any]
+        _pending_events: dict[Any, Any]
         _method_call_counts: dict[Any, int]
         _is_execution_resuming: bool
         _conversation_messages: list[LLMMessage]
@@ -686,7 +686,7 @@ class _ConversationalMixin:
         """Clear per-execution tracking so the next turn re-runs the graph."""
         self._completed_methods.clear()
         self._method_outputs.clear()
-        self._pending_and_listeners.clear()
+        self._pending_events.clear()
         self._method_call_counts.clear()
         self._clear_or_listeners()
         self._is_execution_resuming = False
