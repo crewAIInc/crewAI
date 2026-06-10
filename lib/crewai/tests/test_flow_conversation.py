@@ -1201,6 +1201,40 @@ class TestConversationalFlow:
                     "finalize_session_traces must finalize the trace batch once"
                 )
 
+    def test_deferred_resume_skips_per_resume_flow_finished_event(self) -> None:
+        """Deferred sessions do not emit terminal events while resuming."""
+        from crewai.events.types.flow_events import FlowFinishedEvent
+        from crewai.flow.async_feedback.types import PendingFeedbackContext
+
+        class DeferredResumeFlow(Flow[ChatState]):
+            defer_trace_finalization = True
+
+            @start()
+            def begin(self) -> str:
+                return "started"
+
+        flow = DeferredResumeFlow()
+        flow._pending_feedback_context = PendingFeedbackContext(
+            flow_id=flow.flow_id,
+            flow_class="DeferredResumeFlow",
+            method_name="begin",
+            method_output="started",
+            message="Review",
+        )
+
+        finished_events: list[FlowFinishedEvent] = []
+
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(FlowFinishedEvent)
+            def capture(_: Any, event: FlowFinishedEvent) -> None:
+                finished_events.append(event)
+
+            flow.resume("approved")
+            crewai_event_bus.flush()
+
+        assert finished_events == []
+
     def test_finalize_session_traces_restores_event_scope(self, capsys) -> None:
         """No ``empty scope stack`` warning when deferred ``flow_finished`` fires.
 
