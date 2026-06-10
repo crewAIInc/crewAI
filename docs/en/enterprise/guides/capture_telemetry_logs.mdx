@@ -25,12 +25,14 @@ Telemetry data follows the [OpenTelemetry GenAI semantic conventions](https://op
 1. In CrewAI AMP, go to **Settings** > **OpenTelemetry Collectors**.
 2. Click **Add Collector**.
 3. Select an integration:
-   - **OpenTelemetry Traces** or **OpenTelemetry Logs** — export to any OTLP-compatible collector or backend.
+   - **OpenTelemetry Traces** and **OpenTelemetry Logs** — export to any OTLP-compatible collector or backend.
    - **Datadog** — send traces straight to Datadog's OTLP intake, no separate collector or Datadog Agent required.
 4. Configure the connection. The fields depend on the integration you selected:
 
 <Tabs>
   <Tab title="OpenTelemetry Traces / Logs">
+    **OpenTelemetry Traces** and **OpenTelemetry Logs** are separate integrations that share the same fields — pick the one matching the signal you want to export.
+
     - **Endpoint** — Your collector's OTLP endpoint (e.g., `https://otel-collector.example.com:4317`).
     - **Service Name** — A name to identify this service in your observability platform.
     - **Custom Headers** *(optional)* — Add authentication or routing headers as key-value pairs.
@@ -39,7 +41,12 @@ Telemetry data follows the [OpenTelemetry GenAI semantic conventions](https://op
     <Frame>![OpenTelemetry collector configuration](/images/crewai-otel-collector-opentelemetry.png)</Frame>
   </Tab>
   <Tab title="Datadog">
-    - **Datadog Site Domain** — Your Datadog site's OTLP domain only — for example `otlp.us5.datadoghq.com` — with no protocol or path. CrewAI builds the full HTTPS OTLP endpoint for you. Use the domain that matches your [Datadog site](https://docs.datadoghq.com/getting_started/site/).
+    - **Datadog Site Domain** — Your Datadog site's OTLP host only, with no protocol or path. CrewAI builds the full HTTPS OTLP endpoint for you. Use the host that matches your [Datadog site](https://docs.datadoghq.com/getting_started/site/):
+      - `otlp.datadoghq.com` (US1)
+      - `otlp.us3.datadoghq.com` (US3)
+      - `otlp.us5.datadoghq.com` (US5)
+      - `otlp.datadoghq.eu` (EU1)
+      - `otlp.ap1.datadoghq.com` (AP1)
     - **API Key** — Your Datadog API key. See [how to create one](https://docs.datadoghq.com/account_management/api-app-keys/#api-keys).
 
     The Datadog integration exports **traces**.
