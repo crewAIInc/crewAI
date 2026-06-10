@@ -93,6 +93,7 @@ class FlowHumanFeedbackDefinition(BaseModel):
 class FlowMethodDefinition(BaseModel):
     """Static definition of one Flow method and its execution roles."""
 
+    handler: str | None = None
     start: bool | FlowDefinitionCondition | None = None
     listen: FlowDefinitionCondition | None = None
     router: bool = False

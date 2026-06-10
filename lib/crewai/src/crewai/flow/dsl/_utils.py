@@ -377,6 +377,11 @@ def _build_method_definition(
     else:
         method_definition = fragment.model_copy(deep=True)
 
+    # Skip <locals>/<lambda> qualnames: they can never be re-imported, so a
+    # missing handler is more honest than a dead reference.
+    if "<" not in method.__qualname__:
+        method_definition.handler = f"{method.__module__}:{method.__qualname__}"
+
     human_feedback = _build_human_feedback_definition(
         method, diagnostics, f"{path}.human_feedback"
     )
