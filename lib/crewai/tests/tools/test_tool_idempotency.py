@@ -134,12 +134,14 @@ class TestToolsHandlerIdempotency:
         result = handler.claim_idempotent_result("add", {"x": 1})
         assert result is None  # claim succeeded, caller must execute
 
-    def test_claim_idempotent_prevents_double_claim(self) -> None:
+    def test_claim_idempotent_narrows_race_window(self) -> None:
         handler = ToolsHandler()
-        # First claim succeeds
+        # First claim succeeds (caller must execute)
         result1 = handler.claim_idempotent_result("add", {"x": 1})
         assert result1 is None
-        # Second claim sees in-progress, returns None (falls through)
+        # Second claim sees in-progress, returns None (falls through to execution).
+        # This narrows the race window rather than strictly preventing double
+        # execution — both callers receive None so both may execute.
         result2 = handler.claim_idempotent_result("add", {"x": 1})
         assert result2 is None  # not yet completed
 
