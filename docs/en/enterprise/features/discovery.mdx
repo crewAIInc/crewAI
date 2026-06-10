@@ -1,6 +1,6 @@
 ---
 title: Discovery
-description: "Identify the highest-impact AI automation use cases for your business — powered by CrewAI's production data."
+description: "Identify the highest-impact AI automation use cases for your business."
 icon: "compass"
 mode: "wide"
 ---
@@ -13,7 +13,7 @@ The bottleneck in AI adoption is not building agents — it's knowing _what_ to 
 
 {/* TODO: Add screenshot of Discovery dashboard */}
 
-Instead of weeks of stakeholder interviews, consultant engagements, and slide decks, Discovery uses CrewAI's production data from billions of agentic executions to match your business context against proven patterns. Within minutes, you get actionable, evidence-based recommendations specific to your organization.
+Instead of weeks of stakeholder interviews, consultant engagements, and slide decks, Discovery leverages CrewAI's deep knowledge of agent patterns and what works in production to match your business context against proven approaches. Within minutes, you get actionable, evidence-based recommendations specific to your organization.
 
 ## How It Works
 
@@ -22,13 +22,11 @@ Instead of weeks of stakeholder interviews, consultant engagements, and slide de
     Tell Discovery about your organization — your processes, challenges, goals, and the teams involved. The more context you provide, the more precise the recommendations.
   </Step>
   <Step title="Multi-Signal Matching">
-    Discovery runs cohort analysis and structural pattern recognition against CrewAI's production data, matching your business context to automation patterns already running successfully at scale.
+    Discovery runs cohort analysis and structural pattern recognition using CrewAI's world model, matching your business context to automation patterns already running successfully at scale.
   </Step>
   <Step title="Review Use Cases">
     Within minutes, you receive a set of use cases specific to your company — not generic templates. Each one shows what the automation does, expected impact, complexity, and how it would work in your organization.
-  </Step>
-  <Step title="Connect Data Sources (Optional)">
-    Integrate your internal docs, knowledge bases, and existing systems so Discovery can work with your internal context alongside external signals for deeper, more accurate recommendations.
+    {/* TODO: Add screenshot of use case recommendations */}
   </Step>
   <Step title="Build">
     Select a use case and go directly into Crew Studio or export to code to start building.
@@ -41,13 +39,10 @@ Instead of weeks of stakeholder interviews, consultant engagements, and slide de
 
 <CardGroup cols={2}>
   <Card title="Business-Specific Recommendations" icon="bullseye">
-    Not generic templates. Real use cases matched to your organization based on production patterns from billions of agentic executions.
+    Not generic templates. Real use cases matched to your organization based on CrewAI's knowledge of what works in production.
   </Card>
   <Card title="Impact & Complexity Scoring" icon="chart-mixed">
     Each recommendation includes expected impact, implementation complexity, and how it fits your org — so you can prioritize with confidence.
-  </Card>
-  <Card title="Data Source Integration" icon="database">
-    Connect internal docs, knowledge bases, and existing systems so Discovery works with your internal context alongside external signals.
   </Card>
   <Card title="Iterative Discovery" icon="arrows-rotate">
     Run Discovery multiple times across different business units. It becomes part of how you plan and iterate on your AI roadmap.
@@ -56,30 +51,6 @@ Instead of weeks of stakeholder interviews, consultant engagements, and slide de
     Every recommendation is grounded in what CrewAI knows actually works in production — not guesswork or intuition.
   </Card>
 </CardGroup>
-
-## Getting Started
-
-<Steps>
-  <Step title="Navigate to Discovery">
-    Open CrewAI AMP and select **Discovery** from the main navigation.
-    {/* TODO: Add screenshot of Discovery in navigation */}
-  </Step>
-  <Step title="Describe Your Business Context">
-    Provide details about your organization, processes, challenges, and goals. Be specific — the more context Discovery has, the better the recommendations.
-    {/* TODO: Add screenshot of business context input */}
-  </Step>
-  <Step title="Connect Data Sources (Optional)">
-    Link internal documentation, knowledge bases, or existing systems to give Discovery deeper context about your operations.
-    {/* TODO: Add screenshot of data source connection */}
-  </Step>
-  <Step title="Review Recommended Use Cases">
-    Browse through the use cases Discovery has identified. Each one includes what the automation does, expected impact, complexity, and how it maps to your organization.
-    {/* TODO: Add screenshot of use case recommendations */}
-  </Step>
-  <Step title="Select and Start Building">
-    Pick a use case and jump directly into Crew Studio to build it visually, or export to code for custom development.
-  </Step>
-</Steps>
 
 ## From Discovery to Production
 
@@ -108,50 +79,9 @@ This means you go from "we should use AI somewhere" to a running production auto
     Run Discovery for different business units to build a company-wide AI roadmap with use cases tailored to each team's needs.
   </Card>
   <Card title="ROI Prioritization" icon="chart-line">
-    Need to justify AI investment? Discovery provides evidence-based impact estimates grounded in real production data.
+    Need to justify AI investment? Discovery provides evidence-based impact estimates grounded in real-world results.
   </Card>
 </CardGroup>
-
-## Best Practices
-
-<Tip>
-  **Be specific when describing your business context.** The more detail you provide about your processes, challenges, and goals, the better and more relevant the recommendations will be.
-</Tip>
-
-<Tip>
-  **Run Discovery for individual departments or business units**, not just the whole company. Focused sessions produce more actionable results.
-</Tip>
-
-<Tip>
-  **Use Discovery iteratively.** Revisit as your AI maturity grows — new patterns emerge as CrewAI's production data expands and your organization evolves.
-</Tip>
-
-<Tip>
-  **Connect data sources for more accurate recommendations.** Internal docs and knowledge bases give Discovery the context it needs to match your specific operations, not just your industry.
-</Tip>
-
-## FAQ
-
-### Is my business data used to train models?
-
-No. Your data is used only for your Discovery session. It is not used to train any models or shared with other organizations.
-
-### How is Discovery different from hiring consultants?
-
-| | Discovery | Traditional Consulting |
-|---|---|---|
-| **Speed** | Minutes | Weeks to months |
-| **Basis** | Production data from billions of executions | Intuition and interviews |
-| **Iteration** | Run anytime, as often as needed | Point-in-time snapshot |
-| **Access** | Available to every team | Requires budget and scheduling |
-
-### Can I run Discovery for different departments?
-
-Yes. Run Discovery as many times as you need across different business units. Each session produces recommendations tailored to that specific team's context and challenges.
-
-### What happens after I find a use case?
-
-Go directly to [Crew Studio](/en/enterprise/features/crew-studio) to build it visually, or export to code for custom development. From there, deploy via [Automations](/en/enterprise/features/automations).
 
 ## Related
 
