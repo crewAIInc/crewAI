@@ -24,15 +24,32 @@ mode: "wide"
 
 1. في CrewAI AMP، انتقل إلى **Settings** > **OpenTelemetry Collectors**.
 2. انقر على **Add Collector**.
-3. اختر نوع التكامل — **OpenTelemetry Traces** أو **OpenTelemetry Logs**.
-4. هيّئ الاتصال:
-   - **Endpoint** — نقطة نهاية OTLP لمجمّعك (مثل `https://otel-collector.example.com:4317`).
-   - **Service Name** — اسم لتعريف هذه الخدمة في منصة المراقبة.
-   - **Custom Headers** *(اختياري)* — أضف رؤوس المصادقة أو التوجيه كأزواج مفتاح-قيمة.
-   - **Certificate** *(اختياري)* — قدم شهادة TLS إذا كان مجمّعك يتطلبها.
-5. انقر على **Save**.
+3. اختر تكاملاً:
+   - **OpenTelemetry Traces** أو **OpenTelemetry Logs** — صدّر إلى أي مجمّع أو واجهة خلفية متوافقة مع OTLP.
+   - **Datadog** — أرسل التتبعات مباشرة إلى استقبال OTLP الخاص بـ Datadog، دون الحاجة إلى مجمّع منفصل أو Datadog Agent.
+4. هيّئ الاتصال. تعتمد الحقول على التكامل الذي اخترته:
 
-<Frame>![تهيئة مجمّع OpenTelemetry](/images/crewai-otel-collector-config.png)</Frame>
+<Tabs>
+  <Tab title="OpenTelemetry Traces / Logs">
+    - **Endpoint** — نقطة نهاية OTLP لمجمّعك (مثل `https://otel-collector.example.com:4317`).
+    - **Service Name** — اسم لتعريف هذه الخدمة في منصة المراقبة.
+    - **Custom Headers** *(اختياري)* — أضف رؤوس المصادقة أو التوجيه كأزواج مفتاح-قيمة.
+    - **Certificate** *(اختياري)* — قدم شهادة TLS إذا كان مجمّعك يتطلبها.
+
+    <Frame>![تهيئة مجمّع OpenTelemetry](/images/crewai-otel-collector-opentelemetry.png)</Frame>
+  </Tab>
+  <Tab title="Datadog">
+    - **Datadog Site Domain** — نطاق OTLP لموقع Datadog الخاص بك فقط — على سبيل المثال `otlp.us5.datadoghq.com` — دون بروتوكول أو مسار. يقوم CrewAI ببناء نقطة نهاية HTTPS OTLP الكاملة نيابةً عنك. استخدم النطاق المطابق لـ [موقع Datadog](https://docs.datadoghq.com/getting_started/site/) الخاص بك.
+    - **API Key** — مفتاح واجهة برمجة تطبيقات Datadog الخاص بك. راجع [كيفية إنشاء واحد](https://docs.datadoghq.com/account_management/api-app-keys/#api-keys).
+
+    يصدّر تكامل Datadog **التتبعات**.
+
+    <Frame>![تهيئة مجمّع Datadog](/images/crewai-otel-collector-datadog.png)</Frame>
+  </Tab>
+</Tabs>
+
+5. *(اختياري)* انقر على **Test Connection** للتحقق من قدرة CrewAI على الوصول إلى نقطة النهاية باستخدام بيانات الاعتماد التي قدمتها.
+6. انقر على **Save**.
 
 <Tip>
   يمكنك إضافة مجمّعات متعددة — على سبيل المثال، واحد للتتبعات وآخر للسجلات، أو الإرسال إلى واجهات خلفية مختلفة لأغراض مختلفة.

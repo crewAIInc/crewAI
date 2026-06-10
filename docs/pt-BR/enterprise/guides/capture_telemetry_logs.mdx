@@ -24,15 +24,32 @@ Os dados de telemetria seguem as [convenções semânticas GenAI do OpenTelemetr
 
 1. No CrewAI AMP, vá para **Settings** > **OpenTelemetry Collectors**.
 2. Clique em **Add Collector**.
-3. Selecione um tipo de integração — **OpenTelemetry Traces** ou **OpenTelemetry Logs**.
-4. Configure a conexão:
-   - **Endpoint** — O endpoint OTLP do seu coletor (por exemplo, `https://otel-collector.example.com:4317`).
-   - **Service Name** — Um nome para identificar este serviço na sua plataforma de observabilidade.
-   - **Custom Headers** *(opcional)* — Adicione headers de autenticação ou roteamento como pares chave-valor.
-   - **Certificate** *(opcional)* — Forneça um certificado TLS se o seu coletor exigir um.
-5. Clique em **Save**.
+3. Selecione uma integração:
+   - **OpenTelemetry Traces** ou **OpenTelemetry Logs** — exporte para qualquer coletor ou backend compatível com OTLP.
+   - **Datadog** — envie traces diretamente para a ingestão OTLP do Datadog, sem precisar de um coletor separado ou do Datadog Agent.
+4. Configure a conexão. Os campos dependem da integração selecionada:
 
-<Frame>![Configuração do Coletor OpenTelemetry](/images/crewai-otel-collector-config.png)</Frame>
+<Tabs>
+  <Tab title="OpenTelemetry Traces / Logs">
+    - **Endpoint** — O endpoint OTLP do seu coletor (por exemplo, `https://otel-collector.example.com:4317`).
+    - **Service Name** — Um nome para identificar este serviço na sua plataforma de observabilidade.
+    - **Custom Headers** *(opcional)* — Adicione headers de autenticação ou roteamento como pares chave-valor.
+    - **Certificate** *(opcional)* — Forneça um certificado TLS se o seu coletor exigir um.
+
+    <Frame>![Configuração do coletor OpenTelemetry](/images/crewai-otel-collector-opentelemetry.png)</Frame>
+  </Tab>
+  <Tab title="Datadog">
+    - **Datadog Site Domain** — Apenas o domínio OTLP do seu site Datadog — por exemplo `otlp.us5.datadoghq.com` — sem protocolo ou caminho. O CrewAI monta o endpoint HTTPS OTLP completo para você. Use o domínio correspondente ao seu [site Datadog](https://docs.datadoghq.com/getting_started/site/).
+    - **API Key** — Sua chave de API do Datadog. Veja [como criar uma](https://docs.datadoghq.com/account_management/api-app-keys/#api-keys).
+
+    A integração com o Datadog exporta **traces**.
+
+    <Frame>![Configuração do coletor Datadog](/images/crewai-otel-collector-datadog.png)</Frame>
+  </Tab>
+</Tabs>
+
+5. *(opcional)* Clique em **Test Connection** para verificar se o CrewAI consegue acessar o endpoint com as credenciais fornecidas.
+6. Clique em **Save**.
 
 <Tip>
   Você pode adicionar múltiplos coletores — por exemplo, um para traces e outro para logs, ou enviar para diferentes backends para diferentes propósitos.
