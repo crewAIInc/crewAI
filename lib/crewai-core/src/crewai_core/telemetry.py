@@ -17,7 +17,7 @@ import contextlib
 import logging
 import os
 import threading
-from typing import Any, Final
+from typing import Any, ClassVar, Final
 
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
@@ -72,8 +72,8 @@ class Telemetry:
     and event-bus signal handlers (see ``crewai.telemetry.telemetry``).
     """
 
-    _instance = None
-    _lock = threading.Lock()
+    _instance: ClassVar[Self | None] = None
+    _lock: ClassVar[threading.Lock] = threading.Lock()
 
     def __new__(cls) -> Self:
         if cls._instance is None:
