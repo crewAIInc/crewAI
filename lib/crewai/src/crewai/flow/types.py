@@ -16,7 +16,7 @@ R = TypeVar("R", covariant=True)
 FlowMethodName = NewType("FlowMethodName", str)
 PendingListenerKey = NewType(
     "PendingListenerKey",
-    Annotated[str, "nested flow conditions use 'listener_name:object_id'"],
+    Annotated[str, "listener method name, or 'start:<method>' for conditional starts"],
 )
 
 
