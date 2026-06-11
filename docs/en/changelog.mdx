@@ -4,6 +4,57 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="Jun 10, 2026">
+  ## v1.14.7rc2
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.7rc2)
+
+  ## What's Changed
+
+  ### Bug Fixes
+  - Gate restore on a flag to prevent live snapshots from replaying as resume
+
+  ### Documentation
+  - Update changelog and version for v1.14.7rc1
+
+  ## Contributors
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="Jun 10, 2026">
+  ## v1.14.7rc1
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.7rc1)
+
+  ## What's Changed
+
+  ### Features
+  - Add `reset_runtime_state` to release accumulated bus state
+  - Handle supporting both custom prompts
+  - Decouple conversation logic from runtime and add a `conversational_definition`
+
+  ### Bug Fixes
+  - Fix scope of runtime state per run to bound growth and isolate concurrent runs
+  - Fix telemetry setup on `crewai-login`
+  - Fix respect for `suppress_flow_events` for method-execution events
+
+  ### Documentation
+  - Update OpenTelemetry images
+  - Update documentation to reflect new state of OpenTelemetry collector
+  - Update changelog and version for v1.14.7a4
+
+  ### Refactoring
+  - Simplify flow condition evaluation to be stateless per event
+  - Improve conversation routing cycle with one less route
+
+  ## Contributors
+
+  @greysonlalonde, @lorenzejay, @lucasgomide, @vinibrsl
+
+</Update>
+
 <Update label="Jun 09, 2026">
   ## v1.14.7a4
 

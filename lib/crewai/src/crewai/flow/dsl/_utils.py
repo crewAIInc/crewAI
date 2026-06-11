@@ -9,6 +9,8 @@ from typing_extensions import TypeIs
 
 from crewai.flow.flow_definition import (
     FlowConfigDefinition,
+    FlowConversationalDefinition,
+    FlowConversationalRouterDefinition,
     FlowDefinition,
     FlowDefinitionDiagnostic,
     FlowHumanFeedbackDefinition,
@@ -27,6 +29,13 @@ R = TypeVar("R")
 logger = logging.getLogger(__name__)
 
 _FLOW_METHOD_DEFINITION_ATTR = "__flow_method_definition__"
+_FLOW_METHOD_METADATA_ATTRS = [
+    "__conversational_only__",
+    "__flow_method_definition__",
+    "__flow_persistence_config__",
+    "__human_feedback_config__",
+    "_human_feedback_llm",
+]
 
 
 def is_flow_method(obj: Any) -> TypeIs[FlowMethod[Any, Any]]:
@@ -40,6 +49,39 @@ def _should_include_flow_method(flow_class: type, method: Any) -> bool:
     if getattr(method, "__conversational_only__", False):
         return bool(getattr(flow_class, "conversational", False))
     return True
+
+
+def _is_conversational_flow(flow_class: type) -> bool:
+    return bool(getattr(flow_class, "conversational", False))
+
+
+def _get_inherited_conversational_method(
+    flow_class: type,
+    attr_name: str,
+) -> Any | None:
+    if not _is_conversational_flow(flow_class):
+        return None
+
+    for base in flow_class.__mro__[1:]:
+        inherited = base.__dict__.get(attr_name)
+        if inherited is None:
+            continue
+        if getattr(inherited, "__conversational_only__", False) and is_flow_method(
+            inherited
+        ):
+            return inherited
+    return None
+
+
+def _stamp_inherited_conversational_metadata(
+    method: Any,
+    inherited: Any,
+) -> Any:
+    for attr in _FLOW_METHOD_METADATA_ATTRS:
+        if hasattr(inherited, attr):
+            setattr(method, attr, getattr(inherited, attr))
+    method.__is_flow_method__ = True
+    return method
 
 
 def _set_flow_method_definition(
@@ -135,6 +177,8 @@ def _build_state_definition(
     from pydantic import BaseModel as PydanticBaseModel
 
     state_value = getattr(flow_class, "_initial_state_t", None)
+    if isinstance(state_value, TypeVar):
+        state_value = None
     initial_state = getattr(flow_class, "initial_state", None)
     if initial_state is not None:
         state_value = initial_state
@@ -230,6 +274,98 @@ def _build_persistence_definition(
     )
 
 
+def _build_conversational_router_definition(
+    router_config: Any,
+    diagnostics: list[FlowDefinitionDiagnostic],
+    path: str,
+) -> FlowConversationalRouterDefinition | None:
+    if router_config is None:
+        return None
+
+    routes = getattr(router_config, "routes", None)
+    return FlowConversationalRouterDefinition(
+        prompt=getattr(router_config, "prompt", None),
+        response_format=_serialize_static_value(
+            getattr(router_config, "response_format", None),
+            diagnostics,
+            f"{path}.response_format",
+        ),
+        llm=_serialize_static_value(
+            getattr(router_config, "llm", None), diagnostics, f"{path}.llm"
+        ),
+        routes=[str(route) for route in routes] if routes is not None else None,
+        route_descriptions=getattr(router_config, "route_descriptions", None),
+        default_intent=getattr(router_config, "default_intent", "converse"),
+        fallback_intent=getattr(router_config, "fallback_intent", "converse"),
+        intent_field=str(getattr(router_config, "intent_field", "intent")),
+    )
+
+
+def _build_conversational_definition(
+    flow_class: type,
+    diagnostics: list[FlowDefinitionDiagnostic],
+) -> FlowConversationalDefinition | None:
+    if not _is_conversational_flow(flow_class):
+        return None
+
+    config = getattr(flow_class, "conversational_config", None)
+    builtin_routes = getattr(flow_class, "builtin_routes", ("converse", "end"))
+    internal_routes = getattr(
+        flow_class,
+        "internal_routes",
+        ("answer_from_history",),
+    )
+    if config is None:
+        return FlowConversationalDefinition(
+            enabled=True,
+            builtin_routes=[str(route) for route in builtin_routes],
+            internal_routes=[str(route) for route in internal_routes],
+        )
+
+    default_intents = getattr(config, "default_intents", None)
+    visible_agent_outputs = getattr(config, "visible_agent_outputs", None)
+    return FlowConversationalDefinition(
+        enabled=True,
+        system_prompt=getattr(config, "system_prompt", None),
+        llm=_serialize_static_value(
+            getattr(config, "llm", None), diagnostics, "conversational.llm"
+        ),
+        router=_build_conversational_router_definition(
+            getattr(config, "router", None),
+            diagnostics,
+            "conversational.router",
+        ),
+        answer_from_history_prompt=getattr(config, "answer_from_history_prompt", None),
+        default_intents=(
+            [str(intent) for intent in default_intents]
+            if default_intents is not None
+            else None
+        ),
+        intent_llm=_serialize_static_value(
+            getattr(config, "intent_llm", None),
+            diagnostics,
+            "conversational.intent_llm",
+        ),
+        answer_from_history_llm=_serialize_static_value(
+            getattr(config, "answer_from_history_llm", None),
+            diagnostics,
+            "conversational.answer_from_history_llm",
+        ),
+        visible_agent_outputs=(
+            "all"
+            if visible_agent_outputs == "all"
+            else [str(output) for output in visible_agent_outputs]
+            if visible_agent_outputs is not None
+            else None
+        ),
+        defer_trace_finalization=bool(
+            getattr(config, "defer_trace_finalization", True)
+        ),
+        builtin_routes=[str(route) for route in builtin_routes],
+        internal_routes=[str(route) for route in internal_routes],
+    )
+
+
 def _build_method_definition(
     method: Any,
     diagnostics: list[FlowDefinitionDiagnostic],
@@ -270,6 +406,29 @@ def _iter_flow_methods(flow_class: type) -> dict[str, Any]:
             flow_class, attr_value
         ):
             methods[attr_name] = attr_value
+            continue
+
+        inherited = _get_inherited_conversational_method(flow_class, attr_name)
+        if inherited is not None and callable(attr_value):
+            methods[attr_name] = _stamp_inherited_conversational_metadata(
+                attr_value, inherited
+            )
+
+    if _is_conversational_flow(flow_class):
+        for base in reversed(flow_class.__mro__[1:]):
+            for attr_name, raw_value in base.__dict__.items():
+                if attr_name.startswith("_") or attr_name in methods:
+                    continue
+                if not getattr(raw_value, "__conversational_only__", False):
+                    continue
+                try:
+                    attr_value = getattr(flow_class, attr_name)
+                except AttributeError:
+                    continue
+                if is_flow_method(attr_value) and _should_include_flow_method(
+                    flow_class, attr_value
+                ):
+                    methods[attr_name] = attr_value
 
     # A wrapped method whose name collides with a base Flow model field
     # (e.g. ``checkpoint``) is absorbed by Pydantic as a field; the underlying
@@ -314,6 +473,7 @@ def _build_flow_definition_from_class(
         state=_build_state_definition(flow_class, diagnostics),
         config=_build_config_definition(flow_class, diagnostics),
         persist=_build_persistence_definition(flow_class, diagnostics, "persist"),
+        conversational=_build_conversational_definition(flow_class, diagnostics),
         methods=methods,
         diagnostics=diagnostics,
     )

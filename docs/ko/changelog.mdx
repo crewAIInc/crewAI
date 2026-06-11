@@ -4,6 +4,57 @@ description: "CrewAI의 제품 업데이트, 개선 사항 및 버그 수정"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="2026년 6월 10일">
+  ## v1.14.7rc2
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.7rc2)
+
+  ## 변경 사항
+
+  ### 버그 수정
+  - 라이브 스냅샷이 재개로 재생되는 것을 방지하기 위한 플래그에서 게이트 복원
+
+  ### 문서
+  - v1.14.7rc1에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="2026년 6월 10일">
+  ## v1.14.7rc1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.7rc1)
+
+  ## 변경 사항
+
+  ### 기능
+  - 누적된 버스 상태를 해제하기 위해 `reset_runtime_state` 추가
+  - 사용자 정의 프롬프트를 모두 지원하도록 처리
+  - 대화 논리를 런타임과 분리하고 `conversational_definition` 추가
+
+  ### 버그 수정
+  - 실행당 런타임 상태의 범위를 수정하여 성장 제한 및 동시 실행 격리
+  - `crewai-login`에서 원격 측정 설정 수정
+  - 메서드 실행 이벤트에 대한 `suppress_flow_events` 존중 수정
+
+  ### 문서
+  - OpenTelemetry 이미지 업데이트
+  - OpenTelemetry 수집기의 새로운 상태를 반영하도록 문서 업데이트
+  - v1.14.7a4에 대한 변경 로그 및 버전 업데이트
+
+  ### 리팩토링
+  - 이벤트당 상태 비저장 방식으로 흐름 조건 평가 단순화
+  - 경로를 하나 줄여 대화 라우팅 사이클 개선
+
+  ## 기여자
+
+  @greysonlalonde, @lorenzejay, @lucasgomide, @vinibrsl
+
+</Update>
+
 <Update label="2026년 6월 9일">
   ## v1.14.7a4
 

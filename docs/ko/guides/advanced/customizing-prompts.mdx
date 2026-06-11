@@ -161,6 +161,18 @@ crew = Crew(
 )
 ```
 
+<Note>
+`agent.i18n`은 이전 버전과의 호환성을 위해서만 유지되며 사용이 중단될 예정입니다. 런타임 프롬프트 커스터마이징에는 `Crew`에 `prompt_file`을 전달하세요. 프롬프트 슬라이스를 코드에서 직접 읽어야 한다면 i18n 유틸리티를 직접 사용하세요:
+</Note>
+
+```python
+from crewai.utilities.i18n import get_i18n
+
+i18n = get_i18n("custom_prompts.json")
+format_slice = i18n.slice("format")
+tool_prompt = i18n.tools("ask_question")
+```
+
 #### 옵션 3: o1 모델에 대한 시스템 프롬프트 비활성화
 ```python
 agent = Agent(
@@ -207,6 +219,8 @@ agent = Agent(
 2. Crew의 `prompt_file` 파라미터를 통해 그 파일을 참조하세요.
 
 그러면 CrewAI가 기본값과 사용자가 지정한 내용을 병합하므로, 모든 프롬프트를 다시 정의할 필요가 없습니다. 방법은 다음과 같습니다:
+
+프롬프트 슬라이스를 코드에서 직접 읽어야 하는 경우에는 `agent.i18n`을 읽는 대신 동일한 프롬프트 파일로 `crewai.utilities.i18n.get_i18n()`을 사용하세요.
 
 ### 예시: 기본 프롬프트 커스터마이징
 

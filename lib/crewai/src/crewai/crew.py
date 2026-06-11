@@ -1013,6 +1013,7 @@ class Crew(FlowTrackable, BaseModel):
         )
         token = attach(baggage_ctx)
 
+        runtime_scope = crewai_event_bus._enter_runtime_scope()
         try:
             inputs = prepare_kickoff(self, inputs, input_files)
 
@@ -1048,6 +1049,7 @@ class Crew(FlowTrackable, BaseModel):
                 self._memory.drain_writes()
             clear_files(self.id)
             detach(token)
+            crewai_event_bus._exit_runtime_scope(runtime_scope)
 
     def _post_kickoff(self, result: CrewOutput) -> CrewOutput:
         return result
@@ -1223,6 +1225,7 @@ class Crew(FlowTrackable, BaseModel):
         )
         token = attach(baggage_ctx)
 
+        runtime_scope = crewai_event_bus._enter_runtime_scope()
         try:
             inputs = prepare_kickoff(self, inputs, input_files)
 
@@ -1256,6 +1259,7 @@ class Crew(FlowTrackable, BaseModel):
         finally:
             clear_files(self.id)
             detach(token)
+            crewai_event_bus._exit_runtime_scope(runtime_scope)
 
     async def akickoff_for_each(
         self,
