@@ -1040,7 +1040,7 @@ def test_flow_plotting():
         received_events.append(event)
         event_received.set()
 
-    flow.plot("test_flow")
+    flow.plot("test_flow", show=False)
 
     assert event_received.wait(timeout=5), "Timeout waiting for plot event"
     assert len(received_events) == 1
