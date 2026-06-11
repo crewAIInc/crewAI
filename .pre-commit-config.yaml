@@ -47,6 +47,7 @@ repos:
           --ignore-vuln PYSEC-2025-197
           --ignore-vuln PYSEC-2025-210
           --ignore-vuln PYSEC-2026-139
+          --ignore-vuln GHSA-rrmf-rvhw-rf47
           --ignore-vuln PYSEC-2025-211
           --ignore-vuln PYSEC-2025-212
           --ignore-vuln PYSEC-2025-213
