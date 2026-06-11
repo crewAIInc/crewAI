@@ -260,14 +260,23 @@ def _select_tools() -> list[str]:
     labels = [_tool_label(name, desc) for name, desc in common_tools]
     labels.append("More tools...                                    Show categorized list")
 
-    selected_indices = pick_many("Tools (space to toggle, enter to confirm):", labels)
+    selection = pick_many(
+        "Tools (space to toggle, enter to confirm):",
+        labels,
+        action_indices={more_tools_index},
+    )
+    if isinstance(selection, tuple):
+        selected_indices, action_index = selection
+    else:
+        selected_indices = selection
+        action_index = more_tools_index if more_tools_index in selected_indices else None
     tools = [
         common_tools[idx][0]
         for idx in selected_indices
         if idx < more_tools_index
     ]
 
-    if more_tools_index in selected_indices:
+    if action_index == more_tools_index:
         common_tool_names = {name for name, _desc in common_tools}
         categorized_tools = [
             (category, name, desc)

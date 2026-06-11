@@ -9,8 +9,8 @@ import click
 
 
 # CrewAI brand: primary=#FF5A50 (coral), teal=#1F7982
-_CORAL = "\033[38;2;255;90;80m"   # #FF5A50
-_TEAL = "\033[38;2;31;121;130m"   # #1F7982
+_CORAL = "\033[38;2;255;90;80m"  # #FF5A50
+_TEAL = "\033[38;2;31;121;130m"  # #1F7982
 _GREEN = "\033[38;2;74;186;106m"  # #4aba6a
 _BOLD = "\033[1m"
 _DIM = "\033[2m"
@@ -88,14 +88,30 @@ def _draw_single(labels: list[str], cursor: int, *, clear: bool = False) -> None
     sys.stdout.flush()
 
 
-def _draw_multi(labels: list[str], cursor: int, selected: set[int], *, clear: bool = False) -> None:
-    hint = f"  {_DIM}↑↓ navigate, space toggle, enter confirm{_RESET}"
+def _draw_multi(
+    labels: list[str],
+    cursor: int,
+    selected: set[int],
+    *,
+    action_indices: set[int] | None = None,
+    clear: bool = False,
+) -> None:
+    action_indices = action_indices or set()
+    hint_text = "↑↓ navigate, space toggle, enter confirm"
+    if action_indices:
+        hint_text = "↑↓ navigate, space toggle, enter confirm, space/enter opens > rows"
+    hint = f"  {_DIM}{hint_text}{_RESET}"
     total = len(labels) + 1
     if clear:
         sys.stdout.write(f"\033[{total}A")
     sys.stdout.write(f"\033[2K{hint}\n")
     for i, label in enumerate(labels):
-        check = f"{_CORAL}[x]{_RESET}" if i in selected else "[ ]"
+        if i in action_indices:
+            check = f"{_TEAL}>{_RESET}  "
+        elif i in selected:
+            check = f"{_CORAL}[x]{_RESET}"
+        else:
+            check = "[ ]"
         arrow = f"{_CORAL}→{_RESET} " if i == cursor else "  "
         bold = f"{_BOLD}{label}{_RESET}" if i == cursor else label
         sys.stdout.write(f"\033[2K    {arrow}{check} {bold}\n")
@@ -128,31 +144,59 @@ def _arrow_select_one(labels: list[str]) -> int:
         sys.stdout.flush()
 
 
-def _arrow_select_multi(labels: list[str]) -> list[int]:
+def _arrow_select_multi(
+    labels: list[str],
+    *,
+    action_indices: set[int] | None = None,
+) -> tuple[list[int], int | None]:
     cursor = 0
     total = len(labels)
     selected: set[int] = set()
+    action_indices = action_indices or set()
     sys.stdout.write(_HIDE_CURSOR)
     sys.stdout.flush()
     try:
-        _draw_multi(labels, cursor, selected)
+        _draw_multi(labels, cursor, selected, action_indices=action_indices)
         while True:
             key = _read_key()
             if key == "up" and cursor > 0:
                 cursor -= 1
-                _draw_multi(labels, cursor, selected, clear=True)
+                _draw_multi(
+                    labels,
+                    cursor,
+                    selected,
+                    action_indices=action_indices,
+                    clear=True,
+                )
             elif key == "down" and cursor < total - 1:
                 cursor += 1
-                _draw_multi(labels, cursor, selected, clear=True)
+                _draw_multi(
+                    labels,
+                    cursor,
+                    selected,
+                    action_indices=action_indices,
+                    clear=True,
+                )
             elif key == "space":
+                if cursor in action_indices:
+                    _clear_lines(total + 1)
+                    return sorted(selected), cursor
                 selected ^= {cursor}
-                _draw_multi(labels, cursor, selected, clear=True)
+                _draw_multi(
+                    labels,
+                    cursor,
+                    selected,
+                    action_indices=action_indices,
+                    clear=True,
+                )
             elif key == "enter":
                 _clear_lines(total + 1)
-                return sorted(selected)
+                if cursor in action_indices:
+                    return sorted(selected), cursor
+                return sorted(selected), None
             elif key in ("esc", "q"):
                 _clear_lines(total + 1)
-                return []
+                return [], None
     finally:
         sys.stdout.write(_SHOW_CURSOR)
         sys.stdout.flush()
@@ -175,20 +219,32 @@ def _numbered_select(labels: list[str]) -> int:
         click.secho(f"  Invalid choice. Enter 1-{len(labels)}.", fg="red")
 
 
-def _numbered_select_multi(labels: list[str]) -> list[int]:
+def _numbered_select_multi(
+    labels: list[str],
+    *,
+    action_indices: set[int] | None = None,
+) -> tuple[list[int], int | None]:
+    action_indices = action_indices or set()
     for idx, label in enumerate(labels, 1):
         click.echo(f"    {idx}. {label}")
     click.echo()
-    raw = click.prompt("  Select (comma-separated numbers, or empty to skip)", default="", show_default=False)
+    raw = click.prompt(
+        "  Select (comma-separated numbers, or empty to skip)",
+        default="",
+        show_default=False,
+    )
     if not raw.strip():
-        return []
+        return [], None
     indices = []
     for part in raw.split(","):
         with suppress(ValueError):
             num = int(part.strip())
             if 1 <= num <= len(labels):
-                indices.append(num - 1)
-    return sorted(set(indices))
+                idx = num - 1
+                if idx in action_indices:
+                    return sorted(set(indices)), idx
+                indices.append(idx)
+    return sorted(set(indices)), None
 
 
 # ── Public API ──────────────────────────────────────────────────
@@ -243,18 +299,37 @@ def pick_one(title: str, labels: list[str]) -> int:
     return _numbered_select(labels)
 
 
-def pick_many(title: str, labels: list[str]) -> list[int]:
+def pick_many(
+    title: str,
+    labels: list[str],
+    *,
+    action_indices: set[int] | None = None,
+) -> list[int] | tuple[list[int], int | None]:
     """Arrow-key multi-select with checkboxes.
 
     Returns:
-        Sorted list of selected indices (may be empty).
+        Sorted list of selected indices, or ``(indices, action_index)`` when
+        ``action_indices`` is provided.
     """
     click.echo()
     click.secho(f"  {title}", fg="cyan")
 
     if _is_interactive():
         try:
-            return _arrow_select_multi(labels)
+            selected, action = _arrow_select_multi(
+                labels,
+                action_indices=action_indices,
+            )
         except Exception:
-            return _numbered_select_multi(labels)
-    return _numbered_select_multi(labels)
+            selected, action = _numbered_select_multi(
+                labels,
+                action_indices=action_indices,
+            )
+    else:
+        selected, action = _numbered_select_multi(
+            labels,
+            action_indices=action_indices,
+        )
+    if action_indices is None:
+        return selected
+    return selected, action

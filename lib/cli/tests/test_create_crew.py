@@ -7,6 +7,7 @@ from unittest import mock
 import pytest
 from click.testing import CliRunner
 import crewai_cli.create_json_crew as json_crew
+import crewai_cli.tui_picker as tui_picker
 from crewai_cli.create_crew import create_crew, create_folder_structure
 from crewai_cli.create_json_crew import _default_model_for_provider, create_json_crew
 
@@ -426,10 +427,10 @@ def test_json_wizard_text_prompt_uses_full_prompt_for_readline(monkeypatch):
 
 
 def test_json_wizard_tool_picker_prioritizes_common_tools(monkeypatch):
-    picker_calls: list[tuple[str, list[str]]] = []
+    picker_calls: list[tuple[str, list[str], dict[str, object]]] = []
 
-    def pick_many(title: str, labels: list[str]) -> list[int]:
-        picker_calls.append((title, labels))
+    def pick_many(title: str, labels: list[str], **kwargs) -> list[int]:
+        picker_calls.append((title, labels, kwargs))
         return [0, 2]
 
     monkeypatch.setattr(json_crew, "pick_many", pick_many)
@@ -439,6 +440,7 @@ def test_json_wizard_tool_picker_prioritizes_common_tools(monkeypatch):
     assert tools == ["SerperDevTool", "DirectoryReadTool"]
     assert len(picker_calls) == 1
     labels = picker_calls[0][1]
+    assert picker_calls[0][2]["action_indices"] == {5}
     assert labels[0].strip().endswith("SerperDevTool")
     assert labels[1].strip().endswith("ScrapeWebsiteTool")
     assert labels[2].strip().endswith("DirectoryReadTool")
@@ -451,10 +453,10 @@ def test_json_wizard_tool_picker_prioritizes_common_tools(monkeypatch):
 def test_json_wizard_tool_picker_expands_more_tools(monkeypatch):
     picker_calls: list[tuple[str, list[str]]] = []
 
-    def pick_many(title: str, labels: list[str]) -> list[int]:
+    def pick_many(title: str, labels: list[str], **_kwargs) -> tuple[list[int], int | None] | list[int]:
         picker_calls.append((title, labels))
         if title == "Tools (space to toggle, enter to confirm):":
-            return [0, 5]
+            return [0], 5
         return [
             idx
             for idx, label in enumerate(labels)
@@ -469,6 +471,17 @@ def test_json_wizard_tool_picker_expands_more_tools(monkeypatch):
     assert len(picker_calls) == 2
     assert picker_calls[1][0] == "More tools:"
     assert any("Search & Research:" in label for label in picker_calls[1][1])
+
+
+def test_multi_picker_enter_activates_action_row(monkeypatch):
+    monkeypatch.setattr(tui_picker, "_read_key", lambda: "enter")
+    monkeypatch.setattr(tui_picker, "_draw_multi", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(tui_picker, "_clear_lines", lambda *_args, **_kwargs: None)
+
+    assert tui_picker._arrow_select_multi(
+        ["More tools..."],
+        action_indices={0},
+    ) == ([], 0)
 
 
 def test_json_wizard_agent_attribute_prompts_are_compact(monkeypatch):
