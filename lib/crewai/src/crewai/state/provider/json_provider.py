@@ -4,6 +4,7 @@ import glob
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional
 import json
 import aiofiles
 import asyncio
@@ -11,6 +12,12 @@ import asyncio
 logger = logging.getLogger(__name__)
 
 def _build_path(location: str, branch: str, parent_id: str | None = None) -> Path:
+    # Validate branch to prevent path traversal
+    # Use a list of separators to avoid issues with backslashes in some linters
+    separators = ["/", "\\"]
+    if any(sep in branch for sep in separators) or ".." in branch:
+        raise ValueError("Invalid branch name: " + branch + ". Branch cannot contain path separators or '..'")
+    
     base_dir = Path(location) / branch
     ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     uid = uuid.uuid4().hex[:8]
@@ -22,13 +29,7 @@ class JsonProvider:
         self.location = location
 
     def checkpoint(self, data: str, location: str, *, parent_id: str | None = None, branch: str = "main") -> str:
-        \"\"\"Write a JSON checkpoint file atomically.
-        
-        The use of a temporary file and os.replace provides atomicity for each individual write 
-        (avoiding partial/corrupt files) but does not prevent multiple concurrent writers from 
-        overwriting each other's complete checkpoints. Concurrent-writer protection would 
-        require additional coordination such as an advisory file lock.
-        \"\"\"
+        \"\"\"Write a JSON checkpoint file atomically.\"\"\"
         file_path = _build_path(location, branch, parent_id)
         file_path.parent.mkdir(parents=True, exist_ok=True)
         
@@ -100,20 +101,32 @@ class JsonProvider:
             
         return str(file_path)
 
-    def prune(self, location: str, branch: str, keep: int = 10) -> int:
+    def prune(self, location: str, branch: str, keep: int = 10, max_keep: Optional[int] = None) -> int:
+        # Validate branch to prevent path traversal
+        separators = ["/", "\\"]
+        if any(sep in branch for sep in separators) or ".." in branch:
+            raise ValueError("Invalid branch name: " + branch + ". Branch cannot contain path separators or '..'")
+            
         branch_dir = Path(location) / branch
         if not branch_dir.exists():
             return 0
+        
+        if keep < 0:
+            raise ValueError("keep parameter cannot be negative")
+            
+        effective_keep = max_keep if max_keep is not None else keep
         
         pattern = os.path.join(str(branch_dir), "*.json")
         files = [f for f in glob.glob(pattern) if not os.path.basename(f).startswith('.')]
         files = sorted(files, key=os.path.getmtime)
         
-        if len(files) <= keep:
+        if effective_keep >= len(files):
             return 0
             
+        files_to_delete = files[:-effective_keep] if effective_keep > 0 else files
+        
         deleted_count = 0
-        for file in files[:-keep]:
+        for file in files_to_delete:
             try:
                 os.remove(file)
                 deleted_count += 1
