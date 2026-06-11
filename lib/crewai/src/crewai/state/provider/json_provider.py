@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 import glob
 import logging
 import os
 from pathlib import Path
+import tempfile
+import threading
 from typing import Literal
 import uuid
 
@@ -35,9 +38,18 @@ def _safe_branch(base: str, branch: str) -> None:
 
 
 class JsonProvider(BaseProvider):
-    """Persists runtime state checkpoints as JSON files on the local filesystem."""
+    """Persists runtime state checkpoints as JSON files on the local filesystem.
+
+    File writes are atomic (write-to-temp then ``os.replace``) and serialized
+    by an internal lock so concurrent callers cannot create diverging lineage.
+    """
 
     provider_type: Literal["json"] = "json"
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._lock = threading.Lock()
+        self._async_lock = asyncio.Lock()
 
     def checkpoint(
         self,
@@ -47,7 +59,11 @@ class JsonProvider(BaseProvider):
         parent_id: str | None = None,
         branch: str = "main",
     ) -> str:
-        """Write a JSON checkpoint file.
+        """Write a JSON checkpoint file atomically.
+
+        Uses write-to-temp + ``os.replace()`` to guarantee the checkpoint
+        file is never partially written. A threading lock serializes
+        concurrent writes to prevent lineage divergence.
 
         Args:
             data: The serialized JSON string to persist.
@@ -60,12 +76,25 @@ class JsonProvider(BaseProvider):
         Returns:
             The path to the written checkpoint file.
         """
-        file_path = _build_path(location, branch, parent_id)
-        file_path.parent.mkdir(parents=True, exist_ok=True)
+        with self._lock:
+            file_path = _build_path(location, branch, parent_id)
+            file_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(file_path, "w") as f:
-            f.write(data)
-        return str(file_path)
+            fd, tmp_path = tempfile.mkstemp(dir=str(file_path.parent), suffix=".tmp")
+            try:
+                with os.fdopen(fd, "w") as f:
+                    f.write(data)
+                    f.flush()
+                    os.fsync(f.fileno())
+                os.replace(tmp_path, str(file_path))
+            except BaseException:
+                # Clean up temp file on failure
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
+                raise
+            return str(file_path)
 
     async def acheckpoint(
         self,
@@ -75,7 +104,11 @@ class JsonProvider(BaseProvider):
         parent_id: str | None = None,
         branch: str = "main",
     ) -> str:
-        """Write a JSON checkpoint file asynchronously.
+        """Write a JSON checkpoint file atomically and asynchronously.
+
+        Uses write-to-temp + ``os.replace()`` to guarantee the checkpoint
+        file is never partially written. An asyncio lock serializes
+        concurrent writes to prevent lineage divergence.
 
         Args:
             data: The serialized JSON string to persist.
@@ -88,12 +121,24 @@ class JsonProvider(BaseProvider):
         Returns:
             The path to the written checkpoint file.
         """
-        file_path = _build_path(location, branch, parent_id)
-        await aiofiles.os.makedirs(str(file_path.parent), exist_ok=True)
+        async with self._async_lock:
+            file_path = _build_path(location, branch, parent_id)
+            await aiofiles.os.makedirs(str(file_path.parent), exist_ok=True)
 
-        async with aiofiles.open(file_path, "w") as f:
-            await f.write(data)
-        return str(file_path)
+            fd, tmp_path = tempfile.mkstemp(dir=str(file_path.parent), suffix=".tmp")
+            try:
+                with os.fdopen(fd, "w") as f:
+                    f.write(data)
+                    f.flush()
+                    os.fsync(f.fileno())
+                os.replace(tmp_path, str(file_path))
+            except BaseException:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
+                raise
+            return str(file_path)
 
     def prune(self, location: str, max_keep: int, *, branch: str = "main") -> int:
         """Remove oldest checkpoint files beyond *max_keep* on a branch."""
