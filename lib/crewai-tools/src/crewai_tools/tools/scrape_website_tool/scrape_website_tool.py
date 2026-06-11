@@ -3,9 +3,7 @@ import re
 from typing import Any
 
 from pydantic import Field
-import requests
-
-from crewai_tools.security.safe_path import validate_url
+from crewai_tools.security.safe_path import safe_get
 
 
 try:
@@ -75,8 +73,7 @@ class ScrapeWebsiteTool(BaseTool):
         if website_url is None:
             raise ValueError("Website URL must be provided.")
 
-        website_url = validate_url(website_url)
-        page = requests.get(
+        page = safe_get(
             website_url,
             timeout=15,
             headers=self.headers,
