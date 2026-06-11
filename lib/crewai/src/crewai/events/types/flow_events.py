@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_serializer
 
 from crewai.events.base_events import BaseEvent
 
@@ -56,6 +56,10 @@ class MethodExecutionFailedEvent(FlowEvent):
     type: Literal["method_execution_failed"] = "method_execution_failed"
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_serializer("error")
+    def _serialize_error(self, error: Exception) -> str:
+        return str(error)
 
 
 class MethodExecutionPausedEvent(FlowEvent):

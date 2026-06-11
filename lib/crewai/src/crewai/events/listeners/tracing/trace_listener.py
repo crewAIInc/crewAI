@@ -292,7 +292,7 @@ class TraceCollectionListener(BaseEventListener):
         @event_bus.on(CrewKickoffCompletedEvent)
         def on_crew_completed(source: Any, event: CrewKickoffCompletedEvent) -> None:
             self._handle_trace_event("crew_kickoff_completed", source, event)
-            if self.batch_manager.defer_session_finalization:
+            if self._should_defer_session_finalization():
                 return
             if self._nested_in_flow_execution():
                 return
@@ -306,7 +306,7 @@ class TraceCollectionListener(BaseEventListener):
         @event_bus.on(CrewKickoffFailedEvent)
         def on_crew_failed(source: Any, event: CrewKickoffFailedEvent) -> None:
             self._handle_trace_event("crew_kickoff_failed", source, event)
-            if self.batch_manager.defer_session_finalization:
+            if self._should_defer_session_finalization():
                 return
             if self._nested_in_flow_execution():
                 return
@@ -734,7 +734,7 @@ class TraceCollectionListener(BaseEventListener):
             if not self.batch_manager.is_batch_initialized():
                 return
             # Multi-turn flows defer batch finalization to finalize_session_traces().
-            if self.batch_manager.defer_session_finalization:
+            if self._should_defer_session_finalization():
                 return
             self.batch_manager.finalize_batch()
 
@@ -744,6 +744,15 @@ class TraceCollectionListener(BaseEventListener):
         from crewai.flow.flow_context import current_flow_id
 
         return current_flow_id.get() is not None
+
+    def _should_defer_session_finalization(self) -> bool:
+        """True when the active trace belongs to a deferred flow session."""
+        from crewai.flow.flow_context import current_flow_defer_trace_finalization
+
+        return (
+            self.batch_manager.defer_session_finalization
+            or current_flow_defer_trace_finalization.get()
+        )
 
     def _flow_owns_trace_batch(self) -> bool:
         """True when an in-flight conversational flow already owns the trace batch."""
@@ -786,7 +795,11 @@ class TraceCollectionListener(BaseEventListener):
         (``current_flow_id``) to keep LLM/tool events from falling back to an
         implicit crew batch.
         """
-        from crewai.flow.flow_context import current_flow_id, current_flow_name
+        from crewai.flow.flow_context import (
+            current_flow_defer_trace_finalization,
+            current_flow_id,
+            current_flow_name,
+        )
 
         flow_id = current_flow_id.get()
         if flow_id is None:
@@ -802,6 +815,8 @@ class TraceCollectionListener(BaseEventListener):
         }
         self.batch_manager.batch_owner_type = "flow"
         self.batch_manager.batch_owner_id = flow_id
+        if current_flow_defer_trace_finalization.get():
+            self.batch_manager.defer_session_finalization = True
         self._initialize_batch(user_context, execution_metadata)
         return True
 

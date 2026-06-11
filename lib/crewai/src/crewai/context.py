@@ -117,8 +117,10 @@ def capture_execution_context(
     )
 
 
-def apply_execution_context(ctx: ExecutionContext) -> None:
+def apply_execution_context(ctx: ExecutionContext | dict[str, Any]) -> None:
     """Write an ExecutionContext back into the ContextVars."""
+    if isinstance(ctx, dict):
+        ctx = ExecutionContext.model_validate(ctx)
     _current_task_id.set(ctx.current_task_id)
     current_flow_request_id.set(ctx.flow_request_id)
     current_flow_id.set(ctx.flow_id)

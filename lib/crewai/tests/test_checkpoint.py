@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 import json
 import os
 import sqlite3
@@ -16,6 +17,7 @@ from pydantic import BaseModel
 from crewai.agent.core import Agent
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.crew import Crew
+from crewai.llms.base_llm import BaseLLM
 from crewai.flow.flow import _INITIAL_STATE_CLASS_MARKER, Flow, start
 from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.state.checkpoint_listener import (
@@ -682,3 +684,85 @@ class TestAgentCheckpoint:
             cfg = CheckpointConfig(restore_from=loc)
             restored = Agent.from_checkpoint(cfg)
             assert restored._kickoff_event_id == "evt-456"
+
+
+class _FinalAnswerLLM(BaseLLM):
+    """Stub LLM that always returns a final answer without any API calls."""
+
+    def __init__(self) -> None:
+        super().__init__(model="stub")
+
+    def call(
+        self,
+        messages,
+        tools=None,
+        callbacks=None,
+        available_functions=None,
+        from_task=None,
+        from_agent=None,
+        response_model=None,
+    ):
+        return "Final Answer: done."
+
+    def supports_function_calling(self) -> bool:
+        return False
+
+    def supports_stop_words(self) -> bool:
+        return False
+
+    def get_context_window_size(self) -> int:
+        return 4096
+
+    async def acall(self, *args, **kwargs):
+        raise NotImplementedError
+
+
+class TestCheckpointReusedExecutor:
+    """Checkpoint serialization stamps every live Flow's completed methods.
+
+    The agent executor is a Flow reused across a crew's tasks, so the stamp
+    must not be read back as a restore signal on the next task — otherwise the
+    second task replays as a resume and never reaches a final answer.
+    """
+
+    def test_second_task_runs_with_checkpointing_enabled(self) -> None:
+        agent = Agent(role="r", goal="g", backstory="b", llm=_FinalAnswerLLM())
+        task1 = Task(description="first", expected_output="x", agent=agent)
+        task2 = Task(description="second", expected_output="y", agent=agent)
+        with tempfile.TemporaryDirectory() as d:
+            crew = Crew(
+                agents=[agent],
+                tasks=[task1, task2],
+                verbose=False,
+                checkpoint=CheckpointConfig(
+                    provider=JsonProvider(location=d),
+                    on_events=["task_started", "task_completed"],
+                ),
+            )
+            result = crew.kickoff()
+
+        assert len(result.tasks_output) == 2
+        assert result.tasks_output[1].raw
+
+
+class TestCustomLLMCheckpointRestore:
+    """A custom BaseLLM subclass serializes with the inherited llm_type "base".
+
+    Restoring it must not try to instantiate the abstract BaseLLM; it is rebuilt
+    as a concrete LLM from the saved config instead.
+    """
+
+    def test_restore_does_not_instantiate_abstract_base_llm(self) -> None:
+        agent = Agent(role="r", goal="g", backstory="b", llm=_FinalAnswerLLM())
+        task = Task(description="d", expected_output="e", agent=agent)
+        crew = Crew(agents=[agent], tasks=[task], verbose=False)
+
+        raw = RuntimeState(root=[crew]).model_dump_json()
+        restored = RuntimeState.model_validate_json(
+            raw, context={"from_checkpoint": True}
+        )
+
+        llm = restored.root[0].agents[0].llm
+        assert isinstance(llm, BaseLLM)
+        assert not inspect.isabstract(type(llm))
+        assert llm.model == "stub"
