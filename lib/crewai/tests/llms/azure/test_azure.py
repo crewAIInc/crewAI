@@ -1218,6 +1218,114 @@ def test_azure_mistral_and_other_models():
             assert params["model"] == model_name
 
 
+@pytest.mark.parametrize(
+    ("model", "expected"),
+    [
+        ("gpt-4o", True),
+        ("azure/gpt-4o", True),
+        ("openai/gpt-4o", True),
+        ("azure:openai:gpt-4o", True),
+        ("gpt-4o:latest", True),
+        ("openai/gpt-4o:2024-08-06", True),
+        ("text-embedding-3-large", True),
+        ("text-generation", False),
+        ("prod-gpt-4o", False),
+        ("not-gpt-compatible", False),
+        ("mytext-model", False),
+        ("deepseek-chat", False),
+    ],
+)
+def test_azure_openai_model_detection_uses_bounded_prefixes(model, expected):
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    data = AzureCompletion._normalize_azure_fields(
+        {
+            "model": model,
+            "endpoint": "https://models.inference.ai.azure.com",
+        }
+    )
+
+    assert data["is_azure_openai_endpoint"] is False
+    assert data["is_openai_model"] is expected
+
+
+def test_azure_openai_model_detection_allows_explicit_override():
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    data = AzureCompletion._normalize_azure_fields(
+        {
+            "model": "prod-gpt-4o",
+            "endpoint": "https://models.inference.ai.azure.com",
+            "is_openai_model": True,
+        }
+    )
+
+    assert data["is_azure_openai_endpoint"] is False
+    assert data["is_openai_model"] is True
+
+
+def test_azure_openai_model_detection_allows_false_override():
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    data = AzureCompletion._normalize_azure_fields(
+        {
+            "model": "gpt-4o",
+            "endpoint": "https://models.inference.ai.azure.com",
+            "is_openai_model": False,
+        }
+    )
+
+    assert data["is_azure_openai_endpoint"] is False
+    assert data["is_openai_model"] is False
+
+
+def test_azure_openai_model_detection_rejects_string_override_false():
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    data = AzureCompletion._normalize_azure_fields(
+        {
+            "model": "deepseek-chat",
+            "endpoint": "https://models.inference.ai.azure.com",
+            "is_openai_model": "False",
+        }
+    )
+
+    assert data["is_azure_openai_endpoint"] is False
+    assert data["is_openai_model"] is False
+
+
+@pytest.mark.parametrize("override", ["true", "True", "1", 1])
+def test_azure_openai_model_detection_accepts_truthy_override(override):
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    data = AzureCompletion._normalize_azure_fields(
+        {
+            "model": "prod-gpt-4o",
+            "endpoint": "https://models.inference.ai.azure.com",
+            "is_openai_model": override,
+        }
+    )
+
+    assert data["is_azure_openai_endpoint"] is False
+    assert data["is_openai_model"] is True
+
+
+def test_azure_openai_endpoint_overrides_deployment_name_heuristic():
+    from crewai.llms.providers.azure.completion import AzureCompletion
+
+    data = AzureCompletion._normalize_azure_fields(
+        {
+            "model": "production-model",
+            "endpoint": (
+                "https://test.openai.azure.com/openai/deployments/production-model"
+            ),
+        }
+    )
+
+    assert data["is_azure_openai_endpoint"] is True
+    assert data["is_openai_model"] is True
+
+
 def test_azure_completion_params_preparation_with_drop_params():
     """
     Test that completion parameters are properly prepared with drop paramaeters attribute respected

@@ -148,11 +148,53 @@ class AzureCompletion(BaseLLM):
         # (e.g. "gpt5nano", "my-gpt4", "production-model"), so any deployment
         # hosted on an Azure OpenAI endpoint is treated as OpenAI-compatible.
         # For non-standard endpoints the prefix heuristic remains a fallback.
-        data["is_openai_model"] = data["is_azure_openai_endpoint"] or any(
-            prefix in model.lower()
-            for prefix in ["gpt-", "gpt5", "o1-", "o3-", "o4-", "text-"]
+        # Custom aliases that do not expose the model family at a segment
+        # boundary can still opt in explicitly with is_openai_model=True.
+        explicit_openai_model = AzureCompletion._coerce_bool(
+            data.get("is_openai_model")
         )
+        if data["is_azure_openai_endpoint"]:
+            data["is_openai_model"] = True
+        elif "is_openai_model" in data and explicit_openai_model is not None:
+            data["is_openai_model"] = explicit_openai_model
+        else:
+            data["is_openai_model"] = AzureCompletion._is_openai_model_name(model)
         return data
+
+    @staticmethod
+    def _coerce_bool(value: Any) -> bool | None:
+        if isinstance(value, bool) or value is None:
+            return value
+        if isinstance(value, str):
+            value = value.strip().lower()
+            if value in {"1", "true", "yes", "on"}:
+                return True
+            if value in {"0", "false", "no", "off"}:
+                return False
+        if isinstance(value, int):
+            return bool(value)
+        return None
+
+    @staticmethod
+    def _is_openai_model_name(model: str) -> bool:
+        model_segments = [
+            segment
+            for namespace in model.lower().split("/")
+            for segment in namespace.split(":")
+            if segment
+        ]
+        return any(
+            segment.startswith(prefix)
+            for segment in model_segments
+            for prefix in [
+                "gpt-",
+                "gpt5",
+                "o1-",
+                "o3-",
+                "o4-",
+                "text-embedding-",
+            ]
+        )
 
     @staticmethod
     def _is_azure_openai_endpoint(endpoint: str | None) -> bool:
