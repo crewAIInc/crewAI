@@ -2,6 +2,7 @@
 
 import asyncio
 import threading
+import time
 from datetime import datetime
 from typing import Optional
 
@@ -17,6 +18,7 @@ from crewai.events.types.flow_events import (
     MethodExecutionStartedEvent,
 )
 from crewai.flow.flow import Flow, and_, listen, or_, router, start
+from crewai.flow.runtime import LockedModelProxy, StateProxy
 
 
 def test_simple_sequential_flow():
@@ -554,6 +556,121 @@ def test_flow_uuid_structured():
     assert len(flow.state.id) == 36
     assert flow.state.counter == 2
     assert flow.state.message == "final"
+
+
+def test_flow_state_proxy_wraps_nested_pydantic_models():
+    """Semantic-negative test for the nested-BaseModel locking gap.
+
+    ``StateProxy`` only wrapped ``list`` and ``dict`` attributes; nested Pydantic
+    models fell through unwrapped, so attribute writes on them bypassed the flow
+    state lock and could race under parallel listeners. With the
+    ``LockedModelProxy`` fix, ``flow.state.profile`` is a lock-guarded proxy
+    (distinct from the raw model and exposing ``_lock``), and mutations route
+    through the lock. Before the fix, ``profile is not self._state.profile`` and
+    ``hasattr(profile, "_lock")`` are both False and this test fails.
+    """
+
+    class UserProfile(BaseModel):
+        counter: int = 0
+
+    class MyStructuredState(BaseModel):
+        profile: UserProfile = UserProfile()
+
+    class NestedModelFlow(Flow[MyStructuredState]):
+        @start()
+        def first_method(self):
+            profile = self.state.profile
+            # The proxy must wrap the nested model, not return it raw.
+            assert profile is not self._state.profile
+            assert hasattr(profile, "_lock")
+
+            # Lock-guarded mutation is reflected on the underlying model.
+            profile.counter += 1
+            assert self.state.profile.counter == 1
+
+    flow = NestedModelFlow()
+    flow.kickoff()
+
+
+def test_locked_model_proxy_serializes_writes_under_thread_contention():
+    """Behavioral concurrency test for the nested-``BaseModel`` locking fix.
+
+    Unlike the structural test above (which asserts the model is now lock-wrapped),
+    this drives real thread contention to prove the lock is actually *engaged*: a
+    nested-model attribute write must acquire the flow-state lock, so it cannot
+    proceed while another holder — e.g. a state snapshot/persist — holds that lock.
+
+    Before the ``LockedModelProxy`` fix, ``state.profile`` is the raw model and its
+    writes bypass the lock entirely, so the write would complete *while the lock is
+    held* (the race this PR closes). After the fix the write blocks until the lock
+    is released. The assertion ``not write_done.is_set()`` therefore fails before the
+    fix and passes after.
+    """
+
+    class UserProfile(BaseModel):
+        value: int = 0
+
+    class MyStructuredState(BaseModel):
+        profile: UserProfile = UserProfile()
+
+    lock = threading.Lock()
+    proxy = StateProxy(MyStructuredState(), lock)
+
+    write_started = threading.Event()
+    write_done = threading.Event()
+
+    def writer() -> None:
+        write_started.set()
+        # Routes through LockedModelProxy.__setattr__ -> acquires `lock`.
+        proxy.profile.value = 42
+        write_done.set()
+
+    worker = threading.Thread(target=writer)
+    with lock:  # stand in for a lock-protected state operation (snapshot/persist)
+        worker.start()
+        assert write_started.wait(timeout=2.0)
+        # Give the writer time to attempt the write. With the fix it is blocked on
+        # the lock we hold, so it must NOT have completed yet.
+        time.sleep(0.1)
+        assert not write_done.is_set(), (
+            "nested-model write proceeded while the flow-state lock was held — "
+            "the write bypassed the lock (pre-fix race)"
+        )
+
+    # Lock released: the serialized write now completes with the written value.
+    assert write_done.wait(timeout=2.0)
+    worker.join()
+    assert proxy.profile.value == 42
+
+
+def test_state_proxy_setattr_unwraps_locked_model_proxy():
+    """Assigning a proxied nested model back into state must store the native model.
+
+    The read-side fix returns a nested ``BaseModel`` as a ``LockedModelProxy``. If
+    that value is assigned back (``state.profile = state.profile``), ``__setattr__``
+    must unwrap it to the underlying model first, mirroring the existing
+    ``LockedListProxy``/``LockedDictProxy`` handling, so a proxy wrapper is never
+    persisted inside state. Without the unwrap, the stored value is the proxy itself.
+    """
+
+    class UserProfile(BaseModel):
+        value: int = 0
+
+    class MyStructuredState(BaseModel):
+        profile: UserProfile = UserProfile()
+
+    lock = threading.Lock()
+    proxy = StateProxy(MyStructuredState(), lock)
+
+    read_back = proxy.profile
+    assert isinstance(read_back, LockedModelProxy)
+
+    # Re-assign the proxied model back onto state; it must be unwrapped.
+    proxy.profile = read_back
+
+    stored = object.__getattribute__(proxy, "_proxy_state").profile
+    assert isinstance(stored, UserProfile)
+    assert not isinstance(stored, LockedModelProxy)
 
 
 def test_router_with_multiple_conditions():
