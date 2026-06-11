@@ -4,6 +4,55 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="11 jun 2026">
+  ## v1.14.7
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.7)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar backends padrão plugáveis para memória, conhecimento, rag e fluxo.
+  - Exibir o verdadeiro finish_reason, parâmetros de amostragem e response.id em eventos LLM.
+  - Tipar os gatilhos DSL como decoradores cientes de rotas.
+  - Adicionar API de chat para fluxos de conversa.
+  - Tornar o backend de bloqueio substituível.
+  - Construir FlowDefinition a partir de metadados Flow DSL.
+  - Adicionar provedor nativo Snowflake Cortex LLM.
+  - Adicionar suporte a arquivos de agentes treinados pela equipe.
+
+  ### Correções de Bugs
+  - Corrigir checkpoint para reconstruir BaseLLM personalizado como LLM concreto na restauração.
+  - Controlar a restauração com uma flag para evitar que snapshots ao vivo sejam reproduzidos como retomar.
+  - Escopar o estado de execução por execução para limitar o crescimento e isolar execuções concorrentes.
+  - Corrigir configuração de telemetria no crewai-login.
+  - Respeitar suppress_flow_events para eventos de execução de método.
+  - Restaurar [project.scripts] no pacote crewai para instalação da ferramenta uv.
+  - Resolver CVEs de pip-audit para aiohttp, docling e docling-core.
+  - Corrigir entrada de arquivo que não estava funcionando de forma confiável.
+  - Corrigir histórias de resultados de ferramentas incompletas do Snowflake Claude.
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.14.7.
+  - Atualizar documentação do coletor OpenTelemetry.
+  - Atualizar guia do LLM NVIDIA Nemotron.
+  - Adicionar guia de integração do Databricks.
+  - Adicionar guia de integração do Snowflake.
+
+  ### Desempenho
+  - Melhorar a velocidade de importação do crewai através do carregamento preguiçoso de imports do docling.
+
+  ### Refatoração
+  - Simplificar a avaliação de condições de fluxo para ser sem estado por evento.
+  - Desacoplar a lógica de conversa da execução e adicionar uma conversational_definition.
+  - Dividir `flow.py` em DSL, definição e execução.
+
+  ## Contribuidores
+
+  @Luzk, @alex-clawd, @devin-ai-integration[bot], @greysonlalonde, @gvieira, @jessemiller, @lorenzejay, @lucasgomide, @mattatcha, @vinibrsl
+
+</Update>
+
 <Update label="10 jun 2026">
   ## v1.14.7rc2
 
