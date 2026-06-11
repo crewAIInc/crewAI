@@ -408,6 +408,23 @@ def test_json_wizard_shows_interpolation_hint(capsys):
     assert '"description"' not in output
 
 
+def test_json_wizard_text_prompt_uses_full_prompt_for_readline(monkeypatch):
+    prompts: list[str] = []
+
+    monkeypatch.setattr(
+        json_crew, "_readline_safe_prompt", lambda prompt: f"safe:{prompt}"
+    )
+    monkeypatch.setattr(
+        "builtins.input", lambda prompt: prompts.append(prompt) or "Draft content"
+    )
+
+    assert json_crew._prompt_text("Goal", spacing_before=False) == "Draft content"
+    assert len(prompts) == 1
+    assert prompts[0].startswith("safe:")
+    assert "Goal" in prompts[0]
+    assert " > " in prompts[0]
+
+
 def test_json_wizard_agent_attribute_prompts_are_compact(monkeypatch):
     prompt_calls: list[tuple[str, bool]] = []
     prompt_values = {

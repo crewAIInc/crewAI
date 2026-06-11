@@ -150,6 +150,7 @@ class TestDeployCommand(unittest.TestCase):
     @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
     @patch("crewai_cli.deploy.main.git.Repository.origin_url")
     @patch("builtins.input")
+    @pytest.mark.timeout(180)
     def test_create_crew(self, mock_input, mock_git_origin_url, mock_fetch_env):
         mock_fetch_env.return_value = {"ENV_VAR": "value"}
         mock_git_origin_url.return_value = "https://github.com/test/repo.git"

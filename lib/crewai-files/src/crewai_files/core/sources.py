@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator, Iterator
 import inspect
+import json
 import mimetypes
 from pathlib import Path
 from typing import Annotated, Any, BinaryIO, Protocol, cast, runtime_checkable
@@ -21,6 +22,9 @@ from pydantic_core import CoreSchema, core_schema
 from typing_extensions import TypeIs
 
 from crewai_files.core.constants import DEFAULT_MAX_FILE_SIZE_BYTES, MAGIC_BUFFER_SIZE
+
+
+OCTET_STREAM = "application/octet-stream"
 
 
 @runtime_checkable
@@ -56,13 +60,46 @@ class _AsyncReadableValidator:
 ValidatedAsyncReadable = Annotated[AsyncReadable, _AsyncReadableValidator()]
 
 
-def _fallback_content_type(filename: str | None) -> str:
-    """Get content type from filename extension or return default."""
+def _detect_content_type_from_bytes(data: bytes) -> str | None:
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if data.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if data.startswith(b"%PDF-"):
+        return "application/pdf"
+
+    try:
+        decoded = data.decode("utf-8")
+    except UnicodeDecodeError:
+        return None
+
+    stripped = decoded.lstrip()
+    if stripped.startswith(("{", "[")):
+        try:
+            json.loads(decoded)
+            return "application/json"
+        except json.JSONDecodeError:
+            pass
+
+    if "\x00" not in decoded:
+        return "text/plain"
+
+    return None
+
+
+def _fallback_content_type(filename: str | None, data: bytes | None = None) -> str:
+    """Get content type from bytes, filename extension, or return default."""
+    if data:
+        content_type = _detect_content_type_from_bytes(data)
+        if content_type:
+            return content_type
+
     if filename:
         mime_type, _ = mimetypes.guess_type(filename)
         if mime_type:
             return mime_type
-    return "application/octet-stream"
+
+    return OCTET_STREAM
 
 
 def generate_filename(content_type: str) -> str:
@@ -97,9 +134,19 @@ def detect_content_type(data: bytes, filename: str | None = None) -> str:
         import magic
 
         result: str = magic.from_buffer(data[:MAGIC_BUFFER_SIZE], mime=True)
-        return result
+        if result != OCTET_STREAM:
+            return result
+        return _fallback_content_type(filename, data)
     except ImportError:
-        return _fallback_content_type(filename)
+        return _fallback_content_type(filename, data)
+
+
+def _read_magic_header(path: Path) -> bytes | None:
+    try:
+        with path.open("rb") as file:
+            return file.read(MAGIC_BUFFER_SIZE)
+    except OSError:
+        return None
 
 
 def detect_content_type_from_path(path: Path, filename: str | None = None) -> str:
@@ -115,13 +162,16 @@ def detect_content_type_from_path(path: Path, filename: str | None = None) -> st
     Returns:
         The detected MIME type.
     """
+    fallback_filename = filename or path.name
     try:
         import magic
 
         result: str = magic.from_file(str(path), mime=True)
-        return result
+        if result != OCTET_STREAM:
+            return result
+        return _fallback_content_type(fallback_filename, _read_magic_header(path))
     except ImportError:
-        return _fallback_content_type(filename or path.name)
+        return _fallback_content_type(fallback_filename, _read_magic_header(path))
 
 
 class _BinaryIOValidator:

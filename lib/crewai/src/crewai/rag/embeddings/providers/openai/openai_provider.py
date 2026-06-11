@@ -29,6 +29,7 @@ class OpenAIProvider(BaseEmbeddingsProvider[OpenAIEmbeddingFunction]):
             "EMBEDDINGS_OPENAI_MODEL_NAME",
             "OPENAI_MODEL_NAME",
             "model_name",
+            "model",
         ),
     )
     api_base: str | None = Field(

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import re
 import sys
 from typing import Any
 
@@ -163,6 +164,8 @@ _FLAT_TOOLS: list[tuple[str, str]] = [
     tool for _cat, tools in _TOOL_CATEGORIES for tool in tools
 ]
 
+_ANSI_SEQUENCE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+
 
 # ── Interactive wizard ─────────────────────────────────────────
 
@@ -175,12 +178,32 @@ def _prompt_text(
 ) -> str:
     if spacing_before:
         click.echo()
-    return click.prompt(
-        click.style(f"  {label}", fg="cyan"),
-        default=default,
-        show_default=bool(default),
-        prompt_suffix=click.style(" > ", fg="bright_white"),
-    ).strip()
+
+    prompt = click.style(f"  {label}", fg="cyan")
+    if default:
+        prompt += f" [{default}]"
+    prompt += click.style(" > ", fg="bright_white")
+
+    try:
+        value = input(_readline_safe_prompt(prompt))
+    except (KeyboardInterrupt, EOFError):
+        raise click.Abort() from None
+
+    if not value and default:
+        value = default
+    return value.strip()
+
+
+def _readline_safe_prompt(prompt: str) -> str:
+    if not sys.stdin.isatty():
+        return prompt
+
+    try:
+        import readline  # noqa: F401
+    except ImportError:
+        return prompt
+
+    return _ANSI_SEQUENCE_RE.sub(lambda match: f"\001{match.group(0)}\002", prompt)
 
 
 def _confirm(label: str, default: bool = False) -> bool:

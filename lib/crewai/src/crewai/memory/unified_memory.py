@@ -322,12 +322,16 @@ class Memory(BaseModel):
         """Block until all pending background saves have completed.
 
         Called automatically by ``recall()`` and should be called by the
-        crew at shutdown to ensure no saves are lost.
+        crew at shutdown to ensure no saves are lost. Background save failures
+        are already reported through ``MemorySaveFailedEvent`` and should not
+        fail the task, crew, or flow that produced the output.
         """
         with self._pending_lock:
             pending = list(self._pending_saves)
         for future in pending:
-            future.result()  # blocks until done; re-raises exceptions
+            if future.cancelled():
+                continue
+            future.exception()  # blocks until done without re-raising failures
 
     def close(self) -> None:
         """Drain pending saves, flush storage, and shut down the background thread pool."""

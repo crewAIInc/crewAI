@@ -94,7 +94,8 @@ def _ensure_litellm() -> bool:
     global _litellm_loaded, LITELLM_AVAILABLE
     global litellm, Choices, LiteLLMDelta, Message, ModelResponseBase
     global ModelResponseStream, LiteLLMStreamingChoices, get_supported_openai_params
-    global ChatCompletionDeltaToolCall, Function, ModelResponse, supports_response_schema
+    global ChatCompletionDeltaToolCall, Function
+    global ModelResponse, supports_response_schema
 
     if _litellm_loaded:
         return LITELLM_AVAILABLE
@@ -967,15 +968,6 @@ class LLM(BaseLLM):
                     if tool_arg.function.name
                 ]
                 if tool_calls_list:
-                    usage_dict = self._usage_to_dict(usage_info)
-                    self._handle_emit_call_events(
-                        response=tool_calls_list,
-                        call_type=LLMCallType.TOOL_CALL,
-                        from_task=from_task,
-                        from_agent=from_agent,
-                        messages=params["messages"],
-                        usage=usage_dict,
-                    )
                     return tool_calls_list
 
             finish_reason, response_id_last = (
@@ -1632,15 +1624,6 @@ class LLM(BaseLLM):
                         if result is not None:
                             return result
                     else:
-                        usage_dict = self._usage_to_dict(usage_info)
-                        self._handle_emit_call_events(
-                            response=tool_calls_list,
-                            call_type=LLMCallType.TOOL_CALL,
-                            from_task=from_task,
-                            from_agent=from_agent,
-                            messages=params.get("messages"),
-                            usage=usage_dict,
-                        )
                         return tool_calls_list
 
             usage_dict = self._usage_to_dict(usage_info)
