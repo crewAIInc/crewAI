@@ -94,9 +94,11 @@ def _draw_multi(
     selected: set[int],
     *,
     action_indices: set[int] | None = None,
+    separator_indices: set[int] | None = None,
     clear: bool = False,
 ) -> None:
     action_indices = action_indices or set()
+    separator_indices = separator_indices or set()
     hint_text = "↑↓ navigate, space toggle, enter confirm"
     if action_indices:
         hint_text = "↑↓ navigate, space toggle, enter confirm, space/enter opens > rows"
@@ -106,6 +108,9 @@ def _draw_multi(
         sys.stdout.write(f"\033[{total}A")
     sys.stdout.write(f"\033[2K{hint}\n")
     for i, label in enumerate(labels):
+        if i in separator_indices:
+            sys.stdout.write(f"\033[2K      {_TEAL}{label}{_RESET}\n")
+            continue
         if i in action_indices:
             check = f"{_TEAL}>{_RESET}  "
         elif i in selected:
@@ -148,33 +153,43 @@ def _arrow_select_multi(
     labels: list[str],
     *,
     action_indices: set[int] | None = None,
+    separator_indices: set[int] | None = None,
 ) -> tuple[list[int], int | None]:
-    cursor = 0
     total = len(labels)
     selected: set[int] = set()
     action_indices = action_indices or set()
+    separator_indices = separator_indices or set()
+    cursor = _first_selectable_index(total, separator_indices)
     sys.stdout.write(_HIDE_CURSOR)
     sys.stdout.flush()
     try:
-        _draw_multi(labels, cursor, selected, action_indices=action_indices)
+        _draw_multi(
+            labels,
+            cursor,
+            selected,
+            action_indices=action_indices,
+            separator_indices=separator_indices,
+        )
         while True:
             key = _read_key()
-            if key == "up" and cursor > 0:
-                cursor -= 1
+            if key == "up":
+                cursor = _next_selectable_index(cursor, -1, total, separator_indices)
                 _draw_multi(
                     labels,
                     cursor,
                     selected,
                     action_indices=action_indices,
+                    separator_indices=separator_indices,
                     clear=True,
                 )
-            elif key == "down" and cursor < total - 1:
-                cursor += 1
+            elif key == "down":
+                cursor = _next_selectable_index(cursor, 1, total, separator_indices)
                 _draw_multi(
                     labels,
                     cursor,
                     selected,
                     action_indices=action_indices,
+                    separator_indices=separator_indices,
                     clear=True,
                 )
             elif key == "space":
@@ -187,6 +202,7 @@ def _arrow_select_multi(
                     cursor,
                     selected,
                     action_indices=action_indices,
+                    separator_indices=separator_indices,
                     clear=True,
                 )
             elif key == "enter":
@@ -223,10 +239,17 @@ def _numbered_select_multi(
     labels: list[str],
     *,
     action_indices: set[int] | None = None,
+    separator_indices: set[int] | None = None,
 ) -> tuple[list[int], int | None]:
     action_indices = action_indices or set()
-    for idx, label in enumerate(labels, 1):
-        click.echo(f"    {idx}. {label}")
+    separator_indices = separator_indices or set()
+    numbered_indices: list[int] = []
+    for idx, label in enumerate(labels):
+        if idx in separator_indices:
+            click.secho(f"    {label}", fg="cyan")
+            continue
+        numbered_indices.append(idx)
+        click.echo(f"    {len(numbered_indices)}. {label}")
     click.echo()
     raw = click.prompt(
         "  Select (comma-separated numbers, or empty to skip)",
@@ -239,12 +262,33 @@ def _numbered_select_multi(
     for part in raw.split(","):
         with suppress(ValueError):
             num = int(part.strip())
-            if 1 <= num <= len(labels):
-                idx = num - 1
+            if 1 <= num <= len(numbered_indices):
+                idx = numbered_indices[num - 1]
                 if idx in action_indices:
                     return sorted(set(indices)), idx
                 indices.append(idx)
     return sorted(set(indices)), None
+
+
+def _first_selectable_index(total: int, separator_indices: set[int]) -> int:
+    for idx in range(total):
+        if idx not in separator_indices:
+            return idx
+    return 0
+
+
+def _next_selectable_index(
+    cursor: int,
+    direction: int,
+    total: int,
+    separator_indices: set[int],
+) -> int:
+    next_cursor = cursor + direction
+    while 0 <= next_cursor < total:
+        if next_cursor not in separator_indices:
+            return next_cursor
+        next_cursor += direction
+    return cursor
 
 
 # ── Public API ──────────────────────────────────────────────────
@@ -304,6 +348,7 @@ def pick_many(
     labels: list[str],
     *,
     action_indices: set[int] | None = None,
+    separator_indices: set[int] | None = None,
 ) -> list[int] | tuple[list[int], int | None]:
     """Arrow-key multi-select with checkboxes.
 
@@ -319,16 +364,19 @@ def pick_many(
             selected, action = _arrow_select_multi(
                 labels,
                 action_indices=action_indices,
+                separator_indices=separator_indices,
             )
         except Exception:
             selected, action = _numbered_select_multi(
                 labels,
                 action_indices=action_indices,
+                separator_indices=separator_indices,
             )
     else:
         selected, action = _numbered_select_multi(
             labels,
             action_indices=action_indices,
+            separator_indices=separator_indices,
         )
     if action_indices is None:
         return selected

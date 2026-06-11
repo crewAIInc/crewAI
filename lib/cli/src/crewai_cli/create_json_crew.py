@@ -243,9 +243,12 @@ def _show_interpolation_hint(kind: str) -> None:
     )
 
 
-def _tool_label(name: str, description: str, *, category: str | None = None) -> str:
-    label = description if category is None else f"{category}: {description}"
-    return f"{label:<48s} {name}"
+def _tool_label(name: str, description: str) -> str:
+    return f"{description:<48s} {name}"
+
+
+def _tool_category_label(category: str) -> str:
+    return f"── {category} ──"
 
 
 def _select_tools() -> list[str]:
@@ -256,45 +259,40 @@ def _select_tools() -> list[str]:
         if name in tools_by_name
     ]
 
-    more_tools_index = len(common_tools)
-    labels = [_tool_label(name, desc) for name, desc in common_tools]
-    labels.append("More tools...                                    Show categorized list")
+    labels: list[str] = []
+    tool_by_index: dict[int, str] = {}
+    separator_indices: set[int] = set()
 
-    selection = pick_many(
-        "Tools (space to toggle, enter to confirm):",
-        labels,
-        action_indices={more_tools_index},
-    )
-    if isinstance(selection, tuple):
-        selected_indices, action_index = selection
-    else:
-        selected_indices = selection
-        action_index = more_tools_index if more_tools_index in selected_indices else None
-    tools = [
-        common_tools[idx][0]
-        for idx in selected_indices
-        if idx < more_tools_index
-    ]
+    separator_indices.add(len(labels))
+    labels.append(_tool_category_label("Common tools"))
+    for name, desc in common_tools:
+        tool_by_index[len(labels)] = name
+        labels.append(_tool_label(name, desc))
 
-    if action_index == more_tools_index:
-        common_tool_names = {name for name, _desc in common_tools}
-        categorized_tools = [
-            (category, name, desc)
-            for category, category_tools in _TOOL_CATEGORIES
+    common_tool_names = {name for name, _desc in common_tools}
+    for category, category_tools in _TOOL_CATEGORIES:
+        remaining_tools = [
+            (name, desc)
             for name, desc in category_tools
             if name not in common_tool_names
         ]
-        more_labels = [
-            _tool_label(name, desc, category=category)
-            for category, name, desc in categorized_tools
-        ]
-        tools.extend(
-            categorized_tools[idx][1]
-            for idx in pick_many("More tools:", more_labels)
-            if idx < len(categorized_tools)
-        )
+        if not remaining_tools:
+            continue
+        separator_indices.add(len(labels))
+        labels.append(_tool_category_label(category))
+        for name, desc in remaining_tools:
+            tool_by_index[len(labels)] = name
+            labels.append(_tool_label(name, desc))
 
-    return list(dict.fromkeys(tools))
+    selected_indices = pick_many(
+        "Tools (space to toggle, enter to confirm):",
+        labels,
+        separator_indices=separator_indices,
+    )
+    if isinstance(selected_indices, tuple):
+        selected_indices = selected_indices[0]
+
+    return [tool_by_index[idx] for idx in selected_indices if idx in tool_by_index]
 
 
 def _wizard_agent(

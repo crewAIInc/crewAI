@@ -431,7 +431,7 @@ def test_json_wizard_tool_picker_prioritizes_common_tools(monkeypatch):
 
     def pick_many(title: str, labels: list[str], **kwargs) -> list[int]:
         picker_calls.append((title, labels, kwargs))
-        return [0, 2]
+        return [1, 3]
 
     monkeypatch.setattr(json_crew, "pick_many", pick_many)
 
@@ -440,23 +440,22 @@ def test_json_wizard_tool_picker_prioritizes_common_tools(monkeypatch):
     assert tools == ["SerperDevTool", "DirectoryReadTool"]
     assert len(picker_calls) == 1
     labels = picker_calls[0][1]
-    assert picker_calls[0][2]["action_indices"] == {5}
-    assert labels[0].strip().endswith("SerperDevTool")
-    assert labels[1].strip().endswith("ScrapeWebsiteTool")
-    assert labels[2].strip().endswith("DirectoryReadTool")
-    assert labels[3].strip().endswith("FileReadTool")
-    assert labels[4].strip().endswith("FileWriterTool")
-    assert labels[0].index("Google search") < labels[0].index("SerperDevTool")
-    assert "More tools" in labels[5]
+    assert 0 in picker_calls[0][2]["separator_indices"]
+    assert labels[0] == "── Common tools ──"
+    assert labels[1].strip().endswith("SerperDevTool")
+    assert labels[2].strip().endswith("ScrapeWebsiteTool")
+    assert labels[3].strip().endswith("DirectoryReadTool")
+    assert labels[4].strip().endswith("FileReadTool")
+    assert labels[5].strip().endswith("FileWriterTool")
+    assert labels[1].index("Google search") < labels[1].index("SerperDevTool")
+    assert "More tools" not in labels
 
 
-def test_json_wizard_tool_picker_expands_more_tools(monkeypatch):
-    picker_calls: list[tuple[str, list[str]]] = []
+def test_json_wizard_tool_picker_shows_remaining_tools_by_category(monkeypatch):
+    picker_calls: list[tuple[str, list[str], dict[str, object]]] = []
 
-    def pick_many(title: str, labels: list[str], **_kwargs) -> tuple[list[int], int | None] | list[int]:
-        picker_calls.append((title, labels))
-        if title == "Tools (space to toggle, enter to confirm):":
-            return [0], 5
+    def pick_many(title: str, labels: list[str], **kwargs) -> list[int]:
+        picker_calls.append((title, labels, kwargs))
         return [
             idx
             for idx, label in enumerate(labels)
@@ -467,21 +466,32 @@ def test_json_wizard_tool_picker_expands_more_tools(monkeypatch):
 
     tools = json_crew._select_tools()
 
-    assert tools == ["SerperDevTool", "BraveSearchTool"]
-    assert len(picker_calls) == 2
-    assert picker_calls[1][0] == "More tools:"
-    assert any("Search & Research:" in label for label in picker_calls[1][1])
+    assert tools == ["BraveSearchTool"]
+    assert len(picker_calls) == 1
+    labels = picker_calls[0][1]
+    assert "── Search & Research ──" in labels
+    assert "── Web Scraping ──" in labels
+    assert "── File & Document ──" in labels
+    assert any(label.strip().endswith("BraveSearchTool") for label in labels)
+    assert not any("Search & Research:" in label for label in labels)
 
 
-def test_multi_picker_enter_activates_action_row(monkeypatch):
+def test_multi_picker_skips_separator_on_initial_cursor(monkeypatch):
+    cursors: list[int] = []
+
     monkeypatch.setattr(tui_picker, "_read_key", lambda: "enter")
-    monkeypatch.setattr(tui_picker, "_draw_multi", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        tui_picker,
+        "_draw_multi",
+        lambda _labels, cursor, *_args, **_kwargs: cursors.append(cursor),
+    )
     monkeypatch.setattr(tui_picker, "_clear_lines", lambda *_args, **_kwargs: None)
 
     assert tui_picker._arrow_select_multi(
-        ["More tools..."],
-        action_indices={0},
-    ) == ([], 0)
+        ["── Common tools ──", "Google search via Serper API SerperDevTool"],
+        separator_indices={0},
+    ) == ([], None)
+    assert cursors == [1]
 
 
 def test_json_wizard_agent_attribute_prompts_are_compact(monkeypatch):
