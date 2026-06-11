@@ -8,6 +8,7 @@ from crewai.flow.dsl._types import FlowMethodDecorator, FlowTrigger
 from crewai.flow.dsl._utils import (
     P,
     R,
+    _method_action,
     _set_flow_method_definition,
 )
 from crewai.flow.flow_definition import FlowMethodDefinition
@@ -53,13 +54,17 @@ def start(
     def decorator(func: Callable[P, R]) -> StartMethod[P, R]:
         wrapper = StartMethod(func)
 
-        if condition is not None:
-            _set_flow_method_definition(
-                wrapper,
-                FlowMethodDefinition(start=_to_definition_condition(condition)),
-            )
-        else:
-            _set_flow_method_definition(wrapper, FlowMethodDefinition(start=True))
+        _set_flow_method_definition(
+            wrapper,
+            FlowMethodDefinition(
+                do=_method_action(func),
+                start=(
+                    _to_definition_condition(condition)
+                    if condition is not None
+                    else True
+                ),
+            ),
+        )
         return wrapper
 
     return cast(FlowMethodDecorator, decorator)

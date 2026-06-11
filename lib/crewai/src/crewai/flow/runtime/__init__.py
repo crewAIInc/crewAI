@@ -107,6 +107,7 @@ from crewai.flow.flow_wrappers import (
 from crewai.flow.human_feedback import HumanFeedbackResult
 from crewai.flow.input_provider import InputProvider
 from crewai.flow.persistence.base import FlowPersistence
+from crewai.flow.runtime._action_resolvers import resolve_action
 from crewai.flow.types import (
     FlowExecutionData,
     FlowMethodName,
@@ -171,24 +172,6 @@ def _condition_satisfied(condition: FlowDefinitionCondition, events: set[str]) -
     return combine(_condition_satisfied(branch, events) for branch in branches)
 
 
-def _resolve_handler(ref: str) -> Callable[..., Any]:
-    module_name, separator, qualname = ref.partition(":")
-    if not separator or not module_name or not qualname:
-        raise ValueError(
-            f"invalid handler reference {ref!r}; expected 'module:qualname'"
-        )
-    module = importlib.import_module(module_name)
-    target: Any = module
-    for part in qualname.split("."):
-        target = getattr(target, part)
-    if not callable(target):
-        raise TypeError(
-            f"handler reference {ref!r} resolved to a non-callable "
-            f"{type(target).__name__}"
-        )
-    return cast(Callable[..., Any], target)
-
-
 def _build_definition_state_model(
     state_definition: FlowStateDefinition,
 ) -> BaseModel | None:
@@ -201,7 +184,10 @@ def _build_definition_state_model(
     model_class: type[BaseModel] | None = None
     if state_definition.ref:
         try:
-            resolved = _resolve_handler(state_definition.ref)
+            module_name, _, qualname = state_definition.ref.partition(":")
+            resolved: Any = importlib.import_module(module_name)
+            for part in qualname.split("."):
+                resolved = getattr(resolved, part)
         except Exception:
             logger.warning(
                 "Could not import state ref %r", state_definition.ref, exc_info=True
@@ -1007,7 +993,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if self.name and self.name != self._definition.name:
             self._definition = self._definition.model_copy(update={"name": self.name})
         methods = (
-            self._handler_bound_methods()
+            self._action_bound_methods()
             if definition is not None
             else self._class_bound_methods()
         )
@@ -1041,26 +1027,24 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         self._methods.update(methods)
 
-    def _handler_bound_methods(self) -> dict[FlowMethodName, Callable[..., Any]]:
+    def _action_bound_methods(self) -> dict[FlowMethodName, Callable[..., Any]]:
+        def resolve(name: str, definition: FlowMethodDefinition) -> Callable[..., Any]:
+            try:
+                return resolve_action(self, definition.do)
+            except Exception as e:
+                unresolved.append(f"{name}: {e}")
+                return lambda *args, **kwargs: None
+
         methods: dict[FlowMethodName, Callable[..., Any]] = {}
         unresolved: list[str] = []
         for method_name, method_definition in self._definition.methods.items():
-            if method_definition.handler is None:
-                unresolved.append(f"{method_name}: no handler")
-                continue
-            try:
-                handler = _resolve_handler(method_definition.handler)
-            except Exception as e:
-                unresolved.append(f"{method_name}: {e}")
-                continue
-            if getattr(handler, "__self__", None) is None:
-                handler = handler.__get__(self, type(self))
-            methods[FlowMethodName(method_name)] = handler
+            methods[FlowMethodName(method_name)] = resolve(
+                method_name, method_definition
+            )
         if unresolved:
             raise ValueError(
                 f"Cannot build flow {self._definition.name!r} from its definition; "
-                "methods with missing or unresolvable handlers: "
-                + "; ".join(unresolved)
+                "methods with unresolvable actions: " + "; ".join(unresolved)
             )
         return methods
 

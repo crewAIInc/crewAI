@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 FlowDefinitionCondition = str | dict[str, Any]
 
 __all__ = [
+    "FlowActionDefinition",
     "FlowConfigDefinition",
     "FlowConversationalDefinition",
     "FlowConversationalRouterDefinition",
@@ -91,10 +92,17 @@ class FlowHumanFeedbackDefinition(BaseModel):
     learn_strict: bool = False
 
 
+class FlowActionDefinition(BaseModel):
+    """What a Flow method node executes, independent of when it fires."""
+
+    call: TypingLiteral["code"] = "code"
+    ref: str
+
+
 class FlowMethodDefinition(BaseModel):
     """Static definition of one Flow method and its execution roles."""
 
-    handler: str | None = None
+    do: FlowActionDefinition
     start: bool | FlowDefinitionCondition | None = None
     listen: FlowDefinitionCondition | None = None
     router: bool = False

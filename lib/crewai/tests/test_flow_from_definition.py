@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.flow_events import (
@@ -33,13 +34,17 @@ schema: crewai.flow/v1
 name: ChainFlow
 methods:
   begin:
-    handler: {__name__}:ChainFlow.begin
+    do:
+      call: code
+      ref: {__name__}:ChainFlow.begin
     start: true
   shout:
-    handler: {__name__}:ChainFlow.shout
+    do:
+      ref: {__name__}:ChainFlow.shout
     listen: begin
   confirm:
-    handler: {__name__}:ChainFlow.confirm
+    do:
+      ref: {__name__}:ChainFlow.confirm
     listen: shout
 """
 
@@ -73,20 +78,25 @@ schema: crewai.flow/v1
 name: MergeFlow
 methods:
   begin:
-    handler: {__name__}:MergeFlow.begin
+    do:
+      ref: {__name__}:MergeFlow.begin
     start: true
   left:
-    handler: {__name__}:MergeFlow.left
+    do:
+      ref: {__name__}:MergeFlow.left
     listen: begin
   right:
-    handler: {__name__}:MergeFlow.right
+    do:
+      ref: {__name__}:MergeFlow.right
     listen: begin
   either:
-    handler: {__name__}:MergeFlow.either
+    do:
+      ref: {__name__}:MergeFlow.either
     listen:
       or: [left, right]
   join:
-    handler: {__name__}:MergeFlow.join
+    do:
+      ref: {__name__}:MergeFlow.join
     listen:
       and: [left, right, either]
 """
@@ -115,17 +125,21 @@ schema: crewai.flow/v1
 name: RouteFlow
 methods:
   begin:
-    handler: {__name__}:RouteFlow.begin
+    do:
+      ref: {__name__}:RouteFlow.begin
     start: true
   decide:
-    handler: {__name__}:RouteFlow.decide
+    do:
+      ref: {__name__}:RouteFlow.decide
     listen: begin
     router: true
   take_left:
-    handler: {__name__}:RouteFlow.take_left
+    do:
+      ref: {__name__}:RouteFlow.take_left
     listen: left
   take_right:
-    handler: {__name__}:RouteFlow.take_right
+    do:
+      ref: {__name__}:RouteFlow.take_right
     listen: right
 """
 
@@ -152,14 +166,17 @@ schema: crewai.flow/v1
 name: LoopFlow
 methods:
   step:
-    handler: {__name__}:LoopFlow.step
+    do:
+      ref: {__name__}:LoopFlow.step
     start: retry
   decide:
-    handler: {__name__}:LoopFlow.decide
+    do:
+      ref: {__name__}:LoopFlow.decide
     listen: step
     router: true
   finish:
-    handler: {__name__}:LoopFlow.finish
+    do:
+      ref: {__name__}:LoopFlow.finish
     listen: done
 """
 
@@ -189,10 +206,12 @@ state:
   ref: {__name__}:CounterState
 methods:
   begin:
-    handler: {__name__}:PydanticStateFlow.begin
+    do:
+      ref: {__name__}:PydanticStateFlow.begin
     start: true
   finish:
-    handler: {__name__}:PydanticStateFlow.finish
+    do:
+      ref: {__name__}:PydanticStateFlow.finish
     listen: begin
 """
 
@@ -206,10 +225,12 @@ state:
     count: 5
 methods:
   begin:
-    handler: {__name__}:PydanticStateFlow.begin
+    do:
+      ref: {__name__}:PydanticStateFlow.begin
     start: true
   finish:
-    handler: {__name__}:PydanticStateFlow.finish
+    do:
+      ref: {__name__}:PydanticStateFlow.finish
     listen: begin
 """
 
@@ -230,10 +251,12 @@ state:
         default: none
 methods:
   begin:
-    handler: {__name__}:PydanticStateFlow.begin
+    do:
+      ref: {__name__}:PydanticStateFlow.begin
     start: true
   finish:
-    handler: {__name__}:PydanticStateFlow.finish
+    do:
+      ref: {__name__}:PydanticStateFlow.finish
     listen: begin
 """
 
@@ -255,10 +278,12 @@ state:
         default: none
 methods:
   begin:
-    handler: {__name__}:PydanticStateFlow.begin
+    do:
+      ref: {__name__}:PydanticStateFlow.begin
     start: true
   finish:
-    handler: {__name__}:PydanticStateFlow.finish
+    do:
+      ref: {__name__}:PydanticStateFlow.finish
     listen: begin
 """
 
@@ -270,7 +295,8 @@ state:
   ref: definitely_not_a_module_xyz:MissingState
 methods:
   begin:
-    handler: {__name__}:ChainFlow.begin
+    do:
+      ref: {__name__}:ChainFlow.begin
     start: true
 """
 
@@ -283,7 +309,8 @@ state:
     count: 5
 methods:
   begin:
-    handler: {__name__}:ChainFlow.begin
+    do:
+      ref: {__name__}:ChainFlow.begin
     start: true
 """
 
@@ -295,7 +322,8 @@ state:
   ref: somewhere:Something
 methods:
   begin:
-    handler: {__name__}:ChainFlow.begin
+    do:
+      ref: {__name__}:ChainFlow.begin
     start: true
 """
 
@@ -381,43 +409,41 @@ def test_definition_flow_events_use_definition_name():
     assert all(flow_name == "ChainFlow" for _, _, flow_name in events)
 
 
-def test_from_definition_missing_handler_raises():
+def test_definition_method_without_action_is_invalid():
+    with pytest.raises(ValidationError, match="do"):
+        FlowDefinition.from_dict(
+            {
+                "schema": "crewai.flow/v1",
+                "name": "NoActions",
+                "methods": {"begin": {"start": True}},
+            }
+        )
+
+
+def test_from_definition_unresolvable_ref_raises():
     definition = FlowDefinition.from_dict(
         {
             "schema": "crewai.flow/v1",
-            "name": "NoHandlers",
-            "methods": {"begin": {"start": True}},
-        }
-    )
-
-    with pytest.raises(ValueError, match="begin: no handler"):
-        Flow.from_definition(definition)
-
-
-def test_from_definition_unresolvable_handler_raises():
-    definition = FlowDefinition.from_dict(
-        {
-            "schema": "crewai.flow/v1",
-            "name": "BadHandlers",
+            "name": "BadRefs",
             "methods": {
                 "begin": {
                     "start": True,
-                    "handler": "definitely_not_a_module_xyz:nope",
+                    "do": {"ref": "definitely_not_a_module_xyz:nope"},
                 }
             },
         }
     )
 
-    with pytest.raises(ValueError, match="missing or unresolvable handlers.*begin"):
+    with pytest.raises(ValueError, match="unresolvable actions.*begin"):
         Flow.from_definition(definition)
 
 
-def test_from_definition_malformed_handler_raises():
+def test_from_definition_malformed_ref_raises():
     definition = FlowDefinition.from_dict(
         {
             "schema": "crewai.flow/v1",
-            "name": "MalformedHandlers",
-            "methods": {"begin": {"start": True, "handler": "no-colon-here"}},
+            "name": "MalformedRefs",
+            "methods": {"begin": {"start": True, "do": {"ref": "no-colon-here"}}},
         }
     )
 
@@ -425,11 +451,29 @@ def test_from_definition_malformed_handler_raises():
         Flow.from_definition(definition)
 
 
-def test_flow_definition_stamps_handler_refs():
+def test_from_definition_local_scope_ref_raises():
+    definition = FlowDefinition.from_dict(
+        {
+            "schema": "crewai.flow/v1",
+            "name": "LocalRefs",
+            "methods": {
+                "begin": {
+                    "start": True,
+                    "do": {"ref": f"{__name__}:make.<locals>.LocalFlow.begin"},
+                }
+            },
+        }
+    )
+
+    with pytest.raises(ValueError, match="expected 'module:qualname'"):
+        Flow.from_definition(definition)
+
+
+def test_flow_definition_stamps_refs():
     definition = ChainFlow.flow_definition()
 
-    assert definition.methods["begin"].handler == f"{__name__}:ChainFlow.begin"
-    assert definition.methods["shout"].handler == f"{__name__}:ChainFlow.shout"
+    assert definition.methods["begin"].do.ref == f"{__name__}:ChainFlow.begin"
+    assert definition.methods["shout"].do.ref == f"{__name__}:ChainFlow.shout"
 
 
 def test_pydantic_state_from_ref_parity():
