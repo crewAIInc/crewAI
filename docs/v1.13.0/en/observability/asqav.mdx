@@ -1,0 +1,150 @@
+---
+title: Asqav Integration
+description: Add tamper-evident signed receipts to every tool call your crew makes
+icon: shield-check
+mode: "wide"
+---
+
+# Asqav for CrewAI
+
+[Asqav](https://www.asqav.com) keeps a signed, verifiable record of every tool call your CrewAI agents make. Each call produces a cryptographically signed receipt you can present as evidence in compliance reviews or incident investigations.
+
+The integration uses CrewAI's [tool call hooks](https://docs.crewai.com/en/learn/tool-hooks) to sign `tool:start` and `tool:end` events through the Asqav API. Signing runs server-side, so the receipts live outside your application and survive even if your own logs are modified or lost.
+
+By default the integration is fail-open: a signing failure is logged but the tool call proceeds normally. Enable fail-closed mode to block a tool the moment Asqav refuses to sign its start event. The agent is stopped before it acts, and the refused attempt is still recorded.
+
+> **Disclosure:** This page was contributed by the Asqav team.
+
+## What you get
+
+- A signed `tool:start` receipt before each tool runs, with the tool name and an input preview
+- A signed `tool:end` receipt after each tool completes, with output metadata
+- Receipts you can verify offline or via the Asqav neutral verifier
+- An audit trail that sits outside your own logs and infrastructure
+
+## Prerequisites
+
+- Python 3.10 or newer
+- CrewAI 1.9.1 or newer (tool call hooks require this release)
+- An Asqav account and API key ([sign up at asqav.com](https://www.asqav.com))
+
+## Quick setup
+
+<Steps>
+  <Step title="Install the SDK and integration">
+    Install the `asqav` SDK from PyPI and `asqav-crewai` from GitHub (not yet on PyPI):
+
+    ```bash
+    pip install asqav
+    pip install "git+https://github.com/jagmarques/asqav-crewai.git"
+    ```
+
+    Or install both together using the `crewai` extra:
+
+    ```bash
+    pip install "asqav-crewai[crewai] @ git+https://github.com/jagmarques/asqav-crewai.git"
+    ```
+  </Step>
+  <Step title="Initialise Asqav and register hooks">
+    Call `asqav.init()` with your API key, then register `AsqavHooks` before creating your crew. Hooks apply to every tool call in the process from that point on.
+
+    ```python
+    import asqav
+    from crewai import Agent, Crew, Task
+    from crewai.tools import tool
+
+    from asqav_crewai import AsqavHooks
+
+    asqav.init(api_key="sk_...")
+
+    AsqavHooks(agent_name="my-crew").register()
+    ```
+  </Step>
+  <Step title="Run your crew as usual">
+    Your agents, tasks, and tools need no changes. Every tool call produces two signed receipts.
+
+    ```python
+    @tool("search_tool")
+    def search_tool(query: str) -> str:
+        """Search the web for the given query."""
+        return f"results for {query}"
+
+    agent = Agent(
+        role="Researcher",
+        goal="Find information on a topic",
+        backstory="An expert researcher.",
+        tools=[search_tool],
+    )
+    task = Task(
+        description="Search for the latest AI news.",
+        expected_output="A summary of findings.",
+        agent=agent,
+    )
+    result = Crew(agents=[agent], tasks=[task]).kickoff()
+    ```
+
+    After the run, each tool call will have a `tool:start` and a `tool:end` receipt visible in your [Asqav dashboard](https://www.asqav.com).
+  </Step>
+</Steps>
+
+## Fail-open vs fail-closed
+
+The default mode observes and records. Your crew never breaks because of governance:
+
+```python
+# Observe and record every tool call (default)
+AsqavHooks(agent_name="my-crew").register()
+```
+
+To stop a rogue agent before it acts, enable fail-closed mode. When Asqav refuses to sign a tool's start event, `before_tool_call` returns `False` and CrewAI blocks that call. The refused attempt is still recorded:
+
+```python
+# Block a tool when its start receipt is refused
+AsqavHooks(agent_name="my-crew", fail_closed=True).register()
+```
+
+## Configuration
+
+```python
+# Use an existing Asqav agent by ID instead of creating a new one
+AsqavHooks(agent_id="agt_abc123").register()
+
+# Override the API key per-session
+AsqavHooks(api_key="sk_other", agent_name="audit-crew").register()
+```
+
+## How it works
+
+`AsqavHooks` registers two global CrewAI hooks:
+
+- `before_tool_call` - called before every tool runs; signs a `tool:start` event with the tool name and an input preview (truncated at 200 characters)
+- `after_tool_call` - called after every tool returns; signs a `tool:end` event with the tool name, output type, and output length
+
+The hooks fire on tool calls only. Agents that never call a tool produce no receipts.
+
+The Asqav API signs server-side using NIST FIPS 204 ML-DSA cryptography. The SDK hashes your action context locally and sends only the hash plus a small metadata bag. Raw prompts and tool arguments never leave your infrastructure.
+
+## Viewing receipts
+
+After a run, open your [Asqav dashboard](https://www.asqav.com) to see the signed receipts for each tool call. Each receipt includes a signature ID, a timestamp, and a cryptographic proof you can verify independently.
+
+To verify a receipt offline, use the Asqav neutral verifier included in the SDK:
+
+```bash
+pip install asqav
+python -m asqav.verify receipt.json
+```
+
+## Resources
+
+<CardGroup cols="3">
+  <Card title="asqav-crewai" icon="github" href="https://github.com/jagmarques/asqav-crewai">
+    Integration source and examples
+  </Card>
+  <Card title="Asqav SDK" icon="github" href="https://github.com/jagmarques/asqav-sdk">
+    Python SDK source
+  </Card>
+  <Card title="Asqav website" icon="globe" href="https://www.asqav.com">
+    Sign up, dashboard, and API keys
+  </Card>
+</CardGroup>
