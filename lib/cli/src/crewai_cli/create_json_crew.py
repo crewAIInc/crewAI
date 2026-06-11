@@ -164,6 +164,14 @@ _FLAT_TOOLS: list[tuple[str, str]] = [
     tool for _cat, tools in _TOOL_CATEGORIES for tool in tools
 ]
 
+_COMMON_TOOL_ORDER = [
+    "SerperDevTool",
+    "ScrapeWebsiteTool",
+    "DirectoryReadTool",
+    "FileReadTool",
+    "FileWriterTool",
+]
+
 _ANSI_SEQUENCE_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 
 
@@ -235,6 +243,51 @@ def _show_interpolation_hint(kind: str) -> None:
     )
 
 
+def _tool_label(name: str, description: str, *, category: str | None = None) -> str:
+    label = description if category is None else f"{category}: {description}"
+    return f"{label:<48s} {name}"
+
+
+def _select_tools() -> list[str]:
+    tools_by_name = {name: desc for name, desc in _FLAT_TOOLS}
+    common_tools = [
+        (name, tools_by_name[name])
+        for name in _COMMON_TOOL_ORDER
+        if name in tools_by_name
+    ]
+
+    more_tools_index = len(common_tools)
+    labels = [_tool_label(name, desc) for name, desc in common_tools]
+    labels.append("More tools...                                    Show categorized list")
+
+    selected_indices = pick_many("Tools (space to toggle, enter to confirm):", labels)
+    tools = [
+        common_tools[idx][0]
+        for idx in selected_indices
+        if idx < more_tools_index
+    ]
+
+    if more_tools_index in selected_indices:
+        common_tool_names = {name for name, _desc in common_tools}
+        categorized_tools = [
+            (category, name, desc)
+            for category, category_tools in _TOOL_CATEGORIES
+            for name, desc in category_tools
+            if name not in common_tool_names
+        ]
+        more_labels = [
+            _tool_label(name, desc, category=category)
+            for category, name, desc in categorized_tools
+        ]
+        tools.extend(
+            categorized_tools[idx][1]
+            for idx in pick_many("More tools:", more_labels)
+            if idx < len(categorized_tools)
+        )
+
+    return list(dict.fromkeys(tools))
+
+
 def _wizard_agent(
     agent_num: int,
     existing_names: list[str],
@@ -280,15 +333,7 @@ def _wizard_agent(
     else:
         llm = _select_model()
 
-    # Tools
-    tool_labels = [f"{name:<28s} {desc}" for name, desc in _FLAT_TOOLS]
-    selected_indices = pick_many("Tools (space to toggle, enter to confirm):", tool_labels)
-
-    tools: list[str] = []
-    if selected_indices:
-        tools.extend(
-            _FLAT_TOOLS[idx][0] for idx in selected_indices if idx < len(_FLAT_TOOLS)
-        )
+    tools = _select_tools()
     if tools:
         _success(f"{len(tools)} tool{'s' if len(tools) != 1 else ''}")
     else:

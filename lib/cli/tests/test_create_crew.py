@@ -425,6 +425,52 @@ def test_json_wizard_text_prompt_uses_full_prompt_for_readline(monkeypatch):
     assert " > " in prompts[0]
 
 
+def test_json_wizard_tool_picker_prioritizes_common_tools(monkeypatch):
+    picker_calls: list[tuple[str, list[str]]] = []
+
+    def pick_many(title: str, labels: list[str]) -> list[int]:
+        picker_calls.append((title, labels))
+        return [0, 2]
+
+    monkeypatch.setattr(json_crew, "pick_many", pick_many)
+
+    tools = json_crew._select_tools()
+
+    assert tools == ["SerperDevTool", "DirectoryReadTool"]
+    assert len(picker_calls) == 1
+    labels = picker_calls[0][1]
+    assert labels[0].strip().endswith("SerperDevTool")
+    assert labels[1].strip().endswith("ScrapeWebsiteTool")
+    assert labels[2].strip().endswith("DirectoryReadTool")
+    assert labels[3].strip().endswith("FileReadTool")
+    assert labels[4].strip().endswith("FileWriterTool")
+    assert labels[0].index("Google search") < labels[0].index("SerperDevTool")
+    assert "More tools" in labels[5]
+
+
+def test_json_wizard_tool_picker_expands_more_tools(monkeypatch):
+    picker_calls: list[tuple[str, list[str]]] = []
+
+    def pick_many(title: str, labels: list[str]) -> list[int]:
+        picker_calls.append((title, labels))
+        if title == "Tools (space to toggle, enter to confirm):":
+            return [0, 5]
+        return [
+            idx
+            for idx, label in enumerate(labels)
+            if label.strip().endswith("BraveSearchTool")
+        ]
+
+    monkeypatch.setattr(json_crew, "pick_many", pick_many)
+
+    tools = json_crew._select_tools()
+
+    assert tools == ["SerperDevTool", "BraveSearchTool"]
+    assert len(picker_calls) == 2
+    assert picker_calls[1][0] == "More tools:"
+    assert any("Search & Research:" in label for label in picker_calls[1][1])
+
+
 def test_json_wizard_agent_attribute_prompts_are_compact(monkeypatch):
     prompt_calls: list[tuple[str, bool]] = []
     prompt_values = {
