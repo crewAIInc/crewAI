@@ -1935,13 +1935,17 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 restore_from_state_id=restore_from_state_id,
             )
 
+        runtime_scope = crewai_event_bus._enter_runtime_scope()
         try:
-            asyncio.get_running_loop()
-            ctx = contextvars.copy_context()
-            with ThreadPoolExecutor(max_workers=1) as pool:
-                return pool.submit(ctx.run, asyncio.run, _run_flow()).result()
-        except RuntimeError:
-            return asyncio.run(_run_flow())
+            try:
+                asyncio.get_running_loop()
+                ctx = contextvars.copy_context()
+                with ThreadPoolExecutor(max_workers=1) as pool:
+                    return pool.submit(ctx.run, asyncio.run, _run_flow()).result()
+            except RuntimeError:
+                return asyncio.run(_run_flow())
+        finally:
+            crewai_event_bus._exit_runtime_scope(runtime_scope)
 
     async def kickoff_async(
         self,
@@ -2049,6 +2053,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if current_flow_request_id.get() is None:
             request_id_token = current_flow_request_id.set(self.flow_id)
 
+        runtime_scope = crewai_event_bus._enter_runtime_scope()
         try:
             # Reset flow state for fresh execution unless restoring from persistence
             is_restoring = (
@@ -2345,6 +2350,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             if flow_id_token is not None:
                 current_flow_id.reset(flow_id_token)
             detach(flow_token)
+            crewai_event_bus._exit_runtime_scope(runtime_scope)
 
     async def akickoff(
         self,
