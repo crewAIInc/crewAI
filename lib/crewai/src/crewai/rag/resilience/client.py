@@ -1,28 +1,58 @@
 import time
 import logging
-from typing import Any, List, Protocol, runtime_checkable, TypeVar, cast
+from typing import Any, List, Protocol, runtime_checkable, TypeVar, cast, Annotated
 from functools import wraps
+from typing_extensions import Required, TypedDict, Unpack
 
-# Mocking the types from crewAI for the prototype
-class SearchResult(dict): pass
-class BaseRecord(dict): pass
+# Types from crewAI
+class BaseRecord(TypedDict, total=False):
+    doc_id: str
+    content: Required[str]
+    metadata: dict[str, Any]
 
-T = TypeVar("T", bound="BaseClient")
+class SearchResult(TypedDict):
+    id: str
+    content: str
+    metadata: dict[str, Any]
+    score: float
+
+class BaseCollectionParams(TypedDict):
+    collection_name: Required[str]
+
+class BaseCollectionAddParams(BaseCollectionParams, total=False):
+    documents: Required[list[BaseRecord]]
+    batch_size: int
+
+class BaseCollectionSearchParams(BaseCollectionParams, total=False):
+    query: Required[str]
+    limit: int
+    metadata_filter: dict[str, Any] | None
+    score_threshold: float
 
 @runtime_checkable
 class BaseClient(Protocol):
-    def search(self, **kwargs) -> List[SearchResult]: ...
-    def add_documents(self, **kwargs) -> None: ...
+    client: Any
+    embedding_function: Any
+    def create_collection(self, **kwargs: Unpack[BaseCollectionParams]) -> None: ...
+    async def acreate_collection(self, **kwargs: Unpack[BaseCollectionParams]) -> None: ...
+    def get_or_create_collection(self, **kwargs: Unpack[BaseCollectionParams]) -> Any: ...
+    async def aget_or_create_collection(self, **kwargs: Unpack[BaseCollectionParams]) -> Any: ...
+    def add_documents(self, **kwargs: Unpack[BaseCollectionAddParams]) -> None: ...
+    async def aadd_documents(self, **kwargs: Unpack[BaseCollectionAddParams]) -> None: ...
+    def search(self, **kwargs: Unpack[BaseCollectionSearchParams]) -> List[SearchResult]: ...
+    async def asearch(self, **kwargs: Unpack[BaseCollectionSearchParams]) -> List[SearchResult]: ...
+    def delete_collection(self, **kwargs: Unpack[BaseCollectionParams]) -> None: ...
+    async def adelete_collection(self, **kwargs: Unpack[BaseCollectionParams]) -> None: ...
+    def reset(self) -> None: ...
+    async def areset(self) -> None: ...
 
 logger = logging.getLogger("ResilientRAG")
 
 def with_resilience(method):
-    """Decorator to add retry logic and fallback to ResilientRAGClient methods."""
     def wrapper(self, *args, **kwargs):
         max_retries = 3
         delay = 1.0
         last_exception = None
-        
         for attempt in range(max_retries):
             try:
                 return method(self, *args, **kwargs)
@@ -32,27 +62,20 @@ def with_resilience(method):
                     logger.warning(f"Attempt {attempt+1} failed: {e}. Retrying in {delay}s...")
                     time.sleep(delay)
                     delay *= 2
-                else:
-                    logger.error(f"All {max_retries} attempts failed.")
-        
-        # Fallback logic: return empty list for searches or raise last exception for others
         if "search" in method.__name__:
             logger.info("Triggering graceful fallback: returning empty search results.")
             return []
-        
         if last_exception:
             raise last_exception
-        raise RuntimeError("Resilience wrapper failed without a caught exception")
+        raise RuntimeError("Resilience wrapper failed")
     return wrapper
 
 class ResilientRAGClient:
-    """
-    A wrapper for BaseClient that provides resilience:
-    - Exponential backoff for connection errors.
-    - Graceful fallback to prevent agent crashes.
-    """
     def __init__(self, client: BaseClient):
         self._client = client
+        # Expose internal client attributes to satisfy protocol
+        self.client = getattr(client, "client", None)
+        self.embedding_function = getattr(client, "embedding_function", None)
 
     @with_resilience
     def search(self, **kwargs) -> List[SearchResult]:
@@ -62,32 +85,17 @@ class ResilientRAGClient:
     def add_documents(self, **kwargs) -> None:
         self._client.add_documents(**kwargs)
 
+    # Explicitly define other methods to satisfy the BaseClient protocol
+    def create_collection(self, **kwargs): return self._client.create_collection(**kwargs)
+    async def acreate_collection(self, **kwargs): return await self._client.acreate_collection(**kwargs)
+    def get_or_create_collection(self, **kwargs): return self._client.get_or_create_collection(**kwargs)
+    async def aget_or_create_collection(self, **kwargs): return await self._client.aget_or_create_collection(**kwargs)
+    async def aadd_documents(self, **kwargs): return await self._client.aadd_documents(**kwargs)
+    async def asearch(self, **kwargs): return await self._client.asearch(**kwargs)
+    def delete_collection(self, **kwargs): return self._client.delete_collection(**kwargs)
+    async def adelete_collection(self, **kwargs): return await self._client.adelete_collection(**kwargs)
+    def reset(self): return self._client.reset()
+    async def areset(self): return await self._client.areset()
+
     def __getattr__(self, name):
         return getattr(self._client, name)
-
-# --- Verification ---
-class MockFailingClient:
-    def __init__(self):
-        self.calls = 0
-    
-    def search(self, **kwargs):
-        self.calls += 1
-        if self.calls <= 2:
-            raise ConnectionError("DB is down")
-        return [{"id": "1", "content": "Resilient result", "score": 0.9}]
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    
-    print("Testing ResilientRAGClient with recovering DB...")
-    fail_client = MockFailingClient()
-    resilient = ResilientRAGClient(fail_client)
-    print(f"Final Results: {resilient.search(query='test')}")
-    
-    print("\nTesting ResilientRAGClient with permanent failure...")
-    class PermanentFailClient:
-        def search(self, **kwargs):
-            raise ConnectionError("DB permanently gone")
-    
-    resilient_fail = ResilientRAGClient(PermanentFailClient())
-    print(f"Final Results (Fallback): {resilient_fail.search(query='test')}")
