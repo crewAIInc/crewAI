@@ -4,6 +4,7 @@ import os
 import threading
 from unittest import mock
 from unittest.mock import MagicMock, patch
+import warnings
 
 from crewai.agents.crew_agent_executor import AgentFinish, CrewAgentExecutor
 from crewai.constants import DEFAULT_LLM_MODEL
@@ -96,19 +97,30 @@ def test_agent_accepts_custom_i18n():
         os.path.dirname(__file__), "..", "utilities", "prompts.json"
     )
     i18n = I18N(prompt_file=prompt_file)
-    with pytest.warns(DeprecationWarning, match="Agent.i18n is deprecated"):
-        agent = Agent(
-            role="test role",
-            goal="test goal",
-            backstory="test backstory",
-            i18n=i18n,
-        )
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        i18n=i18n,
+    )
 
     with pytest.warns(DeprecationWarning, match="Agent.i18n is deprecated"):
         agent_i18n = agent.i18n
 
     assert agent_i18n is i18n
     assert agent_i18n.slice("role_playing") == "Lorem ipsum dolor sit amet"
+
+
+def test_agent_copy_does_not_emit_i18n_deprecation_warning():
+    agent = Agent(role="test role", goal="test goal", backstory="test backstory")
+
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always", DeprecationWarning)
+        agent.copy()
+
+    assert not any(
+        "Agent.i18n is deprecated" in str(w.message) for w in caught_warnings
+    )
 
 
 def test_agent_with_only_system_template():

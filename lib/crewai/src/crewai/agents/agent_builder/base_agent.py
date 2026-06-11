@@ -8,7 +8,6 @@ from pathlib import Path
 import re
 from typing import TYPE_CHECKING, Annotated, Any, Final, Literal
 import uuid
-import warnings
 
 from pydantic import (
     UUID4,
@@ -467,15 +466,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
     @model_validator(mode="before")
     @classmethod
     def process_model_config(cls, values: Any) -> dict[str, Any]:
-        processed_values = process_config(values, cls)
-        if isinstance(processed_values, dict) and "i18n" in processed_values:
-            warnings.warn(
-                "Agent.i18n is deprecated and will be removed in a future release. "
-                "Use crewai.utilities.i18n.get_i18n() or Crew(prompt_file=...) instead.",
-                DeprecationWarning,
-                stacklevel=3,
-            )
-        return processed_values
+        return process_config(values, cls)
 
     @field_validator("skills", mode="before")
     @classmethod
