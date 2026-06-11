@@ -862,6 +862,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self._completed_methods = {
                 FlowMethodName(m) for m in self.checkpoint_completed_methods
             }
+            self._restored_from_checkpoint = True
         if self.checkpoint_method_outputs is not None:
             self._method_outputs = list(self.checkpoint_method_outputs)
         if self.checkpoint_method_counts is not None:
@@ -897,6 +898,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     _completed_methods: set[FlowMethodName] = PrivateAttr(default_factory=set)
     _method_call_counts: dict[FlowMethodName, int] = PrivateAttr(default_factory=dict)
     _is_execution_resuming: bool = PrivateAttr(default=False)
+    _restored_from_checkpoint: bool = PrivateAttr(default=False)
     _event_futures: list[Future[None]] = PrivateAttr(default_factory=list)
     _pending_feedback_context: PendingFeedbackContext | None = PrivateAttr(default=None)
     _human_feedback_method_outputs: dict[str, Any] = PrivateAttr(default_factory=dict)
@@ -2058,7 +2060,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             # Reset flow state for fresh execution unless restoring from persistence
             is_restoring = (
                 inputs and "id" in inputs and self.persistence is not None
-            ) or self.checkpoint_completed_methods is not None
+            ) or self._restored_from_checkpoint
             if not is_restoring:
                 # Clear completed methods and outputs for a fresh start
                 self._completed_methods.clear()
@@ -2074,6 +2076,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 # suppress cyclic re-execution on the second iteration.
                 if self._completed_methods:
                     self._is_execution_resuming = True
+
+            # Restore is single-shot: a later kickoff on the same instance
+            # starts fresh.
+            self._restored_from_checkpoint = False
 
             # Fork hydration: when restore_from_state_id is set and persistence is
             # available, hydrate self._state from the source UUID's latest snapshot
