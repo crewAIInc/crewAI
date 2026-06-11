@@ -2,6 +2,7 @@ import os
 import uuid
 import glob
 import logging
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -10,6 +11,14 @@ import aiofiles
 import asyncio
 
 logger = logging.getLogger(__name__)
+
+_SAFE_ID_RE = re.compile(r"^[A-Za-z0-9._-]+$")
+
+def _sanitize_parent_id(parent_id: str | None) -> str:
+    pid = parent_id or "root"
+    if not _SAFE_ID_RE.fullmatch(pid):
+        raise ValueError(f"Invalid parent_id '{pid}'")
+    return pid
 
 def _validate_branch(location: str, branch: str) -> Path:
     \"\"\"Validate branch doesn't escape location and return resolved branch_dir.\"\"\"
@@ -25,7 +34,7 @@ def _build_path(location: str, branch: str, parent_id: str | None = None) -> Pat
     base_dir = _validate_branch(location, branch)
     ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     uid = uuid.uuid4().hex[:8]
-    pid = parent_id or "root"
+    pid = _sanitize_parent_id(parent_id)
     return base_dir / "{}_{}_p-{}.json".format(ts, uid, pid)
 
 class JsonProvider:
@@ -33,12 +42,7 @@ class JsonProvider:
         self.location = location
 
     def checkpoint(self, data: str, location: str, *, parent_id: str | None = None, branch: str = "main") -> str:
-        \"\"\"Write a JSON checkpoint file atomically.
-        
-        The use of a temporary file and os.replace provides atomicity for each individual write 
-        (avoiding partial/corrupt files) but does not prevent multiple concurrent writers from 
-        overwriting each other's complete checkpoints.
-        \"\"\"
+        \"\"\"Write a JSON checkpoint file atomically.\"\"\"
         file_path = _build_path(location, branch, parent_id)
         file_path.parent.mkdir(parents=True, exist_ok=True)
         

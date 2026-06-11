@@ -80,17 +80,16 @@ class ResilientRAGClient(BaseClient):
     async def aadd_documents(self, **kwargs) -> None:
         return await self._client.aadd_documents(**kwargs)
 
-    # Explicitly implement remaining BaseClient methods to ensure type safety
     def create_collection(self, **kwargs) -> None:
         return self._client.create_collection(**kwargs)
 
     async def acreate_collection(self, **kwargs) -> None:
         return await self._client.acreate_collection(**kwargs)
 
-    def get_or_create_collection(self, **kwargs) -> None:
+    def get_or_create_collection(self, **kwargs) -> Any:
         return self._client.get_or_create_collection(**kwargs)
 
-    async def aget_or_create_collection(self, **kwargs) -> None:
+    async def aget_or_create_collection(self, **kwargs) -> Any:
         return await self._client.aget_or_create_collection(**kwargs)
 
     def delete_collection(self, **kwargs) -> None:
@@ -99,8 +98,8 @@ class ResilientRAGClient(BaseClient):
     async def adelete_collection(self, **kwargs) -> None:
         return await self._client.adelete_collection(**kwargs)
 
-    def reset(self, **kwargs) -> None:
-        return self._client.reset(**kwargs)
+    def reset(self) -> None:
+        return self._client.reset()
 
-    async def areset(self, **kwargs) -> None:
-        return await self._client.areset(**kwargs)
+    async def areset(self) -> None:
+        return await self._client.areset()
