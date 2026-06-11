@@ -6,6 +6,7 @@ import pytest
 from crewai import Agent, Crew, Task
 from crewai.telemetry import Telemetry
 from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
 
 
 @pytest.fixture(autouse=True)
@@ -51,6 +52,23 @@ def test_telemetry_enabled_by_default():
         with patch("crewai.telemetry.telemetry.TracerProvider"):
             telemetry = Telemetry()
             assert telemetry.ready is True
+
+
+def test_set_tracer_skips_when_provider_already_configured():
+    """A second telemetry instance must not re-install the global provider."""
+    with (
+        patch.dict(os.environ, {}, clear=True),
+        patch(
+            "crewai.telemetry.telemetry.trace.get_tracer_provider",
+            return_value=TracerProvider(),
+        ),
+        patch("crewai.telemetry.telemetry.trace.set_tracer_provider") as mock_set,
+    ):
+        telemetry = Telemetry()
+        telemetry.set_tracer()
+
+    mock_set.assert_not_called()
+    assert telemetry.trace_set is True
 
 
 @patch("crewai.telemetry.telemetry.logger.error")
