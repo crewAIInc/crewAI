@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 import tempfile
 import threading
-from typing import Literal
+from typing import Any, Literal
 import uuid
 
 import aiofiles
@@ -46,8 +46,8 @@ class JsonProvider(BaseProvider):
 
     provider_type: Literal["json"] = "json"
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def model_post_init(self, __context: Any) -> None:
+        super().model_post_init(__context)
         self._lock = threading.Lock()
         self._async_lock = asyncio.Lock()
 
