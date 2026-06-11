@@ -77,6 +77,40 @@ def test_agent_creation():
     assert agent.backstory == "test backstory"
 
 
+def test_agent_exposes_i18n_for_backward_compatibility():
+    from crewai.utilities.i18n import I18N_DEFAULT
+
+    agent = Agent(role="test role", goal="test goal", backstory="test backstory")
+
+    with pytest.warns(DeprecationWarning, match="Agent.i18n is deprecated"):
+        i18n = agent.i18n
+
+    assert i18n is I18N_DEFAULT
+    assert isinstance(i18n.slice("role_playing"), str)
+
+
+def test_agent_accepts_custom_i18n():
+    from crewai.utilities.i18n import I18N
+
+    prompt_file = os.path.join(
+        os.path.dirname(__file__), "..", "utilities", "prompts.json"
+    )
+    i18n = I18N(prompt_file=prompt_file)
+    with pytest.warns(DeprecationWarning, match="Agent.i18n is deprecated"):
+        agent = Agent(
+            role="test role",
+            goal="test goal",
+            backstory="test backstory",
+            i18n=i18n,
+        )
+
+    with pytest.warns(DeprecationWarning, match="Agent.i18n is deprecated"):
+        agent_i18n = agent.i18n
+
+    assert agent_i18n is i18n
+    assert agent_i18n.slice("role_playing") == "Lorem ipsum dolor sit amet"
+
+
 def test_agent_with_only_system_template():
     """Test that an agent with only system_template works without errors."""
     agent = Agent(
