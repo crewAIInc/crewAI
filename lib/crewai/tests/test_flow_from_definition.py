@@ -537,7 +537,7 @@ def test_dict_state_is_a_copy_of_default_plus_id():
 
     second = Flow.from_definition(definition)
     assert second.state["count"] == 5
-    assert "begin_ran" not in second.state.model_dump()
+    assert "begin_ran" not in second.state
     assert second.state["id"] != flow.state["id"]
     assert definition.state.default == {"count": 5}
 
