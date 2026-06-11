@@ -82,6 +82,7 @@ _LLM_TYPE_REGISTRY: dict[str, str] = {
 def _validate_llm_ref(value: Any) -> Any:
     if isinstance(value, dict):
         import importlib
+        import inspect
 
         llm_type = value.get("llm_type")
         if not llm_type or llm_type not in _LLM_TYPE_REGISTRY:
@@ -92,6 +93,12 @@ def _validate_llm_ref(value: Any) -> Any:
         dotted = _LLM_TYPE_REGISTRY[llm_type]
         mod_path, cls_name = dotted.rsplit(".", 1)
         cls = getattr(importlib.import_module(mod_path), cls_name)
+        if inspect.isabstract(cls):
+            from crewai.llm import LLM
+
+            return LLM(
+                **{k: v for k, v in value.items() if v is not None and k != "llm_type"}
+            )
         return cls(**value)
     return value
 

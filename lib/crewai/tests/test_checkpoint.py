@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 import json
 import os
 import sqlite3
@@ -742,3 +743,26 @@ class TestCheckpointReusedExecutor:
 
         assert len(result.tasks_output) == 2
         assert result.tasks_output[1].raw
+
+
+class TestCustomLLMCheckpointRestore:
+    """A custom BaseLLM subclass serializes with the inherited llm_type "base".
+
+    Restoring it must not try to instantiate the abstract BaseLLM; it is rebuilt
+    as a concrete LLM from the saved config instead.
+    """
+
+    def test_restore_does_not_instantiate_abstract_base_llm(self) -> None:
+        agent = Agent(role="r", goal="g", backstory="b", llm=_FinalAnswerLLM())
+        task = Task(description="d", expected_output="e", agent=agent)
+        crew = Crew(agents=[agent], tasks=[task], verbose=False)
+
+        raw = RuntimeState(root=[crew]).model_dump_json()
+        restored = RuntimeState.model_validate_json(
+            raw, context={"from_checkpoint": True}
+        )
+
+        llm = restored.root[0].agents[0].llm
+        assert isinstance(llm, BaseLLM)
+        assert not inspect.isabstract(type(llm))
+        assert llm.model == "stub"
