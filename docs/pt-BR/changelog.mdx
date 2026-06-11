@@ -4,6 +4,38 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="10 jun 2026">
+  ## v1.14.7rc1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.7rc1)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar `reset_runtime_state` para liberar o estado acumulado do barramento
+  - Lidar com suporte a ambos os prompts personalizados
+  - Desacoplar a lógica de conversa do tempo de execução e adicionar uma `conversational_definition`
+
+  ### Correções de Bugs
+  - Corrigir o escopo do estado de tempo de execução por execução para limitar o crescimento e isolar execuções concorrentes
+  - Corrigir a configuração de telemetria em `crewai-login`
+  - Corrigir o respeito a `suppress_flow_events` para eventos de execução de método
+
+  ### Documentação
+  - Atualizar imagens do OpenTelemetry
+  - Atualizar a documentação para refletir o novo estado do coletor OpenTelemetry
+  - Atualizar o changelog e a versão para v1.14.7a4
+
+  ### Refatoração
+  - Simplificar a avaliação da condição de fluxo para ser sem estado por evento
+  - Melhorar o ciclo de roteamento de conversas com uma rota a menos
+
+  ## Contribuidores
+
+  @greysonlalonde, @lorenzejay, @lucasgomide, @vinibrsl
+
+</Update>
+
 <Update label="09 jun 2026">
   ## v1.14.7a4
 
