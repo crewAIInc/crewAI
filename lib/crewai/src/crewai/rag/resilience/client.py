@@ -58,6 +58,7 @@ def with_resilience(method):
                 return method(self, *args, **kwargs)
             except (ConnectionError, TimeoutError) as e:
                 last_exception = e
+                # Only sleep if there are attempts remaining
                 if attempt < max_retries - 1:
                     logger.warning(f"Attempt {attempt+1} failed: {e}. Retrying in {delay}s...")
                     time.sleep(delay)
@@ -73,7 +74,6 @@ def with_resilience(method):
 class ResilientRAGClient:
     def __init__(self, client: BaseClient):
         self._client = client
-        # Expose internal client attributes to satisfy protocol
         self.client = getattr(client, "client", None)
         self.embedding_function = getattr(client, "embedding_function", None)
 
@@ -85,7 +85,6 @@ class ResilientRAGClient:
     def add_documents(self, **kwargs) -> None:
         self._client.add_documents(**kwargs)
 
-    # Explicitly define other methods to satisfy the BaseClient protocol
     def create_collection(self, **kwargs): return self._client.create_collection(**kwargs)
     async def acreate_collection(self, **kwargs): return await self._client.acreate_collection(**kwargs)
     def get_or_create_collection(self, **kwargs): return self._client.get_or_create_collection(**kwargs)
