@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from typing_extensions import TypeIs
 
 from crewai.flow.flow_definition import (
+    FlowActionDefinition,
     FlowConfigDefinition,
     FlowConversationalDefinition,
     FlowConversationalRouterDefinition,
@@ -82,6 +83,10 @@ def _stamp_inherited_conversational_metadata(
             setattr(method, attr, getattr(inherited, attr))
     method.__is_flow_method__ = True
     return method
+
+
+def _method_action(method: Any) -> FlowActionDefinition:
+    return FlowActionDefinition(ref=f"{method.__module__}:{method.__qualname__}")
 
 
 def _set_flow_method_definition(
@@ -373,9 +378,11 @@ def _build_method_definition(
 ) -> FlowMethodDefinition:
     fragment = _get_flow_method_definition(method)
     if fragment is None:
-        method_definition = FlowMethodDefinition()
+        method_definition = FlowMethodDefinition(do=_method_action(method))
     else:
-        method_definition = fragment.model_copy(deep=True)
+        method_definition = fragment.model_copy(
+            deep=True, update={"do": _method_action(method)}
+        )
 
     human_feedback = _build_human_feedback_definition(
         method, diagnostics, f"{path}.human_feedback"

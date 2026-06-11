@@ -47,7 +47,7 @@ from crewai.flow.conversation import (
     receive_user_message as _receive_user_message,
 )
 from crewai.flow.dsl import listen, start
-from crewai.flow.dsl._utils import _set_flow_method_definition
+from crewai.flow.dsl._utils import _method_action, _set_flow_method_definition
 from crewai.flow.flow_definition import FlowMethodDefinition
 from crewai.utilities.types import LLMMessage
 
@@ -78,7 +78,7 @@ def _conversation_start_router(func: Callable[..., Any]) -> Any:
     wrapper = start()(func)
     _set_flow_method_definition(
         cast(Any, wrapper),
-        FlowMethodDefinition(start=True, router=True),
+        FlowMethodDefinition(do=_method_action(func), start=True, router=True),
     )
     return wrapper
 

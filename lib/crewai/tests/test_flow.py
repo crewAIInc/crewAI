@@ -1157,6 +1157,26 @@ def test_flow_name():
     assert flow.name == "MyFlow"
 
 
+def test_flow_custom_name_overrides_class_name_in_events():
+    class InternalFlowClass(Flow):
+        name = "PublicName"
+
+        @start()
+        def begin(self):
+            return "done"
+
+    received = []
+
+    with crewai_event_bus.scoped_handlers():
+        @crewai_event_bus.on(FlowStartedEvent)
+        def handle(source, event):
+            received.append(event)
+
+        InternalFlowClass().kickoff()
+
+    assert received[0].flow_name == "PublicName"
+
+
 def test_nested_and_or_conditions():
     """Test nested conditions like or_(and_(A, B), and_(C, D)).
 

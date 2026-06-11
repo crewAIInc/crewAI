@@ -22,6 +22,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 import contextvars
 import copy
 import enum
+import importlib
 import inspect
 import logging
 import threading
@@ -95,6 +96,7 @@ from crewai.flow.flow_definition import (
     FlowDefinition,
     FlowDefinitionCondition,
     FlowMethodDefinition,
+    FlowStateDefinition,
 )
 from crewai.flow.flow_wrappers import (
     FlowMethod,
@@ -105,6 +107,7 @@ from crewai.flow.flow_wrappers import (
 from crewai.flow.human_feedback import HumanFeedbackResult
 from crewai.flow.input_provider import InputProvider
 from crewai.flow.persistence.base import FlowPersistence
+from crewai.flow.runtime._action_resolvers import resolve_action
 from crewai.flow.types import (
     FlowExecutionData,
     FlowMethodName,
@@ -167,6 +170,57 @@ def _condition_satisfied(condition: FlowDefinitionCondition, events: set[str]) -
     operator, branches = _condition_branches(condition)
     combine = all if operator == "and" else any
     return combine(_condition_satisfied(branch, events) for branch in branches)
+
+
+def _build_definition_state_model(
+    state_definition: FlowStateDefinition,
+) -> BaseModel | None:
+    kwargs = (
+        dict(state_definition.default)
+        if isinstance(state_definition.default, dict)
+        else {}
+    )
+
+    model_class: type[BaseModel] | None = None
+    if state_definition.ref:
+        try:
+            module_name, _, qualname = state_definition.ref.partition(":")
+            resolved: Any = importlib.import_module(module_name)
+            for part in qualname.split("."):
+                resolved = getattr(resolved, part)
+        except Exception:
+            logger.warning(
+                "Could not import state ref %r", state_definition.ref, exc_info=True
+            )
+        else:
+            if isinstance(resolved, type) and issubclass(resolved, BaseModel):
+                model_class = resolved
+            else:
+                logger.warning(
+                    "State ref %r is not a pydantic model", state_definition.ref
+                )
+
+    if model_class is None and state_definition.json_schema:
+        from crewai.utilities.pydantic_schema_utils import create_model_from_schema
+
+        try:
+            model_class = create_model_from_schema(state_definition.json_schema)
+        except Exception:
+            logger.warning(
+                "Could not build a state model from the declared json_schema",
+                exc_info=True,
+            )
+
+    if model_class is None:
+        return None
+
+    if not issubclass(model_class, FlowState):
+
+        class StateWithId(FlowState, model_class):  # type: ignore[misc, valid-type]
+            pass
+
+        model_class = StateWithId
+    return model_class(**kwargs)
 
 
 def _iter_condition_events(condition: FlowDefinitionCondition) -> Iterator[str]:
@@ -695,21 +749,24 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         return flow_definition
 
     @classmethod
-    def _start_method_names(cls) -> list[FlowMethodName]:
+    def from_definition(cls, definition: FlowDefinition) -> Flow[Any]:
+        """Build a runnable Flow directly from a definition; no subclass required."""
+        return cls.model_validate({}, context={"flow_definition": definition})
+
+    def _start_method_names(self) -> list[FlowMethodName]:
         return [
             FlowMethodName(method_name)
-            for method_name, method_definition in cls.flow_definition().methods.items()
+            for method_name, method_definition in self._definition.methods.items()
             if method_definition.is_start
         ]
 
-    @classmethod
     def _listener_methods(
-        cls,
+        self,
     ) -> Iterator[tuple[FlowMethodName, FlowMethodDefinition, FlowDefinitionCondition]]:
         # (name, definition, condition) for every non-start method that listens.
         # Routers are included (they listen too); callers wanting only plain
         # listeners filter on definition.router.
-        for method_name, method_definition in cls.flow_definition().methods.items():
+        for method_name, method_definition in self._definition.methods.items():
             if method_definition.listen is not None and not method_definition.is_start:
                 yield (
                     FlowMethodName(method_name),
@@ -717,25 +774,22 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     method_definition.listen,
                 )
 
-    @classmethod
     def _start_condition(
-        cls, method_name: FlowMethodName
+        self, method_name: FlowMethodName
     ) -> FlowDefinitionCondition | None:
-        method_definition = cls.flow_definition().methods[str(method_name)]
+        method_definition = self._definition.methods[str(method_name)]
         start = method_definition.start
         if isinstance(start, (str, dict)):
             return start
         return None
 
-    @classmethod
     def _listen_condition(
-        cls, method_name: FlowMethodName
+        self, method_name: FlowMethodName
     ) -> FlowDefinitionCondition | None:
-        return cls.flow_definition().methods[str(method_name)].listen
+        return self._definition.methods[str(method_name)].listen
 
-    @classmethod
-    def _is_router(cls, method_name: FlowMethodName) -> bool:
-        return cls.flow_definition().methods[str(method_name)].router
+    def _is_router(self, method_name: FlowMethodName) -> bool:
+        return self._definition.methods[str(method_name)].router
 
     initial_state: Annotated[  # type: ignore[type-arg]
         type[BaseModel] | type[dict] | dict[str, Any] | BaseModel | None,
@@ -879,7 +933,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         restore_event_scope(())
         reset_last_event_id()
 
-    _methods: dict[FlowMethodName, FlowMethod[Any, Any]] = PrivateAttr(
+    _methods: dict[FlowMethodName, Callable[..., Any]] = PrivateAttr(
         default_factory=dict
     )
     _method_execution_counts: dict[FlowMethodName, int] = PrivateAttr(
@@ -893,6 +947,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         PrivateAttr(default=None)
     )
     _method_outputs: list[Any] = PrivateAttr(default_factory=list)
+    _definition: FlowDefinition = PrivateAttr()
     _state_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
     _or_listeners_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
     _completed_methods: set[FlowMethodName] = PrivateAttr(default_factory=set)
@@ -922,14 +977,26 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             object.__setattr__(self, name, value)
 
     def model_post_init(self, __context: Any) -> None:
-        self._flow_post_init()
+        definition = (
+            __context.get("flow_definition") if isinstance(__context, dict) else None
+        )
+        self._flow_post_init(definition)
 
-    def _flow_post_init(self) -> None:
+    def _flow_post_init(self, definition: FlowDefinition | None = None) -> None:
         """Heavy initialization: state creation, events, memory, method registration."""
         if getattr(self, "_flow_post_init_done", False):
             return
         object.__setattr__(self, "_flow_post_init_done", True)
         self._initialize_runtime_extension_attrs()
+
+        self._definition = definition or type(self).flow_definition()
+        if self.name and self.name != self._definition.name:
+            self._definition = self._definition.model_copy(update={"name": self.name})
+        methods = (
+            self._action_bound_methods()
+            if definition is not None
+            else self._class_bound_methods()
+        )
 
         if self._state is None:
             self._state = self._create_initial_state()
@@ -945,7 +1012,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 self,
                 FlowCreatedEvent(
                     type="flow_created",
-                    flow_name=self.name or self.__class__.__name__,
+                    flow_name=self._definition.name,
                 ),
             )
 
@@ -955,17 +1022,42 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if self.memory is None and not getattr(self, "_skip_auto_memory", False):
             from crewai.memory.utils import sanitize_scope_name
 
-            flow_name = sanitize_scope_name(self.name or self.__class__.__name__)
+            flow_name = sanitize_scope_name(self._definition.name)
             self.memory = Memory(root_scope=f"/flow/{flow_name}")
 
-        # Build the runtime method lookup from the static FlowDefinition.
-        for method_name in type(self).flow_definition().methods:
+        self._methods.update(methods)
+
+    def _action_bound_methods(self) -> dict[FlowMethodName, Callable[..., Any]]:
+        def resolve(name: str, definition: FlowMethodDefinition) -> Callable[..., Any]:
+            try:
+                return resolve_action(self, definition.do)
+            except Exception as e:
+                unresolved.append(f"{name}: {e}")
+                return lambda *args, **kwargs: None
+
+        methods: dict[FlowMethodName, Callable[..., Any]] = {}
+        unresolved: list[str] = []
+        for method_name, method_definition in self._definition.methods.items():
+            methods[FlowMethodName(method_name)] = resolve(
+                method_name, method_definition
+            )
+        if unresolved:
+            raise ValueError(
+                f"Cannot build flow {self._definition.name!r} from its definition; "
+                "methods with unresolvable actions: " + "; ".join(unresolved)
+            )
+        return methods
+
+    def _class_bound_methods(self) -> dict[FlowMethodName, Callable[..., Any]]:
+        methods: dict[FlowMethodName, Callable[..., Any]] = {}
+        for method_name in self._definition.methods:
             method = getattr(self, method_name, None)
             if method is None:
                 continue
             if not hasattr(method, "__self__"):
-                method = method.__get__(self, self.__class__)
-            self._methods[FlowMethodName(method_name)] = method
+                method = method.__get__(self, type(self))
+            methods[FlowMethodName(method_name)] = method
+        return methods
 
     def recall(self, query: str, **kwargs: Any) -> Any:
         """Recall relevant memories. Delegates to this flow's memory.
@@ -1043,7 +1135,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     def _start_condition_triggered_by(
         self, method_name: FlowMethodName, trigger: FlowMethodName
     ) -> bool:
-        condition = type(self)._start_condition(method_name)
+        condition = self._start_condition(method_name)
         if condition is None:
             return False
         return self._condition_met(
@@ -1071,7 +1163,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             trigger_str = str(trigger)
             to_discard: list[FlowMethodName] = []
             for listener_name in candidates:
-                condition = type(self)._listen_condition(listener_name)
+                condition = self._listen_condition(listener_name)
                 if condition is None:
                     continue
                 if trigger_str in _iter_condition_events(condition):
@@ -1093,9 +1185,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         racing_groups: dict[frozenset[FlowMethodName], FlowMethodName] = {}
         listener_conditions: dict[FlowMethodName, FlowDefinitionCondition] = {
             listener_name: condition
-            for listener_name, method_definition, condition in type(
-                self
-            )._listener_methods()
+            for listener_name, method_definition, condition in self._listener_methods()
             if not method_definition.router
         }
 
@@ -1368,7 +1458,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 self,
                 FlowStartedEvent(
                     type="flow_started",
-                    flow_name=self.name or self.__class__.__name__,
+                    flow_name=self._definition.name,
                     inputs=None,
                 ),
             )
@@ -1444,7 +1534,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 self,
                 MethodExecutionFinishedEvent(
                     type="method_execution_finished",
-                    flow_name=self.name or self.__class__.__name__,
+                    flow_name=self._definition.name,
                     method_name=context.method_name,
                     result=collapsed_outcome if emit else result,
                     state=self._state,
@@ -1498,7 +1588,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     self,
                     FlowPausedEvent(
                         type="flow_paused",
-                        flow_name=self.name or self.__class__.__name__,
+                        flow_name=self._definition.name,
                         flow_id=e.context.flow_id,
                         method_name=e.context.method_name,
                         state=self._copy_and_serialize_state(),
@@ -1529,7 +1619,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 self,
                 FlowFinishedEvent(
                     type="flow_finished",
-                    flow_name=self.name or self.__class__.__name__,
+                    flow_name=self._definition.name,
                     result=final_result,
                     state=self._copy_and_serialize_state(),
                 ),
@@ -1595,7 +1685,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     return cast(T, {"id": str(uuid4())})
 
         if init_state is None:
-            return cast(T, {"id": str(uuid4())})
+            return cast(T, self._create_definition_state())
 
         if isinstance(init_state, type):
             state_class = init_state
@@ -1636,6 +1726,34 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         raise TypeError(
             f"Initial state must be dict or BaseModel, got {type(self.initial_state)}"
         )
+
+    def _create_definition_state(self) -> dict[str, Any] | BaseModel:
+        state_definition = self._definition.state
+        if state_definition is None:
+            return {"id": str(uuid4())}
+        if state_definition.type in ("pydantic", "json_schema"):
+            state = _build_definition_state_model(state_definition)
+            if state is not None:
+                return state
+            logger.error(
+                "Flow %r declares %s state but neither ref nor json_schema "
+                "produced a model; falling back to dict state",
+                self._definition.name,
+                state_definition.type,
+            )
+        elif state_definition.type == "unknown":
+            logger.warning(
+                "Flow %r declares state of unknown type; falling back to dict state",
+                self._definition.name,
+            )
+        dict_state: dict[str, Any] = (
+            dict(state_definition.default)
+            if isinstance(state_definition.default, dict)
+            else {}
+        )
+        if "id" not in dict_state:
+            dict_state["id"] = str(uuid4())
+        return dict_state
 
     def _copy_state(self) -> T:
         """Create a copy of the current state.
@@ -2172,7 +2290,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 # explicit finalization call closes the batch.
                 started_event = FlowStartedEvent(
                     type="flow_started",
-                    flow_name=self.name or self.__class__.__name__,
+                    flow_name=self._definition.name,
                     inputs=inputs,
                 )
                 future = crewai_event_bus.emit(self, started_event)
@@ -2212,11 +2330,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 # Determine which start methods to execute at kickoff
                 # Conditional start methods are only triggered by their conditions
                 # UNLESS there are no unconditional starts (then all starts run as entry points)
-                start_methods = type(self)._start_method_names()
+                start_methods = self._start_method_names()
                 unconditional_starts = [
                     start_method
                     for start_method in start_methods
-                    if type(self)._start_condition(start_method) is None
+                    if self._start_condition(start_method) is None
                 ]
                 # If there are unconditional starts, only run those at kickoff
                 # If there are NO unconditional starts, run all starts (including conditional ones)
@@ -2264,7 +2382,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         self,
                         FlowPausedEvent(
                             type="flow_paused",
-                            flow_name=self.name or self.__class__.__name__,
+                            flow_name=self._definition.name,
                             flow_id=e.context.flow_id,
                             method_name=e.context.method_name,
                             state=self._copy_and_serialize_state(),
@@ -2314,7 +2432,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     self,
                     FlowFinishedEvent(
                         type="flow_finished",
-                        flow_name=self.name or self.__class__.__name__,
+                        flow_name=self._definition.name,
                         result=final_output,
                         state=self._copy_and_serialize_state(),
                     ),
@@ -2400,7 +2518,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             MethodExecutionFinishedEvent,
             MethodExecutionFailedEvent,
         )
-        flow_name = self.name or self.__class__.__name__
+        flow_name = self._definition.name
         nodes = sorted(
             (
                 n
@@ -2459,7 +2577,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         )
 
         # If start method is a router, use its result as an additional trigger
-        if type(self)._is_router(start_method_name) and result is not None:
+        if self._is_router(start_method_name) and result is not None:
             # Execute listeners for the start method name first
             await self._execute_listeners(start_method_name, result, finished_event_id)
             # Then execute listeners for the router result (e.g., "approved")
@@ -2479,14 +2597,15 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     def _inject_trigger_payload_for_start_method(
         self, original_method: Callable[..., Any]
     ) -> Callable[..., Any]:
+        accepts_trigger_payload = (
+            "crewai_trigger_payload" in inspect.signature(original_method).parameters
+        )
+
         def prepare_kwargs(
             *args: Any, **kwargs: Any
         ) -> tuple[tuple[Any, ...], dict[str, Any]]:
             inputs = cast(dict[str, Any], baggage.get_baggage("flow_inputs") or {})
             trigger_payload = inputs.get("crewai_trigger_payload")
-
-            sig = inspect.signature(original_method)
-            accepts_trigger_payload = "crewai_trigger_payload" in sig.parameters
 
             if trigger_payload is not None and accepts_trigger_payload:
                 kwargs["crewai_trigger_payload"] = trigger_payload
@@ -2537,7 +2656,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     MethodExecutionStartedEvent(
                         type="method_execution_started",
                         method_name=method_name,
-                        flow_name=self.name or self.__class__.__name__,
+                        flow_name=self._definition.name,
                         params=dumped_params,
                         state=self._copy_and_serialize_state(),
                     ),
@@ -2589,7 +2708,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 finished_event = MethodExecutionFinishedEvent(
                     type="method_execution_finished",
                     method_name=method_name,
-                    flow_name=self.name or self.__class__.__name__,
+                    flow_name=self._definition.name,
                     state=self._copy_and_serialize_state(),
                     result=result,
                 )
@@ -2618,7 +2737,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         MethodExecutionPausedEvent(
                             type="method_execution_paused",
                             method_name=method_name,
-                            flow_name=self.name or self.__class__.__name__,
+                            flow_name=self._definition.name,
                             state=self._copy_and_serialize_state(),
                             flow_id=e.context.flow_id,
                             message=e.context.message,
@@ -2634,7 +2753,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     MethodExecutionFailedEvent(
                         type="method_execution_failed",
                         method_name=method_name,
-                        flow_name=self.name or self.__class__.__name__,
+                        flow_name=self._definition.name,
                         error=e,
                     ),
                 )
@@ -2766,7 +2885,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         await asyncio.gather(*tasks)
 
                 if current_trigger in router_results:
-                    for method_name in type(self)._start_method_names():
+                    for method_name in self._start_method_names():
                         if self._start_condition_triggered_by(
                             method_name, current_trigger
                         ):
@@ -2797,9 +2916,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     ) -> list[FlowMethodName]:
         triggered: list[FlowMethodName] = []
 
-        for listener_name, method_definition, condition in type(
-            self
-        )._listener_methods():
+        for listener_name, method_definition, condition in self._listener_methods():
             is_router = method_definition.router
             if router_only != is_router:
                 continue
@@ -2865,10 +2982,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
                 # For routers, also check if any conditional starts they triggered are completed
                 # If so, continue their chains
-                if type(self)._is_router(listener_name):
-                    for start_method_name in type(self)._start_method_names():
+                if self._is_router(listener_name):
+                    for start_method_name in self._start_method_names():
                         if (
-                            type(self)._start_condition(start_method_name) is not None
+                            self._start_condition(start_method_name) is not None
                             and start_method_name in self._completed_methods
                         ):
                             # This conditional start was executed, continue its chain
@@ -2887,8 +3004,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             method = self._methods[listener_name]
 
             sig = inspect.signature(method)
-            params = list(sig.parameters.values())
-            method_params = [p for p in params if p.name != "self"]
+            method_params = [p for p in sig.parameters.values() if p.name != "self"]
 
             if triggering_event_id:
                 with triggered_by_scope(triggering_event_id):
@@ -3044,7 +3160,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self,
             FlowInputRequestedEvent(
                 type="flow_input_requested",
-                flow_name=self.name or self.__class__.__name__,
+                flow_name=self._definition.name,
                 method_name=method_name,
                 message=message,
                 metadata=metadata,
@@ -3111,7 +3227,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self,
             FlowInputReceivedEvent(
                 type="flow_input_received",
-                flow_name=self.name or self.__class__.__name__,
+                flow_name=self._definition.name,
                 method_name=method_name,
                 message=message,
                 response=response,
@@ -3149,7 +3265,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self,
             HumanFeedbackRequestedEvent(
                 type="human_feedback_requested",
-                flow_name=self.name or self.__class__.__name__,
+                flow_name=self._definition.name,
                 method_name="",  # Will be set by decorator if needed
                 output=output,
                 message=message,
@@ -3178,7 +3294,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 self,
                 HumanFeedbackReceivedEvent(
                     type="human_feedback_received",
-                    flow_name=self.name or self.__class__.__name__,
+                    flow_name=self._definition.name,
                     method_name="",  # Will be set by decorator if needed
                     feedback=feedback,
                     outcome=None,  # Will be determined after collapsing
@@ -3353,7 +3469,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             self,
             FlowPlotEvent(
                 type="flow_plot",
-                flow_name=self.name or self.__class__.__name__,
+                flow_name=self._definition.name,
             ),
         )
         structure = build_flow_structure(cast(Any, self))
