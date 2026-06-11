@@ -1167,11 +1167,12 @@ def test_flow_custom_name_overrides_class_name_in_events():
 
     received = []
 
-    @crewai_event_bus.on(FlowStartedEvent)
-    def handle(source, event):
-        received.append(event)
+    with crewai_event_bus.scoped_handlers():
+        @crewai_event_bus.on(FlowStartedEvent)
+        def handle(source, event):
+            received.append(event)
 
-    InternalFlowClass().kickoff()
+        InternalFlowClass().kickoff()
 
     assert received[0].flow_name == "PublicName"
 
