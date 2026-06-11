@@ -46,7 +46,9 @@ from crewai.flow.conversation import (
     get_conversation_messages,
     receive_user_message as _receive_user_message,
 )
-from crewai.flow.dsl import listen, router, start
+from crewai.flow.dsl import listen, start
+from crewai.flow.dsl._utils import _set_flow_method_definition
+from crewai.flow.flow_definition import FlowMethodDefinition
 from crewai.utilities.types import LLMMessage
 
 
@@ -72,6 +74,15 @@ def _iter_condition_labels(condition: Any) -> set[str]:
     return set()
 
 
+def _conversation_start_router(func: Callable[..., Any]) -> Any:
+    wrapper = start()(func)
+    _set_flow_method_definition(
+        cast(Any, wrapper),
+        FlowMethodDefinition(start=True, router=True),
+    )
+    return wrapper
+
+
 class _ConversationalMixin:
     """Experimental conversational graph for ``Flow``.
 
@@ -85,10 +96,7 @@ class _ConversationalMixin:
     conversational: ClassVar[bool] = False
     conversational_config: ClassVar[ConversationConfig | None] = None
     builtin_routes: ClassVar[tuple[str, ...]] = ("converse", "end")
-    internal_routes: ClassVar[tuple[str, ...]] = (
-        "answer_from_history",
-        "conversation_start",
-    )
+    internal_routes: ClassVar[tuple[str, ...]] = ("answer_from_history",)
     builtin_route_descriptions: ClassVar[dict[str, str]] = {
         "converse": (
             "Ordinary chat, follow-ups, summaries, clarifications, and "
@@ -138,23 +146,24 @@ class _ConversationalMixin:
         def kickoff(self, *args: Any, **kwargs: Any) -> Any:
             pass
 
-    @start()
-    @_conversational_only
     def conversation_start(self) -> str | None:
-        """Internal Flow entrypoint that hands the user message to the router.
+        """Return the current user message for conversational route selection.
 
-        In conversational mode, ``Flow.kickoff_async`` runs all ``@start``
-        methods sequentially and this one is registered last, so any user
-        ``@start`` methods (e.g. permission loading) have already finished
-        before the returned value triggers ``route_conversation``.
+        This remains as a plain overridable helper for compatibility. It is not
+        registered as a Flow method; ``route_conversation`` is the synthetic
+        built-in start/router that begins a conversational turn.
         """
         state = cast(ConversationState, self.state)
         return state.current_user_message
 
-    @router(conversation_start)
+    @_conversation_start_router
     @_conversational_only
     def route_conversation(self) -> str:
         """Route the current turn to a listener label."""
+        if "conversation_start" not in {
+            str(method_name) for method_name in self._completed_methods
+        }:
+            self.conversation_start()
         state = cast(ConversationState, self.state)
         context = self.build_router_context()
         previous_intent = state.last_intent
@@ -651,16 +660,16 @@ class _ConversationalMixin:
         if not type(self)._is_conversational():
             return start_methods, False
 
-        conversation_start = "conversation_start"
-        if conversation_start not in {str(method) for method in start_methods}:
+        route_conversation = "route_conversation"
+        if route_conversation not in {str(method) for method in start_methods}:
             return start_methods, False
 
         ordered_starts = [
-            method for method in start_methods if str(method) != conversation_start
+            method for method in start_methods if str(method) != route_conversation
         ]
         ordered_starts.append(
             next(
-                method for method in start_methods if str(method) == conversation_start
+                method for method in start_methods if str(method) == route_conversation
             )
         )
         return ordered_starts, True
@@ -1047,12 +1056,15 @@ class _ConversationalMixin:
 
         trace_listener = TraceCollectionListener()
         batch_manager = trace_listener.batch_manager
-        if batch_manager.batch_owner_type == "flow":
-            if trace_listener.first_time_handler.is_first_time:
-                trace_listener.first_time_handler.mark_events_collected()
-                trace_listener.first_time_handler.handle_execution_completion()
-            else:
-                batch_manager.finalize_batch()
+        try:
+            if batch_manager.batch_owner_type == "flow":
+                if trace_listener.first_time_handler.is_first_time:
+                    trace_listener.first_time_handler.mark_events_collected()
+                    trace_listener.first_time_handler.handle_execution_completion()
+                else:
+                    batch_manager.finalize_batch()
+        finally:
+            batch_manager.defer_session_finalization = False
 
 
 __all__ = ["_ConversationalMixin"]

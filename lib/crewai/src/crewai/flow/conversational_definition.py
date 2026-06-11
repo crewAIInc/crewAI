@@ -39,9 +39,7 @@ class FlowConversationalDefinition(BaseModel):
     visible_agent_outputs: list[str] | Literal["all"] | None = None
     defer_trace_finalization: bool = True
     builtin_routes: list[str] = Field(default_factory=lambda: ["converse", "end"])
-    internal_routes: list[str] = Field(
-        default_factory=lambda: ["answer_from_history", "conversation_start"]
-    )
+    internal_routes: list[str] = Field(default_factory=lambda: ["answer_from_history"])
 
 
 __all__ = [
