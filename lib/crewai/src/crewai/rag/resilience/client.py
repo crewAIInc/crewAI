@@ -28,15 +28,21 @@ def with_resilience(method):
                 return method(self, *args, **kwargs)
             except (ConnectionError, TimeoutError) as e:
                 last_exception = e
-                logger.warning(f"Attempt {attempt+1} failed: {e}. Retrying in {delay}s...")
-                time.sleep(delay)
-                delay *= 2
+                if attempt < max_retries - 1:
+                    logger.warning(f"Attempt {attempt+1} failed: {e}. Retrying in {delay}s...")
+                    time.sleep(delay)
+                    delay *= 2
+                else:
+                    logger.error(f"All {max_retries} attempts failed.")
         
-        logger.error(f"All {max_retries} attempts failed. Triggering fallback.")
-        # Fallback logic: return empty list for searches or log error for additions
+        # Fallback logic: return empty list for searches or raise last exception for others
         if "search" in method.__name__:
+            logger.info("Triggering graceful fallback: returning empty search results.")
             return []
-        raise last_exception
+        
+        if last_exception:
+            raise last_exception
+        raise RuntimeError("Resilience wrapper failed without a caught exception")
     return wrapper
 
 class ResilientRAGClient:
@@ -57,21 +63,17 @@ class ResilientRAGClient:
         self._client.add_documents(**kwargs)
 
     def __getattr__(self, name):
-        # Delegate other calls to the underlying client
         return getattr(self._client, name)
 
 # --- Verification ---
 class MockFailingClient:
-    """Simulates a vector DB that fails twice then succeeds."""
     def __init__(self):
         self.calls = 0
     
     def search(self, **kwargs):
         self.calls += 1
         if self.calls <= 2:
-            print(f"  [Mock] Call {self.calls}: Simulating ConnectionError...")
             raise ConnectionError("DB is down")
-        print(f"  [Mock] Call {self.calls}: Success!")
         return [{"id": "1", "content": "Resilient result", "score": 0.9}]
 
 if __name__ == "__main__":
@@ -80,9 +82,7 @@ if __name__ == "__main__":
     print("Testing ResilientRAGClient with recovering DB...")
     fail_client = MockFailingClient()
     resilient = ResilientRAGClient(fail_client)
-    
-    results = resilient.search(query="test")
-    print(f"Final Results: {results}")
+    print(f"Final Results: {resilient.search(query='test')}")
     
     print("\nTesting ResilientRAGClient with permanent failure...")
     class PermanentFailClient:
@@ -90,5 +90,4 @@ if __name__ == "__main__":
             raise ConnectionError("DB permanently gone")
     
     resilient_fail = ResilientRAGClient(PermanentFailClient())
-    results_fail = resilient_fail.search(query="test")
-    print(f"Final Results (Fallback): {results_fail}")
+    print(f"Final Results (Fallback): {resilient_fail.search(query='test')}")
