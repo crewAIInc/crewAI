@@ -2,13 +2,16 @@
 
 import os
 import threading
+from types import SimpleNamespace
 from unittest import mock
 from unittest.mock import MagicMock, patch
 import warnings
 
 from crewai.agents.crew_agent_executor import AgentFinish, CrewAgentExecutor
+from crewai.experimental.agent_executor import AgentExecutor, AgentExecutorState
 from crewai.constants import DEFAULT_LLM_MODEL
 from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.logging_events import AgentLogsExecutionEvent
 from crewai.events.types.tool_usage_events import ToolUsageFinishedEvent
 from crewai.knowledge.knowledge import Knowledge
 from crewai.knowledge.knowledge_config import KnowledgeConfig
@@ -787,6 +790,52 @@ def test_agent_human_input():
         # It should have requested feedback twice.
         assert mock_prompt_input.call_count == 2
         assert output.strip().lower() == "hello"
+
+
+def test_agent_human_input_shows_final_answer_when_not_verbose():
+    agent = Agent(role="test role", goal="test goal", backstory="test backstory")
+    task = Task(
+        agent=agent,
+        description="Say the word: Hi",
+        expected_output="The word: Hi",
+        human_input=True,
+    )
+    executor = CrewAgentExecutor.model_construct(
+        agent=agent,
+        task=task,
+        crew=SimpleNamespace(verbose=False),
+        ask_for_human_input=True,
+    )
+
+    with patch.object(crewai_event_bus, "emit") as emit:
+        executor._show_logs(AgentFinish(output="Hello", thought="", text=""))
+
+    event = emit.call_args.args[1]
+    assert isinstance(event, AgentLogsExecutionEvent)
+    assert event.verbose is True
+
+
+def test_experimental_agent_human_input_shows_final_answer_when_not_verbose():
+    agent = Agent(role="test role", goal="test goal", backstory="test backstory")
+    task = Task(
+        agent=agent,
+        description="Say the word: Hi",
+        expected_output="The word: Hi",
+        human_input=True,
+    )
+    executor = AgentExecutor.model_construct(
+        agent=agent,
+        task=task,
+        crew=SimpleNamespace(verbose=False),
+        _state=AgentExecutorState(ask_for_human_input=True),
+    )
+
+    with patch.object(crewai_event_bus, "emit") as emit:
+        executor._show_logs(AgentFinish(output="Hello", thought="", text=""))
+
+    event = emit.call_args.args[1]
+    assert isinstance(event, AgentLogsExecutionEvent)
+    assert event.verbose is True
 
 
 def test_interpolate_inputs():
