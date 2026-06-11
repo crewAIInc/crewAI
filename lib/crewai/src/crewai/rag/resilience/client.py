@@ -2,7 +2,7 @@ import asyncio
 import logging
 import time
 import functools
-from typing import Any, List, Protocol, runtime_checkable
+from typing import Any, List, Protocol, runtime_checkable, Mapping, Union
 from crewai.rag.core.base_client import BaseClient
 from crewai.rag.types import BaseRecord, SearchResult
 
@@ -27,7 +27,7 @@ def with_resilience(method):
                 else:
                     break
         
-        if "search" == method.__name__:
+        if method.__name__ in ("search", "asearch"):
             logger.info("Triggering graceful fallback: returning empty search results.")
             return []
             
@@ -53,35 +53,54 @@ def with_resilience_async(method):
                 else:
                     break
         
-        if "search" == method.__name__:
+        if method.__name__ in ("search", "asearch"):
             logger.info("Triggering graceful fallback: returning empty search results.")
             return []
             
         raise last_exception if last_exception else RuntimeError("Resilience wrapper failed")
     return wrapper
 
-@runtime_checkable
 class ResilientRAGClient(BaseClient):
     def __init__(self, _client: BaseClient):
         self._client = _client
 
     @with_resilience
-    def search(self, query: str, *args, **kwargs) -> List[SearchResult]:
-        return self._client.search(query, *args, **kwargs)
+    def search(self, **kwargs) -> List[SearchResult]:
+        return self._client.search(**kwargs)
 
     @with_resilience
-    def add_documents(self, documents: List[BaseRecord], *args, **kwargs) -> None:
-        return self._client.add_documents(documents, *args, **kwargs)
+    def add_documents(self, **kwargs) -> None:
+        return self._client.add_documents(**kwargs)
 
     @with_resilience_async
-    async def asearch(self, query: str, *args, **kwargs) -> List[SearchResult]:
-        return await self._client.asearch(query, *args, **kwargs)
+    async def asearch(self, **kwargs) -> List[SearchResult]:
+        return await self._client.asearch(**kwargs)
 
     @with_resilience_async
-    async def aadd_documents(self, documents: List[BaseRecord], *args, **kwargs) -> None:
-        return await self._client.aadd_documents(documents, *args, **kwargs)
+    async def aadd_documents(self, **kwargs) -> None:
+        return await self._client.aadd_documents(**kwargs)
 
-    def __getattr__(self, name: str) -> Any:
-        # Forward only a limited set of attributes to avoid bypassing type safety
-        # In a real implementation, this would be an allowlist.
-        return getattr(self._client, name)
+    # Explicitly implement remaining BaseClient methods to ensure type safety
+    def create_collection(self, **kwargs) -> None:
+        return self._client.create_collection(**kwargs)
+
+    async def acreate_collection(self, **kwargs) -> None:
+        return await self._client.acreate_collection(**kwargs)
+
+    def get_or_create_collection(self, **kwargs) -> None:
+        return self._client.get_or_create_collection(**kwargs)
+
+    async def aget_or_create_collection(self, **kwargs) -> None:
+        return await self._client.aget_or_create_collection(**kwargs)
+
+    def delete_collection(self, **kwargs) -> None:
+        return self._client.delete_collection(**kwargs)
+
+    async def adelete_collection(self, **kwargs) -> None:
+        return await self._client.adelete_collection(**kwargs)
+
+    def reset(self, **kwargs) -> None:
+        return self._client.reset(**kwargs)
+
+    async def areset(self, **kwargs) -> None:
+        return await self._client.areset(**kwargs)

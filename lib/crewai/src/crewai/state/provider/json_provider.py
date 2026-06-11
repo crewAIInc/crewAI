@@ -11,14 +11,18 @@ import asyncio
 
 logger = logging.getLogger(__name__)
 
+def _validate_branch(location: str, branch: str) -> Path:
+    \"\"\"Validate branch doesn't escape location and return resolved branch_dir.\"\"\"
+    root = Path(location).resolve()
+    branch_dir = (root / branch).resolve()
+    try:
+        branch_dir.relative_to(root)
+    except ValueError as exc:
+        raise ValueError(f"Branch '{branch}' escapes checkpoint directory") from exc
+    return branch_dir
+
 def _build_path(location: str, branch: str, parent_id: str | None = None) -> Path:
-    # Validate branch to prevent path traversal
-    # Use a list of separators to avoid issues with backslashes in some linters
-    separators = ["/", "\\"]
-    if any(sep in branch for sep in separators) or ".." in branch:
-        raise ValueError("Invalid branch name: " + branch + ". Branch cannot contain path separators or '..'")
-    
-    base_dir = Path(location) / branch
+    base_dir = _validate_branch(location, branch)
     ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     uid = uuid.uuid4().hex[:8]
     pid = parent_id or "root"
@@ -29,7 +33,12 @@ class JsonProvider:
         self.location = location
 
     def checkpoint(self, data: str, location: str, *, parent_id: str | None = None, branch: str = "main") -> str:
-        \"\"\"Write a JSON checkpoint file atomically.\"\"\"
+        \"\"\"Write a JSON checkpoint file atomically.
+        
+        The use of a temporary file and os.replace provides atomicity for each individual write 
+        (avoiding partial/corrupt files) but does not prevent multiple concurrent writers from 
+        overwriting each other's complete checkpoints.
+        \"\"\"
         file_path = _build_path(location, branch, parent_id)
         file_path.parent.mkdir(parents=True, exist_ok=True)
         
@@ -78,9 +87,11 @@ class JsonProvider:
             async with aiofiles.open(tmp_path, "w") as f:
                 await f.write(data)
                 await f.flush()
-                await asyncio.get_event_loop().run_in_executor(None, os.fsync, f.fileno())
+                loop = asyncio.get_running_loop()
+                await loop.run_in_executor(None, os.fsync, f.fileno())
             
-            await asyncio.get_event_loop().run_in_executor(None, os.replace, tmp_path, file_path)
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, os.replace, tmp_path, file_path)
             
             def sync_dir():
                 dir_fd = os.open(str(file_path.parent), os.O_RDONLY)
@@ -89,7 +100,8 @@ class JsonProvider:
                 finally:
                     os.close(dir_fd)
             
-            await asyncio.get_event_loop().run_in_executor(None, sync_dir)
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, sync_dir)
             
         except Exception:
             try:
@@ -102,19 +114,16 @@ class JsonProvider:
         return str(file_path)
 
     def prune(self, location: str, branch: str, keep: int = 10, max_keep: Optional[int] = None) -> int:
-        # Validate branch to prevent path traversal
-        separators = ["/", "\\"]
-        if any(sep in branch for sep in separators) or ".." in branch:
-            raise ValueError("Invalid branch name: " + branch + ". Branch cannot contain path separators or '..'")
-            
-        branch_dir = Path(location) / branch
+        branch_dir = _validate_branch(location, branch)
         if not branch_dir.exists():
             return 0
         
         if keep < 0:
             raise ValueError("keep parameter cannot be negative")
+        if max_keep is not None and max_keep < 0:
+            raise ValueError("max_keep parameter cannot be negative")
             
-        effective_keep = max_keep if max_keep is not None else keep
+        effective_keep = min(max_keep, keep) if max_keep is not None else keep
         
         pattern = os.path.join(str(branch_dir), "*.json")
         files = [f for f in glob.glob(pattern) if not os.path.basename(f).startswith('.')]
