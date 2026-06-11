@@ -47,24 +47,25 @@ class JsonProvider(BaseProvider):
         parent_id: str | None = None,
         branch: str = "main",
     ) -> str:
-        """Write a JSON checkpoint file.
-
-        Args:
-            data: The serialized JSON string to persist.
-            location: Base directory where checkpoints are saved.
-            parent_id: ID of the parent checkpoint for lineage tracking.
-                Encoded in the filename for queryable lineage without
-                parsing the blob.
-            branch: Branch label. Files are stored under ``location/branch/``.
-
-        Returns:
-            The path to the written checkpoint file.
+        """Write a JSON checkpoint file atomically.
+        
+        Uses a temporary file and os.replace to ensure that the checkpoint 
+        is written completely or not at all, preventing corruption during 
+        concurrent writes.
         """
         file_path = _build_path(location, branch, parent_id)
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(file_path, "w") as f:
-            f.write(data)
+        tmp_path = file_path.with_suffix(f".tmp_{uuid.uuid4().hex[:8]}.json")
+        try:
+            with open(tmp_path, "w") as f:
+                f.write(data)
+            os.replace(tmp_path, file_path)
+        except Exception as e:
+            if tmp_path.exists():
+                os.remove(tmp_path)
+            raise e
+            
         return str(file_path)
 
     async def acheckpoint(
