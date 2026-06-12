@@ -50,7 +50,9 @@ def _has_json_crew() -> bool:
         pyproject_data = read_toml()
     except Exception:
         return True
-    declared_type = pyproject_data.get("tool", {}).get("crewai", {}).get("type")
+    declared_type: str | None = (
+        pyproject_data.get("tool", {}).get("crewai", {}).get("type")
+    )
     return declared_type != "flow"
 
 

@@ -173,7 +173,9 @@ class DeployValidator:
             data = parse_toml(pyproject_path.read_text())
         except Exception:
             return True
-        declared_type = (data.get("tool") or {}).get("crewai", {}).get("type")
+        declared_type: str | None = (
+            (data.get("tool") or {}).get("crewai", {}).get("type")
+        )
         return declared_type != "flow"
 
     def run(self) -> list[ValidationResult]:
