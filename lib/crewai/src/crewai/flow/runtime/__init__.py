@@ -21,8 +21,8 @@ from collections.abc import (
 from concurrent.futures import Future, ThreadPoolExecutor
 import contextvars
 import copy
+from datetime import datetime
 import enum
-import importlib
 import inspect
 import logging
 import threading
@@ -86,6 +86,11 @@ from crewai.events.types.flow_events import (
     MethodExecutionStartedEvent,
 )
 from crewai.events.types.llm_events import LLMCallCompletedEvent
+from crewai.flow.async_feedback.types import (
+    HumanFeedbackPending,
+    HumanFeedbackProvider,
+    PendingFeedbackContext,
+)
 from crewai.flow.dsl._utils import build_flow_definition
 from crewai.flow.flow_context import (
     current_flow_defer_trace_finalization,
@@ -96,6 +101,7 @@ from crewai.flow.flow_context import (
 from crewai.flow.flow_definition import (
     FlowDefinition,
     FlowDefinitionCondition,
+    FlowHumanFeedbackDefinition,
     FlowMethodDefinition,
     FlowPersistenceDefinition,
     FlowStateDefinition,
@@ -106,10 +112,20 @@ from crewai.flow.flow_wrappers import (
     RouterMethod,
     StartMethod,
 )
-from crewai.flow.human_feedback import HumanFeedbackResult
+from crewai.flow.human_feedback import (
+    HumanFeedbackResult,
+    _deserialize_llm_from_context,
+    _distill_and_store_lessons,
+    _pre_review_with_lessons,
+    _serialize_llm_for_context,
+)
 from crewai.flow.input_provider import InputProvider
 from crewai.flow.persistence.base import FlowPersistence
-from crewai.flow.runtime._action_resolvers import resolve_action
+from crewai.flow.runtime._resolvers import (
+    resolve_action,
+    resolve_instance_ref,
+    resolve_ref,
+)
 from crewai.flow.types import (
     FlowExecutionData,
     FlowMethodName,
@@ -129,7 +145,6 @@ if TYPE_CHECKING:
     from crewai_files import FileInput
 
     from crewai.context import ExecutionContext
-    from crewai.flow.async_feedback.types import PendingFeedbackContext
     from crewai.llms.base_llm import BaseLLM
 
 from crewai.flow.visualization import build_flow_structure, render_interactive
@@ -178,19 +193,12 @@ def _condition_satisfied(condition: FlowDefinitionCondition, events: set[str]) -
 def _build_definition_state_model(
     state_definition: FlowStateDefinition,
 ) -> BaseModel | None:
-    kwargs = (
-        dict(state_definition.default)
-        if isinstance(state_definition.default, dict)
-        else {}
-    )
+    kwargs = dict(state_definition.default or {})
 
     model_class: type[BaseModel] | None = None
     if state_definition.ref:
         try:
-            module_name, _, qualname = state_definition.ref.partition(":")
-            resolved: Any = importlib.import_module(module_name)
-            for part in qualname.split("."):
-                resolved = getattr(resolved, part)
+            resolved: Any = resolve_ref(state_definition.ref, field="state")
         except Exception:
             logger.warning(
                 "Could not import state ref %r", state_definition.ref, exc_info=True
@@ -274,8 +282,7 @@ def _resolve_persistence(value: Any) -> Any:
     if isinstance(value, dict):
         from crewai.flow.persistence.base import _persistence_registry
 
-        type_name = value.get("persistence_type", "SQLiteFlowPersistence")
-        cls = _persistence_registry.get(type_name)
+        cls = _persistence_registry.get(value.get("persistence_type", ""))
         if cls is not None:
             return cls.model_validate(value)
     return value
@@ -296,7 +303,7 @@ def _validate_input_provider(value: Any) -> Any:
     if value is None or isinstance(value, InputProvider):
         return value
     if isinstance(value, str) and ":" in value:
-        resolved = _resolve_input_provider_ref(value)
+        resolved = resolve_instance_ref(value, field="input_provider")
     else:
         from crewai.types.callback import _dotted_path_to_instance
 
@@ -307,15 +314,6 @@ def _validate_input_provider(value: Any) -> Any:
         f"Resolved input_provider {resolved!r} does not implement the "
         "InputProvider protocol (missing request_input)."
     )
-
-
-def _resolve_input_provider_ref(ref: str) -> Any:
-    from crewai.flow.runtime._action_resolvers import import_ref
-
-    target = import_ref(ref)
-    if inspect.isclass(target):
-        return target()
-    return target
 
 
 def _serialize_input_provider(value: Any) -> str | None:
@@ -774,10 +772,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         return flow_definition
 
     @classmethod
-    def from_definition(cls, definition: FlowDefinition) -> Flow[Any]:
+    def from_definition(cls, definition: FlowDefinition, **kwargs: Any) -> Flow[Any]:
         """Build a runnable Flow directly from a definition; no subclass required."""
         return cls.model_validate(
-            definition.config.model_dump(),
+            {**definition.config.model_dump(), **kwargs},
             context={"flow_definition": definition},
         )
 
@@ -870,12 +868,21 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     ] = Field(default=None)
 
     @classmethod
-    def from_checkpoint(cls, config: CheckpointConfig) -> Flow:  # type: ignore[type-arg]
+    def from_checkpoint(
+        cls,
+        config: CheckpointConfig,
+        *,
+        definition: FlowDefinition | None = None,
+    ) -> Flow:  # type: ignore[type-arg]
         """Restore a Flow from a checkpoint.
 
         Args:
             config: Checkpoint configuration with ``restore_from`` set to
                 the path of the checkpoint to load.
+            definition: The FlowDefinition to restore a definition-built flow
+                (one created via ``Flow.from_definition``) from; its actions
+                are re-resolved since checkpoints carry no callables.
+                Subclasses carry their own definition and don't need this.
 
         Returns:
             A Flow instance ready to resume.
@@ -884,7 +891,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         from crewai.events.event_bus import crewai_event_bus
         from crewai.state.runtime import RuntimeState
 
-        state = RuntimeState.from_checkpoint(config, context={"from_checkpoint": True})
+        context: dict[str, Any] = {"from_checkpoint": True}
+        if definition is not None:
+            context["flow_definition"] = definition
+        state = RuntimeState.from_checkpoint(config, context=context)
         crewai_event_bus.set_runtime_state(state)
         for entity in state.root:
             if not isinstance(entity, Flow):
@@ -894,7 +904,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             if isinstance(entity, cls):
                 entity._restore_from_checkpoint()
                 return entity
-            instance = cls()
+            instance = (
+                cls.from_definition(definition) if definition is not None else cls()
+            )
             instance.checkpoint_completed_methods = entity.checkpoint_completed_methods
             instance.checkpoint_method_outputs = entity.checkpoint_method_outputs
             instance.checkpoint_method_counts = entity.checkpoint_method_counts
@@ -908,17 +920,21 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         cls,
         config: CheckpointConfig,
         branch: str | None = None,
+        *,
+        definition: FlowDefinition | None = None,
     ) -> Flow:  # type: ignore[type-arg]
         """Fork a Flow from a checkpoint, creating a new execution branch.
 
         Args:
             config: Checkpoint configuration with ``restore_from`` set.
             branch: Branch label for the fork. Auto-generated if not provided.
+            definition: The FlowDefinition to restore a definition-built flow
+                from, as in :meth:`from_checkpoint`.
 
         Returns:
             A Flow instance on the new branch. Call kickoff() to run.
         """
-        flow = cls.from_checkpoint(config)
+        flow = cls.from_checkpoint(config, definition=definition)
         state = crewai_event_bus.runtime_state
         if state is None:
             raise RuntimeError(
@@ -1093,13 +1109,20 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
     def _class_bound_methods(self) -> dict[FlowMethodName, Callable[..., Any]]:
         methods: dict[FlowMethodName, Callable[..., Any]] = {}
+        missing: list[str] = []
         for method_name in self._definition.methods:
             method = getattr(self, method_name, None)
             if method is None:
+                missing.append(method_name)
                 continue
             if not hasattr(method, "__self__"):
                 method = method.__get__(self, type(self))
             methods[FlowMethodName(method_name)] = method
+        if missing:
+            raise ValueError(
+                f"Flow {self._definition.name!r} definition declares methods its "
+                "class does not provide: " + ", ".join(missing)
+            )
         return methods
 
     def _attach_usage_aggregation_listener(self) -> None:
@@ -1410,6 +1433,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         cls,
         flow_id: str,
         persistence: FlowPersistence | None = None,
+        *,
+        definition: FlowDefinition | None = None,
         **kwargs: Any,
     ) -> Flow[Any]:
         """Create a Flow instance from a pending feedback state.
@@ -1424,6 +1449,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 If not provided, uses ``default_flow_persistence()`` (the
                 registered factory when present, else the built-in SQLite
                 fallback).
+            definition: The FlowDefinition to restore a definition-built flow
+                (one created via ``Flow.from_definition``) from. Subclasses
+                carry their own definition and don't need this.
             **kwargs: Additional keyword arguments passed to the Flow constructor
 
         Returns:
@@ -1455,7 +1483,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         state_data, pending_context = loaded
 
-        instance = cls(persistence=persistence, **kwargs)
+        instance = (
+            cls.from_definition(definition, persistence=persistence, **kwargs)
+            if definition is not None
+            else cls(persistence=persistence, **kwargs)
+        )
         instance._initialize_state(state_data)
         instance._pending_feedback_context = pending_context
         instance._is_execution_resuming = True
@@ -1576,10 +1608,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 current_flow_id.reset(flow_id_token)
 
     async def _resume_async_body(self, feedback: str = "") -> Any:
-        from datetime import datetime
-
-        from crewai.flow.human_feedback import HumanFeedbackResult
-
         if get_current_parent_id() is None:
             reset_emission_counter()
             reset_last_event_id()
@@ -1607,59 +1635,26 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 "No pending feedback context. Use from_pending() to restore a paused flow."
             )
         emit = context.emit
-        default_outcome = context.default_outcome
 
-        # Try to get the live LLM from the re-imported decorator first.
-        # This preserves the fully-configured object (credentials, safety_settings, etc.)
-        # for same-process resume. For cross-process resume, fall back to the
-        # serialized context.llm which is now a dict with full config (or a legacy string).
-        from crewai.flow.human_feedback import _deserialize_llm_from_context
-
-        llm = None
-        method = self._methods.get(FlowMethodName(context.method_name))
-        if method is not None:
-            live_llm = getattr(method, "_human_feedback_llm", None)
-            if live_llm is not None:
-                from crewai.llms.base_llm import BaseLLM as BaseLLMClass
-
-                if isinstance(live_llm, BaseLLMClass):
-                    llm = live_llm
-
-        if llm is None:
-            llm = _deserialize_llm_from_context(context.llm)
-
-        collapsed_outcome: str | None = None
-
-        if not feedback.strip():
-            if default_outcome:
-                collapsed_outcome = default_outcome
-            elif emit:
-                collapsed_outcome = emit[0]
-        elif emit:
-            if llm is not None:
-                collapsed_outcome = self._collapse_to_outcome(
-                    feedback=feedback,
-                    outcomes=emit,
-                    llm=llm,
-                )
-            else:
-                collapsed_outcome = emit[0]
-
-        result = HumanFeedbackResult(
-            output=context.method_output,
-            feedback=feedback,
-            outcome=collapsed_outcome,
-            timestamp=datetime.now(),
+        # The serialized context carries the full LLM config (a dict, or a
+        # legacy model string) — the single source for cross- and same-process
+        # resume.
+        result = await self._finalize_human_feedback(
             method_name=context.method_name,
+            method_output=context.method_output,
+            raw_feedback=feedback,
+            emit=emit,
+            default_outcome=context.default_outcome,
+            llm=context.llm,
             metadata=context.metadata,
         )
-
-        self.human_feedback_history.append(result)
-        self.last_human_feedback = result
+        collapsed_outcome = result.outcome
 
         self._completed_methods.add(FlowMethodName(context.method_name))
 
-        self._persist_method_completion(FlowMethodName(context.method_name))
+        await asyncio.to_thread(
+            self._persist_method_completion, FlowMethodName(context.method_name)
+        )
 
         self._pending_feedback_context = None
 
@@ -1682,10 +1677,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         # This allows methods to re-execute in loops (e.g., implement_changes → suggest_changes → implement_changes)
         self._is_execution_resuming = False
 
-        if emit and collapsed_outcome is None:
-            collapsed_outcome = default_outcome or emit[0]
-            result.outcome = collapsed_outcome
-
         try:
             if emit and collapsed_outcome:
                 self._method_outputs.append(collapsed_outcome)
@@ -1700,8 +1691,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 )
         except Exception as e:
             # Check if flow was paused again for human feedback (loop case)
-            from crewai.flow.async_feedback.types import HumanFeedbackPending
-
             if isinstance(e, HumanFeedbackPending):
                 self._pending_feedback_context = e.context
 
@@ -1883,11 +1872,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 "Flow %r declares state of unknown type; falling back to dict state",
                 self._definition.name,
             )
-        dict_state: dict[str, Any] = (
-            dict(state_definition.default)
-            if isinstance(state_definition.default, dict)
-            else {}
-        )
+        dict_state: dict[str, Any] = dict(state_definition.default or {})
         if "id" not in dict_state:
             dict_state["id"] = str(uuid4())
         return dict_state
@@ -2167,8 +2152,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     result_holder.append(result)
                 except Exception as e:
                     # HumanFeedbackPending is expected control flow, not an error
-                    from crewai.flow.async_feedback.types import HumanFeedbackPending
-
                     if isinstance(e, HumanFeedbackPending):
                         result_holder.append(e)
                     else:
@@ -2269,8 +2252,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     result_holder.append(result)
                 except Exception as e:
                     # HumanFeedbackPending is expected control flow, not an error
-                    from crewai.flow.async_feedback.types import HumanFeedbackPending
-
                     if isinstance(e, HumanFeedbackPending):
                         result_holder.append(e)
                     else:
@@ -2502,8 +2483,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     await asyncio.gather(*tasks)
             except Exception as e:
                 # Check if flow was paused for human feedback
-                from crewai.flow.async_feedback.types import HumanFeedbackPending
-
                 if isinstance(e, HumanFeedbackPending):
                     # Auto-save pending feedback (create default persistence if needed)
                     if self.persistence is None:
@@ -2840,6 +2819,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             if asyncio.iscoroutine(result):
                 result = await result
 
+            method_definition = self._definition.methods[str(method_name)]
+            if method_definition.human_feedback is not None:
+                result = await self._run_human_feedback_step(
+                    method_name, method_definition.human_feedback, result
+                )
+
             self._method_outputs.append(result)
 
             # For @human_feedback methods with emit, the result is the collapsed outcome
@@ -2858,7 +2843,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
             self._completed_methods.add(method_name)
 
-            self._persist_method_completion(method_name)
+            await asyncio.to_thread(self._persist_method_completion, method_name)
 
             finished_event_id: str | None = None
             if not self.suppress_flow_events:
@@ -2877,8 +2862,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             return result, finished_event_id
         except Exception as e:
             # Check if this is a HumanFeedbackPending exception (paused, not failed)
-            from crewai.flow.async_feedback.types import HumanFeedbackPending
-
             if isinstance(e, HumanFeedbackPending):
                 e.context.method_name = method_name
 
@@ -2919,10 +2902,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             raise e
 
     def _persist_method_completion(self, method_name: FlowMethodName) -> None:
-        method_definition = self._definition.methods.get(method_name)
+        method_definition = self._definition.methods[str(method_name)]
         persist_definition = (
             method_definition.persist
-            if method_definition is not None and method_definition.persist is not None
+            if method_definition.persist is not None
             else self._definition.persist
         )
         if persist_definition is None or not persist_definition.enabled:
@@ -3240,8 +3223,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         except Exception as e:
             # Don't log HumanFeedbackPending as an error - it's expected control flow
-            from crewai.flow.async_feedback.types import HumanFeedbackPending
-
             if not isinstance(e, HumanFeedbackPending):
                 if not getattr(e, "_flow_listener_logged", False):
                     logger.error(f"Error executing listener {listener_name}: {e}")
@@ -3351,7 +3332,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             ThreadPoolExecutor,
             TimeoutError as FuturesTimeoutError,
         )
-        from datetime import datetime
 
         from crewai.events.types.flow_events import (
             FlowInputReceivedEvent,
@@ -3444,12 +3424,165 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         return response
 
+    async def _run_human_feedback_step(
+        self,
+        method_name: FlowMethodName,
+        feedback_definition: FlowHumanFeedbackDefinition,
+        method_output: Any,
+    ) -> Any:
+        llm = feedback_definition.llm
+        llm_instance = (
+            _deserialize_llm_from_context(llm) if isinstance(llm, (str, dict)) else llm
+        )
+        emit = feedback_definition.emit
+        default_outcome = feedback_definition.default_outcome
+        metadata = feedback_definition.metadata
+        learn = feedback_definition.learn and self.memory is not None
+
+        if learn:
+            method_output = await asyncio.to_thread(
+                _pre_review_with_lessons,
+                self,
+                method_name,
+                method_output,
+                llm=llm_instance,
+                learn_source=feedback_definition.learn_source,
+                learn_strict=feedback_definition.learn_strict,
+            )
+
+        provider = self._resolve_feedback_provider(feedback_definition)
+        if provider is not None:
+            context = PendingFeedbackContext(
+                flow_id=self.flow_id or "unknown",
+                flow_class=f"{type(self).__module__}.{type(self).__name__}",
+                method_name=method_name,
+                method_output=method_output,
+                message=feedback_definition.message,
+                emit=list(emit) if emit else None,
+                default_outcome=default_outcome,
+                metadata=metadata or {},
+                llm=llm
+                if llm is None or isinstance(llm, (str, dict))
+                else _serialize_llm_for_context(llm),
+            )
+            feedback_value = await asyncio.to_thread(
+                provider.request_feedback, context, self
+            )
+            if asyncio.iscoroutine(feedback_value):
+                feedback_value = await feedback_value
+            raw_feedback = str(feedback_value)
+        else:
+            raw_feedback = await asyncio.to_thread(
+                self._request_human_feedback,
+                message=feedback_definition.message,
+                output=method_output,
+                metadata=metadata,
+                emit=emit,
+                method_name=method_name,
+            )
+
+        result = await self._finalize_human_feedback(
+            method_name=method_name,
+            method_output=method_output,
+            raw_feedback=raw_feedback,
+            emit=emit,
+            default_outcome=default_outcome,
+            llm=llm_instance,
+            metadata=metadata or {},
+        )
+
+        if learn and raw_feedback.strip():
+            await asyncio.to_thread(
+                _distill_and_store_lessons,
+                self,
+                method_name,
+                method_output,
+                raw_feedback,
+                llm=llm_instance,
+                learn_source=feedback_definition.learn_source,
+                learn_strict=feedback_definition.learn_strict,
+            )
+
+        if emit:
+            # Stash the real method output: the collapsed outcome routes
+            # listeners, but the flow's final result stays the method's
+            # actual return value.
+            self._human_feedback_method_outputs[method_name] = method_output
+            return result.outcome
+        return result
+
+    async def _finalize_human_feedback(
+        self,
+        *,
+        method_name: str,
+        method_output: Any,
+        raw_feedback: str,
+        emit: list[str] | None,
+        default_outcome: str | None,
+        llm: Any,
+        metadata: dict[str, Any],
+    ) -> HumanFeedbackResult:
+        collapsed_outcome: str | None = None
+        if not raw_feedback.strip():
+            if default_outcome:
+                collapsed_outcome = default_outcome
+            elif emit:
+                collapsed_outcome = emit[0]
+        elif emit:
+            collapse_llm = (
+                _deserialize_llm_from_context(llm)
+                if isinstance(llm, (str, dict))
+                else llm
+            )
+            if collapse_llm is not None:
+                collapsed_outcome = await asyncio.to_thread(
+                    self._collapse_to_outcome,
+                    feedback=raw_feedback,
+                    outcomes=emit,
+                    llm=collapse_llm,
+                )
+            else:
+                collapsed_outcome = emit[0]
+        if emit and collapsed_outcome is None:
+            collapsed_outcome = default_outcome or emit[0]
+
+        result = HumanFeedbackResult(
+            output=method_output,
+            feedback=raw_feedback,
+            outcome=collapsed_outcome,
+            method_name=method_name,
+            metadata=metadata,
+        )
+        self.human_feedback_history.append(result)
+        self.last_human_feedback = result
+        return result
+
+    def _resolve_feedback_provider(
+        self, feedback_definition: FlowHumanFeedbackDefinition
+    ) -> Any:
+
+        provider = feedback_definition.provider
+        if isinstance(provider, str):
+            provider = resolve_instance_ref(provider, field="human_feedback.provider")
+        if provider is None:
+            from crewai.flow.flow_config import flow_config
+
+            provider = flow_config.hitl_provider
+        if provider is not None and not isinstance(provider, HumanFeedbackProvider):
+            raise ValueError(
+                f"human_feedback.provider {feedback_definition.provider!r} for flow "
+                f"{self._definition.name!r} does not implement the "
+                "HumanFeedbackProvider protocol (missing request_feedback)."
+            )
+        return provider
+
     def _request_human_feedback(
         self,
         message: str,
         output: Any,
         metadata: dict[str, Any] | None = None,
         emit: Sequence[str] | None = None,
+        method_name: str = "",
     ) -> str:
         """Request feedback from a human.
         Args:
@@ -3457,6 +3590,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             output: The method output to show the human for review.
             metadata: Optional metadata for enterprise integrations.
             emit: Optional list of possible outcomes for routing.
+            method_name: The flow method whose output is under review.
 
         Returns:
             The human's feedback as a string. Empty string if no feedback provided.
@@ -3472,7 +3606,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             HumanFeedbackRequestedEvent(
                 type="human_feedback_requested",
                 flow_name=self._definition.name,
-                method_name="",  # Will be set by decorator if needed
+                method_name=method_name,
                 output=output,
                 message=message,
                 emit=list(emit) if emit else None,
@@ -3501,7 +3635,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 HumanFeedbackReceivedEvent(
                     type="human_feedback_received",
                     flow_name=self._definition.name,
-                    method_name="",  # Will be set by decorator if needed
+                    method_name=method_name,
                     feedback=feedback,
                     outcome=None,  # Will be determined after collapsing
                 ),

@@ -3,11 +3,10 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Any, TypeVar
 
-from crewai.flow.flow_definition import FlowMethodDefinition
 from crewai.flow.human_feedback import (
     HumanFeedbackConfig,
     HumanFeedbackResult,
-    _build_human_feedback_runtime_decorator,
+    _validate_human_feedback_options,
 )
 
 
@@ -21,32 +20,6 @@ F = TypeVar("F", bound=Callable[..., Any])
 __all__ = ["HumanFeedbackResult", "human_feedback"]
 
 
-def _stamp_human_feedback_metadata(
-    wrapper: Any,
-    func: Callable[..., Any],
-    config: HumanFeedbackConfig,
-) -> None:
-    for attr in [
-        "__is_flow_method__",
-        "__flow_persistence_config__",
-        "__flow_method_definition__",
-    ]:
-        if hasattr(func, attr):
-            setattr(wrapper, attr, getattr(func, attr))
-
-    wrapper.__human_feedback_config__ = config
-    wrapper.__is_flow_method__ = True
-
-    if config.emit:
-        fragment = getattr(wrapper, "__flow_method_definition__", None)
-        if isinstance(fragment, FlowMethodDefinition):
-            wrapper.__flow_method_definition__ = fragment.model_copy(
-                update={"router": True, "emit": list(config.emit)}
-            )
-
-    wrapper._human_feedback_llm = config.llm
-
-
 def human_feedback(
     message: str,
     emit: Sequence[str] | None = None,
@@ -58,21 +31,18 @@ def human_feedback(
     learn_source: str = "hitl",
     learn_strict: bool = False,
 ) -> Callable[[F], F]:
-    """Decorator for Flow methods that require human feedback."""
-    runtime_decorator = _build_human_feedback_runtime_decorator(
-        message=message,
-        emit=emit,
-        llm=llm,
-        default_outcome=default_outcome,
-        metadata=metadata,
-        provider=provider,
-        learn=learn,
-        learn_source=learn_source,
-        learn_strict=learn_strict,
+    """Decorator for Flow methods that require human feedback.
+
+    The decorator is a pure metadata stamper: it records the feedback
+    configuration on the method, and the Flow engine collects and routes
+    feedback after the method completes, driven by the flow's definition.
+    """
+    _validate_human_feedback_options(
+        emit=emit, llm=llm, default_outcome=default_outcome
     )
     config = HumanFeedbackConfig(
         message=message,
-        emit=emit,
+        emit=list(emit) if emit is not None else None,
         llm=llm,
         default_outcome=default_outcome,
         metadata=metadata,
@@ -83,8 +53,7 @@ def human_feedback(
     )
 
     def decorator(func: F) -> F:
-        wrapper = runtime_decorator(func)
-        _stamp_human_feedback_metadata(wrapper, func, config)
-        return wrapper
+        func.__human_feedback_config__ = config  # type: ignore[attr-defined]
+        return func
 
     return decorator
