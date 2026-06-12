@@ -85,6 +85,7 @@ from crewai.events.types.flow_events import (
     MethodExecutionPausedEvent,
     MethodExecutionStartedEvent,
 )
+from crewai.events.types.llm_events import LLMCallCompletedEvent
 from crewai.flow.dsl._utils import build_flow_definition
 from crewai.flow.flow_context import (
     current_flow_defer_trace_finalization,
@@ -132,6 +133,7 @@ if TYPE_CHECKING:
 
 from crewai.flow.visualization import build_flow_structure, render_interactive
 from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
+from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.env import get_env_context
 from crewai.utilities.streaming import (
     TaskInfo,
@@ -253,6 +255,16 @@ def _is_multi_event_or(
 
     operator, branches = _condition_branches(condition)
     return operator == "or" and len(branches) > 1
+
+
+def _usage_dict_to_metrics(usage: dict[str, Any] | None) -> UsageMetrics | None:
+    """Normalize an LLM call's raw usage dict into ``UsageMetrics``.
+
+    Thin wrapper around ``UsageMetrics.from_provider_dict`` so the flow
+    aggregator and ``BaseLLM._track_token_usage_internal`` agree on the
+    set of provider key aliases (LiteLLM, Anthropic, Gemini).
+    """
+    return UsageMetrics.from_provider_dict(usage)
 
 
 def _resolve_persistence(value: Any) -> Any:
@@ -960,6 +972,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     _input_history: list[InputHistoryEntry] = PrivateAttr(default_factory=list)
     _state: Any = PrivateAttr(default=None)
     _deferred_flow_started_event_id: str | None = PrivateAttr(default=None)
+    _aggregated_usage_metrics: UsageMetrics = PrivateAttr(default_factory=UsageMetrics)
+    _usage_metrics_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
+    _flow_match_id: str | None = PrivateAttr(default=None)
+    _usage_aggregation_handler: Callable[..., Any] | None = PrivateAttr(default=None)
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:  # type: ignore[override]
         class _FlowGeneric(cls):  # type: ignore[valid-type,misc]
@@ -1058,6 +1074,71 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 method = method.__get__(self, type(self))
             methods[FlowMethodName(method_name)] = method
         return methods
+
+    def _attach_usage_aggregation_listener(self) -> None:
+        """Wire an ``LLMCallCompletedEvent`` listener for the duration of one
+        ``kickoff_async`` call.
+        """
+        if self._usage_aggregation_handler is not None:
+            return
+
+        # Capture the accumulator object in the closure so a stale handler
+        # still queued in the bus thread pool from a prior kickoff writes
+        # into its own (orphaned) UsageMetrics instead of the next kickoff's
+        # fresh one.
+        accumulator = self._aggregated_usage_metrics
+        match_id = self._flow_match_id
+        lock = self._usage_metrics_lock
+
+        def _accumulate(source: Any, event: LLMCallCompletedEvent) -> None:
+            if current_flow_id.get() != match_id:
+                return
+            metrics = _usage_dict_to_metrics(event.usage)
+            if metrics is None:
+                return
+            with lock:
+                accumulator.add_usage_metrics(metrics)
+
+        crewai_event_bus.on(LLMCallCompletedEvent)(_accumulate)
+        self._usage_aggregation_handler = _accumulate
+
+    def _detach_usage_aggregation_listener(self) -> None:
+        handler = self._usage_aggregation_handler
+        if handler is None:
+            return
+        crewai_event_bus.off(LLMCallCompletedEvent, handler)
+        self._usage_aggregation_handler = None
+
+    @property
+    def usage_metrics(self) -> UsageMetrics:
+        """Aggregated LLM token usage for the most recent kickoff (or
+        resume) of this flow instance.
+
+        Aggregation is correlated by the ``current_flow_id`` contextvar
+        captured at kickoff time. Nested kickoffs (a parent flow calling
+        a child flow's ``kickoff``) intentionally roll the child's
+        tokens up into the parent because the contextvar is inherited.
+        Sibling kickoffs that run in parallel under the same parent
+        contextvar share the same correlation id and may therefore
+        over-count each other; if you need strict per-flow isolation
+        in that pattern, run the children in separate tasks that
+        explicitly set their own ``current_flow_id`` before kickoff.
+
+        LLM calls that complete without exposing token usage (e.g.
+        structured-output / Instructor paths) are not counted in
+        ``successful_requests`` either, since we never see the call's
+        token data — the metric stays a faithful summary of usage we
+        actually observed rather than a partial count.
+
+        Cross-process pause/resume (``Flow.from_pending`` in a new
+        process) starts aggregation from zero on the restored instance
+        because pre-pause totals are not yet persisted alongside the
+        pending feedback context. Same-process pause/resume — where the
+        caller keeps the flow instance and calls ``resume`` on it —
+        preserves the running totals end-to-end.
+        """
+        with self._usage_metrics_lock:
+            return self._aggregated_usage_metrics.model_copy()
 
     def recall(self, query: str, **kwargs: Any) -> Any:
         """Recall relevant memories. Delegates to this flow's memory.
@@ -1351,6 +1432,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         instance._initialize_state(state_data)
         instance._pending_feedback_context = pending_context
         instance._is_execution_resuming = True
+        # Seed the match id so the resume-phase listener filters its own
+        # LLM events (which run with `current_flow_id == instance.flow_id`)
+        # instead of dropping or absorbing unrelated ones.
+        instance._flow_match_id = instance.flow_id
 
         return instance
 
@@ -1440,14 +1525,33 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         Raises:
             ValueError: If no pending feedback context exists
         """
-        from datetime import datetime
-
-        from crewai.flow.human_feedback import HumanFeedbackResult
-
         if self._pending_feedback_context is None:
             raise ValueError(
                 "No pending feedback context. Use from_pending() to restore a paused flow."
             )
+
+        # Force `current_flow_id` to this flow's match id for the
+        # duration of the resume so the usage listener's filter passes
+        # even when resume runs under another flow's active context.
+        flow_id_token = None
+        if self._flow_match_id is not None:
+            flow_id_token = current_flow_id.set(self._flow_match_id)
+        self._attach_usage_aggregation_listener()
+        try:
+            return await self._resume_async_body(feedback)
+        finally:
+            # Match kickoff_async: drain pending handlers so the resumed
+            # phase's LLM events all hit `_aggregated_usage_metrics`
+            # before the listener is detached.
+            crewai_event_bus.flush()
+            self._detach_usage_aggregation_listener()
+            if flow_id_token is not None:
+                current_flow_id.reset(flow_id_token)
+
+    async def _resume_async_body(self, feedback: str = "") -> Any:
+        from datetime import datetime
+
+        from crewai.flow.human_feedback import HumanFeedbackResult
 
         if get_current_parent_id() is None:
             reset_emission_counter()
@@ -1471,6 +1575,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         get_env_context()
 
         context = self._pending_feedback_context
+        if context is None:
+            raise ValueError(
+                "No pending feedback context. Use from_pending() to restore a paused flow."
+            )
         emit = context.emit
         default_outcome = context.default_outcome
 
@@ -2174,6 +2282,16 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             request_id_token = current_flow_request_id.set(self.flow_id)
 
         runtime_scope = crewai_event_bus._enter_runtime_scope()
+
+        # Reentrant kickoffs on the same Flow share the outer call's
+        # listener and accumulator; only the outermost call wires usage
+        # aggregation.
+        owns_usage_aggregation = self._usage_aggregation_handler is None
+        if owns_usage_aggregation:
+            self._flow_match_id = current_flow_id.get()
+            self._aggregated_usage_metrics = UsageMetrics()
+            self._attach_usage_aggregation_listener()
+
         try:
             # Reset flow state for fresh execution unless restoring from persistence
             is_restoring = (
@@ -2463,6 +2581,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             # Ensure all background memory saves complete before returning
             if self.memory is not None and hasattr(self.memory, "drain_writes"):
                 self.memory.drain_writes()
+            # Drain pending LLMCallCompletedEvent handlers before
+            # detaching so `flow.usage_metrics` reflects every call
+            # emitted during this kickoff — mirrors `Crew.kickoff()`,
+            # which flushes before reporting `token_usage`. Resume paths
+            # re-attach a fresh listener via `resume_async`.
+            if owns_usage_aggregation:
+                crewai_event_bus.flush()
+                self._detach_usage_aggregation_listener()
             if request_id_token is not None:
                 current_flow_request_id.reset(request_id_token)
             if flow_defer_trace_finalization_token is not None:
