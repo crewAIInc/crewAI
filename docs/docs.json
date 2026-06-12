@@ -370,6 +370,7 @@
                       "edge/en/learn/llm-connections",
                       "edge/en/learn/litellm-removal-guide",
                       "edge/en/learn/multimodal-agents",
+                      "edge/en/learn/offline-evaluation-before-rollout",
                       "edge/en/learn/replay-tasks-from-latest-crew-kickoff",
                       "edge/en/learn/sequential-process",
                       "edge/en/learn/using-annotations",
