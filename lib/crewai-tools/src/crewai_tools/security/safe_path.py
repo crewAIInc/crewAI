@@ -32,8 +32,8 @@ def format_path_for_display(path: str, base_dir: str | None = None) -> str:
         resolved_path = os.path.realpath(path)
         if os.path.commonpath([resolved_base, resolved_path]) == resolved_base:
             return os.path.relpath(resolved_path, resolved_base)
-    except (OSError, ValueError):
-        pass
+    except (OSError, ValueError) as exc:
+        logger.debug("Falling back to basename for display path formatting: %s", exc)
 
     return os.path.basename(os.path.realpath(path)) or "[redacted path]"
 
