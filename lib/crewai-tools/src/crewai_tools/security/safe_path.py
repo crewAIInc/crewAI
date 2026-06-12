@@ -22,6 +22,29 @@ logger = logging.getLogger(__name__)
 _UNSAFE_PATHS_ENV = "CREWAI_TOOLS_ALLOW_UNSAFE_PATHS"
 
 
+def format_path_for_display(path: str, base_dir: str | None = None) -> str:
+    """Return a path label that does not expose absolute directory prefixes."""
+    if base_dir is None:
+        base_dir = os.getcwd()
+
+    try:
+        resolved_base = os.path.realpath(base_dir)
+        resolved_path = os.path.realpath(path)
+        if os.path.commonpath([resolved_base, resolved_path]) == resolved_base:
+            return os.path.relpath(resolved_path, resolved_base)
+    except (OSError, ValueError):
+        pass
+
+    return os.path.basename(os.path.realpath(path)) or "[redacted path]"
+
+
+def format_error_for_display(error: Exception) -> str:
+    """Return exception details without OS-added absolute path context."""
+    if isinstance(error, OSError):
+        return error.strerror or error.__class__.__name__
+    return str(error)
+
+
 def _is_escape_hatch_enabled() -> bool:
     """Check if the unsafe paths escape hatch is enabled."""
     return os.environ.get(_UNSAFE_PATHS_ENV, "").lower() in ("true", "1", "yes")
@@ -66,8 +89,8 @@ def validate_file_path(path: str, base_dir: str | None = None) -> str:
     prefix = resolved_base if resolved_base.endswith(os.sep) else resolved_base + os.sep
     if not resolved_path.startswith(prefix) and resolved_path != resolved_base:
         raise ValueError(
-            f"Path '{path}' resolves to '{resolved_path}' which is outside "
-            f"the allowed directory '{resolved_base}'. "
+            f"Path '{format_path_for_display(resolved_path, resolved_base)}' is "
+            f"outside the allowed directory. "
             f"Set {_UNSAFE_PATHS_ENV}=true to bypass this check."
         )
 
