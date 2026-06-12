@@ -114,11 +114,6 @@ def _load_json_crew(crew_path: Path) -> tuple[Any, dict[str, Any]]:
     return load_crew(crew_path)
 
 
-def _load_json_crew_with_inputs(crew_path: Path) -> tuple[Any, dict[str, Any]]:
-    crew, default_inputs = _load_json_crew(crew_path)
-    return crew, _prompt_for_missing_inputs(crew, default_inputs)
-
-
 def _load_json_crew_for_tui(
     crew_path: Path,
 ) -> tuple[type[Any], Any, dict[str, Any], list[str], list[str]]:
@@ -148,7 +143,7 @@ def _prepare_json_crew_for_tui(crew: Any) -> None:
             agent.llm.stream = True
 
 
-def _run_json_crew(daemon: bool = False, trained_agents_file: str | None = None) -> Any:
+def _run_json_crew(trained_agents_file: str | None = None) -> Any:
     """Load and run a JSON-defined crew."""
     import os
 
@@ -166,9 +161,6 @@ def _run_json_crew(daemon: bool = False, trained_agents_file: str | None = None)
     crew_path = find_crew_json_file()
     if crew_path is None:
         raise FileNotFoundError("No crew.jsonc or crew.json found")
-
-    if daemon:
-        return _run_json_crew_daemon(crew_path)
 
     crew_run_app_cls, crew, default_inputs, task_names, agent_names = (
         _load_json_crew_for_tui(crew_path)
@@ -192,46 +184,6 @@ def _run_json_crew(daemon: bool = False, trained_agents_file: str | None = None)
         _chain_deploy()
 
     return app._crew_result
-
-
-def _run_json_crew_daemon(crew_path: Path) -> Any:
-    """Run a JSON crew in daemon mode — plain console output, no TUI."""
-    import time
-
-    from rich.console import Console
-    from rich.text import Text
-
-    console = Console()
-    teal = "#1F7982"
-    red = "#FF5A50"
-
-    crew, runtime_inputs = _load_json_crew_with_inputs(crew_path)
-
-    console.print(
-        Text(
-            f"  ▸ Running {crew.name or 'Crew'} ({len(crew.tasks)} tasks)",
-            style=f"bold {teal}",
-        )
-    )
-    console.print()
-
-    start = time.time()
-    try:
-        result = crew.kickoff(inputs=runtime_inputs)
-        elapsed = time.time() - start
-        console.print()
-        console.print(Text(f"  ✔ Completed in {elapsed:.1f}s", style=f"bold {teal}"))
-        if result and hasattr(result, "raw") and result.raw:
-            console.print()
-            console.print(result.raw)
-        return result
-    except Exception as e:
-        elapsed = time.time() - start
-        console.print()
-        console.print(
-            Text(f"  ✘ Failed after {elapsed:.1f}s: {e}", style=f"bold {red}")
-        )
-        raise SystemExit(1) from e
 
 
 def _chain_deploy() -> None:
@@ -322,7 +274,7 @@ def _print_post_tui_summary(app: CrewRunApp) -> None:
         )
 
 
-def run_crew(trained_agents_file: str | None = None, daemon: bool = False) -> None:
+def run_crew(trained_agents_file: str | None = None) -> None:
     """Run the crew or flow.
 
     Args:
@@ -330,11 +282,10 @@ def run_crew(trained_agents_file: str | None = None, daemon: bool = False) -> No
             by ``crewai train -f``. When set, exported as
             ``CREWAI_TRAINED_AGENTS_FILE`` so agents load suggestions from this
             file instead of the default ``trained_agents_data.pkl``.
-        daemon: Run without the TUI — plain console output.
     """
     # JSON crew projects take precedence
     if _has_json_crew():
-        _run_json_crew(daemon=daemon, trained_agents_file=trained_agents_file)
+        _run_json_crew(trained_agents_file=trained_agents_file)
         return
 
     crewai_version = get_crewai_version()

@@ -39,6 +39,20 @@ def replay_task_command(*args: Any, **kwargs: Any) -> Any:
     return _replay_task_command(*args, **kwargs)
 
 
+def run_flow_definition(*args: Any, **kwargs: Any) -> Any:
+    from crewai_cli.run_flow_definition import (
+        run_flow_definition as _run_flow_definition,
+    )
+
+    return _run_flow_definition(*args, **kwargs)
+
+
+def run_crew(*args: Any, **kwargs: Any) -> Any:
+    from crewai_cli.run_crew import run_crew as _run_crew
+
+    return _run_crew(*args, **kwargs)
+
+
 if TYPE_CHECKING:
     # mypy sees the real classes; at runtime the shims below defer the
     # heavy imports until a command actually instantiates them.
@@ -498,18 +512,10 @@ def install(context: click.Context) -> None:
     default=None,
     help='Experimental: JSON object passed to flow.kickoff(), e.g. \'{"topic":"AI"}\'.',
 )
-@click.option(
-    "-d",
-    "--daemon",
-    is_flag=True,
-    default=False,
-    help="Run without the TUI — plain console output. Useful for background jobs, CI, and scripting.",
-)
 def run(
     trained_agents_file: str | None,
     definition: str | None,
     inputs: str | None,
-    daemon: bool = False,
 ) -> None:
     """Run the Crew or Flow."""
     if inputs is not None and definition is None:
@@ -520,14 +526,10 @@ def run(
             "Warning: `crewai run --definition` is experimental and may change without notice.",
             fg="yellow",
         )
-        from crewai_cli.run_flow_definition import run_flow_definition
-
         run_flow_definition(definition=definition, inputs=inputs)
         return
 
-    from crewai_cli.run_crew import run_crew
-
-    run_crew(trained_agents_file=trained_agents_file, daemon=daemon)
+    run_crew(trained_agents_file=trained_agents_file)
 
 
 @crewai.command()
