@@ -609,12 +609,16 @@ class Memory(BaseModel):
                 root_scope,
             )
             elapsed_ms = (time.perf_counter() - start) * 1000
-        except RuntimeError:
+        except RuntimeError as e:
             # The encoding pipeline uses asyncio.run() -> to_thread() internally.
             # If the process is shutting down, the default executor is closed and
             # to_thread raises "cannot schedule new futures after shutdown".
             # Silently abandon the save -- the process is exiting anyway.
-            return []
+            # Any other RuntimeError must propagate so the save future's
+            # done-callback reports it via MemorySaveFailedEvent.
+            if "cannot schedule new futures" in str(e):
+                return []
+            raise
 
         try:
             crewai_event_bus.emit(

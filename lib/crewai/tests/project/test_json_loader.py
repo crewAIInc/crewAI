@@ -357,3 +357,109 @@ class TestResolveTools:
 
         spec = {"tool_type": "some.module.Tool"}
         assert _resolve_tools([spec]) == [spec]
+
+
+class TestValidationDoesNotExecuteTools:
+    def _write_project(self, root, tool_line='"custom:landmine"'):
+        agents_dir = root / "agents"
+        agents_dir.mkdir()
+        (agents_dir / "worker.jsonc").write_text(
+            "{\n"
+            '  "role": "Worker",\n'
+            '  "goal": "Work",\n'
+            '  "backstory": "Works hard",\n'
+            f'  "tools": [{tool_line}]\n'
+            "}\n"
+        )
+        crew_path = root / "crew.jsonc"
+        crew_path.write_text(
+            "{\n"
+            '  "agents": ["worker"],\n'
+            '  "tasks": [\n'
+            '    {"name": "t1", "description": "Do work", '
+            '"expected_output": "Done", "agent": "worker"}\n'
+            "  ]\n"
+            "}\n"
+        )
+        return crew_path
+
+    def test_validate_does_not_execute_custom_tool_code(self, tmp_path):
+        from crewai.project.json_loader import validate_crew_project
+
+        sentinel = tmp_path / "executed.txt"
+        tools_dir = tmp_path / "tools"
+        tools_dir.mkdir()
+        (tools_dir / "landmine.py").write_text(
+            f"open({str(sentinel)!r}, 'w').write('boom')\n"
+        )
+        crew_path = self._write_project(tmp_path)
+
+        project = validate_crew_project(crew_path, tmp_path / "agents")
+
+        assert not sentinel.exists(), "validation must not execute tools/<name>.py"
+        assert project.agent_names == ["worker"]
+
+    def test_validate_reports_missing_custom_tool_file(self, tmp_path):
+        from crewai.project.json_loader import (
+            JSONProjectValidationError,
+            validate_crew_project,
+        )
+
+        crew_path = self._write_project(tmp_path)
+
+        with pytest.raises(JSONProjectValidationError) as exc_info:
+            validate_crew_project(crew_path, tmp_path / "agents")
+
+        assert "custom:landmine" in str(exc_info.value)
+        assert "not found" in str(exc_info.value)
+
+    def test_validate_reports_path_escaping_custom_tool(self, tmp_path):
+        from crewai.project.json_loader import (
+            JSONProjectValidationError,
+            validate_crew_project,
+        )
+
+        crew_path = self._write_project(tmp_path, tool_line='"custom:../evil"')
+
+        with pytest.raises(JSONProjectValidationError) as exc_info:
+            validate_crew_project(crew_path, tmp_path / "agents")
+
+        assert "Invalid custom tool name" in str(exc_info.value)
+
+
+class TestCustomToolPathSafety:
+    @pytest.mark.parametrize(
+        "bad_name",
+        ["../evil", "..", "sub/inner", "/etc/passwd", "a-b", "", "name.py"],
+    )
+    def test_unsafe_names_rejected_at_runtime(self, bad_name, tmp_path, monkeypatch):
+        from crewai.project.json_loader import JSONProjectError, _resolve_tools
+
+        monkeypatch.chdir(tmp_path)
+        with pytest.raises(JSONProjectError, match="Invalid custom tool name"):
+            _resolve_tools([f"custom:{bad_name}"])
+
+    def test_resolves_relative_to_project_root_not_cwd(self, tmp_path, monkeypatch):
+        from crewai.project.json_loader import _resolve_tools
+
+        project_root = tmp_path / "project"
+        tools_dir = project_root / "tools"
+        tools_dir.mkdir(parents=True)
+        (tools_dir / "echo.py").write_text(
+            "from crewai.tools.base_tool import BaseTool\n"
+            "\n"
+            "class EchoTool(BaseTool):\n"
+            "    name: str = 'echo'\n"
+            "    description: str = 'echo input'\n"
+            "\n"
+            "    def _run(self, text: str) -> str:\n"
+            "        return text\n"
+        )
+        elsewhere = tmp_path / "elsewhere"
+        elsewhere.mkdir()
+        monkeypatch.chdir(elsewhere)
+
+        tools = _resolve_tools(["custom:echo"], project_root=project_root)
+
+        assert len(tools) == 1
+        assert tools[0].name == "echo"

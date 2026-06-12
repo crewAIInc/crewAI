@@ -55,6 +55,7 @@ def load_crew(
             agents_map=agents_map,
             task_name_map=task_name_map,
             source=source_label,
+            project_root=crew_path.parent,
         )
         try:
             task = Task(**task_kwargs)

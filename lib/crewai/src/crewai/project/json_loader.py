@@ -6,6 +6,7 @@ from dataclasses import dataclass
 import json
 import logging
 from pathlib import Path
+import re
 from typing import Any
 
 from pydantic import ValidationError
@@ -139,7 +140,8 @@ def load_agent(source: str | Path) -> Any:
 
     path = Path(source)
     defn = _expect_object(load_jsonc_file(path), path)
-    agent_kwargs = _agent_kwargs_from_definition(defn, path)
+    root = path.parent.parent if path.parent.name == "agents" else Path.cwd()
+    agent_kwargs = _agent_kwargs_from_definition(defn, path, project_root=root)
 
     try:
         return Agent(**agent_kwargs)
@@ -233,7 +235,13 @@ def load_json_crew_project(
             continue
         try:
             agent_defn = _expect_object(load_jsonc_file(agent_file), agent_file)
-            agent_kwargs = _agent_kwargs_from_definition(agent_defn, agent_file)
+            agent_kwargs = _agent_kwargs_from_definition(
+                agent_defn,
+                agent_file,
+                # Validation must never execute project code (custom tools).
+                resolve_tools=not collect_errors,
+                project_root=crew_path.parent,
+            )
         except Exception as exc:
             if collect_errors:
                 errors.append(str(exc))
@@ -278,6 +286,10 @@ def load_json_crew_project(
             fail(
                 f"{task_path} references agent '{agent_ref}' which is not in the crew agents list"
             )
+
+        fail_many(
+            _tool_definition_errors(task_defn.get("tools"), task_path, crew_path.parent)
+        )
 
         context_names = task_defn.get("context")
         if context_names is not None:
@@ -411,7 +423,11 @@ def _expect_object(value: Any, source: str | Path) -> dict[str, Any]:
 
 
 def _agent_kwargs_from_definition(
-    defn: dict[str, Any], path: Path | str
+    defn: dict[str, Any],
+    path: Path | str,
+    *,
+    resolve_tools: bool = True,
+    project_root: Path | None = None,
 ) -> dict[str, Any]:
     errors = _field_errors(
         defn,
@@ -447,7 +463,17 @@ def _agent_kwargs_from_definition(
         key: value for key, value in defn.items() if key in _agent_allowed_fields()
     }
     agent_kwargs.update(settings)
-    _resolve_tool_fields(agent_kwargs)
+    if resolve_tools:
+        _resolve_tool_fields(agent_kwargs, project_root=project_root)
+    else:
+        # Validation/deploy mode: check tool declarations structurally without
+        # importing or instantiating anything — custom:<name> tools execute
+        # project Python on resolution, which must not happen here.
+        tool_errors = _tool_definition_errors(
+            agent_kwargs.get("tools"), path, project_root
+        )
+        if tool_errors:
+            raise JSONProjectValidationError(tool_errors)
     return agent_kwargs
 
 
@@ -456,6 +482,7 @@ def _task_kwargs_from_definition(
     agents_map: dict[str, Any],
     task_name_map: dict[str, Any],
     source: str,
+    project_root: Path | None = None,
 ) -> dict[str, Any]:
     errors = _field_errors(
         task_defn,
@@ -490,7 +517,7 @@ def _task_kwargs_from_definition(
             context_tasks.append(task_name_map[ctx_name])
         task_kwargs["context"] = context_tasks
 
-    _resolve_tool_fields(task_kwargs)
+    _resolve_tool_fields(task_kwargs, project_root=project_root)
     return task_kwargs
 
 
@@ -528,10 +555,12 @@ def _crew_kwargs_from_definition(
     return crew_kwargs
 
 
-def _resolve_tool_fields(kwargs: dict[str, Any]) -> None:
+def _resolve_tool_fields(
+    kwargs: dict[str, Any], project_root: Path | None = None
+) -> None:
     tools = kwargs.get("tools")
     if tools is not None:
-        kwargs["tools"] = _resolve_tools(tools)
+        kwargs["tools"] = _resolve_tools(tools, project_root=project_root)
 
 
 def _field_errors(
@@ -579,7 +608,7 @@ def _format_validation_error(path: str | Path, exc: ValidationError) -> str:
     return f"{path}: validation failed: {exc}"
 
 
-def _resolve_tools(tool_defs: list[Any]) -> list[Any]:
+def _resolve_tools(tool_defs: list[Any], project_root: Path | None = None) -> list[Any]:
     """Resolve tool specs into tool instances or serialized BaseTool dicts.
 
     Strings keep the existing shorthand behavior. Dicts are passed through so
@@ -600,7 +629,7 @@ def _resolve_tools(tool_defs: list[Any]) -> list[Any]:
         if not tool_def:
             continue
         if tool_def.startswith("custom:"):
-            tools.append(_resolve_custom_tool(tool_def[7:]))
+            tools.append(_resolve_custom_tool(tool_def[7:], project_root=project_root))
             continue
         try:
             tool_cls = _find_tool_class(tool_def)
@@ -684,15 +713,85 @@ def _import_tool_class(mod_path: str, class_name: str) -> type | None:
     return getattr(mod, class_name, None)
 
 
-def _resolve_custom_tool(tool_name: str) -> Any:
+_CUSTOM_TOOL_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+
+
+def _custom_tool_file(tool_name: str, project_root: Path | None) -> Path:
+    """Return the validated path of a custom tool inside ``tools/``.
+
+    Rejects names that aren't plain identifiers and (belt-and-suspenders)
+    any resolved path that escapes the project's ``tools/`` directory, so
+    ``custom:../evil`` or absolute-path style names cannot execute code
+    outside the project.
+    """
+    if not _CUSTOM_TOOL_NAME_RE.fullmatch(tool_name):
+        raise JSONProjectError(
+            f"Invalid custom tool name 'custom:{tool_name}': names must match "
+            f"[A-Za-z_][A-Za-z0-9_]* and resolve to tools/<name>.py inside "
+            f"the project."
+        )
+    tools_dir = ((project_root or Path.cwd()) / "tools").resolve()
+    tool_file = (tools_dir / f"{tool_name}.py").resolve()
+    try:
+        tool_file.relative_to(tools_dir)
+    except ValueError:
+        raise JSONProjectError(
+            f"Custom tool 'custom:{tool_name}' resolves outside the project's "
+            f"tools/ directory."
+        ) from None
+    return tool_file
+
+
+def _tool_definition_errors(
+    tool_defs: Any, source: Path | str, project_root: Path | None
+) -> list[str]:
+    """Structurally validate tool declarations WITHOUT importing anything.
+
+    Used by validation/deploy paths where executing project code (which
+    ``custom:`` resolution does) would be unsafe. Library tool names are not
+    resolved here either — that requires importing crewai_tools modules and
+    would falsely fail when optional dependencies are absent in the
+    validation environment.
+    """
+    if tool_defs is None:
+        return []
+    if not isinstance(tool_defs, list):
+        return [f"{source}: 'tools' must be a list"]
+    errors: list[str] = []
+    for tool_def in tool_defs:
+        if isinstance(tool_def, dict):
+            continue
+        if not isinstance(tool_def, str):
+            errors.append(
+                f"{source}: tool definitions must be strings or objects, "
+                f"got {type(tool_def).__name__}"
+            )
+            continue
+        if not tool_def.startswith("custom:"):
+            continue
+        try:
+            tool_file = _custom_tool_file(tool_def[7:], project_root)
+        except JSONProjectError as exc:
+            errors.append(f"{source}: {exc}")
+            continue
+        if not tool_file.exists():
+            errors.append(
+                f"{source}: custom tool '{tool_def}' not found: expected "
+                f"{tool_file}. Create the file with a BaseTool subclass, or "
+                f"remove the tool from your crew JSON."
+            )
+    return errors
+
+
+def _resolve_custom_tool(tool_name: str, project_root: Path | None = None) -> Any:
     """Resolve a custom tool from the project's ``tools/`` directory.
 
     Note: ``custom:<name>`` tools execute ``tools/<name>.py`` as local Python
     code at load time — JSON configs referencing them are no longer pure data.
-    Only run JSON crew projects from sources you trust.
+    Only run JSON crew projects from sources you trust. Validation paths must
+    use ``_tool_definition_errors`` instead, which never executes anything.
     """
-    tools_dir = Path.cwd() / "tools"
-    tool_file = tools_dir / f"{tool_name}.py"
+    tool_file = _custom_tool_file(tool_name, project_root)
     if not tool_file.exists():
         raise JSONProjectError(
             f"Custom tool 'custom:{tool_name}' not found: expected {tool_file}. "

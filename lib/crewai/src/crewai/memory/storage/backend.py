@@ -8,12 +8,16 @@ from typing import Any, Protocol, runtime_checkable
 from crewai.memory.types import MemoryRecord, ScopeInfo
 
 
-class EmbeddingDimensionMismatchError(RuntimeError):
+class EmbeddingDimensionMismatchError(ValueError):
     """Raised when an embedding's dimensionality doesn't match the existing store.
 
     The most common cause is upgrading CrewAI across the default-embedder
     change (text-embedding-3-small, 1536 dims → text-embedding-3-large,
     3072 dims) while keeping a local memory store created before the upgrade.
+
+    Deliberately not a ``RuntimeError``: background-save plumbing treats
+    ``RuntimeError`` as interpreter/executor shutdown and silently drops the
+    save, which would swallow this actionable migration error.
     """
 
     def __init__(self, stored_dim: int, new_dim: int) -> None:

@@ -715,12 +715,82 @@ def test_async_task_completion_marks_the_right_sidebar_row() -> None:
         app._unsubscribe()
 
 
-def test_resolve_task_idx_falls_back_to_current_task() -> None:
+def test_pop_task_state_falls_back_to_current_task() -> None:
     app = CrewRunApp(total_tasks=2, task_names=["first", "second"])
     app._current_task_idx = 2
+    app._current_task_desc = "second"
 
     class _Evt:
         task = None
         task_name = "unknown"
 
-    assert app._resolve_task_idx(_Evt()) == 2
+    state = app._pop_task_state(_Evt())
+    assert state["idx"] == 2
+    assert state["desc"] == "second"
+
+
+def test_overlapping_task_logs_keep_their_own_state() -> None:
+    """Task 1 completing after task 2 started must log its own description,
+    agent, and output — and must not steal or reset task 2's stream state."""
+    from crewai.events.types.task_events import TaskCompletedEvent, TaskStartedEvent
+    from crewai.tasks.task_output import TaskOutput
+
+    app = CrewRunApp(total_tasks=2, task_names=["first", "second"])
+    app._subscribe()
+    try:
+        task1 = _FakeTask("id-1", "first")
+        task2 = _FakeTask("id-2", "second")
+
+        for task in (task1, task2):
+            future = crewai_event_bus.emit(
+                None, TaskStartedEvent(context=None, task=task)
+            )
+            if future:
+                future.result(timeout=5)
+
+        # Task 2 is current and has streamed state in flight
+        app._task_full_output = "task two streaming output"
+        app._current_task_steps = [{"type": "llm", "summary": "thinking"}]
+
+        future = crewai_event_bus.emit(
+            None,
+            TaskCompletedEvent(
+                output=TaskOutput(
+                    description="first", raw="task one result", agent="a1"
+                ),
+                task=task1,
+            ),
+        )
+        if future:
+            future.result(timeout=5)
+
+        # Task 1's entry carries its own identity and output
+        entry1 = app._task_logs[-1]
+        assert entry1["idx"] == 1
+        assert entry1["desc"] == "first"
+        assert entry1["output"] == "task one result"
+        assert entry1["steps"] == []
+
+        # Task 2's in-flight stream state was not consumed or reset
+        assert app._task_full_output == "task two streaming output"
+        assert app._current_task_steps == [{"type": "llm", "summary": "thinking"}]
+
+        future = crewai_event_bus.emit(
+            None,
+            TaskCompletedEvent(
+                output=TaskOutput(
+                    description="second", raw="task two result", agent="a2"
+                ),
+                task=task2,
+            ),
+        )
+        if future:
+            future.result(timeout=5)
+
+        entry2 = app._task_logs[-1]
+        assert entry2["idx"] == 2
+        assert entry2["desc"] == "second"
+        assert entry2["output"] == "task two streaming output"
+        assert any(step.get("summary") == "thinking" for step in entry2["steps"])
+    finally:
+        app._unsubscribe()

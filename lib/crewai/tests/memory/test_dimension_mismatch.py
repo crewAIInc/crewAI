@@ -105,3 +105,55 @@ def test_lancedb_matching_dim_still_works(lancedb_path: Path) -> None:
     storage.save([_record(4, "second")])
 
     assert len(storage.search([0.1] * 4, limit=5)) == 2
+
+
+def test_error_is_not_a_runtime_error() -> None:
+    """Background-save plumbing treats RuntimeError as executor shutdown and
+    silently drops the save — the mismatch must not be classified that way."""
+    err = EmbeddingDimensionMismatchError(1536, 3072)
+    assert not isinstance(err, RuntimeError)
+    assert isinstance(err, ValueError)
+
+
+def test_background_save_propagates_dimension_mismatch(tmp_path: Path) -> None:
+    from unittest.mock import MagicMock
+
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(
+        storage=str(tmp_path / "db"),
+        llm=MagicMock(),
+        embedder=lambda texts: [[0.1] * 4 for _ in texts],
+    )
+
+    def raise_mismatch(*_args: object, **_kwargs: object) -> None:
+        raise EmbeddingDimensionMismatchError(1536, 3072)
+
+    mem._encode_batch = raise_mismatch  # type: ignore[method-assign]
+
+    with pytest.raises(EmbeddingDimensionMismatchError):
+        mem._background_encode_batch(["content"], None, None, None, None, None, False, None)
+
+
+def test_background_save_still_swallows_shutdown_runtime_error(tmp_path: Path) -> None:
+    from unittest.mock import MagicMock
+
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(
+        storage=str(tmp_path / "db"),
+        llm=MagicMock(),
+        embedder=lambda texts: [[0.1] * 4 for _ in texts],
+    )
+
+    def raise_shutdown(*_args: object, **_kwargs: object) -> None:
+        raise RuntimeError("cannot schedule new futures after shutdown")
+
+    mem._encode_batch = raise_shutdown  # type: ignore[method-assign]
+
+    assert (
+        mem._background_encode_batch(
+            ["content"], None, None, None, None, None, False, None
+        )
+        == []
+    )

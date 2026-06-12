@@ -480,9 +480,11 @@ FooterKey .footer-key--key {
         self._task_statuses: dict[int, str] = {
             i: "pending" for i in range(1, total_tasks + 1)
         }
-        # Maps a task's identity to its sidebar index so completion/failure
-        # events mark the right row even when tasks run async/overlapping.
-        self._task_idx_by_key: dict[str, int] = {}
+        # Maps a task's identity to state captured when it started (sidebar
+        # index, description, agent, start time) so completion/failure events
+        # build their log entry from the right task even when tasks run
+        # async/overlapping.
+        self._task_state_by_key: dict[str, dict[str, Any]] = {}
 
         self._timeline: list[tuple[str, str, str]] = []
         self._current_step: tuple[str, str, str] | None = None
@@ -1388,12 +1390,13 @@ FooterKey .footer-key--key {
             if current in ("pending", "active"):
                 self._plan_step_status[sn] = "done"
 
-    def _resolve_task_idx(self, event: Any) -> int:
-        """Map a completion/failure event back to its sidebar row.
+    def _pop_task_state(self, event: Any) -> dict[str, Any]:
+        """Return the start-time state for a completion/failure event's task.
 
         Tasks can run async/overlapping, so the event's task identity is
-        matched against the index registered when the task started rather
-        than assuming the most recently started task. Caller must hold
+        matched against the state registered when the task started rather
+        than assuming the most recently started task. Falls back to the
+        current shared state for unmatched events. Caller must hold
         ``self._lock``.
         """
         task = getattr(event, "task", None)
@@ -1409,10 +1412,15 @@ FooterKey .footer-key--key {
         if event_task_name:
             candidates.append(event_task_name)
         for key in candidates:
-            idx = self._task_idx_by_key.pop(key, None)
-            if idx is not None:
-                return idx
-        return self._current_task_idx
+            state = self._task_state_by_key.pop(key, None)
+            if state is not None:
+                return state
+        return {
+            "idx": self._current_task_idx,
+            "desc": self._current_task_desc,
+            "agent": self._current_agent,
+            "start_time": self._task_start_time,
+        }
 
     def _prepare_for_replan(self) -> None:
         """Keep current statuses visible while allowing the next plan to replace it."""
@@ -1576,13 +1584,20 @@ FooterKey .footer-key--key {
                 if not desc and event.task_name:
                     desc = event.task_name
                 self._current_task_desc = desc
-                key = str(getattr(event.task, "id", "") or "") or desc
-                if key:
-                    self._task_idx_by_key[key] = idx
 
                 agent = getattr(source, "agent", None) if source else None
-                if agent:
-                    self._current_agent = getattr(agent, "role", "") or ""
+                agent_role = (getattr(agent, "role", "") or "") if agent else ""
+                if agent_role:
+                    self._current_agent = agent_role
+
+                key = str(getattr(event.task, "id", "") or "") or desc
+                if key:
+                    self._task_state_by_key[key] = {
+                        "idx": idx,
+                        "desc": desc,
+                        "agent": agent_role,
+                        "start_time": self._task_start_time,
+                    }
 
                 self._timeline = []
                 self._current_step = None
@@ -1978,72 +1993,97 @@ FooterKey .footer-key--key {
 
         @crewai_event_bus.on(TaskCompletedEvent)
         def on_task_completed(source: Any, event: TaskCompletedEvent) -> None:
-            elapsed = time.time() - self._task_start_time
+            now = time.time()
             with self._lock:
-                idx = self._resolve_task_idx(event)
+                state = self._pop_task_state(event)
+                idx = state["idx"]
                 self._task_statuses[idx] = "done"
-                self._collapse_plan_on_task_done()
+                elapsed = now - state["start_time"]
+                # The shared stream fields (steps, timeline, streamed output)
+                # belong to the most recently started task. Only consume and
+                # reset them when that is the task completing — an earlier
+                # task finishing out of order must not steal or clear the
+                # current task's stream.
+                is_current = idx == self._current_task_idx
+                output = getattr(event.output, "raw", "") or ""
 
-                if self._current_llm_text.strip():
-                    self._current_task_steps.append(
-                        {
-                            "type": "llm",
-                            "summary": "Final response",
-                            "detail": self._current_llm_text.strip(),
-                            "style": "green",
-                        }
-                    )
-                    self._current_llm_text = ""
+                if is_current:
+                    self._collapse_plan_on_task_done()
 
-                steps = list(self._current_task_steps)
-                self._current_task_steps = []
+                    if self._current_llm_text.strip():
+                        self._current_task_steps.append(
+                            {
+                                "type": "llm",
+                                "summary": "Final response",
+                                "detail": self._current_llm_text.strip(),
+                                "style": "green",
+                            }
+                        )
+                        self._current_llm_text = ""
+
+                    steps = list(self._current_task_steps)
+                    self._current_task_steps = []
+                    timeline = list(self._timeline)
+                    output = self._task_full_output or output
+
+                    self._is_streaming = False
+                    self._streaming_text = ""
+                    self._task_full_output = ""
+                    self._timeline = []
+                    self._current_step = None
+                else:
+                    steps = []
+                    timeline = []
 
                 self._task_logs.append(
                     {
                         "idx": idx,
-                        "desc": self._current_task_desc or "Task",
-                        "agent": self._current_agent,
+                        "desc": state["desc"] or "Task",
+                        "agent": state["agent"],
                         "elapsed": elapsed,
-                        "timeline": list(self._timeline),
+                        "timeline": timeline,
                         "steps": steps,
-                        "output": self._task_full_output,
+                        "output": output,
                     }
                 )
-
-                self._is_streaming = False
-                self._streaming_text = ""
-                self._task_full_output = ""
-                self._timeline = []
-                self._current_step = None
 
         self._register_handler(TaskCompletedEvent, on_task_completed)
 
         @crewai_event_bus.on(TaskFailedEvent)
         def on_task_failed(source: Any, event: TaskFailedEvent) -> None:
+            now = time.time()
             with self._lock:
-                idx = self._resolve_task_idx(event)
+                state = self._pop_task_state(event)
+                idx = state["idx"]
                 self._task_statuses[idx] = "failed"
+                is_current = idx == self._current_task_idx
 
-                self._current_task_steps.append(
-                    {
-                        "type": "error",
-                        "summary": f"✘ Failed: {event.error[:100]}",
-                        "detail": event.error,
-                        "style": "red",
-                    }
-                )
-                steps = list(self._current_task_steps)
-                self._current_task_steps = []
+                error_step = {
+                    "type": "error",
+                    "summary": f"✘ Failed: {event.error[:100]}",
+                    "detail": event.error,
+                    "style": "red",
+                }
+                if is_current:
+                    self._current_task_steps.append(error_step)
+                    steps = list(self._current_task_steps)
+                    self._current_task_steps = []
+                    timeline = list(self._timeline)
+                    output = self._task_full_output
+                else:
+                    steps = [error_step]
+                    timeline = []
+                    output = ""
 
                 self._task_logs.append(
                     {
                         "idx": idx,
-                        "desc": self._current_task_desc or "Task",
-                        "agent": self._current_agent,
-                        "elapsed": time.time() - self._task_start_time,
-                        "timeline": list(self._timeline),
+                        "desc": state["desc"] or "Task",
+                        "agent": state["agent"],
+                        "elapsed": now - state["start_time"],
+                        "timeline": timeline,
                         "steps": steps,
-                        "output": self._task_full_output,
+                        "output": output,
                         "error": event.error,
                     }
                 )
