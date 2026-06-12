@@ -30,7 +30,6 @@ def test_run_passes_filename_to_run_crew(run_crew_mock: mock.Mock, runner: CliRu
 
     run_crew_mock.assert_called_once_with(
         trained_agents_file="my_custom_trained.pkl",
-        daemon=False,
     )
     assert result.exit_code == 0
 
@@ -39,7 +38,7 @@ def test_run_passes_filename_to_run_crew(run_crew_mock: mock.Mock, runner: CliRu
 def test_run_without_filename_passes_none(run_crew_mock: mock.Mock, runner: CliRunner) -> None:
     result = runner.invoke(run)
 
-    run_crew_mock.assert_called_once_with(trained_agents_file=None, daemon=False)
+    run_crew_mock.assert_called_once_with(trained_agents_file=None)
     assert result.exit_code == 0
 
 
