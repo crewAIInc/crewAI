@@ -1634,6 +1634,9 @@ github = [
 hyperbrowser = [
     { name = "hyperbrowser" },
 ]
+iflow-search = [
+    { name = "iflow-search" },
+]
 linkup-sdk = [
     { name = "linkup-sdk" },
 ]
@@ -1728,6 +1731,7 @@ requires-dist = [
     { name = "firecrawl-py", marker = "extra == 'firecrawl-py'", specifier = ">=1.8.0" },
     { name = "gitpython", marker = "extra == 'github'", specifier = ">=3.1.50,<4" },
     { name = "hyperbrowser", marker = "extra == 'hyperbrowser'", specifier = ">=0.18.0" },
+    { name = "iflow-search", marker = "extra == 'iflow-search'", specifier = ">=0.1.0,<0.2" },
     { name = "langchain-apify", marker = "extra == 'apify'", specifier = ">=0.1.2,<1.0.0" },
     { name = "linkup-sdk", marker = "extra == 'linkup-sdk'", specifier = ">=0.2.2" },
     { name = "lxml", marker = "extra == 'rag'", specifier = ">=6.1.0,<7" },
@@ -1766,7 +1770,7 @@ requires-dist = [
     { name = "weaviate-client", marker = "extra == 'weaviate-client'", specifier = ">=4.10.2" },
     { name = "youtube-transcript-api", specifier = "~=1.2.2" },
 ]
-provides-extras = ["apify", "beautifulsoup4", "bedrock", "browserbase", "composio-core", "contextual", "couchbase", "databricks-sdk", "daytona", "e2b", "exa-py", "firecrawl-py", "github", "hyperbrowser", "linkup-sdk", "mcp", "mongodb", "multion", "mysql", "oxylabs", "patronus", "postgresql", "qdrant-client", "rag", "scrapegraph-py", "scrapfly-sdk", "selenium", "serpapi", "singlestore", "snowflake", "spider-client", "sqlalchemy", "stagehand", "tavily-python", "weaviate-client", "xml"]
+provides-extras = ["apify", "beautifulsoup4", "bedrock", "browserbase", "composio-core", "contextual", "couchbase", "databricks-sdk", "daytona", "e2b", "exa-py", "firecrawl-py", "github", "hyperbrowser", "iflow-search", "linkup-sdk", "mcp", "mongodb", "multion", "mysql", "oxylabs", "patronus", "postgresql", "qdrant-client", "rag", "scrapegraph-py", "scrapfly-sdk", "selenium", "serpapi", "singlestore", "snowflake", "spider-client", "sqlalchemy", "stagehand", "tavily-python", "weaviate-client", "xml"]
 
 [[package]]
 name = "cryptography"
@@ -3314,6 +3318,19 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/82/77/7b3966d0b9d1d31a36ddf1746926a11dface89a83409bf1483f0237aa758/idna-3.15.tar.gz", hash = "sha256:ca962446ea538f7092a95e057da437618e886f4d349216d2b1e294abfdb65fdc", size = 199245, upload-time = "2026-05-12T22:45:57.011Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d2/23/408243171aa9aaba178d3e2559159c24c1171a641aa83b67bdd3394ead8e/idna-3.15-py3-none-any.whl", hash = "sha256:048adeaf8c2d788c40fee287673ccaa74c24ffd8dcf09ffa555a2fbb59f10ac8", size = 72340, upload-time = "2026-05-12T22:45:55.733Z" },
+]
+
+[[package]]
+name = "iflow-search"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/de/fb/ab630543a2cc24da85172738ccde907ca32e468c6573d064619ce35f80b5/iflow_search-0.1.0.tar.gz", hash = "sha256:633294dd621d2e83ca2ae90a38dce3f48c17acc9681675dbe935b3fbaf2c196a", size = 14230, upload-time = "2026-05-26T03:35:18.258Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f5/9a/08d558ccac3f9aa380da4656d7e95f34568c38c7614384c0c7988fd8444c/iflow_search-0.1.0-py3-none-any.whl", hash = "sha256:813eea2ed21eddb10f9af65cccf901e7c946a0b26bafe72a534f84949032bc9d", size = 20751, upload-time = "2026-05-26T03:35:17.061Z" },
 ]
 
 [[package]]
