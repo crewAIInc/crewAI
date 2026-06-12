@@ -667,3 +667,60 @@ async def test_completed_run_keeps_activity_log_keyboard_navigation_active() -> 
         await pilot.pause()
 
         assert app._log_cursor == 0
+
+
+class _FakeTask:
+    fingerprint = None
+
+    def __init__(self, task_id: str, name: str) -> None:
+        self.id = task_id
+        self.name = name
+        self.description = name
+
+
+def test_async_task_completion_marks_the_right_sidebar_row() -> None:
+    """Overlapping tasks: completing task 1 while task 2 runs must not
+    mark task 2 done, and starting task 2 must not mark task 1 done."""
+    from crewai.events.types.task_events import TaskCompletedEvent, TaskStartedEvent
+    from crewai.tasks.task_output import TaskOutput
+
+    app = CrewRunApp(total_tasks=2, task_names=["first", "second"])
+    app._subscribe()
+    try:
+        task1 = _FakeTask("id-1", "first")
+        task2 = _FakeTask("id-2", "second")
+
+        for task in (task1, task2):
+            future = crewai_event_bus.emit(
+                None, TaskStartedEvent(context=None, task=task)
+            )
+            if future:
+                future.result(timeout=5)
+
+        # Both started: neither prematurely done
+        assert app._task_statuses == {1: "active", 2: "active"}
+
+        future = crewai_event_bus.emit(
+            None,
+            TaskCompletedEvent(
+                output=TaskOutput(description="first", raw="done", agent="a"),
+                task=task1,
+            ),
+        )
+        if future:
+            future.result(timeout=5)
+
+        assert app._task_statuses == {1: "done", 2: "active"}
+    finally:
+        app._unsubscribe()
+
+
+def test_resolve_task_idx_falls_back_to_current_task() -> None:
+    app = CrewRunApp(total_tasks=2, task_names=["first", "second"])
+    app._current_task_idx = 2
+
+    class _Evt:
+        task = None
+        task_name = "unknown"
+
+    assert app._resolve_task_idx(_Evt()) == 2

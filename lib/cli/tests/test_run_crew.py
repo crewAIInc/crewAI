@@ -47,3 +47,74 @@ def test_run_json_crew_leaves_env_untouched_without_flag(monkeypatch, tmp_path: 
         run_crew_module._run_json_crew()
 
     assert CREWAI_TRAINED_AGENTS_FILE_ENV not in os.environ
+
+
+def test_missing_input_names_accepts_hyphenated_placeholders():
+    """The prompt regex must accept the same names kickoff interpolation does."""
+    from types import SimpleNamespace
+
+    crew = SimpleNamespace(
+        agents=[
+            SimpleNamespace(
+                role="Researcher", goal="Cover {my-topic}", backstory=""
+            )
+        ],
+        tasks=[
+            SimpleNamespace(
+                description="Write about {my-topic} for {target-audience}",
+                expected_output="Post",
+                output_file=None,
+            )
+        ],
+    )
+
+    assert run_crew_module._missing_input_names(crew, {}) == [
+        "my-topic",
+        "target-audience",
+    ]
+
+
+def _patch_tui_run(monkeypatch, status: str):
+    """Stub the TUI pieces of _run_json_crew so only exit handling runs."""
+
+    class FakeApp:
+        def __init__(self, **kwargs):
+            self._status = status
+            self._crew_result = "result" if status == "completed" else None
+            self._want_deploy = False
+
+        def run(self):
+            pass
+
+    from types import SimpleNamespace
+
+    crew = SimpleNamespace(name="Demo", tasks=[], agents=[])
+    monkeypatch.setattr(
+        run_crew_module, "find_crew_json_file", lambda: Path("crew.jsonc")
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "_load_json_crew_for_tui",
+        lambda _path: (FakeApp, crew, {}, [], []),
+    )
+    monkeypatch.setattr(
+        run_crew_module, "_prompt_for_missing_inputs", lambda _crew, inputs: inputs
+    )
+    monkeypatch.setattr(run_crew_module, "_print_post_tui_summary", lambda _app: None)
+
+
+def test_run_json_crew_failed_status_exits_nonzero(monkeypatch, tmp_path: Path):
+    monkeypatch.chdir(tmp_path)
+    _patch_tui_run(monkeypatch, status="failed")
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_crew_module._run_json_crew()
+
+    assert exc_info.value.code == 1
+
+
+def test_run_json_crew_completed_status_returns_result(monkeypatch, tmp_path: Path):
+    monkeypatch.chdir(tmp_path)
+    _patch_tui_run(monkeypatch, status="completed")
+
+    assert run_crew_module._run_json_crew() == "result"

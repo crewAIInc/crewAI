@@ -480,6 +480,9 @@ FooterKey .footer-key--key {
         self._task_statuses: dict[int, str] = {
             i: "pending" for i in range(1, total_tasks + 1)
         }
+        # Maps a task's identity to its sidebar index so completion/failure
+        # events mark the right row even when tasks run async/overlapping.
+        self._task_idx_by_key: dict[str, int] = {}
 
         self._timeline: list[tuple[str, str, str]] = []
         self._current_step: tuple[str, str, str] | None = None
@@ -1385,6 +1388,32 @@ FooterKey .footer-key--key {
             if current in ("pending", "active"):
                 self._plan_step_status[sn] = "done"
 
+    def _resolve_task_idx(self, event: Any) -> int:
+        """Map a completion/failure event back to its sidebar row.
+
+        Tasks can run async/overlapping, so the event's task identity is
+        matched against the index registered when the task started rather
+        than assuming the most recently started task. Caller must hold
+        ``self._lock``.
+        """
+        task = getattr(event, "task", None)
+        candidates: list[str] = []
+        if task is not None:
+            task_id = str(getattr(task, "id", "") or "")
+            if task_id:
+                candidates.append(task_id)
+            desc = getattr(task, "name", "") or getattr(task, "description", "") or ""
+            if desc:
+                candidates.append(desc)
+        event_task_name = getattr(event, "task_name", "") or ""
+        if event_task_name:
+            candidates.append(event_task_name)
+        for key in candidates:
+            idx = self._task_idx_by_key.pop(key, None)
+            if idx is not None:
+                return idx
+        return self._current_task_idx
+
     def _prepare_for_replan(self) -> None:
         """Keep current statuses visible while allowing the next plan to replace it."""
         self._awaiting_replan = True
@@ -1533,9 +1562,9 @@ FooterKey .footer-key--key {
                 self._plan_step_status = {}
                 self._awaiting_replan = False
 
-                for k in self._task_statuses:
-                    if self._task_statuses[k] == "active":
-                        self._task_statuses[k] = "done"
+                # Tasks may run async/overlapping, so earlier active rows are
+                # only marked done by their own completion events (with a
+                # final sweep in _on_crew_done).
                 if idx in self._task_statuses:
                     self._task_statuses[idx] = "active"
 
@@ -1547,6 +1576,9 @@ FooterKey .footer-key--key {
                 if not desc and event.task_name:
                     desc = event.task_name
                 self._current_task_desc = desc
+                key = str(getattr(event.task, "id", "") or "") or desc
+                if key:
+                    self._task_idx_by_key[key] = idx
 
                 agent = getattr(source, "agent", None) if source else None
                 if agent:
@@ -1948,7 +1980,7 @@ FooterKey .footer-key--key {
         def on_task_completed(source: Any, event: TaskCompletedEvent) -> None:
             elapsed = time.time() - self._task_start_time
             with self._lock:
-                idx = self._current_task_idx
+                idx = self._resolve_task_idx(event)
                 self._task_statuses[idx] = "done"
                 self._collapse_plan_on_task_done()
 
@@ -1989,7 +2021,7 @@ FooterKey .footer-key--key {
         @crewai_event_bus.on(TaskFailedEvent)
         def on_task_failed(source: Any, event: TaskFailedEvent) -> None:
             with self._lock:
-                idx = self._current_task_idx
+                idx = self._resolve_task_idx(event)
                 self._task_statuses[idx] = "failed"
 
                 self._current_task_steps.append(

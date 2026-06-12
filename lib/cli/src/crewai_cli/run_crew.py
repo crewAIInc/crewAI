@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from contextlib import AbstractContextManager, nullcontext
 from enum import Enum
+import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 from typing import TYPE_CHECKING, Any
 
 import click
@@ -29,7 +31,10 @@ class CrewType(Enum):
     FLOW = "flow"
 
 
-_INPUT_PLACEHOLDER_RE = re.compile(r"(?<!{){([A-Za-z_][A-Za-z0-9_]*)}(?!})")
+# Must accept the same names as the kickoff interpolation pattern in
+# crewai.utilities.string_utils (_VARIABLE_PATTERN), including hyphens —
+# otherwise placeholders are interpolated at runtime but never prompted for.
+_INPUT_PLACEHOLDER_RE = re.compile(r"(?<!{){([A-Za-z_][A-Za-z0-9_\-]*)}(?!})")
 
 
 def _has_json_crew() -> bool:
@@ -145,8 +150,6 @@ def _prepare_json_crew_for_tui(crew: Any) -> None:
 
 def _run_json_crew(trained_agents_file: str | None = None) -> Any:
     """Load and run a JSON-defined crew."""
-    import os
-
     from dotenv import load_dotenv
 
     env_file = Path.cwd() / ".env"
@@ -179,6 +182,19 @@ def _run_json_crew(trained_agents_file: str | None = None) -> Any:
     app.run()
 
     _print_post_tui_summary(app)
+
+    if app._status == "failed":
+        # Mirror the classic subprocess path: a failed crew must produce a
+        # non-zero exit code so scripts and CI don't treat it as success.
+        raise SystemExit(1)
+
+    if app._status not in ("completed", "failed"):
+        # User quit mid-run. kickoff runs in a thread worker that cannot be
+        # force-cancelled, so end the process to stop in-flight LLM and tool
+        # work instead of letting it burn tokens in the background.
+        click.secho("\n  Run cancelled.", fg="yellow")
+        sys.stdout.flush()
+        os._exit(130)
 
     if getattr(app, "_want_deploy", False):
         _chain_deploy()
