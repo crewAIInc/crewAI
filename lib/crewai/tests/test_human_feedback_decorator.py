@@ -551,7 +551,7 @@ class TestHumanFeedbackLearn:
 
         captured_output = {}
 
-        def capture_feedback(message, output, metadata=None, emit=None):
+        def capture_feedback(message, output, metadata=None, emit=None, method_name=""):
             captured_output["shown_to_human"] = output
             return "approved"
 
@@ -631,7 +631,7 @@ class TestHumanFeedbackLearn:
 
         captured: dict[str, Any] = {}
 
-        def capture_feedback(message, output, metadata=None, emit=None):
+        def capture_feedback(message, output, metadata=None, emit=None, method_name=""):
             captured["shown_to_human"] = output
             return ""
 

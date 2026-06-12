@@ -3478,6 +3478,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 output=method_output,
                 metadata=metadata,
                 emit=emit,
+                method_name=method_name,
             )
 
         result = await self._finalize_human_feedback(
@@ -3581,6 +3582,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         output: Any,
         metadata: dict[str, Any] | None = None,
         emit: Sequence[str] | None = None,
+        method_name: str = "",
     ) -> str:
         """Request feedback from a human.
         Args:
@@ -3588,6 +3590,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             output: The method output to show the human for review.
             metadata: Optional metadata for enterprise integrations.
             emit: Optional list of possible outcomes for routing.
+            method_name: The flow method whose output is under review.
 
         Returns:
             The human's feedback as a string. Empty string if no feedback provided.
@@ -3603,7 +3606,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             HumanFeedbackRequestedEvent(
                 type="human_feedback_requested",
                 flow_name=self._definition.name,
-                method_name="",  # Will be set by decorator if needed
+                method_name=method_name,
                 output=output,
                 message=message,
                 emit=list(emit) if emit else None,
@@ -3632,7 +3635,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 HumanFeedbackReceivedEvent(
                     type="human_feedback_received",
                     flow_name=self._definition.name,
-                    method_name="",  # Will be set by decorator if needed
+                    method_name=method_name,
                     feedback=feedback,
                     outcome=None,  # Will be determined after collapsing
                 ),
