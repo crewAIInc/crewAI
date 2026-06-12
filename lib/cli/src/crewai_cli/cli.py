@@ -370,7 +370,7 @@ def reset_memories(
     "--embedder-model",
     type=str,
     default=None,
-    help="Embedder model name (e.g. text-embedding-3-small, gemini-embedding-001).",
+    help="Embedder model name (e.g. text-embedding-3-large, gemini-embedding-001).",
 )
 @click.option(
     "--embedder-config",

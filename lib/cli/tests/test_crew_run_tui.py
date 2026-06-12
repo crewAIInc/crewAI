@@ -19,6 +19,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai_cli import run_crew
 from crewai_cli.crew_run_tui import CrewRunApp
 
 
@@ -54,6 +55,38 @@ def _emit_event(event: object) -> None:
     future = crewai_event_bus.emit(None, event)
     if future:
         future.result(timeout=5)
+
+
+def test_chain_deploy_skips_validation_after_auth_retry(monkeypatch) -> None:
+    create_calls: list[dict[str, object]] = []
+    login_calls: list[bool] = []
+
+    class FakeDeployCommand:
+        attempts = 0
+
+        def create_crew(self, **kwargs) -> None:
+            create_calls.append(kwargs)
+            FakeDeployCommand.attempts += 1
+            if FakeDeployCommand.attempts == 1:
+                raise SystemExit(1)
+
+    class FakeAuthenticationCommand:
+        def login(self) -> None:
+            login_calls.append(True)
+
+    monkeypatch.setattr("crewai_cli.deploy.main.DeployCommand", FakeDeployCommand)
+    monkeypatch.setattr(
+        "crewai_cli.authentication.main.AuthenticationCommand",
+        FakeAuthenticationCommand,
+    )
+
+    run_crew._chain_deploy()
+
+    assert create_calls == [
+        {"confirm": False, "skip_validate": True},
+        {"confirm": False, "skip_validate": True},
+    ]
+    assert login_calls == [True]
 
 
 def test_plan_step_status_updates_only_the_explicit_step() -> None:

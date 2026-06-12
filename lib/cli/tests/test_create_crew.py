@@ -476,6 +476,44 @@ def test_json_wizard_tool_picker_shows_remaining_tools_by_category(monkeypatch):
     assert not any("Search & Research:" in label for label in labels)
 
 
+def test_json_wizard_tool_picker_shows_expanded_builtin_tools(monkeypatch):
+    picker_calls: list[tuple[str, list[str], dict[str, object]]] = []
+
+    def pick_many(title: str, labels: list[str], **kwargs) -> list[int]:
+        picker_calls.append((title, labels, kwargs))
+        return []
+
+    monkeypatch.setattr(json_crew, "pick_many", pick_many)
+
+    json_crew._select_tools()
+
+    labels = picker_calls[0][1]
+    tool_names = {
+        label.rsplit(maxsplit=1)[-1]
+        for idx, label in enumerate(labels)
+        if idx not in picker_calls[0][2]["separator_indices"]
+    }
+
+    assert {
+        "DirectorySearchTool",
+        "MDXSearchTool",
+        "XMLSearchTool",
+        "YoutubeVideoSearchTool",
+        "S3ReaderTool",
+        "E2BExecTool",
+        "TavilyResearchTool",
+        "SerplyNewsSearchTool",
+        "BrowserbaseLoadTool",
+        "PatronusEvalTool",
+    }.issubset(tool_names)
+    assert {
+        "MCPServerAdapter",
+        "MongoDBVectorSearchConfig",
+        "ScrapegraphScrapeToolSchema",
+        "SnowflakeConfig",
+    }.isdisjoint(tool_names)
+
+
 def test_multi_picker_skips_separator_on_initial_cursor(monkeypatch):
     cursors: list[int] = []
 

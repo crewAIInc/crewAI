@@ -261,7 +261,7 @@ class Memory(BaseModel):
                 raise RuntimeError(
                     f"Memory requires an embedder for vector search but initialization failed: {e}\n\n"
                     "To fix this, do one of the following:\n"
-                    "  - Set OPENAI_API_KEY for the default embedder (text-embedding-3-small)\n"
+                    "  - Set OPENAI_API_KEY for the default embedder (text-embedding-3-large)\n"
                     '  - Pass a different embedder: Memory(embedder={{"provider": "google", "config": {{...}}}})\n'
                     "  - Pass a callable: Memory(embedder=my_embedding_function)\n\n"
                     f"Docs: {self._MEMORY_DOCS_URL}"

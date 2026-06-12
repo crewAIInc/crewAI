@@ -43,7 +43,7 @@ _logger = logging.getLogger(__name__)
 
 VECTOR_NAME: Final[str] = "memory"
 
-DEFAULT_VECTOR_DIM: Final[int] = 1536
+DEFAULT_VECTOR_DIM: Final[int] = 3072
 
 _SCROLL_BATCH: Final[int] = 256
 

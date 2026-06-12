@@ -637,7 +637,10 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         if self.memory is True:
             from crewai.memory.unified_memory import Memory
 
-            self.memory = Memory()
+            memory_kwargs: dict[str, Any] = {}
+            if self.llm is not None:
+                memory_kwargs["llm"] = self.llm
+            self.memory = Memory(**memory_kwargs)
         elif self.memory is False:
             self.memory = None
         return self

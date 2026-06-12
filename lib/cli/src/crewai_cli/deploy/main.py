@@ -34,6 +34,39 @@ def _run_predeploy_validation(skip_validate: bool) -> bool:
     return True
 
 
+def _display_git_repository_help() -> None:
+    """Explain how to prepare a new project for deployment."""
+    console.print(
+        "Deployment requires a Git repository with an origin remote.",
+        style="bold red",
+    )
+    console.print(
+        "CrewAI AMP deploys from the remote repository URL, so commit and push "
+        "this project first, then run deploy again.",
+        style="yellow",
+    )
+    console.print("\nSuggested setup:")
+    console.print("  git init")
+    console.print("  git add .")
+    console.print('  git commit -m "Initial crew"')
+    console.print("  git branch -M main")
+    console.print("  git remote add origin <your-repo-url>")
+    console.print("  git push -u origin main")
+
+
+def _display_git_remote_help() -> None:
+    """Explain how to add a remote to an existing Git repository."""
+    console.print("No remote repository URL found.", style="bold red")
+    console.print(
+        "CrewAI AMP deploys from the origin remote. Add a remote, push your "
+        "latest commit, then run deploy again.",
+        style="yellow",
+    )
+    console.print("\nSuggested setup:")
+    console.print("  git remote add origin <your-repo-url>")
+    console.print("  git push -u origin HEAD")
+
+
 class DeployCommand(BaseCommand, PlusAPIMixin):
     """
     A class to handle deployment-related operations for CrewAI projects.
@@ -124,14 +157,11 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         try:
             remote_repo_url = git.Repository().origin_url()
         except ValueError:
-            remote_repo_url = None
+            _display_git_repository_help()
+            return
 
         if remote_repo_url is None:
-            console.print("No remote repository URL found.", style="bold red")
-            console.print(
-                "Please ensure your project has a valid remote repository.",
-                style="yellow",
-            )
+            _display_git_remote_help()
             return
 
         self._confirm_input(env_vars, remote_repo_url, confirm)

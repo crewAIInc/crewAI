@@ -490,8 +490,8 @@ def test_composite_score_reranks_results(
     """Same semantic score: high-importance recent memory ranks first."""
     from crewai.memory.unified_memory import Memory
 
-    # Use same dim as default LanceDB (1536) so storage does not overwrite embedding
-    emb = [0.1] * 1536
+    # Use same dim as default LanceDB (3072) so storage does not overwrite embedding
+    emb = [0.1] * 3072
     mem = Memory(
         storage=str(tmp_path / "rerank_db"),
         llm=MagicMock(),

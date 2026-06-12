@@ -101,7 +101,7 @@ crew = Crew(
 )
 ```
 
-When `memory=True`, the crew creates a default `Memory()` and passes the crew's `embedder` configuration through automatically. All agents in the crew share the crew's memory unless an agent has its own.
+When `memory=True`, the crew creates a default `Memory()` and passes the crew's `embedder` configuration through automatically. All agents in the crew share the crew's memory unless an agent has its own. Without a custom `embedder`, memory uses OpenAI `text-embedding-3-large` embeddings.
 
 After each task, the crew automatically extracts discrete facts from the task output and stores them. Before each task, the agent recalls relevant context from memory and injects it into the task prompt.
 
@@ -515,7 +515,11 @@ memory = Memory(
 
 ## Embedder Configuration
 
-Memory needs an embedding model to convert text into vectors for semantic search. You can configure this in three ways.
+Memory needs an embedding model to convert text into vectors for semantic search. By default, `Memory()` uses OpenAI `text-embedding-3-large` embeddings, which produce 3072-dimensional vectors. Set `OPENAI_API_KEY` for the default path, or configure a custom embedder in one of three ways.
+
+<Warning>
+Existing local memory stores created with 1536-dimensional embeddings, such as `text-embedding-3-small` or `text-embedding-ada-002`, may not be compatible with the `text-embedding-3-large` default. If local testing fails with an embedding dimension mismatch, reset memory with `crewai reset-memories -m`, delete the local memory storage directory, or explicitly configure the older embedder model until you migrate.
+</Warning>
 
 ### Passing to Memory Directly
 
@@ -523,7 +527,7 @@ Memory needs an embedding model to convert text into vectors for semantic search
 from crewai import Memory
 
 # As a config dict
-memory = Memory(embedder={"provider": "openai", "config": {"model_name": "text-embedding-3-small"}})
+memory = Memory(embedder={"provider": "openai", "config": {"model_name": "text-embedding-3-large"}})
 
 # As a pre-built callable
 from crewai.rag.embeddings.factory import build_embedder
@@ -542,7 +546,7 @@ crew = Crew(
     agents=[...],
     tasks=[...],
     memory=True,
-    embedder={"provider": "openai", "config": {"model_name": "text-embedding-3-small"}},
+    embedder={"provider": "openai", "config": {"model_name": "text-embedding-3-large"}},
 )
 ```
 
@@ -554,7 +558,7 @@ crew = Crew(
 memory = Memory(embedder={
     "provider": "openai",
     "config": {
-        "model_name": "text-embedding-3-small",
+        "model_name": "text-embedding-3-large",
         # "api_key": "sk-...",  # or set OPENAI_API_KEY env var
     },
 })
@@ -701,7 +705,7 @@ memory = Memory(embedder=my_embedder)
 
 | Provider | Key | Typical Model | Notes |
 | :--- | :--- | :--- | :--- |
-| OpenAI | `openai` | `text-embedding-3-small` | Default. Set `OPENAI_API_KEY`. |
+| OpenAI | `openai` | `text-embedding-3-large` | Default. Set `OPENAI_API_KEY`. |
 | Ollama | `ollama` | `mxbai-embed-large` | Local, no API key needed. |
 | Azure OpenAI | `azure` | `text-embedding-ada-002` | Requires `deployment_id`. |
 | Google AI | `google-generativeai` | `gemini-embedding-001` | Set `GOOGLE_API_KEY`. |
@@ -836,6 +840,9 @@ class MemoryMonitor(BaseEventListener):
 **Background save errors in logs?**
 - Memory saves run in a background thread. Errors are emitted as `MemorySaveFailedEvent` but don't crash the agent. Check logs for the root cause (usually LLM or embedder connection issues).
 
+**Embedding dimension mismatch?**
+- Existing local memory stores may have been created with a different embedding model. The default OpenAI memory embedder is now `text-embedding-3-large` (3072 dimensions), while older stores commonly used 1536-dimensional embeddings. For local testing, run `crewai reset-memories -m`, delete the local memory storage directory, or configure the previous embedder model explicitly.
+
 **Concurrent write conflicts?**
 - LanceDB operations are serialized with a shared lock and retried automatically on conflict. This handles multiple `Memory` instances pointing at the same database (e.g. agent memory + crew memory). No action needed.
 
@@ -862,7 +869,7 @@ All configuration is passed as keyword arguments to `Memory(...)`. Every paramet
 | :--- | :--- | :--- |
 | `llm` | `"gpt-4o-mini"` | LLM for analysis (model name or `BaseLLM` instance). |
 | `storage` | `"lancedb"` | Storage backend (`"lancedb"`, a path string, or a `StorageBackend` instance). |
-| `embedder` | `None` (OpenAI default) | Embedder (config dict, callable, or `None` for default OpenAI). |
+| `embedder` | `None` (OpenAI `text-embedding-3-large`) | Embedder (config dict, callable, or `None` for default OpenAI). |
 | `recency_weight` | `0.3` | Weight for recency in composite score. |
 | `semantic_weight` | `0.5` | Weight for semantic similarity in composite score. |
 | `importance_weight` | `0.2` | Weight for importance in composite score. |

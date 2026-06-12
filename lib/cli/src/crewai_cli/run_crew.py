@@ -221,13 +221,13 @@ def _chain_deploy() -> None:
     try:
         from crewai_cli.deploy.main import DeployCommand
         console.print("\nStarting deployment…\n", style="bold #FF5A50")
-        DeployCommand().create_crew(confirm=False)
+        DeployCommand().create_crew(confirm=False, skip_validate=True)
     except SystemExit:
         from crewai_cli.authentication.main import AuthenticationCommand
         console.print()
         AuthenticationCommand().login()
         try:
-            DeployCommand().create_crew(confirm=False)
+            DeployCommand().create_crew(confirm=False, skip_validate=True)
         except Exception as e:
             console.print(f"\nDeploy failed: {e}\n", style="bold red")
     except Exception as e:

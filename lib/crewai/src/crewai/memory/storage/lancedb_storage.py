@@ -20,10 +20,10 @@ from crewai.memory.types import MemoryRecord, ScopeInfo
 
 _logger = logging.getLogger(__name__)
 
-# Default embedding vector dimensionality (matches OpenAI text-embedding-3-small).
+# Default embedding vector dimensionality (matches OpenAI text-embedding-3-large).
 # Used when creating new tables and for zero-vector placeholder scans.
 # Callers can override via the ``vector_dim`` constructor parameter.
-DEFAULT_VECTOR_DIM = 1536
+DEFAULT_VECTOR_DIM = 3072
 
 # Safety cap on the number of rows returned by a single scan query.
 # Prevents unbounded memory use when scanning large tables for scope info,

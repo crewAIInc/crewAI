@@ -658,7 +658,14 @@ class Crew(FlowTrackable, BaseModel):
                 from crewai.rag.embeddings.factory import build_embedder
 
                 embedder = build_embedder(cast(dict[str, Any], self.embedder))
-            self._memory = Memory(embedder=embedder, root_scope=crew_root_scope)
+            memory_kwargs: dict[str, Any] = {
+                "embedder": embedder,
+                "root_scope": crew_root_scope,
+            }
+            memory_llm = self._memory_llm()
+            if memory_llm is not None:
+                memory_kwargs["llm"] = memory_llm
+            self._memory = Memory(**memory_kwargs)
         elif self.memory:
             # User passed a Memory / MemoryScope / MemorySlice instance
             # Respect user's configuration — don't auto-set root_scope
@@ -667,6 +674,16 @@ class Crew(FlowTrackable, BaseModel):
             self._memory = None
 
         return self
+
+    def _memory_llm(self) -> str | BaseLLM | None:
+        """Return the LLM auto-created memory should use for analysis."""
+        if self.chat_llm is not None:
+            return self.chat_llm
+        for agent in self.agents:
+            agent_llm = getattr(agent, "llm", None)
+            if agent_llm is not None:
+                return agent_llm
+        return None
 
     @model_validator(mode="after")
     def create_crew_knowledge(self) -> Crew:
