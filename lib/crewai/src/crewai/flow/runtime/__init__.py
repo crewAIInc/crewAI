@@ -97,6 +97,7 @@ from crewai.flow.flow_definition import (
     FlowDefinition,
     FlowDefinitionCondition,
     FlowMethodDefinition,
+    FlowPersistenceDefinition,
     FlowStateDefinition,
 )
 from crewai.flow.flow_wrappers import (
@@ -294,15 +295,27 @@ def _serialize_persistence(value: Any) -> dict[str, Any] | None:
 def _validate_input_provider(value: Any) -> Any:
     if value is None or isinstance(value, InputProvider):
         return value
-    from crewai.types.callback import _dotted_path_to_instance
+    if isinstance(value, str) and ":" in value:
+        resolved = _resolve_input_provider_ref(value)
+    else:
+        from crewai.types.callback import _dotted_path_to_instance
 
-    resolved = _dotted_path_to_instance(value)
+        resolved = _dotted_path_to_instance(value)
     if resolved is None or isinstance(resolved, InputProvider):
         return resolved
     raise ValueError(
         f"Resolved input_provider {resolved!r} does not implement the "
         "InputProvider protocol (missing request_input)."
     )
+
+
+def _resolve_input_provider_ref(ref: str) -> Any:
+    from crewai.flow.runtime._action_resolvers import import_ref
+
+    target = import_ref(ref)
+    if inspect.isclass(target):
+        return target()
+    return target
 
 
 def _serialize_input_provider(value: Any) -> str | None:
@@ -763,7 +776,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     @classmethod
     def from_definition(cls, definition: FlowDefinition) -> Flow[Any]:
         """Build a runnable Flow directly from a definition; no subclass required."""
-        return cls.model_validate({}, context={"flow_definition": definition})
+        return cls.model_validate(
+            definition.config.model_dump(),
+            context={"flow_definition": definition},
+        )
 
     def _start_method_names(self) -> list[FlowMethodName]:
         return [
@@ -976,6 +992,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     _usage_metrics_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
     _flow_match_id: str | None = PrivateAttr(default=None)
     _usage_aggregation_handler: Callable[..., Any] | None = PrivateAttr(default=None)
+    _persist_backends: dict[int, FlowPersistence] = PrivateAttr(default_factory=dict)
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:  # type: ignore[override]
         class _FlowGeneric(cls):  # type: ignore[valid-type,misc]
@@ -1013,6 +1030,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             if definition is not None
             else self._class_bound_methods()
         )
+
+        flow_persist = self._definition.persist
+        if (
+            self.persistence is None
+            and flow_persist is not None
+            and flow_persist.enabled
+        ):
+            self.persistence = self._resolve_persist_backend(flow_persist)
 
         if self._state is None:
             self._state = self._create_initial_state()
@@ -1631,6 +1656,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         self.last_human_feedback = result
 
         self._completed_methods.add(FlowMethodName(context.method_name))
+
+        self._persist_method_completion(FlowMethodName(context.method_name))
 
         self._pending_feedback_context = None
 
@@ -2829,6 +2856,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
             self._completed_methods.add(method_name)
 
+            self._persist_method_completion(method_name)
+
             finished_event_id: str | None = None
             if not self.suppress_flow_events:
                 finished_event = MethodExecutionFinishedEvent(
@@ -2886,6 +2915,48 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 if future:
                     self._event_futures.append(future)
             raise e
+
+    def _persist_method_completion(self, method_name: FlowMethodName) -> None:
+        method_definition = self._definition.methods.get(method_name)
+        persist_definition = (
+            method_definition.persist
+            if method_definition is not None and method_definition.persist is not None
+            else self._definition.persist
+        )
+        if persist_definition is None or not persist_definition.enabled:
+            return
+
+        from crewai.flow.persistence.decorators import PersistenceDecorator
+
+        backend = self.persistence or self._persist_backend_for(persist_definition)
+        PersistenceDecorator.persist_state(
+            self, method_name, backend, verbose=persist_definition.verbose
+        )
+
+    def _persist_backend_for(
+        self, persist_definition: FlowPersistenceDefinition
+    ) -> FlowPersistence:
+        cached = self._persist_backends.get(id(persist_definition))
+        if cached is None:
+            cached = self._resolve_persist_backend(persist_definition)
+            self._persist_backends[id(persist_definition)] = cached
+        return cached
+
+    def _resolve_persist_backend(
+        self, persist_definition: FlowPersistenceDefinition
+    ) -> FlowPersistence:
+        if persist_definition.persistence is None:
+            from crewai.flow.persistence.factory import default_flow_persistence
+
+            return default_flow_persistence()
+        resolved = _resolve_persistence(persist_definition.persistence)
+        if not isinstance(resolved, FlowPersistence):
+            raise ValueError(
+                f"Cannot resolve persistence backend "
+                f"{persist_definition.persistence!r} from the flow definition "
+                f"for flow {self._definition.name!r}."
+            )
+        return resolved
 
     def _copy_and_serialize_state(self) -> dict[str, Any]:
         state_copy = self._copy_state()

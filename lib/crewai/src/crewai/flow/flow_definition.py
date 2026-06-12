@@ -64,10 +64,12 @@ class FlowConfigDefinition(BaseModel):
 
     tracing: bool | None = None
     stream: bool = False
-    memory: Any = None
-    input_provider: Any = None
+    memory: dict[str, Any] | None = None
+    input_provider: str | None = None
     suppress_flow_events: bool = False
     max_method_calls: int = 100
+    defer_trace_finalization: bool = False
+    checkpoint: bool | dict[str, Any] | None = None
 
 
 class FlowPersistenceDefinition(BaseModel):
@@ -75,7 +77,7 @@ class FlowPersistenceDefinition(BaseModel):
 
     enabled: bool = False
     verbose: bool = False
-    persistence: Any = None
+    persistence: dict[str, Any] | None = None
 
 
 class FlowHumanFeedbackDefinition(BaseModel):
@@ -126,7 +128,9 @@ class FlowDefinition(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True, arbitrary_types_allowed=True)
 
-    schema_: str = Field(default="crewai.flow/v1", alias="schema")
+    schema_: TypingLiteral["crewai.flow/v1"] = Field(
+        default="crewai.flow/v1", alias="schema"
+    )
     name: str
     description: str | None = None
     state: FlowStateDefinition | None = None

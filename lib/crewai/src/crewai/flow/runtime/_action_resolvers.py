@@ -17,17 +17,22 @@ class InvalidActionRefError(ValueError):
         super().__init__(f"invalid callable {ref!r}; expected 'module:qualname'")
 
 
-def _resolve_code_action(
-    flow: Flow[Any], action: FlowActionDefinition
-) -> Callable[..., Any]:
-    ref = action.ref
+def import_ref(ref: str) -> Any:
+    """Import the object a `module:qualname` reference points to."""
     module_name, _, qualname = ref.partition(":")
     if "<" in ref or not module_name or not qualname:
         raise InvalidActionRefError(ref)
     try:
-        target = attrgetter(qualname)(importlib.import_module(module_name))
+        return attrgetter(qualname)(importlib.import_module(module_name))
     except (ImportError, AttributeError) as e:
         raise InvalidActionRefError(ref) from e
+
+
+def _resolve_code_action(
+    flow: Flow[Any], action: FlowActionDefinition
+) -> Callable[..., Any]:
+    ref = action.ref
+    target = import_ref(ref)
     if not callable(target):
         raise InvalidActionRefError(ref)
     handler = cast(Callable[..., Any], target)

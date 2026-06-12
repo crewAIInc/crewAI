@@ -219,16 +219,19 @@ def _build_config_definition(
 ) -> FlowConfigDefinition:
     config_field_names = set(FlowConfigDefinition.model_fields)
     field_defaults = {
-        name: field.default
+        name: field.get_default(call_default_factory=True)
         for name, field in getattr(flow_class, "model_fields", {}).items()
         if name in config_field_names
     }
     values: dict[str, Any] = {}
     for field_name, default in field_defaults.items():
         value = getattr(flow_class, field_name, default)
-        values[field_name] = _serialize_static_value(
-            value, diagnostics, f"config.{field_name}"
-        )
+        if field_name == "input_provider":
+            values[field_name] = None if value is None else _object_ref(value)
+        else:
+            values[field_name] = _serialize_static_value(
+                value, diagnostics, f"config.{field_name}"
+            )
     return FlowConfigDefinition(**values)
 
 
