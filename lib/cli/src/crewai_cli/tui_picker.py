@@ -101,7 +101,7 @@ def _draw_multi(
     separator_indices = separator_indices or set()
     hint_text = "↑↓ navigate, space toggle, enter confirm"
     if action_indices:
-        hint_text = "↑↓ navigate, space toggle, enter confirm, space/enter opens > rows"
+        hint_text = "↑↓ navigate, space toggle, enter confirm, ▸ rows expand/collapse"
     hint = f"  {_DIM}{hint_text}{_RESET}"
     total = len(labels) + 1
     if clear:
@@ -112,7 +112,7 @@ def _draw_multi(
             sys.stdout.write(f"\033[2K      {_TEAL}{label}{_RESET}\n")
             continue
         if i in action_indices:
-            check = f"{_TEAL}>{_RESET}  "
+            check = "  "
         elif i in selected:
             check = f"{_CORAL}[x]{_RESET}"
         else:
@@ -154,12 +154,17 @@ def _arrow_select_multi(
     *,
     action_indices: set[int] | None = None,
     separator_indices: set[int] | None = None,
+    preselected: set[int] | None = None,
+    initial_cursor: int | None = None,
 ) -> tuple[list[int], int | None]:
     total = len(labels)
-    selected: set[int] = set()
+    selected: set[int] = set(preselected or ())
     action_indices = action_indices or set()
     separator_indices = separator_indices or set()
-    cursor = _first_selectable_index(total, separator_indices)
+    if initial_cursor is not None and 0 <= initial_cursor < total:
+        cursor = initial_cursor
+    else:
+        cursor = _first_selectable_index(total, separator_indices)
     sys.stdout.write(_HIDE_CURSOR)
     sys.stdout.flush()
     try:
@@ -212,7 +217,7 @@ def _arrow_select_multi(
                 return sorted(selected), None
             elif key in ("esc", "q"):
                 _clear_lines(total + 1)
-                return [], None
+                return sorted(selected), None
     finally:
         sys.stdout.write(_SHOW_CURSOR)
         sys.stdout.flush()
@@ -241,6 +246,7 @@ def _numbered_select_multi(
     *,
     action_indices: set[int] | None = None,
     separator_indices: set[int] | None = None,
+    preselected: set[int] | None = None,
 ) -> tuple[list[int], int | None]:
     action_indices = action_indices or set()
     separator_indices = separator_indices or set()
@@ -258,8 +264,8 @@ def _numbered_select_multi(
         show_default=False,
     )
     if not raw.strip():
-        return [], None
-    indices: list[int] = []
+        return sorted(preselected or ()), None
+    indices: list[int] = list(preselected or ())
     for part in raw.split(","):
         with suppress(ValueError):
             num = int(part.strip())
@@ -350,6 +356,8 @@ def pick_many(
     labels: list[str],
     *,
     separator_indices: set[int] | None = None,
+    preselected: set[int] | None = None,
+    initial_cursor: int | None = None,
 ) -> list[int]: ...
 
 
@@ -360,6 +368,8 @@ def pick_many(
     *,
     action_indices: set[int],
     separator_indices: set[int] | None = None,
+    preselected: set[int] | None = None,
+    initial_cursor: int | None = None,
 ) -> tuple[list[int], int | None]: ...
 
 
@@ -369,6 +379,8 @@ def pick_many(
     *,
     action_indices: set[int] | None = None,
     separator_indices: set[int] | None = None,
+    preselected: set[int] | None = None,
+    initial_cursor: int | None = None,
 ) -> list[int] | tuple[list[int], int | None]:
     """Arrow-key multi-select with checkboxes.
 
@@ -385,18 +397,22 @@ def pick_many(
                 labels,
                 action_indices=action_indices,
                 separator_indices=separator_indices,
+                preselected=preselected,
+                initial_cursor=initial_cursor,
             )
         except Exception:
             selected, action = _numbered_select_multi(
                 labels,
                 action_indices=action_indices,
                 separator_indices=separator_indices,
+                preselected=preselected,
             )
     else:
         selected, action = _numbered_select_multi(
             labels,
             action_indices=action_indices,
             separator_indices=separator_indices,
+            preselected=preselected,
         )
     if action_indices is None:
         return selected

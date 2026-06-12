@@ -428,9 +428,9 @@ def test_json_wizard_text_prompt_uses_full_prompt_for_readline(monkeypatch):
 def test_json_wizard_tool_picker_prioritizes_common_tools(monkeypatch):
     picker_calls: list[tuple[str, list[str], dict[str, object]]] = []
 
-    def pick_many(title: str, labels: list[str], **kwargs) -> list[int]:
+    def pick_many(title: str, labels: list[str], **kwargs):
         picker_calls.append((title, labels, kwargs))
-        return [1, 3]
+        return [1, 3], None
 
     monkeypatch.setattr(json_crew, "pick_many", pick_many)
 
@@ -450,47 +450,125 @@ def test_json_wizard_tool_picker_prioritizes_common_tools(monkeypatch):
     assert "More tools" not in labels
 
 
-def test_json_wizard_tool_picker_shows_remaining_tools_by_category(monkeypatch):
+def test_json_wizard_tool_picker_collapses_categories_by_default(monkeypatch):
     picker_calls: list[tuple[str, list[str], dict[str, object]]] = []
 
-    def pick_many(title: str, labels: list[str], **kwargs) -> list[int]:
+    def pick_many(title: str, labels: list[str], **kwargs):
         picker_calls.append((title, labels, kwargs))
-        return [
-            idx
-            for idx, label in enumerate(labels)
-            if label.strip().endswith("BraveSearchTool")
-        ]
-
-    monkeypatch.setattr(json_crew, "pick_many", pick_many)
-
-    tools = json_crew._select_tools()
-
-    assert tools == ["BraveSearchTool"]
-    assert len(picker_calls) == 1
-    labels = picker_calls[0][1]
-    assert "── Search & Research ──" in labels
-    assert "── Web Scraping ──" in labels
-    assert "── File & Document ──" in labels
-    assert any(label.strip().endswith("BraveSearchTool") for label in labels)
-    assert not any("Search & Research:" in label for label in labels)
-
-
-def test_json_wizard_tool_picker_shows_expanded_builtin_tools(monkeypatch):
-    picker_calls: list[tuple[str, list[str], dict[str, object]]] = []
-
-    def pick_many(title: str, labels: list[str], **kwargs) -> list[int]:
-        picker_calls.append((title, labels, kwargs))
-        return []
+        return [], None
 
     monkeypatch.setattr(json_crew, "pick_many", pick_many)
 
     json_crew._select_tools()
 
     labels = picker_calls[0][1]
+    action_indices = picker_calls[0][2]["action_indices"]
+    # Categories show as collapsed action rows, not separators with tools
+    assert any(label.startswith("▸ Search & Research") for label in labels)
+    assert any(label.startswith("▸ Web Scraping") for label in labels)
+    assert not any(label.strip().endswith("BraveSearchTool") for label in labels)
+    assert len(action_indices) >= 4
+    # Only the common tools section is visible beyond the category rows
+    assert len(labels) == 1 + 5 + len(action_indices)
+
+
+def test_json_wizard_tool_picker_expands_one_category_at_a_time(monkeypatch):
+    picker_calls: list[tuple[str, list[str], dict[str, object]]] = []
+
+    def find_category_row(labels: list[str], category: str) -> int:
+        return next(
+            idx for idx, label in enumerate(labels) if category in label
+        )
+
+    def pick_many(title: str, labels: list[str], **kwargs):
+        picker_calls.append((title, labels, kwargs))
+        call_num = len(picker_calls)
+        if call_num == 1:
+            return [], find_category_row(labels, "Search & Research")
+        if call_num == 2:
+            # Search & Research is expanded; select BraveSearchTool and
+            # expand Web Scraping instead
+            brave = next(
+                idx
+                for idx, label in enumerate(labels)
+                if label.strip().endswith("BraveSearchTool")
+            )
+            return [brave], find_category_row(labels, "Web Scraping")
+        return [], None
+
+    monkeypatch.setattr(json_crew, "pick_many", pick_many)
+
+    tools = json_crew._select_tools()
+
+    assert tools == ["BraveSearchTool"]
+    assert len(picker_calls) == 3
+    # Second render: Search & Research expanded, others collapsed
+    labels2 = picker_calls[1][1]
+    assert any(label.startswith("▾ Search & Research") for label in labels2)
+    assert any(label.strip().endswith("BraveSearchTool") for label in labels2)
+    assert any(label.startswith("▸ Web Scraping") for label in labels2)
+    # Third render: Web Scraping expanded, Search & Research collapsed again
+    labels3 = picker_calls[2][1]
+    assert any(label.startswith("▸ Search & Research") for label in labels3)
+    assert any(label.startswith("▾ Web Scraping") for label in labels3)
+    assert not any(label.strip().endswith("BraveSearchTool") for label in labels3)
+    # The collapsed Search & Research row reports its selection count
+    assert any(
+        "Search & Research" in label and "1 selected" in label for label in labels3
+    )
+    # Cursor returns to the toggled category row
+    assert picker_calls[2][2]["initial_cursor"] == next(
+        idx for idx, label in enumerate(labels3) if "Web Scraping" in label
+    )
+
+
+def test_json_wizard_tool_picker_preserves_selection_across_renders(monkeypatch):
+    picker_calls: list[tuple[str, list[str], dict[str, object]]] = []
+
+    def pick_many(title: str, labels: list[str], **kwargs):
+        picker_calls.append((title, labels, kwargs))
+        call_num = len(picker_calls)
+        if call_num == 1:
+            # Select a common tool, then expand a category
+            category_row = next(
+                idx for idx, label in enumerate(labels) if "Web Scraping" in label
+            )
+            return [1], category_row
+        # Confirm without touching anything else
+        return sorted(kwargs["preselected"]), None
+
+    monkeypatch.setattr(json_crew, "pick_many", pick_many)
+
+    tools = json_crew._select_tools()
+
+    # The common-tool selection survived the expand re-render via preselected
+    assert tools == ["SerperDevTool"]
+    assert 1 in picker_calls[1][2]["preselected"]
+
+
+def test_json_wizard_tool_picker_lists_builtin_tools_across_categories(monkeypatch):
+    picker_calls: list[tuple[str, list[str], dict[str, object]]] = []
+    expanded_labels: list[str] = []
+
+    def pick_many(title: str, labels: list[str], **kwargs):
+        picker_calls.append((title, labels, kwargs))
+        expanded_labels.extend(labels)
+        action_indices = sorted(kwargs["action_indices"])
+        call_num = len(picker_calls)
+        if call_num <= len(action_indices):
+            # Expand the n-th category (indices shift between renders, so
+            # recompute from this render's action rows)
+            return [], action_indices[call_num - 1]
+        return [], None
+
+    monkeypatch.setattr(json_crew, "pick_many", pick_many)
+
+    json_crew._select_tools()
+
     tool_names = {
         label.rsplit(maxsplit=1)[-1]
-        for idx, label in enumerate(labels)
-        if idx not in picker_calls[0][2]["separator_indices"]
+        for label in expanded_labels
+        if not label.startswith(("▸", "▾", "──"))
     }
 
     assert {
@@ -550,7 +628,7 @@ def test_json_wizard_agent_attribute_prompts_are_compact(monkeypatch):
 
     monkeypatch.setattr(json_crew, "_prompt_text", prompt_text)
     monkeypatch.setattr(json_crew, "_select_model", lambda: "openai/gpt-5.5")
-    monkeypatch.setattr(json_crew, "pick_many", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr(json_crew, "pick_many", lambda *_args, **_kwargs: ([], None))
     monkeypatch.setattr(json_crew, "_confirm", lambda *_args, **_kwargs: False)
 
     agent = json_crew._wizard_agent(agent_num=1, existing_names=[])

@@ -337,46 +337,106 @@ def _tool_category_label(category: str) -> str:
     return f"── {category} ──"
 
 
+def _category_row_label(
+    category: str, tools: list[tuple[str, str]], selected: set[str], expanded: bool
+) -> str:
+    """Render an accordion category row with tool/selection counts."""
+    marker = "▾" if expanded else "▸"
+    sel_count = sum(1 for name, _desc in tools if name in selected)
+    suffix = f"{len(tools)} tools"
+    if sel_count:
+        suffix += f", {sel_count} selected"
+    return f"{marker} {category}  ({suffix})"
+
+
 def _select_tools() -> list[str]:
+    """Accordion tool picker.
+
+    Common tools are always visible at the top; every other category shows
+    as a single expandable row. Expanding one category collapses the others.
+    Selections persist while expanding/collapsing.
+    """
     tools_by_name = {name: desc for name, desc in _FLAT_TOOLS}
     common_tools = [
         (name, tools_by_name[name])
         for name in _COMMON_TOOL_ORDER
         if name in tools_by_name
     ]
-
-    labels: list[str] = []
-    tool_by_index: dict[int, str] = {}
-    separator_indices: set[int] = set()
-
-    separator_indices.add(len(labels))
-    labels.append(_tool_category_label("Common tools"))
-    for name, desc in common_tools:
-        tool_by_index[len(labels)] = name
-        labels.append(_tool_label(name, desc))
-
     common_tool_names = {name for name, _desc in common_tools}
+
+    categories: list[tuple[str, list[tuple[str, str]]]] = []
     for category, category_tools in _TOOL_CATEGORIES:
         remaining_tools = [
             (name, desc)
             for name, desc in category_tools
             if name not in common_tool_names
         ]
-        if not remaining_tools:
-            continue
+        if remaining_tools:
+            categories.append((category, remaining_tools))
+
+    selected: set[str] = set()
+    expanded: str | None = None
+    focus_category: str | None = None
+
+    while True:
+        labels: list[str] = []
+        tool_by_index: dict[int, str] = {}
+        separator_indices: set[int] = set()
+        action_indices: set[int] = set()
+        category_by_index: dict[int, str] = {}
+        preselected: set[int] = set()
+        initial_cursor: int | None = None
+
         separator_indices.add(len(labels))
-        labels.append(_tool_category_label(category))
-        for name, desc in remaining_tools:
+        labels.append(_tool_category_label("Common tools"))
+        for name, desc in common_tools:
+            if name in selected:
+                preselected.add(len(labels))
             tool_by_index[len(labels)] = name
             labels.append(_tool_label(name, desc))
 
-    selected_indices = pick_many(
-        "Tools (space to toggle, enter to confirm):",
-        labels,
-        separator_indices=separator_indices,
-    )
+        for category, category_tools in categories:
+            row = len(labels)
+            action_indices.add(row)
+            category_by_index[row] = category
+            is_expanded = category == expanded
+            if category == focus_category:
+                initial_cursor = row
+            labels.append(
+                _category_row_label(category, category_tools, selected, is_expanded)
+            )
+            if is_expanded:
+                for name, desc in category_tools:
+                    if name in selected:
+                        preselected.add(len(labels))
+                    tool_by_index[len(labels)] = name
+                    labels.append(_tool_label(name, desc))
 
-    return [tool_by_index[idx] for idx in selected_indices if idx in tool_by_index]
+        indices, action = pick_many(
+            "Tools (space to toggle, enter to confirm):",
+            labels,
+            action_indices=action_indices,
+            separator_indices=separator_indices,
+            preselected=preselected,
+            initial_cursor=initial_cursor,
+        )
+
+        # Carry over toggles made on this screen; tools not visible in this
+        # render keep their previous state.
+        visible = set(tool_by_index.values())
+        chosen = {tool_by_index[i] for i in indices if i in tool_by_index}
+        selected = (selected - visible) | chosen
+
+        if action is None:
+            break
+        toggled = category_by_index.get(action)
+        focus_category = toggled
+        expanded = None if toggled == expanded else toggled
+
+    ordered = [name for name, _desc in common_tools] + [
+        name for _cat, cat_tools in categories for name, _desc in cat_tools
+    ]
+    return [name for name in ordered if name in selected]
 
 
 def _wizard_agent(
