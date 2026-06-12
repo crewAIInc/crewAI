@@ -85,6 +85,21 @@ ENV_VARS = {
             "key_name": "CEREBRAS_API_KEY",
         },
     ],
+    "lmstudio": [
+        {
+            "prompt": "Enter your LM Studio model name (press Enter to skip)",
+            "key_name": "MODEL",
+        },
+        {
+            "prompt": "Enter your LM Studio API base URL",
+            "key_name": "OPENAI_API_BASE",
+            "default_value": "http://localhost:1234/v1",
+        },
+        {
+            "prompt": "Enter your LM Studio API key (press Enter to skip)",
+            "key_name": "OPENAI_API_KEY",
+        },
+    ],
 }
 
 
@@ -94,6 +109,7 @@ PROVIDERS = [
     "gemini",
     "groq",
     "ollama",
+    "lmstudio",
     "watson",
     "bedrock",
     "azure",

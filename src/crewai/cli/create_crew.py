@@ -157,7 +157,12 @@ def create_crew(name, provider=None, skip_provider=False, parent_folder=None):
                     # Prompt for non-default key-value pairs
                     prompt = details["prompt"]
                     key_name = details["key_name"]
-                    api_key_value = click.prompt(prompt, default="", show_default=False)
+                    default_value = details.get("default_value", "")
+                    api_key_value = click.prompt(
+                        prompt,
+                        default=default_value,
+                        show_default=bool(default_value),
+                    )
 
                     if api_key_value.strip():
                         env_vars[key_name] = api_key_value
