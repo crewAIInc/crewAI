@@ -1,16 +1,27 @@
 from __future__ import annotations
 
+from collections import defaultdict
+from typing import Any, ClassVar
+
 import pytest
 from pydantic import ValidationError
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.flow_events import (
+    FlowCreatedEvent,
+    FlowFinishedEvent,
+    FlowStartedEvent,
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
 )
-from crewai.flow import Flow, and_, listen, or_, router, start
+from crewai.flow import Flow, and_, human_feedback, listen, or_, router, start
+from crewai.flow.async_feedback import PendingFeedbackContext
 from crewai.flow.flow import FlowState
-from crewai.flow.flow_definition import FlowDefinition
+from crewai.flow.flow_definition import FlowConfigDefinition, FlowDefinition
+from crewai.flow.persistence import persist
+from crewai.flow.persistence.base import FlowPersistence
+from crewai.state.checkpoint_config import CheckpointConfig
+from crewai.types.streaming import FlowStreamingOutput
 
 
 class ChainFlow(Flow):
@@ -550,3 +561,503 @@ def test_unknown_state_type_falls_back_to_dict(caplog):
     result = flow.kickoff()
     assert result == "hello"
     assert flow.state["begin_ran"] is True
+
+
+class StubInputProvider:
+    def request_input(self, message, flow, metadata=None):
+        return "stub"
+
+
+class ConfiguredFlow(Flow):
+    suppress_flow_events = True
+    max_method_calls = 5
+    input_provider = StubInputProvider()
+
+    @start()
+    def begin(self):
+        return "configured"
+
+
+SUPPRESSED_CHAIN_YAML = (
+    CHAIN_YAML
+    + """
+config:
+  suppress_flow_events: true
+"""
+)
+
+CAPPED_LOOP_YAML = (
+    LOOP_YAML
+    + """
+config:
+  max_method_calls: 2
+"""
+)
+
+STREAMING_CHAIN_YAML = (
+    CHAIN_YAML
+    + """
+config:
+  stream: true
+"""
+)
+
+DEFERRED_CHAIN_YAML = (
+    CHAIN_YAML
+    + """
+config:
+  defer_trace_finalization: true
+"""
+)
+
+INPUT_PROVIDER_CHAIN_YAML = (
+    CHAIN_YAML
+    + f"""
+config:
+  input_provider: {__name__}:StubInputProvider
+"""
+)
+
+
+def _run_capturing_flow_lifecycle(yaml_str, event_types):
+    events = []
+    with crewai_event_bus.scoped_handlers():
+        for event_type in event_types:
+
+            @crewai_event_bus.on(event_type)
+            def capture(source, event):
+                events.append(event)
+
+        flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+        result = flow.kickoff()
+    return flow, result, events
+
+
+_LIFECYCLE_EVENTS = [
+    FlowCreatedEvent,
+    FlowStartedEvent,
+    FlowFinishedEvent,
+    MethodExecutionStartedEvent,
+    MethodExecutionFinishedEvent,
+]
+
+
+def test_config_suppress_flow_events_from_yaml():
+    twin_events = []
+    with crewai_event_bus.scoped_handlers():
+        for event_type in _LIFECYCLE_EVENTS:
+
+            @crewai_event_bus.on(event_type)
+            def capture(source, event):
+                twin_events.append(type(event).__name__)
+
+        twin_result = ChainFlow(suppress_flow_events=True).kickoff()
+
+    flow, result, events = _run_capturing_flow_lifecycle(
+        SUPPRESSED_CHAIN_YAML, _LIFECYCLE_EVENTS
+    )
+    assert result == twin_result == "confirmed:True"
+    assert flow.suppress_flow_events is True
+    assert [type(e).__name__ for e in events] == twin_events
+    assert not any(
+        isinstance(e, (MethodExecutionStartedEvent, MethodExecutionFinishedEvent))
+        for e in events
+    )
+
+
+def test_config_max_method_calls_from_yaml():
+    flow = Flow.from_definition(FlowDefinition.from_yaml(CAPPED_LOOP_YAML))
+    with pytest.raises(RecursionError, match="has been called 2 times"):
+        flow.kickoff()
+
+
+def test_config_stream_from_yaml():
+    flow = Flow.from_definition(FlowDefinition.from_yaml(STREAMING_CHAIN_YAML))
+    streaming = flow.kickoff()
+    assert isinstance(streaming, FlowStreamingOutput)
+    for _ in streaming:
+        pass
+    assert streaming.result == "confirmed:True"
+    assert flow.stream is True
+
+
+def test_config_defer_trace_finalization_from_yaml():
+    _, _, baseline_events = _run_capturing_flow_lifecycle(
+        CHAIN_YAML, [FlowFinishedEvent]
+    )
+    assert len(baseline_events) == 1
+
+    flow, result, deferred_events = _run_capturing_flow_lifecycle(
+        DEFERRED_CHAIN_YAML, [FlowFinishedEvent]
+    )
+    assert result == "confirmed:True"
+    assert flow.defer_trace_finalization is True
+    assert deferred_events == []
+
+
+def test_config_checkpoint_from_yaml(tmp_path):
+    yaml_str = (
+        CHAIN_YAML
+        + f"""
+config:
+  checkpoint:
+    location: {tmp_path}
+"""
+    )
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    assert isinstance(flow.checkpoint, CheckpointConfig)
+    assert flow.checkpoint.location == str(tmp_path)
+
+
+def test_config_input_provider_from_yaml():
+    flow = Flow.from_definition(FlowDefinition.from_yaml(INPUT_PROVIDER_CHAIN_YAML))
+    assert isinstance(flow.input_provider, StubInputProvider)
+
+
+def test_round_trip_config_equivalence():
+    class_flow = ConfiguredFlow()
+    definition = FlowDefinition.from_yaml(ConfiguredFlow.flow_definition().to_yaml())
+    definition_flow = Flow.from_definition(definition)
+
+    assert definition.config.suppress_flow_events is True
+    assert definition.config.max_method_calls == 5
+    assert definition.config.input_provider == f"{__name__}:StubInputProvider"
+    assert definition_flow.suppress_flow_events is class_flow.suppress_flow_events
+    assert definition_flow.max_method_calls == class_flow.max_method_calls
+    assert isinstance(definition_flow.input_provider, StubInputProvider)
+
+    class_result, class_events = _run_with_events(class_flow)
+    definition_result, definition_events = _run_with_events(definition_flow)
+    assert definition_result == class_result == "configured"
+    assert definition_events == class_events
+
+
+def test_unknown_schema_rejected():
+    with pytest.raises(ValidationError, match="schema"):
+        FlowDefinition.from_dict(
+            {
+                "schema": "crewai.flow/v2",
+                "name": "FutureSchema",
+                "methods": {
+                    "begin": {"start": True, "do": {"ref": f"{__name__}:ChainFlow.begin"}}
+                },
+            }
+        )
+
+
+def test_flow_config_definition_mirrors_flow_fields():
+    for name, field in FlowConfigDefinition.model_fields.items():
+        assert name in Flow.model_fields
+        assert field.get_default(call_default_factory=True) == Flow.model_fields[
+            name
+        ].get_default(call_default_factory=True)
+
+
+class DefinitionStoreBackend(FlowPersistence):
+    persistence_type: str = "DefinitionStoreBackend"
+    store: str = "default"
+
+    saves: ClassVar[dict[str, list[tuple[str, dict[str, Any]]]]] = defaultdict(list)
+    pending: ClassVar[dict[str, tuple[dict[str, Any], PendingFeedbackContext]]] = {}
+
+    def init_db(self) -> None:
+        pass
+
+    def save_state(self, flow_uuid, method_name, state_data):
+        data = state_data if isinstance(state_data, dict) else state_data.model_dump()
+        DefinitionStoreBackend.saves[self.store].append((method_name, dict(data)))
+
+    def load_state(self, flow_uuid):
+        for _, data in reversed(DefinitionStoreBackend.saves[self.store]):
+            if data.get("id") == flow_uuid:
+                return data
+        return None
+
+    def save_pending_feedback(self, flow_uuid, context, state_data):
+        data = state_data if isinstance(state_data, dict) else state_data.model_dump()
+        DefinitionStoreBackend.pending[flow_uuid] = (dict(data), context)
+
+    def load_pending_feedback(self, flow_uuid):
+        return DefinitionStoreBackend.pending.get(flow_uuid)
+
+    def clear_pending_feedback(self, flow_uuid):
+        DefinitionStoreBackend.pending.pop(flow_uuid, None)
+
+
+def _saved_methods(store):
+    return [name for name, _ in DefinitionStoreBackend.saves[store]]
+
+
+class PersistedFlow(Flow):
+    @start()
+    def first(self):
+        self.state["count"] = self.state.get("count", 0) + 1
+        return "one"
+
+    @listen(first)
+    def second(self):
+        self.state["count"] += 1
+        return "two"
+
+
+def _flow_level_persist_yaml(store):
+    return f"""
+schema: crewai.flow/v1
+name: PersistedFlow
+persist:
+  enabled: true
+  persistence:
+    persistence_type: DefinitionStoreBackend
+    store: {store}
+methods:
+  first:
+    do:
+      ref: {__name__}:PersistedFlow.first
+    start: true
+  second:
+    do:
+      ref: {__name__}:PersistedFlow.second
+    listen: first
+"""
+
+
+def _method_level_persist_yaml(store):
+    return f"""
+schema: crewai.flow/v1
+name: PersistedFlow
+methods:
+  first:
+    do:
+      ref: {__name__}:PersistedFlow.first
+    start: true
+    persist:
+      enabled: true
+      persistence:
+        persistence_type: DefinitionStoreBackend
+        store: {store}
+  second:
+    do:
+      ref: {__name__}:PersistedFlow.second
+    listen: first
+"""
+
+
+_CLASS_LEVEL_BACKEND = DefinitionStoreBackend(store="class-decorator")
+
+
+@persist(_CLASS_LEVEL_BACKEND)
+class ClassPersistedFlow(Flow):
+    @start()
+    def first(self):
+        self.state["count"] = self.state.get("count", 0) + 1
+        return "one"
+
+    @listen(first)
+    def second(self):
+        self.state["count"] += 1
+        return "two"
+
+
+_COMBINED_BACKEND = DefinitionStoreBackend(store="combined-decorator")
+
+
+@persist(_COMBINED_BACKEND)
+class CombinedPersistedFlow(Flow):
+    @start()
+    @persist(_COMBINED_BACKEND)
+    def first(self):
+        return "one"
+
+    @listen(first)
+    def second(self):
+        return "two"
+
+
+class MethodPersistedFlow(Flow):
+    @start()
+    @persist(DefinitionStoreBackend(store="method-decorator"))
+    def first(self):
+        self.state["count"] = self.state.get("count", 0) + 1
+        return "one"
+
+    @listen(first)
+    def second(self):
+        self.state["count"] += 1
+        return "two"
+
+
+def test_flow_level_persist_from_yaml_saves_once_per_method():
+    yaml_str = _flow_level_persist_yaml("yaml-flow-level")
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    result = flow.kickoff()
+
+    assert result == "two"
+    assert _saved_methods("yaml-flow-level") == ["first", "second"]
+    _, final_save = DefinitionStoreBackend.saves["yaml-flow-level"][-1]
+    assert final_save["count"] == 2
+    assert final_save["id"] == flow.state["id"]
+
+
+def test_method_level_persist_from_yaml_saves_only_that_method():
+    yaml_str = _method_level_persist_yaml("yaml-method-level")
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow.kickoff()
+
+    assert _saved_methods("yaml-method-level") == ["first"]
+    _, save = DefinitionStoreBackend.saves["yaml-method-level"][0]
+    assert save["count"] == 1
+
+
+def test_method_level_persist_disabled_wins_over_flow_level():
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: PersistedFlow
+persist:
+  enabled: true
+  persistence:
+    persistence_type: DefinitionStoreBackend
+    store: yaml-opt-out
+methods:
+  first:
+    do:
+      ref: {__name__}:PersistedFlow.first
+    start: true
+  second:
+    do:
+      ref: {__name__}:PersistedFlow.second
+    listen: first
+    persist:
+      enabled: false
+"""
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow.kickoff()
+
+    assert _saved_methods("yaml-opt-out") == ["first"]
+
+
+def test_persist_restore_by_id_from_yaml():
+    yaml_str = _flow_level_persist_yaml("yaml-restore")
+
+    flow1 = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow1.kickoff()
+    assert flow1.state["count"] == 2
+
+    flow2 = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow2.kickoff(inputs={"id": flow1.state["id"]})
+    assert flow2.state["count"] == 4
+
+
+def test_combined_class_and_method_persist_saves_once_per_method():
+    before = len(DefinitionStoreBackend.saves["combined-decorator"])
+    CombinedPersistedFlow().kickoff()
+
+    assert _saved_methods("combined-decorator")[before:] == ["first", "second"]
+
+
+def test_method_level_persist_decorator_saves_only_that_method():
+    before = len(DefinitionStoreBackend.saves["method-decorator"])
+    MethodPersistedFlow().kickoff()
+
+    assert _saved_methods("method-decorator")[before:] == ["first"]
+
+
+def test_round_trip_persist_equivalence():
+    definition = FlowDefinition.from_yaml(ClassPersistedFlow.flow_definition().to_yaml())
+
+    before = len(DefinitionStoreBackend.saves["class-decorator"])
+    flow = Flow.from_definition(definition)
+    flow.kickoff()
+
+    assert _saved_methods("class-decorator")[before:] == ["first", "second"]
+
+
+def test_method_persist_backend_overrides_flow_level_backend_from_yaml():
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: PersistedFlow
+persist:
+  enabled: true
+  persistence:
+    persistence_type: DefinitionStoreBackend
+    store: yaml-mixed-flow
+methods:
+  first:
+    do:
+      ref: {__name__}:PersistedFlow.first
+    start: true
+  second:
+    do:
+      ref: {__name__}:PersistedFlow.second
+    listen: first
+    persist:
+      enabled: true
+      persistence:
+        persistence_type: DefinitionStoreBackend
+        store: yaml-mixed-method
+"""
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow.kickoff()
+
+    assert _saved_methods("yaml-mixed-flow") == ["first"]
+    assert _saved_methods("yaml-mixed-method") == ["second"]
+
+
+def test_method_persist_decorator_overrides_class_level_backend():
+    @persist(DefinitionStoreBackend(store="mixed-class"))
+    class MixedPersistedFlow(Flow):
+        @start()
+        @persist(DefinitionStoreBackend(store="mixed-method"))
+        def first(self):
+            return "one"
+
+        @listen(first)
+        def second(self):
+            return "two"
+
+    MixedPersistedFlow().kickoff()
+
+    assert _saved_methods("mixed-method") == ["first"]
+    assert _saved_methods("mixed-class") == ["second"]
+
+
+def test_instance_persistence_overrides_definition_backend():
+    before = len(DefinitionStoreBackend.saves["method-decorator"])
+    flow = MethodPersistedFlow(
+        persistence=DefinitionStoreBackend(store="instance-override")
+    )
+    flow.kickoff()
+
+    assert _saved_methods("instance-override") == ["first"]
+    assert len(DefinitionStoreBackend.saves["method-decorator"]) == before
+
+
+def test_resume_synthetic_completion_persists():
+    backend = DefinitionStoreBackend(store="resume-synthetic")
+
+    class ResumableFlow(Flow):
+        @start()
+        @persist(DefinitionStoreBackend(store="resume-synthetic"))
+        @human_feedback(message="Review:")
+        def generate(self):
+            return "content"
+
+        @listen(generate)
+        def process(self, result):
+            return "done"
+
+    context = PendingFeedbackContext(
+        flow_id="resume-persist-1",
+        flow_class="ResumableFlow",
+        method_name="generate",
+        method_output="content",
+        message="Review:",
+    )
+    backend.save_pending_feedback(
+        "resume-persist-1", context, {"id": "resume-persist-1"}
+    )
+
+    flow = ResumableFlow.from_pending("resume-persist-1", backend)
+    result = flow.resume("looks good")
+
+    assert result == "done"
+    assert _saved_methods("resume-synthetic") == ["generate"]
