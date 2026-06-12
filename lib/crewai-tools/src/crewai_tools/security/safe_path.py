@@ -29,7 +29,9 @@ def format_path_for_display(path: str, base_dir: str | None = None) -> str:
 
     try:
         resolved_base = os.path.realpath(base_dir)
-        resolved_path = os.path.realpath(path)
+        resolved_path = os.path.realpath(
+            os.path.join(resolved_base, path) if not os.path.isabs(path) else path
+        )
         if os.path.commonpath([resolved_base, resolved_path]) == resolved_base:
             return os.path.relpath(resolved_path, resolved_base)
     except (OSError, ValueError) as exc:
