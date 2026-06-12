@@ -1540,6 +1540,10 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         try:
             return await self._resume_async_body(feedback)
         finally:
+            # Match kickoff_async: drain pending handlers so the resumed
+            # phase's LLM events all hit `_aggregated_usage_metrics`
+            # before the listener is detached.
+            crewai_event_bus.flush()
             self._detach_usage_aggregation_listener()
             if flow_id_token is not None:
                 current_flow_id.reset(flow_id_token)
@@ -2577,13 +2581,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             # Ensure all background memory saves complete before returning
             if self.memory is not None and hasattr(self.memory, "drain_writes"):
                 self.memory.drain_writes()
-            # Detach the singleton-bus listener as soon as this kickoff
-            # finishes (whether by completion, pause, or error). Handlers
-            # the bus already snapshotted via `_sync_executor.submit` keep
-            # running and updating `_aggregated_usage_metrics`; only
-            # subsequent emits stop reaching this flow. Resume paths
+            # Drain pending LLMCallCompletedEvent handlers before
+            # detaching so `flow.usage_metrics` reflects every call
+            # emitted during this kickoff — mirrors `Crew.kickoff()`,
+            # which flushes before reporting `token_usage`. Resume paths
             # re-attach a fresh listener via `resume_async`.
             if owns_usage_aggregation:
+                crewai_event_bus.flush()
                 self._detach_usage_aggregation_listener()
             if request_id_token is not None:
                 current_flow_request_id.reset(request_id_token)

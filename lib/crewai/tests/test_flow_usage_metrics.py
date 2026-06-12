@@ -305,6 +305,32 @@ class TestFlowUsageAggregation:
 
         assert handler_count() == before
 
+    def test_kickoff_flushes_event_bus_before_returning(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """`kickoff_async` must drain pending LLMCallCompletedEvent handlers
+        before detaching the listener — otherwise late handlers landing on
+        the threadpool would be lost on short flows. Mirrors the flush
+        ``Crew.kickoff()`` performs before reporting ``token_usage``."""
+
+        flush_calls: list[None] = []
+        original_flush = crewai_event_bus.flush
+
+        def tracked_flush(*args: Any, **kwargs: Any) -> bool:
+            flush_calls.append(None)
+            return original_flush(*args, **kwargs)
+
+        monkeypatch.setattr(crewai_event_bus, "flush", tracked_flush)
+
+        flow = _ScriptedFlow()
+        flow._script = lambda f: _emit_llm_call(
+            flow_id=f._flow_match_id, prompt_tokens=3, completion_tokens=4
+        )
+        flow.kickoff()
+
+        assert flush_calls, "kickoff did not flush the event bus before returning"
+        assert flow.usage_metrics.total_tokens == 7
+
     def test_stale_handler_from_prior_kickoff_does_not_contaminate(self) -> None:
         """A handler still queued from a prior kickoff must not write into
         a later kickoff's accumulator. The handler's closure captures its
