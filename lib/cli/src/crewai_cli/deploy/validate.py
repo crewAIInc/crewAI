@@ -159,7 +159,22 @@ class DeployValidator:
 
     @property
     def _is_json_crew(self) -> bool:
-        return find_crew_json_file(self.project_root) is not None
+        """True for JSON crew projects, deferring to the declared type.
+
+        A flow project that also contains a crew.json(c) file validates as
+        the flow it declares in pyproject.toml, not as a JSON crew.
+        """
+        if find_crew_json_file(self.project_root) is None:
+            return False
+        pyproject_path = self.project_root / "pyproject.toml"
+        if not pyproject_path.exists():
+            return True
+        try:
+            data = parse_toml(pyproject_path.read_text())
+        except Exception:
+            return True
+        declared_type = (data.get("tool") or {}).get("crewai", {}).get("type")
+        return declared_type != "flow"
 
     def run(self) -> list[ValidationResult]:
         """Run all checks. Later checks are skipped when earlier ones make

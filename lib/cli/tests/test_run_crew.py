@@ -118,3 +118,27 @@ def test_run_json_crew_completed_status_returns_result(monkeypatch, tmp_path: Pa
     _patch_tui_run(monkeypatch, status="completed")
 
     assert run_crew_module._run_json_crew() == "result"
+
+
+def test_has_json_crew_defers_to_declared_flow_type(monkeypatch, tmp_path: Path):
+    """A flow project containing a stray crew.jsonc must still run as a flow."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "crew.jsonc").write_text("{}")
+    (tmp_path / "pyproject.toml").write_text('[tool.crewai]\ntype = "flow"\n')
+
+    assert run_crew_module._has_json_crew() is False
+
+
+def test_has_json_crew_true_for_declared_crew_type(monkeypatch, tmp_path: Path):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "crew.jsonc").write_text("{}")
+    (tmp_path / "pyproject.toml").write_text('[tool.crewai]\ntype = "crew"\n')
+
+    assert run_crew_module._has_json_crew() is True
+
+
+def test_has_json_crew_true_without_pyproject(monkeypatch, tmp_path: Path):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "crew.jsonc").write_text("{}")
+
+    assert run_crew_module._has_json_crew() is True

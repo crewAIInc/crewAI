@@ -498,3 +498,30 @@ def test_create_crew_aborts_on_validation_error(tmp_path: Path) -> None:
         cmd.create_crew()
         assert not cmd.plus_api_client.create_crew.called
         del mock_api  # silence unused-var lint
+
+
+def test_is_json_crew_defers_to_declared_flow_type(tmp_path):
+    """A flow project with a stray crew.jsonc must validate as a flow."""
+    (tmp_path / "crew.jsonc").write_text("{}")
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "demo"\nversion = "0.1.0"\n\n'
+        '[tool.crewai]\ntype = "flow"\n'
+    )
+
+    assert DeployValidator(project_root=tmp_path)._is_json_crew is False
+
+
+def test_is_json_crew_true_for_declared_crew_type(tmp_path):
+    (tmp_path / "crew.jsonc").write_text("{}")
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "demo"\nversion = "0.1.0"\n\n'
+        '[tool.crewai]\ntype = "crew"\n'
+    )
+
+    assert DeployValidator(project_root=tmp_path)._is_json_crew is True
+
+
+def test_is_json_crew_true_without_pyproject(tmp_path):
+    (tmp_path / "crew.jsonc").write_text("{}")
+
+    assert DeployValidator(project_root=tmp_path)._is_json_crew is True

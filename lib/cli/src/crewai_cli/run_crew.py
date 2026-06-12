@@ -38,8 +38,20 @@ _INPUT_PLACEHOLDER_RE = re.compile(r"(?<!{){([A-Za-z_][A-Za-z0-9_\-]*)}(?!})")
 
 
 def _has_json_crew() -> bool:
-    """Check if this is a JSON-defined crew project."""
-    return find_crew_json_file() is not None
+    """Check if this is a JSON-defined crew project.
+
+    The project type declared in pyproject.toml wins: a flow project that
+    happens to contain a crew.json(c) file still runs as a flow. A missing
+    or unreadable pyproject means a bare JSON crew project.
+    """
+    if find_crew_json_file() is None:
+        return False
+    try:
+        pyproject_data = read_toml()
+    except Exception:
+        return True
+    declared_type = pyproject_data.get("tool", {}).get("crewai", {}).get("type")
+    return declared_type != "flow"
 
 
 def _extract_input_placeholders(text: str | None) -> set[str]:

@@ -1724,6 +1724,10 @@ FooterKey .footer-key--key {
             source: Any, event: StepObservationFailedEvent
         ) -> None:
             with self._lock:
+                # Intentionally "done", not "failed": this event means the
+                # step OBSERVER failed (e.g. timeout), not the step itself,
+                # and the executor continues past it. A red ✘ would wrongly
+                # suggest the plan step failed.
                 self._set_plan_step_status(event.step_number, "done")
 
         self._register_handler(StepObservationFailedEvent, on_step_observation_failed)
