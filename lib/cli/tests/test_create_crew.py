@@ -9,7 +9,6 @@ from click.testing import CliRunner
 import crewai_cli.create_json_crew as json_crew
 import crewai_cli.tui_picker as tui_picker
 from crewai_cli.create_crew import create_crew, create_folder_structure
-from crewai_cli.create_json_crew import _default_model_for_provider, create_json_crew
 
 
 @pytest.fixture
@@ -625,7 +624,7 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
             {"process": "sequential", "memory": False, "inputs": {}},
         )
 
-        create_json_crew("JSON Crew", provider="openai", skip_provider=True)
+        json_crew.create_json_crew("JSON Crew", provider="openai", skip_provider=True)
 
     mock_wizard.assert_called_once_with(
         skip_provider=True,
@@ -679,8 +678,32 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
 
 
 def test_json_provider_default_model_helper():
-    assert _default_model_for_provider("openai") == "openai/gpt-5.5"
-    assert _default_model_for_provider("anthropic/claude-custom") == (
+    assert json_crew._default_model_for_provider("openai") == "openai/gpt-5.5"
+    assert json_crew._default_model_for_provider("anthropic/claude-custom") == (
         "anthropic/claude-custom"
     )
-    assert _default_model_for_provider("unknown") is None
+    assert json_crew._default_model_for_provider("unknown") is None
+
+
+def test_json_wizard_task_reprompts_on_cancelled_agent_pick(monkeypatch):
+    """Esc on the agent picker must reprompt, not silently assign agent 0."""
+    prompts = iter(["Do the research", "A report"])
+    monkeypatch.setattr(json_crew, "_prompt_text", lambda *a, **k: next(prompts))
+
+    pick_calls: list[str] = []
+    picks = iter([-1, 1])
+
+    def fake_pick_one(title: str, labels: list[str]) -> int:
+        pick_calls.append(title)
+        return next(picks)
+
+    monkeypatch.setattr(json_crew, "pick_one", fake_pick_one)
+
+    task = json_crew._wizard_task(
+        task_num=1,
+        agent_names=["first_agent", "second_agent"],
+        prior_task_names=[],
+    )
+
+    assert len(pick_calls) == 2
+    assert task["agent"] == "second_agent"

@@ -13,9 +13,6 @@ from crewai.agents.agent_builder.utilities.base_token_process import TokenProces
 from crewai.utilities.logger_utils import suppress_warnings
 
 
-LiteLLMCustomLogger = None  # type: ignore[misc, assignment]
-
-
 class TokenCalcHandler(BaseModel):
     """Handler for calculating and tracking token usage in LLM calls.
 

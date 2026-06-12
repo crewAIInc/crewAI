@@ -3,7 +3,7 @@ from __future__ import annotations
 from importlib.metadata import version as get_version
 import os
 import subprocess
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import click
 from crewai_core.token_manager import TokenManager
@@ -39,36 +39,44 @@ def replay_task_command(*args: Any, **kwargs: Any) -> Any:
     return _replay_task_command(*args, **kwargs)
 
 
-class AuthenticationCommand:
-    def __new__(cls, *args: Any, **kwargs: Any) -> Any:
-        from crewai_cli.authentication.main import (
-            AuthenticationCommand as _AuthenticationCommand,
-        )
+if TYPE_CHECKING:
+    # mypy sees the real classes; at runtime the shims below defer the
+    # heavy imports until a command actually instantiates them.
+    from crewai_cli.authentication.main import AuthenticationCommand
+    from crewai_cli.deploy.main import DeployCommand
+    from crewai_cli.organization.main import OrganizationCommand
+    from crewai_cli.remote_template.main import TemplateCommand
+else:
 
-        return _AuthenticationCommand(*args, **kwargs)
+    class AuthenticationCommand:
+        def __new__(cls, *args: Any, **kwargs: Any) -> Any:
+            from crewai_cli.authentication.main import (
+                AuthenticationCommand as _AuthenticationCommand,
+            )
 
+            return _AuthenticationCommand(*args, **kwargs)
 
-class DeployCommand:
-    def __new__(cls, *args: Any, **kwargs: Any) -> Any:
-        from crewai_cli.deploy.main import DeployCommand as _DeployCommand
+    class DeployCommand:
+        def __new__(cls, *args: Any, **kwargs: Any) -> Any:
+            from crewai_cli.deploy.main import DeployCommand as _DeployCommand
 
-        return _DeployCommand(*args, **kwargs)
+            return _DeployCommand(*args, **kwargs)
 
+    class TemplateCommand:
+        def __new__(cls, *args: Any, **kwargs: Any) -> Any:
+            from crewai_cli.remote_template.main import (
+                TemplateCommand as _TemplateCommand,
+            )
 
-class TemplateCommand:
-    def __new__(cls, *args: Any, **kwargs: Any) -> Any:
-        from crewai_cli.remote_template.main import TemplateCommand as _TemplateCommand
+            return _TemplateCommand(*args, **kwargs)
 
-        return _TemplateCommand(*args, **kwargs)
+    class OrganizationCommand:
+        def __new__(cls, *args: Any, **kwargs: Any) -> Any:
+            from crewai_cli.organization.main import (
+                OrganizationCommand as _OrganizationCommand,
+            )
 
-
-class OrganizationCommand:
-    def __new__(cls, *args: Any, **kwargs: Any) -> Any:
-        from crewai_cli.organization.main import (
-            OrganizationCommand as _OrganizationCommand,
-        )
-
-        return _OrganizationCommand(*args, **kwargs)
+            return _OrganizationCommand(*args, **kwargs)
 
 
 def _get_cli_version() -> str:

@@ -1,4 +1,4 @@
-from contextlib import nullcontext
+from contextlib import AbstractContextManager, nullcontext
 from enum import Enum
 from pathlib import Path
 import re
@@ -55,12 +55,16 @@ def _missing_input_names(crew: Any, inputs: dict[str, Any]) -> list[str]:
         placeholders.update(
             _extract_input_placeholders(getattr(task, "expected_output", None))
         )
-        placeholders.update(_extract_input_placeholders(getattr(task, "output_file", None)))
+        placeholders.update(
+            _extract_input_placeholders(getattr(task, "output_file", None))
+        )
 
     return sorted(name for name in placeholders if name not in inputs)
 
 
-def _prompt_for_missing_inputs(crew: Any, default_inputs: dict[str, Any]) -> dict[str, Any]:
+def _prompt_for_missing_inputs(
+    crew: Any, default_inputs: dict[str, Any]
+) -> dict[str, Any]:
     """Ask for runtime values for placeholders that lack default inputs."""
     inputs = dict(default_inputs or {})
     missing = _missing_input_names(crew, inputs)
@@ -85,7 +89,7 @@ def _prompt_for_missing_inputs(crew: Any, default_inputs: dict[str, Any]) -> dic
     return inputs
 
 
-def _json_loading_status(message: str):
+def _json_loading_status(message: str) -> AbstractContextManager[Any]:
     from rich.console import Console
     from rich.text import Text
 
@@ -109,7 +113,9 @@ def _load_json_crew_with_inputs(crew_path: Path) -> tuple[Any, dict[str, Any]]:
     return crew, _prompt_for_missing_inputs(crew, default_inputs)
 
 
-def _load_json_crew_for_tui(crew_path: Path) -> tuple[type[Any], Any, dict[str, Any], list[str], list[str]]:
+def _load_json_crew_for_tui(
+    crew_path: Path,
+) -> tuple[type[Any], Any, dict[str, Any], list[str], list[str]]:
     with _json_loading_status("Preparing crew..."):
         from crewai_cli.crew_run_tui import CrewRunApp
 
@@ -136,13 +142,20 @@ def _prepare_json_crew_for_tui(crew: Any) -> None:
             agent.llm.stream = True
 
 
-def _run_json_crew(daemon: bool = False) -> None:
+def _run_json_crew(daemon: bool = False, trained_agents_file: str | None = None) -> Any:
     """Load and run a JSON-defined crew."""
+    import os
+
     from dotenv import load_dotenv
 
     env_file = Path.cwd() / ".env"
     if env_file.exists():
         load_dotenv(env_file, override=True)
+
+    # JSON crews run in-process, so export the trained-agents file directly
+    # instead of forwarding it to a subprocess like classic crews do.
+    if trained_agents_file:
+        os.environ[CREWAI_TRAINED_AGENTS_FILE_ENV] = trained_agents_file
 
     crew_path = find_crew_json_file()
     if crew_path is None:
@@ -175,7 +188,7 @@ def _run_json_crew(daemon: bool = False) -> None:
     return app._crew_result
 
 
-def _run_json_crew_daemon(crew_path: Path) -> None:
+def _run_json_crew_daemon(crew_path: Path) -> Any:
     """Run a JSON crew in daemon mode — plain console output, no TUI."""
     import time
 
@@ -217,13 +230,16 @@ def _run_json_crew_daemon(crew_path: Path) -> None:
 
 def _chain_deploy() -> None:
     from rich.console import Console
+
     console = Console()
     try:
         from crewai_cli.deploy.main import DeployCommand
+
         console.print("\nStarting deployment…\n", style="bold #FF5A50")
         DeployCommand().create_crew(confirm=False, skip_validate=True)
     except SystemExit:
         from crewai_cli.authentication.main import AuthenticationCommand
+
         console.print()
         AuthenticationCommand().login()
         try:
@@ -234,7 +250,7 @@ def _chain_deploy() -> None:
         console.print(f"\nDeploy failed: {e}\n", style="bold red")
 
 
-def _print_post_tui_summary(app: object) -> None:
+def _print_post_tui_summary(app: Any) -> None:
     """Print a summary to the terminal after the Textual TUI exits."""
     import time
 
@@ -312,7 +328,7 @@ def run_crew(trained_agents_file: str | None = None, daemon: bool = False) -> No
     """
     # JSON crew projects take precedence
     if _has_json_crew():
-        _run_json_crew(daemon=daemon)
+        _run_json_crew(daemon=daemon, trained_agents_file=trained_agents_file)
         return
 
     crewai_version = get_crewai_version()

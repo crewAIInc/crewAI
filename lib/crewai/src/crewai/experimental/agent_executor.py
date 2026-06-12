@@ -731,9 +731,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 )
             return "continue_plan"
 
-        self._mark_todo_completed(
-            current_todo.step_number, result=current_todo.result
-        )
+        self._mark_todo_completed(current_todo.step_number, result=current_todo.result)
 
         if self.agent.verbose:
             completed = self.state.todos.completed_count
@@ -798,9 +796,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         # Step failed but observer does not require a full replan — mark as
         # failed (not completed) so get_failed_todos() tracks it correctly.
-        self._mark_todo_failed(
-            current_todo.step_number, result=current_todo.result
-        )
+        self._mark_todo_failed(current_todo.step_number, result=current_todo.result)
         if self.agent.verbose:
             failed = len(self.state.todos.get_failed_todos())
             total = len(self.state.todos.items)
@@ -867,9 +863,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         # Step failed — also trigger replan
         if not observation.step_completed_successfully:
-            self._mark_todo_failed(
-                current_todo.step_number, result=current_todo.result
-            )
+            self._mark_todo_failed(current_todo.step_number, result=current_todo.result)
             if self.agent.verbose:
                 PRINTER.print(
                     content="[Decide] Step failed — triggering replan",
@@ -889,9 +883,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 )
             return "refine_and_continue"
 
-        self._mark_todo_completed(
-            current_todo.step_number, result=current_todo.result
-        )
+        self._mark_todo_completed(current_todo.step_number, result=current_todo.result)
         if self.agent.verbose:
             completed = self.state.todos.completed_count
             total = len(self.state.todos.items)

@@ -73,20 +73,41 @@ logger = logging.getLogger(__name__)
 
 # litellm is lazy-loaded to avoid its module-level dotenv.load_dotenv()
 # from polluting env vars (e.g. MODEL= overriding embedder model_name).
+# The TYPE_CHECKING imports give mypy the real types; at runtime the names
+# stay None until _ensure_litellm() rebinds them.
 _litellm_loaded = False
-litellm = None  # type: ignore[assignment]
-Choices = None  # type: ignore[assignment, misc]
-LiteLLMDelta = None  # type: ignore[assignment, misc]
-Message = None  # type: ignore[assignment, misc]
-ModelResponseBase = None  # type: ignore[assignment, misc]
-ModelResponseStream = None  # type: ignore[assignment, misc]
-LiteLLMStreamingChoices = None  # type: ignore[assignment, misc]
-get_supported_openai_params = None  # type: ignore[assignment]
-ChatCompletionDeltaToolCall = None  # type: ignore[assignment, misc]
-Function = None  # type: ignore[assignment, misc]
-ModelResponse = None  # type: ignore[assignment, misc]
-supports_response_schema = None  # type: ignore[assignment]
 LITELLM_AVAILABLE = False
+
+if TYPE_CHECKING:
+    import litellm
+    from litellm.litellm_core_utils.get_supported_openai_params import (
+        get_supported_openai_params,
+    )
+    from litellm.types.utils import (
+        ChatCompletionDeltaToolCall,
+        Choices,
+        Delta as LiteLLMDelta,
+        Function,
+        Message,
+        ModelResponse,
+        ModelResponseBase,
+        ModelResponseStream,
+        StreamingChoices as LiteLLMStreamingChoices,
+    )
+    from litellm.utils import supports_response_schema
+else:
+    litellm = None
+    Choices = None
+    LiteLLMDelta = None
+    Message = None
+    ModelResponseBase = None
+    ModelResponseStream = None
+    LiteLLMStreamingChoices = None
+    get_supported_openai_params = None
+    ChatCompletionDeltaToolCall = None
+    Function = None
+    ModelResponse = None
+    supports_response_schema = None
 
 
 def _ensure_litellm() -> bool:
@@ -120,16 +141,16 @@ def _ensure_litellm() -> bool:
         from litellm.utils import supports_response_schema as _supports_response_schema
 
         litellm = _litellm
-        Choices = _Choices
-        LiteLLMDelta = _LiteLLMDelta
-        Message = _Message
-        ModelResponseBase = _ModelResponseBase
-        ModelResponseStream = _ModelResponseStream
-        LiteLLMStreamingChoices = _LiteLLMStreamingChoices
+        Choices = _Choices  # type: ignore[misc]
+        LiteLLMDelta = _LiteLLMDelta  # type: ignore[misc]
+        Message = _Message  # type: ignore[misc]
+        ModelResponseBase = _ModelResponseBase  # type: ignore[misc]
+        ModelResponseStream = _ModelResponseStream  # type: ignore[misc]
+        LiteLLMStreamingChoices = _LiteLLMStreamingChoices  # type: ignore[misc]
         get_supported_openai_params = _get_supported_openai_params
-        ChatCompletionDeltaToolCall = _ChatCompletionDeltaToolCall
-        Function = _Function
-        ModelResponse = _ModelResponse
+        ChatCompletionDeltaToolCall = _ChatCompletionDeltaToolCall  # type: ignore[misc]
+        Function = _Function  # type: ignore[misc]
+        ModelResponse = _ModelResponse  # type: ignore[misc]
         supports_response_schema = _supports_response_schema
 
         _litellm.suppress_debug_info = True

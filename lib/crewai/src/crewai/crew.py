@@ -680,7 +680,7 @@ class Crew(FlowTrackable, BaseModel):
         if self.chat_llm is not None:
             return self.chat_llm
         for agent in self.agents:
-            agent_llm = getattr(agent, "llm", None)
+            agent_llm: str | BaseLLM | None = getattr(agent, "llm", None)
             if agent_llm is not None:
                 return agent_llm
         return None

@@ -282,16 +282,16 @@ def load_json_crew_project(
         context_names = task_defn.get("context")
         if context_names is not None:
             if not isinstance(context_names, list):
-                fail(
-                    f"{task_path} field 'context' must be a list of task names"
-                )
+                fail(f"{task_path} field 'context' must be a list of task names")
             else:
-                fail_many([
-                    f"{task_path} has context reference '{ctx_name}' but that task "
-                    "has not been defined yet"
-                    for ctx_name in context_names
-                    if ctx_name not in known_tasks
-                ])
+                fail_many(
+                    [
+                        f"{task_path} has context reference '{ctx_name}' but that task "
+                        "has not been defined yet"
+                        for ctx_name in context_names
+                        if ctx_name not in known_tasks
+                    ]
+                )
 
         task_name = task_defn.get("name")
         if isinstance(task_name, str) and task_name:
@@ -444,9 +444,7 @@ def _agent_kwargs_from_definition(
         raise JSONProjectValidationError(errors)
 
     agent_kwargs = {
-        key: value
-        for key, value in defn.items()
-        if key in _agent_allowed_fields()
+        key: value for key, value in defn.items() if key in _agent_allowed_fields()
     }
     agent_kwargs.update(settings)
     _resolve_tool_fields(agent_kwargs)
@@ -469,9 +467,7 @@ def _task_kwargs_from_definition(
         raise JSONProjectValidationError(errors)
 
     task_kwargs = {
-        key: value
-        for key, value in task_defn.items()
-        if key in _task_allowed_fields()
+        key: value for key, value in task_defn.items() if key in _task_allowed_fields()
     }
 
     agent_ref = task_kwargs.get("agent")
@@ -516,9 +512,7 @@ def _crew_kwargs_from_definition(
         raise JSONProjectValidationError(errors)
 
     crew_kwargs = {
-        key: value
-        for key, value in defn.items()
-        if key in _crew_allowed_fields()
+        key: value for key, value in defn.items() if key in _crew_allowed_fields()
     }
     crew_kwargs["agents"] = agents
     crew_kwargs["tasks"] = tasks
@@ -606,16 +600,24 @@ def _resolve_tools(tool_defs: list[Any]) -> list[Any]:
         if not tool_def:
             continue
         if tool_def.startswith("custom:"):
-            custom_tool = _resolve_custom_tool(tool_def[7:])
-            if custom_tool is not None:
-                tools.append(custom_tool)
+            tools.append(_resolve_custom_tool(tool_def[7:]))
             continue
         try:
             tool_cls = _find_tool_class(tool_def)
-            if tool_cls:
-                tools.append(tool_cls())
         except Exception as e:
-            logger.warning("Failed to resolve tool '%s': %s", tool_def, e)
+            raise JSONProjectError(f"Failed to resolve tool '{tool_def}': {e}") from e
+        if tool_cls is None:
+            raise JSONProjectError(
+                f"Unknown tool '{tool_def}'. Tool names must match a class from "
+                f"the 'crewai_tools' package (e.g. 'SerperDevTool') or use the "
+                f"'custom:<name>' prefix for a tool defined in tools/<name>.py."
+            )
+        try:
+            tools.append(tool_cls())
+        except Exception as e:
+            raise JSONProjectError(
+                f"Failed to initialize tool '{tool_def}': {e}"
+            ) from e
     return tools
 
 
@@ -648,7 +650,9 @@ def _try_import_tool(class_name: str) -> type | None:
     """Attempt to import a single tool class without loading all of crewai_tools."""
     import re as _re
 
-    base = class_name.removesuffix("Tool") if class_name.endswith("Tool") else class_name
+    base = (
+        class_name.removesuffix("Tool") if class_name.endswith("Tool") else class_name
+    )
     snake = _re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", base).lower()
     tool_snake = snake + "_tool" if not snake.endswith("_tool") else snake
 
@@ -681,12 +685,20 @@ def _import_tool_class(mod_path: str, class_name: str) -> type | None:
 
 
 def _resolve_custom_tool(tool_name: str) -> Any:
-    """Resolve a custom tool from the project's ``tools/`` directory."""
+    """Resolve a custom tool from the project's ``tools/`` directory.
+
+    Note: ``custom:<name>`` tools execute ``tools/<name>.py`` as local Python
+    code at load time — JSON configs referencing them are no longer pure data.
+    Only run JSON crew projects from sources you trust.
+    """
     tools_dir = Path.cwd() / "tools"
     tool_file = tools_dir / f"{tool_name}.py"
     if not tool_file.exists():
-        logger.warning("Custom tool file not found: %s", tool_file)
-        return None
+        raise JSONProjectError(
+            f"Custom tool 'custom:{tool_name}' not found: expected {tool_file}. "
+            f"Create the file with a BaseTool subclass, or remove the tool from "
+            f"your crew JSON."
+        )
     try:
         import importlib.util
 
@@ -694,7 +706,10 @@ def _resolve_custom_tool(tool_name: str) -> Any:
             f"custom_tools.{tool_name}", tool_file
         )
         if spec is None or spec.loader is None:
-            return None
+            raise JSONProjectError(
+                f"Could not load custom tool 'custom:{tool_name}' from {tool_file}"
+            )
+        logger.debug("Executing custom tool module: %s", tool_file)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
 
@@ -707,9 +722,17 @@ def _resolve_custom_tool(tool_name: str) -> Any:
                 and issubclass(attr, BaseTool)
                 and attr is not BaseTool
             ):
-                return attr()
-        logger.warning("No BaseTool subclass found in %s", tool_file)
-        return None
+                # Concrete subclasses supply name/description defaults that
+                # BaseTool's signature requires.
+                tool_cls: type[Any] = attr
+                return tool_cls()
+        raise JSONProjectError(
+            f"No BaseTool subclass found in {tool_file}. Custom tools must "
+            f"define a class inheriting from crewai.tools.BaseTool."
+        )
+    except JSONProjectError:
+        raise
     except Exception as e:
-        logger.warning("Failed to load custom tool '%s': %s", tool_name, e)
-        return None
+        raise JSONProjectError(
+            f"Failed to load custom tool 'custom:{tool_name}' from {tool_file}: {e}"
+        ) from e

@@ -8,6 +8,35 @@ from typing import Any, Protocol, runtime_checkable
 from crewai.memory.types import MemoryRecord, ScopeInfo
 
 
+class EmbeddingDimensionMismatchError(RuntimeError):
+    """Raised when an embedding's dimensionality doesn't match the existing store.
+
+    The most common cause is upgrading CrewAI across the default-embedder
+    change (text-embedding-3-small, 1536 dims → text-embedding-3-large,
+    3072 dims) while keeping a local memory store created before the upgrade.
+    """
+
+    def __init__(self, stored_dim: int, new_dim: int) -> None:
+        self.stored_dim = stored_dim
+        self.new_dim = new_dim
+        super().__init__(
+            f"Embedding dimension mismatch: this memory store contains "
+            f"{stored_dim}-dimensional vectors, but the current embedder produced "
+            f"a {new_dim}-dimensional vector.\n\n"
+            "This usually means the store was created with a different embedding "
+            "model. CrewAI's default embedder changed from "
+            "text-embedding-3-small (1536 dims) to text-embedding-3-large "
+            "(3072 dims), so memory stores created before the upgrade are "
+            "incompatible with the new default.\n\n"
+            "To fix, do one of the following:\n"
+            "  - Reset local memory so it is rebuilt with the new embedder:\n"
+            "      crewai reset-memories --memory   (or crew.reset_memories())\n"
+            "  - Keep existing memories by pinning the previous embedder:\n"
+            '      embedder={"provider": "openai", '
+            '"config": {"model": "text-embedding-3-small"}}'
+        )
+
+
 @runtime_checkable
 class StorageBackend(Protocol):
     """Protocol for pluggable memory storage backends."""

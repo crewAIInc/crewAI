@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from contextlib import suppress
 import sys
+from typing import overload
 
 import click
 
@@ -231,6 +232,7 @@ def _numbered_select(labels: list[str]) -> int:
             if 1 <= num <= len(labels):
                 return num - 1
         except ValueError:
+            # Non-numeric input falls through to the shared error message.
             pass
         click.secho(f"  Invalid choice. Enter 1-{len(labels)}.", fg="red")
 
@@ -258,7 +260,7 @@ def _numbered_select_multi(
     )
     if not raw.strip():
         return [], None
-    indices = []
+    indices: list[int] = []
     for part in raw.split(","):
         with suppress(ValueError):
             num = int(part.strip())
@@ -341,6 +343,25 @@ def pick_one(title: str, labels: list[str]) -> int:
         except Exception:
             return _numbered_select(labels)
     return _numbered_select(labels)
+
+
+@overload
+def pick_many(
+    title: str,
+    labels: list[str],
+    *,
+    separator_indices: set[int] | None = None,
+) -> list[int]: ...
+
+
+@overload
+def pick_many(
+    title: str,
+    labels: list[str],
+    *,
+    action_indices: set[int],
+    separator_indices: set[int] | None = None,
+) -> tuple[list[int], int | None]: ...
 
 
 def pick_many(

@@ -764,6 +764,7 @@ class Agent(BaseAgent):
         Creates a temporary Task + Crew, executes, and returns the raw output.
         """
         from crewai.crew import Crew
+        from crewai.types.streaming import CrewStreamingOutput
 
         task = Task(
             description=content,
@@ -777,6 +778,8 @@ class Agent(BaseAgent):
             memory=self.memory or False,
         )
         result = crew.kickoff()
+        if isinstance(result, CrewStreamingOutput):
+            return result.result.raw
         return result.raw
 
     def execute_task(

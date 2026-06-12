@@ -8,12 +8,12 @@ import json as _json
 import re
 import threading
 import time
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 
 from rich.text import Text
 from textual import work
 from textual.app import App, ComposeResult
-from textual.binding import Binding
+from textual.binding import Binding, BindingType
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.css.query import NoMatches
 from textual.screen import ModalScreen
@@ -23,18 +23,15 @@ from textual.widgets import Button, Footer, Header, Static
 _SPINNER = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 
 # CrewAI brand palette
-_C_BG = "#131313"         # crewai.dark-black
-_C_PANEL = "#1c1c1c"      # slightly lighter than dark-black
-_C_BORDER = "#333333"     # crewai.text — subtle borders
-_C_PRIMARY = "#FF5A50"    # crewai.primary (coral red)
-_C_TEAL = "#1F7982"       # crewai.secondary / tertiary
-_C_GREEN = "#4aba6a"      # success green (warm, not neon)
-_C_YELLOW = "#e0a840"     # warning
-_C_RED = "#FF5A50"        # error (same as primary)
-_C_TEXT = "#e0e0e0"       # light text on dark bg
-_C_DIM = "#AAAAAA"        # crewai.background-grey
-_C_MUTED = "#666666"      # dimmer than _C_DIM for past timeline
-_C_CYAN = "#1F7982"       # alias for teal — used for accents
+_C_PRIMARY = "#FF5A50"  # crewai.primary (coral red)
+_C_TEAL = "#1F7982"  # crewai.secondary / tertiary
+_C_GREEN = "#4aba6a"  # success green (warm, not neon)
+_C_YELLOW = "#e0a840"  # warning
+_C_RED = "#FF5A50"  # error (same as primary)
+_C_TEXT = "#e0e0e0"  # light text on dark bg
+_C_DIM = "#AAAAAA"  # crewai.background-grey
+_C_MUTED = "#666666"  # dimmer than _C_DIM for past timeline
+_C_CYAN = "#1F7982"  # alias for teal — used for accents
 
 _STEP_NUMBER_RE = re.compile(r"\bstep\s+(\d+)\b", re.IGNORECASE)
 _REFINEMENT_RE = re.compile(r"^\s*step\s+(\d+)\s*:\s*(.+)\s*$", re.IGNORECASE)
@@ -57,6 +54,8 @@ def _enable_tracing_in_dotenv() -> None:
         else:
             env_file.write_text(f"{key}=true\n")
     except OSError:
+        # Persisting the tracing flag is best-effort; an unwritable .env
+        # must not block the run (tracing stays enabled for this session).
         pass
 
 
@@ -73,6 +72,7 @@ def _try_parse_structured(text: str) -> Any | None:
         pass
     try:
         import ast
+
         obj = ast.literal_eval(text)
         if isinstance(obj, (dict, list)):
             return obj
@@ -101,7 +101,9 @@ def _format_json_in_text(text: str) -> str:
                         candidate = text[i : j + 1]
                         parsed = _try_parse_structured(candidate)
                         if parsed is not None:
-                            formatted = _json.dumps(parsed, indent=2, ensure_ascii=False)
+                            formatted = _json.dumps(
+                                parsed, indent=2, ensure_ascii=False
+                            )
                             result.append(formatted)
                             i = j + 1
                         else:
@@ -137,7 +139,7 @@ def _colorize_json_line(t: Text, line: str) -> None:
         if ch == '"':
             j = i + 1
             while j < len(s):
-                if s[j] == '\\':
+                if s[j] == "\\":
                     j += 2
                     continue
                 if s[j] == '"':
@@ -146,33 +148,33 @@ def _colorize_json_line(t: Text, line: str) -> None:
                 j += 1
             token = s[i:j]
             rest = s[j:].lstrip()
-            if rest.startswith(':'):
+            if rest.startswith(":"):
                 t.append(token, style=_C_TEAL)
             else:
                 t.append(token, style=_C_DIM)
             i = j
-        elif ch in '{}[],':
+        elif ch in "{}[],":
             t.append(ch, style=_C_MUTED)
             i += 1
-        elif ch == ':':
-            t.append(': ', style=_C_MUTED)
+        elif ch == ":":
+            t.append(": ", style=_C_MUTED)
             i += 1
-            if i < len(s) and s[i] == ' ':
+            if i < len(s) and s[i] == " ":
                 i += 1
-        elif ch in '-0123456789':
+        elif ch in "-0123456789":
             j = i + 1
-            while j < len(s) and s[j] in '0123456789.eE+-':
+            while j < len(s) and s[j] in "0123456789.eE+-":
                 j += 1
             t.append(s[i:j], style=_C_PRIMARY)
             i = j
-        elif s[i:i + 4] == 'true':
-            t.append('true', style=_C_GREEN)
+        elif s[i : i + 4] == "true":
+            t.append("true", style=_C_GREEN)
             i += 4
-        elif s[i:i + 5] == 'false':
-            t.append('false', style=_C_GREEN)
+        elif s[i : i + 5] == "false":
+            t.append("false", style=_C_GREEN)
             i += 5
-        elif s[i:i + 4] == 'null':
-            t.append('null', style=f"italic {_C_MUTED}")
+        elif s[i : i + 4] == "null":
+            t.append("null", style=f"italic {_C_MUTED}")
             i += 4
         else:
             t.append(ch, style=_C_DIM)
@@ -183,7 +185,7 @@ def _append_highlighted(t: Text, content: str, indent: str, max_lines: int = 50)
     """Append text with JSON highlighting if it looks like JSON, else plain."""
     lines = content.split("\n")
     total = len(lines)
-    is_json = content.lstrip()[:1] in ('{', '[', '"')
+    is_json = content.lstrip()[:1] in ("{", "[", '"')
     for line in lines[:max_lines]:
         t.append(f"{indent}  ", style="")
         if is_json:
@@ -195,7 +197,6 @@ def _append_highlighted(t: Text, content: str, indent: str, max_lines: int = 50)
 
 
 class TraceConsentScreen(ModalScreen[bool]):
-
     CSS = """
     TraceConsentScreen {
         align: center middle;
@@ -244,7 +245,7 @@ class TraceConsentScreen(ModalScreen[bool]):
     }
     """
 
-    BINDINGS: ClassVar[list[Binding]] = [
+    BINDINGS: ClassVar[list[BindingType]] = [
         Binding("y", "consent_yes", "Yes", show=False),
         Binding("n", "consent_no", "No", show=False),
         Binding("escape", "consent_no", "Cancel", show=False),
@@ -279,7 +280,7 @@ class TraceConsentScreen(ModalScreen[bool]):
         btn_yes.label = f"{_SPINNER[0]} Loading…"
         btn_no.display = False
         self._spin_timer = self.set_interval(1 / 8, self._spin_tick)
-        self.app._on_trace_consent_accepted()
+        cast("CrewRunApp", self.app)._on_trace_consent_accepted()
 
     def _spin_tick(self) -> None:
         self._frame += 1
@@ -309,7 +310,6 @@ class TraceConsentScreen(ModalScreen[bool]):
 
 
 class CrewRunApp(App[Any]):
-
     TITLE = "CrewAI"
 
     CSS = """
@@ -449,7 +449,7 @@ FooterKey .footer-key--key {
 }
 """
 
-    BINDINGS: ClassVar[list[Binding]] = [
+    BINDINGS: ClassVar[list[BindingType]] = [
         Binding("q", "quit", "Quit"),
         Binding("s", "toggle_sidebar", "Sidebar"),
         Binding("l", "toggle_logs", "Logs"),
@@ -563,6 +563,7 @@ FooterKey .footer-key--key {
             set_suppress_tracing_messages,
             set_tui_mode,
         )
+
         set_tui_mode(True)
         set_suppress_tracing_messages(True)
         try:
@@ -585,7 +586,9 @@ FooterKey .footer-key--key {
 
             agent_names = []
             for agent in crew.agents:
-                name = getattr(agent, "role", "") or getattr(agent, "name", "") or "Agent"
+                name = (
+                    getattr(agent, "role", "") or getattr(agent, "name", "") or "Agent"
+                )
                 agent_names.append(name)
 
             self._crew = crew
@@ -596,7 +599,9 @@ FooterKey .footer-key--key {
                     self._total_tasks = len(crew.tasks)
                     self._task_names = task_names
                     self._agent_names = agent_names
-                    self._task_statuses = {i: "pending" for i in range(1, len(crew.tasks) + 1)}
+                    self._task_statuses = {
+                        i: "pending" for i in range(1, len(crew.tasks) + 1)
+                    }
                     self.title = f"CrewAI — {crew.name or 'Crew'}"
                     self._crew_name = crew.name or "Crew"
                 self._start_time = time.time()
@@ -612,6 +617,7 @@ FooterKey .footer-key--key {
             set_suppress_tracing_messages,
             set_tui_mode,
         )
+
         set_tui_mode(True)
         set_suppress_tracing_messages(True)
         try:
@@ -647,10 +653,15 @@ FooterKey .footer-key--key {
             from crewai.events.listeners.tracing.trace_listener import (
                 TraceCollectionListener,
             )
-            listener = TraceCollectionListener._instance
+
+            listener: TraceCollectionListener | None = getattr(
+                TraceCollectionListener, "_instance", None
+            )
             if listener and listener.batch_manager:
                 bm = listener.batch_manager
-                self._trace_url = getattr(bm, "trace_url", None) or bm.ephemeral_trace_url
+                self._trace_url = (
+                    getattr(bm, "trace_url", None) or bm.ephemeral_trace_url
+                )
         except Exception:  # noqa: S110
             pass
         try:
@@ -742,7 +753,7 @@ FooterKey .footer-key--key {
         if should_refresh:
             self._refresh_log_panel()
 
-    def action_quit(self) -> None:
+    async def action_quit(self) -> None:
         self._unsubscribe()
         self.exit(self._crew_result)
 
@@ -751,6 +762,7 @@ FooterKey .footer-key--key {
             return
         if self._trace_url:
             import webbrowser
+
             try:
                 webbrowser.open(self._trace_url)
             except Exception:  # noqa: S110
@@ -765,11 +777,13 @@ FooterKey .footer-key--key {
     @work(thread=True)
     def _send_traces_worker(self) -> None:
         import webbrowser
+
         try:
             from crewai.events.listeners.tracing.utils import (
                 set_suppress_tracing_messages,
                 set_tui_mode,
             )
+
             set_tui_mode(True)
             set_suppress_tracing_messages(True)
 
@@ -780,7 +794,9 @@ FooterKey .footer-key--key {
                 mark_first_execution_completed,
             )
 
-            listener = TraceCollectionListener._instance
+            listener: TraceCollectionListener | None = getattr(
+                TraceCollectionListener, "_instance", None
+            )
             if not listener:
                 self.call_from_thread(self._dismiss_consent_modal)
                 return
@@ -801,6 +817,7 @@ FooterKey .footer-key--key {
 
             if url:
                 self._trace_url = url
+
                 def _done() -> None:
                     self._dismiss_consent_modal()
                     try:
@@ -809,6 +826,7 @@ FooterKey .footer-key--key {
                         btn.id = "btn-traces-done"
                     except Exception:  # noqa: S110
                         pass
+
                 self.call_from_thread(_done)
                 try:
                     webbrowser.open(url)
@@ -848,14 +866,14 @@ FooterKey .footer-key--key {
             pass
 
     def _focus_activity_log(self) -> None:
-        if not self.is_mounted:
+        if not self._is_mounted:
             return
         log_panel = self.query_one("#log-panel", VerticalScroll)
         if log_panel.display:
             log_panel.focus()
 
     def _refresh_log_panel(self) -> None:
-        if not self.is_mounted:
+        if not self._is_mounted:
             return
         with self._lock:
             if self.query_one("#log-panel").display:
@@ -885,7 +903,9 @@ FooterKey .footer-key--key {
 
     def _tick(self) -> None:
         self._frame += 1
-        elapsed = getattr(self, "_elapsed_frozen", None) or (time.time() - self._start_time)
+        elapsed = getattr(self, "_elapsed_frozen", None) or (
+            time.time() - self._start_time
+        )
         mins, secs = divmod(int(elapsed), 60)
         self.sub_title = f"{mins}:{secs:02d}"
 
@@ -914,7 +934,9 @@ FooterKey .footer-key--key {
 
         for i in range(1, self._total_tasks + 1):
             status = self._task_statuses.get(i, "pending")
-            name = self._task_names[i - 1] if i <= len(self._task_names) else f"Task {i}"
+            name = (
+                self._task_names[i - 1] if i <= len(self._task_names) else f"Task {i}"
+            )
             max_name = sidebar_width - 6
             if len(name) > max_name:
                 name = name[: max_name - 1] + "…"
@@ -1076,7 +1098,7 @@ FooterKey .footer-key--key {
             t.append("  ━━━ Result ━━━\n\n", style=f"bold {_C_TEAL}")
             output = _unescape_text(self._final_output)
             output = _format_json_in_text(output)
-            is_json = output.lstrip()[:1] in ('{', '[', '"')
+            is_json = output.lstrip()[:1] in ("{", "[", '"')
             for line in output.split("\n"):
                 t.append("  ")
                 if is_json:
@@ -1090,7 +1112,10 @@ FooterKey .footer-key--key {
         if should_scroll:
             try:
                 scroll = self.query_one("#scroll-area", VerticalScroll)
-                if scroll.max_scroll_y <= 0 or scroll.scroll_y >= scroll.max_scroll_y - 50:
+                if (
+                    scroll.max_scroll_y <= 0
+                    or scroll.scroll_y >= scroll.max_scroll_y - 50
+                ):
                     scroll.scroll_end(animate=False)
             except Exception:  # noqa: S110
                 pass
@@ -1207,7 +1232,9 @@ FooterKey .footer-key--key {
                 if cursor_top < visible_top + 1:
                     log_scroll.scroll_to(y=max(0, cursor_top - 1), animate=False)
                 elif cursor_bottom > visible_bottom - 1:
-                    log_scroll.scroll_to(y=max(0, cursor_bottom - panel_h + 1), animate=False)
+                    log_scroll.scroll_to(
+                        y=max(0, cursor_bottom - panel_h + 1), animate=False
+                    )
             except Exception:  # noqa: S110
                 pass
 
@@ -1283,7 +1310,10 @@ FooterKey .footer-key--key {
         with self._lock:
             if self._current_step:
                 prev_style, prev_msg, prev_detail = self._current_step
-                skip = prev_msg in ("Thinking…", "Generating response…") or prev_msg.startswith("⚡")
+                skip = prev_msg in (
+                    "Thinking…",
+                    "Generating response…",
+                ) or prev_msg.startswith("⚡")
                 if not skip:
                     self._timeline.append((prev_style, prev_msg, prev_detail))
             self._current_step = (style, message, detail)
@@ -1324,6 +1354,8 @@ FooterKey .footer-key--key {
                             }
                             self._awaiting_replan = False
                     except (ValueError, KeyError):
+                        # Best-effort parse of streamed planner output:
+                        # partial or non-plan JSON is expected and ignored.
                         pass
                     return
 
@@ -1502,7 +1534,6 @@ FooterKey .footer-key--key {
                 self._plan = None
                 self._plan_step_status = {}
                 self._awaiting_replan = False
-                self._plan_tools_used = []
 
                 for k in self._task_statuses:
                     if self._task_statuses[k] == "active":
@@ -1565,11 +1596,27 @@ FooterKey .footer-key--key {
                 if event.usage:
                     u = event.usage
                     inp = next(
-                        (u[k] for k in ("prompt_tokens", "input_tokens", "prompt_token_count") if u.get(k)),
+                        (
+                            u[k]
+                            for k in (
+                                "prompt_tokens",
+                                "input_tokens",
+                                "prompt_token_count",
+                            )
+                            if u.get(k)
+                        ),
                         0,
                     )
                     out = next(
-                        (u[k] for k in ("completion_tokens", "output_tokens", "candidates_token_count") if u.get(k)),
+                        (
+                            u[k]
+                            for k in (
+                                "completion_tokens",
+                                "output_tokens",
+                                "candidates_token_count",
+                            )
+                            if u.get(k)
+                        ),
                         0,
                     )
                     self._input_tokens += inp
@@ -1598,9 +1645,8 @@ FooterKey .footer-key--key {
                 self._current_llm_text += event.chunk
                 self._live_out_tokens += 1
                 if (
-                    (not self._plan or self._awaiting_replan)
-                    and '{"plan"' in self._streaming_text
-                ):
+                    not self._plan or self._awaiting_replan
+                ) and '{"plan"' in self._streaming_text:
                     self._try_parse_plan(self._streaming_text)
                 if self._plan and "step_completed_successfully" in self._streaming_text:
                     self._try_parse_step_observation(self._streaming_text)
@@ -1614,18 +1660,14 @@ FooterKey .footer-key--key {
             with self._lock:
                 self._set_plan_step_status(event.step_number, "active")
 
-        self._register_handler(
-            StepObservationStartedEvent, on_step_observation_started
-        )
+        self._register_handler(StepObservationStartedEvent, on_step_observation_started)
 
         @crewai_event_bus.on(StepObservationCompletedEvent)
         def on_step_observation_completed(
             source: Any, event: StepObservationCompletedEvent
         ) -> None:
             with self._lock:
-                status = (
-                    "done" if event.step_completed_successfully else "failed"
-                )
+                status = "done" if event.step_completed_successfully else "failed"
                 self._set_plan_step_status(event.step_number, status)
 
         self._register_handler(
@@ -1678,9 +1720,7 @@ FooterKey .footer-key--key {
         self._register_handler(PlanReplanTriggeredEvent, on_plan_replan_triggered)
 
         @crewai_event_bus.on(GoalAchievedEarlyEvent)
-        def on_goal_achieved_early(
-            source: Any, event: GoalAchievedEarlyEvent
-        ) -> None:
+        def on_goal_achieved_early(source: Any, event: GoalAchievedEarlyEvent) -> None:
             with self._lock:
                 self._mark_plan_goal_achieved(event.step_number or None)
 
@@ -1698,9 +1738,7 @@ FooterKey .footer-key--key {
                 args_str = ""
                 if event.tool_args:
                     try:
-                        args_str = _json.dumps(
-                            event.tool_args, indent=2, default=str
-                        )
+                        args_str = _json.dumps(event.tool_args, indent=2, default=str)
                     except Exception:
                         args_str = str(event.tool_args)
                 for entry in self._log_entries:
@@ -1711,9 +1749,14 @@ FooterKey .footer-key--key {
                     ):
                         return
                 for entry in self._log_entries:
-                    if entry["status"] == "running" and entry["tool_name"] != event.tool_name:
+                    if (
+                        entry["status"] == "running"
+                        and entry["tool_name"] != event.tool_name
+                    ):
                         entry["status"] = "timeout"
-                        entry["error"] = "No result received before the next tool started"
+                        entry["error"] = (
+                            "No result received before the next tool started"
+                        )
                         entry["duration"] = now - entry["start_time"]
                 plan_step_number = getattr(event, "plan_step_number", None)
                 if not isinstance(plan_step_number, int):
@@ -1754,7 +1797,9 @@ FooterKey .footer-key--key {
                     out = event.output
                     if isinstance(out, (dict, list)):
                         try:
-                            result_str = _json.dumps(out, indent=2, ensure_ascii=False)[:5000]
+                            result_str = _json.dumps(out, indent=2, ensure_ascii=False)[
+                                :5000
+                            ]
                         except (TypeError, ValueError):
                             result_str = str(out)[:5000]
                     else:
@@ -1832,7 +1877,9 @@ FooterKey .footer-key--key {
         )
 
         @crewai_event_bus.on(MemoryRetrievalStartedEvent)
-        def on_memory_retrieval_started(source: Any, event: MemoryRetrievalStartedEvent) -> None:
+        def on_memory_retrieval_started(
+            source: Any, event: MemoryRetrievalStartedEvent
+        ) -> None:
             with self._lock:
                 self._log_entries.append(
                     {
@@ -1850,10 +1897,15 @@ FooterKey .footer-key--key {
         self._register_handler(MemoryRetrievalStartedEvent, on_memory_retrieval_started)
 
         @crewai_event_bus.on(MemoryRetrievalCompletedEvent)
-        def on_memory_retrieval_completed(source: Any, event: MemoryRetrievalCompletedEvent) -> None:
+        def on_memory_retrieval_completed(
+            source: Any, event: MemoryRetrievalCompletedEvent
+        ) -> None:
             with self._lock:
                 for entry in reversed(self._log_entries):
-                    if entry["tool_name"] == "memory_recall" and entry["status"] == "running":
+                    if (
+                        entry["tool_name"] == "memory_recall"
+                        and entry["status"] == "running"
+                    ):
                         entry["status"] = "success"
                         entry["duration"] = event.retrieval_time_ms / 1000
                         content = event.memory_content or ""
@@ -1861,13 +1913,20 @@ FooterKey .footer-key--key {
                             entry["result"] = content[:3000]
                         break
 
-        self._register_handler(MemoryRetrievalCompletedEvent, on_memory_retrieval_completed)
+        self._register_handler(
+            MemoryRetrievalCompletedEvent, on_memory_retrieval_completed
+        )
 
         @crewai_event_bus.on(MemoryRetrievalFailedEvent)
-        def on_memory_retrieval_failed(source: Any, event: MemoryRetrievalFailedEvent) -> None:
+        def on_memory_retrieval_failed(
+            source: Any, event: MemoryRetrievalFailedEvent
+        ) -> None:
             with self._lock:
                 for idx, entry in enumerate(self._log_entries):
-                    if entry["tool_name"] == "memory_recall" and entry["status"] == "running":
+                    if (
+                        entry["tool_name"] == "memory_recall"
+                        and entry["status"] == "running"
+                    ):
                         entry["status"] = "error"
                         entry["error"] = event.error
                         entry["duration"] = 0
@@ -1877,15 +1936,11 @@ FooterKey .footer-key--key {
         self._register_handler(MemoryRetrievalFailedEvent, on_memory_retrieval_failed)
 
         @crewai_event_bus.on(AgentLogsExecutionEvent)
-        def on_agent_execution(
-            source: Any, event: AgentLogsExecutionEvent
-        ) -> None:
+        def on_agent_execution(source: Any, event: AgentLogsExecutionEvent) -> None:
             from crewai.agents.parser import AgentAction, AgentFinish
 
             if isinstance(event.formatted_answer, AgentAction):
-                self._complete_step(
-                    "cyan", f"→ {event.formatted_answer.tool}"
-                )
+                self._complete_step("cyan", f"→ {event.formatted_answer.tool}")
             elif isinstance(event.formatted_answer, AgentFinish):
                 self._complete_step("green", "✔ Agent finished")
 
@@ -1962,6 +2017,8 @@ FooterKey .footer-key--key {
                         "error": event.error,
                     }
                 )
-            self._complete_step("red", f"✘ Failed: {event.error[:50]}", event.error[:200])
+            self._complete_step(
+                "red", f"✘ Failed: {event.error[:50]}", event.error[:200]
+            )
 
         self._register_handler(TaskFailedEvent, on_task_failed)

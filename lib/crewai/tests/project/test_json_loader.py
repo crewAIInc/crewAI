@@ -303,3 +303,57 @@ class TestLoadAgent:
     def test_load_agent_file_not_found(self):
         with pytest.raises(FileNotFoundError):
             load_agent(Path("/nonexistent/agent.json"))
+
+
+class TestResolveTools:
+    def test_unknown_tool_raises_with_guidance(self):
+        from crewai.project.json_loader import JSONProjectError, _resolve_tools
+
+        with pytest.raises(JSONProjectError, match="Unknown tool 'NotARealToolXYZ'"):
+            _resolve_tools(["NotARealToolXYZ"])
+
+    def test_missing_custom_tool_raises(self, tmp_path, monkeypatch):
+        from crewai.project.json_loader import JSONProjectError, _resolve_tools
+
+        monkeypatch.chdir(tmp_path)
+        with pytest.raises(JSONProjectError, match="custom:missing"):
+            _resolve_tools(["custom:missing"])
+
+    def test_custom_tool_without_basetool_subclass_raises(self, tmp_path, monkeypatch):
+        from crewai.project.json_loader import JSONProjectError, _resolve_tools
+
+        monkeypatch.chdir(tmp_path)
+        tools_dir = tmp_path / "tools"
+        tools_dir.mkdir()
+        (tools_dir / "empty.py").write_text("x = 1\n")
+
+        with pytest.raises(JSONProjectError, match="No BaseTool subclass"):
+            _resolve_tools(["custom:empty"])
+
+    def test_custom_tool_resolves(self, tmp_path, monkeypatch):
+        from crewai.project.json_loader import _resolve_tools
+
+        monkeypatch.chdir(tmp_path)
+        tools_dir = tmp_path / "tools"
+        tools_dir.mkdir()
+        (tools_dir / "echo.py").write_text(
+            "from crewai.tools.base_tool import BaseTool\n"
+            "\n"
+            "class EchoTool(BaseTool):\n"
+            "    name: str = 'echo'\n"
+            "    description: str = 'echo input'\n"
+            "\n"
+            "    def _run(self, text: str) -> str:\n"
+            "        return text\n"
+        )
+
+        tools = _resolve_tools(["custom:echo"])
+
+        assert len(tools) == 1
+        assert tools[0].name == "echo"
+
+    def test_serialized_tool_dicts_pass_through(self):
+        from crewai.project.json_loader import _resolve_tools
+
+        spec = {"tool_type": "some.module.Tool"}
+        assert _resolve_tools([spec]) == [spec]

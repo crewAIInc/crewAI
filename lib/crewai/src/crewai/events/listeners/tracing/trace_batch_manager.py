@@ -433,7 +433,10 @@ class TraceBatchManager:
                         title="Trace Batch Finalization",
                         border_style="green",
                     )
-                    if not should_auto_collect_first_time_traces() and not is_tui_mode():
+                    if (
+                        not should_auto_collect_first_time_traces()
+                        and not is_tui_mode()
+                    ):
                         console.print(panel)
                     return True
 

@@ -119,6 +119,10 @@ crewai run
 - `crew.jsonc` - Crew definition with tasks and configuration
 - `tools/` - Custom tools (Python)
 - `knowledge/` - Knowledge files for agents
+
+> **Note:** `custom:<name>` tool references execute `tools/<name>.py` as local
+> Python code when the crew loads. Only run crew projects from sources you
+> trust.
 """
 
 
@@ -371,8 +375,6 @@ def _select_tools() -> list[str]:
         labels,
         separator_indices=separator_indices,
     )
-    if isinstance(selected_indices, tuple):
-        selected_indices = selected_indices[0]
 
     return [tool_by_index[idx] for idx in selected_indices if idx in tool_by_index]
 
@@ -473,7 +475,10 @@ def _wizard_task(
         assigned_agent = agent_names[0]
     else:
         a_idx = pick_one("Assign to agent:", agent_names)
-        assigned_agent = agent_names[max(a_idx, 0)]
+        while a_idx < 0:
+            click.secho("  Every task needs an agent — pick one to continue.", dim=True)
+            a_idx = pick_one("Assign to agent:", agent_names)
+        assigned_agent = agent_names[a_idx]
         _success(f"Agent: {assigned_agent}")
 
     # Context dependencies
@@ -484,9 +489,7 @@ def _wizard_task(
             [*prior_task_names, "None"],
         )
         context = [
-            prior_task_names[i]
-            for i in ctx_indices
-            if i < len(prior_task_names)
+            prior_task_names[i] for i in ctx_indices if i < len(prior_task_names)
         ]
         if context:
             _success(f"Context: {', '.join(context)}")
@@ -503,7 +506,7 @@ def _wizard_task(
 def _wizard_agents_and_tasks(
     skip_provider: bool = False,
     default_llm: str | None = None,
-) -> tuple[list[dict], list[dict], dict]:
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
     """Run the full interactive wizard. Returns (agents, tasks, crew_settings)."""
     agents: list[dict[str, Any]] = []
     tasks: list[dict[str, Any]] = []
@@ -585,43 +588,49 @@ def _agent_to_jsonc(agent: dict[str, Any]) -> str:
     delegation_comma = "," if has_planning else ""
 
     settings_lines = []
-    settings_lines.append('    // Show detailed execution logs')
+    settings_lines.append("    // Show detailed execution logs")
     settings_lines.append('    "verbose": false,')
-    settings_lines.append('')
-    settings_lines.append('    // Allow this agent to delegate tasks to other agents in the crew')
+    settings_lines.append("")
+    settings_lines.append(
+        "    // Allow this agent to delegate tasks to other agents in the crew"
+    )
     settings_lines.append(f'    "allow_delegation": {delegation_val}{delegation_comma}')
-    settings_lines.append('')
-    settings_lines.append('    // Maximum reasoning iterations per task (prevents infinite loops)')
+    settings_lines.append("")
+    settings_lines.append(
+        "    // Maximum reasoning iterations per task (prevents infinite loops)"
+    )
     settings_lines.append('    // "max_iter": 25,')
-    settings_lines.append('')
-    settings_lines.append('    // Maximum tokens for agent\'s response generation')
+    settings_lines.append("")
+    settings_lines.append("    // Maximum tokens for agent's response generation")
     settings_lines.append('    // "max_tokens": null,')
-    settings_lines.append('')
-    settings_lines.append('    // Maximum execution time in seconds')
+    settings_lines.append("")
+    settings_lines.append("    // Maximum execution time in seconds")
     settings_lines.append('    // "max_execution_time": null,')
-    settings_lines.append('')
-    settings_lines.append('    // Maximum LLM requests per minute (rate limiting)')
+    settings_lines.append("")
+    settings_lines.append("    // Maximum LLM requests per minute (rate limiting)")
     settings_lines.append('    // "max_rpm": null,')
-    settings_lines.append('')
-    settings_lines.append('    // Enable agent-level memory (persists across tasks)')
+    settings_lines.append("")
+    settings_lines.append("    // Enable agent-level memory (persists across tasks)")
     settings_lines.append('    // "memory": false,')
-    settings_lines.append('')
-    settings_lines.append('    // Cache tool results to avoid duplicate calls')
+    settings_lines.append("")
+    settings_lines.append("    // Cache tool results to avoid duplicate calls")
     settings_lines.append('    // "cache": true,')
-    settings_lines.append('')
-    settings_lines.append('    // Auto-summarize context when it exceeds the LLM\'s context window')
+    settings_lines.append("")
+    settings_lines.append(
+        "    // Auto-summarize context when it exceeds the LLM's context window"
+    )
     settings_lines.append('    // "respect_context_window": true,')
-    settings_lines.append('')
-    settings_lines.append('    // Maximum retries on execution errors')
+    settings_lines.append("")
+    settings_lines.append("    // Maximum retries on execution errors")
     settings_lines.append('    // "max_retry_limit": 2,')
-    settings_lines.append('')
-    settings_lines.append('    // Enable step-by-step planning before task execution')
+    settings_lines.append("")
+    settings_lines.append("    // Enable step-by-step planning before task execution")
     if has_planning:
         settings_lines.append('    "planning": true')
     else:
         settings_lines.append('    // "planning": false')
-    settings_lines.append('')
-    settings_lines.append('    // Include system prompt in LLM calls')
+    settings_lines.append("")
+    settings_lines.append("    // Include system prompt in LLM calls")
     settings_lines.append('    // "use_system_prompt": true')
 
     settings_block = "\n".join(settings_lines)
@@ -688,51 +697,55 @@ def _task_to_json_fragment(task: dict[str, Any]) -> str:
     """Convert task wizard data to a JSON-like fragment for embedding in crew JSONC."""
     lines = []
     lines.append("    {")
-    lines.append('      // Task identifier')
+    lines.append("      // Task identifier")
     lines.append(f'      "name": {json.dumps(task["name"])},')
-    lines.append('')
-    lines.append('      // What the task should accomplish')
-    lines.append('      // Use {placeholder} inputs here; crewai run prompts for missing values')
+    lines.append("")
+    lines.append("      // What the task should accomplish")
+    lines.append(
+        "      // Use {placeholder} inputs here; crewai run prompts for missing values"
+    )
     lines.append(f'      "description": {json.dumps(task["description"])},')
-    lines.append('')
-    lines.append('      // Clear definition of what the output should look like')
+    lines.append("")
+    lines.append("      // Clear definition of what the output should look like")
     lines.append(f'      "expected_output": {json.dumps(task["expected_output"])},')
-    lines.append('')
-    lines.append('      // Optional task guardrail(s) validate output before completion')
+    lines.append("")
+    lines.append(
+        "      // Optional task guardrail(s) validate output before completion"
+    )
     lines.append('      // Use "guardrail" for one rule or "guardrails" for many')
-    lines.append('      // Failed guardrails retry up to guardrail_max_retries times')
+    lines.append("      // Failed guardrails retry up to guardrail_max_retries times")
     lines.append('      // "guardrail": "Every factual claim needs context support.",')
     lines.append('      // "guardrails": [')
     lines.append('      //   "Every factual claim must be supported by context.",')
     lines.append('      //   "The answer must match the expected output format."')
-    lines.append('      // ],')
+    lines.append("      // ],")
     lines.append('      // "guardrail_max_retries": 2,')
-    lines.append('')
-    lines.append('      // Advanced task options:')
-    lines.append('      // Docs: https://docs.crewai.com/concepts/tasks')
+    lines.append("")
+    lines.append("      // Advanced task options:")
+    lines.append("      // Docs: https://docs.crewai.com/concepts/tasks")
     lines.append('      // "output_json": null,')
     lines.append('      // "output_pydantic": null,')
     lines.append('      // "response_model": null,')
     lines.append('      // "markdown": false,')
     lines.append('      // "input_files": [],')
     lines.append('      // "security_config": {},')
-    lines.append('')
-    lines.append('      // Which agent handles this task')
+    lines.append("")
+    lines.append("      // Which agent handles this task")
     lines.append(f'      "agent": {json.dumps(task["agent"])}')
 
     if task.get("context"):
         lines[-1] += ","  # add comma to agent line
-        lines.append('')
-        lines.append('      // Task outputs used as context')
+        lines.append("")
+        lines.append("      // Task outputs used as context")
         lines.append(f'      "context": {json.dumps(task["context"])}')
 
     if task.get("output_file"):
         lines[-1] += ","
-        lines.append('')
-        lines.append('      // Save output to a file')
+        lines.append("")
+        lines.append("      // Save output to a file")
         lines.append(f'      "output_file": {json.dumps(task["output_file"])}')
 
-    lines.append('')
+    lines.append("")
     lines.append('      // "tools": [],')
     lines.append('      // "human_input": false,')
     lines.append('      // "async_execution": false')
@@ -754,9 +767,7 @@ def _crew_to_jsonc(
     inputs_lines = inputs_json.split("\n")
     if len(inputs_lines) > 1:
         inputs_json = (
-            inputs_lines[0]
-            + "\n"
-            + "\n".join("  " + line for line in inputs_lines[1:])
+            inputs_lines[0] + "\n" + "\n".join("  " + line for line in inputs_lines[1:])
         )
 
     process = settings.get("process", "sequential")
@@ -800,7 +811,7 @@ def _crew_to_jsonc(
 
   // Advanced crew options:
   // Docs: https://docs.crewai.com/concepts/crews
-  // "manager_agent": "{agents[0]['name']}",
+  // "manager_agent": "{agents[0]["name"]}",
   // "function_calling_llm": "openai/gpt-4o-mini",
   // "max_rpm": null,
   // "cache": true,
@@ -935,7 +946,6 @@ def create_json_crew(
 ) -> None:
     """Scaffold a new JSON-first crew project."""
     import keyword
-    import re
     import shutil
 
     enable_prompt_line_editing()
@@ -948,7 +958,9 @@ def create_json_crew(
     folder_name = re.sub(r"[^a-zA-Z0-9_]", "", folder_name)
 
     if not folder_name or folder_name[0].isdigit():
-        raise ValueError(f"Project name '{name}' produces invalid folder name '{folder_name}'")
+        raise ValueError(
+            f"Project name '{name}' produces invalid folder name '{folder_name}'"
+        )
 
     if keyword.iskeyword(folder_name):
         raise ValueError(f"'{folder_name}' is a reserved Python keyword")

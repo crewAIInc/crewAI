@@ -233,8 +233,8 @@ class DeployValidator:
 
         try:
             referenced.update(pattern.findall(crew_path.read_text(errors="ignore")))
-        except OSError:
-            pass
+        except OSError as exc:
+            logger.debug("Skipping unreadable crew file %s: %s", crew_path, exc)
 
         for name in agent_names:
             agent_path = find_json_project_file(agents_dir, name)
@@ -244,8 +244,8 @@ class DeployValidator:
                 referenced.update(
                     pattern.findall(agent_path.read_text(errors="ignore"))
                 )
-            except OSError:
-                pass
+            except OSError as exc:
+                logger.debug("Skipping unreadable agent file %s: %s", agent_path, exc)
 
         for py_path in self.project_root.rglob("*.py"):
             if ".venv" in py_path.parts:

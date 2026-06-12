@@ -15,6 +15,7 @@ from typing import Any
 from crewai_core.lock_store import lock as store_lock
 import lancedb  # type: ignore[import-untyped]
 
+from crewai.memory.storage.backend import EmbeddingDimensionMismatchError
 from crewai.memory.types import MemoryRecord, ScopeInfo
 
 
@@ -295,6 +296,8 @@ class LanceDBStorage:
                 dim = len(r.embedding)
                 break
         is_new_table = self._table is None
+        if not is_new_table and dim and self._vector_dim and dim != self._vector_dim:
+            raise EmbeddingDimensionMismatchError(self._vector_dim, dim)
         with store_lock(self._lock_name):
             self._ensure_table(vector_dim=dim)
             rows = [self._record_to_row(rec) for rec in records]
@@ -311,6 +314,15 @@ class LanceDBStorage:
 
     def update(self, record: MemoryRecord) -> None:
         """Update a record by ID. Preserves created_at, updates last_accessed."""
+        if (
+            self._table is not None
+            and record.embedding
+            and self._vector_dim
+            and len(record.embedding) != self._vector_dim
+        ):
+            raise EmbeddingDimensionMismatchError(
+                self._vector_dim, len(record.embedding)
+            )
         with store_lock(self._lock_name):
             self._ensure_table()
             safe_id = str(record.id).replace("'", "''")
@@ -363,6 +375,10 @@ class LanceDBStorage:
     ) -> list[tuple[MemoryRecord, float]]:
         if self._table is None:
             return []
+        if self._vector_dim and len(query_embedding) != self._vector_dim:
+            raise EmbeddingDimensionMismatchError(
+                self._vector_dim, len(query_embedding)
+            )
         query = self._table.search(query_embedding)
         if scope_prefix is not None and scope_prefix.strip("/"):
             prefix = scope_prefix.rstrip("/")
