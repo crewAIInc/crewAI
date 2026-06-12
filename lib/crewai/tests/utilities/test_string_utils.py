@@ -175,6 +175,22 @@ class TestInterpolateOnly:
         assert '"processed_by": "agent_name"' in result
         assert '"values": [1, 2, 3]' in result
 
+    def test_value_containing_placeholder_is_not_reinterpolated(self):
+        """A brace pattern inside a substituted value must be left untouched.
+
+        Regression: sequential str.replace re-scanned already-substituted values,
+        so a value like "{year} trends" had its {year} wrongly replaced too.
+        """
+        template = "Write about {topic} in {year}"
+        inputs: Dict[str, Union[str, int, float, Dict[str, Any], List[Any]]] = {
+            "topic": "{year} trends",
+            "year": "2024",
+        }
+
+        result = interpolate_only(template, inputs)
+
+        assert result == "Write about {year} trends in 2024"
+
     def test_empty_inputs_dictionary(self):
         """Test that an error is raised with empty inputs dictionary."""
         template = "Hello, {name}!"
