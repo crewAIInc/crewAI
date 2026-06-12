@@ -185,11 +185,6 @@ def persist(
             persistence if persistence is not None else default_flow_persistence()
         )
 
-        if isinstance(target, type):
-            _stamp_persistence_metadata(target, actual_persistence, verbose)
-            return target
-
-        target.__is_flow_method__ = True  # type: ignore[attr-defined]
         _stamp_persistence_metadata(target, actual_persistence, verbose)
         return target
 

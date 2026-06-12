@@ -18,6 +18,7 @@ from crewai.flow.flow_definition import (
     FlowMethodDefinition,
     FlowPersistenceDefinition,
     FlowStateDefinition,
+    _object_ref,
 )
 from crewai.flow.flow_wrappers import (
     FlowMethod,
@@ -35,15 +36,12 @@ _FLOW_METHOD_METADATA_ATTRS = [
     "__flow_method_definition__",
     "__flow_persistence_config__",
     "__human_feedback_config__",
-    "_human_feedback_llm",
 ]
 
 
 def is_flow_method(obj: Any) -> TypeIs[FlowMethod[Any, Any]]:
     """Check if the object carries Flow method wrapper metadata."""
-    return hasattr(obj, "__is_flow_method__") or hasattr(
-        obj, _FLOW_METHOD_DEFINITION_ATTR
-    )
+    return hasattr(obj, _FLOW_METHOD_DEFINITION_ATTR)
 
 
 def _should_include_flow_method(flow_class: type, method: Any) -> bool:
@@ -81,7 +79,6 @@ def _stamp_inherited_conversational_metadata(
     for attr in _FLOW_METHOD_METADATA_ATTRS:
         if hasattr(inherited, attr):
             setattr(method, attr, getattr(inherited, attr))
-    method.__is_flow_method__ = True
     return method
 
 
@@ -103,13 +100,6 @@ def _get_flow_method_definition(method: Any) -> FlowMethodDefinition | None:
     if definition is not None:
         return FlowMethodDefinition.model_validate(definition)
     return None
-
-
-def _object_ref(value: Any) -> str:
-    target = value if isinstance(value, type) else type(value)
-    module = getattr(target, "__module__", "")
-    qualname = getattr(target, "__qualname__", getattr(target, "__name__", ""))
-    return f"{module}:{qualname}" if module and qualname else repr(value)
 
 
 def _is_json_serializable(value: Any) -> bool:
@@ -227,7 +217,10 @@ def _build_config_definition(
     for field_name, default in field_defaults.items():
         value = getattr(flow_class, field_name, default)
         if field_name == "input_provider":
-            values[field_name] = None if value is None else _object_ref(value)
+            # A string value is already a ref; only live objects degrade.
+            values[field_name] = (
+                value if value is None or isinstance(value, str) else _object_ref(value)
+            )
         else:
             values[field_name] = _serialize_static_value(
                 value, diagnostics, f"config.{field_name}"
@@ -247,38 +240,31 @@ def _build_human_feedback_definition(
     return FlowHumanFeedbackDefinition(
         message=str(config.message),
         emit=[str(value) for value in emit] if emit is not None else None,
-        llm=_serialize_static_value(
-            getattr(config, "llm", None), diagnostics, f"{path}.llm"
-        ),
+        # llm and provider stay live: the engine consumes them in-process and
+        # the contract degrades them to serializable forms at JSON dump time.
+        llm=getattr(config, "llm", None),
         default_outcome=getattr(config, "default_outcome", None),
         metadata=_serialize_static_value(
             getattr(config, "metadata", None), diagnostics, f"{path}.metadata"
         ),
-        provider=_serialize_static_value(
-            getattr(config, "provider", None), diagnostics, f"{path}.provider"
-        ),
+        provider=getattr(config, "provider", None),
         learn=bool(getattr(config, "learn", False)),
         learn_source=str(getattr(config, "learn_source", "hitl")),
         learn_strict=bool(getattr(config, "learn_strict", False)),
     )
 
 
-def _build_persistence_definition(
-    value: Any,
-    diagnostics: list[FlowDefinitionDiagnostic],
-    path: str,
-) -> FlowPersistenceDefinition | None:
+def _build_persistence_definition(value: Any) -> FlowPersistenceDefinition | None:
     config = getattr(value, "__flow_persistence_config__", None)
     if config is None:
         return None
-    persistence = getattr(config, "persistence", None)
-    verbose = bool(getattr(config, "verbose", False))
     return FlowPersistenceDefinition(
         enabled=True,
-        verbose=verbose,
-        persistence=_serialize_static_value(
-            persistence, diagnostics, f"{path}.persistence"
-        ),
+        verbose=bool(getattr(config, "verbose", False)),
+        # The backend stays live: the engine persists through the exact
+        # instance the user configured; the contract degrades it to a
+        # serialized config at JSON dump time.
+        persistence=getattr(config, "persistence", None),
     )
 
 
@@ -396,9 +382,7 @@ def _build_method_definition(
             method_definition.router = True
             method_definition.emit = None
 
-    method_definition.persist = _build_persistence_definition(
-        method, diagnostics, f"{path}.persist"
-    )
+    method_definition.persist = _build_persistence_definition(method)
 
     return method_definition
 
@@ -482,7 +466,7 @@ def _build_flow_definition_from_class(
         description=description,
         state=_build_state_definition(flow_class, diagnostics),
         config=_build_config_definition(flow_class, diagnostics),
-        persist=_build_persistence_definition(flow_class, diagnostics, "persist"),
+        persist=_build_persistence_definition(flow_class),
         conversational=_build_conversational_definition(flow_class, diagnostics),
         methods=methods,
         diagnostics=diagnostics,

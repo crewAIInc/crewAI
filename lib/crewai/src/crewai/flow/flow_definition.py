@@ -13,7 +13,7 @@ import json
 import logging
 from typing import Any, Literal as TypingLiteral
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
 import yaml
 
 from crewai.flow.conversational_definition import (
@@ -41,6 +41,14 @@ __all__ = [
 ]
 
 
+def _object_ref(value: Any) -> str:
+    """Format a class or instance as the canonical ``module:qualname`` ref."""
+    target = value if isinstance(value, type) else type(value)
+    module = getattr(target, "__module__", "")
+    qualname = getattr(target, "__qualname__", getattr(target, "__name__", ""))
+    return f"{module}:{qualname}" if module and qualname else repr(value)
+
+
 class FlowDefinitionDiagnostic(BaseModel):
     """A non-fatal Flow Definition build or validation diagnostic."""
 
@@ -56,7 +64,7 @@ class FlowStateDefinition(BaseModel):
     type: TypingLiteral["dict", "pydantic", "json_schema", "unknown"] = "dict"
     ref: str | None = None
     json_schema: dict[str, Any] | None = None
-    default: Any = None
+    default: dict[str, Any] | None = None
 
 
 class FlowConfigDefinition(BaseModel):
@@ -73,15 +81,41 @@ class FlowConfigDefinition(BaseModel):
 
 
 class FlowPersistenceDefinition(BaseModel):
-    """Static persistence configuration."""
+    """Static persistence configuration.
+
+    ``persistence`` may hold a live backend when the definition is built from
+    a decorated class — the engine then persists through the exact instance
+    the user configured; the JSON/YAML projection degrades it to its
+    serialized config.
+    """
 
     enabled: bool = False
     verbose: bool = False
-    persistence: dict[str, Any] | None = None
+    persistence: Any = None
+
+    @field_serializer("persistence", when_used="json")
+    def _serialize_persistence(self, value: Any) -> Any:
+        if value is None or isinstance(value, dict):
+            return value
+        if isinstance(value, BaseModel):
+            try:
+                return value.model_dump(mode="json")
+            except Exception:
+                logger.warning(
+                    "Persistence backend %s is not fully serializable; "
+                    "preserved import reference only.",
+                    _object_ref(value),
+                )
+        return {"ref": _object_ref(value)}
 
 
 class FlowHumanFeedbackDefinition(BaseModel):
-    """Static human feedback configuration."""
+    """Static human feedback configuration.
+
+    ``llm`` and ``provider`` may hold live Python objects when the definition
+    is built from a decorated class; the JSON/YAML projection degrades them to
+    a serialized config (``llm``) or a ``module:qualname`` ref (``provider``).
+    """
 
     message: str
     emit: list[str] | None = None
@@ -92,6 +126,20 @@ class FlowHumanFeedbackDefinition(BaseModel):
     learn: bool = False
     learn_source: str = "hitl"
     learn_strict: bool = False
+
+    @field_serializer("llm", when_used="json")
+    def _serialize_llm(self, value: Any) -> dict[str, Any] | str | None:
+        if value is None or isinstance(value, (str, dict)):
+            return value
+        from crewai.flow.human_feedback import _serialize_llm_for_context
+
+        return _serialize_llm_for_context(value)
+
+    @field_serializer("provider", when_used="json")
+    def _serialize_provider(self, value: Any) -> str | None:
+        if value is None or isinstance(value, str):
+            return value
+        return _object_ref(value)
 
 
 class FlowActionDefinition(BaseModel):
@@ -111,6 +159,16 @@ class FlowMethodDefinition(BaseModel):
     emit: list[str] | None = None
     human_feedback: FlowHumanFeedbackDefinition | None = None
     persist: FlowPersistenceDefinition | None = None
+
+    @model_validator(mode="after")
+    def _canonicalize_human_feedback_routing(self) -> FlowMethodDefinition:
+        # Canonical shape: a method whose human_feedback declares emit
+        # outcomes routes like a router, regardless of how the definition
+        # was authored.
+        if self.human_feedback is not None and self.human_feedback.emit:
+            self.router = True
+            self.emit = None
+        return self
 
     @property
     def is_start(self) -> bool:

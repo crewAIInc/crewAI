@@ -92,8 +92,8 @@ class TestHumanFeedbackValidation:
         assert hasattr(test_method, "__human_feedback_config__")
         assert not hasattr(test_method, "__is_router__")
 
-    def test_persist_preserves_human_feedback_llm_attribute(self):
-        """Test @persist preserves the live LLM stashed by @human_feedback."""
+    def test_persist_preserves_human_feedback_config(self):
+        """Test @persist preserves the config stamped by @human_feedback."""
         llm = object()
 
         @persist()
@@ -105,8 +105,8 @@ class TestHumanFeedbackValidation:
         def test_method(self):
             return "output"
 
-        assert hasattr(test_method, "_human_feedback_llm")
-        assert test_method._human_feedback_llm is llm
+        assert hasattr(test_method, "__human_feedback_config__")
+        assert test_method.__human_feedback_config__.llm is llm
 
 
 class TestHumanFeedbackConfig:
@@ -481,7 +481,7 @@ class TestHumanFeedbackLearn:
         with patch.object(
             flow, "_request_human_feedback", return_value="looks good"
         ):
-            flow.produce()
+            flow.kickoff()
 
         # memory.recall and memory.remember_many should NOT be called
         flow.memory.recall.assert_not_called()
@@ -516,7 +516,7 @@ class TestHumanFeedbackLearn:
             )
             MockLLM.return_value = mock_llm
 
-            flow.produce()
+            flow.kickoff()
 
         # remember_many should be called with the distilled lesson
         flow.memory.remember_many.assert_called_once()
@@ -570,7 +570,7 @@ class TestHumanFeedbackLearn:
             ]
             MockLLM.return_value = mock_llm
 
-            flow.produce()
+            flow.kickoff()
 
         assert captured_output["shown_to_human"] == "draft with citations added"
         # recall was called to find past lessons
@@ -592,7 +592,7 @@ class TestHumanFeedbackLearn:
         with patch.object(
             flow, "_request_human_feedback", return_value=""
         ):
-            flow.produce()
+            flow.kickoff()
 
         flow.memory.remember_many.assert_not_called()
 
@@ -645,7 +645,7 @@ class TestHumanFeedbackLearn:
             mock_llm.call.side_effect = RuntimeError("simulated pre-review failure")
             MockLLM.return_value = mock_llm
 
-            flow.produce()
+            flow.kickoff()
 
         assert captured["shown_to_human"] == "raw draft"
         assert any(
@@ -690,7 +690,7 @@ class TestHumanFeedbackLearn:
             MockLLM.return_value = mock_llm
 
             with pytest.raises(RuntimeError, match="simulated pre-review failure"):
-                flow.produce()
+                flow.kickoff()
 
     def test_distillation_failure_logs_and_does_not_block_flow(self, caplog):
         """Distillation LLM failure logs a warning but does not break the flow."""
@@ -717,7 +717,7 @@ class TestHumanFeedbackLearn:
             mock_llm.call.side_effect = RuntimeError("simulated distill failure")
             MockLLM.return_value = mock_llm
 
-            flow.produce()  # must not raise
+            flow.kickoff()  # must not raise
 
         flow.memory.remember_many.assert_not_called()
         assert any(
