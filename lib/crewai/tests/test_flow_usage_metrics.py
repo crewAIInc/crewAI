@@ -148,12 +148,62 @@ class TestUsageDictToMetrics:
                 UsageMetrics(
                     prompt_tokens=0,
                     completion_tokens=0,
-                    total_tokens=7,
+                    total_tokens=0,
+                    successful_requests=1,
+                ),
+            ),
+            # Native Anthropic provider emits input_tokens/output_tokens
+            (
+                {"input_tokens": 12, "output_tokens": 8},
+                UsageMetrics(
+                    prompt_tokens=12,
+                    completion_tokens=8,
+                    total_tokens=20,
+                    successful_requests=1,
+                ),
+            ),
+            # Native Gemini provider emits prompt_token_count/candidates_token_count
+            (
+                {
+                    "prompt_token_count": 30,
+                    "candidates_token_count": 20,
+                    "reasoning_tokens": 5,
+                },
+                UsageMetrics(
+                    prompt_tokens=30,
+                    completion_tokens=20,
+                    total_tokens=50,
+                    reasoning_tokens=5,
+                    successful_requests=1,
+                ),
+            ),
+            # OpenAI nests cached_tokens under prompt_tokens_details
+            (
+                {
+                    "prompt_tokens": 100,
+                    "completion_tokens": 50,
+                    "prompt_tokens_details": {"cached_tokens": 30},
+                },
+                UsageMetrics(
+                    prompt_tokens=100,
+                    completion_tokens=50,
+                    total_tokens=150,
+                    cached_prompt_tokens=30,
                     successful_requests=1,
                 ),
             ),
         ],
-        ids=["none", "empty", "all_keys", "no_total", "extended_keys", "garbage"],
+        ids=[
+            "none",
+            "empty",
+            "all_keys",
+            "no_total",
+            "extended_keys",
+            "garbage",
+            "anthropic_aliases",
+            "gemini_aliases",
+            "openai_nested_cached",
+        ],
     )
     def test_normalization(
         self, usage: dict[str, Any] | None, expected: UsageMetrics | None

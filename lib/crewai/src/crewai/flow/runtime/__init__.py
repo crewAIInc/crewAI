@@ -258,29 +258,13 @@ def _is_multi_event_or(
 
 
 def _usage_dict_to_metrics(usage: dict[str, Any] | None) -> UsageMetrics | None:
-    if not usage:
-        return None
+    """Normalize an LLM call's raw usage dict into ``UsageMetrics``.
 
-    def _int(key: str) -> int:
-        value = usage.get(key)
-        try:
-            return int(value) if value is not None else 0
-        except (TypeError, ValueError):
-            return 0
-
-    prompt_tokens = _int("prompt_tokens")
-    completion_tokens = _int("completion_tokens")
-    total_tokens = _int("total_tokens") or (prompt_tokens + completion_tokens)
-
-    return UsageMetrics(
-        total_tokens=total_tokens,
-        prompt_tokens=prompt_tokens,
-        completion_tokens=completion_tokens,
-        cached_prompt_tokens=_int("cached_prompt_tokens"),
-        reasoning_tokens=_int("reasoning_tokens"),
-        cache_creation_tokens=_int("cache_creation_tokens"),
-        successful_requests=1,
-    )
+    Thin wrapper around ``UsageMetrics.from_provider_dict`` so the flow
+    aggregator and ``BaseLLM._track_token_usage_internal`` agree on the
+    set of provider key aliases (LiteLLM, Anthropic, Gemini).
+    """
+    return UsageMetrics.from_provider_dict(usage)
 
 
 def _resolve_persistence(value: Any) -> Any:
@@ -1145,6 +1129,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         ``successful_requests`` either, since we never see the call's
         token data — the metric stays a faithful summary of usage we
         actually observed rather than a partial count.
+
+        Cross-process pause/resume (``Flow.from_pending`` in a new
+        process) starts aggregation from zero on the restored instance
+        because pre-pause totals are not yet persisted alongside the
+        pending feedback context. Same-process pause/resume — where the
+        caller keeps the flow instance and calls ``resume`` on it —
+        preserves the running totals end-to-end.
         """
         with self._usage_metrics_lock:
             return self._aggregated_usage_metrics.model_copy()
