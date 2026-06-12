@@ -44,6 +44,10 @@ By default the integration is fail-open: a signing failure is logged but the too
     ```bash
     pip install "asqav-crewai[crewai] @ git+https://github.com/jagmarques/asqav-crewai.git"
     ```
+
+    <Note>
+    `asqav` comes from PyPI, but `asqav-crewai` installs directly from GitHub, which bypasses PyPI's vetting process. Review the [repository contents and commit history](https://github.com/jagmarques/asqav-crewai) before installing, as you should for any package that observes tool execution.
+    </Note>
   </Step>
   <Step title="Initialise Asqav and register hooks">
     Call `asqav.init()` with your API key, then register `AsqavHooks` before creating your crew. Hooks apply to every tool call in the process from that point on.
