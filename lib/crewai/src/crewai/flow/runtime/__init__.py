@@ -993,6 +993,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     _flow_match_id: str | None = PrivateAttr(default=None)
     _usage_aggregation_handler: Callable[..., Any] | None = PrivateAttr(default=None)
     _persist_backends: dict[int, FlowPersistence] = PrivateAttr(default_factory=dict)
+    _instance_persistence: bool = PrivateAttr(default=False)
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:  # type: ignore[override]
         class _FlowGeneric(cls):  # type: ignore[valid-type,misc]
@@ -1032,12 +1033,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         )
 
         flow_persist = self._definition.persist
+        self._instance_persistence = self.persistence is not None
         if (
             self.persistence is None
             and flow_persist is not None
             and flow_persist.enabled
         ):
-            self.persistence = self._resolve_persist_backend(flow_persist)
+            self.persistence = self._persist_backend_for(flow_persist)
 
         if self._state is None:
             self._state = self._create_initial_state()
@@ -2928,7 +2930,14 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         from crewai.flow.persistence.decorators import PersistenceDecorator
 
-        backend = self.persistence or self._persist_backend_for(persist_definition)
+        # An instance-supplied backend overrides definition backends; one the
+        # engine derived from the flow-level definition must not shadow a
+        # method-scoped persist config.
+        backend = (
+            self.persistence
+            if self._instance_persistence and self.persistence is not None
+            else self._persist_backend_for(persist_definition)
+        )
         PersistenceDecorator.persist_state(
             self, method_name, backend, verbose=persist_definition.verbose
         )

@@ -25,7 +25,6 @@ Example:
 from __future__ import annotations
 
 from collections.abc import Callable
-import functools
 import logging
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, Final, TypeVar
@@ -188,15 +187,6 @@ def persist(
 
         if isinstance(target, type):
             _stamp_persistence_metadata(target, actual_persistence, verbose)
-            original_init = target.__init__  # type: ignore[misc]
-
-            @functools.wraps(original_init)
-            def new_init(self: Any, *args: Any, **kwargs: Any) -> None:
-                if "persistence" not in kwargs:
-                    kwargs["persistence"] = actual_persistence
-                original_init(self, *args, **kwargs)
-
-            target.__init__ = new_init  # type: ignore[misc]
             return target
 
         target.__is_flow_method__ = True  # type: ignore[attr-defined]

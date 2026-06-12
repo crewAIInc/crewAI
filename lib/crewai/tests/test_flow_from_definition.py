@@ -971,6 +971,55 @@ def test_round_trip_persist_equivalence():
     assert _saved_methods("class-decorator")[before:] == ["first", "second"]
 
 
+def test_method_persist_backend_overrides_flow_level_backend_from_yaml():
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: PersistedFlow
+persist:
+  enabled: true
+  persistence:
+    persistence_type: DefinitionStoreBackend
+    store: yaml-mixed-flow
+methods:
+  first:
+    do:
+      ref: {__name__}:PersistedFlow.first
+    start: true
+  second:
+    do:
+      ref: {__name__}:PersistedFlow.second
+    listen: first
+    persist:
+      enabled: true
+      persistence:
+        persistence_type: DefinitionStoreBackend
+        store: yaml-mixed-method
+"""
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow.kickoff()
+
+    assert _saved_methods("yaml-mixed-flow") == ["first"]
+    assert _saved_methods("yaml-mixed-method") == ["second"]
+
+
+def test_method_persist_decorator_overrides_class_level_backend():
+    @persist(DefinitionStoreBackend(store="mixed-class"))
+    class MixedPersistedFlow(Flow):
+        @start()
+        @persist(DefinitionStoreBackend(store="mixed-method"))
+        def first(self):
+            return "one"
+
+        @listen(first)
+        def second(self):
+            return "two"
+
+    MixedPersistedFlow().kickoff()
+
+    assert _saved_methods("mixed-method") == ["first"]
+    assert _saved_methods("mixed-class") == ["second"]
+
+
 def test_instance_persistence_overrides_definition_backend():
     before = len(DefinitionStoreBackend.saves["method-decorator"])
     flow = MethodPersistedFlow(
