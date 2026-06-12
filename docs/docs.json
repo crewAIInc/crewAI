@@ -342,6 +342,7 @@
                       "en/observability/opik",
                       "en/observability/patronus-evaluation",
                       "en/observability/portkey",
+                      "en/observability/respan",
                       "en/observability/weave",
                       "en/observability/truefoundry"
                     ]
