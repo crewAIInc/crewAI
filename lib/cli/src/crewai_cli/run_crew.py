@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 from contextlib import AbstractContextManager, nullcontext
 from enum import Enum
 from pathlib import Path
 import re
 import subprocess
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import click
 from crewai.project.json_loader import find_crew_json_file
@@ -16,6 +18,10 @@ from crewai_cli.utils import (
     read_toml,
 )
 from crewai_cli.version import get_crewai_version
+
+
+if TYPE_CHECKING:
+    from crewai_cli.crew_run_tui import CrewRunApp
 
 
 class CrewType(Enum):
@@ -250,7 +256,7 @@ def _chain_deploy() -> None:
         console.print(f"\nDeploy failed: {e}\n", style="bold red")
 
 
-def _print_post_tui_summary(app: Any) -> None:
+def _print_post_tui_summary(app: CrewRunApp) -> None:
     """Print a summary to the terminal after the Textual TUI exits."""
     import time
 

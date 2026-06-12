@@ -518,7 +518,7 @@ memory = Memory(
 Memory needs an embedding model to convert text into vectors for semantic search. By default, `Memory()` uses OpenAI `text-embedding-3-large` embeddings, which produce 3072-dimensional vectors. Set `OPENAI_API_KEY` for the default path, or configure a custom embedder in one of three ways.
 
 <Warning>
-Existing local memory stores created with 1536-dimensional embeddings, such as `text-embedding-3-small` or `text-embedding-ada-002`, may not be compatible with the `text-embedding-3-large` default. If local testing fails with an embedding dimension mismatch, reset memory with `crewai reset-memories -m`, delete the local memory storage directory, or explicitly configure the older embedder model until you migrate.
+Existing local memory stores created with 1536-dimensional embeddings, such as `text-embedding-3-small` or `text-embedding-ada-002`, may not be compatible with the `text-embedding-3-large` default. This applies to both the OpenAI and Azure OpenAI providers — Azure's default embedding model also changed from `text-embedding-ada-002` to `text-embedding-3-large`. If local testing fails with an embedding dimension mismatch, reset memory with `crewai reset-memories -m`, delete the local memory storage directory, or explicitly configure the older embedder model until you migrate.
 </Warning>
 
 ### Passing to Memory Directly
@@ -707,7 +707,7 @@ memory = Memory(embedder=my_embedder)
 | :--- | :--- | :--- | :--- |
 | OpenAI | `openai` | `text-embedding-3-large` | Default. Set `OPENAI_API_KEY`. |
 | Ollama | `ollama` | `mxbai-embed-large` | Local, no API key needed. |
-| Azure OpenAI | `azure` | `text-embedding-ada-002` | Requires `deployment_id`. |
+| Azure OpenAI | `azure` | `text-embedding-3-large` | Default model. Requires `deployment_id`. |
 | Google AI | `google-generativeai` | `gemini-embedding-001` | Set `GOOGLE_API_KEY`. |
 | Google Vertex | `google-vertex` | `gemini-embedding-001` | Requires `project_id`. |
 | Cohere | `cohere` | `embed-english-v3.0` | Strong multilingual support. |

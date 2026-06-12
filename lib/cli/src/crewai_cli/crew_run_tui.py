@@ -26,12 +26,10 @@ _SPINNER = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 _C_PRIMARY = "#FF5A50"  # crewai.primary (coral red)
 _C_TEAL = "#1F7982"  # crewai.secondary / tertiary
 _C_GREEN = "#4aba6a"  # success green (warm, not neon)
-_C_YELLOW = "#e0a840"  # warning
 _C_RED = "#FF5A50"  # error (same as primary)
 _C_TEXT = "#e0e0e0"  # light text on dark bg
 _C_DIM = "#AAAAAA"  # crewai.background-grey
 _C_MUTED = "#666666"  # dimmer than _C_DIM for past timeline
-_C_CYAN = "#1F7982"  # alias for teal — used for accents
 
 _STEP_NUMBER_RE = re.compile(r"\bstep\s+(\d+)\b", re.IGNORECASE)
 _REFINEMENT_RE = re.compile(r"^\s*step\s+(\d+)\s*:\s*(.+)\s*$", re.IGNORECASE)

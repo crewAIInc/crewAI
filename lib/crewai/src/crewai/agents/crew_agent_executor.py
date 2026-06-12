@@ -1272,9 +1272,6 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 )
 
             except Exception as e:
-                if is_native_tool_calling_unsupported_error(e):
-                    self._append_text_tool_calling_fallback_message()
-                    return await self._ainvoke_loop_react()
                 if e.__class__.__module__.startswith("litellm"):
                     raise e
                 if is_context_length_exceeded(e):
@@ -1391,6 +1388,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 return formatted_answer
 
             except Exception as e:
+                if is_native_tool_calling_unsupported_error(e):
+                    self._append_text_tool_calling_fallback_message()
+                    return await self._ainvoke_loop_react()
                 if e.__class__.__module__.startswith("litellm"):
                     raise e
                 if is_context_length_exceeded(e):

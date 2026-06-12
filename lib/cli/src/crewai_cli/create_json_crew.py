@@ -395,8 +395,11 @@ def _wizard_agent(
         return None
 
     name_default = role.lower().replace(" ", "_")[:30]
-    for ch in ".,;:!?'\"()[]{}":
-        name_default = name_default.replace(ch, "")
+    name_default = re.sub(r"[^a-z0-9_]", "", name_default)
+    if not name_default:
+        # Roles made only of symbols would otherwise produce an empty slug
+        # and an invalid agents/.jsonc file name.
+        name_default = f"agent_{agent_num}"
     while name_default in existing_names:
         name_default += "_2"
 
@@ -463,10 +466,10 @@ def _wizard_task(
 
     # Auto-generate name from first few words of description
     words = description.lower().split()[:4]
-    name = "_".join(words)
-    for ch in ".,;:!?'\"()[]{}":
-        name = name.replace(ch, "")
-    name = name + "_task"
+    base = re.sub(r"[^a-z0-9_]", "", "_".join(words))
+    name = f"{base}_task" if base else f"task_{task_num}"
+    while name in prior_task_names:
+        name += "_2"
 
     expected_output = _prompt_text("Expected output", spacing_before=False)
 

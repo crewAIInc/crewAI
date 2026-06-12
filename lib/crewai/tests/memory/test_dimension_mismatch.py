@@ -40,6 +40,25 @@ def test_lancedb_save_mismatch_raises(lancedb_path: Path) -> None:
     assert "text-embedding-3-small" in message
 
 
+def test_lancedb_mixed_batch_mismatch_raises(lancedb_path: Path) -> None:
+    """A single save() batch with inconsistent dimensions must be rejected."""
+    from crewai.memory.storage.lancedb_storage import LanceDBStorage
+
+    storage = LanceDBStorage(path=str(lancedb_path), vector_dim=4)
+    storage.save([_record(4)])
+
+    with pytest.raises(EmbeddingDimensionMismatchError):
+        storage.save([_record(4), _record(8, "stray dimension")])
+
+
+def test_lancedb_mixed_batch_on_fresh_store_raises(lancedb_path: Path) -> None:
+    from crewai.memory.storage.lancedb_storage import LanceDBStorage
+
+    storage = LanceDBStorage(path=str(lancedb_path))
+    with pytest.raises(EmbeddingDimensionMismatchError):
+        storage.save([_record(4), _record(8)])
+
+
 def test_lancedb_search_mismatch_raises(lancedb_path: Path) -> None:
     from crewai.memory.storage.lancedb_storage import LanceDBStorage
 

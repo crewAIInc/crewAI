@@ -282,17 +282,19 @@ class QdrantEdgeStorage:
         if not records:
             return
 
+        # Validate the batch is internally consistent before touching the
+        # store-level dimension.
+        batch_dim = 0
+        for r in records:
+            if r.embedding and len(r.embedding) > 0:
+                if batch_dim == 0:
+                    batch_dim = len(r.embedding)
+                elif len(r.embedding) != batch_dim:
+                    raise EmbeddingDimensionMismatchError(batch_dim, len(r.embedding))
         if self._vector_dim == 0:
-            for r in records:
-                if r.embedding and len(r.embedding) > 0:
-                    self._vector_dim = len(r.embedding)
-                    break
-        elif self._has_existing_data():
-            for r in records:
-                if r.embedding and len(r.embedding) != self._vector_dim:
-                    raise EmbeddingDimensionMismatchError(
-                        self._vector_dim, len(r.embedding)
-                    )
+            self._vector_dim = batch_dim
+        elif batch_dim and batch_dim != self._vector_dim and self._has_existing_data():
+            raise EmbeddingDimensionMismatchError(self._vector_dim, batch_dim)
         if self._config is None and self._vector_dim > 0:
             self._config = self._build_config(self._vector_dim)
         if self._config is None:

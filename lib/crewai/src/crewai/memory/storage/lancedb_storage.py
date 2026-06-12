@@ -289,12 +289,16 @@ class LanceDBStorage:
     def save(self, records: list[MemoryRecord]) -> None:
         if not records:
             return
-        # Auto-detect dimension from the first real embedding.
+        # Auto-detect dimension from the first real embedding and validate
+        # the whole batch against it — a silent mismatch would otherwise be
+        # zero-filled below and corrupt search results.
         dim = None
         for r in records:
             if r.embedding and len(r.embedding) > 0:
-                dim = len(r.embedding)
-                break
+                if dim is None:
+                    dim = len(r.embedding)
+                elif len(r.embedding) != dim:
+                    raise EmbeddingDimensionMismatchError(dim, len(r.embedding))
         is_new_table = self._table is None
         if not is_new_table and dim and self._vector_dim and dim != self._vector_dim:
             raise EmbeddingDimensionMismatchError(self._vector_dim, dim)

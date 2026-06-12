@@ -88,16 +88,21 @@ def _detect_content_type_from_bytes(data: bytes) -> str | None:
 
 
 def _fallback_content_type(filename: str | None, data: bytes | None = None) -> str:
-    """Get content type from bytes, filename extension, or return default."""
-    if data:
-        content_type = _detect_content_type_from_bytes(data)
-        if content_type:
-            return content_type
+    """Get content type from filename extension, then content sniffing.
 
+    The extension lookup runs first so specific types like ``text/csv`` or
+    ``application/xml`` are not degraded to generic sniffed types such as
+    ``text/plain``; byte sniffing only covers extensionless/unknown names.
+    """
     if filename:
         mime_type, _ = mimetypes.guess_type(filename)
         if mime_type:
             return mime_type
+
+    if data:
+        content_type = _detect_content_type_from_bytes(data)
+        if content_type:
+            return content_type
 
     return OCTET_STREAM
 

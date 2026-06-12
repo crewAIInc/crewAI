@@ -584,6 +584,7 @@ class TestStepExecutorCriticalFixes:
 
         tool = Mock()
         tool.name = "count_words"
+        tool.description = "count_words: Counts words in text"
         task = Mock()
         task.name = "test-task"
         task.description = "test task description"
@@ -692,7 +693,11 @@ class TestStepExecutorCriticalFixes:
         assert result.result == "Counted words"
         assert step_executor._use_native_tools is False
         fallback_messages = text_parsed.call_args.args[0]
-        assert "Action Input" in fallback_messages[0]["content"]
+        # The original conversation is preserved (system + user) and the
+        # text-tooling instructions are appended instead of rebuilding.
+        assert fallback_messages[0]["role"] == "system"
+        assert fallback_messages[-1]["role"] == "user"
+        assert "Action Input" in fallback_messages[-1]["content"]
 
     def test_plan_step_lifecycle_events_are_emitted_from_todo_transitions(
         self, mock_dependencies

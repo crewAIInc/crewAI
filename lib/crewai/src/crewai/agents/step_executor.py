@@ -29,6 +29,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageStartedEvent,
 )
 from crewai.utilities.agent_utils import (
+    build_text_tool_calling_fallback_message,
     build_tool_calls_assistant_message,
     check_native_tool_support,
     enforce_rpm_limit,
@@ -38,6 +39,7 @@ from crewai.utilities.agent_utils import (
     is_native_tool_calling_unsupported_error,
     is_tool_call_list,
     process_llm_response,
+    render_text_description_and_args,
     setup_native_tools,
 )
 from crewai.utilities.i18n import I18N_DEFAULT
@@ -184,7 +186,22 @@ class StepExecutor:
                     self._use_native_tools = False
                     self._openai_tools = []
                     self._available_functions = {}
-                    messages = self._build_isolated_messages(todo, context)
+                    # Keep the conversation built so far (including any native
+                    # tool round-trips already appended to ``messages``) and
+                    # append the text-tooling instructions instead of
+                    # restarting the step, so completed tool calls are not
+                    # re-executed against a fresh context.
+                    messages.append(
+                        format_message_for_llm(
+                            build_text_tool_calling_fallback_message(
+                                render_text_description_and_args(self.tools),
+                                ", ".join(
+                                    sanitize_tool_name(t.name) for t in self.tools
+                                ),
+                            ),
+                            role="user",
+                        )
+                    )
                     result_text = self._execute_text_parsed(
                         messages,
                         todo,

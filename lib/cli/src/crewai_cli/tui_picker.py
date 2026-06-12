@@ -12,7 +12,6 @@ import click
 # CrewAI brand: primary=#FF5A50 (coral), teal=#1F7982
 _CORAL = "\033[38;2;255;90;80m"  # #FF5A50
 _TEAL = "\033[38;2;31;121;130m"  # #1F7982
-_GREEN = "\033[38;2;74;186;106m"  # #4aba6a
 _BOLD = "\033[1m"
 _DIM = "\033[2m"
 _RESET = "\033[0m"

@@ -764,6 +764,7 @@ class Agent(BaseAgent):
         Creates a temporary Task + Crew, executes, and returns the raw output.
         """
         from crewai.crew import Crew
+        from crewai.task import Task
         from crewai.types.streaming import CrewStreamingOutput
 
         task = Task(
