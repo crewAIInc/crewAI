@@ -9,6 +9,7 @@ from typing_extensions import TypeIs
 
 from crewai.flow.flow_definition import (
     FlowActionDefinition,
+    FlowCodeActionDefinition,
     FlowConfigDefinition,
     FlowConversationalDefinition,
     FlowConversationalRouterDefinition,
@@ -83,7 +84,7 @@ def _stamp_inherited_conversational_metadata(
 
 
 def _method_action(method: Any) -> FlowActionDefinition:
-    return FlowActionDefinition(ref=f"{method.__module__}:{method.__qualname__}")
+    return FlowCodeActionDefinition(ref=f"{method.__module__}:{method.__qualname__}")
 
 
 def _set_flow_method_definition(
