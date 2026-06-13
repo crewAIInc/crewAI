@@ -3582,7 +3582,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     def _resolve_feedback_provider(
         self, feedback_definition: FlowHumanFeedbackDefinition
     ) -> Any:
-
         provider = feedback_definition.provider
         if isinstance(provider, str):
             provider = resolve_instance_ref(provider, field="human_feedback.provider")
