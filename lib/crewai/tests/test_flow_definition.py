@@ -36,16 +36,20 @@ def test_flow_public_exports_are_explicit():
         "start",
     }
     assert set(flow_definition.__all__) == {
+        "FlowActionDefinition",
+        "FlowCodeActionDefinition",
         "FlowConfigDefinition",
         "FlowConversationalDefinition",
         "FlowConversationalRouterDefinition",
         "FlowDefinition",
         "FlowDefinitionCondition",
         "FlowDefinitionDiagnostic",
+        "FlowExpressionActionDefinition",
         "FlowHumanFeedbackDefinition",
         "FlowMethodDefinition",
         "FlowPersistenceDefinition",
         "FlowStateDefinition",
+        "FlowToolActionDefinition",
     }
     assert "build_flow_structure" in flow_visualization.__all__
     assert "calculate_node_levels" not in flow_visualization.__all__
@@ -629,6 +633,7 @@ def test_flow_definition_preserves_diagnostics_loaded_from_contract():
             "name": "LoadedDiagnosticsFlow",
             "methods": {
                 "decision": {
+                    "do": {"ref": "loaded_flows:LoadedDiagnosticsFlow.decision"},
                     "router": True,
                     "emit": ["continue"],
                 }
@@ -662,6 +667,7 @@ def test_router_start_false_without_listen_reports_missing_trigger():
             "name": "LoadedFlow",
             "methods": {
                 "decision": {
+                    "do": {"ref": "loaded_flows:LoadedFlow.decision"},
                     "router": True,
                     "start": False,
                     "emit": ["continue"],
@@ -740,8 +746,14 @@ def test_static_string_listener_is_allowed_by_contract():
             "schema": "crewai.flow/v1",
             "name": "TypoFlow",
             "methods": {
-                "begin": {"start": True},
-                "handle": {"listen": "begni"},
+                "begin": {
+                    "do": {"ref": "loaded_flows:TypoFlow.begin"},
+                    "start": True,
+                },
+                "handle": {
+                    "do": {"ref": "loaded_flows:TypoFlow.handle"},
+                    "listen": "begni",
+                },
             },
         }
     )
@@ -754,8 +766,15 @@ def test_start_false_not_classified_as_start_method():
             "schema": "crewai.flow/v1",
             "name": "ExplicitNonStartFlow",
             "methods": {
-                "begin": {"start": True},
-                "handle": {"start": False, "listen": "begin"},
+                "begin": {
+                    "do": {"ref": "loaded_flows:ExplicitNonStartFlow.begin"},
+                    "start": True,
+                },
+                "handle": {
+                    "do": {"ref": "loaded_flows:ExplicitNonStartFlow.handle"},
+                    "start": False,
+                    "listen": "begin",
+                },
             },
         }
     )
@@ -812,6 +831,7 @@ def test_flow_definition_logs_diagnostics_when_loaded_from_contract(caplog):
             "name": "LoadedFlow",
             "methods": {
                 "decision": {
+                    "do": {"ref": "loaded_flows:LoadedFlow.decision"},
                     "router": True,
                     "emit": ["continue"],
                 }

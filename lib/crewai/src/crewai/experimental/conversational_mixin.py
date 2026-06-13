@@ -47,7 +47,7 @@ from crewai.flow.conversation import (
     receive_user_message as _receive_user_message,
 )
 from crewai.flow.dsl import listen, start
-from crewai.flow.dsl._utils import _set_flow_method_definition
+from crewai.flow.dsl._utils import _method_action, _set_flow_method_definition
 from crewai.flow.flow_definition import FlowMethodDefinition
 from crewai.utilities.types import LLMMessage
 
@@ -78,7 +78,7 @@ def _conversation_start_router(func: Callable[..., Any]) -> Any:
     wrapper = start()(func)
     _set_flow_method_definition(
         cast(Any, wrapper),
-        FlowMethodDefinition(start=True, router=True),
+        FlowMethodDefinition(do=_method_action(func), start=True, router=True),
     )
     return wrapper
 
@@ -144,6 +144,10 @@ class _ConversationalMixin:
             pass
 
         def kickoff(self, *args: Any, **kwargs: Any) -> Any:
+            pass
+
+        @property
+        def method_outputs(self) -> list[Any]:
             pass
 
     def conversation_start(self) -> str | None:
@@ -1033,7 +1037,8 @@ class _ConversationalMixin:
         # of warning about an empty scope stack.
         started_id = getattr(self, "_deferred_flow_started_event_id", None)
         if started_id:
-            last_output = self._method_outputs[-1] if self._method_outputs else None
+            method_outputs = self.method_outputs
+            last_output = method_outputs[-1] if method_outputs else None
             restore_event_scope(((started_id, "flow_started"),))
             try:
                 crewai_event_bus.emit(

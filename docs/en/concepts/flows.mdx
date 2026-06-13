@@ -226,6 +226,49 @@ After the Flow has run, you can access the final state to see the updates made b
 By ensuring that the final method's output is returned and providing access to the state, CrewAI Flows make it easy to integrate the results of your AI workflows into larger applications or systems,
 while also maintaining and accessing the state throughout the Flow's execution.
 
+## Flow Usage Metrics
+
+After a Flow execution completes, you can access the `usage_metrics` property to view aggregated token usage across **every LLM call** made during the run — including calls from every Crew the Flow orchestrated, calls inside Agent tools, and bare `LLM.call(...)` invocations from Flow methods. This is the SDK-side equivalent of the totals shown in the CrewAI Enterprise UI.
+
+```python Code
+from crewai import LLM
+from crewai.flow.flow import Flow, listen, start
+
+class UsageMetricsFlow(Flow):
+    @start()
+    def run_first_crew(self):
+        self.state.first_result = FirstCrew().crew().kickoff()
+
+    @listen(run_first_crew)
+    def call_llm_directly(self):
+        # Bare LLM call — still counted by flow.usage_metrics
+        llm = LLM(model="openai/gpt-4o-mini")
+        self.state.summary = llm.call("Summarize the key takeaways.")
+
+    @listen(call_llm_directly)
+    def run_second_crew(self):
+        self.state.second_result = SecondCrew().crew().kickoff()
+
+flow = UsageMetricsFlow()
+flow.kickoff()
+
+print(flow.usage_metrics)
+# UsageMetrics(total_tokens=8579, prompt_tokens=6210, completion_tokens=2369,
+#              cached_prompt_tokens=0, reasoning_tokens=0,
+#              cache_creation_tokens=0, successful_requests=5)
+```
+
+<Note>
+  `flow.usage_metrics` is **not** the same as `flow.kickoff().token_usage`. The
+  latter returns the `CrewOutput.token_usage` of the **last** `@listen` method
+  that returned a `CrewOutput`, which means it only reflects the final Crew and
+  ignores prior Crews and bare `LLM.call(...)` invocations entirely. Use
+  `flow.usage_metrics` whenever you need the **full** token rollup for the Flow
+  execution.
+</Note>
+
+Each entry in the returned [`UsageMetrics`](https://github.com/crewAIInc/crewAI/blob/main/lib/crewai/src/crewai/types/usage_metrics.py) is the sum across all LLM calls made within a single `flow.kickoff()` invocation. Counters reset on the next `kickoff()` call (or on each iteration of `kickoff_for_each`), so successive runs don't double-count. The property is safe to read at any point after `kickoff()` completes; reading it during execution returns the partial total accumulated so far.
+
 ## Flow State Management
 
 Managing state effectively is crucial for building reliable and maintainable AI workflows. CrewAI Flows provides robust mechanisms for both unstructured and structured state management,
