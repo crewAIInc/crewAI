@@ -44,6 +44,7 @@ def test_flow_public_exports_are_explicit():
         "FlowDefinition",
         "FlowDefinitionCondition",
         "FlowDefinitionDiagnostic",
+        "FlowExpressionActionDefinition",
         "FlowHumanFeedbackDefinition",
         "FlowMethodDefinition",
         "FlowPersistenceDefinition",

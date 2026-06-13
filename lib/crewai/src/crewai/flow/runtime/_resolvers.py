@@ -16,8 +16,10 @@ from typing import TYPE_CHECKING, Any, cast
 from crewai.flow.flow_definition import (
     FlowActionDefinition,
     FlowCodeActionDefinition,
+    FlowExpressionActionDefinition,
     FlowToolActionDefinition,
 )
+from crewai.flow.runtime._expressions import evaluate_expression, render_with_block
 
 
 if TYPE_CHECKING:
@@ -68,7 +70,7 @@ def _resolve_code_action(
 
 
 def _resolve_tool_action(
-    _flow: Flow[Any], action: FlowToolActionDefinition
+    flow: Flow[Any], action: FlowToolActionDefinition
 ) -> Callable[..., Any]:
     target = resolve_ref(action.ref, field="do")
     from crewai.tools import BaseTool
@@ -89,9 +91,18 @@ def _resolve_tool_action(
     tool_kwargs = action.with_ or {}
 
     def run_tool(*_args: Any, **_kwargs: Any) -> Any:
-        return tool.run(**tool_kwargs)
+        return tool.run(**render_with_block(flow, tool_kwargs))
 
     return run_tool
+
+
+def _resolve_expression_action(
+    flow: Flow[Any], action: FlowExpressionActionDefinition
+) -> Callable[..., Any]:
+    def run_expression(*_args: Any, **_kwargs: Any) -> Any:
+        return evaluate_expression(flow, action.expr)
+
+    return run_expression
 
 
 def resolve_action(flow: Flow[Any], action: FlowActionDefinition) -> Callable[..., Any]:
@@ -100,4 +111,6 @@ def resolve_action(flow: Flow[Any], action: FlowActionDefinition) -> Callable[..
         return _resolve_code_action(flow, action)
     if action.call == "tool":
         return _resolve_tool_action(flow, action)
+    if action.call == "expression":
+        return _resolve_expression_action(flow, action)
     raise ValueError(f"unknown call type {action.call!r}")

@@ -1679,7 +1679,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
         try:
             if emit and collapsed_outcome:
-                self._method_outputs.append(collapsed_outcome)
+                self._method_outputs.append(
+                    {"method": context.method_name, "output": collapsed_outcome}
+                )
                 await self._execute_listeners(
                     FlowMethodName(collapsed_outcome),
                     result,
@@ -1725,7 +1727,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 return e
             raise
 
-        final_result = self._method_outputs[-1] if self._method_outputs else result
+        method_outputs = self.method_outputs
+        final_result = method_outputs[-1] if method_outputs else result
 
         if self._event_futures:
             await asyncio.gather(
@@ -1906,7 +1909,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     @property
     def method_outputs(self) -> list[Any]:
         """Returns the list of all outputs from executed methods."""
-        return self._method_outputs
+        return [entry["output"] for entry in self._method_outputs]
 
     @property
     def flow_id(self) -> str:
@@ -2540,7 +2543,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             # Clear the resumption flag after initial execution completes
             self._is_execution_resuming = False
 
-            final_output = self._method_outputs[-1] if self._method_outputs else None
+            method_outputs = self.method_outputs
+            final_output = method_outputs[-1] if method_outputs else None
 
             if self._event_futures:
                 await asyncio.gather(
@@ -2695,7 +2699,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if start_method_name in self._completed_methods:
             if self._is_execution_resuming:
                 # During resumption, skip execution but continue listeners
-                last_output = self._method_outputs[-1] if self._method_outputs else None
+                method_outputs = self.method_outputs
+                last_output = method_outputs[-1] if method_outputs else None
                 await self._execute_listeners(start_method_name, last_output)
                 return
             # For cyclic flows, clear from completed to allow re-execution
@@ -2825,7 +2830,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     method_name, method_definition.human_feedback, result
                 )
 
-            self._method_outputs.append(result)
+            self._method_outputs.append({"method": str(method_name), "output": result})
 
             # For @human_feedback methods with emit, the result is the collapsed outcome
             # (e.g., "approved") used for routing. But we want the actual method output
@@ -2833,8 +2838,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             # if a stashed output exists. Dict-based stash is concurrency-safe and
             # handles None return values (presence in dict = stashed, not value).
             if method_name in self._human_feedback_method_outputs:
-                self._method_outputs[-1] = self._human_feedback_method_outputs.pop(
-                    method_name
+                self._method_outputs[-1]["output"] = (
+                    self._human_feedback_method_outputs.pop(method_name)
                 )
 
             self._method_execution_counts[method_name] = (
