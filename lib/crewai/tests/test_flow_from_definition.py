@@ -585,6 +585,30 @@ methods:
     assert flow.kickoff(inputs={"topic": "ai"}) == "found:ai agents"
 
 
+def test_tool_action_renders_mixed_cel_input_with_brace_in_string_literal():
+    definition = FlowDefinition.from_dict(
+        {
+            "schema": "crewai.flow/v1",
+            "name": "ToolFlow",
+            "methods": {
+                "search": {
+                    "start": True,
+                    "do": {
+                        "call": "tool",
+                        "ref": f"{__name__}:StaticSearchTool",
+                        "with": {
+                            "search_query": "wrapped ${'a}b'} value",
+                            "prefix": "${'p}x'}",
+                        },
+                    },
+                }
+            },
+        }
+    )
+
+    assert Flow.from_definition(definition).kickoff() == "p}x:wrapped a}b value"
+
+
 def test_tool_action_renders_latest_output_by_method_name():
     yaml_str = f"""
 schema: crewai.flow/v1

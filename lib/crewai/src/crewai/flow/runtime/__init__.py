@@ -962,7 +962,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             }
             self._restored_from_checkpoint = True
         if self.checkpoint_method_outputs is not None:
-            self._method_outputs = list(self.checkpoint_method_outputs)
+            self._method_outputs = [
+                entry
+                if isinstance(entry, dict) and "method" in entry and "output" in entry
+                else {"method": "", "output": entry}
+                for entry in self.checkpoint_method_outputs
+            ]
         if self.checkpoint_method_counts is not None:
             self._method_execution_counts = {
                 FlowMethodName(k): v for k, v in self.checkpoint_method_counts.items()
@@ -1649,6 +1654,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             metadata=context.metadata,
         )
         collapsed_outcome = result.outcome
+        resumed_method_output = result.output
 
         self._completed_methods.add(FlowMethodName(context.method_name))
 
@@ -1680,7 +1686,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         try:
             if emit and collapsed_outcome:
                 self._method_outputs.append(
-                    {"method": context.method_name, "output": collapsed_outcome}
+                    {"method": context.method_name, "output": resumed_method_output}
                 )
                 await self._execute_listeners(
                     FlowMethodName(collapsed_outcome),
@@ -1728,7 +1734,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             raise
 
         method_outputs = self.method_outputs
-        final_result = method_outputs[-1] if method_outputs else result
+        final_result = (
+            method_outputs[-1]
+            if method_outputs
+            else (resumed_method_output if emit else result)
+        )
 
         if self._event_futures:
             await asyncio.gather(

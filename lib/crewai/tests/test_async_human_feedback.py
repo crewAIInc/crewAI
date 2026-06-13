@@ -667,6 +667,50 @@ class TestFlowResumeWithFeedback:
             assert flow.last_human_feedback.outcome == "approved"
             assert flow.result_path == "approved"
 
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
+    def test_terminal_resume_with_emit_returns_method_output(
+        self, mock_emit: MagicMock
+    ) -> None:
+        """Terminal resumed emit methods return the original method output."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "test_flows.db")
+            persistence = SQLiteFlowPersistence(db_path)
+            method_output = {"content": "original content", "status": "ready"}
+
+            class TestFlow(Flow):
+                @start()
+                @human_feedback(
+                    message="Approve?",
+                    emit=["approved", "rejected"],
+                    llm="gpt-4o-mini",
+                )
+                def review(self):
+                    return method_output
+
+            context = PendingFeedbackContext(
+                flow_id="terminal-route-test-123",
+                flow_class="test.TestFlow",
+                method_name="review",
+                method_output=method_output,
+                message="Approve?",
+                emit=["approved", "rejected"],
+                llm="gpt-4o-mini",
+            )
+            persistence.save_pending_feedback(
+                flow_uuid="terminal-route-test-123",
+                context=context,
+                state_data={"id": "terminal-route-test-123"},
+            )
+
+            flow = TestFlow.from_pending("terminal-route-test-123", persistence)
+
+            with patch.object(flow, "_collapse_to_outcome", return_value="approved"):
+                result = flow.resume("yes, this looks great")
+
+            assert result == method_output
+            assert flow.method_outputs == [method_output]
+            assert flow.last_human_feedback.outcome == "approved"
+
 
 # Integration Tests with @human_feedback decorator
 

@@ -14,7 +14,9 @@ if TYPE_CHECKING:
     from crewai.flow.runtime import Flow
 
 
-_EXPRESSION_PATTERN = re.compile(r"\$\{([^}]*)\}")
+_EXPRESSION_PATTERN = re.compile(
+    r"""\$\{((?:[^}'"]+|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*")*)\}"""
+)
 
 __all__ = ["FlowExpressionError", "evaluate_expression", "render_with_block"]
 
@@ -65,25 +67,40 @@ def _render_value(value: Any, context: dict[str, Any]) -> Any:
 
 
 def _render_string(value: str, context: dict[str, Any]) -> Any:
-    if value.startswith("${") and value.endswith("}"):
-        expression = value[2:-1].strip()
-        if not expression:
-            raise FlowExpressionError("empty CEL expression in with block")
-        return _eval_cel(expression, context)
-
-    if _EXPRESSION_PATTERN.search(value) is None:
+    matches = list(_EXPRESSION_PATTERN.finditer(value))
+    if not matches:
         if "${" in value:
             raise FlowExpressionError("unterminated CEL expression in with block")
         return value
 
-    def replace_expression(match: re.Match[str]) -> str:
+    if len(matches) == 1 and matches[0].span() == (0, len(value)):
+        expression = matches[0].group(1).strip()
+        if not expression:
+            raise FlowExpressionError("empty CEL expression in with block")
+        return _eval_cel(expression, context)
+
+    rendered: list[str] = []
+    position = 0
+    for match in matches:
+        start, end = match.span()
+        literal = value[position:start]
+        if "${" in literal:
+            raise FlowExpressionError("unterminated CEL expression in with block")
+        rendered.append(literal)
+
         expression = match.group(1).strip()
         if not expression:
             raise FlowExpressionError("empty CEL expression in with block")
         result = _eval_cel(expression, context)
-        return result if isinstance(result, str) else json.dumps(result)
+        rendered.append(result if isinstance(result, str) else json.dumps(result))
+        position = end
 
-    return _EXPRESSION_PATTERN.sub(replace_expression, value)
+    literal = value[position:]
+    if "${" in literal:
+        raise FlowExpressionError("unterminated CEL expression in with block")
+    rendered.append(literal)
+
+    return "".join(rendered)
 
 
 def _eval_cel(expression: str, context: dict[str, Any]) -> Any:
