@@ -29,6 +29,7 @@ def test_tool_hooks_document_agent_threat_rules_integration_path() -> None:
     assert "agent_fingerprint" in atr_section
     assert "task_fingerprint" in atr_section
     assert "crew_fingerprint" in atr_section
+    assert "security_config.fingerprint" in atr_section
     assert "return False" in atr_section
 
     python_block = atr_section.split("```python", 1)[1].split("```", 1)[0]
