@@ -1185,3 +1185,68 @@ def test_bedrock_no_cache_tokens_defaults_to_zero():
 
         llm.call("Hello")
         assert llm._token_usage['cached_prompt_tokens'] == 0
+
+
+def _make_streaming_tool_use_events(tool_use_id, tool_name, input_chunks):
+    yield {
+        "contentBlockStart": {
+            "start": {
+                "toolUse": {
+                    "toolUseId": tool_use_id,
+                    "name": tool_name,
+                }
+            }
+        }
+    }
+    for chunk in input_chunks:
+        yield {
+            "contentBlockDelta": {
+                "delta": {"toolUse": {"input": chunk}}
+            }
+        }
+    yield {"contentBlockStop": {}}
+    yield {"messageStop": {"stopReason": "tool_use"}}
+
+
+def test_streaming_tool_call_accumulates_input_deltas(bedrock_mocks):
+    """Regression for #6149: streaming Converse must fold tool input deltas
+    back into the tool-call arguments instead of returning {}."""
+    _, mock_client = bedrock_mocks
+    mock_client.converse_stream.return_value = {
+        "stream": _make_streaming_tool_use_events(
+            tool_use_id="tu_test",
+            tool_name="get_weather",
+            input_chunks=['{"city":', ' "Paris"}'],
+        )
+    }
+
+    captured_args = {}
+
+    def get_weather(city: str) -> str:
+        captured_args["city"] = city
+        return f"Sunny in {city}"
+
+    llm = LLM(
+        model="bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+        stream=True,
+    )
+    llm.call(
+        "What's the weather in Paris?",
+        available_functions={"get_weather": get_weather},
+        tools=[
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_weather",
+                    "description": "Get the weather for a city.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {"city": {"type": "string"}},
+                        "required": ["city"],
+                    },
+                },
+            }
+        ],
+    )
+
+    assert captured_args == {"city": "Paris"}

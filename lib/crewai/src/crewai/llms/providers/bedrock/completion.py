@@ -50,6 +50,26 @@ except ImportError:
 STRUCTURED_OUTPUT_TOOL_NAME = "structured_output"
 
 
+def _parse_streaming_tool_input(
+    accumulated: str, fallback: dict[str, Any]
+) -> dict[str, Any]:
+    """Resolve the final tool-call arguments from a Bedrock Converse stream.
+
+    Converse streams deliver `toolUse.input` as a sequence of partial JSON
+    strings on `contentBlockDelta`. The caller accumulates those into
+    ``accumulated`` and we parse it here at ``contentBlockStop``. When no
+    deltas arrived (some providers send the full input on the start block)
+    we fall back to the dict already attached to the tool-use block.
+    """
+    if accumulated:
+        try:
+            parsed = json.loads(accumulated)
+        except json.JSONDecodeError:
+            return fallback or {}
+        return parsed if isinstance(parsed, dict) else fallback or {}
+    return fallback or {}
+
+
 def _preprocess_structured_data(
     data: dict[str, Any], response_model: type[BaseModel]
 ) -> dict[str, Any]:
@@ -1034,8 +1054,14 @@ class BedrockCompletion(BaseLLM):
                         logging.debug("Content block stopped in stream")
                         if current_tool_use:
                             function_name = current_tool_use["name"]
-                            function_args = cast(
-                                dict[str, Any], current_tool_use.get("input", {})
+                            # Streaming Converse delivers tool input as JSON
+                            # deltas in `accumulated_tool_input`; the start
+                            # event's `input` field is empty, so a direct
+                            # read of `current_tool_use["input"]` returned
+                            # {} for the entire stream (#6149).
+                            function_args = _parse_streaming_tool_input(
+                                accumulated_tool_input,
+                                cast(dict[str, Any], current_tool_use.get("input", {})),
                             )
 
                             # Check if this is the structured_output tool
@@ -1632,8 +1658,14 @@ class BedrockCompletion(BaseLLM):
                         logging.debug("Content block stopped in stream")
                         if current_tool_use:
                             function_name = current_tool_use["name"]
-                            function_args = cast(
-                                dict[str, Any], current_tool_use.get("input", {})
+                            # Streaming Converse delivers tool input as JSON
+                            # deltas in `accumulated_tool_input`; the start
+                            # event's `input` field is empty, so a direct
+                            # read of `current_tool_use["input"]` returned
+                            # {} for the entire stream (#6149).
+                            function_args = _parse_streaming_tool_input(
+                                accumulated_tool_input,
+                                cast(dict[str, Any], current_tool_use.get("input", {})),
                             )
 
                             # Check if this is the structured_output tool
