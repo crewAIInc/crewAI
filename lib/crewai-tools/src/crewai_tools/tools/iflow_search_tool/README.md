@@ -11,8 +11,9 @@ endpoint-specific pattern used by the Brave Search suite:
 
 ## Requirements
 
-- `pip install iflow-search` (or `uv add iflow-search`; also available as the
-  `crewai-tools[iflow-search]` extra)
+- `pip install crewai-tools[iflow-search]` — installs both the tool classes
+  and the underlying `iflow-search` SDK. (If you already have `crewai-tools`,
+  just add the SDK with `pip install iflow-search` or `uv add iflow-search`.)
 - `IFLOW_API_KEY` environment variable (or pass `api_key=` to the tool)
 
 ## Usage
