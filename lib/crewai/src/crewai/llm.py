@@ -111,7 +111,7 @@ if LITELLM_AVAILABLE:
 
 MIN_CONTEXT: Final[int] = 1024
 MAX_CONTEXT: Final[int] = 2097152  # Current max from gemini-1.5-pro
-ANTHROPIC_PREFIXES: Final[tuple[str, str, str]] = ("anthropic/", "claude-", "claude/")
+ANTHROPIC_PREFIXES: Final[tuple[str, str, str, str]] = ("anthropic/", "claude-", "claude/", "anthropic--")
 
 LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "gpt-4": 8192,
@@ -455,7 +455,7 @@ class LLM(BaseLLM):
 
         if provider == "anthropic" or provider == "claude":
             return any(
-                model_lower.startswith(prefix) for prefix in ["claude-", "anthropic."]
+                model_lower.startswith(prefix) for prefix in ["claude-", "anthropic.", "anthropic--"]
             )
 
         if provider == "gemini" or provider == "google":
@@ -648,8 +648,7 @@ class LLM(BaseLLM):
         Returns:
             bool: True if the model is from Anthropic, False otherwise.
         """
-        anthropic_prefixes = ("anthropic/", "claude-", "claude/")
-        return any(prefix in model.lower() for prefix in anthropic_prefixes)
+        return any(prefix in model.lower() for prefix in ANTHROPIC_PREFIXES)
 
     def _prepare_completion_params(
         self,
