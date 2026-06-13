@@ -585,7 +585,7 @@ methods:
     assert flow.kickoff(inputs={"topic": "ai"}) == "found:ai agents"
 
 
-def test_tool_action_renders_mixed_cel_input_with_brace_in_string_literal():
+def test_tool_action_rejects_braces_in_embedded_cel_input():
     definition = FlowDefinition.from_dict(
         {
             "schema": "crewai.flow/v1",
@@ -606,7 +606,33 @@ def test_tool_action_renders_mixed_cel_input_with_brace_in_string_literal():
         }
     )
 
-    assert Flow.from_definition(definition).kickoff() == "p}x:wrapped a}b value"
+    with pytest.raises(ValueError, match="cannot contain braces"):
+        Flow.from_definition(definition).kickoff()
+
+
+def test_tool_action_rejects_braces_in_full_cel_input():
+    definition = FlowDefinition.from_dict(
+        {
+            "schema": "crewai.flow/v1",
+            "name": "ToolFlow",
+            "methods": {
+                "search": {
+                    "start": True,
+                    "do": {
+                        "call": "tool",
+                        "ref": f"{__name__}:StaticSearchTool",
+                        "with": {
+                            "search_query": "${{'query': 'ai agents'}.query}",
+                            "prefix": "found",
+                        },
+                    },
+                }
+            },
+        }
+    )
+
+    with pytest.raises(ValueError, match="cannot contain braces"):
+        Flow.from_definition(definition).kickoff()
 
 
 def test_tool_action_renders_latest_output_by_method_name():

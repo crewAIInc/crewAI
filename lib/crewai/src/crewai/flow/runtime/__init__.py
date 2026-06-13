@@ -1683,11 +1683,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         # This allows methods to re-execute in loops (e.g., implement_changes → suggest_changes → implement_changes)
         self._is_execution_resuming = False
 
+        self._method_outputs.append(
+            {"method": context.method_name, "output": resumed_method_output}
+        )
+
         try:
             if emit and collapsed_outcome:
-                self._method_outputs.append(
-                    {"method": context.method_name, "output": resumed_method_output}
-                )
                 await self._execute_listeners(
                     FlowMethodName(collapsed_outcome),
                     result,
@@ -1919,7 +1920,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     @property
     def method_outputs(self) -> list[Any]:
         """Returns the list of all outputs from executed methods."""
-        return [entry["output"] for entry in self._method_outputs]
+        outputs: list[Any] = []
+        for entry in self._method_outputs:
+            if isinstance(entry, dict) and "output" in entry:
+                outputs.append(entry["output"])
+            else:
+                outputs.append(entry)
+        return outputs
 
     @property
     def flow_id(self) -> str:

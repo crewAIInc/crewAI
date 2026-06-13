@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import copy
+import dataclasses
+from itertools import pairwise
 import json
 import re
 from typing import TYPE_CHECKING, Any, cast
@@ -14,9 +16,7 @@ if TYPE_CHECKING:
     from crewai.flow.runtime import Flow
 
 
-_EXPRESSION_PATTERN = re.compile(
-    r"""\$\{((?:[^}'"]+|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*")*)\}"""
-)
+_EXPRESSION_PATTERN = re.compile(r"\$\{([^{}]*)\}")
 
 __all__ = ["FlowExpressionError", "evaluate_expression", "render_with_block"]
 
@@ -49,10 +49,17 @@ def _expression_context(flow: Flow[Any]) -> dict[str, Any]:
 def _outputs_by_name(method_outputs: list[Any]) -> dict[str, Any]:
     outputs: dict[str, Any] = {}
     for entry in method_outputs:
-        output = copy.deepcopy(entry.get("output"))
+        method = ""
+        output = entry
+        if isinstance(entry, dict) and "output" in entry:
+            method = str(entry.get("method", ""))
+            output = entry["output"]
+        output = copy.deepcopy(output)
         if isinstance(output, BaseModel):
             output = output.model_dump(mode="json")
-        outputs[str(entry["method"])] = output
+        elif dataclasses.is_dataclass(output) and not isinstance(output, type):
+            output = dataclasses.asdict(output)
+        outputs[method] = output
     return outputs
 
 
@@ -69,9 +76,13 @@ def _render_value(value: Any, context: dict[str, Any]) -> Any:
 def _render_string(value: str, context: dict[str, Any]) -> Any:
     matches = list(_EXPRESSION_PATTERN.finditer(value))
     if not matches:
-        if "${" in value:
-            raise FlowExpressionError("unterminated CEL expression in with block")
+        _raise_for_invalid_interpolation(value)
         return value
+
+    _raise_for_literal_braces(value[: matches[0].start()])
+    for previous, current in pairwise(matches):
+        _raise_for_literal_braces(value[previous.end() : current.start()])
+    _raise_for_literal_braces(value[matches[-1].end() :])
 
     if len(matches) == 1 and matches[0].span() == (0, len(value)):
         expression = matches[0].group(1).strip()
@@ -84,8 +95,6 @@ def _render_string(value: str, context: dict[str, Any]) -> Any:
     for match in matches:
         start, end = match.span()
         literal = value[position:start]
-        if "${" in literal:
-            raise FlowExpressionError("unterminated CEL expression in with block")
         rendered.append(literal)
 
         expression = match.group(1).strip()
@@ -96,11 +105,27 @@ def _render_string(value: str, context: dict[str, Any]) -> Any:
         position = end
 
     literal = value[position:]
-    if "${" in literal:
-        raise FlowExpressionError("unterminated CEL expression in with block")
     rendered.append(literal)
 
     return "".join(rendered)
+
+
+def _raise_for_invalid_interpolation(value: str) -> None:
+    if "${" not in value:
+        return
+    raise FlowExpressionError(
+        "invalid CEL interpolation in with block: expressions must be enclosed "
+        "as ${...} and cannot contain braces"
+    )
+
+
+def _raise_for_literal_braces(value: str) -> None:
+    if "{" not in value and "}" not in value:
+        return
+    raise FlowExpressionError(
+        "invalid CEL interpolation in with block: expressions must be enclosed "
+        "as ${...} and cannot contain braces"
+    )
 
 
 def _eval_cel(expression: str, context: dict[str, Any]) -> Any:

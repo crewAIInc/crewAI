@@ -711,6 +711,45 @@ class TestFlowResumeWithFeedback:
             assert flow.method_outputs == [method_output]
             assert flow.last_human_feedback.outcome == "approved"
 
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
+    def test_resume_records_method_output_before_downstream_listeners(
+        self, mock_emit: MagicMock
+    ) -> None:
+        """Downstream listeners can read outputs from the resumed method."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "test_flows.db")
+            persistence = SQLiteFlowPersistence(db_path)
+
+            class TestFlow(Flow):
+                @start()
+                @human_feedback(message="Review:")
+                def review(self):
+                    return "generated content"
+
+                @listen(review)
+                def downstream(self, result):
+                    self.state["seen_outputs"] = self.method_outputs
+                    return f"downstream:{result.output}"
+
+            context = PendingFeedbackContext(
+                flow_id="listener-output-test-123",
+                flow_class="test.TestFlow",
+                method_name="review",
+                method_output="generated content",
+                message="Review:",
+            )
+            persistence.save_pending_feedback(
+                flow_uuid="listener-output-test-123",
+                context=context,
+                state_data={"id": "listener-output-test-123"},
+            )
+
+            flow = TestFlow.from_pending("listener-output-test-123", persistence)
+            result = flow.resume("looks good")
+
+            assert result == "downstream:generated content"
+            assert flow.state["seen_outputs"] == ["generated content"]
+
 
 # Integration Tests with @human_feedback decorator
 
