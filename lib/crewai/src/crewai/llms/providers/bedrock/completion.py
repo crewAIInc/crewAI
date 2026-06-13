@@ -1034,6 +1034,16 @@ class BedrockCompletion(BaseLLM):
                         logging.debug("Content block stopped in stream")
                         if current_tool_use:
                             function_name = current_tool_use["name"]
+                            # Streamed tool input arrives as JSON string deltas in
+                            # accumulated_tool_input; fold it back into the tool-use
+                            # block so function_args (and the message history below)
+                            # carry the real arguments instead of an empty input.
+                            try:
+                                current_tool_use["input"] = json.loads(
+                                    accumulated_tool_input
+                                )
+                            except (json.JSONDecodeError, ValueError):
+                                current_tool_use["input"] = {}
                             function_args = cast(
                                 dict[str, Any], current_tool_use.get("input", {})
                             )
@@ -1632,6 +1642,16 @@ class BedrockCompletion(BaseLLM):
                         logging.debug("Content block stopped in stream")
                         if current_tool_use:
                             function_name = current_tool_use["name"]
+                            # Streamed tool input arrives as JSON string deltas in
+                            # accumulated_tool_input; fold it back into the tool-use
+                            # block so function_args (and the message history below)
+                            # carry the real arguments instead of an empty input.
+                            try:
+                                current_tool_use["input"] = json.loads(
+                                    accumulated_tool_input
+                                )
+                            except (json.JSONDecodeError, ValueError):
+                                current_tool_use["input"] = {}
                             function_args = cast(
                                 dict[str, Any], current_tool_use.get("input", {})
                             )
