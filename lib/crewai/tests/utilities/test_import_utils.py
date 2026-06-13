@@ -1,6 +1,7 @@
 """Tests for import utilities."""
 
 import sys
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -186,3 +187,10 @@ class TestImportAndValidateDefinition:
         with patch.dict(sys.modules, {"mocked_module": mock_module}):
             result = import_and_validate_definition("mocked_module.MockClass")
             assert result == mock_class
+
+
+def test_litellm_extra_allows_compatible_versions():
+    pyproject_path = Path(__file__).resolve().parents[2] / "pyproject.toml"
+    pyproject_content = pyproject_path.read_text(encoding="utf-8")
+
+    assert 'litellm>=1.84.0,<2' in pyproject_content
