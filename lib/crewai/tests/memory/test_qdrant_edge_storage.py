@@ -57,7 +57,9 @@ def _rec(
 def test_save_search(storage: QdrantEdgeStorage) -> None:
     r = _rec(content="test content", scope="/foo", categories=["cat1"], importance=0.8)
     storage.save([r])
-    results = storage.search([0.1, 0.2, 0.3, 0.4], scope_prefix="/foo", limit=5)
+    results = storage.search(
+        [0.1, 0.2, 0.3, 0.4], tenant_id="_default", scope_prefix="/foo", limit=5
+    )
     assert len(results) == 1
     rec, score = results[0]
     assert rec.content == "test content"
@@ -65,13 +67,59 @@ def test_save_search(storage: QdrantEdgeStorage) -> None:
     assert score >= 0.0
 
 
+def test_search_isolates_tenants_with_colliding_embeddings(
+    storage: QdrantEdgeStorage,
+) -> None:
+    """Two tenants store records with identical embeddings; each tenant's
+    search must return only its own row. This is the Qdrant-backed mirror of
+    the LanceDB isolation contract in test_tenant_isolation.py.
+    """
+    embedding = [0.5, 0.5, 0.5, 0.5]
+    alice = _rec(content="alice secret", scope="/", embedding=embedding)
+    alice.tenant_id = "alice"
+    bob = _rec(content="bob secret", scope="/", embedding=embedding)
+    bob.tenant_id = "bob"
+    storage.save([alice, bob])
+
+    alice_hits = storage.search(embedding, tenant_id="alice", limit=10)
+    bob_hits = storage.search(embedding, tenant_id="bob", limit=10)
+
+    assert len(alice_hits) == 1
+    assert alice_hits[0][0].content == "alice secret"
+    assert alice_hits[0][0].tenant_id == "alice"
+    assert not any("bob" in r.content for r, _ in alice_hits)
+
+    assert len(bob_hits) == 1
+    assert bob_hits[0][0].content == "bob secret"
+    assert bob_hits[0][0].tenant_id == "bob"
+    assert not any("alice" in r.content for r, _ in bob_hits)
+
+
+def test_delete_is_tenant_scoped(storage: QdrantEdgeStorage) -> None:
+    """A tenant-scoped delete must not touch another tenant's rows."""
+    alice = _rec(content="alice", scope="/")
+    alice.tenant_id = "alice"
+    bob = _rec(content="bob", scope="/")
+    bob.tenant_id = "bob"
+    storage.save([alice, bob])
+
+    deleted = storage.delete(tenant_id="alice")
+    assert deleted == 1
+
+    bob_remaining = storage.list_records(tenant_id="bob")
+    assert len(bob_remaining) == 1
+    assert bob_remaining[0].content == "bob"
+    alice_remaining = storage.list_records(tenant_id="alice")
+    assert alice_remaining == []
+
+
 def test_delete_count(storage: QdrantEdgeStorage) -> None:
     r = _rec(scope="/")
     storage.save([r])
-    assert storage.count() == 1
-    n = storage.delete(scope_prefix="/")
+    assert storage.count(tenant_id="_default") == 1
+    n = storage.delete(tenant_id="_default", scope_prefix="/")
     assert n >= 1
-    assert storage.count() == 0
+    assert storage.count(tenant_id="_default") == 0
 
 
 def test_update_get_record(storage: QdrantEdgeStorage) -> None:
@@ -79,13 +127,13 @@ def test_update_get_record(storage: QdrantEdgeStorage) -> None:
     storage.save([r])
     r.content = "updated"
     storage.update(r)
-    found = storage.get_record(r.id)
+    found = storage.get_record(r.id, tenant_id="_default")
     assert found is not None
     assert found.content == "updated"
 
 
 def test_get_record_not_found(storage: QdrantEdgeStorage) -> None:
-    assert storage.get_record("nonexistent-id") is None
+    assert storage.get_record("nonexistent-id", tenant_id="_default") is None
 
 
 
@@ -95,9 +143,9 @@ def test_list_scopes_get_scope_info(storage: QdrantEdgeStorage) -> None:
         _rec(content="a", scope="/"),
         _rec(content="b", scope="/team"),
     ])
-    scopes = storage.list_scopes("/")
+    scopes = storage.list_scopes("/", tenant_id="_default")
     assert "/team" in scopes
-    info = storage.get_scope_info("/")
+    info = storage.get_scope_info("/", tenant_id="_default")
     assert info.record_count >= 1
     assert info.path == "/"
 
@@ -108,7 +156,9 @@ def test_scope_prefix_filter(storage: QdrantEdgeStorage) -> None:
         _rec(content="eng note", scope="/crew/eng"),
         _rec(content="other note", scope="/other"),
     ])
-    results = storage.search([0.1, 0.2, 0.3, 0.4], scope_prefix="/crew", limit=10)
+    results = storage.search(
+        [0.1, 0.2, 0.3, 0.4], tenant_id="_default", scope_prefix="/crew", limit=10
+    )
     assert len(results) == 2
     scopes = {r.scope for r, _ in results}
     assert "/crew/sales" in scopes
@@ -123,7 +173,7 @@ def test_category_filter(storage: QdrantEdgeStorage) -> None:
         _rec(content="cat2 item", categories=["cat2"]),
     ])
     results = storage.search(
-        [0.1, 0.2, 0.3, 0.4], categories=["cat1"], limit=10
+        [0.1, 0.2, 0.3, 0.4], tenant_id="_default", categories=["cat1"], limit=10
     )
     assert len(results) == 1
     assert results[0][0].categories == ["cat1"]
@@ -135,7 +185,10 @@ def test_metadata_filter(storage: QdrantEdgeStorage) -> None:
         _rec(content="without key", metadata={"env": "dev"}),
     ])
     results = storage.search(
-        [0.1, 0.2, 0.3, 0.4], metadata_filter={"env": "prod"}, limit=10
+        [0.1, 0.2, 0.3, 0.4],
+        tenant_id="_default",
+        metadata_filter={"env": "prod"},
+        limit=10,
     )
     assert len(results) == 1
     assert results[0][0].metadata["env"] == "prod"
@@ -152,8 +205,8 @@ def test_list_records_pagination(storage: QdrantEdgeStorage) -> None:
         for i in range(5)
     ]
     storage.save(records)
-    page1 = storage.list_records(limit=2, offset=0)
-    page2 = storage.list_records(limit=2, offset=2)
+    page1 = storage.list_records(tenant_id="_default", limit=2, offset=0)
+    page2 = storage.list_records(tenant_id="_default", limit=2, offset=2)
     assert len(page1) == 2
     assert len(page2) == 2
     # Newest first.
@@ -165,7 +218,7 @@ def test_list_categories(storage: QdrantEdgeStorage) -> None:
         _rec(categories=["a", "b"]),
         _rec(categories=["b", "c"]),
     ])
-    cats = storage.list_categories()
+    cats = storage.list_categories(tenant_id="_default")
     assert cats.get("b", 0) == 2
     assert cats.get("a", 0) >= 1
     assert cats.get("c", 0) >= 1
@@ -176,26 +229,26 @@ def test_list_categories(storage: QdrantEdgeStorage) -> None:
 def test_touch_records(storage: QdrantEdgeStorage) -> None:
     r = _rec()
     storage.save([r])
-    before = storage.get_record(r.id)
+    before = storage.get_record(r.id, tenant_id="_default")
     assert before is not None
     old_accessed = before.last_accessed
     storage.touch_records([r.id])
-    after = storage.get_record(r.id)
+    after = storage.get_record(r.id, tenant_id="_default")
     assert after is not None
     assert after.last_accessed >= old_accessed
 
 
 def test_reset_full(storage: QdrantEdgeStorage) -> None:
     storage.save([_rec(scope="/a"), _rec(scope="/b")])
-    assert storage.count() == 2
-    storage.reset()
-    assert storage.count() == 0
+    assert storage.count(tenant_id="_default") == 2
+    storage.reset(tenant_id="_default")
+    assert storage.count(tenant_id="_default") == 0
 
 
 def test_reset_scoped(storage: QdrantEdgeStorage) -> None:
     storage.save([_rec(scope="/a"), _rec(scope="/b")])
-    storage.reset(scope_prefix="/a")
-    assert storage.count() == 1
+    storage.reset(tenant_id="_default", scope_prefix="/a")
+    assert storage.count(tenant_id="_default") == 1
 
 
 
@@ -208,7 +261,7 @@ def test_flush_to_central(tmp_path: Path) -> None:
     assert not s._local_has_data
     assert not s._local_path.exists()
     # Central should have the record.
-    assert s.count() == 1
+    assert s.count(tenant_id="_default") == 1
 
 
 def test_dual_shard_search(tmp_path: Path) -> None:
@@ -217,7 +270,7 @@ def test_dual_shard_search(tmp_path: Path) -> None:
     s.flush_to_central()
     s._closed = False
     s.save([_rec(content="local record", scope="/b")])
-    results = s.search([0.1, 0.2, 0.3, 0.4], limit=10)
+    results = s.search([0.1, 0.2, 0.3, 0.4], tenant_id="_default", limit=10)
     assert len(results) == 2
     contents = {r.content for r, _ in results}
     assert "central record" in contents
@@ -230,7 +283,7 @@ def test_close_lifecycle(tmp_path: Path) -> None:
     s.close()
     # Reopen a new storage — should find the record in central.
     s2 = _make_storage(str(tmp_path / "edge"))
-    results = s2.search([0.1, 0.2, 0.3, 0.4], limit=5)
+    results = s2.search([0.1, 0.2, 0.3, 0.4], tenant_id="_default", limit=5)
     assert len(results) == 1
     assert results[0][0].content == "persisted"
     s2.close()
@@ -273,6 +326,13 @@ def test_orphaned_shard_cleanup(tmp_path: Path) -> None:
                     "last_accessed": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
                     "source": "",
                     "private": False,
+                    # Synthetic orphan from a pre-isolation shard would lack
+                    # tenant_id; we stamp it as "_default" here because the
+                    # Qdrant filter pushes WHERE tenant_id = ? and an absent
+                    # field would not match. The migrate CLI does this
+                    # transformation for real pre-isolation data.
+                    "tenant_id": "_default",
+                    "user_id": "",
                 },
             )
         ])
@@ -283,7 +343,7 @@ def test_orphaned_shard_cleanup(tmp_path: Path) -> None:
 
     s2 = _make_storage(str(base))
     assert not orphan_path.exists()
-    results = s2.search([0.5, 0.5, 0.5, 0.5], limit=5)
+    results = s2.search([0.5, 0.5, 0.5, 0.5], tenant_id="_default", limit=5)
     assert len(results) >= 1
     assert any(r.content == "orphaned" for r, _ in results)
     s2.close()

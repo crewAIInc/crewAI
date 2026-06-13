@@ -279,7 +279,7 @@ def reset_memories(
         click.echo(f"An error occurred while resetting memories: {e}", err=True)
 
 
-@crewai.command()
+@crewai.group(invoke_without_command=True)
 @click.option(
     "--storage-path",
     type=str,
@@ -304,13 +304,22 @@ def reset_memories(
     default=None,
     help='Full embedder config as JSON (e.g. \'{"provider": "cohere", "config": {"model_name": "embed-v4.0"}}\').',
 )
+@click.pass_context
 def memory(
+    ctx: click.Context,
     storage_path: str | None,
     embedder_provider: str | None,
     embedder_model: str | None,
     embedder_config: str | None,
 ) -> None:
-    """Open the Memory TUI to browse scopes and recall memories."""
+    """Memory tools. Without a subcommand, opens the Memory TUI.
+
+    Subcommands:
+        migrate    Stamp existing unscoped rows with a tenant_id for per-tenant isolation.
+    """
+    if ctx.invoked_subcommand is not None:
+        return
+
     try:
         from crewai_cli.memory_tui import MemoryTUI
     except ImportError as exc:
@@ -337,6 +346,87 @@ def memory(
 
     app = MemoryTUI(storage_path=storage_path, embedder_config=embedder_spec)
     app.run()
+
+
+@memory.command("migrate")
+@click.option(
+    "--storage-dir",
+    type=str,
+    default=None,
+    help="Memory storage directory. Defaults to $CREWAI_STORAGE_DIR/memory "
+    "or the platform default if unset.",
+)
+@click.option(
+    "--default-tenant",
+    type=str,
+    default="_default",
+    help="Tenant to assign to unstamped rows. Defaults to '_default' so "
+    "existing single-tenant deployments keep working unchanged.",
+)
+@click.option(
+    "--from-metadata-key",
+    type=str,
+    default=None,
+    help="Optional metadata key whose value becomes the row's tenant_id. "
+    "Rows missing the key fall back to --default-tenant. Useful when "
+    "existing rows already carry a customer/user identifier in metadata.",
+)
+@click.option(
+    "--table-name",
+    type=str,
+    default="memories",
+    help="LanceDB table name (default: memories).",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Print what would change without writing. Recommended for the "
+    "first run against production data.",
+)
+def memory_migrate(
+    storage_dir: str | None,
+    default_tenant: str,
+    from_metadata_key: str | None,
+    table_name: str,
+    dry_run: bool,
+) -> None:
+    """Stamp existing unscoped memory rows with a tenant_id.
+
+    For LanceDB, the schema column is auto-added when the table is opened;
+    this command additionally rewrites per-row values when --from-metadata-key
+    is provided. It is idempotent -- running it twice is safe. Run it during
+    a maintenance window; do not run against a process that is actively
+    writing to the same storage.
+    """
+    from crewai_cli.memory_migrate import run_migrate
+
+    summary = run_migrate(
+        storage_dir=storage_dir,
+        default_tenant=default_tenant,
+        from_metadata_key=from_metadata_key,
+        table_name=table_name,
+        dry_run=dry_run,
+    )
+
+    click.echo(f"Storage directory: {summary['storage_dir']}")
+    click.echo(f"Table:             {summary['table_name']}")
+    click.echo(f"Rows scanned:      {summary['rows_scanned']}")
+    click.echo(f"Rows to stamp:     {summary['rows_to_stamp']}")
+    if from_metadata_key:
+        click.echo(f"From metadata key: {from_metadata_key}")
+        click.echo(f"  with key set:    {summary['rows_with_metadata_key']}")
+        # "without key" is derived from rows_scanned, not rows_to_stamp,
+        # because rows_to_stamp shrinks on reruns once the data is migrated
+        # and would produce a misleading (possibly negative) display value.
+        click.echo(
+            f"  without key:     "
+            f"{summary['rows_scanned'] - summary['rows_with_metadata_key']}"
+        )
+    if dry_run:
+        click.echo("DRY RUN -- no changes written. Re-run without --dry-run to apply.")
+    else:
+        click.echo(f"Rows updated:      {summary['rows_updated']}")
 
 
 @crewai.command()

@@ -61,14 +61,33 @@ class MemoryRecord(BaseModel):
         default=None,
         description=(
             "Origin of this memory (e.g. user ID, session ID). "
-            "Used for provenance tracking and privacy filtering."
+            "Used for provenance tracking. NOTE: not an isolation boundary -- "
+            "for per-user/per-tenant isolation, use tenant_id instead."
         ),
     )
     private: bool = Field(
         default=False,
         description=(
             "If True, this memory is only visible to recall requests from the same source, "
-            "or when include_private=True is passed."
+            "or when include_private=True is passed. NOTE: not an isolation boundary -- "
+            "for per-user/per-tenant isolation, use tenant_id instead."
+        ),
+    )
+    tenant_id: str = Field(
+        default="_default",
+        description=(
+            "Isolation key. Every record is owned by exactly one tenant. "
+            "Storage backends MUST filter on this so recall scoped to tenant A "
+            "never returns a row written by tenant B. Default '_default' keeps "
+            "single-tenant deployments working unchanged."
+        ),
+    )
+    user_id: str | None = Field(
+        default=None,
+        description=(
+            "Optional sub-tenant identity. Filtered within a tenant when set. "
+            "tenant_id is the security boundary; user_id is a refinement that "
+            "lets a tenant admin scope to one user inside their tenant."
         ),
     )
 

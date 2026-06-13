@@ -278,15 +278,24 @@ writer_view = memory.slice(
 ```
 
 **Customer support (per-customer context):**
+
+<Warning>
+For real per-customer isolation in a multi-tenant deployment, use `tenant_id`, not `scope`. Scope is a structural path; it does not stop a recall from another customer's session returning the wrong row. See [Memory Isolation](/en/concepts/memory-isolation).
+</Warning>
+
 ```python
 memory = Memory()
 
-# Each customer gets isolated context
-memory.remember("Prefers email communication", scope="/customer/acme-corp")
-memory.remember("On enterprise plan, 50 seats", scope="/customer/acme-corp")
+# Each customer is isolated at the storage layer via tenant_id.
+memory.remember("Prefers email communication", tenant_id="acme-corp",
+                scope="/preferences/communication")
+memory.remember("On enterprise plan, 50 seats", tenant_id="acme-corp",
+                scope="/account/plan")
 
-# Shared product docs are accessible to all agents
-memory.remember("Rate limit is 1000 req/min on enterprise plan", scope="/product/docs")
+# Shared product docs use the default tenant and are read by every
+# customer's recall via a separate Memory or a tenant-admin view.
+memory.remember("Rate limit is 1000 req/min on enterprise plan",
+                scope="/product/docs")
 ```
 
 
