@@ -1039,10 +1039,13 @@ class BedrockCompletion(BaseLLM):
                             # block so function_args (and the message history below)
                             # carry the real arguments instead of an empty input.
                             try:
-                                current_tool_use["input"] = json.loads(
-                                    accumulated_tool_input
+                                parsed_input = json.loads(accumulated_tool_input)
+                                current_tool_use["input"] = (
+                                    parsed_input
+                                    if isinstance(parsed_input, dict)
+                                    else {}
                                 )
-                            except (json.JSONDecodeError, ValueError):
+                            except (json.JSONDecodeError, ValueError, TypeError):
                                 current_tool_use["input"] = {}
                             function_args = cast(
                                 dict[str, Any], current_tool_use.get("input", {})
@@ -1647,10 +1650,13 @@ class BedrockCompletion(BaseLLM):
                             # block so function_args (and the message history below)
                             # carry the real arguments instead of an empty input.
                             try:
-                                current_tool_use["input"] = json.loads(
-                                    accumulated_tool_input
+                                parsed_input = json.loads(accumulated_tool_input)
+                                current_tool_use["input"] = (
+                                    parsed_input
+                                    if isinstance(parsed_input, dict)
+                                    else {}
                                 )
-                            except (json.JSONDecodeError, ValueError):
+                            except (json.JSONDecodeError, ValueError, TypeError):
                                 current_tool_use["input"] = {}
                             function_args = cast(
                                 dict[str, Any], current_tool_use.get("input", {})

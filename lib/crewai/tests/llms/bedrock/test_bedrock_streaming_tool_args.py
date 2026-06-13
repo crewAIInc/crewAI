@@ -40,6 +40,26 @@ def _make_tool_use_stream() -> list[dict]:
     ]
 
 
+def _make_non_dict_tool_use_stream() -> list[dict]:
+    """Synthetic Converse stream whose tool input is valid JSON but not an object.
+
+    ``json.loads`` succeeds here (returns a string), so the parsed value must
+    still be coerced to a dict before it reaches ``fn(**function_args)``.
+    """
+    return [
+        {"messageStart": {"role": "assistant"}},
+        {
+            "contentBlockStart": {
+                "start": {"toolUse": {"toolUseId": "tool-1", "name": "get_weather"}},
+                "contentBlockIndex": 0,
+            }
+        },
+        {"contentBlockDelta": {"delta": {"toolUse": {"input": '"oops"'}}}},
+        {"contentBlockStop": {}},
+        {"messageStop": {"stopReason": "tool_use"}},
+    ]
+
+
 def _build_completion() -> BedrockCompletion:
     """Build a BedrockCompletion with mocked AWS credentials/session."""
     with patch.dict(
@@ -127,3 +147,36 @@ async def test_async_streaming_tool_call_preserves_arguments():
         )
 
     assert captured["args"] == {"city": "Paris"}
+
+
+def test_streaming_non_dict_tool_input_coerced_to_empty_dict():
+    """Valid-but-non-object JSON input must be coerced to ``{}``.
+
+    ``json.loads('"oops"')`` returns a string; passing it on as
+    ``fn(**function_args)`` would raise ``TypeError``. The handler must
+    guard against this and fall back to an empty dict.
+    """
+    llm = _build_completion()
+
+    captured: dict = {}
+
+    def capture(function_args, **kwargs):
+        captured["args"] = function_args
+        return None
+
+    mock_client = MagicMock()
+    mock_client.converse_stream.return_value = {
+        "stream": _make_non_dict_tool_use_stream()
+    }
+
+    with (
+        patch.object(llm, "_get_sync_client", return_value=mock_client),
+        patch.object(llm, "_handle_tool_execution", side_effect=capture),
+    ):
+        llm._handle_streaming_converse(
+            messages=[{"role": "user", "content": "weather in Paris?"}],
+            body={},
+            available_functions={"get_weather": lambda **kw: "sunny"},
+        )
+
+    assert captured["args"] == {}
