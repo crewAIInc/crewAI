@@ -35,6 +35,7 @@ __all__ = [
     "FlowDefinition",
     "FlowDefinitionCondition",
     "FlowDefinitionDiagnostic",
+    "FlowExpressionActionDefinition",
     "FlowHumanFeedbackDefinition",
     "FlowMethodDefinition",
     "FlowPersistenceDefinition",
@@ -163,7 +164,18 @@ class FlowToolActionDefinition(BaseModel):
     with_: dict[str, Any] | None = Field(default=None, alias="with")
 
 
-FlowActionDefinition = FlowCodeActionDefinition | FlowToolActionDefinition
+class FlowExpressionActionDefinition(BaseModel):
+    """A Flow method action that evaluates a CEL expression."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    call: TypingLiteral["expression"]
+    expr: str
+
+
+FlowActionDefinition = (
+    FlowCodeActionDefinition | FlowToolActionDefinition | FlowExpressionActionDefinition
+)
 
 
 class FlowMethodDefinition(BaseModel):

@@ -36,6 +36,14 @@ class StaticSearchTool(BaseTool):
         return f"{prefix}:{search_query}"
 
 
+class TypedInputsTool(BaseTool):
+    name: str = "TypedInputsTool"
+    description: str = "Returns typed input details."
+
+    def _run(self, count: int, include_domains: list[str]) -> str:
+        return f"{count}:{','.join(include_domains)}"
+
+
 class ChainFlow(Flow):
     @start()
     def begin(self):
@@ -50,6 +58,13 @@ class ChainFlow(Flow):
     def confirm(self):
         self.state["confirmed"] = True
         return f"confirmed:{self.state['confirmed']}"
+
+
+class ToolInputFlow(Flow):
+    @start()
+    def build_query(self):
+        self.state["prefix"] = "found"
+        return {"query": "ai agents", "suffix": " news"}
 
 
 CHAIN_YAML = f"""
@@ -543,6 +558,254 @@ def test_tool_action_round_trips_with_inputs():
         "with": {"search_query": "ai agents"},
     }
     assert Flow.from_definition(definition).kickoff() == "search:ai agents"
+
+
+def test_tool_action_renders_cel_inputs_at_runtime():
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: ToolFlow
+methods:
+  begin:
+    do:
+      call: code
+      ref: {__name__}:ChainFlow.begin
+    start: true
+  search:
+    do:
+      call: tool
+      ref: {__name__}:StaticSearchTool
+      with:
+        search_query: "${{state.begin_ran ? state.topic + ' agents' : 'missing'}}"
+        prefix: found
+    listen: begin
+"""
+
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+
+    assert flow.kickoff(inputs={"topic": "ai"}) == "found:ai agents"
+
+
+def test_tool_action_rejects_braces_in_embedded_cel_input():
+    definition = FlowDefinition.from_dict(
+        {
+            "schema": "crewai.flow/v1",
+            "name": "ToolFlow",
+            "methods": {
+                "search": {
+                    "start": True,
+                    "do": {
+                        "call": "tool",
+                        "ref": f"{__name__}:StaticSearchTool",
+                        "with": {
+                            "search_query": "wrapped ${'a}b'} value",
+                            "prefix": "${'p}x'}",
+                        },
+                    },
+                }
+            },
+        }
+    )
+
+    with pytest.raises(ValueError, match="cannot contain braces"):
+        Flow.from_definition(definition).kickoff()
+
+
+def test_tool_action_rejects_braces_in_full_cel_input():
+    definition = FlowDefinition.from_dict(
+        {
+            "schema": "crewai.flow/v1",
+            "name": "ToolFlow",
+            "methods": {
+                "search": {
+                    "start": True,
+                    "do": {
+                        "call": "tool",
+                        "ref": f"{__name__}:StaticSearchTool",
+                        "with": {
+                            "search_query": "${{'query': 'ai agents'}.query}",
+                            "prefix": "found",
+                        },
+                    },
+                }
+            },
+        }
+    )
+
+    with pytest.raises(ValueError, match="cannot contain braces"):
+        Flow.from_definition(definition).kickoff()
+
+
+def test_tool_action_renders_latest_output_by_method_name():
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: ToolFlow
+methods:
+  begin:
+    do:
+      call: code
+      ref: {__name__}:ChainFlow.begin
+    start: true
+  search:
+    do:
+      call: tool
+      ref: {__name__}:StaticSearchTool
+      with:
+        search_query: "${{outputs.begin + ' agents'}}"
+    listen: begin
+"""
+
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+
+    assert flow.kickoff() == "search:hello agents"
+
+
+def test_tool_action_uses_state_and_outputs_in_full_yaml_example():
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: ToolFlow
+methods:
+  build_query:
+    do:
+      call: code
+      ref: {__name__}:ToolInputFlow.build_query
+    start: true
+  search:
+    do:
+      call: tool
+      ref: {__name__}:StaticSearchTool
+      with:
+        search_query: "${{outputs.build_query.query + outputs.build_query.suffix}}"
+        prefix: "${{state.prefix}}"
+    listen: build_query
+"""
+
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+
+    assert flow.kickoff() == "found:ai agents news"
+
+
+def test_tool_action_preserves_whole_expression_value_types():
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: ToolFlow
+methods:
+  typed:
+    do:
+      call: tool
+      ref: {__name__}:TypedInputsTool
+      with:
+        count: "${{state.limit}}"
+        include_domains: "${{state.domains}}"
+    start: true
+"""
+
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+
+    assert (
+        flow.kickoff(inputs={"limit": 2, "domains": ["crewai.com", "example.com"]})
+        == "2:crewai.com,example.com"
+    )
+
+
+def test_tool_action_reports_invalid_cel_expression():
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: ToolFlow
+methods:
+  search:
+    do:
+      call: tool
+      ref: {__name__}:StaticSearchTool
+      with:
+        search_query: "${{state.}}"
+    start: true
+"""
+
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+
+    with pytest.raises(ValueError, match="failed to evaluate CEL expression"):
+        flow.kickoff()
+
+
+def test_expression_action_round_trips():
+    definition = FlowDefinition.from_dict(
+        {
+            "schema": "crewai.flow/v1",
+            "name": "ExpressionFlow",
+            "methods": {
+                "classify": {
+                    "start": True,
+                    "do": {
+                        "call": "expression",
+                        "expr": "state.score >= 80 ? 'qualified' : 'nurture'",
+                    },
+                }
+            },
+        }
+    )
+
+    assert definition.to_dict()["methods"]["classify"]["do"] == {
+        "call": "expression",
+        "expr": "state.score >= 80 ? 'qualified' : 'nurture'",
+    }
+    assert Flow.from_definition(definition).kickoff(inputs={"score": 90}) == "qualified"
+
+
+def test_expression_action_can_route_like_if_else():
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: ExpressionRouterFlow
+methods:
+  begin:
+    do:
+      call: code
+      ref: {__name__}:ChainFlow.begin
+    start: true
+  decide:
+    do:
+      call: expression
+      expr: "state.direction == 'left' ? 'left' : 'right'"
+    listen: begin
+    router: true
+    emit: [left, right]
+  take_left:
+    do:
+      call: code
+      ref: {__name__}:RouteFlow.take_left
+    listen: left
+  take_right:
+    do:
+      call: code
+      ref: {__name__}:RouteFlow.take_right
+    listen: right
+"""
+
+    definition = FlowDefinition.from_yaml(yaml_str)
+
+    assert Flow.from_definition(definition).kickoff(
+        inputs={"direction": "left"}
+    ) == "took-left"
+    assert Flow.from_definition(definition).kickoff(
+        inputs={"direction": "right"}
+    ) == "took-right"
+
+
+def test_expression_action_reports_invalid_cel_expression():
+    yaml_str = """
+schema: crewai.flow/v1
+name: ExpressionFlow
+methods:
+  classify:
+    do:
+      call: expression
+      expr: "state."
+    start: true
+"""
+
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+
+    with pytest.raises(ValueError, match="failed to evaluate CEL expression"):
+        flow.kickoff()
 
 
 def test_tool_action_requires_module_qualname_ref():

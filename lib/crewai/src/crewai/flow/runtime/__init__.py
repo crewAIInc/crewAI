@@ -962,7 +962,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             }
             self._restored_from_checkpoint = True
         if self.checkpoint_method_outputs is not None:
-            self._method_outputs = list(self.checkpoint_method_outputs)
+            self._method_outputs = [
+                entry
+                if isinstance(entry, dict) and "method" in entry and "output" in entry
+                else {"method": "", "output": entry}
+                for entry in self.checkpoint_method_outputs
+            ]
         if self.checkpoint_method_counts is not None:
             self._method_execution_counts = {
                 FlowMethodName(k): v for k, v in self.checkpoint_method_counts.items()
@@ -1649,6 +1654,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             metadata=context.metadata,
         )
         collapsed_outcome = result.outcome
+        resumed_method_output = (
+            result.output
+            if emit and isinstance(result, HumanFeedbackResult)
+            else result
+        )
 
         self._completed_methods.add(FlowMethodName(context.method_name))
 
@@ -1677,9 +1687,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         # This allows methods to re-execute in loops (e.g., implement_changes → suggest_changes → implement_changes)
         self._is_execution_resuming = False
 
+        self._method_outputs.append(
+            {"method": context.method_name, "output": resumed_method_output}
+        )
+
         try:
             if emit and collapsed_outcome:
-                self._method_outputs.append(collapsed_outcome)
                 await self._execute_listeners(
                     FlowMethodName(collapsed_outcome),
                     result,
@@ -1725,7 +1738,12 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 return e
             raise
 
-        final_result = self._method_outputs[-1] if self._method_outputs else result
+        method_outputs = self.method_outputs
+        final_result = (
+            method_outputs[-1]
+            if method_outputs
+            else (resumed_method_output if emit else result)
+        )
 
         if self._event_futures:
             await asyncio.gather(
@@ -1906,7 +1924,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     @property
     def method_outputs(self) -> list[Any]:
         """Returns the list of all outputs from executed methods."""
-        return self._method_outputs
+        outputs: list[Any] = []
+        for entry in self._method_outputs:
+            if isinstance(entry, dict) and "output" in entry:
+                outputs.append(entry["output"])
+            else:
+                outputs.append(entry)
+        return outputs
 
     @property
     def flow_id(self) -> str:
@@ -2540,7 +2564,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             # Clear the resumption flag after initial execution completes
             self._is_execution_resuming = False
 
-            final_output = self._method_outputs[-1] if self._method_outputs else None
+            method_outputs = self.method_outputs
+            final_output = method_outputs[-1] if method_outputs else None
 
             if self._event_futures:
                 await asyncio.gather(
@@ -2695,7 +2720,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if start_method_name in self._completed_methods:
             if self._is_execution_resuming:
                 # During resumption, skip execution but continue listeners
-                last_output = self._method_outputs[-1] if self._method_outputs else None
+                method_outputs = self.method_outputs
+                last_output = method_outputs[-1] if method_outputs else None
                 await self._execute_listeners(start_method_name, last_output)
                 return
             # For cyclic flows, clear from completed to allow re-execution
@@ -2825,7 +2851,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     method_name, method_definition.human_feedback, result
                 )
 
-            self._method_outputs.append(result)
+            self._method_outputs.append({"method": str(method_name), "output": result})
 
             # For @human_feedback methods with emit, the result is the collapsed outcome
             # (e.g., "approved") used for routing. But we want the actual method output
@@ -2833,8 +2859,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             # if a stashed output exists. Dict-based stash is concurrency-safe and
             # handles None return values (presence in dict = stashed, not value).
             if method_name in self._human_feedback_method_outputs:
-                self._method_outputs[-1] = self._human_feedback_method_outputs.pop(
-                    method_name
+                self._method_outputs[-1]["output"] = (
+                    self._human_feedback_method_outputs.pop(method_name)
                 )
 
             self._method_execution_counts[method_name] = (
@@ -3560,7 +3586,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     def _resolve_feedback_provider(
         self, feedback_definition: FlowHumanFeedbackDefinition
     ) -> Any:
-
         provider = feedback_definition.provider
         if isinstance(provider, str):
             provider = resolve_instance_ref(provider, field="human_feedback.provider")

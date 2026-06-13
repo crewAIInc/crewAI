@@ -13,8 +13,8 @@ from crewai_core import (
     user_data,
     version,
 )
-import pytest
 from opentelemetry.sdk.trace import TracerProvider
+import pytest
 
 
 def test_version_returns_string() -> None:
