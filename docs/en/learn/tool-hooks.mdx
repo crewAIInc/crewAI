@@ -204,19 +204,19 @@ def scan_tool_intent_with_atr(context: ToolCallHookContext) -> bool | None:
         "tool_input": context.tool_input,
         "agent_role": context.agent.role if context.agent else None,
         "agent_fingerprint": (
-            context.agent.security_config.fingerprint.uuid_str
-            if context.agent and context.agent.security_config
+            context.agent.fingerprint.uuid_str
+            if context.agent and context.agent.fingerprint
             else None
         ),
         "task_description": context.task.description if context.task else None,
         "task_fingerprint": (
-            context.task.security_config.fingerprint.uuid_str
-            if context.task and context.task.security_config
+            context.task.fingerprint.uuid_str
+            if context.task and context.task.fingerprint
             else None
         ),
         "crew_fingerprint": (
-            context.crew.security_config.fingerprint.uuid_str
-            if context.crew and context.crew.security_config
+            context.crew.fingerprint.uuid_str
+            if context.crew and context.crew.fingerprint
             else None
         ),
     }
