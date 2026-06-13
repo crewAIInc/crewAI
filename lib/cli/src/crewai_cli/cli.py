@@ -26,6 +26,7 @@ from crewai_cli.remote_template.main import TemplateCommand
 from crewai_cli.replay_from_task import replay_task_command
 from crewai_cli.reset_memories_command import reset_memories_command
 from crewai_cli.run_crew import run_crew
+from crewai_cli.run_flow_definition import run_flow_definition
 from crewai_cli.settings.main import SettingsCommand
 from crewai_cli.task_outputs import load_task_outputs
 from crewai_cli.tools.main import ToolCommand
@@ -398,8 +399,36 @@ def install(context: click.Context) -> None:
         "CREWAI_TRAINED_AGENTS_FILE."
     ),
 )
-def run(trained_agents_file: str | None) -> None:
-    """Run the Crew."""
+@click.option(
+    "--definition",
+    type=str,
+    default=None,
+    help=(
+        "Experimental: path to a Flow Definition YAML/JSON file, "
+        "or an inline YAML/JSON string."
+    ),
+)
+@click.option(
+    "--inputs",
+    type=str,
+    default=None,
+    help='Experimental: JSON object passed to flow.kickoff(), e.g. \'{"topic":"AI"}\'.',
+)
+def run(
+    trained_agents_file: str | None, definition: str | None, inputs: str | None
+) -> None:
+    """Run the Crew or Flow."""
+    if inputs is not None and definition is None:
+        raise click.UsageError("--inputs requires --definition")
+
+    if definition is not None:
+        click.secho(
+            "Warning: `crewai run --definition` is experimental and may change without notice.",
+            fg="yellow",
+        )
+        run_flow_definition(definition=definition, inputs=inputs)
+        return
+
     run_crew(trained_agents_file=trained_agents_file)
 
 

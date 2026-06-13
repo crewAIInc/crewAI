@@ -4,6 +4,106 @@ description: "CrewAI의 제품 업데이트, 개선 사항 및 버그 수정"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="2026년 6월 11일">
+  ## v1.14.7
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.7)
+
+  ## 변경 사항
+
+  ### 기능
+  - 메모리, 지식, RAG 및 흐름에 대한 플러그 가능한 기본 백엔드를 추가했습니다.
+  - LLM 이벤트에서 실제 finish_reason, 샘플링 매개변수 및 response.id를 표시합니다.
+  - 경로 인식 장식자로서의 타입 DSL 트리거를 설정합니다.
+  - 대화 흐름을 위한 채팅 API를 추가했습니다.
+  - 잠금 백엔드를 재정의 가능하도록 만듭니다.
+  - Flow DSL 메타데이터에서 FlowDefinition을 빌드합니다.
+  - 네이티브 Snowflake Cortex LLM 공급자를 추가했습니다.
+  - 훈련된 에이전트 파일 지원을 추가했습니다.
+
+  ### 버그 수정
+  - 복원 시 사용자 정의 BaseLLM을 구체적인 LLM으로 재구성하도록 체크포인트를 수정했습니다.
+  - 라이브 스냅샷이 재개로 재생되지 않도록 플래그를 사용하여 복원을 제한합니다.
+  - 실행마다 런타임 상태의 범위를 설정하여 성장을 제한하고 동시 실행을 격리합니다.
+  - crewai-login에서 텔레메트리 설정을 수정했습니다.
+  - 메서드 실행 이벤트에 대해 suppress_flow_events를 존중합니다.
+  - uv 도구 설치를 위해 crewai 패키지에서 [project.scripts]를 복원합니다.
+  - aiohttp, docling 및 docling-core에 대한 pip-audit CVE를 해결합니다.
+  - 파일 입력이 신뢰할 수 없게 작동하는 문제를 수정했습니다.
+  - Snowflake Claude의 불완전한 도구 결과 기록을 수정했습니다.
+
+  ### 문서
+  - v1.14.7에 대한 변경 로그 및 버전을 업데이트했습니다.
+  - OpenTelemetry 수집기 문서를 업데이트했습니다.
+  - NVIDIA Nemotron LLM 가이드를 업데이트했습니다.
+  - Databricks 통합 가이드를 추가했습니다.
+  - Snowflake 통합 가이드를 추가했습니다.
+
+  ### 성능
+  - docling 가져오기를 지연 로딩하여 crewai 가져오기 속도를 개선했습니다.
+
+  ### 리팩토링
+  - 흐름 조건 평가를 이벤트별로 상태 비저장으로 단순화했습니다.
+  - 대화 논리를 런타임에서 분리하고 conversational_definition을 추가했습니다.
+  - `flow.py`를 DSL, 정의 및 런타임으로 분리했습니다.
+
+  ## 기여자
+
+  @Luzk, @alex-clawd, @devin-ai-integration[bot], @greysonlalonde, @gvieira, @jessemiller, @lorenzejay, @lucasgomide, @mattatcha, @vinibrsl
+
+</Update>
+
+<Update label="2026년 6월 10일">
+  ## v1.14.7rc2
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.7rc2)
+
+  ## 변경 사항
+
+  ### 버그 수정
+  - 라이브 스냅샷이 재개로 재생되는 것을 방지하기 위한 플래그에서 게이트 복원
+
+  ### 문서
+  - v1.14.7rc1에 대한 변경 로그 및 버전 업데이트
+
+  ## 기여자
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="2026년 6월 10일">
+  ## v1.14.7rc1
+
+  [GitHub 릴리스 보기](https://github.com/crewAIInc/crewAI/releases/tag/1.14.7rc1)
+
+  ## 변경 사항
+
+  ### 기능
+  - 누적된 버스 상태를 해제하기 위해 `reset_runtime_state` 추가
+  - 사용자 정의 프롬프트를 모두 지원하도록 처리
+  - 대화 논리를 런타임과 분리하고 `conversational_definition` 추가
+
+  ### 버그 수정
+  - 실행당 런타임 상태의 범위를 수정하여 성장 제한 및 동시 실행 격리
+  - `crewai-login`에서 원격 측정 설정 수정
+  - 메서드 실행 이벤트에 대한 `suppress_flow_events` 존중 수정
+
+  ### 문서
+  - OpenTelemetry 이미지 업데이트
+  - OpenTelemetry 수집기의 새로운 상태를 반영하도록 문서 업데이트
+  - v1.14.7a4에 대한 변경 로그 및 버전 업데이트
+
+  ### 리팩토링
+  - 이벤트당 상태 비저장 방식으로 흐름 조건 평가 단순화
+  - 경로를 하나 줄여 대화 라우팅 사이클 개선
+
+  ## 기여자
+
+  @greysonlalonde, @lorenzejay, @lucasgomide, @vinibrsl
+
+</Update>
+
 <Update label="2026년 6월 9일">
   ## v1.14.7a4
 

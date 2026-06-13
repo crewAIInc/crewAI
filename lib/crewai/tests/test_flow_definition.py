@@ -13,6 +13,7 @@ from pydantic import BaseModel
 import crewai.flow.dsl as flow_dsl
 import crewai.flow.flow_definition as flow_definition
 import crewai.flow.visualization.builder as visualization_builder
+from crewai.experimental import ConversationConfig, RouterConfig
 from crewai.flow import Flow, and_, human_feedback, listen, or_, persist, router, start
 
 
@@ -35,14 +36,20 @@ def test_flow_public_exports_are_explicit():
         "start",
     }
     assert set(flow_definition.__all__) == {
+        "FlowActionDefinition",
+        "FlowCodeActionDefinition",
         "FlowConfigDefinition",
+        "FlowConversationalDefinition",
+        "FlowConversationalRouterDefinition",
         "FlowDefinition",
         "FlowDefinitionCondition",
         "FlowDefinitionDiagnostic",
+        "FlowExpressionActionDefinition",
         "FlowHumanFeedbackDefinition",
         "FlowMethodDefinition",
         "FlowPersistenceDefinition",
         "FlowStateDefinition",
+        "FlowToolActionDefinition",
     }
     assert "build_flow_structure" in flow_visualization.__all__
     assert "calculate_node_levels" not in flow_visualization.__all__
@@ -169,6 +176,7 @@ def test_flow_definition_maps_dsl_to_static_contract():
     assert definition.state.ref and "ContractState" in definition.state.ref
     assert definition.config.stream is True
     assert definition.config.max_method_calls == 7
+    assert definition.conversational is None
 
     assert definition.methods["begin"].start is True
     assert definition.methods["process"].listen == "begin"
@@ -201,25 +209,75 @@ def test_flow_definition_excludes_conversational_builtins_for_regular_flows():
 
     methods = RegularFlow.flow_definition().methods
 
+    assert RegularFlow.flow_definition().conversational is None
     assert set(methods) == {"begin"}
     assert "conversation_start" not in methods
     assert "route_conversation" not in methods
     assert "converse_turn" not in methods
 
 
-@pytest.mark.skip(
-    reason="Experimental conversational inherited built-ins are out of scope for the definition-first start migration."
-)
 def test_flow_definition_includes_conversational_builtins_when_enabled():
     class ChatFlow(Flow):
         conversational = True
 
-    methods = ChatFlow.flow_definition().methods
+    definition = ChatFlow.flow_definition()
+    methods = definition.methods
 
-    assert "conversation_start" in methods
+    assert definition.conversational is not None
+    assert definition.conversational.enabled is True
+    assert definition.conversational.defer_trace_finalization is True
+    assert definition.conversational.builtin_routes == ["converse", "end"]
+    assert "conversation_start" not in methods
     assert "route_conversation" in methods
     assert "converse_turn" in methods
-    assert methods["conversation_start"].start is True
+    assert methods["route_conversation"].start is True
+    assert methods["route_conversation"].router is True
+
+
+def test_flow_definition_serializes_conversational_config():
+    @ConversationConfig(
+        system_prompt="Be concise.",
+        llm="gpt-4o-mini",
+        router=RouterConfig(
+            prompt="Pick a route.",
+            routes=["research"],
+            default_intent="converse",
+            fallback_intent="end",
+        ),
+        default_intents=["research"],
+        visible_agent_outputs=["researcher"],
+        defer_trace_finalization=False,
+    )
+    class ChatFlow(Flow):
+        conversational = True
+
+    conversational = ChatFlow.flow_definition().conversational
+
+    assert conversational is not None
+    assert conversational.system_prompt == "Be concise."
+    assert conversational.llm == "gpt-4o-mini"
+    assert conversational.default_intents == ["research"]
+    assert conversational.visible_agent_outputs == ["researcher"]
+    assert conversational.defer_trace_finalization is False
+    assert conversational.router is not None
+    assert conversational.router.prompt == "Pick a route."
+    assert conversational.router.routes == ["research"]
+    assert conversational.router.fallback_intent == "end"
+
+
+def test_flow_definition_uses_collapsed_conversational_router_start():
+    class ChatFlow(Flow):
+        conversational = True
+
+        def conversation_start(self) -> str | None:
+            return "custom"
+
+    methods = ChatFlow.flow_definition().methods
+
+    assert "conversation_start" not in methods
+    assert "route_conversation" in methods
+    assert methods["route_conversation"].start is True
+    assert methods["route_conversation"].router is True
 
 
 def test_flow_definition_serializes_human_feedback_metadata():
@@ -575,6 +633,7 @@ def test_flow_definition_preserves_diagnostics_loaded_from_contract():
             "name": "LoadedDiagnosticsFlow",
             "methods": {
                 "decision": {
+                    "do": {"ref": "loaded_flows:LoadedDiagnosticsFlow.decision"},
                     "router": True,
                     "emit": ["continue"],
                 }
@@ -608,6 +667,7 @@ def test_router_start_false_without_listen_reports_missing_trigger():
             "name": "LoadedFlow",
             "methods": {
                 "decision": {
+                    "do": {"ref": "loaded_flows:LoadedFlow.decision"},
                     "router": True,
                     "start": False,
                     "emit": ["continue"],
@@ -686,8 +746,14 @@ def test_static_string_listener_is_allowed_by_contract():
             "schema": "crewai.flow/v1",
             "name": "TypoFlow",
             "methods": {
-                "begin": {"start": True},
-                "handle": {"listen": "begni"},
+                "begin": {
+                    "do": {"ref": "loaded_flows:TypoFlow.begin"},
+                    "start": True,
+                },
+                "handle": {
+                    "do": {"ref": "loaded_flows:TypoFlow.handle"},
+                    "listen": "begni",
+                },
             },
         }
     )
@@ -700,8 +766,15 @@ def test_start_false_not_classified_as_start_method():
             "schema": "crewai.flow/v1",
             "name": "ExplicitNonStartFlow",
             "methods": {
-                "begin": {"start": True},
-                "handle": {"start": False, "listen": "begin"},
+                "begin": {
+                    "do": {"ref": "loaded_flows:ExplicitNonStartFlow.begin"},
+                    "start": True,
+                },
+                "handle": {
+                    "do": {"ref": "loaded_flows:ExplicitNonStartFlow.handle"},
+                    "start": False,
+                    "listen": "begin",
+                },
             },
         }
     )
@@ -758,6 +831,7 @@ def test_flow_definition_logs_diagnostics_when_loaded_from_contract(caplog):
             "name": "LoadedFlow",
             "methods": {
                 "decision": {
+                    "do": {"ref": "loaded_flows:LoadedFlow.decision"},
                     "router": True,
                     "emit": ["continue"],
                 }

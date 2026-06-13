@@ -8,6 +8,7 @@ from crewai.flow.dsl._types import FlowMethodDecorator, FlowTrigger
 from crewai.flow.dsl._utils import (
     P,
     R,
+    _method_action,
     _set_flow_method_definition,
 )
 from crewai.flow.flow_definition import FlowMethodDefinition
@@ -45,7 +46,11 @@ def listen(condition: FlowTrigger) -> FlowMethodDecorator:
         wrapper = ListenMethod(func)
 
         _set_flow_method_definition(
-            wrapper, FlowMethodDefinition(listen=_to_definition_condition(condition))
+            wrapper,
+            FlowMethodDefinition(
+                do=_method_action(func),
+                listen=_to_definition_condition(condition),
+            ),
         )
         return wrapper
 

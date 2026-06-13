@@ -1040,7 +1040,7 @@ def test_flow_plotting():
         received_events.append(event)
         event_received.set()
 
-    flow.plot("test_flow")
+    flow.plot("test_flow", show=False)
 
     assert event_received.wait(timeout=5), "Timeout waiting for plot event"
     assert len(received_events) == 1
@@ -1155,6 +1155,26 @@ def test_flow_name():
 
     flow = MyFlow()
     assert flow.name == "MyFlow"
+
+
+def test_flow_custom_name_overrides_class_name_in_events():
+    class InternalFlowClass(Flow):
+        name = "PublicName"
+
+        @start()
+        def begin(self):
+            return "done"
+
+    received = []
+
+    with crewai_event_bus.scoped_handlers():
+        @crewai_event_bus.on(FlowStartedEvent)
+        def handle(source, event):
+            received.append(event)
+
+        InternalFlowClass().kickoff()
+
+    assert received[0].flow_name == "PublicName"
 
 
 def test_nested_and_or_conditions():
@@ -1542,40 +1562,63 @@ def test_deeply_nested_conditions():
 
 
 def test_or_branch_does_not_leave_stale_and_state():
-    """or_() over nested and_() branches must not leave stale pending AND state.
-
-    Regression: evaluating an or_() condition stopped at the first branch that was
-    satisfied, so a later and_() branch that the *same* trigger would have completed
-    never cleared its pending state. On the next cycle that trigger alone then
-    spuriously re-satisfied the whole condition. Both branches share the final
-    event ``x`` here, so the shared trigger that completes branch ``(a AND x)`` also
-    completes branch ``(c AND x)`` and both must be cleared together.
-    """
+    fired = []
 
     class StaleStateFlow(Flow):
         @start()
         def begin(self):
             pass
 
-        @listen(or_(and_("a", "x"), and_("c", "x")))
-        def joined(self):
+        @listen(begin)
+        def a(self):
             pass
 
-    flow = StaleStateFlow()
-    condition = type(flow)._listen_condition("joined")
+        @listen(begin)
+        def c(self):
+            pass
 
-    def fires(trigger):
-        return flow._evaluate_condition(condition, trigger, "joined")
+        @listen(and_(a, c))
+        def x(self):
+            pass
 
-    # First cycle: "a" then "c" arrive, then the shared "x" completes (a AND x).
-    assert fires("a") is False
-    assert fires("c") is False
-    assert fires("x") is True
+        @listen(or_(and_("a", "x"), and_("c", "y")))
+        def joined(self):
+            fired.append("joined")
 
-    # Next cycle: "x" alone must NOT re-satisfy the condition. The "c" from the
-    # previous cycle was consumed when "joined" fired, so neither branch is half
-    # complete and "x" by itself is insufficient.
-    assert fires("x") is False
+        @router(joined)
+        def emit_y(self):
+            return "y"
+
+    StaleStateFlow().kickoff()
+
+    assert fired == ["joined"]
+
+
+def test_and_branch_inside_or_does_not_race():
+    execution_order = []
+
+    class DiamondWithFallbackFlow(Flow):
+        @start()
+        def go(self):
+            execution_order.append("go")
+
+        @listen(go)
+        def a(self):
+            execution_order.append("a")
+
+        @listen(go)
+        def b(self):
+            execution_order.append("b")
+
+        @listen(or_(and_(a, b), "fallback"))
+        def done(self):
+            execution_order.append("done")
+
+    DiamondWithFallbackFlow().kickoff()
+
+    assert "done" in execution_order
+    assert execution_order.index("done") > execution_order.index("a")
+    assert execution_order.index("done") > execution_order.index("b")
 
 
 def test_mixed_sync_async_execution_order():
