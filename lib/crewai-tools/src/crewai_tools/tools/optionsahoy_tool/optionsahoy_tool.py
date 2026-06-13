@@ -158,7 +158,12 @@ class OptionsAhoyTool(BaseTool):
 
     def _check_required(self, calculator: str, inputs: dict[str, Any]) -> None:
         required = REQUIRED_FIELDS.get(calculator, ())
-        missing = [field for field in required if field not in inputs]
+        missing = [
+            field
+            for field in required
+            if field not in inputs
+            or (inputs[field] is None and field not in _KEEP_NULL)
+        ]
         if missing:
             raise ValueError(
                 f"OptionsAhoy '{calculator}' is missing required input field(s): "
