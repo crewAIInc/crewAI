@@ -24,7 +24,16 @@ from crewai.flow.flow_definition import FlowConfigDefinition, FlowDefinition
 from crewai.flow.persistence import persist
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.state.checkpoint_config import CheckpointConfig
+from crewai.tools import BaseTool
 from crewai.types.streaming import FlowStreamingOutput
+
+
+class StaticSearchTool(BaseTool):
+    name: str = "StaticSearchTool"
+    description: str = "Returns a deterministic search result."
+
+    def _run(self, search_query: str, prefix: str = "search") -> str:
+        return f"{prefix}:{search_query}"
 
 
 class ChainFlow(Flow):
@@ -488,6 +497,94 @@ def test_flow_definition_stamps_refs():
 
     assert definition.methods["begin"].do.ref == f"{__name__}:ChainFlow.begin"
     assert definition.methods["shout"].do.ref == f"{__name__}:ChainFlow.shout"
+
+
+def test_from_definition_runs_tool_action_with_static_inputs():
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: ToolFlow
+methods:
+  search:
+    do:
+      call: tool
+      ref: {__name__}:StaticSearchTool
+      with:
+        search_query: ai agents
+        prefix: found
+    start: true
+"""
+
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+
+    assert flow.kickoff() == "found:ai agents"
+
+
+def test_tool_action_round_trips_with_inputs():
+    definition = FlowDefinition.from_dict(
+        {
+            "schema": "crewai.flow/v1",
+            "name": "ToolFlow",
+            "methods": {
+                "search": {
+                    "start": True,
+                    "do": {
+                        "call": "tool",
+                        "ref": f"{__name__}:StaticSearchTool",
+                        "with": {"search_query": "ai agents"},
+                    },
+                }
+            },
+        }
+    )
+
+    assert definition.to_dict()["methods"]["search"]["do"] == {
+        "call": "tool",
+        "ref": f"{__name__}:StaticSearchTool",
+        "with": {"search_query": "ai agents"},
+    }
+    assert Flow.from_definition(definition).kickoff() == "search:ai agents"
+
+
+def test_tool_action_requires_module_qualname_ref():
+    definition = FlowDefinition.from_dict(
+        {
+            "schema": "crewai.flow/v1",
+            "name": "ToolFlow",
+            "methods": {
+                "search": {
+                    "start": True,
+                    "do": {
+                        "call": "tool",
+                        "ref": f"{__name__}.StaticSearchTool",
+                        "with": {"search_query": "ai agents"},
+                    },
+                }
+            },
+        }
+    )
+
+    with pytest.raises(ValueError, match="expected 'module:qualname'"):
+        Flow.from_definition(definition)
+
+
+def test_code_action_rejects_tool_inputs():
+    with pytest.raises(ValidationError):
+        FlowDefinition.from_dict(
+            {
+                "schema": "crewai.flow/v1",
+                "name": "InvalidCodeActionFlow",
+                "methods": {
+                    "begin": {
+                        "start": True,
+                        "do": {
+                            "call": "code",
+                            "ref": f"{__name__}:ChainFlow.begin",
+                            "with": {"search_query": "ai agents"},
+                        },
+                    }
+                },
+            }
+        )
 
 
 def test_pydantic_state_from_ref_parity():

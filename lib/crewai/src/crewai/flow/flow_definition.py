@@ -28,6 +28,7 @@ FlowDefinitionCondition = str | dict[str, Any]
 
 __all__ = [
     "FlowActionDefinition",
+    "FlowCodeActionDefinition",
     "FlowConfigDefinition",
     "FlowConversationalDefinition",
     "FlowConversationalRouterDefinition",
@@ -38,6 +39,7 @@ __all__ = [
     "FlowMethodDefinition",
     "FlowPersistenceDefinition",
     "FlowStateDefinition",
+    "FlowToolActionDefinition",
 ]
 
 
@@ -142,11 +144,26 @@ class FlowHumanFeedbackDefinition(BaseModel):
         return _object_ref(value)
 
 
-class FlowActionDefinition(BaseModel):
-    """What a Flow method node executes, independent of when it fires."""
+class FlowCodeActionDefinition(BaseModel):
+    """A Flow method action that executes importable Python code."""
+
+    model_config = ConfigDict(extra="forbid")
 
     call: TypingLiteral["code"] = "code"
     ref: str
+
+
+class FlowToolActionDefinition(BaseModel):
+    """A Flow method action that invokes a CrewAI tool."""
+
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    call: TypingLiteral["tool"]
+    ref: str
+    with_: dict[str, Any] | None = Field(default=None, alias="with")
+
+
+FlowActionDefinition = FlowCodeActionDefinition | FlowToolActionDefinition
 
 
 class FlowMethodDefinition(BaseModel):
