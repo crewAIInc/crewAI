@@ -1686,8 +1686,7 @@ rag = [
     { name = "python-docx" },
 ]
 scrapegraph-py = [
-    { name = "scrapegraph-py", version = "1.47.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
-    { name = "scrapegraph-py", version = "2.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+    { name = "scrapegraph-py" },
 ]
 scrapfly-sdk = [
     { name = "scrapfly-sdk" },
@@ -1768,7 +1767,7 @@ requires-dist = [
     { name = "pytube", specifier = "~=15.0.0" },
     { name = "qdrant-client", marker = "extra == 'qdrant-client'", specifier = ">=1.12.1" },
     { name = "requests", specifier = ">=2.33.0,<3" },
-    { name = "scrapegraph-py", marker = "extra == 'scrapegraph-py'", specifier = ">=1.9.0" },
+    { name = "scrapegraph-py", marker = "extra == 'scrapegraph-py'", specifier = ">=1.9.0,<2" },
     { name = "scrapfly-sdk", marker = "extra == 'scrapfly-sdk'", specifier = ">=0.8.19" },
     { name = "selenium", marker = "extra == 'selenium'", specifier = ">=4.27.1" },
     { name = "serpapi", marker = "extra == 'serpapi'", specifier = ">=0.1.5" },
@@ -8276,42 +8275,17 @@ wheels = [
 name = "scrapegraph-py"
 version = "1.47.0"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version == '3.11.*' and platform_machine != 's390x'",
-    "python_full_version == '3.11.*' and platform_machine == 's390x'",
-    "python_full_version < '3.11' and platform_machine != 's390x'",
-    "python_full_version < '3.11' and platform_machine == 's390x'",
-]
 dependencies = [
-    { name = "aiohttp", marker = "python_full_version < '3.12'" },
-    { name = "beautifulsoup4", marker = "python_full_version < '3.12'" },
-    { name = "pydantic", marker = "python_full_version < '3.12'" },
-    { name = "python-dotenv", marker = "python_full_version < '3.12'" },
-    { name = "requests", marker = "python_full_version < '3.12'" },
-    { name = "toonify", marker = "python_full_version < '3.12'" },
+    { name = "aiohttp" },
+    { name = "beautifulsoup4" },
+    { name = "pydantic" },
+    { name = "python-dotenv" },
+    { name = "requests" },
+    { name = "toonify" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/5f/b4/9196574ac53c6c94fb311824e3f6e5e13191620fb9a09b056daf0e77a19d/scrapegraph_py-1.47.0.tar.gz", hash = "sha256:4794820d9dcdba2c6ee22b4ad0975843a10adb65e4831e680f846067e13c5aa9", size = 340039, upload-time = "2026-04-18T13:50:01.084Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e4/60/fefc1221b49b3910cd91751c98f14d5a4a5ea6d0fb8e51b63e246bdd1acf/scrapegraph_py-1.47.0-py3-none-any.whl", hash = "sha256:7edb0c095a6d6280c05aee22503672350ed9dd7c289354affeee06dc3323819c", size = 50968, upload-time = "2026-04-18T13:49:59.773Z" },
-]
-
-[[package]]
-name = "scrapegraph-py"
-version = "2.1.0"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.13' and platform_machine != 's390x'",
-    "python_full_version >= '3.13' and platform_machine == 's390x'",
-    "python_full_version == '3.12.*' and platform_machine != 's390x'",
-    "python_full_version == '3.12.*' and platform_machine == 's390x'",
-]
-dependencies = [
-    { name = "httpx", marker = "python_full_version >= '3.12'" },
-    { name = "pydantic", marker = "python_full_version >= '3.12'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/0d/4b/8b165cfb0d6b564cc69e4f58270bb54f2457c68d5c0fc648d547e3d0e207/scrapegraph_py-2.1.0.tar.gz", hash = "sha256:c4d1ed4d0c11c5c10e999d310ce1146f62809a91292b3d07d69b40c2a0954d75", size = 4876208, upload-time = "2026-04-21T12:53:48.428Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/2e/22/1d4b1430af1c007b095c4a4bd2af062d581e87be89a36166ab318d3e5224/scrapegraph_py-2.1.0-py3-none-any.whl", hash = "sha256:9bd9a6f6c30d44d362afc873aba61fd8cf066c62fe8dd83f0eb16f3d666c66ff", size = 15590, upload-time = "2026-04-21T12:53:43.662Z" },
 ]
 
 [[package]]
@@ -8925,7 +8899,7 @@ name = "toonify"
 version = "1.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "tiktoken", marker = "python_full_version < '3.12'" },
+    { name = "tiktoken" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ce/53/409a1dd7bcb52c74da019994cb866e875d0bf9020b89c7fcfcdea2866ce3/toonify-1.6.0.tar.gz", hash = "sha256:57bf6fbc9d73e463e8773c491123b233b0c79482235e0c27b908b4e58b54ec77", size = 30106, upload-time = "2026-02-06T16:00:02.622Z" }
 wheels = [
