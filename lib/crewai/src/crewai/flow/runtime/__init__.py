@@ -1654,7 +1654,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             metadata=context.metadata,
         )
         collapsed_outcome = result.outcome
-        resumed_method_output = result.output
+        resumed_method_output = (
+            result.output
+            if emit and isinstance(result, HumanFeedbackResult)
+            else result
+        )
 
         self._completed_methods.add(FlowMethodName(context.method_name))
 

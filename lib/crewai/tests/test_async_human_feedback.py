@@ -21,7 +21,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from pydantic import BaseModel
 
-from crewai.flow import Flow, start, listen, human_feedback
+from crewai.flow import Flow, HumanFeedbackResult, start, listen, human_feedback
 from crewai.flow.async_feedback import (
     ConsoleProvider,
     HumanFeedbackPending,
@@ -616,6 +616,45 @@ class TestFlowResumeWithFeedback:
             assert persistence.load_pending_feedback("resume-test-123") is None
 
     @patch("crewai.flow.runtime.crewai_event_bus.emit")
+    def test_terminal_resume_without_emit_returns_feedback_result(
+        self, mock_emit: MagicMock
+    ) -> None:
+        """Terminal resumed non-emit methods return the full feedback result."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "test_flows.db")
+            persistence = SQLiteFlowPersistence(db_path)
+
+            class TestFlow(Flow):
+                @start()
+                @human_feedback(message="Review this:", metadata={"stage": "draft"})
+                def generate(self):
+                    return {"content": "generated content"}
+
+            context = PendingFeedbackContext(
+                flow_id="terminal-non-emit-test-123",
+                flow_class="test.TestFlow",
+                method_name="generate",
+                method_output={"content": "generated content"},
+                message="Review this:",
+                metadata={"stage": "draft"},
+            )
+            persistence.save_pending_feedback(
+                flow_uuid="terminal-non-emit-test-123",
+                context=context,
+                state_data={"id": "terminal-non-emit-test-123"},
+            )
+
+            flow = TestFlow.from_pending("terminal-non-emit-test-123", persistence)
+            result = flow.resume("looks good!")
+
+            assert isinstance(result, HumanFeedbackResult)
+            assert result.output == {"content": "generated content"}
+            assert result.feedback == "looks good!"
+            assert result.outcome is None
+            assert result.metadata == {"stage": "draft"}
+            assert flow.method_outputs == [result]
+
+    @patch("crewai.flow.runtime.crewai_event_bus.emit")
     def test_resume_routing(self, mock_emit: MagicMock) -> None:
         """Test resume with routing."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -748,7 +787,11 @@ class TestFlowResumeWithFeedback:
             result = flow.resume("looks good")
 
             assert result == "downstream:generated content"
-            assert flow.state["seen_outputs"] == ["generated content"]
+            assert len(flow.state["seen_outputs"]) == 1
+            seen_output = flow.state["seen_outputs"][0]
+            assert isinstance(seen_output, HumanFeedbackResult)
+            assert seen_output.output == "generated content"
+            assert seen_output.feedback == "looks good"
 
 
 # Integration Tests with @human_feedback decorator
