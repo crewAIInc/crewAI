@@ -94,6 +94,26 @@ def test_optionsahoy_tool_missing_required_field_raises(tool):
         tool.run(calculator="qsbs", inputs={"stateCode": "CA"})
 
 
+def test_optionsahoy_tool_none_required_field_raises(tool):
+    # A required field present but None is stripped from the payload, so it must
+    # be treated as missing. terminationDate is the documented kept-null exception.
+    with pytest.raises(ValueError, match="missing required input field"):
+        tool.run(
+            calculator="nso",
+            inputs={
+                "shares": 1000,
+                "strike": None,
+                "currentPrice": 50,
+                "ordinaryIncome": 200000,
+                "filingStatus": "single",
+                "stateCode": "CA",
+                "stillEmployed": True,
+                "holdYears": 2,
+                "holdFunding": "cash",
+            },
+        )
+
+
 @patch("requests.post")
 def test_optionsahoy_tool_http_error_returns_error_json(mock_post, tool):
     error_response = MagicMock()
