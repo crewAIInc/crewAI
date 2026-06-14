@@ -1,0 +1,131 @@
+---
+title: iFlow Search Tools
+description: A suite of tools for the iFlow Search API — web search, image search, and web page fetching for AI agents.
+icon: magnifying-glass
+mode: "wide"
+---
+
+# iFlow Search Tools
+
+## Description
+
+CrewAI offers an **iFlow Search tool suite** for the [iFlow Search API (心流搜索)](https://platform.iflow.cn/docs/).
+Each tool targets a specific capability rather than a single catch-all search tool:
+
+| Tool | Capability | Use case |
+| --- | --- | --- |
+| `IFlowWebSearchTool` | Web search | Current information, URLs, snippets |
+| `IFlowImageSearchTool` | Image search | Pictures, diagrams, visual references |
+| `IFlowWebFetchTool` | Web fetch | Extract readable content from a URL |
+
+All tools share `IFlowSearchToolBase`, which wraps the [`iflow-search`](https://pypi.org/project/iflow-search/) SDK with lazy import, `IFLOW_API_KEY` resolution, and JSON output (`ensure_ascii=False` for multilingual results).
+
+<Note>
+  This is a native CrewAI `BaseTool` integration. It is **not** an AMP / Studio provider tile and does not require MCP stdio configuration. For MCP-based hosts, see the community MCP documentation route.
+</Note>
+
+## Installation
+
+Install CrewAI tools with the optional iFlow Search extra:
+
+```shell
+pip install 'crewai-tools[iflow-search]'
+```
+
+Or with uv:
+
+```shell
+uv add 'crewai-tools[iflow-search]'
+```
+
+## Getting Started
+
+1. **Install** — `crewai-tools[iflow-search]` pulls in both the tool classes and the `iflow-search` SDK.
+2. **Get an API key** — sign up at [platform.iflow.cn](https://platform.iflow.cn/docs/).
+3. **Set the environment variable** — store your key as `IFLOW_API_KEY`, or pass `api_key=` when constructing a tool.
+
+```bash
+export IFLOW_API_KEY='YOUR_IFLOW_API_KEY'
+```
+
+Optional:
+
+```bash
+export IFLOW_BASE_URL='https://platform.iflow.cn'
+```
+
+## Quick Examples
+
+### Web Search
+
+```python Code
+from crewai_tools import IFlowWebSearchTool
+
+tool = IFlowWebSearchTool()
+results = tool.run(query="CrewAI multi-agent framework", count=5)
+print(results)
+```
+
+### Image Search
+
+```python Code
+from crewai_tools import IFlowImageSearchTool
+
+tool = IFlowImageSearchTool()
+results = tool.run(query="agent orchestration diagram")
+print(results)
+```
+
+### Web Fetch
+
+```python Code
+from crewai_tools import IFlowWebFetchTool
+
+tool = IFlowWebFetchTool()
+results = tool.run(url="https://docs.crewai.com")
+print(results)
+```
+
+## Agent Example
+
+```python Code
+import os
+
+from crewai import Agent, Crew, Task
+from crewai_tools import IFlowWebSearchTool, IFlowWebFetchTool
+
+# os.environ["IFLOW_API_KEY"] = "YOUR_IFLOW_API_KEY"
+
+researcher = Agent(
+    role="Web Researcher",
+    goal="Find current information and read source pages",
+    backstory="You use iFlow Search tools for grounded web research.",
+    tools=[IFlowWebSearchTool(), IFlowWebFetchTool()],
+    verbose=True,
+)
+
+task = Task(
+    description="Search for the latest CrewAI release notes and summarize the top result.",
+    expected_output="A short summary with the source URL.",
+    agent=researcher,
+)
+
+crew = Crew(agents=[researcher], tasks=[task], verbose=True)
+print(crew.kickoff())
+```
+
+## Configuration
+
+Every tool accepts these constructor options:
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `api_key` | `str \| None` | iFlow API key. Falls back to `IFLOW_API_KEY`. |
+| `base_url` | `str \| None` | Optional API base URL override. |
+| `timeout` | `float \| None` | Request timeout in seconds. |
+| `client` | `IFlowSearchClient \| None` | Pre-built SDK client (useful for tests). |
+
+## Related
+
+- Standalone adapter: [`iflow-search-crewai`](https://pypi.org/project/iflow-search-crewai/) on PyPI
+- iFlow API docs: https://platform.iflow.cn/docs/

@@ -72,10 +72,12 @@ class IFlowSearchToolBase(BaseTool):
         if not IFLOW_AVAILABLE:
             raise ImportError(
                 "The 'iflow-search' package is required to use the iFlow Search tools. "
-                "Install it with: pip install iflow-search (or uv add iflow-search)."
+                "Install with: pip install 'crewai-tools[iflow-search]' "
+                "(or pip install iflow-search)."
             )
         self.client = IFlowSearchClient(
             api_key=api_key,
+            source="crewai",
             integration_name=_INTEGRATION_NAME,
             base_url=self.base_url,
             timeout=self.timeout,
