@@ -18,6 +18,7 @@ from crewai.events.listeners.tracing.trace_batch_manager import TraceBatchManage
 from crewai.events.listeners.tracing.types import TraceEvent
 from crewai.events.listeners.tracing.utils import (
     is_tracing_enabled_in_context,
+    is_tui_mode,
     safe_serialize_to_dict,
     should_auto_collect_first_time_traces,
     should_enable_tracing,
@@ -212,8 +213,8 @@ class TraceCollectionListener(BaseEventListener):
             not should_enable_tracing()
             and not is_tracing_enabled_in_context()
             and not should_auto_collect_first_time_traces()
+            and not is_tui_mode()
         ):
-            self._listeners_setup = True
             return
 
         self._register_flow_event_handlers(crewai_event_bus)
@@ -297,6 +298,12 @@ class TraceCollectionListener(BaseEventListener):
             if self._nested_in_flow_execution():
                 return
             if self.batch_manager.batch_owner_type == "crew":
+                if is_tui_mode():
+                    if self.first_time_handler.is_first_time:
+                        self.first_time_handler.mark_events_collected()
+                    elif is_tracing_enabled_in_context() or should_enable_tracing():
+                        self.batch_manager.finalize_batch()
+                    return
                 if self.first_time_handler.is_first_time:
                     self.first_time_handler.mark_events_collected()
                     self.first_time_handler.handle_execution_completion()
@@ -309,6 +316,12 @@ class TraceCollectionListener(BaseEventListener):
             if self._should_defer_session_finalization():
                 return
             if self._nested_in_flow_execution():
+                return
+            if is_tui_mode():
+                if self.first_time_handler.is_first_time:
+                    self.first_time_handler.mark_events_collected()
+                elif is_tracing_enabled_in_context() or should_enable_tracing():
+                    self.batch_manager.finalize_batch()
                 return
             if self.first_time_handler.is_first_time:
                 self.first_time_handler.mark_events_collected()

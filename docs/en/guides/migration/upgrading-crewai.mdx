@@ -141,7 +141,7 @@ crew = Crew(
     process=Process.sequential,   # or Process.hierarchical
     memory=True,
     cache=True,
-    embedder={"provider": "openai", "config": {"model": "text-embedding-3-small"}},
+    embedder={"provider": "openai", "config": {"model": "text-embedding-3-large"}},
 )
 ```
 
@@ -173,7 +173,7 @@ write = Task(
 
 ### Memory & embedder config {#memory-embedder-config}
 
-If `memory=True` and you're not using the default OpenAI embeddings, you must pass an `embedder`:
+If `memory=True` and you're not using the default OpenAI `text-embedding-3-large` embeddings, you must pass an `embedder`:
 
 ```python
 crew = Crew(
@@ -187,4 +187,4 @@ crew = Crew(
 )
 ```
 
-Set the relevant provider credentials (`OPENAI_API_KEY`, `OLLAMA_HOST`, etc.) in your `.env` file. Memory storage paths are project-local by default — delete the project's memory directory if you change embedders, since dimensions don't mix.
+Set the relevant provider credentials (`OPENAI_API_KEY`, `OLLAMA_HOST`, etc.) in your `.env` file. Memory storage paths are project-local by default. Existing local memory stores created with 1536-dimensional embeddings may not be compatible with the default OpenAI `text-embedding-3-large` embedder, which uses 3072 dimensions. If you hit a dimension mismatch, delete the project's memory directory, run `crewai reset-memories -m`, or explicitly configure the older embedder model until you migrate.

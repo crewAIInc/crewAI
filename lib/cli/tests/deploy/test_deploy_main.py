@@ -150,6 +150,7 @@ class TestDeployCommand(unittest.TestCase):
     @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
     @patch("crewai_cli.deploy.main.git.Repository.origin_url")
     @patch("builtins.input")
+    @pytest.mark.timeout(180)
     def test_create_crew(self, mock_input, mock_git_origin_url, mock_fetch_env):
         mock_fetch_env.return_value = {"ENV_VAR": "value"}
         mock_git_origin_url.return_value = "https://github.com/test/repo.git"
@@ -164,6 +165,40 @@ class TestDeployCommand(unittest.TestCase):
             self.deploy_command.create_crew(skip_validate=True)
             self.assertIn("Deployment created successfully!", fake_out.getvalue())
             self.assertIn("new-uuid", fake_out.getvalue())
+
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    def test_create_crew_without_git_repo_shows_setup_help(
+        self, mock_repository, mock_fetch_env
+    ):
+        mock_fetch_env.return_value = {"ENV_VAR": "value"}
+        mock_repository.side_effect = ValueError("not a Git repository")
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command.create_crew(skip_validate=True)
+            output = fake_out.getvalue()
+
+        self.assertIn("Deployment requires a Git repository", output)
+        self.assertIn("git init", output)
+        self.assertIn("git remote add origin <your-repo-url>", output)
+        self.mock_client.create_crew.assert_not_called()
+
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    def test_create_crew_without_remote_shows_remote_help(
+        self, mock_repository, mock_fetch_env
+    ):
+        mock_fetch_env.return_value = {"ENV_VAR": "value"}
+        mock_repository.return_value.origin_url.return_value = None
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command.create_crew(skip_validate=True)
+            output = fake_out.getvalue()
+
+        self.assertIn("No remote repository URL found.", output)
+        self.assertIn("git remote add origin <your-repo-url>", output)
+        self.assertIn("git push -u origin HEAD", output)
+        self.mock_client.create_crew.assert_not_called()
 
     def test_list_crews(self):
         mock_response = MagicMock()

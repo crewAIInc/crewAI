@@ -1066,7 +1066,11 @@ class TestLLMObjectPreservedInContext:
             persistence = SQLiteFlowPersistence(db_path)
 
             from crewai.llm import LLM
-            mock_llm_obj = LLM(model="gemini-2.0-flash", provider="gemini")
+            mock_llm_obj = LLM(
+                model="llama3",
+                provider="ollama",
+                base_url="http://localhost:11434",
+            )
 
             class PausingProvider:
                 def __init__(self, persistence: SQLiteFlowPersistence):
@@ -1116,19 +1120,19 @@ class TestLLMObjectPreservedInContext:
 
             assert provider.captured_context is not None
             assert isinstance(provider.captured_context.llm, dict)
-            assert provider.captured_context.llm["model"] == "gemini/gemini-2.0-flash"
+            assert provider.captured_context.llm["model"] == "ollama/llama3"
 
             flow_id = result.context.flow_id
             loaded = persistence.load_pending_feedback(flow_id)
             assert loaded is not None
             _, loaded_context = loaded
             assert isinstance(loaded_context.llm, dict)
-            assert loaded_context.llm["model"] == "gemini/gemini-2.0-flash"
+            assert loaded_context.llm["model"] == "ollama/llama3"
 
             flow2 = TestFlow.from_pending(flow_id, persistence)
             assert flow2._pending_feedback_context is not None
             assert isinstance(flow2._pending_feedback_context.llm, dict)
-            assert flow2._pending_feedback_context.llm["model"] == "gemini/gemini-2.0-flash"
+            assert flow2._pending_feedback_context.llm["model"] == "ollama/llama3"
 
             with patch.object(flow2, "_collapse_to_outcome", return_value="approved") as mock_collapse:
                 flow2.resume("this looks good, proceed!")
@@ -1140,7 +1144,7 @@ class TestLLMObjectPreservedInContext:
             assert call_kwargs.kwargs["outcomes"] == ["needs_changes", "approved"]
             # LLM should be a live object (from _human_feedback_llm) or reconstructed, not None
             assert call_kwargs.kwargs["llm"] is not None
-            assert getattr(call_kwargs.kwargs["llm"], "model", None) == "gemini-2.0-flash"
+            assert getattr(call_kwargs.kwargs["llm"], "model", None) == "llama3"
             assert flow2.last_human_feedback.outcome == "approved"
             assert flow2.result_path == "approved"
 
@@ -1172,20 +1176,24 @@ class TestLLMObjectPreservedInContext:
         from crewai.flow.human_feedback import _serialize_llm_for_context
         from crewai.llm import LLM
 
-        llm = LLM(model="gemini-2.0-flash", provider="gemini")
+        llm = LLM(
+            model="llama3",
+            provider="ollama",
+            base_url="http://localhost:11434",
+        )
         result = _serialize_llm_for_context(llm)
         assert isinstance(result, dict)
-        assert result["model"] == "gemini/gemini-2.0-flash"
+        assert result["model"] == "ollama/llama3"
 
     def test_provider_prefix_not_doubled_when_already_present(self) -> None:
         """Test that provider prefix is not added when model already has a slash."""
         from crewai.flow.human_feedback import _serialize_llm_for_context
         from crewai.llm import LLM
 
-        llm = LLM(model="gemini/gemini-2.0-flash")
+        llm = LLM(model="ollama/llama3", base_url="http://localhost:11434")
         result = _serialize_llm_for_context(llm)
         assert isinstance(result, dict)
-        assert result["model"] == "gemini/gemini-2.0-flash"
+        assert result["model"] == "ollama/llama3"
 
     def test_no_provider_attr_falls_back_to_bare_model(self) -> None:
         """Test that objects without to_config_dict fall back to model string."""

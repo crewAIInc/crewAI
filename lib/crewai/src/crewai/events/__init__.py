@@ -116,6 +116,11 @@ if TYPE_CHECKING:
         MemorySaveFailedEvent,
         MemorySaveStartedEvent,
     )
+    from crewai.events.types.observation_events import (
+        PlanStepCompletedEvent,
+        PlanStepEvent,
+        PlanStepStartedEvent,
+    )
     from crewai.events.types.reasoning_events import (
         AgentReasoningCompletedEvent,
         AgentReasoningFailedEvent,
@@ -220,6 +225,9 @@ _LAZY_EVENT_MAPPING: dict[str, str] = {
     "MemorySaveCompletedEvent": "crewai.events.types.memory_events",
     "MemorySaveFailedEvent": "crewai.events.types.memory_events",
     "MemorySaveStartedEvent": "crewai.events.types.memory_events",
+    "PlanStepCompletedEvent": "crewai.events.types.observation_events",
+    "PlanStepEvent": "crewai.events.types.observation_events",
+    "PlanStepStartedEvent": "crewai.events.types.observation_events",
     "AgentReasoningCompletedEvent": "crewai.events.types.reasoning_events",
     "AgentReasoningFailedEvent": "crewai.events.types.reasoning_events",
     "AgentReasoningStartedEvent": "crewai.events.types.reasoning_events",
@@ -349,6 +357,9 @@ __all__ = [
     "MethodExecutionFailedEvent",
     "MethodExecutionFinishedEvent",
     "MethodExecutionStartedEvent",
+    "PlanStepCompletedEvent",
+    "PlanStepEvent",
+    "PlanStepStartedEvent",
     "ReasoningEvent",
     "SkillActivatedEvent",
     "SkillDiscoveryCompletedEvent",

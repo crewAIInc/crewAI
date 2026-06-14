@@ -3,42 +3,94 @@ from __future__ import annotations
 from importlib.metadata import version as get_version
 import os
 import subprocess
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import click
 from crewai_core.token_manager import TokenManager
 
-from crewai_cli.add_crew_to_flow import add_crew_to_flow
-from crewai_cli.authentication.main import AuthenticationCommand
 from crewai_cli.config import Settings
-from crewai_cli.create_crew import create_crew
-from crewai_cli.create_flow import create_flow
-from crewai_cli.crew_chat import run_chat
-from crewai_cli.deploy.main import DeployCommand
-from crewai_cli.enterprise.main import EnterpriseConfigureCommand
-from crewai_cli.evaluate_crew import evaluate_crew
-from crewai_cli.experimental.skills.main import SkillCommand
-from crewai_cli.install_crew import install_crew
-from crewai_cli.kickoff_flow import kickoff_flow
-from crewai_cli.organization.main import OrganizationCommand
-from crewai_cli.plot_flow import plot_flow
-from crewai_cli.remote_template.main import TemplateCommand
-from crewai_cli.replay_from_task import replay_task_command
-from crewai_cli.reset_memories_command import reset_memories_command
-from crewai_cli.run_crew import run_crew
-from crewai_cli.run_flow_definition import run_flow_definition
-from crewai_cli.settings.main import SettingsCommand
-from crewai_cli.task_outputs import load_task_outputs
-from crewai_cli.tools.main import ToolCommand
-from crewai_cli.train_crew import train_crew
-from crewai_cli.triggers.main import TriggersCommand
-from crewai_cli.update_crew import update_crew
 from crewai_cli.user_data import (
     _load_user_data,
     is_tracing_enabled,
     update_user_data,
 )
-from crewai_cli.utils import build_env_with_all_tool_credentials, read_toml
+from crewai_cli.utils import (
+    build_env_with_all_tool_credentials,
+    enable_prompt_line_editing,
+    read_toml,
+)
+
+
+def train_crew(*args: Any, **kwargs: Any) -> Any:
+    from crewai_cli.train_crew import train_crew as _train_crew
+
+    return _train_crew(*args, **kwargs)
+
+
+def evaluate_crew(*args: Any, **kwargs: Any) -> Any:
+    from crewai_cli.evaluate_crew import evaluate_crew as _evaluate_crew
+
+    return _evaluate_crew(*args, **kwargs)
+
+
+def replay_task_command(*args: Any, **kwargs: Any) -> Any:
+    from crewai_cli.replay_from_task import replay_task_command as _replay_task_command
+
+    return _replay_task_command(*args, **kwargs)
+
+
+def run_flow_definition(*args: Any, **kwargs: Any) -> Any:
+    from crewai_cli.run_flow_definition import (
+        run_flow_definition as _run_flow_definition,
+    )
+
+    return _run_flow_definition(*args, **kwargs)
+
+
+def run_crew(*args: Any, **kwargs: Any) -> Any:
+    from crewai_cli.run_crew import run_crew as _run_crew
+
+    return _run_crew(*args, **kwargs)
+
+
+if TYPE_CHECKING:
+    # mypy sees the real classes; at runtime the shims below defer the
+    # heavy imports until a command actually instantiates them.
+    from crewai_cli.authentication.main import AuthenticationCommand
+    from crewai_cli.deploy.main import DeployCommand
+    from crewai_cli.organization.main import OrganizationCommand
+    from crewai_cli.remote_template.main import TemplateCommand
+else:
+
+    class AuthenticationCommand:
+        def __new__(cls, *args: Any, **kwargs: Any) -> Any:
+            from crewai_cli.authentication.main import (
+                AuthenticationCommand as _AuthenticationCommand,
+            )
+
+            return _AuthenticationCommand(*args, **kwargs)
+
+    class DeployCommand:
+        def __new__(cls, *args: Any, **kwargs: Any) -> Any:
+            from crewai_cli.deploy.main import DeployCommand as _DeployCommand
+
+            return _DeployCommand(*args, **kwargs)
+
+    class TemplateCommand:
+        def __new__(cls, *args: Any, **kwargs: Any) -> Any:
+            from crewai_cli.remote_template.main import (
+                TemplateCommand as _TemplateCommand,
+            )
+
+            return _TemplateCommand(*args, **kwargs)
+
+    class OrganizationCommand:
+        def __new__(cls, *args: Any, **kwargs: Any) -> Any:
+            from crewai_cli.organization.main import (
+                OrganizationCommand as _OrganizationCommand,
+            )
+
+            return _OrganizationCommand(*args, **kwargs)
 
 
 def _get_cli_version() -> str:
@@ -91,17 +143,57 @@ def uv(uv_args: tuple[str, ...]) -> None:
 
 
 @crewai.command()
-@click.argument("type", type=click.Choice(["crew", "flow"]))
-@click.argument("name")
+@click.argument(
+    "type", required=False, default=None, type=click.Choice(["crew", "flow"])
+)
+@click.argument("name", required=False, default=None)
 @click.option("--provider", type=str, help="The provider to use for the crew")
 @click.option("--skip_provider", is_flag=True, help="Skip provider validation")
+@click.option(
+    "--classic",
+    is_flag=True,
+    help="Use classic Python/YAML project structure instead of JSON",
+)
 def create(
-    type: str, name: str, provider: str | None, skip_provider: bool = False
+    type: str | None,
+    name: str | None,
+    provider: str | None,
+    skip_provider: bool = False,
+    classic: bool = False,
 ) -> None:
     """Create a new crew, or flow."""
+    if not type:
+        from crewai_cli.tui_picker import pick
+
+        options = [
+            ("crew", "A team of AI agents working together"),
+            (
+                "flow",
+                "A deterministic workflow with full control over agents and crews",
+            ),
+        ]
+        type = pick("What would you like to create?", options)
+        if type is None:
+            raise SystemExit(0)
+        click.echo()
+    if not name:
+        enable_prompt_line_editing()
+        name = click.prompt(
+            click.style(f"  Name of your {type}", fg="cyan", bold=True),
+            prompt_suffix=click.style(" › ", fg="bright_white"),  # noqa: RUF001
+        )
     if type == "crew":
-        create_crew(name, provider, skip_provider)
+        if classic:
+            from crewai_cli.create_crew import create_crew
+
+            create_crew(name, provider, skip_provider)
+        else:
+            from crewai_cli.create_json_crew import create_json_crew
+
+            create_json_crew(name, provider, skip_provider)
     elif type == "flow":
+        from crewai_cli.create_flow import create_flow
+
         create_flow(name)
     else:
         click.secho("Error: Invalid type. Must be 'crew' or 'flow'.", fg="red")
@@ -186,6 +278,8 @@ def replay(task_id: str, trained_agents_file: str | None) -> None:
 def log_tasks_outputs() -> None:
     """Retrieve your latest crew.kickoff() task outputs."""
     try:
+        from crewai_cli.task_outputs import load_task_outputs
+
         tasks = load_task_outputs()
 
         if not tasks:
@@ -274,6 +368,8 @@ def reset_memories(
                 "Please specify at least one memory type to reset using the appropriate flags."
             )
             return
+        from crewai_cli.reset_memories_command import reset_memories_command
+
         reset_memories_command(memory, knowledge, agent_knowledge, kickoff_outputs, all)
     except Exception as e:
         click.echo(f"An error occurred while resetting memories: {e}", err=True)
@@ -296,7 +392,7 @@ def reset_memories(
     "--embedder-model",
     type=str,
     default=None,
-    help="Embedder model name (e.g. text-embedding-3-small, gemini-embedding-001).",
+    help="Embedder model name (e.g. text-embedding-3-large, gemini-embedding-001).",
 )
 @click.option(
     "--embedder-config",
@@ -351,7 +447,7 @@ def memory(
     "-m",
     "--model",
     type=str,
-    default="gpt-4o-mini",
+    default="gpt-5.4-mini",
     help="LLM Model to run the tests on the Crew. For now only accepting only OpenAI models.",
 )
 @click.option(
@@ -382,6 +478,8 @@ def test(n_iterations: int, model: str, trained_agents_file: str | None) -> None
 @click.pass_context
 def install(context: click.Context) -> None:
     """Install the Crew."""
+    from crewai_cli.install_crew import install_crew
+
     install_crew(context.args)
 
 
@@ -415,7 +513,9 @@ def install(context: click.Context) -> None:
     help='Experimental: JSON object passed to flow.kickoff(), e.g. \'{"topic":"AI"}\'.',
 )
 def run(
-    trained_agents_file: str | None, definition: str | None, inputs: str | None
+    trained_agents_file: str | None,
+    definition: str | None,
+    inputs: str | None,
 ) -> None:
     """Run the Crew or Flow."""
     if inputs is not None and definition is None:
@@ -435,6 +535,8 @@ def run(
 @crewai.command()
 def update() -> None:
     """Update the pyproject.toml of the Crew project to use uv."""
+    from crewai_cli.update_crew import update_crew
+
     update_crew()
 
 
@@ -544,6 +646,8 @@ def tool() -> None:
 @tool.command(name="create")
 @click.argument("handle")
 def tool_create(handle: str) -> None:
+    from crewai_cli.tools.main import ToolCommand
+
     tool_cmd = ToolCommand()
     tool_cmd.create(handle)
 
@@ -551,6 +655,8 @@ def tool_create(handle: str) -> None:
 @tool.command(name="install")
 @click.argument("handle")
 def tool_install(handle: str) -> None:
+    from crewai_cli.tools.main import ToolCommand
+
     tool_cmd = ToolCommand()
     tool_cmd.login()
     tool_cmd.install(handle)
@@ -567,6 +673,8 @@ def tool_install(handle: str) -> None:
 @click.option("--public", "is_public", flag_value=True, default=False)
 @click.option("--private", "is_public", flag_value=False)
 def tool_publish(is_public: bool, force: bool) -> None:
+    from crewai_cli.tools.main import ToolCommand
+
     tool_cmd = ToolCommand()
     tool_cmd.login()
     tool_cmd.publish(is_public, force)
@@ -599,6 +707,8 @@ def skill() -> None:
     help="Create skill in current dir instead of ./skills/",
 )
 def skill_create(name: str, in_project: bool) -> None:
+    from crewai_cli.experimental.skills.main import SkillCommand
+
     skill_cmd = SkillCommand()
     skill_cmd.create(name, in_project=in_project)
 
@@ -606,6 +716,8 @@ def skill_create(name: str, in_project: bool) -> None:
 @skill.command(name="install")
 @click.argument("ref")
 def skill_install(ref: str) -> None:
+    from crewai_cli.experimental.skills.main import SkillCommand
+
     skill_cmd = SkillCommand()
     skill_cmd.install(ref)
 
@@ -622,6 +734,8 @@ def skill_install(ref: str) -> None:
 @click.option("--private", "is_public", flag_value=False)
 @click.option("--org", default=None, help="Organisation slug (overrides settings).")
 def skill_publish(is_public: bool, org: str | None, force: bool) -> None:
+    from crewai_cli.experimental.skills.main import SkillCommand
+
     skill_cmd = SkillCommand()
     skill_cmd.publish(is_public, org=org, force=force)
 
@@ -629,6 +743,8 @@ def skill_publish(is_public: bool, org: str | None, force: bool) -> None:
 @skill.command(name="list")
 def skill_list() -> None:
     """List locally installed skills."""
+    from crewai_cli.experimental.skills.main import SkillCommand
+
     skill_cmd = SkillCommand()
     skill_cmd.list_cached()
 
@@ -668,6 +784,8 @@ def flow() -> None:
 @flow.command(name="kickoff")
 def flow_run() -> None:
     """Kickoff the Flow."""
+    from crewai_cli.kickoff_flow import kickoff_flow
+
     click.echo("Running the Flow")
     kickoff_flow()
 
@@ -675,6 +793,8 @@ def flow_run() -> None:
 @flow.command(name="plot")
 def flow_plot() -> None:
     """Plot the Flow."""
+    from crewai_cli.plot_flow import plot_flow
+
     click.echo("Plotting the Flow")
     plot_flow()
 
@@ -683,6 +803,8 @@ def flow_plot() -> None:
 @click.argument("crew_name")
 def flow_add_crew(crew_name: str) -> None:
     """Add a crew to an existing flow."""
+    from crewai_cli.add_crew_to_flow import add_crew_to_flow
+
     click.echo(f"Adding crew {crew_name} to the flow")
     add_crew_to_flow(crew_name)
 
@@ -695,6 +817,8 @@ def triggers() -> None:
 @triggers.command(name="list")
 def triggers_list() -> None:
     """List all available triggers from integrations."""
+    from crewai_cli.triggers.main import TriggersCommand
+
     triggers_cmd = TriggersCommand()
     triggers_cmd.list_triggers()
 
@@ -703,6 +827,8 @@ def triggers_list() -> None:
 @click.argument("trigger_path")
 def triggers_run(trigger_path: str) -> None:
     """Execute crew with trigger payload. Format: app_slug/trigger_slug"""
+    from crewai_cli.triggers.main import TriggersCommand
+
     triggers_cmd = TriggersCommand()
     triggers_cmd.execute_with_trigger(trigger_path)
 
@@ -715,6 +841,8 @@ def chat() -> None:
     click.secho(
         "\nStarting a conversation with the Crew\nType 'exit' or Ctrl+C to quit.\n",
     )
+    from crewai_cli.crew_chat import run_chat
+
     run_chat()
 
 
@@ -754,6 +882,8 @@ def enterprise() -> None:
 @click.argument("enterprise_url")
 def enterprise_configure(enterprise_url: str) -> None:
     """Configure CrewAI AMP OAuth2 settings from the provided Enterprise URL."""
+    from crewai_cli.enterprise.main import EnterpriseConfigureCommand
+
     enterprise_command = EnterpriseConfigureCommand()
     enterprise_command.configure(enterprise_url)
 
@@ -766,6 +896,8 @@ def config() -> None:
 @config.command("list")
 def config_list() -> None:
     """List all CLI configuration parameters."""
+    from crewai_cli.settings.main import SettingsCommand
+
     config_command = SettingsCommand()
     config_command.list()
 
@@ -775,6 +907,8 @@ def config_list() -> None:
 @click.argument("value")
 def config_set(key: str, value: str) -> None:
     """Set a CLI configuration parameter."""
+    from crewai_cli.settings.main import SettingsCommand
+
     config_command = SettingsCommand()
     config_command.set(key, value)
 
@@ -782,6 +916,8 @@ def config_set(key: str, value: str) -> None:
 @config.command("reset")
 def config_reset() -> None:
     """Reset all CLI configuration parameters to default values."""
+    from crewai_cli.settings.main import SettingsCommand
+
     config_command = SettingsCommand()
     config_command.reset_all_settings()
 

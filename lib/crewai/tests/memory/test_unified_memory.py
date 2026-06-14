@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 from pathlib import Path
+import threading
 from unittest.mock import MagicMock
 
 import pytest
@@ -489,8 +490,8 @@ def test_composite_score_reranks_results(
     """Same semantic score: high-importance recent memory ranks first."""
     from crewai.memory.unified_memory import Memory
 
-    # Use same dim as default LanceDB (1536) so storage does not overwrite embedding
-    emb = [0.1] * 1536
+    # Use same dim as default LanceDB (3072) so storage does not overwrite embedding
+    emb = [0.1] * 3072
     mem = Memory(
         storage=str(tmp_path / "rerank_db"),
         llm=MagicMock(),
@@ -972,6 +973,42 @@ def test_recall_drains_pending_writes(tmp_path: Path, mock_embedder: MagicMock) 
     matches = mem.recall("Python", scope="/test", limit=5, depth="shallow")
     assert len(matches) >= 1
     assert "Python" in matches[0].record.content
+
+
+def test_drain_writes_reports_background_save_failure_without_raising(
+    tmp_path: Path, mock_embedder: MagicMock
+) -> None:
+    """Background memory failures should be reported without failing cleanup."""
+    from crewai.events.event_bus import crewai_event_bus
+    from crewai.events.types.memory_events import MemorySaveFailedEvent
+    from crewai.memory.unified_memory import Memory
+
+    failure_seen = threading.Event()
+    failures: list[MemorySaveFailedEvent] = []
+    mem = Memory(
+        storage=str(tmp_path / "db"),
+        llm=MagicMock(),
+        embedder=mock_embedder,
+    )
+
+    def fail_save() -> None:
+        raise ValueError("invalid model ID")
+
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(MemorySaveFailedEvent)
+        def on_memory_save_failed(_source, event):
+            failures.append(event)
+            failure_seen.set()
+
+        mem._submit_save(fail_save)
+        mem.drain_writes()
+
+        assert failure_seen.wait(timeout=2)
+
+    assert failures
+    assert failures[0].value == "background save"
+    assert failures[0].error == "invalid model ID"
 
 
 def test_close_drains_and_shuts_down(tmp_path: Path, mock_embedder: MagicMock) -> None:
