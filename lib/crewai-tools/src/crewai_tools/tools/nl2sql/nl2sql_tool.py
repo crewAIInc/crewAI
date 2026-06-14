@@ -463,8 +463,7 @@ class NL2SQLTool(BaseTool):
             self._validate_query(sql_query)
             if self.require_approval and not self._request_approval(sql_query):
                 return (
-                    f"Query execution was rejected by the human reviewer: "
-                    f"{sql_query}"
+                    f"Query execution was rejected by the human reviewer: {sql_query}"
                 )
             data = self.execute_sql(sql_query)
         except ValueError:
