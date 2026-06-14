@@ -96,6 +96,53 @@ crew = Crew(
 result = crew.kickoff()
 ```
 
+### Building Tools That Return Multimodal Content
+
+You can build custom tools that pass images, audio, video, or PDF files directly to the LLM by returning a `MultimodalToolResult`. The files are automatically injected into the conversation in the correct provider format — no special agent configuration needed.
+
+**Installation prerequisite**: `crewai-files` must be installed (`pip install crewai-files`).
+
+```python
+from crewai.tools import BaseTool, MultimodalToolResult
+from crewai_files import ImageFile
+
+class ScreenshotTool(BaseTool):
+    name: str = "take_screenshot"
+    description: str = "Capture a screenshot of a URL and return it to the LLM"
+
+    def _run(self, url: str) -> MultimodalToolResult:
+        image_data = capture_screenshot(url)  # returns bytes
+        return MultimodalToolResult(
+            text="Screenshot captured successfully",
+            files={"screenshot": ImageFile(source=image_data)},
+        )
+```
+
+The `files` dict maps arbitrary key names to any `crewai_files` file object (`ImageFile`, `AudioFile`, `VideoFile`, `PDFFile`, `TextFile`, or the generic `File`). All files in the dict are forwarded to the LLM alongside the `text` observation.
+
+**Supported file sources**:
+- `bytes` — raw binary content
+- `str` / `pathlib.Path` — local file path
+- URL string starting with `http://` or `https://` — remote resource
+
+```python
+# From bytes
+ImageFile(source=raw_bytes)
+
+# From a local path
+ImageFile(source="/path/to/image.png")
+
+# From a URL
+ImageFile(source="https://example.com/image.png")
+```
+
+**Returning a file directly**: As an alternative to `MultimodalToolResult`, a tool can return a single `FileInput` object directly and CrewAI will wrap it automatically:
+
+```python
+def _run(self, query: str) -> ImageFile:
+    return ImageFile(source=generate_image(query))
+```
+
 ### Tool Details
 
 When working with multimodal agents, the `AddImageTool` is automatically configured with the following schema:

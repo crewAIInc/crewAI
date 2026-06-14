@@ -96,6 +96,53 @@ crew = Crew(
 result = crew.kickoff()
 ```
 
+### Criando Ferramentas que Retornam Conteúdo Multimodal
+
+Você pode criar ferramentas personalizadas que passam imagens, áudio, vídeo ou arquivos PDF diretamente para o LLM retornando um `MultimodalToolResult`. Os arquivos são injetados automaticamente na conversa no formato correto do provedor — sem necessidade de configuração especial do agente.
+
+**Pré-requisito de instalação**: `crewai-files` deve estar instalado (`pip install crewai-files`).
+
+```python
+from crewai.tools import BaseTool, MultimodalToolResult
+from crewai_files import ImageFile
+
+class ScreenshotTool(BaseTool):
+    name: str = "take_screenshot"
+    description: str = "Capture a screenshot of a URL and return it to the LLM"
+
+    def _run(self, url: str) -> MultimodalToolResult:
+        image_data = capture_screenshot(url)  # returns bytes
+        return MultimodalToolResult(
+            text="Screenshot captured successfully",
+            files={"screenshot": ImageFile(source=image_data)},
+        )
+```
+
+O dicionário `files` mapeia nomes de chaves arbitrárias para qualquer objeto de arquivo `crewai_files` (`ImageFile`, `AudioFile`, `VideoFile`, `PDFFile`, `TextFile`, ou o `File` genérico). Todos os arquivos no dicionário são encaminhados ao LLM juntamente com a observação `text`.
+
+**Fontes de arquivo suportadas**:
+- `bytes` — conteúdo binário bruto
+- `str` / `pathlib.Path` — caminho de arquivo local
+- String de URL começando com `http://` ou `https://` — recurso remoto
+
+```python
+# From bytes
+ImageFile(source=raw_bytes)
+
+# From a local path
+ImageFile(source="/path/to/image.png")
+
+# From a URL
+ImageFile(source="https://example.com/image.png")
+```
+
+**Retornando um arquivo diretamente**: Como alternativa ao `MultimodalToolResult`, uma ferramenta pode retornar um único objeto `FileInput` diretamente e o CrewAI o envolverá automaticamente:
+
+```python
+def _run(self, query: str) -> ImageFile:
+    return ImageFile(source=generate_image(query))
+```
+
 ### Detalhes da Ferramenta
 
 Ao trabalhar com agentes multimodais, a `AddImageTool` é automaticamente configurada com o seguinte esquema:

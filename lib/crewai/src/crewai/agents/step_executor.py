@@ -28,6 +28,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.tools.tool_types import ToolResult
 from crewai.utilities.agent_utils import (
     build_tool_calls_assistant_message,
     check_native_tool_support,
@@ -311,16 +312,21 @@ class StepExecutor:
             if isinstance(formatted, AgentAction):
                 tool_calls_made.append(formatted.tool)
                 tool_result = self._execute_text_tool_with_events(formatted)
-                last_tool_result = tool_result
+                last_tool_result = tool_result.result
                 messages.append({"role": "assistant", "content": answer_str})
-                messages.append(self._build_observation_message(tool_result))
+                if tool_result.result_as_answer:
+                    return tool_result.result
+                obs_msg = self._build_observation_message(tool_result.result)
+                if tool_result.files:
+                    obs_msg["files"] = tool_result.files
+                messages.append(obs_msg)
                 continue
 
             return answer_str
 
         return last_tool_result
 
-    def _execute_text_tool_with_events(self, formatted: AgentAction) -> str:
+    def _execute_text_tool_with_events(self, formatted: AgentAction) -> ToolResult:
         """Execute text-parsed tool calls with tool usage events."""
         args_dict = self._parse_tool_args(formatted.tool_input)
         agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
@@ -386,7 +392,7 @@ class StepExecutor:
                 finished_at=datetime.now(),
             ),
         )
-        return str(tool_result.result)
+        return tool_result
 
     def _parse_tool_args(self, tool_input: Any) -> dict[str, Any]:
         """Parse tool args from the parser output into a dict payload for events."""

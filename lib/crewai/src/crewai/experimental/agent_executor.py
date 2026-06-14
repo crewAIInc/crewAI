@@ -1526,6 +1526,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         if hasattr(result, "text"):
             self._append_message_to_state(result.text)
+            if isinstance(result, AgentAction) and tool_result.files:
+                self._inject_files_into_last_user_message(tool_result.files)
 
         if isinstance(result, AgentFinish):
             self.state.is_finished = True
@@ -2838,17 +2840,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         Returns:
             Updated action or final answer.
         """
-        add_image_tool = I18N_DEFAULT.tools("add_image")
-        if (
-            isinstance(add_image_tool, dict)
-            and formatted_answer.tool.casefold().strip()
-            == add_image_tool.get("name", "").casefold().strip()
-        ):
-            self.state.messages.append(
-                {"role": "assistant", "content": tool_result.result}
-            )
-            return formatted_answer
-
         return handle_agent_action_core(
             formatted_answer=formatted_answer,
             tool_result=tool_result,
@@ -2856,6 +2847,16 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             step_callback=self.step_callback,
             show_logs=self._show_logs,
         )
+
+    def _inject_files_into_last_user_message(self, files: dict[str, Any]) -> None:
+        """Attach files to the most-recent role='user' message in state.messages."""
+        for i in range(len(self.state.messages) - 1, -1, -1):
+            msg = self.state.messages[i]
+            if msg.get("role") == "user":
+                existing: dict[str, Any] = msg.get("files", {})
+                existing.update(files)
+                msg["files"] = existing
+                break
 
     def _invoke_step_callback(
         self, formatted_answer: AgentAction | AgentFinish
