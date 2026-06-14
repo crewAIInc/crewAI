@@ -46,6 +46,7 @@ from crewai.state.checkpoint_config import CheckpointConfig, _coerce_checkpoint
 from crewai.tools.base_tool import BaseTool, Tool
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.config import process_config
+from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.logger import Logger
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.string_utils import interpolate_only
@@ -81,6 +82,7 @@ _LLM_TYPE_REGISTRY: dict[str, str] = {
 def _validate_llm_ref(value: Any) -> Any:
     if isinstance(value, dict):
         import importlib
+        import inspect
 
         llm_type = value.get("llm_type")
         if not llm_type or llm_type not in _LLM_TYPE_REGISTRY:
@@ -91,6 +93,12 @@ def _validate_llm_ref(value: Any) -> Any:
         dotted = _LLM_TYPE_REGISTRY[llm_type]
         mod_path, cls_name = dotted.rsplit(".", 1)
         cls = getattr(importlib.import_module(mod_path), cls_name)
+        if inspect.isabstract(cls):
+            from crewai.llm import LLM
+
+            return LLM(
+                **{k: v for k, v in value.items() if v is not None and k != "llm_type"}
+            )
         return cls(**value)
     return value
 
@@ -186,6 +194,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         tools (list[Any] | None): Tools at the agent's disposal.
         max_iter (int): Maximum iterations for an agent to execute a task.
         agent_executor: An instance of the CrewAgentExecutor class.
+        i18n (I18N): Internationalization settings.
         llm (Any): Language model that will run the agent.
         crew (Any): Crew to which the agent belongs.
 
@@ -265,6 +274,14 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             _serialize_executor_ref, return_type=dict | None, when_used="json"
         ),
     ] = Field(default=None, description="An instance of the CrewAgentExecutor class.")
+    i18n: I18N = Field(
+        default_factory=get_i18n,
+        description="Internationalization settings.",
+        deprecated=(
+            "Agent.i18n is deprecated and will be removed in a future release. "
+            "Use crewai.utilities.i18n.get_i18n() or Crew(prompt_file=...) instead."
+        ),
+    )
 
     llm: Annotated[
         str | BaseLLM | None,

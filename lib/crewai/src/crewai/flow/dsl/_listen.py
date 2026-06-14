@@ -3,13 +3,13 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import cast
 
-from crewai.flow.dsl._conditions import _definition_condition_from_runtime
+from crewai.flow.dsl._conditions import _to_definition_condition
 from crewai.flow.dsl._types import FlowMethodDecorator, FlowTrigger
 from crewai.flow.dsl._utils import (
     P,
     R,
+    _method_action,
     _set_flow_method_definition,
-    _set_trigger_metadata,
 )
 from crewai.flow.flow_definition import FlowMethodDefinition
 from crewai.flow.flow_wrappers import ListenMethod
@@ -47,9 +47,11 @@ def listen(condition: FlowTrigger) -> FlowMethodDecorator:
 
         _set_flow_method_definition(
             wrapper,
-            FlowMethodDefinition(listen=_definition_condition_from_runtime(condition)),
+            FlowMethodDefinition(
+                do=_method_action(func),
+                listen=_to_definition_condition(condition),
+            ),
         )
-        _set_trigger_metadata(wrapper, condition)
         return wrapper
 
     return cast(FlowMethodDecorator, decorator)

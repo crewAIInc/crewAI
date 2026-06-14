@@ -3,13 +3,13 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import cast
 
-from crewai.flow.dsl._conditions import _definition_condition_from_runtime
+from crewai.flow.dsl._conditions import _to_definition_condition
 from crewai.flow.dsl._types import FlowMethodDecorator, FlowTrigger
 from crewai.flow.dsl._utils import (
     P,
     R,
+    _method_action,
     _set_flow_method_definition,
-    _set_trigger_metadata,
 )
 from crewai.flow.flow_definition import FlowMethodDefinition
 from crewai.flow.flow_wrappers import StartMethod
@@ -54,16 +54,17 @@ def start(
     def decorator(func: Callable[P, R]) -> StartMethod[P, R]:
         wrapper = StartMethod(func)
 
-        if condition is not None:
-            _set_flow_method_definition(
-                wrapper,
-                FlowMethodDefinition(
-                    start=_definition_condition_from_runtime(condition)
+        _set_flow_method_definition(
+            wrapper,
+            FlowMethodDefinition(
+                do=_method_action(func),
+                start=(
+                    _to_definition_condition(condition)
+                    if condition is not None
+                    else True
                 ),
-            )
-            _set_trigger_metadata(wrapper, condition)
-        else:
-            _set_flow_method_definition(wrapper, FlowMethodDefinition(start=True))
+            ),
+        )
         return wrapper
 
     return cast(FlowMethodDecorator, decorator)

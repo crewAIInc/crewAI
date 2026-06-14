@@ -13,6 +13,7 @@ from crewai_cli.cli import (
     flow_add_crew,
     login,
     reset_memories,
+    run,
     test,
     train,
     version,
@@ -117,6 +118,43 @@ def test_test_invalid_string_iterations(evaluate_crew, runner):
         "Usage: test [OPTIONS]\nTry 'test --help' for help.\n\nError: Invalid value for '-n' / '--n_iterations': 'invalid' is not a valid integer.\n"
         in result.output
     )
+
+
+@mock.patch("crewai_cli.cli.run_crew")
+def test_run_uses_project_runner_by_default(run_crew, runner):
+    result = runner.invoke(run)
+
+    assert result.exit_code == 0
+    run_crew.assert_called_once_with(trained_agents_file=None)
+    assert "experimental" not in result.output.lower()
+
+
+@mock.patch("crewai_cli.cli.run_flow_definition")
+def test_run_with_definition_uses_definition_runner(run_flow_definition, runner):
+    result = runner.invoke(
+        run,
+        ["--definition", "flow.yaml", "--inputs", '{"topic":"AI"}'],
+    )
+
+    assert result.exit_code == 0
+    assert (
+        "Warning: `crewai run --definition` is experimental and may change without notice."
+        in result.output
+    )
+    run_flow_definition.assert_called_once_with(
+        definition="flow.yaml", inputs='{"topic":"AI"}'
+    )
+
+
+@mock.patch("crewai_cli.cli.run_crew")
+@mock.patch("crewai_cli.cli.run_flow_definition")
+def test_run_rejects_inputs_without_definition(run_flow_definition, run_crew, runner):
+    result = runner.invoke(run, ["--inputs", '{"topic":"AI"}'])
+
+    assert result.exit_code == 2
+    assert "Error: --inputs requires --definition" in result.output
+    run_flow_definition.assert_not_called()
+    run_crew.assert_not_called()
 
 
 @mock.patch("crewai_cli.cli.AuthenticationCommand")

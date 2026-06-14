@@ -24,22 +24,20 @@ Example:
 
 from __future__ import annotations
 
-import asyncio
 from collections.abc import Callable
-import functools
 import logging
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any, Final, TypeVar, cast
+from typing import TYPE_CHECKING, Any, Final, TypeVar
 
 from crewai_core.printer import PRINTER
 from pydantic import BaseModel
 
 from crewai.flow.persistence.base import FlowPersistence
-from crewai.flow.persistence.sqlite import SQLiteFlowPersistence
+from crewai.flow.persistence.factory import default_flow_persistence
 
 
 if TYPE_CHECKING:
-    from crewai.flow.flow import Flow
+    from crewai.flow.runtime import Flow
 
 
 logger = logging.getLogger(__name__)
@@ -64,20 +62,6 @@ def _stamp_persistence_metadata(
         persistence=persistence,
         verbose=verbose,
     )
-
-
-_PRESERVED_FLOW_ATTRS: Final[tuple[str, ...]] = (
-    "__is_start_method__",
-    "__trigger_methods__",
-    "__condition_type__",
-    "__trigger_condition__",
-    "__is_router__",
-    "__router_emit__",
-    "__human_feedback_config__",
-    "__flow_persistence_config__",
-    "__flow_method_definition__",
-    "_human_feedback_llm",
-)
 
 
 class PersistenceDecorator:
@@ -170,9 +154,15 @@ def persist(
     states. When applied at the method level, it persists only that method's
     state.
 
+    The decorator is a pure metadata stamper: it records the persistence
+    configuration on the class or method, and the Flow engine saves state
+    after each persisted method completes, driven by the flow's definition.
+
     Args:
         persistence: Optional FlowPersistence implementation to use.
-                    If not provided, uses SQLiteFlowPersistence.
+                    If not provided, uses ``default_flow_persistence()`` (the
+                    registered factory when present, else the built-in SQLite
+                    fallback).
         verbose: Whether to log persistence operations. Defaults to False.
 
     Returns:
@@ -191,127 +181,11 @@ def persist(
     """
 
     def decorator(target: type | Callable[..., T]) -> type | Callable[..., T]:
-        actual_persistence = persistence or SQLiteFlowPersistence()
+        actual_persistence = (
+            persistence if persistence is not None else default_flow_persistence()
+        )
 
-        if isinstance(target, type):
-            _stamp_persistence_metadata(target, actual_persistence, verbose)
-            original_init = target.__init__  # type: ignore[misc]
-
-            @functools.wraps(original_init)
-            def new_init(self: Any, *args: Any, **kwargs: Any) -> None:
-                if "persistence" not in kwargs:
-                    kwargs["persistence"] = actual_persistence
-                original_init(self, *args, **kwargs)
-
-            target.__init__ = new_init  # type: ignore[misc]
-
-            # Preserve original methods' decorators
-            original_methods = {
-                name: method
-                for name, method in target.__dict__.items()
-                if callable(method)
-                and (
-                    hasattr(method, "__is_start_method__")
-                    or hasattr(method, "__trigger_methods__")
-                    or hasattr(method, "__condition_type__")
-                    or hasattr(method, "__is_flow_method__")
-                    or hasattr(method, "__is_router__")
-                )
-            }
-
-            for name, method in original_methods.items():
-                if asyncio.iscoroutinefunction(method):
-                    # Closure captures the current name and method
-                    def create_async_wrapper(
-                        method_name: str, original_method: Callable[..., Any]
-                    ) -> Callable[..., Any]:
-                        @functools.wraps(original_method)
-                        async def method_wrapper(
-                            self: Any, *args: Any, **kwargs: Any
-                        ) -> Any:
-                            result = await original_method(self, *args, **kwargs)
-                            PersistenceDecorator.persist_state(
-                                self, method_name, actual_persistence, verbose
-                            )
-                            return result
-
-                        return method_wrapper
-
-                    wrapped = create_async_wrapper(name, method)
-
-                    for attr in _PRESERVED_FLOW_ATTRS:
-                        if hasattr(method, attr):
-                            setattr(wrapped, attr, getattr(method, attr))
-                    wrapped.__is_flow_method__ = True  # type: ignore[attr-defined]
-
-                    setattr(target, name, wrapped)
-                else:
-
-                    def create_sync_wrapper(
-                        method_name: str, original_method: Callable[..., Any]
-                    ) -> Callable[..., Any]:
-                        @functools.wraps(original_method)
-                        def method_wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
-                            result = original_method(self, *args, **kwargs)
-                            PersistenceDecorator.persist_state(
-                                self, method_name, actual_persistence, verbose
-                            )
-                            return result
-
-                        return method_wrapper
-
-                    wrapped = create_sync_wrapper(name, method)
-
-                    for attr in _PRESERVED_FLOW_ATTRS:
-                        if hasattr(method, attr):
-                            setattr(wrapped, attr, getattr(method, attr))
-                    wrapped.__is_flow_method__ = True  # type: ignore[attr-defined]
-
-                    setattr(target, name, wrapped)
-
-            return target
-        method = target
-        method.__is_flow_method__ = True  # type: ignore[attr-defined]
-        _stamp_persistence_metadata(method, actual_persistence, verbose)
-
-        if asyncio.iscoroutinefunction(method):
-
-            @functools.wraps(method)
-            async def method_async_wrapper(
-                flow_instance: Any, *args: Any, **kwargs: Any
-            ) -> T:
-                method_coro = method(flow_instance, *args, **kwargs)
-                if asyncio.iscoroutine(method_coro):
-                    result = await method_coro
-                else:
-                    result = method_coro
-                PersistenceDecorator.persist_state(
-                    flow_instance, method.__name__, actual_persistence, verbose
-                )
-                return cast(T, result)
-
-            for attr in _PRESERVED_FLOW_ATTRS:
-                if hasattr(method, attr):
-                    setattr(method_async_wrapper, attr, getattr(method, attr))
-            method_async_wrapper.__is_flow_method__ = True  # type: ignore[attr-defined]
-            _stamp_persistence_metadata(
-                method_async_wrapper, actual_persistence, verbose
-            )
-            return cast(Callable[..., T], method_async_wrapper)
-
-        @functools.wraps(method)
-        def method_sync_wrapper(flow_instance: Any, *args: Any, **kwargs: Any) -> T:
-            result = method(flow_instance, *args, **kwargs)
-            PersistenceDecorator.persist_state(
-                flow_instance, method.__name__, actual_persistence, verbose
-            )
-            return result
-
-        for attr in _PRESERVED_FLOW_ATTRS:
-            if hasattr(method, attr):
-                setattr(method_sync_wrapper, attr, getattr(method, attr))
-        method_sync_wrapper.__is_flow_method__ = True  # type: ignore[attr-defined]
-        _stamp_persistence_metadata(method_sync_wrapper, actual_persistence, verbose)
-        return cast(Callable[..., T], method_sync_wrapper)
+        _stamp_persistence_metadata(target, actual_persistence, verbose)
+        return target
 
     return decorator

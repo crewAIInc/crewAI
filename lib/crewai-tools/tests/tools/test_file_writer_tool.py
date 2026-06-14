@@ -47,6 +47,8 @@ def test_basic_file_write(tool, temp_env):
     assert os.path.exists(path)
     assert read_file(path) == temp_env["test_content"]
     assert "successfully written" in result
+    assert temp_env["test_file"] in result
+    assert temp_env["temp_dir"] not in result
 
 
 def test_directory_creation(tool, temp_env):
@@ -62,6 +64,8 @@ def test_directory_creation(tool, temp_env):
     assert os.path.exists(new_dir)
     assert os.path.exists(path)
     assert "successfully written" in result
+    assert temp_env["test_file"] in result
+    assert new_dir not in result
 
 
 @pytest.mark.parametrize(
@@ -134,6 +138,8 @@ def test_file_exists_error_handling(tool, temp_env, overwrite):
     )
 
     assert "already exists and overwrite option was not passed" in result
+    assert temp_env["test_file"] in result
+    assert temp_env["temp_dir"] not in result
     assert read_file(path) == "Pre-existing content"
 
 
