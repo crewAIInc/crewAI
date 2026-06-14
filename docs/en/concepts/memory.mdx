@@ -754,6 +754,60 @@ memory = Memory(
 )
 ```
 
+### Agent Magnet base URL integration
+
+[Agent Magnet](https://agentmagnet.app) can sit in front of OpenAI-compatible LLM calls by changing the model's `base_url`. Use this when you want Agent Magnet to observe the same LLM traffic CrewAI already sends while keeping CrewAI's native `Memory` API, storage, scopes, and retrieval behavior unchanged.
+
+```python
+from crewai import Agent, Crew, LLM, Memory, Process, Task
+
+
+agent_magnet_llm = LLM(
+    model="openai/gpt-4o-mini",
+    api_key="your-agent-magnet-api-key",
+    base_url="https://magnet-gateway.onrender.com/v1",
+    default_headers={"x-session-id": "customer-support-user"},
+)
+
+memory = Memory(
+    llm=agent_magnet_llm,
+    root_scope="/crew/customer-support",
+)
+
+# Use Crew(memory=True) when the default CrewAI memory settings are enough;
+# pass Memory(...) when you need custom storage, scoring, or root_scope.
+
+support_agent = Agent(
+    role="Support Analyst",
+    goal="Answer customer questions using durable support context",
+    backstory="You remember support preferences and recurring product issues.",
+    llm=agent_magnet_llm,
+)
+
+support_task = Task(
+    description="Answer the customer's question: {question}. Preserve useful follow-up context.",
+    expected_output="A concise answer with any reusable context captured in memory.",
+    agent=support_agent,
+)
+
+crew = Crew(
+    agents=[support_agent],
+    tasks=[support_task],
+    process=Process.sequential,
+    memory=memory,
+)
+
+crew.kickoff(inputs={"question": "What plan includes SSO?"})
+```
+
+You can also configure the same proxy globally for OpenAI-compatible calls, then keep passing `default_headers` on the `LLM` so Agent Magnet can associate calls with the right user:
+
+```bash
+export OPENAI_BASE_URL="https://magnet-gateway.onrender.com/v1"
+```
+
+CrewAI does not need an Agent Magnet SDK or runtime dependency for this path, so you can route through Agent Magnet without adding an Agent Magnet dependency. The integration boundary is the OpenAI-compatible LLM endpoint: CrewAI continues to manage local memory persistence, `root_scope` isolation, explicit `scope` values, forgetting, and recall scoring; Agent Magnet handles whatever cross-session learning its proxy layer provides. Agent Magnet uses the `x-session-id` header to link interactions to a specific end user.
+
 
 ## Storage Backend
 
