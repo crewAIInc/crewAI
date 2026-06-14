@@ -28,6 +28,7 @@ class IFlowWebSearchTool(IFlowSearchToolBase):
     args_schema: type[BaseModel] = IFlowWebSearchToolSchema
 
     def _run(self, query: str, count: int | None = None) -> str:
+        """Search the web via iFlow and return normalized JSON results."""
         response = self._get_client().web_search(query=query, count=count)
         return json.dumps(
             {

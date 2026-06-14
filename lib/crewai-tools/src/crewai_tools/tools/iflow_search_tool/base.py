@@ -63,17 +63,17 @@ class IFlowSearchToolBase(BaseTool):
         """
         if self.client is not None:
             return self.client
-        api_key = self.api_key or os.getenv("IFLOW_API_KEY")
-        if not api_key:
-            raise ValueError(
-                "iFlow Search API key not found. Set the IFLOW_API_KEY environment "
-                "variable or pass api_key= when constructing the tool."
-            )
         if not IFLOW_AVAILABLE:
             raise ImportError(
                 "The 'iflow-search' package is required to use the iFlow Search tools. "
                 "Install with: pip install 'crewai-tools[iflow-search]' "
                 "(or pip install iflow-search)."
+            )
+        api_key = self.api_key or os.getenv("IFLOW_API_KEY")
+        if not api_key:
+            raise ValueError(
+                "iFlow Search API key not found. Set the IFLOW_API_KEY environment "
+                "variable or pass api_key= when constructing the tool."
             )
         self.client = IFlowSearchClient(
             api_key=api_key,

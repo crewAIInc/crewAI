@@ -28,6 +28,7 @@ class IFlowImageSearchTool(IFlowSearchToolBase):
     args_schema: type[BaseModel] = IFlowImageSearchToolSchema
 
     def _run(self, query: str, count: int | None = None) -> str:
+        """Search for images via iFlow and return normalized JSON results."""
         response = self._get_client().image_search(query=query, count=count)
         return json.dumps(
             {

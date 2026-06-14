@@ -24,6 +24,7 @@ class IFlowWebFetchTool(IFlowSearchToolBase):
     args_schema: type[BaseModel] = IFlowWebFetchToolSchema
 
     def _run(self, url: str) -> str:
+        """Fetch a web page via iFlow and return normalized JSON content."""
         response = self._get_client().web_fetch(url=url)
         return json.dumps(
             {

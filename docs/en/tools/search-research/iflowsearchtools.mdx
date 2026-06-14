@@ -48,11 +48,7 @@ uv add 'crewai-tools[iflow-search]'
 export IFLOW_API_KEY='YOUR_IFLOW_API_KEY'
 ```
 
-Optional:
-
-```bash
-export IFLOW_BASE_URL='https://platform.iflow.cn'
-```
+To override the API endpoint, pass `base_url=` when constructing a tool (for example, `IFlowWebSearchTool(base_url="https://platform.iflow.cn")`). The tools do not read `IFLOW_BASE_URL` from the environment.
 
 ## Quick Examples
 

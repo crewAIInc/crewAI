@@ -136,8 +136,7 @@ class TestIFlowWebFetchTool:
 
 class TestIFlowSearchToolBase:
     def test_missing_api_key_raises_clear_error(self):
-        with patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("IFLOW_API_KEY", None)
+        with patch.dict(os.environ, clear=True):
             tool = IFlowWebSearchTool()
             with pytest.raises(ValueError, match="IFLOW_API_KEY"):
                 tool.run(query="crewai")
