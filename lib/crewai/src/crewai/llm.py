@@ -6,6 +6,7 @@ from datetime import datetime
 import json
 import logging
 import os
+import threading
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -77,6 +78,12 @@ logger = logging.getLogger(__name__)
 # stay None until _ensure_litellm() rebinds them.
 _litellm_loaded = False
 LITELLM_AVAILABLE = False
+
+# litellm's success/failure callback lists are process-global mutable state.
+# Concurrent crews (e.g. multiple kickoff_async() dispatched to threads) all
+# mutate them during setup, so guard every read-modify-write with a lock to
+# avoid races such as `ValueError: list.remove(x): x not in list`.
+_CALLBACK_LOCK = threading.Lock()
 
 if TYPE_CHECKING:
     import litellm
@@ -2442,15 +2449,22 @@ class LLM(BaseLLM):
             # but not registered with litellm globals
             return
 
-        with suppress_warnings():
+        with suppress_warnings(), _CALLBACK_LOCK:
             callback_types = [type(callback) for callback in callbacks]
-            for callback in litellm.success_callback[:]:
-                if type(callback) in callback_types:
-                    litellm.success_callback.remove(callback)
-
-            for callback in litellm._async_success_callback[:]:
-                if type(callback) in callback_types:
-                    litellm._async_success_callback.remove(callback)
+            # Filter via slice assignment instead of .remove(): it mutates the
+            # existing global list in place (litellm keeps a reference to it),
+            # is atomic under the GIL, and can never raise ValueError if another
+            # thread already removed the entry.
+            litellm.success_callback[:] = [
+                callback
+                for callback in litellm.success_callback
+                if type(callback) not in callback_types
+            ]
+            litellm._async_success_callback[:] = [
+                callback
+                for callback in litellm._async_success_callback
+                if type(callback) not in callback_types
+            ]
 
             litellm.callbacks = callbacks
 
@@ -2480,7 +2494,7 @@ class LLM(BaseLLM):
             # When litellm is not available, env callbacks have no effect
             return
 
-        with suppress_warnings():
+        with suppress_warnings(), _CALLBACK_LOCK:
             success_callbacks_str = os.environ.get("LITELLM_SUCCESS_CALLBACKS", "")
             success_callbacks: list[str | Callable[..., Any]] = []
             if success_callbacks_str:
