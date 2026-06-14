@@ -32,7 +32,7 @@ def _build_executor(**kwargs: Any) -> AgentExecutor:
     executor._method_outputs = []
     executor._completed_methods = set()
     executor._fired_or_listeners = set()
-    executor._pending_and_listeners = {}
+    executor._pending_events = {}
     executor._method_execution_counts = {}
     executor._method_call_counts = {}
     executor._event_futures = []

@@ -4,6 +4,149 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="11 jun 2026">
+  ## v1.14.7
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.7)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar backends padrão plugáveis para memória, conhecimento, rag e fluxo.
+  - Exibir o verdadeiro finish_reason, parâmetros de amostragem e response.id em eventos LLM.
+  - Tipar os gatilhos DSL como decoradores cientes de rotas.
+  - Adicionar API de chat para fluxos de conversa.
+  - Tornar o backend de bloqueio substituível.
+  - Construir FlowDefinition a partir de metadados Flow DSL.
+  - Adicionar provedor nativo Snowflake Cortex LLM.
+  - Adicionar suporte a arquivos de agentes treinados pela equipe.
+
+  ### Correções de Bugs
+  - Corrigir checkpoint para reconstruir BaseLLM personalizado como LLM concreto na restauração.
+  - Controlar a restauração com uma flag para evitar que snapshots ao vivo sejam reproduzidos como retomar.
+  - Escopar o estado de execução por execução para limitar o crescimento e isolar execuções concorrentes.
+  - Corrigir configuração de telemetria no crewai-login.
+  - Respeitar suppress_flow_events para eventos de execução de método.
+  - Restaurar [project.scripts] no pacote crewai para instalação da ferramenta uv.
+  - Resolver CVEs de pip-audit para aiohttp, docling e docling-core.
+  - Corrigir entrada de arquivo que não estava funcionando de forma confiável.
+  - Corrigir histórias de resultados de ferramentas incompletas do Snowflake Claude.
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.14.7.
+  - Atualizar documentação do coletor OpenTelemetry.
+  - Atualizar guia do LLM NVIDIA Nemotron.
+  - Adicionar guia de integração do Databricks.
+  - Adicionar guia de integração do Snowflake.
+
+  ### Desempenho
+  - Melhorar a velocidade de importação do crewai através do carregamento preguiçoso de imports do docling.
+
+  ### Refatoração
+  - Simplificar a avaliação de condições de fluxo para ser sem estado por evento.
+  - Desacoplar a lógica de conversa da execução e adicionar uma conversational_definition.
+  - Dividir `flow.py` em DSL, definição e execução.
+
+  ## Contribuidores
+
+  @Luzk, @alex-clawd, @devin-ai-integration[bot], @greysonlalonde, @gvieira, @jessemiller, @lorenzejay, @lucasgomide, @mattatcha, @vinibrsl
+
+</Update>
+
+<Update label="10 jun 2026">
+  ## v1.14.7rc2
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.7rc2)
+
+  ## O que Mudou
+
+  ### Correções de Bugs
+  - Restauração de portão em uma flag para evitar que snapshots ao vivo sejam reproduzidos como retomar
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.14.7rc1
+
+  ## Contributors
+
+  @greysonlalonde
+
+</Update>
+
+<Update label="10 jun 2026">
+  ## v1.14.7rc1
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.7rc1)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar `reset_runtime_state` para liberar o estado acumulado do barramento
+  - Lidar com suporte a ambos os prompts personalizados
+  - Desacoplar a lógica de conversa do tempo de execução e adicionar uma `conversational_definition`
+
+  ### Correções de Bugs
+  - Corrigir o escopo do estado de tempo de execução por execução para limitar o crescimento e isolar execuções concorrentes
+  - Corrigir a configuração de telemetria em `crewai-login`
+  - Corrigir o respeito a `suppress_flow_events` para eventos de execução de método
+
+  ### Documentação
+  - Atualizar imagens do OpenTelemetry
+  - Atualizar a documentação para refletir o novo estado do coletor OpenTelemetry
+  - Atualizar o changelog e a versão para v1.14.7a4
+
+  ### Refatoração
+  - Simplificar a avaliação da condição de fluxo para ser sem estado por evento
+  - Melhorar o ciclo de roteamento de conversas com uma rota a menos
+
+  ## Contribuidores
+
+  @greysonlalonde, @lorenzejay, @lucasgomide, @vinibrsl
+
+</Update>
+
+<Update label="09 jun 2026">
+  ## v1.14.7a4
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.7a4)
+
+  ## O Que Mudou
+
+  ### Funcionalidades
+  - Migrar a execução @listen/@router para ler a partir de FlowDefinition
+  - Adicionar backends padrão plugáveis para memória, conhecimento, rag e flow
+
+  ### Documentação
+  - Atualizar changelog e versão para v1.14.7a3
+
+  ## Contributors
+
+  @greysonlalonde, @mattatcha, @vinibrsl
+
+</Update>
+
+<Update label="08 jun 2026">
+  ## v1.14.7a3
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.7a3)
+
+  ## O que Mudou
+
+  ### Correções de Bugs
+  - Corrigir a exposição de `ask_for_human_input` no `AgentExecutor` experimental
+  - Resolver CVEs do pip-audit para `aiohttp`, `docling`, `docling-core` e `pip`
+
+  ### Refatoração
+  - Migrar `@start` para ler de `FlowDefinition`
+
+  ### Documentação
+  - Atualizar o changelog e a versão para v1.14.7a2
+
+  ## Contribuidores
+
+  @greysonlalonde, @lorenzejay, @vinibrsl
+
+</Update>
+
 <Update label="05 jun 2026">
   ## v1.14.7a2
 

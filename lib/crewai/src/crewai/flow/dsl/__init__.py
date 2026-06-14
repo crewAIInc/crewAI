@@ -15,10 +15,7 @@ from crewai.flow.dsl._human_feedback import (
 from crewai.flow.dsl._listen import listen
 from crewai.flow.dsl._router import router
 from crewai.flow.dsl._start import start
-from crewai.flow.dsl._utils import (
-    build_flow_definition as build_flow_definition,
-    extract_flow_definition as extract_flow_definition,
-)
+from crewai.flow.dsl._utils import build_flow_definition as build_flow_definition
 
 
 __all__ = [

@@ -161,6 +161,18 @@ crew = Crew(
 )
 ```
 
+<Note>
+`agent.i18n` is maintained only for backward compatibility and is deprecated. For runtime prompt customization, pass `prompt_file` to `Crew`. For programmatic access to prompt slices, use the i18n utility directly:
+</Note>
+
+```python
+from crewai.utilities.i18n import get_i18n
+
+i18n = get_i18n("custom_prompts.json")
+format_slice = i18n.slice("format")
+tool_prompt = i18n.tools("ask_question")
+```
+
 #### Option 3: Disable System Prompts for o1 Models
 ```python
 agent = Agent(
@@ -207,6 +219,8 @@ One straightforward approach is to create a JSON file for the prompts you want t
 2. Reference that file via the `prompt_file` parameter in your Crew.
 
 CrewAI then merges your customizations with the defaults, so you don't have to redefine every prompt. Here's how:
+
+For code that needs to read prompt slices directly, use `crewai.utilities.i18n.get_i18n()` with the same prompt file instead of reading `agent.i18n`.
 
 ### Example: Basic Prompt Customization
 
