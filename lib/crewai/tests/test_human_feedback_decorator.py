@@ -860,9 +860,9 @@ class TestHumanFeedbackFinalOutputPreservation:
         ):
             flow.kickoff()
 
-        # _method_outputs should contain the real output
-        assert len(flow._method_outputs) == 1
-        assert flow._method_outputs[0] == {"data": "real output"}
+        # method_outputs should contain the real output
+        assert flow.method_outputs == [{"data": "real output"}]
+        assert flow._method_outputs[0]["method"] == "generate"
 
     @patch("builtins.input", return_value="looks good")
     @patch("builtins.print")

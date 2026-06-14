@@ -63,7 +63,7 @@ spider-client = [
     "spider-client>=0.1.25",
 ]
 scrapegraph-py = [
-    "scrapegraph-py>=1.9.0",
+    "scrapegraph-py>=1.9.0,<2",
 ]
 linkup-sdk = [
     "linkup-sdk>=0.2.2",

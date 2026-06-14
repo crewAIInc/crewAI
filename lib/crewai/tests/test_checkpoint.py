@@ -617,6 +617,44 @@ class TestKickoffFromCheckpoint:
 
 
 
+class TestLegacyMethodOutputsRestore:
+    def test_restore_wraps_legacy_plain_value_outputs(self) -> None:
+        flow = Flow()
+        flow._method_outputs = ["first", "second"]
+        state = RuntimeState(root=[flow])
+        state._provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            loc = state.checkpoint(d)
+            cfg = CheckpointConfig(restore_from=loc)
+            restored = Flow.from_checkpoint(cfg)
+
+        assert restored.method_outputs == ["first", "second"]
+
+    def test_restore_legacy_outputs_evaluates_expressions(self) -> None:
+        from crewai.flow.runtime._expressions import _expression_context
+
+        flow = Flow()
+        flow._method_outputs = ["legacy"]
+        state = RuntimeState(root=[flow])
+        state._provider = JsonProvider()
+        with tempfile.TemporaryDirectory() as d:
+            loc = state.checkpoint(d)
+            cfg = CheckpointConfig(restore_from=loc)
+            restored = Flow.from_checkpoint(cfg)
+
+        context = _expression_context(restored)
+        assert context["outputs"] == {"": "legacy"}
+
+    def test_raw_legacy_outputs_remain_readable(self) -> None:
+        from crewai.flow.runtime._expressions import _expression_context
+
+        flow = Flow()
+        flow._method_outputs = ["legacy"]
+
+        assert flow.method_outputs == ["legacy"]
+        assert _expression_context(flow)["outputs"] == {"": "legacy"}
+
+
 class TestAgentCheckpoint:
     def _make_agent_state(self) -> RuntimeState:
         agent = Agent(role="r", goal="g", backstory="b", llm="gpt-4o-mini")

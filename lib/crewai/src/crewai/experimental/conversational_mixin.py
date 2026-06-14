@@ -146,6 +146,10 @@ class _ConversationalMixin:
         def kickoff(self, *args: Any, **kwargs: Any) -> Any:
             pass
 
+        @property
+        def method_outputs(self) -> list[Any]:
+            pass
+
     def conversation_start(self) -> str | None:
         """Return the current user message for conversational route selection.
 
@@ -1033,7 +1037,8 @@ class _ConversationalMixin:
         # of warning about an empty scope stack.
         started_id = getattr(self, "_deferred_flow_started_event_id", None)
         if started_id:
-            last_output = self._method_outputs[-1] if self._method_outputs else None
+            method_outputs = self.method_outputs
+            last_output = method_outputs[-1] if method_outputs else None
             restore_event_scope(((started_id, "flow_started"),))
             try:
                 crewai_event_bus.emit(

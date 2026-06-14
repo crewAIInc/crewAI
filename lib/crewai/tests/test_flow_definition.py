@@ -37,16 +37,19 @@ def test_flow_public_exports_are_explicit():
     }
     assert set(flow_definition.__all__) == {
         "FlowActionDefinition",
+        "FlowCodeActionDefinition",
         "FlowConfigDefinition",
         "FlowConversationalDefinition",
         "FlowConversationalRouterDefinition",
         "FlowDefinition",
         "FlowDefinitionCondition",
         "FlowDefinitionDiagnostic",
+        "FlowExpressionActionDefinition",
         "FlowHumanFeedbackDefinition",
         "FlowMethodDefinition",
         "FlowPersistenceDefinition",
         "FlowStateDefinition",
+        "FlowToolActionDefinition",
     }
     assert "build_flow_structure" in flow_visualization.__all__
     assert "calculate_node_levels" not in flow_visualization.__all__
