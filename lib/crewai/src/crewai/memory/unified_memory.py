@@ -66,7 +66,7 @@ class Memory(BaseModel):
     memory_kind: Literal["memory"] = "memory"
 
     llm: Annotated[BaseLLM | str, PlainValidator(_passthrough)] = Field(
-        default="gpt-4o-mini",
+        default="gpt-5.4-mini",
         description="LLM for analysis (model name or BaseLLM instance).",
     )
     storage: Annotated[StorageBackend | str, PlainValidator(_passthrough)] = Field(
@@ -204,7 +204,12 @@ class Memory(BaseModel):
         )
 
         if isinstance(self.storage, str):
-            if self.storage == "qdrant-edge":
+            from crewai.memory.storage.factory import resolve_memory_storage
+
+            custom = resolve_memory_storage(self.storage)
+            if custom is not None:
+                self._storage = custom
+            elif self.storage == "qdrant-edge":
                 from crewai.memory.storage.qdrant_edge_storage import QdrantEdgeStorage
 
                 self._storage = QdrantEdgeStorage()
@@ -234,7 +239,7 @@ class Memory(BaseModel):
                 raise RuntimeError(
                     f"Memory requires an LLM for analysis but initialization failed: {e}\n\n"
                     "To fix this, do one of the following:\n"
-                    "  - Set OPENAI_API_KEY for the default model (gpt-4o-mini)\n"
+                    "  - Set OPENAI_API_KEY for the default model (gpt-5.4-mini)\n"
                     '  - Pass a different model: Memory(llm="anthropic/claude-3-haiku-20240307")\n'
                     '  - Pass any LLM instance: Memory(llm=LLM(model="your-model"))\n'
                     "  - To skip LLM analysis, pass all fields explicitly to remember()\n"
@@ -256,7 +261,7 @@ class Memory(BaseModel):
                 raise RuntimeError(
                     f"Memory requires an embedder for vector search but initialization failed: {e}\n\n"
                     "To fix this, do one of the following:\n"
-                    "  - Set OPENAI_API_KEY for the default embedder (text-embedding-3-small)\n"
+                    "  - Set OPENAI_API_KEY for the default embedder (text-embedding-3-large)\n"
                     '  - Pass a different embedder: Memory(embedder={{"provider": "google", "config": {{...}}}})\n'
                     "  - Pass a callable: Memory(embedder=my_embedding_function)\n\n"
                     f"Docs: {self._MEMORY_DOCS_URL}"
@@ -317,12 +322,16 @@ class Memory(BaseModel):
         """Block until all pending background saves have completed.
 
         Called automatically by ``recall()`` and should be called by the
-        crew at shutdown to ensure no saves are lost.
+        crew at shutdown to ensure no saves are lost. Background save failures
+        are already reported through ``MemorySaveFailedEvent`` and should not
+        fail the task, crew, or flow that produced the output.
         """
         with self._pending_lock:
             pending = list(self._pending_saves)
         for future in pending:
-            future.result()  # blocks until done; re-raises exceptions
+            if future.cancelled():
+                continue
+            future.exception()  # blocks until done without re-raising failures
 
     def close(self) -> None:
         """Drain pending saves, flush storage, and shut down the background thread pool."""
@@ -600,12 +609,16 @@ class Memory(BaseModel):
                 root_scope,
             )
             elapsed_ms = (time.perf_counter() - start) * 1000
-        except RuntimeError:
+        except RuntimeError as e:
             # The encoding pipeline uses asyncio.run() -> to_thread() internally.
             # If the process is shutting down, the default executor is closed and
             # to_thread raises "cannot schedule new futures after shutdown".
             # Silently abandon the save -- the process is exiting anyway.
-            return []
+            # Any other RuntimeError must propagate so the save future's
+            # done-callback reports it via MemorySaveFailedEvent.
+            if "cannot schedule new futures" in str(e):
+                return []
+            raise
 
         try:
             crewai_event_bus.emit(

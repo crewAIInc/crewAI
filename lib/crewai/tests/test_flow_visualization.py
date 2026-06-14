@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from crewai.flow.flow import Flow, and_, listen, or_, router, start
+from crewai.flow.flow_definition import FlowDefinition
 from crewai.flow.visualization import (
     build_flow_structure,
     visualize_flow_structure,
@@ -36,14 +37,14 @@ class RouterFlow(Flow):
     @router(init)
     def decide(self):
         if hasattr(self, "state") and self.state.get("path") == "b":
-            return "path_b"
-        return "path_a"
+            return "event_b"
+        return "event_a"
 
-    @listen("path_a")
+    @listen("event_a")
     def handle_a(self):
         return "handled_a"
 
-    @listen("path_b")
+    @listen("event_b")
     def handle_b(self):
         return "handled_b"
 
@@ -69,11 +70,31 @@ class ComplexFlow(Flow):
 
     @router(converge_and)
     def router_decision(self):
-        return "final_path"
+        return "final_event"
 
-    @listen("final_path")
+    @listen("final_event")
     def finalize(self):
         return "complete"
+
+
+def _attach_flow_definition(
+    flow_class: type[Flow], methods: dict[str, dict[str, object]]
+) -> None:
+    flow_class._flow_definition = FlowDefinition.from_dict(
+        {
+            "schema": "crewai.flow/v1",
+            "name": flow_class.__name__,
+            "methods": {
+                name: {
+                    "do": {
+                        "ref": f"{flow_class.__module__}:{flow_class.__name__}.{name}"
+                    },
+                    **spec,
+                }
+                for name, spec in methods.items()
+            },
+        }
+    )
 
 
 def test_build_flow_structure_simple():
@@ -98,6 +119,54 @@ def test_build_flow_structure_simple():
     assert edge["condition_type"] == "OR"
 
 
+def test_build_flow_structure_from_flow_class():
+    """Test building structure from a Flow class via its FlowDefinition."""
+    structure = build_flow_structure(SimpleFlow)
+
+    assert set(structure["nodes"]) == {"begin", "process"}
+    assert structure["start_methods"] == ["begin"]
+    assert structure["nodes"]["begin"]["class_name"] == "SimpleFlow"
+
+
+def test_build_flow_structure_from_flow_definition():
+    """Test building visualization directly from a FlowDefinition."""
+    definition = FlowDefinition.from_dict(
+        {
+            "schema": "crewai.flow/v1",
+            "name": "DefinedFlow",
+            "methods": {
+                "begin": {
+                    "do": {"ref": "defined_flows:DefinedFlow.begin"},
+                    "start": True,
+                },
+                "decide": {
+                    "do": {"ref": "defined_flows:DefinedFlow.decide"},
+                    "listen": "begin",
+                    "router": True,
+                    "emit": ["done"],
+                },
+                "finish": {
+                    "do": {"ref": "defined_flows:DefinedFlow.finish"},
+                    "listen": "done",
+                },
+            },
+        }
+    )
+
+    structure = build_flow_structure(definition)
+
+    assert set(structure["nodes"]) == {"begin", "decide", "finish"}
+    assert structure["start_methods"] == ["begin"]
+    assert structure["router_methods"] == ["decide"]
+    assert structure["nodes"]["begin"]["class_name"] == "DefinedFlow"
+    assert any(
+        edge["source"] == "decide"
+        and edge["target"] == "finish"
+        and edge["router_event"] == "done"
+        for edge in structure["edges"]
+    )
+
+
 def test_build_flow_structure_with_router():
     """Test building structure for a flow with router."""
     flow = RouterFlow()
@@ -111,13 +180,10 @@ def test_build_flow_structure_with_router():
 
     router_node = structure["nodes"]["decide"]
     assert router_node["type"] == "router"
+    assert "router_events" not in router_node
 
-    if "router_paths" in router_node:
-        assert len(router_node["router_paths"]) >= 1
-        assert any("path" in path for path in router_node["router_paths"])
-
-    router_edges = [edge for edge in structure["edges"] if edge["is_router_path"]]
-    assert len(router_edges) >= 1
+    router_edges = [edge for edge in structure["edges"] if edge["is_router_event"]]
+    assert router_edges == []
 
 
 def test_build_flow_structure_with_and_or_conditions():
@@ -203,49 +269,40 @@ def test_visualize_flow_structure_json_data():
     assert "handle_b" in js_content
 
     assert "router" in js_content.lower()
-    assert "path_a" in js_content
-    assert "path_b" in js_content
+    assert "event_a" in js_content
+    assert "event_b" in js_content
 
 
-def test_node_metadata_includes_source_info():
-    """Test that nodes include source code and line number information."""
+def test_node_metadata_omits_source_info():
+    """Test that definition-only visualization omits Python source metadata."""
     flow = SimpleFlow()
     structure = build_flow_structure(flow)
 
-    for node_name, node_metadata in structure["nodes"].items():
-        assert node_metadata["source_code"] is not None
-        assert len(node_metadata["source_code"]) > 0
-        assert node_metadata["source_start_line"] is not None
-        assert node_metadata["source_start_line"] > 0
-        assert node_metadata["source_file"] is not None
-        assert node_metadata["source_file"].endswith(".py")
+    for node_metadata in structure["nodes"].values():
+        assert "source_code" not in node_metadata
+        assert "source_lines" not in node_metadata
+        assert "source_start_line" not in node_metadata
+        assert "source_file" not in node_metadata
 
 
-def test_node_metadata_includes_method_signature():
-    """Test that nodes include method signature information."""
+def test_node_metadata_omits_method_signature():
+    """Test that definition-only visualization omits Python method signatures."""
     flow = SimpleFlow()
     structure = build_flow_structure(flow)
 
     begin_node = structure["nodes"]["begin"]
-    assert begin_node["method_signature"] is not None
-    assert "operationId" in begin_node["method_signature"]
-    assert begin_node["method_signature"]["operationId"] == "begin"
-    assert "parameters" in begin_node["method_signature"]
-    assert "returns" in begin_node["method_signature"]
+    assert "method_signature" not in begin_node
 
 
 def test_router_node_has_correct_metadata():
-    """Test that router nodes have correct type and paths."""
+    """Test that router nodes have correct type and event metadata."""
     flow = RouterFlow()
     structure = build_flow_structure(flow)
 
     router_node = structure["nodes"]["decide"]
     assert router_node["type"] == "router"
     assert router_node["is_router"] is True
-    assert router_node["router_paths"] is not None
-    assert len(router_node["router_paths"]) == 2
-    assert "path_a" in router_node["router_paths"]
-    assert "path_b" in router_node["router_paths"]
+    assert "router_events" not in router_node
 
 
 def test_listen_node_has_trigger_methods():
@@ -255,7 +312,7 @@ def test_listen_node_has_trigger_methods():
 
     handle_a_node = structure["nodes"]["handle_a"]
     assert handle_a_node["trigger_methods"] is not None
-    assert "path_a" in handle_a_node["trigger_methods"]
+    assert "event_a" in handle_a_node["trigger_methods"]
 
 
 def test_and_condition_node_metadata():
@@ -317,16 +374,15 @@ def test_topological_path_counting():
     assert len(structure["edges"]) > 0
 
 
-def test_class_signature_metadata():
-    """Test that nodes include class signature information."""
+def test_class_metadata_comes_from_definition():
+    """Test that nodes include only definition-derived class metadata."""
     flow = SimpleFlow()
     structure = build_flow_structure(flow)
 
-    for node_name, node_metadata in structure["nodes"].items():
+    for node_metadata in structure["nodes"].values():
         assert node_metadata["class_name"] is not None
         assert node_metadata["class_name"] == "SimpleFlow"
-        assert node_metadata["class_signature"] is not None
-        assert "SimpleFlow" in node_metadata["class_signature"]
+        assert "class_signature" not in node_metadata
 
 
 def test_visualization_plot_method():
@@ -338,8 +394,8 @@ def test_visualization_plot_method():
     assert os.path.exists(html_file)
 
 
-def test_router_paths_to_string_conditions():
-    """Test that router paths correctly connect to listeners with string conditions."""
+def test_router_events_to_string_conditions():
+    """Test that router events correctly connect to listeners with string conditions."""
 
     class RouterToStringFlow(Flow):
         @start()
@@ -349,25 +405,34 @@ def test_router_paths_to_string_conditions():
         @router(init)
         def decide(self):
             if hasattr(self, "state") and self.state.get("path") == "b":
-                return "path_b"
-            return "path_a"
+                return "event_b"
+            return "event_a"
 
-        @listen(or_("path_a", "path_b"))
+        @listen(or_("event_a", "event_b"))
         def handle_either(self):
             return "handled"
 
-        @listen("path_b")
+        @listen("event_b")
         def handle_b_only(self):
             return "handled_b"
 
     flow = RouterToStringFlow()
+    _attach_flow_definition(
+        RouterToStringFlow,
+        {
+            "init": {"start": True},
+            "decide": {"listen": "init", "router": True, "emit": ["event_a", "event_b"]},
+            "handle_either": {"listen": {"or": ["event_a", "event_b"]}},
+            "handle_b_only": {"listen": "event_b"},
+        },
+    )
     structure = build_flow_structure(flow)
 
     decide_node = structure["nodes"]["decide"]
-    assert "path_a" in decide_node["router_paths"]
-    assert "path_b" in decide_node["router_paths"]
+    assert "event_a" in decide_node["router_events"]
+    assert "event_b" in decide_node["router_events"]
 
-    router_edges = [edge for edge in structure["edges"] if edge["is_router_path"]]
+    router_edges = [edge for edge in structure["edges"] if edge["is_router_event"]]
 
     assert len(router_edges) == 3
 
@@ -382,8 +447,8 @@ def test_router_paths_to_string_conditions():
     assert len(edges_to_handle_b_only) == 1
 
 
-def test_router_paths_not_in_and_conditions():
-    """Test that router paths don't create edges to AND-nested conditions."""
+def test_router_events_not_in_and_conditions():
+    """Test that router events don't create edges to AND-nested conditions."""
 
     class RouterAndConditionFlow(Flow):
         @start()
@@ -392,24 +457,34 @@ def test_router_paths_not_in_and_conditions():
 
         @router(init)
         def decide(self):
-            return "path_a"
+            return "event_a"
 
-        @listen("path_a")
+        @listen("event_a")
         def step_1(self):
             return "step_1_done"
 
-        @listen(and_("path_a", step_1))
+        @listen(and_("event_a", step_1))
         def step_2_and(self):
             return "step_2_done"
 
-        @listen(or_(and_("path_a", step_1), "path_a"))
+        @listen(or_(and_("event_a", step_1), "event_a"))
         def step_3_or(self):
             return "step_3_done"
 
     flow = RouterAndConditionFlow()
+    _attach_flow_definition(
+        RouterAndConditionFlow,
+        {
+            "init": {"start": True},
+            "decide": {"listen": "init", "router": True, "emit": ["event_a"]},
+            "step_1": {"listen": "event_a"},
+            "step_2_and": {"listen": {"and": ["event_a", "step_1"]}},
+            "step_3_or": {"listen": {"or": [{"and": ["event_a", "step_1"]}, "event_a"]}},
+        },
+    )
     structure = build_flow_structure(flow)
 
-    router_edges = [edge for edge in structure["edges"] if edge["is_router_path"]]
+    router_edges = [edge for edge in structure["edges"] if edge["is_router_event"]]
 
     targets = [edge["target"] for edge in router_edges]
 
@@ -454,6 +529,17 @@ def test_chained_routers_no_self_loops():
             return "need_auth"
 
     flow = ChainedRouterFlow()
+    _attach_flow_definition(
+        ChainedRouterFlow,
+        {
+            "entrance": {"start": True},
+            "session_in_cache": {"listen": "entrance", "router": True, "emit": ["exp"]},
+            "check_exp": {"listen": "exp", "router": True, "emit": ["auth"]},
+            "call_ai_auth": {"listen": "auth", "router": True, "emit": ["action"]},
+            "forward_to_action": {"listen": "action"},
+            "forward_to_authenticate": {"listen": "authenticate"},
+        },
+    )
     structure = build_flow_structure(flow)
 
     for edge in structure["edges"]:
@@ -461,13 +547,13 @@ def test_chained_routers_no_self_loops():
             f"Self-loop detected: {edge['source']} -> {edge['target']}"
         )
 
-    router_edges = [edge for edge in structure["edges"] if edge["is_router_path"]]
+    router_edges = [edge for edge in structure["edges"] if edge["is_router_event"]]
 
     # session_in_cache -> check_exp (via 'exp')
     exp_edges = [
         edge
         for edge in router_edges
-        if edge["router_path_label"] == "exp" and edge["source"] == "session_in_cache"
+        if edge["router_event"] == "exp" and edge["source"] == "session_in_cache"
     ]
     assert len(exp_edges) == 1
     assert exp_edges[0]["target"] == "check_exp"
@@ -476,7 +562,7 @@ def test_chained_routers_no_self_loops():
     auth_edges = [
         edge
         for edge in router_edges
-        if edge["router_path_label"] == "auth" and edge["source"] == "check_exp"
+        if edge["router_event"] == "auth" and edge["source"] == "check_exp"
     ]
     assert len(auth_edges) == 1
     assert auth_edges[0]["target"] == "call_ai_auth"
@@ -485,7 +571,7 @@ def test_chained_routers_no_self_loops():
     action_edges = [
         edge
         for edge in router_edges
-        if edge["router_path_label"] == "action" and edge["source"] == "call_ai_auth"
+        if edge["router_event"] == "action" and edge["source"] == "call_ai_auth"
     ]
     assert len(action_edges) == 1
     assert action_edges[0]["target"] == "forward_to_action"
@@ -523,6 +609,16 @@ def test_routers_with_shared_output_strings():
             return "skipped"
 
     flow = SharedOutputRouterFlow()
+    _attach_flow_definition(
+        SharedOutputRouterFlow,
+        {
+            "start": {"start": True},
+            "router_a": {"listen": "start", "router": True, "emit": ["auth"]},
+            "router_b": {"listen": "auth", "router": True, "emit": ["done"]},
+            "finalize": {"listen": "done"},
+            "handle_skip": {"listen": "skip"},
+        },
+    )
     structure = build_flow_structure(flow)
 
     for edge in structure["edges"]:
@@ -531,11 +627,11 @@ def test_routers_with_shared_output_strings():
         )
 
     # router_a should connect to router_b via 'auth'
-    router_edges = [edge for edge in structure["edges"] if edge["is_router_path"]]
+    router_edges = [edge for edge in structure["edges"] if edge["is_router_event"]]
     auth_from_a = [
         edge
         for edge in router_edges
-        if edge["source"] == "router_a" and edge["router_path_label"] == "auth"
+        if edge["source"] == "router_a" and edge["router_event"] == "auth"
     ]
     assert len(auth_from_a) == 1
     assert auth_from_a[0]["target"] == "router_b"
@@ -544,17 +640,17 @@ def test_routers_with_shared_output_strings():
     done_from_b = [
         edge
         for edge in router_edges
-        if edge["source"] == "router_b" and edge["router_path_label"] == "done"
+        if edge["source"] == "router_b" and edge["router_event"] == "done"
     ]
     assert len(done_from_b) == 1
     assert done_from_b[0]["target"] == "finalize"
 
 
-def test_warning_for_router_without_paths(caplog):
-    """Test that a warning is logged when a router has no determinable paths."""
+def test_warning_for_router_without_events(caplog):
+    """Test that a warning is logged when a router has no determinable events."""
     import logging
 
-    class RouterWithoutPathsFlow(Flow):
+    class RouterWithoutEventsFlow(Flow):
         """Flow with a router that returns a dynamic value."""
 
         @start()
@@ -564,34 +660,35 @@ def test_warning_for_router_without_paths(caplog):
         @router(begin)
         def dynamic_router(self):
             import random
-            return random.choice(["path_a", "path_b"])
+            return random.choice(["event_a", "event_b"])
 
-        @listen("path_a")
+        @listen("event_a")
         def handle_a(self):
             return "a"
 
-        @listen("path_b")
+        @listen("event_b")
         def handle_b(self):
             return "b"
 
-    flow = RouterWithoutPathsFlow()
+    flow = RouterWithoutEventsFlow()
 
     with caplog.at_level(logging.WARNING):
         build_flow_structure(flow)
 
     assert any(
-        "Could not determine return paths for router 'dynamic_router'" in record.message
+        "Router events for 'dynamic_router' are dynamic" in record.message
         for record in caplog.records
     )
 
     assert any(
-        "Found listeners waiting for triggers" in record.message
+        "Static visualization could not match listener triggers" in record.message
         for record in caplog.records
     )
+    assert not any(record.levelno >= logging.ERROR for record in caplog.records)
 
 
 def test_warning_for_orphaned_listeners(caplog):
-    """Test that an error is logged when listeners wait for triggers no router outputs."""
+    """Test that a warning is logged when a trigger has no explicit router output."""
     import logging
     from typing import Literal
 
@@ -615,19 +712,33 @@ def test_warning_for_orphaned_listeners(caplog):
             return "orphan"
 
     flow = OrphanedListenerFlow()
+    _attach_flow_definition(
+        OrphanedListenerFlow,
+        {
+            "begin": {"start": True},
+            "my_router": {
+                "listen": "begin",
+                "router": True,
+                "emit": ["option_a", "option_b"],
+            },
+            "handle_a": {"listen": "option_a"},
+            "handle_orphan": {"listen": "option_c"},
+        },
+    )
 
-    with caplog.at_level(logging.ERROR):
+    with caplog.at_level(logging.WARNING):
         build_flow_structure(flow)
 
     assert any(
-        "Found listeners waiting for triggers" in record.message
+        "Static visualization could not match listener triggers" in record.message
         and "option_c" in record.message
         for record in caplog.records
     )
+    assert not any(record.levelno >= logging.ERROR for record in caplog.records)
 
 
-def test_no_warning_for_properly_typed_router(caplog):
-    """Test that no warning is logged when router has proper type annotations."""
+def test_no_warning_for_explicit_contract_router_events(caplog):
+    """Test no warning is logged when router events are declared in the contract."""
     import logging
     from typing import Literal
 
@@ -639,23 +750,39 @@ def test_no_warning_for_properly_typed_router(caplog):
             return "started"
 
         @router(begin)
-        def typed_router(self) -> Literal["path_a", "path_b"]:
-            return "path_a"
+        def typed_router(self) -> Literal["event_a", "event_b"]:
+            return "event_a"
 
-        @listen("path_a")
+        @listen("event_a")
         def handle_a(self):
             return "a"
 
-        @listen("path_b")
+        @listen("event_b")
         def handle_b(self):
             return "b"
 
     flow = ProperlyTypedRouterFlow()
+    _attach_flow_definition(
+        ProperlyTypedRouterFlow,
+        {
+            "begin": {"start": True},
+            "typed_router": {
+                "listen": "begin",
+                "router": True,
+                "emit": ["event_a", "event_b"],
+            },
+            "handle_a": {"listen": "event_a"},
+            "handle_b": {"listen": "event_b"},
+        },
+    )
 
     with caplog.at_level(logging.WARNING):
         build_flow_structure(flow)
 
     # No warnings should be logged
     warning_messages = [r.message for r in caplog.records if r.levelno >= logging.WARNING]
-    assert not any("Could not determine return paths" in msg for msg in warning_messages)
-    assert not any("Found listeners waiting for triggers" in msg for msg in warning_messages)
+    assert not any("Router events for" in msg for msg in warning_messages)
+    assert not any(
+        "Static visualization could not match listener triggers" in msg
+        for msg in warning_messages
+    )

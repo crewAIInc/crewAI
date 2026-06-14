@@ -46,6 +46,7 @@ from crewai.state.checkpoint_config import CheckpointConfig, _coerce_checkpoint
 from crewai.tools.base_tool import BaseTool, Tool
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.config import process_config
+from crewai.utilities.i18n import I18N, get_i18n
 from crewai.utilities.logger import Logger
 from crewai.utilities.rpm_controller import RPMController
 from crewai.utilities.string_utils import interpolate_only
@@ -81,16 +82,42 @@ _LLM_TYPE_REGISTRY: dict[str, str] = {
 def _validate_llm_ref(value: Any) -> Any:
     if isinstance(value, dict):
         import importlib
+        import inspect
 
         llm_type = value.get("llm_type")
-        if not llm_type or llm_type not in _LLM_TYPE_REGISTRY:
+        if not llm_type:
+            model = (
+                value.get("model")
+                or value.get("model_name")
+                or value.get("deployment_name")
+            )
+            if not model:
+                raise ValueError(
+                    "LLM config objects must include 'model', 'model_name', "
+                    "or 'deployment_name', or a serialized 'llm_type'. "
+                    f"Got keys: {list(value)}"
+                )
+            from crewai.llm import LLM
+
+            llm_kwargs = {**value, "model": model}
+            llm_kwargs.pop("model_name", None)
+            llm_kwargs.pop("deployment_name", None)
+            return LLM(**llm_kwargs)
+
+        if llm_type not in _LLM_TYPE_REGISTRY:
             raise ValueError(
-                f"Unknown or missing llm_type: {llm_type!r}. "
+                f"Unknown llm_type: {llm_type!r}. "
                 f"Expected one of {list(_LLM_TYPE_REGISTRY)}"
             )
         dotted = _LLM_TYPE_REGISTRY[llm_type]
         mod_path, cls_name = dotted.rsplit(".", 1)
         cls = getattr(importlib.import_module(mod_path), cls_name)
+        if inspect.isabstract(cls):
+            from crewai.llm import LLM
+
+            return LLM(
+                **{k: v for k, v in value.items() if v is not None and k != "llm_type"}
+            )
         return cls(**value)
     return value
 
@@ -186,6 +213,7 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         tools (list[Any] | None): Tools at the agent's disposal.
         max_iter (int): Maximum iterations for an agent to execute a task.
         agent_executor: An instance of the CrewAgentExecutor class.
+        i18n (I18N): Internationalization settings.
         llm (Any): Language model that will run the agent.
         crew (Any): Crew to which the agent belongs.
 
@@ -265,6 +293,14 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
             _serialize_executor_ref, return_type=dict | None, when_used="json"
         ),
     ] = Field(default=None, description="An instance of the CrewAgentExecutor class.")
+    i18n: I18N = Field(
+        default_factory=get_i18n,
+        description="Internationalization settings.",
+        deprecated=(
+            "Agent.i18n is deprecated and will be removed in a future release. "
+            "Use crewai.utilities.i18n.get_i18n() or Crew(prompt_file=...) instead."
+        ),
+    )
 
     llm: Annotated[
         str | BaseLLM | None,
@@ -601,7 +637,10 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         if self.memory is True:
             from crewai.memory.unified_memory import Memory
 
-            self.memory = Memory()
+            memory_kwargs: dict[str, Any] = {}
+            if self.llm is not None:
+                memory_kwargs["llm"] = self.llm
+            self.memory = Memory(**memory_kwargs)
         elif self.memory is False:
             self.memory = None
         return self

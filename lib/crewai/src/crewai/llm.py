@@ -23,7 +23,6 @@ from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.llm_events import (
     LLMCallCompletedEvent,
     LLMCallFailedEvent,
-    LLMCallStartedEvent,
     LLMCallType,
     LLMStreamChunkEvent,
 )
@@ -32,6 +31,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai.llms._finish_reason_utils import extract_choices_finish_reason_and_id
 from crewai.llms.base_llm import (
     BaseLLM,
     JsonResponseFormat,
@@ -68,7 +68,17 @@ if TYPE_CHECKING:
     from crewai.tools.base_tool import BaseTool
     from crewai.utilities.types import LLMMessage
 
-try:
+load_dotenv()
+logger = logging.getLogger(__name__)
+
+# litellm is lazy-loaded to avoid its module-level dotenv.load_dotenv()
+# from polluting env vars (e.g. MODEL= overriding embedder model_name).
+# The TYPE_CHECKING imports give mypy the real types; at runtime the names
+# stay None until _ensure_litellm() rebinds them.
+_litellm_loaded = False
+LITELLM_AVAILABLE = False
+
+if TYPE_CHECKING:
     import litellm
     from litellm.litellm_core_utils.get_supported_openai_params import (
         get_supported_openai_params,
@@ -85,28 +95,70 @@ try:
         StreamingChoices as LiteLLMStreamingChoices,
     )
     from litellm.utils import supports_response_schema
-
-    LITELLM_AVAILABLE = True
-except ImportError:
-    LITELLM_AVAILABLE = False
-    litellm = None  # type: ignore[assignment]
-    Choices = None  # type: ignore[assignment, misc]
-    LiteLLMDelta = None  # type: ignore[assignment, misc]
-    Message = None  # type: ignore[assignment, misc]
-    ModelResponseBase = None  # type: ignore[assignment, misc]
-    ModelResponseStream = None  # type: ignore[assignment, misc]
-    LiteLLMStreamingChoices = None  # type: ignore[assignment, misc]
-    get_supported_openai_params = None  # type: ignore[assignment]
-    ChatCompletionDeltaToolCall = None  # type: ignore[assignment, misc]
-    Function = None  # type: ignore[assignment, misc]
-    ModelResponse = None  # type: ignore[assignment, misc]
-    supports_response_schema = None  # type: ignore[assignment]
+else:
+    litellm = None
+    Choices = None
+    LiteLLMDelta = None
+    Message = None
+    ModelResponseBase = None
+    ModelResponseStream = None
+    LiteLLMStreamingChoices = None
+    get_supported_openai_params = None
+    ChatCompletionDeltaToolCall = None
+    Function = None
+    ModelResponse = None
+    supports_response_schema = None
 
 
-load_dotenv()
-logger = logging.getLogger(__name__)
-if LITELLM_AVAILABLE:
-    litellm.suppress_debug_info = True
+def _ensure_litellm() -> bool:
+    """Lazy-load litellm on first use. Returns True if available."""
+    global _litellm_loaded, LITELLM_AVAILABLE
+    global litellm, Choices, LiteLLMDelta, Message, ModelResponseBase
+    global ModelResponseStream, LiteLLMStreamingChoices, get_supported_openai_params
+    global ChatCompletionDeltaToolCall, Function
+    global ModelResponse, supports_response_schema
+
+    if _litellm_loaded:
+        return LITELLM_AVAILABLE
+    _litellm_loaded = True
+
+    try:
+        import litellm as _litellm
+        from litellm.litellm_core_utils.get_supported_openai_params import (
+            get_supported_openai_params as _get_supported_openai_params,
+        )
+        from litellm.types.utils import (
+            ChatCompletionDeltaToolCall as _ChatCompletionDeltaToolCall,
+            Choices as _Choices,
+            Delta as _LiteLLMDelta,
+            Function as _Function,
+            Message as _Message,
+            ModelResponse as _ModelResponse,
+            ModelResponseBase as _ModelResponseBase,
+            ModelResponseStream as _ModelResponseStream,
+            StreamingChoices as _LiteLLMStreamingChoices,
+        )
+        from litellm.utils import supports_response_schema as _supports_response_schema
+
+        litellm = _litellm
+        Choices = _Choices  # type: ignore[misc]
+        LiteLLMDelta = _LiteLLMDelta  # type: ignore[misc]
+        Message = _Message  # type: ignore[misc]
+        ModelResponseBase = _ModelResponseBase  # type: ignore[misc]
+        ModelResponseStream = _ModelResponseStream  # type: ignore[misc]
+        LiteLLMStreamingChoices = _LiteLLMStreamingChoices  # type: ignore[misc]
+        get_supported_openai_params = _get_supported_openai_params
+        ChatCompletionDeltaToolCall = _ChatCompletionDeltaToolCall  # type: ignore[misc]
+        Function = _Function  # type: ignore[misc]
+        ModelResponse = _ModelResponse  # type: ignore[misc]
+        supports_response_schema = _supports_response_schema
+
+        _litellm.suppress_debug_info = True
+        LITELLM_AVAILABLE = True
+    except ImportError:
+        LITELLM_AVAILABLE = False
+
+    return LITELLM_AVAILABLE
 
 
 MIN_CONTEXT: Final[int] = 1024
@@ -117,6 +169,7 @@ LLM_CONTEXT_WINDOW_SIZES: Final[dict[str, int]] = {
     "gpt-4": 8192,
     "gpt-4o": 128000,
     "gpt-4o-mini": 200000,
+    "gpt-5.4-mini": 200000,
     "gpt-4-turbo": 128000,
     "gpt-4.1": 1047576,  # Based on official docs
     "gpt-4.1-mini-2025-04-14": 1047576,
@@ -288,6 +341,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "hosted_vllm",
     "cerebras",
     "dashscope",
+    "snowflake",
 ]
 
 
@@ -376,6 +430,7 @@ class LLM(BaseLLM):
                 "hosted_vllm": "hosted_vllm",
                 "cerebras": "cerebras",
                 "dashscope": "dashscope",
+                "snowflake": "snowflake",
             }
 
             canonical_provider = provider_mapping.get(prefix.lower())
@@ -409,7 +464,8 @@ class LLM(BaseLLM):
             except Exception as e:
                 raise ImportError(f"Error importing native provider: {e}") from e
 
-        if not LITELLM_AVAILABLE:
+        # FALLBACK to LiteLLM — lazy-load on first use
+        if not _ensure_litellm():
             native_list = ", ".join(SUPPORTED_NATIVE_PROVIDERS)
             error_msg = (
                 f"Unable to initialize LLM with model '{model}'. "
@@ -493,6 +549,9 @@ class LLM(BaseLLM):
 
         if provider == "openrouter":
             # OpenRouter uses org/model format but accepts anything
+            return True
+
+        if provider == "snowflake":
             return True
 
         return False
@@ -593,6 +652,11 @@ class LLM(BaseLLM):
 
             return BedrockCompletion
 
+        if provider == "snowflake":
+            from crewai.llms.providers.snowflake.completion import SnowflakeCompletion
+
+            return SnowflakeCompletion
+
         openai_compatible_providers = {
             "openrouter",
             "deepseek",
@@ -623,7 +687,7 @@ class LLM(BaseLLM):
     @model_validator(mode="after")
     def _init_litellm(self) -> LLM:
         self.is_litellm = True
-        if LITELLM_AVAILABLE:
+        if _ensure_litellm():
             litellm.drop_params = True
             self.set_callbacks(self.callbacks or [])
             self.set_env_callbacks()
@@ -723,6 +787,11 @@ class LLM(BaseLLM):
         last_chunk = None
         chunk_count = 0
         usage_info = None
+        # Tracked across the loop: LiteLLM with include_usage emits a final
+        # usage-only chunk with empty choices, so the post-loop last_chunk has
+        # no finish_reason. Capture both incrementally instead.
+        stream_finish_reason: str | None = None
+        stream_response_id: str | None = None
 
         accumulated_tool_args: defaultdict[int, AccumulatedToolArgs] = defaultdict(
             AccumulatedToolArgs
@@ -741,6 +810,16 @@ class LLM(BaseLLM):
 
                 if isinstance(chunk, ModelResponseBase):
                     response_id = chunk.id
+                elif isinstance(chunk, dict):
+                    response_id = chunk.get("id")
+
+                chunk_finish, chunk_id = self._extract_finish_reason_and_response_id(
+                    chunk
+                )
+                if chunk_finish:
+                    stream_finish_reason = chunk_finish
+                if chunk_id and not stream_response_id:
+                    stream_response_id = chunk_id
 
                 try:
                     choices = None
@@ -913,6 +992,11 @@ class LLM(BaseLLM):
                 if tool_calls_list:
                     return tool_calls_list
 
+            finish_reason, response_id_last = (
+                stream_finish_reason,
+                stream_response_id,
+            )
+
             if not tool_calls or not available_functions:
                 if response_model and self.is_litellm:
                     instructor_instance = InternalInstructor(
@@ -930,6 +1014,8 @@ class LLM(BaseLLM):
                         from_agent=from_agent,
                         messages=params["messages"],
                         usage=usage_dict,
+                        finish_reason=finish_reason,
+                        response_id=response_id_last,
                     )
                     return structured_response
 
@@ -941,6 +1027,8 @@ class LLM(BaseLLM):
                     from_agent=from_agent,
                     messages=params["messages"],
                     usage=usage_dict,
+                    finish_reason=finish_reason,
+                    response_id=response_id_last,
                 )
                 return full_response
 
@@ -956,6 +1044,8 @@ class LLM(BaseLLM):
                 from_agent=from_agent,
                 messages=params["messages"],
                 usage=usage_dict,
+                finish_reason=finish_reason,
+                response_id=response_id_last,
             )
             return full_response
 
@@ -969,6 +1059,10 @@ class LLM(BaseLLM):
             logging.error(f"Error in streaming response: {e!s}")
             if full_response.strip():
                 logging.warning(f"Returning partial response despite error: {e!s}")
+                finish_reason, response_id_last = (
+                    stream_finish_reason,
+                    stream_response_id,
+                )
                 self._handle_emit_call_events(
                     response=full_response,
                     call_type=LLMCallType.LLM_CALL,
@@ -976,6 +1070,8 @@ class LLM(BaseLLM):
                     from_agent=from_agent,
                     messages=params["messages"],
                     usage=self._usage_to_dict(usage_info),
+                    finish_reason=finish_reason,
+                    response_id=response_id_last,
                 )
                 return full_response
 
@@ -1160,6 +1256,10 @@ class LLM(BaseLLM):
             else None
         )
 
+        finish_reason, response_id = self._extract_finish_reason_and_response_id(
+            response
+        )
+
         if response_model is not None:
             # When using instructor/response_model, litellm returns a Pydantic model instance
             if isinstance(response, BaseModel):
@@ -1171,6 +1271,8 @@ class LLM(BaseLLM):
                     from_agent=from_agent,
                     messages=params["messages"],
                     usage=response_usage,
+                    finish_reason=finish_reason,
+                    response_id=response_id,
                 )
                 return structured_response
 
@@ -1207,6 +1309,8 @@ class LLM(BaseLLM):
                 from_agent=from_agent,
                 messages=params["messages"],
                 usage=response_usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
             return text_response
 
@@ -1224,6 +1328,8 @@ class LLM(BaseLLM):
             from_agent=from_agent,
             messages=params["messages"],
             usage=response_usage,
+            finish_reason=finish_reason,
+            response_id=response_id,
         )
         return text_response
 
@@ -1301,6 +1407,10 @@ class LLM(BaseLLM):
             else None
         )
 
+        finish_reason, response_id = self._extract_finish_reason_and_response_id(
+            response
+        )
+
         if response_model is not None:
             if isinstance(response, BaseModel):
                 structured_response = response.model_dump_json()
@@ -1311,6 +1421,8 @@ class LLM(BaseLLM):
                     from_agent=from_agent,
                     messages=params["messages"],
                     usage=response_usage,
+                    finish_reason=finish_reason,
+                    response_id=response_id,
                 )
                 return structured_response
 
@@ -1349,6 +1461,8 @@ class LLM(BaseLLM):
                 from_agent=from_agent,
                 messages=params["messages"],
                 usage=response_usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             )
             return text_response
 
@@ -1366,6 +1480,8 @@ class LLM(BaseLLM):
             from_agent=from_agent,
             messages=params["messages"],
             usage=response_usage,
+            finish_reason=finish_reason,
+            response_id=response_id,
         )
         return text_response
 
@@ -1403,12 +1519,29 @@ class LLM(BaseLLM):
         params["stream"] = True
         params["stream_options"] = {"include_usage": True}
         response_id = None
+        # See sync sibling: incrementally track finish_reason/response_id so the
+        # usage-only final chunk doesn't wipe them.
+        stream_finish_reason: str | None = None
+        stream_response_id: str | None = None
 
         try:
             async for chunk in await litellm.acompletion(**params):
                 chunk_count += 1
                 chunk_content = None
-                response_id = chunk.id if isinstance(chunk, ModelResponseBase) else None
+                if isinstance(chunk, ModelResponseBase):
+                    response_id = chunk.id
+                elif isinstance(chunk, dict):
+                    response_id = chunk.get("id")
+                else:
+                    response_id = None
+
+                chunk_finish, chunk_id = self._extract_finish_reason_and_response_id(
+                    chunk
+                )
+                if chunk_finish:
+                    stream_finish_reason = chunk_finish
+                if chunk_id and not stream_response_id:
+                    stream_response_id = chunk_id
 
                 try:
                     choices = None
@@ -1516,6 +1649,10 @@ class LLM(BaseLLM):
                         return tool_calls_list
 
             usage_dict = self._usage_to_dict(usage_info)
+            finish_reason, response_id_last = (
+                stream_finish_reason,
+                stream_response_id,
+            )
             self._handle_emit_call_events(
                 response=full_response,
                 call_type=LLMCallType.LLM_CALL,
@@ -1523,6 +1660,8 @@ class LLM(BaseLLM):
                 from_agent=from_agent,
                 messages=params.get("messages"),
                 usage=usage_dict,
+                finish_reason=finish_reason,
+                response_id=response_id_last,
             )
             return full_response
 
@@ -1536,6 +1675,10 @@ class LLM(BaseLLM):
             if chunk_count == 0:
                 raise
             if full_response:
+                finish_reason, response_id_last = (
+                    stream_finish_reason,
+                    stream_response_id,
+                )
                 self._handle_emit_call_events(
                     response=full_response,
                     call_type=LLMCallType.LLM_CALL,
@@ -1543,6 +1686,8 @@ class LLM(BaseLLM):
                     from_agent=from_agent,
                     messages=params.get("messages"),
                     usage=self._usage_to_dict(usage_info),
+                    finish_reason=finish_reason,
+                    response_id=response_id_last,
                 )
                 return full_response
             raise
@@ -1669,19 +1814,14 @@ class LLM(BaseLLM):
             ValueError: If response format is not supported
             LLMContextLengthExceededError: If input exceeds model's context limit
         """
-        with llm_call_context() as call_id:
-            crewai_event_bus.emit(
-                self,
-                event=LLMCallStartedEvent(
-                    messages=messages,
-                    tools=tools,
-                    callbacks=callbacks,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    model=self.model,
-                    call_id=call_id,
-                ),
+        with llm_call_context():
+            self._emit_call_started_event(
+                messages=messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
             )
 
             self._validate_call_params()
@@ -1813,19 +1953,14 @@ class LLM(BaseLLM):
             ValueError: If response format is not supported
             LLMContextLengthExceededError: If input exceeds model's context limit
         """
-        with llm_call_context() as call_id:
-            crewai_event_bus.emit(
-                self,
-                event=LLMCallStartedEvent(
-                    messages=messages,
-                    tools=tools,
-                    callbacks=callbacks,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    model=self.model,
-                    call_id=call_id,
-                ),
+        with llm_call_context():
+            self._emit_call_started_event(
+                messages=messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
             )
 
             self._validate_call_params()
@@ -1916,16 +2051,62 @@ class LLM(BaseLLM):
 
     @staticmethod
     def _usage_to_dict(usage: Any) -> dict[str, Any] | None:
+        """Convert a provider usage object to a plain dict and flatten the
+        cache/reasoning sub-counts that LiteLLM nests under provider-specific
+        shapes into the top-level keys the rest of the pipeline expects.
+
+        LiteLLM hands back provider usage as-is, so cache-read, cache-creation
+        and reasoning tokens may live in nested objects (e.g.
+        ``prompt_tokens_details.cached_tokens``) or under Anthropic-style keys
+        (``cache_read_input_tokens``). Downstream span mapping only reads the
+        flat ``cached_prompt_tokens`` / ``reasoning_tokens`` /
+        ``cache_creation_tokens`` keys, so we surface them here.
+
+        Only those derived buckets are populated; ``prompt_tokens`` /
+        ``completion_tokens`` / ``total_tokens`` are left untouched. Extraction
+        precedence mirrors ``BaseLLM._track_token_usage_internal``.
+        """
         if usage is None:
             return None
         if isinstance(usage, dict):
-            return usage
-        if isinstance(usage, BaseModel):
-            result: dict[str, Any] = usage.model_dump()
-            return result
-        if hasattr(usage, "__dict__"):
-            return {k: v for k, v in vars(usage).items() if not k.startswith("_")}
-        return None
+            data: dict[str, Any] = dict(usage)
+        elif isinstance(usage, BaseModel):
+            data = usage.model_dump()
+        elif hasattr(usage, "__dict__"):
+            data = {k: v for k, v in vars(usage).items() if not k.startswith("_")}
+        else:
+            return None
+
+        def _nested(container: Any, key: str) -> Any:
+            if isinstance(container, dict):
+                return container.get(key)
+            return getattr(container, key, None)
+
+        prompt_details = data.get("prompt_tokens_details")
+        completion_details = data.get("completion_tokens_details")
+
+        cached_prompt_tokens = (
+            data.get("cached_tokens")
+            or data.get("cached_prompt_tokens")
+            or data.get("cache_read_input_tokens")
+            or _nested(prompt_details, "cached_tokens")
+        )
+        if cached_prompt_tokens is not None:
+            data["cached_prompt_tokens"] = cached_prompt_tokens
+
+        reasoning_tokens = data.get("reasoning_tokens") or _nested(
+            completion_details, "reasoning_tokens"
+        )
+        if reasoning_tokens is not None:
+            data["reasoning_tokens"] = reasoning_tokens
+
+        cache_creation_tokens = data.get("cache_creation_tokens") or data.get(
+            "cache_creation_input_tokens"
+        )
+        if cache_creation_tokens is not None:
+            data["cache_creation_tokens"] = cache_creation_tokens
+
+        return data
 
     def _handle_emit_call_events(
         self,
@@ -1935,6 +2116,8 @@ class LLM(BaseLLM):
         from_agent: BaseAgent | None = None,
         messages: str | list[LLMMessage] | None = None,
         usage: dict[str, Any] | None = None,
+        finish_reason: str | None = None,
+        response_id: str | None = None,
     ) -> None:
         """Handle the events for the LLM call.
 
@@ -1945,6 +2128,10 @@ class LLM(BaseLLM):
             from_agent: Optional agent object
             messages: Optional messages object
             usage: Optional token usage data
+            finish_reason: Raw provider finish reason (e.g. "stop", "length",
+                "tool_calls"). Optional; downstream telemetry coerces to the
+                OTel GenAI enum.
+            response_id: Raw provider response identifier. Optional.
         """
         crewai_event_bus.emit(
             self,
@@ -1957,8 +2144,23 @@ class LLM(BaseLLM):
                 model=self.model,
                 call_id=get_current_call_id(),
                 usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             ),
         )
+
+    def _effective_max_tokens(self) -> int | float | None:
+        """LiteLLM sends ``max_tokens or max_completion_tokens`` as the cap."""
+        return self.max_tokens or self.max_completion_tokens
+
+    @staticmethod
+    def _extract_finish_reason_and_response_id(
+        response_or_chunk: Any,
+    ) -> tuple[str | None, str | None]:
+        """LiteLLM responses/chunks share the choices-shape with OpenAI/Azure;
+        delegate to the shared extractor.
+        """
+        return extract_choices_finish_reason_and_id(response_or_chunk)
 
     def _process_message_files(self, messages: list[LLMMessage]) -> list[LLMMessage]:
         """Process files attached to messages and format for provider.
@@ -2153,7 +2355,8 @@ class LLM(BaseLLM):
         Note: This validation only applies to the litellm fallback path.
         Native providers have their own validation.
         """
-        if not LITELLM_AVAILABLE or supports_response_schema is None:
+        if not _ensure_litellm() or supports_response_schema is None:
+            # When litellm is not available, skip validation
             # (this path should only be reached for litellm fallback models)
             return
 
@@ -2173,7 +2376,7 @@ class LLM(BaseLLM):
         Note: This method is only used by the litellm fallback path.
         Native providers override this method with their own implementation.
         """
-        if not LITELLM_AVAILABLE:
+        if not _ensure_litellm():
             # When litellm is not available, assume function calling is supported
             # (all modern models support it)
             return True
@@ -2197,7 +2400,7 @@ class LLM(BaseLLM):
         if "gpt-5" in model_lower:
             return False
 
-        if not LITELLM_AVAILABLE or get_supported_openai_params is None:
+        if not _ensure_litellm() or get_supported_openai_params is None:
             # When litellm is not available, assume stop words are supported
             return True
 
@@ -2245,7 +2448,8 @@ class LLM(BaseLLM):
         Note: This only affects the litellm fallback path. Native providers
         don't use litellm callbacks - they emit events via base_llm.py.
         """
-        if not LITELLM_AVAILABLE:
+        if not _ensure_litellm():
+            # When litellm is not available, callbacks are still stored
             # but not registered with litellm globals
             return
 
@@ -2283,7 +2487,8 @@ class LLM(BaseLLM):
         This will set `litellm.success_callback` to ["langfuse", "langsmith"] and
         `litellm.failure_callback` to ["langfuse"].
         """
-        if not LITELLM_AVAILABLE:
+        if not _ensure_litellm():
+            # When litellm is not available, env callbacks have no effect
             return
 
         with suppress_warnings():

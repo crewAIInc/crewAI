@@ -7,9 +7,11 @@ flow methods, routing logic, and error handling.
 from __future__ import annotations
 
 import asyncio
+from types import SimpleNamespace
 import time
 from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
+from uuid import uuid4
 
 import pytest
 from pydantic import BaseModel
@@ -30,7 +32,7 @@ def _build_executor(**kwargs: Any) -> AgentExecutor:
     executor._method_outputs = []
     executor._completed_methods = set()
     executor._fired_or_listeners = set()
-    executor._pending_and_listeners = {}
+    executor._pending_events = {}
     executor._method_execution_counts = {}
     executor._method_call_counts = {}
     executor._event_futures = []
@@ -57,6 +59,10 @@ from crewai.experimental.agent_executor import (
 )
 from crewai.agents.parser import AgentAction, AgentFinish
 from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.observation_events import (
+    PlanStepCompletedEvent,
+    PlanStepStartedEvent,
+)
 from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
@@ -64,6 +70,8 @@ from crewai.events.types.tool_usage_events import (
 from crewai.tools.tool_types import ToolResult
 from crewai.utilities.step_execution_context import StepExecutionContext
 from crewai.utilities.planning_types import TodoItem
+from crewai.utilities.file_store import clear_files, clear_task_files, store_files
+from crewai_files import TextFile
 
 class TestAgentExecutorState:
     """Test AgentExecutorState Pydantic model."""
@@ -111,6 +119,58 @@ class TestAgentExecutor:
 
     class StructuredResult(BaseModel):
         value: str
+
+    def test_inject_files_from_crew_task_store(self):
+        """Crew-level input_files should attach to the LLM user message."""
+        crew_id = uuid4()
+        task_id = uuid4()
+        stored_file = TextFile(source=b"stored content")
+        executor = _build_executor(
+            crew=SimpleNamespace(id=crew_id),
+            task=SimpleNamespace(id=task_id),
+        )
+        executor.state.messages = [{"role": "user", "content": "Analyze this file"}]
+
+        try:
+            store_files(crew_id, {"document": stored_file})
+            executor._inject_files_from_inputs({})
+        finally:
+            clear_files(crew_id)
+            clear_task_files(task_id)
+
+        assert executor.state.messages[0]["files"] == {"document": stored_file}
+
+    @pytest.mark.asyncio
+    async def test_ainject_files_from_crew_task_store_uses_async_store(self):
+        """Async file injection should not call the sync file store helper."""
+        crew_id = uuid4()
+        task_id = uuid4()
+        stored_file = TextFile(source=b"stored content")
+        local_file = TextFile(source=b"local content")
+        inputs = {"files": {"local": local_file}}
+        executor = _build_executor(
+            crew=SimpleNamespace(id=crew_id),
+            task=SimpleNamespace(id=task_id),
+        )
+        executor.state.messages = [{"role": "user", "content": "Analyze this file"}]
+
+        with (
+            patch(
+                "crewai.experimental.agent_executor.aget_all_files",
+                new=AsyncMock(return_value={"document": stored_file}),
+            ) as async_get_files,
+            patch(
+                "crewai.experimental.agent_executor.get_all_files",
+                side_effect=AssertionError("sync file store should not be called"),
+            ),
+        ):
+            await executor._ainject_files_from_inputs(inputs)
+
+        async_get_files.assert_awaited_once_with(crew_id, task_id)
+        assert executor.state.messages[0]["files"] == {
+            "document": stored_file,
+            "local": local_file,
+        }
 
     @pytest.fixture
     def mock_dependencies(self):
@@ -261,6 +321,41 @@ class TestAgentExecutor:
 
         assert result == "native_finished"
         assert get_llm_response_mock.call_args.kwargs["response_model"] is None
+
+    def test_call_llm_native_tools_falls_back_when_provider_rejects_tools(
+        self, mock_dependencies
+    ):
+        """Provider-level unsupported tools errors should downgrade to ReAct."""
+        executor = _build_executor(
+            **mock_dependencies,
+            original_tools=[Mock()],
+            callbacks=[],
+        )
+        executor._openai_tools = [{"type": "function", "function": {"name": "lookup"}}]
+        executor.state.use_native_tools = True
+        executor.state.pending_tool_calls = [Mock()]
+        executor.state.messages = [{"role": "user", "content": "Use a tool"}]
+        executor.tools = [Mock()]
+        executor.tools_names = "lookup"
+        executor.tools_description = "lookup: search for information"
+
+        with patch(
+            "crewai.experimental.agent_executor.get_llm_response",
+            side_effect=RuntimeError(
+                "Error code: 400 - registry.ollama.ai/library/mariner:latest "
+                "does not support tools"
+            ),
+        ):
+            result = executor.call_llm_native_tools()
+
+        assert result == "continue_reasoning"
+        assert executor.state.use_native_tools is False
+        assert executor.state.pending_tool_calls == []
+        assert executor.state.messages[-1]["role"] == "user"
+        assert "Native tool calling is unavailable" in executor.state.messages[-1][
+            "content"
+        ]
+        assert "Action Input" in executor.state.messages[-1]["content"]
 
     def test_finalize_success(self, mock_dependencies):
         """Test finalize with valid AgentFinish."""
@@ -489,6 +584,7 @@ class TestStepExecutorCriticalFixes:
 
         tool = Mock()
         tool.name = "count_words"
+        tool.description = "count_words: Counts words in text"
         task = Mock()
         task.name = "test-task"
         task.description = "test task description"
@@ -554,13 +650,126 @@ class TestStepExecutorCriticalFixes:
             "crewai.agents.step_executor.execute_tool_and_check_finality",
             return_value=ToolResult(result="2", result_as_answer=False),
         ):
-            output = step_executor._execute_text_tool_with_events(action)
+            todo = TodoItem(step_number=2, description="Count words")
+            output = step_executor._execute_text_tool_with_events(action, todo)
 
         crewai_event_bus.flush()
 
         assert output == "2"
         assert len(started_events) >= 1
         assert len(finished_events) >= 1
+        assert started_events[-1].plan_step_number == 2
+        assert started_events[-1].plan_step_description == "Count words"
+        assert finished_events[-1].plan_step_number == 2
+        assert finished_events[-1].plan_step_description == "Count words"
+
+    def test_step_executor_falls_back_when_native_tools_are_rejected(
+        self, step_executor
+    ):
+        """Plan steps should retry through text tool calls when native tools fail."""
+        step_executor._use_native_tools = True
+        step_executor._openai_tools = [{"type": "function", "function": {"name": "count_words"}}]
+        step_executor._available_functions = {"count_words": Mock()}
+        todo = TodoItem(step_number=1, description="Count words")
+        context = StepExecutionContext(task_description="task", task_goal="goal")
+
+        with (
+            patch.object(
+                step_executor,
+                "_execute_native",
+                side_effect=RuntimeError(
+                    "registry.ollama.ai/library/mariner:latest does not support tools"
+                ),
+            ),
+            patch.object(
+                step_executor,
+                "_execute_text_parsed",
+                return_value="Counted words",
+            ) as text_parsed,
+        ):
+            result = step_executor.execute(todo, context)
+
+        assert result.success is True
+        assert result.result == "Counted words"
+        assert step_executor._use_native_tools is False
+        fallback_messages = text_parsed.call_args.args[0]
+        # The original conversation is preserved (system + user) and the
+        # text-tooling instructions are appended instead of rebuilding.
+        assert fallback_messages[0]["role"] == "system"
+        assert fallback_messages[-1]["role"] == "user"
+        assert "Action Input" in fallback_messages[-1]["content"]
+
+    def test_plan_step_lifecycle_events_are_emitted_from_todo_transitions(
+        self, mock_dependencies
+    ):
+        """Todo transitions should publish authoritative plan step events."""
+        from crewai.utilities.planning_types import TodoList
+
+        executor = _build_executor(**mock_dependencies)
+        todo = TodoItem(
+            step_number=1,
+            description="Search the official release",
+            tool_to_use="search",
+        )
+        executor.state.todos = TodoList(items=[todo])
+
+        started_events: list[PlanStepStartedEvent] = []
+        completed_events: list[PlanStepCompletedEvent] = []
+
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(PlanStepStartedEvent)
+            def _on_started(_source, event):
+                started_events.append(event)
+
+            @crewai_event_bus.on(PlanStepCompletedEvent)
+            def _on_completed(_source, event):
+                completed_events.append(event)
+
+            executor._mark_todo_running(todo)
+            executor._mark_todo_completed(1, result="Found release")
+            crewai_event_bus.flush()
+
+        assert todo.status == "completed"
+        assert len(started_events) == 1
+        assert started_events[0].step_number == 1
+        assert started_events[0].step_description == "Search the official release"
+        assert started_events[0].tool_to_use == "search"
+        assert len(completed_events) == 1
+        assert completed_events[0].success is True
+        assert completed_events[0].step_number == 1
+        assert completed_events[0].result == "Found release"
+
+    def test_failed_todo_transition_emits_failed_plan_step_event(
+        self, mock_dependencies
+    ):
+        """Failed todo transitions should publish failed plan step events."""
+        from crewai.utilities.planning_types import TodoList
+
+        executor = _build_executor(**mock_dependencies)
+        todo = TodoItem(step_number=1, description="Search release")
+        executor.state.todos = TodoList(items=[todo])
+        completed_events: list[PlanStepCompletedEvent] = []
+
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(PlanStepCompletedEvent)
+            def _on_completed(_source, event):
+                completed_events.append(event)
+
+            executor._mark_todo_failed(
+                1,
+                result="Error: no result",
+                error="No result",
+            )
+            crewai_event_bus.flush()
+
+        assert todo.status == "failed"
+        assert len(completed_events) == 1
+        assert completed_events[0].success is False
+        assert completed_events[0].step_number == 1
+        assert completed_events[0].result == "Error: no result"
+        assert completed_events[0].error == "No result"
 
     @patch("crewai.experimental.agent_executor.handle_output_parser_exception")
     def test_recover_from_parser_error(
@@ -1593,6 +1802,12 @@ class TestReasoningEffort:
         executor.handle_step_observed_medium = (
             AgentExecutor.handle_step_observed_medium.__get__(executor)
         )
+        executor._mark_todo_completed = (
+            AgentExecutor._mark_todo_completed.__get__(executor)
+        )
+        executor._mark_todo_failed = (
+            AgentExecutor._mark_todo_failed.__get__(executor)
+        )
 
         success_todo = TodoItem(
             step_number=1,
@@ -1659,6 +1874,9 @@ class TestReasoningEffort:
         executor.handle_step_observed_low = (
             AgentExecutor.handle_step_observed_low.__get__(executor)
         )
+        executor._mark_todo_completed = (
+            AgentExecutor._mark_todo_completed.__get__(executor)
+        )
 
         todo = TodoItem(
             step_number=1,
@@ -1691,6 +1909,12 @@ class TestReasoningEffort:
         executor.agent.planning_config.reasoning_effort = "low"
         executor.handle_step_observed_low = (
             AgentExecutor.handle_step_observed_low.__get__(executor)
+        )
+        executor._mark_todo_completed = (
+            AgentExecutor._mark_todo_completed.__get__(executor)
+        )
+        executor._mark_todo_failed = (
+            AgentExecutor._mark_todo_failed.__get__(executor)
         )
 
         todo = TodoItem(
@@ -2009,13 +2233,13 @@ class TestTodoStatusTracking:
         from crewai.experimental.agent_executor import AgentExecutor
 
         source = inspect.getsource(AgentExecutor.handle_step_observed_medium)
-        assert "mark_failed" in source, (
-            "handle_step_observed_medium should use mark_failed for failed steps"
+        assert "_mark_todo_failed" in source, (
+            "handle_step_observed_medium should use _mark_todo_failed for failed steps"
         )
         failed_no_replan_idx = source.index("failed but no replan")
         after_comment = source[failed_no_replan_idx:]
-        assert "mark_completed" not in after_comment, (
-            "mark_completed should not be called on failed steps"
+        assert "_mark_todo_completed" not in after_comment, (
+            "_mark_todo_completed should not be called on failed steps"
         )
 
     def test_failed_step_appears_in_get_failed_todos(self):

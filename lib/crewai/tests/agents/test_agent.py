@@ -4,6 +4,7 @@ import os
 import threading
 from unittest import mock
 from unittest.mock import MagicMock, patch
+import warnings
 
 from crewai.agents.crew_agent_executor import AgentFinish, CrewAgentExecutor
 from crewai.constants import DEFAULT_LLM_MODEL
@@ -25,6 +26,19 @@ from crewai import Agent, Crew, Task
 from crewai.agents.cache import CacheHandler
 from crewai.tools import tool
 from crewai.utilities import RPMController
+
+
+def test_agent_memory_true_uses_agent_llm_model():
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm="ollama/llama3",
+        memory=True,
+    )
+
+    assert agent.memory is not None
+    assert agent.memory.llm == "ollama/llama3"
 
 
 def test_agent_llm_creation_with_env_vars():
@@ -75,6 +89,51 @@ def test_agent_creation():
     assert agent.role == "test role"
     assert agent.goal == "test goal"
     assert agent.backstory == "test backstory"
+
+
+def test_agent_exposes_i18n_for_backward_compatibility():
+    from crewai.utilities.i18n import I18N_DEFAULT
+
+    agent = Agent(role="test role", goal="test goal", backstory="test backstory")
+
+    with pytest.warns(DeprecationWarning, match="Agent.i18n is deprecated"):
+        i18n = agent.i18n
+
+    assert i18n is I18N_DEFAULT
+    assert isinstance(i18n.slice("role_playing"), str)
+
+
+def test_agent_accepts_custom_i18n():
+    from crewai.utilities.i18n import I18N
+
+    prompt_file = os.path.join(
+        os.path.dirname(__file__), "..", "utilities", "prompts.json"
+    )
+    i18n = I18N(prompt_file=prompt_file)
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        i18n=i18n,
+    )
+
+    with pytest.warns(DeprecationWarning, match="Agent.i18n is deprecated"):
+        agent_i18n = agent.i18n
+
+    assert agent_i18n is i18n
+    assert agent_i18n.slice("role_playing") == "Lorem ipsum dolor sit amet"
+
+
+def test_agent_copy_does_not_emit_i18n_deprecation_warning():
+    agent = Agent(role="test role", goal="test goal", backstory="test backstory")
+
+    with warnings.catch_warnings(record=True) as caught_warnings:
+        warnings.simplefilter("always", DeprecationWarning)
+        agent.copy()
+
+    assert not any(
+        "Agent.i18n is deprecated" in str(w.message) for w in caught_warnings
+    )
 
 
 def test_agent_with_only_system_template():
@@ -1064,6 +1123,62 @@ def test_agent_use_trained_data_honors_env_var(crew_training_handler, monkeypatc
 
     crew_training_handler.assert_has_calls(
         [mock.call("my_custom_trained.pkl"), mock.call().load()]
+    )
+
+
+@patch("crewai.agent.core.CrewTrainingHandler")
+def test_agent_use_trained_data_prefers_crew_trained_agents_file(
+    crew_training_handler, monkeypatch
+):
+    monkeypatch.setenv("CREWAI_TRAINED_AGENTS_FILE", "env_trained.pkl")
+    agent = Agent(
+        role="researcher",
+        goal="test goal",
+        backstory="test backstory",
+    )
+    task = Task(
+        description="Research the topic",
+        expected_output="A short report",
+        agent=agent,
+    )
+    crew = Crew(agents=[agent], tasks=[task], trained_agents_file="crew_trained.pkl")
+    agent.crew = crew
+    crew_training_handler.return_value.load.return_value = {}
+
+    agent._use_trained_data(task_prompt="What is 1 + 1?")
+
+    crew_training_handler.assert_has_calls(
+        [mock.call("crew_trained.pkl"), mock.call().load()]
+    )
+
+
+@patch("crewai.agent.core.CrewTrainingHandler")
+def test_agent_use_trained_data_accepts_crew_trained_agents_file_path(
+    crew_training_handler, tmp_path
+):
+    agent = Agent(
+        role="researcher",
+        goal="test goal",
+        backstory="test backstory",
+    )
+    task = Task(
+        description="Research the topic",
+        expected_output="A short report",
+        agent=agent,
+    )
+    trained_agents_file = tmp_path / "crew_trained.pkl"
+    crew = Crew(
+        agents=[agent],
+        tasks=[task],
+        trained_agents_file=trained_agents_file,
+    )
+    agent.crew = crew
+    crew_training_handler.return_value.load.return_value = {}
+
+    agent._use_trained_data(task_prompt="What is 1 + 1?")
+
+    crew_training_handler.assert_has_calls(
+        [mock.call(str(trained_agents_file)), mock.call().load()]
     )
 
 

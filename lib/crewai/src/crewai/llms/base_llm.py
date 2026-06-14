@@ -150,6 +150,13 @@ class BaseLLM(BaseModel, ABC):
     llm_type: str = "base"
     model: str
     temperature: float | None = None
+    top_p: float | None = None
+    max_tokens: int | float | None = None
+    stream: bool | None = None
+    seed: int | None = None
+    frequency_penalty: float | None = None
+    presence_penalty: float | None = None
+    n: int | None = None
     api_key: str | None = None
     base_url: str | None = None
     provider: str = Field(default="openai")
@@ -464,6 +471,16 @@ class BaseLLM(BaseModel, ABC):
         """
         return None
 
+    def _effective_max_tokens(self) -> int | float | None:
+        """Token cap actually sent to the provider, for start-event telemetry.
+
+        Defaults to ``self.max_tokens``. Providers that cap generation through a
+        differently named field (e.g. ``max_completion_tokens`` on OpenAI/Azure,
+        ``max_output_tokens`` on Gemini) override this so ``LLMCallStartedEvent``
+        reports the real limit instead of ``None``.
+        """
+        return self.max_tokens
+
     def _emit_call_started_event(
         self,
         messages: str | list[LLMMessage],
@@ -472,9 +489,37 @@ class BaseLLM(BaseModel, ABC):
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
         from_agent: BaseAgent | None = None,
+        temperature: float | None = None,
+        top_p: float | None = None,
+        max_tokens: int | float | None = None,
+        stream: bool | None = None,
+        seed: int | None = None,
+        stop_sequences: list[str] | None = None,
+        frequency_penalty: float | None = None,
+        presence_penalty: float | None = None,
+        n: int | None = None,
     ) -> None:
         """Emit LLM call started event."""
         from crewai.utilities.serialization import to_serializable
+
+        if temperature is None:
+            temperature = self.temperature
+        if top_p is None:
+            top_p = self.top_p
+        if max_tokens is None:
+            max_tokens = self._effective_max_tokens()
+        if stream is None:
+            stream = self.stream
+        if seed is None:
+            seed = self.seed
+        if stop_sequences is None:
+            stop_sequences = self.stop_sequences or None
+        if frequency_penalty is None:
+            frequency_penalty = self.frequency_penalty
+        if presence_penalty is None:
+            presence_penalty = self.presence_penalty
+        if n is None:
+            n = self.n
 
         crewai_event_bus.emit(
             self,
@@ -487,6 +532,15 @@ class BaseLLM(BaseModel, ABC):
                 from_agent=from_agent,
                 model=self.model,
                 call_id=get_current_call_id(),
+                temperature=temperature,
+                top_p=top_p,
+                max_tokens=max_tokens,
+                stream=stream,
+                seed=seed,
+                stop_sequences=stop_sequences,
+                frequency_penalty=frequency_penalty,
+                presence_penalty=presence_penalty,
+                n=n,
             ),
         )
 
@@ -498,6 +552,8 @@ class BaseLLM(BaseModel, ABC):
         from_agent: BaseAgent | None = None,
         messages: str | list[LLMMessage] | None = None,
         usage: dict[str, Any] | None = None,
+        finish_reason: str | None = None,
+        response_id: str | None = None,
     ) -> None:
         """Emit LLM call completed event."""
         from crewai.utilities.serialization import to_serializable
@@ -513,6 +569,8 @@ class BaseLLM(BaseModel, ABC):
                 model=self.model,
                 call_id=get_current_call_id(),
                 usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             ),
         )
 
@@ -832,41 +890,17 @@ class BaseLLM(BaseModel, ABC):
         Args:
             usage_data: Token usage data from the API response
         """
-        prompt_tokens = (
-            usage_data.get("prompt_tokens")
-            or usage_data.get("prompt_token_count")
-            or usage_data.get("input_tokens")
-            or 0
-        )
+        metrics = UsageMetrics.from_provider_dict(usage_data)
+        if metrics is None:
+            return
 
-        completion_tokens = (
-            usage_data.get("completion_tokens")
-            or usage_data.get("candidates_token_count")
-            or usage_data.get("output_tokens")
-            or 0
-        )
-
-        cached_tokens = (
-            usage_data.get("cached_tokens")
-            or usage_data.get("cached_prompt_tokens")
-            or usage_data.get("cache_read_input_tokens")
-            or 0
-        )
-        if not cached_tokens:
-            prompt_details = usage_data.get("prompt_tokens_details")
-            if isinstance(prompt_details, dict):
-                cached_tokens = prompt_details.get("cached_tokens", 0) or 0
-
-        reasoning_tokens = usage_data.get("reasoning_tokens", 0) or 0
-        cache_creation_tokens = usage_data.get("cache_creation_tokens", 0) or 0
-
-        self._token_usage["prompt_tokens"] += prompt_tokens
-        self._token_usage["completion_tokens"] += completion_tokens
-        self._token_usage["total_tokens"] += prompt_tokens + completion_tokens
-        self._token_usage["successful_requests"] += 1
-        self._token_usage["cached_prompt_tokens"] += cached_tokens
-        self._token_usage["reasoning_tokens"] += reasoning_tokens
-        self._token_usage["cache_creation_tokens"] += cache_creation_tokens
+        self._token_usage["prompt_tokens"] += metrics.prompt_tokens
+        self._token_usage["completion_tokens"] += metrics.completion_tokens
+        self._token_usage["total_tokens"] += metrics.total_tokens
+        self._token_usage["successful_requests"] += metrics.successful_requests
+        self._token_usage["cached_prompt_tokens"] += metrics.cached_prompt_tokens
+        self._token_usage["reasoning_tokens"] += metrics.reasoning_tokens
+        self._token_usage["cache_creation_tokens"] += metrics.cache_creation_tokens
 
     def get_token_usage_summary(self) -> UsageMetrics:
         """Get summary of token usage for this LLM instance.

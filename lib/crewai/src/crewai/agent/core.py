@@ -758,6 +758,31 @@ class Agent(BaseAgent):
         self._check_execution_error(e, task)
         return await self.aexecute_task(task, context, tools)
 
+    def message(self, content: str, **kwargs: Any) -> str:
+        """Send a single message and get a response.
+
+        Creates a temporary Task + Crew, executes, and returns the raw output.
+        """
+        from crewai.crew import Crew
+        from crewai.task import Task
+        from crewai.types.streaming import CrewStreamingOutput
+
+        task = Task(
+            description=content,
+            expected_output="Respond to the user's message appropriately.",
+            agent=self,
+        )
+        crew = Crew(
+            agents=[self],
+            tasks=[task],
+            verbose=self.verbose,
+            memory=self.memory or False,
+        )
+        result = crew.kickoff()
+        if isinstance(result, CrewStreamingOutput):
+            return result.result.raw
+        return result.raw
+
     def execute_task(
         self,
         task: Task,
@@ -1219,9 +1244,17 @@ class Agent(BaseAgent):
 
     def _use_trained_data(self, task_prompt: str) -> str:
         """Use trained data for the agent task prompt to improve output."""
-        trained_file = os.getenv(
-            CREWAI_TRAINED_AGENTS_FILE_ENV, TRAINED_AGENTS_DATA_FILE
+        crew_trained_agents_file = (
+            getattr(self.crew, "trained_agents_file", None)
+            if self.crew and not isinstance(self.crew, str)
+            else None
         )
+        trained_file = (
+            os.fspath(crew_trained_agents_file)
+            if crew_trained_agents_file
+            else os.getenv(CREWAI_TRAINED_AGENTS_FILE_ENV, TRAINED_AGENTS_DATA_FILE)
+        )
+
         if data := CrewTrainingHandler(trained_file).load():
             if trained_data_output := data.get(self.role):
                 task_prompt += (

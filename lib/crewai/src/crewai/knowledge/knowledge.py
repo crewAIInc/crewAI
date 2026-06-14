@@ -13,6 +13,7 @@ from crewai.knowledge.source.string_knowledge_source import StringKnowledgeSourc
 from crewai.knowledge.source.text_file_knowledge_source import (
     TextFileKnowledgeSource,
 )
+from crewai.knowledge.storage.base_knowledge_storage import BaseKnowledgeStorage
 from crewai.knowledge.storage.knowledge_storage import KnowledgeStorage
 from crewai.rag.core.base_embeddings_provider import BaseEmbeddingsProvider
 from crewai.rag.embeddings.types import EmbedderConfig
@@ -89,7 +90,7 @@ class Knowledge(BaseModel):
     Knowledge is a collection of sources and setup for the vector store to save and query relevant context.
     Args:
         sources: list[BaseKnowledgeSource] = Field(default_factory=list)
-        storage: KnowledgeStorage | None = Field(default=None)
+        storage: BaseKnowledgeStorage | None = Field(default=None)
         embedder: EmbedderConfig | None = None
     """
 
@@ -98,7 +99,7 @@ class Knowledge(BaseModel):
         BeforeValidator(_resolve_knowledge_sources),
     ] = Field(default_factory=list)
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    storage: KnowledgeStorage | None = Field(default=None)
+    storage: BaseKnowledgeStorage | None = Field(default=None)
     embedder: Annotated[
         EmbedderConfig | None,
         PlainSerializer(
@@ -112,15 +113,22 @@ class Knowledge(BaseModel):
         collection_name: str,
         sources: list[BaseKnowledgeSource],
         embedder: EmbedderConfig | None = None,
-        storage: KnowledgeStorage | None = None,
+        storage: BaseKnowledgeStorage | None = None,
         **data: object,
     ) -> None:
         super().__init__(**data)
-        if storage:
+        if storage is not None:
             self.storage = storage
         else:
-            self.storage = KnowledgeStorage(
-                embedder=embedder, collection_name=collection_name
+            from crewai.knowledge.storage.factory import resolve_knowledge_storage
+
+            custom = resolve_knowledge_storage(embedder, collection_name)
+            self.storage = (
+                custom
+                if custom is not None
+                else KnowledgeStorage(
+                    embedder=embedder, collection_name=collection_name
+                )
             )
         self.sources = sources
 
@@ -152,10 +160,9 @@ class Knowledge(BaseModel):
             raise e
 
     def reset(self) -> None:
-        if self.storage:
-            self.storage.reset()
-        else:
+        if self.storage is None:
             raise ValueError("Storage is not initialized.")
+        self.storage.reset()
 
     async def aquery(
         self, query: list[str], results_limit: int = 5, score_threshold: float = 0.6
@@ -193,7 +200,6 @@ class Knowledge(BaseModel):
 
     async def areset(self) -> None:
         """Reset the knowledge base asynchronously."""
-        if self.storage:
-            await self.storage.areset()
-        else:
+        if self.storage is None:
             raise ValueError("Storage is not initialized.")
+        await self.storage.areset()

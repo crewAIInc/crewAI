@@ -161,6 +161,108 @@ def test_flow_with_or_condition():
     )
 
 
+def test_flow_executes_and_condition_with_single_branch_or():
+    class NestedConditionFlow(Flow):
+        @start()
+        def event_a(self):
+            return "a"
+
+        @listen(event_a)
+        def event_b(self):
+            return "b"
+
+        @router(event_b)
+        def emit_event_c(self):
+            return "event_c"
+
+        @listen(and_(event_a, event_b, or_("event_c")))
+        def event_d(self):
+            return "done"
+
+    assert NestedConditionFlow().kickoff() == "done"
+
+
+def test_or_listener_fires_once_across_parallel_starts():
+    """Parallel ``@start`` paths feeding ``or_`` must not double-fire the listener."""
+    fire_count = 0
+
+    class ParallelOrFlow(Flow):
+        @start()
+        async def fast_start(self):
+            return "fast"
+
+        @start()
+        async def slow_start(self):
+            await asyncio.sleep(0.2)
+            return "slow"
+
+        @listen(or_(fast_start, slow_start))
+        def handler(self):
+            nonlocal fire_count
+            fire_count += 1
+
+    asyncio.run(ParallelOrFlow().kickoff_async())
+
+    assert fire_count == 1
+
+
+def test_or_listener_re_arms_across_router_loop():
+    """Regression for #5972: multi-source ``or_`` re-fires on each router emission."""
+    fire_count = 0
+
+    class CyclicOrFlow(Flow):
+        iteration = 0
+
+        @start()
+        def kick(self):
+            return "kick"
+
+        @router(kick)
+        def initial_router(self):
+            return "SignalA"
+
+        @listen(or_("SignalA", "SignalB"))
+        def handler(self):
+            nonlocal fire_count
+            fire_count += 1
+
+        @router(handler)
+        def loop_router(self):
+            self.iteration += 1
+            return "stop" if self.iteration >= 3 else "SignalB"
+
+    CyclicOrFlow().kickoff()
+
+    assert fire_count == 3
+
+
+def test_or_listener_does_not_double_fire_across_chained_routers():
+    """Chained routers within one dispatch wave must not re-fire the same ``or_`` listener."""
+    fire_count = 0
+
+    class ChainedRouterOrFlow(Flow):
+        @start()
+        def kick(self):
+            return "kick"
+
+        @router(kick)
+        def router_a(self):
+            return "SignalA"
+
+        @router("SignalA")
+        def router_b(self):
+            return "SignalB"
+
+        @listen(or_("SignalA", "SignalB"))
+        def handler(self):
+            nonlocal fire_count
+            fire_count += 1
+
+    ChainedRouterOrFlow().kickoff()
+
+    assert fire_count == 1
+
+
 def test_flow_with_router():
     """Test a flow that uses a router method to determine the next step."""
     execution_order = []
@@ -189,6 +291,121 @@ def test_flow_with_router():
     flow.kickoff()
 
     assert execution_order == ["start_method", "router", "step_if_true"]
+
+
+def test_start_runtime_uses_flow_definition_without_legacy_start_metadata():
+    execution_order = []
+
+    class DefinitionStartFlow(Flow):
+        @start()
+        def begin(self):
+            execution_order.append("begin")
+            return "begin"
+
+        @router(begin)
+        def route(self):
+            execution_order.append("route")
+            return "branch_event"
+
+        @start("branch_event")
+        def branch(self):
+            execution_order.append("branch")
+            return "branch"
+
+        @listen(branch)
+        def done(self):
+            execution_order.append("done")
+
+    assert not hasattr(DefinitionStartFlow.__dict__["begin"], "__is_start_method__")
+    assert not hasattr(DefinitionStartFlow.__dict__["branch"], "__trigger_methods__")
+
+    DefinitionStartFlow().kickoff()
+
+    assert execution_order == ["begin", "route", "branch", "done"]
+
+
+def test_listen_runtime_uses_flow_definition_without_legacy_listener_metadata():
+    execution_order = []
+
+    class DefinitionListenFlow(Flow):
+        @start()
+        def begin(self):
+            execution_order.append("begin")
+
+        @listen(begin)
+        def by_callable(self):
+            execution_order.append("by_callable")
+
+        @listen(and_(begin, by_callable))
+        def by_and(self):
+            execution_order.append("by_and")
+
+        @listen(or_(and_(begin, by_callable), "fallback"))
+        def nested(self):
+            execution_order.append("nested")
+
+    for method_name in ("by_callable", "by_and", "nested"):
+        method = DefinitionListenFlow.__dict__[method_name]
+        assert not hasattr(method, "__trigger_methods__")
+        assert not hasattr(method, "__condition_type__")
+        assert not hasattr(method, "__trigger_condition__")
+
+    DefinitionListenFlow().kickoff()
+
+    assert execution_order[0] == "begin"
+    assert {"by_callable", "by_and", "nested"}.issubset(execution_order)
+
+
+def test_router_runtime_uses_flow_definition_without_legacy_router_metadata():
+    execution_order = []
+
+    class DefinitionRouterFlow(Flow):
+        @start()
+        def begin(self):
+            execution_order.append("begin")
+            return "begin"
+
+        @router(begin, emit=["go_left"])
+        def decide(self):
+            execution_order.append("decide")
+            return "go_left"
+
+        @listen("go_left")
+        def handle_left(self):
+            execution_order.append("handle_left")
+
+    route = DefinitionRouterFlow.__dict__["decide"]
+    assert not hasattr(route, "__is_router__")
+    assert not hasattr(route, "__router_emit__")
+    assert not hasattr(route, "__trigger_methods__")
+    assert not hasattr(route, "__condition_type__")
+    assert not hasattr(route, "__trigger_condition__")
+
+    DefinitionRouterFlow().kickoff()
+
+    assert execution_order == ["begin", "decide", "handle_left"]
+
+
+def test_router_falsy_result_emits_runtime_event():
+    execution_order = []
+
+    class FalsyRouterResultFlow(Flow):
+        @start()
+        def begin(self):
+            execution_order.append("begin")
+
+        @router(begin)
+        def decide(self):
+            execution_order.append("decide")
+            return 0
+
+        @listen("0")
+        def handle_zero(self):
+            execution_order.append("handle_zero")
+
+    FalsyRouterResultFlow().kickoff()
+
+    assert execution_order == ["begin", "decide", "handle_zero"]
 
 
 def test_async_flow():
@@ -823,7 +1040,7 @@ def test_flow_plotting():
         received_events.append(event)
         event_received.set()
 
-    flow.plot("test_flow")
+    flow.plot("test_flow", show=False)
 
     assert event_received.wait(timeout=5), "Timeout waiting for plot event"
     assert len(received_events) == 1
@@ -938,6 +1155,26 @@ def test_flow_name():
 
     flow = MyFlow()
     assert flow.name == "MyFlow"
+
+
+def test_flow_custom_name_overrides_class_name_in_events():
+    class InternalFlowClass(Flow):
+        name = "PublicName"
+
+        @start()
+        def begin(self):
+            return "done"
+
+    received = []
+
+    with crewai_event_bus.scoped_handlers():
+        @crewai_event_bus.on(FlowStartedEvent)
+        def handle(source, event):
+            received.append(event)
+
+        InternalFlowClass().kickoff()
+
+    assert received[0].flow_name == "PublicName"
 
 
 def test_nested_and_or_conditions():
@@ -1079,9 +1316,9 @@ def test_router_cascade_chain():
         @router(process_level_1)
         def router_level_2(self):
             execution_order.append("router_level_2")
-            return "level_2_path"
+            return "level_2_event"
 
-        @listen("level_2_path")
+        @listen("level_2_event")
         def process_level_2(self):
             execution_order.append("process_level_2")
             self.state["level"] = 3
@@ -1090,9 +1327,9 @@ def test_router_cascade_chain():
         @router(process_level_2)
         def router_level_3(self):
             execution_order.append("router_level_3")
-            return "final_path"
+            return "final_event"
 
-        @listen("final_path")
+        @listen("final_event")
         def finalize(self):
             execution_order.append("finalize")
             return "complete"
@@ -1180,14 +1417,14 @@ def test_complex_and_or_branching():
     assert execution_order.index("final") > execution_order.index("branch_2b")
 
 
-def test_conditional_router_paths_exclusivity():
-    """Test that only the returned router path activates, not all paths."""
+def test_conditional_router_events_exclusivity():
+    """Test that only the returned router event activates, not all events."""
     execution_order = []
 
     class ConditionalRouterFlow(Flow):
         def __init__(self):
             super().__init__()
-            self.state["condition"] = "take_path_b"
+            self.state["condition"] = "take_event_b"
 
         @start()
         def begin(self):
@@ -1196,33 +1433,33 @@ def test_conditional_router_paths_exclusivity():
         @router(begin)
         def decision_point(self):
             execution_order.append("decision_point")
-            if self.state["condition"] == "take_path_a":
-                return "path_a"
-            elif self.state["condition"] == "take_path_b":
-                return "path_b"
+            if self.state["condition"] == "take_event_a":
+                return "event_a"
+            elif self.state["condition"] == "take_event_b":
+                return "event_b"
             else:
-                return "path_c"
+                return "event_c"
 
-        @listen("path_a")
-        def handle_path_a(self):
-            execution_order.append("handle_path_a")
+        @listen("event_a")
+        def handle_event_a(self):
+            execution_order.append("handle_event_a")
 
-        @listen("path_b")
-        def handle_path_b(self):
-            execution_order.append("handle_path_b")
+        @listen("event_b")
+        def handle_event_b(self):
+            execution_order.append("handle_event_b")
 
-        @listen("path_c")
-        def handle_path_c(self):
-            execution_order.append("handle_path_c")
+        @listen("event_c")
+        def handle_event_c(self):
+            execution_order.append("handle_event_c")
 
     flow = ConditionalRouterFlow()
     flow.kickoff()
 
     assert "begin" in execution_order
     assert "decision_point" in execution_order
-    assert "handle_path_b" in execution_order
-    assert "handle_path_a" not in execution_order
-    assert "handle_path_c" not in execution_order
+    assert "handle_event_b" in execution_order
+    assert "handle_event_a" not in execution_order
+    assert "handle_event_c" not in execution_order
 
 
 def test_state_consistency_across_parallel_branches():
@@ -1322,6 +1559,66 @@ def test_deeply_nested_conditions():
     and_ab_satisfied = result_idx > a_idx and result_idx > b_idx
     and_cd_satisfied = result_idx > c_idx and result_idx > d_idx
     assert and_ab_satisfied or and_cd_satisfied
+
+
+def test_or_branch_does_not_leave_stale_and_state():
+    fired = []
+
+    class StaleStateFlow(Flow):
+        @start()
+        def begin(self):
+            pass
+
+        @listen(begin)
+        def a(self):
+            pass
+
+        @listen(begin)
+        def c(self):
+            pass
+
+        @listen(and_(a, c))
+        def x(self):
+            pass
+
+        @listen(or_(and_("a", "x"), and_("c", "y")))
+        def joined(self):
+            fired.append("joined")
+
+        @router(joined)
+        def emit_y(self):
+            return "y"
+
+    StaleStateFlow().kickoff()
+
+    assert fired == ["joined"]
+
+
+def test_and_branch_inside_or_does_not_race():
+    execution_order = []
+
+    class DiamondWithFallbackFlow(Flow):
+        @start()
+        def go(self):
+            execution_order.append("go")
+
+        @listen(go)
+        def a(self):
+            execution_order.append("a")
+
+        @listen(go)
+        def b(self):
+            execution_order.append("b")
+
+        @listen(or_(and_(a, b), "fallback"))
+        def done(self):
+            execution_order.append("done")
+
+    DiamondWithFallbackFlow().kickoff()
+
+    assert "done" in execution_order
+    assert execution_order.index("done") > execution_order.index("a")
+    assert execution_order.index("done") > execution_order.index("b")
 
 
 def test_mixed_sync_async_execution_order():
