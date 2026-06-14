@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 from datetime import date, datetime
 import json
 from typing import Any, TypeAlias
@@ -23,21 +24,23 @@ def to_serializable(
 ) -> Serializable:
     """Converts a Python object into a JSON-compatible representation.
 
-    Supports primitives, datetime objects, collections, dictionaries, and
-    Pydantic models. Recursion depth is limited to prevent infinite nesting.
+    Supports primitives, datetime objects, collections, dictionaries,
+    dataclasses, and Pydantic models. Recursion depth is limited to prevent
+    infinite nesting.
     Non-convertible objects default to their string representations.
 
     Args:
         obj: Object to transform.
         exclude: Set of keys to exclude from the result.
-        max_depth: Maximum recursion depth. Defaults to 5.
+        max_depth: Maximum recursion depth. Defaults to 5. Values less than or
+            equal to 0 disable the depth limit.
         _current_depth: Current recursion depth (for internal use).
         _ancestors: Set of ancestor object ids for cycle detection (for internal use).
 
     Returns:
         Serializable: A JSON-compatible structure.
     """
-    if _current_depth >= max_depth:
+    if max_depth > 0 and _current_depth >= max_depth:
         return repr(obj)
 
     if exclude is None:
@@ -58,6 +61,18 @@ def to_serializable(
         return f"<circular_ref:{type(obj).__name__}>"
     new_ancestors = _ancestors | {object_id}
 
+    if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
+        return {
+            field.name: to_serializable(
+                obj=getattr(obj, field.name),
+                exclude=exclude,
+                max_depth=max_depth,
+                _current_depth=_current_depth + 1,
+                _ancestors=new_ancestors,
+            )
+            for field in dataclasses.fields(obj)
+            if field.name not in exclude
+        }
     if isinstance(obj, (list, tuple, set)):
         return [
             to_serializable(
@@ -84,7 +99,7 @@ def to_serializable(
     if isinstance(obj, BaseModel):
         try:
             return to_serializable(
-                obj=obj.model_dump(exclude=exclude),
+                obj=obj.model_dump(mode="json", exclude=exclude),
                 max_depth=max_depth,
                 _current_depth=_current_depth + 1,
                 _ancestors=new_ancestors,

@@ -121,11 +121,8 @@ from crewai.flow.human_feedback import (
 )
 from crewai.flow.input_provider import InputProvider
 from crewai.flow.persistence.base import FlowPersistence
-from crewai.flow.runtime._resolvers import (
-    resolve_action,
-    resolve_instance_ref,
-    resolve_ref,
-)
+from crewai.flow.runtime._actions import build_action
+from crewai.flow.runtime._refs import resolve_instance_ref, resolve_ref
 from crewai.flow.types import (
     FlowExecutionData,
     FlowMethodName,
@@ -1092,9 +1089,9 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         self._methods.update(methods)
 
     def _action_bound_methods(self) -> dict[FlowMethodName, Callable[..., Any]]:
-        def resolve(name: str, definition: FlowMethodDefinition) -> Callable[..., Any]:
+        def build(name: str, definition: FlowMethodDefinition) -> Callable[..., Any]:
             try:
-                return resolve_action(self, definition.do)
+                return build_action(self, definition.do)
             except Exception as e:
                 unresolved.append(f"{name}: {e}")
                 return lambda *args, **kwargs: None
@@ -1102,9 +1099,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         methods: dict[FlowMethodName, Callable[..., Any]] = {}
         unresolved: list[str] = []
         for method_name, method_definition in self._definition.methods.items():
-            methods[FlowMethodName(method_name)] = resolve(
-                method_name, method_definition
-            )
+            methods[FlowMethodName(method_name)] = build(method_name, method_definition)
         if unresolved:
             raise ValueError(
                 f"Cannot build flow {self._definition.name!r} from its definition; "

@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import asyncio
 from collections import defaultdict
+from dataclasses import dataclass
 from pathlib import Path
+import threading
 from typing import Any, ClassVar
 from unittest.mock import patch
 
 import pytest
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.flow_events import (
@@ -44,6 +47,26 @@ class TypedInputsTool(BaseTool):
         return f"{count}:{','.join(include_domains)}"
 
 
+class AsyncResultTool(BaseTool):
+    name: str = "AsyncResultTool"
+    description: str = "Returns an async result from its sync entrypoint."
+
+    def _run(self, value: str) -> Any:
+        async def build_result() -> str:
+            await asyncio.sleep(0)
+            return f"async:{value}"
+
+        return build_result()
+
+
+class CallableCodeAction:
+    def __call__(self, value: str) -> str:
+        return f"callable:{value}"
+
+
+CALLABLE_CODE_ACTION = CallableCodeAction()
+
+
 class ChainFlow(Flow):
     @start()
     def begin(self):
@@ -65,6 +88,41 @@ class ToolInputFlow(Flow):
     def build_query(self):
         self.state["prefix"] = "found"
         return {"query": "ai agents", "suffix": " news"}
+
+
+class EachActionFlow(Flow):
+    inner_thread_id: int | None = None
+
+    def normalize_row(self, row: str, prefix: str = "normalized") -> str:
+        return f"{prefix}:{row}"
+
+    def save_row(self, row: str, normalized: str) -> dict[str, str]:
+        return {"row": row, "normalized": normalized}
+
+    def keyword_code(self, name: str, punctuation: str) -> str:
+        return f"{name}{punctuation}"
+
+    def fail_on_bad_row(self, row: str) -> str:
+        if row == "bad":
+            raise RuntimeError("bad row")
+        return row
+
+    def require_threaded_context(self, row: str) -> str:
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            pass
+        else:
+            raise RuntimeError("inner action ran on the event loop")
+
+        from crewai.flow.flow_context import current_flow_method_name
+
+        self.inner_thread_id = threading.get_ident()
+        return f"{current_flow_method_name.get()}:{row}"
+
+    def after_each(self) -> str:
+        self.state["after_count"] = self.state.get("after_count", 0) + 1
+        return f"after:{self.state['after_count']}"
 
 
 CHAIN_YAML = f"""
@@ -727,6 +785,381 @@ methods:
         flow.kickoff()
 
 
+def test_code_action_renders_keyword_inputs():
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: CodeWithFlow
+methods:
+  greet:
+    do:
+      call: code
+      ref: {__name__}:EachActionFlow.keyword_code
+      with:
+        name: "${{state.name}}"
+        punctuation: "!"
+    start: true
+"""
+
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+
+    assert flow.kickoff(inputs={"name": "hello"}) == "hello!"
+
+
+def test_code_action_supports_callable_instance_refs():
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: CallableInstanceFlow
+methods:
+  call_instance:
+    do:
+      call: code
+      ref: {__name__}:CALLABLE_CODE_ACTION
+      with:
+        value: "${{state.value}}"
+    start: true
+"""
+
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+
+    assert flow.kickoff(inputs={"value": "ok"}) == "callable:ok"
+
+
+def test_each_action_executes_one_nested_code_action():
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: EachFlow
+methods:
+  process_rows:
+    do:
+      call: each
+      in: state.rows
+      do:
+        - normalize:
+            call: code
+            ref: {__name__}:EachActionFlow.normalize_row
+            with:
+              row: "${{item}}"
+    start: true
+"""
+
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+
+    assert flow.kickoff(inputs={"rows": ["a", "b"]}) == [
+        "normalized:a",
+        "normalized:b",
+    ]
+
+
+def test_each_action_runs_sync_inner_actions_off_event_loop_with_context():
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: EachFlow
+methods:
+  process_rows:
+    do:
+      call: each
+      in: state.rows
+      do:
+        - threaded:
+            call: code
+            ref: {__name__}:EachActionFlow.require_threaded_context
+            with:
+              row: "${{item}}"
+    start: true
+"""
+
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    caller_thread_id = threading.get_ident()
+
+    assert flow.kickoff(inputs={"rows": ["a"]}) == ["process_rows:a"]
+    assert flow.inner_thread_id is not None
+    assert flow.inner_thread_id != caller_thread_id
+
+
+def test_each_action_runs_async_tool_results_from_sync_inner_actions():
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: EachFlow
+methods:
+  process_rows:
+    do:
+      call: each
+      in: state.rows
+      do:
+        - async_tool:
+            call: tool
+            ref: {__name__}:AsyncResultTool
+            with:
+              value: "${{item}}"
+    start: true
+"""
+
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+
+    assert flow.kickoff(inputs={"rows": ["a", "b"]}) == ["async:a", "async:b"]
+
+
+def test_each_action_uses_iteration_outputs_between_nested_actions():
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: EachFlow
+methods:
+  process_rows:
+    do:
+      call: each
+      in: state.rows
+      do:
+        - normalize:
+            call: code
+            ref: {__name__}:EachActionFlow.normalize_row
+            with:
+              row: "${{item}}"
+              prefix: saved
+        - save:
+            call: code
+            ref: {__name__}:EachActionFlow.save_row
+            with:
+              row: "${{item}}"
+              normalized: "${{outputs.normalize}}"
+    start: true
+"""
+
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+
+    assert flow.kickoff(inputs={"rows": ["a", "b"]}) == [
+        {"row": "a", "normalized": "saved:a"},
+        {"row": "b", "normalized": "saved:b"},
+    ]
+
+
+def test_each_action_resets_inner_outputs_between_iterations():
+    yaml_str = """
+schema: crewai.flow/v1
+name: EachFlow
+methods:
+  process_rows:
+    do:
+      call: each
+      in: state.rows
+      do:
+        - leak_check:
+            call: expression
+            expr: "has(outputs.previous) ? outputs.previous : 'empty'"
+        - previous:
+            call: expression
+            expr: item
+    start: true
+"""
+
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+
+    assert flow.kickoff(inputs={"rows": ["a", "b"]}) == ["a", "b"]
+    assert flow._method_outputs == [
+        {"method": "process_rows", "output": ["a", "b"]}
+    ]
+
+
+def test_each_action_preserves_flow_outputs_and_prefers_inner_outputs():
+    yaml_str = """
+schema: crewai.flow/v1
+name: EachFlow
+methods:
+  seed:
+    do:
+      call: expression
+      expr: "'global'"
+    start: true
+  process_rows:
+    do:
+      call: each
+      in: state.rows
+      do:
+        - before_shadow:
+            call: expression
+            expr: "outputs.seed + ':' + item"
+        - seed:
+            call: expression
+            expr: "'local:' + item"
+        - after_shadow:
+            call: expression
+            expr: "outputs.seed"
+    listen: seed
+"""
+
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+
+    assert flow.kickoff(inputs={"rows": ["a", "b"]}) == [
+        "local:a",
+        "local:b",
+    ]
+    assert flow._method_outputs == [
+        {"method": "seed", "output": "global"},
+        {"method": "process_rows", "output": ["local:a", "local:b"]},
+    ]
+
+
+def test_each_action_empty_list_returns_empty_and_listener_runs_once():
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: EachFlow
+methods:
+  process_rows:
+    do:
+      call: each
+      in: state.rows
+      do:
+        - normalize:
+            call: code
+            ref: {__name__}:EachActionFlow.normalize_row
+            with:
+              row: "${{item}}"
+    start: true
+  after_each:
+    do:
+      call: code
+      ref: {__name__}:EachActionFlow.after_each
+    listen: process_rows
+"""
+
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    events = []
+    with crewai_event_bus.scoped_handlers():
+
+        @crewai_event_bus.on(MethodExecutionFinishedEvent)
+        def on_finished(source, event):
+            events.append(event.method_name)
+
+        result = flow.kickoff(inputs={"rows": []})
+
+    assert result == "after:1"
+    assert flow.method_outputs == [[], "after:1"]
+    assert flow.state["after_count"] == 1
+    assert events.count("process_rows") == 1
+    assert events.count("after_each") == 1
+
+
+@pytest.mark.parametrize(
+    ("expr", "inputs"),
+    [
+        ("1", {}),
+        ('"rows"', {}),
+        ("state.rows", {"rows": {"a": 1}}),
+    ],
+)
+def test_each_action_rejects_non_list_inputs(expr, inputs):
+    definition = FlowDefinition.from_dict(
+        {
+            "schema": "crewai.flow/v1",
+            "name": "EachFlow",
+            "methods": {
+                "process_rows": {
+                    "start": True,
+                    "do": {
+                        "call": "each",
+                        "in": expr,
+                        "do": [{"value": {"call": "expression", "expr": "item"}}],
+                    },
+                }
+            },
+        }
+    )
+    flow = Flow.from_definition(definition)
+
+    with pytest.raises(ValueError, match="each.in must evaluate to an array"):
+        flow.kickoff(inputs=inputs)
+
+
+@pytest.mark.parametrize(
+    "action_do",
+    [
+        [],
+        [{"first": {"call": "expression", "expr": "item"}, "second": {"call": "expression", "expr": "item"}}],
+        [{"1bad": {"call": "expression", "expr": "item"}}],
+        [
+            {"same": {"call": "expression", "expr": "item"}},
+            {"same": {"call": "expression", "expr": "item"}},
+        ],
+    ],
+)
+def test_each_action_validates_inner_action_shape(action_do):
+    with pytest.raises(ValidationError):
+        FlowDefinition.from_dict(
+            {
+                "schema": "crewai.flow/v1",
+                "name": "EachFlow",
+                "methods": {
+                    "process_rows": {
+                        "start": True,
+                        "do": {
+                            "call": "each",
+                            "in": "state.rows",
+                            "do": action_do,
+                        },
+                    }
+                },
+            }
+        )
+
+
+def test_each_action_rejects_nested_each_actions():
+    with pytest.raises(ValidationError):
+        FlowDefinition.from_dict(
+            {
+                "schema": "crewai.flow/v1",
+                "name": "EachFlow",
+                "methods": {
+                    "process_rows": {
+                        "start": True,
+                        "do": {
+                            "call": "each",
+                            "in": "state.rows",
+                            "do": [
+                                {
+                                    "nested": {
+                                        "call": "each",
+                                        "in": "state.children",
+                                        "do": [
+                                            {
+                                                "child": {
+                                                    "call": "expression",
+                                                    "expr": "item",
+                                                }
+                                            }
+                                        ],
+                                    }
+                                }
+                            ],
+                        },
+                    }
+                },
+            }
+        )
+
+
+def test_each_action_failure_fails_outer_method():
+    yaml_str = f"""
+schema: crewai.flow/v1
+name: EachFlow
+methods:
+  process_rows:
+    do:
+      call: each
+      in: state.rows
+      do:
+        - validate:
+            call: code
+            ref: {__name__}:EachActionFlow.fail_on_bad_row
+            with:
+              row: "${{item}}"
+    start: true
+"""
+
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+
+    with pytest.raises(RuntimeError, match="bad row"):
+        flow.kickoff(inputs={"rows": ["ok", "bad"]})
+
+
 def test_expression_action_round_trips():
     definition = FlowDefinition.from_dict(
         {
@@ -749,6 +1182,26 @@ def test_expression_action_round_trips():
         "expr": "state.score >= 80 ? 'qualified' : 'nurture'",
     }
     assert Flow.from_definition(definition).kickoff(inputs={"score": 90}) == "qualified"
+
+
+def test_expression_local_context_recurses_into_dataclass_values():
+    from crewai.flow.runtime._expressions import evaluate_expression
+
+    class Payload(BaseModel):
+        name: str
+
+    @dataclass
+    class Row:
+        payload: Payload
+
+    assert (
+        evaluate_expression(
+            Flow(),
+            "item.payload.name",
+            local_context={"item": Row(payload=Payload(name="qualified"))},
+        )
+        == "qualified"
+    )
 
 
 def test_expression_action_can_route_like_if_else():
@@ -828,26 +1281,6 @@ def test_tool_action_requires_module_qualname_ref():
 
     with pytest.raises(ValueError, match="expected 'module:qualname'"):
         Flow.from_definition(definition)
-
-
-def test_code_action_rejects_tool_inputs():
-    with pytest.raises(ValidationError):
-        FlowDefinition.from_dict(
-            {
-                "schema": "crewai.flow/v1",
-                "name": "InvalidCodeActionFlow",
-                "methods": {
-                    "begin": {
-                        "start": True,
-                        "do": {
-                            "call": "code",
-                            "ref": f"{__name__}:ChainFlow.begin",
-                            "with": {"search_query": "ai agents"},
-                        },
-                    }
-                },
-            }
-        )
 
 
 def test_pydantic_state_from_ref_parity():
