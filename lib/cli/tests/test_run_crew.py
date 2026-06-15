@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 import subprocess
+import sys
 
 import pytest
 from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
@@ -56,6 +57,18 @@ def test_json_run_uses_project_env_when_pyproject_exists(monkeypatch, tmp_path: 
         trained_agents_file="trained.pkl"
     )
 
+    expected_env = {
+        "EXISTING": "value",
+        run_crew_module._CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV: str(
+            Path(run_crew_module.__file__).resolve().parent
+        ),
+        CREWAI_TRAINED_AGENTS_FILE_ENV: "trained.pkl",
+    }
+    if local_crewai_source_dir := run_crew_module._find_local_crewai_source_dir():
+        expected_env[run_crew_module._CREWAI_RUNNER_SOURCE_DIR_ENV] = str(
+            local_crewai_source_dir
+        )
+
     assert install_calls == [True]
     assert subprocess_calls == [
         (
@@ -71,13 +84,58 @@ def test_json_run_uses_project_env_when_pyproject_exists(monkeypatch, tmp_path: 
                 "capture_output": False,
                 "text": True,
                 "check": True,
-                "env": {
-                    "EXISTING": "value",
-                    CREWAI_TRAINED_AGENTS_FILE_ENV: "trained.pkl",
-                },
+                "env": expected_env,
             },
         )
     ]
+
+
+def test_json_runner_code_loads_current_cli_package_over_project_env(tmp_path: Path):
+    old_parent = tmp_path / "old"
+    old_pkg = old_parent / "crewai_cli"
+    old_pkg.mkdir(parents=True)
+    (old_pkg / "__init__.py").write_text("")
+    (old_pkg / "run_crew.py").write_text("raise ImportError('old package used')\n")
+    old_crewai_project = old_parent / "crewai" / "project"
+    old_crewai_project.mkdir(parents=True)
+    (old_parent / "crewai" / "__init__.py").write_text("")
+    (old_crewai_project / "__init__.py").write_text("")
+    (old_crewai_project / "json_loader.py").write_text(
+        "raise ImportError('old crewai used')\n"
+    )
+
+    current_pkg = tmp_path / "current" / "crewai_cli"
+    current_pkg.mkdir(parents=True)
+    marker = tmp_path / "marker.txt"
+    (current_pkg / "__init__.py").write_text("")
+    (current_pkg / "run_crew.py").write_text(
+        "from pathlib import Path\n"
+        "from crewai.project.json_loader import SOURCE\n"
+        "def _run_json_crew(trained_agents_file=None):\n"
+        f"    Path({str(marker)!r}).write_text(SOURCE + ':' + (trained_agents_file or ''))\n"
+    )
+    current_crewai_project = tmp_path / "current_crewai_src" / "crewai" / "project"
+    current_crewai_project.mkdir(parents=True)
+    (tmp_path / "current_crewai_src" / "crewai" / "__init__.py").write_text("")
+    (current_crewai_project / "__init__.py").write_text("")
+    (current_crewai_project / "json_loader.py").write_text("SOURCE = 'current'\n")
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(old_parent)
+    env[run_crew_module._CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV] = str(current_pkg)
+    env[run_crew_module._CREWAI_RUNNER_SOURCE_DIR_ENV] = str(
+        tmp_path / "current_crewai_src"
+    )
+    env[CREWAI_TRAINED_AGENTS_FILE_ENV] = "trained.pkl"
+
+    subprocess.run(
+        [sys.executable, "-c", run_crew_module._JSON_CREW_RUNNER_CODE],
+        check=True,
+        env=env,
+        cwd=tmp_path,
+    )
+
+    assert marker.read_text() == "current:trained.pkl"
 
 
 def test_json_run_without_pyproject_runs_in_process(monkeypatch, tmp_path: Path):

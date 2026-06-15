@@ -35,12 +35,46 @@ class CrewType(Enum):
 # crewai.utilities.string_utils (_VARIABLE_PATTERN), including hyphens —
 # otherwise placeholders are interpolated at runtime but never prompted for.
 _INPUT_PLACEHOLDER_RE = re.compile(r"(?<!{){([A-Za-z_][A-Za-z0-9_\-]*)}(?!})")
-_JSON_CREW_RUNNER_CODE = (
-    "import os; "
-    "from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV; "
-    "from crewai_cli.run_crew import _run_json_crew; "
-    "_run_json_crew(trained_agents_file=os.getenv(CREWAI_TRAINED_AGENTS_FILE_ENV))"
+_CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV = "CREWAI_CLI_RUNNER_PACKAGE_DIR"
+_CREWAI_RUNNER_SOURCE_DIR_ENV = "CREWAI_RUNNER_SOURCE_DIR"
+_JSON_CREW_RUNNER_CODE = """
+import importlib.util
+import os
+from pathlib import Path
+import sys
+
+source_dir = os.environ.get("CREWAI_RUNNER_SOURCE_DIR")
+if source_dir:
+    sys.path.insert(0, source_dir)
+
+package_dir = Path(os.environ["CREWAI_CLI_RUNNER_PACKAGE_DIR"])
+package_spec = importlib.util.spec_from_file_location(
+    "crewai_cli",
+    package_dir / "__init__.py",
+    submodule_search_locations=[str(package_dir)],
 )
+if package_spec is None or package_spec.loader is None:
+    raise ImportError(f"Cannot load CrewAI CLI package from {package_dir}")
+
+package = importlib.util.module_from_spec(package_spec)
+sys.modules["crewai_cli"] = package
+package_spec.loader.exec_module(package)
+
+module_path = package_dir / "run_crew.py"
+module_spec = importlib.util.spec_from_file_location("crewai_cli.run_crew", module_path)
+if module_spec is None or module_spec.loader is None:
+    raise ImportError(f"Cannot load CrewAI CLI runner from {module_path}")
+
+module = importlib.util.module_from_spec(module_spec)
+sys.modules["crewai_cli.run_crew"] = module
+module_spec.loader.exec_module(module)
+
+from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
+
+module._run_json_crew(
+    trained_agents_file=os.getenv(CREWAI_TRAINED_AGENTS_FILE_ENV)
+)
+""".strip()
 
 
 def _has_json_crew() -> bool:
@@ -238,6 +272,15 @@ def _install_json_crew_dependencies() -> None:
         raise SystemExit(1) from e
 
 
+def _find_local_crewai_source_dir() -> Path | None:
+    """Return the repo's CrewAI source dir when running from a source checkout."""
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / "lib" / "crewai" / "src"
+        if (candidate / "crewai" / "project" / "json_loader.py").is_file():
+            return candidate
+    return None
+
+
 def _run_json_crew_in_project_env(trained_agents_file: str | None = None) -> Any:
     """Run JSON crews from the project's uv-managed environment."""
     if not (Path.cwd() / "pyproject.toml").is_file():
@@ -247,6 +290,9 @@ def _run_json_crew_in_project_env(trained_agents_file: str | None = None) -> Any
 
     command = ["uv", "run", "--no-sync", "python", "-c", _JSON_CREW_RUNNER_CODE]
     env = build_env_with_all_tool_credentials()
+    env[_CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV] = str(Path(__file__).resolve().parent)
+    if local_crewai_source_dir := _find_local_crewai_source_dir():
+        env[_CREWAI_RUNNER_SOURCE_DIR_ENV] = str(local_crewai_source_dir)
     if trained_agents_file:
         env[CREWAI_TRAINED_AGENTS_FILE_ENV] = trained_agents_file
 
