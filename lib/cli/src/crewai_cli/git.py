@@ -48,6 +48,7 @@ class Repository:
                 ["git", "rev-parse", "--is-inside-work-tree"],  # noqa: S607
                 cwd=self.path,
                 encoding="utf-8",
+                stderr=subprocess.DEVNULL,
             )
             return True
         except subprocess.CalledProcessError:
