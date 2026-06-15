@@ -1594,7 +1594,13 @@ class OpenAICompletion(BaseLLM):
         if self.is_o1_model and self.reasoning_effort:
             params["reasoning_effort"] = self.reasoning_effort
 
-        if self.response_format is not None:
+        # Skip response_format for providers that don't support it
+        # (e.g., Deepseek returns "response_format type is unavailable")
+        if (
+            self.response_format is not None
+            and self._extract_provider(self.model)
+            not in {"deepseek"}
+        ):
             if isinstance(self.response_format, type) and issubclass(
                 self.response_format, BaseModel
             ):
