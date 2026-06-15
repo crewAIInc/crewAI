@@ -9,6 +9,8 @@ _INITIAL_COMMIT_EXCLUDE_PATTERNS = [
     ".crewai/",
     ".env",
     ".env.*",
+    "!.env.example",
+    "!.env.sample",
     ".mypy_cache/",
     ".pytest_cache/",
     ".ruff_cache/",

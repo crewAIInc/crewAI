@@ -239,6 +239,63 @@ class TestDeployCommand(unittest.TestCase):
     @patch("crewai_cli.deploy.main.create_project_zip")
     @patch("crewai_cli.deploy.main.git.Repository")
     @patch("crewai_cli.deploy.main.DeployCommand._display_deployment_info")
+    def test_deploy_with_remote_keeps_remote_path_when_fetch_fails(
+        self, mock_display, mock_repository, mock_create_project_zip
+    ):
+        repository = mock_repository.return_value
+        repository.origin_url.return_value = "https://github.com/test/repo.git"
+        repository.fetch.side_effect = ValueError("fetch failed")
+        repository.create_initial_commit_if_needed.return_value = False
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.is_success = True
+        mock_response.json.return_value = {"uuid": "test-uuid"}
+        self.mock_client.deploy_by_name.return_value = mock_response
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command.deploy(skip_validate=True)
+            output = fake_out.getvalue()
+
+        mock_repository.assert_called_once_with(fetch=False)
+        repository.fetch.assert_called_once_with()
+        self.assertIn("Continuing with remote deployment", output)
+        self.mock_client.deploy_by_name.assert_called_once_with("test_project")
+        self.mock_client.update_crew_from_zip.assert_not_called()
+        mock_create_project_zip.assert_not_called()
+        mock_display.assert_called_once_with({"uuid": "test-uuid"})
+
+    @patch("crewai_cli.deploy.main.create_project_zip")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("crewai_cli.deploy.main.DeployCommand._display_deployment_info")
+    def test_deploy_with_remote_keeps_remote_path_when_initial_commit_fails(
+        self, mock_display, mock_repository, mock_create_project_zip
+    ):
+        repository = mock_repository.return_value
+        repository.origin_url.return_value = "https://github.com/test/repo.git"
+        repository.create_initial_commit_if_needed.side_effect = RuntimeError(
+            "commit failed"
+        )
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.is_success = True
+        mock_response.json.return_value = {"uuid": "test-uuid"}
+        self.mock_client.deploy_by_name.return_value = mock_response
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command.deploy(skip_validate=True)
+            output = fake_out.getvalue()
+
+        mock_repository.assert_called_once_with(fetch=False)
+        repository.fetch.assert_called_once_with()
+        self.assertIn("Continuing with remote deployment", output)
+        self.mock_client.deploy_by_name.assert_called_once_with("test_project")
+        self.mock_client.update_crew_from_zip.assert_not_called()
+        mock_create_project_zip.assert_not_called()
+        mock_display.assert_called_once_with({"uuid": "test-uuid"})
+
+    @patch("crewai_cli.deploy.main.create_project_zip")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    @patch("crewai_cli.deploy.main.DeployCommand._display_deployment_info")
     def test_deploy_with_uuid_without_remote_updates_from_zip(
         self, mock_display, mock_repository, mock_create_project_zip
     ):

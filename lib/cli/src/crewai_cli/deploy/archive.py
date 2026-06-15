@@ -72,6 +72,7 @@ def create_project_zip(
 
 
 def _project_files(root: Path, repository: git.Repository | None = None) -> list[Path]:
+    """Return project-relative files to include in the archive."""
     if repository is not None:
         files = [Path(path) for path in repository.deployable_files()]
         return [
@@ -88,16 +89,19 @@ def _project_files(root: Path, repository: git.Repository | None = None) -> list
 
 
 def _walk_files(root: Path) -> list[Path]:
+    """List regular files below root as project-relative paths."""
     return [
         path.relative_to(root) for path in root.rglob("*") if _is_regular_file(path)
     ]
 
 
 def _is_regular_file(path: Path) -> bool:
+    """Return True for regular files, excluding symlinks to files."""
     return path.is_file() and not path.is_symlink()
 
 
 def _is_excluded(path: Path) -> bool:
+    """Return True when a file should be omitted from deployment ZIPs."""
     parts = set(path.parts)
     if parts.intersection(_EXCLUDED_DIRS):
         return True
@@ -111,6 +115,7 @@ def _is_excluded(path: Path) -> bool:
 
 
 def _stage_project(root: Path, files: list[Path]) -> Path:
+    """Copy archive files into a temporary staging directory."""
     staging_root = Path(tempfile.mkdtemp(prefix="crewai-deploy-"))
 
     try:
@@ -132,6 +137,7 @@ def _stage_project(root: Path, files: list[Path]) -> Path:
 
 
 def _is_json_crew_project(root: Path) -> bool:
+    """Return True for JSON crew projects that need a Python deploy wrapper."""
     if not ((root / "crew.jsonc").is_file() or (root / "crew.json").is_file()):
         return False
 
@@ -156,6 +162,7 @@ def _is_json_crew_project(root: Path) -> bool:
 
 
 def _read_pyproject(root: Path) -> dict[str, Any]:
+    """Read pyproject.toml, returning an empty mapping on missing or invalid data."""
     pyproject_path = root / "pyproject.toml"
     if not pyproject_path.is_file():
         return {}
@@ -166,6 +173,7 @@ def _read_pyproject(root: Path) -> dict[str, Any]:
 
 
 def _package_name(root: Path) -> str | None:
+    """Return the normalized Python package name for the project."""
     project = _read_pyproject(root).get("project")
     if not isinstance(project, dict):
         return None
@@ -179,6 +187,7 @@ def _package_name(root: Path) -> str | None:
 
 
 def _class_name(package_name: str) -> str:
+    """Return the generated wrapper class name for a package."""
     parts = [part for part in re.split(r"[^a-zA-Z0-9]+", package_name) if part]
     class_name = "".join(part[:1].upper() + part[1:] for part in parts)
     if not class_name:
@@ -189,6 +198,7 @@ def _class_name(package_name: str) -> str:
 
 
 def _add_json_crew_deploy_wrapper(root: Path) -> None:
+    """Add Python wrapper files required to deploy a JSON crew project."""
     package_name = _package_name(root)
     if package_name is None:
         return
@@ -215,6 +225,7 @@ def _add_json_crew_deploy_wrapper(root: Path) -> None:
 
 
 def _json_crew_py(class_name: str, crew_filename: str) -> str:
+    """Render the generated crew.py module for a JSON crew."""
     return f'''from pathlib import Path
 
 from crewai import Crew
@@ -239,6 +250,7 @@ class {class_name}:
 
 
 def _json_main_py(package_name: str, class_name: str) -> str:
+    """Render the generated main.py entrypoints for a JSON crew."""
     return f"""#!/usr/bin/env python
 import json
 import sys
@@ -293,6 +305,7 @@ def run_with_trigger():
 
 
 def _ensure_project_scripts(root: Path, package_name: str) -> None:
+    """Ensure generated wrappers have project script entrypoints."""
     pyproject_path = root / "pyproject.toml"
     if not pyproject_path.is_file():
         return

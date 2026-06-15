@@ -77,17 +77,20 @@ def test_create_project_zip_excludes_symlinked_files(tmp_path: Path):
     (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
     outside_file = tmp_path.parent / f"{tmp_path.name}-secret.txt"
     outside_file.write_text("secret\n")
+    archive_path: Path | None = None
     try:
-        (tmp_path / "external-secret.txt").symlink_to(outside_file)
-    except OSError as exc:
-        pytest.skip(f"symlinks are not supported in this environment: {exc}")
+        try:
+            (tmp_path / "external-secret.txt").symlink_to(outside_file)
+        except OSError as exc:
+            pytest.skip(f"symlinks are not supported in this environment: {exc}")
 
-    archive_path = create_project_zip("demo", project_dir=tmp_path)
-    try:
+        archive_path = create_project_zip("demo", project_dir=tmp_path)
         with zipfile.ZipFile(archive_path) as archive:
             names = set(archive.namelist())
     finally:
-        archive_path.unlink(missing_ok=True)
+        if archive_path is not None:
+            archive_path.unlink(missing_ok=True)
+        outside_file.unlink(missing_ok=True)
 
     assert names == {"pyproject.toml"}
 

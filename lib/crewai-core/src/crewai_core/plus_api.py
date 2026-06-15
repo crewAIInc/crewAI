@@ -201,6 +201,7 @@ class PlusAPI:
         timeout: float | None = None,
         verify: bool = True,
     ) -> httpx.Response:
+        """Send an authenticated multipart request containing a project ZIP."""
         url = urljoin(self.base_url, endpoint)
         headers = dict(cast(dict[str, str], self.headers))
         headers.pop("Content-Type", None)
@@ -349,6 +350,7 @@ class PlusAPI:
         name: str | None = None,
         env: dict[str, str] | None = None,
     ) -> httpx.Response:
+        """Create a crew deployment from a local project ZIP archive."""
         data: dict[str, str] = {}
         if name:
             data["name"] = name
@@ -369,6 +371,7 @@ class PlusAPI:
         *,
         env: dict[str, str] | None = None,
     ) -> httpx.Response:
+        """Update an existing crew deployment from a local project ZIP archive."""
         data: dict[str, str] = {}
         if env:
             data.update({f"env[{key}]": value for key, value in env.items()})

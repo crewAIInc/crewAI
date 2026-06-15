@@ -141,6 +141,8 @@ def test_initialize_creates_initial_commit(fp, tmp_path):
     exclude_file = tmp_path / ".git" / "info" / "exclude"
     exclude_text = exclude_file.read_text()
     assert ".env" in exclude_text
+    assert "!.env.example" in exclude_text
+    assert "!.env.sample" in exclude_text
     assert "__pycache__/" in exclude_text
 
 

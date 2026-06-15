@@ -54,6 +54,7 @@ def _display_git_remote_help() -> None:
 
 
 def _env_summary(env_vars: dict[str, str]) -> str:
+    """Return a compact description of environment variables for prompts."""
     if not env_vars:
         return "0 env vars"
     keys = ", ".join(sorted(env_vars))
@@ -167,6 +168,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         self._display_deployment_info(response.json())
 
     def _deployment_uuid_by_name(self) -> str:
+        """Resolve the current project's deployment UUID by project name."""
         if not self.project_name:
             raise ValueError("project_name is required to find a deployment")
 
@@ -207,8 +209,9 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         self._display_creation_success(response.json())
 
     def _prepare_git_repository(self) -> git.Repository | None:
+        """Prepare Git for deploy while preserving remote deploy when possible."""
         try:
-            repository = git.Repository()
+            repository = git.Repository(fetch=False)
         except ValueError as exc:
             if "not a Git repository" not in str(exc):
                 console.print(
@@ -228,6 +231,33 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
                 return None
 
             _display_git_repository_help()
+            return repository
+
+        remote_repo_url = repository.origin_url()
+        if remote_repo_url:
+            try:
+                repository.fetch()
+            except ValueError as fetch_error:
+                console.print(
+                    "Could not fetch from origin. Continuing with remote deployment.",
+                    style="yellow",
+                )
+                console.print(str(fetch_error), style="dim")
+
+            try:
+                if repository.create_initial_commit_if_needed():
+                    console.print(
+                        "Created an initial Git commit for this project.",
+                        style="green",
+                    )
+            except Exception as commit_error:
+                console.print(
+                    "Could not create an initial Git commit. "
+                    "Continuing with remote deployment.",
+                    style="yellow",
+                )
+                console.print(str(commit_error), style="dim")
+
             return repository
 
         try:
@@ -252,6 +282,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         repository: git.Repository | None,
         confirm: bool,
     ) -> Any:
+        """Create a deployment by uploading a project ZIP archive."""
         if not self.project_name:
             raise ValueError("project_name is required to create a ZIP deployment")
 
@@ -273,6 +304,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         uuid: str,
         repository: git.Repository | None,
     ) -> Any:
+        """Update an existing deployment by uploading a project ZIP archive."""
         if not self.project_name:
             raise ValueError("project_name is required to update a ZIP deployment")
 
@@ -302,6 +334,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             )
 
     def _confirm_zip_input(self, env_vars: dict[str, str], confirm: bool) -> None:
+        """Prompt before ZIP upload unless confirmation was already supplied."""
         if not confirm:
             input(f"Press Enter to continue with {_env_summary(env_vars)}")
 
