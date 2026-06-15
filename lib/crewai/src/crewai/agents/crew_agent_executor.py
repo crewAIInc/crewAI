@@ -48,6 +48,7 @@ from crewai.hooks.tool_hooks import (
     ToolCallHookContext,
     get_after_tool_call_hooks,
     get_before_tool_call_hooks,
+    resolve_tool_call_decision,
 )
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.agent_utils import (
@@ -950,7 +951,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     structured_tool = structured
                     break
 
-        hook_blocked = False
+        hook_blocked_message: str | None = None
         before_hook_context = ToolCallHookContext(
             tool_name=func_name,
             tool_input=args_dict or {},
@@ -963,8 +964,10 @@ class CrewAgentExecutor(BaseAgentExecutor):
         try:
             for hook in before_hooks:
                 hook_result = hook(before_hook_context)
-                if hook_result is False:
-                    hook_blocked = True
+                hook_blocked_message = resolve_tool_call_decision(
+                    hook_result, func_name
+                )
+                if hook_blocked_message is not None:
                     break
         except Exception as hook_error:
             if self.agent.verbose:
@@ -973,8 +976,8 @@ class CrewAgentExecutor(BaseAgentExecutor):
                     color="red",
                 )
 
-        if hook_blocked:
-            result = f"Tool execution blocked by hook. Tool: {func_name}"
+        if hook_blocked_message is not None:
+            result = hook_blocked_message
         elif max_usage_reached and original_tool:
             result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
         elif not from_cache and func_name in available_functions:

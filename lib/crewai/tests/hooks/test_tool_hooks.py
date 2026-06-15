@@ -4,6 +4,8 @@ from unittest.mock import Mock
 
 from crewai.hooks import (
     clear_all_tool_call_hooks,
+    ToolCallDecision,
+    ToolCallDecisionType,
     unregister_after_tool_call_hook,
     unregister_before_tool_call_hook,
 )
@@ -456,6 +458,63 @@ class TestToolHooksIntegration:
 
         assert "SECRET_KEY=[REDACTED]" in result
         assert "abc123" not in result
+
+    def test_needs_review_decision_blocks_react_tool_execution(self):
+        """A pre-tool release decision can require review without executing the tool."""
+        from crewai.agents.parser import AgentAction
+        from crewai.tools.structured_tool import CrewStructuredTool
+        from crewai.utilities.tool_utils import execute_tool_and_check_finality
+
+        tool_executed = False
+
+        def transfer_funds(account: str) -> str:
+            """Transfer funds to the requested account."""
+            nonlocal tool_executed
+            tool_executed = True
+            return f"transferred to {account}"
+
+        structured_tool = CrewStructuredTool.from_function(
+            transfer_funds,
+            name="transfer_funds",
+            description="Transfer funds to an account.",
+        )
+
+        def mediation_hook(context: ToolCallHookContext) -> ToolCallDecision:
+            assert context.tool_name == "transfer_funds"
+            return ToolCallDecision.needs_review(
+                reason="payment release requires human approval",
+                review_context={"ticket": "REL-42"},
+            )
+
+        register_before_tool_call_hook(mediation_hook)
+        try:
+            result = execute_tool_and_check_finality(
+                agent_action=AgentAction(
+                    thought="Need to transfer funds",
+                    tool="transfer_funds",
+                    tool_input='{"account": "acct_123"}',
+                    text=(
+                        "Thought: Need to transfer funds\n"
+                        "Action: transfer_funds\n"
+                        'Action Input: {"account": "acct_123"}'
+                    ),
+                ),
+                tools=[structured_tool],
+            )
+        finally:
+            clear_all_tool_call_hooks()
+
+        assert tool_executed is False
+        assert result.result_as_answer is False
+        assert "requires review" in result.result
+        assert "payment release requires human approval" in result.result
+        assert "REL-42" in result.result
+
+    def test_tool_call_decision_factories(self):
+        """Release-control decisions expose the tri-state runtime vocabulary."""
+        assert ToolCallDecision.proceed().decision is ToolCallDecisionType.PROCEED
+        assert ToolCallDecision.needs_review().decision is ToolCallDecisionType.NEEDS_REVIEW
+        assert ToolCallDecision.silence().decision is ToolCallDecisionType.SILENCE
 
 
     def test_unregister_before_hook(self):

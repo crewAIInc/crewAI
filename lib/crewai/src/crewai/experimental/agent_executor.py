@@ -64,6 +64,7 @@ from crewai.hooks.tool_hooks import (
     ToolCallHookContext,
     get_after_tool_call_hooks,
     get_before_tool_call_hooks,
+    resolve_tool_call_decision,
 )
 from crewai.hooks.types import (
     AfterLLMCallHookCallable,
@@ -1948,7 +1949,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     structured_tool = structured
                     break
 
-        hook_blocked = False
+        hook_blocked_message: str | None = None
         before_hook_context = ToolCallHookContext(
             tool_name=func_name,
             tool_input=args_dict,
@@ -1961,8 +1962,10 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         try:
             for hook in before_hooks:
                 hook_result = hook(before_hook_context)
-                if hook_result is False:
-                    hook_blocked = True
+                hook_blocked_message = resolve_tool_call_decision(
+                    hook_result, func_name
+                )
+                if hook_blocked_message is not None:
                     break
         except Exception as hook_error:
             if self.agent.verbose:
@@ -1971,8 +1974,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     color="red",
                 )
 
-        if hook_blocked:
-            result = f"Tool execution blocked by hook. Tool: {func_name}"
+        if hook_blocked_message is not None:
+            result = hook_blocked_message
         elif not from_cache and not max_usage_reached:
             result = "Tool not found"
             if func_name in self._available_functions:

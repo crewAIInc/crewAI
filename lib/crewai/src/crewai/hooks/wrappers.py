@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any, TypeVar
 
 if TYPE_CHECKING:
     from crewai.hooks.llm_hooks import LLMCallHookContext
+    from crewai.hooks.tool_call_decision import ToolCallDecision
     from crewai.hooks.tool_hooks import ToolCallHookContext
 
 P = TypeVar("P")
@@ -107,7 +108,7 @@ class BeforeToolCallHookMethod:
 
     def __init__(
         self,
-        meth: Callable[[Any, ToolCallHookContext], bool | None],
+        meth: Callable[[Any, ToolCallHookContext], bool | ToolCallDecision | None],
         tools: list[str] | None = None,
         agents: list[str] | None = None,
     ) -> None:
@@ -117,7 +118,7 @@ class BeforeToolCallHookMethod:
         self.agents = agents
         _copy_method_metadata(self, meth)
 
-    def __call__(self, *args: Any, **kwargs: Any) -> bool | None:
+    def __call__(self, *args: Any, **kwargs: Any) -> bool | ToolCallDecision | None:
         """Call the wrapped method."""
         return self._meth(*args, **kwargs)
 

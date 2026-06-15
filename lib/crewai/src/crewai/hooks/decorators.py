@@ -10,6 +10,7 @@ from crewai.utilities.string_utils import sanitize_tool_name
 
 if TYPE_CHECKING:
     from crewai.hooks.llm_hooks import LLMCallHookContext
+    from crewai.hooks.tool_call_decision import ToolCallDecision
     from crewai.hooks.tool_hooks import ToolCallHookContext
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -190,8 +191,8 @@ def after_llm_call(
 
 @overload
 def before_tool_call(
-    func: Callable[[ToolCallHookContext], bool | None],
-) -> Callable[[ToolCallHookContext], bool | None]: ...
+    func: Callable[[ToolCallHookContext], bool | ToolCallDecision | None],
+) -> Callable[[ToolCallHookContext], bool | ToolCallDecision | None]: ...
 
 
 @overload
@@ -200,21 +201,21 @@ def before_tool_call(
     tools: list[str] | None = None,
     agents: list[str] | None = None,
 ) -> Callable[
-    [Callable[[ToolCallHookContext], bool | None]],
-    Callable[[ToolCallHookContext], bool | None],
+    [Callable[[ToolCallHookContext], bool | ToolCallDecision | None]],
+    Callable[[ToolCallHookContext], bool | ToolCallDecision | None],
 ]: ...
 
 
 def before_tool_call(
-    func: Callable[[ToolCallHookContext], bool | None] | None = None,
+    func: Callable[[ToolCallHookContext], bool | ToolCallDecision | None] | None = None,
     *,
     tools: list[str] | None = None,
     agents: list[str] | None = None,
 ) -> (
-    Callable[[ToolCallHookContext], bool | None]
+    Callable[[ToolCallHookContext], bool | ToolCallDecision | None]
     | Callable[
-        [Callable[[ToolCallHookContext], bool | None]],
-        Callable[[ToolCallHookContext], bool | None],
+        [Callable[[ToolCallHookContext], bool | ToolCallDecision | None]],
+        Callable[[ToolCallHookContext], bool | ToolCallDecision | None],
     ]
 ):
     """Decorator to register a function as a before_tool_call hook.
