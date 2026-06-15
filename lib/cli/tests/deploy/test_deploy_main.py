@@ -10,7 +10,6 @@ import json
 
 import crewai_cli.deploy.main as deploy_main
 import httpx
-from crewai_cli.deploy.main import DeployCommand
 from crewai_cli.utils import parse_toml
 
 
@@ -97,7 +96,7 @@ class TestDeployCommand(unittest.TestCase):
         self.mock_get_auth_token.return_value = "test_token"
         self.mock_get_project_name.return_value = "test_project"
 
-        self.deploy_command = DeployCommand()
+        self.deploy_command = deploy_main.DeployCommand()
         self.mock_client = self.deploy_command.plus_api_client
 
     def test_init_success(self):
@@ -115,7 +114,7 @@ class TestDeployCommand(unittest.TestCase):
         mock_get_auth_token.side_effect = Exception("Auth failed")
 
         with self.assertRaises(SystemExit):
-            DeployCommand()
+            deploy_main.DeployCommand()
 
     def test_validate_response_successful_response(self):
         mock_response = Mock(spec=httpx.Response)
