@@ -38,6 +38,8 @@ _EXCLUDED_SUFFIXES = {
     ".pyc",
     ".pyo",
 }
+_SCRIPT_KEY_PATTERN = re.compile(r"^\s*(?P<key>[A-Za-z0-9_.-]+|\"[^\"]+\"|'[^']+')\s*=")
+_SECTION_PATTERN = re.compile(r"^\s*\[[^\]]+\]\s*(?:#.*)?$")
 
 
 def create_project_zip(
@@ -326,17 +328,82 @@ def _ensure_project_scripts(root: Path, package_name: str) -> None:
         return
 
     content = pyproject_path.read_text(encoding="utf-8")
-    if "[project.scripts]" in content:
-        return
+    entries = _project_script_entries(package_name)
+    pyproject_path.write_text(
+        _update_project_scripts(content, entries),
+        encoding="utf-8",
+    )
 
-    script_block = f'''
 
-[project.scripts]
-{package_name} = "{package_name}.main:run"
-run_crew = "{package_name}.main:run"
-train = "{package_name}.main:train"
-replay = "{package_name}.main:replay"
-test = "{package_name}.main:test"
-run_with_trigger = "{package_name}.main:run_with_trigger"
-'''
-    pyproject_path.write_text(content.rstrip() + script_block, encoding="utf-8")
+def _project_script_entries(package_name: str) -> dict[str, str]:
+    """Return script entrypoints required by the generated JSON wrapper."""
+    return {
+        package_name: f"{package_name}.main:run",
+        "run_crew": f"{package_name}.main:run",
+        "train": f"{package_name}.main:train",
+        "replay": f"{package_name}.main:replay",
+        "test": f"{package_name}.main:test",
+        "run_with_trigger": f"{package_name}.main:run_with_trigger",
+    }
+
+
+def _update_project_scripts(content: str, entries: dict[str, str]) -> str:
+    """Add or replace generated script entries in pyproject.toml content."""
+    lines = content.rstrip().splitlines()
+    header_index = _project_scripts_header_index(lines)
+    if header_index is None:
+        return content.rstrip() + _project_scripts_block(entries)
+
+    end_index = _section_end_index(lines, header_index + 1)
+    seen: set[str] = set()
+    for index in range(header_index + 1, end_index):
+        key = _script_key(lines[index])
+        if key in entries:
+            lines[index] = _script_line(key, entries[key])
+            seen.add(key)
+
+    missing_lines = [
+        _script_line(key, value) for key, value in entries.items() if key not in seen
+    ]
+    lines[end_index:end_index] = missing_lines
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _project_scripts_header_index(lines: list[str]) -> int | None:
+    """Return the line index of the project scripts table, if present."""
+    for index, line in enumerate(lines):
+        if line.strip() == "[project.scripts]":
+            return index
+    return None
+
+
+def _section_end_index(lines: list[str], start_index: int) -> int:
+    """Return the exclusive end index for a TOML table section."""
+    for index in range(start_index, len(lines)):
+        if _SECTION_PATTERN.match(lines[index]):
+            return index
+    return len(lines)
+
+
+def _script_key(line: str) -> str | None:
+    """Return the script key for a pyproject script line."""
+    match = _SCRIPT_KEY_PATTERN.match(line)
+    if not match:
+        return None
+
+    key = match.group("key")
+    if key.startswith(("'", '"')) and key.endswith(("'", '"')):
+        return key[1:-1]
+    return key
+
+
+def _script_line(key: str, value: str) -> str:
+    """Render a project script TOML entry."""
+    return f'{key} = "{value}"'
+
+
+def _project_scripts_block(entries: dict[str, str]) -> str:
+    """Render a project scripts TOML table."""
+    lines = ["", "", "[project.scripts]"]
+    lines.extend(_script_line(key, value) for key, value in entries.items())
+    return "\n".join(lines) + "\n"

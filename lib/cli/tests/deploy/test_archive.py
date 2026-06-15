@@ -177,6 +177,43 @@ type = "crew"
     assert "run_crew = \"json_crew.main:run\"" in pyproject
 
 
+def test_create_project_zip_updates_existing_json_project_scripts(tmp_path: Path):
+    (tmp_path / "pyproject.toml").write_text(
+        """
+[project]
+name = "json_crew"
+version = "0.1.0"
+
+[project.scripts]
+json_crew = "old.module:run"
+run_crew = "old.module:run"
+custom = "custom.module:main"
+
+[tool.crewai]
+type = "crew"
+""".strip()
+        + "\n"
+    )
+    (tmp_path / "crew.jsonc").write_text("{}\n")
+
+    archive_path = create_project_zip("json_crew", project_dir=tmp_path)
+    try:
+        with zipfile.ZipFile(archive_path) as archive:
+            pyproject = archive.read("pyproject.toml").decode()
+    finally:
+        archive_path.unlink(missing_ok=True)
+
+    assert 'json_crew = "json_crew.main:run"' in pyproject
+    assert 'run_crew = "json_crew.main:run"' in pyproject
+    assert 'train = "json_crew.main:train"' in pyproject
+    assert 'replay = "json_crew.main:replay"' in pyproject
+    assert 'test = "json_crew.main:test"' in pyproject
+    assert 'run_with_trigger = "json_crew.main:run_with_trigger"' in pyproject
+    assert 'custom = "custom.module:main"' in pyproject
+    assert "old.module:run" not in pyproject
+    assert "[tool.crewai]" in pyproject
+
+
 @pytest.mark.parametrize(
     "tool_config",
     [
