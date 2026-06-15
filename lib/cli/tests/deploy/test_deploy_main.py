@@ -440,6 +440,41 @@ class TestDeployCommand(unittest.TestCase):
         )
         self.mock_client.create_crew.assert_not_called()
 
+    @patch("crewai_cli.deploy.main.create_project_zip")
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
+    @patch("crewai_cli.deploy.main.git.Repository")
+    def test_create_crew_without_remote_uses_git_file_list_when_commit_fails(
+        self, mock_repository, mock_fetch_env, mock_create_project_zip
+    ):
+        mock_fetch_env.return_value = {"ENV_VAR": "value"}
+        repository = mock_repository.return_value
+        repository.origin_url.return_value = None
+        repository.create_initial_commit_if_needed.side_effect = RuntimeError(
+            "commit failed"
+        )
+        mock_create_project_zip.return_value = Path("/tmp/test_project.zip")
+        mock_response = MagicMock()
+        mock_response.status_code = 201
+        mock_response.is_success = True
+        mock_response.json.return_value = {"uuid": "zip-uuid", "status": "created"}
+        self.mock_client.create_crew_from_zip.return_value = mock_response
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command.create_crew(confirm=True, skip_validate=True)
+            output = fake_out.getvalue()
+
+        self.assertIn("Continuing with ZIP deployment using Git", output)
+        self.assertIn("file listing", output)
+        mock_create_project_zip.assert_called_once_with(
+            "test_project", repository=repository
+        )
+        self.mock_client.create_crew_from_zip.assert_called_once_with(
+            Path("/tmp/test_project.zip"),
+            name="test_project",
+            env={"ENV_VAR": "value"},
+        )
+        self.mock_client.create_crew.assert_not_called()
+
     def test_list_crews(self):
         mock_response = MagicMock()
         mock_response.status_code = 200

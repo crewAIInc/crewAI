@@ -8,6 +8,7 @@ from typing import Any
 import zipfile
 
 from crewai_cli import git
+from crewai_cli.deploy.validate import normalize_package_name
 from crewai_cli.utils import parse_toml
 
 
@@ -156,7 +157,9 @@ def _is_json_crew_project(root: Path) -> bool:
 
     package_name = _package_name(root)
     if package_name is None:
-        return False
+        raise ValueError(
+            "Could not derive a valid Python package name from [project].name."
+        )
 
     return not (root / "src" / package_name / "crew.py").is_file()
 
@@ -167,9 +170,10 @@ def _read_pyproject(root: Path) -> dict[str, Any]:
     if not pyproject_path.is_file():
         return {}
     try:
-        return parse_toml(pyproject_path.read_text())
+        pyproject = parse_toml(pyproject_path.read_text())
     except Exception:
         return {}
+    return pyproject if isinstance(pyproject, dict) else {}
 
 
 def _package_name(root: Path) -> str | None:
@@ -182,8 +186,8 @@ def _package_name(root: Path) -> str | None:
     if not isinstance(name, str) or not name.strip():
         return None
 
-    folder = name.replace(" ", "_").replace("-", "_").lower()
-    return re.sub(r"[^a-zA-Z0-9_]", "", folder)
+    package_name = normalize_package_name(name)
+    return package_name or None
 
 
 def _class_name(package_name: str) -> str:
@@ -201,7 +205,9 @@ def _add_json_crew_deploy_wrapper(root: Path) -> None:
     """Add Python wrapper files required to deploy a JSON crew project."""
     package_name = _package_name(root)
     if package_name is None:
-        return
+        raise ValueError(
+            "Could not derive a valid Python package name from [project].name."
+        )
 
     package_dir = root / "src" / package_name
     config_dir = package_dir / "config"

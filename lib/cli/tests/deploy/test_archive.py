@@ -138,3 +138,24 @@ type = "crew"
     assert "JsonCrew" in crew_py
     assert "from json_crew.crew import JsonCrew" in main_py
     assert "run_crew = \"json_crew.main:run\"" in pyproject
+
+
+def test_create_project_zip_rejects_empty_normalized_package_name(tmp_path: Path):
+    (tmp_path / "pyproject.toml").write_text(
+        """
+[project]
+name = "!!!"
+version = "0.1.0"
+
+[tool.crewai]
+type = "crew"
+""".strip()
+        + "\n"
+    )
+    (tmp_path / "crew.jsonc").write_text("{}\n")
+
+    with pytest.raises(
+        ValueError,
+        match=r"Could not derive a valid Python package name",
+    ):
+        create_project_zip("invalid", project_dir=tmp_path)

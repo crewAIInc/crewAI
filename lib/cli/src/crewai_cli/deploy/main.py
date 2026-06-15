@@ -268,11 +268,12 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
                 )
         except Exception as commit_error:
             console.print(
-                "Could not create an initial Git commit. Continuing with ZIP deployment.",
+                "Could not create an initial Git commit. "
+                "Continuing with ZIP deployment using Git file listing.",
                 style="yellow",
             )
             console.print(str(commit_error), style="dim")
-            return None
+            return repository
 
         return repository
 

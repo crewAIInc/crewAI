@@ -3,6 +3,7 @@ import subprocess
 
 import click
 
+from crewai_cli.deploy.validate import normalize_package_name
 from crewai_cli.utils import build_env_with_all_tool_credentials, parse_toml
 
 
@@ -30,10 +31,23 @@ def _is_json_crew_project(project_root: Path | None = None) -> bool:
         pyproject = parse_toml(pyproject_path.read_text())
     except Exception:
         return True
+    if not isinstance(pyproject, dict):
+        return True
 
-    declared_type: str | None = (
-        (pyproject.get("tool") or {}).get("crewai", {}).get("type")
+    tool_config = pyproject.get("tool") or {}
+    crewai_config = tool_config.get("crewai") if isinstance(tool_config, dict) else None
+    declared_type = (
+        crewai_config.get("type") if isinstance(crewai_config, dict) else None
     )
+    project_config = pyproject.get("project") or {}
+    project_name = (
+        project_config.get("name") if isinstance(project_config, dict) else None
+    )
+    if isinstance(project_name, str):
+        package_name = normalize_package_name(project_name)
+        if package_name and (root / "src" / package_name / "crew.py").is_file():
+            return False
+
     return declared_type != "flow"
 
 
