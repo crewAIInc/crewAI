@@ -256,9 +256,16 @@ def _run_json_crew(trained_agents_file: str | None = None) -> Any:
     return app._crew_result
 
 
-def _install_json_crew_dependencies() -> None:
-    """Lock and sync JSON crew projects before loading them in-process."""
-    if not (Path.cwd() / "pyproject.toml").is_file():
+def _has_lockfile(project_root: Path | None = None) -> bool:
+    """Return True when the project already has a dependency lockfile."""
+    root = project_root or Path.cwd()
+    return (root / "uv.lock").is_file() or (root / "poetry.lock").is_file()
+
+
+def _install_json_crew_dependencies_if_needed() -> None:
+    """Lock and sync JSON crew projects only when no lockfile exists."""
+    project_root = Path.cwd()
+    if not (project_root / "pyproject.toml").is_file() or _has_lockfile(project_root):
         return
 
     from crewai_cli.install_crew import install_crew
@@ -286,7 +293,7 @@ def _run_json_crew_in_project_env(trained_agents_file: str | None = None) -> Any
     if not (Path.cwd() / "pyproject.toml").is_file():
         return _run_json_crew(trained_agents_file=trained_agents_file)
 
-    _install_json_crew_dependencies()
+    _install_json_crew_dependencies_if_needed()
 
     command = ["uv", "run", "--no-sync", "python", "-c", _JSON_CREW_RUNNER_CODE]
     env = build_env_with_all_tool_credentials()
