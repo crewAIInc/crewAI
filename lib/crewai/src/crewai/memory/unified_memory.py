@@ -21,7 +21,7 @@ from crewai.events.types.memory_events import (
     MemorySaveStartedEvent,
 )
 from crewai.llms.base_llm import BaseLLM
-from crewai.memory.analyze import extract_memories_from_content
+from crewai.memory.analyze import extract_action_insights_from_content, extract_memories_from_content
 from crewai.memory.storage.backend import StorageBackend
 from crewai.memory.types import (
     MemoryConfig,
@@ -641,6 +641,25 @@ class Memory(BaseModel):
         """
         return extract_memories_from_content(content, self._llm)
 
+    def extract_action_insights(self, content: str) -> list[Any]:
+        """Extract behavioral insights from a ReAct execution trace using the LLM.
+
+        This is a pure helper — it does NOT store anything. Callers should
+        call remember() on each insight's content to persist them, with
+        ``metadata.type = \"action_insight\"`` and the insight fields stored
+        in metadata.
+
+        On LLM failure, returns an empty list — behavioral extraction is
+        best-effort and should never block factual memory storage.
+
+        Args:
+            content: Raw ReAct execution trace (Thought/Action/Observation chain).
+
+        Returns:
+            List of ActionInsightItem objects (empty list on failure or blank input).
+        """
+        return extract_action_insights_from_content(content, self._llm)
+
     def recall(
         self,
         query: str,
@@ -992,6 +1011,10 @@ class Memory(BaseModel):
     async def aextract_memories(self, content: str) -> list[str]:
         """Async variant of extract_memories."""
         return self.extract_memories(content)
+
+    async def aextract_action_insights(self, content: str) -> list[Any]:
+        """Async variant of extract_action_insights."""
+        return self.extract_action_insights(content)
 
     async def aremember(
         self,

@@ -171,6 +171,10 @@ class MemoryScope(BaseModel):
         """Extract discrete memories from content; delegates to underlying Memory."""
         return self._require_memory().extract_memories(content)
 
+    def extract_action_insights(self, content: str) -> list[Any]:
+        """Extract behavioral insights; delegates to underlying Memory."""
+        return self._require_memory().extract_action_insights(content)
+
     def forget(
         self,
         scope: str | None = None,
@@ -326,6 +330,10 @@ class MemorySlice(BaseModel):
     def extract_memories(self, content: str) -> list[str]:
         """Extract discrete memories from content; delegates to underlying Memory."""
         return self._require_memory().extract_memories(content)
+
+    def extract_action_insights(self, content: str) -> list[Any]:
+        """Extract behavioral insights; delegates to underlying Memory."""
+        return self._require_memory().extract_action_insights(content)
 
     def list_scopes(self, path: str = "/") -> list[str]:
         """List scopes across all slice roots."""

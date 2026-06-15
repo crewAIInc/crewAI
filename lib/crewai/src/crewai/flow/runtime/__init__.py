@@ -1258,6 +1258,22 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         result: list[str] = self.memory.extract_memories(content)
         return result
 
+    def extract_action_insights(self, content: str) -> list[Any]:
+        """Extract behavioral insights. Delegates to this flow's memory.
+
+        Args:
+            content: Raw ReAct execution trace text.
+
+        Returns:
+            List of ActionInsightItem objects.
+
+        Raises:
+            ValueError: If no memory is configured for this flow.
+        """
+        if self.memory is None:
+            raise ValueError("No memory configured for this flow")
+        return self.memory.extract_action_insights(content)
+
     def _clear_or_listeners(self) -> None:
         """Clear fired OR listeners for cyclic flows."""
         with self._or_listeners_lock:

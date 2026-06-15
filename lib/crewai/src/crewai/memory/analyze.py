@@ -100,6 +100,40 @@ class ExtractedMemories(BaseModel):
     )
 
 
+class ActionInsightItem(BaseModel):
+    """A single behavioral insight extracted from a ReAct execution trace."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: str = Field(
+        description="One of 'decision', 'lesson', or 'pattern'.",
+    )
+    content: str = Field(
+        description="The insight statement — a clear, self-contained description.",
+    )
+    rationale: str = Field(
+        default="",
+        description="Why this approach worked or failed.",
+    )
+    domain: str = Field(
+        default="general",
+        description="Context scope tag (e.g. 'data analysis', 'code review').",
+    )
+    context_signals: list[str] = Field(
+        default_factory=list,
+        description="Observable conditions that trigger or relate to this insight.",
+    )
+
+
+class ExtractedActionInsights(BaseModel):
+    """LLM output for extracting behavioral insights from a ReAct execution trace."""
+
+    insights: list[ActionInsightItem] = Field(
+        default_factory=list,
+        description="Behavioral insights extracted from the execution trace.",
+    )
+
+
 class ConsolidationAction(BaseModel):
     """A single action in a consolidation plan."""
 
@@ -195,6 +229,54 @@ def extract_memories_from_content(content: str, llm: Any) -> list[str]:
             exc_info=False,
         )
         return [content]
+
+
+
+
+def extract_action_insights_from_content(content: str, llm: Any) -> list[ActionInsightItem]:
+    """Use the LLM to extract behavioral insights from a ReAct execution trace.
+
+    This is a pure helper: it does NOT store anything. Callers should call
+    memory.remember() on each insight's content to persist them, with
+    metadata.type = \"action_insight\" and the insight fields stored in metadata.
+
+    On LLM failure, returns an empty list — behavioral extraction is
+    best-effort and should never block or pollute factual memory storage.
+
+    Args:
+        content: Raw ReAct execution trace text (Thought/Action/Observation chain).
+        llm: The LLM instance to use.
+
+    Returns:
+        List of ActionInsightItem objects (empty list on failure or blank input).
+    """
+    if not (content or "").strip():
+        return []
+    user = _get_prompt("extract_action_insights_user").format(content=content)
+    messages = [
+        {"role": "system", "content": _get_prompt("extract_action_insights_system")},
+        {"role": "user", "content": user},
+    ]
+    try:
+        if getattr(llm, "supports_function_calling", lambda: False)():
+            response = llm.call(messages, response_model=ExtractedActionInsights)
+            if isinstance(response, ExtractedActionInsights):
+                return response.insights
+            return ExtractedActionInsights.model_validate(response).insights
+        response = llm.call(messages)
+        if isinstance(response, ExtractedActionInsights):
+            return response.insights
+        if isinstance(response, str):
+            data = json.loads(response)
+            return ExtractedActionInsights.model_validate(data).insights
+        return ExtractedActionInsights.model_validate(response).insights
+    except Exception as e:
+        _logger.warning(
+            "Action insight extraction failed, returning empty list: %s",
+            e,
+            exc_info=False,
+        )
+        return []
 
 
 def analyze_query(

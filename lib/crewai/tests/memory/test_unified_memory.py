@@ -991,3 +991,121 @@ def test_close_drains_and_shuts_down(tmp_path: Path, mock_embedder: MagicMock) -
     mem.close()
     # After close, records should be persisted
     assert mem._storage.count() == 1
+
+
+# ── extract_action_insights tests ──────────────────────────────
+
+
+def test_extract_action_insights_returns_list_from_llm(tmp_path: Path) -> None:
+    """Memory.extract_action_insights() delegates to LLM and returns list of ActionInsightItem."""
+    from crewai.memory.analyze import ActionInsightItem, ExtractedActionInsights
+    from crewai.memory.unified_memory import Memory
+
+    mock_llm = MagicMock()
+    mock_llm.supports_function_calling.return_value = True
+    mock_llm.call.return_value = ExtractedActionInsights(
+        insights=[
+            ActionInsightItem(
+                type="lesson",
+                content="API returned incomplete data; direct DB query more reliable.",
+                rationale="API had stale cache.",
+                domain="data analysis",
+                context_signals=["API timeout", "incomplete results"],
+            ),
+            ActionInsightItem(
+                type="pattern",
+                content="Reformulating query with broader terms after empty search succeeds.",
+                rationale="First search too specific.",
+                domain="general",
+                context_signals=["empty search results"],
+            ),
+        ]
+    )
+
+    mem = Memory(
+        storage=str(tmp_path / "action_insights_db"),
+        llm=mock_llm,
+        embedder=MagicMock(return_value=[[0.1] * 1536]),
+    )
+    result = mem.extract_action_insights("ReAct trace: Thought → Action: search → Obs: no results. Thought → Action: search broader → Obs: found 5 docs.")
+
+    assert len(result) == 2
+    assert result[0].type == "lesson"
+    assert result[0].domain == "data analysis"
+    assert result[0].context_signals == ["API timeout", "incomplete results"]
+    assert result[1].type == "pattern"
+    mock_llm.call.assert_called_once()
+    call_kw = mock_llm.call.call_args[1]
+    assert call_kw.get("response_model") == ExtractedActionInsights
+
+
+def test_extract_action_insights_empty_content_returns_empty_list(tmp_path: Path) -> None:
+    """Memory.extract_action_insights() with empty/whitespace content returns [] without calling LLM."""
+    from crewai.memory.unified_memory import Memory
+
+    mock_llm = MagicMock()
+    mem = Memory(storage=str(tmp_path / "empty_ai_db"), llm=mock_llm, embedder=MagicMock())
+    assert mem.extract_action_insights("") == []
+    assert mem.extract_action_insights("   \n  ") == []
+    mock_llm.call.assert_not_called()
+
+
+def test_extract_action_insights_llm_failure_returns_empty(tmp_path: Path) -> None:
+    """When LLM raises, extract_action_insights_from_content returns [] (not raw content)."""
+    from crewai.memory.analyze import extract_action_insights_from_content
+
+    llm = MagicMock()
+    llm.call.side_effect = RuntimeError("Network error")
+    content = "Thought: search → Observation: no results."
+    result = extract_action_insights_from_content(content, llm)
+    assert result == []
+
+
+def test_memory_scope_extract_action_insights_delegates() -> None:
+    """MemoryScope.extract_action_insights delegates to underlying Memory."""
+    from crewai.memory.memory_scope import MemoryScope
+
+    mock_memory = MagicMock()
+    mock_memory.extract_action_insights.return_value = []
+    scope = MemoryScope(memory=mock_memory, root_path="/agent/1")
+    result = scope.extract_action_insights("ReAct trace")
+    mock_memory.extract_action_insights.assert_called_once_with("ReAct trace")
+    assert result == []
+
+
+def test_memory_slice_extract_action_insights_delegates() -> None:
+    """MemorySlice.extract_action_insights delegates to underlying Memory."""
+    from crewai.memory.memory_scope import MemorySlice
+
+    mock_memory = MagicMock()
+    mock_memory.extract_action_insights.return_value = []
+    sl = MemorySlice(memory=mock_memory, scopes=["/a", "/b"], read_only=True)
+    result = sl.extract_action_insights("ReAct trace")
+    mock_memory.extract_action_insights.assert_called_once_with("ReAct trace")
+    assert result == []
+
+
+def test_flow_extract_action_insights_delegates_when_memory_present() -> None:
+    """Flow.extract_action_insights delegates to flow memory and returns list."""
+    from crewai.flow.flow import Flow
+
+    mock_memory = MagicMock()
+    mock_memory.extract_action_insights.return_value = []
+
+    class FlowWithMemory(Flow):
+        memory = mock_memory
+
+    f = FlowWithMemory()
+    result = f.extract_action_insights("ReAct trace")
+    mock_memory.extract_action_insights.assert_called_once_with("ReAct trace")
+    assert result == []
+
+
+def test_flow_extract_action_insights_raises_when_memory_none() -> None:
+    """Flow.extract_action_insights raises ValueError when memory is explicitly None."""
+    from crewai.flow.flow import Flow
+
+    f = Flow()
+    f.memory = None
+    with pytest.raises(ValueError, match="No memory configured"):
+        f.extract_action_insights("some content")
