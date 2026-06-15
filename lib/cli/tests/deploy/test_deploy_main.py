@@ -293,11 +293,13 @@ class TestDeployCommand(unittest.TestCase):
         mock_display.assert_called_once_with({"uuid": "test-uuid"})
 
     @patch("crewai_cli.deploy.main.create_project_zip")
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
     @patch("crewai_cli.deploy.main.git.Repository")
     @patch("crewai_cli.deploy.main.DeployCommand._display_deployment_info")
     def test_deploy_with_uuid_without_remote_updates_from_zip(
-        self, mock_display, mock_repository, mock_create_project_zip
+        self, mock_display, mock_repository, mock_fetch_env, mock_create_project_zip
     ):
+        mock_fetch_env.return_value = {"ENV_VAR": "value"}
         mock_repository.return_value.origin_url.return_value = None
         mock_repository.return_value.create_initial_commit_if_needed.return_value = (
             False
@@ -311,17 +313,21 @@ class TestDeployCommand(unittest.TestCase):
         self.deploy_command.deploy(uuid="test-uuid", skip_validate=True)
 
         self.mock_client.update_crew_from_zip.assert_called_once_with(
-            "test-uuid", Path("/tmp/test_project.zip")
+            "test-uuid",
+            Path("/tmp/test_project.zip"),
+            env={"ENV_VAR": "value"},
         )
         self.mock_client.deploy_by_uuid.assert_not_called()
         mock_display.assert_called_once_with({"uuid": "test-uuid"})
 
     @patch("crewai_cli.deploy.main.create_project_zip")
+    @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
     @patch("crewai_cli.deploy.main.git.Repository")
     @patch("crewai_cli.deploy.main.DeployCommand._display_deployment_info")
     def test_deploy_with_project_name_without_remote_updates_from_zip(
-        self, mock_display, mock_repository, mock_create_project_zip
+        self, mock_display, mock_repository, mock_fetch_env, mock_create_project_zip
     ):
+        mock_fetch_env.return_value = {"ENV_VAR": "value"}
         mock_repository.return_value.origin_url.return_value = None
         mock_repository.return_value.create_initial_commit_if_needed.return_value = (
             False
@@ -341,7 +347,9 @@ class TestDeployCommand(unittest.TestCase):
 
         self.mock_client.crew_status_by_name.assert_called_once_with("test_project")
         self.mock_client.update_crew_from_zip.assert_called_once_with(
-            "test-uuid", Path("/tmp/test_project.zip")
+            "test-uuid",
+            Path("/tmp/test_project.zip"),
+            env={"ENV_VAR": "value"},
         )
         self.mock_client.deploy_by_name.assert_not_called()
         mock_display.assert_called_once_with({"uuid": "test-uuid"})

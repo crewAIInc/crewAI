@@ -155,11 +155,17 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             response = self.plus_api_client.deploy_by_name(self.project_name)
         elif uuid:
             _display_git_remote_help()
-            response = self._update_crew_from_zip(uuid, repository)
+            env_vars = fetch_and_json_env_file()
+            response = self._update_crew_from_zip(uuid, repository, env_vars)
         elif self.project_name:
             _display_git_remote_help()
             deployment_uuid = self._deployment_uuid_by_name()
-            response = self._update_crew_from_zip(deployment_uuid, repository)
+            env_vars = fetch_and_json_env_file()
+            response = self._update_crew_from_zip(
+                deployment_uuid,
+                repository,
+                env_vars,
+            )
         else:
             self._standard_no_param_error_message()
             return
@@ -304,6 +310,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         self,
         uuid: str,
         repository: git.Repository | None,
+        env_vars: dict[str, str],
     ) -> Any:
         """Update an existing deployment by uploading a project ZIP archive."""
         if not self.project_name:
@@ -313,7 +320,11 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         zip_file_path = create_project_zip(self.project_name, repository=repository)
         try:
             console.print("Uploading project ZIP...", style="bold blue")
-            return self.plus_api_client.update_crew_from_zip(uuid, zip_file_path)
+            return self.plus_api_client.update_crew_from_zip(
+                uuid,
+                zip_file_path,
+                env=env_vars,
+            )
         finally:
             zip_file_path.unlink(missing_ok=True)
 
