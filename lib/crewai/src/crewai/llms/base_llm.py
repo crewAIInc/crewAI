@@ -126,6 +126,10 @@ def get_current_call_id() -> str:
     return call_id
 
 
+# Providers that do not support the response_format parameter.
+# Deepseek: returns "response_format type is unavailable now"
+PROVIDERS_WITHOUT_RESPONSE_FORMAT: set[str] = {"deepseek"}
+
 class BaseLLM(BaseModel, ABC):
     """Abstract base class for LLM implementations.
 
