@@ -234,7 +234,11 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
                     style="yellow",
                 )
                 console.print(str(init_error), style="dim")
-                return None
+                try:
+                    return git.Repository(fetch=False)
+                except Exception as repository_error:
+                    console.print(str(repository_error), style="dim")
+                    return None
 
             _display_git_repository_help()
             return repository

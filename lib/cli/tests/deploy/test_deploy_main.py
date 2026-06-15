@@ -414,6 +414,25 @@ class TestDeployCommand(unittest.TestCase):
         )
         self.mock_client.create_crew.assert_not_called()
 
+    @patch("crewai_cli.deploy.main.git.Repository")
+    def test_prepare_git_repository_returns_repo_when_init_commit_fails(
+        self, mock_repository
+    ):
+        recovered_repository = MagicMock()
+        mock_repository.side_effect = [
+            ValueError("not a Git repository"),
+            recovered_repository,
+        ]
+        mock_repository.initialize.side_effect = RuntimeError("commit failed")
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            repository = self.deploy_command._prepare_git_repository()
+
+        self.assertIs(repository, recovered_repository)
+        self.assertIn("Git auto-setup did not complete", fake_out.getvalue())
+        mock_repository.initialize.assert_called_once_with()
+        self.assertEqual(mock_repository.call_count, 2)
+
     @patch("crewai_cli.deploy.main.create_project_zip")
     @patch("crewai_cli.deploy.main.fetch_and_json_env_file")
     @patch("crewai_cli.deploy.main.git.Repository")

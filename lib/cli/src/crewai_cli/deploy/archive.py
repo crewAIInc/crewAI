@@ -75,16 +75,29 @@ def create_project_zip(
 def _project_files(root: Path, repository: git.Repository | None = None) -> list[Path]:
     """Return project-relative files to include in the archive."""
     if repository is not None:
-        files = [Path(path) for path in repository.deployable_files()]
-        return [
-            path
-            for path in files
-            if not _is_excluded(path) and _is_regular_file(root / path)
-        ]
+        return _repository_project_files(root, repository)
+
+    try:
+        repository = git.Repository(path=str(root), fetch=False)
+    except ValueError:
+        repository = None
+
+    if repository is not None:
+        return _repository_project_files(root, repository)
 
     return [
         path
         for path in _walk_files(root)
+        if not _is_excluded(path) and _is_regular_file(root / path)
+    ]
+
+
+def _repository_project_files(root: Path, repository: git.Repository) -> list[Path]:
+    """Return deployable files from Git while applying local safety excludes."""
+    files = [Path(path) for path in repository.deployable_files()]
+    return [
+        path
+        for path in files
         if not _is_excluded(path) and _is_regular_file(root / path)
     ]
 

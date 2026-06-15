@@ -182,7 +182,7 @@ def test_json_project_env_run_failure_exits_nonzero(monkeypatch, tmp_path: Path)
 def test_json_run_installs_dependencies_when_pyproject_has_no_lockfile(
     monkeypatch, tmp_path: Path
 ):
-    """JSON crew runs should lock/sync project dependencies only once."""
+    """JSON crew runs should lock/sync project dependencies only when needed."""
     monkeypatch.chdir(tmp_path)
     (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
     calls = []
@@ -196,16 +196,38 @@ def test_json_run_installs_dependencies_when_pyproject_has_no_lockfile(
 
     run_crew_module._install_json_crew_dependencies_if_needed()
 
-    assert calls == [([], True, False)]
+    assert calls == [([], True, None)]
 
 
 @pytest.mark.parametrize("lockfile", ["uv.lock", "poetry.lock"])
-def test_json_run_skips_dependency_install_when_lockfile_exists(
+def test_json_run_syncs_frozen_when_lockfile_exists_without_venv(
     monkeypatch, tmp_path: Path, lockfile: str
 ):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
     (tmp_path / lockfile).write_text("# lock\n")
+    calls = []
+
+    def fake_install_crew(
+        proxy_options, *, raise_on_error=False, install_project=None
+    ):
+        calls.append((proxy_options, raise_on_error, install_project))
+
+    monkeypatch.setattr("crewai_cli.install_crew.install_crew", fake_install_crew)
+
+    run_crew_module._install_json_crew_dependencies_if_needed()
+
+    assert calls == [(["--frozen"], True, None)]
+
+
+@pytest.mark.parametrize("lockfile", ["uv.lock", "poetry.lock"])
+def test_json_run_skips_dependency_install_when_lockfile_and_venv_exist(
+    monkeypatch, tmp_path: Path, lockfile: str
+):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    (tmp_path / lockfile).write_text("# lock\n")
+    (tmp_path / ".venv").mkdir()
     calls = []
 
     def fake_install_crew(

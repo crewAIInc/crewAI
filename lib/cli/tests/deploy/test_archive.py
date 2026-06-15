@@ -1,4 +1,5 @@
 from pathlib import Path
+import subprocess
 import zipfile
 
 import pytest
@@ -54,6 +55,42 @@ def test_create_project_zip_uses_repository_file_list(tmp_path: Path):
         archive_path.unlink(missing_ok=True)
 
     assert names == {"pyproject.toml", "uv.lock"}
+
+
+def test_create_project_zip_without_repository_uses_git_ignore_rules(
+    tmp_path: Path,
+):
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    (tmp_path / ".gitignore").write_text("node_modules/\nsecret.txt\n")
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "main.py").write_text("print('hello')\n")
+    (tmp_path / "node_modules").mkdir()
+    (tmp_path / "node_modules" / "package.json").write_text("{}\n")
+    (tmp_path / "secret.txt").write_text("secret\n")
+
+    try:
+        subprocess.run(
+            ["git", "init"],
+            cwd=tmp_path,
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+    except (FileNotFoundError, subprocess.CalledProcessError) as exc:
+        pytest.skip(f"git is not available in this environment: {exc}")
+
+    archive_path = create_project_zip("demo", project_dir=tmp_path)
+    try:
+        with zipfile.ZipFile(archive_path) as archive:
+            names = set(archive.namelist())
+    finally:
+        archive_path.unlink(missing_ok=True)
+
+    assert names == {
+        ".gitignore",
+        "pyproject.toml",
+        "src/main.py",
+    }
 
 
 def test_create_project_zip_does_not_fallback_when_repository_listing_fails(

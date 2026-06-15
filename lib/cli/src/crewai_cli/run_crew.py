@@ -262,17 +262,31 @@ def _has_lockfile(project_root: Path | None = None) -> bool:
     return (root / "uv.lock").is_file() or (root / "poetry.lock").is_file()
 
 
+def _has_project_venv(project_root: Path | None = None) -> bool:
+    """Return True when the project already has a local uv environment."""
+    root = project_root or Path.cwd()
+    return (root / ".venv").is_dir()
+
+
 def _install_json_crew_dependencies_if_needed() -> None:
-    """Lock and sync JSON crew projects only when no lockfile exists."""
+    """Prepare JSON crew dependencies without mutating existing lockfiles."""
     project_root = Path.cwd()
-    if not (project_root / "pyproject.toml").is_file() or _has_lockfile(project_root):
+    if not (project_root / "pyproject.toml").is_file():
+        return
+
+    has_lockfile = _has_lockfile(project_root)
+    if has_lockfile and _has_project_venv(project_root):
         return
 
     from crewai_cli.install_crew import install_crew
 
     try:
-        click.echo("Installing dependencies...")
-        install_crew([], raise_on_error=True, install_project=False)
+        if has_lockfile:
+            click.echo("Syncing dependencies from lockfile...")
+            install_crew(["--frozen"], raise_on_error=True)
+        else:
+            click.echo("Installing dependencies...")
+            install_crew([], raise_on_error=True)
     except subprocess.CalledProcessError as e:
         raise SystemExit(e.returncode) from e
     except Exception as e:
