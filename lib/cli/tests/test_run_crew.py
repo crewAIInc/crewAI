@@ -90,6 +90,60 @@ def test_json_run_uses_project_env_when_pyproject_exists(monkeypatch, tmp_path: 
     ]
 
 
+def test_json_run_uses_poetry_run_for_poetry_lock_without_uv_lock(
+    monkeypatch, tmp_path: Path
+):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    (tmp_path / "poetry.lock").write_text("# lock\n")
+    monkeypatch.setattr(
+        run_crew_module,
+        "_install_json_crew_dependencies_if_needed",
+        lambda: None,
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "build_env_with_all_tool_credentials",
+        lambda: {},
+    )
+    subprocess_calls = []
+
+    def fake_subprocess_run(command, **kwargs):
+        subprocess_calls.append((command, kwargs))
+
+    monkeypatch.setattr(run_crew_module.subprocess, "run", fake_subprocess_run)
+
+    run_crew_module._run_json_crew_in_project_env()
+
+    expected_env = {
+        run_crew_module._CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV: str(
+            Path(run_crew_module.__file__).resolve().parent
+        ),
+    }
+    if local_crewai_source_dir := run_crew_module._find_local_crewai_source_dir():
+        expected_env[run_crew_module._CREWAI_RUNNER_SOURCE_DIR_ENV] = str(
+            local_crewai_source_dir
+        )
+
+    assert subprocess_calls == [
+        (
+            [
+                "poetry",
+                "run",
+                "python",
+                "-c",
+                run_crew_module._JSON_CREW_RUNNER_CODE,
+            ],
+            {
+                "capture_output": False,
+                "text": True,
+                "check": True,
+                "env": expected_env,
+            },
+        )
+    ]
+
+
 def test_json_runner_code_loads_current_cli_package_over_project_env(tmp_path: Path):
     old_parent = tmp_path / "old"
     old_pkg = old_parent / "crewai_cli"
@@ -199,13 +253,12 @@ def test_json_run_installs_dependencies_when_pyproject_has_no_lockfile(
     assert calls == [([], True, None)]
 
 
-@pytest.mark.parametrize("lockfile", ["uv.lock", "poetry.lock"])
-def test_json_run_syncs_frozen_when_lockfile_exists_without_venv(
-    monkeypatch, tmp_path: Path, lockfile: str
+def test_json_run_syncs_frozen_when_uv_lock_exists_without_venv(
+    monkeypatch, tmp_path: Path
 ):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
-    (tmp_path / lockfile).write_text("# lock\n")
+    (tmp_path / "uv.lock").write_text("# lock\n")
     calls = []
 
     def fake_install_crew(
@@ -218,6 +271,26 @@ def test_json_run_syncs_frozen_when_lockfile_exists_without_venv(
     run_crew_module._install_json_crew_dependencies_if_needed()
 
     assert calls == [(["--frozen"], True, None)]
+
+
+def test_json_run_skips_uv_sync_when_only_poetry_lock_exists_without_venv(
+    monkeypatch, tmp_path: Path
+):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    (tmp_path / "poetry.lock").write_text("# lock\n")
+    calls = []
+
+    def fake_install_crew(
+        proxy_options, *, raise_on_error=False, install_project=None
+    ):
+        calls.append((proxy_options, raise_on_error, install_project))
+
+    monkeypatch.setattr("crewai_cli.install_crew.install_crew", fake_install_crew)
+
+    run_crew_module._install_json_crew_dependencies_if_needed()
+
+    assert calls == []
 
 
 @pytest.mark.parametrize("lockfile", ["uv.lock", "poetry.lock"])

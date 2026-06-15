@@ -258,8 +258,24 @@ def _run_json_crew(trained_agents_file: str | None = None) -> Any:
 
 def _has_lockfile(project_root: Path | None = None) -> bool:
     """Return True when the project already has a dependency lockfile."""
+    return _has_uv_lockfile(project_root) or _has_poetry_lockfile(project_root)
+
+
+def _has_uv_lockfile(project_root: Path | None = None) -> bool:
+    """Return True when the project has a uv lockfile."""
     root = project_root or Path.cwd()
-    return (root / "uv.lock").is_file() or (root / "poetry.lock").is_file()
+    return (root / "uv.lock").is_file()
+
+
+def _has_poetry_lockfile(project_root: Path | None = None) -> bool:
+    """Return True when the project has a Poetry lockfile."""
+    root = project_root or Path.cwd()
+    return (root / "poetry.lock").is_file()
+
+
+def _uses_poetry_lockfile(project_root: Path | None = None) -> bool:
+    """Return True when Poetry is the only available lock source."""
+    return _has_poetry_lockfile(project_root) and not _has_uv_lockfile(project_root)
 
 
 def _has_project_venv(project_root: Path | None = None) -> bool:
@@ -274,14 +290,17 @@ def _install_json_crew_dependencies_if_needed() -> None:
     if not (project_root / "pyproject.toml").is_file():
         return
 
-    has_lockfile = _has_lockfile(project_root)
+    has_uv_lockfile = _has_uv_lockfile(project_root)
+    has_lockfile = has_uv_lockfile or _has_poetry_lockfile(project_root)
     if has_lockfile and _has_project_venv(project_root):
+        return
+    if _uses_poetry_lockfile(project_root):
         return
 
     from crewai_cli.install_crew import install_crew
 
     try:
-        if has_lockfile:
+        if has_uv_lockfile:
             click.echo("Syncing dependencies from lockfile...")
             install_crew(["--frozen"], raise_on_error=True)
         else:
@@ -302,6 +321,13 @@ def _find_local_crewai_source_dir() -> Path | None:
     return None
 
 
+def _json_crew_run_command(project_root: Path | None = None) -> list[str]:
+    """Return the project-environment command for running JSON crews."""
+    if _uses_poetry_lockfile(project_root):
+        return ["poetry", "run", "python", "-c", _JSON_CREW_RUNNER_CODE]
+    return ["uv", "run", "--no-sync", "python", "-c", _JSON_CREW_RUNNER_CODE]
+
+
 def _run_json_crew_in_project_env(trained_agents_file: str | None = None) -> Any:
     """Run JSON crews from the project's uv-managed environment."""
     if not (Path.cwd() / "pyproject.toml").is_file():
@@ -309,7 +335,7 @@ def _run_json_crew_in_project_env(trained_agents_file: str | None = None) -> Any
 
     _install_json_crew_dependencies_if_needed()
 
-    command = ["uv", "run", "--no-sync", "python", "-c", _JSON_CREW_RUNNER_CODE]
+    command = _json_crew_run_command()
     env = build_env_with_all_tool_credentials()
     env[_CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV] = str(Path(__file__).resolve().parent)
     if local_crewai_source_dir := _find_local_crewai_source_dir():
