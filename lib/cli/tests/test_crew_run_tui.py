@@ -19,6 +19,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai_cli.command import AuthenticationRequiredError
 from crewai_cli import run_crew
 from crewai_cli.crew_run_tui import CrewRunApp
 
@@ -68,7 +69,7 @@ def test_chain_deploy_skips_validation_after_auth_retry(monkeypatch) -> None:
             create_calls.append(kwargs)
             FakeDeployCommand.attempts += 1
             if FakeDeployCommand.attempts == 1:
-                raise SystemExit(1)
+                raise AuthenticationRequiredError
 
     class FakeAuthenticationCommand:
         def login(self) -> None:
@@ -87,6 +88,32 @@ def test_chain_deploy_skips_validation_after_auth_retry(monkeypatch) -> None:
         {"confirm": True, "skip_validate": True},
     ]
     assert login_calls == [True]
+
+
+def test_chain_deploy_does_not_login_for_deploy_exit(monkeypatch, capsys) -> None:
+    create_calls: list[dict[str, object]] = []
+    login_calls: list[bool] = []
+
+    class FakeDeployCommand:
+        def create_crew(self, **kwargs) -> None:
+            create_calls.append(kwargs)
+            raise SystemExit(42)
+
+    class FakeAuthenticationCommand:
+        def login(self) -> None:
+            login_calls.append(True)
+
+    monkeypatch.setattr("crewai_cli.deploy.main.DeployCommand", FakeDeployCommand)
+    monkeypatch.setattr(
+        "crewai_cli.authentication.main.AuthenticationCommand",
+        FakeAuthenticationCommand,
+    )
+
+    run_crew._chain_deploy()
+
+    assert create_calls == [{"confirm": True, "skip_validate": True}]
+    assert login_calls == []
+    assert "Deploy failed with exit code 42" in capsys.readouterr().out
 
 
 def test_plan_step_status_updates_only_the_explicit_step() -> None:

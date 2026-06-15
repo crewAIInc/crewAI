@@ -364,20 +364,40 @@ def _chain_deploy() -> None:
     from rich.console import Console
 
     console = Console()
+
+    def print_system_exit_failure(exc: SystemExit) -> None:
+        if isinstance(exc.code, int):
+            detail = f" with exit code {exc.code}"
+        elif exc.code:
+            detail = f": {exc.code}"
+        else:
+            detail = ""
+        console.print(f"\nDeploy failed{detail}\n", style="bold red")
+
     try:
+        from crewai_cli.command import AuthenticationRequiredError
         from crewai_cli.deploy.main import DeployCommand
 
         console.print("\nStarting deployment…\n", style="bold #FF5A50")
         DeployCommand().create_crew(confirm=True, skip_validate=True)
-    except SystemExit:
+    except AuthenticationRequiredError:
         from crewai_cli.authentication.main import AuthenticationCommand
 
         console.print()
         AuthenticationCommand().login()
         try:
             DeployCommand().create_crew(confirm=True, skip_validate=True)
+        except AuthenticationRequiredError:
+            console.print(
+                "\nDeploy failed: authentication is still required.\n",
+                style="bold red",
+            )
+        except SystemExit as e:
+            print_system_exit_failure(e)
         except Exception as e:
             console.print(f"\nDeploy failed: {e}\n", style="bold red")
+    except SystemExit as e:
+        print_system_exit_failure(e)
     except Exception as e:
         console.print(f"\nDeploy failed: {e}\n", style="bold red")
 
