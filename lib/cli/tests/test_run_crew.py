@@ -127,14 +127,16 @@ def test_json_run_installs_dependencies_when_pyproject_exists(
     (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
     calls = []
 
-    def fake_install_crew(proxy_options, *, raise_on_error=False):
-        calls.append((proxy_options, raise_on_error))
+    def fake_install_crew(
+        proxy_options, *, raise_on_error=False, install_project=None
+    ):
+        calls.append((proxy_options, raise_on_error, install_project))
 
     monkeypatch.setattr("crewai_cli.install_crew.install_crew", fake_install_crew)
 
     run_crew_module._install_json_crew_dependencies()
 
-    assert calls == [([], True)]
+    assert calls == [([], True, False)]
 
 
 def test_json_run_skips_dependency_install_without_pyproject(
@@ -143,7 +145,9 @@ def test_json_run_skips_dependency_install_without_pyproject(
     monkeypatch.chdir(tmp_path)
     calls = []
 
-    def fake_install_crew(proxy_options, *, raise_on_error=False):
+    def fake_install_crew(
+        proxy_options, *, raise_on_error=False, install_project=None
+    ):
         calls.append((proxy_options, raise_on_error))
 
     monkeypatch.setattr("crewai_cli.install_crew.install_crew", fake_install_crew)
@@ -157,7 +161,9 @@ def test_json_run_install_failure_exits_nonzero(monkeypatch, tmp_path: Path):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
 
-    def fake_install_crew(proxy_options, *, raise_on_error=False):
+    def fake_install_crew(
+        proxy_options, *, raise_on_error=False, install_project=None
+    ):
         raise subprocess.CalledProcessError(42, ["uv", "sync"])
 
     monkeypatch.setattr("crewai_cli.install_crew.install_crew", fake_install_crew)

@@ -231,7 +231,7 @@ def _install_json_crew_dependencies() -> None:
 
     try:
         click.echo("Installing dependencies...")
-        install_crew([], raise_on_error=True)
+        install_crew([], raise_on_error=True, install_project=False)
     except subprocess.CalledProcessError as e:
         raise SystemExit(e.returncode) from e
     except Exception as e:
