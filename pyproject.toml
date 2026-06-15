@@ -195,6 +195,8 @@ exclude-newer = "3 days"
 # starlette <1.0.1 has PYSEC-2026-161 (missing Host header validation poisons request.url.path, bypassing path-based auth). Transitive via fastapi.
 # litellm 1.83.8+ hard-pins openai==2.24.0, missing openai.types.responses used by crewai;
 # override to >=2.30.0 (the version litellm 1.83.7 used) until upstream relaxes the pin.
+# torch 2.11.0 fails to import on CPython 3.13.8; torchvision 0.27.0 is the matching
+# release for torch 2.12.0.
 override-dependencies = [
     "openai>=2.30.0,<3",
     "rich>=13.7.1",
@@ -204,6 +206,10 @@ override-dependencies = [
     "langchain-text-splitters>=1.1.2,<2",
     "urllib3>=2.7.0",
     "transformers>=5.4.0; python_version >= '3.10'",
+    "torch<2.13.0; python_version < '3.13'",
+    "torch>=2.12.0,<2.13.0; python_version >= '3.13'",
+    "torchvision<0.28.0; python_version < '3.13'",
+    "torchvision>=0.27.0,<0.28.0; python_version >= '3.13'",
     "cryptography>=46.0.7",
     "pypdf>=6.10.2,<7",
     "uv>=0.11.15,<1",
