@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+import subprocess
 
 import pytest
 from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
@@ -14,14 +15,157 @@ def test_run_crew_forwards_trained_agents_file_to_json_crews(monkeypatch):
     monkeypatch.setattr(run_crew_module, "_has_json_crew", lambda: True)
     called: dict = {}
 
-    def fake_run_json_crew(trained_agents_file=None):
+    def fake_run_json_crew_in_project_env(trained_agents_file=None):
         called["trained_agents_file"] = trained_agents_file
 
-    monkeypatch.setattr(run_crew_module, "_run_json_crew", fake_run_json_crew)
+    monkeypatch.setattr(
+        run_crew_module,
+        "_run_json_crew_in_project_env",
+        fake_run_json_crew_in_project_env,
+    )
 
     run_crew_module.run_crew(trained_agents_file="some.pkl")
 
     assert called == {"trained_agents_file": "some.pkl"}
+
+
+def test_json_run_uses_project_env_when_pyproject_exists(monkeypatch, tmp_path: Path):
+    """JSON crew runs should execute inside the project uv environment."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    install_calls = []
+    subprocess_calls = []
+
+    monkeypatch.setattr(
+        run_crew_module,
+        "_install_json_crew_dependencies",
+        lambda: install_calls.append(True),
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "build_env_with_all_tool_credentials",
+        lambda: {"EXISTING": "value"},
+    )
+
+    def fake_subprocess_run(command, **kwargs):
+        subprocess_calls.append((command, kwargs))
+
+    monkeypatch.setattr(run_crew_module.subprocess, "run", fake_subprocess_run)
+
+    run_crew_module._run_json_crew_in_project_env(
+        trained_agents_file="trained.pkl"
+    )
+
+    assert install_calls == [True]
+    assert subprocess_calls == [
+        (
+            [
+                "uv",
+                "run",
+                "--no-sync",
+                "python",
+                "-c",
+                run_crew_module._JSON_CREW_RUNNER_CODE,
+            ],
+            {
+                "capture_output": False,
+                "text": True,
+                "check": True,
+                "env": {
+                    "EXISTING": "value",
+                    CREWAI_TRAINED_AGENTS_FILE_ENV: "trained.pkl",
+                },
+            },
+        )
+    ]
+
+
+def test_json_run_without_pyproject_runs_in_process(monkeypatch, tmp_path: Path):
+    monkeypatch.chdir(tmp_path)
+    called: dict = {}
+
+    def fake_run_json_crew(trained_agents_file=None):
+        called["trained_agents_file"] = trained_agents_file
+        return "result"
+
+    monkeypatch.setattr(run_crew_module, "_run_json_crew", fake_run_json_crew)
+
+    assert (
+        run_crew_module._run_json_crew_in_project_env(
+            trained_agents_file="trained.pkl"
+        )
+        == "result"
+    )
+    assert called == {"trained_agents_file": "trained.pkl"}
+
+
+def test_json_project_env_run_failure_exits_nonzero(monkeypatch, tmp_path: Path):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+
+    monkeypatch.setattr(run_crew_module, "_install_json_crew_dependencies", lambda: None)
+    monkeypatch.setattr(
+        run_crew_module, "build_env_with_all_tool_credentials", lambda: {}
+    )
+
+    def fake_subprocess_run(command, **kwargs):
+        raise subprocess.CalledProcessError(7, command)
+
+    monkeypatch.setattr(run_crew_module.subprocess, "run", fake_subprocess_run)
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_crew_module._run_json_crew_in_project_env()
+
+    assert exc_info.value.code == 7
+
+
+def test_json_run_installs_dependencies_when_pyproject_exists(
+    monkeypatch, tmp_path: Path
+):
+    """JSON crew runs should lock/sync project dependencies before loading."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    calls = []
+
+    def fake_install_crew(proxy_options, *, raise_on_error=False):
+        calls.append((proxy_options, raise_on_error))
+
+    monkeypatch.setattr("crewai_cli.install_crew.install_crew", fake_install_crew)
+
+    run_crew_module._install_json_crew_dependencies()
+
+    assert calls == [([], True)]
+
+
+def test_json_run_skips_dependency_install_without_pyproject(
+    monkeypatch, tmp_path: Path
+):
+    monkeypatch.chdir(tmp_path)
+    calls = []
+
+    def fake_install_crew(proxy_options, *, raise_on_error=False):
+        calls.append((proxy_options, raise_on_error))
+
+    monkeypatch.setattr("crewai_cli.install_crew.install_crew", fake_install_crew)
+
+    run_crew_module._install_json_crew_dependencies()
+
+    assert calls == []
+
+
+def test_json_run_install_failure_exits_nonzero(monkeypatch, tmp_path: Path):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+
+    def fake_install_crew(proxy_options, *, raise_on_error=False):
+        raise subprocess.CalledProcessError(42, ["uv", "sync"])
+
+    monkeypatch.setattr("crewai_cli.install_crew.install_crew", fake_install_crew)
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_crew_module._install_json_crew_dependencies()
+
+    assert exc_info.value.code == 42
 
 
 def test_run_json_crew_exports_trained_agents_env(monkeypatch, tmp_path: Path):

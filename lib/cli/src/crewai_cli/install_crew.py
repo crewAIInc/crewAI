@@ -9,7 +9,7 @@ from crewai_cli.utils import build_env_with_all_tool_credentials
 # on some environments we don't use this command but instead uv sync directly
 # so if you expect this to support more things you will need to replicate it there
 # ask @joaomdmoura if you are unsure
-def install_crew(proxy_options: list[str]) -> None:
+def install_crew(proxy_options: list[str], *, raise_on_error: bool = False) -> None:
     """
     Install the crew by running the UV command to lock and install.
     """
@@ -22,11 +22,21 @@ def install_crew(proxy_options: list[str]) -> None:
         # project depends on tools from a private index.
         env = build_env_with_all_tool_credentials()
 
-        subprocess.run(command, check=True, capture_output=False, text=True, env=env)  # noqa: S603
+        subprocess.run(  # noqa: S603
+            command,
+            check=True,
+            capture_output=False,
+            text=True,
+            env=env,
+        )
 
     except subprocess.CalledProcessError as e:
         click.echo(f"An error occurred while running the crew: {e}", err=True)
         click.echo(e.output, err=True)
+        if raise_on_error:
+            raise
 
     except Exception as e:
         click.echo(f"An unexpected error occurred: {e}", err=True)
+        if raise_on_error:
+            raise

@@ -83,8 +83,8 @@ def test_chain_deploy_skips_validation_after_auth_retry(monkeypatch) -> None:
     run_crew._chain_deploy()
 
     assert create_calls == [
-        {"confirm": False, "skip_validate": True},
-        {"confirm": False, "skip_validate": True},
+        {"confirm": True, "skip_validate": True},
+        {"confirm": True, "skip_validate": True},
     ]
     assert login_calls == [True]
 

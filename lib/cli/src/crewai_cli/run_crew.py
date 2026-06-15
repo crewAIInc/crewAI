@@ -35,6 +35,9 @@ class CrewType(Enum):
 # crewai.utilities.string_utils (_VARIABLE_PATTERN), including hyphens —
 # otherwise placeholders are interpolated at runtime but never prompted for.
 _INPUT_PLACEHOLDER_RE = re.compile(r"(?<!{){([A-Za-z_][A-Za-z0-9_\-]*)}(?!})")
+_JSON_CREW_RUNNER_CODE = (
+    "from crewai_cli.run_crew import _run_json_crew; _run_json_crew()"
+)
 
 
 def _has_json_crew() -> bool:
@@ -216,6 +219,49 @@ def _run_json_crew(trained_agents_file: str | None = None) -> Any:
     return app._crew_result
 
 
+def _install_json_crew_dependencies() -> None:
+    """Lock and sync JSON crew projects before loading them in-process."""
+    if not (Path.cwd() / "pyproject.toml").is_file():
+        return
+
+    from crewai_cli.install_crew import install_crew
+
+    try:
+        click.echo("Installing dependencies...")
+        install_crew([], raise_on_error=True)
+    except subprocess.CalledProcessError as e:
+        raise SystemExit(e.returncode) from e
+    except Exception as e:
+        raise SystemExit(1) from e
+
+
+def _run_json_crew_in_project_env(trained_agents_file: str | None = None) -> Any:
+    """Run JSON crews from the project's uv-managed environment."""
+    if not (Path.cwd() / "pyproject.toml").is_file():
+        return _run_json_crew(trained_agents_file=trained_agents_file)
+
+    _install_json_crew_dependencies()
+
+    command = ["uv", "run", "--no-sync", "python", "-c", _JSON_CREW_RUNNER_CODE]
+    env = build_env_with_all_tool_credentials()
+    if trained_agents_file:
+        env[CREWAI_TRAINED_AGENTS_FILE_ENV] = trained_agents_file
+
+    try:
+        subprocess.run(  # noqa: S603
+            command,
+            capture_output=False,
+            text=True,
+            check=True,
+            env=env,
+        )
+    except subprocess.CalledProcessError as e:
+        raise SystemExit(e.returncode) from e
+    except Exception as e:
+        click.echo(f"An unexpected error occurred while running the JSON crew: {e}")
+        raise SystemExit(1) from e
+
+
 def _chain_deploy() -> None:
     from rich.console import Console
 
@@ -224,14 +270,14 @@ def _chain_deploy() -> None:
         from crewai_cli.deploy.main import DeployCommand
 
         console.print("\nStarting deployment…\n", style="bold #FF5A50")
-        DeployCommand().create_crew(confirm=False, skip_validate=True)
+        DeployCommand().create_crew(confirm=True, skip_validate=True)
     except SystemExit:
         from crewai_cli.authentication.main import AuthenticationCommand
 
         console.print()
         AuthenticationCommand().login()
         try:
-            DeployCommand().create_crew(confirm=False, skip_validate=True)
+            DeployCommand().create_crew(confirm=True, skip_validate=True)
         except Exception as e:
             console.print(f"\nDeploy failed: {e}\n", style="bold red")
     except Exception as e:
@@ -315,7 +361,7 @@ def run_crew(trained_agents_file: str | None = None) -> None:
     """
     # JSON crew projects take precedence
     if _has_json_crew():
-        _run_json_crew(trained_agents_file=trained_agents_file)
+        _run_json_crew_in_project_env(trained_agents_file=trained_agents_file)
         return
 
     crewai_version = get_crewai_version()
