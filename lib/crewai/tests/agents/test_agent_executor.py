@@ -83,7 +83,6 @@ class TestAgentExecutorState:
         assert state.messages == []
         assert state.current_answer is None
         assert state.is_finished is False
-        assert state.ask_for_human_input is False
         # Planning state fields
         assert state.plan is None
         assert state.plan_ready is False
@@ -105,13 +104,11 @@ class TestAgentExecutorState:
             iterations=5,
             current_answer=AgentFinish(thought="thinking", output="done", text="final"),
             is_finished=True,
-            ask_for_human_input=True,
         )
         assert state.messages == messages
         assert state.iterations == 5
         assert isinstance(state.current_answer, AgentFinish)
         assert state.is_finished is True
-        assert state.ask_for_human_input is True
 
 
 class TestAgentExecutor:
