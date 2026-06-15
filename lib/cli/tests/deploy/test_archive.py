@@ -177,6 +177,41 @@ type = "crew"
     assert "run_crew = \"json_crew.main:run\"" in pyproject
 
 
+@pytest.mark.parametrize(
+    "tool_config",
+    [
+        'tool = "invalid"\n',
+        '[tool]\ncrewai = "invalid"\n',
+    ],
+)
+def test_create_project_zip_adds_json_wrapper_for_malformed_tool_config(
+    tmp_path: Path, tool_config: str
+):
+    (tmp_path / "pyproject.toml").write_text(
+        f"""
+[project]
+name = "json_crew"
+version = "0.1.0"
+
+{tool_config}
+""".strip()
+        + "\n"
+    )
+    (tmp_path / "crew.jsonc").write_text("{}\n")
+
+    archive_path = create_project_zip("json_crew", project_dir=tmp_path)
+    try:
+        with zipfile.ZipFile(archive_path) as archive:
+            names = set(archive.namelist())
+            pyproject = archive.read("pyproject.toml").decode()
+    finally:
+        archive_path.unlink(missing_ok=True)
+
+    assert "src/json_crew/crew.py" in names
+    assert "src/json_crew/main.py" in names
+    assert "run_crew = \"json_crew.main:run\"" in pyproject
+
+
 def test_create_project_zip_rejects_empty_normalized_package_name(tmp_path: Path):
     (tmp_path / "pyproject.toml").write_text(
         """

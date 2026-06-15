@@ -157,14 +157,10 @@ def _is_json_crew_project(root: Path) -> bool:
 
     project = _read_pyproject(root)
     tool_config = project.get("tool") or {}
-    if not isinstance(tool_config, dict):
-        return False
-
-    crewai_config = tool_config.get("crewai") or {}
-    if not isinstance(crewai_config, dict):
-        return False
-
-    declared_type = crewai_config.get("type")
+    crewai_config = tool_config.get("crewai") if isinstance(tool_config, dict) else None
+    declared_type = (
+        crewai_config.get("type") if isinstance(crewai_config, dict) else None
+    )
     if declared_type == "flow":
         return False
 
