@@ -8,14 +8,18 @@ from rich.console import Console
 from crewai_cli import git
 from crewai_cli.command import BaseCommand, PlusAPIMixin
 from crewai_cli.deploy.archive import create_project_zip
-from crewai_cli.deploy.validate import validate_project
+from crewai_cli.deploy.validate import DeployValidator, Severity, render_report
 from crewai_cli.utils import fetch_and_json_env_file, get_project_name
 
 
 console = Console()
+_MISSING_LOCKFILE_ERROR_CODES = {"missing_lockfile"}
 
 
-def _run_predeploy_validation(skip_validate: bool) -> bool:
+def _run_predeploy_validation(
+    skip_validate: bool,
+    ignored_error_codes: set[str] | None = None,
+) -> bool:
     """Run pre-deploy validation unless skipped.
 
     Returns True if deployment should proceed, False if it should abort.
@@ -27,8 +31,22 @@ def _run_predeploy_validation(skip_validate: bool) -> bool:
         return True
 
     console.print("Running pre-deploy validation...", style="bold blue")
-    validator = validate_project()
-    if not validator.ok:
+    validator = DeployValidator()
+    validator.run()
+
+    ignored_error_codes = ignored_error_codes or set()
+    visible_results = [
+        result
+        for result in validator.results
+        if result.severity is not Severity.ERROR
+        or result.code not in ignored_error_codes
+    ]
+    render_report(visible_results)
+
+    blocking_errors = [
+        result for result in validator.errors if result.code not in ignored_error_codes
+    ]
+    if blocking_errors:
         console.print(
             "\n[bold red]Pre-deploy validation failed. "
             "Fix the issues above or re-run with --skip-validate.[/bold red]"
@@ -61,12 +79,17 @@ def _env_summary(env_vars: dict[str, str]) -> str:
     return f"{len(env_vars)} env vars: {keys}"
 
 
+def _needs_lockfile_for_deploy(project_root: Path | None = None) -> bool:
+    """Return True when deploy should create the project's first lockfile."""
+    root = project_root or Path.cwd()
+    if not (root / "pyproject.toml").is_file():
+        return False
+    return not (root / "uv.lock").is_file() and not (root / "poetry.lock").is_file()
+
+
 def _ensure_lockfile_for_deploy() -> None:
     """Create a uv lockfile before deploy when a project has not been run yet."""
-    project_root = Path.cwd()
-    if not (project_root / "pyproject.toml").is_file():
-        return
-    if (project_root / "uv.lock").is_file() or (project_root / "poetry.lock").is_file():
+    if not _needs_lockfile_for_deploy():
         return
 
     from crewai_cli.install_crew import install_crew
@@ -81,6 +104,28 @@ def _ensure_lockfile_for_deploy() -> None:
         raise SystemExit(e.returncode) from e
     except Exception as e:
         raise SystemExit(1) from e
+
+
+def _prepare_project_for_deploy(skip_validate: bool) -> bool:
+    """Validate deploy inputs before creating a missing lockfile."""
+    if skip_validate:
+        _run_predeploy_validation(skip_validate)
+        _ensure_lockfile_for_deploy()
+        return True
+
+    needs_lockfile = _needs_lockfile_for_deploy()
+    ignored_error_codes = _MISSING_LOCKFILE_ERROR_CODES if needs_lockfile else None
+    if not _run_predeploy_validation(
+        skip_validate,
+        ignored_error_codes=ignored_error_codes,
+    ):
+        return False
+
+    if not needs_lockfile:
+        return True
+
+    _ensure_lockfile_for_deploy()
+    return _run_predeploy_validation(skip_validate)
 
 
 class DeployCommand(BaseCommand, PlusAPIMixin):
@@ -141,8 +186,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             uuid (Optional[str]): The UUID of the crew to deploy.
             skip_validate (bool): Skip pre-deploy validation checks.
         """
-        _ensure_lockfile_for_deploy()
-        if not _run_predeploy_validation(skip_validate):
+        if not _prepare_project_for_deploy(skip_validate):
             return
         self._telemetry.start_deployment_span(uuid)
         console.print("Starting deployment...", style="bold blue")
@@ -194,8 +238,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             confirm (bool): Whether to skip the interactive confirmation prompt.
             skip_validate (bool): Skip pre-deploy validation checks.
         """
-        _ensure_lockfile_for_deploy()
-        if not _run_predeploy_validation(skip_validate):
+        if not _prepare_project_for_deploy(skip_validate):
             return
         self._telemetry.create_crew_deployment_span()
         console.print("Creating deployment...", style="bold blue")

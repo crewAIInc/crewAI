@@ -10,6 +10,7 @@ import json
 
 import crewai_cli.deploy.main as deploy_main
 import httpx
+from crewai_cli.deploy.validate import Severity, ValidationResult
 from crewai_cli.utils import parse_toml
 
 
@@ -77,6 +78,93 @@ def test_ensure_lockfile_for_deploy_failure_exits_nonzero(
         deploy_main._ensure_lockfile_for_deploy()
 
     assert exc_info.value.code == 42
+
+
+class _FakeDeployValidator:
+    def __init__(self, results: list[ValidationResult]):
+        self.results = results
+
+    @property
+    def errors(self) -> list[ValidationResult]:
+        return [
+            result
+            for result in self.results
+            if result.severity is Severity.ERROR
+        ]
+
+    def run(self) -> list[ValidationResult]:
+        return self.results
+
+
+def test_prepare_project_for_deploy_blocks_install_when_validation_fails(
+    monkeypatch, tmp_path: Path
+):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    install_calls = []
+    rendered_results = []
+    missing_lockfile = ValidationResult(
+        Severity.ERROR,
+        "missing_lockfile",
+        "Expected to find a lockfile",
+    )
+    invalid_config = ValidationResult(
+        Severity.ERROR,
+        "invalid_crew_json",
+        "crew.jsonc has invalid configuration",
+    )
+
+    monkeypatch.setattr(
+        deploy_main,
+        "DeployValidator",
+        lambda: _FakeDeployValidator([missing_lockfile, invalid_config]),
+    )
+    monkeypatch.setattr(deploy_main, "render_report", rendered_results.append)
+
+    def fake_install_crew(proxy_options, *, raise_on_error=False):
+        install_calls.append((proxy_options, raise_on_error))
+
+    monkeypatch.setattr("crewai_cli.install_crew.install_crew", fake_install_crew)
+
+    assert deploy_main._prepare_project_for_deploy(skip_validate=False) is False
+
+    assert install_calls == []
+    assert [[result.code for result in results] for results in rendered_results] == [
+        ["invalid_crew_json"]
+    ]
+
+
+def test_prepare_project_for_deploy_creates_missing_lock_after_validation(
+    monkeypatch, tmp_path: Path
+):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    install_calls = []
+    missing_lockfile = ValidationResult(
+        Severity.ERROR,
+        "missing_lockfile",
+        "Expected to find a lockfile",
+    )
+    validators = [
+        _FakeDeployValidator([missing_lockfile]),
+        _FakeDeployValidator([]),
+    ]
+
+    def fake_validator():
+        return validators.pop(0)
+
+    def fake_install_crew(proxy_options, *, raise_on_error=False):
+        install_calls.append((proxy_options, raise_on_error))
+        (tmp_path / "uv.lock").write_text("# lock\n")
+
+    monkeypatch.setattr(deploy_main, "DeployValidator", fake_validator)
+    monkeypatch.setattr(deploy_main, "render_report", lambda results: None)
+    monkeypatch.setattr("crewai_cli.install_crew.install_crew", fake_install_crew)
+
+    assert deploy_main._prepare_project_for_deploy(skip_validate=False) is True
+
+    assert install_calls == [([], True)]
+    assert validators == []
 
 
 class TestDeployCommand(unittest.TestCase):
