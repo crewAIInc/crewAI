@@ -2,14 +2,82 @@ import sys
 import unittest
 from io import StringIO
 from pathlib import Path
+import subprocess
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 import json
 
+import crewai_cli.deploy.main as deploy_main
 import httpx
 from crewai_cli.deploy.main import DeployCommand
 from crewai_cli.utils import parse_toml
+
+
+def test_ensure_lockfile_for_deploy_runs_install_when_lock_missing(
+    monkeypatch, tmp_path: Path
+):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    calls = []
+
+    def fake_install_crew(proxy_options, *, raise_on_error=False):
+        calls.append((proxy_options, raise_on_error))
+
+    monkeypatch.setattr("crewai_cli.install_crew.install_crew", fake_install_crew)
+
+    deploy_main._ensure_lockfile_for_deploy()
+
+    assert calls == [([], True)]
+
+
+def test_ensure_lockfile_for_deploy_skips_when_lock_exists(monkeypatch, tmp_path: Path):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    (tmp_path / "uv.lock").write_text("# lock\n")
+    calls = []
+
+    def fake_install_crew(proxy_options, *, raise_on_error=False):
+        calls.append((proxy_options, raise_on_error))
+
+    monkeypatch.setattr("crewai_cli.install_crew.install_crew", fake_install_crew)
+
+    deploy_main._ensure_lockfile_for_deploy()
+
+    assert calls == []
+
+
+def test_ensure_lockfile_for_deploy_skips_without_pyproject(
+    monkeypatch, tmp_path: Path
+):
+    monkeypatch.chdir(tmp_path)
+    calls = []
+
+    def fake_install_crew(proxy_options, *, raise_on_error=False):
+        calls.append((proxy_options, raise_on_error))
+
+    monkeypatch.setattr("crewai_cli.install_crew.install_crew", fake_install_crew)
+
+    deploy_main._ensure_lockfile_for_deploy()
+
+    assert calls == []
+
+
+def test_ensure_lockfile_for_deploy_failure_exits_nonzero(
+    monkeypatch, tmp_path: Path
+):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+
+    def fake_install_crew(proxy_options, *, raise_on_error=False):
+        raise subprocess.CalledProcessError(42, ["uv", "sync"])
+
+    monkeypatch.setattr("crewai_cli.install_crew.install_crew", fake_install_crew)
+
+    with pytest.raises(SystemExit) as exc_info:
+        deploy_main._ensure_lockfile_for_deploy()
+
+    assert exc_info.value.code == 42
 
 
 class TestDeployCommand(unittest.TestCase):

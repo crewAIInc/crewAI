@@ -1,3 +1,5 @@
+from pathlib import Path
+import subprocess
 from typing import Any
 
 from crewai_core.plus_api import CreateCrewPayload
@@ -58,6 +60,28 @@ def _env_summary(env_vars: dict[str, str]) -> str:
     return f"{len(env_vars)} env vars: {keys}"
 
 
+def _ensure_lockfile_for_deploy() -> None:
+    """Create a uv lockfile before deploy when a project has not been run yet."""
+    project_root = Path.cwd()
+    if not (project_root / "pyproject.toml").is_file():
+        return
+    if (project_root / "uv.lock").is_file() or (project_root / "poetry.lock").is_file():
+        return
+
+    from crewai_cli.install_crew import install_crew
+
+    console.print(
+        "No lockfile found. Installing dependencies before deployment...",
+        style="bold blue",
+    )
+    try:
+        install_crew([], raise_on_error=True)
+    except subprocess.CalledProcessError as e:
+        raise SystemExit(e.returncode) from e
+    except Exception as e:
+        raise SystemExit(1) from e
+
+
 class DeployCommand(BaseCommand, PlusAPIMixin):
     """
     A class to handle deployment-related operations for CrewAI projects.
@@ -116,6 +140,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             uuid (Optional[str]): The UUID of the crew to deploy.
             skip_validate (bool): Skip pre-deploy validation checks.
         """
+        _ensure_lockfile_for_deploy()
         if not _run_predeploy_validation(skip_validate):
             return
         self._telemetry.start_deployment_span(uuid)
@@ -161,6 +186,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             confirm (bool): Whether to skip the interactive confirmation prompt.
             skip_validate (bool): Skip pre-deploy validation checks.
         """
+        _ensure_lockfile_for_deploy()
         if not _run_predeploy_validation(skip_validate):
             return
         self._telemetry.create_crew_deployment_span()
