@@ -1,6 +1,8 @@
 from pathlib import Path
 import zipfile
 
+import pytest
+
 from crewai_cli.deploy.archive import create_project_zip
 
 
@@ -52,6 +54,42 @@ def test_create_project_zip_uses_repository_file_list(tmp_path: Path):
         archive_path.unlink(missing_ok=True)
 
     assert names == {"pyproject.toml", "uv.lock"}
+
+
+def test_create_project_zip_does_not_fallback_when_repository_listing_fails(
+    tmp_path: Path,
+):
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+
+    class RepositoryStub:
+        def deployable_files(self) -> list[str]:
+            raise RuntimeError("git listing failed")
+
+    with pytest.raises(RuntimeError, match="git listing failed"):
+        create_project_zip(
+            "demo",
+            project_dir=tmp_path,
+            repository=RepositoryStub(),  # type: ignore[arg-type]
+        )
+
+
+def test_create_project_zip_excludes_symlinked_files(tmp_path: Path):
+    (tmp_path / "pyproject.toml").write_text("[project]\nname = 'demo'\n")
+    outside_file = tmp_path.parent / f"{tmp_path.name}-secret.txt"
+    outside_file.write_text("secret\n")
+    try:
+        (tmp_path / "external-secret.txt").symlink_to(outside_file)
+    except OSError as exc:
+        pytest.skip(f"symlinks are not supported in this environment: {exc}")
+
+    archive_path = create_project_zip("demo", project_dir=tmp_path)
+    try:
+        with zipfile.ZipFile(archive_path) as archive:
+            names = set(archive.namelist())
+    finally:
+        archive_path.unlink(missing_ok=True)
+
+    assert names == {"pyproject.toml"}
 
 
 def test_create_project_zip_adds_json_project_wrapper(tmp_path: Path):

@@ -73,25 +73,28 @@ def create_project_zip(
 
 def _project_files(root: Path, repository: git.Repository | None = None) -> list[Path]:
     if repository is not None:
-        try:
-            files = [Path(path) for path in repository.deployable_files()]
-            return [
-                path
-                for path in files
-                if not _is_excluded(path) and (root / path).is_file()
-            ]
-        except Exception:  # noqa: S110
-            pass
+        files = [Path(path) for path in repository.deployable_files()]
+        return [
+            path
+            for path in files
+            if not _is_excluded(path) and _is_regular_file(root / path)
+        ]
 
     return [
         path
         for path in _walk_files(root)
-        if not _is_excluded(path) and (root / path).is_file()
+        if not _is_excluded(path) and _is_regular_file(root / path)
     ]
 
 
 def _walk_files(root: Path) -> list[Path]:
-    return [path.relative_to(root) for path in root.rglob("*") if path.is_file()]
+    return [
+        path.relative_to(root) for path in root.rglob("*") if _is_regular_file(path)
+    ]
+
+
+def _is_regular_file(path: Path) -> bool:
+    return path.is_file() and not path.is_symlink()
 
 
 def _is_excluded(path: Path) -> bool:
@@ -112,9 +115,13 @@ def _stage_project(root: Path, files: list[Path]) -> Path:
 
     try:
         for relative_path in files:
+            source = root / relative_path
+            if not _is_regular_file(source):
+                continue
+
             destination = staging_root / relative_path
             destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(root / relative_path, destination)
+            shutil.copy2(source, destination)
 
         if _is_json_crew_project(staging_root):
             _add_json_crew_deploy_wrapper(staging_root)

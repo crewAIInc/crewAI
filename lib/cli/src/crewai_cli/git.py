@@ -51,8 +51,9 @@ class Repository:
 
     def fetch(self) -> None:
         """Fetch latest updates from the remote."""
-        result = subprocess.run(
-            ["git", "fetch"],  # noqa: S607
+        command = ["git", "fetch"]
+        result = subprocess.run(  # noqa: S603
+            command,
             cwd=self.path,
             capture_output=True,
             text=True,
@@ -61,11 +62,10 @@ class Repository:
             return
         if "No remote repository specified" in result.stderr:
             return
-        raise subprocess.CalledProcessError(
-            result.returncode,
-            ["git", "fetch"],
-            output=result.stdout,
-            stderr=result.stderr,
+        details = result.stderr.strip() or result.stdout.strip() or "no output"
+        raise ValueError(
+            f"Git fetch failed with exit code {result.returncode} "
+            f"for command {command!r}: {details}"
         )
 
     @classmethod

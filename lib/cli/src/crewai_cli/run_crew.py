@@ -36,7 +36,10 @@ class CrewType(Enum):
 # otherwise placeholders are interpolated at runtime but never prompted for.
 _INPUT_PLACEHOLDER_RE = re.compile(r"(?<!{){([A-Za-z_][A-Za-z0-9_\-]*)}(?!})")
 _JSON_CREW_RUNNER_CODE = (
-    "from crewai_cli.run_crew import _run_json_crew; _run_json_crew()"
+    "import os; "
+    "from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV; "
+    "from crewai_cli.run_crew import _run_json_crew; "
+    "_run_json_crew(trained_agents_file=os.getenv(CREWAI_TRAINED_AGENTS_FILE_ENV))"
 )
 
 
@@ -260,6 +263,8 @@ def _run_json_crew_in_project_env(trained_agents_file: str | None = None) -> Any
     except Exception as e:
         click.echo(f"An unexpected error occurred while running the JSON crew: {e}")
         raise SystemExit(1) from e
+
+    return None
 
 
 def _chain_deploy() -> None:

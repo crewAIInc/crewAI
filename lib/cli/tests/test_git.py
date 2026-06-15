@@ -31,6 +31,18 @@ def test_is_git_not_installed(fp):
         Repository(path=".")
 
 
+def test_fetch_failure_raises_value_error(fp):
+    fp.register(["git", "--version"], stdout="git version 2.30.0\n")
+    fp.register(["git", "rev-parse", "--is-inside-work-tree"], stdout="true\n")
+    fp.register(["git", "fetch"], returncode=128, stderr="remote unavailable\n")
+
+    with pytest.raises(
+        ValueError,
+        match=r"Git fetch failed with exit code 128 for command \['git', 'fetch'\]: remote unavailable",
+    ):
+        Repository(path=".")
+
+
 def test_status(fp, repository):
     fp.register(
         ["git", "status", "--branch", "--porcelain"],
