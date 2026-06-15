@@ -1549,7 +1549,8 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 agent_role=self.agent.role,
                 formatted_answer=formatted_answer,
                 verbose=self.agent.verbose
-                or (hasattr(self, "crew") and getattr(self.crew, "verbose", False)),
+                or (hasattr(self, "crew") and getattr(self.crew, "verbose", False))
+                or getattr(self, "ask_for_human_input", False),
             ),
         )
 
