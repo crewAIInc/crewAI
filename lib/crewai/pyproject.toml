@@ -33,6 +33,7 @@ dependencies = [
     "appdirs~=1.4.4",
     "jsonref~=1.1.0",
     "json-repair~=0.25.2",
+    "cel-python>=0.5.0,<0.6",
     "tomli-w~=1.1.0",
     "tomli~=2.0.2",
     "json5~=0.10.0",

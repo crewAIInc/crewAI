@@ -5,7 +5,6 @@ from unittest.mock import Mock, patch
 import pytest
 from crewai import Agent, Crew, Task
 from crewai.telemetry import Telemetry
-from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 
 
@@ -111,9 +110,8 @@ def test_telemetry_fails_due_connect_timeout(export_mock, logger_mock):
         os.environ, {"CREWAI_DISABLE_TELEMETRY": "false", "OTEL_SDK_DISABLED": "false"}
     ):
         telemetry = Telemetry()
-        telemetry.set_tracer()
 
-        tracer = trace.get_tracer(__name__)
+        tracer = telemetry.provider.get_tracer(__name__)
         with tracer.start_as_current_span("test-span"):
             agent = Agent(
                 role="agent",
@@ -129,7 +127,7 @@ def test_telemetry_fails_due_connect_timeout(export_mock, logger_mock):
             crew = Crew(agents=[agent], tasks=[task], name="TestCrew")
             crew.kickoff()
 
-        trace.get_tracer_provider().force_flush()
+        telemetry.provider.force_flush()
 
     assert export_mock.called
     assert logger_mock.call_count == export_mock.call_count

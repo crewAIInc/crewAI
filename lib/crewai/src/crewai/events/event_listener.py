@@ -158,7 +158,6 @@ class EventListener(BaseEventListener):
             trace_listener.formatter = self.formatter
 
     def setup_listeners(self, crewai_event_bus: CrewAIEventsBus) -> None:
-
         @crewai_event_bus.on(CCEnvEvent)
         def on_cc_env(_: Any, event: CCEnvEvent) -> None:
             self._telemetry.env_context_span(event.type)

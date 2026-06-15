@@ -99,6 +99,10 @@ from crewai.events.types.memory_events import (
     MemorySaveFailedEvent,
     MemorySaveStartedEvent,
 )
+from crewai.events.types.observation_events import (
+    PlanStepCompletedEvent,
+    PlanStepStartedEvent,
+)
 from crewai.events.types.reasoning_events import (
     AgentReasoningCompletedEvent,
     AgentReasoningFailedEvent,
@@ -191,6 +195,8 @@ EventTypes = (
     | MemoryRetrievalStartedEvent
     | MemoryRetrievalCompletedEvent
     | MemoryRetrievalFailedEvent
+    | PlanStepStartedEvent
+    | PlanStepCompletedEvent
     | MCPConnectionStartedEvent
     | MCPConnectionCompletedEvent
     | MCPConnectionFailedEvent

@@ -890,41 +890,17 @@ class BaseLLM(BaseModel, ABC):
         Args:
             usage_data: Token usage data from the API response
         """
-        prompt_tokens = (
-            usage_data.get("prompt_tokens")
-            or usage_data.get("prompt_token_count")
-            or usage_data.get("input_tokens")
-            or 0
-        )
+        metrics = UsageMetrics.from_provider_dict(usage_data)
+        if metrics is None:
+            return
 
-        completion_tokens = (
-            usage_data.get("completion_tokens")
-            or usage_data.get("candidates_token_count")
-            or usage_data.get("output_tokens")
-            or 0
-        )
-
-        cached_tokens = (
-            usage_data.get("cached_tokens")
-            or usage_data.get("cached_prompt_tokens")
-            or usage_data.get("cache_read_input_tokens")
-            or 0
-        )
-        if not cached_tokens:
-            prompt_details = usage_data.get("prompt_tokens_details")
-            if isinstance(prompt_details, dict):
-                cached_tokens = prompt_details.get("cached_tokens", 0) or 0
-
-        reasoning_tokens = usage_data.get("reasoning_tokens", 0) or 0
-        cache_creation_tokens = usage_data.get("cache_creation_tokens", 0) or 0
-
-        self._token_usage["prompt_tokens"] += prompt_tokens
-        self._token_usage["completion_tokens"] += completion_tokens
-        self._token_usage["total_tokens"] += prompt_tokens + completion_tokens
-        self._token_usage["successful_requests"] += 1
-        self._token_usage["cached_prompt_tokens"] += cached_tokens
-        self._token_usage["reasoning_tokens"] += reasoning_tokens
-        self._token_usage["cache_creation_tokens"] += cache_creation_tokens
+        self._token_usage["prompt_tokens"] += metrics.prompt_tokens
+        self._token_usage["completion_tokens"] += metrics.completion_tokens
+        self._token_usage["total_tokens"] += metrics.total_tokens
+        self._token_usage["successful_requests"] += metrics.successful_requests
+        self._token_usage["cached_prompt_tokens"] += metrics.cached_prompt_tokens
+        self._token_usage["reasoning_tokens"] += metrics.reasoning_tokens
+        self._token_usage["cache_creation_tokens"] += metrics.cache_creation_tokens
 
     def get_token_usage_summary(self) -> UsageMetrics:
         """Get summary of token usage for this LLM instance.

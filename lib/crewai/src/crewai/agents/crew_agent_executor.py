@@ -53,6 +53,7 @@ from crewai.types.callback import SerializableCallable
 from crewai.utilities.agent_utils import (
     _llm_stop_words_applied,
     aget_llm_response,
+    build_text_tool_calling_fallback_message,
     convert_tools_to_openai_schema,
     enforce_rpm_limit,
     format_message_for_llm,
@@ -64,6 +65,7 @@ from crewai.utilities.agent_utils import (
     handle_unknown_error,
     has_reached_max_iterations,
     is_context_length_exceeded,
+    is_native_tool_calling_unsupported_error,
     parse_tool_call_args,
     process_llm_response,
     track_delegation_if_needed,
@@ -464,6 +466,20 @@ class CrewAgentExecutor(BaseAgentExecutor):
         self._show_logs(formatted_answer)
         return formatted_answer
 
+    def _append_text_tool_calling_fallback_message(self) -> None:
+        """Add text tool-calling instructions after native tools are rejected."""
+        if not self.tools:
+            return
+        self.messages.append(
+            format_message_for_llm(
+                build_text_tool_calling_fallback_message(
+                    self.tools_description,
+                    self.tools_names,
+                ),
+                role="user",
+            )
+        )
+
     def _invoke_loop_native_tools(self) -> AgentFinish:
         """Execute agent loop using native function calling.
 
@@ -557,6 +573,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 return formatted_answer
 
             except Exception as e:
+                if is_native_tool_calling_unsupported_error(e):
+                    self._append_text_tool_calling_fallback_message()
+                    return self._invoke_loop_react()
                 if e.__class__.__module__.startswith("litellm"):
                     raise e
                 if is_context_length_exceeded(e):
@@ -1369,6 +1388,9 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 return formatted_answer
 
             except Exception as e:
+                if is_native_tool_calling_unsupported_error(e):
+                    self._append_text_tool_calling_fallback_message()
+                    return await self._ainvoke_loop_react()
                 if e.__class__.__module__.startswith("litellm"):
                     raise e
                 if is_context_length_exceeded(e):
