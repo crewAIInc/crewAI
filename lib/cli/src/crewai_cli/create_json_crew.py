@@ -14,7 +14,12 @@ from rich.text import Text
 
 from crewai_cli.constants import ENV_VARS
 from crewai_cli.tui_picker import pick_many, pick_one
-from crewai_cli.utils import enable_prompt_line_editing, load_env_vars, write_env_file
+from crewai_cli.utils import (
+    enable_prompt_line_editing,
+    is_dmn_mode_enabled,
+    load_env_vars,
+    write_env_file,
+)
 
 
 # ── Provider / model data ───────────────────────────────────────
@@ -641,6 +646,43 @@ def _wizard_agents_and_tasks(
     return agents, tasks, crew_settings
 
 
+def _default_agents_and_tasks(
+    default_llm: str | None = None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
+    """Return deterministic scaffold data for non-interactive project creation."""
+    llm = default_llm or "openai/gpt-4o"
+    agents = [
+        {
+            "name": "researcher",
+            "role": "Senior Researcher",
+            "goal": "Research the requested topic and identify useful findings.",
+            "backstory": (
+                "You are an experienced researcher who finds relevant information "
+                "and presents it clearly."
+            ),
+            "llm": llm,
+            "tools": [],
+            "planning": False,
+            "allow_delegation": False,
+        }
+    ]
+    tasks = [
+        {
+            "name": "research_task",
+            "description": "Research current AI trends and write a concise summary.",
+            "expected_output": "A concise markdown report with key findings.",
+            "agent": "researcher",
+            "context": [],
+        }
+    ]
+    crew_settings = {
+        "process": "sequential",
+        "memory": False,
+        "inputs": {},
+    }
+    return agents, tasks, crew_settings
+
+
 # ── JSONC generation from wizard data ──────────────────────────
 
 
@@ -1029,7 +1071,9 @@ def create_json_crew(
     import keyword
     import shutil
 
-    enable_prompt_line_editing()
+    dmn_mode = is_dmn_mode_enabled()
+    if not dmn_mode:
+        enable_prompt_line_editing()
 
     name = name.rstrip("/")
     if not name.strip():
@@ -1048,6 +1092,8 @@ def create_json_crew(
 
     folder_path = Path(folder_name)
     if folder_path.exists():
+        if dmn_mode:
+            raise click.ClickException(f"Folder {folder_name} already exists.")
         if not click.confirm(f"Folder {folder_name} already exists. Override?"):
             click.secho("Cancelled.", fg="yellow")
             sys.exit(0)
@@ -1056,10 +1102,14 @@ def create_json_crew(
     click.echo()
     click.secho(f"  Creating crew: {name}", fg="green", bold=True)
 
-    agents, tasks, crew_settings = _wizard_agents_and_tasks(
-        skip_provider=skip_provider,
-        default_llm=_default_model_for_provider(provider),
-    )
+    default_llm = _default_model_for_provider(provider)
+    if dmn_mode:
+        agents, tasks, crew_settings = _default_agents_and_tasks(default_llm)
+    else:
+        agents, tasks, crew_settings = _wizard_agents_and_tasks(
+            skip_provider=skip_provider,
+            default_llm=default_llm,
+        )
 
     # Create directories
     folder_path.mkdir(parents=True)
@@ -1104,7 +1154,7 @@ def create_json_crew(
     (folder_path / "skills" / ".gitkeep").write_text("", encoding="utf-8")
 
     # Setup .env with API keys
-    if not skip_provider:
+    if not skip_provider and not dmn_mode:
         models = list({a["llm"] for a in agents})
         for model in models:
             _setup_env(folder_path, model)
