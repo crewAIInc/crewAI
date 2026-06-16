@@ -353,7 +353,7 @@ def _load_json_crew_project_definition(
                 agent_defn,
                 f"{agent_source}: type",
                 resolve_python_refs=not collect_errors,
-                project_root=crew_path.parent,
+                project_root=project_root,
             )
             agent_kwargs = _agent_kwargs_from_definition(
                 agent_defn,
@@ -410,7 +410,7 @@ def _load_json_crew_project_definition(
                 task_defn,
                 task_path,
                 resolve_python_refs=not collect_errors,
-                project_root=crew_path.parent,
+                project_root=project_root,
             )
         )
         missing_required = [
