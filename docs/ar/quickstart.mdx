@@ -66,7 +66,7 @@ mode: "wide"
       "tasks": [
         {
           "name": "research_task",
-          "description": "أجرِ بحثًا معمقًا عن {topic}. استخدم البحث على الويب للعثور على معلومات حديثة وموثوقة. السنة الحالية 2026.",
+          "description": "أجرِ بحثًا معمقًا عن {topic}. استخدم البحث على الويب للعثور على معلومات حديثة وموثوقة.",
           "expected_output": "تقرير بصيغة Markdown بأقسام واضحة: الاتجاهات الرئيسية، أدوات أو شركات بارزة، والآثار. بين 800 و1200 كلمة تقريبًا. دون إحاطة المستند بأكمله بكتل كود.",
           "agent": "researcher",
           "output_file": "output/report.md",
@@ -174,7 +174,7 @@ mode: "wide"
 
   <CodeGroup>
     ```markdown output/report.md
-    # وكلاء الذكاء الاصطناعي في 2026: المشهد والاتجاهات
+    # وكلاء الذكاء الاصطناعي: المشهد والاتجاهات الحديثة
 
     ## ملخص تنفيذي
     …
@@ -209,7 +209,7 @@ mode: "wide"
 يجب أن تطابق الأسماء في `crew.jsonc` الملفات والمراجع:
 
 - `agents: ["researcher"]` يحمّل `agents/researcher.jsonc`
-- `context: ["research_task"]` يشير إلى مهمة سابقة اسمها `research_task`
+- `tasks[].agent: "researcher"` يربط المهمة بذلك الـ agent
 
 ## النشر
 

@@ -149,11 +149,16 @@ crews/support_agent
 
 ## ملفات القفل وUV Workspaces
 
-يجب أن يحتوي المجلد المحدد على `pyproject.toml` ودليل `src/` الخاصين بالأتمتة.
+يجب أن يحتوي المجلد المحدد على `pyproject.toml` وملفات المشروع المناسبة لنوع
+الأتمتة:
+
+- crew بنمط JSON-first: ملف `crew.jsonc` أو `crew.json` مع مجلد `agents/`
+- Crew كلاسيكي أو Flow: مجلد `src/` مع نقطة دخول Python المتوقعة
+
 يمكن أن يوجد ملف `uv.lock` أو `poetry.lock` إما في المجلد المحدد أو في جذر
 المستودع.
 
-يدعم هذا التخطيطين الشائعين في monorepo:
+يدعم هذا تخطيطي ملفات القفل الشائعين:
 
 <Tabs>
   <Tab title="ملف قفل المشروع">
@@ -163,9 +168,9 @@ crews/support_agent
         `-- support_agent/
             |-- pyproject.toml
             |-- uv.lock
-            `-- src/
-                `-- support_agent/
-                    `-- main.py
+            |-- crew.jsonc
+            `-- agents/
+                `-- support_agent.jsonc
     ```
   </Tab>
 
@@ -178,9 +183,9 @@ crews/support_agent
     `-- crews/
         `-- support_agent/
             |-- pyproject.toml
-            `-- src/
-                `-- support_agent/
-                    `-- main.py
+            |-- crew.jsonc
+            `-- agents/
+                `-- support_agent.jsonc
     ```
   </Tab>
 </Tabs>

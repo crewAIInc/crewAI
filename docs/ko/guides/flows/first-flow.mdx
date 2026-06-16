@@ -72,21 +72,24 @@ guide_creator_flow/
 ├── pyproject.toml
 ├── README.md
 ├── .env
-├── main.py
-├── crews/
-│   └── poem_crew/
-│       ├── config/
-│       │   ├── agents.yaml
-│       │   └── tasks.yaml
-│       └── poem_crew.py
-└── tools/
-    └── custom_tool.py
+└── src/
+    └── guide_creator_flow/
+        ├── __init__.py
+        ├── main.py
+        ├── crews/
+        │   └── poem_crew/
+        │       ├── config/
+        │       │   ├── agents.yaml
+        │       │   └── tasks.yaml
+        │       └── poem_crew.py
+        └── tools/
+            └── custom_tool.py
 ```
 
 이 구조는 flow의 다양한 구성 요소를 명확하게 분리해줍니다:
-- `main.py` 파일의 main flow 로직
-- `crews` 디렉터리의 특화된 crew들
-- `tools` 디렉터리의 custom tool들
+- `src/guide_creator_flow/main.py` 파일의 main flow 로직
+- `src/guide_creator_flow/crews` 디렉터리의 특화된 crew들
+- `src/guide_creator_flow/tools` 디렉터리의 custom tool들
 
 이제 이 구조를 수정하여 guide creator flow를 만들 것입니다. 이 flow는 포괄적인 학습 가이드 생성을 조직하는 역할을 합니다.
 

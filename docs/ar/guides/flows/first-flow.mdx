@@ -50,15 +50,18 @@ guide_creator_flow/
 ├── pyproject.toml
 ├── README.md
 ├── .env
-├── main.py
-├── crews/
-│   └── poem_crew/
-│       ├── config/
-│       │   ├── agents.yaml
-│       │   └── tasks.yaml
-│       └── poem_crew.py
-└── tools/
-    └── custom_tool.py
+└── src/
+    └── guide_creator_flow/
+        ├── __init__.py
+        ├── main.py
+        ├── crews/
+        │   └── poem_crew/
+        │       ├── config/
+        │       │   ├── agents.yaml
+        │       │   └── tasks.yaml
+        │       └── poem_crew.py
+        └── tools/
+            └── custom_tool.py
 ```
 
 يوفر هذا الهيكل فصلاً واضحًا بين مكونات Flow المختلفة. سنعدّل هذا الهيكل لإنشاء Flow منشئ الدليل.

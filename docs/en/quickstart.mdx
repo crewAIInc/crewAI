@@ -66,7 +66,7 @@ If you have not installed CrewAI yet, follow the [installation guide](/en/instal
       "tasks": [
         {
           "name": "research_task",
-          "description": "Conduct thorough research about {topic}. Use web search to find current, credible information. The current year is 2026.",
+          "description": "Conduct thorough research about {topic}. Use web search to find recent, credible information.",
           "expected_output": "A markdown report with clear sections: key trends, notable tools or companies, and implications. Aim for 800-1200 words. No fenced code blocks around the whole document.",
           "agent": "researcher",
           "output_file": "output/report.md",
@@ -177,7 +177,7 @@ If you have not installed CrewAI yet, follow the [installation guide](/en/instal
 
   <CodeGroup>
     ```markdown output/report.md
-    # AI Agents in 2026: Landscape and Trends
+    # AI Agents: Recent Landscape and Trends
 
     ## Executive summary
     …
@@ -212,7 +212,7 @@ You now have an end-to-end Flow with an agent crew and a saved report — a soli
 The names in `crew.jsonc` must match the files and task references you use:
 
 - `agents: ["researcher"]` loads `agents/researcher.jsonc`
-- `context: ["research_task"]` references a prior task named `research_task`
+- `tasks[].agent: "researcher"` assigns the task to that agent
 
 ## Deploying
 

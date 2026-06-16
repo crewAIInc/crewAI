@@ -120,7 +120,7 @@ Then include that agent from `crew.jsonc`:
 }
 ```
 
-Agent files support any public `Agent` field. Common fields include `role`, `goal`, `backstory`, `llm`, `tools`, `function_calling_llm`, `guardrail`, `step_callback`, and `settings`. Behavior options such as `verbose`, `allow_delegation`, `max_iter`, `max_rpm`, `memory`, `cache`, `planning`, and `use_system_prompt` can be placed at the top level or under `settings`; values in `settings` take precedence.
+Agent files support any public `Agent` field. Common fields include `role`, `goal`, `backstory`, `llm`, `tools`, `function_calling_llm`, `guardrail`, `step_callback`, and `settings`. Behavior options such as `verbose`, `allow_delegation`, `max_iter`, `max_rpm`, `memory`, `cache`, `planning_config`, and `use_system_prompt` can be placed at the top level or under `settings`; values in `settings` take precedence.
 
 <Note>
   JSONC supports comments and trailing commas. If both `agents/<name>.jsonc` and `agents/<name>.json` exist, CrewAI uses the JSONC file.

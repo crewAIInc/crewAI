@@ -108,7 +108,7 @@ Projetos clássicos criados com `crewai create crew <name> --classic` usam `conf
 
 A configuração YAML continua suportada para projetos existentes em Python/YAML e para equipes que preferem definir tarefas a partir de uma classe `@CrewBase`.
 
-Após criar um projeto clássico, navegue até o arquivo `src/latest_ai_development/config/tasks.yaml` e modifique o template para refletir os requisitos específicos das tarefas.
+Após criar um projeto clássico, navegue até o arquivo `src/<project_name>/config/tasks.yaml` e modifique o template para refletir os requisitos específicos das tarefas.
 
 <Note>
 Variáveis em seus arquivos YAML (como `{topic}`) serão substituídas por valores vindos dos seus inputs ao executar o crew:
@@ -144,7 +144,7 @@ reporting_task:
 Para usar essa configuração YAML em seu código, crie uma classe crew que herda de `CrewBase`:
 
 ```python crew.py
-# src/latest_ai_development/crew.py
+# src/<project_name>/crew.py
 
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task

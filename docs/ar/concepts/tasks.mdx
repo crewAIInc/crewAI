@@ -114,7 +114,7 @@ crew = Crew(
 
 يظل إعداد YAML مدعومًا للمشاريع الحالية المبنية بـ Python/YAML وللفِرق التي تفضل تعريف المهام من خلال فئة `@CrewBase`.
 
-بعد إنشاء مشروع كلاسيكي، انتقل إلى ملف `src/latest_ai_development/config/tasks.yaml` وعدّل القالب ليتوافق مع متطلبات مهامك المحددة.
+بعد إنشاء مشروع كلاسيكي، انتقل إلى ملف `src/<project_name>/config/tasks.yaml` وعدّل القالب ليتوافق مع متطلبات مهامك المحددة.
 
 <Note>
 المتغيرات في ملفات YAML (مثل `{topic}`) سيتم استبدالها بالقيم من مدخلاتك عند تشغيل الفريق:
@@ -150,7 +150,7 @@ reporting_task:
 لاستخدام إعداد YAML هذا في كودك، أنشئ فئة فريق ترث من `CrewBase`:
 
 ```python crew.py
-# src/latest_ai_development/crew.py
+# src/<project_name>/crew.py
 
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task

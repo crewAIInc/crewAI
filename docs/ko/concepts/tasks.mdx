@@ -105,7 +105,7 @@ CrewAI에서 작업을 생성하는 일반적인 방법은 **JSONC 프로젝트 
 
 YAML 구성은 기존 Python/YAML 프로젝트와 `@CrewBase` 클래스에서 태스크를 정의하려는 팀을 위해 계속 지원됩니다.
 
-클래식 프로젝트를 만든 후, `src/latest_ai_development/config/tasks.yaml` 파일로 이동하여 템플릿을 귀하의 특정 작업 요구 사항에 맞게 수정하세요.
+클래식 프로젝트를 만든 후, `src/<project_name>/config/tasks.yaml` 파일로 이동하여 템플릿을 작업 요구 사항에 맞게 수정하세요.
 
 <Note>
 YAML 파일 내 변수(예: `{topic}`)는 크루를 실행할 때 입력값에서 가져온 값으로 대체됩니다:
@@ -141,7 +141,7 @@ reporting_task:
 이 YAML 구성을 코드에서 사용하려면 `CrewBase`를 상속받는 크루 클래스를 생성하세요:
 
 ```python crew.py
-# src/latest_ai_development/crew.py
+# src/<project_name>/crew.py
 
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task

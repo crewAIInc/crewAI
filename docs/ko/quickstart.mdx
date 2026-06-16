@@ -66,7 +66,7 @@ CrewAI를 아직 설치하지 않았다면 먼저 [설치 가이드](/ko/install
       "tasks": [
         {
           "name": "research_task",
-          "description": "{topic}에 대해 철저히 조사하세요. 웹 검색으로 최신이고 신뢰할 수 있는 정보를 찾으세요. 현재 연도는 2026년입니다.",
+          "description": "{topic}에 대해 철저히 조사하세요. 웹 검색으로 최신이고 신뢰할 수 있는 정보를 찾으세요.",
           "expected_output": "마크다운 보고서로, 주요 트렌드·주목할 도구나 기업·시사점 등으로 섹션을 나누세요. 분량은 약 800~1200단어. 문서 전체를 코드 펜스로 감싸지 마세요.",
           "agent": "researcher",
           "output_file": "output/report.md",
@@ -174,7 +174,7 @@ CrewAI를 아직 설치하지 않았다면 먼저 [설치 가이드](/ko/install
 
   <CodeGroup>
     ```markdown output/report.md
-    # 2026년 AI 에이전트: 동향과 전망
+    # AI 에이전트: 최신 동향과 전망
 
     ## 요약
     …
@@ -209,7 +209,7 @@ Flow 패턴(라우팅, 지속성, human-in-the-loop)을 더 보려면 [첫 Flow 
 `crew.jsonc`의 이름은 파일과 참조에 맞아야 합니다:
 
 - `agents: ["researcher"]`는 `agents/researcher.jsonc`를 로드합니다.
-- `context: ["research_task"]`는 이전 태스크 `research_task`를 참조합니다.
+- `tasks[].agent: "researcher"`는 해당 태스크를 그 에이전트에 배정합니다.
 
 ## 배포
 

@@ -90,7 +90,7 @@ mode: "wide"
 }
 ```
 
-استخدم `{placeholder}` داخل `role` أو `goal` أو `backstory`. ضع القيم الافتراضية في `inputs` داخل `crew.jsonc`؛ وسيطلب `crewai run` أي قيم ناقصة. يمكن وضع حقول السلوك مثل `verbose` و `allow_delegation` و `max_iter` و `memory` و `cache` و `planning` في المستوى الأعلى أو داخل `settings`.
+استخدم `{placeholder}` داخل `role` أو `goal` أو `backstory`. ضع القيم الافتراضية في `inputs` داخل `crew.jsonc`؛ وسيطلب `crewai run` أي قيم ناقصة. يمكن وضع حقول السلوك مثل `verbose` و `allow_delegation` و `max_iter` و `memory` و `cache` و `planning_config` في المستوى الأعلى أو داخل `settings`.
 
 <Note>
 يدعم JSONC التعليقات والفواصل النهائية. إذا وُجد `agents/<name>.jsonc` و `agents/<name>.json` معًا، يستخدم CrewAI ملف JSONC.
@@ -102,7 +102,7 @@ mode: "wide"
 
 تظل تهيئة YAML مدعومة للمشاريع الحالية المبنية بـ Python/YAML وللفِرق التي تفضل تعريف الوكلاء من خلال فئة `@CrewBase`.
 
-بعد إنشاء مشروع كلاسيكي، انتقل إلى ملف `src/latest_ai_development/config/agents.yaml` وعدّل القالب ليتوافق مع متطلباتك.
+بعد إنشاء مشروع كلاسيكي، انتقل إلى ملف `src/<project_name>/config/agents.yaml` وعدّل القالب ليتوافق مع متطلباتك.
 
 <Note>
 ستُستبدل المتغيرات في ملفات YAML (مثل `{topic}`) بقيم من مدخلاتك عند تشغيل الطاقم:
@@ -114,7 +114,7 @@ crew.kickoff(inputs={'topic': 'AI Agents'})
 إليك مثالًا على كيفية تهيئة الوكلاء باستخدام YAML:
 
 ```yaml agents.yaml
-# src/latest_ai_development/config/agents.yaml
+# src/<project_name>/config/agents.yaml
 researcher:
   role: >
     {topic} Senior Data Researcher
@@ -139,7 +139,7 @@ reporting_analyst:
 لاستخدام تهيئة YAML في الكود، أنشئ فئة طاقم ترث من `CrewBase`:
 
 ```python Code
-# src/latest_ai_development/crew.py
+# src/<project_name>/crew.py
 from crewai import Agent, Crew, Process
 from crewai.project import CrewBase, agent, crew
 from crewai_tools import SerperDevTool

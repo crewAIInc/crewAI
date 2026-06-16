@@ -73,21 +73,24 @@ guide_creator_flow/
 ├── pyproject.toml
 ├── README.md
 ├── .env
-├── main.py
-├── crews/
-│   └── poem_crew/
-│       ├── config/
-│       │   ├── agents.yaml
-│       │   └── tasks.yaml
-│       └── poem_crew.py
-└── tools/
-    └── custom_tool.py
+└── src/
+    └── guide_creator_flow/
+        ├── __init__.py
+        ├── main.py
+        ├── crews/
+        │   └── poem_crew/
+        │       ├── config/
+        │       │   ├── agents.yaml
+        │       │   └── tasks.yaml
+        │       └── poem_crew.py
+        └── tools/
+            └── custom_tool.py
 ```
 
 This structure provides a clear separation between different components of your flow:
-- The main flow logic in the `main.py` file
-- Specialized crews in the `crews` directory
-- Custom tools in the `tools` directory
+- The main flow logic in the `src/guide_creator_flow/main.py` file
+- Specialized crews in the `src/guide_creator_flow/crews` directory
+- Custom tools in the `src/guide_creator_flow/tools` directory
 
 We'll modify this structure to create our guide creator flow, which will orchestrate the process of generating comprehensive learning guides.
 

@@ -66,7 +66,7 @@ Se ainda não instalou o CrewAI, siga primeiro o [guia de instalação](/pt-BR/i
       "tasks": [
         {
           "name": "research_task",
-          "description": "Faça uma pesquisa aprofundada sobre {topic}. Use busca na web para obter informações atuais e confiáveis. O ano atual é 2026.",
+          "description": "Faça uma pesquisa aprofundada sobre {topic}. Use busca na web para obter informações recentes e confiáveis.",
           "expected_output": "Um relatório em markdown com seções claras: tendências principais, ferramentas ou empresas relevantes e implicações. Entre 800 e 1200 palavras. Sem cercas de código em volta do documento inteiro.",
           "agent": "researcher",
           "output_file": "output/report.md",
@@ -174,7 +174,7 @@ Se ainda não instalou o CrewAI, siga primeiro o [guia de instalação](/pt-BR/i
 
   <CodeGroup>
     ```markdown output/report.md
-    # Agentes de IA em 2026: panorama e tendências
+    # Agentes de IA: panorama e tendências recentes
 
     ## Resumo executivo
     …
@@ -209,7 +209,7 @@ Você tem um Flow ponta a ponta com um crew de agente e um relatório salvo — 
 Os nomes em `crew.jsonc` devem coincidir com os arquivos e referências:
 
 - `agents: ["researcher"]` carrega `agents/researcher.jsonc`
-- `context: ["research_task"]` referencia uma tarefa anterior chamada `research_task`
+- `tasks[].agent: "researcher"` atribui a tarefa a esse agente
 
 ## Implantação
 
