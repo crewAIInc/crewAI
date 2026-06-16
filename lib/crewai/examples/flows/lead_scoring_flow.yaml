@@ -1,0 +1,98 @@
+# uv run --project lib/crewai crewai run --definition lib/crewai/examples/flows/lead_scoring_flow.yaml --inputs '{"lead":{"name":"Dana Lee","company":"Acme","employees":1200}}'
+# uv run --project lib/crewai crewai run --definition lib/crewai/examples/flows/lead_scoring_flow.yaml --inputs '{"lead":{"name":"Sam Poe","company":"Tiny LLC","employees":3}}'
+
+schema: crewai.flow/v1
+name: LeadScoringFlow
+description: Score an inbound lead, then route high-scoring leads to outreach and the rest to a log tool.
+
+state:
+  type: dict
+  default:
+    lead: {}
+
+methods:
+  score_lead:
+    start: true
+    do:
+      call: crew
+      with:
+        name: lead_scoring_crew
+        verbose: true
+        agents:
+          scorer:
+            role: Lead Qualification Analyst
+            goal: Assign a 0-100 fit score to inbound lead {name} from {company}
+            backstory: >
+              A revenue-ops veteran who scores leads against a clear ideal
+              customer profile: company size is the dominant signal.
+        tasks:
+          - name: score_lead_task
+            agent: scorer
+            description: >
+              Evaluate the inbound lead {name} from {company} ({employees}
+              employees) against this rubric, where company size dominates:
+              1000+ employees scores 85-100 (hot), 200-999 scores 70-84 (warm),
+              and under 200 scores 0-69 (cold). Return an integer score with a
+              one-line rationale.
+            expected_output: >
+              A LeadScore with an integer `score` (0-100), a short `reasoning`,
+              and a `tier` of "hot", "warm", or "cold".
+            output_pydantic:
+              type: object
+              properties:
+                score:
+                  type: integer
+                reasoning:
+                  type: string
+                tier:
+                  type: string
+                  enum: [hot, warm, cold]
+              required: [score, reasoning, tier]
+        inputs:
+          name: "${state.lead.name}"
+          company: "${state.lead.company}"
+          employees: "${state.lead.employees}"
+
+  route_by_score:
+    listen: score_lead
+    router: true
+    emit: [qualified, unqualified]
+    do:
+      call: expression
+      expr: "outputs.score_lead.pydantic.score >= 80 ? 'qualified' : 'unqualified'"
+
+  run_outreach:
+    listen: qualified
+    do:
+      call: crew
+      with:
+        name: outreach_crew
+        verbose: true
+        agents:
+          sdr:
+            role: Outbound SDR
+            goal: Draft a tailored first-touch email to {name} at {company}
+            backstory: >
+              A top-performing SDR who writes concise, personalized outreach
+              that earns replies from busy buyers.
+        tasks:
+          - name: draft_outreach_task
+            agent: sdr
+            description: >
+              Write a short, personalized first-touch email to {name} at
+              {company}. Ground the hook in this qualification rationale:
+              "{reasoning}".
+            expected_output: A ready-to-send outreach email with a subject line and body.
+        inputs:
+          name: "${state.lead.name}"
+          company: "${state.lead.company}"
+          reasoning: "${outputs.score_lead.pydantic.reasoning}"
+
+  log_unqualified:
+    listen: unqualified
+    do:
+      call: tool
+      ref: lead_flow.tools:LogLeadTool
+      with:
+        message: "${'Skipped low-fit lead ' + state.lead.name + ' (score ' + string(outputs.score_lead.pydantic.score) + ')'}"
+        level: info
