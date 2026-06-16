@@ -1,5 +1,6 @@
+from dataclasses import dataclass
 from datetime import date, datetime
-from typing import List
+from typing import Any, List
 
 import pytest
 from crewai.utilities.serialization import to_serializable, to_string
@@ -18,6 +19,13 @@ class Person(BaseModel):
     address: Address
     birthday: date
     skills: List[str]
+
+
+@dataclass
+class DataclassPerson:
+    name: str
+    address: Address
+    skills: tuple[str, ...]
 
 
 @pytest.mark.parametrize(
@@ -106,6 +114,24 @@ def test_pydantic_model_serialization():
     )
 
 
+def test_dataclass_serialization_recurses_into_nested_values():
+    person = DataclassPerson(
+        name="Ada",
+        address=Address(street="1 Loop", city="Compute", country="Pythonia"),
+        skills=("Python", "Math"),
+    )
+
+    assert to_serializable(person) == {
+        "name": "Ada",
+        "address": {
+            "street": "1 Loop",
+            "city": "Compute",
+            "country": "Pythonia",
+        },
+        "skills": ["Python", "Math"],
+    }
+
+
 def test_depth_limit():
     """Test max depth handling with a deeply nested structure"""
 
@@ -128,6 +154,27 @@ def test_depth_limit():
             }
         }
     }
+
+
+@pytest.mark.parametrize("max_depth", [0, -1])
+def test_non_positive_max_depth_disables_depth_limit(max_depth):
+    def create_nested(depth):
+        if depth == 0:
+            return "value"
+        return {"next": create_nested(depth - 1)}
+
+    assert to_serializable(create_nested(10), max_depth=max_depth) == create_nested(10)
+
+
+def test_unlimited_depth_still_detects_dataclass_cycles():
+    @dataclass
+    class Node:
+        child: Any = None
+
+    node = Node()
+    node.child = node
+
+    assert to_serializable(node, max_depth=0) == {"child": "<circular_ref:Node>"}
 
 
 def test_exclude_keys():

@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import copy
-import dataclasses
 from itertools import pairwise
 import json
 import re
 from typing import TYPE_CHECKING, Any, cast
 
-from pydantic import BaseModel
+from crewai.utilities.serialization import to_serializable
 
 
 if TYPE_CHECKING:
@@ -25,25 +23,45 @@ class FlowExpressionError(ValueError):
     """A FlowDefinition expression failed to parse or evaluate."""
 
 
-def render_with_block(flow: Flow[Any], value: Any) -> Any:
+def render_with_block(
+    flow: Flow[Any], value: Any, local_context: dict[str, Any] | None = None
+) -> Any:
     """Render CEL expressions inside a FlowDefinition ``with:`` payload."""
-    context = _expression_context(flow)
+    context = _expression_context(flow, local_context=local_context)
     return _render_value(value, context)
 
 
-def evaluate_expression(flow: Flow[Any], expression: str) -> Any:
+def evaluate_expression(
+    flow: Flow[Any], expression: str, local_context: dict[str, Any] | None = None
+) -> Any:
     """Evaluate a FlowDefinition CEL expression against runtime context."""
     expression = expression.strip()
     if not expression:
         raise FlowExpressionError("empty CEL expression")
-    return _eval_cel(expression, _expression_context(flow))
+    return _eval_cel(expression, _expression_context(flow, local_context=local_context))
 
 
-def _expression_context(flow: Flow[Any]) -> dict[str, Any]:
-    return {
+def _expression_context(
+    flow: Flow[Any], local_context: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    outputs = _outputs_by_name(flow._method_outputs)
+    context: dict[str, Any] = {
         "state": flow._copy_and_serialize_state(),
-        "outputs": _outputs_by_name(flow._method_outputs),
+        "outputs": outputs,
     }
+    if local_context:
+        local_values = {
+            key: to_serializable(value, max_depth=0)
+            for key, value in local_context.items()
+        }
+        local_outputs = local_values.pop("outputs", None)
+        local_values.pop("state", None)
+        context.update(local_values)
+        if local_outputs is not None:
+            if not isinstance(local_outputs, dict):
+                raise TypeError("flow definition local outputs must be a mapping")
+            context["outputs"] = {**outputs, **local_outputs}
+    return context
 
 
 def _outputs_by_name(method_outputs: list[Any]) -> dict[str, Any]:
@@ -54,12 +72,7 @@ def _outputs_by_name(method_outputs: list[Any]) -> dict[str, Any]:
         if isinstance(entry, dict) and "output" in entry:
             method = str(entry.get("method", ""))
             output = entry["output"]
-        output = copy.deepcopy(output)
-        if isinstance(output, BaseModel):
-            output = output.model_dump(mode="json")
-        elif dataclasses.is_dataclass(output) and not isinstance(output, type):
-            output = dataclasses.asdict(output)
-        outputs[method] = output
+        outputs[method] = to_serializable(output, max_depth=0)
     return outputs
 
 
