@@ -705,6 +705,9 @@ def _agent_to_jsonc(agent: dict[str, Any]) -> str:
   // Example: "role": "Senior {{industry}} Researcher"
   "role": {json.dumps(agent["role"])},
 
+  // Optional custom Agent subclass
+  // "type": {{"python": "my_project.agents.CustomAgent"}},
+
   // The agent's primary objective
   "goal": {json.dumps(agent["goal"])},
 
@@ -728,7 +731,9 @@ def _agent_to_jsonc(agent: dict[str, Any]) -> str:
 
   // Optional agent-level guardrail — validates this agent's final output.
   // String guardrails are checked by an LLM and can reject/retry output.
+  // Python refs must point to module-level functions/classes in trusted code.
   // "guardrail": "Only answer with information supported by retrieved evidence.",
+  // "step_callback": {{"python": "my_project.callbacks.on_agent_step"}},
   // "guardrail_max_retries": 2,
 
   // Advanced agent options:
@@ -786,9 +791,18 @@ def _task_to_json_fragment(task: dict[str, Any]) -> str:
     lines.append("")
     lines.append("      // Advanced task options:")
     lines.append("      // Docs: https://docs.crewai.com/concepts/tasks")
-    lines.append('      // "output_json": null,')
+    lines.append('      // "type": "ConditionalTask",')
+    lines.append(
+        '      // "condition": { "python": "my_project.conditions.should_run" },'
+    )
+    lines.append(
+        '      // "output_json": { "python": "my_project.models.ReportOutput" },'
+    )
     lines.append('      // "output_pydantic": null,')
     lines.append('      // "response_model": null,')
+    lines.append(
+        '      // "converter_cls": { "python": "my_project.converters.CustomConverter" },'
+    )
     lines.append('      // "markdown": false,')
     lines.append('      // "input_files": { "brief": "data/brief.txt" },')
     lines.append('      // "security_config": {},')
@@ -874,7 +888,11 @@ def _crew_to_jsonc(
 
   // Advanced crew options:
   // Docs: https://docs.crewai.com/concepts/crews
+  // For hierarchical crews, manager_agent can reference an agents/<name>.jsonc file
+  // that is not included in the "agents" list.
   // "manager_agent": "{agents[0]["name"]}",
+  // "before_kickoff_callbacks": [{{"python": "my_project.callbacks.before_kickoff"}}],
+  // "after_kickoff_callbacks": [{{"python": "my_project.callbacks.after_kickoff"}}],
   // "function_calling_llm": "openai/gpt-4o-mini",
   // "max_rpm": null,
   // "cache": true,
