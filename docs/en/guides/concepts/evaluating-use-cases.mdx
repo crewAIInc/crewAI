@@ -174,7 +174,6 @@ Flows are ideal when:
 # Example: Customer Support Flow with structured processing
 from crewai.flow.flow import Flow, listen, or_, router, start
 from pydantic import BaseModel
-from typing import List, Dict
 
 # Define structured state
 class SupportTicketState(BaseModel):
@@ -262,7 +261,6 @@ The most sophisticated applications often benefit from combining Crews and Flows
 from crewai.flow.flow import Flow, listen, start
 from crewai import Agent, Crew, Process, Task
 from pydantic import BaseModel
-from typing import List, Dict
 
 class ContentState(BaseModel):
     topic: str = ""

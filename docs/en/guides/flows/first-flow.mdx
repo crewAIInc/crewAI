@@ -206,14 +206,13 @@ These task definitions provide detailed instructions to our agents, ensuring the
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 from crewai.agents.agent_builder.base_agent import BaseAgent
-from typing import List
 
 @CrewBase
 class ContentCrew():
     """Content writing crew"""
 
-    agents: List[BaseAgent]
-    tasks: List[Task]
+    agents: list[BaseAgent]
+    tasks: list[Task]
 
     @agent
     def content_writer(self) -> Agent:
@@ -271,7 +270,7 @@ Let's create our flow in the `main.py` file:
 #!/usr/bin/env python
 import json
 import os
-from typing import List, Dict
+
 from pydantic import BaseModel, Field
 from crewai import LLM
 from crewai.flow.flow import Flow, listen, start
@@ -286,7 +285,7 @@ class GuideOutline(BaseModel):
     title: str = Field(description="Title of the guide")
     introduction: str = Field(description="Introduction to the topic")
     target_audience: str = Field(description="Description of the target audience")
-    sections: List[Section] = Field(description="List of sections in the guide")
+    sections: list[Section] = Field(description="List of sections in the guide")
     conclusion: str = Field(description="Conclusion or summary of the guide")
 
 # Define our flow state
@@ -294,7 +293,7 @@ class GuideCreatorState(BaseModel):
     topic: str = ""
     audience_level: str = ""
     guide_outline: GuideOutline = None
-    sections_content: Dict[str, str] = {}
+    sections_content: dict[str, str] = {}
 
 class GuideCreatorFlow(Flow[GuideCreatorState]):
     """Flow for creating a comprehensive guide on any topic"""
@@ -590,7 +589,7 @@ class GuideCreatorState(BaseModel):
     topic: str = ""
     audience_level: str = ""
     guide_outline: GuideOutline = None
-    sections_content: Dict[str, str] = {}
+    sections_content: dict[str, str] = {}
 ```
 
 This provides a type-safe way to track and transform data throughout your flow.

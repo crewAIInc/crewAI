@@ -151,7 +151,6 @@ Here's how to implement structured state management:
 ```python
 from crewai.flow.flow import Flow, listen, start
 from pydantic import BaseModel, Field
-from typing import List, Dict, Optional
 
 # Define your state model
 class UserPreferences(BaseModel):
@@ -161,7 +160,7 @@ class UserPreferences(BaseModel):
 class AppState(BaseModel):
     user_name: str = ""
     preferences: UserPreferences = UserPreferences()
-    items: List[str] = []
+    items: list[str] = []
     processed: bool = False
     completion_percentage: float = 0.0
 
@@ -390,7 +389,6 @@ Behavior notes:
 - `restore_from_state_id=None` (default) is byte-identical to a kickoff without the parameter.
 - Pinning `inputs["id"]` while forking means the new run shares a persistence key with another flow — usually you want only `restore_from_state_id`.
 
-
 ## Advanced State Patterns
 
 ### Conditional starts and resumable execution
@@ -471,7 +469,6 @@ For complex state transformations, you can create dedicated methods:
 ```python
 from crewai.flow.flow import Flow, listen, start
 from pydantic import BaseModel
-from typing import List, Dict
 
 class UserData(BaseModel):
     name: str
@@ -479,7 +476,7 @@ class UserData(BaseModel):
     login_count: int = 0
 
 class ComplexState(BaseModel):
-    users: Dict[str, UserData] = {}
+    users: dict[str, UserData] = {}
     active_user_count: int = 0
 
 class TransformationFlow(Flow[ComplexState]):
@@ -643,8 +640,8 @@ class BloatedState(BaseModel):
 # Better: Focused state
 class FocusedState(BaseModel):
     user_id: str
-    preferences: Dict[str, str]
-    completion_status: Dict[str, bool]
+    preferences: dict[str, str]
+    completion_status: dict[str, bool]
 ```
 
 ### 2. Use Structured State for Complex Flows
@@ -665,7 +662,7 @@ class UserRegistrationState(BaseModel):
     email: str
     verification_status: bool = False
     registration_date: datetime = Field(default_factory=datetime.now)
-    last_login: Optional[datetime] = None
+    last_login: datetime | None = None
 
 class RegistrationFlow(Flow[UserRegistrationState]):
     # Methods with strongly-typed state access
@@ -750,10 +747,9 @@ self.state.items.append(new_item)  # Mutable operation
 
 # Consider creating new state:
 from pydantic import BaseModel
-from typing import List
 
 class ItemState(BaseModel):
-    items: List[str] = []
+    items: list[str] = []
 
 class ImmutableFlow(Flow[ItemState]):
     @start()

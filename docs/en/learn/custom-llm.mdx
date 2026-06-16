@@ -15,11 +15,11 @@ Here's a minimal custom LLM implementation:
 
 ```python
 from crewai import BaseLLM
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 import requests
 
 class CustomLLM(BaseLLM):
-    def __init__(self, model: str, api_key: str, endpoint: str, temperature: Optional[float] = None):
+    def __init__(self, model: str, api_key: str, endpoint: str, temperature: float | None = None):
         # IMPORTANT: Call super().__init__() with required parameters
         super().__init__(model=model, temperature=temperature)
         
@@ -28,11 +28,11 @@ class CustomLLM(BaseLLM):
         
     def call(
         self,
-        messages: Union[str, List[Dict[str, str]]],
-        tools: Optional[List[dict]] = None,
-        callbacks: Optional[List[Any]] = None,
-        available_functions: Optional[Dict[str, Any]] = None,
-    ) -> Union[str, Any]:
+        messages: str | list[dict[str, str]],
+        tools: list[dict] | None = None,
+        callbacks: list[Any] | None = None,
+        available_functions: dict[str, Any] | None = None,
+    ) -> str | Any:
         """Call the LLM with the given messages."""
         # Convert string to message format if needed
         if isinstance(messages, str):
@@ -113,7 +113,7 @@ result = crew.kickoff()
 **Critical**: You must call `super().__init__(model, temperature)` with the required parameters:
 
 ```python
-def __init__(self, model: str, api_key: str, temperature: Optional[float] = None):
+def __init__(self, model: str, api_key: str, temperature: float | None = None):
     # REQUIRED: Call parent constructor with model and temperature
     super().__init__(model=model, temperature=temperature)
     
@@ -176,10 +176,9 @@ def call(self, messages, tools=None, callbacks=None, available_functions=None):
 
 ```python
 from crewai import BaseLLM
-from typing import Optional
 
 class CustomAuthLLM(BaseLLM):
-    def __init__(self, model: str, auth_token: str, endpoint: str, temperature: Optional[float] = None):
+    def __init__(self, model: str, auth_token: str, endpoint: str, temperature: float | None = None):
         super().__init__(model=model, temperature=temperature)
         self.auth_token = auth_token
         self.endpoint = endpoint
@@ -293,7 +292,7 @@ def __init__(self, api_key: str):
     super().__init__()
 
 # ✅ Correct
-def __init__(self, model: str, api_key: str, temperature: Optional[float] = None):
+def __init__(self, model: str, api_key: str, temperature: float | None = None):
     super().__init__(model=model, temperature=temperature)
 ```
 
