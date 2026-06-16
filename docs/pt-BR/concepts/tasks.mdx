@@ -67,13 +67,48 @@ crew = Crew(
 
 ## Criando Tarefas
 
-Existem duas maneiras de criar tarefas no CrewAI: utilizando **configuração YAML (recomendado)** ou definindo-as **diretamente no código**.
+Existem duas formas comuns de criar tarefas no CrewAI: usando **configuração JSONC (recomendado para novas crews)** ou definindo-as **diretamente no código**.
 
-### Configuração YAML (Recomendado)
+### Configuração JSONC (Recomendado)
 
-Utilizar configuração YAML oferece uma forma mais limpa e de fácil manutenção para definir tarefas. Recomendamos fortemente esse método em seus projetos CrewAI.
+Novos projetos criados com `crewai create crew <name>` definem tarefas no `crew.jsonc`.
 
-Após criar seu projeto CrewAI conforme indicado na seção [Instalação](/pt-BR/installation), navegue até o arquivo `src/latest_ai_development/config/tasks.yaml` e modifique o template para refletir os requisitos específicos das tarefas.
+````jsonc crew.jsonc
+{
+  "name": "Research Crew",
+  "agents": ["researcher", "reporting_analyst"],
+  "tasks": [
+    {
+      "name": "research_task",
+      "description": "Conduct thorough research about {topic}.",
+      "expected_output": "A list of the most relevant information about {topic}.",
+      "agent": "researcher"
+    },
+    {
+      "name": "reporting_task",
+      "description": "Review the research and expand it into a detailed report.",
+      "expected_output": "A polished markdown report.",
+      "agent": "reporting_analyst",
+      "context": ["research_task"],
+      "markdown": true,
+      "output_file": "report.md"
+    }
+  ],
+  "inputs": {
+    "topic": "AI Agents"
+  }
+}
+````
+
+Cada tarefa precisa de `description` e `expected_output`. O valor de `agent` deve corresponder a um agente listado em `agents`. `context` referencia nomes de tarefas anteriores; referências futuras são rejeitadas. Campos comuns incluem `name`, `agent`, `context`, `output_file`, `tools`, `human_input`, `async_execution`, `guardrail`, `guardrails`, `markdown`, `output_json`, `output_pydantic` e `response_model`.
+
+### Configuração YAML Clássica
+
+Projetos clássicos criados com `crewai create crew <name> --classic` usam `config/tasks.yaml` e uma classe `@CrewBase` em `crew.py`.
+
+A configuração YAML continua suportada para projetos existentes em Python/YAML e para equipes que preferem definir tarefas a partir de uma classe `@CrewBase`.
+
+Após criar um projeto clássico, navegue até o arquivo `src/latest_ai_development/config/tasks.yaml` e modifique o template para refletir os requisitos específicos das tarefas.
 
 <Note>
 Variáveis em seus arquivos YAML (como `{topic}`) serão substituídas por valores vindos dos seus inputs ao executar o crew:

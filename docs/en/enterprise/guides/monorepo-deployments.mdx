@@ -24,10 +24,9 @@ company-ai/
 `-- crews/
     |-- support_agent/
     |   |-- pyproject.toml
-    |   `-- src/
-    |       `-- support_agent/
-    |           |-- main.py
-    |           `-- crew.py
+    |   |-- crew.jsonc
+    |   `-- agents/
+    |       `-- support_agent.jsonc
     `-- research_flow/
         |-- pyproject.toml
         `-- src/
@@ -48,7 +47,7 @@ folder as the automation project root.
 
 When a working directory is set, AMP uses that folder for:
 
-- Project validation, including `pyproject.toml`, `src/`, and the Crew or Flow entry point
+- Project validation, including `pyproject.toml`, JSON crew files, and any classic Crew or Flow entry point
 - Dependency installation with `uv`
 - The running process working directory
 - The `CREW_ROOT_DIR` environment variable

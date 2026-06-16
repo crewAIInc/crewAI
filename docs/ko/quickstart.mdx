@@ -39,84 +39,60 @@ CrewAI를 아직 설치하지 않았다면 먼저 [설치 가이드](/ko/install
   이렇게 하면 `src/latest_ai_flow/` 아래에 Flow 앱이 만들어지고, 다음 단계에서 **단일 에이전트** 연구 crew로 바꿀 시작용 crew가 `crews/content_crew/`에 포함됩니다.
   </Step>
 
-  <Step title="`agents.yaml`에 에이전트 하나 설정">
-  `src/latest_ai_flow/crews/content_crew/config/agents.yaml` 내용을 한 명의 연구원만 남기도록 바꿉니다. `{topic}` 같은 변수는 `crew.kickoff(inputs=...)`로 채워집니다.
+  <Step title="JSONC로 에이전트 하나 설정">
+  `src/latest_ai_flow/crews/content_crew/agents/researcher.jsonc`를 만듭니다(`agents/` 디렉터리가 없으면 생성). `{topic}` 같은 변수는 `crew.kickoff(inputs=...)`로 채워집니다.
 
-    ```yaml agents.yaml
-    # src/latest_ai_flow/crews/content_crew/config/agents.yaml
-    researcher:
-      role: >
-        {topic} 시니어 데이터 리서처
-      goal: >
-        {topic} 분야의 최신 동향을 파악한다
-      backstory: >
-        당신은 {topic}의 최신 흐름을 찾아내는 데 능숙한 연구원입니다.
-        가장 관련성 높은 정보를 찾아 명확하게 전달합니다.
+    ```jsonc agents/researcher.jsonc
+    {
+      "role": "{topic} 시니어 데이터 리서처",
+      "goal": "{topic} 분야의 최신 동향을 파악한다",
+      "backstory": "당신은 가장 관련성 높은 정보를 찾아 명확하게 전달하는 연구원입니다.",
+      "tools": ["SerperDevTool"],
+      "settings": {
+        "verbose": true
+      }
+    }
     ```
 
   </Step>
 
-  <Step title="`tasks.yaml`에 작업 하나 설정">
-    ```yaml tasks.yaml
-    # src/latest_ai_flow/crews/content_crew/config/tasks.yaml
-    research_task:
-      description: >
-        {topic}에 대해 철저히 조사하세요. 웹 검색으로 최신이고 신뢰할 수 있는 정보를 찾으세요.
-        현재 연도는 2026년입니다.
-      expected_output: >
-        마크다운 보고서로, 주요 트렌드·주목할 도구나 기업·시사점 등으로 섹션을 나누세요.
-        분량은 약 800~1200단어. 문서 전체를 코드 펜스로 감싸지 마세요.
-      agent: researcher
-      output_file: output/report.md
+  <Step title="`crew.jsonc`에 crew 설정">
+  `src/latest_ai_flow/crews/content_crew/crew.jsonc`를 만듭니다:
+
+    ```jsonc crew.jsonc
+    {
+      "name": "Research Crew",
+      "agents": ["researcher"],
+      "tasks": [
+        {
+          "name": "research_task",
+          "description": "{topic}에 대해 철저히 조사하세요. 웹 검색으로 최신이고 신뢰할 수 있는 정보를 찾으세요. 현재 연도는 2026년입니다.",
+          "expected_output": "마크다운 보고서로, 주요 트렌드·주목할 도구나 기업·시사점 등으로 섹션을 나누세요. 분량은 약 800~1200단어. 문서 전체를 코드 펜스로 감싸지 마세요.",
+          "agent": "researcher",
+          "output_file": "output/report.md",
+          "markdown": true
+        }
+      ],
+      "process": "sequential",
+      "verbose": true
+    }
     ```
 
   </Step>
 
-  <Step title="crew 클래스 연결 (`content_crew.py`)">
-  생성된 crew가 YAML을 읽고 연구원에게 `SerperDevTool`을 붙이도록 합니다.
+  <Step title="JSON crew 로드 (`content_crew.py`)">
+  생성된 `content_crew.py`를 `crew.jsonc`를 `Crew`로 바꾸는 작은 loader로 교체합니다.
 
     ```python content_crew.py
     # src/latest_ai_flow/crews/content_crew/content_crew.py
-    from typing import List
+    from pathlib import Path
 
-    from crewai import Agent, Crew, Process, Task
-    from crewai.agents.agent_builder.base_agent import BaseAgent
-    from crewai.project import CrewBase, agent, crew, task
-    from crewai_tools import SerperDevTool
+    from crewai.project import load_crew
 
 
-    @CrewBase
-    class ResearchCrew:
-      """Flow 안에서 사용하는 단일 에이전트 연구 crew."""
-
-      agents: List[BaseAgent]
-      tasks: List[Task]
-
-      agents_config = "config/agents.yaml"
-      tasks_config = "config/tasks.yaml"
-
-      @agent
-      def researcher(self) -> Agent:
-        return Agent(
-          config=self.agents_config["researcher"],  # type: ignore[index]
-          verbose=True,
-          tools=[SerperDevTool()],
-        )
-
-      @task
-      def research_task(self) -> Task:
-        return Task(
-          config=self.tasks_config["research_task"],  # type: ignore[index]
-        )
-
-      @crew
-      def crew(self) -> Crew:
-        return Crew(
-          agents=self.agents,
-          tasks=self.tasks,
-          process=Process.sequential,
-          verbose=True,
-        )
+    def kickoff_content_crew(inputs: dict):
+      crew, default_inputs = load_crew(Path(__file__).with_name("crew.jsonc"))
+      return crew.kickoff(inputs={**default_inputs, **inputs})
     ```
 
   </Step>
@@ -130,7 +106,7 @@ CrewAI를 아직 설치하지 않았다면 먼저 [설치 가이드](/ko/install
 
     from crewai.flow import Flow, listen, start
 
-    from latest_ai_flow.crews.content_crew.content_crew import ResearchCrew
+    from latest_ai_flow.crews.content_crew.content_crew import kickoff_content_crew
 
 
     class ResearchFlowState(BaseModel):
@@ -149,7 +125,7 @@ CrewAI를 아직 설치하지 않았다면 먼저 [설치 가이드](/ko/install
 
       @listen(prepare_topic)
       def run_research(self):
-        result = ResearchCrew().crew().kickoff(inputs={"topic": self.state.topic})
+        result = kickoff_content_crew(inputs={"topic": self.state.topic})
         self.state.report = result.raw
         print("연구 crew 실행 완료.")
 
@@ -171,7 +147,7 @@ CrewAI를 아직 설치하지 않았다면 먼저 [설치 가이드](/ko/install
     ```
 
   <Tip>
-  패키지 이름이 `latest_ai_flow`가 아니면 `ResearchCrew` import 경로를 프로젝트 모듈 경로에 맞게 바꾸세요.
+  패키지 이름이 `latest_ai_flow`가 아니면 `kickoff_content_crew` import 경로를 프로젝트 모듈 경로에 맞게 바꾸세요.
   </Tip>
   </Step>
 
@@ -219,7 +195,7 @@ CrewAI를 아직 설치하지 않았다면 먼저 [설치 가이드](/ko/install
 ## 한 번에 이해하기
 
 1. **Flow** — `LatestAiFlow`는 `prepare_topic` → `run_research` → `summarize` 순으로 실행됩니다. 상태(`topic`, `report`)는 Flow에 있습니다.
-2. **Crew** — `ResearchCrew`는 에이전트 한 명·작업 하나로 실행됩니다. 연구원이 **Serper**로 웹을 검색하고 구조화된 보고서를 씁니다.
+2. **Crew** — `kickoff_content_crew`가 `crew.jsonc`를 로드하고 에이전트 한 명·작업 하나로 실행합니다. 연구원이 **Serper**로 웹을 검색하고 구조화된 보고서를 씁니다.
 3. **결과물** — 작업의 `output_file`이 `output/report.md`에 보고서를 씁니다.
 
 Flow 패턴(라우팅, 지속성, human-in-the-loop)을 더 보려면 [첫 Flow 만들기](/ko/guides/flows/first-flow)와 [Flows](/ko/concepts/flows)를 참고하세요. Flow 없이 crew만 쓰려면 [Crews](/ko/concepts/crews)를, 작업 없이 단일 `Agent`의 `kickoff()`만 쓰려면 [Agents](/ko/concepts/agents#direct-agent-interaction-with-kickoff)를 참고하세요.
@@ -230,7 +206,10 @@ Flow 패턴(라우팅, 지속성, human-in-the-loop)을 더 보려면 [첫 Flow 
 
 ### 이름 일치
 
-YAML 키(`researcher`, `research_task`)는 `@CrewBase` 클래스의 메서드 이름과 같아야 합니다. 전체 데코레이터 패턴은 [Crews](/ko/concepts/crews)를 참고하세요.
+`crew.jsonc`의 이름은 파일과 참조에 맞아야 합니다:
+
+- `agents: ["researcher"]`는 `agents/researcher.jsonc`를 로드합니다.
+- `context: ["research_task"]`는 이전 태스크 `research_task`를 참조합니다.
 
 ## 배포
 

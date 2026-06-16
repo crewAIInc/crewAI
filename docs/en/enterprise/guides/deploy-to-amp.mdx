@@ -374,17 +374,17 @@ git push
 
 **Solution**: Verify your project matches the expected structure:
 
-- **Both Crews and Flows**: Must have entry point at `src/project_name/main.py`
-- **Crews**: Use a `run()` function as entry point
-- **Flows**: Use a `kickoff()` function as entry point
+- **JSON-first Crews**: Keep `crew.jsonc` or `crew.json` and `agents/` at the project root
+- **Classic Crews**: Use `src/project_name/main.py` with a `run()` entry point
+- **Flows**: Use `src/project_name/main.py` with a `kickoff()` entry point
 
 See [Prepare for Deployment](/en/enterprise/guides/prepare-for-deployment) for detailed structure diagrams.
 
-#### Missing CrewBase Decorator
+#### Missing CrewBase Decorator in a Classic Crew
 
 **Symptom**: "Crew not found", "Config not found", or agent/task configuration errors
 
-**Solution**: Ensure **all** crew classes use the `@CrewBase` decorator:
+**Solution**: For classic Python/YAML crews, ensure all crew classes use the `@CrewBase` decorator. JSON-first crews do not need this decorator.
 
 ```python
 from crewai.project import CrewBase, agent, crew, task
@@ -404,8 +404,8 @@ class YourCrew():
 ```
 
 <Info>
-  This applies to standalone Crews AND crews embedded inside Flow projects.
-  Every crew class needs the decorator.
+  This applies to classic Python crew classes, including classic crews embedded inside Flow projects.
+  JSON-first crews are validated from `crew.jsonc` and `agents/` instead.
 </Info>
 
 #### Incorrect pyproject.toml Type
@@ -442,8 +442,8 @@ type = "flow"
 **Solution**:
 1. Check the execution logs in the AMP dashboard (Traces tab)
 2. Verify all tools have required API keys configured
-3. Ensure agent configurations in `agents.yaml` are valid
-4. Check task configurations in `tasks.yaml` for syntax errors
+3. For JSON-first crews, validate `crew.jsonc` and the referenced files in `agents/`
+4. For classic crews, ensure `agents.yaml` and `tasks.yaml` are valid
 
 <Card title="Need Help?" icon="headset" href="mailto:support@crewai.com">
   Contact our support team for assistance with deployment issues or questions

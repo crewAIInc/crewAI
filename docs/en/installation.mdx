@@ -116,7 +116,7 @@ If you haven't installed `uv` yet, follow **step 1** to quickly get it set up on
 
 # Creating a CrewAI Project
 
-We recommend using the `YAML` template scaffolding for a structured approach to defining agents and tasks. Here's how to get started:
+`crewai create crew` now creates a JSON-first crew project. Agents live in `agents/*.jsonc`, tasks and crew-level settings live in `crew.jsonc`, and `crewai run` loads that JSON definition directly.
 
 <Steps>
   <Step title="Generate Project Scaffolding">
@@ -129,21 +129,20 @@ We recommend using the `YAML` template scaffolding for a structured approach to 
       ```
       my_project/
       ├── .gitignore
+      ├── .env
+      ├── agents/
+      │   └── researcher.jsonc
+      ├── crew.jsonc
       ├── knowledge/
       ├── pyproject.toml
       ├── README.md
-      ├── .env
-      └── src/
-          └── my_project/
-              ├── __init__.py
-              ├── main.py
-              ├── crew.py
-              ├── tools/
-              │   ├── custom_tool.py
-              │   └── __init__.py
-              └── config/
-                  ├── agents.yaml
-                  └── tasks.yaml
+      ├── skills/
+      └── tools/
+      ```
+
+    - If you need the older Python/YAML scaffold with `crew.py`, `config/agents.yaml`, and `config/tasks.yaml`, run:
+      ```shell
+      crewai create crew <your_project_name> --classic
       ```
 
   </Step>
@@ -152,15 +151,15 @@ We recommend using the `YAML` template scaffolding for a structured approach to 
     - Your project will contain these essential files:
       | File | Purpose |
       | --- | --- |
-      | `agents.yaml` | Define your AI agents and their roles |
-      | `tasks.yaml` | Set up agent tasks and workflows |
+      | `crew.jsonc` | Configure the crew, task order, process, and input defaults |
+      | `agents/*.jsonc` | Define each agent's role, goal, backstory, LLM, tools, and behavior |
       | `.env` | Store API keys and environment variables |
-      | `main.py` | Project entry point and execution flow |
-      | `crew.py` | Crew orchestration and coordination |
-      | `tools/` | Directory for custom agent tools |
-      | `knowledge/` | Directory for knowledge base |
+      | `tools/` | Optional Python files for `custom:<name>` tools |
+      | `knowledge/` | Optional knowledge files for agents |
+      | `skills/` | Optional skill files applied to the crew |
 
-    - Start by editing `agents.yaml` and `tasks.yaml` to define your crew's behavior.
+    - Start by editing `crew.jsonc` and the files in `agents/` to define your crew's behavior.
+    - Use `{placeholder}` values in agent and task text, then set defaults in `crew.jsonc` under `inputs`. When you run `crewai run`, the CLI prompts for any missing values.
     - Keep sensitive information like API keys in `.env`.
 
   </Step>

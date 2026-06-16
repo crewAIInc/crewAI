@@ -113,7 +113,7 @@ python3 --version
 
 # إنشاء مشروع CrewAI
 
-نوصي باستخدام قالب `YAML` لنهج منظم في تعريف الـ Agents والمهام. إليك كيفية البدء:
+يقوم `crewai create crew` الآن بإنشاء مشروع crew بأسلوب JSON-first. توضع الـ Agents في `agents/*.jsonc`، وتوضع المهام وإعدادات الـ crew في `crew.jsonc`، ويحمّل `crewai run` هذا التعريف مباشرة.
 
 <Steps>
   <Step title="إنشاء هيكل المشروع">
@@ -126,21 +126,20 @@ python3 --version
       ```
       my_project/
       ├── .gitignore
+      ├── .env
+      ├── agents/
+      │   └── researcher.jsonc
+      ├── crew.jsonc
       ├── knowledge/
       ├── pyproject.toml
       ├── README.md
-      ├── .env
-      └── src/
-          └── my_project/
-              ├── __init__.py
-              ├── main.py
-              ├── crew.py
-              ├── tools/
-              │   ├── custom_tool.py
-              │   └── __init__.py
-              └── config/
-                  ├── agents.yaml
-                  └── tasks.yaml
+      ├── skills/
+      └── tools/
+      ```
+
+    - إذا احتجت إلى البنية القديمة Python/YAML التي تحتوي على `crew.py` و `config/agents.yaml` و `config/tasks.yaml`، شغّل:
+      ```shell
+      crewai create crew <your_project_name> --classic
       ```
 
   </Step>
@@ -149,15 +148,15 @@ python3 --version
     - سيحتوي مشروعك على هذه الملفات الأساسية:
       | الملف | الغرض |
       | --- | --- |
-      | `agents.yaml` | تعريف الـ Agents وأدوارهم |
-      | `tasks.yaml` | إعداد مهام الـ Agents وسير العمل |
+      | `crew.jsonc` | إعداد الـ crew وترتيب المهام والعملية وقيم الإدخال الافتراضية |
+      | `agents/*.jsonc` | تعريف دور كل Agent وهدفه و backstory والـ LLM والأدوات والسلوك |
       | `.env` | تخزين مفاتيح API ومتغيرات البيئة |
-      | `main.py` | نقطة دخول المشروع وتدفق التنفيذ |
-      | `crew.py` | تنسيق وإدارة الـ Crew |
-      | `tools/` | مجلد الأدوات المخصصة |
-      | `knowledge/` | مجلد قاعدة المعرفة |
+      | `tools/` | ملفات Python اختيارية لأدوات `custom:<name>` |
+      | `knowledge/` | ملفات معرفة اختيارية للـ Agents |
+      | `skills/` | ملفات skills اختيارية تطبق على الـ crew |
 
-    - ابدأ بتحرير `agents.yaml` و`tasks.yaml` لتعريف سلوك الـ Crew.
+    - ابدأ بتحرير `crew.jsonc` والملفات داخل `agents/` لتعريف سلوك الـ crew.
+    - استخدم قيم `{placeholder}` في نصوص الـ Agents والمهام، ثم ضع القيم الافتراضية في `inputs` داخل `crew.jsonc`. عند تشغيل `crewai run` ستطلب CLI أي قيم ناقصة.
     - احتفظ بالمعلومات الحساسة مثل مفاتيح API في `.env`.
 
   </Step>

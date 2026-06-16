@@ -373,17 +373,17 @@ git push
 
 **Solução**: Verifique se seu projeto corresponde à estrutura esperada:
 
-- **Tanto Crews quanto Flows**: Devem ter ponto de entrada em `src/project_name/main.py`
-- **Crews**: Usam uma função `run()` como ponto de entrada
-- **Flows**: Usam uma função `kickoff()` como ponto de entrada
+- **Crews JSON-first**: Mantenha `crew.jsonc` ou `crew.json` e `agents/` na raiz do projeto
+- **Crews clássicas**: Use `src/project_name/main.py` com uma função de entrada `run()`
+- **Flows**: Use `src/project_name/main.py` com uma função de entrada `kickoff()`
 
 Veja [Preparar para Implantação](/pt-BR/enterprise/guides/prepare-for-deployment) para diagramas de estrutura detalhados.
 
-#### Decorador CrewBase Ausente
+#### Decorador CrewBase Ausente em uma Crew Clássica
 
 **Sintoma**: Erros "Crew not found", "Config not found" ou erros de configuração de agent/task
 
-**Solução**: Certifique-se de que **todas** as classes crew usam o decorador `@CrewBase`:
+**Solução**: Para crews clássicas Python/YAML, certifique-se de que todas as classes crew usam o decorador `@CrewBase`. Crews JSON-first não precisam desse decorador.
 
 ```python
 from crewai.project import CrewBase, agent, crew, task
@@ -403,8 +403,8 @@ class YourCrew():
 ```
 
 <Info>
-  Isso se aplica a Crews independentes E crews embutidos dentro de projetos Flow.
-  Toda classe crew precisa do decorador.
+  Isso se aplica a classes crew Python clássicas, incluindo crews clássicas embutidas em projetos Flow.
+  Crews JSON-first são validadas a partir de `crew.jsonc` e `agents/`.
 </Info>
 
 #### Tipo Incorreto no pyproject.toml
@@ -441,8 +441,8 @@ type = "flow"
 **Solução**:
 1. Verifique os logs de execução no dashboard AMP (aba Traces)
 2. Verifique se todas as ferramentas têm as chaves API necessárias configuradas
-3. Certifique-se de que as configurações de agents em `agents.yaml` são válidas
-4. Verifique se há erros de sintaxe nas configurações de tasks em `tasks.yaml`
+3. Para crews JSON-first, valide `crew.jsonc` e os arquivos referenciados em `agents/`
+4. Para crews clássicas, verifique se `agents.yaml` e `tasks.yaml` são válidos
 
 <Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
   Entre em contato com nossa equipe de suporte para ajuda com questões de

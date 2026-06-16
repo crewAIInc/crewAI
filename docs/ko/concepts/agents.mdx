@@ -66,13 +66,39 @@ CrewAI AOP에는 코드를 작성하지 않고도 에이전트 생성 및 구성
 
 ## 에이전트 생성
 
-CrewAI에서 에이전트를 생성하는 방법에는 **YAML 구성(권장)**을 사용하는 방법과 **코드에서 직접 정의**하는 두 가지가 있습니다.
+CrewAI에서 에이전트를 생성하는 일반적인 방법은 **JSONC 프로젝트 구성(새 crew 권장)** 또는 **코드에서 직접 정의**입니다.
 
-### YAML 구성 (권장)
+### JSONC 구성 (권장)
 
-YAML 구성을 사용하면 에이전트를 보다 깔끔하고 유지 관리하기 쉽도록 정의할 수 있습니다. CrewAI 프로젝트에서 이 방식을 사용하는 것을 강력히 권장합니다.
+`crewai create crew <name>`으로 만든 새 프로젝트는 JSON-first 구성을 사용합니다. 각 에이전트는 `agents/<agent_name>.jsonc`에 정의하고, `crew.jsonc`에서 crew에 포함할 에이전트를 나열합니다.
 
-[설치](/ko/installation) 섹션에 설명된 대로 CrewAI 프로젝트를 생성한 후, `src/latest_ai_development/config/agents.yaml` 파일로 이동하여 템플릿을 여러분의 요구 사항에 맞게 수정하세요.
+```jsonc agents/researcher.jsonc
+{
+  "role": "{topic} Senior Data Researcher",
+  "goal": "Uncover cutting-edge developments in {topic}",
+  "backstory": "You find the most relevant information and present it clearly.",
+  "llm": "openai/gpt-4o",
+  "tools": ["SerperDevTool"],
+  "settings": {
+    "verbose": true,
+    "allow_delegation": false
+  }
+}
+```
+
+`role`, `goal`, `backstory`에 `{placeholder}`를 사용할 수 있습니다. 기본값은 `crew.jsonc`의 `inputs`에 넣고, 빠진 값은 `crewai run`이 실행 시 물어봅니다. `verbose`, `allow_delegation`, `max_iter`, `memory`, `cache`, `planning` 같은 동작 필드는 최상위 또는 `settings` 안에 둘 수 있습니다.
+
+<Note>
+JSONC는 주석과 trailing comma를 지원합니다. `agents/<name>.jsonc`와 `agents/<name>.json`이 모두 있으면 CrewAI는 JSONC 파일을 사용합니다.
+</Note>
+
+### 클래식 YAML 구성
+
+`crewai create crew <name> --classic`으로 만든 클래식 프로젝트는 `config/agents.yaml`과 `crew.py`의 `@CrewBase` 클래스를 사용합니다.
+
+YAML 구성은 기존 Python/YAML 프로젝트와 `@CrewBase` 클래스에서 에이전트를 정의하려는 팀을 위해 계속 지원됩니다.
+
+클래식 프로젝트를 만든 후, `src/latest_ai_development/config/agents.yaml` 파일로 이동하여 템플릿을 여러분의 요구 사항에 맞게 수정하세요.
 
 <Note>
 YAML 파일의 변수(예: `{topic}`)는 crew를 실행할 때 입력값에서 가져온 값으로 대체됩니다:

@@ -830,7 +830,7 @@ if __name__ == "__main__":
 crewai create flow name_of_flow
 ```
 
-سيولّد هذا الأمر مشروع CrewAI جديد مع هيكل المجلدات اللازم. يتضمن المشروع المولّد فريق Crew مُعد مسبقًا يُسمى `poem_crew` ويعمل بالفعل. يمكنك استخدام هذا الفريق كقالب بنسخه ولصقه وتعديله لإنشاء فرق أخرى.
+سيولّد هذا الأمر مشروع CrewAI جديد مع هيكل المجلدات اللازم. يتضمن المشروع المولّد فريق Crew مُعد مسبقًا يُسمى `poem_crew` ويعمل بالفعل. يستخدم الـ embedded crew الابتدائي بنية Python/YAML الكلاسيكية؛ أما crews المستقلة الجديدة التي تُنشأ عبر `crewai create crew` فتستخدم بنية JSON-first.
 
 ### هيكل المجلدات
 
@@ -860,7 +860,29 @@ crewai create flow name_of_flow
 - `config/tasks.yaml`: يحدد المهام للفريق.
 - `poem_crew.py`: يحتوي على تعريف الفريق، بما في ذلك الـ Agents والمهام والفريق نفسه.
 
-يمكنك نسخ ولصق وتعديل `poem_crew` لإنشاء فرق أخرى.
+يمكنك نسخ ولصق وتعديل `poem_crew` لإنشاء crews كلاسيكية مضمّنة أخرى.
+
+للـ crews المضمّنة بنمط JSON-first، استخدم مجلدًا يحتوي على `crew.jsonc` و `agents/*.jsonc`:
+
+```text
+crews/
+└── research_crew/
+    ├── agents/
+    │   └── researcher.jsonc
+    └── crew.jsonc
+```
+
+ثم حمّلها من خطوة في Flow:
+
+```python
+from pathlib import Path
+from crewai.project import load_crew
+
+crew, default_inputs = load_crew(
+    Path(__file__).parent / "crews" / "research_crew" / "crew.jsonc"
+)
+result = crew.kickoff(inputs={**default_inputs, "topic": "AI Agents"})
+```
 
 ### ربط فرق Crew في `main.py`
 

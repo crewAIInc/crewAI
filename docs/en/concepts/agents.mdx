@@ -71,80 +71,64 @@ The Visual Agent Builder enables:
 
 ## Creating Agents
 
-There are two ways to create agents in CrewAI: using **YAML configuration (recommended)** or defining them **directly in code**.
+There are two common ways to create agents in CrewAI: using **JSONC project configuration (recommended for new crews)** or defining them **directly in code**.
 
-### YAML Configuration (Recommended)
+### JSONC Configuration (Recommended)
 
-Using YAML configuration provides a cleaner, more maintainable way to define agents. We strongly recommend using this approach in your CrewAI projects.
+New projects created with `crewai create crew <name>` use JSON-first configuration. Each agent is defined in `agents/<agent_name>.jsonc`, and `crew.jsonc` lists which agents are part of the crew.
 
-After creating your CrewAI project as outlined in the [Installation](/en/installation) section, navigate to the `src/latest_ai_development/config/agents.yaml` file and modify the template to match your requirements.
-
-<Note>
-Variables in your YAML files (like `{topic}`) will be replaced with values from your inputs when running the crew:
-```python Code
-crew.kickoff(inputs={'topic': 'AI Agents'})
-```
-</Note>
-
-Here's an example of how to configure agents using YAML:
-
-```yaml agents.yaml
-# src/latest_ai_development/config/agents.yaml
-researcher:
-  role: >
-    {topic} Senior Data Researcher
-  goal: >
-    Uncover cutting-edge developments in {topic}
-  backstory: >
-    You're a seasoned researcher with a knack for uncovering the latest
-    developments in {topic}. Known for your ability to find the most relevant
-    information and present it in a clear and concise manner.
-
-reporting_analyst:
-  role: >
-    {topic} Reporting Analyst
-  goal: >
-    Create detailed reports based on {topic} data analysis and research findings
-  backstory: >
-    You're a meticulous analyst with a keen eye for detail. You're known for
-    your ability to turn complex data into clear and concise reports, making
-    it easy for others to understand and act on the information you provide.
-```
-
-To use this YAML configuration in your code, create a crew class that inherits from `CrewBase`:
-
-```python Code
-# src/latest_ai_development/crew.py
-from crewai import Agent, Crew, Process
-from crewai.project import CrewBase, agent, crew
-from crewai_tools import SerperDevTool
-
-@CrewBase
-class LatestAiDevelopmentCrew():
-  """LatestAiDevelopment crew"""
-
-  agents_config = "config/agents.yaml"
-
-  @agent
-  def researcher(self) -> Agent:
-    return Agent(
-      config=self.agents_config['researcher'], # type: ignore[index]
-      verbose=True,
-      tools=[SerperDevTool()]
-    )
-
-  @agent
-  def reporting_analyst(self) -> Agent:
-    return Agent(
-      config=self.agents_config['reporting_analyst'], # type: ignore[index]
-      verbose=True
-    )
-```
+After creating your CrewAI project as outlined in the [Installation](/en/installation) section, edit the generated files in `agents/`.
 
 <Note>
-  The names you use in your YAML files (`agents.yaml`) should match the method
-  names in your Python code.
+Use `{placeholder}` values in `role`, `goal`, or `backstory`. Put defaults in `crew.jsonc` under `inputs`; `crewai run` prompts for any missing values.
 </Note>
+
+Here's an example `agents/researcher.jsonc` file:
+
+```jsonc agents/researcher.jsonc
+{
+  "role": "{topic} Senior Data Researcher",
+  "goal": "Uncover cutting-edge developments in {topic}",
+  "backstory": "You find the most relevant information and present it clearly.",
+  "llm": "openai/gpt-4o",
+  "tools": ["SerperDevTool"],
+  "settings": {
+    "verbose": true,
+    "allow_delegation": false,
+    "max_iter": 20
+  }
+}
+```
+
+Then include that agent from `crew.jsonc`:
+
+```jsonc crew.jsonc
+{
+  "name": "Research Crew",
+  "agents": ["researcher"],
+  "tasks": [
+    {
+      "name": "research_task",
+      "description": "Research {topic}",
+      "expected_output": "A concise briefing about {topic}",
+      "agent": "researcher"
+    }
+  ],
+  "inputs": {
+    "topic": "AI Agents"
+  }
+}
+```
+
+Agent files support any public `Agent` field. Common fields include `role`, `goal`, `backstory`, `llm`, `tools`, `function_calling_llm`, `guardrail`, `step_callback`, and `settings`. Behavior options such as `verbose`, `allow_delegation`, `max_iter`, `max_rpm`, `memory`, `cache`, `planning`, and `use_system_prompt` can be placed at the top level or under `settings`; values in `settings` take precedence.
+
+<Note>
+  JSONC supports comments and trailing commas. If both `agents/<name>.jsonc` and `agents/<name>.json` exist, CrewAI uses the JSONC file.
+</Note>
+
+### Classic YAML Configuration
+
+Classic projects created with `crewai create crew <name> --classic` use `config/agents.yaml` and a `@CrewBase` class in `crew.py`. This remains supported for teams that want Python decorators or existing YAML projects.
 
 ### Direct Code Definition
 

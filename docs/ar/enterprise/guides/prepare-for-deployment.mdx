@@ -24,7 +24,7 @@ mode: "wide"
 
 <CardGroup cols={2}>
   <Card title="مشاريع الطاقم" icon="users">
-    فرق وكلاء ذكاء اصطناعي مستقلة مع `crew.py` يحدد الوكلاء والمهام. الأفضل للمهام المركزة والتعاونية.
+    فرق وكلاء ذكاء اصطناعي مستقلة. الـ crews الجديدة تستخدم بنية JSON-first مع `crew.jsonc` و `agents/`؛ ويمكن للـ crews الكلاسيكية الاستمرار في استخدام `crew.py`.
   </Card>
   <Card title="مشاريع التدفق" icon="diagram-project">
     سير عمل مُنسّق مع طواقم مضمنة في مجلد `crews/`. الأفضل للعمليات المعقدة متعددة المراحل.
@@ -33,19 +33,19 @@ mode: "wide"
 
 | الجانب | الطاقم | التدفق |
 |--------|--------|--------|
-| **بنية المشروع** | `src/project_name/` مع `crew.py` | `src/project_name/` مع مجلد `crews/` |
-| **موقع المنطق الرئيسي** | `src/project_name/crew.py` | `src/project_name/main.py` (فئة Flow) |
-| **دالة نقطة الدخول** | `run()` في `main.py` | `kickoff()` في `main.py` |
+| **بنية المشروع** | جذر المشروع مع `crew.jsonc` و `agents/` | `src/project_name/` مع مجلد `crews/` |
+| **موقع المنطق الرئيسي** | `crew.jsonc` (كلاسيكي: `src/project_name/crew.py`) | `src/project_name/main.py` (فئة Flow) |
+| **دالة نقطة الدخول** | تُحمّل من `crew.jsonc` (كلاسيكي: `run()` في `main.py`) | `kickoff()` في `main.py` |
 | **نوع pyproject.toml** | `type = "crew"` | `type = "flow"` |
 | **أمر CLI للإنشاء** | `crewai create crew name` | `crewai create flow name` |
-| **موقع التهيئة** | `src/project_name/config/` | `src/project_name/crews/crew_name/config/` |
+| **موقع التهيئة** | `crew.jsonc` و `agents/` و `tools/` اختياريًا | `src/project_name/crews/crew_name/config/` أو مجلدات crew JSON مضمنة |
 | **يمكن أن يحتوي طواقم أخرى** | لا | نعم (في مجلد `crews/`) |
 
 ## مرجع بنية المشروع
 
 ### بنية مشروع الطاقم
 
-عند تشغيل `crewai create crew my_crew`، تحصل على هذه البنية:
+عند تشغيل `crewai create crew my_crew`، تحصل على بنية JSON-first:
 
 ```
 my_crew/
@@ -54,23 +54,24 @@ my_crew/
 ├── README.md
 ├── .env
 ├── uv.lock                  # REQUIRED for deployment
-└── src/
-    └── my_crew/
-        ├── __init__.py
-        ├── main.py          # Entry point with run() function
-        ├── crew.py          # Crew class with @CrewBase decorator
-        ├── tools/
-        │   ├── custom_tool.py
-        │   └── __init__.py
-        └── config/
-            ├── agents.yaml  # Agent definitions
-            └── tasks.yaml   # Task definitions
+├── crew.jsonc               # إعدادات الـ crew والمهام والعملية والمدخلات
+├── agents/
+│   └── researcher.jsonc     # تعريفات الـ Agents
+├── tools/                   # أدوات custom:<name> اختيارية
+├── knowledge/
+└── skills/
 ```
 
 <Warning>
-  بنية `src/project_name/` المتداخلة ضرورية للطواقم.
-  وضع الملفات في المستوى الخاطئ سيسبب فشل النشر.
+  في crews بنمط JSON-first، أبقِ `crew.jsonc` و `agents/` و `tools/` و `knowledge/` و `skills/`
+  في جذر المشروع. وضعها داخل `src/` يمنع `crewai run` والتحقق قبل النشر من العثور على تعريف الـ crew.
 </Warning>
+
+<Info>
+  المشاريع الكلاسيكية التي تُنشأ عبر `crewai create crew my_crew --classic` تستخدم البنية القديمة
+  `src/project_name/crew.py` و `src/project_name/config/agents.yaml` و
+  `src/project_name/config/tasks.yaml`. تظل هذه البنية مدعومة للـ crews المكتوبة في Python مع decorators.
+</Info>
 
 ### بنية مشروع التدفق
 
@@ -100,9 +101,9 @@ my_flow/
 ```
 
 <Info>
-  كلا الطواقم والتدفقات تستخدم بنية `src/project_name/`.
-  الفرق الرئيسي أن التدفقات لها مجلد `crews/` للطواقم المضمنة،
-  بينما الطواقم لها `crew.py` مباشرة في مجلد المشروع.
+  الـ crews المستقلة بنمط JSON-first تستخدم ملفات JSON في جذر المشروع. أما Flows فتظل تستخدم
+  `src/project_name/` ويمكن أن تحتوي crews مضمنة كلاسيكية أو مجلدات crew JSON يتم تحميلها عبر
+  `crewai.project.load_crew`.
 </Info>
 
 ## قائمة فحص ما قبل النشر
@@ -154,60 +155,89 @@ git commit -m "Add uv.lock for deployment"
 git push
 ```
 
-### 3. التحقق من استخدام مُزخرف CrewBase
+### 3. التحقق من تعريف الـ Crew
 
-**يجب أن تستخدم كل فئة طاقم مُزخرف `@CrewBase`.** ينطبق هذا على:
+<Tabs>
+  <Tab title="JSON-first Crews">
+    يجب أن تحتوي crews بنمط JSON-first على `crew.jsonc` أو `crew.json` في جذر المشروع.
+    يجب أن يشير مصفوفة `agents` إلى ملفات داخل `agents/`، ويجب أن تشير كل task إلى اسم Agent صحيح.
 
-- مشاريع الطاقم المستقلة
-- الطواقم المضمنة داخل مشاريع التدفق
+    ```jsonc crew.jsonc
+    {
+      "name": "Research Crew",
+      "agents": ["researcher"],
+      "tasks": [
+        {
+          "name": "research_task",
+          "description": "Research {topic}.",
+          "expected_output": "A concise report.",
+          "agent": "researcher"
+        }
+      ],
+      "inputs": {
+        "topic": "AI Agents"
+      }
+    }
+    ```
 
-```python
-from crewai import Agent, Crew, Process, Task
-from crewai.project import CrewBase, agent, crew, task
-from crewai.agents.agent_builder.base_agent import BaseAgent
-from typing import List
+    تُشار الأدوات المخصصة بصيغة `"custom:<name>"` ويجب تنفيذها في
+    `tools/<name>.py` كصنف يرث من `BaseTool`.
+  </Tab>
+  <Tab title="Crews كلاسيكية Python/YAML">
+    يجب أن تستخدم الـ crews الكلاسيكية وPython crews المضمنة داخل Flows مزخرف `@CrewBase`.
 
-@CrewBase  # This decorator is REQUIRED
-class MyCrew():
-    """My crew description"""
+    ```python
+    from crewai import Agent, Crew, Process, Task
+    from crewai.project import CrewBase, agent, crew, task
+    from crewai.agents.agent_builder.base_agent import BaseAgent
+    from typing import List
 
-    agents: List[BaseAgent]
-    tasks: List[Task]
+    @CrewBase
+    class MyCrew():
+        """My crew description"""
 
-    @agent
-    def my_agent(self) -> Agent:
-        return Agent(
-            config=self.agents_config['my_agent'],  # type: ignore[index]
-            verbose=True
-        )
+        agents: List[BaseAgent]
+        tasks: List[Task]
 
-    @task
-    def my_task(self) -> Task:
-        return Task(
-            config=self.tasks_config['my_task']  # type: ignore[index]
-        )
+        @agent
+        def my_agent(self) -> Agent:
+            return Agent(
+                config=self.agents_config['my_agent'],  # type: ignore[index]
+                verbose=True
+            )
 
-    @crew
-    def crew(self) -> Crew:
-        return Crew(
-            agents=self.agents,
-            tasks=self.tasks,
-            process=Process.sequential,
-            verbose=True,
-        )
-```
+        @task
+        def my_task(self) -> Task:
+            return Task(
+                config=self.tasks_config['my_task']  # type: ignore[index]
+            )
 
-<Warning>
-  إذا نسيت مُزخرف `@CrewBase`، سيفشل النشر بأخطاء حول
-  تهيئات الوكلاء أو المهام المفقودة.
-</Warning>
+        @crew
+        def crew(self) -> Crew:
+            return Crew(
+                agents=self.agents,
+                tasks=self.tasks,
+                process=Process.sequential,
+                verbose=True,
+            )
+    ```
+  </Tab>
+</Tabs>
 
 ### 4. التحقق من نقاط دخول المشروع
 
-كل من الطواقم والتدفقات لها نقطة دخول في `src/project_name/main.py`:
+لا تحتاج crews المستقلة بنمط JSON-first إلى ملف `src/project_name/main.py` مكتوب يدويًا؛
+يقوم `crewai run` وتغليف النشر بتحميل `crew.jsonc` مباشرة. تستخدم crews الكلاسيكية وFlows نقاط دخول Python:
 
 <Tabs>
-  <Tab title="للطواقم">
+  <Tab title="JSON-first Crews">
+    شغّل محليًا من جذر المشروع:
+
+    ```bash
+    crewai run
+    ```
+  </Tab>
+  <Tab title="Crews كلاسيكية">
     تستخدم نقطة الدخول دالة `run()`:
 
     ```python
@@ -278,16 +308,17 @@ grep -A2 "\[tool.crewai\]" pyproject.toml
 # 2. Verify uv.lock exists
 ls -la uv.lock || echo "ERROR: uv.lock missing! Run 'uv lock'"
 
-# 3. Verify src/ structure exists
-ls -la src/*/main.py 2>/dev/null || echo "No main.py found in src/"
+# 3. For JSON-first crews, verify crew.jsonc and agents/
+([ -f crew.jsonc ] || [ -f crew.json ]) || echo "No crew.jsonc or crew.json found"
+test -d agents || echo "No agents/ directory found"
 
-# 4. For Crews - verify crew.py exists
+# 4. For classic Crews - verify crew.py exists
 ls -la src/*/crew.py 2>/dev/null || echo "No crew.py (expected for Crews)"
 
 # 5. For Flows - verify crews/ folder exists
 ls -la src/*/crews/ 2>/dev/null || echo "No crews/ folder (expected for Flows)"
 
-# 6. Check for CrewBase usage
+# 6. For classic Python crews - check for CrewBase usage
 grep -r "@CrewBase" . --include="*.py"
 ```
 
@@ -297,8 +328,9 @@ grep -r "@CrewBase" . --include="*.py"
 |-------|-------|---------|
 | `uv.lock` مفقود | فشل البناء أثناء حل الاعتماديات | شغّل `uv lock` وارفعه |
 | `type` خاطئ في pyproject.toml | نجاح البناء لكن فشل وقت التشغيل | غيّر إلى النوع الصحيح |
-| مُزخرف `@CrewBase` مفقود | أخطاء "Config not found" | أضف المُزخرف لجميع فئات الطاقم |
-| ملفات في الجذر بدل `src/` | نقطة الدخول غير موجودة | انقلها إلى `src/project_name/` |
+| `crew.jsonc` أو `agents/` مفقود في crew بنمط JSON-first | لا يمكن العثور على تعريف الـ crew | أبقِ `crew.jsonc` و `agents/` في جذر المشروع |
+| مُزخرف `@CrewBase` مفقود في crew كلاسيكية | أخطاء "Config not found" | أضف المُزخرف لجميع فئات الـ crew الكلاسيكية |
+| ملفات كلاسيكية في الجذر بدل `src/` | نقطة الدخول غير موجودة | انقل ملفات Python الكلاسيكية إلى `src/project_name/` |
 | `run()` أو `kickoff()` مفقودة | لا يمكن بدء الأتمتة | أضف دالة الدخول الصحيحة |
 
 ## الخطوات التالية

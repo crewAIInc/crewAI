@@ -64,7 +64,7 @@ Isso gerará um projeto com a estrutura básica necessária para seu flow.
 
 ## Passo 2: Entendendo a Estrutura do Projeto
 
-O projeto gerado possui a seguinte estrutura. Reserve um momento para conhecê-la, pois isso ajudará você a criar flows mais complexos no futuro.
+O projeto gerado possui a seguinte estrutura. A crew inicial embutida usa o layout clássico Python/YAML. Para usar uma crew JSON-first dentro de um Flow, crie `crew.jsonc` e `agents/*.jsonc` na pasta da crew e carregue com `crewai.project.load_crew`, como mostrado em [Flows](/pt-BR/concepts/flows#building-your-crews).
 
 ```
 guide_creator_flow/
@@ -102,156 +102,82 @@ Este comando cria automaticamente os diretórios e arquivos de template necessá
 
 ## Passo 4: Configure o Crew de Redator de Conteúdo
 
-Agora, vamos modificar os arquivos gerados para o crew de redatores. Vamos configurar dois agentes especializados – um escritor e um revisor – que irão colaborar para criar um conteúdo de alta qualidade para o nosso guia.
+Agora, vamos configurar o crew de redatores com JSONC. Vamos definir dois agentes especializados - um escritor e um revisor - que colaboram para criar conteúdo de alta qualidade para o guia.
 
-1. Primeiro, atualize o arquivo de configuração de agents para definir a equipe de criação de conteúdo:
+1. Crie `src/guide_creator_flow/crews/content_crew/agents/content_writer.jsonc`:
 
-   Lembre-se de configurar o `llm` com o provedor que está utilizando.
-
-```yaml
-# src/guide_creator_flow/crews/content_crew/config/agents.yaml
-content_writer:
-  role: >
-    Redator de Conteúdo Educacional
-  goal: >
-    Criar conteúdo envolvente e informativo que explique completamente o tema proposto
-    e forneça insights valiosos ao leitor
-  backstory: >
-    Você é um talentoso escritor educacional com experiência em criar conteúdo claro
-    e atraente. Você tem facilidade para explicar conceitos complexos em linguagem acessível
-    e organizar as informações de forma a ajudar o leitor a construir seu entendimento.
-  llm: provider/model-id  # e.g. openai/gpt-4o, google/gemini-2.0-flash, anthropic/claude...
-
-content_reviewer:
-  role: >
-    Revisor(a) e Editor(a) de Conteúdo Educacional
-  goal: >
-    Garantir que o conteúdo seja preciso, abrangente, bem estruturado e mantenha
-    consistência com as seções previamente escritas
-  backstory: >
-    Você é um editor(a) meticuloso(a) com anos de experiência revisando conteúdo educacional.
-    Tem atenção aos detalhes, clareza e coesão. Você se destaca em aprimorar conteúdo
-    mantendo o estilo do autor original e garantindo qualidade consistente em várias seções.
-  llm: provider/model-id  # e.g. openai/gpt-4o, google/gemini-2.0-flash, anthropic/claude...
+```jsonc
+{
+  "role": "Educational Content Writer",
+  "goal": "Create engaging, informative content that thoroughly explains the assigned topic and provides valuable insights to the reader.",
+  "backstory": "You are a talented educational writer who explains complex concepts in accessible language and organizes information clearly.",
+  "llm": "provider/model-id",
+  "settings": {
+    "verbose": true
+  }
+}
 ```
 
-Essas definições de agents estabelecem papéis e perspectivas especializadas que irão moldar como nossos agentes de IA abordam a criação de conteúdo. Note como cada agent possui um propósito e expertise distintos.
+2. Crie `src/guide_creator_flow/crews/content_crew/agents/content_reviewer.jsonc`:
 
-2. Em seguida, atualize o arquivo de configuração de tarefas para definir as tarefas específicas de escrita e revisão:
-
-```yaml
-# src/guide_creator_flow/crews/content_crew/config/tasks.yaml
-write_section_task:
-  description: >
-    Escreva uma seção abrangente sobre o tema: "{section_title}"
-
-    Descrição da seção: {section_description}
-    Público-alvo: {audience_level} aprendizes
-
-    Seu conteúdo deve:
-    1. Começar com uma breve introdução ao tema da seção
-    2. Explicar claramente todos os conceitos principais com exemplos
-    3. Incluir aplicações práticas ou exercícios onde apropriado
-    4. Terminar com um resumo dos pontos principais
-    5. Ter aproximadamente 500-800 palavras
-
-    Formate seu conteúdo em Markdown com títulos, listas e ênfase apropriados.
-
-    Seções previamente escritas:
-    {previous_sections}
-
-    Certifique-se de que seu conteúdo mantenha consistência com as seções já escritas
-    e amplie os conceitos que já foram explicados.
-  expected_output: >
-    Uma seção bem estruturada e abrangente em formato Markdown que explique
-    totalmente o tema e é apropriada para o público-alvo.
-  agent: content_writer
-
-review_section_task:
-  description: >
-    Revise e melhore a seguinte seção sobre "{section_title}":
-
-    {draft_content}
-
-    Público-alvo: {audience_level} aprendizes
-
-    Seções previamente escritas:
-    {previous_sections}
-
-    Sua revisão deve:
-    1. Corrigir qualquer erro gramatical ou de ortografia
-    2. Melhorar clareza e legibilidade
-    3. Garantir que o conteúdo seja abrangente e preciso
-    4. Verificar a consistência com as seções já escritas
-    5. Aprimorar a estrutura e o fluxo
-    6. Adicionar qualquer informação-chave ausente
-
-    Forneça a versão aprimorada da seção em formato Markdown.
-  expected_output: >
-    Uma versão melhorada e refinada da seção, mantendo a estrutura original,
-    mas aprimorando clareza, precisão e consistência.
-  agent: content_reviewer
-  context:
-    - write_section_task
+```jsonc
+{
+  "role": "Educational Content Reviewer and Editor",
+  "goal": "Ensure content is accurate, comprehensive, well-structured, and consistent with previously written sections.",
+  "backstory": "You are a meticulous editor with an eye for detail, clarity, and coherence.",
+  "llm": "provider/model-id",
+  "settings": {
+    "verbose": true
+  }
+}
 ```
 
-Essas definições de tarefas fornecem instruções detalhadas para nossos agents, garantindo que eles produzam conteúdo que atenda aos padrões de qualidade. Observe como o parâmetro `context` na tarefa de revisão cria um fluxo onde o revisor tem acesso à produção do redator.
+Substitua `provider/model-id` pelo modelo que você usa, como `openai/gpt-4o`, `gemini/gemini-2.0-flash-001` ou `anthropic/claude-sonnet-4-6`.
 
-3. Agora, atualize o arquivo de implementação do crew para definir como nossos agents e tasks trabalham juntos:
+3. Crie `src/guide_creator_flow/crews/content_crew/crew.jsonc`:
+
+```jsonc
+{
+  "name": "Content Crew",
+  "agents": ["content_writer", "content_reviewer"],
+  "tasks": [
+    {
+      "name": "write_section_task",
+      "description": "Write a comprehensive section on the topic: \"{section_title}\".\n\nSection description: {section_description}\nTarget audience: {audience_level} level learners\n\nYour content should begin with a brief introduction, explain key concepts clearly with examples, include practical applications where appropriate, end with a summary, and be approximately 500-800 words.\n\nPreviously written sections:\n{previous_sections}",
+      "expected_output": "A well-structured, comprehensive section in Markdown format that thoroughly explains the topic and is appropriate for the target audience.",
+      "agent": "content_writer",
+      "markdown": true
+    },
+    {
+      "name": "review_section_task",
+      "description": "Review and improve this section on \"{section_title}\":\n\n{draft_content}\n\nTarget audience: {audience_level} level learners\nPreviously written sections:\n{previous_sections}\n\nFix errors, improve clarity, verify consistency, enhance structure, and add missing key information.",
+      "expected_output": "An improved, polished version of the section that maintains the original structure but enhances clarity, accuracy, and consistency.",
+      "agent": "content_reviewer",
+      "context": ["write_section_task"],
+      "markdown": true
+    }
+  ],
+  "process": "sequential",
+  "verbose": true
+}
+```
+
+O campo `context` permite que o revisor use a saída do escritor.
+
+4. Substitua `src/guide_creator_flow/crews/content_crew/content_crew.py` por um pequeno loader:
 
 ```python
-# src/guide_creator_flow/crews/content_crew/content_crew.py
-from crewai import Agent, Crew, Process, Task
-from crewai.project import CrewBase, agent, crew, task
-from crewai.agents.agent_builder.base_agent import BaseAgent
-from typing import List
+from pathlib import Path
 
-@CrewBase
-class ContentCrew():
-    """Crew de redação de conteúdo"""
+from crewai.project import load_crew
 
-    agents: List[BaseAgent]
-    tasks: List[Task]
 
-    @agent
-    def content_writer(self) -> Agent:
-        return Agent(
-            config=self.agents_config['content_writer'], # type: ignore[index]
-            verbose=True
-        )
-
-    @agent
-    def content_reviewer(self) -> Agent:
-        return Agent(
-            config=self.agents_config['content_reviewer'], # type: ignore[index]
-            verbose=True
-        )
-
-    @task
-    def write_section_task(self) -> Task:
-        return Task(
-            config=self.tasks_config['write_section_task'] # type: ignore[index]
-        )
-
-    @task
-    def review_section_task(self) -> Task:
-        return Task(
-            config=self.tasks_config['review_section_task'], # type: ignore[index]
-            context=[self.write_section_task()]
-        )
-
-    @crew
-    def crew(self) -> Crew:
-        """Cria o crew de redação de conteúdo"""
-        return Crew(
-            agents=self.agents,
-            tasks=self.tasks,
-            process=Process.sequential,
-            verbose=True,
-        )
+def kickoff_content_crew(inputs: dict):
+    crew, default_inputs = load_crew(Path(__file__).with_name("crew.jsonc"))
+    return crew.kickoff(inputs={**default_inputs, **inputs})
 ```
 
-Essa definição de crew estabelece o relacionamento entre nossos agents e tasks, definindo um processo sequencial onde o redator cria o rascunho e o revisor o aprimora. Embora este crew possa funcionar de forma independente, em nosso flow ele será orquestrado como parte de um sistema maior.
+Esse loader transforma `crew.jsonc` em uma `Crew` em runtime. Embora essa crew possa funcionar de forma independente, no nosso flow ela será orquestrada como parte de um sistema maior.
 
 ## Passo 5: Crie o Flow
 
@@ -273,7 +199,7 @@ from typing import List, Dict
 from pydantic import BaseModel, Field
 from crewai import LLM
 from crewai.flow.flow import Flow, listen, start
-from guide_creator_flow.crews.content_crew.content_crew import ContentCrew
+from guide_creator_flow.crews.content_crew.content_crew import kickoff_content_crew
 
 # Definir nossos modelos para dados estruturados
 class Section(BaseModel):
@@ -378,7 +304,7 @@ class GuideCreatorFlow(Flow[GuideCreatorState]):
                 previous_sections_text = "No previous sections written yet."
 
             # Executar a crew de conteúdo para esta seção
-            result = ContentCrew().crew().kickoff(inputs={
+            result = kickoff_content_crew(inputs={
                 "section_title": section.title,
                 "section_description": section.description,
                 "audience_level": self.state.audience_level,
@@ -597,7 +523,7 @@ Isso fornece uma maneira segura e tipada de rastrear e transformar dados ao long
 Flows podem integrar crews para tarefas colaborativas complexas:
 
 ```python
-result = ContentCrew().crew().kickoff(inputs={
+result = kickoff_content_crew(inputs={
     "section_title": section.title,
     # ...
 })

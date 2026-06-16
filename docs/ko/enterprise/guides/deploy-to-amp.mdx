@@ -373,17 +373,17 @@ git push
 
 **해결책**: 프로젝트가 예상 구조와 일치하는지 확인합니다:
 
-- **Crews와 Flows 모두**: 진입점이 `src/project_name/main.py`에 있어야 합니다
-- **Crews**: 진입점으로 `run()` 함수 사용
-- **Flows**: 진입점으로 `kickoff()` 함수 사용
+- **JSON-first Crews**: `crew.jsonc` 또는 `crew.json`과 `agents/`를 프로젝트 루트에 둡니다
+- **클래식 Crews**: `src/project_name/main.py`에 `run()` 진입점을 둡니다
+- **Flows**: `src/project_name/main.py`에 `kickoff()` 진입점을 둡니다
 
 자세한 구조 다이어그램은 [배포 준비하기](/ko/enterprise/guides/prepare-for-deployment)를 참조하세요.
 
-#### CrewBase 데코레이터 누락
+#### 클래식 Crew의 CrewBase 데코레이터 누락
 
 **증상**: "Crew not found", "Config not found" 또는 agent/task 구성 오류
 
-**해결책**: **모든** crew 클래스가 `@CrewBase` 데코레이터를 사용하는지 확인합니다:
+**해결책**: 클래식 Python/YAML crew에서는 모든 crew 클래스가 `@CrewBase` 데코레이터를 사용하는지 확인합니다. JSON-first crew에는 이 데코레이터가 필요하지 않습니다.
 
 ```python
 from crewai.project import CrewBase, agent, crew, task
@@ -403,8 +403,8 @@ class YourCrew():
 ```
 
 <Info>
-  이것은 독립 실행형 Crews와 Flow 프로젝트 내에 포함된 crews 모두에 적용됩니다.
-  모든 crew 클래스에 데코레이터가 필요합니다.
+  이것은 Flow 프로젝트에 포함된 클래식 crew를 포함하여 클래식 Python crew 클래스에 적용됩니다.
+  JSON-first crew는 `crew.jsonc`와 `agents/`를 기준으로 검증됩니다.
 </Info>
 
 #### 잘못된 pyproject.toml 타입
@@ -441,8 +441,8 @@ type = "flow"
 **해결책**:
 1. AMP 대시보드에서 실행 로그를 확인합니다 (Traces 탭)
 2. 모든 도구에 필요한 API 키가 구성되어 있는지 확인합니다
-3. `agents.yaml`의 agent 구성이 유효한지 확인합니다
-4. `tasks.yaml`의 task 구성에 구문 오류가 없는지 확인합니다
+3. JSON-first crew의 경우 `crew.jsonc`와 `agents/`에서 참조한 파일을 검증합니다
+4. 클래식 crew의 경우 `agents.yaml`과 `tasks.yaml`이 유효한지 확인합니다
 
 <Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
   배포 문제 또는 AMP 플랫폼에 대한 문의 사항이 있으시면 지원팀에 연락해 주세요.

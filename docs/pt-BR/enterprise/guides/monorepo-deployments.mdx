@@ -24,10 +24,9 @@ company-ai/
 `-- crews/
     |-- support_agent/
     |   |-- pyproject.toml
-    |   `-- src/
-    |       `-- support_agent/
-    |           |-- main.py
-    |           `-- crew.py
+    |   |-- crew.jsonc
+    |   `-- agents/
+    |       `-- support_agent.jsonc
     `-- research_flow/
         |-- pyproject.toml
         `-- src/
@@ -48,7 +47,7 @@ selecionada como a raiz do projeto da automação.
 
 Quando um diretório de trabalho é definido, o AMP usa essa pasta para:
 
-- Validação do projeto, incluindo `pyproject.toml`, `src/` e o ponto de entrada do Crew ou Flow
+- Validação do projeto, incluindo `pyproject.toml`, arquivos de crew JSON e qualquer ponto de entrada clássico de Crew ou Flow
 - Instalação de dependências com `uv`
 - O diretório de trabalho do processo em execução
 - A variável de ambiente `CREW_ROOT_DIR`

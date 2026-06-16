@@ -42,6 +42,8 @@ cd guide_creator_flow
 
 ## الخطوة 2: فهم هيكل المشروع
 
+يستخدم الـ crew المبدئي المضمّن في مشروع Flow بنية Python/YAML الكلاسيكية. لاستخدام crew بنمط JSON-first داخل Flow، أنشئ `crew.jsonc` و `agents/*.jsonc` داخل مجلد الـ crew وحمّله عبر `crewai.project.load_crew` كما في [Flows](/ar/concepts/flows#building-your-crews).
+
 ```
 guide_creator_flow/
 ├── .gitignore
@@ -69,139 +71,77 @@ crewai flow add-crew content-crew
 
 ## الخطوة 4: تهيئة Crew كتابة المحتوى
 
-1. حدّث ملف تهيئة الـ Agents. تذكر تعيين `llm` للمزود الذي تستخدمه.
+سنهيئ crew كتابة المحتوى باستخدام JSONC. سنعرّف Agent للكتابة وAgent للمراجعة، ثم نحمّل `crew.jsonc` من خطوة Flow.
 
-```yaml
-# src/guide_creator_flow/crews/content_crew/config/agents.yaml
-content_writer:
-  role: >
-    Educational Content Writer
-  goal: >
-    Create engaging, informative content that thoroughly explains the assigned topic
-    and provides valuable insights to the reader
-  backstory: >
-    You are a talented educational writer with expertise in creating clear, engaging
-    content. You have a gift for explaining complex concepts in accessible language
-    and organizing information in a way that helps readers build their understanding.
-  llm: provider/model-id
+1. أنشئ `src/guide_creator_flow/crews/content_crew/agents/content_writer.jsonc`:
 
-content_reviewer:
-  role: >
-    Educational Content Reviewer and Editor
-  goal: >
-    Ensure content is accurate, comprehensive, well-structured, and maintains
-    consistency with previously written sections
-  backstory: >
-    You are a meticulous editor with years of experience reviewing educational
-    content. You have an eye for detail, clarity, and coherence.
-  llm: provider/model-id
+```jsonc
+{
+  "role": "Educational Content Writer",
+  "goal": "Create engaging, informative content that thoroughly explains the assigned topic and provides valuable insights to the reader.",
+  "backstory": "You are a talented educational writer who explains complex concepts in accessible language and organizes information clearly.",
+  "llm": "provider/model-id",
+  "settings": {
+    "verbose": true
+  }
+}
 ```
 
-2. حدّث ملف تهيئة المهام:
+2. أنشئ `src/guide_creator_flow/crews/content_crew/agents/content_reviewer.jsonc`:
 
-```yaml
-# src/guide_creator_flow/crews/content_crew/config/tasks.yaml
-write_section_task:
-  description: >
-    Write a comprehensive section on the topic: "{section_title}"
-
-    Section description: {section_description}
-    Target audience: {audience_level} level learners
-
-    Your content should:
-    1. Begin with a brief introduction to the section topic
-    2. Explain all key concepts clearly with examples
-    3. Include practical applications or exercises where appropriate
-    4. End with a summary of key points
-    5. Be approximately 500-800 words in length
-
-    Format your content in Markdown with appropriate headings, lists, and emphasis.
-
-    Previously written sections:
-    {previous_sections}
-  expected_output: >
-    A well-structured, comprehensive section in Markdown format that thoroughly
-    explains the topic and is appropriate for the target audience.
-  agent: content_writer
-
-review_section_task:
-  description: >
-    Review and improve the following section on "{section_title}":
-
-    {draft_content}
-
-    Target audience: {audience_level} level learners
-
-    Previously written sections:
-    {previous_sections}
-
-    Your review should:
-    1. Fix any grammatical or spelling errors
-    2. Improve clarity and readability
-    3. Ensure content is comprehensive and accurate
-    4. Verify consistency with previously written sections
-    5. Enhance the structure and flow
-    6. Add any missing key information
-  expected_output: >
-    An improved, polished version of the section that maintains the original
-    structure but enhances clarity, accuracy, and consistency.
-  agent: content_reviewer
-  context:
-    - write_section_task
+```jsonc
+{
+  "role": "Educational Content Reviewer and Editor",
+  "goal": "Ensure content is accurate, comprehensive, well-structured, and consistent with previously written sections.",
+  "backstory": "You are a meticulous editor with an eye for detail, clarity, and coherence.",
+  "llm": "provider/model-id",
+  "settings": {
+    "verbose": true
+  }
+}
 ```
 
-3. حدّث ملف تنفيذ Crew:
+استبدل `provider/model-id` بالنموذج الذي تستخدمه، مثل `openai/gpt-4o` أو `gemini/gemini-2.0-flash-001` أو `anthropic/claude-sonnet-4-6`.
+
+3. أنشئ `src/guide_creator_flow/crews/content_crew/crew.jsonc`:
+
+```jsonc
+{
+  "name": "Content Crew",
+  "agents": ["content_writer", "content_reviewer"],
+  "tasks": [
+    {
+      "name": "write_section_task",
+      "description": "Write a comprehensive section on the topic: \"{section_title}\".\n\nSection description: {section_description}\nTarget audience: {audience_level} level learners\n\nYour content should begin with a brief introduction, explain key concepts clearly with examples, include practical applications where appropriate, end with a summary, and be approximately 500-800 words.\n\nPreviously written sections:\n{previous_sections}",
+      "expected_output": "A well-structured, comprehensive section in Markdown format that thoroughly explains the topic and is appropriate for the target audience.",
+      "agent": "content_writer",
+      "markdown": true
+    },
+    {
+      "name": "review_section_task",
+      "description": "Review and improve this section on \"{section_title}\":\n\n{draft_content}\n\nTarget audience: {audience_level} level learners\nPreviously written sections:\n{previous_sections}\n\nFix errors, improve clarity, verify consistency, enhance structure, and add missing key information.",
+      "expected_output": "An improved, polished version of the section that maintains the original structure but enhances clarity, accuracy, and consistency.",
+      "agent": "content_reviewer",
+      "context": ["write_section_task"],
+      "markdown": true
+    }
+  ],
+  "process": "sequential",
+  "verbose": true
+}
+```
+
+4. استبدل `src/guide_creator_flow/crews/content_crew/content_crew.py` بمحمل صغير:
 
 ```python
-# src/guide_creator_flow/crews/content_crew/content_crew.py
-from crewai import Agent, Crew, Process, Task
-from crewai.project import CrewBase, agent, crew, task
-from crewai.agents.agent_builder.base_agent import BaseAgent
-from typing import List
+from pathlib import Path
 
-@CrewBase
-class ContentCrew():
-    """Content writing crew"""
+from crewai.project import load_crew
 
-    agents: List[BaseAgent]
-    tasks: List[Task]
 
-    @agent
-    def content_writer(self) -> Agent:
-        return Agent(
-            config=self.agents_config['content_writer'], # type: ignore[index]
-            verbose=True
-        )
-
-    @agent
-    def content_reviewer(self) -> Agent:
-        return Agent(
-            config=self.agents_config['content_reviewer'], # type: ignore[index]
-            verbose=True
-        )
-
-    @task
-    def write_section_task(self) -> Task:
-        return Task(
-            config=self.tasks_config['write_section_task'] # type: ignore[index]
-        )
-
-    @task
-    def review_section_task(self) -> Task:
-        return Task(
-            config=self.tasks_config['review_section_task'], # type: ignore[index]
-            context=[self.write_section_task()]
-        )
-
-    @crew
-    def crew(self) -> Crew:
-        """Creates the content writing crew"""
-        return Crew(
-            agents=self.agents,
-            tasks=self.tasks,
-            process=Process.sequential,
-            verbose=True,
-        )
+def kickoff_content_crew(inputs: dict):
+    crew, default_inputs = load_crew(Path(__file__).with_name("crew.jsonc"))
+    return crew.kickoff(inputs={**default_inputs, **inputs})
 ```
 
 ## الخطوة 5: إنشاء Flow

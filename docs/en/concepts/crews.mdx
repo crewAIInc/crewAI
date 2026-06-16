@@ -48,108 +48,74 @@ A crew in crewAI represents a collaborative group of agents working together to 
 
 ## Creating Crews
 
-There are two ways to create crews in CrewAI: using **YAML configuration (recommended)** or defining them **directly in code**.
+There are two common ways to create crews in CrewAI: using **JSONC project configuration (recommended for new crews)** or defining them **directly in code**.
 
-### YAML Configuration (Recommended)
+### JSONC Configuration (Recommended)
 
-Using YAML configuration provides a cleaner, more maintainable way to define crews and is consistent with how agents and tasks are defined in CrewAI projects.
+New projects created with `crewai create crew <name>` use `crew.jsonc` for crew-level settings and tasks, plus one file per agent in `agents/`.
 
-After creating your CrewAI project as outlined in the [Installation](/en/installation) section, you can define your crew in a class that inherits from `CrewBase` and uses decorators to define agents, tasks, and the crew itself.
+`crewai run` automatically detects `crew.jsonc` or `crew.json`, loads the referenced agents, prompts for missing placeholders, and kicks off the crew.
 
-#### Example Crew Class with Decorators
+#### Example `crew.jsonc`
 
-```python code
-from crewai import Agent, Crew, Task, Process
-from crewai.project import CrewBase, agent, task, crew, before_kickoff, after_kickoff
-from crewai.agents.agent_builder.base_agent import BaseAgent
-from typing import List
-
-@CrewBase
-class YourCrewName:
-    """Description of your crew"""
-
-    agents: List[BaseAgent]
-    tasks: List[Task]
-
-    # Paths to your YAML configuration files
-    # To see an example agent and task defined in YAML, checkout the following:
-    # - Task: https://docs.crewai.com/concepts/tasks#yaml-configuration-recommended
-    # - Agents: https://docs.crewai.com/concepts/agents#yaml-configuration-recommended
-    agents_config = 'config/agents.yaml'
-    tasks_config = 'config/tasks.yaml'
-
-    @before_kickoff
-    def prepare_inputs(self, inputs):
-        # Modify inputs before the crew starts
-        inputs['additional_data'] = "Some extra information"
-        return inputs
-
-    @after_kickoff
-    def process_output(self, output):
-        # Modify output after the crew finishes
-        output.raw += "\nProcessed after kickoff."
-        return output
-
-    @agent
-    def agent_one(self) -> Agent:
-        return Agent(
-            config=self.agents_config['agent_one'], # type: ignore[index]
-            verbose=True
-        )
-
-    @agent
-    def agent_two(self) -> Agent:
-        return Agent(
-            config=self.agents_config['agent_two'], # type: ignore[index]
-            verbose=True
-        )
-
-    @task
-    def task_one(self) -> Task:
-        return Task(
-            config=self.tasks_config['task_one'] # type: ignore[index]
-        )
-
-    @task
-    def task_two(self) -> Task:
-        return Task(
-            config=self.tasks_config['task_two'] # type: ignore[index]
-        )
-
-    @crew
-    def crew(self) -> Crew:
-        return Crew(
-            agents=self.agents,  # Automatically collected by the @agent decorator
-            tasks=self.tasks,    # Automatically collected by the @task decorator.
-            process=Process.sequential,
-            verbose=True,
-        )
+```jsonc crew.jsonc
+{
+  "name": "Market Research Crew",
+  "agents": ["researcher", "analyst"],
+  "tasks": [
+    {
+      "name": "research",
+      "description": "Research {topic} and collect the most relevant facts.",
+      "expected_output": "Structured research notes about {topic}.",
+      "agent": "researcher"
+    },
+    {
+      "name": "analysis",
+      "description": "Analyze the research and write a concise report.",
+      "expected_output": "A markdown report with findings and recommendations.",
+      "agent": "analyst",
+      "context": ["research"],
+      "output_file": "output/report.md"
+    }
+  ],
+  "process": "sequential",
+  "verbose": true,
+  "memory": true,
+  "inputs": {
+    "topic": "AI Agents"
+  }
+}
 ```
 
-How to run the above code:
+Each string in `agents` resolves to `agents/<name>.jsonc` first, then `agents/<name>.json`.
 
-```python code
-YourCrewName().crew().kickoff(inputs={"any": "input here"})
+```jsonc agents/researcher.jsonc
+{
+  "role": "{topic} Senior Researcher",
+  "goal": "Find accurate and current information about {topic}.",
+  "backstory": "You are a careful researcher who cites clear evidence.",
+  "llm": "openai/gpt-4o",
+  "tools": ["SerperDevTool"]
+}
 ```
 
 <Note>
-Tasks will be executed in the order they are defined.
+Tasks run in the order they appear in `tasks` when `process` is `"sequential"`.
 </Note>
 
-The `CrewBase` class, along with these decorators, automates the collection of agents and tasks, reducing the need for manual management.
+For hierarchical crews, set `"process": "hierarchical"` and provide either `manager_llm` or `manager_agent`. A `manager_agent` can reference an `agents/<name>.jsonc` file that is not included in the top-level `agents` list.
 
-#### Decorators overview from `annotations.py`
+JSON crew definitions support crew-level fields such as `process`, `verbose`, `memory`, `cache`, `max_rpm`, `planning`, `planning_llm`, `manager_llm`, `manager_agent`, `function_calling_llm`, `output_log_file`, `stream`, `tracing`, `before_kickoff_callbacks`, and `after_kickoff_callbacks`.
 
-CrewAI provides several decorators in the `annotations.py` file that are used to mark methods within your crew class for special handling:
+Python callbacks and custom classes use `{"python": "module.attribute"}`. Custom tools use `"custom:<name>"` and load `tools/<name>.py` at runtime.
 
-- `@CrewBase`: Marks the class as a crew base class.
-- `@agent`: Denotes a method that returns an `Agent` object.
-- `@task`: Denotes a method that returns a `Task` object.
-- `@crew`: Denotes the method that returns the `Crew` object.
-- `@before_kickoff`: (Optional) Marks a method to be executed before the crew starts.
-- `@after_kickoff`: (Optional) Marks a method to be executed after the crew finishes.
+<Warning>
+Only run JSON crew projects from sources you trust. `custom:<name>` tools and `{"python": "module.attribute"}` references execute local Python code when the crew loads.
+</Warning>
 
-These decorators help in organizing your crew's structure and automatically collecting agents and tasks without manually listing them.
+### Classic Python/YAML Configuration
+
+Classic projects created with `crewai create crew <name> --classic` use `crew.py`, `config/agents.yaml`, `config/tasks.yaml`, and the `@CrewBase`, `@agent`, `@task`, and `@crew` decorators. That pattern remains supported and is documented in [Using Annotations](/en/learn/using-annotations).
 
 ### Direct Code Definition (Alternative)
 

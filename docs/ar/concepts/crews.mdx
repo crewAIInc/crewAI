@@ -40,11 +40,52 @@ mode: "wide"
 
 ## إنشاء الأطقم
 
-هناك طريقتان لإنشاء الأطقم في CrewAI: باستخدام **تهيئة YAML (موصى بها)** أو تعريفها **مباشرة في الكود**.
+هناك طريقتان رئيسيتان لإنشاء الأطقم في CrewAI: باستخدام **تهيئة JSONC (الموصى بها للـ crews الجديدة)** أو تعريفها **مباشرة في الكود** للمشاريع الكلاسيكية والحالات المتقدمة.
 
-### تهيئة YAML (موصى بها)
+### تهيئة JSONC (موصى بها)
 
-توفر تهيئة YAML طريقة أنظف وأكثر قابلية للصيانة لتعريف الأطقم وتتسق مع كيفية تعريف الوكلاء والمهام في مشاريع CrewAI.
+المشاريع الجديدة التي تُنشأ عبر `crewai create crew <name>` تستخدم `crew.jsonc` لإعدادات الـ crew والمهام، وملفًا منفصلًا لكل Agent داخل `agents/`. يكتشف `crewai run` ملف `crew.jsonc` أو `crew.json`، ويحمّل الـ Agents المشار إليها، ويطلب قيم placeholders الناقصة، ثم يبدأ الـ crew.
+
+```jsonc crew.jsonc
+{
+  "name": "Market Research Crew",
+  "agents": ["researcher", "analyst"],
+  "tasks": [
+    {
+      "name": "research",
+      "description": "Research {topic} and collect the most relevant facts.",
+      "expected_output": "Structured research notes about {topic}.",
+      "agent": "researcher"
+    },
+    {
+      "name": "analysis",
+      "description": "Analyze the research and write a concise report.",
+      "expected_output": "A markdown report with findings and recommendations.",
+      "agent": "analyst",
+      "context": ["research"],
+      "output_file": "output/report.md"
+    }
+  ],
+  "process": "sequential",
+  "verbose": true,
+  "memory": true,
+  "inputs": {
+    "topic": "AI Agents"
+  }
+}
+```
+
+كل عنصر في `agents` يُحل أولًا إلى `agents/<name>.jsonc` ثم إلى `agents/<name>.json`. للـ crews الهرمية، استخدم `"process": "hierarchical"` مع `manager_llm` أو `manager_agent`.
+
+<Warning>
+شغّل مشاريع JSON crew من مصادر تثق بها فقط. أدوات `custom:<name>` ومراجع `{"python": "module.attribute"}` تنفذ كود Python محليًا عند تحميل الـ crew.
+</Warning>
+
+### تهيئة YAML الكلاسيكية
+
+المشاريع الكلاسيكية التي تُنشأ عبر `crewai create crew <name> --classic` تستخدم `crew.py` و `config/agents.yaml` و `config/tasks.yaml` والمزيّنات `@CrewBase` و `@agent` و `@task` و `@crew`.
+
+تظل هذه الطريقة مدعومة للمشاريع الحالية المبنية بـ Python/YAML وللفِرق التي تحتاج تحكمًا صريحًا عبر decorators.
 
 ```python code
 from crewai import Agent, Crew, Task, Process

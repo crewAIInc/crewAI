@@ -73,13 +73,48 @@ crew = Crew(
 
 ## إنشاء المهام
 
-هناك طريقتان لإنشاء المهام في CrewAI: باستخدام **إعداد YAML (موصى به)** أو تعريفها **مباشرة في الكود**.
+هناك طريقتان شائعتان لإنشاء المهام في CrewAI: باستخدام **تهيئة JSONC (الموصى بها للـ crews الجديدة)** أو تعريفها **مباشرة في الكود**.
 
-### إعداد YAML (موصى به)
+### تهيئة JSONC (موصى بها)
 
-يوفر استخدام إعداد YAML طريقة أنظف وأكثر قابلية للصيانة لتعريف المهام. نوصي بشدة باستخدام هذا النهج لتعريف المهام في مشاريع CrewAI.
+المشاريع الجديدة التي تُنشأ عبر `crewai create crew <name>` تعرّف المهام في `crew.jsonc`.
 
-بعد إنشاء مشروع CrewAI كما هو موضح في قسم [التثبيت](/ar/installation)، انتقل إلى ملف `src/latest_ai_development/config/tasks.yaml` وعدّل القالب ليتوافق مع متطلبات مهامك المحددة.
+````jsonc crew.jsonc
+{
+  "name": "Research Crew",
+  "agents": ["researcher", "reporting_analyst"],
+  "tasks": [
+    {
+      "name": "research_task",
+      "description": "Conduct thorough research about {topic}.",
+      "expected_output": "A list of the most relevant information about {topic}.",
+      "agent": "researcher"
+    },
+    {
+      "name": "reporting_task",
+      "description": "Review the research and expand it into a detailed report.",
+      "expected_output": "A polished markdown report.",
+      "agent": "reporting_analyst",
+      "context": ["research_task"],
+      "markdown": true,
+      "output_file": "report.md"
+    }
+  ],
+  "inputs": {
+    "topic": "AI Agents"
+  }
+}
+````
+
+كل مهمة تحتاج إلى `description` و `expected_output`. يجب أن يطابق `agent` اسم Agent مذكورًا في `agents`. يشير `context` إلى أسماء مهام سابقة فقط؛ وترفض الإشارات إلى مهام لاحقة.
+
+### إعداد YAML الكلاسيكي
+
+المشاريع الكلاسيكية التي تُنشأ عبر `crewai create crew <name> --classic` تستخدم `config/tasks.yaml` وفئة `@CrewBase` في `crew.py`.
+
+يظل إعداد YAML مدعومًا للمشاريع الحالية المبنية بـ Python/YAML وللفِرق التي تفضل تعريف المهام من خلال فئة `@CrewBase`.
+
+بعد إنشاء مشروع كلاسيكي، انتقل إلى ملف `src/latest_ai_development/config/tasks.yaml` وعدّل القالب ليتوافق مع متطلبات مهامك المحددة.
 
 <Note>
 المتغيرات في ملفات YAML (مثل `{topic}`) سيتم استبدالها بالقيم من مدخلاتك عند تشغيل الفريق:

@@ -64,7 +64,7 @@ cd guide_creator_flow
 
 ## 2단계: 프로젝트 구조 이해하기
 
-생성된 프로젝트는 다음과 같은 구조를 가지고 있습니다. 잠시 시간을 내어 이 구조에 익숙해지세요. 구조를 이해하면 앞으로 더 복잡한 flow를 만드는 데 도움이 됩니다.
+생성된 프로젝트는 다음과 같은 구조를 가지고 있습니다. 시작용 embedded crew는 클래식 Python/YAML 레이아웃을 사용합니다. Flow 안에서 JSON-first crew를 사용하려면 crew 폴더에 `crew.jsonc`와 `agents/*.jsonc`를 만들고 `crewai.project.load_crew`로 로드하세요. 예시는 [Flows](/ko/concepts/flows#building-your-crews)를 참고하세요.
 
 ```
 guide_creator_flow/
@@ -102,149 +102,82 @@ crewai flow add-crew content-crew
 
 ## 4단계: 콘텐츠 작가 Crew 구성
 
-이제 콘텐츠 작가 crew를 위해 생성된 파일을 수정해보겠습니다. 우리는 가이드의 고품질 콘텐츠를 만들기 위해 협업하는 두 명의 전문 에이전트 - 작가와 리뷰어 - 를 설정할 것입니다.
+이제 콘텐츠 작가 crew를 JSONC로 구성합니다. 가이드의 고품질 콘텐츠를 만들기 위해 협업하는 두 명의 전문 에이전트 - 작가와 리뷰어 - 를 설정합니다.
 
-1. 먼저, 에이전트 구성 파일을 업데이트하여 콘텐츠 제작 팀을 정의합니다:
+1. `src/guide_creator_flow/crews/content_crew/agents/content_writer.jsonc`를 만듭니다:
 
-   `llm`을 사용 중인 공급자로 설정해야 함을 기억하세요.
-
-```yaml
-# src/guide_creator_flow/crews/content_crew/config/agents.yaml
-content_writer:
-  role: >
-    교육 콘텐츠 작가
-  goal: >
-    할당된 주제를 철저히 설명하고 독자에게 소중한 통찰력을 제공하는 흥미롭고 유익한 콘텐츠를 제작합니다
-  backstory: >
-    당신은 명확하고 흥미로운 콘텐츠를 만드는 데 능숙한 교육 전문 작가입니다. 복잡한 개념도 쉽게 설명하며,
-    정보를 독자가 이해하기 쉽게 조직할 수 있습니다.
-  llm: provider/model-id  # 예: openai/gpt-4o, google/gemini-2.0-flash, anthropic/claude...
-
-content_reviewer:
-  role: >
-    교육 콘텐츠 검토자 및 에디터
-  goal: >
-    콘텐츠가 정확하고, 포괄적이며, 잘 구조화되어 있고, 이전에 작성된 섹션과의 일관성을 유지하도록 합니다
-  backstory: >
-    당신은 수년간 교육 콘텐츠를 검토해 온 꼼꼼한 에디터입니다. 세부 사항, 명확성, 일관성에 뛰어나며,
-    원 저자의 목소리를 유지하면서도 콘텐츠의 품질을 향상시키는 데 능숙합니다.
-  llm: provider/model-id  # 예: openai/gpt-4o, google/gemini-2.0-flash, anthropic/claude...
+```jsonc
+{
+  "role": "Educational Content Writer",
+  "goal": "Create engaging, informative content that thoroughly explains the assigned topic and provides valuable insights to the reader.",
+  "backstory": "You are a talented educational writer who explains complex concepts in accessible language and organizes information clearly.",
+  "llm": "provider/model-id",
+  "settings": {
+    "verbose": true
+  }
+}
 ```
 
-이 에이전트 정의는 AI 에이전트가 콘텐츠 제작을 접근하는 전문화된 역할과 관점을 구성합니다. 각 에이전트가 뚜렷한 목적과 전문성을 지니고 있음을 확인하세요.
+2. `src/guide_creator_flow/crews/content_crew/agents/content_reviewer.jsonc`를 만듭니다:
 
-2. 다음으로, 작업 구성 파일을 업데이트하여 구체적인 작성 및 검토 작업을 정의합니다:
-
-```yaml
-# src/guide_creator_flow/crews/content_crew/config/tasks.yaml
-write_section_task:
-  description: >
-    주제에 대한 포괄적인 섹션을 작성하세요: "{section_title}"
-
-    섹션 설명: {section_description}
-    대상 독자: {audience_level} 수준 학습자
-
-    작성 시 아래 사항을 반드시 지켜주세요:
-    1. 섹션 주제에 대한 간략한 소개로 시작
-    2. 모든 주요 개념을 예시와 함께 명확하게 설명
-    3. 적절하다면 실용적인 활용 사례나 연습문제 포함
-    4. 주요 포인트 요약으로 마무리
-    5. 대략 500-800단어 분량
-
-    콘텐츠는 적절한 제목, 목록, 강조를 포함해 Markdown 형식으로 작성하세요.
-
-    이전에 작성된 섹션:
-    {previous_sections}
-
-    반드시 콘텐츠가 이전에 쓴 섹션과 일관성을 유지하고 앞에서 설명된 개념을 바탕으로 작성되도록 하세요.
-  expected_output: >
-    주제를 철저히 설명하고 대상 독자에게 적합한, 구조가 잘 잡힌 Markdown 형식의 포괄적 섹션
-  agent: content_writer
-
-review_section_task:
-  description: >
-    아래 "{section_title}" 섹션의 내용을 검토하고 개선하세요:
-
-    {draft_content}
-
-    대상 독자: {audience_level} 수준 학습자
-
-    이전에 작성된 섹션:
-    {previous_sections}
-
-    검토 시 아래 사항을 반드시 지켜주세요:
-    1. 문법/철자 오류 수정
-    2. 명확성 및 가독성 향상
-    3. 내용이 포괄적이고 정확한지 확인
-    4. 이전에 쓴 섹션과 일관성 유지
-    5. 구조와 흐름 강화
-    6. 누락된 핵심 정보 추가
-
-    개선된 버전의 섹션을 Markdown 형식으로 제공하세요.
-  expected_output: >
-    원래의 구조를 유지하면서도 명확성, 정확성, 일관성을 향상시킨 세련된 개선본
-  agent: content_reviewer
-  context:
-    - write_section_task
+```jsonc
+{
+  "role": "Educational Content Reviewer and Editor",
+  "goal": "Ensure content is accurate, comprehensive, well-structured, and consistent with previously written sections.",
+  "backstory": "You are a meticulous editor with an eye for detail, clarity, and coherence.",
+  "llm": "provider/model-id",
+  "settings": {
+    "verbose": true
+  }
+}
 ```
 
-이 작업 정의는 에이전트에게 세부적인 지침을 제공하여 우리의 품질 기준에 부합하는 콘텐츠를 생산하게 합니다. review 작업의 `context` 파라미터를 통해 리뷰어가 작가의 결과물에 접근할 수 있는 워크플로우가 생성됨에 주의하세요.
+`provider/model-id`를 사용하는 모델로 바꾸세요. 예: `openai/gpt-4o`, `gemini/gemini-2.0-flash-001`, `anthropic/claude-sonnet-4-6`.
 
-3. 이제 crew 구현 파일을 업데이트하여 에이전트와 작업이 어떻게 연동되는지 정의합니다:
+3. `src/guide_creator_flow/crews/content_crew/crew.jsonc`를 만듭니다:
+
+```jsonc
+{
+  "name": "Content Crew",
+  "agents": ["content_writer", "content_reviewer"],
+  "tasks": [
+    {
+      "name": "write_section_task",
+      "description": "Write a comprehensive section on the topic: \"{section_title}\".\n\nSection description: {section_description}\nTarget audience: {audience_level} level learners\n\nYour content should begin with a brief introduction, explain key concepts clearly with examples, include practical applications where appropriate, end with a summary, and be approximately 500-800 words.\n\nPreviously written sections:\n{previous_sections}",
+      "expected_output": "A well-structured, comprehensive section in Markdown format that thoroughly explains the topic and is appropriate for the target audience.",
+      "agent": "content_writer",
+      "markdown": true
+    },
+    {
+      "name": "review_section_task",
+      "description": "Review and improve this section on \"{section_title}\":\n\n{draft_content}\n\nTarget audience: {audience_level} level learners\nPreviously written sections:\n{previous_sections}\n\nFix errors, improve clarity, verify consistency, enhance structure, and add missing key information.",
+      "expected_output": "An improved, polished version of the section that maintains the original structure but enhances clarity, accuracy, and consistency.",
+      "agent": "content_reviewer",
+      "context": ["write_section_task"],
+      "markdown": true
+    }
+  ],
+  "process": "sequential",
+  "verbose": true
+}
+```
+
+`context` 필드를 통해 리뷰어가 작가의 출력을 사용할 수 있습니다.
+
+4. `src/guide_creator_flow/crews/content_crew/content_crew.py`를 작은 loader로 교체합니다:
 
 ```python
-# src/guide_creator_flow/crews/content_crew/content_crew.py
-from crewai import Agent, Crew, Process, Task
-from crewai.project import CrewBase, agent, crew, task
-from crewai.agents.agent_builder.base_agent import BaseAgent
-from typing import List
+from pathlib import Path
 
-@CrewBase
-class ContentCrew():
-    """Content writing crew"""
+from crewai.project import load_crew
 
-    agents: List[BaseAgent]
-    tasks: List[Task]
 
-    @agent
-    def content_writer(self) -> Agent:
-        return Agent(
-            config=self.agents_config['content_writer'], # type: ignore[index]
-            verbose=True
-        )
-
-    @agent
-    def content_reviewer(self) -> Agent:
-        return Agent(
-            config=self.agents_config['content_reviewer'], # type: ignore[index]
-            verbose=True
-        )
-
-    @task
-    def write_section_task(self) -> Task:
-        return Task(
-            config=self.tasks_config['write_section_task'] # type: ignore[index]
-        )
-
-    @task
-    def review_section_task(self) -> Task:
-        return Task(
-            config=self.tasks_config['review_section_task'], # type: ignore[index]
-            context=[self.write_section_task()]
-        )
-
-    @crew
-    def crew(self) -> Crew:
-        """Creates the content writing crew"""
-        return Crew(
-            agents=self.agents,
-            tasks=self.tasks,
-            process=Process.sequential,
-            verbose=True,
-        )
+def kickoff_content_crew(inputs: dict):
+    crew, default_inputs = load_crew(Path(__file__).with_name("crew.jsonc"))
+    return crew.kickoff(inputs={**default_inputs, **inputs})
 ```
 
-이 crew 정의는 에이전트와 작업 간의 관계를 설정하여, 콘텐츠 작가가 초안을 작성하고 리뷰어가 이를 개선하는 순차적 과정을 만듭니다. 이 crew는 독립적으로도 작동할 수 있지만, 우리의 플로우에서 더 큰 시스템의 일부로 오케스트레이션될 예정입니다.
+이 loader는 런타임에 `crew.jsonc`를 `Crew`로 바꿉니다. 이 crew는 독립적으로도 작동할 수 있지만, 우리의 플로우에서는 더 큰 시스템의 일부로 오케스트레이션됩니다.
 
 ## 5단계: 플로우(Flow) 생성
 
@@ -266,7 +199,7 @@ from typing import List, Dict
 from pydantic import BaseModel, Field
 from crewai import LLM
 from crewai.flow.flow import Flow, listen, start
-from guide_creator_flow.crews.content_crew.content_crew import ContentCrew
+from guide_creator_flow.crews.content_crew.content_crew import kickoff_content_crew
 
 # Define our models for structured data
 class Section(BaseModel):
@@ -371,7 +304,7 @@ class GuideCreatorFlow(Flow[GuideCreatorState]):
                 previous_sections_text = "No previous sections written yet."
 
             # Run the content crew for this section
-            result = ContentCrew().crew().kickoff(inputs={
+            result = kickoff_content_crew(inputs={
                 "section_title": section.title,
                 "section_description": section.description,
                 "audience_level": self.state.audience_level,
@@ -590,7 +523,7 @@ class GuideCreatorState(BaseModel):
 Flow는 복잡한 협업 작업을 위해 crew와 원활하게 통합될 수 있습니다:
 
 ```python
-result = ContentCrew().crew().kickoff(inputs={
+result = kickoff_content_crew(inputs={
     "section_title": section.title,
     # ...
 })

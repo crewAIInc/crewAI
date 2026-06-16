@@ -106,7 +106,7 @@ Se você ainda não instalou o `uv`, siga o **passo 1** para instalá-lo rapidam
 
 # Criando um Projeto CrewAI
 
-Recomendamos utilizar o template de scaffolding `YAML` para uma abordagem estruturada na definição dos agentes e tarefas. Veja como começar:
+`crewai create crew` agora cria um projeto de crew JSON-first. Os agentes ficam em `agents/*.jsonc`, as tarefas e configurações da crew ficam em `crew.jsonc`, e `crewai run` carrega essa definição JSON diretamente.
 
 <Steps>
   <Step title="Gerar Scaffolding do Projeto">
@@ -120,23 +120,22 @@ Recomendamos utilizar o template de scaffolding `YAML` para uma abordagem estrut
       ```
       my_project/
       ├── .gitignore
+      ├── .env
+      ├── agents/
+      │   └── researcher.jsonc
+      ├── crew.jsonc
       ├── knowledge/
       ├── pyproject.toml
       ├── README.md
-      ├── .env
-      └── src/
-          └── my_project/
-              ├── __init__.py
-              ├── main.py
-              ├── crew.py
-              ├── tools/
-              │   ├── custom_tool.py
-              │   └── __init__.py
-              └── config/
-                  ├── agents.yaml
-                  └── tasks.yaml
+      ├── skills/
+      └── tools/
       ```
       </Frame>
+
+    - Se você precisar do scaffold antigo em Python/YAML com `crew.py`, `config/agents.yaml` e `config/tasks.yaml`, execute:
+      ```shell
+      crewai create crew <your_project_name> --classic
+      ```
 
   </Step>
 
@@ -144,15 +143,15 @@ Recomendamos utilizar o template de scaffolding `YAML` para uma abordagem estrut
     - Seu projeto conterá estes arquivos essenciais:
       | Arquivo | Finalidade |
       | --- | --- |
-      | `agents.yaml` | Defina seus agentes de IA e seus papéis |
-      | `tasks.yaml` | Configure as tarefas e fluxos de trabalho dos agentes |
+      | `crew.jsonc` | Configure a crew, a ordem das tarefas, o processo e os inputs padrão |
+      | `agents/*.jsonc` | Defina o papel, objetivo, backstory, LLM, ferramentas e comportamento de cada agente |
       | `.env` | Armazene chaves de API e variáveis de ambiente |
-      | `main.py` | Ponto de entrada e fluxo de execução do projeto |
-      | `crew.py` | Orquestração e coordenação do crew |
-      | `tools/` | Diretório para ferramentas customizadas dos agentes |
-      | `knowledge/` | Diretório para base de conhecimento |
+      | `tools/` | Arquivos Python opcionais para ferramentas `custom:<name>` |
+      | `knowledge/` | Arquivos opcionais de conhecimento para agentes |
+      | `skills/` | Arquivos opcionais de skills aplicadas à crew |
 
-    - Comece editando `agents.yaml` e `tasks.yaml` para definir o comportamento do seu crew.
+    - Comece editando `crew.jsonc` e os arquivos em `agents/` para definir o comportamento da crew.
+    - Use valores `{placeholder}` nos textos de agentes e tarefas e defina padrões em `crew.jsonc` dentro de `inputs`. Ao executar `crewai run`, a CLI pergunta por valores que estiverem faltando.
     - Mantenha informações sensíveis como chaves de API no arquivo `.env`.
 
   </Step>
