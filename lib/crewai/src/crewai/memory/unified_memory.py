@@ -990,12 +990,18 @@ class Memory(BaseModel):
             scope: Scope to reset. If None and root_scope is set, resets only
                 within root_scope. If None and no root_scope, resets all.
         """
+        self.drain_writes()
         effective_scope = scope
         if effective_scope is None and self.root_scope:
             effective_scope = self.root_scope
         elif effective_scope is not None and self.root_scope:
             effective_scope = join_scope_paths(self.root_scope, effective_scope)
         self._storage.reset(scope_prefix=effective_scope)
+
+    def reset_all(self) -> None:
+        """Reset the entire backing memory store, ignoring ``root_scope``."""
+        self.drain_writes()
+        self._storage.reset(scope_prefix=None)
 
     async def aextract_memories(self, content: str) -> list[str]:
         """Async variant of extract_memories."""

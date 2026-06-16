@@ -6,7 +6,10 @@ from typing import Any
 import click
 
 from crewai.flow import Flow
-from crewai.utilities.project_utils import get_crews, get_flows
+from crewai.memory.unified_memory import Memory
+from crewai.project.crew_loader import load_crew
+from crewai.project.json_loader import find_crew_json_file
+from crewai.utilities.project_utils import get_crews, get_flows, read_toml
 
 
 def _reset_flow_memory(flow: Flow[Any]) -> None:
@@ -23,7 +26,9 @@ def _reset_flow_memory(flow: Flow[Any]) -> None:
     if mem is None:
         return
     try:
-        if hasattr(mem, "reset"):
+        if isinstance(mem, Memory):
+            mem.reset_all()
+        elif hasattr(mem, "reset"):
             mem.reset()
         elif hasattr(mem, "_memory") and mem._memory is not None:
             mem._memory.reset()
@@ -35,6 +40,31 @@ def _reset_flow_memory(flow: Flow[Any]) -> None:
     except RuntimeError as exc:
         # Restored MemoryScope/MemorySlice without a rebound Memory.
         click.echo(f"Memory reset skipped: {exc}", err=True)
+
+
+def _current_project_declares_flow() -> bool:
+    try:
+        pyproject_data = read_toml()
+    except Exception:
+        return False
+
+    declared_type: str | None = (
+        pyproject_data.get("tool", {}).get("crewai", {}).get("type")
+    )
+    return declared_type == "flow"
+
+
+def _get_json_crew() -> Any | None:
+    """Load a JSON-first crew from the current project, if present."""
+    if _current_project_declares_flow():
+        return None
+
+    crew_path = find_crew_json_file()
+    if crew_path is None:
+        return None
+
+    crew, _ = load_crew(crew_path)
+    return crew
 
 
 def reset_memories_command(
@@ -61,6 +91,8 @@ def reset_memories_command(
             return
 
         crews = get_crews()
+        if json_crew := _get_json_crew():
+            crews.append(json_crew)
         flows = get_flows()
 
         if not crews and not flows:
