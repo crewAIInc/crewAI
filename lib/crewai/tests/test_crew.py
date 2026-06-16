@@ -3830,7 +3830,6 @@ def test_crew_testing_function(researcher):
     assert isinstance(received_events[1], CrewTestCompletedEvent)
 
 
-@pytest.mark.vcr()
 def test_hierarchical_verbose_manager_agent(researcher, writer):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
@@ -3845,13 +3844,18 @@ def test_hierarchical_verbose_manager_agent(researcher, writer):
         verbose=True,
     )
 
-    crew.kickoff()
+    mock_task_output = TaskOutput(
+        description="Mock description", raw="mocked output", agent="mocked agent", messages=[]
+    )
+    task.output = mock_task_output
+
+    with patch.object(Task, "execute_sync", return_value=mock_task_output):
+        crew.kickoff()
 
     assert crew.manager_agent is not None
     assert crew.manager_agent.verbose
 
 
-@pytest.mark.vcr()
 def test_hierarchical_verbose_false_manager_agent(researcher, writer):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
@@ -3866,7 +3870,13 @@ def test_hierarchical_verbose_false_manager_agent(researcher, writer):
         verbose=False,
     )
 
-    crew.kickoff()
+    mock_task_output = TaskOutput(
+        description="Mock description", raw="mocked output", agent="mocked agent", messages=[]
+    )
+    task.output = mock_task_output
+
+    with patch.object(Task, "execute_sync", return_value=mock_task_output):
+        crew.kickoff()
 
     assert crew.manager_agent is not None
     assert not crew.manager_agent.verbose
