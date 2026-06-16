@@ -439,6 +439,7 @@ class TestValidationDoesNotExecuteTools:
             "    return None\n"
         )
         monkeypatch.syspath_prepend(str(tmp_path))
+        sys.modules.pop("callbacks", None)
         crew_path = self._write_project(
             tmp_path,
             tool_line='{"tool_type": "some.module.Tool"}',

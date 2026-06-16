@@ -65,6 +65,10 @@ def load_crew(
             task = task_class(**task_kwargs)
         except ValidationError as exc:
             raise JSONProjectError(f"{source_label}: validation failed: {exc}") from exc
+        except Exception as exc:
+            raise JSONProjectError(
+                f"{source_label}: failed to load task: {exc}"
+            ) from exc
 
         tasks_list.append(task)
         task_name = task_defn.get("name")

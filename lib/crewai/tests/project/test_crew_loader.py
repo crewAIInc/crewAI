@@ -194,7 +194,7 @@ class TestLoadCrew:
                     "name": "work",
                     "description": "Do work",
                     "expected_output": "Work done",
-                    "agent": "worker",
+                    "agent": "manager",
                 }
             ],
             "process": "hierarchical",
@@ -208,6 +208,7 @@ class TestLoadCrew:
         assert crew.agents[0].role == "worker role"
         assert crew.manager_agent is not None
         assert crew.manager_agent.role == "manager role"
+        assert crew.tasks[0].agent is crew.manager_agent
 
     def test_crew_accepts_llm_config_objects(self, tmp_path: Path):
         agents_dir = tmp_path / "agents"

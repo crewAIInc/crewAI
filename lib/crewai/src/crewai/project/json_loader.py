@@ -7,7 +7,7 @@ import json
 import logging
 from pathlib import Path
 import re
-from typing import Any
+from typing import Any, cast
 
 from pydantic import BaseModel, ValidationError
 
@@ -281,7 +281,6 @@ def load_json_crew_project(
 
     agents_dir = Path(agents_dir)
     agent_definitions: dict[str, JSONAgentDefinition] = {}
-    known_agents = {name for name in agent_names if isinstance(name, str)}
 
     def load_agent_definition(agent_name: str) -> None:
         if not isinstance(agent_name, str) or not agent_name:
@@ -347,6 +346,8 @@ def load_json_crew_project(
                 f'or a {{"{PYTHON_REF_KEY}": "module.agent"}} reference'
             )
 
+    known_agents = set(agent_definitions)
+
     task_defs = defn.get("tasks", [])
     if not isinstance(task_defs, list) or not task_defs:
         fail(f"{crew_path}: 'tasks' must be a non-empty list")
@@ -375,7 +376,8 @@ def load_json_crew_project(
         agent_ref = task_defn.get("agent")
         if agent_ref is not None and agent_ref not in known_agents:
             fail(
-                f"{task_path} references agent '{agent_ref}' which is not in the crew agents list"
+                f"{task_path} references agent '{agent_ref}' which does not match "
+                "a loaded agent definition"
             )
 
         fail_many(
@@ -542,7 +544,8 @@ def _python_ref_path(value: Any, source: str | Path) -> str:
     errors = _python_ref_errors(value, source)
     if errors:
         raise JSONProjectValidationError(errors)
-    return value[PYTHON_REF_KEY].strip()
+    path = cast(str, value[PYTHON_REF_KEY])
+    return path.strip()
 
 
 def _resolve_python_ref(
@@ -574,7 +577,7 @@ def _resolve_python_class(
     *,
     base_class: type[Any] | None = None,
 ) -> type[Any]:
-    cls = _resolve_python_ref(value, source, expected="class")
+    cls = cast(type[Any], _resolve_python_ref(value, source, expected="class"))
     if base_class is not None and not issubclass(cls, base_class):
         raise JSONProjectError(
             f"{source}: Python reference '{_python_ref_path(value, source)}' "
@@ -591,17 +594,18 @@ def _agent_class_from_definition(
 ) -> type[Any]:
     from crewai import Agent
 
+    agent_class = cast(type[Any], Agent)
     type_value = defn.get("type")
     if type_value is None:
-        return Agent
+        return agent_class
     if isinstance(type_value, str) and type_value in _AGENT_TYPE_ALIASES:
-        return Agent
+        return agent_class
     if _is_python_ref(type_value):
         if not resolve_python_refs:
             errors = _python_ref_errors(type_value, source)
             if errors:
                 raise JSONProjectValidationError(errors)
-            return Agent
+            return agent_class
         from crewai.agents.agent_builder.base_agent import BaseAgent
 
         return _resolve_python_class(type_value, source, base_class=BaseAgent)
@@ -621,22 +625,23 @@ def _task_class_from_definition(
 ) -> type[Any]:
     from crewai import Task
 
+    task_class = cast(type[Any], Task)
     type_value = defn.get("type")
     if type_value is None:
-        return Task
+        return task_class
     if isinstance(type_value, str) and type_value in _TASK_TYPE_ALIASES:
-        return Task
+        return task_class
     if isinstance(type_value, str) and type_value in _CONDITIONAL_TASK_TYPE_ALIASES:
         from crewai.tasks.conditional_task import ConditionalTask
 
-        return ConditionalTask
+        return cast(type[Any], ConditionalTask)
     if _is_python_ref(type_value):
         if not resolve_python_refs:
             errors = _python_ref_errors(type_value, source)
             if errors:
                 raise JSONProjectValidationError(errors)
-            return Task
-        return _resolve_python_class(type_value, source, base_class=Task)
+            return task_class
+        return _resolve_python_class(type_value, source, base_class=task_class)
     if isinstance(type_value, str):
         raise JSONProjectError(
             f"{source}: unsupported task type '{type_value}'. Use 'Task', "
@@ -758,7 +763,8 @@ def _task_kwargs_from_definition(
     if agent_ref is not None and isinstance(agent_ref, str):
         if agent_ref not in agents_map:
             raise JSONProjectError(
-                f"{source} references agent '{agent_ref}' which is not in the crew agents list"
+                f"{source} references agent '{agent_ref}' which does not match "
+                "a loaded agent definition"
             )
         task_kwargs["agent"] = agents_map[agent_ref]
 
