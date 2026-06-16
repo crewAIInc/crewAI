@@ -770,6 +770,28 @@ class Memory(BaseModel):
                     score_threshold=None,
                     query_time_ms=elapsed_ms,
                     source_type=_source,
+                    result_items=[
+                        {
+                            "record_id": m.record.id,
+                            "content": m.record.content,
+                            "scope": m.record.scope,
+                            "categories": m.record.categories,
+                            "metadata": m.record.metadata,
+                            "source": m.record.source,
+                            "private": m.record.private,
+                            "importance": m.record.importance,
+                            "created_at": m.record.created_at.isoformat()
+                            if m.record.created_at
+                            else None,
+                            "last_accessed": m.record.last_accessed.isoformat()
+                            if m.record.last_accessed
+                            else None,
+                            "score": m.score,
+                            "match_reasons": m.match_reasons,
+                            "evidence_gaps": m.evidence_gaps,
+                        }
+                        for m in results
+                    ],
                 ),
             )
             return results

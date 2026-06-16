@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import threading
 from unittest.mock import MagicMock
@@ -1028,3 +1028,125 @@ def test_close_drains_and_shuts_down(tmp_path: Path, mock_embedder: MagicMock) -
     mem.close()
     # After close, records should be persisted
     assert mem._storage.count() == 1
+
+
+def test_memory_query_completed_event_result_items_field():
+    """MemoryQueryCompletedEvent.result_items contains per-item provenance.
+
+    Validates the fix for issue #5800: the event now emits structured
+    result_items so benchmark runners can trace per-memory provenance
+    (record_id, scope, score, match_reasons, evidence_gaps) without
+    needing to deserialize the full MemoryMatch objects.
+    Embeddings are intentionally excluded to avoid leaking vector data
+    into traces and benchmark reports.
+    """
+    from crewai.events.types.memory_events import MemoryQueryCompletedEvent
+    from crewai.memory.types import MemoryMatch, MemoryRecord
+
+    now = datetime.now(timezone.utc)
+    rec1 = MemoryRecord(
+        id="rec-1",
+        content="Alice worked on the Q3 report",
+        scope="/work/q3",
+        categories=["report", "Q3"],
+        metadata={"author": "Alice"},
+        importance=0.9,
+        source="session-42",
+        private=False,
+        created_at=now,
+        last_accessed=now,
+    )
+    rec2 = MemoryRecord(
+        id="rec-2",
+        content="Bob reviewed the budget proposal",
+        scope="/work/budget",
+        categories=["budget"],
+        metadata={"reviewer": "Bob"},
+        importance=0.7,
+        source="session-42",
+        private=True,
+        created_at=now,
+        last_accessed=now,
+    )
+    match1 = MemoryMatch(
+        record=rec1,
+        score=0.95,
+        match_reasons=["semantic", "recency"],
+        evidence_gaps=[],
+    )
+    match2 = MemoryMatch(
+        record=rec2,
+        score=0.88,
+        match_reasons=["semantic"],
+        evidence_gaps=["cross_agent_attribution"],
+    )
+
+    event = MemoryQueryCompletedEvent(
+        query="who worked on reports",
+        results=[match1, match2],
+        limit=10,
+        query_time_ms=12.5,
+        result_items=[
+            {
+                "record_id": m.record.id,
+                "content": m.record.content,
+                "scope": m.record.scope,
+                "categories": m.record.categories,
+                "metadata": m.record.metadata,
+                "source": m.record.source,
+                "private": m.record.private,
+                "importance": m.record.importance,
+                "created_at": m.record.created_at.isoformat(),
+                "last_accessed": m.record.last_accessed.isoformat(),
+                "score": m.score,
+                "match_reasons": m.match_reasons,
+                "evidence_gaps": m.evidence_gaps,
+            }
+            for m in [match1, match2]
+        ],
+    )
+
+    assert event.query == "who worked on reports"
+    assert len(event.result_items) == 2
+
+    item1 = event.result_items[0]
+    assert item1["record_id"] == "rec-1"
+    assert item1["content"] == "Alice worked on the Q3 report"
+    assert item1["scope"] == "/work/q3"
+    assert item1["categories"] == ["report", "Q3"]
+    assert item1["metadata"] == {"author": "Alice"}
+    assert item1["source"] == "session-42"
+    assert item1["private"] is False
+    assert item1["importance"] == 0.9
+    assert item1["score"] == 0.95
+    assert item1["match_reasons"] == ["semantic", "recency"]
+    assert item1["evidence_gaps"] == []
+    assert "embedding" not in item1
+    assert "embedding" not in item1["content"]  # not nested
+
+    item2 = event.result_items[1]
+    assert item2["record_id"] == "rec-2"
+    assert item2["private"] is True
+    assert item2["evidence_gaps"] == ["cross_agent_attribution"]
+    assert "embedding" not in item2
+
+    # Serialization excludes embeddings (no repr/embedding field on MemoryRecord)
+    dumped = event.model_dump()
+    assert "embedding" not in str(dumped["result_items"])
+
+
+def test_memory_query_completed_event_result_items_empty_when_no_results():
+    """result_items is an empty list when recall returns no matches."""
+    from crewai.events.types.memory_events import MemoryQueryCompletedEvent
+
+    event = MemoryQueryCompletedEvent(
+        query="nonexistent fact",
+        results=[],
+        limit=10,
+        query_time_ms=1.2,
+        result_items=[],
+    )
+
+    assert event.result_items == []
+    dumped = event.model_dump()
+    assert dumped["result_items"] == []
