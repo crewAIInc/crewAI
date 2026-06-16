@@ -17,6 +17,7 @@ from packaging import version
 from crewai_cli.utils import (
     build_env_with_all_tool_credentials,
     enable_prompt_line_editing,
+    is_dmn_mode_enabled,
     read_toml,
 )
 from crewai_cli.version import get_crewai_version
@@ -202,6 +203,35 @@ def _prepare_json_crew_for_tui(crew: Any) -> None:
             agent.llm.stream = True
 
 
+def _runtime_inputs_without_prompt(
+    crew: Any, default_inputs: dict[str, Any]
+) -> dict[str, Any]:
+    """Return runtime inputs in non-interactive mode or exit on missing values."""
+    inputs = dict(default_inputs or {})
+    missing = _missing_input_names(crew, inputs)
+    if missing:
+        missing_list = ", ".join(missing)
+        click.echo(
+            "Missing runtime inputs for CREWAI_DMN mode: "
+            f"{missing_list}. Add them to the `inputs` object in crew.json(c).",
+            err=True,
+        )
+        raise SystemExit(1)
+    return inputs
+
+
+def _run_json_crew_without_tui(crew_path: Path) -> Any:
+    """Run a JSON-defined crew with plain terminal output."""
+    with _json_loading_status("Preparing crew..."):
+        crew, default_inputs = _load_json_crew(crew_path)
+
+    runtime_inputs = _runtime_inputs_without_prompt(crew, default_inputs)
+    result = crew.kickoff(inputs=runtime_inputs)
+    if result is not None:
+        click.echo(str(result))
+    return result
+
+
 def _run_json_crew(trained_agents_file: str | None = None) -> Any:
     """Load and run a JSON-defined crew."""
     from dotenv import load_dotenv
@@ -218,6 +248,9 @@ def _run_json_crew(trained_agents_file: str | None = None) -> Any:
     crew_path = find_crew_json_file()
     if crew_path is None:
         raise FileNotFoundError("No crew.jsonc or crew.json found")
+
+    if is_dmn_mode_enabled():
+        return _run_json_crew_without_tui(crew_path)
 
     crew_run_app_cls, crew, default_inputs, task_names, agent_names = (
         _load_json_crew_for_tui(crew_path)

@@ -17,6 +17,7 @@ from crewai_cli.user_data import (
 from crewai_cli.utils import (
     build_env_with_all_tool_credentials,
     enable_prompt_line_editing,
+    is_dmn_mode_enabled,
     read_toml,
 )
 
@@ -162,7 +163,13 @@ def create(
     classic: bool = False,
 ) -> None:
     """Create a new crew, or flow."""
+    dmn_mode = is_dmn_mode_enabled()
     if not type:
+        if dmn_mode:
+            raise click.UsageError(
+                "TYPE is required when CREWAI_DMN is set. "
+                "Use `crewai create crew <name>` or `crewai create flow <name>`."
+            )
         from crewai_cli.tui_picker import pick
 
         options = [
@@ -177,11 +184,15 @@ def create(
             raise SystemExit(0)
         click.echo()
     if not name:
+        if dmn_mode:
+            raise click.UsageError("NAME is required when CREWAI_DMN is set.")
         enable_prompt_line_editing()
         name = click.prompt(
             click.style(f"  Name of your {type}", fg="cyan", bold=True),
             prompt_suffix=click.style(" › ", fg="bright_white"),  # noqa: RUF001
         )
+    if dmn_mode:
+        skip_provider = True
     if type == "crew":
         if classic:
             from crewai_cli.create_crew import create_crew
