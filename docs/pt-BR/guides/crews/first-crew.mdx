@@ -46,13 +46,14 @@ Precisa do layout antigo com `crew.py`, `config/agents.yaml` e `config/tasks.yam
 
 ## Etapa 2: Definir os agentes
 
-Crie dois arquivos de agentes. Os nomes dos arquivos são os nomes referenciados em `crew.jsonc`.
+Substitua o arquivo gerado `agents/researcher.jsonc` e adicione `agents/analyst.jsonc`. Os nomes dos arquivos são os nomes referenciados em `crew.jsonc`.
 
 ```jsonc agents/researcher.jsonc
 {
   "role": "Senior Research Specialist for {topic}",
   "goal": "Find comprehensive and accurate information about {topic}, with a focus on recent developments and key insights.",
   "backstory": "You are an experienced research specialist who organizes complex information into clear, useful notes.",
+  // Substitua pelo seu modelo, por exemplo "openai/gpt-4o".
   "llm": "provider/model-id",
   "tools": ["SerperDevTool"],
   "settings": {
@@ -67,6 +68,7 @@ Crie dois arquivos de agentes. Os nomes dos arquivos são os nomes referenciados
   "role": "Report Analyst for {topic}",
   "goal": "Turn research findings into a clear, well-structured report.",
   "backstory": "You are a careful analyst with strong technical writing skills and a talent for extracting useful insights.",
+  // Substitua pelo seu modelo, por exemplo "openai/gpt-4o".
   "llm": "provider/model-id",
   "settings": {
     "verbose": true,

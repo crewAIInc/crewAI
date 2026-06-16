@@ -147,7 +147,7 @@ If you have not installed CrewAI yet, follow the [installation guide](/en/instal
     ```
 
   <Tip>
-  If your package name differs from `latest_ai_flow`, change the import of `ResearchCrew` to match your project’s module path.
+  If your package name differs from `latest_ai_flow`, change the `kickoff_content_crew` import to match your project’s module path.
   </Tip>
   </Step>
 
@@ -198,7 +198,7 @@ If you have not installed CrewAI yet, follow the [installation guide](/en/instal
 ## How this run fits together
 
 1. **Flow** — `LatestAiFlow` runs `prepare_topic` first, then `run_research`, then `summarize`. State (`topic`, `report`) lives on the Flow.
-2. **Crew** — `ResearchCrew` runs one task with one agent: the researcher uses **Serper** to search the web, then writes the structured report.
+2. **Crew** — `kickoff_content_crew` loads `crew.jsonc` and runs one task with one agent: the researcher uses **Serper** to search the web, then writes the structured report.
 3. **Artifact** — The task’s `output_file` writes the report under `output/report.md`.
 
 To go deeper on Flow patterns (routing, persistence, human-in-the-loop), see [Build your first Flow](/en/guides/flows/first-flow) and [Flows](/en/concepts/flows). For crews without a Flow, see [Crews](/en/concepts/crews). For a single `Agent` and `kickoff()` without tasks, see [Agents](/en/concepts/agents#direct-agent-interaction-with-kickoff).

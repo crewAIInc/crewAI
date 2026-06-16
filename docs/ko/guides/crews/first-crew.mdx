@@ -44,13 +44,14 @@ research_crew/
 
 ## 2단계: 에이전트 정의
 
-두 에이전트 파일을 만듭니다. 파일 이름이 `crew.jsonc`에서 참조하는 에이전트 이름입니다.
+생성된 `agents/researcher.jsonc` 파일을 교체하고 `agents/analyst.jsonc`를 추가합니다. 파일 이름이 `crew.jsonc`에서 참조하는 에이전트 이름입니다.
 
 ```jsonc agents/researcher.jsonc
 {
   "role": "Senior Research Specialist for {topic}",
   "goal": "Find comprehensive and accurate information about {topic}, with a focus on recent developments and key insights.",
   "backstory": "You are an experienced research specialist who organizes complex information into clear, useful notes.",
+  // 사용하는 모델로 바꾸세요. 예: "openai/gpt-4o".
   "llm": "provider/model-id",
   "tools": ["SerperDevTool"],
   "settings": {
@@ -65,6 +66,7 @@ research_crew/
   "role": "Report Analyst for {topic}",
   "goal": "Turn research findings into a clear, well-structured report.",
   "backstory": "You are a careful analyst with strong technical writing skills and a talent for extracting useful insights.",
+  // 사용하는 모델로 바꾸세요. 예: "openai/gpt-4o".
   "llm": "provider/model-id",
   "settings": {
     "verbose": true,

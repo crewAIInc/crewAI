@@ -44,13 +44,14 @@ research_crew/
 
 ## الخطوة 2: تعريف الـ Agents
 
-أنشئ ملفين للـ Agents. اسم الملف هو الاسم الذي تشير إليه في `crew.jsonc`.
+استبدل ملف `agents/researcher.jsonc` المُنشأ وأضف `agents/analyst.jsonc`. اسم الملف هو الاسم الذي تشير إليه في `crew.jsonc`.
 
 ```jsonc agents/researcher.jsonc
 {
   "role": "Senior Research Specialist for {topic}",
   "goal": "Find comprehensive and accurate information about {topic}, with a focus on recent developments and key insights.",
   "backstory": "You are an experienced research specialist who organizes complex information into clear, useful notes.",
+  // استبدله بالنموذج الذي تستخدمه، مثل "openai/gpt-4o".
   "llm": "provider/model-id",
   "tools": ["SerperDevTool"],
   "settings": {
@@ -65,6 +66,7 @@ research_crew/
   "role": "Report Analyst for {topic}",
   "goal": "Turn research findings into a clear, well-structured report.",
   "backstory": "You are a careful analyst with strong technical writing skills and a talent for extracting useful insights.",
+  // استبدله بالنموذج الذي تستخدمه، مثل "openai/gpt-4o".
   "llm": "provider/model-id",
   "settings": {
     "verbose": true,
