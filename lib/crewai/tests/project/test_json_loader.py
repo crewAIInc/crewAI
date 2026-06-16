@@ -480,6 +480,28 @@ class TestValidationDoesNotExecuteTools:
 
         assert "Invalid custom tool name" in str(exc_info.value)
 
+    def test_validate_rejects_deep_python_ref_nesting(self, tmp_path):
+        from crewai.project.json_loader import validate_crew_project
+
+        crew_path = self._write_project(
+            tmp_path,
+            tool_line='{"tool_type": "some.module.Tool"}',
+        )
+        agent_file = tmp_path / "agents" / "worker.jsonc"
+        agent_def = json.loads(agent_file.read_text())
+        nested: dict[str, object] = {}
+        current = nested
+        for _ in range(70):
+            child: dict[str, object] = {}
+            current["nested"] = child
+            current = child
+        current["ref"] = {"python": "callbacks.step_callback"}
+        agent_def["security_config"] = nested
+        agent_file.write_text(json.dumps(agent_def))
+
+        with pytest.raises(JSONProjectValidationError, match="maximum depth"):
+            validate_crew_project(crew_path, tmp_path / "agents")
+
 
 class TestCustomToolPathSafety:
     @pytest.mark.parametrize(

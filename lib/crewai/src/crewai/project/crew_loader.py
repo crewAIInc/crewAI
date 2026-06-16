@@ -119,7 +119,11 @@ def _load_crew_project(
 
     for index, task_defn in enumerate(project.task_definitions):
         task_source = f"{source_label}: tasks[{index}]"
-        task_class = _task_class_from_definition(task_defn, f"{task_source}: type")
+        task_class = _task_class_from_definition(
+            task_defn,
+            f"{task_source}: type",
+            project_root=project_root,
+        )
         task_kwargs = _task_kwargs_from_definition(
             task_defn,
             agents_map=agents_map,
@@ -147,6 +151,7 @@ def _load_crew_project(
         tasks=tasks_list,
         agents_map=agents_map,
         source=source_label,
+        project_root=project_root,
     )
 
     try:

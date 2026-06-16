@@ -560,6 +560,98 @@ class TestLoadCrew:
         assert "summary" in task.output_json.model_fields
         assert task.converter_cls.__name__ == "SpecialConverter"
 
+    def test_crew_rejects_stdlib_python_ref_for_agent_callback(
+        self, tmp_path: Path
+    ):
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(
+            agents_dir,
+            "worker",
+            step_callback={"python": "os.system"},
+        )
+
+        crew_def = {
+            "name": "unsafe_callback_crew",
+            "agents": ["worker"],
+            "tasks": [
+                {
+                    "name": "work",
+                    "description": "Do work",
+                    "expected_output": "Work done",
+                    "agent": "worker",
+                }
+            ],
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        with pytest.raises(JSONProjectError, match="project root"):
+            load_crew(crew_file)
+
+    def test_crew_rejects_stdlib_python_ref_for_mcp_tool_filter(
+        self, tmp_path: Path
+    ):
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(
+            agents_dir,
+            "worker",
+            mcps=[
+                {
+                    "command": "python",
+                    "args": ["server.py"],
+                    "tool_filter": {"python": "os.system"},
+                }
+            ],
+        )
+
+        crew_def = {
+            "name": "unsafe_mcp_filter_crew",
+            "agents": ["worker"],
+            "tasks": [
+                {
+                    "name": "work",
+                    "description": "Do work",
+                    "expected_output": "Work done",
+                    "agent": "worker",
+                }
+            ],
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        with pytest.raises(JSONProjectError, match="project root"):
+            load_crew(crew_file)
+
+    def test_crew_rejects_callable_python_ref_for_object_field(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        _write_python_defs(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(
+            agents_dir,
+            "worker",
+            security_config={"python": "json_refs.always_true"},
+        )
+
+        crew_def = {
+            "name": "unsafe_object_ref_crew",
+            "agents": ["worker"],
+            "tasks": [
+                {
+                    "name": "work",
+                    "description": "Do work",
+                    "expected_output": "Work done",
+                    "agent": "worker",
+                }
+            ],
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        with pytest.raises(JSONProjectError, match="supported object reference"):
+            load_crew(crew_file)
+
     def test_crew_loads_project_relative_input_files(self, tmp_path: Path):
         agents_dir = tmp_path / "agents"
         agents_dir.mkdir()
@@ -594,6 +686,78 @@ class TestLoadCrew:
 
         assert _input_file_path(input_files["brief"]) == brief_path
         assert _input_file_path(input_files["spec"]) == spec_path
+
+    def test_crew_rejects_relative_input_file_outside_project(self, tmp_path: Path):
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(agents_dir, "reader")
+
+        crew_def = {
+            "name": "unsafe_input_files_crew",
+            "agents": ["reader"],
+            "tasks": [
+                {
+                    "name": "read",
+                    "description": "Read files",
+                    "expected_output": "File summary",
+                    "agent": "reader",
+                    "input_files": {"secret": "../secret.txt"},
+                }
+            ],
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        with pytest.raises(JSONProjectValidationError, match="outside the project root"):
+            load_crew(crew_file)
+
+    def test_crew_rejects_absolute_input_file_outside_project(self, tmp_path: Path):
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(agents_dir, "reader")
+        outside_path = tmp_path.parent / "secret.txt"
+
+        crew_def = {
+            "name": "unsafe_absolute_input_files_crew",
+            "agents": ["reader"],
+            "tasks": [
+                {
+                    "name": "read",
+                    "description": "Read files",
+                    "expected_output": "File summary",
+                    "agent": "reader",
+                    "input_files": {"secret": str(outside_path)},
+                }
+            ],
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        with pytest.raises(JSONProjectValidationError, match="outside the project root"):
+            load_crew(crew_file)
+
+    def test_crew_rejects_file_uri_input_file_outside_project(self, tmp_path: Path):
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(agents_dir, "reader")
+        outside_uri = (tmp_path.parent / "secret.txt").as_uri()
+
+        crew_def = {
+            "name": "unsafe_file_uri_input_files_crew",
+            "agents": ["reader"],
+            "tasks": [
+                {
+                    "name": "read",
+                    "description": "Read files",
+                    "expected_output": "File summary",
+                    "agent": "reader",
+                    "input_files": {"secret": outside_uri},
+                }
+            ],
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        with pytest.raises(JSONProjectValidationError, match="outside the project root"):
+            load_crew(crew_file)
+
 
     def test_missing_agent_file_raises(self, tmp_path: Path):
         agents_dir = tmp_path / "agents"
