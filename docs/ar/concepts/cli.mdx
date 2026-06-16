@@ -52,6 +52,8 @@ crewai create crew my_new_crew
 crewai create flow my_new_flow
 ```
 
+افتراضيًا، ينشئ `crewai create crew` مشروعًا JSON-first يحتوي على `crew.jsonc` و `agents/*.jsonc`. استخدم `crewai create crew my_new_crew --classic` فقط إذا أردت البنية القديمة Python/YAML مع `crew.py` و `config/agents.yaml` و `config/tasks.yaml`.
+
 ### 2. الإصدار
 
 عرض الإصدار المثبت من CrewAI.
@@ -142,7 +144,20 @@ crewai chat
 ```
 
 <Note>
-مهم: عيّن خاصية `chat_llm` في ملف `crew.py` لتفعيل هذا الأمر.
+مهم: عيّن خاصية `chat_llm` في تعريف الـ crew لتفعيل هذا الأمر.
+
+للـ crews بنمط JSON-first، أضفها إلى `crew.jsonc`:
+
+```jsonc
+{
+  "name": "My Crew",
+  "agents": ["researcher"],
+  "tasks": [],
+  "chat_llm": "openai/gpt-4o"
+}
+```
+
+للـ crews الكلاسيكية Python/YAML، عيّنها في `crew.py`:
 
 ```python
 @crew

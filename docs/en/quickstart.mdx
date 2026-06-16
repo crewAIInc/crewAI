@@ -39,85 +39,60 @@ If you have not installed CrewAI yet, follow the [installation guide](/en/instal
   This creates a Flow app under `src/latest_ai_flow/`, including a starter crew under `crews/content_crew/` that you will replace with a minimal **single-agent** research crew in the next steps.
   </Step>
 
-  <Step title="Configure one agent in `agents.yaml`">
-  Replace the contents of `src/latest_ai_flow/crews/content_crew/config/agents.yaml` with a single researcher. Variables like `{topic}` are filled from `crew.kickoff(inputs=...)`.
+  <Step title="Configure one agent in JSONC">
+  Create `src/latest_ai_flow/crews/content_crew/agents/researcher.jsonc` (create the `agents/` directory if needed). Variables like `{topic}` are filled from `crew.kickoff(inputs=...)`.
 
-    ```yaml agents.yaml
-    # src/latest_ai_flow/crews/content_crew/config/agents.yaml
-    researcher:
-      role: >
-        {topic} Senior Data Researcher
-      goal: >
-        Uncover cutting-edge developments in {topic}
-      backstory: >
-        You're a seasoned researcher with a knack for uncovering the latest
-        developments in {topic}. You find the most relevant information and
-        present it clearly.
+    ```jsonc agents/researcher.jsonc
+    {
+      "role": "{topic} Senior Data Researcher",
+      "goal": "Uncover cutting-edge developments in {topic}",
+      "backstory": "You're a seasoned researcher who finds relevant information and presents it clearly.",
+      "tools": ["SerperDevTool"],
+      "settings": {
+        "verbose": true
+      }
+    }
     ```
 
   </Step>
 
-  <Step title="Configure one task in `tasks.yaml`">
-    ```yaml tasks.yaml
-    # src/latest_ai_flow/crews/content_crew/config/tasks.yaml
-    research_task:
-      description: >
-        Conduct thorough research about {topic}. Use web search to find current,
-        credible information. The current year is 2026.
-      expected_output: >
-        A markdown report with clear sections: key trends, notable tools or companies,
-        and implications. Aim for 800–1200 words. No fenced code blocks around the whole document.
-      agent: researcher
-      output_file: output/report.md
+  <Step title="Configure the crew in `crew.jsonc`">
+  Create `src/latest_ai_flow/crews/content_crew/crew.jsonc`:
+
+    ```jsonc crew.jsonc
+    {
+      "name": "Research Crew",
+      "agents": ["researcher"],
+      "tasks": [
+        {
+          "name": "research_task",
+          "description": "Conduct thorough research about {topic}. Use web search to find recent, credible information.",
+          "expected_output": "A markdown report with clear sections: key trends, notable tools or companies, and implications. Aim for 800-1200 words. No fenced code blocks around the whole document.",
+          "agent": "researcher",
+          "output_file": "output/report.md",
+          "markdown": true
+        }
+      ],
+      "process": "sequential",
+      "verbose": true
+    }
     ```
 
   </Step>
 
-  <Step title="Wire the crew class (`content_crew.py`)">
-  Point the generated crew at your YAML and attach `SerperDevTool` to the researcher.
+  <Step title="Load the JSON crew (`content_crew.py`)">
+  Replace the generated `content_crew.py` with a small loader that turns `crew.jsonc` into a `Crew`.
 
     ```python content_crew.py
     # src/latest_ai_flow/crews/content_crew/content_crew.py
-    from typing import List
+    from pathlib import Path
 
-    from crewai import Agent, Crew, Process, Task
-    from crewai.agents.agent_builder.base_agent import BaseAgent
-    from crewai.project import CrewBase, agent, crew, task
-    from crewai_tools import SerperDevTool
+    from crewai.project import load_crew
 
 
-    @CrewBase
-    class ResearchCrew:
-      """Single-agent research crew used inside the Flow."""
-
-      agents: List[BaseAgent]
-      tasks: List[Task]
-
-      agents_config = "config/agents.yaml"
-      tasks_config = "config/tasks.yaml"
-
-      @agent
-      def researcher(self) -> Agent:
-        return Agent(
-          config=self.agents_config["researcher"],  # type: ignore[index]
-          verbose=True,
-          tools=[SerperDevTool()],
-        )
-
-      @task
-      def research_task(self) -> Task:
-        return Task(
-          config=self.tasks_config["research_task"],  # type: ignore[index]
-        )
-
-      @crew
-      def crew(self) -> Crew:
-        return Crew(
-          agents=self.agents,
-          tasks=self.tasks,
-          process=Process.sequential,
-          verbose=True,
-        )
+    def kickoff_content_crew(inputs: dict):
+      crew, default_inputs = load_crew(Path(__file__).with_name("crew.jsonc"))
+      return crew.kickoff(inputs={**default_inputs, **inputs})
     ```
 
   </Step>
@@ -131,7 +106,7 @@ If you have not installed CrewAI yet, follow the [installation guide](/en/instal
 
     from crewai.flow import Flow, listen, start
 
-    from latest_ai_flow.crews.content_crew.content_crew import ResearchCrew
+    from latest_ai_flow.crews.content_crew.content_crew import kickoff_content_crew
 
 
     class ResearchFlowState(BaseModel):
@@ -150,7 +125,7 @@ If you have not installed CrewAI yet, follow the [installation guide](/en/instal
 
       @listen(prepare_topic)
       def run_research(self):
-        result = ResearchCrew().crew().kickoff(inputs={"topic": self.state.topic})
+        result = kickoff_content_crew(inputs={"topic": self.state.topic})
         self.state.report = result.raw
         print("Research crew finished.")
 
@@ -172,7 +147,7 @@ If you have not installed CrewAI yet, follow the [installation guide](/en/instal
     ```
 
   <Tip>
-  If your package name differs from `latest_ai_flow`, change the import of `ResearchCrew` to match your project’s module path.
+  If your package name differs from `latest_ai_flow`, change the `kickoff_content_crew` import to match your project’s module path.
   </Tip>
   </Step>
 
@@ -202,7 +177,7 @@ If you have not installed CrewAI yet, follow the [installation guide](/en/instal
 
   <CodeGroup>
     ```markdown output/report.md
-    # AI Agents in 2026: Landscape and Trends
+    # AI Agents: Recent Landscape and Trends
 
     ## Executive summary
     …
@@ -223,7 +198,7 @@ If you have not installed CrewAI yet, follow the [installation guide](/en/instal
 ## How this run fits together
 
 1. **Flow** — `LatestAiFlow` runs `prepare_topic` first, then `run_research`, then `summarize`. State (`topic`, `report`) lives on the Flow.
-2. **Crew** — `ResearchCrew` runs one task with one agent: the researcher uses **Serper** to search the web, then writes the structured report.
+2. **Crew** — `kickoff_content_crew` loads `crew.jsonc` and runs one task with one agent: the researcher uses **Serper** to search the web, then writes the structured report.
 3. **Artifact** — The task’s `output_file` writes the report under `output/report.md`.
 
 To go deeper on Flow patterns (routing, persistence, human-in-the-loop), see [Build your first Flow](/en/guides/flows/first-flow) and [Flows](/en/concepts/flows). For crews without a Flow, see [Crews](/en/concepts/crews). For a single `Agent` and `kickoff()` without tasks, see [Agents](/en/concepts/agents#direct-agent-interaction-with-kickoff).
@@ -234,7 +209,10 @@ You now have an end-to-end Flow with an agent crew and a saved report — a soli
 
 ### Naming consistency
 
-YAML keys (`researcher`, `research_task`) must match the method names on your `@CrewBase` class. See [Crews](/en/concepts/crews) for the full decorator pattern.
+The names in `crew.jsonc` must match the files and task references you use:
+
+- `agents: ["researcher"]` loads `agents/researcher.jsonc`
+- `tasks[].agent: "researcher"` assigns the task to that agent
 
 ## Deploying
 

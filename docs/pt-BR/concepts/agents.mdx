@@ -71,13 +71,39 @@ O Construtor Visual de Agentes permite:
 
 ## Criando Agentes
 
-Existem duas maneiras de criar agentes no CrewAI: usando **configuração YAML (recomendado)** ou definindo-os **diretamente em código**.
+Existem duas formas comuns de criar agentes no CrewAI: usando **configuração JSONC (recomendado para novas crews)** ou definindo-os **diretamente em código**.
 
-### Configuração em YAML (Recomendado)
+### Configuração JSONC (Recomendado)
 
-Usar configuração em YAML proporciona uma maneira mais limpa e fácil de manter para definir agentes. Recomendamos fortemente esse método em seus projetos CrewAI.
+Novos projetos criados com `crewai create crew <name>` usam configuração JSON-first. Cada agente fica em `agents/<agent_name>.jsonc`, e `crew.jsonc` lista quais agentes fazem parte da crew.
 
-Depois de criar seu projeto CrewAI conforme descrito na seção de [Instalação](/pt-BR/installation), navegue até o arquivo `src/latest_ai_development/config/agents.yaml` e edite o template para atender aos seus requisitos.
+```jsonc agents/researcher.jsonc
+{
+  "role": "{topic} Senior Data Researcher",
+  "goal": "Uncover cutting-edge developments in {topic}",
+  "backstory": "You find the most relevant information and present it clearly.",
+  "llm": "openai/gpt-4o",
+  "tools": ["SerperDevTool"],
+  "settings": {
+    "verbose": true,
+    "allow_delegation": false
+  }
+}
+```
+
+Use `{placeholder}` em `role`, `goal` ou `backstory`. Defina padrões em `crew.jsonc` dentro de `inputs`; `crewai run` pergunta por valores que estiverem faltando. Campos de comportamento como `verbose`, `allow_delegation`, `max_iter`, `memory`, `cache` e `planning_config` podem ficar no topo ou em `settings`.
+
+<Note>
+JSONC aceita comentários e vírgulas finais. Se `agents/<name>.jsonc` e `agents/<name>.json` existirem, CrewAI usa o arquivo JSONC.
+</Note>
+
+### Configuração YAML Clássica
+
+Projetos clássicos criados com `crewai create crew <name> --classic` usam `config/agents.yaml` e uma classe `@CrewBase` em `crew.py`.
+
+A configuração YAML continua suportada para projetos existentes em Python/YAML e para equipes que preferem definir agentes a partir de uma classe `@CrewBase`.
+
+Depois de criar um projeto clássico, navegue até o arquivo `src/<project_name>/config/agents.yaml` e edite o template para atender aos seus requisitos.
 
 <Note>
 Variáveis em seus arquivos YAML (como `{topic}`) serão substituídas pelos valores fornecidos em seus inputs ao executar o crew:
@@ -89,7 +115,7 @@ crew.kickoff(inputs={'topic': 'AI Agents'})
 Veja um exemplo de como configurar agentes usando YAML:
 
 ```yaml agents.yaml
-# src/latest_ai_development/config/agents.yaml
+# src/<project_name>/config/agents.yaml
 researcher:
   role: >
     {topic} Senior Data Researcher
@@ -114,7 +140,7 @@ reporting_analyst:
 Para usar essa configuração YAML no seu código, crie uma classe de crew que herda de `CrewBase`:
 
 ```python Code
-# src/latest_ai_development/crew.py
+# src/<project_name>/crew.py
 from crewai import Agent, Crew, Process
 from crewai.project import CrewBase, agent, crew
 from crewai_tools import SerperDevTool

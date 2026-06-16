@@ -24,10 +24,9 @@ company-ai/
 `-- crews/
     |-- support_agent/
     |   |-- pyproject.toml
-    |   `-- src/
-    |       `-- support_agent/
-    |           |-- main.py
-    |           `-- crew.py
+    |   |-- crew.jsonc
+    |   `-- agents/
+    |       `-- support_agent.jsonc
     `-- research_flow/
         |-- pyproject.toml
         `-- src/
@@ -48,7 +47,7 @@ selecionada como a raiz do projeto da automação.
 
 Quando um diretório de trabalho é definido, o AMP usa essa pasta para:
 
-- Validação do projeto, incluindo `pyproject.toml`, `src/` e o ponto de entrada do Crew ou Flow
+- Validação do projeto, incluindo `pyproject.toml`, arquivos de crew JSON e qualquer ponto de entrada clássico de Crew ou Flow
 - Instalação de dependências com `uv`
 - O diretório de trabalho do processo em execução
 - A variável de ambiente `CREW_ROOT_DIR`
@@ -155,11 +154,16 @@ remove barras finais. Um valor em branco usa a raiz do repositório.
 
 ## Arquivos Lock e Workspaces UV
 
-A pasta selecionada deve conter o `pyproject.toml` e o diretório `src/` da
-automação. Um arquivo `uv.lock` ou `poetry.lock` pode ficar na pasta selecionada
-ou na raiz do repositório.
+A pasta selecionada deve conter o `pyproject.toml` e os arquivos exigidos pelo
+tipo de projeto:
 
-Isso oferece suporte aos dois layouts comuns de monorepo:
+- Crew JSON-first: `crew.jsonc` ou `crew.json`, além de `agents/`
+- Crew clássico ou Flow: `src/` com o ponto de entrada Python esperado
+
+Um arquivo `uv.lock` ou `poetry.lock` pode ficar na pasta selecionada ou na raiz
+do repositório.
+
+Isso oferece suporte aos dois layouts comuns de arquivo lock:
 
 <Tabs>
   <Tab title="Arquivo lock do projeto">
@@ -169,9 +173,9 @@ Isso oferece suporte aos dois layouts comuns de monorepo:
         `-- support_agent/
             |-- pyproject.toml
             |-- uv.lock
-            `-- src/
-                `-- support_agent/
-                    `-- main.py
+            |-- crew.jsonc
+            `-- agents/
+                `-- support_agent.jsonc
     ```
   </Tab>
 
@@ -184,9 +188,9 @@ Isso oferece suporte aos dois layouts comuns de monorepo:
     `-- crews/
         `-- support_agent/
             |-- pyproject.toml
-            `-- src/
-                `-- support_agent/
-                    `-- main.py
+            |-- crew.jsonc
+            `-- agents/
+                `-- support_agent.jsonc
     ```
   </Tab>
 </Tabs>

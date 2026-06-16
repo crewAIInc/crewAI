@@ -820,7 +820,7 @@ Você pode gerar um novo projeto CrewAI que já inclui toda a estrutura para cri
 crewai create flow name_of_flow
 ```
 
-Esse comando irá gerar um novo projeto CrewAI com a estrutura de pastas necessária. O projeto gerado inclui uma crew pré-criada chamada `poem_crew`, já funcional. Você pode usar essa crew como modelo, copiando, colando e editando para criar outras crews.
+Esse comando irá gerar um novo projeto CrewAI com a estrutura de pastas necessária. O projeto gerado inclui uma crew pré-criada chamada `poem_crew`, já funcional. A crew embutida inicial usa a estrutura clássica Python/YAML; novas crews independentes criadas com `crewai create crew` usam a estrutura JSON-first.
 
 ### Estrutura de Pastas
 
@@ -850,7 +850,29 @@ Na pasta `crews`, você pode definir múltiplas crews. Cada crew tem sua própri
 - `config/tasks.yaml`: Define as tarefas da crew.
 - `poem_crew.py`: Contém a definição da crew, incluindo agentes, tarefas, etc.
 
-Você pode copiar, colar e editar a `poem_crew` para criar outras crews.
+Você pode copiar, colar e editar a `poem_crew` para criar outras crews clássicas embutidas.
+
+Para crews embutidas JSON-first, use uma pasta com `crew.jsonc` e `agents/*.jsonc`:
+
+```text
+crews/
+└── research_crew/
+    ├── agents/
+    │   └── researcher.jsonc
+    └── crew.jsonc
+```
+
+Depois carregue a crew em uma etapa do Flow:
+
+```python
+from pathlib import Path
+from crewai.project import load_crew
+
+crew, default_inputs = load_crew(
+    Path(__file__).parent / "crews" / "research_crew" / "crew.jsonc"
+)
+result = crew.kickoff(inputs={**default_inputs, "topic": "AI Agents"})
+```
 
 ### Conectando Crews no `main.py`
 

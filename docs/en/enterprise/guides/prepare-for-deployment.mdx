@@ -24,7 +24,7 @@ Understanding which type you're deploying is essential because they have differe
 
 <CardGroup cols={2}>
   <Card title="Crew Projects" icon="users">
-    Standalone AI agent teams with `crew.py` defining agents and tasks. Best for focused, collaborative tasks.
+    Standalone AI agent teams. New crews are JSON-first with `crew.jsonc` and `agents/`; classic crews can still use `crew.py`.
   </Card>
   <Card title="Flow Projects" icon="diagram-project">
     Orchestrated workflows with embedded crews in a `crews/` folder. Best for complex, multi-stage processes.
@@ -33,19 +33,19 @@ Understanding which type you're deploying is essential because they have differe
 
 | Aspect | Crew | Flow |
 |--------|------|------|
-| **Project structure** | `src/project_name/` with `crew.py` | `src/project_name/` with `crews/` folder |
-| **Main logic location** | `src/project_name/crew.py` | `src/project_name/main.py` (Flow class) |
-| **Entry point function** | `run()` in `main.py` | `kickoff()` in `main.py` |
+| **Project structure** | Project root with `crew.jsonc` and `agents/` | `src/project_name/` with `crews/` folder |
+| **Main logic location** | `crew.jsonc` (classic: `src/project_name/crew.py`) | `src/project_name/main.py` (Flow class) |
+| **Entry point function** | Loaded from `crew.jsonc` (classic: `run()` in `main.py`) | `kickoff()` in `main.py` |
 | **pyproject.toml type** | `type = "crew"` | `type = "flow"` |
 | **CLI create command** | `crewai create crew name` | `crewai create flow name` |
-| **Config location** | `src/project_name/config/` | `src/project_name/crews/crew_name/config/` |
+| **Config location** | `crew.jsonc`, `agents/`, optional `tools/` | `src/project_name/crews/crew_name/config/` or embedded JSON crew folders |
 | **Can contain other crews** | No | Yes (in `crews/` folder) |
 
 ## Project Structure Reference
 
 ### Crew Project Structure
 
-When you run `crewai create crew my_crew`, you get this structure:
+When you run `crewai create crew my_crew`, you get the JSON-first structure:
 
 ```
 my_crew/
@@ -54,23 +54,26 @@ my_crew/
 ├── README.md
 ├── .env
 ├── uv.lock                  # REQUIRED for deployment
-└── src/
-    └── my_crew/
-        ├── __init__.py
-        ├── main.py          # Entry point with run() function
-        ├── crew.py          # Crew class with @CrewBase decorator
-        ├── tools/
-        │   ├── custom_tool.py
-        │   └── __init__.py
-        └── config/
-            ├── agents.yaml  # Agent definitions
-            └── tasks.yaml   # Task definitions
+├── crew.jsonc               # Crew settings, tasks, process, inputs
+├── agents/
+│   └── researcher.jsonc     # Agent definitions
+├── tools/                   # Optional custom:<name> tools
+├── knowledge/
+└── skills/
 ```
 
 <Warning>
-  The nested `src/project_name/` structure is critical for Crews.
-  Placing files at the wrong level will cause deployment failures.
+  For JSON-first crews, keep `crew.jsonc`, `agents/`, `tools/`, `knowledge/`, and `skills/`
+  at the project root. Placing them under `src/` will prevent `crewai run` and deployment
+  validation from finding the crew definition.
 </Warning>
+
+<Info>
+  Classic projects created with `crewai create crew my_crew --classic` use the older
+  `src/project_name/crew.py`, `src/project_name/config/agents.yaml`, and
+  `src/project_name/config/tasks.yaml` layout. That layout remains supported for
+  decorator-based Python crews.
+</Info>
 
 ### Flow Project Structure
 
@@ -100,9 +103,9 @@ my_flow/
 ```
 
 <Info>
-  Both Crews and Flows use the `src/project_name/` structure.
-  The key difference is that Flows have a `crews/` folder for embedded crews,
-  while Crews have `crew.py` directly in the project folder.
+  JSON-first standalone crews use project-root JSON files. Flows still use
+  `src/project_name/` and can contain either classic embedded crews or embedded
+  JSON crew folders loaded with `crewai.project.load_crew`.
 </Info>
 
 ## Pre-Deployment Checklist
@@ -154,60 +157,91 @@ git commit -m "Add uv.lock for deployment"
 git push
 ```
 
-### 3. Validate CrewBase Decorator Usage
+### 3. Validate the Crew Definition
 
-**Every crew class must use the `@CrewBase` decorator.** This applies to:
+<Tabs>
+  <Tab title="JSON-first Crews">
+    JSON-first crews must have a `crew.jsonc` or `crew.json` file at the project root.
+    The `agents` array must reference files in `agents/`, and each task should reference
+    a valid agent name.
 
-- Standalone crew projects
-- Crews embedded inside Flow projects
+    ```jsonc crew.jsonc
+    {
+      "name": "Research Crew",
+      "agents": ["researcher"],
+      "tasks": [
+        {
+          "name": "research_task",
+          "description": "Research {topic}.",
+          "expected_output": "A concise report.",
+          "agent": "researcher"
+        }
+      ],
+      "inputs": {
+        "topic": "AI Agents"
+      }
+    }
+    ```
 
-```python
-from crewai import Agent, Crew, Process, Task
-from crewai.project import CrewBase, agent, crew, task
-from crewai.agents.agent_builder.base_agent import BaseAgent
-from typing import List
+    Custom tools are referenced as `"custom:<name>"` and must be implemented in
+    `tools/<name>.py` with a `BaseTool` subclass.
+  </Tab>
+  <Tab title="Classic Python/YAML Crews">
+    Classic crews and Python crews embedded in Flows must use the `@CrewBase` decorator.
 
-@CrewBase  # This decorator is REQUIRED
-class MyCrew():
-    """My crew description"""
+    ```python
+    from crewai import Agent, Crew, Process, Task
+    from crewai.project import CrewBase, agent, crew, task
+    from crewai.agents.agent_builder.base_agent import BaseAgent
+    from typing import List
 
-    agents: List[BaseAgent]
-    tasks: List[Task]
+    @CrewBase
+    class MyCrew():
+        """My crew description"""
 
-    @agent
-    def my_agent(self) -> Agent:
-        return Agent(
-            config=self.agents_config['my_agent'],  # type: ignore[index]
-            verbose=True
-        )
+        agents: List[BaseAgent]
+        tasks: List[Task]
 
-    @task
-    def my_task(self) -> Task:
-        return Task(
-            config=self.tasks_config['my_task']  # type: ignore[index]
-        )
+        @agent
+        def my_agent(self) -> Agent:
+            return Agent(
+                config=self.agents_config['my_agent'],  # type: ignore[index]
+                verbose=True
+            )
 
-    @crew
-    def crew(self) -> Crew:
-        return Crew(
-            agents=self.agents,
-            tasks=self.tasks,
-            process=Process.sequential,
-            verbose=True,
-        )
-```
+        @task
+        def my_task(self) -> Task:
+            return Task(
+                config=self.tasks_config['my_task']  # type: ignore[index]
+            )
 
-<Warning>
-  If you forget the `@CrewBase` decorator, your deployment will fail with
-  errors about missing agents or tasks configurations.
-</Warning>
+        @crew
+        def crew(self) -> Crew:
+            return Crew(
+                agents=self.agents,
+                tasks=self.tasks,
+                process=Process.sequential,
+                verbose=True,
+            )
+    ```
+  </Tab>
+</Tabs>
 
 ### 4. Check Project Entry Points
 
-Both Crews and Flows have their entry point in `src/project_name/main.py`:
+JSON-first standalone crews do not need a hand-written `src/project_name/main.py`; `crewai run`
+and deployment packaging load `crew.jsonc` directly. Classic crews and Flows use Python entry
+points:
 
 <Tabs>
-  <Tab title="For Crews">
+  <Tab title="JSON-first Crews">
+    Run locally from the project root:
+
+    ```bash
+    crewai run
+    ```
+  </Tab>
+  <Tab title="Classic Crews">
     The entry point uses a `run()` function:
 
     ```python
@@ -278,16 +312,17 @@ grep -A2 "\[tool.crewai\]" pyproject.toml
 # 2. Verify uv.lock exists
 ls -la uv.lock || echo "ERROR: uv.lock missing! Run 'uv lock'"
 
-# 3. Verify src/ structure exists
-ls -la src/*/main.py 2>/dev/null || echo "No main.py found in src/"
+# 3. For JSON-first crews, verify crew.jsonc and agents/ exist
+([ -f crew.jsonc ] || [ -f crew.json ]) || echo "No crew.jsonc or crew.json found"
+test -d agents || echo "No agents/ directory found"
 
-# 4. For Crews - verify crew.py exists
+# 4. For classic Crews - verify crew.py exists
 ls -la src/*/crew.py 2>/dev/null || echo "No crew.py (expected for Crews)"
 
 # 5. For Flows - verify crews/ folder exists
 ls -la src/*/crews/ 2>/dev/null || echo "No crews/ folder (expected for Flows)"
 
-# 6. Check for CrewBase usage
+# 6. For classic Python crews - check for CrewBase usage
 grep -r "@CrewBase" . --include="*.py"
 ```
 
@@ -297,8 +332,9 @@ grep -r "@CrewBase" . --include="*.py"
 |---------|---------|-----|
 | Missing `uv.lock` | Build fails during dependency resolution | Run `uv lock` and commit |
 | Wrong `type` in pyproject.toml | Build succeeds but runtime fails | Change to correct type |
-| Missing `@CrewBase` decorator | "Config not found" errors | Add decorator to all crew classes |
-| Files at root instead of `src/` | Entry point not found | Move to `src/project_name/` |
+| Missing `crew.jsonc` or `agents/` in a JSON-first crew | Crew definition not found | Keep `crew.jsonc` and `agents/` at the project root |
+| Missing `@CrewBase` decorator in a classic crew | "Config not found" errors | Add decorator to all classic crew classes |
+| Classic files at root instead of `src/` | Entry point not found | Move classic Python files to `src/project_name/` |
 | Missing `run()` or `kickoff()` | Cannot start automation | Add correct entry function |
 
 ## Next Steps

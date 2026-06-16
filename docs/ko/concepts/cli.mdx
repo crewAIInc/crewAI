@@ -52,6 +52,8 @@ crewai create crew my_new_crew
 crewai create flow my_new_flow
 ```
 
+기본적으로 `crewai create crew`는 `crew.jsonc`와 `agents/*.jsonc`가 있는 JSON-first 프로젝트를 만듭니다. `crew.py`, `config/agents.yaml`, `config/tasks.yaml`을 사용하는 기존 Python/YAML 스캐폴드가 필요할 때만 `crewai create crew my_new_crew --classic`을 사용하세요.
+
 ### 2. 버전
 
 설치된 CrewAI의 버전을 표시합니다.
@@ -183,7 +185,20 @@ crewai chat
 이 명령어들은 CrewAI 프로젝트의 루트 디렉터리에서 실행해야 합니다.
 </Note>
 <Note>
-중요: 이 명령어를 사용하려면 `crew.py` 파일에서 `chat_llm` 속성을 설정해야 합니다.
+중요: 이 명령어를 사용하려면 crew 정의에 `chat_llm` 속성을 설정해야 합니다.
+
+JSON-first crew에서는 `crew.jsonc`에 추가합니다:
+
+```jsonc
+{
+  "name": "My Crew",
+  "agents": ["researcher"],
+  "tasks": [],
+  "chat_llm": "openai/gpt-4o"
+}
+```
+
+클래식 Python/YAML crew에서는 `crew.py`에 설정합니다:
 
 ```python
 @crew
@@ -313,7 +328,7 @@ CLI를 사용하여 [CrewAI AMP](http://app.crewai.com)에 crew를 배포하는 
 
 ### 11. API 키
 
-`crewai create crew` 명령어를 실행하면, CLI에서 선택할 수 있는 LLM 제공업체 목록이 표시되고, 그 다음으로 선택한 제공업체에 대한 모델 선택이 이어집니다.
+`crewai create crew` 명령어를 실행하면, CLI에서 선택할 수 있는 LLM 제공업체 목록이 표시되고, 그 다음으로 선택한 제공업체에 대한 모델 선택이 이어집니다. 선택한 모델은 생성된 `.env`에 저장되며 각 에이전트 JSONC 파일은 자체 `llm`을 설정할 수 있습니다.
 
 LLM 제공업체와 모델을 선택하면, API 키를 입력하라는 메시지가 표시됩니다.
 

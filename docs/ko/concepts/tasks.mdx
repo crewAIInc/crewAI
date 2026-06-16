@@ -64,13 +64,48 @@ crew = Crew(
 
 ## 작업 생성하기
 
-CrewAI에서 작업을 생성하는 방법에는 **YAML 구성(권장)** 을 사용하는 방법과 **코드에서 직접 정의하는 방법** 두 가지가 있습니다.
+CrewAI에서 작업을 생성하는 일반적인 방법은 **JSONC 프로젝트 구성(새 crew 권장)** 또는 **코드에서 직접 정의**입니다.
 
-### YAML 구성 (권장)
+### JSONC 구성 (권장)
 
-YAML 구성을 사용하면 작업을 정의할 때 더 깔끔하고 유지 관리가 용이한 방법을 제공합니다. CrewAI 프로젝트에서 작업을 정의할 때 이 방식을 사용하는 것을 강력히 권장합니다.
+`crewai create crew <name>`으로 만든 새 프로젝트는 `crew.jsonc`에 태스크를 정의합니다.
 
-[설치](/ko/installation) 섹션에 따라 CrewAI 프로젝트를 생성한 후, `src/latest_ai_development/config/tasks.yaml` 파일로 이동하여 템플릿을 귀하의 특정 작업 요구 사항에 맞게 수정하세요.
+```jsonc crew.jsonc
+{
+  "name": "Research Crew",
+  "agents": ["researcher", "reporting_analyst"],
+  "tasks": [
+    {
+      "name": "research_task",
+      "description": "Conduct thorough research about {topic}.",
+      "expected_output": "A list of the most relevant information about {topic}.",
+      "agent": "researcher"
+    },
+    {
+      "name": "reporting_task",
+      "description": "Review the research and expand it into a detailed report.",
+      "expected_output": "A polished markdown report.",
+      "agent": "reporting_analyst",
+      "context": ["research_task"],
+      "markdown": true,
+      "output_file": "report.md"
+    }
+  ],
+  "inputs": {
+    "topic": "AI Agents"
+  }
+}
+```
+
+각 태스크에는 `description`과 `expected_output`이 필요합니다. `agent` 값은 `agents`에 나열된 에이전트 이름과 일치해야 합니다. `context`는 이전 태스크 이름만 참조할 수 있으며, 이후 태스크 참조는 거부됩니다.
+
+### 클래식 YAML 구성
+
+`crewai create crew <name> --classic`으로 만든 클래식 프로젝트는 `config/tasks.yaml`과 `crew.py`의 `@CrewBase` 클래스를 사용합니다.
+
+YAML 구성은 기존 Python/YAML 프로젝트와 `@CrewBase` 클래스에서 태스크를 정의하려는 팀을 위해 계속 지원됩니다.
+
+클래식 프로젝트를 만든 후, `src/<project_name>/config/tasks.yaml` 파일로 이동하여 템플릿을 작업 요구 사항에 맞게 수정하세요.
 
 <Note>
 YAML 파일 내 변수(예: `{topic}`)는 크루를 실행할 때 입력값에서 가져온 값으로 대체됩니다:
@@ -106,7 +141,7 @@ reporting_task:
 이 YAML 구성을 코드에서 사용하려면 `CrewBase`를 상속받는 크루 클래스를 생성하세요:
 
 ```python crew.py
-# src/latest_ai_development/crew.py
+# src/<project_name>/crew.py
 
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task

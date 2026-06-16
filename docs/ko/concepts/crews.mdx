@@ -41,13 +41,54 @@ crewAI에서 crew는 일련의 작업을 달성하기 위해 함께 협력하는
 
 ## 크루 생성하기
 
-CrewAI에서 크루를 생성하는 방법은 두 가지가 있습니다: **YAML 구성(권장)**을 사용하는 방법과 **코드에서 직접 정의**하는 방법입니다.
+CrewAI에서 크루를 생성하는 주요 방법은 **JSONC 구성(새 crew 권장)**을 사용하는 방법과 클래식 프로젝트나 고급 사용 사례에서 **코드로 직접 정의**하는 방법입니다.
 
-### YAML 구성 (권장)
+### JSONC 구성 (권장)
 
-YAML 구성을 사용하면 crew를 정의할 때 더 깔끔하고 유지 관리하기 쉬운 방법을 제공하며, CrewAI 프로젝트에서 agent 및 task를 정의하는 방식과 일관성을 유지할 수 있습니다.
+`crewai create crew <name>`으로 만든 새 프로젝트는 crew 수준 설정과 태스크를 `crew.jsonc`에 두고, 각 에이전트를 `agents/`의 별도 파일에 둡니다. `crewai run`은 `crew.jsonc` 또는 `crew.json`을 감지해 에이전트를 로드하고, 빠진 placeholder 값을 물은 뒤 crew를 시작합니다.
 
-[설치](/ko/installation) 섹션에 설명된 대로 CrewAI 프로젝트를 생성한 후, `CrewBase`를 상속받는 클래스에서 데코레이터를 이용해 agent, task, 그리고 crew 자체를 정의할 수 있습니다.
+```jsonc crew.jsonc
+{
+  "name": "Market Research Crew",
+  "agents": ["researcher", "analyst"],
+  "tasks": [
+    {
+      "name": "research",
+      "description": "Research {topic} and collect the most relevant facts.",
+      "expected_output": "Structured research notes about {topic}.",
+      "agent": "researcher"
+    },
+    {
+      "name": "analysis",
+      "description": "Analyze the research and write a concise report.",
+      "expected_output": "A markdown report with findings and recommendations.",
+      "agent": "analyst",
+      "context": ["research"],
+      "output_file": "output/report.md"
+    }
+  ],
+  "process": "sequential",
+  "verbose": true,
+  "memory": true,
+  "inputs": {
+    "topic": "AI Agents"
+  }
+}
+```
+
+`agents`의 각 문자열은 먼저 `agents/<name>.jsonc`, 그 다음 `agents/<name>.json`으로 해석됩니다. 계층형 crew는 `"process": "hierarchical"`와 `manager_llm` 또는 `manager_agent`를 사용하세요.
+
+<Warning>
+신뢰하는 출처의 JSON crew 프로젝트만 실행하세요. `custom:<name>` 도구와 `{"python": "module.attribute"}` 참조는 crew 로드 시 로컬 Python 코드를 실행합니다.
+</Warning>
+
+### 클래식 YAML 구성
+
+`crewai create crew <name> --classic`으로 만든 클래식 프로젝트는 `crew.py`, `config/agents.yaml`, `config/tasks.yaml`, `@CrewBase`, `@agent`, `@task`, `@crew` 데코레이터를 사용합니다.
+
+이 방식은 기존 Python/YAML 프로젝트와 Python 데코레이터 제어가 필요한 팀을 위해 계속 지원됩니다.
+
+클래식 프로젝트를 만든 후, `CrewBase`를 상속받는 클래스에서 데코레이터를 이용해 agent, task, 그리고 crew 자체를 정의할 수 있습니다.
 
 #### 데코레이터가 적용된 예시 Crew 클래스
 

@@ -23,10 +23,9 @@ company-ai/
 `-- crews/
     |-- support_agent/
     |   |-- pyproject.toml
-    |   `-- src/
-    |       `-- support_agent/
-    |           |-- main.py
-    |           `-- crew.py
+    |   |-- crew.jsonc
+    |   `-- agents/
+    |       `-- support_agent.jsonc
     `-- research_flow/
         |-- pyproject.toml
         `-- src/
@@ -47,7 +46,7 @@ crews/support_agent
 
 عند تعيين دليل عمل، يستخدم AMP ذلك المجلد من أجل:
 
-- التحقق من المشروع، بما في ذلك `pyproject.toml` و`src/` ونقطة دخول Crew أو Flow
+- التحقق من المشروع، بما في ذلك `pyproject.toml` وملفات crew JSON وأي نقطة دخول كلاسيكية لـ Crew أو Flow
 - تثبيت الاعتماديات باستخدام `uv`
 - دليل العمل للعملية قيد التشغيل
 - متغير البيئة `CREW_ROOT_DIR`
@@ -150,11 +149,16 @@ crews/support_agent
 
 ## ملفات القفل وUV Workspaces
 
-يجب أن يحتوي المجلد المحدد على `pyproject.toml` ودليل `src/` الخاصين بالأتمتة.
+يجب أن يحتوي المجلد المحدد على `pyproject.toml` وملفات المشروع المناسبة لنوع
+الأتمتة:
+
+- crew بنمط JSON-first: ملف `crew.jsonc` أو `crew.json` مع مجلد `agents/`
+- Crew كلاسيكي أو Flow: مجلد `src/` مع نقطة دخول Python المتوقعة
+
 يمكن أن يوجد ملف `uv.lock` أو `poetry.lock` إما في المجلد المحدد أو في جذر
 المستودع.
 
-يدعم هذا التخطيطين الشائعين في monorepo:
+يدعم هذا تخطيطي ملفات القفل الشائعين:
 
 <Tabs>
   <Tab title="ملف قفل المشروع">
@@ -164,9 +168,9 @@ crews/support_agent
         `-- support_agent/
             |-- pyproject.toml
             |-- uv.lock
-            `-- src/
-                `-- support_agent/
-                    `-- main.py
+            |-- crew.jsonc
+            `-- agents/
+                `-- support_agent.jsonc
     ```
   </Tab>
 
@@ -179,9 +183,9 @@ crews/support_agent
     `-- crews/
         `-- support_agent/
             |-- pyproject.toml
-            `-- src/
-                `-- support_agent/
-                    `-- main.py
+            |-- crew.jsonc
+            `-- agents/
+                `-- support_agent.jsonc
     ```
   </Tab>
 </Tabs>

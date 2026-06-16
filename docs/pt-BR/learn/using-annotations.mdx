@@ -5,11 +5,15 @@ icon: "at"
 mode: "wide"
 ---
 
-Este guia explica como utilizar anotações para referenciar corretamente **agentes**, **tarefas** e outros componentes no arquivo `crew.py`.
+Este guia explica como utilizar anotações para referenciar corretamente **agentes**, **tarefas** e outros componentes em um arquivo `crew.py` clássico.
+
+<Note>
+Novos projetos criados com `crewai create crew <name>` são JSON-first e usam `crew.jsonc` com `agents/*.jsonc`. Use este guia ao trabalhar em um projeto clássico criado com `crewai create crew <name> --classic`, ao migrar um projeto Python/YAML existente ou quando precisar de controle via decorators em Python.
+</Note>
 
 ## Introdução
 
-As anotações no framework CrewAI são utilizadas para decorar classes e métodos, fornecendo metadados e funcionalidades para diversos componentes do seu crew. Essas anotações auxiliam na organização e estruturação do seu código, tornando-o mais legível e fácil de manter.
+As anotações no framework CrewAI são utilizadas para decorar classes e métodos, fornecendo metadados e funcionalidades para diversos componentes do seu crew. Em projetos clássicos Python/YAML, elas organizam o código que carrega `config/agents.yaml`, `config/tasks.yaml` e retorna o objeto `Crew`.
 
 ## Anotações Disponíveis
 
@@ -113,9 +117,9 @@ def crew(self) -> Crew:
 
 A anotação `@crew` é usada para decorar o método que cria e retorna o objeto `Crew`. Este método reúne todos os componentes (agentes e tarefas) em um crew funcional.
 
-## Configuração YAML
+## Configuração YAML Clássica
 
-As configurações dos agentes geralmente são armazenadas em um arquivo YAML. Veja um exemplo de como o arquivo `agents.yaml` pode ser estruturado para o agente researcher:
+Em projetos clássicos, as configurações dos agentes geralmente são armazenadas em um arquivo YAML. Veja um exemplo de como o arquivo `agents.yaml` pode ser estruturado para o agente researcher:
 
 ```yaml
 researcher:
@@ -146,6 +150,6 @@ Repare como os campos `llm` e `tools` no arquivo YAML correspondem aos métodos 
 - **Nomenclatura Consistente**: Utilize nomenclatura clara e consistente para seus métodos. Por exemplo, métodos de agentes podem ser nomeados de acordo com suas funções (ex: researcher, reporting_analyst).
 - **Variáveis de Ambiente**: Utilize variáveis de ambiente para informações sensíveis como chaves de API.
 - **Flexibilidade**: Estruture seu crew de forma flexível, permitindo fácil adição ou remoção de agentes e tarefas.
-- **Correspondência YAML-Código**: Assegure que os nomes e estruturas nos arquivos YAML correspondam corretamente aos métodos decorados em seu código Python.
+- **Correspondência YAML-Código**: Em projetos clássicos, assegure que os nomes e estruturas nos arquivos YAML correspondam corretamente aos métodos decorados em seu código Python.
 
-Seguindo essas orientações e utilizando corretamente as anotações, você conseguirá criar crews bem estruturados e de fácil manutenção utilizando o framework CrewAI.
+Seguindo essas orientações e utilizando corretamente as anotações, você conseguirá manter crews clássicos bem estruturados. Para novas crews, prefira a estrutura JSON-first em [Crews](/pt-BR/concepts/crews).

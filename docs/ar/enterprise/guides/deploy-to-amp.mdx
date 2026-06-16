@@ -374,17 +374,17 @@ git push
 
 **الحل**: تحقق من أن مشروعك يتطابق مع البنية المتوقعة:
 
-- **كل من الطواقم والتدفقات**: يجب أن تكون نقطة الدخول في `src/project_name/main.py`
-- **الطواقم**: تستخدم دالة `run()` كنقطة دخول
-- **التدفقات**: تستخدم دالة `kickoff()` كنقطة دخول
+- **JSON-first Crews**: أبقِ `crew.jsonc` أو `crew.json` و `agents/` في جذر المشروع
+- **Crews كلاسيكية**: استخدم `src/project_name/main.py` مع دالة دخول `run()`
+- **Flows**: استخدم `src/project_name/main.py` مع دالة دخول `kickoff()`
 
 راجع [التحضير للنشر](/ar/enterprise/guides/prepare-for-deployment) لمخططات البنية المفصلة.
 
-#### مُزخرف CrewBase مفقود
+#### مُزخرف CrewBase مفقود في crew كلاسيكية
 
 **العرض**: أخطاء "Crew not found" أو "Config not found" أو أخطاء تهيئة الوكيل/المهمة
 
-**الحل**: تأكد من أن **جميع** فئات الطاقم تستخدم مُزخرف `@CrewBase`:
+**الحل**: في crews الكلاسيكية Python/YAML، تأكد من أن جميع فئات الـ crew تستخدم مُزخرف `@CrewBase`. لا تحتاج crews بنمط JSON-first إلى هذا المزخرف.
 
 ```python
 from crewai.project import CrewBase, agent, crew, task
@@ -404,8 +404,8 @@ class YourCrew():
 ```
 
 <Info>
-  ينطبق هذا على الطواقم المستقلة والطواقم المضمنة داخل مشاريع التدفق.
-  كل فئة طاقم تحتاج المُزخرف.
+  ينطبق هذا على فئات crew الكلاسيكية المكتوبة في Python، بما في ذلك crews الكلاسيكية المضمنة داخل مشاريع Flow.
+  يتم التحقق من crews بنمط JSON-first من `crew.jsonc` و `agents/` بدلاً من ذلك.
 </Info>
 
 #### نوع pyproject.toml غير صحيح
@@ -442,8 +442,8 @@ type = "flow"
 **الحل**:
 1. تحقق من سجلات التنفيذ في لوحة تحكم AMP (علامة تبويب Traces)
 2. تحقق من أن جميع الأدوات لديها مفاتيح API المطلوبة مُهيأة
-3. تأكد من صحة تهيئات الوكلاء في `agents.yaml`
-4. تحقق من تهيئات المهام في `tasks.yaml` بحثاً عن أخطاء الصياغة
+3. في crews بنمط JSON-first، تحقق من `crew.jsonc` والملفات المشار إليها داخل `agents/`
+4. في crews الكلاسيكية، تأكد من صحة `agents.yaml` و `tasks.yaml`
 
 <Card title="تحتاج مساعدة؟" icon="headset" href="mailto:support@crewai.com">
   تواصل مع فريق الدعم للمساعدة في مشاكل النشر أو أسئلة حول

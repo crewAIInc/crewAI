@@ -74,104 +74,54 @@ crew = Crew(
 
 ## Creating Tasks
 
-There are two ways to create tasks in CrewAI: using **YAML configuration (recommended)** or defining them **directly in code**.
+There are two common ways to create tasks in CrewAI: using **JSONC project configuration (recommended for new crews)** or defining them **directly in code**.
 
-### YAML Configuration (Recommended)
+### JSONC Configuration (Recommended)
 
-Using YAML configuration provides a cleaner, more maintainable way to define tasks. We strongly recommend using this approach to define tasks in your CrewAI projects.
+New projects created with `crewai create crew <name>` define tasks in `crew.jsonc`. The `agents` array points to files in `agents/`, and the `tasks` array defines the ordered work the crew should run.
 
-After creating your CrewAI project as outlined in the [Installation](/en/installation) section, navigate to the `src/latest_ai_development/config/tasks.yaml` file and modify the template to match your specific task requirements.
+After creating your CrewAI project as outlined in the [Installation](/en/installation) section, edit the generated `crew.jsonc`.
 
 <Note>
-Variables in your YAML files (like `{topic}`) will be replaced with values from your inputs when running the crew:
-```python Code
-crew.kickoff(inputs={'topic': 'AI Agents'})
-```
+Use `{placeholder}` values in task `description`, `expected_output`, and `output_file`. Put defaults in the top-level `inputs` object; `crewai run` prompts for any missing values.
 </Note>
 
-Here's an example of how to configure tasks using YAML:
+Here's an example `crew.jsonc` with two ordered tasks:
 
-````yaml tasks.yaml
-research_task:
-  description: >
-    Conduct a thorough research about {topic}
-    Make sure you find any interesting and relevant information given
-    the current year is 2025.
-  expected_output: >
-    A list with 10 bullet points of the most relevant information about {topic}
-  agent: researcher
-
-reporting_task:
-  description: >
-    Review the context you got and expand each topic into a full section for a report.
-    Make sure the report is detailed and contains any and all relevant information.
-  expected_output: >
-    A fully fledge reports with the mains topics, each with a full section of information.
-    Formatted as markdown without '```'
-  agent: reporting_analyst
-  markdown: true
-  output_file: report.md
+````jsonc crew.jsonc
+{
+  "name": "Research Crew",
+  "agents": ["researcher", "reporting_analyst"],
+  "tasks": [
+    {
+      "name": "research_task",
+      "description": "Conduct thorough research about {topic}. Include current and relevant information.",
+      "expected_output": "A list of the most relevant information about {topic}.",
+      "agent": "researcher"
+    },
+    {
+      "name": "reporting_task",
+      "description": "Review the research and expand it into a detailed report.",
+      "expected_output": "A polished markdown report without fenced code blocks.",
+      "agent": "reporting_analyst",
+      "context": ["research_task"],
+      "markdown": true,
+      "output_file": "report.md"
+    }
+  ],
+  "inputs": {
+    "topic": "AI Agents"
+  }
+}
 ````
 
-To use this YAML configuration in your code, create a crew class that inherits from `CrewBase`:
+Each task must include `description` and `expected_output`. The `agent` value should match an agent name listed in `agents`. `context` is a list of prior task names; forward references are rejected so sequential context stays explicit.
 
-```python crew.py
-# src/latest_ai_development/crew.py
+Task entries support any public `Task` field. Common fields include `name`, `agent`, `context`, `output_file`, `tools`, `human_input`, `async_execution`, `guardrail`, `guardrails`, `guardrail_max_retries`, `markdown`, `input_files`, `output_json`, `output_pydantic`, `response_model`, and `converter_cls`. Use `"type": "ConditionalTask"` with a `condition` field for conditional tasks.
 
-from crewai import Agent, Crew, Process, Task
-from crewai.project import CrewBase, agent, crew, task
-from crewai_tools import SerperDevTool
+### Classic YAML Configuration
 
-@CrewBase
-class LatestAiDevelopmentCrew():
-  """LatestAiDevelopment crew"""
-
-  @agent
-  def researcher(self) -> Agent:
-    return Agent(
-      config=self.agents_config['researcher'], # type: ignore[index]
-      verbose=True,
-      tools=[SerperDevTool()]
-    )
-
-  @agent
-  def reporting_analyst(self) -> Agent:
-    return Agent(
-      config=self.agents_config['reporting_analyst'], # type: ignore[index]
-      verbose=True
-    )
-
-  @task
-  def research_task(self) -> Task:
-    return Task(
-      config=self.tasks_config['research_task'] # type: ignore[index]
-    )
-
-  @task
-  def reporting_task(self) -> Task:
-    return Task(
-      config=self.tasks_config['reporting_task'] # type: ignore[index]
-    )
-
-  @crew
-  def crew(self) -> Crew:
-    return Crew(
-      agents=[
-        self.researcher(),
-        self.reporting_analyst()
-      ],
-      tasks=[
-        self.research_task(),
-        self.reporting_task()
-      ],
-      process=Process.sequential
-    )
-```
-
-<Note>
-  The names you use in your YAML files (`agents.yaml` and `tasks.yaml`) should
-  match the method names in your Python code.
-</Note>
+Classic projects created with `crewai create crew <name> --classic` use `config/tasks.yaml` and a `@CrewBase` class in `crew.py`. This remains supported for existing YAML projects or teams that prefer decorator-based Python wiring.
 
 ### Direct Code Definition (Alternative)
 

@@ -24,10 +24,9 @@ company-ai/
 `-- crews/
     |-- support_agent/
     |   |-- pyproject.toml
-    |   `-- src/
-    |       `-- support_agent/
-    |           |-- main.py
-    |           `-- crew.py
+    |   |-- crew.jsonc
+    |   `-- agents/
+    |       `-- support_agent.jsonc
     `-- research_flow/
         |-- pyproject.toml
         `-- src/
@@ -48,7 +47,7 @@ folder as the automation project root.
 
 When a working directory is set, AMP uses that folder for:
 
-- Project validation, including `pyproject.toml`, `src/`, and the Crew or Flow entry point
+- Project validation, including `pyproject.toml`, JSON crew files, and any classic Crew or Flow entry point
 - Dependency installation with `uv`
 - The running process working directory
 - The `CREW_ROOT_DIR` environment variable
@@ -153,11 +152,16 @@ removes trailing slashes. A blank value uses the repository root.
 
 ## Lock Files and UV Workspaces
 
-The selected folder must contain the automation's `pyproject.toml` and `src/`
-directory. A `uv.lock` or `poetry.lock` file can live either in the selected
-folder or at the repository root.
+The selected folder must contain the automation's `pyproject.toml` and the
+project files for its type:
 
-This supports both common monorepo layouts:
+- JSON-first crew: `crew.jsonc` or `crew.json`, plus `agents/`
+- Classic crew or Flow: `src/` with the expected Python entry point
+
+A `uv.lock` or `poetry.lock` file can live either in the selected folder or at
+the repository root.
+
+This supports both common lock-file layouts:
 
 <Tabs>
   <Tab title="Project lock file">
@@ -167,9 +171,9 @@ This supports both common monorepo layouts:
         `-- support_agent/
             |-- pyproject.toml
             |-- uv.lock
-            `-- src/
-                `-- support_agent/
-                    `-- main.py
+            |-- crew.jsonc
+            `-- agents/
+                `-- support_agent.jsonc
     ```
   </Tab>
 
@@ -182,9 +186,9 @@ This supports both common monorepo layouts:
     `-- crews/
         `-- support_agent/
             |-- pyproject.toml
-            `-- src/
-                `-- support_agent/
-                    `-- main.py
+            |-- crew.jsonc
+            `-- agents/
+                `-- support_agent.jsonc
     ```
   </Tab>
 </Tabs>

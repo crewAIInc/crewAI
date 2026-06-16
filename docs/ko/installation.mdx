@@ -106,7 +106,7 @@ CrewAI는 의존성 관리와 패키지 처리를 위해 `uv`를 사용합니다
 
 # CrewAI 프로젝트 생성하기
 
-에이전트 및 태스크를 정의할 때 구조적인 접근 방식을 위해 `YAML` 템플릿 스캐폴딩을 사용하는 것을 권장합니다. 다음은 시작 방법입니다:
+`crewai create crew`는 이제 JSON-first crew 프로젝트를 생성합니다. 에이전트는 `agents/*.jsonc`에, 태스크와 crew 수준 설정은 `crew.jsonc`에 두며, `crewai run`은 이 JSON 정의를 직접 로드합니다.
 
 <Steps>
   <Step title="프로젝트 스캐폴딩 생성">
@@ -119,21 +119,20 @@ CrewAI는 의존성 관리와 패키지 처리를 위해 `uv`를 사용합니다
       ```
       my_project/
       ├── .gitignore
+      ├── .env
+      ├── agents/
+      │   └── researcher.jsonc
+      ├── crew.jsonc
       ├── knowledge/
       ├── pyproject.toml
       ├── README.md
-      ├── .env
-      └── src/
-          └── my_project/
-              ├── __init__.py
-              ├── main.py
-              ├── crew.py
-              ├── tools/
-              │   ├── custom_tool.py
-              │   └── __init__.py
-              └── config/
-                  ├── agents.yaml
-                  └── tasks.yaml
+      ├── skills/
+      └── tools/
+      ```
+
+    - `crew.py`, `config/agents.yaml`, `config/tasks.yaml`을 사용하는 기존 Python/YAML 스캐폴드가 필요하다면 다음을 실행하세요:
+      ```shell
+      crewai create crew <your_project_name> --classic
       ```
 
   </Step>
@@ -142,15 +141,15 @@ CrewAI는 의존성 관리와 패키지 처리를 위해 `uv`를 사용합니다
     - 프로젝트에는 다음과 같은 주요 파일들이 포함되어 있습니다:
       | 파일 | 용도 |
       | --- | --- |
-      | `agents.yaml` | AI 에이전트 및 역할 정의 |
-      | `tasks.yaml` | 에이전트 태스크 및 워크플로우 설정 |
+      | `crew.jsonc` | crew, 태스크 순서, 프로세스, 기본 입력값 설정 |
+      | `agents/*.jsonc` | 각 에이전트의 역할, 목표, backstory, LLM, 도구, 동작 정의 |
       | `.env` | API 키 및 환경 변수 저장 |
-      | `main.py` | 프로젝트 진입점 및 실행 흐름 |
-      | `crew.py` | Crew 오케스트레이션 및 코디네이션 |
-      | `tools/` | 커스텀 에이전트 도구 디렉터리 |
-      | `knowledge/` | 지식 베이스 디렉터리 |
+      | `tools/` | `custom:<name>` 도구를 위한 선택적 Python 파일 |
+      | `knowledge/` | 에이전트용 선택적 지식 파일 |
+      | `skills/` | crew에 적용할 선택적 skill 파일 |
 
-    - `agents.yaml` 및 `tasks.yaml`을 편집하여 crew의 동작을 정의하는 것부터 시작하세요.
+    - `crew.jsonc`와 `agents/` 안의 파일을 편집하여 crew 동작을 정의하세요.
+    - 에이전트와 태스크 텍스트에 `{placeholder}`를 사용하고, `crew.jsonc`의 `inputs`에 기본값을 넣으세요. `crewai run` 실행 시 빠진 값은 CLI가 묻습니다.
     - API 키와 같은 민감한 정보는 `.env` 파일에 보관하세요.
 
   </Step>

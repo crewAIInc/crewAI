@@ -41,13 +41,54 @@ Uma crew no crewAI representa um grupo colaborativo de agentes trabalhando em co
 
 ## Criando Crews
 
-Existem duas maneiras de criar crews no CrewAI: utilizando **configuração YAML (recomendado)** ou definindo diretamente **em código**.
+Existem duas maneiras principais de criar crews no CrewAI: utilizando **configuração JSONC (recomendada para novas crews)** ou definindo a crew **em código** para projetos clássicos e casos avançados.
 
-### Configuração YAML (Recomendado)
+### Configuração JSONC (Recomendado)
 
-O uso da configuração YAML proporciona uma forma mais limpa e fácil de manter para definir crews, sendo consistente com a definição de agentes e tasks em projetos CrewAI.
+Novos projetos criados com `crewai create crew <name>` usam `crew.jsonc` para configurações da crew e tarefas, além de um arquivo por agente em `agents/`. `crewai run` detecta `crew.jsonc` ou `crew.json`, carrega os agentes referenciados, pergunta por placeholders ausentes e inicia a crew.
 
-Após criar seu projeto CrewAI conforme descrito na seção [Instalação](/pt-BR/installation), você pode definir sua crew em uma classe que herda de `CrewBase` e utiliza decorators para definir agentes, tarefas e a própria crew.
+```jsonc crew.jsonc
+{
+  "name": "Market Research Crew",
+  "agents": ["researcher", "analyst"],
+  "tasks": [
+    {
+      "name": "research",
+      "description": "Research {topic} and collect the most relevant facts.",
+      "expected_output": "Structured research notes about {topic}.",
+      "agent": "researcher"
+    },
+    {
+      "name": "analysis",
+      "description": "Analyze the research and write a concise report.",
+      "expected_output": "A markdown report with findings and recommendations.",
+      "agent": "analyst",
+      "context": ["research"],
+      "output_file": "output/report.md"
+    }
+  ],
+  "process": "sequential",
+  "verbose": true,
+  "memory": true,
+  "inputs": {
+    "topic": "AI Agents"
+  }
+}
+```
+
+Cada string em `agents` resolve primeiro para `agents/<name>.jsonc` e depois para `agents/<name>.json`. Para crews hierárquicas, use `"process": "hierarchical"` com `manager_llm` ou `manager_agent`.
+
+<Warning>
+Execute projetos JSON apenas de fontes confiáveis. Ferramentas `custom:<name>` e referências `{"python": "module.attribute"}` executam código Python local quando a crew é carregada.
+</Warning>
+
+### Configuração YAML Clássica
+
+Projetos clássicos criados com `crewai create crew <name> --classic` usam `crew.py`, `config/agents.yaml`, `config/tasks.yaml` e os decorators `@CrewBase`, `@agent`, `@task` e `@crew`.
+
+Essa abordagem continua suportada para projetos existentes em Python/YAML e para equipes que precisam de controle explícito via decorators.
+
+Após criar um projeto clássico, você pode definir sua crew em uma classe que herda de `CrewBase` e utiliza decorators para definir agentes, tarefas e a própria crew.
 
 #### Exemplo de Classe Crew com Decorators
 

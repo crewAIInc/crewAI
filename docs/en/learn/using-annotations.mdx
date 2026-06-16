@@ -1,15 +1,19 @@
 ---
 title: "Using Annotations in crew.py"
-description: "Learn how to use annotations to properly structure agents, tasks, and components in CrewAI"
+description: "Learn how to use classic Python annotations to structure agents, tasks, and components in CrewAI"
 icon: "at"
 mode: "wide"
 ---
 
-This guide explains how to use annotations to properly reference **agents**, **tasks**, and other components in the `crew.py` file.
+This guide explains how to use annotations to properly reference **agents**, **tasks**, and other components in a classic `crew.py` file.
+
+<Note>
+New crew projects created with `crewai create crew <name>` are JSON-first and use `crew.jsonc` plus `agents/*.jsonc`. Use this annotations guide when you are working in a classic project created with `crewai create crew <name> --classic`, migrating an existing Python/YAML project, or need decorator-based Python control.
+</Note>
 
 ## Introduction
 
-Annotations in the CrewAI framework are used to decorate classes and methods, providing metadata and functionality to various components of your crew. These annotations help in organizing and structuring your code, making it more readable and maintainable.
+Annotations in the CrewAI framework are used to decorate classes and methods, providing metadata and functionality to various components of your crew. In classic Python/YAML projects, these annotations help organize the code that loads `config/agents.yaml`, `config/tasks.yaml`, and returns the `Crew` object.
 
 ## Available Annotations
 
@@ -113,9 +117,9 @@ def crew(self) -> Crew:
 
 The `@crew` annotation is used to decorate the method that creates and returns the `Crew` object. This method assembles all the components (agents and tasks) into a functional crew.
 
-## YAML Configuration
+## Classic YAML Configuration
 
-The agent configurations are typically stored in a YAML file. Here's an example of how the `agents.yaml` file might look for the researcher agent:
+In classic projects, agent configurations are typically stored in a YAML file. Here's an example of how the `agents.yaml` file might look for the researcher agent:
 
 ```yaml
 researcher:
@@ -146,6 +150,6 @@ Note how the `llm` and `tools` in the YAML file correspond to the methods decora
 - **Consistent Naming**: Use clear and consistent naming conventions for your methods. For example, agent methods could be named after their roles (e.g., researcher, reporting_analyst).
 - **Environment Variables**: Use environment variables for sensitive information like API keys.
 - **Flexibility**: Design your crew to be flexible by allowing easy addition or removal of agents and tasks.
-- **YAML-Code Correspondence**: Ensure that the names and structures in your YAML files correspond correctly to the decorated methods in your Python code.
+- **YAML-Code Correspondence**: In classic projects, ensure that the names and structures in your YAML files correspond correctly to the decorated methods in your Python code.
 
-By following these guidelines and properly using annotations, you can create well-structured and maintainable crews using the CrewAI framework.
+By following these guidelines and properly using annotations, you can maintain classic Python/YAML crews cleanly. For new crews, prefer the JSON-first structure covered in [Crews](/en/concepts/crews).

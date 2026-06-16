@@ -831,7 +831,7 @@ You can generate a new CrewAI project that includes all the scaffolding needed t
 crewai create flow name_of_flow
 ```
 
-This command will generate a new CrewAI project with the necessary folder structure. The generated project includes a prebuilt crew called `poem_crew` that is already working. You can use this crew as a template by copying, pasting, and editing it to create other crews.
+This command will generate a new CrewAI project with the necessary folder structure. The generated project includes a prebuilt crew called `poem_crew` that is already working. The starter embedded crew uses the classic Python/YAML layout; new standalone crews created with `crewai create crew` use the JSON-first layout.
 
 ### Folder Structure
 
@@ -855,13 +855,35 @@ After running the `crewai create flow name_of_flow` command, you will see a fold
 
 ### Building Your Crews
 
-In the `crews` folder, you can define multiple crews. Each crew will have its own folder containing configuration files and the crew definition file. For example, the `poem_crew` folder contains:
+In the `crews` folder, you can define multiple crews. The generated `poem_crew` uses the classic embedded-crew structure:
 
 - `config/agents.yaml`: Defines the agents for the crew.
 - `config/tasks.yaml`: Defines the tasks for the crew.
 - `poem_crew.py`: Contains the crew definition, including agents, tasks, and the crew itself.
 
-You can copy, paste, and edit the `poem_crew` to create other crews.
+You can copy, paste, and edit the `poem_crew` to create other classic embedded crews.
+
+For JSON-first embedded crews, use a folder with `crew.jsonc` and `agents/*.jsonc` instead:
+
+```text
+crews/
+└── research_crew/
+    ├── agents/
+    │   └── researcher.jsonc
+    └── crew.jsonc
+```
+
+Then load it from a Flow step:
+
+```python
+from pathlib import Path
+from crewai.project import load_crew
+
+crew, default_inputs = load_crew(
+    Path(__file__).parent / "crews" / "research_crew" / "crew.jsonc"
+)
+result = crew.kickoff(inputs={**default_inputs, "topic": "AI Agents"})
+```
 
 ### Connecting Crews in `main.py`
 

@@ -53,6 +53,8 @@ crewai create crew my_new_crew
 crewai create flow my_new_flow
 ```
 
+Por padrão, `crewai create crew` cria um projeto JSON-first com `crew.jsonc` e `agents/*.jsonc`. Use `crewai create crew my_new_crew --classic` somente quando quiser o scaffold antigo em Python/YAML com `crew.py`, `config/agents.yaml` e `config/tasks.yaml`.
+
 ### 2. Version
 
 Mostre a versão instalada do CrewAI.
@@ -203,7 +205,20 @@ crewai chat
 Garanta que você execute estes comandos a partir do diretório raiz do seu projeto CrewAI.
 </Note>
 <Note>
-IMPORTANTE: Defina a propriedade `chat_llm` no seu arquivo `crew.py` para habilitar este comando.
+IMPORTANTE: Defina a propriedade `chat_llm` na definição da sua crew para habilitar este comando.
+
+Para crews JSON-first, adicione em `crew.jsonc`:
+
+```jsonc
+{
+  "name": "My Crew",
+  "agents": ["researcher"],
+  "tasks": [],
+  "chat_llm": "openai/gpt-4o"
+}
+```
+
+Para crews clássicas Python/YAML, defina em `crew.py`:
 
 ```python
 @crew
@@ -334,7 +349,7 @@ Assista ao vídeo tutorial para uma demonstração passo-a-passo de implantaçã
 
 ### 11. Chaves de API
 
-Ao executar o comando `crewai create crew`, o CLI primeiro mostrará os 5 provedores de LLM mais comuns e pedirá para você selecionar um.
+Ao executar o comando `crewai create crew`, o CLI mostrará provedores de LLM disponíveis e depois a seleção de modelo para o provedor escolhido. O modelo selecionado é salvo no `.env` gerado, e cada agente JSONC pode definir seu próprio `llm`.
 
 Após selecionar um provedor de LLM, será solicitado que você informe as chaves de API.
 
