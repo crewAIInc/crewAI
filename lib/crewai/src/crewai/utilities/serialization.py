@@ -99,7 +99,7 @@ def to_serializable(
     if isinstance(obj, BaseModel):
         try:
             return to_serializable(
-                obj=obj.model_dump(mode="json", exclude=exclude),
+                obj=obj.model_dump(mode="json", exclude=exclude, serialize_as_any=True),
                 max_depth=max_depth,
                 _current_depth=_current_depth + 1,
                 _ancestors=new_ancestors,
