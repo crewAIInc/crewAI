@@ -700,6 +700,56 @@ Checkout this repository for full demos and examples of MCP integration with Cre
   CrewAI MCP Demo
 </Card>
 
+
+## Community MCP Servers
+
+The following community-maintained MCP servers are compatible with CrewAI's MCP integration.
+
+### HiveAgent
+
+[HiveAgent](https://hiveagentiq.com) provides 1,221 MCP tools for the agentic economy, covering payments (Visa ICC, Mastercard Agent Pay, Stripe MPP, x402, BVNK, Circle CPN), agent identity (DID, KYA), security (injection scanning, circuit breaker), yield (4–12% APY), and 45 industry verticals.
+
+**Install via Smithery:**
+
+```bash
+npx @smithery/cli install @hiveagentiq/hiveagent
+```
+
+**Usage with `MCPServerAdapter`:**
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import MCPServerAdapter
+
+server_params = {
+    "url": "https://hiveagentiq.com/mcp",
+    "transport": "streamable-http"
+}
+
+with MCPServerAdapter(server_params) as hiveagent_tools:
+    agent = Agent(
+        role="Payments Agent",
+        goal="Process payments and verify agent identity",
+        backstory="Agent with access to 1,221 HiveAgent tools",
+        tools=hiveagent_tools,
+        verbose=True,
+    )
+    # ... build and run your crew
+```
+
+**Usage with DSL (simple string reference):**
+
+```python
+from crewai import Agent
+
+agent = Agent(
+    role="Payments Agent",
+    goal="Process payments and verify agent identity",
+    backstory="Agent with access to HiveAgent tools",
+    mcps=["https://hiveagentiq.com/mcp"],
+)
+```
+
 ## Staying Safe with MCP
 
 <Warning>Always ensure that you trust an MCP Server before using it.</Warning>
