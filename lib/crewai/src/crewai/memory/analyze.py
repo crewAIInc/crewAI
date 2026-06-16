@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -105,7 +105,7 @@ class ActionInsightItem(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    type: str = Field(
+    type: Literal["decision", "lesson", "pattern"] = Field(
         description="One of 'decision', 'lesson', or 'pattern'.",
     )
     content: str = Field(
@@ -262,6 +262,9 @@ def extract_action_insights_from_content(content: str, llm: Any) -> list[ActionI
             response = llm.call(messages, response_model=ExtractedActionInsights)
             if isinstance(response, ExtractedActionInsights):
                 return response.insights
+            if isinstance(response, str):
+                data = json.loads(response)
+                return ExtractedActionInsights.model_validate(data).insights
             return ExtractedActionInsights.model_validate(response).insights
         response = llm.call(messages)
         if isinstance(response, ExtractedActionInsights):

@@ -1109,3 +1109,61 @@ def test_flow_extract_action_insights_raises_when_memory_none() -> None:
     f.memory = None
     with pytest.raises(ValueError, match="No memory configured"):
         f.extract_action_insights("some content")
+
+
+def test_aextract_action_insights_returns_list_from_llm(tmp_path: Path) -> None:
+    """Memory.aextract_action_insights() async variant returns list of ActionInsightItem."""
+    import asyncio
+    from crewai.memory.analyze import ActionInsightItem, ExtractedActionInsights
+    from crewai.memory.unified_memory import Memory
+
+    mock_llm = MagicMock()
+    mock_llm.supports_function_calling.return_value = True
+    mock_llm.call.return_value = ExtractedActionInsights(
+        insights=[
+            ActionInsightItem(
+                type="lesson",
+                content="Async test insight.",
+                rationale="Test rationale.",
+                domain="testing",
+                context_signals=["test signal"],
+            ),
+        ]
+    )
+
+    mem = Memory(
+        storage=str(tmp_path / "async_ai_db"),
+        llm=mock_llm,
+        embedder=MagicMock(return_value=[[0.1] * 1536]),
+    )
+
+    async def run() -> list[Any]:
+        return await mem.aextract_action_insights("Test ReAct trace")
+
+    result = asyncio.run(run())
+    assert len(result) == 1
+    assert result[0].type == "lesson"
+    assert result[0].domain == "testing"
+    assert result[0].context_signals == ["test signal"]
+
+
+def test_aextract_action_insights_llm_failure_returns_empty(tmp_path: Path) -> None:
+    """Memory.aextract_action_insights() async variant returns [] on LLM failure."""
+    import asyncio
+    from crewai.memory.unified_memory import Memory
+
+    mock_llm = MagicMock()
+    mock_llm.supports_function_calling.return_value = True
+    mock_llm.call.side_effect = RuntimeError("Async LLM error")
+
+    mem = Memory(
+        storage=str(tmp_path / "async_ai_fail_db"),
+        llm=mock_llm,
+        embedder=MagicMock(return_value=[[0.1] * 1536]),
+    )
+
+    async def run() -> list[Any]:
+        return await mem.aextract_action_insights("Test ReAct trace")
+
+    result = asyncio.run(run())
+    assert result == []
