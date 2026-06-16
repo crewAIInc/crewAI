@@ -1174,14 +1174,13 @@ def test_lite_agent_save_to_memory_saves_action_insights():
     agent.kickoff("What is the answer?")
 
     mock_memory.extract_action_insights.assert_called_once()
-    mock_memory.remember.assert_called_once()
-    call_kw = mock_memory.remember.call_args.kwargs
+    mock_memory._save_action_insight.assert_called_once()
+    call_kw = mock_memory._save_action_insight.call_args.kwargs
     assert call_kw["content"] == "API is unreliable; query DB directly."
+    assert call_kw["insight_type"] == "lesson"
+    assert call_kw["domain"] == "data analysis"
+    assert call_kw["context_signals"] == ["API error"]
     assert call_kw["scope"] == "/behavioral"
-    assert call_kw["categories"] == ["lesson", "data analysis"]
-    assert call_kw["importance"] == 0.5
-    assert call_kw["metadata"]["type"] == "action_insight"
-    assert call_kw["metadata"]["insight_type"] == "lesson"
 
 
 @pytest.mark.filterwarnings("ignore:LiteAgent is deprecated")

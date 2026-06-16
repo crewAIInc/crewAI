@@ -442,26 +442,23 @@ def test_executor_save_to_memory_saves_action_insights() -> None:
     )
 
     mock_memory.extract_action_insights.assert_called_once()
-    assert mock_memory.remember.call_count == 2
+    assert mock_memory._save_action_insight.call_count == 2
 
-    call_1_args = mock_memory.remember.call_args_list[0].kwargs
+    call_1_args = mock_memory._save_action_insight.call_args_list[0].kwargs
     assert call_1_args["content"] == "Direct DB query more reliable than API."
+    assert call_1_args["insight_type"] == "lesson"
+    assert call_1_args["domain"] == "data analysis"
+    assert call_1_args["context_signals"] == ["API timeout"]
     assert call_1_args["scope"] == "/behavioral"
-    assert call_1_args["categories"] == ["lesson", "data analysis"]
-    assert call_1_args["importance"] == 0.5
-    assert call_1_args["metadata"]["type"] == "action_insight"
-    assert call_1_args["metadata"]["insight_type"] == "lesson"
-    assert call_1_args["metadata"]["context_signals"] == ["API timeout"]
 
-    call_2_args = mock_memory.remember.call_args_list[1].kwargs
+    call_2_args = mock_memory._save_action_insight.call_args_list[1].kwargs
     assert call_2_args["content"] == "Reformulate search on empty results."
-    assert call_2_args["categories"] == ["pattern", "search strategy"]
-    assert call_2_args["metadata"]["type"] == "action_insight"
-    assert call_2_args["metadata"]["insight_type"] == "pattern"
+    assert call_2_args["insight_type"] == "pattern"
+    assert call_2_args["domain"] == "search strategy"
 
 
 def test_executor_save_to_memory_insight_extract_empty_noop() -> None:
-    """When extract_action_insights returns [], no remember calls for insights."""
+    """When extract_action_insights returns [], no _save_action_insight calls for insights."""
     from crewai.agents.agent_builder.base_agent_executor import BaseAgentExecutor
     from crewai.agents.parser import AgentFinish
 
@@ -487,7 +484,7 @@ def test_executor_save_to_memory_insight_extract_empty_noop() -> None:
     )
 
     mock_memory.extract_action_insights.assert_called_once()
-    mock_memory.remember.assert_not_called()
+    mock_memory._save_action_insight.assert_not_called()
 
 
 def test_memory_scope_extract_memories_delegates() -> None:
@@ -1368,3 +1365,165 @@ def test_aextract_action_insights_llm_failure_returns_empty(tmp_path: Path) -> N
 
     result = asyncio.run(run())
     assert result == []
+
+
+# ── _save_action_insight aggregation tests ─────────────────────
+
+
+def test_save_action_insight_inserts_new(tmp_path: Path, mock_embedder: MagicMock) -> None:
+    """First save of an insight creates a record with observation_count=1."""
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(
+        storage=str(tmp_path / "agg_new"),
+        llm=MagicMock(),
+        embedder=mock_embedder,
+    )
+
+    record = mem._save_action_insight(
+        content="Test insight content.",
+        insight_type="lesson",
+        domain="testing",
+        rationale="Because.",
+        context_signals=["signal_a"],
+    )
+
+    assert record is not None
+    assert record.content == "Test insight content."
+    assert record.metadata["observation_count"] == 1
+    assert record.metadata["type"] == "action_insight"
+    assert record.metadata["first_observed_at"] == record.metadata["last_observed_at"]
+
+    # Verify it's persisted
+    assert mem._storage.count() == 1
+
+
+def test_save_action_insight_aggregates(tmp_path: Path, mock_embedder: MagicMock) -> None:
+    """Saving the same insight twice increments observation_count and keeps one record."""
+    from crewai.memory.unified_memory import Memory
+
+    embedder = MagicMock()
+    embedder.side_effect = lambda texts: [[0.5] * 1536 for _ in texts]
+
+    mem = Memory(
+        storage=str(tmp_path / "agg_twice"),
+        llm=MagicMock(),
+        embedder=embedder,
+    )
+
+    r1 = mem._save_action_insight(
+        content="Repeated insight.",
+        insight_type="lesson",
+        domain="testing",
+        rationale="Test.",
+        context_signals=[],
+    )
+    assert r1 is not None
+    assert r1.metadata["observation_count"] == 1
+    first_id = r1.id
+
+    # Second save with same content and embedder (identical embedding → high similarity)
+    r2 = mem._save_action_insight(
+        content="Repeated insight.",
+        insight_type="lesson",
+        domain="testing",
+        rationale="Test.",
+        context_signals=[],
+    )
+    assert r2 is not None
+    assert r2.metadata["observation_count"] == 2
+
+    # Should be the same record, not a dupe
+    assert r2.id == first_id
+    assert mem._storage.count() == 1
+
+
+def test_save_action_insight_skips_aggregation_on_low_similarity(
+    tmp_path: Path, mock_embedder: MagicMock
+) -> None:
+    """Different content with distinct embeddings does NOT aggregate."""
+    from crewai.memory.unified_memory import Memory
+
+    call_count = 0
+    def distinct_embedder(texts):
+        nonlocal call_count
+        result = []
+        for i, _ in enumerate(texts):
+            emb = [0.0] * 1536
+            emb[(call_count + i) % 1536] = 1.0
+            result.append(emb)
+        call_count += len(texts)
+        return result
+
+    embedder = MagicMock(side_effect=distinct_embedder)
+    mem = Memory(
+        storage=str(tmp_path / "agg_distinct"),
+        llm=MagicMock(),
+        embedder=embedder,
+    )
+
+    mem._save_action_insight(
+        content="First unique insight.",
+        insight_type="lesson", domain="a", rationale="R1", context_signals=[],
+    )
+    mem._save_action_insight(
+        content="Second completely different insight.",
+        insight_type="pattern", domain="b", rationale="R2", context_signals=[],
+    )
+
+    assert mem._storage.count() == 2
+
+
+# ── compute_behavioral_adjustment tests ─────────────────────────
+
+
+def test_behavioral_adjustment_high_confidence() -> None:
+    """10+ observations → no confidence discount."""
+    from crewai.memory.types import MemoryConfig, compute_behavioral_adjustment
+
+    config = MemoryConfig()
+    meta = {"observation_count": 10, "last_observed_at": "2026-06-16T10:00:00Z"}
+    multiplier, reasons = compute_behavioral_adjustment(meta, config)
+    assert multiplier == 1.0  # no discount at 10 obs
+    assert not any("low_confidence" in r for r in reasons)
+
+
+def test_behavioral_adjustment_low_confidence() -> None:
+    """1 observation → confidence discount applied."""
+    from crewai.memory.types import MemoryConfig, compute_behavioral_adjustment
+
+    config = MemoryConfig()
+    meta = {"observation_count": 1, "last_observed_at": "2026-06-16T10:00:00Z"}
+    multiplier, reasons = compute_behavioral_adjustment(meta, config)
+    assert multiplier < 1.0
+    assert any("low_confidence" in r for r in reasons)
+
+
+def test_behavioral_adjustment_contradiction() -> None:
+    """contradicts set → multiplier halved."""
+    from crewai.memory.types import MemoryConfig, compute_behavioral_adjustment
+
+    config = MemoryConfig()
+    meta = {
+        "observation_count": 10,
+        "last_observed_at": "2026-06-16T10:00:00Z",
+        "contradicts": ["some-other-id"],
+    }
+    multiplier, reasons = compute_behavioral_adjustment(meta, config)
+    assert multiplier == 0.5
+    assert "contradicted" in reasons
+
+
+def test_behavioral_adjustment_stale() -> None:
+    """Old last_observed_at → staleness discount applied."""
+    from crewai.memory.types import MemoryConfig, compute_behavioral_adjustment
+
+    config = MemoryConfig(recency_half_life_days=30)  # behavioral HL = 60d
+    old_date = "2026-01-01T00:00:00"  # ~166 days ago (no Z suffix for Python 3.11 compat)
+    meta = {
+        "observation_count": 10,
+        "last_observed_at": old_date,
+    }
+    multiplier, reasons = compute_behavioral_adjustment(meta, config)
+    assert multiplier < 0.5  # significant decay after 166d
+    assert "stale" in reasons

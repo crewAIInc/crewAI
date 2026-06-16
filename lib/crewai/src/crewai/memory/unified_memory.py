@@ -28,6 +28,7 @@ from crewai.memory.types import (
     MemoryMatch,
     MemoryRecord,
     ScopeInfo,
+    compute_behavioral_adjustment,
     compute_composite_score,
     embed_text,
 )
@@ -734,6 +735,13 @@ class Memory(BaseModel):
                     results = []
                     for r, s in raw:
                         composite, reasons = compute_composite_score(r, s, self._config)
+                        # Behavioral insights get additional adjustment factors
+                        if r.metadata.get("type") == "action_insight":
+                            adj, adj_reasons = compute_behavioral_adjustment(
+                                r.metadata, self._config,
+                            )
+                            composite *= adj
+                            reasons.extend(adj_reasons)
                         results.append(
                             MemoryMatch(
                                 record=r,
@@ -876,6 +884,102 @@ class Memory(BaseModel):
         updated = existing.model_copy(update=updates)
         self._storage.update(updated)
         return updated
+
+    def _save_action_insight(
+        self,
+        content: str,
+        insight_type: str,
+        domain: str,
+        rationale: str,
+        context_signals: list[str],
+        scope: str = "/behavioral",
+        agent_role: str | None = None,
+        root_scope: str | None = None,
+    ) -> MemoryRecord | None:
+        """Save or aggregate a behavioral action insight.
+
+        Bypasses EncodingFlow since all fields are pre-filled. Direct path:
+        embed → search for similar → update count (if found) or insert new.
+
+        Args:
+            content: The insight statement.
+            insight_type: One of 'decision', 'lesson', or 'pattern'.
+            domain: Professional domain tag.
+            rationale: Why this approach worked or failed.
+            context_signals: Observable conditions triggering this insight.
+            scope: Inner scope (default "/behavioral").
+            agent_role: Optional agent role for metadata.
+            root_scope: Optional root scope override.
+
+        Returns:
+            The saved MemoryRecord, or None on failure.
+        """
+        try:
+            # 1. Embed the content
+            embedding = embed_text(self._embedder, content)
+            if not embedding:
+                self._logger.warning("Failed to embed action insight content")
+                return None
+
+            # 2. Determine effective scope
+            effective_scope = scope
+            if root_scope:
+                effective_scope = join_scope_paths(root_scope, scope)
+
+            # 3. Search for similar existing insights
+            similar = self._storage.search(
+                embedding,
+                scope_prefix=effective_scope,
+                limit=3,
+                min_score=0.0,
+            )
+
+            # 4. Aggregate or insert
+            threshold = self._config.consolidation_threshold  # default 0.85
+            now = datetime.utcnow()
+
+            for record, sim_score in similar:
+                if sim_score >= threshold:
+                    # Found similar insight — aggregate
+                    existing_meta = dict(record.metadata)
+                    count = existing_meta.get("observation_count", 1)
+                    existing_meta["observation_count"] = count + 1
+                    existing_meta["last_observed_at"] = now.isoformat()
+
+                    updated = record.model_copy(update={
+                        "last_accessed": now,
+                        "metadata": existing_meta,
+                    })
+                    self._storage.update(updated)
+                    return updated
+
+            # 5. No similar insight — insert new
+            metadata: dict[str, Any] = {
+                "type": "action_insight",
+                "insight_type": insight_type,
+                "domain": domain,
+                "rationale": rationale,
+                "context_signals": context_signals,
+                "observation_count": 1,
+                "first_observed_at": now.isoformat(),
+                "last_observed_at": now.isoformat(),
+            }
+            record = MemoryRecord(
+                content=content,
+                scope=effective_scope,
+                categories=[insight_type, domain],
+                metadata=metadata,
+                importance=0.5,
+                embedding=embedding,
+            )
+            self._storage.save([record])
+            return record
+
+        except Exception as e:
+            self._logger.warning(
+                "Failed to save action insight: %s", e, exc_info=False,
+            )
+            return None
 
     def scope(self, path: str) -> Any:
         """Return a scoped view of this memory."""

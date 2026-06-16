@@ -632,22 +632,17 @@ class LiteAgent(FlowTrackable, BaseModel):
             if extracted:
                 self._memory.remember_many(extracted, agent_role=self.role)
 
-            # --- Behavioral action insight extraction ---
+            # --- Behavioral action insight extraction + save (with aggregation) ---
             insights = self._memory.extract_action_insights(raw)
             if insights:
                 for insight in insights:
-                    self._memory.remember(
+                    self._memory._save_action_insight(
                         content=insight.content,
+                        insight_type=insight.type,
+                        domain=insight.domain,
+                        rationale=insight.rationale,
+                        context_signals=insight.context_signals,
                         scope="/behavioral",
-                        categories=[insight.type, insight.domain],
-                        metadata={
-                            "type": "action_insight",
-                            "insight_type": insight.type,
-                            "domain": insight.domain,
-                            "rationale": insight.rationale,
-                            "context_signals": insight.context_signals,
-                        },
-                        importance=0.5,
                         agent_role=self.role,
                     )
         except Exception as e:
