@@ -7,10 +7,15 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from crewai.project.crew_definition import CrewDefinition
 from crewai.project.json_loader import (
+    JSONAgentDefinition,
+    JSONCrewProject,
     JSONProjectError,
     JSONProjectValidationError,
+    _AgentDefinitionSource,
     _crew_kwargs_from_definition,
+    _load_json_crew_project_definition,
     _task_class_from_definition,
     _task_kwargs_from_definition,
     load_json_crew_project,
@@ -27,12 +32,73 @@ def load_crew(
     default inputs.  Agent definitions are resolved from individual
     ``<name>.jsonc`` / ``<name>.json`` files inside an ``agents/`` directory.
     """
-    from crewai import Crew, Task
-
     crew_path = Path(source)
     project = load_json_crew_project(crew_path, agents_dir=agents_dir)
+    return _load_crew_project(project, project_root=crew_path.parent)
 
-    def build_agent(agent_def: Any) -> Any:
+
+def load_crew_from_definition(
+    definition: CrewDefinition | dict[str, Any],
+    *,
+    source: str | Path = "<inline crew>",
+    project_root: str | Path | None = None,
+) -> tuple[Any, dict[str, Any]]:
+    """Load a ``Crew`` from an in-memory JSON/YAML crew definition."""
+    root = Path(project_root) if project_root is not None else Path.cwd()
+    source_label = str(source)
+    crew_definition = (
+        definition
+        if isinstance(definition, CrewDefinition)
+        else CrewDefinition.model_validate(definition)
+    )
+    definition_data = crew_definition.model_dump(mode="python", exclude_none=True)
+    project = _crew_project_from_definition(
+        definition_data,
+        source=source_label,
+        project_root=root,
+    )
+    return _load_crew_project(project, project_root=root)
+
+
+def _crew_project_from_definition(
+    definition: dict[str, Any],
+    *,
+    source: str,
+    project_root: Path,
+) -> JSONCrewProject:
+    agent_bodies: dict[str, Any] = definition["agents"]
+    agent_names = list(agent_bodies)
+    manager_agent = definition.get("manager_agent")
+    if isinstance(manager_agent, str):
+        agent_names = [name for name in agent_names if name != manager_agent]
+
+    def load_agent_definition_source(agent_name: str) -> _AgentDefinitionSource | None:
+        body = agent_bodies.get(agent_name)
+        if body is None:
+            return None
+        return body, f"{source}: agents.{agent_name}"
+
+    return _load_json_crew_project_definition(
+        {**definition, "agents": agent_names},
+        source=source,
+        agents_dir=project_root / "agents",
+        project_root=project_root,
+        load_agent_definition_source=load_agent_definition_source,
+        missing_agent_hint=None,
+        collect_errors=False,
+    )
+
+
+def _load_crew_project(
+    project: JSONCrewProject,
+    *,
+    project_root: Path,
+) -> tuple[Any, dict[str, Any]]:
+    from crewai import Crew, Task
+
+    source_label = str(project.crew_path)
+
+    def build_agent(agent_def: JSONAgentDefinition) -> Any:
         try:
             return agent_def.agent_class(**agent_def.kwargs)
         except ValidationError as exc:
@@ -52,22 +118,26 @@ def load_crew(
     task_name_map: dict[str, Task] = {}
 
     for index, task_defn in enumerate(project.task_definitions):
-        source_label = f"{crew_path}: tasks[{index}]"
-        task_class = _task_class_from_definition(task_defn, f"{source_label}: type")
+        task_source = f"{source_label}: tasks[{index}]"
+        task_class = _task_class_from_definition(
+            task_defn,
+            f"{task_source}: type",
+            project_root=project_root,
+        )
         task_kwargs = _task_kwargs_from_definition(
             task_defn,
             agents_map=agents_map,
             task_name_map=task_name_map,
-            source=source_label,
-            project_root=crew_path.parent,
+            source=task_source,
+            project_root=project_root,
         )
         try:
             task = task_class(**task_kwargs)
         except ValidationError as exc:
-            raise JSONProjectError(f"{source_label}: validation failed: {exc}") from exc
+            raise JSONProjectError(f"{task_source}: validation failed: {exc}") from exc
         except Exception as exc:
             raise JSONProjectError(
-                f"{source_label}: failed to load task: {exc}"
+                f"{task_source}: failed to load task: {exc}"
             ) from exc
 
         tasks_list.append(task)
@@ -80,17 +150,18 @@ def load_crew(
         agents=[agents_map[name] for name in project.agent_names],
         tasks=tasks_list,
         agents_map=agents_map,
-        source=crew_path,
+        source=source_label,
+        project_root=project_root,
     )
 
     try:
         crew = Crew(**crew_kwargs)
     except ValidationError as exc:
-        raise JSONProjectError(f"{crew_path}: validation failed: {exc}") from exc
+        raise JSONProjectError(f"{source_label}: validation failed: {exc}") from exc
     except JSONProjectValidationError:
         raise
     except Exception as exc:
-        raise JSONProjectError(f"{crew_path}: failed to load crew: {exc}") from exc
+        raise JSONProjectError(f"{source_label}: failed to load crew: {exc}") from exc
 
     return crew, project.definition.get("inputs", {})
 

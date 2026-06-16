@@ -41,6 +41,7 @@ def test_flow_public_exports_are_explicit():
         "FlowConfigDefinition",
         "FlowConversationalDefinition",
         "FlowConversationalRouterDefinition",
+        "FlowCrewActionDefinition",
         "FlowDefinition",
         "FlowDefinitionCondition",
         "FlowDefinitionDiagnostic",

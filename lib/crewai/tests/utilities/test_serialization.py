@@ -21,6 +21,10 @@ class Person(BaseModel):
     skills: List[str]
 
 
+class Container(BaseModel):
+    payload: BaseModel | None = None
+
+
 @dataclass
 class DataclassPerson:
     name: str
@@ -112,6 +116,16 @@ def test_pydantic_model_serialization():
         to_string(result)
         == '{"single_model": {"street": "123 Main St", "city": "Tech City", "country": "Pythonia"}, "nested_model": {"name": "John Doe", "age": 30, "address": {"street": "123 Main St", "city": "Tech City", "country": "Pythonia"}, "birthday": "1994-01-01", "skills": ["Python", "Testing"]}, "model_list": [{"street": "123 Main St", "city": "Tech City", "country": "Pythonia"}, {"street": "123 Main St", "city": "Tech City", "country": "Pythonia"}], "model_dict": {"home": {"street": "123 Main St", "city": "Tech City", "country": "Pythonia"}}}'
     )
+
+
+def test_polymorphic_field_serializes_concrete_subclass():
+    container = Container(
+        payload=Address(street="1 Main", city="Tech City", country="Pythonia")
+    )
+
+    assert to_serializable(container) == {
+        "payload": {"street": "1 Main", "city": "Tech City", "country": "Pythonia"}
+    }
 
 
 def test_dataclass_serialization_recurses_into_nested_values():
