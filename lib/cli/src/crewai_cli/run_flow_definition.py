@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import sys
 from typing import Any
 
 import click
@@ -21,6 +22,7 @@ def run_flow_definition(definition: str, inputs: str | None = None) -> None:
 
     parsed_inputs = _parse_inputs(inputs)
     definition_source = _read_definition_source(definition)
+    _ensure_definition_dir_importable(definition)
 
     try:
         flow_definition = _parse_flow_definition(FlowDefinition, definition_source)
@@ -83,6 +85,19 @@ def _read_definition_source(definition: str) -> str:
         raise SystemExit(1) from exc
 
     return definition
+
+
+def _ensure_definition_dir_importable(definition: str) -> None:
+    path = Path(definition).expanduser()
+    try:
+        if not path.is_file():
+            return
+    except OSError:
+        return
+
+    project_dir = str(path.resolve().parent)
+    if project_dir not in sys.path:
+        sys.path.append(project_dir)
 
 
 def _looks_like_inline_definition(definition: str) -> bool:

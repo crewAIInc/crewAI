@@ -129,6 +129,25 @@ def test_run_flow_definition_accepts_definition_files(
     assert _captured_json(capsys) == {"flow": expected_flow_name, "inputs": {}}
 
 
+def test_run_flow_definition_makes_definition_dir_importable(
+    tmp_path, capsys, fake_flow_runtime, monkeypatch
+):
+    project_dir = tmp_path / "project"
+    project_dir.mkdir()
+    (project_dir / "lead_flow.py").write_text("MARKER = 'loaded'\n")
+    definition_path = project_dir / "flow.yaml"
+    definition_path.write_text("schema: crewai.flow/v1\nname: TestFlow\n")
+
+    monkeypatch.delitem(sys.modules, "lead_flow", raising=False)
+    monkeypatch.chdir(tmp_path)
+
+    run_flow_definition(str(definition_path))
+
+    import lead_flow
+
+    assert lead_flow.MARKER == "loaded"
+
+
 def test_run_flow_definition_rejects_non_object_inputs(fake_flow_runtime, capsys):
     with pytest.raises(SystemExit):
         run_flow_definition("name: TestFlow", '["not", "an", "object"]')
