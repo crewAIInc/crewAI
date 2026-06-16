@@ -451,7 +451,7 @@ def test_run_json_crew_dmn_mode_bypasses_tui(monkeypatch, tmp_path: Path, capsys
     from types import SimpleNamespace
 
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("CREWAI_DMN", "1")
+    monkeypatch.setenv("CREWAI_DMN", "True")
     crew_path = tmp_path / "crew.jsonc"
     crew_path.write_text("{}")
     kickoff_calls = []
@@ -496,7 +496,7 @@ def test_run_json_crew_dmn_mode_exits_on_missing_inputs(
     from types import SimpleNamespace
 
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("CREWAI_DMN", "1")
+    monkeypatch.setenv("CREWAI_DMN", "True")
     crew_path = tmp_path / "crew.jsonc"
     crew_path.write_text("{}")
     crew = SimpleNamespace(

@@ -816,7 +816,7 @@ def test_json_wizard_task_reprompts_on_cancelled_agent_pick(monkeypatch):
 
 def test_json_create_dmn_mode_uses_non_interactive_defaults(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("CREWAI_DMN", "1")
+    monkeypatch.setenv("CREWAI_DMN", "True")
     monkeypatch.setattr(
         json_crew,
         "_wizard_agents_and_tasks",

@@ -102,7 +102,7 @@ def test_tree_copy_to_existing_directory(temp_tree):
         shutil.rmtree(dest_dir)
 
 
-@pytest.mark.parametrize("value", ["1", "true", "yes", "anything"])
+@pytest.mark.parametrize("value", ["1", "true", "True", "yes", "anything"])
 def test_is_dmn_mode_enabled_for_truthy_values(monkeypatch, value):
     monkeypatch.setenv("CREWAI_DMN", value)
 

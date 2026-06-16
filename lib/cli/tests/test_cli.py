@@ -160,21 +160,21 @@ def test_run_rejects_inputs_without_definition(run_flow_definition, run_crew, ru
 
 @mock.patch("crewai_cli.create_json_crew.create_json_crew")
 def test_create_crew_in_dmn_mode_skips_provider_prompts(create_json_crew, runner):
-    result = runner.invoke(create, ["crew", "DMN Crew"], env={"CREWAI_DMN": "1"})
+    result = runner.invoke(create, ["crew", "DMN Crew"], env={"CREWAI_DMN": "True"})
 
     assert result.exit_code == 0
     create_json_crew.assert_called_once_with("DMN Crew", None, True)
 
 
 def test_create_requires_type_in_dmn_mode(runner):
-    result = runner.invoke(create, env={"CREWAI_DMN": "1"})
+    result = runner.invoke(create, env={"CREWAI_DMN": "True"})
 
     assert result.exit_code == 2
     assert "TYPE is required when CREWAI_DMN is set" in result.output
 
 
 def test_create_requires_name_in_dmn_mode(runner):
-    result = runner.invoke(create, ["flow"], env={"CREWAI_DMN": "1"})
+    result = runner.invoke(create, ["flow"], env={"CREWAI_DMN": "True"})
 
     assert result.exit_code == 2
     assert "NAME is required when CREWAI_DMN is set" in result.output
