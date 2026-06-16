@@ -9,7 +9,7 @@ from pathlib import Path
 import re
 from typing import Any
 
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 
 logger = logging.getLogger(__name__)
@@ -71,6 +71,66 @@ _CREW_RUNTIME_FIELDS = {
 
 
 JSON_PROJECT_EXTENSIONS = (".jsonc", ".json")
+PYTHON_REF_KEY = "python"
+
+_AGENT_TYPE_ALIASES = {
+    "agent",
+    "Agent",
+    "crewai.Agent",
+    "crewai.agent.core.Agent",
+}
+_TASK_TYPE_ALIASES = {
+    "task",
+    "Task",
+    "crewai.Task",
+    "crewai.task.Task",
+}
+_CONDITIONAL_TASK_TYPE_ALIASES = {
+    "conditional",
+    "conditional_task",
+    "ConditionalTask",
+    "crewai.tasks.conditional_task.ConditionalTask",
+}
+_URI_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
+
+_AGENT_CALLABLE_FIELDS = {"guardrail", "step_callback"}
+_AGENT_CALLABLE_LIST_FIELDS = {"callbacks"}
+_TASK_CALLABLE_FIELDS = {"callback", "condition", "guardrail"}
+_TASK_CALLABLE_LIST_FIELDS = {"guardrails"}
+_TASK_MODEL_CLASS_FIELDS = {"output_json", "output_pydantic", "response_model"}
+_CREW_CALLABLE_FIELDS = {"step_callback", "task_callback"}
+_CREW_CALLABLE_LIST_FIELDS = {"before_kickoff_callbacks", "after_kickoff_callbacks"}
+_AGENT_OBJECT_REF_FIELDS = {
+    "agent_executor",
+    "checkpoint",
+    "embedder",
+    "function_calling_llm",
+    "i18n",
+    "knowledge",
+    "knowledge_config",
+    "knowledge_sources",
+    "knowledge_storage",
+    "llm",
+    "memory",
+    "planning_config",
+    "security_config",
+    "skills",
+}
+_TASK_OBJECT_REF_FIELDS = {"security_config"}
+_CREW_OBJECT_REF_FIELDS = {
+    "chat_llm",
+    "checkpoint",
+    "embedder",
+    "function_calling_llm",
+    "knowledge",
+    "knowledge_sources",
+    "manager_agent",
+    "manager_llm",
+    "memory",
+    "planning_llm",
+    "security_config",
+    "skills",
+}
 
 
 @dataclass(frozen=True)
@@ -81,6 +141,7 @@ class JSONAgentDefinition:
     path: Path
     definition: dict[str, Any]
     kwargs: dict[str, Any]
+    agent_class: type[Any]
 
 
 @dataclass(frozen=True)
@@ -136,15 +197,19 @@ def load_jsonc_file(source: str | Path) -> Any:
 
 def load_agent(source: str | Path) -> Any:
     """Load an existing ``Agent`` from a ``.json`` / ``.jsonc`` definition file."""
-    from crewai import Agent
-
     path = Path(source)
     defn = _expect_object(load_jsonc_file(path), path)
     root = path.parent.parent if path.parent.name == "agents" else Path.cwd()
-    agent_kwargs = _agent_kwargs_from_definition(defn, path, project_root=root)
+    agent_class = _agent_class_from_definition(defn, f"{path}: type")
+    agent_kwargs = _agent_kwargs_from_definition(
+        defn,
+        path,
+        agent_class=agent_class,
+        project_root=root,
+    )
 
     try:
-        return Agent(**agent_kwargs)
+        return agent_class(**agent_kwargs)
     except ValidationError as exc:
         raise JSONProjectError(_format_validation_error(path, exc)) from exc
     except Exception as exc:
@@ -207,6 +272,7 @@ def load_json_crew_project(
             {"inputs"},
         )
     )
+    fail_many(_python_reference_definition_errors(defn, crew_path))
 
     agent_names = defn.get("agents", [])
     if not isinstance(agent_names, list) or not agent_names:
@@ -215,10 +281,14 @@ def load_json_crew_project(
 
     agents_dir = Path(agents_dir)
     agent_definitions: dict[str, JSONAgentDefinition] = {}
-    for agent_name in agent_names:
+    known_agents = {name for name in agent_names if isinstance(name, str)}
+
+    def load_agent_definition(agent_name: str) -> None:
         if not isinstance(agent_name, str) or not agent_name:
             fail(f"{crew_path}: each agent reference must be a non-empty string")
-            continue
+            return
+        if agent_name in agent_definitions:
+            return
         agent_file = find_json_project_file(agents_dir, agent_name)
         if agent_file is None:
             message = (
@@ -232,27 +302,50 @@ def load_json_crew_project(
                 )
             else:
                 raise FileNotFoundError(message)
-            continue
+            return
         try:
             agent_defn = _expect_object(load_jsonc_file(agent_file), agent_file)
+            agent_class = _agent_class_from_definition(
+                agent_defn,
+                f"{agent_file}: type",
+                resolve_python_refs=not collect_errors,
+            )
             agent_kwargs = _agent_kwargs_from_definition(
                 agent_defn,
                 agent_file,
+                agent_class=agent_class,
                 # Validation must never execute project code (custom tools).
                 resolve_tools=not collect_errors,
+                resolve_python_refs=not collect_errors,
                 project_root=crew_path.parent,
             )
         except Exception as exc:
             if collect_errors:
                 errors.append(str(exc))
-                continue
+                return
             raise
         agent_definitions[agent_name] = JSONAgentDefinition(
             name=agent_name,
             path=agent_file,
             definition=agent_defn,
             kwargs=agent_kwargs,
+            agent_class=agent_class,
         )
+
+    for agent_name in agent_names:
+        load_agent_definition(agent_name)
+
+    manager_agent = defn.get("manager_agent")
+    if manager_agent is not None:
+        if isinstance(manager_agent, str) and manager_agent:
+            load_agent_definition(manager_agent)
+        elif _is_python_ref(manager_agent):
+            pass
+        else:
+            fail(
+                f"{crew_path}: 'manager_agent' must be an agent definition name "
+                f'or a {{"{PYTHON_REF_KEY}": "module.agent"}} reference'
+            )
 
     task_defs = defn.get("tasks", [])
     if not isinstance(task_defs, list) or not task_defs:
@@ -260,18 +353,16 @@ def load_json_crew_project(
         task_defs = []
 
     known_tasks: set[str] = set()
-    known_agents = {name for name in agent_names if isinstance(name, str)}
     for index, task_defn in enumerate(task_defs):
         task_path = f"{crew_path}: tasks[{index}]"
         if not isinstance(task_defn, dict):
             fail(f"{task_path} must be an object")
             continue
         fail_many(
-            _field_errors(
+            _task_definition_errors(
                 task_defn,
-                _task_allowed_fields(),
-                _TASK_RUNTIME_FIELDS,
                 task_path,
+                resolve_python_refs=not collect_errors,
             )
         )
         missing_required = [
@@ -422,19 +513,177 @@ def _expect_object(value: Any, source: str | Path) -> dict[str, Any]:
     return value
 
 
+def _is_python_ref(value: Any) -> bool:
+    return isinstance(value, dict) and PYTHON_REF_KEY in value
+
+
+def _python_ref_errors(value: Any, source: str | Path) -> list[str]:
+    if not isinstance(value, dict):
+        return [
+            f"{source}: Python reference must be an object like "
+            f'{{"{PYTHON_REF_KEY}": "module.attribute"}}'
+        ]
+    if set(value) != {PYTHON_REF_KEY}:
+        return [
+            f"{source}: Python reference objects must only contain '{PYTHON_REF_KEY}'"
+        ]
+    path = value.get(PYTHON_REF_KEY)
+    if not isinstance(path, str) or not path.strip():
+        return [f"{source}: Python reference '{PYTHON_REF_KEY}' must be a string"]
+    if "." not in path:
+        return [
+            f"{source}: Python reference '{path}' must be a dotted import path "
+            "like 'module.attribute'"
+        ]
+    return []
+
+
+def _python_ref_path(value: Any, source: str | Path) -> str:
+    errors = _python_ref_errors(value, source)
+    if errors:
+        raise JSONProjectValidationError(errors)
+    return value[PYTHON_REF_KEY].strip()
+
+
+def _resolve_python_ref(
+    value: Any,
+    source: str | Path,
+    *,
+    expected: str,
+) -> Any:
+    from crewai.utilities.import_utils import import_and_validate_definition
+
+    path = _python_ref_path(value, source)
+    try:
+        resolved = import_and_validate_definition(path)
+    except Exception as exc:
+        raise JSONProjectError(f"{source}: failed to import '{path}': {exc}") from exc
+
+    if expected == "any":
+        return resolved
+    if expected == "callable" and not callable(resolved):
+        raise JSONProjectError(f"{source}: Python reference '{path}' is not callable")
+    if expected == "class" and not isinstance(resolved, type):
+        raise JSONProjectError(f"{source}: Python reference '{path}' is not a class")
+    return resolved
+
+
+def _resolve_python_class(
+    value: Any,
+    source: str | Path,
+    *,
+    base_class: type[Any] | None = None,
+) -> type[Any]:
+    cls = _resolve_python_ref(value, source, expected="class")
+    if base_class is not None and not issubclass(cls, base_class):
+        raise JSONProjectError(
+            f"{source}: Python reference '{_python_ref_path(value, source)}' "
+            f"must be a subclass of {base_class.__module__}.{base_class.__name__}"
+        )
+    return cls
+
+
+def _agent_class_from_definition(
+    defn: dict[str, Any],
+    source: str | Path,
+    *,
+    resolve_python_refs: bool = True,
+) -> type[Any]:
+    from crewai import Agent
+
+    type_value = defn.get("type")
+    if type_value is None:
+        return Agent
+    if isinstance(type_value, str) and type_value in _AGENT_TYPE_ALIASES:
+        return Agent
+    if _is_python_ref(type_value):
+        if not resolve_python_refs:
+            errors = _python_ref_errors(type_value, source)
+            if errors:
+                raise JSONProjectValidationError(errors)
+            return Agent
+        from crewai.agents.agent_builder.base_agent import BaseAgent
+
+        return _resolve_python_class(type_value, source, base_class=BaseAgent)
+    if isinstance(type_value, str):
+        raise JSONProjectError(
+            f"{source}: unsupported agent type '{type_value}'. Use 'Agent' or "
+            f'{{"{PYTHON_REF_KEY}": "module.CustomAgent"}}.'
+        )
+    raise JSONProjectValidationError(_python_ref_errors(type_value, source))
+
+
+def _task_class_from_definition(
+    defn: dict[str, Any],
+    source: str | Path,
+    *,
+    resolve_python_refs: bool = True,
+) -> type[Any]:
+    from crewai import Task
+
+    type_value = defn.get("type")
+    if type_value is None:
+        return Task
+    if isinstance(type_value, str) and type_value in _TASK_TYPE_ALIASES:
+        return Task
+    if isinstance(type_value, str) and type_value in _CONDITIONAL_TASK_TYPE_ALIASES:
+        from crewai.tasks.conditional_task import ConditionalTask
+
+        return ConditionalTask
+    if _is_python_ref(type_value):
+        if not resolve_python_refs:
+            errors = _python_ref_errors(type_value, source)
+            if errors:
+                raise JSONProjectValidationError(errors)
+            return Task
+        return _resolve_python_class(type_value, source, base_class=Task)
+    if isinstance(type_value, str):
+        raise JSONProjectError(
+            f"{source}: unsupported task type '{type_value}'. Use 'Task', "
+            f"'ConditionalTask', or "
+            f'{{"{PYTHON_REF_KEY}": "module.CustomTask"}}.'
+        )
+    raise JSONProjectValidationError(_python_ref_errors(type_value, source))
+
+
+def _model_fields_for(model_cls: type[Any], source: str | Path) -> set[str]:
+    fields = getattr(model_cls, "model_fields", None)
+    if not isinstance(fields, dict):
+        raise JSONProjectError(
+            f"{source}: {model_cls.__module__}.{model_cls.__name__} must be a "
+            "Pydantic model class"
+        )
+    return set(fields)
+
+
+def _definition_has_python_type(defn: dict[str, Any]) -> bool:
+    return _is_python_ref(defn.get("type"))
+
+
 def _agent_kwargs_from_definition(
     defn: dict[str, Any],
     path: Path | str,
     *,
+    agent_class: type[Any] | None = None,
     resolve_tools: bool = True,
+    resolve_python_refs: bool = True,
     project_root: Path | None = None,
 ) -> dict[str, Any]:
+    agent_class = agent_class or _agent_class_from_definition(
+        defn,
+        f"{path}: type",
+        resolve_python_refs=resolve_python_refs,
+    )
+    allowed_fields = _agent_allowed_fields(agent_class)
+    extra_allowed = {"settings", "type"}
+    skip_unknown = _definition_has_python_type(defn) and not resolve_python_refs
     errors = _field_errors(
         defn,
-        _agent_allowed_fields(),
+        allowed_fields,
         _AGENT_RUNTIME_FIELDS,
         path,
-        {"settings"},
+        extra_allowed,
+        skip_unknown=skip_unknown,
     )
     for required in ("role", "goal", "backstory"):
         if required not in defn:
@@ -450,21 +699,26 @@ def _agent_kwargs_from_definition(
         errors.extend(
             _field_errors(
                 settings,
-                _agent_allowed_fields(),
+                allowed_fields,
                 _AGENT_RUNTIME_FIELDS,
                 f"{path}: settings",
+                skip_unknown=skip_unknown,
             )
+        )
+    errors.extend(_python_reference_definition_errors(defn, path))
+    if isinstance(settings, dict):
+        errors.extend(
+            _python_reference_definition_errors(settings, f"{path}: settings")
         )
 
     if errors:
         raise JSONProjectValidationError(errors)
 
-    agent_kwargs = {
-        key: value for key, value in defn.items() if key in _agent_allowed_fields()
-    }
+    agent_kwargs = {key: value for key, value in defn.items() if key in allowed_fields}
     agent_kwargs.update(settings)
     if resolve_tools:
         _resolve_tool_fields(agent_kwargs, project_root=project_root)
+        _resolve_agent_python_refs(agent_kwargs, path)
     else:
         # Validation/deploy mode: check tool declarations structurally without
         # importing or instantiating anything — custom:<name> tools execute
@@ -484,17 +738,20 @@ def _task_kwargs_from_definition(
     source: str,
     project_root: Path | None = None,
 ) -> dict[str, Any]:
+    task_class = _task_class_from_definition(task_defn, f"{source}: type")
+    allowed_fields = _task_allowed_fields(task_class)
     errors = _field_errors(
         task_defn,
-        _task_allowed_fields(),
+        allowed_fields,
         _TASK_RUNTIME_FIELDS,
         source,
+        {"type"},
     )
     if errors:
         raise JSONProjectValidationError(errors)
 
     task_kwargs = {
-        key: value for key, value in task_defn.items() if key in _task_allowed_fields()
+        key: value for key, value in task_defn.items() if key in allowed_fields
     }
 
     agent_ref = task_kwargs.get("agent")
@@ -518,6 +775,13 @@ def _task_kwargs_from_definition(
         task_kwargs["context"] = context_tasks
 
     _resolve_tool_fields(task_kwargs, project_root=project_root)
+    _resolve_task_python_refs(task_kwargs, source)
+    if "input_files" in task_kwargs:
+        task_kwargs["input_files"] = _normalize_input_files(
+            task_kwargs["input_files"],
+            source,
+            project_root,
+        )
     return task_kwargs
 
 
@@ -548,9 +812,11 @@ def _crew_kwargs_from_definition(
     if isinstance(manager_agent, str):
         if manager_agent not in agents_map:
             raise JSONProjectError(
-                f"{source}: manager_agent '{manager_agent}' is not in the crew agents list"
+                f"{source}: manager_agent '{manager_agent}' does not match an agent definition"
             )
         crew_kwargs["manager_agent"] = agents_map[manager_agent]
+
+    _resolve_crew_python_refs(crew_kwargs, source)
 
     return crew_kwargs
 
@@ -561,6 +827,8 @@ def _resolve_tool_fields(
     tools = kwargs.get("tools")
     if tools is not None:
         kwargs["tools"] = _resolve_tools(tools, project_root=project_root)
+    if "mcps" in kwargs:
+        kwargs["mcps"] = _resolve_mcp_python_refs(kwargs["mcps"])
 
 
 def _field_errors(
@@ -569,11 +837,17 @@ def _field_errors(
     runtime_fields: set[str],
     source: str | Path,
     extra_allowed: set[str] | None = None,
+    *,
+    skip_unknown: bool = False,
 ) -> list[str]:
     extra_allowed = extra_allowed or set()
     keys = set(data)
     runtime = sorted(keys & runtime_fields)
-    unknown = sorted(keys - allowed_fields - runtime_fields - extra_allowed)
+    unknown = (
+        []
+        if skip_unknown
+        else sorted(keys - allowed_fields - runtime_fields - extra_allowed)
+    )
 
     errors: list[str] = []
     if runtime:
@@ -586,22 +860,433 @@ def _field_errors(
     return errors
 
 
-def _agent_allowed_fields() -> set[str]:
+def _agent_allowed_fields(agent_class: type[Any] | None = None) -> set[str]:
     from crewai import Agent
 
-    return set(Agent.model_fields) - _AGENT_RUNTIME_FIELDS
+    return _model_fields_for(agent_class or Agent, "agent type") - _AGENT_RUNTIME_FIELDS
 
 
-def _task_allowed_fields() -> set[str]:
+def _task_allowed_fields(task_class: type[Any] | None = None) -> set[str]:
     from crewai import Task
 
-    return set(Task.model_fields) - _TASK_RUNTIME_FIELDS
+    return _model_fields_for(task_class or Task, "task type") - _TASK_RUNTIME_FIELDS
 
 
 def _crew_allowed_fields() -> set[str]:
     from crewai import Crew
 
     return set(Crew.model_fields) - _CREW_RUNTIME_FIELDS
+
+
+def _task_definition_errors(
+    task_defn: dict[str, Any],
+    source: str | Path,
+    *,
+    resolve_python_refs: bool,
+) -> list[str]:
+    skip_unknown = _definition_has_python_type(task_defn) and not resolve_python_refs
+    try:
+        task_class = _task_class_from_definition(
+            task_defn,
+            f"{source}: type",
+            resolve_python_refs=resolve_python_refs,
+        )
+    except JSONProjectValidationError as exc:
+        return exc.errors
+    except JSONProjectError as exc:
+        return [str(exc)]
+
+    errors = _field_errors(
+        task_defn,
+        _task_allowed_fields(task_class),
+        _TASK_RUNTIME_FIELDS,
+        source,
+        {"type"},
+        skip_unknown=skip_unknown,
+    )
+    errors.extend(_python_reference_definition_errors(task_defn, source))
+    return errors
+
+
+def _python_reference_definition_errors(
+    defn: dict[str, Any],
+    source: str | Path,
+) -> list[str]:
+    errors: list[str] = []
+    for field in (
+        _AGENT_CALLABLE_FIELDS
+        | _AGENT_CALLABLE_LIST_FIELDS
+        | _TASK_CALLABLE_FIELDS
+        | _TASK_CALLABLE_LIST_FIELDS
+        | _TASK_MODEL_CLASS_FIELDS
+        | _CREW_CALLABLE_FIELDS
+        | _CREW_CALLABLE_LIST_FIELDS
+        | {"converter_cls", "executor_class"}
+    ):
+        if field not in defn:
+            continue
+        errors.extend(_python_reference_value_errors(defn[field], f"{source}: {field}"))
+
+    for field in (
+        _AGENT_OBJECT_REF_FIELDS | _TASK_OBJECT_REF_FIELDS | _CREW_OBJECT_REF_FIELDS
+    ):
+        if field not in defn:
+            continue
+        errors.extend(
+            _python_reference_value_errors_recursive(defn[field], f"{source}: {field}")
+        )
+
+    errors.extend(
+        _embedder_python_ref_errors(defn.get("embedder"), f"{source}: embedder")
+    )
+    errors.extend(_a2a_python_ref_errors(defn.get("a2a"), f"{source}: a2a"))
+    errors.extend(_mcp_python_ref_errors(defn.get("mcps"), f"{source}: mcps"))
+
+    type_value = defn.get("type")
+    if _is_python_ref(type_value):
+        errors.extend(_python_ref_errors(type_value, f"{source}: type"))
+    return errors
+
+
+def _python_reference_value_errors(value: Any, source: str | Path) -> list[str]:
+    errors: list[str] = []
+    if _is_python_ref(value):
+        return _python_ref_errors(value, source)
+    if isinstance(value, list):
+        for index, item in enumerate(value):
+            if _is_python_ref(item):
+                errors.extend(_python_ref_errors(item, f"{source}[{index}]"))
+    return errors
+
+
+def _python_reference_value_errors_recursive(
+    value: Any, source: str | Path
+) -> list[str]:
+    if _is_python_ref(value):
+        return _python_ref_errors(value, source)
+    errors: list[str] = []
+    if isinstance(value, list):
+        for index, item in enumerate(value):
+            errors.extend(
+                _python_reference_value_errors_recursive(item, f"{source}[{index}]")
+            )
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            errors.extend(
+                _python_reference_value_errors_recursive(item, f"{source}.{key}")
+            )
+    return errors
+
+
+def _embedder_python_ref_errors(value: Any, source: str | Path) -> list[str]:
+    if not isinstance(value, dict):
+        return []
+    config = value.get("config")
+    if not isinstance(config, dict):
+        return []
+    embedding_callable = config.get("embedding_callable")
+    if _is_python_ref(embedding_callable):
+        return _python_ref_errors(
+            embedding_callable, f"{source}.config.embedding_callable"
+        )
+    return []
+
+
+def _a2a_python_ref_errors(value: Any, source: str | Path) -> list[str]:
+    configs = value if isinstance(value, list) else [value]
+    errors: list[str] = []
+    for index, config in enumerate(configs):
+        if not isinstance(config, dict):
+            continue
+        response_model = config.get("response_model")
+        if _is_python_ref(response_model):
+            errors.extend(
+                _python_ref_errors(response_model, f"{source}[{index}].response_model")
+            )
+    return errors
+
+
+def _mcp_python_ref_errors(value: Any, source: str | Path) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    errors: list[str] = []
+    for index, config in enumerate(value):
+        if not isinstance(config, dict):
+            continue
+        tool_filter = config.get("tool_filter")
+        if _is_python_ref(tool_filter):
+            errors.extend(
+                _python_ref_errors(tool_filter, f"{source}[{index}].tool_filter")
+            )
+        elif isinstance(tool_filter, dict) and tool_filter.get("type") == "static":
+            for key in ("allowed_tool_names", "blocked_tool_names"):
+                names = tool_filter.get(key)
+                if names is not None and not _is_string_list(names):
+                    errors.append(
+                        f"{source}[{index}].tool_filter.{key} must be a list of strings"
+                    )
+    return errors
+
+
+def _resolve_agent_python_refs(kwargs: dict[str, Any], source: str | Path) -> None:
+    _resolve_callable_fields(
+        kwargs,
+        source,
+        scalar_fields=_AGENT_CALLABLE_FIELDS,
+        list_fields=_AGENT_CALLABLE_LIST_FIELDS,
+    )
+    if _is_python_ref(kwargs.get("executor_class")):
+        kwargs["executor_class"] = _resolve_python_class(
+            kwargs["executor_class"], f"{source}: executor_class"
+        )
+    if "embedder" in kwargs:
+        kwargs["embedder"] = _resolve_embedder_python_refs(kwargs["embedder"], source)
+    if "a2a" in kwargs:
+        kwargs["a2a"] = _resolve_a2a_python_refs(kwargs["a2a"], source)
+    _resolve_object_reference_fields(kwargs, source, _AGENT_OBJECT_REF_FIELDS)
+
+
+def _resolve_task_python_refs(kwargs: dict[str, Any], source: str | Path) -> None:
+    _resolve_callable_fields(
+        kwargs,
+        source,
+        scalar_fields=_TASK_CALLABLE_FIELDS,
+        list_fields=_TASK_CALLABLE_LIST_FIELDS,
+    )
+    for field in _TASK_MODEL_CLASS_FIELDS:
+        if _is_python_ref(kwargs.get(field)):
+            kwargs[field] = _resolve_model_class(kwargs[field], f"{source}: {field}")
+    if _is_python_ref(kwargs.get("converter_cls")):
+        from crewai.utilities.converter import Converter
+
+        kwargs["converter_cls"] = _resolve_python_class(
+            kwargs["converter_cls"],
+            f"{source}: converter_cls",
+            base_class=Converter,
+        )
+    elif isinstance(kwargs.get("converter_cls"), str):
+        raise JSONProjectError(
+            f"{source}: converter_cls must use "
+            f'{{"{PYTHON_REF_KEY}": "module.ConverterSubclass"}}'
+        )
+    _resolve_object_reference_fields(kwargs, source, _TASK_OBJECT_REF_FIELDS)
+
+
+def _resolve_crew_python_refs(kwargs: dict[str, Any], source: str | Path) -> None:
+    _resolve_callable_fields(
+        kwargs,
+        source,
+        scalar_fields=_CREW_CALLABLE_FIELDS,
+        list_fields=_CREW_CALLABLE_LIST_FIELDS,
+    )
+    if "embedder" in kwargs:
+        kwargs["embedder"] = _resolve_embedder_python_refs(kwargs["embedder"], source)
+    _resolve_object_reference_fields(kwargs, source, _CREW_OBJECT_REF_FIELDS)
+
+
+def _resolve_object_reference_fields(
+    kwargs: dict[str, Any],
+    source: str | Path,
+    fields: set[str],
+) -> None:
+    for field in fields:
+        if field not in kwargs:
+            continue
+        kwargs[field] = _resolve_python_refs_recursively(
+            kwargs[field], f"{source}: {field}"
+        )
+
+
+def _resolve_python_refs_recursively(value: Any, source: str | Path) -> Any:
+    if _is_python_ref(value):
+        return _resolve_python_ref(value, source, expected="any")
+    if isinstance(value, list):
+        return [
+            _resolve_python_refs_recursively(item, f"{source}[{index}]")
+            for index, item in enumerate(value)
+        ]
+    if isinstance(value, dict):
+        return {
+            key: _resolve_python_refs_recursively(item, f"{source}.{key}")
+            for key, item in value.items()
+        }
+    return value
+
+
+def _resolve_callable_fields(
+    kwargs: dict[str, Any],
+    source: str | Path,
+    *,
+    scalar_fields: set[str],
+    list_fields: set[str],
+) -> None:
+    for field in scalar_fields:
+        if _is_python_ref(kwargs.get(field)):
+            kwargs[field] = _resolve_python_ref(
+                kwargs[field],
+                f"{source}: {field}",
+                expected="callable",
+            )
+    for field in list_fields:
+        value = kwargs.get(field)
+        if not isinstance(value, list):
+            continue
+        kwargs[field] = [
+            _resolve_python_ref(
+                item, f"{source}: {field}[{index}]", expected="callable"
+            )
+            if _is_python_ref(item)
+            else item
+            for index, item in enumerate(value)
+        ]
+
+
+def _resolve_model_class(value: Any, source: str | Path) -> type[BaseModel]:
+    return _resolve_python_class(value, source, base_class=BaseModel)
+
+
+def _resolve_embedder_python_refs(value: Any, source: str | Path) -> Any:
+    if not isinstance(value, dict):
+        return value
+    config = value.get("config")
+    if not isinstance(config, dict):
+        return value
+    embedding_callable = config.get("embedding_callable")
+    if not _is_python_ref(embedding_callable):
+        return value
+
+    from crewai.rag.embeddings.providers.custom.embedding_callable import (
+        CustomEmbeddingFunction,
+    )
+
+    normalized = dict(value)
+    normalized_config = dict(config)
+    normalized_config["embedding_callable"] = _resolve_python_class(
+        embedding_callable,
+        f"{source}: embedder.config.embedding_callable",
+        base_class=CustomEmbeddingFunction,
+    )
+    normalized["config"] = normalized_config
+    return normalized
+
+
+def _resolve_a2a_python_refs(value: Any, source: str | Path) -> Any:
+    if isinstance(value, list):
+        return [
+            _resolve_a2a_python_refs(item, f"{source}: a2a[{index}]")
+            for index, item in enumerate(value)
+        ]
+    if not isinstance(value, dict):
+        return value
+    response_model = value.get("response_model")
+    if response_model is None:
+        return value
+
+    normalized = dict(value)
+    if _is_python_ref(response_model):
+        normalized["response_model"] = _resolve_model_class(
+            response_model,
+            f"{source}: a2a.response_model",
+        )
+    elif isinstance(response_model, dict):
+        from crewai.utilities.pydantic_schema_utils import create_model_from_schema
+
+        normalized["response_model"] = create_model_from_schema(response_model)
+    return normalized
+
+
+def _resolve_mcp_python_refs(value: Any) -> Any:
+    if not isinstance(value, list):
+        return value
+    return [
+        _resolve_mcp_config_python_refs(config, index)
+        if isinstance(config, dict)
+        else config
+        for index, config in enumerate(value)
+    ]
+
+
+def _resolve_mcp_config_python_refs(
+    config: dict[str, Any], index: int
+) -> dict[str, Any]:
+    tool_filter = config.get("tool_filter")
+    if tool_filter is None:
+        return config
+    normalized = dict(config)
+    if _is_python_ref(tool_filter):
+        normalized["tool_filter"] = _resolve_python_ref(
+            tool_filter,
+            f"mcps[{index}].tool_filter",
+            expected="callable",
+        )
+    elif isinstance(tool_filter, dict) and tool_filter.get("type") == "static":
+        from crewai.mcp.filters import create_static_tool_filter
+
+        allowed_tool_names = tool_filter.get("allowed_tool_names")
+        blocked_tool_names = tool_filter.get("blocked_tool_names")
+        if allowed_tool_names is not None and not _is_string_list(allowed_tool_names):
+            raise JSONProjectValidationError(
+                [
+                    f"mcps[{index}].tool_filter.allowed_tool_names must be a list of strings"
+                ]
+            )
+        if blocked_tool_names is not None and not _is_string_list(blocked_tool_names):
+            raise JSONProjectValidationError(
+                [
+                    f"mcps[{index}].tool_filter.blocked_tool_names must be a list of strings"
+                ]
+            )
+        normalized["tool_filter"] = create_static_tool_filter(
+            allowed_tool_names=allowed_tool_names,
+            blocked_tool_names=blocked_tool_names,
+        )
+    return normalized
+
+
+def _is_string_list(value: Any) -> bool:
+    return isinstance(value, list) and all(isinstance(item, str) for item in value)
+
+
+def _normalize_input_files(
+    value: Any,
+    source: str | Path,
+    project_root: Path | None,
+) -> Any:
+    if value is None:
+        return value
+    if not isinstance(value, dict):
+        raise JSONProjectValidationError(
+            [f"{source}: input_files must be an object mapping names to file specs"]
+        )
+
+    normalized: dict[str, Any] = {}
+    for name, file_spec in value.items():
+        if isinstance(file_spec, str):
+            normalized[name] = {
+                "source": _resolve_project_path(file_spec, project_root)
+            }
+            continue
+        if isinstance(file_spec, dict):
+            normalized_spec = dict(file_spec)
+            for field in ("source", "path"):
+                field_value = normalized_spec.get(field)
+                if isinstance(field_value, str):
+                    normalized_spec[field] = _resolve_project_path(
+                        field_value, project_root
+                    )
+            normalized[name] = normalized_spec
+            continue
+        normalized[name] = file_spec
+    return normalized
+
+
+def _resolve_project_path(value: str, project_root: Path | None) -> str:
+    if not value or _URI_RE.match(value):
+        return value
+    path = Path(value)
+    if path.is_absolute():
+        return value
+    return str(((project_root or Path.cwd()) / path).resolve())
 
 
 def _format_validation_error(path: str | Path, exc: ValidationError) -> str:

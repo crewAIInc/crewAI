@@ -12,6 +12,36 @@ from crewai.project.json_loader import JSONProjectError, JSONProjectValidationEr
 from crewai.project.crew_loader import load_crew
 
 
+def _write_python_defs(tmp_path: Path) -> None:
+    module = tmp_path / "json_refs.py"
+    module.write_text(
+        "from pydantic import BaseModel\n"
+        "from crewai import Agent, Task\n"
+        "from crewai.security.security_config import SecurityConfig\n"
+        "from crewai.utilities.converter import Converter\n"
+        "\n"
+        "def always_true(_context):\n"
+        "    return True\n"
+        "\n"
+        "def task_callback(output):\n"
+        "    return output\n"
+        "\n"
+        "class SpecialAgent(Agent):\n"
+        "    specialty: str = 'general'\n"
+        "\n"
+        "class SpecialTask(Task):\n"
+        "    priority: int = 0\n"
+        "\n"
+        "class ReportModel(BaseModel):\n"
+        "    summary: str\n"
+        "\n"
+        "class SpecialConverter(Converter):\n"
+        "    pass\n"
+        "\n"
+        "security_config = SecurityConfig(fingerprint='agent-seed')\n"
+    )
+
+
 def _write_agent(agents_dir: Path, name: str, **overrides) -> Path:
     defn = {
         "role": f"{name} role",
@@ -28,6 +58,15 @@ def _write_crew(project_dir: Path, crew_def: dict) -> Path:
     f = project_dir / "crew.jsonc"
     f.write_text(json.dumps(crew_def))
     return f
+
+
+def _input_file_path(value) -> Path:
+    if isinstance(value, dict):
+        source = value.get("source", value)
+    else:
+        source = getattr(value, "source", value)
+    path = getattr(source, "path", source)
+    return Path(str(path))
 
 
 class TestLoadCrew:
@@ -138,6 +177,37 @@ class TestLoadCrew:
         crew, _ = load_crew(crew_file)
         from crewai import Process
         assert crew.process == Process.hierarchical
+
+    def test_crew_hierarchical_manager_agent_from_separate_agent_file(
+        self, tmp_path: Path
+    ):
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(agents_dir, "worker")
+        _write_agent(agents_dir, "manager")
+
+        crew_def = {
+            "name": "hier_manager_crew",
+            "agents": ["worker"],
+            "tasks": [
+                {
+                    "name": "work",
+                    "description": "Do work",
+                    "expected_output": "Work done",
+                    "agent": "worker",
+                }
+            ],
+            "process": "hierarchical",
+            "manager_agent": "manager",
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        crew, _ = load_crew(crew_file)
+
+        assert len(crew.agents) == 1
+        assert crew.agents[0].role == "worker role"
+        assert crew.manager_agent is not None
+        assert crew.manager_agent.role == "manager role"
 
     def test_crew_accepts_llm_config_objects(self, tmp_path: Path):
         agents_dir = tmp_path / "agents"
@@ -288,6 +358,156 @@ class TestLoadCrew:
         assert task.markdown is True
         assert task.guardrail == "Return a summary field."
         assert task.allow_crewai_trigger_context is False
+
+    def test_crew_loads_conditional_task_with_python_condition(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        _write_python_defs(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(agents_dir, "worker")
+
+        crew_def = {
+            "name": "conditional_crew",
+            "agents": ["worker"],
+            "tasks": [
+                {
+                    "name": "first",
+                    "description": "First task",
+                    "expected_output": "First output",
+                    "agent": "worker",
+                },
+                {
+                    "type": "ConditionalTask",
+                    "name": "second",
+                    "description": "Second task",
+                    "expected_output": "Second output",
+                    "agent": "worker",
+                    "condition": {"python": "json_refs.always_true"},
+                },
+            ],
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        crew, _ = load_crew(crew_file)
+
+        from crewai.tasks.conditional_task import ConditionalTask
+
+        assert isinstance(crew.tasks[1], ConditionalTask)
+        assert crew.tasks[1].should_execute(None)
+
+    def test_crew_loads_custom_agent_and_task_types(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        _write_python_defs(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(
+            agents_dir,
+            "specialist",
+            type={"python": "json_refs.SpecialAgent"},
+            security_config={"python": "json_refs.security_config"},
+            specialty="research",
+        )
+
+        crew_def = {
+            "name": "custom_types_crew",
+            "agents": ["specialist"],
+            "tasks": [
+                {
+                    "type": {"python": "json_refs.SpecialTask"},
+                    "name": "prioritized",
+                    "description": "Do prioritized work",
+                    "expected_output": "Prioritized output",
+                    "agent": "specialist",
+                    "priority": 7,
+                }
+            ],
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        crew, _ = load_crew(crew_file)
+
+        assert crew.agents[0].__class__.__name__ == "SpecialAgent"
+        assert crew.agents[0].specialty == "research"
+        from crewai.security.fingerprint import Fingerprint
+
+        assert crew.agents[0].security_config.fingerprint == Fingerprint.generate(
+            seed="agent-seed"
+        )
+        assert crew.tasks[0].__class__.__name__ == "SpecialTask"
+        assert crew.tasks[0].priority == 7
+
+    def test_crew_loads_python_ref_task_fields(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        _write_python_defs(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(agents_dir, "writer")
+
+        crew_def = {
+            "name": "python_refs_crew",
+            "agents": ["writer"],
+            "tasks": [
+                {
+                    "name": "write",
+                    "description": "Write something",
+                    "expected_output": "Written content",
+                    "agent": "writer",
+                    "callback": {"python": "json_refs.task_callback"},
+                    "output_json": {"python": "json_refs.ReportModel"},
+                    "converter_cls": {"python": "json_refs.SpecialConverter"},
+                }
+            ],
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        crew, _ = load_crew(crew_file)
+        task = crew.tasks[0]
+
+        assert task.callback.__name__ == "task_callback"
+        assert task.output_json.__name__ == "ReportModel"
+        assert "summary" in task.output_json.model_fields
+        assert task.converter_cls.__name__ == "SpecialConverter"
+
+    def test_crew_loads_project_relative_input_files(self, tmp_path: Path):
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(agents_dir, "reader")
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        brief_path = data_dir / "brief.txt"
+        spec_path = data_dir / "spec.md"
+        brief_path.write_text("brief")
+        spec_path.write_text("spec")
+
+        crew_def = {
+            "name": "input_files_crew",
+            "agents": ["reader"],
+            "tasks": [
+                {
+                    "name": "read",
+                    "description": "Read files",
+                    "expected_output": "File summary",
+                    "agent": "reader",
+                    "input_files": {
+                        "brief": "data/brief.txt",
+                        "spec": {"source": "data/spec.md"},
+                    },
+                }
+            ],
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        crew, _ = load_crew(crew_file)
+        input_files = crew.tasks[0].input_files
+
+        assert _input_file_path(input_files["brief"]) == brief_path
+        assert _input_file_path(input_files["spec"]) == spec_path
 
     def test_missing_agent_file_raises(self, tmp_path: Path):
         agents_dir = tmp_path / "agents"

@@ -790,7 +790,7 @@ def _task_to_json_fragment(task: dict[str, Any]) -> str:
     lines.append('      // "output_pydantic": null,')
     lines.append('      // "response_model": null,')
     lines.append('      // "markdown": false,')
-    lines.append('      // "input_files": [],')
+    lines.append('      // "input_files": { "brief": "data/brief.txt" },')
     lines.append('      // "security_config": {},')
     lines.append("")
     lines.append("      // Which agent handles this task")
