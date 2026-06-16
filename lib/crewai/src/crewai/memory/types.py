@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
@@ -413,6 +413,9 @@ def compute_behavioral_adjustment(
     if last_seen:
         try:
             last = datetime.fromisoformat(last_seen)
+            # Normalize timezone-aware to naive UTC so subtraction with utcnow() works
+            if last.tzinfo is not None:
+                last = last.astimezone(timezone.utc).replace(tzinfo=None)
             days_since = max((datetime.utcnow() - last).total_seconds() / 86400.0, 0.0)
             behavioral_hl = config.recency_half_life_days * 2  # default 60d
             staleness = 0.5 ** (days_since / behavioral_hl)

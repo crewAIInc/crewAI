@@ -1482,9 +1482,10 @@ def test_behavioral_adjustment_high_confidence() -> None:
     from crewai.memory.types import MemoryConfig, compute_behavioral_adjustment
 
     config = MemoryConfig()
-    meta = {"observation_count": 10, "last_observed_at": "2026-06-16T10:00:00Z"}
+    now = datetime.utcnow().isoformat()
+    meta = {"observation_count": 10, "last_observed_at": now}
     multiplier, reasons = compute_behavioral_adjustment(meta, config)
-    assert multiplier == 1.0  # no discount at 10 obs
+    assert multiplier == pytest.approx(1.0, abs=1e-9)  # no discount at 10 obs
     assert not any("low_confidence" in r for r in reasons)
 
 
@@ -1493,7 +1494,8 @@ def test_behavioral_adjustment_low_confidence() -> None:
     from crewai.memory.types import MemoryConfig, compute_behavioral_adjustment
 
     config = MemoryConfig()
-    meta = {"observation_count": 1, "last_observed_at": "2026-06-16T10:00:00Z"}
+    now = datetime.utcnow().isoformat()
+    meta = {"observation_count": 1, "last_observed_at": now}
     multiplier, reasons = compute_behavioral_adjustment(meta, config)
     assert multiplier < 1.0
     assert any("low_confidence" in r for r in reasons)
@@ -1504,13 +1506,14 @@ def test_behavioral_adjustment_contradiction() -> None:
     from crewai.memory.types import MemoryConfig, compute_behavioral_adjustment
 
     config = MemoryConfig()
+    now = datetime.utcnow().isoformat()
     meta = {
         "observation_count": 10,
-        "last_observed_at": "2026-06-16T10:00:00Z",
+        "last_observed_at": now,
         "contradicts": ["some-other-id"],
     }
     multiplier, reasons = compute_behavioral_adjustment(meta, config)
-    assert multiplier == 0.5
+    assert multiplier == pytest.approx(0.5, abs=1e-9)
     assert "contradicted" in reasons
 
 

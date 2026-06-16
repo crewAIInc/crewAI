@@ -5,6 +5,7 @@ from __future__ import annotations
 from concurrent.futures import Future, ThreadPoolExecutor
 import contextvars
 from datetime import datetime
+import logging
 import threading
 import time
 from typing import TYPE_CHECKING, Annotated, Any, Literal
@@ -35,6 +36,8 @@ from crewai.memory.types import (
 from crewai.memory.utils import join_scope_paths
 from crewai.rag.embeddings.factory import build_embedder
 from crewai.rag.embeddings.providers.openai.types import OpenAIProviderSpec
+
+_logger = logging.getLogger(__name__)
 
 
 if TYPE_CHECKING:
@@ -770,6 +773,14 @@ class Memory(BaseModel):
                     }
                 )
                 results = flow.state.final_results
+                # Apply behavioral adjustment to action insights in deep recall too
+                for m in results:
+                    if m.record.metadata.get("type") == "action_insight":
+                        adj, adj_reasons = compute_behavioral_adjustment(
+                            m.record.metadata, self._config,
+                        )
+                        m.score *= adj
+                        m.match_reasons.extend(adj_reasons)
 
             if results:
                 try:
@@ -914,17 +925,21 @@ class Memory(BaseModel):
         Returns:
             The saved MemoryRecord, or None on failure.
         """
+        if self.read_only:
+            return None
+
         try:
             # 1. Embed the content
             embedding = embed_text(self._embedder, content)
             if not embedding:
-                self._logger.warning("Failed to embed action insight content")
+                _logger.warning("Failed to embed action insight content")
                 return None
 
-            # 2. Determine effective scope
+            # 2. Determine effective scope: per-call root_scope, then self.root_scope, then bare scope
+            effective_root = root_scope if root_scope is not None else self.root_scope
             effective_scope = scope
-            if root_scope:
-                effective_scope = join_scope_paths(root_scope, scope)
+            if effective_root:
+                effective_scope = join_scope_paths(effective_root, scope)
 
             # 3. Search for similar existing insights
             similar = self._storage.search(
@@ -976,7 +991,7 @@ class Memory(BaseModel):
             return record
 
         except Exception as e:
-            self._logger.warning(
+            _logger.warning(
                 "Failed to save action insight: %s", e, exc_info=False,
             )
             return None
