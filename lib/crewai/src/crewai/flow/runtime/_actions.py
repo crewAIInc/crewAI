@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Protocol, cast
 from crewai.flow.flow_definition import (
     FlowActionDefinition,
     FlowCodeActionDefinition,
+    FlowCrewActionDefinition,
     FlowEachActionDefinition,
     FlowEachInnerActionDefinition,
     FlowExpressionActionDefinition,
@@ -104,6 +105,25 @@ class ToolAction:
             ) from e
 
 
+class CrewAction:
+    definition_type = FlowCrewActionDefinition
+
+    def __init__(self, flow: Flow[Any], definition: FlowCrewActionDefinition) -> None:
+        self.flow = flow
+        self.definition = definition
+
+    async def run(self, *_args: Any, **kwargs: Any) -> Any:
+        from crewai.project.crew_loader import load_crew_from_definition
+
+        local_context = _pop_local_context(kwargs)
+        crew_definition = self.definition.with_
+        inputs = render_with_block(
+            self.flow, crew_definition.inputs, local_context=local_context
+        )
+        crew, _ = load_crew_from_definition(crew_definition, source="crew action")
+        return await crew.kickoff_async(inputs=inputs)
+
+
 class ExpressionAction:
     definition_type = FlowExpressionActionDefinition
 
@@ -177,6 +197,7 @@ _ACTION_TYPES: tuple[_ActionType, ...] = (
     EachAction,
     CodeAction,
     ToolAction,
+    CrewAction,
     ExpressionAction,
 )
 

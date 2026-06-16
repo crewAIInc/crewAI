@@ -765,6 +765,252 @@ methods:
     )
 
 
+def test_crew_action_runs_inline_yaml_definition(monkeypatch: pytest.MonkeyPatch):
+    from crewai import Crew
+
+    async def fake_kickoff_async(
+        self: Crew, inputs: dict[str, Any] | None = None, **_kwargs: Any
+    ) -> dict[str, Any]:
+        return {
+            "crew": self.name,
+            "agents": [agent.role for agent in self.agents],
+            "tasks": [task.description for task in self.tasks],
+            "inputs": inputs,
+        }
+
+    monkeypatch.setattr(Crew, "kickoff_async", fake_kickoff_async)
+
+    yaml_str = """
+schema: crewai.flow/v1
+name: CrewFlow
+methods:
+  research:
+    do:
+      call: crew
+      with:
+        name: inline_research
+        agents:
+          researcher:
+            role: Researcher
+            goal: Research {topic}
+            backstory: Knows things.
+        tasks:
+          - name: research_task
+            description: Research {topic}
+            expected_output: Findings about {topic}
+            agent: researcher
+        inputs:
+          topic: "${state.topic}"
+    start: true
+"""
+
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+
+    assert flow.kickoff(inputs={"topic": "AI"}) == {
+        "crew": "inline_research",
+        "agents": ["Researcher"],
+        "tasks": ["Research {topic}"],
+        "inputs": {"topic": "AI"},
+    }
+
+
+def test_crew_action_round_trips_with_inline_definition():
+    definition = FlowDefinition.from_dict(
+        {
+            "schema": "crewai.flow/v1",
+            "name": "CrewFlow",
+            "methods": {
+                "research": {
+                    "start": True,
+                    "do": {
+                        "call": "crew",
+                        "with": {
+                            "name": "inline_research",
+                            "agents": {
+                                "researcher": {
+                                    "role": "Researcher",
+                                    "goal": "Research {topic}",
+                                    "backstory": "Knows things.",
+                                }
+                            },
+                            "tasks": [
+                                {
+                                    "name": "research_task",
+                                    "description": "Research {topic}",
+                                    "expected_output": "Findings about {topic}",
+                                    "agent": "researcher",
+                                }
+                            ],
+                            "inputs": {"topic": "${state.topic}"},
+                        },
+                    },
+                }
+            },
+        }
+    )
+
+    assert definition.to_dict()["methods"]["research"]["do"]["call"] == "crew"
+    assert (
+        definition.to_dict()["methods"]["research"]["do"]["with"]["agents"][
+            "researcher"
+        ]["role"]
+        == "Researcher"
+    )
+
+
+def test_crew_action_normalizes_named_agent_list_definition():
+    definition = FlowDefinition.from_dict(
+        {
+            "schema": "crewai.flow/v1",
+            "name": "CrewFlow",
+            "methods": {
+                "research": {
+                    "start": True,
+                    "do": {
+                        "call": "crew",
+                        "with": {
+                            "agents": [
+                                {
+                                    "name": "researcher",
+                                    "role": "Researcher",
+                                    "goal": "Research {topic}",
+                                    "backstory": "Knows things.",
+                                }
+                            ],
+                            "tasks": [
+                                {
+                                    "description": "Research {topic}",
+                                    "expected_output": "Findings about {topic}",
+                                    "agent": "researcher",
+                                }
+                            ],
+                        },
+                    },
+                }
+            },
+        }
+    )
+
+    assert (
+        definition.to_dict()["methods"]["research"]["do"]["with"]["agents"][
+            "researcher"
+        ]["role"]
+        == "Researcher"
+    )
+
+
+def test_crew_action_json_schema_describes_inline_crew_definitions():
+    schema_defs = FlowDefinition.json_schema()["$defs"]
+    agents_schema = schema_defs["CrewDefinition"]["properties"]["agents"]
+
+    assert set(schema_defs["CrewDefinition"]["properties"]) >= {
+        "agents",
+        "tasks",
+        "inputs",
+    }
+    assert {option["type"] for option in agents_schema["anyOf"]} == {"array", "object"}
+    assert set(schema_defs["CrewAgentDefinition"]["properties"]) >= {
+        "role",
+        "goal",
+        "backstory",
+        "settings",
+    }
+    assert set(schema_defs["CrewTaskDefinition"]["properties"]) >= {
+        "description",
+        "expected_output",
+        "agent",
+        "context",
+    }
+
+
+def test_crew_action_rejects_incomplete_inline_agent_definition():
+    with pytest.raises(ValidationError, match="goal"):
+        FlowDefinition.from_dict(
+            {
+                "schema": "crewai.flow/v1",
+                "name": "CrewFlow",
+                "methods": {
+                    "research": {
+                        "start": True,
+                        "do": {
+                            "call": "crew",
+                            "with": {
+                                "agents": {
+                                    "researcher": {
+                                        "role": "Researcher",
+                                        "backstory": "Knows things.",
+                                    }
+                                },
+                                "tasks": [
+                                    {
+                                        "description": "Research",
+                                        "expected_output": "Findings",
+                                        "agent": "researcher",
+                                    }
+                                ],
+                            },
+                        },
+                    }
+                },
+            }
+        )
+
+
+def test_crew_action_rejects_ref():
+    with pytest.raises(ValidationError, match="ref"):
+        FlowDefinition.from_dict(
+            {
+                "schema": "crewai.flow/v1",
+                "name": "CrewFlow",
+                "methods": {
+                    "research": {
+                        "start": True,
+                        "do": {
+                            "call": "crew",
+                            "ref": "project.crew:build_crew",
+                            "with": {"inputs": {"topic": "AI"}},
+                        },
+                    }
+                },
+            }
+        )
+
+
+def test_crew_action_rejects_non_mapping_inputs_in_definition():
+    with pytest.raises(ValidationError, match="crew.inputs must be a mapping"):
+        FlowDefinition.from_dict(
+            {
+                "schema": "crewai.flow/v1",
+                "name": "CrewFlow",
+                "methods": {
+                    "research": {
+                        "start": True,
+                        "do": {
+                            "call": "crew",
+                            "with": {
+                                "agents": {
+                                    "researcher": {
+                                        "role": "Researcher",
+                                        "goal": "Research",
+                                        "backstory": "Knows things.",
+                                    }
+                                },
+                                "tasks": [
+                                    {
+                                        "description": "Research",
+                                        "expected_output": "Findings",
+                                        "agent": "researcher",
+                                    }
+                                ],
+                                "inputs": "topic",
+                            },
+                        },
+                    }
+                },
+            }
+        )
+
+
 def test_tool_action_reports_invalid_cel_expression():
     yaml_str = f"""
 schema: crewai.flow/v1

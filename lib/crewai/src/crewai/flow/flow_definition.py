@@ -28,6 +28,7 @@ from crewai.flow.conversational_definition import (
     FlowConversationalDefinition,
     FlowConversationalRouterDefinition,
 )
+from crewai.project.crew_definition import CrewDefinition
 
 
 logger = logging.getLogger(__name__)
@@ -41,6 +42,7 @@ __all__ = [
     "FlowConfigDefinition",
     "FlowConversationalDefinition",
     "FlowConversationalRouterDefinition",
+    "FlowCrewActionDefinition",
     "FlowDefinition",
     "FlowDefinitionCondition",
     "FlowDefinitionDiagnostic",
@@ -176,6 +178,15 @@ class FlowToolActionDefinition(BaseModel):
     with_: dict[str, Any] | None = Field(default=None, alias="with")
 
 
+class FlowCrewActionDefinition(BaseModel):
+    """A Flow method action that builds and kicks off a CrewAI crew."""
+
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    call: TypingLiteral["crew"]
+    with_: CrewDefinition = Field(alias="with")
+
+
 class FlowExpressionActionDefinition(BaseModel):
     """A Flow method action that evaluates a CEL expression."""
 
@@ -186,7 +197,10 @@ class FlowExpressionActionDefinition(BaseModel):
 
 
 FlowInnerActionDefinition = (
-    FlowCodeActionDefinition | FlowToolActionDefinition | FlowExpressionActionDefinition
+    FlowCodeActionDefinition
+    | FlowToolActionDefinition
+    | FlowCrewActionDefinition
+    | FlowExpressionActionDefinition
 )
 
 
@@ -236,6 +250,7 @@ class FlowEachActionDefinition(BaseModel):
 FlowActionDefinition = (
     FlowCodeActionDefinition
     | FlowToolActionDefinition
+    | FlowCrewActionDefinition
     | FlowExpressionActionDefinition
     | FlowEachActionDefinition
 )
