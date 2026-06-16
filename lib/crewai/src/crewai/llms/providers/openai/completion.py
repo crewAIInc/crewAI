@@ -1570,8 +1570,10 @@ class OpenAICompletion(BaseLLM):
             params["reasoning_effort"] = self.reasoning_effort
 
         if self.response_format is not None:
-            if isinstance(self.response_format, type) and issubclass(
-                self.response_format, BaseModel
+            if (
+                isinstance(self.response_format, type)
+                and issubclass(self.response_format, BaseModel)
+                and self.supports_native_structured_output()
             ):
                 params["response_format"] = generate_model_description(
                     self.response_format
@@ -1636,7 +1638,7 @@ class OpenAICompletion(BaseLLM):
     ) -> str | Any:
         """Handle non-streaming chat completion."""
         try:
-            if response_model:
+            if response_model and self.supports_native_structured_output():
                 parse_params = {
                     k: v for k, v in params.items() if k != "response_format"
                 }
@@ -1722,10 +1724,14 @@ class OpenAICompletion(BaseLLM):
 
             content = message.content or ""
 
-            if self.response_format and isinstance(self.response_format, type):
+            # When native structured output was skipped (e.g. a provider that
+            # rejects json_schema), validate the plain completion against the
+            # requested model client-side so a parsed object is still returned.
+            structured_format = response_model or self.response_format
+            if structured_format is not None and isinstance(structured_format, type):
                 try:
                     structured_result = self._validate_structured_output(
-                        content, self.response_format
+                        content, structured_format
                     )
                     self._emit_call_completed_event(
                         response=structured_result,
@@ -1905,7 +1911,7 @@ class OpenAICompletion(BaseLLM):
         full_response = ""
         tool_calls: dict[int, dict[str, Any]] = {}
 
-        if response_model:
+        if response_model and self.supports_native_structured_output():
             parse_params = {
                 k: v
                 for k, v in params.items()
@@ -2057,7 +2063,7 @@ class OpenAICompletion(BaseLLM):
     ) -> str | Any:
         """Handle non-streaming async chat completion."""
         try:
-            if response_model:
+            if response_model and self.supports_native_structured_output():
                 parse_params = {
                     k: v for k, v in params.items() if k != "response_format"
                 }
@@ -2149,10 +2155,14 @@ class OpenAICompletion(BaseLLM):
 
             content = message.content or ""
 
-            if self.response_format and isinstance(self.response_format, type):
+            # When native structured output was skipped (e.g. a provider that
+            # rejects json_schema), validate the plain completion against the
+            # requested model client-side so a parsed object is still returned.
+            structured_format = response_model or self.response_format
+            if structured_format is not None and isinstance(structured_format, type):
                 try:
                     structured_result = self._validate_structured_output(
-                        content, self.response_format
+                        content, structured_format
                     )
                     self._emit_call_completed_event(
                         response=structured_result,
@@ -2380,6 +2390,20 @@ class OpenAICompletion(BaseLLM):
     def supports_function_calling(self) -> bool:
         """Check if the model supports function calling."""
         return not self.is_o1_model
+
+    def supports_native_structured_output(self) -> bool:
+        """Whether the endpoint accepts OpenAI's json_schema structured outputs.
+
+        OpenAI's ``beta.chat.completions.parse`` / ``.stream`` and a Pydantic
+        ``response_format`` send a ``response_format`` of type ``json_schema``.
+        Some OpenAI-compatible endpoints reject it (e.g. DeepSeek: "This
+        response_format type is unavailable now"). Subclasses override this to
+        fall back to a plain completion plus client-side validation.
+
+        Returns:
+            ``True`` for OpenAI; subclasses may return ``False``.
+        """
+        return True
 
     def supports_stop_words(self) -> bool:
         """Check if the model supports stop words."""
