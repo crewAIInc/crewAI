@@ -248,6 +248,33 @@ class TestLoadAgent:
         assert len(agent.tools or []) == 1
         assert agent.tools[0].name == "echo"
 
+    def test_load_agent_accepts_static_mcp_tool_filter(self, tmp_path: Path):
+        agent_def = {
+            "role": "MCP User",
+            "goal": "Use MCP tools",
+            "backstory": "MCP expert.",
+            "mcps": [
+                {
+                    "command": "python",
+                    "args": ["server.py"],
+                    "tool_filter": {
+                        "type": "static",
+                        "allowed_tool_names": ["read_file"],
+                        "blocked_tool_names": ["delete_file"],
+                    },
+                }
+            ],
+        }
+        agent_file = tmp_path / "agent.json"
+        agent_file.write_text(json.dumps(agent_def))
+
+        agent = load_agent(agent_file)
+
+        tool_filter = agent.mcps[0].tool_filter
+        assert tool_filter({"name": "read_file"})
+        assert not tool_filter({"name": "delete_file"})
+        assert not tool_filter({"name": "write_file"})
+
     def test_load_agent_rejects_runtime_fields(self, tmp_path: Path):
         agent_def = {
             "id": "00000000-0000-4000-8000-000000000000",
@@ -398,6 +425,33 @@ class TestValidationDoesNotExecuteTools:
 
         assert not sentinel.exists(), "validation must not execute tools/<name>.py"
         assert project.agent_names == ["worker"]
+
+    def test_validate_does_not_import_python_refs(
+        self, tmp_path, monkeypatch: pytest.MonkeyPatch
+    ):
+        from crewai.project.json_loader import validate_crew_project
+
+        sentinel = tmp_path / "python_ref_executed.txt"
+        (tmp_path / "callbacks.py").write_text(
+            "from pathlib import Path\n"
+            f"Path({str(sentinel)!r}).write_text('boom')\n"
+            "def step_callback(*_args, **_kwargs):\n"
+            "    return None\n"
+        )
+        monkeypatch.syspath_prepend(str(tmp_path))
+        sys.modules.pop("callbacks", None)
+        crew_path = self._write_project(
+            tmp_path,
+            tool_line='{"tool_type": "some.module.Tool"}',
+        )
+        agent_file = tmp_path / "agents" / "worker.jsonc"
+        agent_def = json.loads(agent_file.read_text())
+        agent_def["step_callback"] = {"python": "callbacks.step_callback"}
+        agent_file.write_text(json.dumps(agent_def))
+
+        validate_crew_project(crew_path, tmp_path / "agents")
+
+        assert not sentinel.exists(), "validation must not import Python refs"
 
     def test_validate_reports_missing_custom_tool_file(self, tmp_path):
         from crewai.project.json_loader import (

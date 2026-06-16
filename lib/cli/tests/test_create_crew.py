@@ -721,9 +721,30 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
     assert '"guardrail_max_retries": 2' in crew_template
     assert "Docs: https://docs.crewai.com/concepts/tasks" in crew_template
     assert '"output_pydantic": null' in crew_template
+    assert '"type": "ConditionalTask"' in crew_template
+    assert '"condition": { "python": "my_project.conditions.should_run" }' in (
+        crew_template
+    )
+    assert '"output_json": { "python": "my_project.models.ReportOutput" }' in (
+        crew_template
+    )
+    assert (
+        '"converter_cls": { "python": "my_project.converters.CustomConverter" }'
+        in crew_template
+    )
     assert '"markdown": false' in crew_template
+    assert '"input_files": { "brief": "data/brief.txt" }' in crew_template
     assert "Docs: https://docs.crewai.com/concepts/crews" in crew_template
+    assert "manager_agent can reference an agents/<name>.jsonc file" in crew_template
     assert '"manager_agent": "researcher"' in crew_template
+    assert (
+        '"before_kickoff_callbacks": [{"python": '
+        '"my_project.callbacks.before_kickoff"}]'
+    ) in crew_template
+    assert (
+        '"after_kickoff_callbacks": [{"python": '
+        '"my_project.callbacks.after_kickoff"}]'
+    ) in crew_template
     assert '"output_log_file": "crew.log"' in crew_template
     assert "Crew-level LLM fields also accept object form" in crew_template
     assert '"chat_llm": {"model": "llama3", "provider": "ollama"' in (
@@ -740,7 +761,13 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
         agent_template
     )
     assert '"role": "Senior {industry} Researcher"' in agent_template
+    assert '"type": {"python": "my_project.agents.CustomAgent"}' in agent_template
     assert "Optional agent-level guardrail" in agent_template
+    assert "Python refs must point to module-level functions/classes" in agent_template
+    assert (
+        '"step_callback": {"python": "my_project.callbacks.on_agent_step"}'
+        in agent_template
+    )
     assert '"guardrail_max_retries": 2' in agent_template
     assert "Docs: https://docs.crewai.com/concepts/agents" in agent_template
     assert '"reasoning": true' in agent_template

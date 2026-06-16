@@ -11,6 +11,7 @@ from crewai.project.json_loader import (
     JSONProjectError,
     JSONProjectValidationError,
     _crew_kwargs_from_definition,
+    _task_class_from_definition,
     _task_kwargs_from_definition,
     load_json_crew_project,
 )
@@ -26,16 +27,14 @@ def load_crew(
     default inputs.  Agent definitions are resolved from individual
     ``<name>.jsonc`` / ``<name>.json`` files inside an ``agents/`` directory.
     """
-    from crewai import Agent, Crew, Task
+    from crewai import Crew, Task
 
     crew_path = Path(source)
     project = load_json_crew_project(crew_path, agents_dir=agents_dir)
 
-    agents_map: dict[str, Any] = {}
-    for name in project.agent_names:
-        agent_def = project.agents[name]
+    def build_agent(agent_def: Any) -> Any:
         try:
-            agents_map[name] = Agent(**agent_def.kwargs)
+            return agent_def.agent_class(**agent_def.kwargs)
         except ValidationError as exc:
             raise JSONProjectError(
                 f"{agent_def.path}: validation failed: {exc}"
@@ -45,11 +44,16 @@ def load_crew(
                 f"{agent_def.path}: failed to load agent: {exc}"
             ) from exc
 
+    agents_map: dict[str, Any] = {}
+    for name, agent_def in project.agents.items():
+        agents_map[name] = build_agent(agent_def)
+
     tasks_list: list[Task] = []
     task_name_map: dict[str, Task] = {}
 
     for index, task_defn in enumerate(project.task_definitions):
         source_label = f"{crew_path}: tasks[{index}]"
+        task_class = _task_class_from_definition(task_defn, f"{source_label}: type")
         task_kwargs = _task_kwargs_from_definition(
             task_defn,
             agents_map=agents_map,
@@ -58,9 +62,13 @@ def load_crew(
             project_root=crew_path.parent,
         )
         try:
-            task = Task(**task_kwargs)
+            task = task_class(**task_kwargs)
         except ValidationError as exc:
             raise JSONProjectError(f"{source_label}: validation failed: {exc}") from exc
+        except Exception as exc:
+            raise JSONProjectError(
+                f"{source_label}: failed to load task: {exc}"
+            ) from exc
 
         tasks_list.append(task)
         task_name = task_defn.get("name")
@@ -69,7 +77,7 @@ def load_crew(
 
     crew_kwargs = _crew_kwargs_from_definition(
         project.definition,
-        agents=list(agents_map.values()),
+        agents=[agents_map[name] for name in project.agent_names],
         tasks=tasks_list,
         agents_map=agents_map,
         source=crew_path,
