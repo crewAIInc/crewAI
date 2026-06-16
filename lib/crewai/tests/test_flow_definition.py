@@ -44,6 +44,8 @@ def test_flow_public_exports_are_explicit():
         "FlowDefinition",
         "FlowDefinitionCondition",
         "FlowDefinitionDiagnostic",
+        "FlowEachActionDefinition",
+        "FlowEachInnerActionDefinition",
         "FlowExpressionActionDefinition",
         "FlowHumanFeedbackDefinition",
         "FlowMethodDefinition",
@@ -430,6 +432,73 @@ def test_flow_definition_round_trips_json_and_yaml():
     assert yaml_round_trip.to_dict() == definition.to_dict()
     assert yaml_round_trip.methods["decide"].router is True
     assert yaml_round_trip.methods["decide"].listen == "begin"
+
+
+def test_each_action_round_trips_json_and_yaml():
+    definition = flow_definition.FlowDefinition.from_dict(
+        {
+            "schema": "crewai.flow/v1",
+            "name": "EachFlow",
+            "methods": {
+                "process_rows": {
+                    "description": "Process every loaded row.",
+                    "start": True,
+                    "do": {
+                        "call": "each",
+                        "in": "state.rows",
+                        "do": [
+                            {
+                                "normalize": {
+                                    "call": "tool",
+                                    "ref": "my_tools:NormalizeRowTool",
+                                    "with": {"row": "${ item }"},
+                                }
+                            },
+                            {
+                                "save": {
+                                    "call": "code",
+                                    "ref": "my_flow:save_row",
+                                    "with": {
+                                        "row": "${ item }",
+                                        "normalized": "${ outputs.normalize }",
+                                    },
+                                }
+                            },
+                        ],
+                    },
+                }
+            },
+        }
+    )
+
+    json_round_trip = flow_definition.FlowDefinition.from_json(definition.to_json())
+    yaml_round_trip = flow_definition.FlowDefinition.from_yaml(definition.to_yaml())
+
+    assert json_round_trip.to_dict() == definition.to_dict()
+    assert yaml_round_trip.to_dict() == definition.to_dict()
+    assert yaml_round_trip.methods["process_rows"].description == (
+        "Process every loaded row."
+    )
+    assert yaml_round_trip.methods["process_rows"].do.call == "each"
+
+
+def test_flow_definition_rejects_invalid_method_names():
+    with pytest.raises(ValueError, match="Flow method names must match"):
+        flow_definition.FlowDefinition.from_dict(
+            {
+                "schema": "crewai.flow/v1",
+                "name": "InvalidMethodNameFlow",
+                "methods": {
+                    "process-rows": {
+                        "start": True,
+                        "do": {
+                            "call": "expression",
+                            "expr": "'done'",
+                        },
+                    }
+                },
+            }
+        )
 
 
 def test_flow_definition_detects_persist_metadata():

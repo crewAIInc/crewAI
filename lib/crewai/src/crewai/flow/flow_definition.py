@@ -11,9 +11,17 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from typing import Any, Literal as TypingLiteral
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    RootModel,
+    field_serializer,
+    model_validator,
+)
 import yaml
 
 from crewai.flow.conversational_definition import (
@@ -25,6 +33,7 @@ from crewai.flow.conversational_definition import (
 logger = logging.getLogger(__name__)
 
 FlowDefinitionCondition = str | dict[str, Any]
+_STEP_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 __all__ = [
     "FlowActionDefinition",
@@ -35,6 +44,8 @@ __all__ = [
     "FlowDefinition",
     "FlowDefinitionCondition",
     "FlowDefinitionDiagnostic",
+    "FlowEachActionDefinition",
+    "FlowEachInnerActionDefinition",
     "FlowExpressionActionDefinition",
     "FlowHumanFeedbackDefinition",
     "FlowMethodDefinition",
@@ -148,10 +159,11 @@ class FlowHumanFeedbackDefinition(BaseModel):
 class FlowCodeActionDefinition(BaseModel):
     """A Flow method action that executes importable Python code."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
     call: TypingLiteral["code"] = "code"
     ref: str
+    with_: dict[str, Any] | None = Field(default=None, alias="with")
 
 
 class FlowToolActionDefinition(BaseModel):
@@ -173,14 +185,66 @@ class FlowExpressionActionDefinition(BaseModel):
     expr: str
 
 
-FlowActionDefinition = (
+FlowInnerActionDefinition = (
     FlowCodeActionDefinition | FlowToolActionDefinition | FlowExpressionActionDefinition
+)
+
+
+class FlowEachInnerActionDefinition(RootModel[dict[str, FlowInnerActionDefinition]]):
+    """One named action inside an ``each`` composite action."""
+
+    @model_validator(mode="after")
+    def _validate_action_mapping(self) -> FlowEachInnerActionDefinition:
+        if len(self.root) != 1:
+            raise ValueError("each.do entries must be one-key mappings")
+        _validate_step_name(self.name, field="each.do action names")
+        return self
+
+    @property
+    def name(self) -> str:
+        return next(iter(self.root))
+
+    @property
+    def action(self) -> FlowInnerActionDefinition:
+        return next(iter(self.root.values()))
+
+
+class FlowEachActionDefinition(BaseModel):
+    """A composite action that runs a sequential mini-pipeline for each item."""
+
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    call: TypingLiteral["each"]
+    in_: str = Field(alias="in")
+    do: list[FlowEachInnerActionDefinition]
+
+    @model_validator(mode="after")
+    def _validate_inner_action_list(self) -> FlowEachActionDefinition:
+        if not self.do:
+            raise ValueError("each.do must contain at least one action")
+
+        seen: set[str] = set()
+        for inner_action in self.do:
+            name = inner_action.name
+            if name in seen:
+                raise ValueError(f"each.do action names must be unique: {name!r}")
+            seen.add(name)
+
+        return self
+
+
+FlowActionDefinition = (
+    FlowCodeActionDefinition
+    | FlowToolActionDefinition
+    | FlowExpressionActionDefinition
+    | FlowEachActionDefinition
 )
 
 
 class FlowMethodDefinition(BaseModel):
     """Static definition of one Flow method and its execution roles."""
 
+    description: str | None = None
     do: FlowActionDefinition
     start: bool | FlowDefinitionCondition | None = None
     listen: FlowDefinitionCondition | None = None
@@ -226,6 +290,12 @@ class FlowDefinition(BaseModel):
     conversational: FlowConversationalDefinition | None = None
     methods: dict[str, FlowMethodDefinition] = Field(default_factory=dict)
     diagnostics: list[FlowDefinitionDiagnostic] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _validate_method_names(self) -> FlowDefinition:
+        for method_name in self.methods:
+            _validate_step_name(method_name, field="Flow method names")
+        return self
 
     def to_dict(self, *, exclude_none: bool = True) -> dict[str, Any]:
         """Serialize the definition to a JSON/YAML-ready dictionary."""
@@ -367,6 +437,11 @@ def _log_flow_definition_diagnostics(
 
 def _deserialize_diagnostics(value: Any) -> list[FlowDefinitionDiagnostic]:
     return [FlowDefinitionDiagnostic.model_validate(item) for item in value or []]
+
+
+def _validate_step_name(name: str, *, field: str) -> None:
+    if not isinstance(name, str) or not _STEP_NAME_PATTERN.fullmatch(name):
+        raise ValueError(f"{field} must match {_STEP_NAME_PATTERN.pattern}")
 
 
 def _merge_diagnostics(
