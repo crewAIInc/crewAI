@@ -766,6 +766,7 @@ class TestLoadCrew:
             r"C:\Users\alice\.ssh\id_rsa",
             "C:/Users/alice/.ssh/id_rsa",
             r"\\server\share\secret.txt",
+            "//server/share/secret.txt",
         ],
     )
     def test_crew_rejects_windows_input_file_outside_project(

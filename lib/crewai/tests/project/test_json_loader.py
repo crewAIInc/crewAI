@@ -11,6 +11,7 @@ import pytest
 from crewai.llms.base_llm import BaseLLM
 from crewai.project.json_loader import (
     JSONProjectValidationError,
+    _looks_like_windows_absolute_path,
     find_json_project_file,
     load_agent,
     strip_jsonc_comments,
@@ -72,6 +73,31 @@ def test_find_json_project_file_prefers_jsonc(tmp_path: Path):
     jsonc_path.write_text("{}")
 
     assert find_json_project_file(tmp_path, "agent") == jsonc_path
+
+
+@pytest.mark.parametrize(
+    "path_value",
+    [
+        r"C:\Users\alice\.ssh\id_rsa",
+        "C:/Users/alice/.ssh/id_rsa",
+        r"\\server\share\secret.txt",
+        "//server/share/secret.txt",
+    ],
+)
+def test_windows_absolute_path_detection(path_value: str):
+    assert _looks_like_windows_absolute_path(path_value)
+
+
+@pytest.mark.parametrize(
+    "path_value",
+    [
+        r"folder\file.txt",
+        "folder/file.txt",
+        r"\server\share\secret.txt",
+    ],
+)
+def test_windows_absolute_path_detection_ignores_relative_paths(path_value: str):
+    assert not _looks_like_windows_absolute_path(path_value)
 
 
 class TestLoadAgent:

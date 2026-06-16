@@ -98,6 +98,7 @@ _CONDITIONAL_TASK_TYPE_ALIASES = {
 }
 _URI_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
 _WINDOWS_DRIVE_PATH_RE = re.compile(r"^[A-Za-z]:")
+_WINDOWS_UNC_PATH_RE = re.compile(r"^(?:\\\\|//)[^\\/]+[\\/][^\\/]+(?:[\\/]|$)")
 _MAX_PYTHON_REF_DEPTH = 64
 
 _AGENT_CALLABLE_FIELDS = {"guardrail", "step_callback"}
@@ -1746,8 +1747,10 @@ def _resolve_project_path(
 
 
 def _looks_like_windows_absolute_path(value: str) -> bool:
+    if _WINDOWS_UNC_PATH_RE.match(value):
+        return True
     windows_path = PureWindowsPath(value)
-    return bool(windows_path.drive) and windows_path.is_absolute()
+    return windows_path.is_absolute()
 
 
 def _format_validation_error(path: str | Path, exc: ValidationError) -> str:
