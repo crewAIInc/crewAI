@@ -951,6 +951,18 @@ def test_validate_model_in_constants():
         LLM._validate_model_in_constants("claude-3-5-sonnet-latest", "claude") is True
     )
     assert LLM._validate_model_in_constants("unknown-model", "claude") is False
+    # Custom Anthropic deployment naming should still be recognized (#5893)
+    assert (
+        LLM._validate_model_in_constants("anthropic--claude-3-5-sonnet", "anthropic")
+        is True
+    )
+    assert (
+        LLM._validate_model_in_constants("anthropic.claude-3-5-sonnet", "anthropic")
+        is True
+    )
+    assert LLM._validate_model_in_constants("my-claude-deploy", "anthropic") is True
+    # ...but lookalikes that are not Anthropic must not match
+    assert LLM._validate_model_in_constants("anthropomorphic", "anthropic") is False
 
     # Gemini models
     assert LLM._validate_model_in_constants("gemini-2.5-pro", "gemini") is True
@@ -973,6 +985,23 @@ def test_validate_model_in_constants():
         LLM._validate_model_in_constants("anthropic.claude-future-v1:0", "bedrock")
         is True
     )
+
+
+def test_infer_provider_from_model_custom_naming():
+    """Unprefixed but recognizable model ids must not default to OpenAI (#5893)."""
+    # Custom Anthropic deployment names route to the Anthropic provider instead
+    # of being silently misrouted to OpenAI.
+    assert (
+        LLM._infer_provider_from_model("anthropic--claude-3-5-sonnet") == "anthropic"
+    )
+    assert LLM._infer_provider_from_model("anthropic.claude-3-5-sonnet") == "anthropic"
+    assert LLM._infer_provider_from_model("claude-3-5-sonnet") == "anthropic"
+    assert LLM._infer_provider_from_model("gemini-2.5-pro") == "gemini"
+    # No regression: genuine OpenAI and unknown models still resolve to OpenAI.
+    assert LLM._infer_provider_from_model("gpt-4o") == "openai"
+    assert LLM._infer_provider_from_model("some-unknown-model") == "openai"
+    assert LLM._infer_provider_from_model("anthropomorphic-model") == "openai"
+
 
 @pytest.mark.vcr(record_mode="once",decode_compressed_response=True)
 def test_usage_info_non_streaming_with_call():

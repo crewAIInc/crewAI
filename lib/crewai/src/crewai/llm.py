@@ -508,9 +508,11 @@ class LLM(BaseLLM):
             )
 
         if provider == "anthropic" or provider == "claude":
-            return any(
-                model_lower.startswith(prefix) for prefix in ["claude-", "anthropic."]
-            )
+            # Match Anthropic models regardless of custom deployment naming
+            # (e.g. "anthropic--claude-...", "anthropic.claude-...") rather than
+            # only the canonical "claude-" / "anthropic." prefixes (#5893).
+            # "anthropomorphic" does not start with "anthropic", so it is safe.
+            return "claude" in model_lower or model_lower.startswith("anthropic")
 
         if provider == "gemini" or provider == "google":
             return any(
@@ -618,6 +620,15 @@ class LLM(BaseLLM):
 
         if model in AZURE_MODELS:
             return "azure"
+
+        # Before defaulting to OpenAI, fall back to provider naming patterns so
+        # unprefixed but recognizable model ids (e.g. "anthropic--claude-...")
+        # are not silently misrouted to OpenAI (#5893). Only families with
+        # specific prefix rules are consulted; broad patterns (e.g. bedrock's
+        # bare "." match) are intentionally excluded to avoid false positives.
+        for candidate in ("anthropic", "gemini"):
+            if cls._matches_provider_pattern(model, candidate):
+                return candidate
 
         return "openai"
 
