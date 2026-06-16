@@ -1935,7 +1935,8 @@
                       "en/learn/using-annotations",
                       "en/learn/execution-hooks",
                       "en/learn/llm-hooks",
-                      "en/learn/tool-hooks"
+                      "en/learn/tool-hooks",
+                      "en/learn/tool-call-gating-with-tessera"
                     ]
                   },
                   {
@@ -2909,7 +2910,8 @@
                       "en/learn/using-annotations",
                       "en/learn/execution-hooks",
                       "en/learn/llm-hooks",
-                      "en/learn/tool-hooks"
+                      "en/learn/tool-hooks",
+                      "en/learn/tool-call-gating-with-tessera"
                     ]
                   },
                   {
@@ -3397,7 +3399,8 @@
                       "en/learn/using-annotations",
                       "en/learn/execution-hooks",
                       "en/learn/llm-hooks",
-                      "en/learn/tool-hooks"
+                      "en/learn/tool-hooks",
+                      "en/learn/tool-call-gating-with-tessera"
                     ]
                   },
                   {
@@ -3894,7 +3897,8 @@
                       "en/learn/using-annotations",
                       "en/learn/execution-hooks",
                       "en/learn/llm-hooks",
-                      "en/learn/tool-hooks"
+                      "en/learn/tool-hooks",
+                      "en/learn/tool-call-gating-with-tessera"
                     ]
                   },
                   {
@@ -4391,7 +4395,8 @@
                       "en/learn/using-annotations",
                       "en/learn/execution-hooks",
                       "en/learn/llm-hooks",
-                      "en/learn/tool-hooks"
+                      "en/learn/tool-hooks",
+                      "en/learn/tool-call-gating-with-tessera"
                     ]
                   },
                   {
@@ -4888,7 +4893,8 @@
                       "en/learn/using-annotations",
                       "en/learn/execution-hooks",
                       "en/learn/llm-hooks",
-                      "en/learn/tool-hooks"
+                      "en/learn/tool-hooks",
+                      "en/learn/tool-call-gating-with-tessera"
                     ]
                   },
                   {
@@ -5384,7 +5390,8 @@
                       "en/learn/using-annotations",
                       "en/learn/execution-hooks",
                       "en/learn/llm-hooks",
-                      "en/learn/tool-hooks"
+                      "en/learn/tool-hooks",
+                      "en/learn/tool-call-gating-with-tessera"
                     ]
                   },
                   {
@@ -5870,7 +5877,8 @@
                       "en/learn/using-annotations",
                       "en/learn/execution-hooks",
                       "en/learn/llm-hooks",
-                      "en/learn/tool-hooks"
+                      "en/learn/tool-hooks",
+                      "en/learn/tool-call-gating-with-tessera"
                     ]
                   },
                   {
@@ -6356,7 +6364,8 @@
                       "en/learn/using-annotations",
                       "en/learn/execution-hooks",
                       "en/learn/llm-hooks",
-                      "en/learn/tool-hooks"
+                      "en/learn/tool-hooks",
+                      "en/learn/tool-call-gating-with-tessera"
                     ]
                   },
                   {
@@ -7330,7 +7339,8 @@
                       "en/learn/using-annotations",
                       "en/learn/execution-hooks",
                       "en/learn/llm-hooks",
-                      "en/learn/tool-hooks"
+                      "en/learn/tool-hooks",
+                      "en/learn/tool-call-gating-with-tessera"
                     ]
                   },
                   {
