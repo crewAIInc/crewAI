@@ -402,6 +402,7 @@ def test_missing_input_names_accepts_hyphenated_placeholders():
 
 def _patch_tui_run(monkeypatch, status: str):
     """Stub the TUI pieces of _run_json_crew so only exit handling runs."""
+    monkeypatch.delenv("CREWAI_DMN", raising=False)
 
     class FakeApp:
         def __init__(self, **kwargs):
@@ -444,6 +445,84 @@ def test_run_json_crew_completed_status_returns_result(monkeypatch, tmp_path: Pa
     _patch_tui_run(monkeypatch, status="completed")
 
     assert run_crew_module._run_json_crew() == "result"
+
+
+def test_run_json_crew_dmn_mode_bypasses_tui(monkeypatch, tmp_path: Path, capsys):
+    from types import SimpleNamespace
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("CREWAI_DMN", "True")
+    crew_path = tmp_path / "crew.jsonc"
+    crew_path.write_text("{}")
+    kickoff_calls = []
+
+    class FakeCrew:
+        name = "Demo"
+        agents = [SimpleNamespace(role="Researcher", goal="Research", backstory="")]
+        tasks = [
+            SimpleNamespace(
+                description="Research",
+                expected_output="Findings",
+                output_file=None,
+            )
+        ]
+
+        def kickoff(self, inputs):
+            kickoff_calls.append(inputs)
+            return "plain result"
+
+    monkeypatch.setattr(run_crew_module, "find_crew_json_file", lambda: crew_path)
+    monkeypatch.setattr(
+        run_crew_module,
+        "_load_json_crew",
+        lambda _path: (FakeCrew(), {"topic": "AI"}),
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "_load_json_crew_for_tui",
+        lambda _path: pytest.fail("DMN mode must not start the TUI loader"),
+    )
+
+    assert run_crew_module._run_json_crew() == "plain result"
+
+    captured = capsys.readouterr()
+    assert kickoff_calls == [{"topic": "AI"}]
+    assert "plain result" in captured.out
+
+
+def test_run_json_crew_dmn_mode_exits_on_missing_inputs(
+    monkeypatch, tmp_path: Path, capsys
+):
+    from types import SimpleNamespace
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("CREWAI_DMN", "True")
+    crew_path = tmp_path / "crew.jsonc"
+    crew_path.write_text("{}")
+    crew = SimpleNamespace(
+        agents=[
+            SimpleNamespace(
+                role="Researcher",
+                goal="Research {topic}",
+                backstory="",
+            )
+        ],
+        tasks=[],
+    )
+
+    monkeypatch.setattr(run_crew_module, "find_crew_json_file", lambda: crew_path)
+    monkeypatch.setattr(
+        run_crew_module,
+        "_load_json_crew",
+        lambda _path: (crew, {}),
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_crew_module._run_json_crew()
+
+    captured = capsys.readouterr()
+    assert exc_info.value.code == 1
+    assert "Missing runtime inputs for CREWAI_DMN mode: topic" in captured.err
 
 
 def test_has_json_crew_defers_to_declared_flow_type(monkeypatch, tmp_path: Path):

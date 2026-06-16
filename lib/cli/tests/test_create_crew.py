@@ -812,3 +812,34 @@ def test_json_wizard_task_reprompts_on_cancelled_agent_pick(monkeypatch):
 
     assert len(pick_calls) == 2
     assert task["agent"] == "second_agent"
+
+
+def test_json_create_dmn_mode_uses_non_interactive_defaults(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("CREWAI_DMN", "True")
+    monkeypatch.setattr(
+        json_crew,
+        "_wizard_agents_and_tasks",
+        lambda **_: pytest.fail("DMN mode must not run the wizard"),
+    )
+    monkeypatch.setattr(
+        json_crew,
+        "_setup_env",
+        lambda *_args, **_kwargs: pytest.fail("DMN mode must not prompt for env vars"),
+    )
+
+    json_crew.create_json_crew("DMN Crew", provider="anthropic", skip_provider=False)
+
+    project_root = tmp_path / "dmn_crew"
+    assert (project_root / "crew.jsonc").exists()
+    assert (project_root / "agents" / "researcher.jsonc").exists()
+    assert not (project_root / ".env").exists()
+
+    crew_template = (project_root / "crew.jsonc").read_text()
+    agent_template = (project_root / "agents" / "researcher.jsonc").read_text()
+
+    assert '"memory": false' in crew_template
+    assert '"description": "Research current AI trends and write a concise summary."' in (
+        crew_template
+    )
+    assert '"llm": "anthropic/claude-opus-4-6"' in agent_template
