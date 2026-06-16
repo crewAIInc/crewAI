@@ -8,7 +8,7 @@ import importlib
 import inspect
 import json
 import logging
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import re
 import sys
 from typing import Any, cast
@@ -97,6 +97,7 @@ _CONDITIONAL_TASK_TYPE_ALIASES = {
     "crewai.tasks.conditional_task.ConditionalTask",
 }
 _URI_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
+_WINDOWS_DRIVE_PATH_RE = re.compile(r"^[A-Za-z]:")
 _MAX_PYTHON_REF_DEPTH = 64
 
 _AGENT_CALLABLE_FIELDS = {"guardrail", "step_callback"}
@@ -651,7 +652,7 @@ def _import_project_python_reference(
     module_path, _, attr = path.rpartition(".")
     root = _project_root(project_root)
     _project_module_file(module_path, root, source)
-    _evict_external_cached_modules(module_path, root)
+    displaced_modules = _evict_external_cached_modules(module_path, root)
 
     logger.info(
         "Resolving JSON Python reference '%s' for %s from project root %s",
@@ -667,33 +668,40 @@ def _import_project_python_reference(
         inserted_sys_path = True
 
     try:
-        module = importlib.import_module(module_path)
-    except Exception as exc:
-        logger.debug(
-            "Failed to import JSON Python reference module %r from %s",
-            module_path,
-            source,
-            exc_info=True,
-        )
-        raise JSONProjectError(
-            f"{source}: failed to import Python reference '{path}'"
-        ) from exc
+        try:
+            module = importlib.import_module(module_path)
+        except Exception as exc:
+            logger.debug(
+                "Failed to import JSON Python reference module %r from %s",
+                module_path,
+                source,
+                exc_info=True,
+            )
+            raise JSONProjectError(
+                f"{source}: failed to import Python reference '{path}'"
+            ) from exc
+
+        if not _module_is_project_local(module, root):
+            raise JSONProjectError(
+                f"{source}: Python reference '{path}' resolved outside project root"
+            )
+        if not hasattr(module, attr):
+            raise JSONProjectError(
+                f"{source}: Python reference '{path}' could not be resolved"
+            )
+        return getattr(module, attr)
     finally:
         if inserted_sys_path:
             try:
                 sys.path.remove(root_str)
             except ValueError:
-                pass
-
-    if not _module_is_project_local(module, root):
-        raise JSONProjectError(
-            f"{source}: Python reference '{path}' resolved outside project root"
-        )
-    if not hasattr(module, attr):
-        raise JSONProjectError(
-            f"{source}: Python reference '{path}' could not be resolved"
-        )
-    return getattr(module, attr)
+                logger.debug(
+                    "Project root %s was already removed from sys.path while "
+                    "resolving JSON Python reference %r",
+                    root,
+                    path,
+                )
+        _restore_external_cached_modules(displaced_modules, root)
 
 
 def _project_root(project_root: Path | None) -> Path:
@@ -723,13 +731,15 @@ def _project_module_file(
 def _evict_external_cached_modules(
     module_path: str,
     project_root: Path,
-) -> None:
+) -> dict[str, Any]:
+    displaced_modules: dict[str, Any] = {}
     parts = module_path.split(".")
     for index in range(len(parts), 0, -1):
         prefix = ".".join(parts[:index])
         module = sys.modules.get(prefix)
         if module is None or _module_is_project_local(module, project_root):
             continue
+        displaced_modules[prefix] = module
         logger.debug(
             "Evicting cached module %r before resolving JSON Python reference "
             "from project root %s",
@@ -737,6 +747,36 @@ def _evict_external_cached_modules(
             project_root,
         )
         sys.modules.pop(prefix, None)
+    return displaced_modules
+
+
+def _restore_external_cached_modules(
+    displaced_modules: dict[str, Any],
+    project_root: Path,
+) -> None:
+    if not displaced_modules:
+        return
+
+    displaced_prefixes = tuple(displaced_modules)
+    for name, module in list(sys.modules.items()):
+        if not any(
+            name == prefix or name.startswith(f"{prefix}.")
+            for prefix in displaced_prefixes
+        ):
+            continue
+        if _module_is_project_local(module, project_root):
+            logger.debug(
+                "Removing project-local module %r before restoring cached module",
+                name,
+            )
+            sys.modules.pop(name, None)
+
+    for name in sorted(displaced_modules, key=lambda value: value.count(".")):
+        logger.debug(
+            "Restoring cached module %r after JSON Python reference import",
+            name,
+        )
+        sys.modules[name] = displaced_modules[name]
 
 
 def _module_is_project_local(module: Any, project_root: Path) -> bool:
@@ -1668,26 +1708,46 @@ def _resolve_project_path(
 ) -> str:
     if not value:
         return value
+    root = _project_root(project_root)
     parsed = urlparse(value)
-    if parsed.scheme and parsed.scheme.lower() != "file":
+    path_value = value
+    if (
+        parsed.scheme
+        and parsed.scheme.lower() != "file"
+        and not _WINDOWS_DRIVE_PATH_RE.match(value)
+    ):
         return value
     if parsed.scheme.lower() == "file":
         if parsed.netloc not in {"", "localhost"}:
             raise JSONProjectValidationError(
                 [f"{source}: file URI '{value}' must point to a local project path"]
             )
-        path = Path(unquote(parsed.path))
+        path_value = unquote(parsed.path)
+        if re.match(r"^/[A-Za-z]:", path_value):
+            path_value = path_value[1:]
+        path = Path(path_value)
     elif _URI_RE.match(value):
-        return value
+        path = Path(path_value)
     else:
-        path = Path(value)
-    root = _project_root(project_root)
+        path = Path(path_value)
+    if (
+        _looks_like_windows_absolute_path(path_value)
+        or _WINDOWS_DRIVE_PATH_RE.match(path_value)
+    ) and not path.is_absolute():
+        raise JSONProjectValidationError(
+            [f"{source}: path '{value}' resolves outside the project root {root}"]
+        )
     resolved = path.resolve() if path.is_absolute() else (root / path).resolve()
     if not _is_relative_to(resolved, root):
         raise JSONProjectValidationError(
             [f"{source}: path '{value}' resolves outside the project root {root}"]
         )
     return str(resolved)
+
+
+def _looks_like_windows_absolute_path(value: str) -> bool:
+    windows_path = PureWindowsPath(value)
+    return bool(windows_path.drive) and windows_path.is_absolute()
 
 
 def _format_validation_error(path: str | Path, exc: ValidationError) -> str:
