@@ -9,7 +9,7 @@ import pytest
 
 from crewai.llms.base_llm import BaseLLM
 from crewai.project.json_loader import JSONProjectError, JSONProjectValidationError
-from crewai.project.crew_loader import load_crew
+from crewai.project.crew_loader import load_crew, load_crew_from_definition
 
 
 def _write_python_defs(tmp_path: Path) -> None:
@@ -70,6 +70,91 @@ def _input_file_path(value) -> Path:
 
 
 class TestLoadCrew:
+    def test_load_crew_from_inline_definition(self):
+        crew, inputs = load_crew_from_definition(
+            {
+                "name": "inline_crew",
+                "agents": {
+                    "researcher": {
+                        "role": "Researcher",
+                        "goal": "Research {topic}",
+                        "backstory": "Knows things.",
+                    }
+                },
+                "tasks": [
+                    {
+                        "name": "research",
+                        "description": "Research {topic}",
+                        "expected_output": "Findings about {topic}",
+                        "agent": "researcher",
+                    }
+                ],
+                "inputs": {"topic": "AI"},
+            }
+        )
+
+        assert crew.name == "inline_crew"
+        assert crew.agents[0].role == "Researcher"
+        assert crew.tasks[0].description == "Research {topic}"
+        assert inputs == {"topic": "AI"}
+
+    def test_inline_definition_accepts_null_inputs(self):
+        _, inputs = load_crew_from_definition(
+            {
+                "agents": {
+                    "researcher": {
+                        "role": "Researcher",
+                        "goal": "Research",
+                        "backstory": "Knows things.",
+                    }
+                },
+                "tasks": [
+                    {
+                        "description": "Research",
+                        "expected_output": "Findings",
+                        "agent": "researcher",
+                    }
+                ],
+                "inputs": None,
+            }
+        )
+
+        assert inputs == {}
+
+    def test_inline_hierarchical_manager_agent_is_not_duplicated(self):
+        crew, _ = load_crew_from_definition(
+            {
+                "name": "inline_hier_manager_crew",
+                "agents": {
+                    "worker": {
+                        "role": "Worker",
+                        "goal": "Do work",
+                        "backstory": "Does things.",
+                    },
+                    "manager": {
+                        "role": "Manager",
+                        "goal": "Coordinate work",
+                        "backstory": "Keeps the work moving.",
+                    },
+                },
+                "tasks": [
+                    {
+                        "description": "Do work",
+                        "expected_output": "Work done",
+                        "agent": "manager",
+                    }
+                ],
+                "process": "hierarchical",
+                "manager_agent": "manager",
+            }
+        )
+
+        assert len(crew.agents) == 1
+        assert crew.agents[0].role == "Worker"
+        assert crew.manager_agent is not None
+        assert crew.manager_agent.role == "Manager"
+        assert crew.tasks[0].agent is crew.manager_agent
+
     def test_minimal_crew(self, tmp_path: Path):
         agents_dir = tmp_path / "agents"
         agents_dir.mkdir()

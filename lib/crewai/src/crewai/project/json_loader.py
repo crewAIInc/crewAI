@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 import json
 import logging
@@ -156,6 +157,10 @@ class JSONCrewProject:
     task_definitions: list[dict[str, Any]]
 
 
+_AgentDefinitionSource = tuple[dict[str, Any], str | Path]
+_AgentDefinitionLoader = Callable[[str], _AgentDefinitionSource | None]
+
+
 def find_json_project_file(directory: str | Path, stem: str) -> Path | None:
     """Return ``stem.jsonc`` or ``stem.json``, preferring JSONC."""
     root = Path(directory)
@@ -230,7 +235,7 @@ def load_json_crew_project(
     *,
     collect_errors: bool = False,
 ) -> JSONCrewProject:
-    """Parse and structurally validate a JSON crew project.
+    """Load and structurally validate a JSON crew project from files.
 
     When ``collect_errors`` is true, all discoverable structural errors are
     returned as a single ``JSONProjectValidationError`` for deploy validation.
@@ -239,7 +244,46 @@ def load_json_crew_project(
     crew_path = Path(source)
     if agents_dir is None:
         agents_dir = crew_path.parent / "agents"
+    agents_dir = Path(agents_dir)
 
+    def load_agent_definition_source(agent_name: str) -> _AgentDefinitionSource | None:
+        agent_file = find_json_project_file(agents_dir, agent_name)
+        if agent_file is None:
+            return None
+        return _expect_object(load_jsonc_file(agent_file), agent_file), agent_file
+
+    try:
+        defn = _expect_object(load_jsonc_file(crew_path), crew_path)
+    except Exception as exc:
+        if collect_errors:
+            raise JSONProjectValidationError([str(exc)]) from exc
+        raise
+
+    return _load_json_crew_project_definition(
+        defn,
+        source=crew_path,
+        agents_dir=agents_dir,
+        project_root=crew_path.parent,
+        load_agent_definition_source=load_agent_definition_source,
+        missing_agent_hint=(
+            f"not found in {agents_dir} "
+            f"(tried {{agent_name}}.jsonc and {{agent_name}}.json)"
+        ),
+        collect_errors=collect_errors,
+    )
+
+
+def _load_json_crew_project_definition(
+    defn: dict[str, Any],
+    *,
+    source: str | Path,
+    agents_dir: str | Path,
+    project_root: Path,
+    load_agent_definition_source: _AgentDefinitionLoader,
+    missing_agent_hint: str | None,
+    collect_errors: bool,
+) -> JSONCrewProject:
+    """Structurally validate a parsed JSON crew project definition."""
     errors: list[str] = []
 
     def fail(message: str, exc_type: type[Exception] = JSONProjectError) -> None:
@@ -256,67 +300,58 @@ def load_json_crew_project(
             return
         raise JSONProjectValidationError(messages)
 
-    try:
-        defn = _expect_object(load_jsonc_file(crew_path), crew_path)
-    except Exception as exc:
-        if collect_errors:
-            raise JSONProjectValidationError([str(exc)]) from exc
-        raise
-
     fail_many(
         _field_errors(
             defn,
             _crew_allowed_fields(),
             _CREW_RUNTIME_FIELDS,
-            crew_path,
+            source,
             {"inputs"},
         )
     )
-    fail_many(_python_reference_definition_errors(defn, crew_path))
+    fail_many(_python_reference_definition_errors(defn, source))
 
     agent_names = defn.get("agents", [])
     if not isinstance(agent_names, list) or not agent_names:
-        fail(f"{crew_path}: 'agents' must be a non-empty list")
+        fail(f"{source}: 'agents' must be a non-empty list")
         agent_names = []
 
-    agents_dir = Path(agents_dir)
     agent_definitions: dict[str, JSONAgentDefinition] = {}
 
     def load_agent_definition(agent_name: str) -> None:
         if not isinstance(agent_name, str) or not agent_name:
-            fail(f"{crew_path}: each agent reference must be a non-empty string")
+            fail(f"{source}: each agent reference must be a non-empty string")
             return
         if agent_name in agent_definitions:
             return
-        agent_file = find_json_project_file(agents_dir, agent_name)
-        if agent_file is None:
-            message = (
-                f"Agent definition for '{agent_name}' not found in {agents_dir} "
-                f"(tried {agent_name}.jsonc and {agent_name}.json)"
-            )
-            if collect_errors:
-                errors.append(
-                    f"{crew_path}: agent '{agent_name}' not found in {agents_dir} "
-                    f"(tried {agent_name}.jsonc and {agent_name}.json)"
-                )
-            else:
-                raise FileNotFoundError(message)
-            return
         try:
-            agent_defn = _expect_object(load_jsonc_file(agent_file), agent_file)
+            loaded_agent = load_agent_definition_source(agent_name)
+            if loaded_agent is None:
+                hint = (
+                    missing_agent_hint.format(agent_name=agent_name)
+                    if missing_agent_hint is not None
+                    else "not found in provided agent definitions"
+                )
+                message = f"Agent definition for '{agent_name}' {hint}"
+                if collect_errors:
+                    errors.append(f"{source}: agent '{agent_name}' {hint}")
+                else:
+                    raise FileNotFoundError(message)
+                return
+            agent_defn, agent_source = loaded_agent
             agent_class = _agent_class_from_definition(
                 agent_defn,
-                f"{agent_file}: type",
+                f"{agent_source}: type",
                 resolve_python_refs=not collect_errors,
             )
             agent_kwargs = _agent_kwargs_from_definition(
                 agent_defn,
-                agent_file,
+                agent_source,
                 agent_class=agent_class,
                 # Validation must never execute project code (custom tools).
                 resolve_tools=not collect_errors,
                 resolve_python_refs=not collect_errors,
-                project_root=crew_path.parent,
+                project_root=project_root,
             )
         except Exception as exc:
             if collect_errors:
@@ -325,7 +360,7 @@ def load_json_crew_project(
             raise
         agent_definitions[agent_name] = JSONAgentDefinition(
             name=agent_name,
-            path=agent_file,
+            path=Path(str(agent_source)),
             definition=agent_defn,
             kwargs=agent_kwargs,
             agent_class=agent_class,
@@ -342,7 +377,7 @@ def load_json_crew_project(
             pass
         else:
             fail(
-                f"{crew_path}: 'manager_agent' must be an agent definition name "
+                f"{source}: 'manager_agent' must be an agent definition name "
                 f'or a {{"{PYTHON_REF_KEY}": "module.agent"}} reference'
             )
 
@@ -350,12 +385,12 @@ def load_json_crew_project(
 
     task_defs = defn.get("tasks", [])
     if not isinstance(task_defs, list) or not task_defs:
-        fail(f"{crew_path}: 'tasks' must be a non-empty list")
+        fail(f"{source}: 'tasks' must be a non-empty list")
         task_defs = []
 
     known_tasks: set[str] = set()
     for index, task_defn in enumerate(task_defs):
-        task_path = f"{crew_path}: tasks[{index}]"
+        task_path = f"{source}: tasks[{index}]"
         if not isinstance(task_defn, dict):
             fail(f"{task_path} must be an object")
             continue
@@ -381,7 +416,7 @@ def load_json_crew_project(
             )
 
         fail_many(
-            _tool_definition_errors(task_defn.get("tools"), task_path, crew_path.parent)
+            _tool_definition_errors(task_defn.get("tools"), task_path, project_root)
         )
 
         context_names = task_defn.get("context")
@@ -406,8 +441,8 @@ def load_json_crew_project(
         raise JSONProjectValidationError(errors)
 
     return JSONCrewProject(
-        crew_path=crew_path,
-        agents_dir=agents_dir,
+        crew_path=Path(str(source)),
+        agents_dir=Path(str(agents_dir)),
         definition=defn,
         agent_names=list(agent_names),
         agents=agent_definitions,
