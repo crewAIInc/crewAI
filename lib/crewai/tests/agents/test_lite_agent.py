@@ -1137,3 +1137,99 @@ def test_lite_agent_memory_instance_recall_and_save_called():
     mock_memory.remember_many.assert_called_once_with(
         ["Fact one.", "Fact two."], agent_role="Test"
     )
+
+
+@pytest.mark.filterwarnings("ignore:LiteAgent is deprecated")
+def test_lite_agent_save_to_memory_saves_action_insights():
+    """_save_to_memory calls extract_action_insights then remember per insight with correct metadata."""
+    mock_llm = Mock(spec=LLM)
+    mock_llm.call.return_value = "Final Answer: The answer is 42."
+    mock_llm.stop = []
+    mock_llm.supports_stop_words.return_value = False
+    mock_llm.get_token_usage_summary.return_value = UsageMetrics(
+        total_tokens=10, prompt_tokens=5, completion_tokens=5,
+        cached_prompt_tokens=0, successful_requests=1,
+    )
+    from crewai.memory.analyze import ActionInsightItem
+
+    mock_memory = Mock()
+    mock_memory.read_only = False
+    mock_memory.recall.return_value = []
+    mock_memory.extract_memories.return_value = []
+    mock_memory.extract_action_insights.return_value = [
+        ActionInsightItem(
+            type="lesson",
+            content="API is unreliable; query DB directly.",
+            rationale="API timeout issues.",
+            domain="data analysis",
+            context_signals=["API error"],
+        ),
+    ]
+
+    agent = LiteAgent(
+        role="Test", goal="Test goal", backstory="Test backstory",
+        llm=mock_llm, memory=mock_memory, verbose=False,
+    )
+
+    agent.kickoff("What is the answer?")
+
+    mock_memory.extract_action_insights.assert_called_once()
+    mock_memory.remember.assert_called_once()
+    call_kw = mock_memory.remember.call_args.kwargs
+    assert call_kw["content"] == "API is unreliable; query DB directly."
+    assert call_kw["scope"] == "/behavioral"
+    assert call_kw["categories"] == ["lesson", "data analysis"]
+    assert call_kw["importance"] == 0.5
+    assert call_kw["metadata"]["type"] == "action_insight"
+    assert call_kw["metadata"]["insight_type"] == "lesson"
+
+
+@pytest.mark.filterwarnings("ignore:LiteAgent is deprecated")
+def test_lite_agent_inject_memory_context_includes_behavioral():
+    """_inject_memory_context includes behavioral insights in the system message."""
+    from crewai.memory.types import MemoryRecord, MemoryMatch
+
+    mock_llm = Mock(spec=LLM)
+    mock_llm.call.return_value = "Final Answer: The answer is 42."
+    mock_llm.stop = []
+    mock_llm.supports_stop_words.return_value = False
+    mock_llm.get_token_usage_summary.return_value = UsageMetrics(
+        total_tokens=10, prompt_tokens=5, completion_tokens=5,
+        cached_prompt_tokens=0, successful_requests=1,
+    )
+
+    mock_memory = Mock()
+    mock_memory.read_only = False
+    # Return a mix of factual and behavioral matches
+    factual = MemoryMatch(
+        record=MemoryRecord(content="Team uses PostgreSQL."),
+        score=0.9,
+        match_reasons=["semantic"],
+    )
+    behavioral = MemoryMatch(
+        record=MemoryRecord(
+            content="Query DB when API fails.",
+            metadata={"type": "action_insight", "insight_type": "lesson", "domain": "data analysis"},
+        ),
+        score=0.8,
+        match_reasons=["semantic"],
+    )
+    mock_memory.recall.return_value = [factual, behavioral]
+    mock_memory.extract_memories.return_value = []
+    mock_memory.extract_action_insights.return_value = []
+
+    agent = LiteAgent(
+        role="Test", goal="Test goal", backstory="Test backstory",
+        llm=mock_llm, memory=mock_memory, verbose=False,
+    )
+
+    # Trigger memory injection via kickoff
+    agent.kickoff("What database do we use?")
+
+    assert mock_memory.recall.called
+    # Check that the system message includes both sections
+    system_msg = agent._messages[0]["content"]
+    assert "Team uses PostgreSQL" in system_msg
+    assert "Query DB when API fails" in system_msg
+    assert "Behavioral patterns from past experience" in system_msg
+    assert "Relevant memories" in system_msg

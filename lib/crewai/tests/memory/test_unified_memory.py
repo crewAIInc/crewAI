@@ -399,6 +399,97 @@ def test_executor_save_to_memory_skips_delegation_output() -> None:
     mock_memory.remember.assert_not_called()
 
 
+def test_executor_save_to_memory_saves_action_insights() -> None:
+    """_save_to_memory calls extract_action_insights then remember per insight with correct metadata."""
+    from crewai.agents.agent_builder.base_agent_executor import BaseAgentExecutor
+    from crewai.agents.parser import AgentFinish
+    from crewai.memory.analyze import ActionInsightItem
+
+    mock_memory = MagicMock()
+    mock_memory.read_only = False
+    mock_memory.extract_memories.return_value = []  # no factual memories
+    mock_memory.extract_action_insights.return_value = [
+        ActionInsightItem(
+            type="lesson",
+            content="Direct DB query more reliable than API.",
+            rationale="API had stale cache.",
+            domain="data analysis",
+            context_signals=["API timeout"],
+        ),
+        ActionInsightItem(
+            type="pattern",
+            content="Reformulate search on empty results.",
+            rationale="First search too narrow.",
+            domain="search strategy",
+            context_signals=["empty results"],
+        ),
+    ]
+
+    mock_agent = MagicMock()
+    mock_agent.memory = mock_memory
+    mock_agent._logger = MagicMock()
+    mock_agent.role = "Researcher"
+
+    mock_task = MagicMock()
+    mock_task.description = "Do research"
+    mock_task.expected_output = "A report"
+
+    executor = BaseAgentExecutor()
+    executor.agent = mock_agent
+    executor.task = mock_task
+    executor._save_to_memory(
+        AgentFinish(thought="", output="We queried DB.", text="We queried DB.")
+    )
+
+    mock_memory.extract_action_insights.assert_called_once()
+    assert mock_memory.remember.call_count == 2
+
+    call_1_args = mock_memory.remember.call_args_list[0].kwargs
+    assert call_1_args["content"] == "Direct DB query more reliable than API."
+    assert call_1_args["scope"] == "/behavioral"
+    assert call_1_args["categories"] == ["lesson", "data analysis"]
+    assert call_1_args["importance"] == 0.5
+    assert call_1_args["metadata"]["type"] == "action_insight"
+    assert call_1_args["metadata"]["insight_type"] == "lesson"
+    assert call_1_args["metadata"]["context_signals"] == ["API timeout"]
+
+    call_2_args = mock_memory.remember.call_args_list[1].kwargs
+    assert call_2_args["content"] == "Reformulate search on empty results."
+    assert call_2_args["categories"] == ["pattern", "search strategy"]
+    assert call_2_args["metadata"]["type"] == "action_insight"
+    assert call_2_args["metadata"]["insight_type"] == "pattern"
+
+
+def test_executor_save_to_memory_insight_extract_empty_noop() -> None:
+    """When extract_action_insights returns [], no remember calls for insights."""
+    from crewai.agents.agent_builder.base_agent_executor import BaseAgentExecutor
+    from crewai.agents.parser import AgentFinish
+
+    mock_memory = MagicMock()
+    mock_memory.read_only = False
+    mock_memory.extract_memories.return_value = []
+    mock_memory.extract_action_insights.return_value = []
+
+    mock_agent = MagicMock()
+    mock_agent.memory = mock_memory
+    mock_agent._logger = MagicMock()
+    mock_agent.role = "Tester"
+
+    mock_task = MagicMock()
+    mock_task.description = "Task"
+    mock_task.expected_output = "Out"
+
+    executor = BaseAgentExecutor()
+    executor.agent = mock_agent
+    executor.task = mock_task
+    executor._save_to_memory(
+        AgentFinish(thought="", output="Done.", text="Done.")
+    )
+
+    mock_memory.extract_action_insights.assert_called_once()
+    mock_memory.remember.assert_not_called()
+
+
 def test_memory_scope_extract_memories_delegates() -> None:
     """MemoryScope.extract_memories delegates to underlying Memory."""
     from crewai.memory.memory_scope import MemoryScope
@@ -699,6 +790,116 @@ def test_agent_kickoff_memory_recall_and_save(tmp_path: Path, mock_embedder: Mag
     saved_contents = remember_many_mock.call_args.args[0]
     assert "PostgreSQL is used." in saved_contents
 
+
+def test_retrieve_memory_context_separates_factual_and_behavioral() -> None:
+    """_retrieve_memory_context post-filters factual and behavioral memories into separate sections."""
+    from unittest.mock import patch
+    from crewai.agent.core import Agent
+    from crewai.memory.types import MemoryRecord, MemoryMatch
+
+    # Build mock matches: 2 factual + 1 behavioral
+    factual_1 = MemoryMatch(
+        record=MemoryRecord(content="Team uses PostgreSQL.", metadata={}),
+        score=0.9,
+        match_reasons=["semantic"],
+    )
+    factual_2 = MemoryMatch(
+        record=MemoryRecord(content="API rate limit is 100/min.", metadata={}),
+        score=0.8,
+        match_reasons=["semantic"],
+    )
+    behavioral = MemoryMatch(
+        record=MemoryRecord(
+            content="When API times out, query DB directly.",
+            metadata={"type": "action_insight", "insight_type": "lesson", "domain": "data analysis"},
+        ),
+        score=0.75,
+        match_reasons=["semantic"],
+    )
+
+    mock_memory = MagicMock()
+    mock_memory.recall.return_value = [factual_1, behavioral, factual_2]
+
+    agent = Agent(role="Tester", goal="Test", backstory="Test", verbose=False)
+    agent.memory = mock_memory
+
+    # Mock _is_any_available_memory to return True
+    with patch.object(agent, "_is_any_available_memory", return_value=True):
+        result = agent._retrieve_memory_context(
+            MagicMock(description="What database do we use?", id="1"),
+            "Original prompt",
+        )
+
+    assert "Original prompt" in result
+    assert "Team uses PostgreSQL" in result
+    assert "API rate limit is 100/min" in result
+    assert "When API times out, query DB directly" in result
+    assert "Behavioral patterns from past experience" in result
+    assert "Relevant memories" in result
+
+
+def test_retrieve_memory_context_behavioral_only() -> None:
+    """When only behavioral matches exist, only the behavioral section appears."""
+    from unittest.mock import patch
+    from crewai.agent.core import Agent
+    from crewai.memory.types import MemoryRecord, MemoryMatch
+
+    behavioral = MemoryMatch(
+        record=MemoryRecord(
+            content="Query DB when API fails.",
+            metadata={"type": "action_insight"},
+        ),
+        score=0.8,
+        match_reasons=["semantic"],
+    )
+
+    mock_memory = MagicMock()
+    mock_memory.recall.return_value = [behavioral]
+
+    agent = Agent(role="Tester", goal="Test", backstory="Test", verbose=False)
+    agent.memory = mock_memory
+
+    with patch.object(agent, "_is_any_available_memory", return_value=True):
+        result = agent._retrieve_memory_context(
+            MagicMock(description="Test query", id="2"),
+            "Base prompt",
+        )
+
+    assert "Base prompt" in result
+    assert "Query DB when API fails" in result
+    assert "Behavioral patterns from past experience" in result
+    # No "Relevant memories" header for factual-only
+    assert "Relevant memories" not in result
+
+
+def test_retrieve_memory_context_factual_only() -> None:
+    """When only factual matches exist, only the factual section appears."""
+    from unittest.mock import patch
+    from crewai.agent.core import Agent
+    from crewai.memory.types import MemoryRecord, MemoryMatch
+
+    factual = MemoryMatch(
+        record=MemoryRecord(content="Team uses PostgreSQL."),
+        score=0.9,
+        match_reasons=["semantic"],
+    )
+
+    mock_memory = MagicMock()
+    mock_memory.recall.return_value = [factual]
+
+    agent = Agent(role="Tester", goal="Test", backstory="Test", verbose=False)
+    agent.memory = mock_memory
+
+    with patch.object(agent, "_is_any_available_memory", return_value=True):
+        result = agent._retrieve_memory_context(
+            MagicMock(description="Test query", id="3"),
+            "Base prompt",
+        )
+
+    assert "Base prompt" in result
+    assert "Team uses PostgreSQL" in result
+    assert "Relevant memories" in result
+    assert "Behavioral patterns from past experience" not in result
 
 
 

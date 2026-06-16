@@ -46,6 +46,7 @@ class BaseAgentExecutor(BaseModel):
                 f"Expected result: {self.task.expected_output}\n"
                 f"Result: {output.text}"
             )
+            # --- Factual memory extraction ---
             extracted = memory.extract_memories(raw)
             if extracted:
                 base_root = getattr(memory, "root_scope", None)
@@ -61,5 +62,48 @@ class BaseAgentExecutor(BaseModel):
                     )
                 else:
                     memory.remember_many(extracted, agent_role=self.agent.role)
+
+            # --- Behavioral action insight extraction ---
+            insights = memory.extract_action_insights(raw)
+            if insights:
+                base_root = getattr(memory, "root_scope", None)
+                if isinstance(base_root, str) and base_root:
+                    agent_role = self.agent.role or "unknown"
+                    sanitized_role = sanitize_scope_name(agent_role)
+                    agent_root = f"{base_root.rstrip('/')}/agent/{sanitized_role}"
+                    if not agent_root.startswith("/"):
+                        agent_root = "/" + agent_root
+                    for insight in insights:
+                        memory.remember(
+                            content=insight.content,
+                            scope="/behavioral",
+                            categories=[insight.type, insight.domain],
+                            metadata={
+                                "type": "action_insight",
+                                "insight_type": insight.type,
+                                "domain": insight.domain,
+                                "rationale": insight.rationale,
+                                "context_signals": insight.context_signals,
+                            },
+                            importance=0.5,
+                            agent_role=self.agent.role,
+                            root_scope=agent_root,
+                        )
+                else:
+                    for insight in insights:
+                        memory.remember(
+                            content=insight.content,
+                            scope="/behavioral",
+                            categories=[insight.type, insight.domain],
+                            metadata={
+                                "type": "action_insight",
+                                "insight_type": insight.type,
+                                "domain": insight.domain,
+                                "rationale": insight.rationale,
+                                "context_signals": insight.context_signals,
+                            },
+                            importance=0.5,
+                            agent_role=self.agent.role,
+                        )
         except Exception as e:
             self.agent._logger.log("error", f"Failed to save to memory: {e}")

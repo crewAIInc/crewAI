@@ -566,10 +566,33 @@ class LiteAgent(FlowTrackable, BaseModel):
         memory_block = ""
         try:
             matches = self._memory.recall(query, limit=10)
-            if matches:
-                memory_block = "Relevant memories:\n" + "\n".join(
-                    f"- {m.record.content}" for m in matches
+
+            # Separate factual memories from behavioral insights
+            factual = [
+                m for m in matches
+                if m.record.metadata.get("type") != "action_insight"
+            ]
+            behavioral = [
+                m for m in matches
+                if m.record.metadata.get("type") == "action_insight"
+            ]
+
+            parts: list[str] = []
+            if factual:
+                parts.append(
+                    "Relevant memories:\n"
+                    + "\n".join(f"- {m.record.content}" for m in factual)
                 )
+            if behavioral:
+                behavioral_block = "\n".join(
+                    f"- {m.record.content}" for m in behavioral
+                )
+                parts.append(
+                    I18N_DEFAULT.slice("behavioral_memory").format(
+                        behavioral_memory=behavioral_block
+                    )
+                )
+            memory_block = "\n".join(parts)
             if memory_block:
                 formatted = I18N_DEFAULT.slice("memory").format(memory=memory_block)
                 if self._messages and self._messages[0].get("role") == "system":
@@ -597,15 +620,36 @@ class LiteAgent(FlowTrackable, BaseModel):
             )
 
     def _save_to_memory(self, output_text: str) -> None:
-        """Extract discrete memories from the run and remember each. No-op if _memory is None or read-only."""
+        """Extract discrete memories and behavioral insights from the run. No-op if _memory is None or read-only."""
         if self._memory is None or self._memory.read_only:
             return
         input_str = self._get_last_user_content() or "User request"
         try:
             raw = f"Input: {input_str}\nAgent: {self.role}\nResult: {output_text}"
+
+            # --- Factual memory extraction ---
             extracted = self._memory.extract_memories(raw)
             if extracted:
                 self._memory.remember_many(extracted, agent_role=self.role)
+
+            # --- Behavioral action insight extraction ---
+            insights = self._memory.extract_action_insights(raw)
+            if insights:
+                for insight in insights:
+                    self._memory.remember(
+                        content=insight.content,
+                        scope="/behavioral",
+                        categories=[insight.type, insight.domain],
+                        metadata={
+                            "type": "action_insight",
+                            "insight_type": insight.type,
+                            "domain": insight.domain,
+                            "rationale": insight.rationale,
+                            "context_signals": insight.context_signals,
+                        },
+                        importance=0.5,
+                        agent_role=self.role,
+                    )
         except Exception as e:
             if self.verbose:
                 PRINTER.print(
