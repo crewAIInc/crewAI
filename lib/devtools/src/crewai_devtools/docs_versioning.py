@@ -205,7 +205,7 @@ def _is_version_slug(value: str) -> bool:
     return bool(VERSION_SLUG_RE.match(value))
 
 
-def _previous_default(versions: list[dict]) -> dict | None:
+def _previous_default(versions: list[dict[str, Any]]) -> dict[str, Any] | None:
     """Return the entry currently marked default (or the first versioned)."""
     for v in versions:
         if v.get("default") and _is_version_slug(v.get("version", "")):
@@ -217,8 +217,8 @@ def _previous_default(versions: list[dict]) -> dict | None:
 
 
 def _build_new_entry(
-    previous: dict, version_slug: str, locale: str, docs_root: Path
-) -> dict | None:
+    previous: dict[str, Any], version_slug: str, locale: str, docs_root: Path
+) -> dict[str, Any] | None:
     """Clone the previous default's nav into a new entry for ``version_slug``.
 
     Page paths are rewritten from ``v<prev>/<locale>/...`` to
@@ -248,7 +248,10 @@ def _build_new_entry(
 
     rewritten = _walk_pages(new_entry, transform)
     pruned = _prune_missing_pages(rewritten, docs_root)
-    if not pruned or not pruned.get("tabs"):
+    # ``_prune_missing_pages`` recurses across str/list/dict, so its return
+    # type is the union of those. We always call it with a dict entry, so we
+    # narrow back to ``dict`` here to satisfy the typed signature.
+    if not isinstance(pruned, dict) or not pruned.get("tabs"):
         return None
     return pruned
 
@@ -266,7 +269,7 @@ def _prune_missing_pages(node: Any, docs_root: Path) -> Any:
         return [k for k in kept if k is not None]
 
     if isinstance(node, dict):
-        out: dict = {}
+        out: dict[str, Any] = {}
         for key, value in node.items():
             if key in {"pages", "tabs", "groups"}:
                 pruned = _prune_missing_pages(value, docs_root)
@@ -285,7 +288,7 @@ def _prune_missing_pages(node: Any, docs_root: Path) -> Any:
     return node
 
 
-def _drop_latest_marker(entry: dict) -> dict:
+def _drop_latest_marker(entry: dict[str, Any]) -> dict[str, Any]:
     out = dict(entry)
     out.pop("default", None)
     if out.get("tag") == LATEST_TAG:
@@ -293,7 +296,7 @@ def _drop_latest_marker(entry: dict) -> dict:
     return out
 
 
-def _update_redirects(data: dict, version_slug: str) -> int:
+def _update_redirects(data: dict[str, Any], version_slug: str) -> int:
     """Make every redirect destination land on the current default version.
 
     Two passes:
@@ -335,11 +338,13 @@ def _update_redirects(data: dict, version_slug: str) -> int:
     for entry in redirects:
         if not isinstance(entry, dict):
             continue
-        destination = entry.get("destination")
-        if not isinstance(destination, str):
+        existing_destination = entry.get("destination")
+        if not isinstance(existing_destination, str):
             continue
-        new_destination = _rewrite_destination_to_version(destination, version_slug)
-        if new_destination != destination:
+        new_destination = _rewrite_destination_to_version(
+            existing_destination, version_slug
+        )
+        if new_destination != existing_destination:
             entry["destination"] = new_destination
             upserted += 1
 
@@ -385,7 +390,7 @@ def _migrate_docs_json(docs_json: Path, version_slug: str) -> tuple[int, int, in
     skipped = 0
     for block in data["navigation"]["languages"]:
         locale = block["language"]
-        versions: list[dict] = block.get("versions", [])
+        versions: list[dict[str, Any]] = block.get("versions", [])
         if any(v.get("version") == version_slug for v in versions):
             skipped += 1
             continue
@@ -402,7 +407,7 @@ def _migrate_docs_json(docs_json: Path, version_slug: str) -> tuple[int, int, in
             skipped += 1
             continue
 
-        updated: list[dict] = []
+        updated: list[dict[str, Any]] = []
         for v in versions:
             if v.get("default") or v.get("tag") == LATEST_TAG:
                 updated.append(_drop_latest_marker(v))
