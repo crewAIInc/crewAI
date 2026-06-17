@@ -1,0 +1,189 @@
+---
+title: Google Cloud Secret Manager
+description: تكوين Google Cloud Secret Manager كمزود أسرار لـ CrewAI Platform من البداية إلى النهاية
+sidebarTitle: ببيانات اعتماد ثابتة
+icon: "key"
+---
+
+## نظرة عامة
+
+يأخذك هذا الدليل عبر تكوين Google Cloud Secret Manager كمزود أسرار لمؤسستك على CrewAI Platform، باستخدام **بيانات اعتماد حساب خدمة**. بنهاية الدليل، ستتمكن CrewAI Platform من قراءة الأسرار المخزّنة في مشروع Google Cloud الخاص بك وحقنها كقيم متغيرات بيئة وقت التشغيل.
+
+<Note>
+يغطي هذا الدليل مسار **بيانات الاعتماد الثابتة** — تُحَلّ الأسرار وقت النشر وتُدمج في صورة النشر. تتطلب القيم المُدوَّرة إعادة نشر. إذا أردت أسراراً مراعية للتدوير تُحدَّث في كل إطلاق أتمتة، راجع [GCP Workload Identity Federation](/ar/enterprise/features/secrets-manager/gcp-workload-identity).
+</Note>
+
+<Note>
+يغطي هذا الدليل التكوين من جانب GCP وإعداد بيانات الاعتماد في CrewAI Platform. للإشارة بعدها إلى سر من متغير بيئة، راجع [استخدام مدير الأسرار](/ar/enterprise/features/secrets-manager/usage).
+</Note>
+
+## المتطلبات المسبقة
+
+<Note>
+قبل البدء، تأكد من امتلاكك:
+
+- مشروع Google Cloud مع تفعيل **Secret Manager API**. فعّله في [وحدة تحكم APIs & Services](https://console.cloud.google.com/apis/library/secretmanager.googleapis.com) أو عبر `gcloud`:
+
+  ```bash
+  gcloud services enable secretmanager.googleapis.com --project=YOUR_PROJECT_ID
+  ```
+
+- إذن في المشروع لإنشاء حسابات خدمة ومنح أدوار IAM و(إن لزم) إنشاء الأسرار.
+- مؤسسة على CrewAI Platform يمتلك مستخدمك فيها إذن `secret_providers: manage`. راجع [الأذونات (RBAC)](/ar/enterprise/features/secrets-manager/usage#permissions-rbac).
+</Note>
+
+## الخطوة 1 — إنشاء حساب خدمة
+
+حساب الخدمة هو الهوية من جانب GCP التي ستُصادق بها CrewAI Platform.
+
+في [وحدة تحكم IAM & Admin ← Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts)، انقر على **Create Service Account**.
+
+- **Service account name:** `crewai-secrets-reader`
+- **Service account ID:** يُملأ تلقائياً من الاسم (مثلاً `crewai-secrets-reader@YOUR_PROJECT_ID.iam.gserviceaccount.com`)
+- **Description (optional):** "Read-only access to Secret Manager for CrewAI Platform"
+
+انقر على **Create and Continue**. تخطَّ المنح الاختيارية في هذه الشاشة — ستُرفق الدور في الخطوة 2. انقر على **Done**.
+
+للتفاصيل الكاملة، راجع وثائق GCP: [Create service accounts](https://cloud.google.com/iam/docs/service-accounts-create).
+
+{/* SCREENSHOT: GCP "Create service account" form with name "crewai-secrets-reader" → /images/secrets-manager/gcp/01-create-service-account.png */}
+
+## الخطوة 2 — منح الوصول إلى Secret Manager
+
+تحتاج CrewAI Platform إلى إذن لسرد وقراءة الأسرار في مشروعك. استخدم أحد نطاقين — **على مستوى المشروع** للبساطة، أو **لكل سر** لأقل الامتيازات.
+
+<Tabs>
+  <Tab title="على مستوى المشروع (أبسط)">
+    في [وحدة تحكم IAM](https://console.cloud.google.com/iam-admin/iam)، انقر على **Grant Access** و:
+
+    - **New principals:** بريد حساب الخدمة من الخطوة 1.
+    - **Role:** **Secret Manager Secret Accessor** (`roles/secretmanager.secretAccessor`).
+
+    انقر على **Save**.
+
+    أو عبر `gcloud`:
+
+    ```bash
+    gcloud projects add-iam-policy-binding YOUR_PROJECT_ID \
+      --member="serviceAccount:crewai-secrets-reader@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+      --role="roles/secretmanager.secretAccessor"
+    ```
+
+    {/* SCREENSHOT: GCP IAM "Grant access" panel with the service account and Secret Manager Secret Accessor role → /images/secrets-manager/gcp/02-iam-grant-access.png */}
+  </Tab>
+
+  <Tab title="لكل سر (أقل الامتيازات)">
+    امنح الدور فقط على الأسرار المحددة التي ينبغي أن تصل إليها CrewAI Platform. كرّر لكل سر:
+
+    ```bash
+    gcloud secrets add-iam-policy-binding YOUR_SECRET_NAME \
+      --member="serviceAccount:crewai-secrets-reader@YOUR_PROJECT_ID.iam.gserviceaccount.com" \
+      --role="roles/secretmanager.secretAccessor" \
+      --project=YOUR_PROJECT_ID
+    ```
+
+    أو في الوحدة: افتح كل سر في [Secret Manager](https://console.cloud.google.com/security/secret-manager)، انقر على **Permissions** في اللوحة اليمنى، وامنح **Secret Manager Secret Accessor** لحساب الخدمة.
+
+    {/* SCREENSHOT: Per-secret "Permissions" panel in Secret Manager with the service account granted accessor role → /images/secrets-manager/gcp/03-per-secret-permissions.png */}
+  </Tab>
+</Tabs>
+
+<Tip>
+يمنح دور `roles/secretmanager.secretAccessor` وصول قراءة فقط لقيم الأسرار. تستدعي CrewAI Platform أيضاً `secretmanager.secrets.list` لتجربة الاقتراح التلقائي في نموذج متغير البيئة — هذا الإذن مُضمَّن في الدور على نطاق المشروع، لكن **ليس** على نطاق لكل سر. مع ارتباطات لكل سر، لن يقترح الإكمال التلقائي أسراراً؛ ستحتاج إلى كتابة اسم السر الكامل.
+</Tip>
+
+## الخطوة 3 — إنشاء مفتاح حساب الخدمة
+
+افتح حساب الخدمة من الخطوة 1 في [وحدة تحكم IAM & Admin ← Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts).
+
+- انقر على علامة التبويب **Keys**.
+- انقر على **Add Key** ← **Create new key**.
+- **Key type:** JSON.
+- انقر على **Create**. يُنزّل المتصفح ملف JSON — احتفظ به بأمان؛ لا يمكن إعادة تنزيله.
+
+أو عبر `gcloud`:
+
+```bash
+gcloud iam service-accounts keys create ./crewai-secrets-reader.json \
+  --iam-account=crewai-secrets-reader@YOUR_PROJECT_ID.iam.gserviceaccount.com
+```
+
+<Warning>
+مفتاح حساب الخدمة هو بيانات اعتماد ثابتة طويلة الأمد. خزّنه بأمان (في مدير كلمات مرور أو مخزن أسرارك الخاص) ودوّره بشكل منتظم. للقضاء على بيانات الاعتماد الثابتة تماماً، استخدم [GCP Workload Identity Federation](/ar/enterprise/features/secrets-manager/gcp-workload-identity) بدلاً من ذلك.
+</Warning>
+
+{/* SCREENSHOT: Service account "Keys" tab with the "Create new key" → JSON option → /images/secrets-manager/gcp/04-create-service-account-key.png */}
+
+## الخطوة 4 — إضافة بيانات الاعتماد في CrewAI Platform
+
+في CrewAI Platform، انتقل إلى **Settings** ← **Secret Provider Credentials** وانقر على **Add Credential**.
+
+{/* SCREENSHOT: Sidebar/nav highlighting Settings → Secret Provider Credentials → /images/secrets-manager/usage/01-amp-settings-nav.png */}
+
+املأ النموذج:
+
+- **Name:** اسم وصفي، مثلاً `gcp-prod`.
+- **Provider:** `Google Cloud Secret Manager`.
+- **Project ID:** معرّف مشروع GCP الخاص بك (مثلاً `my-crewai-prod`).
+- **Service Account JSON:** الصق المحتوى الكامل لملف JSON الذي نزّلته في الخطوة 3.
+- (اختياري) حدّد **Set as default credential for this provider**. تُستخدم بيانات الاعتماد الافتراضية بواسطة متغيرات البيئة التي تشير إلى أسرار GCP بدون تحديد بيانات اعتماد صراحةً.
+
+انقر على **Create**.
+
+{/* SCREENSHOT: "Add Secret Provider Credential" form with GCP fields filled in → /images/secrets-manager/gcp/05-amp-add-credential-form-gcp.png */}
+
+## الخطوة 5 — إنشاء سر واحد على الأقل في GCP
+
+إذا لم يكن لديك بالفعل أسرار في GCP Secret Manager، أنشئ واحداً الآن لتتمكن من التحقق من الاتصال في الخطوة 6.
+
+في [وحدة تحكم Secret Manager](https://console.cloud.google.com/security/secret-manager)، انقر على **Create secret**.
+
+- **Name:** اسم فريد، مثلاً `openai-api-key`.
+- **Secret value:** إما لصق قيمة خام أو رفع ملف.
+- اترك إعدادات التدوير والتكرار وغيرها على القيم الافتراضية ما لم تكن لديك متطلبات محددة.
+
+انقر على **Create secret**.
+
+أو عبر `gcloud`:
+
+```bash
+echo -n "sk-your-actual-key" | gcloud secrets create openai-api-key \
+  --data-file=- \
+  --project=YOUR_PROJECT_ID \
+  --replication-policy=automatic
+```
+
+<Note>
+**صيغة الإشارة بمفتاح JSON.** يتعامل GCP Secret Manager مع قيم الأسرار كبيانات معتمة. إذا حدث أن كانت قيمة سرّك سلسلة JSON، يمكن لـ CrewAI Platform استخراج حقل واحد باستخدام صيغة `secret-name#json_key` (مثلاً `database-credentials#password`). راجع [استخدام مدير الأسرار](/ar/enterprise/features/secrets-manager/usage#referencing-secrets-in-environment-variables) للتفاصيل.
+</Note>
+
+للتفاصيل الكاملة، راجع وثائق GCP: [Create a secret](https://cloud.google.com/secret-manager/docs/create-secret-quickstart).
+
+{/* SCREENSHOT: GCP "Create secret" form with name and value → /images/secrets-manager/gcp/06-create-secret.png */}
+
+## الخطوة 6 — اختبار الاتصال
+
+عُد إلى CrewAI Platform، في صفحة **Secret Provider Credentials**، اعثر على بيانات الاعتماد التي أنشأتها للتو وانقر على **Test Connection**.
+
+تؤكد رسالة نجاح أن CrewAI Platform يمكنها المصادقة مع GCP وقراءة الأسرار من مشروعك.
+
+{/* SCREENSHOT: Success toast after clicking "Test Connection" on the GCP credential → /images/secrets-manager/gcp/07-test-connection-success.png */}
+
+إذا فشل الاختبار، تحقق من الأسباب الأكثر شيوعاً:
+
+| العَرَض | السبب المحتمل |
+|---|---|
+| `PERMISSION_DENIED` عند سرد الأسرار | يفتقد حساب الخدمة إلى `roles/secretmanager.secretAccessor`، أو حدّدت نطاقه لكل سر (لا يُمنح `list`). تحقق من الخطوة 2 من جديد. |
+| `PERMISSION_DENIED` على `secretmanager.secrets.access` | نفس ما سبق، لكن لسر محدد. تأكد من أن حساب الخدمة يمتلك دور accessor على السر المعني. |
+| `unauthorized_client` / `invalid_grant` | ملف Service Account JSON الملصوق غير صالح أو منتهي الصلاحية أو لحساب خدمة محذوف. أعد إنشاء المفتاح (الخطوة 3) والصقه من جديد. |
+| `Project ID does not match` | لا يطابق حقل Project ID في CrewAI Platform المشروع الذي يملك حساب الخدمة / الأسرار. تحقق من الخطوة 4 من جديد. |
+| `API not enabled` | Secret Manager API غير مفعَّل في المشروع. راجع المتطلبات المسبقة. |
+
+## الخطوات التالية
+
+الآن وقد اتصل GCP، توجّه إلى [استخدام مدير الأسرار](/ar/enterprise/features/secrets-manager/usage) من أجل:
+
+- منح أعضاء المؤسسة الأذونات الصحيحة لاستخدام (أو إدارة) مدير الأسرار.
+- الإشارة إلى أسرار GCP الخاصة بك من متغيرات بيئة CrewAI Platform.
+
+إذا كنت تريد أسراراً **مراعية للتدوير** تنتشر دون إعادة نشر، انتقل إلى [GCP Workload Identity Federation](/ar/enterprise/features/secrets-manager/gcp-workload-identity) — نفس مخزن الأسرار، بدون بيانات اعتماد ثابتة، وتُجلب الأسرار في كل إطلاق.

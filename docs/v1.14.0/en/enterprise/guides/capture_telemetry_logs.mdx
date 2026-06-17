@@ -1,0 +1,39 @@
+---
+title: "OpenTelemetry Export"
+description: "Export traces and logs from your CrewAI AMP deployments to your own OpenTelemetry collector"
+icon: "magnifying-glass-chart"
+mode: "wide"
+---
+
+CrewAI AMP can export OpenTelemetry **traces** and **logs** from your deployments directly to your own collector. This lets you monitor agent performance, track LLM calls, and debug issues using your existing observability stack.
+
+Telemetry data follows the [OpenTelemetry GenAI semantic conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/) plus additional CrewAI-specific attributes.
+
+## Prerequisites
+
+<CardGroup cols={2}>
+  <Card title="CrewAI AMP account" icon="users">
+    Your organization must have an active CrewAI AMP account.
+  </Card>
+  <Card title="OpenTelemetry collector" icon="server">
+    You need an OpenTelemetry-compatible collector endpoint (e.g., your own OTel Collector, Datadog, Grafana, or any OTLP-compatible backend).
+  </Card>
+</CardGroup>
+
+## Setting up a collector
+
+1. In CrewAI AMP, go to **Settings** > **OpenTelemetry Collectors**.
+2. Click **Add Collector**.
+3. Select an integration type — **OpenTelemetry Traces** or **OpenTelemetry Logs**.
+4. Configure the connection:
+   - **Endpoint** — Your collector's OTLP endpoint (e.g., `https://otel-collector.example.com:4317`).
+   - **Service Name** — A name to identify this service in your observability platform.
+   - **Custom Headers** *(optional)* — Add authentication or routing headers as key-value pairs.
+   - **Certificate** *(optional)* — Provide a TLS certificate if your collector requires one.
+5. Click **Save**.
+
+<Frame>![OpenTelemetry Collector Configuration](/images/crewai-otel-collector-config.png)</Frame>
+
+<Tip>
+  You can add multiple collectors — for example, one for traces and another for logs, or send to different backends for different purposes.
+</Tip>
