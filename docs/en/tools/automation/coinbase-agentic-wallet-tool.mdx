@@ -1,0 +1,90 @@
+---
+title: Coinbase Agentic Wallet Tool
+description: Connect CrewAI agents to Coinbase Agentic Wallet MCP tools for autonomous x402 API discovery and USDC payments.
+icon: wallet
+mode: "wide"
+---
+
+# Coinbase Agentic Wallet Tool
+
+`CoinbaseAgenticWalletTool` connects CrewAI agents to the [Coinbase Agentic Wallet MCP server](https://docs.cdp.coinbase.com/agentic-wallet/mcp/welcome). Agents can discover and pay for HTTP APIs autonomously via the x402 protocol, using a Coinbase-managed embedded wallet. Funding happens through the built-in Coinbase Onramp when needed, with no API keys or seed phrases to manage.
+
+The tool wraps CrewAI's `MCPServerAdapter` around the local MCP bundle installed by `npx @coinbase/payments-mcp install --client other` and returns the MCP tools as CrewAI-compatible tools.
+
+## Installation
+
+```shell
+pip install "crewai-tools[mcp]"
+```
+
+Install Node.js so `npx` can run the Coinbase installer and `node` can launch the local MCP bundle.
+
+Run the Coinbase installer once:
+
+```shell
+npx @coinbase/payments-mcp install --client other
+```
+
+The installer creates the stdio server bundle at `~/.payments-mcp/bundle.js`.
+
+## Usage
+
+Use the context manager so the MCP server is stopped after the crew run:
+
+```python
+from crewai import Agent, Crew, Task
+from crewai_tools import CoinbaseAgenticWalletTool
+
+with CoinbaseAgenticWalletTool() as coinbase_tools:
+    agent = Agent(
+        role="Payments Researcher",
+        goal="Discover paid APIs and use them when they are useful",
+        backstory=(
+            "You can search the x402 bazaar, inspect payment requirements, "
+            "and pay for HTTP APIs in USDC."
+        ),
+        tools=coinbase_tools,
+    )
+
+    task = Task(
+        description="Find a paid weather API and get today's forecast for San Francisco.",
+        expected_output="A concise forecast with the paid API response summarized.",
+        agent=agent,
+    )
+
+    crew = Crew(agents=[agent], tasks=[task])
+    crew.kickoff()
+```
+
+## Manual lifecycle
+
+If your crew setup cannot use a context manager, call `stop()` after the run:
+
+```python
+from crewai import Agent
+from crewai_tools import CoinbaseAgenticWalletTool
+
+wallet = CoinbaseAgenticWalletTool(connect_timeout=90)
+try:
+    agent = Agent(
+        role="Payments Researcher",
+        goal="Use x402 APIs",
+        backstory="You can discover and pay for x402 APIs.",
+        tools=wallet.tools,
+    )
+finally:
+    wallet.stop()
+```
+
+## Authentication
+
+On first use, the MCP server opens a companion window for email and OTP sign-in. This creates a Coinbase-managed embedded wallet, so you do not need to manage a seed phrase. Fund the wallet through the built-in Coinbase Onramp.
+
+## Available actions
+
+The MCP server lets agents search the x402 bazaar, inspect payment requirements, pay for HTTP APIs in USDC, and check wallet address and balance. See the [Agentic Wallet MCP tool reference](https://docs.cdp.coinbase.com/agentic-wallet/mcp/mcp-tools/overview) for the full catalog.
+
+## Resources
+
+- [Coinbase Agentic Wallet MCP docs](https://docs.cdp.coinbase.com/agentic-wallet/mcp/welcome)
+- [x402 protocol docs](https://docs.cdp.coinbase.com/x402/welcome)
