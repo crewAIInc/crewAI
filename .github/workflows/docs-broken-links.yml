@@ -4,13 +4,13 @@ on:
   pull_request:
     paths:
       - "docs/**"
-      - "docs.json"
+      - "docs/docs.json"
   push:
     branches:
       - main
     paths:
       - "docs/**"
-      - "docs.json"
+      - "docs/docs.json"
   workflow_dispatch:
 
 jobs:
@@ -25,11 +25,12 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Install libsecret for Mintlify CLI
+        run: sudo apt-get update && sudo apt-get install -y libsecret-1-0
+
       - name: Install Mintlify CLI
-        run: npm i -g mintlify
+        run: npm install -g mint@latest
 
       - name: Run broken link checker
-        run: |
-          # Auto-answer the prompt with yes command
-          yes "" | mintlify broken-links || test $? -eq 141
         working-directory: ./docs
+        run: mint broken-links
