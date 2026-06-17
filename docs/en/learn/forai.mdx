@@ -1,0 +1,92 @@
+---
+title: Using ForAI with CrewAI
+description: Configure CrewAI with ForAI, an OpenAI-compatible AI model gateway for agents and high-volume LLM applications.
+icon: route
+mode: "wide"
+---
+
+## Overview
+
+[ForAI](https://www.forai.ai) is an OpenAI-compatible AI model gateway designed for AI agents and high-volume LLM applications.
+
+Because ForAI exposes an OpenAI-compatible API, you can use it with CrewAI by configuring the `LLM` class with your ForAI API key and base URL.
+
+## Prerequisites
+
+Before you begin:
+
+- Create a ForAI account at [forai.ai](https://www.forai.ai)
+- Generate an API key from the [ForAI console](https://www.forai.ai/console)
+- Install CrewAI in your Python environment
+
+## Installation
+
+Install CrewAI normally:
+
+```bash
+pip install crewai
+```
+
+## Configure ForAI
+
+Create an `LLM` instance with your ForAI API key and the ForAI OpenAI-compatible endpoint:
+
+```python
+from crewai import LLM
+
+llm = LLM(
+    model="gpt-5.5",
+    api_key="YOUR_FORAI_API_KEY",
+    base_url="https://www.forai.ai/v1"
+)
+```
+
+<Tip>
+  Store your API key in an environment variable instead of hardcoding it in application code.
+</Tip>
+
+```python
+import os
+from crewai import LLM
+
+llm = LLM(
+    model="gpt-5.5",
+    api_key=os.environ["FORAI_API_KEY"],
+    base_url="https://www.forai.ai/v1"
+)
+```
+
+## Example
+
+Use the ForAI-backed LLM with any CrewAI agent:
+
+```python
+from crewai import Agent, LLM
+
+llm = LLM(
+    model="gpt-5.5",
+    api_key="YOUR_FORAI_API_KEY",
+    base_url="https://www.forai.ai/v1"
+)
+
+researcher = Agent(
+    role="Researcher",
+    goal="Research AI trends",
+    backstory="Expert AI researcher",
+    llm=llm
+)
+```
+
+You can also reuse the same `llm` instance across multiple agents in a crew.
+
+## Benefits
+
+- OpenAI-compatible API
+- Unified access to multiple frontier models
+- Centralized billing
+- Suitable for AI agents and multi-agent systems
+
+## Resources
+
+- [ForAI website](https://www.forai.ai)
+- [ForAI documentation](https://docs.forai.ai)
