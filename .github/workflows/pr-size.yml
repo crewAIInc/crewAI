@@ -30,3 +30,24 @@ jobs:
             **/*.json
             **/test_durations/**
             **/cassettes/**
+
+  python-diff-size:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+      - name: Enforce Python diff size limit
+        env:
+          MAX: "1500"
+        run: |
+          base="origin/${{ github.base_ref }}"
+          # Sum added + deleted lines across changed .py files; skip binaries ("-").
+          total=$(git diff --numstat "$base...HEAD" -- '*.py' \
+            | awk '$1 != "-" && $2 != "-" { sum += $1 + $2 } END { print sum + 0 }')
+          echo "Python churn: $total lines (limit $MAX)"
+          if [ "$total" -gt "$MAX" ]; then
+            echo "::error::Python changes total $total lines, over the $MAX-line limit. Split into smaller PRs."
+            git diff --numstat "$base...HEAD" -- '*.py' | sort -rn
+            exit 1
+          fi
