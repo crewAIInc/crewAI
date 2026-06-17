@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from mimir_client import MimirClient  # The official client required for Mimir
+from mimir_client import MimirClient  # type: ignore
 from crewai.memory.types import MemoryRecord, ScopeInfo
 
 _logger = logging.getLogger(__name__)
