@@ -1,0 +1,222 @@
+---
+title: "모노레포 배포"
+description: "더 큰 저장소의 하위 폴더에서 Crew 또는 Flow 배포하기"
+icon: "folder-tree"
+mode: "wide"
+---
+
+<Note>
+  Crew 또는 Flow가 더 큰 저장소 안에 있을 때 작업 디렉터리를 사용하세요.
+  CrewAI AMP는 저장소 루트 대신 해당 하위 폴더에서 자동화를 검증, 빌드,
+  실행합니다.
+</Note>
+
+## 사용 시점
+
+모노레포 배포는 하나의 저장소에 여러 자동화, 공유 패키지 또는 다른 애플리케이션
+코드가 함께 있을 때 유용합니다:
+
+```text
+company-ai/
+|-- uv.lock
+|-- packages/
+|   `-- shared_tools/
+`-- crews/
+    |-- support_agent/
+    |   |-- pyproject.toml
+    |   `-- src/
+    |       `-- support_agent/
+    |           |-- main.py
+    |           `-- crew.py
+    `-- research_flow/
+        |-- pyproject.toml
+        `-- src/
+            `-- research_flow/
+                `-- main.py
+```
+
+`support_agent`를 배포하려면 작업 디렉터리를 다음과 같이 설정합니다:
+
+```text
+crews/support_agent
+```
+
+AMP는 여전히 전체 저장소를 가져오거나 업로드하지만, 선택한 폴더를 자동화
+프로젝트 루트로 처리합니다.
+
+## 작업 디렉터리가 제어하는 항목
+
+작업 디렉터리가 설정되면 AMP는 해당 폴더를 다음 용도로 사용합니다:
+
+- `pyproject.toml`, `src/`, Crew 또는 Flow 진입점을 포함한 프로젝트 검증
+- `uv`를 사용한 종속성 설치
+- 실행 중인 프로세스의 작업 디렉터리
+- `CREW_ROOT_DIR` 환경 변수
+
+필드를 비워 두면 기존 동작이 유지되며 저장소 루트를 사용합니다.
+
+## 지원되는 소스
+
+다음 소스에서 배포를 만들 때 작업 디렉터리를 설정할 수 있습니다:
+
+- 연결된 GitHub 저장소
+- AMP에 구성된 Git 저장소
+- ZIP 업로드
+
+<Info>
+  작업 디렉터리는 AMP 웹 인터페이스에서 구성하세요.
+  `crewai deploy create` CLI 흐름은 이 필드를 묻지 않습니다.
+</Info>
+
+기존 배포의 **Settings** 페이지에서도 작업 디렉터리를 추가하거나 변경할 수
+있습니다. 변경 사항은 다음 배포부터 적용됩니다.
+
+<Warning>
+  작업 디렉터리와 auto-deploy는 함께 사용할 수 없습니다. 배포에 작업
+  디렉터리가 설정되어 있으면 해당 배포의 auto-deploy가 비활성화됩니다.
+  작업 디렉터리를 설정하기 전에 auto-deploy를 끄세요.
+</Warning>
+
+## 새 배포 구성
+
+<Steps>
+  <Step title="Deploy from Code 열기">
+    CrewAI AMP에서 새 배포를 만들고 소스를 선택합니다: GitHub, Git
+    Repository 또는 ZIP 업로드.
+  </Step>
+
+  <Step title="저장소, 브랜치 또는 ZIP 파일 선택">
+    모노레포가 들어 있는 저장소와 브랜치를 선택하거나, 루트에 모노레포 내용이
+    포함된 ZIP 파일을 업로드합니다.
+  </Step>
+
+  <Step title="고급 설정 열기">
+    배포 양식에서 **Advanced** 섹션을 펼칩니다.
+  </Step>
+
+  <Step title="작업 디렉터리 입력">
+    저장소 루트에서 Crew 또는 Flow 프로젝트까지의 경로를 입력합니다:
+
+    ```text
+    crews/support_agent
+    ```
+
+    앞에 슬래시를 붙이지 마세요.
+  </Step>
+
+  <Step title="배포">
+    필요한 환경 변수를 추가한 다음 배포를 시작합니다.
+  </Step>
+</Steps>
+
+## 기존 배포 구성
+
+<Steps>
+  <Step title="배포 설정 열기">
+    AMP에서 자동화로 이동한 뒤 **Settings**를 엽니다.
+  </Step>
+
+  <Step title="필요한 경우 auto-deploy 끄기">
+    auto-deploy가 활성화되어 있으면 먼저 끄세요. auto-deploy가 켜져 있는
+    동안에는 작업 디렉터리 필드를 사용할 수 없습니다.
+  </Step>
+
+  <Step title="작업 디렉터리 설정">
+    **Basic settings**에서 다음과 같은 하위 폴더 경로를 입력합니다:
+
+    ```text
+    crews/support_agent
+    ```
+  </Step>
+
+  <Step title="다시 배포">
+    설정을 저장하고 자동화를 다시 배포합니다. 새 작업 디렉터리는 다음 배포부터
+    사용됩니다.
+  </Step>
+</Steps>
+
+## 경로 규칙
+
+작업 디렉터리는 저장소 또는 ZIP 루트 안의 상대 경로여야 합니다.
+
+| 규칙 | 예시 |
+|------|------|
+| 상대 경로를 사용합니다 | `crews/support_agent` |
+| `/`로 시작하지 않습니다 | `/crews/support_agent`는 유효하지 않습니다 |
+| `.` 또는 `..` 경로 세그먼트를 사용하지 않습니다 | `crews/../support_agent`는 유효하지 않습니다 |
+| 문자, 숫자, 하이픈, 밑줄, 점, 슬래시만 사용합니다 | `crews/support agent`는 유효하지 않습니다 |
+| 경로는 255자 이하로 유지합니다 | 더 긴 경로는 거부됩니다 |
+
+AMP는 앞뒤 공백을 제거하고, 반복된 슬래시를 하나로 줄이며, 끝의 슬래시를
+제거합니다. 빈 값은 저장소 루트를 사용합니다.
+
+## Lock 파일과 UV 워크스페이스
+
+선택한 폴더에는 자동화의 `pyproject.toml`과 `src/` 디렉터리가 있어야
+합니다. `uv.lock` 또는 `poetry.lock` 파일은 선택한 폴더나 저장소 루트에
+둘 수 있습니다.
+
+이 방식은 일반적인 두 가지 모노레포 레이아웃을 모두 지원합니다:
+
+<Tabs>
+  <Tab title="프로젝트 lock 파일">
+    ```text
+    company-ai/
+    `-- crews/
+        `-- support_agent/
+            |-- pyproject.toml
+            |-- uv.lock
+            `-- src/
+                `-- support_agent/
+                    `-- main.py
+    ```
+  </Tab>
+
+  <Tab title="워크스페이스 lock 파일">
+    ```text
+    company-ai/
+    |-- uv.lock
+    |-- packages/
+    |   `-- shared_tools/
+    `-- crews/
+        `-- support_agent/
+            |-- pyproject.toml
+            `-- src/
+                `-- support_agent/
+                    `-- main.py
+    ```
+  </Tab>
+</Tabs>
+
+<Tip>
+  자동화가 모노레포의 다른 위치에 있는 공유 패키지를 가져온다면, UV
+  workspace, path 또는 source 설정을 사용해 해당 패키지를 `pyproject.toml`에
+  선언하세요. AMP는 선택한 폴더에서 자동화를 실행하므로, 저장소 루트가
+  Python path에 있다고 가정하기보다 공유 코드를 종속성으로 설치해야 합니다.
+</Tip>
+
+## 문제 해결
+
+### 작업 디렉터리를 찾을 수 없음
+
+경로가 저장소 또는 ZIP 루트를 기준으로 한 상대 경로인지 확인하세요. ZIP
+업로드의 경우 ZIP 내용에 입력한 작업 디렉터리 경로가 정확히 포함되어야 합니다.
+
+### pyproject.toml 누락
+
+작업 디렉터리는 여러 프로젝트를 담은 상위 폴더가 아니라 Crew 또는 Flow 프로젝트
+폴더를 가리켜야 합니다.
+
+### uv.lock 또는 poetry.lock 누락
+
+선택한 프로젝트 폴더 또는 저장소 루트에 lock 파일을 커밋하세요. UV
+워크스페이스의 경우 `uv.lock`을 워크스페이스 루트에 두는 방식이 지원됩니다.
+
+### Auto-Deploy를 사용할 수 없음
+
+작업 디렉터리가 설정되어 있으면 auto-deploy가 비활성화됩니다. 수동 재배포를
+사용하거나 AMP API로 CI/CD에서 재배포를 트리거하세요.
+
+<Card title="AMP에 배포하기" icon="rocket" href="/ko/enterprise/guides/deploy-to-amp">
+  모노레포 작업 디렉터리를 선택한 뒤 배포 가이드를 계속 진행하세요.
+</Card>

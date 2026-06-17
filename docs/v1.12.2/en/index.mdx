@@ -1,0 +1,105 @@
+---
+title: "CrewAI Documentation"
+description: "Build collaborative AI agents, crews, and flows — production ready from day one."
+icon: "house"
+mode: "wide"
+---
+
+<div
+  style={{
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 20,
+    textAlign: 'center',
+    padding: '48px 24px',
+    borderRadius: 16,
+    background: 'linear-gradient(180deg, rgba(235,102,88,0.12) 0%, rgba(201,76,60,0.08) 100%)',
+    border: '1px solid rgba(235,102,88,0.18)'
+  }}
+>
+  <img src="/images/crew_only_logo.png" alt="CrewAI" width="250" height="100" />
+  <div style={{ maxWidth: 720 }}>
+    <h1 style={{ marginBottom: 12 }}>Ship multi‑agent systems with confidence</h1>
+    <p style={{ color: 'var(--mint-text-2)' }}>
+      Design agents, orchestrate crews, and automate flows with guardrails, memory, knowledge, and observability baked in.
+    </p>
+  </div>
+
+  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
+    <a className="button button-primary" href="/en/quickstart">Get started</a>
+    <a className="button" href="/en/changelog">View changelog</a>
+    <a className="button" href="/en/api-reference/introduction">API Reference</a>
+  </div>
+
+</div>
+
+<div style={{ marginTop: 32 }} />
+
+## Get started
+
+<CardGroup cols={3}>
+  <Card title="Introduction" href="/en/introduction" icon="sparkles">
+    Overview of CrewAI concepts, architecture, and what you can build with agents, crews, and flows.
+  </Card>
+  <Card title="Installation" href="/en/installation" icon="wrench">
+    Install via `uv`, configure API keys, and set up the CLI for local development.
+  </Card>
+  <Card title="Quickstart" href="/en/quickstart" icon="rocket">
+    Spin up your first crew in minutes. Learn the core runtime, project layout, and dev loop.
+  </Card>
+</CardGroup>
+
+## Build the basics
+
+<CardGroup cols={3}>
+  <Card title="Agents" href="/en/concepts/agents" icon="users">
+    Compose agents with tools, memory, knowledge, and structured outputs using Pydantic. Includes templates and best practices.
+  </Card>
+  <Card title="Flows" href="/en/concepts/flows" icon="arrow-progress">
+    Orchestrate start/listen/router steps, manage state, persist execution, and resume long-running workflows.
+  </Card>
+  <Card title="Tasks & Processes" href="/en/concepts/tasks" icon="check">
+    Define sequential, hierarchical, or hybrid processes with guardrails, callbacks, and human-in-the-loop triggers.
+  </Card>
+</CardGroup>
+
+## Enterprise journey
+
+<CardGroup cols={3}>
+  <Card title="Deploy automations" href="/en/enterprise/features/automations" icon="server">
+    Manage environments, redeploy safely, and monitor live runs directly from the Enterprise console.
+  </Card>
+  <Card title="Triggers & Flows" href="/en/enterprise/guides/automation-triggers" icon="bolt">
+    Connect Gmail, Slack, Salesforce, and more. Pass trigger payloads into crews and flows automatically.
+  </Card>
+  <Card title="Team management" href="/en/enterprise/guides/team-management" icon="users-gear">
+    Invite teammates, configure RBAC, and control access to production automations.
+  </Card>
+</CardGroup>
+
+## What’s new
+
+<CardGroup cols={2}>
+  <Card title="Triggers overview" href="/en/enterprise/guides/automation-triggers" icon="sparkles">
+    Unified overview for Gmail, Drive, Outlook, Teams, OneDrive, HubSpot, and more — now with sample payloads and crews.
+  </Card>
+  <Card title="Integration tools" href="/en/tools/integration/overview" icon="plug">
+    Call existing CrewAI automations or Amazon Bedrock Agents directly from your crews using the updated integration toolkit.
+  </Card>
+</CardGroup>
+
+<Callout title="Explore real-world patterns" icon="github">
+  Browse the <a href="/en/examples/cookbooks">examples and cookbooks</a> for end-to-end reference implementations across agents, flows, and enterprise automations.
+</Callout>
+
+## Stay connected
+
+<CardGroup cols={2}>
+  <Card title="Star us on GitHub" href="https://github.com/crewAIInc/crewAI" icon="star">
+    If CrewAI helps you ship faster, give us a star and share your builds with the community.
+  </Card>
+  <Card title="Join the community" href="https://community.crewai.com" icon="comments">
+    Ask questions, showcase workflows, and request features alongside other builders.
+  </Card>
+</CardGroup>

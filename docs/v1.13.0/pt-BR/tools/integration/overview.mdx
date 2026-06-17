@@ -1,0 +1,72 @@
+---
+title: "Visão Geral"
+description: "Conecte agentes CrewAI com automações externas e serviços de IA gerenciados"
+icon: "plug"
+mode: "wide"
+---
+
+As ferramentas de integração permitem que seus agentes deleguem trabalho para outras plataformas de automação e serviços de IA gerenciados. Use-as quando o fluxo precisar invocar uma automação já publicada no CrewAI Platform ou quando for necessário direcionar tarefas para provedores especializados, como Amazon Bedrock.
+
+## **Ferramentas Disponíveis**
+
+<CardGroup cols={2}>
+  <Card title="Ferramenta de Execução de Automação CrewAI" icon="robot" href="/pt-BR/tools/integration/crewaiautomationtool">
+    Invoque automações ativas do CrewAI Platform, envie entradas personalizadas e acompanhe o resultado diretamente do seu agente.
+  </Card>
+
+  <Card title="Ferramenta Bedrock Invoke Agent" icon="aws" href="/pt-BR/tools/integration/bedrockinvokeagenttool">
+    Acesse agentes do Amazon Bedrock a partir das suas crews, reutilize guardrails existentes da AWS e traga as respostas de volta ao fluxo atual.
+  </Card>
+</CardGroup>
+
+## **Casos de Uso Comuns**
+
+- **Encadear automações**: Inicie uma automação do CrewAI a partir de outra crew ou flow
+- **Hand-off corporativo**: Direcione tarefas para agentes Bedrock que já incorporam políticas e guardrails internos
+- **Workflows híbridos**: Combine o raciocínio do CrewAI com sistemas externos que expõem APIs de agente
+- **Tarefas demoradas**: Faça polling de automações externas e mescle o resultado final na execução atual
+
+## **Exemplo de Início Rápido**
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import InvokeCrewAIAutomationTool
+from crewai_tools.aws.bedrock.agents.invoke_agent_tool import BedrockInvokeAgentTool
+
+# Automação externa
+analysis_automation = InvokeCrewAIAutomationTool(
+    crew_api_url="https://analysis-crew.acme.crewai.com",
+    crew_bearer_token="YOUR_BEARER_TOKEN",
+    crew_name="Analysis Automation",
+    crew_description="Executa o pipeline de análise em produção",
+)
+
+# Agente gerenciado no Bedrock
+knowledge_router = BedrockInvokeAgentTool(
+    agent_id="bedrock-agent-id",
+    agent_alias_id="prod",
+)
+
+automation_strategist = Agent(
+    role="Estrategista de Automação",
+    goal="Orquestrar automações externas e resumir os resultados",
+    backstory="Você coordena fluxos corporativos e sabe quando delegar tarefas a serviços especializados.",
+    tools=[analysis_automation, knowledge_router],
+    verbose=True,
+)
+
+execute_playbook = Task(
+    description="Execute a automação de análise e peça ao agente Bedrock pontos principais para a diretoria.",
+    agent=automation_strategist,
+)
+
+Crew(agents=[automation_strategist], tasks=[execute_playbook]).kickoff()
+```
+
+## **Boas Práticas**
+
+- **Proteja credenciais**: Armazene tokens e chaves de API em variáveis de ambiente ou no gerenciador de segredos
+- **Planeje a latência**: Automações externas podem levar mais tempo — configure intervalos e timeouts adequados
+- **Reutilize sessões**: Agentes Bedrock aceitam IDs de sessão para manter contexto entre chamadas
+- **Valide respostas**: Normalize a saída remota (JSON, texto, códigos de status) antes de enviá-la a etapas seguintes
+- **Monitore o uso**: Acompanhe logs no CrewAI Platform ou no AWS CloudWatch para evitar estouros de quota e falhas

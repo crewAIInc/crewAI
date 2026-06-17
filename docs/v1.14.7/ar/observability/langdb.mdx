@@ -1,0 +1,167 @@
+---
+title: تكامل LangDB
+description: إدارة وتأمين وتحسين سير عمل CrewAI مع بوابة LangDB AI — الوصول إلى أكثر من 350 نموذجاً وتوجيه تلقائي وتحسين التكاليف ومراقبة كاملة.
+icon: database
+mode: "wide"
+---
+
+# مقدمة
+
+توفر [بوابة LangDB AI](https://langdb.ai) واجهات API متوافقة مع OpenAI للاتصال بنماذج لغة كبيرة متعددة وتعمل كمنصة مراقبة تجعل تتبع سير عمل CrewAI شاملاً وسهلاً مع توفير الوصول إلى أكثر من 350 نموذج لغة. مع استدعاء `init()` واحد، يتم التقاط جميع تفاعلات الوكلاء وتنفيذ المهام واستدعاءات LLM، مما يوفر مراقبة شاملة وبنية تحتية جاهزة للإنتاج لتطبيقاتك.
+
+<Frame caption="مثال تتبع LangDB CrewAI">
+  <img src="/images/langdb-1.png" alt="مثال تتبع LangDB CrewAI" />
+</Frame>
+
+**تحقق من:** [عرض مثال التتبع المباشر](https://app.langdb.ai/sharing/threads/3becbfed-a1be-ae84-ea3c-4942867a3e22)
+
+## الميزات
+
+### قدرات بوابة AI
+- **الوصول إلى أكثر من 350 LLM**: الاتصال بجميع نماذج اللغة الرئيسية من خلال تكامل واحد
+- **النماذج الافتراضية**: إنشاء إعدادات نماذج مخصصة مع معاملات وقواعد توجيه محددة
+- **MCP الافتراضي**: تفعيل التوافق والتكامل مع أنظمة MCP لتعزيز اتصال الوكلاء
+- **حواجز الحماية**: تنفيذ تدابير السلامة وضوابط الامتثال لسلوك الوكلاء
+
+### المراقبة والتتبع
+- **تتبع تلقائي**: استدعاء `init()` واحد يلتقط جميع تفاعلات CrewAI
+- **رؤية شاملة**: مراقبة سير عمل الوكلاء من البداية إلى النهاية
+- **تتبع استخدام الأدوات**: تتبع الأدوات التي يستخدمها الوكلاء ونتائجها
+- **مراقبة استدعاءات النماذج**: رؤى مفصلة لتفاعلات LLM
+- **تحليلات الأداء**: مراقبة زمن الاستجابة واستخدام الرموز والتكاليف
+- **دعم التصحيح**: تنفيذ خطوة بخطوة لاستكشاف الأخطاء
+- **المراقبة في الوقت الفعلي**: لوحة معلومات التتبعات والمقاييس الحية
+
+## تعليمات الإعداد
+
+<Steps>
+  <Step title="تثبيت LangDB">
+    ثبّت عميل LangDB مع علامة ميزة CrewAI:
+    ```bash
+    pip install 'pylangdb[crewai]'
+    ```
+  </Step>
+  <Step title="تعيين متغيرات البيئة">
+    قم بإعداد بيانات اعتماد LangDB:
+    ```bash
+    export LANGDB_API_KEY="<your_langdb_api_key>"
+    export LANGDB_PROJECT_ID="<your_langdb_project_id>"
+    export LANGDB_API_BASE_URL='https://api.us-east-1.langdb.ai'
+    ```
+  </Step>
+  <Step title="تهيئة التتبع">
+    استورد وهيّئ LangDB قبل إعداد كود CrewAI:
+    ```python
+    from pylangdb.crewai import init
+    # Initialize LangDB
+    init()
+    ```
+  </Step>
+  <Step title="إعداد CrewAI مع LangDB">
+    قم بإعداد LLM مع رؤوس LangDB:
+    ```python
+    from crewai import Agent, Task, Crew, LLM
+    import os
+
+    # Configure LLM with LangDB headers
+    llm = LLM(
+        model="openai/gpt-4o",
+        api_key=os.getenv("LANGDB_API_KEY"),
+        base_url=os.getenv("LANGDB_API_BASE_URL"),
+        extra_headers={"x-project-id": os.getenv("LANGDB_PROJECT_ID")}
+    )
+    ```
+  </Step>
+</Steps>
+
+## مثال سريع للبدء
+
+```python
+import os
+from pylangdb.crewai import init
+from crewai import Agent, Task, Crew, LLM
+
+init()
+
+def create_llm(model):
+    return LLM(
+        model=model,
+        api_key=os.environ.get("LANGDB_API_KEY"),
+        base_url=os.environ.get("LANGDB_API_BASE_URL"),
+        extra_headers={"x-project-id": os.environ.get("LANGDB_PROJECT_ID")}
+    )
+
+researcher = Agent(
+    role="Research Specialist",
+    goal="Research topics thoroughly",
+    backstory="Expert researcher with skills in finding information",
+    llm=create_llm("openai/gpt-4o"),
+    verbose=True
+)
+
+task = Task(
+    description="Research the given topic and provide a comprehensive summary",
+    agent=researcher,
+    expected_output="Detailed research summary with key findings"
+)
+
+crew = Crew(agents=[researcher], tasks=[task])
+result = crew.kickoff()
+print(result)
+```
+
+## عرض التتبعات في LangDB
+
+بعد تشغيل تطبيق CrewAI، يمكنك عرض تتبعات مفصلة في لوحة معلومات LangDB:
+
+<Frame caption="لوحة معلومات تتبع LangDB">
+  <img src="/images/langdb-2.png" alt="لوحة معلومات تتبع LangDB تعرض سير عمل CrewAI" />
+</Frame>
+
+### ما ستراه
+
+- **تفاعلات الوكلاء**: التدفق الكامل لمحادثات الوكلاء وتسليم المهام
+- **استخدام الأدوات**: الأدوات التي تم استدعاؤها ومدخلاتها ومخرجاتها
+- **استدعاءات النماذج**: تفاعلات LLM المفصلة مع المطالبات والاستجابات
+- **مقاييس الأداء**: تتبع زمن الاستجابة واستخدام الرموز والتكاليف
+- **الجدول الزمني للتنفيذ**: عرض خطوة بخطوة لسير العمل بالكامل
+
+## استكشاف الأخطاء وإصلاحها
+
+### المشاكل الشائعة
+
+- **عدم ظهور تتبعات**: تأكد من استدعاء `init()` قبل أي استيرادات CrewAI
+- **أخطاء المصادقة**: تحقق من مفتاح API ومعرف المشروع في LangDB
+
+## الموارد
+
+<CardGroup cols={3}>
+  <Card title="وثائق LangDB" icon="book" href="https://docs.langdb.ai">
+    الوثائق والأدلة الرسمية لـ LangDB
+  </Card>
+  <Card title="أدلة LangDB" icon="graduation-cap" href="https://docs.langdb.ai/guides">
+    برامج تعليمية خطوة بخطوة لبناء وكلاء AI
+  </Card>
+  <Card title="أمثلة GitHub" icon="github" href="https://github.com/langdb/langdb-samples/tree/main/examples/crewai">
+    أمثلة تكامل CrewAI الكاملة
+  </Card>
+  <Card title="لوحة معلومات LangDB" icon="chart-line" href="https://app.langdb.ai">
+    الوصول إلى تتبعاتك وتحليلاتك
+  </Card>
+  <Card title="كتالوج النماذج" icon="list" href="https://app.langdb.ai/models">
+    تصفح أكثر من 350 نموذج لغة متاح
+  </Card>
+  <Card title="ميزات المؤسسات" icon="building" href="https://docs.langdb.ai/enterprise">
+    خيارات الاستضافة الذاتية وقدرات المؤسسات
+  </Card>
+</CardGroup>
+
+## الخطوات التالية
+
+غطى هذا الدليل أساسيات دمج بوابة LangDB AI مع CrewAI. لتعزيز سير عمل الذكاء الاصطناعي بشكل أكبر، استكشف:
+
+- **النماذج الافتراضية**: إنشاء إعدادات نماذج مخصصة مع استراتيجيات توجيه
+- **حواجز الحماية والسلامة**: تنفيذ تصفية المحتوى وضوابط الامتثال
+- **النشر في الإنتاج**: إعداد خطط احتياطية وإعادة المحاولة وتوازن الأحمال
+
+لمزيد من الميزات المتقدمة وحالات الاستخدام، زُر [وثائق LangDB](https://docs.langdb.ai) أو استكشف [كتالوج النماذج](https://app.langdb.ai/models) لاكتشاف جميع النماذج المتاحة.
