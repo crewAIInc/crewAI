@@ -63,6 +63,104 @@ def test_flow_public_exports_are_explicit():
     assert "calculate_node_levels" not in flow_visualization.__all__
 
 
+def test_flow_definition_json_schema_carries_reference_descriptions():
+    schema = flow_definition.FlowDefinition.json_schema()
+    defs = schema["$defs"]
+
+    assert schema["properties"]["schema"]["description"]
+    assert schema["properties"]["methods"]["description"]
+
+    method_properties = defs["FlowMethodDefinition"]["properties"]
+    assert method_properties["do"]["description"] == "Action executed when this method runs."
+    assert "Trigger condition" in method_properties["listen"]["description"]
+
+    script_properties = defs["FlowScriptActionDefinition"]["properties"]
+    assert "trusted inline Python" in script_properties["call"]["description"]
+    assert "not interpolated" in script_properties["code"]["description"]
+    assert "not sandboxed" in script_properties["code"]["description"]
+
+    state_schema = schema["properties"]["state"]["anyOf"][0]
+    assert state_schema["discriminator"]["propertyName"] == "type"
+    assert state_schema["discriminator"]["mapping"] == {
+        "dict": "#/$defs/FlowDictStateDefinition",
+        "json_schema": "#/$defs/FlowJsonSchemaStateDefinition",
+        "pydantic": "#/$defs/FlowPydanticStateDefinition",
+        "unknown": "#/$defs/FlowUnknownStateDefinition",
+    }
+
+    dict_state_properties = defs["FlowDictStateDefinition"]["properties"]
+    assert dict_state_properties["type"]["description"]
+    assert "ref" not in dict_state_properties
+
+    json_schema_state_properties = defs["FlowJsonSchemaStateDefinition"]["properties"]
+    assert json_schema_state_properties["json_schema"]["description"]
+    assert "json_schema" in defs["FlowJsonSchemaStateDefinition"]["required"]
+
+    pydantic_state_properties = defs["FlowPydanticStateDefinition"]["properties"]
+    assert "Fallback JSON Schema" in pydantic_state_properties["json_schema"][
+        "description"
+    ]
+
+    each_properties = defs["FlowEachActionDefinition"]["properties"]
+    assert "list to iterate" in each_properties["in"]["description"]
+    assert "Ordered inner actions" in each_properties["do"]["description"]
+
+
+def test_flow_definition_json_schema_carries_field_examples_only():
+    schema = flow_definition.FlowDefinition.json_schema()
+    defs = schema["$defs"]
+
+    for model_name in [
+        "FlowDefinition",
+        "FlowCodeActionDefinition",
+        "FlowToolActionDefinition",
+        "FlowCrewActionDefinition",
+        "FlowExpressionActionDefinition",
+        "FlowScriptActionDefinition",
+        "FlowEachActionDefinition",
+        "FlowMethodDefinition",
+        "FlowDictStateDefinition",
+        "FlowJsonSchemaStateDefinition",
+        "FlowPydanticStateDefinition",
+        "FlowUnknownStateDefinition",
+        "FlowConfigDefinition",
+        "FlowPersistenceDefinition",
+        "FlowHumanFeedbackDefinition",
+        "FlowDefinitionDiagnostic",
+    ]:
+        model_schema = schema if model_name == "FlowDefinition" else defs[model_name]
+        assert "examples" not in model_schema
+
+    assert schema["properties"]["name"]["examples"] == ["ResearchFlow"]
+    assert schema["properties"]["schema"]["examples"] == ["crewai.flow/v1"]
+    assert schema["properties"]["methods"]["examples"][0]["seed"]["do"] == {
+        "call": "expression",
+        "expr": "state.topic",
+    }
+
+    script_properties = defs["FlowScriptActionDefinition"]["properties"]
+    assert script_properties["call"]["examples"] == ["script"]
+    assert "input.strip()" in script_properties["code"]["examples"][0]
+    assert script_properties["language"]["examples"] == ["python"]
+
+    action_properties = defs["FlowCodeActionDefinition"]["properties"]
+    assert action_properties["ref"]["examples"] == [
+        "my_project.flows:normalize_topic"
+    ]
+    assert action_properties["with"]["examples"] == [{"topic": "${state.topic}"}]
+
+    each_properties = defs["FlowEachActionDefinition"]["properties"]
+    assert each_properties["in"]["examples"] == ["state.rows"]
+    assert each_properties["do"]["examples"][0][0]["clean"]["call"] == "script"
+
+    method_properties = defs["FlowMethodDefinition"]["properties"]
+    assert method_properties["listen"]["examples"] == [
+        "seed",
+        {"or": ["approved", "revise"]},
+    ]
+    assert method_properties["emit"]["examples"] == [["approved", "revise"]]
+
+
 def test_flow_state_definition_uses_discriminated_branches():
     definition = flow_definition.FlowDefinition.model_validate(
         {
