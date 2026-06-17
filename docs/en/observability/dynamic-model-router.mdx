@@ -1,0 +1,115 @@
+---
+title: Dynamic Model Router Integration
+description: Route each CrewAI agent call to the cheapest model tier that can handle the task — before the API call is made.
+icon: route
+mode: "wide"
+---
+
+## Introduction
+
+[Dynamic Model Router](https://github.com/manthan9891994/agents-multi-model-support) is a pre-call task classifier for CrewAI. It analyzes each prompt and routes it to the cheapest model tier (low / medium / high) that can produce a correct response — before the API call is made.
+
+- **3-layer cascade** — L1 keywords (<1ms) → L3 frozen MiniLM ML head (~15ms) → L2 LLM fallback (~500ms)
+- **No proxy** — runs in-process, no extra network hop, no vendor lock-in
+- **Cost reduction depends on your traffic mix** — typical 60–80% on mixed-complexity workloads, but the cascade is fully **configurable**: tune the keyword packs, complexity thresholds, and tier definitions to your own domain and task distribution to maximize savings
+- **Built-in telemetry** — pluggable backends (SQLite / Postgres / BigQuery / DynamoDB / GCS) or plain Python logging
+
+### Installation & Setup
+
+<Steps>
+<Step title="Install the required packages">
+```bash
+pip install -U crewai dynamic-model-router
+```
+</Step>
+
+<Step title="Configure CrewAI with the Dynamic Model Router">
+
+The integration is a drop-in `LLM` replacement:
+
+```python
+from crewai import Agent, Task, Crew
+from classifier.integrations.crewai import DynamicLLM
+
+llm = DynamicLLM()  # picks the cheapest tier per call
+
+researcher = Agent(
+    role="Research Analyst",
+    goal="Find concise, accurate answers",
+    backstory="Expert at distilling complex topics.",
+    llm=llm,
+)
+
+writer = Agent(
+    role="Technical Writer",
+    goal="Explain findings clearly for engineers",
+    backstory="Writes for technical audiences.",
+    llm=llm,
+)
+
+simple_task = Task(
+    description="What is the capital of France?",
+    expected_output="One-line answer.",
+    agent=researcher,
+)
+
+complex_task = Task(
+    description=(
+        "Compare CQRS and event sourcing for a healthcare records system "
+        "under HIPAA constraints. Discuss trade-offs."
+    ),
+    expected_output="A 2-paragraph technical comparison.",
+    agent=writer,
+)
+
+crew = Crew(agents=[researcher, writer], tasks=[simple_task, complex_task])
+result = crew.kickoff()
+print(result)
+```
+
+The simple task routes to the **low** tier, the complex one to **high** — automatically, in <15ms.
+</Step>
+
+<Step title="Optional — enable telemetry">
+
+By default, the router emits one INFO line per decision via Python `logging`. For full structured events (one JSON event per decision and per outcome, including model, tier, latency, cost, success), set the `DMR_TELEMETRY` env var before importing:
+
+```bash
+export DMR_TELEMETRY=1
+```
+
+```python
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+from classifier.integrations.crewai import DynamicLLM
+llm = DynamicLLM()
+# every call now emits a structured DEBUG line you can pipe to any log collector
+```
+
+To persist events into a queryable store (SQLite / Postgres / BigQuery / DynamoDB / GCS), construct a `Router` with a pluggable backend and use it directly:
+
+```python
+from classifier import Router
+from classifier.logger_backends import StdoutLoggerBackend
+
+router = Router(decision_logger=StdoutLoggerBackend())
+decision = router.classify("summarize this contract clause")
+# pass decision.model_name to your CrewAI LLM construction
+```
+
+See the [backends examples](https://github.com/manthan9891994/agents-multi-model-support/tree/master/examples/custom_backends) for SQLite / Postgres / BigQuery / DynamoDB / GCS templates.
+</Step>
+</Steps>
+
+## Why it helps
+
+Most CrewAI deployments pin one model per agent. That's wasteful — a "Hello, how are you?" task gets routed to the same frontier reasoning model (GPT-5, Claude Opus 4.x) as "Design a distributed consensus algorithm." Dynamic Model Router classifies each task and routes it to the right tier.
+
+The router learns from your telemetry. Feed it your decisions and outcomes (via any of the pluggable backends), tune the thresholds for your domain, and savings improve over time — there is no universal "X% cheaper" guarantee because the answer depends entirely on the data you put in.
+
+## Resources
+
+- **PyPI**: https://pypi.org/project/dynamic-model-router/
+- **GitHub**: https://github.com/manthan9891994/agents-multi-model-support
+- **License**: MIT
