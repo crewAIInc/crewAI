@@ -8,7 +8,6 @@ class MimirStorage(StorageBackend):
     """Storage backend powered by the official mimir-client SDK."""
 
     def __init__(self, config: Optional[Dict[str, Any]] = None) -> None:
-        # Importiamo il client reale qui dentro per sicurezza
         try:
             from mimir_client import MimirClient
         except ImportError:
@@ -18,66 +17,64 @@ class MimirStorage(StorageBackend):
             )
         
         self.config = config or {}
-        # Inizializziamo il client ufficiale di Mimir
         self.client = MimirClient(**self.config)
 
-    def save(self, value: Any, metadata: Optional[Dict[str, Any]] = None, agent: Optional[str] = None) -> None:
-        """Saves a value to the Mimir storage using artifact creation."""
-        # Creiamo una copia pulita dei metadati per evitare mutazioni in-place (Fix Immagine 3)
+    # Diventa ASYNC per supportare l'SDK di Mimir (Fix Immagine 4)
+    async def save(self, value: Any, metadata: Optional[Dict[str, Any]] = None, agent: Optional[str] = None) -> None:
+        """Saves a value to the Mimir storage using async artifact creation."""
         clean_metadata = dict(metadata) if metadata else {}
         if agent:
             clean_metadata["agent"] = agent
 
-        payload = {
-            "text": str(value),
-            "metadata": clean_metadata
-        }
-
-        # L'SDK di Mimir usa la creazione di artifact/documenti per salvare la memoria
         try:
-            self.client.create_artifact(payload=payload)
+            # Passiamo i parametri corretti richiesti esplicitamente dall'SDK (Fix Immagine 4)
+            await self.client.create_artifact(
+                artifact_type="memory",
+                content=str(value),
+                metadata=clean_metadata
+            )
         except Exception as e:
             logger.error(f"Error saving to MimirStorage: {e}")
             raise e
 
     def search(self, query: str, limit: int = 3, filter: Optional[Dict[str, Any]] = None, score_threshold: float = 0.35) -> List[Any]:
-        """Searches the Mimir storage using semantic vector search."""
-        # Se l'utente richiede filtri complessi non supportati, lanciamo un errore chiaro
+        """Searches the Mimir storage using full-text search."""
         if filter:
             raise NotImplementedError("Advanced filtering is not currently supported in MimirStorage search.")
 
         try:
-            # L'SDK richiede una ricerca semantica basata su vettori o testo (Fix Immagine 4)
-            # Nota: A seconda della configurazione, Mimir estrae internamente il vettore dalla query testuale
-            results = self.client.search_semantic(query_text=query, limit=limit)
+            # Usiamo search_fulltext per query testuali dirette senza bisogno di embedding (Fix Immagine 5)
+            results = self.client.search_fulltext(query=query, limit=limit)
             
-            # Formattiamo i risultati per l'interfaccia di CrewAI
             formatted_results = []
             for res in results:
-                # Filtriamo in base allo score se presente
                 if hasattr(res, 'score') and res.score < score_threshold:
                     continue
-                formatted_results.append(getattr(res, 'text', str(res)))
+                formatted_results.append(getattr(res, 'content', str(res)))
             return formatted_results
             
         except Exception as e:
             logger.error(f"Error searching in MimirStorage: {e}")
-            return []
+            # Rilanciamo l'errore per non mascherare i fallimenti (Fix Immagine 6)
+            raise e
 
-    def delete(self, key: str, filter: Optional[Dict[str, Any]] = None) -> None:
-        """Deletes entries from Mimir storage."""
-        # Se l'utente passa filtri che non possiamo gestire, blocchiamo esplicitamente (Fix Immagine 5)
+    def delete(self, key: str, filter: Optional[Dict[str, Any]] = None) -> int:
+        """Deletes entries from Mimir storage and returns the deleted count."""
         if filter and any(k for k in filter if k != "record_ids"):
             raise NotImplementedError(
                 "MimirStorage.delete() currently only supports deletion by 'record_ids'."
             )
 
+        deleted_count = 0
         try:
-            # Utilizziamo l'eliminazione nativa tramite ID dell'artifact
             record_ids = filter.get("record_ids") if filter else [key]
             if record_ids:
                 for r_id in record_ids:
                     self.client.delete_artifact(artifact_id=r_id)
+                    deleted_count += 1
+            
+            # Restituiamo un intero come richiesto dal protocollo StorageBackend (Fix Immagine 7)
+            return deleted_count
         except Exception as e:
             logger.error(f"Error deleting from MimirStorage: {e}")
             raise e

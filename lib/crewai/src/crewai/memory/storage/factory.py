@@ -52,7 +52,7 @@ def resolve_memory_storage(spec: str) -> StorageBackend | None:
     ``None`` means no factory is registered or it declined this spec; the
     caller then falls back to the built-in selection.
     """
-    # Spostiamo l'import qui dentro (Lazy Loading) così non rompe il programma agli altri utenti
+    # Fix del percorso di import (niente più "lib.crewai.src")
     if spec == "mimir":
         from crewai.memory.storage.mimir_storage import MimirStorage
         return MimirStorage()
