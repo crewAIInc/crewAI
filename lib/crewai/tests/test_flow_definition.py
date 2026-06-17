@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Annotated, Literal
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 import crewai.flow.dsl as flow_dsl
 import crewai.flow.flow_definition as flow_definition
@@ -45,17 +45,49 @@ def test_flow_public_exports_are_explicit():
         "FlowDefinition",
         "FlowDefinitionCondition",
         "FlowDefinitionDiagnostic",
+        "FlowDictStateDefinition",
         "FlowEachActionDefinition",
         "FlowEachInnerActionDefinition",
         "FlowExpressionActionDefinition",
         "FlowHumanFeedbackDefinition",
+        "FlowJsonSchemaStateDefinition",
         "FlowMethodDefinition",
         "FlowPersistenceDefinition",
+        "FlowPydanticStateDefinition",
         "FlowStateDefinition",
         "FlowToolActionDefinition",
+        "FlowUnknownStateDefinition",
     }
     assert "build_flow_structure" in flow_visualization.__all__
     assert "calculate_node_levels" not in flow_visualization.__all__
+
+
+def test_flow_state_definition_uses_discriminated_branches():
+    definition = flow_definition.FlowDefinition.model_validate(
+        {
+            "name": "TypedStateFlow",
+            "state": {
+                "type": "json_schema",
+                "json_schema": {"type": "object"},
+            },
+        }
+    )
+
+    assert isinstance(
+        definition.state,
+        flow_definition.FlowJsonSchemaStateDefinition,
+    )
+
+    with pytest.raises(ValidationError, match="extra_forbidden"):
+        flow_definition.FlowDefinition.model_validate(
+            {
+                "name": "InvalidStateFlow",
+                "state": {
+                    "type": "dict",
+                    "ref": "my_project.flows:ResearchState",
+                },
+            }
+        )
 
 
 def test_condition_combinators_return_nested_runtime_tree():
