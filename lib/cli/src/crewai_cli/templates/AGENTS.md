@@ -769,8 +769,31 @@ from crewai.tools import tool
 
 @tool("Calculator")
 def calculator(expression: str) -> str:
-    """Evaluates a mathematical expression and returns the result."""
-    return str(eval(expression))
+    """Evaluates a simple mathematical expression (e.g. '2 + 3 * 4') and returns the result."""
+    import ast
+    import operator
+
+    ops = {
+        ast.Add: operator.add,
+        ast.Sub: operator.sub,
+        ast.Mult: operator.mul,
+        ast.Div: operator.truediv,
+        ast.Pow: operator.pow,
+        ast.USub: operator.neg,
+    }
+
+    def _eval(node):
+        if isinstance(node, ast.Expression):
+            return _eval(node.body)
+        elif isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+            return node.value
+        elif isinstance(node, ast.BinOp) and type(node.op) in ops:
+            return ops[type(node.op)](_eval(node.left), _eval(node.right))
+        elif isinstance(node, ast.UnaryOp) and type(node.op) in ops:
+            return ops[type(node.op)](_eval(node.operand))
+        raise ValueError(f"Unsupported expression: {ast.dump(node)}")
+
+    return str(_eval(ast.parse(expression, mode="eval")))
 ```
 
 ### Built-in Tools (install with `uv add crewai-tools`)
