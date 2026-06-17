@@ -767,11 +767,11 @@ class CustomSearchTool(BaseTool):
 ```python
 from crewai.tools import tool
 
-@tool("ReadFile")
-def read_file(file_path: str) -> str:
-    """Reads and returns the contents of a file at the given path."""
-    with open(file_path, "r") as f:
-        return f.read()
+@tool("WordCount")
+def word_count(text: str) -> str:
+    """Counts the number of words in the given text."""
+    count = len(text.split())
+    return f"Word count: {count}"
 ```
 
 ### Built-in Tools (install with `uv add crewai-tools`)
