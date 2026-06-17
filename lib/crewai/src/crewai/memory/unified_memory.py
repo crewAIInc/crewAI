@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from concurrent.futures import Future, ThreadPoolExecutor
 import contextvars
-from datetime import datetime, timezone
+from datetime import datetime
 import threading
 import time
 from typing import TYPE_CHECKING, Annotated, Any, Literal
@@ -28,6 +28,7 @@ from crewai.memory.types import (
     MemoryMatch,
     MemoryRecord,
     ScopeInfo,
+    _utc_now,
     compute_composite_score,
     embed_text,
 )
@@ -848,7 +849,7 @@ class Memory(BaseModel):
         existing = self._storage.get_record(record_id)
         if existing is None:
             raise ValueError(f"Record not found: {record_id}")
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        now = _utc_now()
         updates: dict[str, Any] = {"last_accessed": now}
         if content is not None:
             updates["content"] = content

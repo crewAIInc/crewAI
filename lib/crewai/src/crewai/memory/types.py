@@ -9,6 +9,15 @@ from uuid import uuid4
 from pydantic import BaseModel, Field
 
 
+def _utc_now() -> datetime:
+    """Return the current UTC time as a naive datetime.
+
+    This replaces the deprecated ``datetime.utcnow()`` while keeping the
+    naive-datetime contract used throughout the memory subsystem.
+    """
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
 # When searching the vector store, we ask for more results than the caller
 # requested so that post-search steps (composite scoring, deduplication,
 # category filtering) have enough candidates to fill the final result set.
@@ -44,11 +53,11 @@ class MemoryRecord(BaseModel):
         description="Importance score from 0.0 to 1.0, affects retrieval ranking.",
     )
     created_at: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        default_factory=_utc_now,
         description="When the memory was created.",
     )
     last_accessed: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        default_factory=_utc_now,
         description="When the memory was last accessed.",
     )
     embedding: list[float] | None = Field(
@@ -361,7 +370,7 @@ def compute_composite_score(
         Tuple of (composite_score, match_reasons). match_reasons includes
         "semantic" always; "recency" if decay > 0.5; "importance" if record.importance > 0.5.
     """
-    age_seconds = (datetime.now(timezone.utc).replace(tzinfo=None) - record.created_at).total_seconds()
+    age_seconds = (_utc_now() - record.created_at).total_seconds()
     age_days = max(age_seconds / 86400.0, 0.0)
     decay = 0.5 ** (age_days / config.recency_half_life_days)
 
