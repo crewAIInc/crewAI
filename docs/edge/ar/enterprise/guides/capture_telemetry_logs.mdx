@@ -49,7 +49,9 @@ mode: "wide"
       - `otlp.ap1.datadoghq.com` (AP1)
     - **API Key** — مفتاح واجهة برمجة تطبيقات Datadog الخاص بك. راجع [كيفية إنشاء واحد](https://docs.datadoghq.com/account_management/api-app-keys/#api-keys).
 
-    يصدّر تكامل Datadog **التتبعات**.
+    يرسل قالب Datadog الافتراضي **التتبعات** إلى المسار `/v1/traces`. لتصدير **السجلات** عبر OTLP بدلاً من ذلك، أضف مجمّع **OpenTelemetry Logs** يشير إلى نفس مضيف OTLP الخاص بـ Datadog مع تعيين المسار إلى `/v1/logs` — يمكن للإشارتين العمل جنبًا إلى جنب.
+
+    لشحن السجلات عبر stdout (مسار Datadog Agent) بدلاً من OTLP، راجع [سجلات JSON المنظمة](/ar/enterprise/guides/structured_logs) و[لوحة معلومات Datadog لـ crewAI](/ar/enterprise/guides/datadog_dashboard).
 
     <Frame>![تهيئة مجمّع Datadog](/images/crewai-otel-collector-datadog.png)</Frame>
   </Tab>

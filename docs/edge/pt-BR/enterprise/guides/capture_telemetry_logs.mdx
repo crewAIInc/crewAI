@@ -49,7 +49,9 @@ Os dados de telemetria seguem as [convenções semânticas GenAI do OpenTelemetr
       - `otlp.ap1.datadoghq.com` (AP1)
     - **API Key** — Sua chave de API do Datadog. Veja [como criar uma](https://docs.datadoghq.com/account_management/api-app-keys/#api-keys).
 
-    A integração com o Datadog exporta **traces**.
+    O template padrão do Datadog envia **traces** para o caminho `/v1/traces`. Para exportar **logs** via OTLP, adicione um coletor **OpenTelemetry Logs** apontando para o mesmo host OTLP do Datadog com o caminho definido como `/v1/logs` — ambos os sinais podem rodar lado a lado.
+
+    Para envio de logs via stdout (o caminho do Datadog Agent) em vez de OTLP, veja [Logs JSON Estruturados](/pt-BR/enterprise/guides/structured_logs) e [Dashboard Datadog para crewAI](/pt-BR/enterprise/guides/datadog_dashboard).
 
     <Frame>![Configuração do coletor Datadog](/images/crewai-otel-collector-datadog.png)</Frame>
   </Tab>
