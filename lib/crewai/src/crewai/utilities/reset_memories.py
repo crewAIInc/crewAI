@@ -63,7 +63,14 @@ def _get_json_crew() -> Any | None:
     if crew_path is None:
         return None
 
-    crew, _ = load_crew(crew_path)
+    try:
+        crew, _ = load_crew(crew_path)
+    except Exception as exc:
+        click.echo(
+            f"Skipping JSON crew at {crew_path}: failed to load ({exc}).",
+            err=True,
+        )
+        return None
     return crew
 
 
