@@ -193,26 +193,24 @@ def _build_definition_state_model(
     kwargs = dict(state_definition.default or {})
 
     model_class: type[BaseModel] | None = None
-    if state_definition.ref:
+    state_ref = getattr(state_definition, "ref", None)
+    if state_ref:
         try:
-            resolved: Any = resolve_ref(state_definition.ref, field="state")
+            resolved: Any = resolve_ref(state_ref, field="state")
         except Exception:
-            logger.warning(
-                "Could not import state ref %r", state_definition.ref, exc_info=True
-            )
+            logger.warning("Could not import state ref %r", state_ref, exc_info=True)
         else:
             if isinstance(resolved, type) and issubclass(resolved, BaseModel):
                 model_class = resolved
             else:
-                logger.warning(
-                    "State ref %r is not a pydantic model", state_definition.ref
-                )
+                logger.warning("State ref %r is not a pydantic model", state_ref)
 
-    if model_class is None and state_definition.json_schema:
+    json_schema = getattr(state_definition, "json_schema", None)
+    if model_class is None and json_schema:
         from crewai.utilities.pydantic_schema_utils import create_model_from_schema
 
         try:
-            model_class = create_model_from_schema(state_definition.json_schema)
+            model_class = create_model_from_schema(json_schema)
         except Exception:
             logger.warning(
                 "Could not build a state model from the declared json_schema",

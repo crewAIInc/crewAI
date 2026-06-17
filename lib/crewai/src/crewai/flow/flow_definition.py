@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Any, Literal as TypingLiteral
+from typing import Annotated, Any, Literal as TypingLiteral, TypeAlias
 
 from pydantic import (
     BaseModel,
@@ -46,14 +46,18 @@ __all__ = [
     "FlowDefinition",
     "FlowDefinitionCondition",
     "FlowDefinitionDiagnostic",
+    "FlowDictStateDefinition",
     "FlowEachActionDefinition",
     "FlowEachInnerActionDefinition",
     "FlowExpressionActionDefinition",
     "FlowHumanFeedbackDefinition",
+    "FlowJsonSchemaStateDefinition",
     "FlowMethodDefinition",
     "FlowPersistenceDefinition",
+    "FlowPydanticStateDefinition",
     "FlowStateDefinition",
     "FlowToolActionDefinition",
+    "FlowUnknownStateDefinition",
 ]
 
 
@@ -74,13 +78,114 @@ class FlowDefinitionDiagnostic(BaseModel):
     path: str | None = None
 
 
-class FlowStateDefinition(BaseModel):
-    """Static description of a Flow state contract."""
+class FlowDictStateDefinition(BaseModel):
+    """Static description of a plain dictionary Flow state contract."""
 
-    type: TypingLiteral["dict", "pydantic", "json_schema", "unknown"] = "dict"
-    ref: str | None = None
-    json_schema: dict[str, Any] | None = None
-    default: dict[str, Any] | None = None
+    model_config = ConfigDict(extra="forbid")
+
+    type: TypingLiteral["dict"] = Field(
+        default="dict",
+        description="Plain dictionary state with optional default values.",
+        examples=["dict"],
+    )
+    default: dict[str, Any] | None = Field(
+        default=None,
+        description="Default state values applied before kickoff inputs.",
+        examples=[{"topic": "AI agents", "limit": 3}],
+    )
+
+
+class FlowPydanticStateDefinition(BaseModel):
+    """Static description of an importable Pydantic Flow state contract."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: TypingLiteral["pydantic"] = Field(
+        default="pydantic",
+        description="Importable Pydantic model used as the Flow state type.",
+        examples=["pydantic"],
+    )
+    ref: str | None = Field(
+        default=None,
+        description="Import reference for the state model, formatted as module:qualname.",
+        examples=["my_project.flows:ResearchState"],
+    )
+    json_schema: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "Fallback JSON Schema used when the Pydantic state ref is unavailable."
+        ),
+        examples=[
+            {
+                "type": "object",
+                "properties": {"topic": {"type": "string"}},
+                "required": ["topic"],
+            }
+        ],
+    )
+    default: dict[str, Any] | None = Field(
+        default=None,
+        description="Default state values applied before kickoff inputs.",
+        examples=[{"topic": "AI agents", "limit": 3}],
+    )
+
+
+class FlowJsonSchemaStateDefinition(BaseModel):
+    """Static description of an inline JSON Schema Flow state contract."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: TypingLiteral["json_schema"] = Field(
+        default="json_schema",
+        description="Inline JSON Schema used as the Flow state contract.",
+        examples=["json_schema"],
+    )
+    json_schema: dict[str, Any] = Field(
+        description="JSON Schema used to validate and document flow state.",
+        examples=[
+            {
+                "type": "object",
+                "properties": {"topic": {"type": "string"}},
+                "required": ["topic"],
+            }
+        ],
+    )
+    default: dict[str, Any] | None = Field(
+        default=None,
+        description="Default state values applied before kickoff inputs.",
+        examples=[{"topic": "AI agents", "limit": 3}],
+    )
+
+
+class FlowUnknownStateDefinition(BaseModel):
+    """Static description of a state contract that could not be serialized."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    type: TypingLiteral["unknown"] = Field(
+        default="unknown",
+        description="Unknown state representation; runtime falls back to dictionary state.",
+        examples=["unknown"],
+    )
+    ref: str | None = Field(
+        default=None,
+        description="Best-effort import reference for the unknown state type.",
+        examples=["my_project.flows:CustomState"],
+    )
+    default: dict[str, Any] | None = Field(
+        default=None,
+        description="Default state values applied before kickoff inputs.",
+        examples=[{"topic": "AI agents", "limit": 3}],
+    )
+
+
+FlowStateDefinition: TypeAlias = Annotated[
+    FlowDictStateDefinition
+    | FlowPydanticStateDefinition
+    | FlowJsonSchemaStateDefinition
+    | FlowUnknownStateDefinition,
+    Field(discriminator="type"),
+]
 
 
 class FlowConfigDefinition(BaseModel):
