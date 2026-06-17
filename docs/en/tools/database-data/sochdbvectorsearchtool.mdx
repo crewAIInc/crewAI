@@ -1,0 +1,77 @@
+---
+title: 'SochDB Vector Search Tool'
+description: 'Semantic search capabilities for CrewAI agents using SochDB'
+icon: vector-square
+mode: "wide"
+---
+
+## Overview
+
+The SochDB Vector Search Tool enables semantic search capabilities in your
+CrewAI agents by leveraging [SochDB](https://github.com/sochdb/sochdb), an
+AI-native database that supports hosted gRPC access and embedded deployments.
+This tool allows your agents to search through documents stored in a SochDB
+collection using semantic similarity.
+
+## Installation
+
+Install CrewAI tools with the SochDB extra:
+
+```bash
+uv add "crewai-tools[sochdb]" openai
+```
+
+## Basic Usage
+
+```python
+from crewai import Agent
+from crewai_tools import SochDBConfig, SochDBVectorSearchTool
+
+sochdb_tool = SochDBVectorSearchTool(
+    sochdb_config=SochDBConfig(
+        grpc_address="studio.agentslab.host:50053",
+        collection_name="knowledge",
+        namespace="default",
+        limit=3,
+    )
+)
+
+agent = Agent(
+    role="Research Assistant",
+    goal="Find relevant information in SochDB",
+    tools=[sochdb_tool],
+)
+```
+
+The tool automatically uses OpenAI embeddings by default. If you already have
+your own embedding function, pass it with `custom_embedding_fn`.
+
+## Tool Parameters
+
+### Required Parameters
+
+- `sochdb_config` (SochDBConfig): Configuration object containing all SochDB settings
+
+### SochDBConfig Parameters
+
+- `grpc_address` (str): Hosted SochDB gRPC address in `host:port` form
+- `collection_name` (str): Name of the SochDB collection to search
+- `namespace` (str): Namespace to search within (default: `default`)
+- `limit` (int): Maximum number of results to return (default: `3`)
+
+### Optional Tool Parameters
+
+- `custom_embedding_fn` (Callable[[str], list[float]]): Custom function for query vectorization
+- `embedding_model` (str): OpenAI embedding model used when no custom embedding function is provided
+
+## Filtering
+
+Pass a JSON object as `metadata_filter_json` when the tool is called to filter
+results by metadata.
+
+```python
+tool._run(
+    query="latest benchmark result",
+    metadata_filter_json='{"topic":"benchmark"}',
+)
+```

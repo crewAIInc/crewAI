@@ -192,6 +192,10 @@ from crewai_tools.tools.snowflake_search_tool.snowflake_search_tool import (
     SnowflakeConfig,
     SnowflakeSearchTool,
 )
+from crewai_tools.tools.sochdb_vector_search_tool.sochdb_search_tool import (
+    SochDBConfig,
+    SochDBVectorSearchTool,
+)
 from crewai_tools.tools.spider_tool.spider_tool import SpiderTool
 from crewai_tools.tools.stagehand_tool.stagehand_tool import StagehandTool
 from crewai_tools.tools.tavily_extractor_tool.tavily_extractor_tool import (
@@ -313,6 +317,8 @@ __all__ = [
     "SingleStoreSearchTool",
     "SnowflakeConfig",
     "SnowflakeSearchTool",
+    "SochDBConfig",
+    "SochDBVectorSearchTool",
     "SpiderTool",
     "StagehandTool",
     "TXTSearchTool",

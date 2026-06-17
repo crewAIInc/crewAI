@@ -89,6 +89,9 @@ exa-py = [
 qdrant-client = [
     "qdrant-client>=1.12.1",
 ]
+sochdb = [
+    "sochdb>=0.5.7",
+]
 apify = [
     "langchain-apify>=0.1.2,<1.0.0",
 ]
