@@ -1,103 +1,83 @@
-from __future__ import annotations
-import json
 import logging
-from datetime import datetime
-from typing import Any
+from typing import Any, Dict, List, Optional
+from crewai.memory.storage.backend import StorageBackend
 
-from mimir_client import MimirClient  # type: ignore
-from crewai.memory.types import MemoryRecord, ScopeInfo
+logger = logging.getLogger(__name__)
 
-_logger = logging.getLogger(__name__)
+class MimirStorage(StorageBackend):
+    """Storage backend powered by the official mimir-client SDK."""
 
-class MimirStorage:
-    """Mimir-backed storage for persistent cross-session agent memory."""
-
-    def __init__(
-        self,
-        path: str | None = None,
-        table_name: str = "crewai_memory",
-        **kwargs: Any
-    ) -> None:
-        """Initialize connection with Mimir memory engine."""
-        # If no path is provided, Mimir defaults to a local-first database
-        self.db_path = path or "./mimir_memory.db"
-        self._table_name = table_name
-        self.client = MimirClient(self.db_path)
-        _logger.info(f"Mimir Storage Backend initialized at {self.db_path}")
-
-    def save(self, records: list[MemoryRecord]) -> None:
-        """Save memory records into Mimir persistent database using 'remember'."""
-        if not records:
-            return
+    def __init__(self, config: Optional[Dict[str, Any]] = None) -> None:
+        # Importiamo il client reale qui dentro per sicurezza
+        try:
+            from mimir_client import MimirClient
+        except ImportError:
+            raise ImportError(
+                "The 'mimir-client' package is required to use MimirStorage. "
+                "Please install it using: pip install mimir-client"
+            )
         
-        for record in records:
-            # Create structured metadata for cross-session persistence
-            metadata = record.metadata or {}
-            metadata.update({
-                "scope": record.scope,
-                "categories": record.categories,
-                "created_at": record.created_at.isoformat()
-            })
+        self.config = config or {}
+        # Inizializziamo il client ufficiale di Mimir
+        self.client = MimirClient(**self.config)
+
+    def save(self, value: Any, metadata: Optional[Dict[str, Any]] = None, agent: Optional[str] = None) -> None:
+        """Saves a value to the Mimir storage using artifact creation."""
+        # Creiamo una copia pulita dei metadati per evitare mutazioni in-place (Fix Immagine 3)
+        clean_metadata = dict(metadata) if metadata else {}
+        if agent:
+            clean_metadata["agent"] = agent
+
+        payload = {
+            "text": str(value),
+            "metadata": clean_metadata
+        }
+
+        # L'SDK di Mimir usa la creazione di artifact/documenti per salvare la memoria
+        try:
+            self.client.create_artifact(payload=payload)
+        except Exception as e:
+            logger.error(f"Error saving to MimirStorage: {e}")
+            raise e
+
+    def search(self, query: str, limit: int = 3, filter: Optional[Dict[str, Any]] = None, score_threshold: float = 0.35) -> List[Any]:
+        """Searches the Mimir storage using semantic vector search."""
+        # Se l'utente richiede filtri complessi non supportati, lanciamo un errore chiaro
+        if filter:
+            raise NotImplementedError("Advanced filtering is not currently supported in MimirStorage search.")
+
+        try:
+            # L'SDK richiede una ricerca semantica basata su vettori o testo (Fix Immagine 4)
+            # Nota: A seconda della configurazione, Mimir estrae internamente il vettore dalla query testuale
+            results = self.client.search_semantic(query_text=query, limit=limit)
             
-            # Mimir uses 'remember' method to store long-term stable information
-            self.client.remember(
-                content=record.content,
-                metadata=metadata
+            # Formattiamo i risultati per l'interfaccia di CrewAI
+            formatted_results = []
+            for res in results:
+                # Filtriamo in base allo score se presente
+                if hasattr(res, 'score') and res.score < score_threshold:
+                    continue
+                formatted_results.append(getattr(res, 'text', str(res)))
+            return formatted_results
+            
+        except Exception as e:
+            logger.error(f"Error searching in MimirStorage: {e}")
+            return []
+
+    def delete(self, key: str, filter: Optional[Dict[str, Any]] = None) -> None:
+        """Deletes entries from Mimir storage."""
+        # Se l'utente passa filtri che non possiamo gestire, blocchiamo esplicitamente (Fix Immagine 5)
+        if filter and any(k for k in filter if k != "record_ids"):
+            raise NotImplementedError(
+                "MimirStorage.delete() currently only supports deletion by 'record_ids'."
             )
 
-    def search(
-        self,
-        query_embedding: list[float], # Provided by CrewAI interface
-        scope_prefix: str | None = None,
-        limit: int = 10,
-        min_score: float = 0.0,
-        **kwargs: Any
-    ) -> list[tuple[MemoryRecord, float]]:
-        """Search memories using Mimir hybrid 'recall' function."""
-        # Mimir supports hybrid search. We use recall to query relevant memories
-        raw_results = self.client.recall(query=kwargs.get("query_text", ""), limit=limit)
-        
-        out: list[tuple[MemoryRecord, float]] = []
-        for row in raw_results:
-            # Convert Mimir output row into CrewAI MemoryRecord format
-            record = MemoryRecord(
-                id=str(row.get("id")),
-                content=str(row.get("content")),
-                scope=str(row.get("metadata", {}).get("scope", "/")),
-                categories=row.get("metadata", {}).get("categories", []),
-                metadata=row.get("metadata", {}),
-                created_at=datetime.fromisoformat(row.get("metadata", {}).get("created_at", datetime.utcnow().isoformat()))
-            )
-            score = float(row.get("score", 1.0))
-            if score >= min_score:
-                out.append((record, score))
-                
-        return out[:limit]
-
-    def delete(self, record_ids: list[str] | None = None, **kwargs: Any) -> int:
-        """Remove memories using Mimir 'forget' function."""
-        if not record_ids:
-            return 0
-        count = 0
-        for rid in record_ids:
-            # Mimir uses 'forget' to remove or decay a specific memory record
-            self.client.forget(record_id=rid)
-            count += 1
-        return count
-
-    # --- Async implementations required by CrewAI architecture ---
-    async def asave(self, records: list[MemoryRecord]) -> None:
-        self.save(records)
-
-    async def asearch(
-        self,
-        query_embedding: list[float],
-        scope_prefix: str | None = None,
-        limit: int = 10,
-        min_score: float = 0.0,
-        **kwargs: Any
-    ) -> list[tuple[MemoryRecord, float]]:
-        return self.search(query_embedding, scope_prefix, limit, min_score, **kwargs)
-
-    async def adelete(self, record_ids: list[str] | None = None, **kwargs: Any) -> int:
-        return self.delete(record_ids, **kwargs)
+        try:
+            # Utilizziamo l'eliminazione nativa tramite ID dell'artifact
+            record_ids = filter.get("record_ids") if filter else [key]
+            if record_ids:
+                for r_id in record_ids:
+                    self.client.delete_artifact(artifact_id=r_id)
+        except Exception as e:
+            logger.error(f"Error deleting from MimirStorage: {e}")
+            raise e

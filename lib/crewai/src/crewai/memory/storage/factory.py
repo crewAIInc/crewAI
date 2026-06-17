@@ -15,9 +15,10 @@ the built-in default.
 """
 
 from __future__ import annotations
-from crewai.memory.storage.mimir_storage import MimirStorage
 from collections.abc import Callable
 from typing import TYPE_CHECKING
+
+from lib.crewai.src.crewai.memory.storage.mimir_storage import MimirStorage
 
 
 if TYPE_CHECKING:
@@ -51,10 +52,10 @@ def resolve_memory_storage(spec: str) -> StorageBackend | None:
     ``None`` means no factory is registered or it declined this spec; the
     caller then falls back to the built-in selection.
     """
-    # 1. Se l'utente chiede esplicitamente "mimir", restituiamo il nostro nuovo backend
+    # Spostiamo l'import qui dentro (Lazy Loading) così non rompe il programma agli altri utenti
     if spec == "mimir":
+        from crewai.memory.storage.mimir_storage import MimirStorage
         return MimirStorage()
 
-    # 2. Altrimenti, seguiamo il flusso normale della factory personalizzata
     factory = _factory
     return factory(spec) if factory is not None else None
