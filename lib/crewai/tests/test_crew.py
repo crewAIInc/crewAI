@@ -4584,6 +4584,26 @@ def test_reset_knowledge_with_no_crew_knowledge(researcher, writer):
     )
 
 
+def test_reset_memory_uses_full_unified_memory_reset(researcher):
+    crew = Crew(
+        agents=[researcher],
+        process=Process.sequential,
+        tasks=[
+            Task(description="Task 1", expected_output="output", agent=researcher),
+        ],
+        memory=True,
+    )
+
+    assert isinstance(crew._memory, Memory)
+    with patch.object(Memory, "reset_all") as reset_all, patch.object(
+        Memory, "reset"
+    ) as reset:
+        crew.reset_memories(command_type="memory")
+
+    reset_all.assert_called_once_with()
+    reset.assert_not_called()
+
+
 def test_reset_knowledge_with_only_crew_knowledge(researcher, writer):
     mock_ks = MagicMock(spec=Knowledge)
 

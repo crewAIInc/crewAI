@@ -1439,7 +1439,7 @@ requires-dist = [
     { name = "json5", specifier = "~=0.10.0" },
     { name = "jsonref", specifier = "~=1.1.0" },
     { name = "lancedb", specifier = ">=0.29.2,<0.30.1" },
-    { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.83.7,<1.84" },
+    { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.84.0,<1.85" },
     { name = "mcp", specifier = "~=1.26.0" },
     { name = "mem0ai", marker = "extra == 'mem0'", specifier = ">=2.0.0,<3" },
     { name = "openai", specifier = ">=2.30.0,<3" },
@@ -4078,7 +4078,7 @@ wheels = [
 
 [[package]]
 name = "litellm"
-version = "1.83.14"
+version = "1.84.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -4094,9 +4094,9 @@ dependencies = [
     { name = "tiktoken" },
     { name = "tokenizers" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/8d/7c/c095649380adc96c8630273c1768c2ad1e74aa2ee1dd8dd05d218a60569f/litellm-1.83.14.tar.gz", hash = "sha256:24aef9b47cdc424c833e32f3727f411741c690832cd1fe4405e0077144fe09c9", size = 14836599, upload-time = "2026-04-26T03:16:10.176Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b4/2c/eda7995bc9d6a7277be409a317893df52a25131a21ed572651a3c27ac20e/litellm-1.84.8.tar.gz", hash = "sha256:5a6349ce1c153fc27c9b1f88c39a396779c30af16704d9ef3633ccb24d04d374", size = 15117432, upload-time = "2026-06-13T01:25:25.125Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7f/5c/1b5691575420135e90578543b2bf219497caa33cfd0af64cb38f30288450/litellm-1.83.14-py3-none-any.whl", hash = "sha256:92b11ba2a32cf80707ddf388d18526696c7999a21b418c5e3b6eda1243d2cfdb", size = 16457054, upload-time = "2026-04-26T03:16:05.72Z" },
+    { url = "https://files.pythonhosted.org/packages/12/9b/70a4f3378130564505046e94ce521363f50d075198e16b7663b66b11eb23/litellm-1.84.8-py3-none-any.whl", hash = "sha256:297b81d56b3fdfc39411b0330edce0f29a4b2e82e90d5f73efdc102b57cb45e7", size = 16747828, upload-time = "2026-06-13T01:25:12.964Z" },
 ]
 
 [[package]]

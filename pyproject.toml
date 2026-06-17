@@ -193,8 +193,8 @@ exclude-newer = "3 days"
 # pip <26.1.1 has GHSA-58qw-9mgm-455v (archive handling); OSV considers 26.1.1 unaffected.
 # paramiko <5.0.0 has GHSA-r374-rxx8-8654 (SHA-1 in rsakey.py); OSV considers 5.0.0 unaffected. Transitive via composio-core.
 # starlette <1.3.1 has PYSEC-2026-161, GHSA-jp82-jpqv-5vv3, and GHSA-82w8-qh3p-5jfq. Transitive via fastapi.
-# litellm 1.83.8+ hard-pins openai==2.24.0, missing openai.types.responses used by crewai;
-# override to >=2.30.0 (the version litellm 1.83.7 used) until upstream relaxes the pin.
+# Keep OpenAI on the SDK range required by CrewAI when transitive dependencies
+# loosen or pin their own lower versions.
 override-dependencies = [
     "openai>=2.30.0,<3",
     "rich>=13.7.1",
