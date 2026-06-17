@@ -55,6 +55,7 @@ __all__ = [
     "FlowMethodDefinition",
     "FlowPersistenceDefinition",
     "FlowPydanticStateDefinition",
+    "FlowScriptActionDefinition",
     "FlowStateDefinition",
     "FlowToolActionDefinition",
     "FlowUnknownStateDefinition",
@@ -301,11 +302,39 @@ class FlowExpressionActionDefinition(BaseModel):
     expr: str
 
 
+class FlowScriptActionDefinition(BaseModel):
+    """A Flow method action that executes trusted inline Python."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    call: TypingLiteral["script"] = Field(
+        description="Action discriminator. Use script to execute trusted inline Python.",
+        examples=["script"],
+    )
+    code: str = Field(
+        description=(
+            "Trusted Python source executed as a generated function. Runtime values are "
+            "passed as state, outputs, input, and item; they are not interpolated into "
+            "the source. This is not sandboxed."
+        ),
+        examples=[
+            "state['normalized_topic'] = input.strip()\n"
+            "return state['normalized_topic']"
+        ],
+    )
+    language: TypingLiteral["python"] = Field(
+        default="python",
+        description="Script language. Only python is currently supported.",
+        examples=["python"],
+    )
+
+
 FlowInnerActionDefinition = (
     FlowCodeActionDefinition
     | FlowToolActionDefinition
     | FlowCrewActionDefinition
     | FlowExpressionActionDefinition
+    | FlowScriptActionDefinition
 )
 
 
@@ -357,6 +386,7 @@ FlowActionDefinition = (
     | FlowToolActionDefinition
     | FlowCrewActionDefinition
     | FlowExpressionActionDefinition
+    | FlowScriptActionDefinition
     | FlowEachActionDefinition
 )
 

@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import ast
 import asyncio
 from collections.abc import Callable
 import contextvars
 import inspect
+import os
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
 from crewai.flow.flow_definition import (
@@ -15,9 +17,11 @@ from crewai.flow.flow_definition import (
     FlowEachActionDefinition,
     FlowEachInnerActionDefinition,
     FlowExpressionActionDefinition,
+    FlowScriptActionDefinition,
     FlowToolActionDefinition,
 )
 from crewai.flow.runtime._expressions import evaluate_expression, render_with_block
+from crewai.flow.runtime._outputs import outputs_by_name
 from crewai.flow.runtime._refs import InvalidRefError, resolve_ref
 
 
@@ -29,6 +33,8 @@ __all__ = ["build_action"]
 
 LocalContext = dict[str, Any]
 _LOCAL_CONTEXT_KWARG = "__flow_definition_local_context"
+_ALLOW_SCRIPT_EXECUTION_ENV_VAR = "CREWAI_ALLOW_FLOW_SCRIPT_EXECUTION"
+_TRUSTED_SCRIPT_EXECUTION_VALUES = frozenset({"1", "true", "yes"})
 
 
 class _BuiltAction(Protocol):
@@ -140,6 +146,62 @@ class ExpressionAction:
         )
 
 
+class ScriptAction:
+    definition_type = FlowScriptActionDefinition
+
+    def __init__(self, flow: Flow[Any], definition: FlowScriptActionDefinition) -> None:
+        self.flow = flow
+        self.definition = definition
+        self.handler = self._compile_handler()
+
+    def run(self, *args: Any, **kwargs: Any) -> Any:
+        local_context = _pop_local_context(kwargs)
+        return self.handler(
+            state=self.flow.state,
+            outputs=outputs_by_name(
+                self.flow._method_outputs,
+                local_outputs=local_context.get("outputs") if local_context else None,
+            ),
+            input=args[0] if args else None,
+            item=local_context.get("item") if local_context else None,
+        )
+
+    def _compile_handler(self) -> Callable[..., Any]:
+        raw = os.environ.get(_ALLOW_SCRIPT_EXECUTION_ENV_VAR, "")
+        if raw.strip().lower() not in _TRUSTED_SCRIPT_EXECUTION_VALUES:
+            raise RuntimeError(
+                "Flow script execution is disabled by default. "
+                f"Set {_ALLOW_SCRIPT_EXECUTION_ENV_VAR}=1 to enable it only for "
+                "trusted flow definitions."
+            )
+
+        filename = f"crewai.flow.script.{self.flow._definition.name}"
+        module = ast.parse(self.definition.code, filename=filename)
+        function = ast.FunctionDef(
+            name="_flow_script",
+            args=ast.arguments(
+                posonlyargs=[],
+                args=[ast.arg(arg) for arg in ("state", "outputs", "input", "item")],
+                vararg=None,
+                kwonlyargs=[],
+                kw_defaults=[],
+                kwarg=None,
+                defaults=[],
+            ),
+            body=module.body or [ast.Pass()],
+            decorator_list=[],
+            returns=None,
+            type_comment=None,
+            type_params=[],
+        )
+        module.body = [function]
+        ast.fix_missing_locations(module)
+
+        namespace: dict[str, Any] = {"__name__": filename}
+        exec(compile(module, filename, "exec"), namespace)  # nosec B102 # noqa: S102
+        return cast(Callable[..., Any], namespace["_flow_script"])
+
+
 class EachAction:
     definition_type = FlowEachActionDefinition
 
@@ -199,6 +261,7 @@ _ACTION_TYPES: tuple[_ActionType, ...] = (
     ToolAction,
     CrewAction,
     ExpressionAction,
+    ScriptAction,
 )
 
 

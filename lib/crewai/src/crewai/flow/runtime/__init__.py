@@ -1090,6 +1090,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         def build(name: str, definition: FlowMethodDefinition) -> Callable[..., Any]:
             try:
                 return build_action(self, definition.do)
+            except RuntimeError:
+                raise
             except Exception as e:
                 unresolved.append(f"{name}: {e}")
                 return lambda *args, **kwargs: None

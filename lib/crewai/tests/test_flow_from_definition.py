@@ -1145,6 +1145,116 @@ methods:
     assert flow.kickoff(inputs={"rows": ["a", "b"]}) == ["async:a", "async:b"]
 
 
+def test_script_action_requires_explicit_opt_in():
+    yaml_str = """
+schema: crewai.flow/v1
+name: ScriptFlow
+methods:
+  normalize:
+    do:
+      call: script
+      code: |
+        return "blocked"
+    start: true
+"""
+
+    with pytest.raises(
+        RuntimeError, match="CREWAI_ALLOW_FLOW_SCRIPT_EXECUTION=1"
+    ) as exc_info:
+        Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    assert "methods with unresolvable actions" not in str(exc_info.value)
+
+
+def test_script_action_runs_python_imports_mutates_state_and_returns_value(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setenv("CREWAI_ALLOW_FLOW_SCRIPT_EXECUTION", "1")
+
+    yaml_str = """
+schema: crewai.flow/v1
+name: ScriptFlow
+methods:
+  normalize:
+    do:
+      call: script
+      code: |
+        import math
+
+        state["rounded"] = math.ceil(state["raw_score"])
+        return f"rounded:{state['rounded']}"
+    start: true
+"""
+
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+
+    assert flow.kickoff(inputs={"raw_score": 3.2}) == "rounded:4"
+    assert flow.state["rounded"] == 4
+
+
+def test_script_listener_reads_trigger_input_and_outputs(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setenv("CREWAI_ALLOW_FLOW_SCRIPT_EXECUTION", "1")
+
+    yaml_str = """
+schema: crewai.flow/v1
+name: ScriptFlow
+methods:
+  seed:
+    do:
+      call: expression
+      expr: "'alpha'"
+    start: true
+  combine:
+    do:
+      call: script
+      code: |
+        state["input_matches_output"] = input == outputs["seed"]
+        return f"{outputs['seed']}:{input}"
+    listen: seed
+"""
+
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+
+    assert flow.kickoff() == "alpha:alpha"
+    assert flow.state["input_matches_output"] is True
+
+
+def test_script_each_action_reads_item_and_inner_outputs(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setenv("CREWAI_ALLOW_FLOW_SCRIPT_EXECUTION", "1")
+
+    yaml_str = """
+schema: crewai.flow/v1
+name: ScriptEachFlow
+methods:
+  seed:
+    do:
+      call: expression
+      expr: "'global'"
+    start: true
+  process_rows:
+    do:
+      call: each
+      in: state.rows
+      do:
+        - clean:
+            call: script
+            code: |
+              return item.strip()
+        - tag:
+            call: script
+            code: |
+              return f"{outputs['seed']}:{outputs['clean']}"
+    listen: seed
+"""
+
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+
+    assert flow.kickoff(inputs={"rows": [" a ", " b "]}) == ["global:a", "global:b"]
+
+
 def test_each_action_uses_iteration_outputs_between_nested_actions():
     yaml_str = f"""
 schema: crewai.flow/v1
