@@ -1,134 +1,132 @@
 ---
 title: Neatlogs Integration
-description: Understand, debug, and share your CrewAI agent runs
+description: Collaborative debugging and observability for your CrewAI agents
 icon: magnifying-glass-chart
 mode: "wide"
 ---
 
-# Introduction
-
-Neatlogs helps you **see what your agent did**, **why**, and **share it**.
-
-It captures every step: thoughts, tool calls, responses, evaluations. No raw logs. Just clear, structured traces. Great for debugging and collaboration.
-
-## Why use Neatlogs?
-
-CrewAI agents use multiple tools and reasoning steps. When something goes wrong, you need context — not just errors.
-
-Neatlogs lets you:
-
-- Follow the full decision path
-- Add feedback directly on steps
-- Chat with the trace using AI assistant
-- Share runs publicly for feedback
-- Turn insights into tasks
-
-All in one place.
-
-Manage your traces effortlessly
-
-![Traces](/images/neatlogs-1.png)
-![Trace Response](/images/neatlogs-2.png)
-
-The best UX to view a CrewAI trace. Post comments anywhere you want. Use AI to debug.
-
-![Trace Details](/images/neatlogs-3.png)
-![Ai Chat Bot With A Trace](/images/neatlogs-4.png)
-![Comments Drawer](/images/neatlogs-5.png)
-
-## Core Features
-
-- **Trace Viewer**: Track thoughts, tools, and decisions in sequence
-- **Inline Comments**: Tag teammates on any trace step
-- **Feedback & Evaluation**: Mark outputs as correct or incorrect
-- **Error Highlighting**: Automatic flagging of API/tool failures
-- **Task Conversion**: Convert comments into assigned tasks
-- **Ask the Trace (AI)**: Chat with your trace using Neatlogs AI bot
-- **Public Sharing**: Publish trace links to your community
-
-## Quick Setup with CrewAI
-
-<Steps>
-  <Step title="Sign Up & Get API Key">
-    Visit [neatlogs.com](https://neatlogs.com/?utm_source=crewAI-docs), create a project, copy the API key.
-  </Step>
-  <Step title="Install SDK">
-    ```bash
-    pip install neatlogs
-    ```
-    (Latest version 0.8.0, Python 3.8+; MIT license)
-  </Step>
-  <Step title="Initialize Neatlogs">
-    Before starting Crew agents, add:
-
-    ```python
-    import neatlogs
-    neatlogs.init("YOUR_PROJECT_API_KEY")
-    ```
-
-    Agents run as usual. Neatlogs captures everything automatically.
-
-  </Step>
-</Steps>
-
-
-
-## Under the Hood
-
-According to GitHub, Neatlogs:
-
-- Captures thoughts, tool calls, responses, errors, and token stats
-- Supports AI-powered task generation and robust evaluation workflows
-
-All with just two lines of code.
-
-
-
-## Watch It Work
-
-### 🔍 Full Demo (4 min)
+[Neatlogs](https://neatlogs.com/?utm_source=crewAI-docs) is a collaborative debugging workspace for AI agent teams. It captures every LLM call, tool invocation, token count, and latency and surfaces it all in a shared dashboard your whole team can search, comment on, and act from.
 
 <iframe
   className="w-full aspect-video rounded-xl"
-  src="https://www.youtube.com/embed/8KDme9T2I7Q?si=b8oHteaBwFNs_Duk"
-  title="NeatLogs overview"
+  src="https://www.youtube.com/embed/dfVGAp7xVC8"
+  title="Neatlogs overview"
   frameBorder="0"
   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
   allowFullScreen
-></iframe>
+/>
 
-### ⚙️ CrewAI Integration (30 s)
+## What is Neatlogs?
 
+{/* ADD YOUTUBE VIDEO HERE - team to provide URL */}
+{/*
 <iframe
   className="w-full aspect-video rounded-xl"
-  src="https://www.loom.com/embed/9c78b552af43452bb3e4783cb8d91230?sid=e9d7d370-a91a-49b0-809e-2f375d9e801d"
-  title="Loom video player"
+  src="https://www.youtube.com/embed/YOUR_VIDEO_ID"
+  title="What is Neatlogs"
   frameBorder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
   allowFullScreen
-></iframe>
+/>
+*/}
 
+Agent failures rarely throw exceptions. They produce wrong outputs, miss tool calls, or hallucinate. Neatlogs gives your team the full picture: what the agent decided, why, and where it went wrong.
 
+<CardGroup cols={2}>
+  <Card title="Trace Viewer" icon="list-tree">
+    Follow every thought, tool call, and decision in sequence. Token counts and latency included.
+  </Card>
+  <Card title="AI-Powered Search" icon="sparkles">
+    Find traces, runs, and patterns in plain English. No query language needed.
+  </Card>
+  <Card title="Inline Comments" icon="message">
+    Tag teammates on any trace step. Threads keep investigation in one place.
+  </Card>
+  <Card title="Feedback & Evaluation" icon="thumbs-up">
+    Mark outputs correct or incorrect. Build eval datasets straight from production traces.
+  </Card>
+  <Card title="Ask the Trace" icon="robot">
+    Chat with your trace using the built-in AI assistant to surface root causes fast.
+  </Card>
+  <Card title="Public Sharing" icon="share-nodes">
+    Publish trace links to your community or stakeholders for async review.
+  </Card>
+</CardGroup>
 
-## Links & Support
+## Quick Setup
 
-- 📘 [Neatlogs Docs](https://docs.neatlogs.com/)
-- 🔐 [Dashboard & API Key](https://app.neatlogs.com/)
-- 🐦 [Follow on Twitter](https://twitter.com/neatlogs)
-- 📧 Contact: hello@neatlogs.com
-- 🛠 [GitHub SDK](https://github.com/NeatLogs/neatlogs)
+<Steps>
+  <Step title="Sign up and get your API key">
+    Go to [neatlogs.com](https://neatlogs.com/?utm_source=crewAI-docs), create a project, and copy the API key from your dashboard.
+  </Step>
+  <Step title="Install the SDK">
+    ```bash
+    pip install neatlogs
+    ```
+  </Step>
+  <Step title="Add this before your Crew runs">
+    Call `neatlogs.init()` before importing CrewAI so the auto-instrumentation patches land first.
 
+    ```python
+    import os
+    import neatlogs
 
+    neatlogs.init(
+        api_key=os.environ["NEATLOGS_API_KEY"],
+        endpoint=os.environ["NEATLOGS_ENDPOINT"],
+        workflow_name="my-agent",
+        instrumentations=["crewai"],
+    )
 
-## TL;DR
+    # Now import and run your crew as normal
+    from crewai import Crew, Agent, Task
+    ```
 
-With just:
+    That's it — no changes to the rest of your code.
+  </Step>
+  <Step title="Traces logged directly in your dashboard">
+    Every tool call, agent run, and LLM call is captured and surfaced in your Neatlogs dashboard automatically. Tag teammates and leave comments directly on any trace step — no context switching, no Slack threads, no copy-pasting outputs.
 
-```bash
-pip install neatlogs
+    <video autoPlay loop muted playsInline className="w-full rounded-xl">
+      <source src="/images/neatlogs-traces.mp4" type="video/mp4" />
+    </video>
+  </Step>
+  <Step title="Experiments — version control for your prompts">
+    Iterate on prompts without touching production. Neatlogs gives you version control for every prompt in your crew and a playground to test changes side by side — so you can improve agent behaviour safely before it goes anywhere near your live system.
 
-import neatlogs
-neatlogs.init("YOUR_API_KEY")
+    <video autoPlay loop muted playsInline className="w-full rounded-xl">
+      <source src="/images/neatlogs-experiments.mp4" type="video/mp4" />
+    </video>
+  </Step>
+  <Step title="Code fixes directly in your IDE">
+    Get agent improvement suggestions and code fixes surfaced straight into Cursor, Codex, Claude Code, and other AI-native editors. Debug and improve your crew without leaving the tools you already work in.
 
-You can now capture, understand, share, and act on your CrewAI agent runs in seconds.
-No setup overhead. Full trace transparency. Full team collaboration.
-```
+    <video autoPlay loop muted playsInline className="w-full rounded-xl">
+      <source src="/images/neatlogs-codefixes.mp4" type="video/mp4" />
+    </video>
+  </Step>
+  <Step title="Human evaluations">
+    Bring your team in to review agent outputs, mark runs as correct or incorrect, and build evaluation datasets straight from production traces. Close the loop between what your agents produce and what they should produce.
+
+    <video autoPlay loop muted playsInline className="w-full rounded-xl">
+      <source src="/images/neatlogs-evals.mp4" type="video/mp4" />
+    </video>
+  </Step>
+</Steps>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Neatlogs Docs" icon="book" href="https://docs.neatlogs.com/">
+    Full SDK reference and integration guides
+  </Card>
+  <Card title="Dashboard & API Key" icon="key" href="https://neatlogs.com/?utm_source=crewAI-docs">
+    Create a project and get your API key
+  </Card>
+  <Card title="GitHub SDK" icon="github" href="https://github.com/NeatLogs/neatlogs">
+    MIT licensed · Python 3.8+
+  </Card>
+  <Card title="Contact" icon="envelope" href="mailto:hello@neatlogs.com">
+    hello@neatlogs.com
+  </Card>
+</CardGroup>
