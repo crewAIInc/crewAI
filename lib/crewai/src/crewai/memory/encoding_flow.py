@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from concurrent.futures import Future, ThreadPoolExecutor
 import contextvars
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 import math
 from typing import Any
@@ -376,7 +376,7 @@ class EncodingFlow(Flow[EncodingState]):
         conflicts from two operations targeting the same record.
         """
         items = list(self.state.items)
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
 
         # Multiple items may reference the same existing record (because their
         # similar_records overlap). Collect one action per record_id, first wins.
