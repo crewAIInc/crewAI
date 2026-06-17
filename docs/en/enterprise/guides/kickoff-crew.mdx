@@ -86,6 +86,60 @@ curl -H "Authorization: Bearer YOUR_CREW_TOKEN" https://your-crew-url.crewai.com
 
 Your bearer token is available on the Status tab of your crew's detail page.
 
+## File Uploads
+
+When your crew or flow includes file-typed state fields (using `ImageFile`, `PDFFile`, or `File` from `crewai-files`), these fields automatically render as file upload dropzones in the Run tab UI. Users can drag and drop files directly, and the Platform handles storage and delivery to your agents.
+
+### Multipart Kickoff (Recommended)
+
+Send files directly with the kickoff request using `multipart/form-data`:
+
+```bash
+curl -X POST https://your-deployment.crewai.com/kickoff \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -F 'inputs={"title": "Report"}' \
+  -F 'document=@/path/to/file.pdf'
+```
+
+Files are automatically stored and converted to file objects. The agent receives the file with provider-specific optimization (inline base64, file upload API, or URL reference depending on the LLM provider).
+
+### JSON Kickoff with File URLs
+
+If you have files already hosted at URLs, pass them via `input_files`:
+
+```bash
+curl -X POST https://your-deployment.crewai.com/kickoff \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "inputs": {"title": "Report"},
+    "input_files": {"document": "https://example.com/file.pdf"}
+  }'
+```
+
+### Separate Upload + Kickoff
+
+Upload files first, then reference them by URL:
+
+```bash
+# Step 1: Upload
+curl -X POST https://your-deployment.crewai.com/files \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -F 'file=@/path/to/file.pdf' \
+  -F 'field_name=document'
+# Returns: {"url": "https://...", "field_name": "document"}
+
+# Step 2: Kickoff with URL
+curl -X POST https://your-deployment.crewai.com/kickoff \
+  -H 'Authorization: Bearer YOUR_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -d '{"inputs": {"title": "Report"}, "input_files": {"document": "https://..."}}'
+```
+
+<Note type="info">
+File uploads work the same way for both crews and flows. Define file-typed fields in your state schema, and the Platform UI and API will handle uploads automatically.
+</Note>
+
 ### Checking Crew Health
 
 Before executing operations, you can verify that your crew is running properly:
