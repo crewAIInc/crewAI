@@ -17,8 +17,13 @@ class MimirStorage(StorageBackend):
             )
         
         self.config = config or {}
-        # Inization synchronous code for MimirSyncClient
-        self.client = MimirSyncClient(**self.config)
+        
+        # Filtriamo la configurazione per passare solo i parametri supportati (Fix Immagine 14)
+        allowed_keys = {"api_url", "tenant", "timeout"}
+        filtered_config = {k: v for k, v in self.config.items() if k in allowed_keys}
+        
+        # Initialize synchronous MimirSyncClient (Fix typo Immagine 14 e 15)
+        self.client = MimirSyncClient(**filtered_config)
 
     def save(self, value: Any, metadata: Optional[Dict[str, Any]] = None, agent: Optional[str] = None) -> None:
         """Saves a value to the Mimir storage synchronously using artifact creation."""
