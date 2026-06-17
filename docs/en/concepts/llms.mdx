@@ -1293,6 +1293,79 @@ In this section, you'll find detailed examples that help you select, configure, 
     uv add 'crewai[litellm]'
     ```
   </Accordion>
+
+  <Accordion title="FuturMix">
+    [FuturMix](https://futurmix.ai) is an OpenAI-compatible AI gateway that provides access to 22+ models from OpenAI, Anthropic, and Google through a single endpoint.
+
+    Since FuturMix is fully OpenAI-compatible, it works with CrewAI's native OpenAI integration — no LiteLLM required.
+
+    Set the following environment variables in your `.env` file:
+    ```toml Code
+    OPENAI_API_KEY=<your-futurmix-api-key>
+    OPENAI_API_BASE=https://futurmix.ai/v1
+    ```
+
+    **Using the LLM Class:**
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="openai/gpt-4o",
+        base_url="https://futurmix.ai/v1",
+        api_key="your-futurmix-api-key",
+    )
+    ```
+
+    **Using Environment Variables:**
+    ```python Code
+    import os
+
+    os.environ["OPENAI_API_KEY"] = "your-futurmix-api-key"
+    os.environ["OPENAI_API_BASE"] = "https://futurmix.ai/v1"
+
+    # Then use any supported model name
+    agent = Agent(
+        role="Researcher",
+        goal="Research AI trends",
+        backstory="An AI research specialist.",
+        llm="openai/gpt-4o",  # Or any model available on FuturMix
+    )
+    ```
+
+    **Using Other Model Providers Through FuturMix:**
+    ```python Code
+    from crewai import LLM
+
+    # Access Anthropic models through FuturMix
+    claude_llm = LLM(
+        model="openai/claude-sonnet-4-20250514",
+        base_url="https://futurmix.ai/v1",
+        api_key="your-futurmix-api-key",
+    )
+
+    # Access Google models through FuturMix
+    gemini_llm = LLM(
+        model="openai/gemini-2.5-flash-preview-04-17",
+        base_url="https://futurmix.ai/v1",
+        api_key="your-futurmix-api-key",
+    )
+    ```
+
+    | Model                              | Provider   | Context Window  |
+    |------------------------------------|------------|----------------|
+    | gpt-4o                             | OpenAI     | 128K tokens    |
+    | gpt-4o-mini                        | OpenAI     | 128K tokens    |
+    | o4-mini                            | OpenAI     | 200K tokens    |
+    | claude-sonnet-4-20250514           | Anthropic  | 200K tokens    |
+    | claude-3-5-haiku-20241022          | Anthropic  | 200K tokens    |
+    | gemini-2.5-flash-preview-04-17     | Google     | 1M tokens      |
+    | gemini-2.0-flash                   | Google     | 1M tokens      |
+
+    **Note:** Since FuturMix is OpenAI-compatible, it uses CrewAI's native OpenAI provider. Install the OpenAI extras:
+    ```bash
+    uv add "crewai[openai]"
+    ```
+  </Accordion>
 </AccordionGroup>
 
 ## Streaming Responses
