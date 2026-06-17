@@ -15,10 +15,13 @@ from crewai.flow.flow_definition import (
     FlowConversationalRouterDefinition,
     FlowDefinition,
     FlowDefinitionDiagnostic,
+    FlowDictStateDefinition,
     FlowHumanFeedbackDefinition,
     FlowMethodDefinition,
     FlowPersistenceDefinition,
+    FlowPydanticStateDefinition,
     FlowStateDefinition,
+    FlowUnknownStateDefinition,
     _object_ref,
 )
 from crewai.flow.flow_wrappers import (
@@ -185,12 +188,11 @@ def _build_state_definition(
         default = None
         if isinstance(state_value, dict):
             default = _serialize_static_value(state_value, diagnostics, "state.default")
-        return FlowStateDefinition(type="dict", default=default)
+        return FlowDictStateDefinition(default=default)
     if isinstance(state_value, type) and issubclass(state_value, PydanticBaseModel):
-        return FlowStateDefinition(type="pydantic", ref=_state_ref(state_value))
+        return FlowPydanticStateDefinition(ref=_state_ref(state_value))
     if isinstance(state_value, PydanticBaseModel):
-        return FlowStateDefinition(
-            type="pydantic",
+        return FlowPydanticStateDefinition(
             ref=_state_ref(state_value),
             default=_serialize_static_value(state_value, diagnostics, "state.default"),
         )
@@ -201,7 +203,7 @@ def _build_state_definition(
             message=f"could not serialize state type {_object_ref(state_value)}",
         )
     )
-    return FlowStateDefinition(type="unknown", ref=_state_ref(state_value))
+    return FlowUnknownStateDefinition(ref=_state_ref(state_value))
 
 
 def _build_config_definition(
