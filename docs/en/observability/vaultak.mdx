@@ -1,0 +1,153 @@
+---
+title: Vaultak Integration
+description: Runtime security and behavioral monitoring for CrewAI agents
+icon: shield-halved
+mode: "wide"
+---
+
+# Vaultak Integration
+
+[Vaultak](https://vaultak.com) is a runtime security platform that wraps your CrewAI agents with
+real-time protection. Every tool call and LLM action is risk-scored (0–10), checked against your policy
+rules, and automatically blocked or rolled back if it exceeds your threshold — before it touches your
+production systems.
+
+> **What is Vaultak?** Vaultak intercepts agent actions in real time, enforces policy rules, scans tool
+> outputs for PII, alerts on errors, and triggers automatic rollback on failures. It's purpose-built for
+> agentic workloads that can write to databases, send emails, execute code, or call external APIs.
+
+## Why use Vaultak with CrewAI?
+
+CrewAI agents are powerful — but give them tools and they can cause real damage: deleted records,
+leaked PII, unauthorized transactions. Vaultak adds a security layer without changing your crew logic:
+
+- **Risk scoring** on every tool call before it executes
+- **Policy enforcement** — block actions that violate your rules
+- **PII masking** — strip sensitive data from tool outputs before they reach the LLM
+- **Automatic rollback** on chain errors
+- **Full audit trail** in your Vaultak dashboard — every action, every risk score
+
+## Get Started
+
+<Steps>
+  <Step title="Sign up and get your API key">
+    Create an account at [vaultak.com](https://vaultak.com) and copy your API key from the dashboard.
+    It starts with `vtk_`.
+  </Step>
+
+  <Step title="Install the package">
+    ```bash
+    pip install langchain-vaultak
+    ```
+
+    Requires Python 3.8+, `langchain-core >= 0.1.0`, and `vaultak >= 0.1.0`.
+  </Step>
+
+  <Step title="Attach the handler to your LLM">
+    Pass `VaultakCallbackHandler` as a callback to the LLM your agents use.
+    CrewAI agents forward LLM callbacks automatically to every task and tool call.
+
+    ```python
+    from crewai import Agent, Task, Crew, Process
+    from langchain_openai import ChatOpenAI
+    from langchain_vaultak import VaultakCallbackHandler
+
+    # Initialize the security handler
+    vaultak = VaultakCallbackHandler(
+        api_key="vtk_...",
+        agent_name="research-crew",
+        block_on_high_risk=True,
+        risk_threshold=7.0,
+        verbose=True,
+    )
+
+    # Attach to the LLM — all agents that use this LLM are now monitored
+    llm = ChatOpenAI(model="gpt-4o", callbacks=[vaultak])
+
+    researcher = Agent(
+        role="Senior Research Analyst",
+        goal="Uncover the latest AI developments",
+        backstory="You work at a leading tech think tank.",
+        verbose=True,
+        llm=llm,
+    )
+
+    writer = Agent(
+        role="Tech Content Strategist",
+        goal="Craft compelling content on tech advancements",
+        backstory="You turn complex research into engaging narratives.",
+        verbose=True,
+        llm=llm,
+    )
+
+    task1 = Task(
+        description="Analyze the latest AI advancements in 2025.",
+        expected_output="Bullet-point analysis report",
+        agent=researcher,
+    )
+
+    task2 = Task(
+        description="Write a blog post based on the research findings.",
+        expected_output="Full blog post of at least 4 paragraphs",
+        agent=writer,
+    )
+
+    crew = Crew(
+        agents=[researcher, writer],
+        tasks=[task1, task2],
+        process=Process.sequential,
+        verbose=True,
+    )
+
+    result = crew.kickoff()
+    ```
+  </Step>
+
+  <Step title="View results in your dashboard">
+    Every action is now visible at [app.vaultak.com](https://app.vaultak.com):
+    real-time risk scores, full action history, policy violations, and alerts.
+    Configure or tighten policy rules without touching your code.
+  </Step>
+</Steps>
+
+## Configuration
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `api_key` | `str` | — | Your Vaultak API key — required |
+| `agent_name` | `str` | `"langchain-agent"` | Label for this crew in the Vaultak dashboard |
+| `block_on_high_risk` | `bool` | `True` | Raise an exception to halt the crew when risk score exceeds the threshold |
+| `risk_threshold` | `float` | `7.0` | Score (0–10) above which actions are blocked |
+| `verbose` | `bool` | `False` | Log every scored action to stdout |
+
+### Stricter threshold for sensitive workloads
+
+For crews with access to production databases or financial systems, lower the threshold:
+
+```python
+vaultak = VaultakCallbackHandler(
+    api_key="vtk_...",
+    agent_name="prod-db-crew",
+    risk_threshold=5.0,  # Block anything above medium risk
+    verbose=True,        # Log every scored action to stdout
+)
+```
+
+## What gets monitored
+
+| CrewAI event | Vaultak action |
+|---|---|
+| Chain/crew starts | Opens a monitoring session |
+| Agent picks a tool | Risk-scores the action (0–10); blocks if above threshold |
+| Tool call starts | Checks against your policy rules |
+| Tool call returns output | Scans for PII and masks it before it reaches the next agent |
+| Tool or LLM error | Sends an alert to your dashboard |
+| Chain error | Triggers automatic rollback |
+| Crew completes | Closes the monitoring session |
+
+## Links
+
+- [Vaultak documentation](https://docs.vaultak.com)
+- [PyPI package](https://pypi.org/project/langchain-vaultak)
+- [GitHub](https://github.com/vaultak/langchain-vaultak)
+- [Dashboard](https://app.vaultak.com)
