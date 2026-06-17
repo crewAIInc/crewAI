@@ -36,7 +36,7 @@ multion = [
     "multion>=1.1.0",
 ]
 firecrawl-py = [
-    "firecrawl-py>=1.8.0",
+    "firecrawl-py>=4.0.0,<5",
 ]
 composio-core = [
     "composio-core>=0.6.11.post1",

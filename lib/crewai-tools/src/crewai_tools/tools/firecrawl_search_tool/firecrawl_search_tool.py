@@ -7,7 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 
 try:
-    from firecrawl import FirecrawlApp  # type: ignore[import-untyped]
+    from firecrawl import Firecrawl  # type: ignore[import-untyped]
 
     FIRECRAWL_AVAILABLE = True
 except ImportError:
@@ -15,6 +15,7 @@ except ImportError:
 
 
 class FirecrawlSearchToolSchema(BaseModel):
+    """Input schema for the Firecrawl search tool."""
     query: str = Field(description="Search query")
 
 
@@ -74,15 +75,17 @@ class FirecrawlSearchTool(BaseTool):
     )
 
     def __init__(self, api_key: str | None = None, **kwargs: Any) -> None:
+        """Initialize the tool and its Firecrawl v2 client."""
         super().__init__(**kwargs)
         self.api_key = api_key
         self._initialize_firecrawl()
 
     def _initialize_firecrawl(self) -> None:
+        """Import firecrawl-py (installing it on demand if missing) and build the client."""
         try:
-            from firecrawl import FirecrawlApp
+            from firecrawl import Firecrawl
 
-            self._firecrawl = FirecrawlApp(api_key=self.api_key)
+            self._firecrawl = Firecrawl(api_key=self.api_key)
         except ImportError:
             import click
 
@@ -92,23 +95,24 @@ class FirecrawlSearchTool(BaseTool):
                 import subprocess
 
                 try:
-                    subprocess.run(["uv", "add", "firecrawl-py"], check=True)  # noqa: S607
-                    from firecrawl import FirecrawlApp
+                    subprocess.run(["uv", "add", "firecrawl-py>=4.0.0,<5"], check=True)  # noqa: S607
+                    from firecrawl import Firecrawl
 
-                    self._firecrawl = FirecrawlApp(api_key=self.api_key)
+                    self._firecrawl = Firecrawl(api_key=self.api_key)
                 except subprocess.CalledProcessError as e:
                     raise ImportError("Failed to install firecrawl-py package") from e
             else:
                 raise ImportError(
-                    "`firecrawl-py` package not found, please run `uv add firecrawl-py`"
+                    "`firecrawl-py` package not found, please run `uv add 'firecrawl-py>=4.0.0,<5'`"
                 ) from None
 
     def _run(
         self,
         query: str,
     ) -> Any:
+        """Run a Firecrawl web search for the query and return the results."""
         if not self._firecrawl:
-            raise RuntimeError("FirecrawlApp not properly initialized")
+            raise RuntimeError("Firecrawl client not properly initialized")
 
         return self._firecrawl.search(
             query=query,
@@ -117,7 +121,7 @@ class FirecrawlSearchTool(BaseTool):
 
 
 try:
-    from firecrawl import FirecrawlApp  # noqa: F401
+    from firecrawl import Firecrawl  # noqa: F401
 
     if not getattr(FirecrawlSearchTool, "_model_rebuilt", False):
         FirecrawlSearchTool.model_rebuild()

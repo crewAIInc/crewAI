@@ -14,7 +14,7 @@ mode: "wide"
 ## Installation
 
 - Get an API key from [firecrawl.dev](https://firecrawl.dev) and set it in environment variables (`FIRECRAWL_API_KEY`).
-- Install the [Firecrawl SDK](https://github.com/mendableai/firecrawl) along with `crewai[tools]` package:
+- Install the [Firecrawl SDK](https://github.com/firecrawl/firecrawl) along with `crewai[tools]` package:
 
 ```shell
 pip install firecrawl-py 'crewai[tools]'
@@ -32,11 +32,6 @@ tool = FirecrawlSearchTool(query='what is firecrawl?')
 
 ## Arguments
 
-- `api_key`: Optional. Specifies Firecrawl API key. Defaults is the `FIRECRAWL_API_KEY` environment variable.
-- `query`: The search query string to be used for searching.
-- `page_options`: Optional. Options for result formatting.
-  - `onlyMainContent`: Optional. Only return the main content of the page excluding headers, navs, footers, etc.
-  - `includeHtml`: Optional. Include the raw HTML content of the page. Will output a html key in the response.
-  - `fetchPageContent`: Optional. Fetch the full content of the page.
-- `search_options`: Optional. Options for controlling the crawling behavior.
-  - `limit`: Optional. Maximum number of pages to crawl.
+- `query`: Required. The search query.
+- `config`: Optional. A dictionary of [Firecrawl v2 search options](https://docs.firecrawl.dev/api-reference/endpoint/search) passed directly to the SDK — for example `limit`, `sources`, `location`, `tbs`, and `scrape_options` to scrape the result pages.
+- `api_key`: Optional. Your Firecrawl API key. Defaults to the `FIRECRAWL_API_KEY` environment variable.

@@ -9,7 +9,7 @@ from crewai_tools.security.safe_path import validate_url
 
 
 try:
-    from firecrawl import FirecrawlApp  # type: ignore[import-untyped]
+    from firecrawl import Firecrawl  # type: ignore[import-untyped]
 
     FIRECRAWL_AVAILABLE = True
 except ImportError:
@@ -17,6 +17,7 @@ except ImportError:
 
 
 class FirecrawlCrawlWebsiteToolSchema(BaseModel):
+    """Input schema for the Firecrawl crawl tool."""
     url: str = Field(description="Website URL")
 
 
@@ -29,7 +30,7 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
 
     Default configuration options (Firecrawl v2 API):
         max_discovery_depth (int): Maximum depth for discovering pages. Default: 2
-        ignore_sitemap (bool): Whether to ignore sitemap. Default: True
+        sitemap (str): Sitemap usage mode ("skip", "include", "only"). Default: "skip"
         limit (int): Maximum number of pages to crawl. Default: 10
         allow_external_links (bool): Allow crawling external links. Default: False
         allow_subdomains (bool): Allow crawling subdomains. Default: False
@@ -50,7 +51,7 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
     config: dict[str, Any] | None = Field(
         default_factory=lambda: {
             "max_discovery_depth": 2,
-            "ignore_sitemap": True,
+            "sitemap": "skip",
             "limit": 10,
             "allow_external_links": False,
             "allow_subdomains": False,
@@ -75,15 +76,17 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
     )
 
     def __init__(self, api_key: str | None = None, **kwargs: Any) -> None:
+        """Initialize the tool and its Firecrawl v2 client."""
         super().__init__(**kwargs)
         self.api_key = api_key
         self._initialize_firecrawl()
 
     def _initialize_firecrawl(self) -> None:
+        """Import firecrawl-py (installing it on demand if missing) and build the client."""
         try:
-            from firecrawl import FirecrawlApp
+            from firecrawl import Firecrawl
 
-            self._firecrawl = FirecrawlApp(api_key=self.api_key)
+            self._firecrawl = Firecrawl(api_key=self.api_key)
         except ImportError:
             import click
 
@@ -93,27 +96,28 @@ class FirecrawlCrawlWebsiteTool(BaseTool):
                 import subprocess
 
                 try:
-                    subprocess.run(["uv", "add", "firecrawl-py"], check=True)  # noqa: S607
-                    from firecrawl import FirecrawlApp
+                    subprocess.run(["uv", "add", "firecrawl-py>=4.0.0,<5"], check=True)  # noqa: S607
+                    from firecrawl import Firecrawl
 
-                    self._firecrawl = FirecrawlApp(api_key=self.api_key)
+                    self._firecrawl = Firecrawl(api_key=self.api_key)
                 except subprocess.CalledProcessError as e:
                     raise ImportError("Failed to install firecrawl-py package") from e
             else:
                 raise ImportError(
-                    "`firecrawl-py` package not found, please run `uv add firecrawl-py`"
+                    "`firecrawl-py` package not found, please run `uv add 'firecrawl-py>=4.0.0,<5'`"
                 ) from None
 
     def _run(self, url: str) -> Any:
+        """Crawl the given URL and return the crawled pages."""
         if not self._firecrawl:
-            raise RuntimeError("FirecrawlApp not properly initialized")
+            raise RuntimeError("Firecrawl client not properly initialized")
 
         url = validate_url(url)
         return self._firecrawl.crawl(url=url, poll_interval=2, **self.config)
 
 
 try:
-    from firecrawl import FirecrawlApp  # noqa: F401
+    from firecrawl import Firecrawl  # noqa: F401
 
     if not getattr(FirecrawlCrawlWebsiteTool, "_model_rebuilt", False):
         FirecrawlCrawlWebsiteTool.model_rebuild()
