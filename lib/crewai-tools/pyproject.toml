@@ -149,9 +149,10 @@ e2b = [
 ]
 
 k8s_agent_sandbox = [
-    "k8s-agent-sandbox>=0.4.5"
+    "k8s-agent-sandbox @ git+https://github.com/kubernetes-sigs/agent-sandbox.git@b1ef44f5800491a5044a4816fd2e6b8918205f97#subdirectory=clients/python/agentic-sandbox-client",
 ]
-
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.uv]
 exclude-newer = "3 days"

@@ -217,10 +217,15 @@ from crewai_tools.tools.youtube_video_search_tool.youtube_video_search_tool impo
     YoutubeVideoSearchTool,
 )
 from crewai_tools.tools.zapier_action_tool.zapier_action_tool import ZapierActionTools
-from crewai_tools.tools.k8s_agent_sandbox.base_tool import K8sBaseTool
-from crewai_tools.tools.k8s_agent_sandbox.exec_tool import K8sExecTool
-from crewai_tools.tools.k8s_agent_sandbox.python_tool import K8sPythonTool
-from crewai_tools.tools.k8s_agent_sandbox.file_tool import K8sFileTool
+from crewai_tools.tools.k8s_agent_sandbox import (
+    K8sAgentSandboxToolClientSettings,
+    K8sAgentSandboxToolSandboxSettings,
+    K8sAgentSandboxToolset,
+    K8sAgentSandboxBaseTool,
+    K8sAgentSandboxExecTool,
+    K8sAgentSandboxPythonTool,
+    K8sAgentSandboxFileTool,
+)
 
 
 __all__ = [
@@ -276,6 +281,13 @@ __all__ = [
     "InvokeCrewAIAutomationTool",
     "JSONSearchTool",
     "JinaScrapeWebsiteTool",
+    "K8sAgentSandboxToolClientSettings",
+    "K8sAgentSandboxToolSandboxSettings",
+    "K8sAgentSandboxToolset",
+    "K8sAgentSandboxBaseTool",
+    "K8sAgentSandboxExecTool",
+    "K8sAgentSandboxFileTool",
+    "K8sAgentSandboxPythonTool",
     "LinkupSearchTool",
     "LlamaIndexTool",
     "MCPServerAdapter",
@@ -334,10 +346,6 @@ __all__ = [
     "YoutubeVideoSearchTool",
     "ZapierActionTool",
     "ZapierActionTools",
-    "K8sBaseTool"
-    "K8sExecTool"
-    "K8sPythonTool",
-    "K8sFileTool",
 ]
 
 __version__ = "1.15.8"
