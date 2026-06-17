@@ -1,0 +1,132 @@
+---
+title: "Ferramenta de Busca SiftQ"
+description: "Realize buscas na web com ranqueamento neural usando a API SiftQ"
+icon: "magnifying-glass"
+mode: "wide"
+---
+
+O `SiftqSearchTool` fornece uma interface para a API de Busca SiftQ, permitindo que agentes CrewAI realizem buscas na web com ranqueamento neural em múltiplos escopos de conteúdo. Suporta busca em páginas web, documentos, artigos acadêmicos, imagens, vídeos e podcasts — tudo com contagem de resultados e profundidade de conteúdo configuráveis.
+
+## Instalação
+
+O `SiftqSearchTool` está incluído no pacote `crewai-tools` e usa a biblioteca `requests`, que já é uma dependência. Nenhum pacote adicional é necessário.
+
+```shell
+uv add 'crewai[tools]'
+```
+
+## Variáveis de Ambiente
+
+Opcionalmente, defina sua chave de API SiftQ como uma variável de ambiente para um limite de taxa mais alto:
+
+```bash
+export SIFTQ_API_KEY='sua_chave_siftq_api'
+```
+
+Se nenhuma chave de API for definida, uma chave pública de nível gratuito é usada (limitada a 100 buscas/dia).
+
+Obtenha uma chave de API em https://siftq.com (cadastre-se e crie uma chave).
+
+## Exemplo de Uso
+
+Aqui está como inicializar e usar o `SiftqSearchTool` dentro de um agente CrewAI:
+
+```python
+import os
+from crewai import Agent, Task, Crew
+from crewai_tools import SiftqSearchTool
+
+# Opcionalmente defina sua chave de API para limites mais altos
+# os.environ["SIFTQ_API_KEY"] = "SUA_CHAVE_SIFTQ_API"
+
+# Inicialize a ferramenta
+siftq_tool = SiftqSearchTool()
+
+# Crie um agente que usa a ferramenta
+pesquisador = Agent(
+    role='Pesquisador de Mercado',
+    goal='Encontrar informações sobre as últimas tendências de IA',
+    backstory='Um pesquisador de mercado especializado em tecnologia.',
+    tools=[siftq_tool],
+    verbose=True
+)
+
+# Crie uma tarefa para o agente
+tarefa_pesquisa = Task(
+    description='Pesquise as 3 principais tendências de IA em 2024.',
+    expected_output='Um relatório JSON resumindo as 3 principais tendências de IA encontradas.',
+    agent=pesquisador
+)
+
+# Forme a equipe e inicie
+crew = Crew(
+    agents=[pesquisador],
+    tasks=[tarefa_pesquisa],
+    verbose=2
+)
+
+resultado = crew.kickoff()
+print(resultado)
+```
+
+## Opções de Configuração
+
+O `SiftqSearchTool` aceita os seguintes argumentos durante a inicialização ou ao chamar o método `run`:
+
+- `query` (str): **Obrigatório**. A string de consulta de busca.
+- `scope` (Literal["webpage", "document", "scholar", "image", "video", "podcast"], opcional): O escopo da busca. Padrão: `"webpage"`.
+- `api_key` (str, opcional): A chave de API SiftQ. Usa a variável de ambiente `SIFTQ_API_KEY` como fallback, depois uma chave pública de nível gratuito.
+- `include_summary` (bool, opcional): Incluir resumos gerados por IA para cada resultado. Padrão: `False`.
+- `include_raw_content` (bool, opcional): Obter o conteúdo bruto de cada página de origem. Padrão: `False`.
+- `concise_snippet` (bool, opcional): Retornar trechos concisos com correspondências exatas de texto. Padrão: `False`.
+- `max_results` (int, opcional): Número máximo de resultados (1-100). Padrão: `5`.
+- `timeout` (int, opcional): Tempo limite da requisição em segundos. Padrão: `60`.
+
+## Uso Avançado
+
+Você pode configurar a ferramenta com parâmetros personalizados:
+
+```python
+# Buscar artigos acadêmicos com resumos de IA
+ferramenta_academica = SiftqSearchTool(
+    scope='scholar',
+    max_results=10,
+    include_summary=True
+)
+
+# Buscar páginas web com conteúdo bruto completo
+ferramenta_profunda = SiftqSearchTool(
+    scope='webpage',
+    max_results=5,
+    include_raw_content=True,
+    include_summary=True
+)
+
+# Buscar vídeos com trechos concisos
+ferramenta_video = SiftqSearchTool(
+    scope='video',
+    max_results=3,
+    concise_snippet=True
+)
+```
+
+## Recursos
+
+- **Busca com Ranqueamento Neural**: Relevância de alta qualidade usando algoritmos de ranqueamento neural
+- **Múltiplos Escopos**: Busque em páginas web, documentos, artigos acadêmicos, imagens, vídeos e podcasts
+- **Resumos de IA**: Inclua opcionalmente resumos gerados por IA para cada resultado
+- **Conteúdo Bruto**: Obtenha o conteúdo completo da página quando necessário
+- **Trechos Concisos**: Obtenha trechos com correspondência exata de texto para respostas precisas
+- **Nível Gratuito Disponível**: Chave de API pública permite até 100 buscas por dia
+- **Filtragem de Conteúdo**: Truncamento automático de conteúdo previne problemas de janela de contexto
+
+## Formato da Resposta
+
+A ferramenta retorna resultados de busca como uma string JSON contendo:
+- Resultados da busca com títulos, URLs e trechos
+- Resumos de IA opcionais (quando ativados)
+- Conteúdo bruto de página opcional (quando ativado)
+- Contagem total de resultados e créditos consumidos
+- Campos específicos do escopo (autores, citações, duração, etc.)
+
+O conteúdo de cada resultado é automaticamente truncado para evitar problemas de janela de contexto, mantendo as informações mais relevantes.

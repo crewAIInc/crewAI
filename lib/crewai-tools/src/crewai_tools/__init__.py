@@ -185,6 +185,7 @@ from crewai_tools.tools.serply_api_tool.serply_web_search_tool import (
 from crewai_tools.tools.serply_api_tool.serply_webpage_to_markdown_tool import (
     SerplyWebpageToMarkdownTool,
 )
+from crewai_tools.tools.siftq_search_tool.siftq_search_tool import SiftqSearchTool
 from crewai_tools.tools.singlestore_search_tool.singlestore_search_tool import (
     SingleStoreSearchTool,
 )
@@ -310,6 +311,7 @@ __all__ = [
     "SerplyScholarSearchTool",
     "SerplyWebSearchTool",
     "SerplyWebpageToMarkdownTool",
+    "SiftqSearchTool",
     "SingleStoreSearchTool",
     "SnowflakeConfig",
     "SnowflakeSearchTool",
