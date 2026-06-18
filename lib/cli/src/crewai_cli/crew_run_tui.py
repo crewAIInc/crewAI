@@ -651,7 +651,6 @@ FooterKey .footer-key--key {
             self.call_from_thread(self._on_crew_failed, str(e))
 
     def _on_crew_done(self, output: str | None) -> None:
-        self._unsubscribe()
         with self._lock:
             self._status = "completed"
             self._final_output = output
@@ -700,9 +699,9 @@ FooterKey .footer-key--key {
         self.call_later(self._focus_activity_log)
         self._tick_timer.stop()
         self._tick_timer = self.set_interval(1 / 2, self._tick)
+        self._unsubscribe_if_no_running_memory_save()
 
     def _on_crew_failed(self, error: str) -> None:
-        self._unsubscribe()
         with self._lock:
             self._status = "failed"
             self._error = error
@@ -721,6 +720,7 @@ FooterKey .footer-key--key {
         self.call_later(self._focus_activity_log)
         self._tick_timer.stop()
         self._tick_timer = self.set_interval(1 / 2, self._tick)
+        self._unsubscribe_if_no_running_memory_save()
 
     # ── Actions ─────────────────────────────────────────────
 
@@ -1537,6 +1537,26 @@ FooterKey .footer-key--key {
             pass
         self._event_handlers.clear()
 
+    def _has_running_memory_save_locked(self) -> bool:
+        return any(
+            entry["tool_name"] == "memory_save" and entry["status"] == "running"
+            for entry in self._log_entries
+        )
+
+    def _unsubscribe_if_no_running_memory_save(self) -> None:
+        with self._lock:
+            should_unsubscribe = (
+                self._status
+                in {
+                    "completed",
+                    "failed",
+                }
+                and not self._has_running_memory_save_locked()
+            )
+
+        if should_unsubscribe:
+            self._unsubscribe()
+
     def _subscribe(self) -> None:
         from crewai.events.event_bus import crewai_event_bus
         from crewai.events.types.crew_events import CrewKickoffStartedEvent
@@ -2019,40 +2039,51 @@ FooterKey .footer-key--key {
                         self._suppressed_memory_save_event_ids.discard(
                             event.started_event_id
                         )
-                    return
-                for entry in reversed(self._log_entries):
-                    if entry["tool_name"] == "memory_save" and (
-                        (
-                            event.started_event_id is None
-                            and entry["status"] == "running"
-                        )
-                        or entry.get("event_id") == event.started_event_id
-                        or entry.get("started_event_id") == event.started_event_id
-                    ):
-                        entry["status"] = "success"
-                        entry["duration"] = event.save_time_ms / 1000
-                        entry["result"] = _truncate_log_text(
-                            event.value, _LOG_RESULT_TEXT_LIMIT
-                        )
-                        entry["error"] = None
-                        entry["started_event_id"] = event.started_event_id
-                        break
                 else:
-                    self._log_entries.append(
-                        {
-                            "tool_name": "memory_save",
-                            "status": "success",
-                            "args": None,
-                            "result": _truncate_log_text(
-                                event.value, _LOG_RESULT_TEXT_LIMIT
-                            ),
-                            "error": None,
-                            "start_time": time.time(),
-                            "duration": event.save_time_ms / 1000,
-                            "task_idx": self._current_task_idx,
-                            "started_event_id": event.started_event_id,
-                        }
+                    has_matching_entry = event.started_event_id is not None and any(
+                        entry["tool_name"] == "memory_save"
+                        and (
+                            entry.get("event_id") == event.started_event_id
+                            or entry.get("started_event_id") == event.started_event_id
+                        )
+                        for entry in self._log_entries
                     )
+                    for entry in reversed(self._log_entries):
+                        if entry["tool_name"] == "memory_save" and (
+                            (
+                                event.started_event_id is None
+                                and entry["status"] == "running"
+                            )
+                            or entry.get("event_id") == event.started_event_id
+                            or entry.get("started_event_id") == event.started_event_id
+                            or (not has_matching_entry and entry["status"] == "running")
+                        ):
+                            entry["status"] = "success"
+                            entry["duration"] = event.save_time_ms / 1000
+                            entry["result"] = _truncate_log_text(
+                                event.value, _LOG_RESULT_TEXT_LIMIT
+                            )
+                            entry["error"] = None
+                            entry["started_event_id"] = event.started_event_id
+                            break
+                    else:
+                        self._log_entries.append(
+                            {
+                                "tool_name": "memory_save",
+                                "status": "success",
+                                "args": None,
+                                "result": _truncate_log_text(
+                                    event.value, _LOG_RESULT_TEXT_LIMIT
+                                ),
+                                "error": None,
+                                "start_time": time.time(),
+                                "duration": event.save_time_ms / 1000,
+                                "task_idx": self._current_task_idx,
+                                "started_event_id": event.started_event_id,
+                            }
+                        )
+
+            self._unsubscribe_if_no_running_memory_save()
 
         self._register_handler(MemorySaveCompletedEvent, on_memory_save_completed)
 
@@ -2067,39 +2098,50 @@ FooterKey .footer-key--key {
                         self._suppressed_memory_save_event_ids.discard(
                             event.started_event_id
                         )
-                    return
-                for idx, entry in reversed(list(enumerate(self._log_entries))):
-                    if entry["tool_name"] == "memory_save" and (
-                        (
-                            event.started_event_id is None
-                            and entry["status"] == "running"
-                        )
-                        or entry.get("event_id") == event.started_event_id
-                        or entry.get("started_event_id") == event.started_event_id
-                    ):
-                        entry["status"] = "error"
-                        entry["error"] = event.error
-                        entry["duration"] = time.time() - entry["start_time"]
-                        entry["started_event_id"] = event.started_event_id
-                        self._log_expanded.add(idx)
-                        break
                 else:
-                    self._log_entries.append(
-                        {
-                            "tool_name": "memory_save",
-                            "status": "error",
-                            "args": _truncate_log_text(
-                                event.value, _LOG_ARGS_TEXT_LIMIT
-                            ),
-                            "result": None,
-                            "error": event.error,
-                            "start_time": time.time(),
-                            "duration": 0,
-                            "task_idx": self._current_task_idx,
-                            "started_event_id": event.started_event_id,
-                        }
+                    has_matching_entry = event.started_event_id is not None and any(
+                        entry["tool_name"] == "memory_save"
+                        and (
+                            entry.get("event_id") == event.started_event_id
+                            or entry.get("started_event_id") == event.started_event_id
+                        )
+                        for entry in self._log_entries
                     )
-                    self._log_expanded.add(len(self._log_entries) - 1)
+                    for idx, entry in reversed(list(enumerate(self._log_entries))):
+                        if entry["tool_name"] == "memory_save" and (
+                            (
+                                event.started_event_id is None
+                                and entry["status"] == "running"
+                            )
+                            or entry.get("event_id") == event.started_event_id
+                            or entry.get("started_event_id") == event.started_event_id
+                            or (not has_matching_entry and entry["status"] == "running")
+                        ):
+                            entry["status"] = "error"
+                            entry["error"] = event.error
+                            entry["duration"] = time.time() - entry["start_time"]
+                            entry["started_event_id"] = event.started_event_id
+                            self._log_expanded.add(idx)
+                            break
+                    else:
+                        self._log_entries.append(
+                            {
+                                "tool_name": "memory_save",
+                                "status": "error",
+                                "args": _truncate_log_text(
+                                    event.value, _LOG_ARGS_TEXT_LIMIT
+                                ),
+                                "result": None,
+                                "error": event.error,
+                                "start_time": time.time(),
+                                "duration": 0,
+                                "task_idx": self._current_task_idx,
+                                "started_event_id": event.started_event_id,
+                            }
+                        )
+                        self._log_expanded.add(len(self._log_entries) - 1)
+
+            self._unsubscribe_if_no_running_memory_save()
 
         self._register_handler(MemorySaveFailedEvent, on_memory_save_failed)
 

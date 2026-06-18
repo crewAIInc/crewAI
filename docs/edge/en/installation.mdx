@@ -12,7 +12,7 @@ Install our coding agent skills (Claude Code, Codex, ...) to quickly get your co
 <button
   type="button"
   className="button button-primary"
-  onClick={(event) => {
+  onClick={async (event) => {
     const prompt = `Set up this environment so I can build with CrewAI.
 
 First install the official CrewAI coding-agent skills if this environment supports npx:
@@ -48,12 +48,17 @@ Setup steps:
 Do not hardcode API keys. Use .env.
 Do not invent CLI flags. Validate with crewai --help or crewai create --help.
 If a command fails, show the exact command and error, explain the likely cause, fix what you can safely fix, and retry once.`;
-    void navigator.clipboard.writeText(prompt);
     const button = event.currentTarget;
-    button.textContent = "Copied";
-    window.setTimeout(() => {
-      button.textContent = "Copy instructions for coding agents";
-    }, 1600);
+    try {
+      await navigator.clipboard.writeText(prompt);
+      button.textContent = "Copied";
+    } catch {
+      button.textContent = "Copy failed";
+    } finally {
+      window.setTimeout(() => {
+        button.textContent = "Copy instructions for coding agents";
+      }, 1600);
+    }
   }}
 >
   Copy instructions for coding agents

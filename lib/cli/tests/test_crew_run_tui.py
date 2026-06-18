@@ -727,6 +727,50 @@ async def test_crew_done_does_not_timeout_memory_save() -> None:
 
 
 @pytest.mark.asyncio
+async def test_crew_done_keeps_memory_save_subscription_until_completion() -> None:
+    app = _app_with_plan()
+    auto_unsubscribed = False
+
+    async with app.run_test(size=(100, 40)) as pilot:
+        try:
+            assert app._event_handlers
+            started_event = MemorySaveStartedEvent(
+                value="9 memories (background)",
+                metadata={},
+                source_type="unified_memory",
+            )
+            _emit_event(started_event)
+
+            app._on_crew_done("final output")
+            await pilot.pause()
+
+            assert app._log_entries[0]["status"] == "running"
+            assert app._event_handlers
+
+            _emit_event(
+                MemorySaveCompletedEvent(
+                    value="9 memories saved",
+                    metadata={},
+                    save_time_ms=8300,
+                    source_type="unified_memory",
+                    started_event_id=started_event.event_id,
+                )
+            )
+            await pilot.pause()
+
+            auto_unsubscribed = not app._event_handlers
+        finally:
+            app._unsubscribe()
+
+    assert app._log_entries[0]["tool_name"] == "memory_save"
+    assert app._log_entries[0]["status"] == "success"
+    assert app._log_entries[0]["result"] == "9 memories saved"
+    assert app._log_entries[0]["error"] is None
+    assert app._log_entries[0]["duration"] == 8.3
+    assert auto_unsubscribed is True
+
+
+@pytest.mark.asyncio
 async def test_crew_failed_does_not_timeout_memory_save() -> None:
     app = _app_with_plan()
 

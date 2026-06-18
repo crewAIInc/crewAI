@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from contextlib import AbstractContextManager, nullcontext
 from enum import Enum
 import os
@@ -7,7 +8,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import click
 from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
@@ -90,10 +91,10 @@ except module.click.ClickException as exc:
 """.strip()
 
 
-def _import_find_crew_json_file() -> Any:
+def _import_find_crew_json_file() -> Callable[[], Path | None]:
     from crewai.project.json_loader import find_crew_json_file as _find_crew_json_file
 
-    return _find_crew_json_file
+    return cast("Callable[[], Path | None]", _find_crew_json_file)
 
 
 def _is_missing_crewai_package(exc: ModuleNotFoundError) -> bool:
