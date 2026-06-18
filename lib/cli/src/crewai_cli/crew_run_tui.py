@@ -2071,13 +2071,20 @@ FooterKey .footer-key--key {
                         )
                 else:
                     for entry in reversed(self._log_entries):
-                        if entry["tool_name"] == "memory_save" and (
-                            (
-                                event.started_event_id is None
-                                and entry["status"] == "running"
+                        has_started_event_match = (
+                            event.started_event_id is not None
+                            and (
+                                entry.get("event_id") == event.started_event_id
+                                or entry.get("started_event_id")
+                                == event.started_event_id
                             )
-                            or entry.get("event_id") == event.started_event_id
-                            or entry.get("started_event_id") == event.started_event_id
+                        )
+                        has_running_event_without_id = (
+                            event.started_event_id is None
+                            and entry["status"] == "running"
+                        )
+                        if entry["tool_name"] == "memory_save" and (
+                            has_running_event_without_id or has_started_event_match
                         ):
                             entry["status"] = "success"
                             entry["duration"] = event.save_time_ms / 1000
@@ -2121,13 +2128,20 @@ FooterKey .footer-key--key {
                         )
                 else:
                     for idx, entry in reversed(list(enumerate(self._log_entries))):
-                        if entry["tool_name"] == "memory_save" and (
-                            (
-                                event.started_event_id is None
-                                and entry["status"] == "running"
+                        has_started_event_match = (
+                            event.started_event_id is not None
+                            and (
+                                entry.get("event_id") == event.started_event_id
+                                or entry.get("started_event_id")
+                                == event.started_event_id
                             )
-                            or entry.get("event_id") == event.started_event_id
-                            or entry.get("started_event_id") == event.started_event_id
+                        )
+                        has_running_event_without_id = (
+                            event.started_event_id is None
+                            and entry["status"] == "running"
+                        )
+                        if entry["tool_name"] == "memory_save" and (
+                            has_running_event_without_id or has_started_event_match
                         ):
                             entry["status"] = "error"
                             entry["error"] = event.error

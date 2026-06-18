@@ -578,6 +578,105 @@ def test_memory_save_failure_with_unmatched_id_does_not_update_running_row() -> 
     assert app._log_expanded == {2}
 
 
+def test_memory_save_completion_without_id_does_not_update_stale_row() -> None:
+    app = _app_with_plan()
+    now = time.time()
+    app._log_entries = [
+        {
+            "tool_name": "memory_save",
+            "status": "running",
+            "args": "current background save",
+            "result": None,
+            "error": None,
+            "start_time": now,
+            "duration": None,
+            "task_idx": 1,
+        },
+        {
+            "tool_name": "memory_save",
+            "status": "success",
+            "args": "stale background save",
+            "result": "stale save completed",
+            "error": None,
+            "start_time": now - 10,
+            "duration": 1.0,
+            "task_idx": 1,
+        },
+    ]
+
+    app._subscribe()
+    try:
+        _emit_event(
+            MemorySaveCompletedEvent(
+                value="current save completed",
+                metadata={},
+                save_time_ms=2800,
+                source_type="unified_memory",
+                parent_event_id="manual-parent",
+            )
+        )
+    finally:
+        app._unsubscribe()
+
+    assert [entry["status"] for entry in app._log_entries] == [
+        "success",
+        "success",
+    ]
+    assert app._log_entries[0]["args"] == "current background save"
+    assert app._log_entries[0]["result"] == "current save completed"
+    assert app._log_entries[1]["args"] == "stale background save"
+    assert app._log_entries[1]["result"] == "stale save completed"
+
+
+def test_memory_save_failure_without_id_does_not_update_stale_row() -> None:
+    app = _app_with_plan()
+    now = time.time()
+    app._log_entries = [
+        {
+            "tool_name": "memory_save",
+            "status": "running",
+            "args": "current background save",
+            "result": None,
+            "error": None,
+            "start_time": now,
+            "duration": None,
+            "task_idx": 1,
+        },
+        {
+            "tool_name": "memory_save",
+            "status": "success",
+            "args": "stale background save",
+            "result": "stale save completed",
+            "error": None,
+            "start_time": now - 10,
+            "duration": 1.0,
+            "task_idx": 1,
+        },
+    ]
+
+    app._subscribe()
+    try:
+        _emit_event(
+            MemorySaveFailedEvent(
+                value="current save failed",
+                metadata={},
+                error="embedding connection failed",
+                source_type="unified_memory",
+                parent_event_id="manual-parent",
+            )
+        )
+    finally:
+        app._unsubscribe()
+
+    assert [entry["status"] for entry in app._log_entries] == ["error", "success"]
+    assert app._log_entries[0]["args"] == "current background save"
+    assert app._log_entries[0]["error"] == "embedding connection failed"
+    assert app._log_entries[1]["args"] == "stale background save"
+    assert app._log_entries[1]["result"] == "stale save completed"
+    assert app._log_entries[1]["error"] is None
+    assert app._log_expanded == {0}
+
+
 def test_memory_save_payloads_are_truncated_in_activity_log() -> None:
     app = _app_with_plan()
     long_args = "a" * (_LOG_ARGS_TEXT_LIMIT + 10)
