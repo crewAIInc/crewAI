@@ -479,11 +479,24 @@ FlowAtomicActionDefinition: TypeAlias = Annotated[
 class FlowEachStepDefinition(BaseModel):
     """One named step inside an ``each`` composite action."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(
+        populate_by_name=True,
+        extra="forbid",
+    )
 
     name: str = Field(
         description="Step name used to reference this step's output.",
         examples=["clean"],
+    )
+    if_: str | None = Field(
+        default=None,
+        alias="if",
+        description=(
+            "Optional CEL expression evaluated against state, outputs, and local "
+            "context. When present, the step runs only if the expression evaluates "
+            "to true."
+        ),
+        examples=["item.kind == 'invoice'"],
     )
     action: FlowAtomicActionDefinition = Field(
         description="Atomic action to run for this step.",
@@ -518,8 +531,8 @@ class FlowEachActionDefinition(BaseModel):
     )
     do: list[FlowEachStepDefinition] = Field(
         description=(
-            "Ordered steps to run for each item. Each step has a name and an "
-            "atomic action."
+            "Ordered steps to run for each item. Each step has a name, optional "
+            "if expression, and atomic action."
         ),
         examples=[
             [
@@ -529,6 +542,7 @@ class FlowEachActionDefinition(BaseModel):
                 },
                 {
                     "name": "tag",
+                    "if": "outputs.clean != ''",
                     "action": {"call": "expression", "expr": "outputs.clean"},
                 },
             ]
@@ -540,13 +554,7 @@ class FlowEachActionDefinition(BaseModel):
         if not self.do:
             raise ValueError("each.do must contain at least one step")
 
-        seen: set[str] = set()
-        for step in self.do:
-            name = step.name
-            if name in seen:
-                raise ValueError(f"each.do step names must be unique: {name!r}")
-            seen.add(name)
-
+        _validate_step_list(self.do, field="each.do")
         return self
 
 
@@ -734,6 +742,15 @@ class FlowDefinition(BaseModel):
 def _validate_step_name(name: str, *, field: str) -> None:
     if not isinstance(name, str) or not _STEP_NAME_PATTERN.fullmatch(name):
         raise ValueError(f"{field} must match {_STEP_NAME_PATTERN.pattern}")
+
+
+def _validate_step_list(steps: list[FlowEachStepDefinition], *, field: str) -> None:
+    seen: set[str] = set()
+    for step in steps:
+        name = step.name
+        if name in seen:
+            raise ValueError(f"{field} step names must be unique: {name!r}")
+        seen.add(name)
 
 
 def log_flow_definition_issues(definition: FlowDefinition) -> None:

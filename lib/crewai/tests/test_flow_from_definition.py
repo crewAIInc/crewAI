@@ -1368,6 +1368,103 @@ methods:
     ]
 
 
+def test_each_action_runs_simple_if_clauses():
+    yaml_str = """
+schema: crewai.flow/v1
+name: EachIfFlow
+methods:
+  process_rows:
+    do:
+      call: each
+      in: state.rows
+      do:
+        - name: kind
+          action:
+            call: expression
+            expr: item.kind
+        - name: kept
+          if: "outputs.kind == 'keep'"
+          action:
+            call: expression
+            expr: "'kept:' + item.value"
+        - name: skipped
+          if: "outputs.kind != 'keep'"
+          action:
+            call: expression
+            expr: "'skipped:' + item.value"
+    start: true
+"""
+
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+
+    assert flow.kickoff(
+        inputs={
+            "rows": [
+                {"kind": "keep", "value": "a"},
+                {"kind": "drop", "value": "b"},
+            ]
+        }
+    ) == ["kept:a", "skipped:b"]
+
+
+def test_each_action_skipped_if_keeps_previous_output():
+    yaml_str = """
+schema: crewai.flow/v1
+name: EachIfFlow
+methods:
+  process_rows:
+    do:
+      call: each
+      in: state.rows
+      do:
+        - name: original
+          action:
+            call: expression
+            expr: item.value
+        - name: maybe_included
+          if: item.include
+          action:
+            call: expression
+            expr: "'included:' + item.value"
+    start: true
+"""
+
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+
+    assert flow.kickoff(
+        inputs={
+            "rows": [
+                {"include": True, "value": "a"},
+                {"include": False, "value": "b"},
+            ]
+        }
+    ) == ["included:a", "b"]
+
+
+def test_each_action_if_condition_must_be_boolean():
+    yaml_str = """
+schema: crewai.flow/v1
+name: EachIfFlow
+methods:
+  process_rows:
+    do:
+      call: each
+      in: state.rows
+      do:
+        - name: value
+          if: item.value
+          action:
+            call: expression
+            expr: item.value
+    start: true
+"""
+
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+
+    with pytest.raises(ValueError, match="if expression must evaluate to a boolean"):
+        flow.kickoff(inputs={"rows": [{"value": "truthy"}]})
+
+
 def test_each_action_empty_list_returns_empty_and_listener_runs_once():
     yaml_str = f"""
 schema: crewai.flow/v1
@@ -1454,6 +1551,14 @@ def test_each_action_rejects_non_list_inputs(expr, inputs):
         [{"name": "missing_action"}],
         [{"action": {"call": "expression", "expr": "item"}}],
         [
+            {
+                "name": "value",
+                "if": "true",
+                "then": [],
+                "action": {"call": "expression", "expr": "item"},
+            }
+        ],
+        [
             {"name": "same", "action": {"call": "expression", "expr": "item"}},
             {"name": "same", "action": {"call": "expression", "expr": "item"}},
         ],
@@ -1472,6 +1577,26 @@ def test_each_action_validates_step_shape(action_do):
                             "call": "each",
                             "in": "state.rows",
                             "do": action_do,
+                        },
+                    }
+                },
+            }
+        )
+
+
+def test_if_clauses_are_rejected_at_method_level():
+    with pytest.raises(ValidationError):
+        FlowDefinition.from_dict(
+            {
+                "schema": "crewai.flow/v1",
+                "name": "TopLevelIfFlow",
+                "methods": {
+                    "process": {
+                        "start": True,
+                        "do": {
+                            "call": "expression",
+                            "if": "true",
+                            "expr": "'ok'",
                         },
                     }
                 },

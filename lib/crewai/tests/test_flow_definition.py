@@ -110,6 +110,9 @@ def test_flow_definition_json_schema_carries_reference_descriptions():
     assert "list to iterate" in each_properties["in"]["description"]
     assert "Ordered steps" in each_properties["do"]["description"]
 
+    step_properties = defs["FlowEachStepDefinition"]["properties"]
+    assert "runs only if" in step_properties["if"]["description"]
+
 
 def test_flow_definition_json_schema_carries_field_examples_only():
     schema = flow_definition.FlowDefinition.json_schema()
@@ -158,6 +161,10 @@ def test_flow_definition_json_schema_carries_field_examples_only():
     assert each_properties["in"]["examples"] == ["state.rows"]
     assert each_properties["do"]["examples"][0][0]["name"] == "clean"
     assert each_properties["do"]["examples"][0][0]["action"]["call"] == "script"
+    assert each_properties["do"]["examples"][0][1]["if"] == "outputs.clean != ''"
+
+    step_properties = defs["FlowEachStepDefinition"]["properties"]
+    assert step_properties["if"]["examples"] == ["item.kind == 'invoice'"]
 
     method_properties = defs["FlowMethodDefinition"]["properties"]
     assert method_properties["listen"]["examples"] == [
