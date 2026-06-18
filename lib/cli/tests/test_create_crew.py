@@ -714,6 +714,7 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
     assert not (tmp_path / "json_crew" / "config.jsonc").exists()
 
     pyproject = tomli.loads((tmp_path / "json_crew" / "pyproject.toml").read_text())
+    assert pyproject["project"]["dependencies"] == ["crewai[tools]==1.14.8a"]
     assert pyproject["tool"]["hatch"]["build"]["targets"]["wheel"][
         "only-include"
     ] == ["agents", "crew.jsonc", "tools", "knowledge", "skills"]
