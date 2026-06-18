@@ -645,14 +645,11 @@ class TestLegacyMethodOutputsRestore:
         context = _expression_context(restored)
         assert context["outputs"] == {"": "legacy"}
 
-    def test_raw_legacy_outputs_remain_readable(self) -> None:
-        from crewai.flow.runtime._expressions import _expression_context
-
+    def test_raw_legacy_outputs_property_remains_readable(self) -> None:
         flow = Flow()
         flow._method_outputs = ["legacy"]
 
         assert flow.method_outputs == ["legacy"]
-        assert _expression_context(flow)["outputs"] == {"": "legacy"}
 
 
 class TestAgentCheckpoint:

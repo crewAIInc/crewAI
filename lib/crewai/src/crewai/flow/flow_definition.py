@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Annotated, Any, Literal as TypingLiteral, TypeAlias
+from typing import Annotated, Any, Literal, TypeAlias
 
 from pydantic import (
     BaseModel,
@@ -45,7 +45,6 @@ __all__ = [
     "FlowCrewActionDefinition",
     "FlowDefinition",
     "FlowDefinitionCondition",
-    "FlowDefinitionDiagnostic",
     "FlowDictStateDefinition",
     "FlowEachActionDefinition",
     "FlowEachInnerActionDefinition",
@@ -55,6 +54,7 @@ __all__ = [
     "FlowMethodDefinition",
     "FlowPersistenceDefinition",
     "FlowPydanticStateDefinition",
+    "FlowScriptActionDefinition",
     "FlowStateDefinition",
     "FlowToolActionDefinition",
     "FlowUnknownStateDefinition",
@@ -69,21 +69,12 @@ def _object_ref(value: Any) -> str:
     return f"{module}:{qualname}" if module and qualname else repr(value)
 
 
-class FlowDefinitionDiagnostic(BaseModel):
-    """A non-fatal Flow Definition build or validation diagnostic."""
-
-    code: str
-    message: str
-    severity: TypingLiteral["warning", "error"] = "warning"
-    path: str | None = None
-
-
 class FlowDictStateDefinition(BaseModel):
     """Static description of a plain dictionary Flow state contract."""
 
     model_config = ConfigDict(extra="forbid")
 
-    type: TypingLiteral["dict"] = Field(
+    type: Literal["dict"] = Field(
         default="dict",
         description="Plain dictionary state with optional default values.",
         examples=["dict"],
@@ -100,7 +91,7 @@ class FlowPydanticStateDefinition(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    type: TypingLiteral["pydantic"] = Field(
+    type: Literal["pydantic"] = Field(
         default="pydantic",
         description="Importable Pydantic model used as the Flow state type.",
         examples=["pydantic"],
@@ -135,7 +126,7 @@ class FlowJsonSchemaStateDefinition(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    type: TypingLiteral["json_schema"] = Field(
+    type: Literal["json_schema"] = Field(
         default="json_schema",
         description="Inline JSON Schema used as the Flow state contract.",
         examples=["json_schema"],
@@ -162,7 +153,7 @@ class FlowUnknownStateDefinition(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    type: TypingLiteral["unknown"] = Field(
+    type: Literal["unknown"] = Field(
         default="unknown",
         description="Unknown state representation; runtime falls back to dictionary state.",
         examples=["unknown"],
@@ -191,14 +182,46 @@ FlowStateDefinition: TypeAlias = Annotated[
 class FlowConfigDefinition(BaseModel):
     """Serializable Flow-level configuration."""
 
-    tracing: bool | None = None
-    stream: bool = False
-    memory: dict[str, Any] | None = None
-    input_provider: str | None = None
-    suppress_flow_events: bool = False
-    max_method_calls: int = 100
-    defer_trace_finalization: bool = False
-    checkpoint: bool | dict[str, Any] | None = None
+    tracing: bool | None = Field(
+        default=None,
+        description="Override for flow tracing; when omitted, runtime defaults apply.",
+        examples=[True],
+    )
+    stream: bool = Field(
+        default=False,
+        description="Whether the flow should emit streaming events when supported.",
+        examples=[True],
+    )
+    memory: dict[str, Any] | None = Field(
+        default=None,
+        description="Serializable memory configuration passed to flow execution.",
+        examples=[{"enabled": True}],
+    )
+    input_provider: str | None = Field(
+        default=None,
+        description="Import reference or provider key used to supply flow inputs.",
+        examples=["my_project.inputs:load_inputs"],
+    )
+    suppress_flow_events: bool = Field(
+        default=False,
+        description="Disable flow event emission for this definition.",
+        examples=[False],
+    )
+    max_method_calls: int = Field(
+        default=100,
+        description="Maximum number of method executions allowed during one kickoff.",
+        examples=[20],
+    )
+    defer_trace_finalization: bool = Field(
+        default=False,
+        description="Defer trace finalization so callers can complete tracing later.",
+        examples=[False],
+    )
+    checkpoint: bool | dict[str, Any] | None = Field(
+        default=None,
+        description="Checkpointing configuration, or true to use default checkpointing.",
+        examples=[True, {"enabled": True}],
+    )
 
 
 class FlowPersistenceDefinition(BaseModel):
@@ -210,9 +233,21 @@ class FlowPersistenceDefinition(BaseModel):
     serialized config.
     """
 
-    enabled: bool = False
-    verbose: bool = False
-    persistence: Any = None
+    enabled: bool = Field(
+        default=False,
+        description="Whether persistence is enabled for this flow or method.",
+        examples=[True],
+    )
+    verbose: bool = Field(
+        default=False,
+        description="Whether persistence should emit verbose diagnostic output.",
+        examples=[False],
+    )
+    persistence: Any = Field(
+        default=None,
+        description="Persistence backend configuration or import reference.",
+        examples=[{"ref": "my_project.persistence:FlowStore"}],
+    )
 
     @field_serializer("persistence", when_used="json")
     def _serialize_persistence(self, value: Any) -> Any:
@@ -238,15 +273,53 @@ class FlowHumanFeedbackDefinition(BaseModel):
     a serialized config (``llm``) or a ``module:qualname`` ref (``provider``).
     """
 
-    message: str
-    emit: list[str] | None = None
-    llm: Any = "gpt-4o-mini"
-    default_outcome: str | None = None
-    metadata: dict[str, Any] | None = None
-    provider: Any = None
-    learn: bool = False
-    learn_source: str = "hitl"
-    learn_strict: bool = False
+    message: str = Field(
+        description="Prompt shown to the human reviewer when feedback is requested.",
+        examples=["Review the research summary before publishing."],
+    )
+    emit: list[str] | None = Field(
+        default=None,
+        description=(
+            "Allowed feedback outcomes. When set, the method routes like a router "
+            "using the selected outcome."
+        ),
+        examples=[["approved", "revise"]],
+    )
+    llm: Any = Field(
+        default="gpt-4o-mini",
+        description="LLM configuration used to assist or process human feedback.",
+        examples=["gpt-4o-mini"],
+    )
+    default_outcome: str | None = Field(
+        default=None,
+        description="Outcome to use when feedback cannot be collected.",
+        examples=["revise"],
+    )
+    metadata: dict[str, Any] | None = Field(
+        default=None,
+        description="Serializable metadata attached to the feedback request.",
+        examples=[{"team": "research"}],
+    )
+    provider: Any = Field(
+        default=None,
+        description="Feedback provider configuration or import reference.",
+        examples=["my_project.feedback:provider"],
+    )
+    learn: bool = Field(
+        default=False,
+        description="Whether feedback should be recorded for later learning workflows.",
+        examples=[True],
+    )
+    learn_source: str = Field(
+        default="hitl",
+        description="Source label attached to learned feedback records.",
+        examples=["hitl"],
+    )
+    learn_strict: bool = Field(
+        default=False,
+        description="Whether learning should enforce strict validation of feedback data.",
+        examples=[False],
+    )
 
     @field_serializer("llm", when_used="json")
     def _serialize_llm(self, value: Any) -> dict[str, Any] | str | None:
@@ -266,30 +339,89 @@ class FlowHumanFeedbackDefinition(BaseModel):
 class FlowCodeActionDefinition(BaseModel):
     """A Flow method action that executes importable Python code."""
 
-    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+    model_config = ConfigDict(
+        populate_by_name=True,
+        extra="forbid",
+    )
 
-    call: TypingLiteral["code"] = "code"
-    ref: str
-    with_: dict[str, Any] | None = Field(default=None, alias="with")
+    call: Literal["code"] = Field(
+        default="code",
+        description="Action discriminator. Use code to call importable Python.",
+        examples=["code"],
+    )
+    ref: str = Field(
+        description="Import reference for the callable, formatted as module:qualname.",
+        examples=["my_project.flows:normalize_topic"],
+    )
+    with_: dict[str, Any] | None = Field(
+        default=None,
+        alias="with",
+        description="Keyword arguments passed to the callable after expression rendering.",
+        examples=[{"topic": "${state.topic}"}],
+    )
 
 
 class FlowToolActionDefinition(BaseModel):
     """A Flow method action that invokes a CrewAI tool."""
 
-    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+    model_config = ConfigDict(
+        populate_by_name=True,
+        extra="forbid",
+    )
 
-    call: TypingLiteral["tool"]
-    ref: str
-    with_: dict[str, Any] | None = Field(default=None, alias="with")
+    call: Literal["tool"] = Field(
+        description="Action discriminator. Use tool to instantiate and run a CrewAI tool.",
+        examples=["tool"],
+    )
+    ref: str = Field(
+        description="Import reference for a BaseTool class, formatted as module:qualname.",
+        examples=["my_project.tools:SearchTool"],
+    )
+    with_: dict[str, Any] | None = Field(
+        default=None,
+        alias="with",
+        description="Tool input arguments after expression rendering.",
+        examples=[{"query": "${outputs.normalize_topic}", "limit": 5}],
+    )
 
 
 class FlowCrewActionDefinition(BaseModel):
     """A Flow method action that builds and kicks off a CrewAI crew."""
 
-    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+    model_config = ConfigDict(
+        populate_by_name=True,
+        extra="forbid",
+    )
 
-    call: TypingLiteral["crew"]
-    with_: CrewDefinition = Field(alias="with")
+    call: Literal["crew"] = Field(
+        description="Action discriminator. Use crew to run an inline Crew definition.",
+        examples=["crew"],
+    )
+    with_: CrewDefinition = Field(
+        alias="with",
+        description="Inline Crew definition to load and execute for this action.",
+        examples=[
+            {
+                "name": "inline_research",
+                "agents": {
+                    "researcher": {
+                        "role": "Researcher",
+                        "goal": "Research {topic}",
+                        "backstory": "Knows the domain.",
+                    }
+                },
+                "tasks": [
+                    {
+                        "name": "research_task",
+                        "description": "Research {topic}",
+                        "expected_output": "Findings about {topic}",
+                        "agent": "researcher",
+                    }
+                ],
+                "inputs": {"topic": "${state.topic}"},
+            }
+        ],
+    )
 
 
 class FlowExpressionActionDefinition(BaseModel):
@@ -297,8 +429,41 @@ class FlowExpressionActionDefinition(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    call: TypingLiteral["expression"]
-    expr: str
+    call: Literal["expression"] = Field(
+        description="Action discriminator. Use expression to evaluate a CEL expression.",
+        examples=["expression"],
+    )
+    expr: str = Field(
+        description="CEL expression evaluated against state, outputs, and local context.",
+        examples=["state.topic", "outputs.normalize_topic"],
+    )
+
+
+class FlowScriptActionDefinition(BaseModel):
+    """A Flow method action that executes trusted inline Python."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    call: Literal["script"] = Field(
+        description="Action discriminator. Use script to execute trusted inline Python.",
+        examples=["script"],
+    )
+    code: str = Field(
+        description=(
+            "Trusted Python source executed as a generated function. Runtime values are "
+            "passed as state, outputs, input, and item; they are not interpolated into "
+            "the source. This is not sandboxed."
+        ),
+        examples=[
+            "state['normalized_topic'] = input.strip()\n"
+            "return state['normalized_topic']"
+        ],
+    )
+    language: Literal["python"] = Field(
+        default="python",
+        description="Script language. Only python is currently supported.",
+        examples=["python"],
+    )
 
 
 FlowInnerActionDefinition = (
@@ -306,11 +471,17 @@ FlowInnerActionDefinition = (
     | FlowToolActionDefinition
     | FlowCrewActionDefinition
     | FlowExpressionActionDefinition
+    | FlowScriptActionDefinition
 )
 
 
 class FlowEachInnerActionDefinition(RootModel[dict[str, FlowInnerActionDefinition]]):
     """One named action inside an ``each`` composite action."""
+
+    root: dict[str, FlowInnerActionDefinition] = Field(
+        description="Single-entry mapping from an inner action name to its action.",
+        examples=[{"clean": {"call": "script", "code": "return item.strip()"}}],
+    )
 
     @model_validator(mode="after")
     def _validate_action_mapping(self) -> FlowEachInnerActionDefinition:
@@ -331,11 +502,35 @@ class FlowEachInnerActionDefinition(RootModel[dict[str, FlowInnerActionDefinitio
 class FlowEachActionDefinition(BaseModel):
     """A composite action that runs a sequential mini-pipeline for each item."""
 
-    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+    model_config = ConfigDict(
+        populate_by_name=True,
+        extra="forbid",
+    )
 
-    call: TypingLiteral["each"]
-    in_: str = Field(alias="in")
-    do: list[FlowEachInnerActionDefinition]
+    call: Literal["each"] = Field(
+        description=(
+            "Action discriminator. Use each to run a sequence of actions for every "
+            "item in an input list."
+        ),
+        examples=["each"],
+    )
+    in_: str = Field(
+        alias="in",
+        description="CEL expression that must evaluate to the list to iterate.",
+        examples=["state.rows"],
+    )
+    do: list[FlowEachInnerActionDefinition] = Field(
+        description=(
+            "Ordered inner actions to run for each item. Each entry must be a "
+            "single-key mapping naming that inner action."
+        ),
+        examples=[
+            [
+                {"clean": {"call": "script", "code": "return item.strip()"}},
+                {"tag": {"call": "expression", "expr": "outputs.clean"}},
+            ]
+        ],
+    )
 
     @model_validator(mode="after")
     def _validate_inner_action_list(self) -> FlowEachActionDefinition:
@@ -357,6 +552,7 @@ FlowActionDefinition = (
     | FlowToolActionDefinition
     | FlowCrewActionDefinition
     | FlowExpressionActionDefinition
+    | FlowScriptActionDefinition
     | FlowEachActionDefinition
 )
 
@@ -364,14 +560,48 @@ FlowActionDefinition = (
 class FlowMethodDefinition(BaseModel):
     """Static definition of one Flow method and its execution roles."""
 
-    description: str | None = None
-    do: FlowActionDefinition
-    start: bool | FlowDefinitionCondition | None = None
-    listen: FlowDefinitionCondition | None = None
-    router: bool = False
-    emit: list[str] | None = None
-    human_feedback: FlowHumanFeedbackDefinition | None = None
-    persist: FlowPersistenceDefinition | None = None
+    description: str | None = Field(
+        default=None,
+        description="Human-readable summary of what this method does.",
+        examples=["Normalize the incoming topic."],
+    )
+    do: FlowActionDefinition = Field(
+        description="Action executed when this method runs.",
+        examples=[{"call": "script", "code": "return input.strip()"}],
+    )
+    start: bool | FlowDefinitionCondition | None = Field(
+        default=None,
+        description=(
+            "Marks a start method. True starts unconditionally; a condition starts "
+            "when the kickoff inputs or events satisfy it."
+        ),
+        examples=[True],
+    )
+    listen: FlowDefinitionCondition | None = Field(
+        default=None,
+        description="Trigger condition that runs this method after upstream events.",
+        examples=["seed", {"or": ["approved", "revise"]}],
+    )
+    router: bool = Field(
+        default=False,
+        description="Whether the method output should be treated as the next event name.",
+        examples=[True],
+    )
+    emit: list[str] | None = Field(
+        default=None,
+        description="Declared router events this method may emit.",
+        examples=[["approved", "revise"]],
+    )
+    human_feedback: FlowHumanFeedbackDefinition | None = Field(
+        default=None,
+        description="Optional human feedback step applied after the method action.",
+        examples=[{"message": "Review the research summary before publishing."}],
+    )
+    persist: FlowPersistenceDefinition | None = Field(
+        default=None,
+        description="Method-level persistence override.",
+        examples=[{"enabled": True}],
+    )
 
     @model_validator(mode="after")
     def _canonicalize_human_feedback_routing(self) -> FlowMethodDefinition:
@@ -397,19 +627,57 @@ class FlowMethodDefinition(BaseModel):
 class FlowDefinition(BaseModel):
     """Static, serializable definition of a Flow."""
 
-    model_config = ConfigDict(populate_by_name=True, arbitrary_types_allowed=True)
-
-    schema_: TypingLiteral["crewai.flow/v1"] = Field(
-        default="crewai.flow/v1", alias="schema"
+    model_config = ConfigDict(
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
     )
-    name: str
-    description: str | None = None
-    state: FlowStateDefinition | None = None
-    config: FlowConfigDefinition = Field(default_factory=FlowConfigDefinition)
-    persist: FlowPersistenceDefinition | None = None
-    conversational: FlowConversationalDefinition | None = None
-    methods: dict[str, FlowMethodDefinition] = Field(default_factory=dict)
-    diagnostics: list[FlowDefinitionDiagnostic] = Field(default_factory=list)
+
+    schema_: Literal["crewai.flow/v1"] = Field(
+        default="crewai.flow/v1",
+        alias="schema",
+        description="Flow Definition schema identifier and version.",
+        examples=["crewai.flow/v1"],
+    )
+    name: str = Field(
+        description="Unique flow name used in logs, events, and traces.",
+        examples=["ResearchFlow"],
+    )
+    description: str | None = Field(
+        default=None,
+        description="Human-readable summary of the flow.",
+        examples=["Normalize a topic and prepare it for research."],
+    )
+    state: FlowStateDefinition | None = Field(
+        default=None,
+        description="State contract for kickoff inputs and runtime state.",
+        examples=[{"type": "dict", "default": {"topic": "AI agents"}}],
+    )
+    config: FlowConfigDefinition = Field(
+        default_factory=FlowConfigDefinition,
+        description="Serializable flow-level runtime configuration.",
+        examples=[{"stream": True, "max_method_calls": 20}],
+    )
+    persist: FlowPersistenceDefinition | None = Field(
+        default=None,
+        description="Flow-level persistence configuration.",
+        examples=[{"enabled": True}],
+    )
+    conversational: FlowConversationalDefinition | None = Field(
+        default=None,
+        description="Conversational flow configuration, when the flow supports chat.",
+    )
+    methods: dict[str, FlowMethodDefinition] = Field(
+        default_factory=dict,
+        description="Mapping of method names to method definitions.",
+        examples=[
+            {
+                "seed": {
+                    "start": True,
+                    "do": {"call": "expression", "expr": "state.topic"},
+                }
+            }
+        ],
+    )
 
     @model_validator(mode="after")
     def _validate_method_names(self) -> FlowDefinition:
@@ -436,13 +704,9 @@ class FlowDefinition(BaseModel):
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> FlowDefinition:
-        """Load a definition from a dictionary and attach diagnostics."""
-        serialized_diagnostics = _deserialize_diagnostics(data.get("diagnostics", []))
+        """Load a definition from a dictionary."""
         definition = cls.model_validate(data)
-        definition.diagnostics = _merge_diagnostics(
-            serialized_diagnostics, definition.validate_contract()
-        )
-        definition.log_diagnostics()
+        log_flow_definition_issues(definition)
         return definition
 
     @classmethod
@@ -463,122 +727,81 @@ class FlowDefinition(BaseModel):
         """Return the JSON Schema for the Flow Definition contract."""
         return cls.model_json_schema(by_alias=True)
 
-    def validate_contract(self) -> list[FlowDefinitionDiagnostic]:
-        """Validate the static contract without rejecting dynamic routing."""
-        diagnostics: list[FlowDefinitionDiagnostic] = []
-        for method_name, method in self.methods.items():
-            path = f"methods.{method_name}"
-            if method.router and not method.is_start and method.listen is None:
-                diagnostics.append(
-                    FlowDefinitionDiagnostic(
-                        code="router_without_trigger",
-                        severity="error",
-                        path=path,
-                        message="router: true requires either start or listen",
-                    )
-                )
-            if method.emit and not method.router:
-                diagnostics.append(
-                    FlowDefinitionDiagnostic(
-                        code="emit_without_router",
-                        path=f"{path}.emit",
-                        message="emit is only used by routers to declare downstream events",
-                    )
-                )
-            if method.human_feedback:
-                human_feedback_config = method.human_feedback
-                if human_feedback_config.emit and not human_feedback_config.llm:
-                    diagnostics.append(
-                        FlowDefinitionDiagnostic(
-                            code="human_feedback_llm_required",
-                            severity="error",
-                            path=f"{path}.human_feedback.llm",
-                            message="llm is required when human_feedback.emit is set",
-                        )
-                    )
-                if (
-                    human_feedback_config.default_outcome is not None
-                    and not human_feedback_config.emit
-                ):
-                    diagnostics.append(
-                        FlowDefinitionDiagnostic(
-                            code="human_feedback_default_requires_emit",
-                            severity="error",
-                            path=f"{path}.human_feedback.default_outcome",
-                            message="default_outcome requires human_feedback.emit",
-                        )
-                    )
-                elif (
-                    human_feedback_config.default_outcome is not None
-                    and human_feedback_config.emit
-                ):
-                    if (
-                        human_feedback_config.default_outcome
-                        not in human_feedback_config.emit
-                    ):
-                        diagnostics.append(
-                            FlowDefinitionDiagnostic(
-                                code="human_feedback_default_not_in_emit",
-                                severity="error",
-                                path=f"{path}.human_feedback.default_outcome",
-                                message="default_outcome must be one of human_feedback.emit",
-                            )
-                        )
-
-        return diagnostics
-
-    def with_diagnostics(self) -> FlowDefinition:
-        """Attach fresh diagnostics and return this definition."""
-        self.diagnostics = self.validate_contract()
-        self.log_diagnostics()
-        return self
-
-    def log_diagnostics(self) -> None:
-        """Emit all attached diagnostics through the flow definition logger."""
-        _log_flow_definition_diagnostics(self.name, self.diagnostics)
-
-
-def _log_flow_definition_diagnostics(
-    definition_name: str,
-    diagnostics: list[FlowDefinitionDiagnostic],
-) -> None:
-    for diagnostic in diagnostics:
-        level = logging.ERROR if diagnostic.severity == "error" else logging.WARNING
-        path = f" at {diagnostic.path}" if diagnostic.path else ""
-        logger.log(
-            level,
-            "Flow definition diagnostic for %s%s [%s]: %s",
-            definition_name,
-            path,
-            diagnostic.code,
-            diagnostic.message,
-        )
-
-
-def _deserialize_diagnostics(value: Any) -> list[FlowDefinitionDiagnostic]:
-    return [FlowDefinitionDiagnostic.model_validate(item) for item in value or []]
-
 
 def _validate_step_name(name: str, *, field: str) -> None:
     if not isinstance(name, str) or not _STEP_NAME_PATTERN.fullmatch(name):
         raise ValueError(f"{field} must match {_STEP_NAME_PATTERN.pattern}")
 
 
-def _merge_diagnostics(
-    *diagnostic_groups: list[FlowDefinitionDiagnostic],
-) -> list[FlowDefinitionDiagnostic]:
-    diagnostics: list[FlowDefinitionDiagnostic] = []
-    seen: set[tuple[str, str, str | None, str]] = set()
-    for group in diagnostic_groups:
-        for diagnostic in group:
-            key = (
-                diagnostic.code,
-                diagnostic.severity,
-                diagnostic.path,
-                diagnostic.message,
+def log_flow_definition_issues(definition: FlowDefinition) -> None:
+    for method_name, method in definition.methods.items():
+        path = f"methods.{method_name}"
+        if method.router and not method.is_start and method.listen is None:
+            _log_flow_definition_issue(
+                definition.name,
+                code="router_without_trigger",
+                severity="error",
+                path=path,
+                message="router: true requires either start or listen",
             )
-            if key in seen:
-                continue
-            seen.add(key)
-            diagnostics.append(diagnostic)
-    return diagnostics
+        if method.emit and not method.router:
+            _log_flow_definition_issue(
+                definition.name,
+                code="emit_without_router",
+                path=f"{path}.emit",
+                message="emit is only used by routers to declare downstream events",
+            )
+        if method.human_feedback:
+            human_feedback_config = method.human_feedback
+            if human_feedback_config.emit and not human_feedback_config.llm:
+                _log_flow_definition_issue(
+                    definition.name,
+                    code="human_feedback_llm_required",
+                    severity="error",
+                    path=f"{path}.human_feedback.llm",
+                    message="llm is required when human_feedback.emit is set",
+                )
+            if (
+                human_feedback_config.default_outcome is not None
+                and not human_feedback_config.emit
+            ):
+                _log_flow_definition_issue(
+                    definition.name,
+                    code="human_feedback_default_requires_emit",
+                    severity="error",
+                    path=f"{path}.human_feedback.default_outcome",
+                    message="default_outcome requires human_feedback.emit",
+                )
+            elif (
+                human_feedback_config.default_outcome is not None
+                and human_feedback_config.emit
+                and human_feedback_config.default_outcome
+                not in human_feedback_config.emit
+            ):
+                _log_flow_definition_issue(
+                    definition.name,
+                    code="human_feedback_default_not_in_emit",
+                    severity="error",
+                    path=f"{path}.human_feedback.default_outcome",
+                    message="default_outcome must be one of human_feedback.emit",
+                )
+
+
+def _log_flow_definition_issue(
+    definition_name: str,
+    *,
+    code: str,
+    message: str,
+    severity: Literal["warning", "error"] = "warning",
+    path: str | None = None,
+) -> None:
+    level = logging.ERROR if severity == "error" else logging.WARNING
+    location = f" at {path}" if path else ""
+    logger.log(
+        level,
+        "Flow definition issue for %s%s [%s]: %s",
+        definition_name,
+        location,
+        code,
+        message,
+    )
