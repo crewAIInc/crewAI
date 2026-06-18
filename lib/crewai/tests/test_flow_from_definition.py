@@ -1800,6 +1800,28 @@ def test_expression_local_context_recurses_into_dataclass_values():
     )
 
 
+def test_expression_empty_context_overrides_stored_context():
+    from crewai.flow.expressions import Expression, ExpressionError
+
+    expression = Expression("state.score", context={"state": {"score": 90}})
+
+    assert expression.evaluate() == 90
+    with pytest.raises(ExpressionError):
+        expression.evaluate({})
+
+
+def test_expression_template_empty_context_overrides_stored_context():
+    from crewai.flow.expressions import Expression, ExpressionError
+
+    expression = Expression(
+        {"score": "${state.score}"}, context={"state": {"score": 90}}
+    )
+
+    assert expression.render_template() == {"score": 90}
+    with pytest.raises(ExpressionError):
+        expression.render_template({})
+
+
 def test_expression_action_can_route_like_if_else():
     yaml_str = f"""
 schema: crewai.flow/v1

@@ -106,14 +106,16 @@ class Expression:
 
     def evaluate(self, context: dict[str, Any] | None = None) -> Any:
         """Evaluate this value as a full CEL expression."""
+        resolved_context = self.context if context is None else context
         return self._evaluate_cel(
             self._require_cel_source(cast(str, self.value)),
-            context or self.context or {},
+            resolved_context or {},
         )
 
     def render_template(self, context: dict[str, Any] | None = None) -> Any:
         """Evaluate nested strings fully wrapped in ``${...}`` as CEL."""
-        return self._render_template_value(self.value, context or self.context or {})
+        resolved_context = self.context if context is None else context
+        return self._render_template_value(self.value, resolved_context or {})
 
     @staticmethod
     def _validate_template_value(
