@@ -43,13 +43,16 @@ jobs:
         env:
           MAX: "1500"
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
+          # Three-dot base...head == merge-base(base, head)..head: matches GitHub's
+          # "Files changed" diff and ignores the synthetic merge commit at HEAD.
           # Sum added + deleted lines across changed .py files; skip binaries ("-").
-          total=$(git diff --numstat "$BASE_SHA...HEAD" -- '*.py' \
+          total=$(git diff --numstat "$BASE_SHA...$HEAD_SHA" -- '*.py' \
             | awk '$1 != "-" && $2 != "-" { sum += $1 + $2 } END { print sum + 0 }')
           echo "Python churn: $total lines (limit $MAX)"
           if [ "$total" -gt "$MAX" ]; then
             echo "::error::Python changes total $total lines, over the $MAX-line limit. Split into smaller PRs."
-            git diff --numstat "$BASE_SHA...HEAD" -- '*.py' | sort -rn
+            git diff --numstat "$BASE_SHA...$HEAD_SHA" -- '*.py' | sort -rn
             exit 1
           fi
