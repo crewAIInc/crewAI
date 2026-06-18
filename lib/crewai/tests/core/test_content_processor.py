@@ -64,9 +64,9 @@ class TestContentProcessorProviderProtocol:
     """Tests for the ContentProcessorProvider Protocol."""
 
     def test_protocol_is_runtime_checkable(self) -> None:
-        assert hasattr(ContentProcessorProvider, "__protocol_attrs__") or isinstance(
-            NoOpContentProcessor(), ContentProcessorProvider
-        )
+        # isinstance() raises TypeError if the Protocol is not @runtime_checkable,
+        # so this single assertion properly verifies runtime-checkability.
+        assert isinstance(NoOpContentProcessor(), ContentProcessorProvider)
 
     def test_noop_processor_satisfies_protocol(self) -> None:
         processor = NoOpContentProcessor()
@@ -225,8 +225,10 @@ class TestContextVarIsolation:
         t_b = threading.Thread(target=thread_b)
         t_a.start()
         t_b.start()
-        t_a.join()
-        t_b.join()
+        t_a.join(timeout=5)
+        t_b.join(timeout=5)
+        assert not t_a.is_alive()
+        assert not t_b.is_alive()
 
         assert results["a"] == "thread_a"
         assert results["b"] == "thread_b"
