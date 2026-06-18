@@ -530,6 +530,51 @@ def test_bedrock_context_window_size():
     assert context_size_titan > 5000
 
 
+def test_bedrock_context_window_size_cross_region_inference_profile():
+    """
+    Cross-region inference profile ids (us./eu./apac.) must resolve to the
+    same context window as the base model id.
+
+    AWS recommends invoking newer models through cross-region inference
+    profiles, whose ids carry a geographic prefix. Without stripping that
+    prefix the lookup falls through to the 8192-token default, so a 200K
+    model is treated as an 8K one and conversations are truncated early.
+    """
+    base = LLM(model="bedrock/anthropic.claude-sonnet-4-20250514-v1:0")
+    base_size = base.get_context_window_size()
+    assert base_size > 150000  # 200K with ratio, not the 8192 fallback
+
+    for profile_model in (
+        "bedrock/us.anthropic.claude-sonnet-4-20250514-v1:0",
+        "bedrock/eu.anthropic.claude-sonnet-4-20250514-v1:0",
+        "bedrock/apac.anthropic.claude-sonnet-4-20250514-v1:0",
+    ):
+        llm = LLM(model=profile_model)
+        assert llm.get_context_window_size() == base_size, (
+            f"{profile_model} should match the base model context window"
+        )
+
+
+def test_bedrock_supports_multimodal_cross_region_inference_profile():
+    """
+    Vision support must be detected for cross-region inference profiles
+    across all geographic prefixes, matching the base model id.
+    """
+    base = LLM(model="bedrock/anthropic.claude-sonnet-4-20250514-v1:0")
+    assert base.supports_multimodal() is True
+
+    for profile_model in (
+        "bedrock/us.anthropic.claude-sonnet-4-20250514-v1:0",
+        "bedrock/eu.anthropic.claude-sonnet-4-20250514-v1:0",
+        "bedrock/apac.anthropic.claude-sonnet-4-20250514-v1:0",
+        "bedrock/eu.amazon.nova-pro-v1:0",
+    ):
+        llm = LLM(model=profile_model)
+        assert llm.supports_multimodal() is True, (
+            f"{profile_model} should be detected as multimodal"
+        )
+
+
 def test_bedrock_message_formatting():
     """
     Test that messages are properly formatted for Bedrock Converse API
