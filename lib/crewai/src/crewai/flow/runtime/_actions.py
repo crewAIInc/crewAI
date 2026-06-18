@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, Any, Protocol, cast
 from crewai.flow.expressions import Expression, ExpressionData
 from crewai.flow.flow_definition import (
     FlowActionDefinition,
+    FlowAgentActionDefinition,
     FlowCodeActionDefinition,
     FlowCrewActionDefinition,
     FlowEachActionDefinition,
@@ -138,6 +139,35 @@ class CrewAction:
         ).render_template()
         crew, _ = load_crew_from_definition(crew_definition, source="crew action")
         return await crew.kickoff_async(inputs=inputs)
+
+
+class AgentAction:
+    definition_type = FlowAgentActionDefinition
+
+    def __init__(self, flow: Flow[Any], definition: FlowAgentActionDefinition) -> None:
+        self.flow = flow
+        self.definition = definition
+
+    async def run(self, *_args: Any, **kwargs: Any) -> Any:
+        from crewai.project.json_loader import load_agent_from_definition
+
+        local_context = _pop_local_context(kwargs)
+        rendered_input = Expression.from_flow(
+            cast(ExpressionData, self.definition.with_.input),
+            self.flow,
+            local_context=local_context,
+        ).render_template()
+        if not isinstance(rendered_input, str):
+            raise ValueError("agent input must render to a string")
+
+        agent, response_format = load_agent_from_definition(
+            self.definition.with_,
+            source="agent action",
+        )
+        return await agent.kickoff_async(
+            rendered_input,
+            response_format=response_format,
+        )
 
 
 class ExpressionAction:
@@ -284,6 +314,7 @@ _ACTION_TYPES: tuple[_ActionType, ...] = (
     EachAction,
     CodeAction,
     ToolAction,
+    AgentAction,
     CrewAction,
     ExpressionAction,
     ScriptAction,
