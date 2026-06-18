@@ -9,6 +9,10 @@ CrewAI AMP can export OpenTelemetry **traces** and **logs** from your deployment
 
 Telemetry data follows the [OpenTelemetry GenAI semantic conventions](https://opentelemetry.io/docs/specs/semconv/gen-ai/) plus additional CrewAI-specific attributes.
 
+<Tip>
+OpenTelemetry is the **recommended observability path** — vendor-neutral, works with any OTLP-compatible backend (Grafana, Honeycomb, NewRelic, your own collector). If you specifically use Datadog, see the dedicated [Datadog Integration](./datadog) guide which covers both the Datadog Agent path and Datadog's OTLP intake.
+</Tip>
+
 ## Prerequisites
 
 <CardGroup cols={2}>
@@ -41,17 +45,7 @@ Telemetry data follows the [OpenTelemetry GenAI semantic conventions](https://op
     <Frame>![OpenTelemetry collector configuration](/images/crewai-otel-collector-opentelemetry.png)</Frame>
   </Tab>
   <Tab title="Datadog">
-    - **Datadog Site Domain** — Your Datadog site's OTLP host only, with no protocol or path. CrewAI builds the full HTTPS OTLP endpoint for you. Use the host that matches your [Datadog site](https://docs.datadoghq.com/getting_started/site/):
-      - `otlp.datadoghq.com` (US1)
-      - `otlp.us3.datadoghq.com` (US3)
-      - `otlp.us5.datadoghq.com` (US5)
-      - `otlp.datadoghq.eu` (EU1)
-      - `otlp.ap1.datadoghq.com` (AP1)
-    - **API Key** — Your Datadog API key. See [how to create one](https://docs.datadoghq.com/account_management/api-app-keys/#api-keys).
-
-    The Datadog integration exports **traces**.
-
-    <Frame>![Datadog collector configuration](/images/crewai-otel-collector-datadog.png)</Frame>
+    For Datadog setup, see the dedicated [Datadog Integration](./datadog) guide — it covers both the Datadog Agent path (recommended, cheaper for log volume) and Datadog's OTLP intake with full collector configuration steps.
   </Tab>
 </Tabs>
 
