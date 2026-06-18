@@ -18,7 +18,6 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
-    RootModel,
     field_serializer,
     model_validator,
 )
@@ -38,6 +37,7 @@ _STEP_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 __all__ = [
     "FlowActionDefinition",
+    "FlowAtomicActionDefinition",
     "FlowCodeActionDefinition",
     "FlowConfigDefinition",
     "FlowConversationalDefinition",
@@ -47,7 +47,7 @@ __all__ = [
     "FlowDefinitionCondition",
     "FlowDictStateDefinition",
     "FlowEachActionDefinition",
-    "FlowEachInnerActionDefinition",
+    "FlowEachStepDefinition",
     "FlowExpressionActionDefinition",
     "FlowHumanFeedbackDefinition",
     "FlowJsonSchemaStateDefinition",
@@ -466,37 +466,47 @@ class FlowScriptActionDefinition(BaseModel):
     )
 
 
-FlowInnerActionDefinition = (
+FlowAtomicActionDefinition: TypeAlias = Annotated[
     FlowCodeActionDefinition
     | FlowToolActionDefinition
     | FlowCrewActionDefinition
     | FlowExpressionActionDefinition
-    | FlowScriptActionDefinition
-)
+    | FlowScriptActionDefinition,
+    Field(discriminator="call"),
+]
 
 
-class FlowEachInnerActionDefinition(RootModel[dict[str, FlowInnerActionDefinition]]):
-    """One named action inside an ``each`` composite action."""
+class FlowEachStepDefinition(BaseModel):
+    """One named step inside an ``each`` composite action."""
 
-    root: dict[str, FlowInnerActionDefinition] = Field(
-        description="Single-entry mapping from an inner action name to its action.",
-        examples=[{"clean": {"call": "script", "code": "return item.strip()"}}],
+    model_config = ConfigDict(
+        populate_by_name=True,
+        extra="forbid",
+    )
+
+    name: str = Field(
+        description="Step name used to reference this step's output.",
+        examples=["clean"],
+    )
+    if_: str | None = Field(
+        default=None,
+        alias="if",
+        description=(
+            "Optional CEL expression evaluated against state, outputs, and local "
+            "context. When present, the step runs only if the expression evaluates "
+            "to true."
+        ),
+        examples=["item.kind == 'invoice'"],
+    )
+    action: FlowAtomicActionDefinition = Field(
+        description="Atomic action to run for this step.",
+        examples=[{"call": "script", "code": "return item.strip()"}],
     )
 
     @model_validator(mode="after")
-    def _validate_action_mapping(self) -> FlowEachInnerActionDefinition:
-        if len(self.root) != 1:
-            raise ValueError("each.do entries must be one-key mappings")
-        _validate_step_name(self.name, field="each.do action names")
+    def _validate_step_name(self) -> FlowEachStepDefinition:
+        _validate_step_name(self.name, field="each.do step names")
         return self
-
-    @property
-    def name(self) -> str:
-        return next(iter(self.root))
-
-    @property
-    def action(self) -> FlowInnerActionDefinition:
-        return next(iter(self.root.values()))
 
 
 class FlowEachActionDefinition(BaseModel):
@@ -519,35 +529,36 @@ class FlowEachActionDefinition(BaseModel):
         description="CEL expression that must evaluate to the list to iterate.",
         examples=["state.rows"],
     )
-    do: list[FlowEachInnerActionDefinition] = Field(
+    do: list[FlowEachStepDefinition] = Field(
         description=(
-            "Ordered inner actions to run for each item. Each entry must be a "
-            "single-key mapping naming that inner action."
+            "Ordered steps to run for each item. Each step has a name, optional "
+            "if expression, and atomic action."
         ),
         examples=[
             [
-                {"clean": {"call": "script", "code": "return item.strip()"}},
-                {"tag": {"call": "expression", "expr": "outputs.clean"}},
+                {
+                    "name": "clean",
+                    "action": {"call": "script", "code": "return item.strip()"},
+                },
+                {
+                    "name": "tag",
+                    "if": "outputs.clean != ''",
+                    "action": {"call": "expression", "expr": "outputs.clean"},
+                },
             ]
         ],
     )
 
     @model_validator(mode="after")
-    def _validate_inner_action_list(self) -> FlowEachActionDefinition:
+    def _validate_step_list(self) -> FlowEachActionDefinition:
         if not self.do:
-            raise ValueError("each.do must contain at least one action")
+            raise ValueError("each.do must contain at least one step")
 
-        seen: set[str] = set()
-        for inner_action in self.do:
-            name = inner_action.name
-            if name in seen:
-                raise ValueError(f"each.do action names must be unique: {name!r}")
-            seen.add(name)
-
+        _validate_step_list(self.do, field="each.do")
         return self
 
 
-FlowActionDefinition = (
+FlowActionDefinition: TypeAlias = (
     FlowCodeActionDefinition
     | FlowToolActionDefinition
     | FlowCrewActionDefinition
@@ -731,6 +742,15 @@ class FlowDefinition(BaseModel):
 def _validate_step_name(name: str, *, field: str) -> None:
     if not isinstance(name, str) or not _STEP_NAME_PATTERN.fullmatch(name):
         raise ValueError(f"{field} must match {_STEP_NAME_PATTERN.pattern}")
+
+
+def _validate_step_list(steps: list[FlowEachStepDefinition], *, field: str) -> None:
+    seen: set[str] = set()
+    for step in steps:
+        name = step.name
+        if name in seen:
+            raise ValueError(f"{field} step names must be unique: {name!r}")
+        seen.add(name)
 
 
 def log_flow_definition_issues(definition: FlowDefinition) -> None:

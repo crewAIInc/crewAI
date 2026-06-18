@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import ast
 import asyncio
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 import contextvars
 import inspect
 import os
@@ -15,7 +15,7 @@ from crewai.flow.flow_definition import (
     FlowCodeActionDefinition,
     FlowCrewActionDefinition,
     FlowEachActionDefinition,
-    FlowEachInnerActionDefinition,
+    FlowEachStepDefinition,
     FlowExpressionActionDefinition,
     FlowScriptActionDefinition,
     FlowToolActionDefinition,
@@ -32,6 +32,8 @@ if TYPE_CHECKING:
 __all__ = ["FlowScriptExecutionDisabledError", "build_action"]
 
 LocalContext = dict[str, Any]
+NestedStepRunner = Callable[[LocalContext], Awaitable[Any]]
+NestedStep = tuple[str, str | None, NestedStepRunner]
 _LOCAL_CONTEXT_KWARG = "__flow_definition_local_context"
 _ALLOW_SCRIPT_EXECUTION_ENV_VAR = "CREWAI_ALLOW_FLOW_SCRIPT_EXECUTION"
 _TRUSTED_SCRIPT_EXECUTION_VALUES = frozenset({"1", "true", "yes"})
@@ -217,9 +219,9 @@ class EachAction:
     def __init__(self, flow: Flow[Any], definition: FlowEachActionDefinition) -> None:
         self.flow = flow
         self.definition = definition
-        self.inner_actions = [
-            (inner_action.name, self._build_inner_action(inner_action))
-            for inner_action in definition.do
+        self.steps: list[NestedStep] = [
+            (step.name, step.if_, self._build_step_action(step))
+            for step in definition.do
         ]
 
     async def run(self, *_args: Any, **_kwargs: Any) -> list[Any]:
@@ -231,22 +233,30 @@ class EachAction:
 
         for item in items:
             local_outputs: dict[str, Any] = {}
+            local_context = {"item": item, "outputs": local_outputs}
             last_output: Any = None
-            for name, run_inner_action in self.inner_actions:
-                last_output = await run_inner_action(
-                    {"item": item, "outputs": local_outputs}
-                )
+            for name, condition, run_step_action in self.steps:
+                if condition is not None and not self._condition_matches(
+                    condition, local_context
+                ):
+                    continue
+
+                last_output = await run_step_action(local_context)
                 local_outputs[name] = last_output
             results.append(last_output)
 
         return results
 
-    def _build_inner_action(
-        self, inner_action: FlowEachInnerActionDefinition
-    ) -> Callable[[LocalContext], Any]:
-        run_action = build_action(self.flow, inner_action.action)
+    def _condition_matches(self, condition: str, local_context: LocalContext) -> bool:
+        result = evaluate_expression(self.flow, condition, local_context=local_context)
+        if not isinstance(result, bool):
+            raise ValueError("if expression must evaluate to a boolean")
+        return result
 
-        async def run_inner_action(local_context: LocalContext) -> Any:
+    def _build_step_action(self, step: FlowEachStepDefinition) -> NestedStepRunner:
+        run_action = build_action(self.flow, step.action)
+
+        async def run_step_action(local_context: LocalContext) -> Any:
             kwargs = {_LOCAL_CONTEXT_KWARG: local_context}
             if inspect.iscoroutinefunction(run_action):
                 result = run_action(**kwargs)
@@ -261,7 +271,7 @@ class EachAction:
                 result = await result
             return result
 
-        return run_inner_action
+        return run_step_action
 
 
 _ACTION_TYPES: tuple[_ActionType, ...] = (
