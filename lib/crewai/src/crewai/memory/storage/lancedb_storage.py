@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import contextvars
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import logging
 import os
@@ -165,8 +165,8 @@ class LanceDBStorage:
                 "categories_str": "[]",
                 "metadata_str": "{}",
                 "importance": 0.5,
-                "created_at": datetime.utcnow().isoformat(),
-                "last_accessed": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "last_accessed": datetime.now(timezone.utc).isoformat(),
                 "source": "",
                 "private": False,
                 "vector": [0.0] * vector_dim,
@@ -264,11 +264,15 @@ class LanceDBStorage:
     def _row_to_record(self, row: dict[str, Any]) -> MemoryRecord:
         def _parse_dt(val: Any) -> datetime:
             if val is None:
-                return datetime.utcnow()
+                return datetime.now(timezone.utc)
             if isinstance(val, datetime):
-                return val
-            s = str(val)
-            return datetime.fromisoformat(s.replace("Z", "+00:00"))
+                dt = val
+            else:
+                s = str(val)
+                dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                return dt.replace(tzinfo=timezone.utc)
+            return dt.astimezone(timezone.utc)
 
         return MemoryRecord(
             id=str(row["id"]),
@@ -349,7 +353,7 @@ class LanceDBStorage:
         if not record_ids or self._table is None:
             return
         with store_lock(self._lock_name):
-            now = datetime.utcnow().isoformat()
+            now = datetime.now(timezone.utc).isoformat()
             safe_ids = [str(rid).replace("'", "''") for rid in record_ids]
             ids_expr = ", ".join(f"'{rid}'" for rid in safe_ids)
             self._do_write(
