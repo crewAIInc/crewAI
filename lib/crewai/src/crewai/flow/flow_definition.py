@@ -45,7 +45,6 @@ __all__ = [
     "FlowCrewActionDefinition",
     "FlowDefinition",
     "FlowDefinitionCondition",
-    "FlowDefinitionDiagnostic",
     "FlowDictStateDefinition",
     "FlowEachActionDefinition",
     "FlowEachInnerActionDefinition",
@@ -68,29 +67,6 @@ def _object_ref(value: Any) -> str:
     module = getattr(target, "__module__", "")
     qualname = getattr(target, "__qualname__", getattr(target, "__name__", ""))
     return f"{module}:{qualname}" if module and qualname else repr(value)
-
-
-class FlowDefinitionDiagnostic(BaseModel):
-    """A non-fatal Flow Definition build or validation diagnostic."""
-
-    code: str = Field(
-        description="Stable diagnostic identifier for tooling and tests.",
-        examples=["router_without_trigger"],
-    )
-    message: str = Field(
-        description="Human-readable explanation of the diagnostic.",
-        examples=["router: true requires either start or listen"],
-    )
-    severity: Literal["warning", "error"] = Field(
-        default="warning",
-        description="Diagnostic severity. Errors indicate an invalid or incomplete contract.",
-        examples=["error"],
-    )
-    path: str | None = Field(
-        default=None,
-        description="Dot path to the definition field that produced the diagnostic.",
-        examples=["methods.decide"],
-    )
 
 
 class FlowDictStateDefinition(BaseModel):
@@ -702,20 +678,6 @@ class FlowDefinition(BaseModel):
             }
         ],
     )
-    diagnostics: list[FlowDefinitionDiagnostic] = Field(
-        default_factory=list,
-        description="Validation diagnostics attached to this definition.",
-        examples=[
-            [
-                {
-                    "code": "router_without_trigger",
-                    "message": "router: true requires either start or listen",
-                    "severity": "error",
-                    "path": "methods.decide",
-                }
-            ]
-        ],
-    )
 
     @model_validator(mode="after")
     def _validate_method_names(self) -> FlowDefinition:
@@ -742,13 +704,9 @@ class FlowDefinition(BaseModel):
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> FlowDefinition:
-        """Load a definition from a dictionary and attach diagnostics."""
-        serialized_diagnostics = _deserialize_diagnostics(data.get("diagnostics", []))
+        """Load a definition from a dictionary."""
         definition = cls.model_validate(data)
-        definition.diagnostics = _merge_diagnostics(
-            serialized_diagnostics, definition.validate_contract()
-        )
-        definition.log_diagnostics()
+        log_flow_definition_issues(definition)
         return definition
 
     @classmethod
@@ -769,122 +727,81 @@ class FlowDefinition(BaseModel):
         """Return the JSON Schema for the Flow Definition contract."""
         return cls.model_json_schema(by_alias=True)
 
-    def validate_contract(self) -> list[FlowDefinitionDiagnostic]:
-        """Validate the static contract without rejecting dynamic routing."""
-        diagnostics: list[FlowDefinitionDiagnostic] = []
-        for method_name, method in self.methods.items():
-            path = f"methods.{method_name}"
-            if method.router and not method.is_start and method.listen is None:
-                diagnostics.append(
-                    FlowDefinitionDiagnostic(
-                        code="router_without_trigger",
-                        severity="error",
-                        path=path,
-                        message="router: true requires either start or listen",
-                    )
-                )
-            if method.emit and not method.router:
-                diagnostics.append(
-                    FlowDefinitionDiagnostic(
-                        code="emit_without_router",
-                        path=f"{path}.emit",
-                        message="emit is only used by routers to declare downstream events",
-                    )
-                )
-            if method.human_feedback:
-                human_feedback_config = method.human_feedback
-                if human_feedback_config.emit and not human_feedback_config.llm:
-                    diagnostics.append(
-                        FlowDefinitionDiagnostic(
-                            code="human_feedback_llm_required",
-                            severity="error",
-                            path=f"{path}.human_feedback.llm",
-                            message="llm is required when human_feedback.emit is set",
-                        )
-                    )
-                if (
-                    human_feedback_config.default_outcome is not None
-                    and not human_feedback_config.emit
-                ):
-                    diagnostics.append(
-                        FlowDefinitionDiagnostic(
-                            code="human_feedback_default_requires_emit",
-                            severity="error",
-                            path=f"{path}.human_feedback.default_outcome",
-                            message="default_outcome requires human_feedback.emit",
-                        )
-                    )
-                elif (
-                    human_feedback_config.default_outcome is not None
-                    and human_feedback_config.emit
-                ):
-                    if (
-                        human_feedback_config.default_outcome
-                        not in human_feedback_config.emit
-                    ):
-                        diagnostics.append(
-                            FlowDefinitionDiagnostic(
-                                code="human_feedback_default_not_in_emit",
-                                severity="error",
-                                path=f"{path}.human_feedback.default_outcome",
-                                message="default_outcome must be one of human_feedback.emit",
-                            )
-                        )
-
-        return diagnostics
-
-    def with_diagnostics(self) -> FlowDefinition:
-        """Attach fresh diagnostics and return this definition."""
-        self.diagnostics = self.validate_contract()
-        self.log_diagnostics()
-        return self
-
-    def log_diagnostics(self) -> None:
-        """Emit all attached diagnostics through the flow definition logger."""
-        _log_flow_definition_diagnostics(self.name, self.diagnostics)
-
-
-def _log_flow_definition_diagnostics(
-    definition_name: str,
-    diagnostics: list[FlowDefinitionDiagnostic],
-) -> None:
-    for diagnostic in diagnostics:
-        level = logging.ERROR if diagnostic.severity == "error" else logging.WARNING
-        path = f" at {diagnostic.path}" if diagnostic.path else ""
-        logger.log(
-            level,
-            "Flow definition diagnostic for %s%s [%s]: %s",
-            definition_name,
-            path,
-            diagnostic.code,
-            diagnostic.message,
-        )
-
-
-def _deserialize_diagnostics(value: Any) -> list[FlowDefinitionDiagnostic]:
-    return [FlowDefinitionDiagnostic.model_validate(item) for item in value or []]
-
 
 def _validate_step_name(name: str, *, field: str) -> None:
     if not isinstance(name, str) or not _STEP_NAME_PATTERN.fullmatch(name):
         raise ValueError(f"{field} must match {_STEP_NAME_PATTERN.pattern}")
 
 
-def _merge_diagnostics(
-    *diagnostic_groups: list[FlowDefinitionDiagnostic],
-) -> list[FlowDefinitionDiagnostic]:
-    diagnostics: list[FlowDefinitionDiagnostic] = []
-    seen: set[tuple[str, str, str | None, str]] = set()
-    for group in diagnostic_groups:
-        for diagnostic in group:
-            key = (
-                diagnostic.code,
-                diagnostic.severity,
-                diagnostic.path,
-                diagnostic.message,
+def log_flow_definition_issues(definition: FlowDefinition) -> None:
+    for method_name, method in definition.methods.items():
+        path = f"methods.{method_name}"
+        if method.router and not method.is_start and method.listen is None:
+            _log_flow_definition_issue(
+                definition.name,
+                code="router_without_trigger",
+                severity="error",
+                path=path,
+                message="router: true requires either start or listen",
             )
-            if key in seen:
-                continue
-            seen.add(key)
-            diagnostics.append(diagnostic)
-    return diagnostics
+        if method.emit and not method.router:
+            _log_flow_definition_issue(
+                definition.name,
+                code="emit_without_router",
+                path=f"{path}.emit",
+                message="emit is only used by routers to declare downstream events",
+            )
+        if method.human_feedback:
+            human_feedback_config = method.human_feedback
+            if human_feedback_config.emit and not human_feedback_config.llm:
+                _log_flow_definition_issue(
+                    definition.name,
+                    code="human_feedback_llm_required",
+                    severity="error",
+                    path=f"{path}.human_feedback.llm",
+                    message="llm is required when human_feedback.emit is set",
+                )
+            if (
+                human_feedback_config.default_outcome is not None
+                and not human_feedback_config.emit
+            ):
+                _log_flow_definition_issue(
+                    definition.name,
+                    code="human_feedback_default_requires_emit",
+                    severity="error",
+                    path=f"{path}.human_feedback.default_outcome",
+                    message="default_outcome requires human_feedback.emit",
+                )
+            elif (
+                human_feedback_config.default_outcome is not None
+                and human_feedback_config.emit
+                and human_feedback_config.default_outcome
+                not in human_feedback_config.emit
+            ):
+                _log_flow_definition_issue(
+                    definition.name,
+                    code="human_feedback_default_not_in_emit",
+                    severity="error",
+                    path=f"{path}.human_feedback.default_outcome",
+                    message="default_outcome must be one of human_feedback.emit",
+                )
+
+
+def _log_flow_definition_issue(
+    definition_name: str,
+    *,
+    code: str,
+    message: str,
+    severity: Literal["warning", "error"] = "warning",
+    path: str | None = None,
+) -> None:
+    level = logging.ERROR if severity == "error" else logging.WARNING
+    location = f" at {path}" if path else ""
+    logger.log(
+        level,
+        "Flow definition issue for %s%s [%s]: %s",
+        definition_name,
+        location,
+        code,
+        message,
+    )

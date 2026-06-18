@@ -44,7 +44,6 @@ def test_flow_public_exports_are_explicit():
         "FlowCrewActionDefinition",
         "FlowDefinition",
         "FlowDefinitionCondition",
-        "FlowDefinitionDiagnostic",
         "FlowDictStateDefinition",
         "FlowEachActionDefinition",
         "FlowEachInnerActionDefinition",
@@ -69,6 +68,7 @@ def test_flow_definition_json_schema_carries_reference_descriptions():
 
     assert schema["properties"]["schema"]["description"]
     assert schema["properties"]["methods"]["description"]
+    assert "diagnostics" not in schema["properties"]
 
     method_properties = defs["FlowMethodDefinition"]["properties"]
     assert method_properties["do"]["description"] == "Action executed when this method runs."
@@ -79,7 +79,11 @@ def test_flow_definition_json_schema_carries_reference_descriptions():
     assert "not interpolated" in script_properties["code"]["description"]
     assert "not sandboxed" in script_properties["code"]["description"]
 
-    state_schema = schema["properties"]["state"]["anyOf"][0]
+    state_schema = next(
+        branch
+        for branch in schema["properties"]["state"]["anyOf"]
+        if "discriminator" in branch
+    )
     assert state_schema["discriminator"]["propertyName"] == "type"
     assert state_schema["discriminator"]["mapping"] == {
         "dict": "#/$defs/FlowDictStateDefinition",
@@ -126,7 +130,6 @@ def test_flow_definition_json_schema_carries_field_examples_only():
         "FlowConfigDefinition",
         "FlowPersistenceDefinition",
         "FlowHumanFeedbackDefinition",
-        "FlowDefinitionDiagnostic",
     ]:
         model_schema = schema if model_name == "FlowDefinition" else defs[model_name]
         assert "examples" not in model_schema
@@ -332,7 +335,7 @@ def test_flow_definition_maps_dsl_to_static_contract():
     assert review.human_feedback.learn_strict is True
 
     assert definition.methods["audit"].listen == {"and": ["begin", "process"]}
-    assert definition.diagnostics == []
+    assert "diagnostics" not in definition.to_dict()
 
 
 def test_flow_definition_excludes_conversational_builtins_for_regular_flows():
@@ -414,7 +417,8 @@ def test_flow_definition_uses_collapsed_conversational_router_start():
     assert methods["route_conversation"].router is True
 
 
-def test_flow_definition_serializes_human_feedback_metadata():
+def test_flow_definition_serializes_human_feedback_metadata(caplog):
+    caplog.set_level(logging.WARNING, logger="crewai.flow.dsl._utils")
     marker = object()
 
     class MetadataFlow(Flow):
@@ -433,9 +437,9 @@ def test_flow_definition_serializes_human_feedback_metadata():
     assert review.human_feedback is not None
     assert review.human_feedback.metadata == {"ref": "builtins:dict"}
     assert any(
-        diagnostic.code == "non_serializable_value"
-        and diagnostic.path == "methods.review.human_feedback.metadata"
-        for diagnostic in definition.diagnostics
+        "methods.review.human_feedback.metadata" in record.message
+        and "not fully serializable" in record.message
+        for record in caplog.records
     )
     definition.to_json()
 
@@ -674,7 +678,6 @@ def test_flow_definition_allows_dynamic_router_emit():
     definition = DynamicRouterFlow.flow_definition()
 
     assert definition.methods["decide"].emit is None
-    assert definition.diagnostics == []
 
 
 def test_flow_definition_infers_literal_router_emit():
@@ -827,16 +830,15 @@ def test_flow_definition_accepts_explicit_router_events():
     assert definition.methods["decide"].emit == ["left", "right"]
 
 
-def test_flow_definition_preserves_diagnostics_loaded_from_contract():
+def test_flow_definition_ignores_legacy_diagnostics_loaded_from_contract():
     definition = flow_definition.FlowDefinition.from_dict(
         {
             "schema": "crewai.flow/v1",
             "name": "LoadedDiagnosticsFlow",
             "methods": {
-                "decision": {
-                    "do": {"ref": "loaded_flows:LoadedDiagnosticsFlow.decision"},
-                    "router": True,
-                    "emit": ["continue"],
+                "begin": {
+                    "do": {"ref": "loaded_flows:LoadedDiagnosticsFlow.begin"},
+                    "start": True,
                 }
             },
             "diagnostics": [
@@ -856,13 +858,13 @@ def test_flow_definition_preserves_diagnostics_loaded_from_contract():
         }
     )
 
-    codes = [diagnostic.code for diagnostic in definition.diagnostics]
-    assert "serialized_warning" in codes
-    assert codes.count("router_without_trigger") == 1
+    assert "diagnostics" not in definition.to_dict()
 
 
-def test_router_start_false_without_listen_reports_missing_trigger():
-    definition = flow_definition.FlowDefinition.from_dict(
+def test_router_start_false_without_listen_logs_missing_trigger(caplog):
+    caplog.set_level(logging.ERROR, logger="crewai.flow.flow_definition")
+
+    flow_definition.FlowDefinition.from_dict(
         {
             "schema": "crewai.flow/v1",
             "name": "LoadedFlow",
@@ -878,9 +880,10 @@ def test_router_start_false_without_listen_reports_missing_trigger():
     )
 
     assert any(
-        diagnostic.code == "router_without_trigger"
-        and diagnostic.path == "methods.decision"
-        for diagnostic in definition.diagnostics
+        record.levelno == logging.ERROR
+        and "router_without_trigger" in record.message
+        and "methods.decision" in record.message
+        for record in caplog.records
     )
 
 
@@ -908,7 +911,7 @@ def test_router_human_feedback_preserves_existing_router_metadata():
     assert method.human_feedback is not None
 
 
-def test_dynamic_router_flow_definition_has_no_diagnostics():
+def test_dynamic_router_flow_definition_allows_dynamic_emit():
     class LazyDynamicRouterFlow(Flow):
         @start()
         def begin(self):
@@ -919,7 +922,7 @@ def test_dynamic_router_flow_definition_has_no_diagnostics():
             return self.state["dynamic_event"]
 
     definition = LazyDynamicRouterFlow.flow_definition()
-    assert definition.diagnostics == []
+    assert definition.methods["decide"].emit is None
 
 
 def test_dynamic_router_string_listener_is_valid_contract():
@@ -938,7 +941,7 @@ def test_dynamic_router_string_listener_is_valid_contract():
 
     definition = DynamicRouterListenerFlow.flow_definition()
 
-    assert definition.diagnostics == []
+    assert definition.methods["handle"].listen == "dynamic_event"
 
 
 def test_static_string_listener_is_allowed_by_contract():
@@ -958,7 +961,7 @@ def test_static_string_listener_is_allowed_by_contract():
             },
         }
     )
-    assert definition.diagnostics == []
+    assert definition.methods["handle"].listen == "begni"
 
 
 def test_start_false_not_classified_as_start_method():
@@ -1023,10 +1026,10 @@ def test_flow_definition_cache_is_not_reused_by_subclasses():
     assert set(child_definition.methods) == {"child_step"}
 
 
-def test_flow_definition_logs_diagnostics_when_loaded_from_contract(caplog):
+def test_flow_definition_logs_validation_issues_when_loaded_from_contract(caplog):
     caplog.set_level(logging.WARNING, logger="crewai.flow.flow_definition")
 
-    definition = flow_definition.FlowDefinition.from_dict(
+    flow_definition.FlowDefinition.from_dict(
         {
             "schema": "crewai.flow/v1",
             "name": "LoadedFlow",
@@ -1040,10 +1043,6 @@ def test_flow_definition_logs_diagnostics_when_loaded_from_contract(caplog):
         }
     )
 
-    assert any(
-        diagnostic.code == "router_without_trigger"
-        for diagnostic in definition.diagnostics
-    )
     assert any(
         record.levelno == logging.ERROR
         and "LoadedFlow" in record.message
