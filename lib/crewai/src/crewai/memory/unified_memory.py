@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from concurrent.futures import Future, ThreadPoolExecutor
+from contextlib import suppress
 import contextvars
+import copy
 from datetime import datetime
 import threading
 import time
@@ -51,6 +53,24 @@ def _default_embedder() -> OpenAIEmbeddingFunction:
     """Build default OpenAI embedder for memory."""
     spec: OpenAIProviderSpec = {"provider": "openai", "config": {}}
     return build_embedder(spec)
+
+
+def _non_streaming_analysis_llm(llm: Any) -> Any:
+    """Return an isolated non-streaming LLM for internal memory analysis."""
+    if not isinstance(llm, BaseLLM):
+        return llm
+
+    try:
+        analysis_llm = copy.copy(llm)
+    except Exception:
+        try:
+            analysis_llm = llm.model_copy(deep=False)
+        except Exception:
+            return llm
+
+    with suppress(Exception):
+        analysis_llm.stream = False
+    return analysis_llm
 
 
 class Memory(BaseModel):
@@ -200,7 +220,9 @@ class Memory(BaseModel):
             query_analysis_threshold=self.query_analysis_threshold,
         )
 
-        self._llm_instance = None if isinstance(self.llm, str) else self.llm
+        self._llm_instance = (
+            None if isinstance(self.llm, str) else _non_streaming_analysis_llm(self.llm)
+        )
         self._embedder_instance = (
             self.embedder
             if (self.embedder is not None and not isinstance(self.embedder, dict))

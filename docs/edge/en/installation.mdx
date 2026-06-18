@@ -9,7 +9,60 @@ mode: "wide"
 
 Install our coding agent skills (Claude Code, Codex, ...) to quickly get your coding agents up and running with CrewAI.
 
-You can install it with `npx skills add crewaiinc/skills`
+<button
+  type="button"
+  className="button button-primary"
+  onClick={async (event) => {
+    const prompt = `Set up this environment so I can build with CrewAI.
+
+First install the official CrewAI coding-agent skills if this environment supports npx:
+
+npx skills add crewaiinc/skills
+
+If npx is missing or the current agent cannot load skills, do not fail the whole setup. Report the exact issue and continue using the CrewAI docs directly.
+
+Use these CrewAI docs as source of truth before making assumptions:
+- https://skills.crewai.com
+- https://docs.crewai.com/llms.txt
+- https://docs.crewai.com/en/installation
+- https://docs.crewai.com/en/guides/coding-tools/build-with-ai
+
+Setup steps:
+1. Check python3 --version. CrewAI requires Python >=3.10 and <3.14.
+2. Install uv if missing:
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+3. Source the uv environment if needed:
+   source "$HOME/.local/bin/env"
+4. Install the CrewAI CLI:
+   uv tool install crewai
+5. Verify the CLI:
+   crewai version
+   crewai create --help
+6. Create a project:
+   CREWAI_DMN=true crewai create
+7. After project creation, inspect the generated files before editing.
+8. Run:
+   crewai install
+   crewai run
+
+Do not hardcode API keys. Use .env.
+Do not invent CLI flags. Validate with crewai --help or crewai create --help.
+If a command fails, show the exact command and error, explain the likely cause, fix what you can safely fix, and retry once.`;
+    const button = event.currentTarget;
+    try {
+      await navigator.clipboard.writeText(prompt);
+      button.textContent = "Copied";
+    } catch {
+      button.textContent = "Copy failed";
+    } finally {
+      window.setTimeout(() => {
+        button.textContent = "Copy instructions for coding agents";
+      }, 1600);
+    }
+  }}
+>
+  Copy instructions for coding agents
+</button>
 
 <iframe src="https://www.loom.com/embed/befb9f68b81f42ad8112bfdd95a780af" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen style={{width: "100%", height: "400px"}}></iframe>
 

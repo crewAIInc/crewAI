@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from contextlib import AbstractContextManager, nullcontext
 from enum import Enum
 import os
@@ -7,10 +8,9 @@ from pathlib import Path
 import re
 import subprocess
 import sys
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import click
-from crewai.project.json_loader import find_crew_json_file
 from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
 from packaging import version
 
@@ -38,6 +38,15 @@ class CrewType(Enum):
 _INPUT_PLACEHOLDER_RE = re.compile(r"(?<!{){([A-Za-z_][A-Za-z0-9_\-]*)}(?!})")
 _CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV = "CREWAI_CLI_RUNNER_PACKAGE_DIR"
 _CREWAI_RUNNER_SOURCE_DIR_ENV = "CREWAI_RUNNER_SOURCE_DIR"
+_FULL_CREWAI_INSTALL_MESSAGE = """\
+CrewAI CLI is installed without the `crewai` package required to run crews.
+
+Install the full CrewAI prerelease package:
+
+  uv tool install --force --prerelease=allow 'crewai[tools]==1.14.8a1'
+
+The quotes are required in zsh so `crewai[tools]` is not treated as a glob.
+"""
 _JSON_CREW_RUNNER_CODE = """
 import importlib.util
 import os
@@ -72,10 +81,37 @@ module_spec.loader.exec_module(module)
 
 from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
 
-module._run_json_crew(
-    trained_agents_file=os.getenv(CREWAI_TRAINED_AGENTS_FILE_ENV)
-)
+try:
+    module._run_json_crew(
+        trained_agents_file=os.getenv(CREWAI_TRAINED_AGENTS_FILE_ENV)
+    )
+except module.click.ClickException as exc:
+    exc.show()
+    raise SystemExit(exc.exit_code)
 """.strip()
+
+
+def _import_find_crew_json_file() -> Callable[[], Path | None]:
+    from crewai.project.json_loader import find_crew_json_file as _find_crew_json_file
+
+    return cast("Callable[[], Path | None]", _find_crew_json_file)
+
+
+def _is_missing_crewai_package(exc: ModuleNotFoundError) -> bool:
+    return bool(exc.name and exc.name.startswith("crewai"))
+
+
+def _full_crewai_install_error() -> click.ClickException:
+    return click.ClickException(_FULL_CREWAI_INSTALL_MESSAGE)
+
+
+def find_crew_json_file() -> Path | None:
+    try:
+        return _import_find_crew_json_file()()
+    except ModuleNotFoundError as exc:
+        if _is_missing_crewai_package(exc):
+            raise _full_crewai_install_error() from exc
+        raise
 
 
 def _has_json_crew() -> bool:
