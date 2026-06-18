@@ -121,7 +121,7 @@ from crewai.flow.human_feedback import (
 )
 from crewai.flow.input_provider import InputProvider
 from crewai.flow.persistence.base import FlowPersistence
-from crewai.flow.runtime._actions import build_action
+from crewai.flow.runtime._actions import FlowScriptExecutionDisabledError, build_action
 from crewai.flow.runtime._refs import resolve_instance_ref, resolve_ref
 from crewai.flow.types import (
     FlowExecutionData,
@@ -1090,7 +1090,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         def build(name: str, definition: FlowMethodDefinition) -> Callable[..., Any]:
             try:
                 return build_action(self, definition.do)
-            except RuntimeError:
+            except FlowScriptExecutionDisabledError:
                 raise
             except Exception as e:
                 unresolved.append(f"{name}: {e}")

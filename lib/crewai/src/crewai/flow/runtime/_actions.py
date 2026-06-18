@@ -29,12 +29,16 @@ if TYPE_CHECKING:
     from crewai.flow.runtime import Flow
 
 
-__all__ = ["build_action"]
+__all__ = ["FlowScriptExecutionDisabledError", "build_action"]
 
 LocalContext = dict[str, Any]
 _LOCAL_CONTEXT_KWARG = "__flow_definition_local_context"
 _ALLOW_SCRIPT_EXECUTION_ENV_VAR = "CREWAI_ALLOW_FLOW_SCRIPT_EXECUTION"
 _TRUSTED_SCRIPT_EXECUTION_VALUES = frozenset({"1", "true", "yes"})
+
+
+class FlowScriptExecutionDisabledError(RuntimeError):
+    """Raised when a flow definition tries to execute inline script code."""
 
 
 class _BuiltAction(Protocol):
@@ -169,7 +173,7 @@ class ScriptAction:
     def _compile_handler(self) -> Callable[..., Any]:
         raw = os.environ.get(_ALLOW_SCRIPT_EXECUTION_ENV_VAR, "")
         if raw.strip().lower() not in _TRUSTED_SCRIPT_EXECUTION_VALUES:
-            raise RuntimeError(
+            raise FlowScriptExecutionDisabledError(
                 "Flow script execution is disabled by default. "
                 f"Set {_ALLOW_SCRIPT_EXECUTION_ENV_VAR}=1 to enable it only for "
                 "trusted flow definitions."
@@ -197,6 +201,11 @@ class ScriptAction:
         module.body = [function]
         ast.fix_missing_locations(module)
 
+        # The YAML here is trusted project source authored by the code owner,
+        # so this has the same trust boundary as using custom tools. We
+        # intentionally do not interpolate user input and runtime values are passed
+        # as function arguments. This is still arbitrary trusted Python execution,
+        # so it remains disabled by default behind `CREWAI_ALLOW_FLOW_SCRIPT_EXECUTION`
         namespace: dict[str, Any] = {"__name__": filename}
         exec(compile(module, filename, "exec"), namespace)  # nosec B102 # noqa: S102
         return cast(Callable[..., Any], namespace["_flow_script"])

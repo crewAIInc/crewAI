@@ -26,6 +26,7 @@ from crewai.flow.flow_config import flow_config
 from crewai.flow.flow_definition import FlowConfigDefinition, FlowDefinition
 from crewai.flow.persistence import persist
 from crewai.flow.persistence.base import FlowPersistence
+from crewai.flow.runtime._actions import FlowScriptExecutionDisabledError
 from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.tools import BaseTool
 from crewai.types.streaming import FlowStreamingOutput
@@ -1159,7 +1160,8 @@ methods:
 """
 
     with pytest.raises(
-        RuntimeError, match="CREWAI_ALLOW_FLOW_SCRIPT_EXECUTION=1"
+        FlowScriptExecutionDisabledError,
+        match="CREWAI_ALLOW_FLOW_SCRIPT_EXECUTION=1",
     ) as exc_info:
         Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
     assert "methods with unresolvable actions" not in str(exc_info.value)
