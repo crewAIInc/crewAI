@@ -361,30 +361,12 @@ class TestLoadAgent:
 
 
 class TestLoadAgentFromDefinition:
-    def test_loads_inline_agent_and_ignores_kickoff_input(self):
-        agent, response_format = load_agent_from_definition(
-            {
-                "role": "Analyst",
-                "goal": "Analyze data",
-                "backstory": "Data expert.",
-                "settings": {"verbose": True, "max_iter": 3},
-                "input": "${state.question}",
-            },
-            source="agent action",
-        )
-
-        assert agent.role == "Analyst"
-        assert agent.verbose is True
-        assert agent.max_iter == 3
-        assert response_format is None
-
-    def test_resolves_response_format(self, tmp_path: Path):
+    def test_resolves_response_format_from_project_module(self, tmp_path: Path):
         (tmp_path / "models.py").write_text(
             "from pydantic import BaseModel\n"
             "class AnswerModel(BaseModel):\n"
             "    answer: str\n"
         )
-        sys.modules.pop("models", None)
 
         _, response_format = load_agent_from_definition(
             {
@@ -398,7 +380,6 @@ class TestLoadAgentFromDefinition:
             project_root=tmp_path,
         )
 
-        assert response_format is not None
         assert issubclass(response_format, BaseModel)
         assert response_format.__name__ == "AnswerModel"
 

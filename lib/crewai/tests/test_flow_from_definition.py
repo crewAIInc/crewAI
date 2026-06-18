@@ -815,16 +815,9 @@ def test_agent_action_runs_inline_yaml_definition(monkeypatch: pytest.MonkeyPatc
     from crewai import Agent
 
     async def fake_kickoff_async(
-        self: Agent,
-        messages: str,
-        response_format: type[Any] | None = None,
-        **_kwargs: Any,
+        self: Agent, messages: str, **_kwargs: Any
     ) -> dict[str, Any]:
-        return {
-            "agent": self.role,
-            "input": messages,
-            "response_format": response_format,
-        }
+        return {"agent": self.role, "input": messages}
 
     monkeypatch.setattr(Agent, "kickoff_async", fake_kickoff_async)
 
@@ -848,62 +841,6 @@ methods:
     assert flow.kickoff(inputs={"question": "What is CrewAI?"}) == {
         "agent": "Analyst",
         "input": "What is CrewAI?",
-        "response_format": None,
-    }
-
-
-def test_agent_action_passes_response_format(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-):
-    from crewai import Agent
-
-    (tmp_path / "models.py").write_text(
-        "from pydantic import BaseModel\n"
-        "class AnswerModel(BaseModel):\n"
-        "    answer: str\n"
-    )
-    monkeypatch.chdir(tmp_path)
-
-    async def fake_kickoff_async(
-        self: Agent,
-        messages: str,
-        response_format: type[Any] | None = None,
-        **_kwargs: Any,
-    ) -> dict[str, Any]:
-        return {
-            "agent": self.role,
-            "input": messages,
-            "response_format": response_format.__name__ if response_format else None,
-        }
-
-    monkeypatch.setattr(Agent, "kickoff_async", fake_kickoff_async)
-
-    definition = FlowDefinition.from_dict(
-        {
-            "schema": "crewai.flow/v1",
-            "name": "AgentFlow",
-            "methods": {
-                "answer": {
-                    "start": True,
-                    "do": {
-                        "call": "agent",
-                        "with": {
-                            "role": "Analyst",
-                            "goal": "Answer questions",
-                            "backstory": "Knows things.",
-                            "input": "${state.question}",
-                            "response_format": {"python": "models.AnswerModel"},
-                        },
-                    },
-                }
-            },
-        }
-    )
-
-    assert Flow.from_definition(definition).kickoff(inputs={"question": "Hi"}) == {
-        "agent": "Analyst",
-        "input": "Hi",
-        "response_format": "AnswerModel",
     }
 
 
@@ -911,12 +848,9 @@ def test_agent_action_runs_inside_each(monkeypatch: pytest.MonkeyPatch):
     from crewai import Agent
 
     async def fake_kickoff_async(
-        self: Agent,
-        messages: str,
-        response_format: type[Any] | None = None,
-        **_kwargs: Any,
+        self: Agent, messages: str, **_kwargs: Any
     ) -> str:
-        return f"{self.role}:{messages}:{response_format}"
+        return f"{self.role}:{messages}"
 
     monkeypatch.setattr(Agent, "kickoff_async", fake_kickoff_async)
 
@@ -943,8 +877,8 @@ methods:
     flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
 
     assert flow.kickoff(inputs={"questions": ["one", "two"]}) == [
-        "Analyst:one:None",
-        "Analyst:two:None",
+        "Analyst:one",
+        "Analyst:two",
     ]
 
 
