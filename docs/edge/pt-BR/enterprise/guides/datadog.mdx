@@ -1,6 +1,6 @@
 ---
 title: "Integração com Datadog"
-description: "Monitore implantações CrewAI AMP auto-hospedadas no Datadog — escolha o caminho do Datadog Agent para envio de logs com bom custo ou o ingest OTLP do Datadog para configuração sem agente, depois importe o dashboard de operações pronto."
+description: "Monitore implantações CrewAI AMP auto-hospedadas no Datadog via Datadog Agent ou ingest OTLP do Datadog — ambos os caminhos entregam as mesmas facetas estruturadas para importar o dashboard de operações pronto."
 icon: "dog"
 mode: "wide"
 ---
@@ -12,24 +12,26 @@ mode: "wide"
 CrewAI ships first-class support for Datadog: two log-ingestion paths, a JSON log schema designed for cheap indexing, and a ready-made operations dashboard you can import in under five minutes.
 
 <Note>
-For vendor-neutral observability via any OTLP backend (Grafana, Honeycomb, your own collector), see [OpenTelemetry Export](/pt-BR/enterprise/guides/capture_telemetry_logs).
+For vendor-neutral observability via any OTLP backend (Grafana, Honeycomb, your own collector), see [OpenTelemetry Export](./capture_telemetry_logs).
 </Note>
 
 ## Choose a path
 
+CrewAI supports two log-ingestion paths to Datadog — both are first-class and produce the same structured facets that power the dashboard. Pick the one that fits your infrastructure.
+
 <Tabs>
-  <Tab title="Datadog Agent (recommended)">
-    The Datadog Agent runs alongside your CrewAI containers (typically as a DaemonSet on Kubernetes) and tails their stdout. **Recommended** for log-heavy workloads — single-line JSON logs are cheaper to ingest than multi-line tracebacks, and every event ships with structured attributes.
+  <Tab title="Datadog Agent">
+    The Datadog Agent runs alongside your CrewAI containers (typically as a DaemonSet on Kubernetes) and tails their stdout. With `CREWAI_LOG_FORMAT=json` set, each log event ships as a single billable line with structured attributes.
 
     **Setup:**
     1. Run the Datadog Agent next to your CrewAI containers — see [Datadog's deployment docs](https://docs.datadoghq.com/agent/) for Kubernetes, ECS, or VM setup. Enable log collection (`logs_enabled: true`) and container log collection (`logs_config.container_collect_all: true`).
-    2. Set `CREWAI_LOG_FORMAT=json` on every CrewAI container (API + workers) so each log event is a single billable line instead of a multi-line traceback. See the [log schema reference](#log-schema-reference) below for the full field contract.
+    2. Set `CREWAI_LOG_FORMAT=json` on every CrewAI container (API + workers) so each log event is a single line instead of a multi-line traceback. See the [log schema reference](#log-schema-reference) below for the full field contract.
     3. Confirm logs arrive in Datadog Logs with the JSON fields parsed — see [Verify ingestion](#verify-ingestion).
 
-    **When to pick this path:** you already run the Datadog Agent for infrastructure metrics, you want logs without configuring an OTel collector in AMP, or your log volume makes per-event ingestion cost a concern.
+    **Pick this path if** you already operate Datadog Agents (e.g. for infrastructure metrics), or your log volume makes per-event ingestion cost a real concern — collapsing tracebacks into single events keeps Agent ingestion cheap at scale.
   </Tab>
   <Tab title="Datadog OTLP intake">
-    Datadog accepts OTLP traffic directly at its intake endpoint, no Agent required. Easier setup if you can't run an Agent in your environment, but Datadog meters OTLP intake separately — check pricing before adopting at scale.
+    CrewAI AMP exports OpenTelemetry traffic directly to Datadog's OTLP endpoint with no Agent required. Logs and traces ride a single export pipeline configured in AMP's UI, using the same protocol you'd use for any other OTLP backend.
 
     **Setup:**
     1. In CrewAI AMP, go to **Settings → OpenTelemetry Collectors → Add Collector** and pick **Datadog**.
@@ -41,12 +43,12 @@ For vendor-neutral observability via any OTLP backend (Grafana, Honeycomb, your 
          - `otlp.datadoghq.eu` (EU1)
          - `otlp.ap1.datadoghq.com` (AP1)
        - **API Key** — your Datadog API key. See [how to create one](https://docs.datadoghq.com/account_management/api-app-keys/#api-keys).
-    3. The default Datadog template ships **traces** to the `/v1/traces` path. To export **logs** via OTLP, add a second **OpenTelemetry Logs** collector pointed at the same Datadog OTLP host with the path set to `/v1/logs`. Both signals can run side by side.
-    4. *(optional)* Click **Test Connection** to verify CrewAI can reach the endpoint with the credentials you provided. Then click **Save**.
+    3. The Datadog template provisions **both signals at once** — when you save, AMP creates a traces collector at `/v1/traces` and a logs collector at `/v1/logs`, both sharing the same Datadog OTLP host and API key. You'll see them as two separate rows in your OTel collectors list.
+    4. *(optional)* Click **Test Connection** to verify CrewAI can reach the endpoint with the credentials you provided. Then click **Save** — both collectors are created in one step.
 
     <Frame>![Datadog collector configuration](/images/crewai-otel-collector-datadog.png)</Frame>
 
-    **When to pick this path:** you can't or don't want to run the Datadog Agent, or you're already using OTLP for traces and want a single export pipeline.
+    **Pick this path if** you'd rather not operate a Datadog Agent, you already use OTLP for traces and want one export pipeline, or you may later want to fan out the same telemetry to other backends (Grafana, Honeycomb, etc.) without changing your application setup.
   </Tab>
 </Tabs>
 
@@ -55,7 +57,7 @@ Either path lands the same structured facets in Datadog (`@automation_id`, `@kic
 ## Log schema reference
 
 <Info>
-This schema applies to the **Datadog Agent path** — stdout JSON logs produced when `CREWAI_LOG_FORMAT=json` is set. Logs delivered via the **Datadog OTLP intake** use OpenTelemetry attribute names and may differ; see [OpenTelemetry Export](/pt-BR/enterprise/guides/capture_telemetry_logs).
+This schema applies to the **Datadog Agent path** — stdout JSON logs produced when `CREWAI_LOG_FORMAT=json` is set. Logs delivered via the **Datadog OTLP intake** use OpenTelemetry attribute names and may differ; see [OpenTelemetry Export](./capture_telemetry_logs).
 </Info>
 
 When `CREWAI_LOG_FORMAT=json` is set, every log event is emitted as a **single JSON object per line** to stdout, with internal newlines escaped. The format is plain JSON — Datadog parses it natively, and the same payload is also consumable by Splunk, Loki, Elasticsearch, and CloudWatch without custom log pipelines.
@@ -284,7 +286,7 @@ The `$service` template variable defaults to `*` and will catch every CrewAI dep
 ## Next steps
 
 <CardGroup cols={2}>
-  <Card title="OpenTelemetry Export" icon="magnifying-glass-chart" href="/pt-BR/enterprise/guides/capture_telemetry_logs">
+  <Card title="OpenTelemetry Export" icon="magnifying-glass-chart" href="./capture_telemetry_logs">
     Vendor-neutral observability for non-Datadog stacks (Grafana, Honeycomb, your own collector) — or as a Datadog complement when you want to fan out telemetry to multiple backends.
   </Card>
   <Card title="Datadog Log Search Syntax" icon="magnifying-glass" href="https://docs.datadoghq.com/logs/explorer/search_syntax/">

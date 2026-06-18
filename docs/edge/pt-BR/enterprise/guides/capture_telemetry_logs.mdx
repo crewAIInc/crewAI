@@ -10,7 +10,7 @@ O CrewAI AMP pode exportar **traces** e **logs** do OpenTelemetry das suas impla
 Os dados de telemetria seguem as [convenções semânticas GenAI do OpenTelemetry](https://opentelemetry.io/docs/specs/semconv/gen-ai/) além de atributos adicionais específicos do CrewAI.
 
 <Tip>
-OpenTelemetry é o **caminho de observabilidade recomendado** — neutro em relação a fornecedores, funciona com qualquer backend compatível com OTLP (Grafana, Honeycomb, NewRelic, seu próprio coletor). Se você usa especificamente o Datadog, veja o guia dedicado [Integração com Datadog](/pt-BR/enterprise/guides/datadog), que cobre tanto o caminho do Datadog Agent quanto o ingest OTLP do Datadog.
+OpenTelemetry é o **caminho de observabilidade recomendado** — neutro em relação a fornecedores, funciona com qualquer backend compatível com OTLP (Grafana, Honeycomb, NewRelic, seu próprio coletor). Se você usa especificamente o Datadog, veja o guia dedicado [Integração com Datadog](./datadog), que cobre tanto o caminho do Datadog Agent quanto o ingest OTLP do Datadog.
 </Tip>
 
 ## Pré-requisitos
@@ -45,7 +45,7 @@ OpenTelemetry é o **caminho de observabilidade recomendado** — neutro em rela
     <Frame>![Configuração do coletor OpenTelemetry](/images/crewai-otel-collector-opentelemetry.png)</Frame>
   </Tab>
   <Tab title="Datadog">
-    Para configurar o Datadog, veja o guia dedicado [Integração com Datadog](/pt-BR/enterprise/guides/datadog) — ele cobre tanto o caminho do Datadog Agent (recomendado, mais barato para volumes altos de log) quanto o ingest OTLP do Datadog, com os passos completos de configuração do coletor.
+    Para configurar o Datadog, veja o guia dedicado [Integração com Datadog](./datadog) — ele cobre tanto o caminho do Datadog Agent (recomendado, mais barato para volumes altos de log) quanto o ingest OTLP do Datadog, com os passos completos de configuração do coletor.
   </Tab>
 </Tabs>
 
