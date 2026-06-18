@@ -373,6 +373,51 @@ def test_memory_save_events_are_shown_in_activity_log() -> None:
     assert app._log_entries[0]["task_idx"] == 1
 
 
+def test_nested_memory_save_event_is_hidden_for_save_to_memory_tool() -> None:
+    app = _app_with_plan()
+    app._subscribe()
+    try:
+        tool_args = {"contents": ["Fact to remember."]}
+        _emit_event(
+            ToolUsageStartedEvent(
+                tool_name="save_to_memory",
+                tool_args=tool_args,
+            )
+        )
+        _emit_event(
+            MemorySaveStartedEvent(
+                value="Fact to remember.",
+                metadata={},
+                source_type="unified_memory",
+            )
+        )
+        _emit_event(
+            MemorySaveCompletedEvent(
+                value="Fact to remember.",
+                metadata={},
+                save_time_ms=123,
+                source_type="unified_memory",
+            )
+        )
+        now = datetime.now()
+        _emit_event(
+            ToolUsageFinishedEvent(
+                tool_name="save_to_memory",
+                tool_args=tool_args,
+                started_at=now,
+                finished_at=now,
+                output="Saved to memory.",
+            )
+        )
+    finally:
+        app._unsubscribe()
+
+    assert len(app._log_entries) == 1
+    assert app._log_entries[0]["tool_name"] == "save_to_memory"
+    assert app._log_entries[0]["status"] == "success"
+    assert app._log_entries[0]["result"] == "Saved to memory."
+
+
 def test_memory_save_failure_is_shown_in_activity_log() -> None:
     app = _app_with_plan()
     app._subscribe()
@@ -399,6 +444,41 @@ def test_memory_save_failure_is_shown_in_activity_log() -> None:
     assert app._log_entries[0]["status"] == "error"
     assert app._log_entries[0]["error"] == "embedding connection failed"
     assert app._log_expanded == {0}
+
+
+def test_memory_save_completion_updates_timed_out_row() -> None:
+    app = _app_with_plan()
+    app._subscribe()
+    try:
+        _emit_event(
+            MemorySaveStartedEvent(
+                value="9 memories (background)",
+                metadata={},
+                source_type="unified_memory",
+            )
+        )
+
+        app._log_entries[0]["status"] = "timeout"
+        app._log_entries[0]["error"] = "No result received before crew completed"
+        app._log_entries[0]["duration"] = 8.3
+
+        _emit_event(
+            MemorySaveCompletedEvent(
+                value="9 memories saved",
+                metadata={},
+                save_time_ms=8300,
+                source_type="unified_memory",
+            )
+        )
+    finally:
+        app._unsubscribe()
+
+    assert len(app._log_entries) == 1
+    assert app._log_entries[0]["tool_name"] == "memory_save"
+    assert app._log_entries[0]["status"] == "success"
+    assert app._log_entries[0]["result"] == "9 memories saved"
+    assert app._log_entries[0]["error"] is None
+    assert app._log_entries[0]["duration"] == 8.3
 
 
 def test_tool_failure_does_not_override_successful_plan_step_completion() -> None:
@@ -544,6 +624,43 @@ async def test_crew_done_does_not_mark_unfinished_tool_successful() -> None:
     assert app._log_entries[0]["result"] is None
     assert app._log_entries[0]["error"] == "No result received before crew completed"
     assert app._plan_step_status == {1: "failed", 2: "done", 3: "done"}
+
+
+@pytest.mark.asyncio
+async def test_crew_done_does_not_timeout_memory_save() -> None:
+    app = _app_with_plan()
+
+    async with app.run_test(size=(100, 40)) as pilot:
+        app._log_entries = [
+            {
+                "tool_name": "memory_save",
+                "status": "running",
+                "args": "9 memories (background)",
+                "result": None,
+                "error": None,
+                "start_time": time.time() - 8,
+                "duration": None,
+                "task_idx": 1,
+            },
+            {
+                "tool_name": "search",
+                "status": "running",
+                "args": '{"query": "CrewAI"}',
+                "result": None,
+                "error": None,
+                "start_time": time.time() - 2,
+                "duration": None,
+                "task_idx": 1,
+            },
+        ]
+
+        app._on_crew_done("final output")
+        await pilot.pause()
+
+    assert app._log_entries[0]["status"] == "running"
+    assert app._log_entries[0]["error"] is None
+    assert app._log_entries[1]["status"] == "timeout"
+    assert app._log_entries[1]["error"] == "No result received before crew completed"
 
 
 def test_streamed_step_observation_updates_named_step_only() -> None:

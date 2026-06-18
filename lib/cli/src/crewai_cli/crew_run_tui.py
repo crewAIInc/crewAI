@@ -36,6 +36,10 @@ _REFINEMENT_RE = re.compile(r"^\s*step\s+(\d+)\s*:\s*(.+)\s*$", re.IGNORECASE)
 _INTERNAL_TOOL_NAMES = {"create_reasoning_plan"}
 
 
+def _is_save_to_memory_tool(tool_name: str | None) -> bool:
+    return (tool_name or "").replace(" ", "_").lower() == "save_to_memory"
+
+
 def _enable_tracing_in_dotenv() -> None:
     """Append CREWAI_TRACING_ENABLED=true to .env if not already set."""
     from pathlib import Path
@@ -519,6 +523,7 @@ FooterKey .footer-key--key {
         self._log_expanded: set[int] = set()
         self._log_scroll_needed: bool = False
         self._log_line_map: list[tuple[int, int, int]] = []
+        self._suppressed_memory_save_event_ids: set[str] = set()
 
         self._event_handlers: list[tuple[type, Any]] = []
 
@@ -649,6 +654,8 @@ FooterKey .footer-key--key {
             now = time.time()
             for entry in self._log_entries:
                 if entry["status"] == "running":
+                    if entry["tool_name"] == "memory_save":
+                        continue
                     entry["status"] = "timeout"
                     entry["error"] = "No result received before crew completed"
                     entry["duration"] = now - entry["start_time"]
@@ -692,6 +699,8 @@ FooterKey .footer-key--key {
             now = time.time()
             for entry in self._log_entries:
                 if entry["status"] == "running":
+                    if entry["tool_name"] == "memory_save":
+                        continue
                     entry["status"] = "error"
                     entry["duration"] = now - entry["start_time"]
         self._tick()
@@ -1830,6 +1839,7 @@ FooterKey .footer-key--key {
                         "duration": None,
                         "task_idx": self._current_task_idx,
                         "plan_step_number": plan_step_number,
+                        "event_id": event.event_id,
                     }
                 )
             self._complete_step("teal", f"⚡ {event.tool_name}…")
@@ -1928,11 +1938,34 @@ FooterKey .footer-key--key {
             MemorySaveStartedEvent,
         )
 
+        def is_nested_save_to_memory_event(event: Any) -> bool:
+            if event.parent_event_id is None:
+                return False
+            state = crewai_event_bus.runtime_state
+            if state is None:
+                return False
+            parent_node = state.event_record.nodes.get(event.parent_event_id)
+            parent_event = getattr(parent_node, "event", None)
+            return (
+                getattr(parent_event, "type", None) == "tool_usage_started"
+                and _is_save_to_memory_tool(getattr(parent_event, "tool_name", None))
+            )
+
         @crewai_event_bus.on(MemorySaveStartedEvent)
         def on_memory_save_started(
             source: Any, event: MemorySaveStartedEvent
         ) -> None:
             with self._lock:
+                if is_nested_save_to_memory_event(event):
+                    self._suppressed_memory_save_event_ids.add(event.event_id)
+                    return
+                for entry in reversed(self._log_entries):
+                    if (
+                        _is_save_to_memory_tool(entry["tool_name"])
+                        and entry.get("event_id") == event.parent_event_id
+                    ):
+                        self._suppressed_memory_save_event_ids.add(event.event_id)
+                        return
                 for entry in reversed(self._log_entries):
                     if (
                         entry["tool_name"] == "memory_save"
@@ -1961,18 +1994,30 @@ FooterKey .footer-key--key {
             source: Any, event: MemorySaveCompletedEvent
         ) -> None:
             with self._lock:
+                if (
+                    event.started_event_id in self._suppressed_memory_save_event_ids
+                    or is_nested_save_to_memory_event(event)
+                ):
+                    self._suppressed_memory_save_event_ids.discard(
+                        event.started_event_id
+                    )
+                    return
                 for entry in reversed(self._log_entries):
                     if (
                         entry["tool_name"] == "memory_save"
-                        and entry["status"] == "running"
                         and (
-                            event.started_event_id is None
+                            (
+                                event.started_event_id is None
+                                and entry["status"] == "running"
+                            )
                             or entry.get("event_id") == event.started_event_id
+                            or entry.get("started_event_id") == event.started_event_id
                         )
                     ):
                         entry["status"] = "success"
                         entry["duration"] = event.save_time_ms / 1000
                         entry["result"] = event.value
+                        entry["error"] = None
                         entry["started_event_id"] = event.started_event_id
                         break
                 else:
@@ -1997,13 +2042,24 @@ FooterKey .footer-key--key {
             source: Any, event: MemorySaveFailedEvent
         ) -> None:
             with self._lock:
+                if (
+                    event.started_event_id in self._suppressed_memory_save_event_ids
+                    or is_nested_save_to_memory_event(event)
+                ):
+                    self._suppressed_memory_save_event_ids.discard(
+                        event.started_event_id
+                    )
+                    return
                 for idx, entry in reversed(list(enumerate(self._log_entries))):
                     if (
                         entry["tool_name"] == "memory_save"
-                        and entry["status"] == "running"
                         and (
-                            event.started_event_id is None
+                            (
+                                event.started_event_id is None
+                                and entry["status"] == "running"
+                            )
                             or entry.get("event_id") == event.started_event_id
+                            or entry.get("started_event_id") == event.started_event_id
                         )
                     ):
                         entry["status"] = "error"
