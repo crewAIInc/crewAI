@@ -16,9 +16,7 @@ the built-in default.
 
 from __future__ import annotations
 from collections.abc import Callable
-from typing import TYPE_CHECKING
-
-from lib.crewai.src.crewai.memory.storage.mimir_storage import MimirStorage
+from typing import TYPE_CHECKING, Optional
 
 
 if TYPE_CHECKING:
@@ -46,16 +44,16 @@ def set_memory_storage_factory(factory: MemoryStorageFactory | None) -> None:
     _factory = factory
 
 
-def resolve_memory_storage(spec: str) -> StorageBackend | None:
+def resolve_memory_storage(spec: str, config: Optional[dict] = None) -> StorageBackend | None:
     """Return the registered factory's backend for ``spec``, or ``None``.
 
     ``None`` means no factory is registered or it declined this spec; the
     caller then falls back to the built-in selection.
     """
-    # Fix del percorso di import (niente più "lib.crewai.src")
+    
     if spec == "mimir":
         from crewai.memory.storage.mimir_storage import MimirStorage
-        return MimirStorage()
+        return MimirStorage(config=config)
 
     factory = _factory
     return factory(spec) if factory is not None else None
