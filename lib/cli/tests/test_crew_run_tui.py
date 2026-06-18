@@ -26,7 +26,12 @@ from crewai.events.types.tool_usage_events import (
 )
 from crewai_cli.command import AuthenticationRequiredError
 from crewai_cli import run_crew
-from crewai_cli.crew_run_tui import CrewRunApp
+from crewai_cli.crew_run_tui import (
+    CrewRunApp,
+    _LOG_ARGS_TEXT_LIMIT,
+    _LOG_RESULT_TEXT_LIMIT,
+    _LOG_TRUNCATION_SUFFIX,
+)
 
 
 def _app_with_plan() -> CrewRunApp:
@@ -481,6 +486,64 @@ def test_memory_save_completion_updates_timed_out_row() -> None:
     assert app._log_entries[0]["duration"] == 8.3
 
 
+def test_memory_save_payloads_are_truncated_in_activity_log() -> None:
+    app = _app_with_plan()
+    long_args = "a" * (_LOG_ARGS_TEXT_LIMIT + 10)
+    long_result = "r" * (_LOG_RESULT_TEXT_LIMIT + 10)
+
+    app._subscribe()
+    try:
+        _emit_event(
+            MemorySaveStartedEvent(
+                value=long_args,
+                metadata={},
+                source_type="unified_memory",
+            )
+        )
+        _emit_event(
+            MemorySaveCompletedEvent(
+                value=long_result,
+                metadata={},
+                save_time_ms=8300,
+                source_type="unified_memory",
+            )
+        )
+    finally:
+        app._unsubscribe()
+
+    assert len(app._log_entries[0]["args"]) == _LOG_ARGS_TEXT_LIMIT
+    assert app._log_entries[0]["args"].endswith(_LOG_TRUNCATION_SUFFIX)
+    assert len(app._log_entries[0]["result"]) == _LOG_RESULT_TEXT_LIMIT
+    assert app._log_entries[0]["result"].endswith(_LOG_TRUNCATION_SUFFIX)
+
+
+def test_starting_next_tool_does_not_timeout_memory_save() -> None:
+    app = _app_with_plan()
+    app._subscribe()
+    try:
+        _emit_event(
+            MemorySaveStartedEvent(
+                value="9 memories (background)",
+                metadata={},
+                source_type="unified_memory",
+            )
+        )
+        _emit_event(
+            ToolUsageStartedEvent(
+                tool_name="read_website_content",
+                tool_args={"url": "https://example.com"},
+            )
+        )
+    finally:
+        app._unsubscribe()
+
+    assert app._log_entries[0]["tool_name"] == "memory_save"
+    assert app._log_entries[0]["status"] == "running"
+    assert app._log_entries[0]["error"] is None
+    assert app._log_entries[1]["tool_name"] == "read_website_content"
+    assert app._log_entries[1]["status"] == "running"
+
+
 def test_tool_failure_does_not_override_successful_plan_step_completion() -> None:
     app = _app_with_plan()
     app._subscribe()
@@ -661,6 +724,43 @@ async def test_crew_done_does_not_timeout_memory_save() -> None:
     assert app._log_entries[0]["error"] is None
     assert app._log_entries[1]["status"] == "timeout"
     assert app._log_entries[1]["error"] == "No result received before crew completed"
+
+
+@pytest.mark.asyncio
+async def test_crew_failed_does_not_timeout_memory_save() -> None:
+    app = _app_with_plan()
+
+    async with app.run_test(size=(100, 40)) as pilot:
+        app._log_entries = [
+            {
+                "tool_name": "memory_save",
+                "status": "running",
+                "args": "9 memories (background)",
+                "result": None,
+                "error": None,
+                "start_time": time.time() - 8,
+                "duration": None,
+                "task_idx": 1,
+            },
+            {
+                "tool_name": "search",
+                "status": "running",
+                "args": '{"query": "CrewAI"}',
+                "result": None,
+                "error": None,
+                "start_time": time.time() - 2,
+                "duration": None,
+                "task_idx": 1,
+            },
+        ]
+
+        app._on_crew_failed("boom")
+        await pilot.pause()
+
+    assert app._log_entries[0]["status"] == "running"
+    assert app._log_entries[0]["error"] is None
+    assert app._log_entries[1]["status"] == "error"
+    assert app._log_entries[1]["error"] == "No result received before crew failed"
 
 
 def test_streamed_step_observation_updates_named_step_only() -> None:
