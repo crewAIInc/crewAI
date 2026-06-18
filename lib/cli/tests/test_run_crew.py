@@ -26,7 +26,7 @@ def test_missing_crewai_package_shows_full_install_hint(monkeypatch):
     message = exc_info.value.message
     assert "CrewAI CLI is installed without the `crewai` package" in message
     assert (
-        "uv tool install --force --prerelease=allow 'crewai[tools]==1.14.8a1'"
+        "uv tool install --force --prerelease=allow 'crewai[tools]==1.14.8a2'"
         in message
     )
     assert "quotes are required in zsh" in message

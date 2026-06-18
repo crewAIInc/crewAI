@@ -43,7 +43,7 @@ CrewAI CLI is installed without the `crewai` package required to run crews.
 
 Install the full CrewAI prerelease package:
 
-  uv tool install --force --prerelease=allow 'crewai[tools]==1.14.8a1'
+  uv tool install --force --prerelease=allow 'crewai[tools]==1.14.8a2'
 
 The quotes are required in zsh so `crewai[tools]` is not treated as a glob.
 """
