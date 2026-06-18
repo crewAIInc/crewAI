@@ -5,10 +5,31 @@ from pathlib import Path
 import subprocess
 import sys
 
+import click
 import pytest
 from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
 
 import crewai_cli.run_crew as run_crew_module
+
+
+def test_missing_crewai_package_shows_full_install_hint(monkeypatch):
+    def missing_crewai_package():
+        raise ModuleNotFoundError("No module named 'crewai'", name="crewai")
+
+    monkeypatch.setattr(
+        run_crew_module, "_import_find_crew_json_file", missing_crewai_package
+    )
+
+    with pytest.raises(click.ClickException) as exc_info:
+        run_crew_module.find_crew_json_file()
+
+    message = exc_info.value.message
+    assert "CrewAI CLI is installed without the `crewai` package" in message
+    assert (
+        "uv tool install --force --prerelease=allow 'crewai[tools]==1.14.8a'"
+        in message
+    )
+    assert "quotes are required in zsh" in message
 
 
 def test_run_crew_forwards_trained_agents_file_to_json_crews(monkeypatch):
