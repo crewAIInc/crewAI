@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import threading
 from unittest.mock import MagicMock
@@ -459,7 +459,7 @@ def test_composite_score_brand_new_memory() -> None:
         content="test",
         scope="/",
         importance=0.7,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
     )
     score, reasons = compute_composite_score(record, 0.8, config)
     assert 0.82 <= score <= 0.86
@@ -471,7 +471,7 @@ def test_composite_score_brand_new_memory() -> None:
 def test_composite_score_old_memory_decayed() -> None:
     """Memory 60 days old (2 half-lives) has decay = 0.25; composite ~ 0.575."""
     config = MemoryConfig(recency_half_life_days=30)
-    old_date = datetime.utcnow() - timedelta(days=60)
+    old_date = datetime.now(timezone.utc) - timedelta(days=60)
     record = MemoryRecord(
         content="old",
         scope="/",
@@ -482,6 +482,21 @@ def test_composite_score_old_memory_decayed() -> None:
     assert 0.55 <= score <= 0.60
     assert "semantic" in reasons
     assert "recency" not in reasons  # decay 0.25 is not > 0.5
+
+
+def test_composite_score_accepts_legacy_naive_datetime() -> None:
+    """Legacy records with naive UTC datetimes still score without type errors."""
+    config = MemoryConfig()
+    record = MemoryRecord(
+        content="legacy",
+        scope="/",
+        created_at=datetime.utcnow(),
+    )
+
+    score, reasons = compute_composite_score(record, 0.7, config)
+
+    assert score > 0
+    assert "semantic" in reasons
 
 
 def test_composite_score_reranks_results(
@@ -506,7 +521,7 @@ def test_composite_score_reranks_results(
         embedding=emb,
     )
     mem._storage.save([record_high])
-    old = datetime.utcnow() - timedelta(days=90)
+    old = datetime.now(timezone.utc) - timedelta(days=90)
     record_low = MemoryRecord(
         content="Old trivial note",
         scope="/",
@@ -528,7 +543,7 @@ def test_composite_score_match_reasons_populated() -> None:
     fresh_high = MemoryRecord(
         content="x",
         importance=0.9,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
     )
     score1, reasons1 = compute_composite_score(fresh_high, 0.5, config)
     assert "semantic" in reasons1
@@ -538,7 +553,7 @@ def test_composite_score_match_reasons_populated() -> None:
     old_low = MemoryRecord(
         content="y",
         importance=0.1,
-        created_at=datetime.utcnow() - timedelta(days=60),
+        created_at=datetime.now(timezone.utc) - timedelta(days=60),
     )
     score2, reasons2 = compute_composite_score(old_low, 0.5, config)
     assert "semantic" in reasons2
@@ -556,7 +571,7 @@ def test_composite_score_custom_config() -> None:
     record = MemoryRecord(
         content="any",
         importance=0.9,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
     )
     score, reasons = compute_composite_score(record, 0.73, config)
     assert score == pytest.approx(0.73, rel=1e-5)
