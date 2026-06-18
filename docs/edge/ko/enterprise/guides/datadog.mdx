@@ -1,0 +1,295 @@
+---
+title: "Datadog 통합"
+description: "Datadog Agent 또는 Datadog의 OTLP 수집을 통해 자체 호스팅 CrewAI AMP 배포를 Datadog에서 모니터링하세요 — 두 경로 모두 동일한 구조화된 패싯을 생성하므로 기성 운영 대시보드를 가져올 수 있습니다."
+icon: "dog"
+mode: "wide"
+---
+
+<Note>
+**번역 진행 중** — 콘텐츠가 영어로 표시됩니다.
+</Note>
+
+CrewAI ships first-class support for Datadog: two log-ingestion paths, a JSON log schema designed for cheap indexing, and a ready-made operations dashboard you can import in under five minutes.
+
+<Note>
+For vendor-neutral observability via any OTLP backend (Grafana, Honeycomb, your own collector), see [OpenTelemetry Export](./capture_telemetry_logs).
+</Note>
+
+## Choose a path
+
+CrewAI supports two log-ingestion paths to Datadog — both are first-class and produce the same structured facets that power the dashboard. Pick the one that fits your infrastructure.
+
+<Tabs>
+  <Tab title="Datadog Agent">
+    The Datadog Agent runs alongside your CrewAI containers (typically as a DaemonSet on Kubernetes) and tails their stdout. With `CREWAI_LOG_FORMAT=json` set, each log event ships as a single billable line with structured attributes.
+
+    **Setup:**
+    1. Run the Datadog Agent next to your CrewAI containers — see [Datadog's deployment docs](https://docs.datadoghq.com/agent/) for Kubernetes, ECS, or VM setup. Enable log collection (`logs_enabled: true`) and container log collection (`logs_config.container_collect_all: true`).
+    2. Set `CREWAI_LOG_FORMAT=json` as an **automation environment variable** in CrewAI AMP (open your automation → **Settings → Environment Variables**) so each log event is a single line instead of a multi-line traceback. AMP propagates the value to every container in the deployment (API + workers) — don't set it on the container or host directly. See [Enabling JSON output](#enabling-json-output) below for the AMP UI walkthrough and the [log schema reference](#log-schema-reference) for the full field contract.
+    3. Confirm logs arrive in Datadog Logs with the JSON fields parsed — see [Verify ingestion](#verify-ingestion).
+
+    **Pick this path if** you already operate Datadog Agents (e.g. for infrastructure metrics), or your log volume makes per-event ingestion cost a real concern — collapsing tracebacks into single events keeps Agent ingestion cheap at scale.
+  </Tab>
+  <Tab title="Datadog OTLP intake">
+    CrewAI AMP exports OpenTelemetry traffic directly to Datadog's OTLP endpoint with no Agent required. Logs and traces ride a single export pipeline configured in AMP's UI, using the same protocol you'd use for any other OTLP backend.
+
+    **Setup:**
+    1. In CrewAI AMP, go to **Settings → OpenTelemetry Collectors → Add Collector** and pick **Datadog**.
+    2. Configure the connection:
+       - **Datadog Site Domain** — your Datadog site's OTLP host only, no protocol or path. CrewAI builds the full HTTPS OTLP endpoint for you. Use the host that matches your [Datadog site](https://docs.datadoghq.com/getting_started/site/):
+         - `otlp.datadoghq.com` (US1)
+         - `otlp.us3.datadoghq.com` (US3)
+         - `otlp.us5.datadoghq.com` (US5)
+         - `otlp.datadoghq.eu` (EU1)
+         - `otlp.ap1.datadoghq.com` (AP1)
+       - **API Key** — your Datadog API key. See [how to create one](https://docs.datadoghq.com/account_management/api-app-keys/#api-keys).
+    3. The Datadog template provisions **both signals at once** — when you save, AMP creates a traces collector at `/v1/traces` and a logs collector at `/v1/logs`, both sharing the same Datadog OTLP host and API key. You'll see them as two separate rows in your OTel collectors list.
+    4. *(optional)* Click **Test Connection** to verify CrewAI can reach the endpoint with the credentials you provided. Then click **Save** — both collectors are created in one step.
+
+    <Frame>![Datadog collector configuration](/images/crewai-otel-collector-datadog.png)</Frame>
+
+    **Pick this path if** you'd rather not operate a Datadog Agent, you already use OTLP for traces and want one export pipeline, or you may later want to fan out the same telemetry to other backends (Grafana, Honeycomb, etc.) without changing your application setup.
+  </Tab>
+</Tabs>
+
+Either path lands the same structured facets in Datadog (`@automation_id`, `@kickoff_id`, `@execution_id`, `@automation_name`, `@crewai_version`, `@exception.type`, `@gen_ai.*`), so the dashboard works identically with either choice.
+
+## Log schema reference
+
+<Info>
+This schema applies to the **Datadog Agent path** — stdout JSON logs produced when `CREWAI_LOG_FORMAT=json` is set. Logs delivered via the **Datadog OTLP intake** use OpenTelemetry attribute names and may differ; see [OpenTelemetry Export](./capture_telemetry_logs).
+</Info>
+
+When `CREWAI_LOG_FORMAT=json` is set, every log event is emitted as a **single JSON object per line** to stdout, with internal newlines escaped. The format is plain JSON — Datadog parses it natively, and the same payload is also consumable by Splunk, Loki, Elasticsearch, and CloudWatch without custom log pipelines.
+
+### Why JSON output
+
+<CardGroup cols={2}>
+  <Card title="Lower ingestion cost" icon="dollar-sign">
+    Most managed log backends bill per event. A Python traceback in text format is counted as one event per line — 30+ events for a single error. JSON output collapses each traceback into a single event with the stack trace as an escaped string field.
+  </Card>
+  <Card title="Structured search" icon="magnifying-glass">
+    Search by `@automation_id`, `@exception.type`, `@kickoff_id` instead of grepping free-text. Build dashboards on typed facets without parser configuration.
+  </Card>
+  <Card title="APM ↔ logs correlation" icon="link">
+    Every event carries `trace_id` and `span_id` when fired inside a recording span, so backends auto-link logs to traces.
+  </Card>
+  <Card title="Stable contract" icon="file-shield">
+    The `schema` field gates compatibility — within `v1`, fields are added but never renamed or removed.
+  </Card>
+</CardGroup>
+
+### Enabling JSON output
+
+`CREWAI_LOG_FORMAT=json` must be set as an **automation environment variable** in CrewAI AMP — it is **not** a container, host, or Docker setting. Open your automation in AMP, click the **Settings** icon, and add the variable under the **Environment Variables** section. AMP applies the value to every container in the deployment (API + workers) on the next restart. See [Update Your Crew](./update-crew) for the full UI walkthrough with screenshots.
+
+```shell
+CREWAI_LOG_FORMAT=json
+```
+
+Restart the deployment to pick up the change. Every log line on stdout from that point on is a single JSON object.
+
+<Note>
+  The default value is `text`, which preserves the legacy human-readable line format byte-for-byte. Setting any value other than `json` falls back to text mode. There is no migration step — the variable is read at process start and the format switches immediately.
+</Note>
+
+### Example events
+
+A single info-level log inside an active automation kickoff:
+
+```json
+{
+  "schema": "v1",
+  "ts": "2026-06-17T16:14:23.482914Z",
+  "level": "INFO",
+  "logger": "crewai_enterprise.utilities.pii_redaction",
+  "crewai_version": "1.14.7",
+  "msg": "PII tracking state reset (engines preserved)",
+  "automation_id": "12",
+  "task_id": "0843a930-b306-464b-89c8-bfafa78cc711",
+  "kickoff_id": "0843a930-b306-464b-89c8-bfafa78cc711",
+  "execution_id": "0843a930-b306-464b-89c8-bfafa78cc711",
+  "automation_name": "research_flow"
+}
+```
+
+An error with a Python exception is collapsed into a single event with the traceback as a string:
+
+```json
+{
+  "schema": "v1",
+  "ts": "2026-06-17T16:14:31.218450Z",
+  "level": "ERROR",
+  "logger": "api.tasks.flow_run_task",
+  "crewai_version": "1.14.7",
+  "msg": "Flow execution failed",
+  "automation_id": "12",
+  "kickoff_id": "0843a930-b306-464b-89c8-bfafa78cc711",
+  "execution_id": "0843a930-b306-464b-89c8-bfafa78cc711",
+  "automation_name": "research_flow",
+  "exception": {
+    "type": "ValueError",
+    "message": "Topic cannot be empty",
+    "stacktrace": "Traceback (most recent call last):\n  File \"/app/flow.py\", line 42, in summarize\n    ...\nValueError: Topic cannot be empty\n"
+  }
+}
+```
+
+The same error in legacy text mode would have produced ~25 separate log events (one per traceback line) — all of which the backend would bill and index individually.
+
+### Schema v1 fields
+
+Within the `v1` schema, fields are only added, never renamed or removed. New fields will appear as soon as a deployment is upgraded.
+
+| Field | Type | Always present | Source |
+|-------|------|----------------|--------|
+| `schema` | string | Yes | Constant `"v1"`. Increment indicates a breaking schema change. |
+| `ts` | string (ISO-8601 UTC, microseconds) | Yes | Record creation time, e.g. `2026-06-17T16:14:23.482914Z`. |
+| `level` | string | Yes | Python log level name: `DEBUG` / `INFO` / `WARNING` / `ERROR` / `CRITICAL`. |
+| `logger` | string | Yes | Dotted logger name, e.g. `api.tasks.flow_run_task`. |
+| `crewai_version` | string | Yes (when `crewai` package metadata is resolvable) | Installed `crewai` package version, e.g. `"1.14.7"`. |
+| `msg` | string | Yes | Rendered log message (after `%`-formatting / `{}`-formatting). |
+| `automation_id` | string | When `CREWAI_PLUS_ID` env var is set | Numeric deployment ID (AMP provisions this on every container). |
+| `task_id` | string | On Celery worker logs | Celery task UUID, or `"no-task"` for non-task contexts. |
+| `kickoff_id` | string | Inside an automation kickoff | UUID of the current kickoff. |
+| `execution_id` | string | Inside an automation kickoff | UUID of the current sub-execution. Equal to `kickoff_id` at the top level; differs for nested flow methods that spawn sub-executions. |
+| `automation_name` | string | Inside an automation kickoff | Human-readable automation/flow name, e.g. `"research_flow"`. |
+| `trace_id` | string (32-hex) | Inside a recording OpenTelemetry span | Hex trace ID. Omitted when no span is active. |
+| `span_id` | string (16-hex) | Inside a recording OpenTelemetry span | Hex span ID. Omitted when no span is active. |
+| `exception` | object | When the log record has `exc_info` | `{type, message, stacktrace}` — full traceback as a single escaped string. |
+
+<Tip>
+  Any additional `extra={...}` kwargs passed to a logger call appear as top-level JSON fields verbatim. Reserved field names above always win to keep the schema stable.
+</Tip>
+
+### Stability promise
+
+The `schema` field declares the contract. Within `v1`, CrewAI commits to:
+
+- **Never removing a field** that customers may have built queries or dashboards against.
+- **Never renaming a field** in place — renames happen via a schema bump (e.g. `v2`), with the old name kept as a deprecated alias for at least one release cycle.
+- **Adding new fields** at any time. Consumers should ignore unknown top-level keys.
+
+When a `v2` is introduced, both the `schema` field and the migration guide will be published in advance, and `v1` will continue to be emitted for one release cycle so dashboards and queries have time to migrate.
+
+## Prerequisite: promote facets
+
+Datadog auto-discovers fields the first time it sees them but doesn't make them queryable in widgets until they're promoted to **facets**. This is a one-time setup in your Datadog account.
+
+<Steps>
+  <Step title="Search for a CrewAI log">
+    Open [Logs Explorer](https://app.datadoghq.com/logs) and search `service:crewai*`. You should see at least one log event.
+  </Step>
+  <Step title="Promote each field">
+    Click any log entry to open the right-hand details panel. For each field below, hover the field name → click the gear icon → **Create facet**.
+
+    - `automation_id`, `automation_name`, `execution_id`, `kickoff_id`, `task_id`
+    - `crewai_version`, `model_id`
+    - `exception.type`, `exception.message`
+
+    Skip any field that already shows a star icon next to its name — that means it's already a facet. The `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`, and `gen_ai.request.model` facets are typically promoted automatically by Datadog's LLM Observability auto-discovery, but verify they exist before importing the dashboard.
+  </Step>
+</Steps>
+
+## Import the dashboard
+
+<Steps>
+  <Step title="Download the dashboard JSON">
+    Save [`datadog_dashboard.json`](https://raw.githubusercontent.com/crewAIInc/crewAI/main/docs/edge/en/enterprise/guides/datadog_dashboard.json) to your machine.
+  </Step>
+  <Step title="Open the import dialog in Datadog">
+    Navigate to **Dashboards → New Dashboard**. Click the **gear icon** in the top right of the empty dashboard and select **Import Dashboard JSON**.
+  </Step>
+  <Step title="Paste or upload the JSON">
+    Paste the contents of `datadog_dashboard.json` into the import dialog (or drag the file in). Click **Import**.
+
+    Datadog creates the dashboard immediately and lands you on it. The first load may show empty widgets for a few seconds while queries execute against the time range.
+  </Step>
+</Steps>
+
+<Tip>
+  Datadog's [Dashboard API](https://docs.datadoghq.com/api/latest/dashboards/#create-a-new-dashboard) accepts the same JSON via `POST /api/v1/dashboard`. Use it if you manage dashboards through Terraform, Pulumi, or CI.
+</Tip>
+
+## What you get
+
+The dashboard is organized into four sections plus a placeholder for a custom drill-down widget:
+
+| Section | Widgets | Useful for |
+|---------|---------|------------|
+| **Header** | Total Executions · Error Rate (%) · Active Automations · CrewAI Versions in Use | At-a-glance health for the last hour. Error Rate is conditionally formatted (green ≤ 5%, yellow ≤ 10%, red > 10%). |
+| **Throughput** | Executions per Hour by Automation (top 10, stacked bars) | Spotting traffic shifts, surfacing busy automations, validating that a rollout didn't change baseline volume. |
+| **Errors** | Errors by Exception Type (top 5, stacked bars) · Top Exception Types by Count (toplist) | Triaging failures — which exception types are spiking, which automations they're hitting. |
+| **Cost** | Total Tokens per Hour by Model (input + output, stacked area) | Tracking LLM token spend by model. Useful for catching cost regressions when an automation switches model or starts looping. |
+| **Drill-Down** | _(empty placeholder)_ | See [Customization](#customize) for adding a recent-errors log stream here. |
+
+Three template variables at the top of the dashboard re-scope every widget at once:
+
+- **`$automation`** — filter to a single automation by name.
+- **`$version`** — filter to a single `crewai` SDK version (useful for comparing pre- and post-upgrade behavior).
+- **`$service`** — filter to a specific Datadog `service` tag (useful when multiple CrewAI deployments share one Datadog account).
+
+## Verify ingestion
+
+Open [Logs Explorer](https://app.datadoghq.com/logs) and run a query that matches your ingestion path:
+
+<Tabs>
+  <Tab title="Datadog Agent">
+    Search `service:crewai* @schema:v1`. You should see structured logs with the JSON fields parsed into Datadog facets. Pick a recent event and verify it has `@automation_id`, `@kickoff_id`, `@execution_id`, `@crewai_version`, and (when running inside a span) `@trace_id` / `@span_id` populated.
+
+    If nothing appears, confirm `CREWAI_LOG_FORMAT=json` is set under your automation's **Environment Variables** in AMP, the deployment was restarted after the change, and the Datadog Agent is tailing container stdout.
+  </Tab>
+  <Tab title="Datadog OTLP intake">
+    Search `source:otlp service:crewai*`. OTLP attributes land with their OpenTelemetry names (`automation_id`, `crewai.kickoff.id`, etc.) rather than the stdout JSON keys, but they map to the same dashboard facets after [facet promotion](#prerequisite-promote-facets).
+
+    If nothing appears, verify the collector endpoint is correct (`/v1/logs` for logs, `/v1/traces` for traces) and **Test Connection** succeeded when the collector was saved.
+  </Tab>
+</Tabs>
+
+## Customize
+
+The dashboard ships with deliberate gaps so you can extend it without uninstalling and re-importing.
+
+### Add a Recent Errors log stream
+
+The **Drill-Down** section is intentionally empty. Add a Log Stream widget to it for an inline view of recent failures:
+
+1. Edit the dashboard and click **+ Add Widgets** inside the Drill-Down group.
+2. Drag in a **Log Stream** widget.
+3. Set the filter query to `status:error $automation $version $service`.
+4. Choose columns: `@timestamp`, `@automation_name`, `@exception.type`, `@exception.message`, `@execution_id`.
+5. Sort by most recent, limit to 25 entries.
+
+Clicking any row jumps to Logs Explorer with the same filter pre-applied.
+
+### Add p95 latency
+
+Logs don't include execution duration by default. Two ways to add a latency widget:
+
+- **From APM traces** — if you also export OTLP traces to Datadog, add a Timeseries widget with data source **Traces**, query `service:crewai*`, aggregation `p95 of @duration`. Datadog APM auto-tracks span duration.
+- **From metric extraction** — extract a `flow.duration_ms` metric from logs via [Datadog's log-to-metric pipeline](https://docs.datadoghq.com/logs/log_configuration/logs_to_metrics/), then chart it like any other metric. Useful if you don't run APM.
+
+### Re-scope to multiple deployments
+
+The `$service` template variable defaults to `*` and will catch every CrewAI deployment in your Datadog account. Change the default to a specific service name in **Configure → Template Variables** if you want the dashboard to focus on one deployment by default.
+
+## Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---------|--------------|-----|
+| All widgets show "No data" | Facets aren't promoted | Re-do the [Promote facets](#prerequisite-promote-facets) step. Datadog won't query against an un-promoted field. |
+| Error Rate widget shows `NaN` | No executions in the time window | Either no traffic, or `@execution_id` isn't faceted. Expand the time range and re-check facets. |
+| Throughput chart is flat at the same value | Logs aren't reaching Datadog | Search `service:crewai*` in Logs Explorer. If nothing shows, verify the Datadog Agent is running (Agent path) or the OTel collector endpoint is correct (OTLP path). |
+| `crewai_version` shows fewer values than expected | Some containers predate the structured-logs work | The `crewai_version` field was added alongside JSON output. Older deployments running text mode (or older AMP builds) won't emit it. Upgrade those deployments to pick up the field. See the [log schema reference](#log-schema-reference) for the full field contract. |
+| Template variables don't filter widgets | The widget's filter line doesn't reference the template variable | Edit the widget and confirm the search includes `$automation $version $service`. |
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="OpenTelemetry Export" icon="magnifying-glass-chart" href="./capture_telemetry_logs">
+    Vendor-neutral observability for non-Datadog stacks (Grafana, Honeycomb, your own collector) — or as a Datadog complement when you want to fan out telemetry to multiple backends.
+  </Card>
+  <Card title="Datadog Log Search Syntax" icon="magnifying-glass" href="https://docs.datadoghq.com/logs/explorer/search_syntax/">
+    Reference for customizing widget queries against the structured facets above.
+  </Card>
+</CardGroup>

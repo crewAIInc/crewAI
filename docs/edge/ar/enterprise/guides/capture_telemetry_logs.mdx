@@ -9,6 +9,10 @@ mode: "wide"
 
 تتبع بيانات القياس [اتفاقيات OpenTelemetry GenAI الدلالية](https://opentelemetry.io/docs/specs/semconv/gen-ai/) بالإضافة إلى سمات خاصة بـ CrewAI.
 
+<Tip>
+تُعدّ OpenTelemetry **مسار المراقبة الموصى به** — محايدة تجاه الموردين، وتعمل مع أي خلفية متوافقة مع OTLP (Grafana, Honeycomb, NewRelic، أو مجمّعك الخاص). إذا كنت تستخدم Datadog تحديدًا، فراجع دليل [تكامل Datadog](./datadog) المخصص، الذي يغطي كلًا من مسار وكيل Datadog واستيعاب OTLP من Datadog.
+</Tip>
+
 ## المتطلبات المسبقة
 
 <CardGroup cols={2}>
@@ -41,17 +45,7 @@ mode: "wide"
     <Frame>![تهيئة مجمّع OpenTelemetry](/images/crewai-otel-collector-opentelemetry.png)</Frame>
   </Tab>
   <Tab title="Datadog">
-    - **Datadog Site Domain** — مضيف OTLP لموقع Datadog الخاص بك فقط، دون بروتوكول أو مسار. يقوم CrewAI ببناء نقطة نهاية HTTPS OTLP الكاملة نيابةً عنك. استخدم المضيف المطابق لـ [موقع Datadog](https://docs.datadoghq.com/getting_started/site/) الخاص بك:
-      - `otlp.datadoghq.com` (US1)
-      - `otlp.us3.datadoghq.com` (US3)
-      - `otlp.us5.datadoghq.com` (US5)
-      - `otlp.datadoghq.eu` (EU1)
-      - `otlp.ap1.datadoghq.com` (AP1)
-    - **API Key** — مفتاح واجهة برمجة تطبيقات Datadog الخاص بك. راجع [كيفية إنشاء واحد](https://docs.datadoghq.com/account_management/api-app-keys/#api-keys).
-
-    يصدّر تكامل Datadog **التتبعات**.
-
-    <Frame>![تهيئة مجمّع Datadog](/images/crewai-otel-collector-datadog.png)</Frame>
+    لإعداد Datadog، راجع دليل [تكامل Datadog](./datadog) المخصص — فهو يغطي كلًا من مسار وكيل Datadog (الموصى به، أرخص لحجم السجلات الكبير) واستيعاب OTLP من Datadog، مع خطوات تهيئة كاملة للمجمّع.
   </Tab>
 </Tabs>
 
