@@ -54,6 +54,7 @@ def test_flow_public_exports_are_explicit():
         "FlowMethodDefinition",
         "FlowPersistenceDefinition",
         "FlowPydanticStateDefinition",
+        "FlowScriptActionDefinition",
         "FlowStateDefinition",
         "FlowToolActionDefinition",
         "FlowUnknownStateDefinition",

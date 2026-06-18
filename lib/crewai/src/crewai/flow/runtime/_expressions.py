@@ -7,6 +7,7 @@ import json
 import re
 from typing import TYPE_CHECKING, Any, cast
 
+from crewai.flow.runtime._outputs import outputs_by_name
 from crewai.utilities.serialization import to_serializable
 
 
@@ -44,7 +45,12 @@ def evaluate_expression(
 def _expression_context(
     flow: Flow[Any], local_context: dict[str, Any] | None = None
 ) -> dict[str, Any]:
-    outputs = _outputs_by_name(flow._method_outputs)
+    local_outputs = local_context.get("outputs") if local_context else None
+    outputs = outputs_by_name(
+        flow._method_outputs,
+        local_outputs=local_outputs,
+        serialize=True,
+    )
     context: dict[str, Any] = {
         "state": flow._copy_and_serialize_state(),
         "outputs": outputs,
@@ -53,27 +59,10 @@ def _expression_context(
         local_values = {
             key: to_serializable(value, max_depth=0)
             for key, value in local_context.items()
+            if key not in {"outputs", "state"}
         }
-        local_outputs = local_values.pop("outputs", None)
-        local_values.pop("state", None)
         context.update(local_values)
-        if local_outputs is not None:
-            if not isinstance(local_outputs, dict):
-                raise TypeError("flow definition local outputs must be a mapping")
-            context["outputs"] = {**outputs, **local_outputs}
     return context
-
-
-def _outputs_by_name(method_outputs: list[Any]) -> dict[str, Any]:
-    outputs: dict[str, Any] = {}
-    for entry in method_outputs:
-        method = ""
-        output = entry
-        if isinstance(entry, dict) and "output" in entry:
-            method = str(entry.get("method", ""))
-            output = entry["output"]
-        outputs[method] = to_serializable(output, max_depth=0)
-    return outputs
 
 
 def _render_value(value: Any, context: dict[str, Any]) -> Any:
