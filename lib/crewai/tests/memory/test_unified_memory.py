@@ -19,6 +19,39 @@ from crewai.memory.types import (
 )
 
 
+def test_memory_analysis_llm_is_isolated_from_streaming_agent_llm(
+    tmp_path: Path,
+) -> None:
+    """Memory analysis should not share a mutable streaming LLM with the agent UI."""
+    from crewai.llms.base_llm import BaseLLM
+    from crewai.memory.unified_memory import Memory
+    from crewai.utilities.types import LLMMessage
+
+    class FakeStreamingLLM(BaseLLM):
+        def call(
+            self,
+            messages: str | list[LLMMessage],
+            tools: list[dict] | None = None,
+            callbacks: list | None = None,
+            available_functions: dict | None = None,
+            from_task: object | None = None,
+            from_agent: object | None = None,
+            response_model: type | None = None,
+        ) -> str:
+            return ""
+
+    agent_llm = FakeStreamingLLM(model="fake-model", stream=True)
+    mem = Memory(
+        storage=str(tmp_path / "db"),
+        llm=agent_llm,
+        embedder=lambda texts: [[0.1] for _ in texts],
+    )
+
+    assert mem._llm is not agent_llm
+    assert mem._llm.stream is False
+
+    agent_llm.stream = True
+    assert mem._llm.stream is False
 
 
 def test_memory_record_defaults() -> None:

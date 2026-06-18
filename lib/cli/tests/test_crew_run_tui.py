@@ -4,6 +4,11 @@ import time
 import pytest
 
 from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.memory_events import (
+    MemorySaveCompletedEvent,
+    MemorySaveFailedEvent,
+    MemorySaveStartedEvent,
+)
 from crewai.events.types.observation_events import (
     GoalAchievedEarlyEvent,
     PlanRefinementEvent,
@@ -333,6 +338,67 @@ def test_internal_reasoning_function_call_is_hidden_from_activity_log() -> None:
 
     assert app._log_entries == []
     assert app._current_task_steps == []
+
+
+def test_memory_save_events_are_shown_in_activity_log() -> None:
+    app = _app_with_plan()
+    app._current_task_idx = 1
+    app._subscribe()
+    try:
+        _emit_event(
+            MemorySaveStartedEvent(
+                value="2 memories (background)",
+                metadata={},
+                source_type="unified_memory",
+            )
+        )
+        _emit_event(
+            MemorySaveCompletedEvent(
+                value="2 memories saved",
+                metadata={},
+                save_time_ms=123,
+                source_type="unified_memory",
+            )
+        )
+    finally:
+        app._unsubscribe()
+
+    assert len(app._log_entries) == 1
+    assert app._log_entries[0]["tool_name"] == "memory_save"
+    assert app._log_entries[0]["status"] == "success"
+    assert app._log_entries[0]["args"] == "2 memories (background)"
+    assert app._log_entries[0]["result"] == "2 memories saved"
+    assert app._log_entries[0]["error"] is None
+    assert app._log_entries[0]["duration"] == 0.123
+    assert app._log_entries[0]["task_idx"] == 1
+
+
+def test_memory_save_failure_is_shown_in_activity_log() -> None:
+    app = _app_with_plan()
+    app._subscribe()
+    try:
+        _emit_event(
+            MemorySaveStartedEvent(
+                value="background save",
+                metadata={},
+                source_type="unified_memory",
+            )
+        )
+        _emit_event(
+            MemorySaveFailedEvent(
+                value="background save",
+                metadata={},
+                error="embedding connection failed",
+                source_type="unified_memory",
+            )
+        )
+    finally:
+        app._unsubscribe()
+
+    assert app._log_entries[0]["tool_name"] == "memory_save"
+    assert app._log_entries[0]["status"] == "error"
+    assert app._log_entries[0]["error"] == "embedding connection failed"
+    assert app._log_expanded == {0}
 
 
 def test_tool_failure_does_not_override_successful_plan_step_completion() -> None:

@@ -1923,7 +1923,112 @@ FooterKey .footer-key--key {
             MemoryRetrievalCompletedEvent,
             MemoryRetrievalFailedEvent,
             MemoryRetrievalStartedEvent,
+            MemorySaveCompletedEvent,
+            MemorySaveFailedEvent,
+            MemorySaveStartedEvent,
         )
+
+        @crewai_event_bus.on(MemorySaveStartedEvent)
+        def on_memory_save_started(
+            source: Any, event: MemorySaveStartedEvent
+        ) -> None:
+            with self._lock:
+                for entry in reversed(self._log_entries):
+                    if (
+                        entry["tool_name"] == "memory_save"
+                        and entry.get("started_event_id") == event.event_id
+                    ):
+                        entry["args"] = event.value
+                        return
+                self._log_entries.append(
+                    {
+                        "tool_name": "memory_save",
+                        "status": "running",
+                        "args": event.value,
+                        "result": None,
+                        "error": None,
+                        "start_time": time.time(),
+                        "duration": None,
+                        "task_idx": self._current_task_idx,
+                        "event_id": event.event_id,
+                    }
+                )
+
+        self._register_handler(MemorySaveStartedEvent, on_memory_save_started)
+
+        @crewai_event_bus.on(MemorySaveCompletedEvent)
+        def on_memory_save_completed(
+            source: Any, event: MemorySaveCompletedEvent
+        ) -> None:
+            with self._lock:
+                for entry in reversed(self._log_entries):
+                    if (
+                        entry["tool_name"] == "memory_save"
+                        and entry["status"] == "running"
+                        and (
+                            event.started_event_id is None
+                            or entry.get("event_id") == event.started_event_id
+                        )
+                    ):
+                        entry["status"] = "success"
+                        entry["duration"] = event.save_time_ms / 1000
+                        entry["result"] = event.value
+                        entry["started_event_id"] = event.started_event_id
+                        break
+                else:
+                    self._log_entries.append(
+                        {
+                            "tool_name": "memory_save",
+                            "status": "success",
+                            "args": None,
+                            "result": event.value,
+                            "error": None,
+                            "start_time": time.time(),
+                            "duration": event.save_time_ms / 1000,
+                            "task_idx": self._current_task_idx,
+                            "started_event_id": event.started_event_id,
+                        }
+                    )
+
+        self._register_handler(MemorySaveCompletedEvent, on_memory_save_completed)
+
+        @crewai_event_bus.on(MemorySaveFailedEvent)
+        def on_memory_save_failed(
+            source: Any, event: MemorySaveFailedEvent
+        ) -> None:
+            with self._lock:
+                for idx, entry in reversed(list(enumerate(self._log_entries))):
+                    if (
+                        entry["tool_name"] == "memory_save"
+                        and entry["status"] == "running"
+                        and (
+                            event.started_event_id is None
+                            or entry.get("event_id") == event.started_event_id
+                        )
+                    ):
+                        entry["status"] = "error"
+                        entry["error"] = event.error
+                        entry["duration"] = time.time() - entry["start_time"]
+                        entry["started_event_id"] = event.started_event_id
+                        self._log_expanded.add(idx)
+                        break
+                else:
+                    self._log_entries.append(
+                        {
+                            "tool_name": "memory_save",
+                            "status": "error",
+                            "args": event.value,
+                            "result": None,
+                            "error": event.error,
+                            "start_time": time.time(),
+                            "duration": 0,
+                            "task_idx": self._current_task_idx,
+                            "started_event_id": event.started_event_id,
+                        }
+                    )
+                    self._log_expanded.add(len(self._log_entries) - 1)
+
+        self._register_handler(MemorySaveFailedEvent, on_memory_save_failed)
 
         @crewai_event_bus.on(MemoryRetrievalStartedEvent)
         def on_memory_retrieval_started(
