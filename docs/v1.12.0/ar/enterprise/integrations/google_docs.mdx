@@ -1,0 +1,550 @@
+---
+title: تكامل Google Docs
+description: "إنشاء المستندات وتحريرها مع تكامل Google Docs لـ CrewAI."
+icon: "file-lines"
+mode: "wide"
+---
+
+## نظرة عامة
+
+مكّن وكلاءك من إنشاء وتحرير وإدارة مستندات Google Docs مع معالجة النصوص والتنسيق. أتمت إنشاء المستندات، وأدرج النصوص واستبدلها، وأدر نطاقات المحتوى، وبسّط سير عمل المستندات باستخدام الأتمتة المدعومة بالذكاء الاصطناعي.
+
+## المتطلبات الأساسية
+
+قبل استخدام تكامل Google Docs، تأكد من توفر ما يلي:
+
+- حساب [CrewAI AMP](https://app.crewai.com) مع اشتراك فعّال
+- حساب Google مع إمكانية الوصول إلى Google Docs
+- ربط حساب Google الخاص بك عبر [صفحة التكاملات](https://app.crewai.com/crewai_plus/connectors)
+
+## إعداد تكامل Google Docs
+
+### 1. ربط حساب Google الخاص بك
+
+1. انتقل إلى [تكاملات CrewAI AMP](https://app.crewai.com/crewai_plus/connectors)
+2. ابحث عن **Google Docs** في قسم تكاملات المصادقة
+3. انقر على **Connect** وأكمل عملية OAuth
+4. امنح الصلاحيات اللازمة للوصول إلى المستندات
+5. انسخ رمز المؤسسة من [إعدادات التكامل](https://app.crewai.com/crewai_plus/settings/integrations)
+
+### 2. تثبيت الحزمة المطلوبة
+
+```bash
+uv add crewai-tools
+```
+
+### 3. إعداد متغير البيئة
+
+<Note>
+  لاستخدام التكاملات مع `Agent(apps=[])`, يجب تعيين متغير البيئة
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` برمز المؤسسة الخاص بك.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+أو أضفه إلى ملف `.env`:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
+## الإجراءات المتاحة
+
+<AccordionGroup>
+  <Accordion title="google_docs/create_document">
+    **الوصف:** إنشاء مستند Google جديد.
+
+    **المعاملات:**
+    - `title` (string, اختياري): عنوان المستند الجديد.
+
+  </Accordion>
+
+  <Accordion title="google_docs/get_document">
+    **الوصف:** الحصول على محتويات وبيانات وصفية لمستند Google.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند المراد استرجاعه.
+    - `includeTabsContent` (boolean, اختياري): ما إذا كان يجب تضمين محتوى علامات التبويب. الافتراضي هو `false`.
+    - `suggestionsViewMode` (string, اختياري): وضع عرض الاقتراحات المراد تطبيقه. القيم: `DEFAULT_FOR_CURRENT_ACCESS`, `PREVIEW_SUGGESTIONS_ACCEPTED`, `PREVIEW_WITHOUT_SUGGESTIONS`. الافتراضي: `DEFAULT_FOR_CURRENT_ACCESS`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/batch_update">
+    **الوصف:** تطبيق تحديث واحد أو أكثر على مستند Google.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند المراد تحديثه.
+    - `requests` (array, مطلوب): قائمة بالتحديثات المراد تطبيقها على المستند.
+    - `writeControl` (object, اختياري): يوفر التحكم في كيفية تنفيذ طلبات الكتابة.
+
+  </Accordion>
+
+  <Accordion title="google_docs/insert_text">
+    **الوصف:** إدراج نص في مستند Google في موقع محدد.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند المراد تحديثه.
+    - `text` (string, مطلوب): النص المراد إدراجه.
+    - `index` (integer, اختياري): الفهرس القائم على الصفر حيث يتم إدراج النص. الافتراضي هو `1`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/replace_text">
+    **الوصف:** استبدال جميع نُسخ النص في مستند Google.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند المراد تحديثه.
+    - `containsText` (string, مطلوب): النص المراد البحث عنه واستبداله.
+    - `replaceText` (string, مطلوب): النص البديل.
+    - `matchCase` (boolean, اختياري): ما إذا كان البحث يجب أن يراعي حالة الأحرف. الافتراضي هو `false`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/delete_content_range">
+    **الوصف:** حذف المحتوى من نطاق محدد في مستند Google.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند المراد تحديثه.
+    - `startIndex` (integer, مطلوب): فهرس بداية النطاق المراد حذفه.
+    - `endIndex` (integer, مطلوب): فهرس نهاية النطاق المراد حذفه.
+
+  </Accordion>
+
+  <Accordion title="google_docs/insert_page_break">
+    **الوصف:** إدراج فاصل صفحة في موقع محدد في مستند Google.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند المراد تحديثه.
+    - `index` (integer, اختياري): الفهرس القائم على الصفر حيث يتم إدراج فاصل الصفحة. الافتراضي هو `1`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/create_named_range">
+    **الوصف:** إنشاء نطاق مسمّى في مستند Google.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند المراد تحديثه.
+    - `name` (string, مطلوب): اسم النطاق المسمّى.
+    - `startIndex` (integer, مطلوب): فهرس بداية النطاق.
+    - `endIndex` (integer, مطلوب): فهرس نهاية النطاق.
+
+  </Accordion>
+
+  <Accordion title="google_docs/create_document_with_content">
+    **الوصف:** إنشاء مستند Google جديد مع محتوى في إجراء واحد.
+
+    **المعاملات:**
+    - `title` (string, مطلوب): عنوان المستند الجديد.
+    - `content` (string, اختياري): المحتوى النصي المراد إدراجه في المستند. استخدم `\n` لفقرات جديدة.
+
+  </Accordion>
+
+  <Accordion title="google_docs/append_text">
+    **الوصف:** إلحاق نص بنهاية مستند Google. يُدرج تلقائياً في نهاية المستند دون الحاجة لتحديد فهرس.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند.
+    - `text` (string, مطلوب): النص المراد إلحاقه بنهاية المستند. استخدم `\n` لفقرات جديدة.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_text_bold">
+    **الوصف:** جعل النص غامقاً أو إزالة التنسيق الغامق في مستند Google.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند.
+    - `startIndex` (integer, مطلوب): موضع بداية النص المراد تنسيقه.
+    - `endIndex` (integer, مطلوب): موضع نهاية النص المراد تنسيقه (حصري).
+    - `bold` (boolean, مطلوب): عيّن `true` لجعله غامقاً، `false` لإزالة الغامق.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_text_italic">
+    **الوصف:** جعل النص مائلاً أو إزالة التنسيق المائل في مستند Google.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند.
+    - `startIndex` (integer, مطلوب): موضع بداية النص المراد تنسيقه.
+    - `endIndex` (integer, مطلوب): موضع نهاية النص المراد تنسيقه (حصري).
+    - `italic` (boolean, مطلوب): عيّن `true` لجعله مائلاً، `false` لإزالة المائل.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_text_underline">
+    **الوصف:** إضافة أو إزالة تنسيق التسطير من النص في مستند Google.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند.
+    - `startIndex` (integer, مطلوب): موضع بداية النص المراد تنسيقه.
+    - `endIndex` (integer, مطلوب): موضع نهاية النص المراد تنسيقه (حصري).
+    - `underline` (boolean, مطلوب): عيّن `true` للتسطير، `false` لإزالة التسطير.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_text_strikethrough">
+    **الوصف:** إضافة أو إزالة تنسيق يتوسطه خط من النص في مستند Google.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند.
+    - `startIndex` (integer, مطلوب): موضع بداية النص المراد تنسيقه.
+    - `endIndex` (integer, مطلوب): موضع نهاية النص المراد تنسيقه (حصري).
+    - `strikethrough` (boolean, مطلوب): عيّن `true` لإضافة يتوسطه خط، `false` للإزالة.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_font_size">
+    **الوصف:** تغيير حجم خط النص في مستند Google.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند.
+    - `startIndex` (integer, مطلوب): موضع بداية النص المراد تنسيقه.
+    - `endIndex` (integer, مطلوب): موضع نهاية النص المراد تنسيقه (حصري).
+    - `fontSize` (number, مطلوب): حجم الخط بالنقاط. الأحجام الشائعة: 10, 11, 12, 14, 16, 18, 24, 36.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_text_color">
+    **الوصف:** تغيير لون النص باستخدام قيم RGB (مقياس 0-1) في مستند Google.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند.
+    - `startIndex` (integer, مطلوب): موضع بداية النص المراد تنسيقه.
+    - `endIndex` (integer, مطلوب): موضع نهاية النص المراد تنسيقه (حصري).
+    - `red` (number, مطلوب): مكوّن الأحمر (0-1). مثال: `1` للأحمر الكامل.
+    - `green` (number, مطلوب): مكوّن الأخضر (0-1). مثال: `0.5` لنصف الأخضر.
+    - `blue` (number, مطلوب): مكوّن الأزرق (0-1). مثال: `0` لعدم وجود أزرق.
+
+  </Accordion>
+
+  <Accordion title="google_docs/create_hyperlink">
+    **الوصف:** تحويل نص موجود إلى رابط قابل للنقر في مستند Google.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند.
+    - `startIndex` (integer, مطلوب): موضع بداية النص المراد تحويله إلى رابط.
+    - `endIndex` (integer, مطلوب): موضع نهاية النص المراد تحويله إلى رابط (حصري).
+    - `url` (string, مطلوب): عنوان URL الذي يجب أن يشير إليه الرابط. مثال: `"https://example.com"`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/apply_heading_style">
+    **الوصف:** تطبيق نمط عنوان أو فقرة على نطاق نصي في مستند Google.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند.
+    - `startIndex` (integer, مطلوب): موضع بداية الفقرة (الفقرات) المراد تنسيقها.
+    - `endIndex` (integer, مطلوب): موضع نهاية الفقرة (الفقرات) المراد تنسيقها.
+    - `style` (string, مطلوب): النمط المراد تطبيقه. القيم: `NORMAL_TEXT`, `TITLE`, `SUBTITLE`, `HEADING_1`, `HEADING_2`, `HEADING_3`, `HEADING_4`, `HEADING_5`, `HEADING_6`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_paragraph_alignment">
+    **الوصف:** تعيين محاذاة النص للفقرات في مستند Google.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند.
+    - `startIndex` (integer, مطلوب): موضع بداية الفقرة (الفقرات) المراد محاذاتها.
+    - `endIndex` (integer, مطلوب): موضع نهاية الفقرة (الفقرات) المراد محاذاتها.
+    - `alignment` (string, مطلوب): محاذاة النص. القيم: `START` (يسار), `CENTER`, `END` (يمين), `JUSTIFIED`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_line_spacing">
+    **الوصف:** تعيين تباعد الأسطر للفقرات في مستند Google.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند.
+    - `startIndex` (integer, مطلوب): موضع بداية الفقرة (الفقرات).
+    - `endIndex` (integer, مطلوب): موضع نهاية الفقرة (الفقرات).
+    - `lineSpacing` (number, مطلوب): تباعد الأسطر كنسبة مئوية. `100` = مفرد، `115` = 1.15x، `150` = 1.5x، `200` = مزدوج.
+
+  </Accordion>
+
+  <Accordion title="google_docs/create_paragraph_bullets">
+    **الوصف:** تحويل الفقرات إلى قائمة نقطية أو مرقمة في مستند Google.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند.
+    - `startIndex` (integer, مطلوب): موضع بداية الفقرات المراد تحويلها إلى قائمة.
+    - `endIndex` (integer, مطلوب): موضع نهاية الفقرات المراد تحويلها إلى قائمة.
+    - `bulletPreset` (string, مطلوب): نمط النقاط/الترقيم. القيم: `BULLET_DISC_CIRCLE_SQUARE`, `BULLET_DIAMONDX_ARROW3D_SQUARE`, `BULLET_CHECKBOX`, `BULLET_ARROW_DIAMOND_DISC`, `BULLET_STAR_CIRCLE_SQUARE`, `NUMBERED_DECIMAL_ALPHA_ROMAN`, `NUMBERED_DECIMAL_ALPHA_ROMAN_PARENS`, `NUMBERED_DECIMAL_NESTED`, `NUMBERED_UPPERALPHA_ALPHA_ROMAN`, `NUMBERED_UPPERROMAN_UPPERALPHA_DECIMAL`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/delete_paragraph_bullets">
+    **الوصف:** إزالة النقاط أو الترقيم من الفقرات في مستند Google.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند.
+    - `startIndex` (integer, مطلوب): موضع بداية فقرات القائمة.
+    - `endIndex` (integer, مطلوب): موضع نهاية فقرات القائمة.
+
+  </Accordion>
+
+  <Accordion title="google_docs/insert_table_with_content">
+    **الوصف:** إدراج جدول مع محتوى في مستند Google في إجراء واحد. قدم المحتوى كمصفوفة ثنائية الأبعاد.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند.
+    - `rows` (integer, مطلوب): عدد الصفوف في الجدول.
+    - `columns` (integer, مطلوب): عدد الأعمدة في الجدول.
+    - `index` (integer, اختياري): الموضع لإدراج الجدول. إذا لم يُحدد، يُدرج الجدول في نهاية المستند.
+    - `content` (array, مطلوب): محتوى الجدول كمصفوفة ثنائية الأبعاد. كل مصفوفة داخلية هي صف. مثال: `[["Year", "Revenue"], ["2023", "$43B"], ["2024", "$45B"]]`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/insert_table_row">
+    **الوصف:** إدراج صف جديد فوق أو أسفل خلية مرجعية في جدول موجود.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند.
+    - `tableStartIndex` (integer, مطلوب): فهرس بداية الجدول.
+    - `rowIndex` (integer, مطلوب): فهرس الصف (قائم على الصفر) للخلية المرجعية.
+    - `columnIndex` (integer, اختياري): فهرس العمود (قائم على الصفر) للخلية المرجعية. الافتراضي هو `0`.
+    - `insertBelow` (boolean, اختياري): إذا `true`، يُدرج أسفل الصف المرجعي. إذا `false`، يُدرج فوقه. الافتراضي هو `true`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/insert_table_column">
+    **الوصف:** إدراج عمود جديد يساراً أو يميناً لخلية مرجعية في جدول موجود.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند.
+    - `tableStartIndex` (integer, مطلوب): فهرس بداية الجدول.
+    - `rowIndex` (integer, اختياري): فهرس الصف (قائم على الصفر) للخلية المرجعية. الافتراضي هو `0`.
+    - `columnIndex` (integer, مطلوب): فهرس العمود (قائم على الصفر) للخلية المرجعية.
+    - `insertRight` (boolean, اختياري): إذا `true`، يُدرج إلى اليمين. إذا `false`، يُدرج إلى اليسار. الافتراضي هو `true`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/delete_table_row">
+    **الوصف:** حذف صف من جدول موجود في مستند Google.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند.
+    - `tableStartIndex` (integer, مطلوب): فهرس بداية الجدول.
+    - `rowIndex` (integer, مطلوب): فهرس الصف (قائم على الصفر) المراد حذفه.
+    - `columnIndex` (integer, اختياري): فهرس العمود (قائم على الصفر) لأي خلية في الصف. الافتراضي هو `0`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/delete_table_column">
+    **الوصف:** حذف عمود من جدول موجود في مستند Google.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند.
+    - `tableStartIndex` (integer, مطلوب): فهرس بداية الجدول.
+    - `rowIndex` (integer, اختياري): فهرس الصف (قائم على الصفر) لأي خلية في العمود. الافتراضي هو `0`.
+    - `columnIndex` (integer, مطلوب): فهرس العمود (قائم على الصفر) المراد حذفه.
+
+  </Accordion>
+
+  <Accordion title="google_docs/merge_table_cells">
+    **الوصف:** دمج نطاق من خلايا الجدول في خلية واحدة. يتم الاحتفاظ بمحتوى جميع الخلايا.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند.
+    - `tableStartIndex` (integer, مطلوب): فهرس بداية الجدول.
+    - `rowIndex` (integer, مطلوب): فهرس الصف البادئ (قائم على الصفر) للدمج.
+    - `columnIndex` (integer, مطلوب): فهرس العمود البادئ (قائم على الصفر) للدمج.
+    - `rowSpan` (integer, مطلوب): عدد الصفوف المراد دمجها.
+    - `columnSpan` (integer, مطلوب): عدد الأعمدة المراد دمجها.
+
+  </Accordion>
+
+  <Accordion title="google_docs/unmerge_table_cells">
+    **الوصف:** إلغاء دمج خلايا جدول مدمجة سابقاً وإعادتها إلى خلايا فردية.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند.
+    - `tableStartIndex` (integer, مطلوب): فهرس بداية الجدول.
+    - `rowIndex` (integer, مطلوب): فهرس الصف (قائم على الصفر) للخلية المدمجة.
+    - `columnIndex` (integer, مطلوب): فهرس العمود (قائم على الصفر) للخلية المدمجة.
+    - `rowSpan` (integer, مطلوب): عدد الصفوف التي تمتد عليها الخلية المدمجة.
+    - `columnSpan` (integer, مطلوب): عدد الأعمدة التي تمتد عليها الخلية المدمجة.
+
+  </Accordion>
+
+  <Accordion title="google_docs/insert_inline_image">
+    **الوصف:** إدراج صورة من عنوان URL عام في مستند Google. يجب أن تكون الصورة متاحة للعموم، وأقل من 50 ميجابايت، وبصيغة PNG/JPEG/GIF.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند.
+    - `uri` (string, مطلوب): عنوان URL العام للصورة. يجب أن يكون متاحاً بدون مصادقة.
+    - `index` (integer, اختياري): الموضع لإدراج الصورة. إذا لم يُحدد، تُدرج الصورة في نهاية المستند. الافتراضي هو `1`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/insert_section_break">
+    **الوصف:** إدراج فاصل قسم لإنشاء أقسام مستند بتنسيقات مختلفة.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند.
+    - `index` (integer, مطلوب): الموضع لإدراج فاصل القسم.
+    - `sectionType` (string, مطلوب): نوع فاصل القسم. القيم: `CONTINUOUS` (يبقى في نفس الصفحة), `NEXT_PAGE` (يبدأ صفحة جديدة).
+
+  </Accordion>
+
+  <Accordion title="google_docs/create_header">
+    **الوصف:** إنشاء ترويسة للمستند. يُرجع headerId يمكن استخدامه مع insert_text لإضافة محتوى الترويسة.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند.
+    - `type` (string, اختياري): نوع الترويسة. القيم: `DEFAULT`. الافتراضي هو `DEFAULT`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/create_footer">
+    **الوصف:** إنشاء تذييل للمستند. يُرجع footerId يمكن استخدامه مع insert_text لإضافة محتوى التذييل.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند.
+    - `type` (string, اختياري): نوع التذييل. القيم: `DEFAULT`. الافتراضي هو `DEFAULT`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/delete_header">
+    **الوصف:** حذف ترويسة من المستند. استخدم get_document للعثور على headerId.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند.
+    - `headerId` (string, مطلوب): معرّف الترويسة المراد حذفها.
+
+  </Accordion>
+
+  <Accordion title="google_docs/delete_footer">
+    **الوصف:** حذف تذييل من المستند. استخدم get_document للعثور على footerId.
+
+    **المعاملات:**
+    - `documentId` (string, مطلوب): معرّف المستند.
+    - `footerId` (string, مطلوب): معرّف التذييل المراد حذفه.
+
+  </Accordion>
+</AccordionGroup>
+
+## أمثلة الاستخدام
+
+### إعداد Agent أساسي لـ Google Docs
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create an agent with Google Docs capabilities
+docs_agent = Agent(
+    role="Document Creator",
+    goal="Create and manage Google Docs documents efficiently",
+    backstory="An AI assistant specialized in Google Docs document creation and editing.",
+    apps=['google_docs']  # All Google Docs actions will be available
+)
+
+# Task to create a new document
+create_doc_task = Task(
+    description="Create a new Google Document titled 'Project Status Report'",
+    agent=docs_agent,
+    expected_output="New Google Document 'Project Status Report' created successfully"
+)
+
+# Run the task
+crew = Crew(
+    agents=[docs_agent],
+    tasks=[create_doc_task]
+)
+
+crew.kickoff()
+```
+
+### تحرير النصوص وإدارة المحتوى
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create an agent focused on text editing
+text_editor = Agent(
+    role="Document Editor",
+    goal="Edit and update content in Google Docs documents",
+    backstory="An AI assistant skilled in precise text editing and content management.",
+    apps=['google_docs/insert_text', 'google_docs/replace_text', 'google_docs/delete_content_range']
+)
+
+# Task to edit document content
+edit_content_task = Task(
+    description="In document 'your_document_id', insert the text 'Executive Summary: ' at the beginning, then replace all instances of 'TODO' with 'COMPLETED'.",
+    agent=text_editor,
+    expected_output="Document updated with new text inserted and TODO items replaced."
+)
+
+crew = Crew(
+    agents=[text_editor],
+    tasks=[edit_content_task]
+)
+
+crew.kickoff()
+```
+
+### عمليات المستندات المتقدمة
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create an agent for advanced document operations
+document_formatter = Agent(
+    role="Document Formatter",
+    goal="Apply advanced formatting and structure to Google Docs",
+    backstory="An AI assistant that handles complex document formatting and organization.",
+    apps=['google_docs/batch_update', 'google_docs/insert_page_break', 'google_docs/create_named_range']
+)
+
+# Task to format document
+format_doc_task = Task(
+    description="In document 'your_document_id', insert a page break at position 100, create a named range called 'Introduction' for characters 1-50, and apply batch formatting updates.",
+    agent=document_formatter,
+    expected_output="Document formatted with page break, named range, and styling applied."
+)
+
+crew = Crew(
+    agents=[document_formatter],
+    tasks=[format_doc_task]
+)
+
+crew.kickoff()
+```
+
+## استكشاف الأخطاء وإصلاحها
+
+### المشاكل الشائعة
+
+**أخطاء المصادقة**
+
+- تأكد من أن حساب Google الخاص بك لديه الصلاحيات اللازمة للوصول إلى Google Docs.
+- تحقق من أن اتصال OAuth يتضمن جميع النطاقات المطلوبة (`https://www.googleapis.com/auth/documents`).
+
+**مشاكل معرّف المستند**
+
+- تحقق جيداً من صحة معرّفات المستندات.
+- تأكد من وجود المستند وإمكانية الوصول إليه من حسابك.
+- يمكن العثور على معرّفات المستندات في عنوان URL لـ Google Docs.
+
+**عمليات إدراج النص والنطاقات**
+
+- عند استخدام `insert_text` أو `delete_content_range`، تأكد من صحة مواضع الفهرس.
+- تذكر أن Google Docs يستخدم فهرسة قائمة على الصفر.
+- يجب أن يحتوي المستند على محتوى في مواضع الفهرس المحددة.
+
+**تنسيق طلبات التحديث الدفعي**
+
+- عند استخدام `batch_update`، تأكد من صحة تنسيق مصفوفة `requests` وفقاً لتوثيق Google Docs API.
+- تتطلب التحديثات المعقدة هياكل JSON محددة لكل نوع طلب.
+
+**عمليات استبدال النص**
+
+- لـ `replace_text`، تأكد من مطابقة معامل `containsText` تماماً للنص المراد استبداله.
+- استخدم معامل `matchCase` للتحكم في حساسية حالة الأحرف.
+
+### الحصول على المساعدة
+
+<Card title="تحتاج مساعدة؟" icon="headset" href="mailto:support@crewai.com">
+  تواصل مع فريق الدعم للحصول على المساعدة في إعداد تكامل Google Docs أو
+  استكشاف الأخطاء وإصلاحها.
+</Card>

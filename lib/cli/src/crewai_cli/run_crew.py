@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from contextlib import AbstractContextManager, nullcontext
 from enum import Enum
 import os
@@ -7,16 +8,16 @@ from pathlib import Path
 import re
 import subprocess
 import sys
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import click
-from crewai.project.json_loader import find_crew_json_file
 from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
 from packaging import version
 
 from crewai_cli.utils import (
     build_env_with_all_tool_credentials,
     enable_prompt_line_editing,
+    is_dmn_mode_enabled,
     read_toml,
 )
 from crewai_cli.version import get_crewai_version
@@ -35,6 +36,82 @@ class CrewType(Enum):
 # crewai.utilities.string_utils (_VARIABLE_PATTERN), including hyphens —
 # otherwise placeholders are interpolated at runtime but never prompted for.
 _INPUT_PLACEHOLDER_RE = re.compile(r"(?<!{){([A-Za-z_][A-Za-z0-9_\-]*)}(?!})")
+_CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV = "CREWAI_CLI_RUNNER_PACKAGE_DIR"
+_CREWAI_RUNNER_SOURCE_DIR_ENV = "CREWAI_RUNNER_SOURCE_DIR"
+_FULL_CREWAI_INSTALL_MESSAGE = """\
+CrewAI CLI is installed without the `crewai` package required to run crews.
+
+Install the full CrewAI prerelease package:
+
+  uv tool install --force --prerelease=allow 'crewai[tools]==1.14.8a1'
+
+The quotes are required in zsh so `crewai[tools]` is not treated as a glob.
+"""
+_JSON_CREW_RUNNER_CODE = """
+import importlib.util
+import os
+from pathlib import Path
+import sys
+
+source_dir = os.environ.get("CREWAI_RUNNER_SOURCE_DIR")
+if source_dir:
+    sys.path.insert(0, source_dir)
+
+package_dir = Path(os.environ["CREWAI_CLI_RUNNER_PACKAGE_DIR"])
+package_spec = importlib.util.spec_from_file_location(
+    "crewai_cli",
+    package_dir / "__init__.py",
+    submodule_search_locations=[str(package_dir)],
+)
+if package_spec is None or package_spec.loader is None:
+    raise ImportError(f"Cannot load CrewAI CLI package from {package_dir}")
+
+package = importlib.util.module_from_spec(package_spec)
+sys.modules["crewai_cli"] = package
+package_spec.loader.exec_module(package)
+
+module_path = package_dir / "run_crew.py"
+module_spec = importlib.util.spec_from_file_location("crewai_cli.run_crew", module_path)
+if module_spec is None or module_spec.loader is None:
+    raise ImportError(f"Cannot load CrewAI CLI runner from {module_path}")
+
+module = importlib.util.module_from_spec(module_spec)
+sys.modules["crewai_cli.run_crew"] = module
+module_spec.loader.exec_module(module)
+
+from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
+
+try:
+    module._run_json_crew(
+        trained_agents_file=os.getenv(CREWAI_TRAINED_AGENTS_FILE_ENV)
+    )
+except module.click.ClickException as exc:
+    exc.show()
+    raise SystemExit(exc.exit_code)
+""".strip()
+
+
+def _import_find_crew_json_file() -> Callable[[], Path | None]:
+    from crewai.project.json_loader import find_crew_json_file as _find_crew_json_file
+
+    return cast("Callable[[], Path | None]", _find_crew_json_file)
+
+
+def _is_missing_crewai_package(exc: ModuleNotFoundError) -> bool:
+    return bool(exc.name and exc.name.startswith("crewai"))
+
+
+def _full_crewai_install_error() -> click.ClickException:
+    return click.ClickException(_FULL_CREWAI_INSTALL_MESSAGE)
+
+
+def find_crew_json_file() -> Path | None:
+    try:
+        return _import_find_crew_json_file()()
+    except ModuleNotFoundError as exc:
+        if _is_missing_crewai_package(exc):
+            raise _full_crewai_install_error() from exc
+        raise
 
 
 def _has_json_crew() -> bool:
@@ -162,6 +239,35 @@ def _prepare_json_crew_for_tui(crew: Any) -> None:
             agent.llm.stream = True
 
 
+def _runtime_inputs_without_prompt(
+    crew: Any, default_inputs: dict[str, Any]
+) -> dict[str, Any]:
+    """Return runtime inputs in non-interactive mode or exit on missing values."""
+    inputs = dict(default_inputs or {})
+    missing = _missing_input_names(crew, inputs)
+    if missing:
+        missing_list = ", ".join(missing)
+        click.echo(
+            "Missing runtime inputs for CREWAI_DMN mode: "
+            f"{missing_list}. Add them to the `inputs` object in crew.json(c).",
+            err=True,
+        )
+        raise SystemExit(1)
+    return inputs
+
+
+def _run_json_crew_without_tui(crew_path: Path) -> Any:
+    """Run a JSON-defined crew with plain terminal output."""
+    with _json_loading_status("Preparing crew..."):
+        crew, default_inputs = _load_json_crew(crew_path)
+
+    runtime_inputs = _runtime_inputs_without_prompt(crew, default_inputs)
+    result = crew.kickoff(inputs=runtime_inputs)
+    if result is not None:
+        click.echo(str(result))
+    return result
+
+
 def _run_json_crew(trained_agents_file: str | None = None) -> Any:
     """Load and run a JSON-defined crew."""
     from dotenv import load_dotenv
@@ -178,6 +284,9 @@ def _run_json_crew(trained_agents_file: str | None = None) -> Any:
     crew_path = find_crew_json_file()
     if crew_path is None:
         raise FileNotFoundError("No crew.jsonc or crew.json found")
+
+    if is_dmn_mode_enabled():
+        return _run_json_crew_without_tui(crew_path)
 
     crew_run_app_cls, crew, default_inputs, task_names, agent_names = (
         _load_json_crew_for_tui(crew_path)
@@ -216,24 +325,148 @@ def _run_json_crew(trained_agents_file: str | None = None) -> Any:
     return app._crew_result
 
 
+def _has_lockfile(project_root: Path | None = None) -> bool:
+    """Return True when the project already has a dependency lockfile."""
+    return _has_uv_lockfile(project_root) or _has_poetry_lockfile(project_root)
+
+
+def _has_uv_lockfile(project_root: Path | None = None) -> bool:
+    """Return True when the project has a uv lockfile."""
+    root = project_root or Path.cwd()
+    return (root / "uv.lock").is_file()
+
+
+def _has_poetry_lockfile(project_root: Path | None = None) -> bool:
+    """Return True when the project has a Poetry lockfile."""
+    root = project_root or Path.cwd()
+    return (root / "poetry.lock").is_file()
+
+
+def _uses_poetry_lockfile(project_root: Path | None = None) -> bool:
+    """Return True when Poetry is the only available lock source."""
+    return _has_poetry_lockfile(project_root) and not _has_uv_lockfile(project_root)
+
+
+def _has_project_venv(project_root: Path | None = None) -> bool:
+    """Return True when the project already has a local uv environment."""
+    root = project_root or Path.cwd()
+    return (root / ".venv").is_dir()
+
+
+def _install_json_crew_dependencies_if_needed() -> None:
+    """Prepare JSON crew dependencies without mutating existing lockfiles."""
+    project_root = Path.cwd()
+    if not (project_root / "pyproject.toml").is_file():
+        return
+
+    has_uv_lockfile = _has_uv_lockfile(project_root)
+    has_lockfile = has_uv_lockfile or _has_poetry_lockfile(project_root)
+    if has_lockfile and _has_project_venv(project_root):
+        return
+    if _uses_poetry_lockfile(project_root):
+        return
+
+    from crewai_cli.install_crew import install_crew
+
+    try:
+        if has_uv_lockfile:
+            click.echo("Syncing dependencies from lockfile...")
+            install_crew(["--frozen"], raise_on_error=True)
+        else:
+            click.echo("Installing dependencies...")
+            install_crew([], raise_on_error=True)
+    except subprocess.CalledProcessError as e:
+        raise SystemExit(e.returncode) from e
+    except Exception as e:
+        raise SystemExit(1) from e
+
+
+def _find_local_crewai_source_dir() -> Path | None:
+    """Return the repo's CrewAI source dir when running from a source checkout."""
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / "lib" / "crewai" / "src"
+        if (candidate / "crewai" / "project" / "json_loader.py").is_file():
+            return candidate
+    return None
+
+
+def _json_crew_run_command(project_root: Path | None = None) -> list[str]:
+    """Return the project-environment command for running JSON crews."""
+    if _uses_poetry_lockfile(project_root):
+        return ["poetry", "run", "python", "-c", _JSON_CREW_RUNNER_CODE]
+    return ["uv", "run", "--no-sync", "python", "-c", _JSON_CREW_RUNNER_CODE]
+
+
+def _run_json_crew_in_project_env(trained_agents_file: str | None = None) -> Any:
+    """Run JSON crews from the project's uv-managed environment."""
+    if not (Path.cwd() / "pyproject.toml").is_file():
+        return _run_json_crew(trained_agents_file=trained_agents_file)
+
+    _install_json_crew_dependencies_if_needed()
+
+    command = _json_crew_run_command()
+    env = build_env_with_all_tool_credentials()
+    env[_CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV] = str(Path(__file__).resolve().parent)
+    if local_crewai_source_dir := _find_local_crewai_source_dir():
+        env[_CREWAI_RUNNER_SOURCE_DIR_ENV] = str(local_crewai_source_dir)
+    if trained_agents_file:
+        env[CREWAI_TRAINED_AGENTS_FILE_ENV] = trained_agents_file
+
+    try:
+        subprocess.run(  # noqa: S603
+            command,
+            capture_output=False,
+            text=True,
+            check=True,
+            env=env,
+        )
+    except subprocess.CalledProcessError as e:
+        raise SystemExit(e.returncode) from e
+    except Exception as e:
+        click.echo(f"An unexpected error occurred while running the JSON crew: {e}")
+        raise SystemExit(1) from e
+
+    return None
+
+
 def _chain_deploy() -> None:
     from rich.console import Console
 
     console = Console()
+
+    def print_system_exit_failure(exc: SystemExit) -> None:
+        if isinstance(exc.code, int):
+            detail = f" with exit code {exc.code}"
+        elif exc.code:
+            detail = f": {exc.code}"
+        else:
+            detail = ""
+        console.print(f"\nDeploy failed{detail}\n", style="bold red")
+
     try:
+        from crewai_cli.command import AuthenticationRequiredError
         from crewai_cli.deploy.main import DeployCommand
 
         console.print("\nStarting deployment…\n", style="bold #FF5A50")
-        DeployCommand().create_crew(confirm=False, skip_validate=True)
-    except SystemExit:
+        DeployCommand().create_crew(confirm=True, skip_validate=True)
+    except AuthenticationRequiredError:
         from crewai_cli.authentication.main import AuthenticationCommand
 
         console.print()
         AuthenticationCommand().login()
         try:
-            DeployCommand().create_crew(confirm=False, skip_validate=True)
+            DeployCommand().create_crew(confirm=True, skip_validate=True)
+        except AuthenticationRequiredError:
+            console.print(
+                "\nDeploy failed: authentication is still required.\n",
+                style="bold red",
+            )
+        except SystemExit as e:
+            print_system_exit_failure(e)
         except Exception as e:
             console.print(f"\nDeploy failed: {e}\n", style="bold red")
+    except SystemExit as e:
+        print_system_exit_failure(e)
     except Exception as e:
         console.print(f"\nDeploy failed: {e}\n", style="bold red")
 
@@ -315,7 +548,7 @@ def run_crew(trained_agents_file: str | None = None) -> None:
     """
     # JSON crew projects take precedence
     if _has_json_crew():
-        _run_json_crew(trained_agents_file=trained_agents_file)
+        _run_json_crew_in_project_env(trained_agents_file=trained_agents_file)
         return
 
     crewai_version = get_crewai_version()

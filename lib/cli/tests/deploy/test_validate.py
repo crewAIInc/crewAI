@@ -481,7 +481,7 @@ def test_modern_crewai_pin_does_not_warn(tmp_path: Path) -> None:
 
 def test_create_crew_aborts_on_validation_error(tmp_path: Path) -> None:
     """`crewai deploy create` must not contact the API when validation fails."""
-    from unittest.mock import MagicMock, patch as mock_patch
+    from unittest.mock import patch as mock_patch
 
     from crewai_cli.deploy.main import DeployCommand
 
@@ -490,10 +490,10 @@ def test_create_crew_aborts_on_validation_error(tmp_path: Path) -> None:
         mock_patch("crewai_cli.deploy.main.get_project_name", return_value="p"),
         mock_patch("crewai_cli.command.PlusAPI") as mock_api,
         mock_patch(
-            "crewai_cli.deploy.main.validate_project"
-        ) as mock_validate,
+            "crewai_cli.deploy.main._prepare_project_for_deploy",
+            return_value=False,
+        ),
     ):
-        mock_validate.return_value = MagicMock(ok=False)
         cmd = DeployCommand()
         cmd.create_crew()
         assert not cmd.plus_api_client.create_crew.called

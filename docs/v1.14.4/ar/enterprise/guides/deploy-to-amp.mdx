@@ -1,0 +1,445 @@
+---
+title: "النشر على AMP"
+description: "انشر طاقمك أو تدفقك على CrewAI AMP"
+icon: "rocket"
+mode: "wide"
+---
+
+<Note>
+  بعد إنشاء طاقم أو تدفق محلياً (أو عبر Crew Studio)، الخطوة التالية هي
+  نشره على منصة CrewAI AMP. يغطي هذا الدليل طرق نشر متعددة
+  لمساعدتك في اختيار النهج الأفضل لسير عملك.
+</Note>
+
+## المتطلبات المسبقة
+
+<CardGroup cols={2}>
+  <Card title="مشروع جاهز للنشر" icon="check-circle">
+    يجب أن يكون لديك طاقم أو تدفق يعمل بنجاح محلياً.
+    اتبع [دليل التحضير](/ar/enterprise/guides/prepare-for-deployment) للتحقق من بنية مشروعك.
+  </Card>
+  <Card title="مستودع GitHub" icon="github">
+    يجب أن يكون الكود في مستودع GitHub (لطريقة تكامل
+    GitHub)
+  </Card>
+</CardGroup>
+
+<Info>
+  **الطواقم مقابل التدفقات**: يمكن نشر كلا نوعي المشاريع كـ "أتمتات" على CrewAI AMP.
+  عملية النشر هي نفسها، لكن لهما بنى مشاريع مختلفة.
+  راجع [التحضير للنشر](/ar/enterprise/guides/prepare-for-deployment) للتفاصيل.
+</Info>
+
+## الخيار 1: النشر باستخدام CrewAI CLI
+
+يوفر CLI أسرع طريقة لنشر الطواقم أو التدفقات المطورة محلياً على منصة AMP.
+يكتشف CLI تلقائياً نوع مشروعك من `pyproject.toml` ويبني وفقاً لذلك.
+
+<Steps>
+  <Step title="تثبيت CrewAI CLI">
+    إذا لم تكن قد فعلت بالفعل، ثبّت CrewAI CLI:
+
+    ```bash
+    pip install crewai[tools]
+    ```
+
+    <Tip>
+    يأتي CLI مع حزمة CrewAI الرئيسية، لكن الإضافة `[tools]` تضمن حصولك على جميع اعتماديات النشر.
+    </Tip>
+
+  </Step>
+
+  <Step title="المصادقة مع منصة Enterprise">
+    أولاً، تحتاج لمصادقة CLI مع منصة CrewAI AMP:
+
+    ```bash
+    # إذا كان لديك حساب CrewAI AMP بالفعل، أو تريد إنشاء واحد:
+    crewai login
+    ```
+
+    عند تشغيل أي من الأمرين، سيقوم CLI بـ:
+    1. عرض رابط ورمز جهاز فريد
+    2. فتح متصفحك على صفحة المصادقة
+    3. طلب تأكيد الجهاز
+    4. إتمام عملية المصادقة
+
+    عند المصادقة الناجحة، سترى رسالة تأكيد في الطرفية!
+
+  </Step>
+
+  <Step title="إنشاء عملية نشر">
+
+    من مجلد مشروعك، شغّل:
+
+    ```bash
+    crewai deploy create
+    ```
+
+    سيقوم هذا الأمر بـ:
+    1. اكتشاف معلومات مستودع GitHub
+    2. تحديد متغيرات البيئة في ملف `.env` المحلي
+    3. نقل هذه المتغيرات بأمان إلى منصة Enterprise
+    4. إنشاء عملية نشر جديدة بمعرّف فريد
+
+    عند الإنشاء الناجح، سترى رسالة مثل:
+    ```shell
+    Deployment created successfully!
+    Name: your_project_name
+    Deployment ID: 01234567-89ab-cdef-0123-456789abcdef
+    Current Status: Deploy Enqueued
+    ```
+
+  </Step>
+
+  <Step title="مراقبة تقدم النشر">
+
+    تتبع حالة النشر بـ:
+
+    ```bash
+    crewai deploy status
+    ```
+
+    للسجلات المفصلة لعملية البناء:
+
+    ```bash
+    crewai deploy logs
+    ```
+
+    <Tip>
+    يستغرق النشر الأول عادة حوالي دقيقة واحدة.
+    </Tip>
+
+  </Step>
+</Steps>
+
+## أوامر CLI إضافية
+
+يقدم CrewAI CLI عدة أوامر لإدارة عمليات النشر:
+
+```bash
+# عرض جميع عمليات النشر
+crewai deploy list
+
+# الحصول على حالة النشر
+crewai deploy status
+
+# عرض سجلات النشر
+crewai deploy logs
+
+# دفع التحديثات بعد تغييرات الكود
+crewai deploy push
+
+# إزالة عملية نشر
+crewai deploy remove <deployment_id>
+```
+
+## الخيار 2: النشر مباشرة عبر واجهة الويب
+
+يمكنك أيضاً نشر طواقمك أو تدفقاتك مباشرة عبر واجهة ويب CrewAI AMP بربط حساب GitHub. لا يتطلب هذا النهج استخدام CLI على جهازك المحلي. تكتشف المنصة تلقائياً نوع مشروعك وتتعامل مع البناء بشكل مناسب.
+
+<Steps>
+
+  <Step title="الدفع إلى GitHub">
+
+تحتاج لدفع طاقمك إلى مستودع GitHub. إذا لم تكن قد أنشأت طاقماً بعد، يمكنك [اتباع هذا الدليل](/ar/quickstart).
+
+  </Step>
+
+  <Step title="ربط GitHub بـ CrewAI AMP">
+
+    1. سجّل الدخول إلى [CrewAI AMP](https://app.crewai.com)
+    2. انقر على زر "Connect GitHub"
+
+    <Frame>
+      ![زر ربط GitHub](/images/enterprise/connect-github.png)
+    </Frame>
+
+  </Step>
+
+  <Step title="اختيار المستودع">
+
+    بعد ربط حساب GitHub، ستتمكن من اختيار المستودع للنشر:
+
+    <Frame>
+      ![اختيار المستودع](/images/enterprise/select-repo.png)
+    </Frame>
+
+  </Step>
+
+  <Step title="تعيين متغيرات البيئة">
+
+    قبل النشر، ستحتاج لإعداد متغيرات البيئة للاتصال بمزود LLM أو خدمات أخرى:
+
+    1. يمكنك إضافة المتغيرات فردياً أو بشكل جماعي
+    2. أدخل متغيرات البيئة بتنسيق `KEY=VALUE` (واحد لكل سطر)
+
+    <Frame>
+      ![تعيين متغيرات البيئة](/images/enterprise/set-env-variables.png)
+    </Frame>
+
+    <Info>
+      تستخدم حزم Python خاصة؟ ستحتاج لإضافة بيانات اعتماد السجل هنا أيضاً.
+      راجع [سجلات الحزم الخاصة](/ar/enterprise/guides/private-package-registry) للمتغيرات المطلوبة.
+    </Info>
+
+  </Step>
+
+  <Step title="نشر طاقمك">
+
+    1. انقر على زر "Deploy" لبدء عملية النشر
+    2. يمكنك مراقبة التقدم عبر شريط التقدم
+    3. يستغرق النشر الأول عادة حوالي دقيقة واحدة
+
+    <Frame>
+      ![تقدم النشر](/images/enterprise/deploy-progress.png)
+    </Frame>
+
+    بمجرد اكتمال النشر، سترى:
+    - رابط طاقمك الفريد
+    - رمز Bearer لحماية API طاقمك
+    - زر "Delete" إذا كنت تحتاج لإزالة النشر
+
+  </Step>
+
+</Steps>
+
+## الخيار 3: إعادة النشر باستخدام API (تكامل CI/CD)
+
+لعمليات النشر الآلية في خطوط أنابيب CI/CD، يمكنك استخدام CrewAI API لتشغيل إعادة نشر الطواقم الحالية. هذا مفيد بشكل خاص لـ GitHub Actions وJenkins أو سير عمل الأتمتة الأخرى.
+
+<Steps>
+  <Step title="الحصول على رمز الوصول الشخصي">
+
+    انتقل إلى إعدادات حساب CrewAI AMP لإنشاء رمز API:
+
+    1. انتقل إلى [app.crewai.com](https://app.crewai.com)
+    2. انقر على **Settings** → **Account** → **Personal Access Token**
+    3. أنشئ رمزاً جديداً وانسخه بأمان
+    4. خزّن هذا الرمز كسر في نظام CI/CD
+
+  </Step>
+
+  <Step title="إيجاد UUID الأتمتة">
+
+    حدد موقع المعرّف الفريد لطاقمك المنشور:
+
+    1. انتقل إلى **Automations** في لوحة تحكم CrewAI AMP
+    2. اختر الأتمتة/الطاقم الحالي
+    3. انقر على **Additional Details**
+    4. انسخ **UUID** — يحدد هذا نشر طاقمك المحدد
+
+  </Step>
+
+  <Step title="تشغيل إعادة النشر عبر API">
+
+    استخدم نقطة نهاية Deploy API لتشغيل إعادة النشر:
+
+    ```bash
+    curl -i -X POST \
+         -H "Authorization: Bearer YOUR_PERSONAL_ACCESS_TOKEN" \
+         https://app.crewai.com/crewai_plus/api/v1/crews/YOUR-AUTOMATION-UUID/deploy
+
+    # HTTP/2 200
+    # content-type: application/json
+    #
+    # {
+    #   "uuid": "your-automation-uuid",
+    #   "status": "Deploy Enqueued",
+    #   "public_url": "https://your-crew-deployment.crewai.com",
+    #   "token": "your-bearer-token"
+    # }
+    ```
+
+    <Info>
+    إذا تم إنشاء أتمتتك متصلة بـ Git أولاً، سيسحب API تلقائياً أحدث التغييرات من مستودعك قبل إعادة النشر.
+    </Info>
+
+  </Step>
+
+  <Step title="مثال تكامل GitHub Actions">
+
+    إليك سير عمل GitHub Actions مع مشغلات نشر أكثر تعقيداً:
+
+    ```yaml
+    name: Deploy CrewAI Automation
+
+    on:
+      push:
+        branches: [ main ]
+      pull_request:
+        types: [ labeled ]
+      release:
+        types: [ published ]
+
+    jobs:
+      deploy:
+        runs-on: ubuntu-latest
+        if: |
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'deploy')) ||
+          (github.event_name == 'release')
+        steps:
+          - name: Trigger CrewAI Redeployment
+            run: |
+              curl -X POST \
+                   -H "Authorization: Bearer ${{ secrets.CREWAI_PAT }}" \
+                   https://app.crewai.com/crewai_plus/api/v1/crews/${{ secrets.CREWAI_AUTOMATION_UUID }}/deploy
+    ```
+
+    <Tip>
+    أضف `CREWAI_PAT` و`CREWAI_AUTOMATION_UUID` كأسرار مستودع. لعمليات نشر PR، أضف تسمية "deploy" لتشغيل سير العمل.
+    </Tip>
+
+    </Step>
+
+  </Steps>
+
+## التفاعل مع أتمتتك المنشورة
+
+بمجرد اكتمال النشر، يمكنك الوصول إلى طاقمك عبر:
+
+1. **REST API**: تنشئ المنصة نقطة نهاية HTTPS فريدة بهذه المسارات الرئيسية:
+
+   - `/inputs`: يعرض معاملات الإدخال المطلوبة
+   - `/kickoff`: يبدأ التنفيذ بالمدخلات المقدمة
+   - `/status/{kickoff_id}`: يتحقق من حالة التنفيذ
+
+2. **واجهة الويب**: زر [app.crewai.com](https://app.crewai.com) للوصول إلى:
+   - **علامة تبويب Status**: عرض معلومات النشر وتفاصيل نقطة نهاية API ورمز المصادقة
+   - **علامة تبويب Run**: تمثيل مرئي لبنية طاقمك
+   - **علامة تبويب Executions**: سجل جميع عمليات التنفيذ
+   - **علامة تبويب Metrics**: تحليلات الأداء
+   - **علامة تبويب Traces**: رؤى التنفيذ المفصلة
+
+### تشغيل عملية تنفيذ
+
+من لوحة تحكم Enterprise، يمكنك:
+
+1. النقر على اسم طاقمك لفتح تفاصيله
+2. اختيار "Trigger Crew" من واجهة الإدارة
+3. إدخال المدخلات المطلوبة في النافذة المنبثقة
+4. مراقبة التقدم أثناء مرور التنفيذ عبر خط الأنابيب
+
+### المراقبة والتحليلات
+
+توفر منصة Enterprise ميزات مراقبة شاملة:
+
+- **إدارة التنفيذ**: تتبع عمليات التشغيل النشطة والمكتملة
+- **التتبعات**: تحليلات مفصلة لكل عملية تنفيذ
+- **المقاييس**: استخدام الرموز وأوقات التنفيذ والتكاليف
+- **عرض الجدول الزمني**: تمثيل مرئي لتسلسل المهام
+
+### ميزات متقدمة
+
+تقدم منصة Enterprise أيضاً:
+
+- **إدارة متغيرات البيئة**: تخزين وإدارة مفاتيح API بأمان
+- **اتصالات LLM**: تهيئة التكاملات مع مزودي LLM المختلفين
+- **مستودع الأدوات المخصصة**: إنشاء ومشاركة وتثبيت الأدوات
+- **Crew Studio**: بناء الطواقم عبر واجهة محادثة دون كتابة كود
+
+## استكشاف أخطاء النشر وإصلاحها
+
+إذا فشل النشر، تحقق من هذه المشكلات الشائعة:
+
+### فشل البناء
+
+#### ملف uv.lock مفقود
+
+**العرض**: فشل البناء مبكراً مع أخطاء حل الاعتماديات
+
+**الحل**: أنشئ ملف القفل وارفعه:
+
+```bash
+uv lock
+git add uv.lock
+git commit -m "Add uv.lock for deployment"
+git push
+```
+
+<Warning>
+  ملف `uv.lock` مطلوب لجميع عمليات النشر. بدونه، لا يمكن للمنصة
+  تثبيت اعتمادياتك بشكل موثوق.
+</Warning>
+
+#### بنية المشروع الخاطئة
+
+**العرض**: أخطاء "Could not find entry point" أو "Module not found"
+
+**الحل**: تحقق من أن مشروعك يتطابق مع البنية المتوقعة:
+
+- **كل من الطواقم والتدفقات**: يجب أن تكون نقطة الدخول في `src/project_name/main.py`
+- **الطواقم**: تستخدم دالة `run()` كنقطة دخول
+- **التدفقات**: تستخدم دالة `kickoff()` كنقطة دخول
+
+راجع [التحضير للنشر](/ar/enterprise/guides/prepare-for-deployment) لمخططات البنية المفصلة.
+
+#### مُزخرف CrewBase مفقود
+
+**العرض**: أخطاء "Crew not found" أو "Config not found" أو أخطاء تهيئة الوكيل/المهمة
+
+**الحل**: تأكد من أن **جميع** فئات الطاقم تستخدم مُزخرف `@CrewBase`:
+
+```python
+from crewai.project import CrewBase, agent, crew, task
+
+@CrewBase  # This decorator is REQUIRED
+class YourCrew():
+    """Your crew description"""
+
+    @agent
+    def my_agent(self) -> Agent:
+        return Agent(
+            config=self.agents_config['my_agent'],  # type: ignore[index]
+            verbose=True
+        )
+
+    # ... rest of crew definition
+```
+
+<Info>
+  ينطبق هذا على الطواقم المستقلة والطواقم المضمنة داخل مشاريع التدفق.
+  كل فئة طاقم تحتاج المُزخرف.
+</Info>
+
+#### نوع pyproject.toml غير صحيح
+
+**العرض**: نجاح البناء لكن فشل وقت التشغيل، أو سلوك غير متوقع
+
+**الحل**: تحقق من أن قسم `[tool.crewai]` يتطابق مع نوع مشروعك:
+
+```toml
+# For Crew projects:
+[tool.crewai]
+type = "crew"
+
+# For Flow projects:
+[tool.crewai]
+type = "flow"
+```
+
+### فشل وقت التشغيل
+
+#### فشل اتصال LLM
+
+**العرض**: أخطاء مفتاح API، "model not found"، أو فشل المصادقة
+
+**الحل**:
+1. تحقق من صحة تعيين مفتاح API لمزود LLM في متغيرات البيئة
+2. تأكد من تطابق أسماء متغيرات البيئة مع ما يتوقعه الكود
+3. اختبر محلياً بنفس متغيرات البيئة بالضبط قبل النشر
+
+#### أخطاء تنفيذ الطاقم
+
+**العرض**: يبدأ الطاقم لكن يفشل أثناء التنفيذ
+
+**الحل**:
+1. تحقق من سجلات التنفيذ في لوحة تحكم AMP (علامة تبويب Traces)
+2. تحقق من أن جميع الأدوات لديها مفاتيح API المطلوبة مُهيأة
+3. تأكد من صحة تهيئات الوكلاء في `agents.yaml`
+4. تحقق من تهيئات المهام في `tasks.yaml` بحثاً عن أخطاء الصياغة
+
+<Card title="تحتاج مساعدة؟" icon="headset" href="mailto:support@crewai.com">
+  تواصل مع فريق الدعم للمساعدة في مشاكل النشر أو أسئلة حول
+  منصة AMP.
+</Card>

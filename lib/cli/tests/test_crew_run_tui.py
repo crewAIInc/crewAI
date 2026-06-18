@@ -4,6 +4,11 @@ import time
 import pytest
 
 from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.memory_events import (
+    MemorySaveCompletedEvent,
+    MemorySaveFailedEvent,
+    MemorySaveStartedEvent,
+)
 from crewai.events.types.observation_events import (
     GoalAchievedEarlyEvent,
     PlanRefinementEvent,
@@ -19,8 +24,14 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
+from crewai_cli.command import AuthenticationRequiredError
 from crewai_cli import run_crew
-from crewai_cli.crew_run_tui import CrewRunApp
+from crewai_cli.crew_run_tui import (
+    CrewRunApp,
+    _LOG_ARGS_TEXT_LIMIT,
+    _LOG_RESULT_TEXT_LIMIT,
+    _LOG_TRUNCATION_SUFFIX,
+)
 
 
 def _app_with_plan() -> CrewRunApp:
@@ -68,7 +79,7 @@ def test_chain_deploy_skips_validation_after_auth_retry(monkeypatch) -> None:
             create_calls.append(kwargs)
             FakeDeployCommand.attempts += 1
             if FakeDeployCommand.attempts == 1:
-                raise SystemExit(1)
+                raise AuthenticationRequiredError
 
     class FakeAuthenticationCommand:
         def login(self) -> None:
@@ -83,10 +94,36 @@ def test_chain_deploy_skips_validation_after_auth_retry(monkeypatch) -> None:
     run_crew._chain_deploy()
 
     assert create_calls == [
-        {"confirm": False, "skip_validate": True},
-        {"confirm": False, "skip_validate": True},
+        {"confirm": True, "skip_validate": True},
+        {"confirm": True, "skip_validate": True},
     ]
     assert login_calls == [True]
+
+
+def test_chain_deploy_does_not_login_for_deploy_exit(monkeypatch, capsys) -> None:
+    create_calls: list[dict[str, object]] = []
+    login_calls: list[bool] = []
+
+    class FakeDeployCommand:
+        def create_crew(self, **kwargs) -> None:
+            create_calls.append(kwargs)
+            raise SystemExit(42)
+
+    class FakeAuthenticationCommand:
+        def login(self) -> None:
+            login_calls.append(True)
+
+    monkeypatch.setattr("crewai_cli.deploy.main.DeployCommand", FakeDeployCommand)
+    monkeypatch.setattr(
+        "crewai_cli.authentication.main.AuthenticationCommand",
+        FakeAuthenticationCommand,
+    )
+
+    run_crew._chain_deploy()
+
+    assert create_calls == [{"confirm": True, "skip_validate": True}]
+    assert login_calls == []
+    assert "Deploy failed with exit code 42" in capsys.readouterr().out
 
 
 def test_plan_step_status_updates_only_the_explicit_step() -> None:
@@ -308,6 +345,396 @@ def test_internal_reasoning_function_call_is_hidden_from_activity_log() -> None:
     assert app._current_task_steps == []
 
 
+def test_memory_save_events_are_shown_in_activity_log() -> None:
+    app = _app_with_plan()
+    app._current_task_idx = 1
+    app._subscribe()
+    try:
+        _emit_event(
+            MemorySaveStartedEvent(
+                value="2 memories (background)",
+                metadata={},
+                source_type="unified_memory",
+            )
+        )
+        _emit_event(
+            MemorySaveCompletedEvent(
+                value="2 memories saved",
+                metadata={},
+                save_time_ms=123,
+                source_type="unified_memory",
+            )
+        )
+    finally:
+        app._unsubscribe()
+
+    assert len(app._log_entries) == 1
+    assert app._log_entries[0]["tool_name"] == "memory_save"
+    assert app._log_entries[0]["status"] == "success"
+    assert app._log_entries[0]["args"] == "2 memories (background)"
+    assert app._log_entries[0]["result"] == "2 memories saved"
+    assert app._log_entries[0]["error"] is None
+    assert app._log_entries[0]["duration"] == 0.123
+    assert app._log_entries[0]["task_idx"] == 1
+
+
+def test_nested_memory_save_event_is_hidden_for_save_to_memory_tool() -> None:
+    app = _app_with_plan()
+    app._subscribe()
+    try:
+        tool_args = {"contents": ["Fact to remember."]}
+        _emit_event(
+            ToolUsageStartedEvent(
+                tool_name="save_to_memory",
+                tool_args=tool_args,
+            )
+        )
+        _emit_event(
+            MemorySaveStartedEvent(
+                value="Fact to remember.",
+                metadata={},
+                source_type="unified_memory",
+            )
+        )
+        _emit_event(
+            MemorySaveCompletedEvent(
+                value="Fact to remember.",
+                metadata={},
+                save_time_ms=123,
+                source_type="unified_memory",
+            )
+        )
+        now = datetime.now()
+        _emit_event(
+            ToolUsageFinishedEvent(
+                tool_name="save_to_memory",
+                tool_args=tool_args,
+                started_at=now,
+                finished_at=now,
+                output="Saved to memory.",
+            )
+        )
+    finally:
+        app._unsubscribe()
+
+    assert len(app._log_entries) == 1
+    assert app._log_entries[0]["tool_name"] == "save_to_memory"
+    assert app._log_entries[0]["status"] == "success"
+    assert app._log_entries[0]["result"] == "Saved to memory."
+
+
+def test_memory_save_failure_is_shown_in_activity_log() -> None:
+    app = _app_with_plan()
+    app._subscribe()
+    try:
+        _emit_event(
+            MemorySaveStartedEvent(
+                value="background save",
+                metadata={},
+                source_type="unified_memory",
+            )
+        )
+        _emit_event(
+            MemorySaveFailedEvent(
+                value="background save",
+                metadata={},
+                error="embedding connection failed",
+                source_type="unified_memory",
+            )
+        )
+    finally:
+        app._unsubscribe()
+
+    assert app._log_entries[0]["tool_name"] == "memory_save"
+    assert app._log_entries[0]["status"] == "error"
+    assert app._log_entries[0]["error"] == "embedding connection failed"
+    assert app._log_expanded == {0}
+
+
+def test_memory_save_completion_updates_timed_out_row() -> None:
+    app = _app_with_plan()
+    app._subscribe()
+    try:
+        _emit_event(
+            MemorySaveStartedEvent(
+                value="9 memories (background)",
+                metadata={},
+                source_type="unified_memory",
+            )
+        )
+
+        app._log_entries[0]["status"] = "timeout"
+        app._log_entries[0]["error"] = "No result received before crew completed"
+        app._log_entries[0]["duration"] = 8.3
+
+        _emit_event(
+            MemorySaveCompletedEvent(
+                value="9 memories saved",
+                metadata={},
+                save_time_ms=8300,
+                source_type="unified_memory",
+            )
+        )
+    finally:
+        app._unsubscribe()
+
+    assert len(app._log_entries) == 1
+    assert app._log_entries[0]["tool_name"] == "memory_save"
+    assert app._log_entries[0]["status"] == "success"
+    assert app._log_entries[0]["result"] == "9 memories saved"
+    assert app._log_entries[0]["error"] is None
+    assert app._log_entries[0]["duration"] == 8.3
+
+
+def test_memory_save_completion_with_unmatched_id_does_not_update_running_row() -> None:
+    app = _app_with_plan()
+    app._subscribe()
+    try:
+        _emit_event(
+            MemorySaveStartedEvent(
+                value="first background save",
+                metadata={},
+                source_type="unified_memory",
+                parent_event_id="manual-parent",
+            )
+        )
+        _emit_event(
+            MemorySaveStartedEvent(
+                value="second background save",
+                metadata={},
+                source_type="unified_memory",
+                parent_event_id="manual-parent",
+            )
+        )
+
+        _emit_event(
+            MemorySaveCompletedEvent(
+                value="orphan save completed",
+                metadata={},
+                save_time_ms=2800,
+                source_type="unified_memory",
+                parent_event_id="manual-parent",
+                started_event_id="missing-memory-save-start",
+            )
+        )
+    finally:
+        app._unsubscribe()
+
+    assert [entry["status"] for entry in app._log_entries] == [
+        "running",
+        "running",
+        "success",
+    ]
+    assert app._log_entries[0]["args"] == "first background save"
+    assert app._log_entries[1]["args"] == "second background save"
+    assert app._log_entries[2]["result"] == "orphan save completed"
+    assert app._log_entries[2]["started_event_id"] == "missing-memory-save-start"
+
+
+def test_memory_save_failure_with_unmatched_id_does_not_update_running_row() -> None:
+    app = _app_with_plan()
+    app._subscribe()
+    try:
+        _emit_event(
+            MemorySaveStartedEvent(
+                value="first background save",
+                metadata={},
+                source_type="unified_memory",
+                parent_event_id="manual-parent",
+            )
+        )
+        _emit_event(
+            MemorySaveStartedEvent(
+                value="second background save",
+                metadata={},
+                source_type="unified_memory",
+                parent_event_id="manual-parent",
+            )
+        )
+
+        _emit_event(
+            MemorySaveFailedEvent(
+                value="orphan save failed",
+                metadata={},
+                error="embedding connection failed",
+                source_type="unified_memory",
+                parent_event_id="manual-parent",
+                started_event_id="missing-memory-save-start",
+            )
+        )
+    finally:
+        app._unsubscribe()
+
+    assert [entry["status"] for entry in app._log_entries] == [
+        "running",
+        "running",
+        "error",
+    ]
+    assert app._log_entries[0]["args"] == "first background save"
+    assert app._log_entries[1]["args"] == "second background save"
+    assert app._log_entries[2]["args"] == "orphan save failed"
+    assert app._log_entries[2]["error"] == "embedding connection failed"
+    assert app._log_entries[2]["started_event_id"] == "missing-memory-save-start"
+    assert app._log_expanded == {2}
+
+
+def test_memory_save_completion_without_id_does_not_update_stale_row() -> None:
+    app = _app_with_plan()
+    now = time.time()
+    app._log_entries = [
+        {
+            "tool_name": "memory_save",
+            "status": "running",
+            "args": "current background save",
+            "result": None,
+            "error": None,
+            "start_time": now,
+            "duration": None,
+            "task_idx": 1,
+        },
+        {
+            "tool_name": "memory_save",
+            "status": "success",
+            "args": "stale background save",
+            "result": "stale save completed",
+            "error": None,
+            "start_time": now - 10,
+            "duration": 1.0,
+            "task_idx": 1,
+        },
+    ]
+
+    app._subscribe()
+    try:
+        _emit_event(
+            MemorySaveCompletedEvent(
+                value="current save completed",
+                metadata={},
+                save_time_ms=2800,
+                source_type="unified_memory",
+                parent_event_id="manual-parent",
+            )
+        )
+    finally:
+        app._unsubscribe()
+
+    assert [entry["status"] for entry in app._log_entries] == [
+        "success",
+        "success",
+    ]
+    assert app._log_entries[0]["args"] == "current background save"
+    assert app._log_entries[0]["result"] == "current save completed"
+    assert app._log_entries[1]["args"] == "stale background save"
+    assert app._log_entries[1]["result"] == "stale save completed"
+
+
+def test_memory_save_failure_without_id_does_not_update_stale_row() -> None:
+    app = _app_with_plan()
+    now = time.time()
+    app._log_entries = [
+        {
+            "tool_name": "memory_save",
+            "status": "running",
+            "args": "current background save",
+            "result": None,
+            "error": None,
+            "start_time": now,
+            "duration": None,
+            "task_idx": 1,
+        },
+        {
+            "tool_name": "memory_save",
+            "status": "success",
+            "args": "stale background save",
+            "result": "stale save completed",
+            "error": None,
+            "start_time": now - 10,
+            "duration": 1.0,
+            "task_idx": 1,
+        },
+    ]
+
+    app._subscribe()
+    try:
+        _emit_event(
+            MemorySaveFailedEvent(
+                value="current save failed",
+                metadata={},
+                error="embedding connection failed",
+                source_type="unified_memory",
+                parent_event_id="manual-parent",
+            )
+        )
+    finally:
+        app._unsubscribe()
+
+    assert [entry["status"] for entry in app._log_entries] == ["error", "success"]
+    assert app._log_entries[0]["args"] == "current background save"
+    assert app._log_entries[0]["error"] == "embedding connection failed"
+    assert app._log_entries[1]["args"] == "stale background save"
+    assert app._log_entries[1]["result"] == "stale save completed"
+    assert app._log_entries[1]["error"] is None
+    assert app._log_expanded == {0}
+
+
+def test_memory_save_payloads_are_truncated_in_activity_log() -> None:
+    app = _app_with_plan()
+    long_args = "a" * (_LOG_ARGS_TEXT_LIMIT + 10)
+    long_result = "r" * (_LOG_RESULT_TEXT_LIMIT + 10)
+
+    app._subscribe()
+    try:
+        _emit_event(
+            MemorySaveStartedEvent(
+                value=long_args,
+                metadata={},
+                source_type="unified_memory",
+            )
+        )
+        _emit_event(
+            MemorySaveCompletedEvent(
+                value=long_result,
+                metadata={},
+                save_time_ms=8300,
+                source_type="unified_memory",
+            )
+        )
+    finally:
+        app._unsubscribe()
+
+    assert len(app._log_entries[0]["args"]) == _LOG_ARGS_TEXT_LIMIT
+    assert app._log_entries[0]["args"].endswith(_LOG_TRUNCATION_SUFFIX)
+    assert len(app._log_entries[0]["result"]) == _LOG_RESULT_TEXT_LIMIT
+    assert app._log_entries[0]["result"].endswith(_LOG_TRUNCATION_SUFFIX)
+
+
+def test_starting_next_tool_does_not_timeout_memory_save() -> None:
+    app = _app_with_plan()
+    app._subscribe()
+    try:
+        _emit_event(
+            MemorySaveStartedEvent(
+                value="9 memories (background)",
+                metadata={},
+                source_type="unified_memory",
+            )
+        )
+        _emit_event(
+            ToolUsageStartedEvent(
+                tool_name="read_website_content",
+                tool_args={"url": "https://example.com"},
+            )
+        )
+    finally:
+        app._unsubscribe()
+
+    assert app._log_entries[0]["tool_name"] == "memory_save"
+    assert app._log_entries[0]["status"] == "running"
+    assert app._log_entries[0]["error"] is None
+    assert app._log_entries[1]["tool_name"] == "read_website_content"
+    assert app._log_entries[1]["status"] == "running"
+
+
 def test_tool_failure_does_not_override_successful_plan_step_completion() -> None:
     app = _app_with_plan()
     app._subscribe()
@@ -451,6 +878,187 @@ async def test_crew_done_does_not_mark_unfinished_tool_successful() -> None:
     assert app._log_entries[0]["result"] is None
     assert app._log_entries[0]["error"] == "No result received before crew completed"
     assert app._plan_step_status == {1: "failed", 2: "done", 3: "done"}
+
+
+@pytest.mark.asyncio
+async def test_crew_done_does_not_timeout_memory_save() -> None:
+    app = _app_with_plan()
+
+    async with app.run_test(size=(100, 40)) as pilot:
+        app._log_entries = [
+            {
+                "tool_name": "memory_save",
+                "status": "running",
+                "args": "9 memories (background)",
+                "result": None,
+                "error": None,
+                "start_time": time.time() - 8,
+                "duration": None,
+                "task_idx": 1,
+            },
+            {
+                "tool_name": "search",
+                "status": "running",
+                "args": '{"query": "CrewAI"}',
+                "result": None,
+                "error": None,
+                "start_time": time.time() - 2,
+                "duration": None,
+                "task_idx": 1,
+            },
+        ]
+
+        app._on_crew_done("final output")
+        await pilot.pause()
+
+    assert app._log_entries[0]["status"] == "running"
+    assert app._log_entries[0]["error"] is None
+    assert app._log_entries[1]["status"] == "timeout"
+    assert app._log_entries[1]["error"] == "No result received before crew completed"
+
+
+@pytest.mark.asyncio
+async def test_crew_done_keeps_memory_save_subscription_until_completion(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "crewai_cli.crew_run_tui._MEMORY_SAVE_DRAIN_GRACE_SECONDS", 0.05
+    )
+    app = _app_with_plan()
+    auto_unsubscribed = False
+
+    async with app.run_test(size=(100, 40)) as pilot:
+        try:
+            assert app._event_handlers
+            started_event = MemorySaveStartedEvent(
+                value="9 memories (background)",
+                metadata={},
+                source_type="unified_memory",
+            )
+            _emit_event(started_event)
+
+            app._on_crew_done("final output")
+            await pilot.pause()
+
+            assert app._log_entries[0]["status"] == "running"
+            assert app._event_handlers
+
+            _emit_event(
+                MemorySaveCompletedEvent(
+                    value="9 memories saved",
+                    metadata={},
+                    save_time_ms=8300,
+                    source_type="unified_memory",
+                    started_event_id=started_event.event_id,
+                )
+            )
+            await pilot.pause()
+
+            assert app._event_handlers
+            await pilot.pause(0.08)
+            auto_unsubscribed = not app._event_handlers
+        finally:
+            app._unsubscribe()
+
+    assert app._log_entries[0]["tool_name"] == "memory_save"
+    assert app._log_entries[0]["status"] == "success"
+    assert app._log_entries[0]["result"] == "9 memories saved"
+    assert app._log_entries[0]["error"] is None
+    assert app._log_entries[0]["duration"] == 8.3
+    assert auto_unsubscribed is True
+
+
+@pytest.mark.asyncio
+async def test_crew_done_waits_for_queued_memory_save_events(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "crewai_cli.crew_run_tui._MEMORY_SAVE_DRAIN_GRACE_SECONDS", 0.05
+    )
+    app = _app_with_plan()
+    auto_unsubscribed = False
+
+    async with app.run_test(size=(100, 40)) as pilot:
+        try:
+            assert app._event_handlers
+
+            app._on_crew_done("final output")
+
+            assert app._event_handlers
+            started_event = MemorySaveStartedEvent(
+                value="9 memories (background)",
+                metadata={},
+                source_type="unified_memory",
+                parent_event_id="manual-parent",
+            )
+            _emit_event(started_event)
+            await pilot.pause()
+
+            assert app._log_entries[0]["tool_name"] == "memory_save"
+            assert app._log_entries[0]["status"] == "running"
+
+            _emit_event(
+                MemorySaveCompletedEvent(
+                    value="9 memories saved",
+                    metadata={},
+                    save_time_ms=8300,
+                    source_type="unified_memory",
+                    parent_event_id="manual-parent",
+                    started_event_id=started_event.event_id,
+                )
+            )
+            await pilot.pause()
+
+            assert app._event_handlers
+            await pilot.pause(0.08)
+            auto_unsubscribed = not app._event_handlers
+        finally:
+            app._unsubscribe()
+
+    assert app._log_entries[0]["tool_name"] == "memory_save"
+    assert app._log_entries[0]["status"] == "success"
+    assert app._log_entries[0]["args"] == "9 memories (background)"
+    assert app._log_entries[0]["result"] == "9 memories saved"
+    assert app._log_entries[0]["error"] is None
+    assert app._log_entries[0]["duration"] == 8.3
+    assert auto_unsubscribed is True
+
+
+@pytest.mark.asyncio
+async def test_crew_failed_does_not_timeout_memory_save() -> None:
+    app = _app_with_plan()
+
+    async with app.run_test(size=(100, 40)) as pilot:
+        app._log_entries = [
+            {
+                "tool_name": "memory_save",
+                "status": "running",
+                "args": "9 memories (background)",
+                "result": None,
+                "error": None,
+                "start_time": time.time() - 8,
+                "duration": None,
+                "task_idx": 1,
+            },
+            {
+                "tool_name": "search",
+                "status": "running",
+                "args": '{"query": "CrewAI"}',
+                "result": None,
+                "error": None,
+                "start_time": time.time() - 2,
+                "duration": None,
+                "task_idx": 1,
+            },
+        ]
+
+        app._on_crew_failed("boom")
+        await pilot.pause()
+
+    assert app._log_entries[0]["status"] == "running"
+    assert app._log_entries[0]["error"] is None
+    assert app._log_entries[1]["status"] == "error"
+    assert app._log_entries[1]["error"] == "No result received before crew failed"
 
 
 def test_streamed_step_observation_updates_named_step_only() -> None:

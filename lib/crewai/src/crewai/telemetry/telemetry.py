@@ -982,6 +982,11 @@ class Telemetry:
         def _operation() -> None:
             tracer = trace.get_tracer("crewai.telemetry")
             span = tracer.start_span("Flow Execution")
+            self._add_attribute(
+                span,
+                "crewai_version",
+                version("crewai"),
+            )
             self._add_attribute(span, "flow_name", flow_name)
             self._add_attribute(span, "node_names", json.dumps(node_names))
             close_span(span)
