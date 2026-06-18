@@ -1293,6 +1293,45 @@ In this section, you'll find detailed examples that help you select, configure, 
     uv add 'crewai[litellm]'
     ```
   </Accordion>
+
+  <Accordion title="Pinstripes">
+    [Pinstripes](https://pinstripes.io) is an OpenAI-compatible inference API. Because CrewAI routes LLM calls through LiteLLM, you can use Pinstripes as a drop-in provider — a single API key gives your agents access to DeepSeek, GLM, Qwen, and MiniMax models.
+
+    Set the following environment variable in your `.env` file:
+    ```toml Code
+    PINSTRIPES_API_KEY=<your-api-key>
+    ```
+
+    Example usage in your CrewAI project:
+    ```python Code
+    from crewai import LLM
+
+    llm = LLM(
+        model="openai/ps/deepseek-v4-flash",
+        base_url="https://pinstripes.io/v1",
+        api_key="<your-pinstripes-api-key>",  # Or set PINSTRIPES_API_KEY
+        temperature=0.7
+    )
+    ```
+
+    Pinstripes uses the `openai/` LiteLLM prefix with a custom `base_url`, so the standard OpenAI-compatible transport is used.
+
+    **Available models:**
+
+    | Model                  | Price (per 1M tokens) |
+    |------------------------|-----------------------|
+    | `ps/deepseek-v4-flash` | $0.10                 |
+    | `ps/glm-4.5-air`       | $0.125                |
+    | `ps/qwen3-35b`         | $0.14                 |
+    | `ps/minimax-m2.7`      | $0.255                |
+
+    Use each model with the `openai/` prefix (e.g. `openai/ps/qwen3-35b`).
+
+    **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
+    ```bash
+    uv add 'crewai[litellm]'
+    ```
+  </Accordion>
 </AccordionGroup>
 
 ## Streaming Responses
