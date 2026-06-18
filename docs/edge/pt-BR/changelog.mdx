@@ -4,6 +4,43 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="17 jun 2026">
+  ## v1.14.8a
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.8a)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar ação de bloco de script/código ao FlowDefinition
+  - Adicionar ações de equipe ao FlowDefinition
+  - Adicionar ação composta `each` ao FlowDefinition
+  - Implementar suporte ao modo DMN na criação e execução de equipes
+  - Melhorar a funcionalidade de redefinição de memória e o manuseio de equipes em JSON
+  - Adicionar expressões às ações do FlowDefinition
+  - Implementar ferramentas de execução de definição de fluxo sem código Python
+  - Conduzir feedback humano a partir da definição de fluxo
+  - Conectar configuração e persistência do FlowDefinition ao tempo de execução
+  - Adicionar `crewai run --definition` experimental para fluxos
+  - Suportar fallback de implantação ZIP e execuções de projeto de equipe em JSON
+  - Introduzir equipes em JSON primeiro
+
+  ### Correções de Bugs
+  - Corrigir ferramenta Exa duplicada
+  - Corrigir uso de token agregado em todas as chamadas LLM
+  - Resolver problemas com o carregamento de equipes e lógica de validação
+
+  ### Documentação
+  - Documentar campos do FlowDefinition no esquema JSON
+  - Atualizar documentação de instalação e início rápido para projetos de equipe em JSON-primeiro
+  - Atualizar changelog e versão para v1.14.7
+
+  ## Contribuidores
+
+  @gabemilani, @greysonlalonde, @iris-clawd, @joaomdmoura, @lorenzejay, @lucasgomide, @theCyberTech, @vinibrsl
+
+</Update>
+
 <Update label="11 jun 2026">
   ## v1.14.7
 
