@@ -909,18 +909,48 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
         from_cache = False
         result: str = "Tool not found"
-        input_str = json.dumps(args_dict) if args_dict else ""
+        input_str = (
+            json.dumps(args_dict, sort_keys=True, separators=(",", ":"))
+            if args_dict
+            else ""
+        )
+        is_idempotent = original_tool and getattr(original_tool, "idempotent", False)
+
         if self.tools_handler and self.tools_handler.cache:
-            cached_result = self.tools_handler.cache.read(
-                tool=func_name, input=input_str
-            )
-            if cached_result is not None:
-                result = (
-                    str(cached_result)
-                    if not isinstance(cached_result, str)
-                    else cached_result
+            if is_idempotent:
+                from crewai.tools.base_tool import (
+                    IDEMPOTENT_EXECUTION_SENTINEL,
+                    IDEMPOTENT_SENTINEL_MESSAGE,
+                    is_idempotent_sentinel,
                 )
-                from_cache = True
+
+                claimed, existing = self.tools_handler.cache.claim_if_absent(
+                    tool=func_name, input=input_str, sentinel=IDEMPOTENT_EXECUTION_SENTINEL,
+                )
+                if not claimed:
+                    result = (
+                        IDEMPOTENT_SENTINEL_MESSAGE
+                        if is_idempotent_sentinel(existing)
+                        else str(existing) if not isinstance(existing, str) else existing
+                    )
+                    return {
+                        "call_id": call_id,
+                        "func_name": func_name,
+                        "result": result,
+                        "from_cache": True,
+                        "original_tool": original_tool,
+                    }
+            else:
+                cached_result = self.tools_handler.cache.read(
+                    tool=func_name, input=input_str
+                )
+                if cached_result is not None:
+                    result = (
+                        str(cached_result)
+                        if not isinstance(cached_result, str)
+                        else cached_result
+                    )
+                    from_cache = True
 
         agent_key = getattr(self.agent, "key", "unknown") if self.agent else "unknown"
         started_at = datetime.now()
@@ -982,19 +1012,24 @@ class CrewAgentExecutor(BaseAgentExecutor):
                 raw_result = available_functions[func_name](**(args_dict or {}))
 
                 if self.tools_handler and self.tools_handler.cache:
-                    should_cache = True
-                    if (
-                        original_tool
-                        and hasattr(original_tool, "cache_function")
-                        and callable(original_tool.cache_function)
-                    ):
-                        should_cache = original_tool.cache_function(
-                            args_dict or {}, raw_result
-                        )
-                    if should_cache:
+                    if is_idempotent:
                         self.tools_handler.cache.add(
                             tool=func_name, input=input_str, output=raw_result
                         )
+                    else:
+                        should_cache = True
+                        if (
+                            original_tool
+                            and hasattr(original_tool, "cache_function")
+                            and callable(original_tool.cache_function)
+                        ):
+                            should_cache = original_tool.cache_function(
+                                args_dict or {}, raw_result
+                            )
+                        if should_cache:
+                            self.tools_handler.cache.add(
+                                tool=func_name, input=input_str, output=raw_result
+                            )
 
                 result = (
                     str(raw_result) if not isinstance(raw_result, str) else raw_result

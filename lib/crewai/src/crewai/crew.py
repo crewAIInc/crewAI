@@ -217,6 +217,16 @@ class Crew(FlowTrackable, BaseModel):
 
     name: str | None = Field(default="crew")
     cache: bool = Field(default=True)
+    cache_backend: Any = Field(
+        default=None,
+        description=(
+            "Pluggable cache backend for tool-result caching. "
+            "Pass an SQLiteCacheBackend for cross-process idempotent "
+            "deduplication, or any CacheBackend implementation. "
+            "Defaults to InMemoryCacheBackend when None."
+        ),
+        exclude=True,
+    )
     tasks: list[Task] = Field(default_factory=list)
     agents: Annotated[
         list[BaseAgent],
@@ -617,7 +627,7 @@ class Crew(FlowTrackable, BaseModel):
     def set_private_attrs(self) -> Crew:
         """set private attributes."""
         if not getattr(self, "_cache_handler", None):
-            self._cache_handler = CacheHandler()
+            self._cache_handler = CacheHandler(backend=self.cache_backend)
         event_listener = EventListener()
 
         tracing_enabled = should_enable_tracing(override=self.tracing)

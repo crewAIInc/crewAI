@@ -1907,18 +1907,48 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         # Check cache before executing
         from_cache = False
-        input_str = json.dumps(args_dict) if args_dict else ""
+        input_str = (
+            json.dumps(args_dict, sort_keys=True, separators=(",", ":"))
+            if args_dict
+            else ""
+        )
+        is_idempotent = original_tool and getattr(original_tool, "idempotent", False)
+
         if self.tools_handler and self.tools_handler.cache:
-            cached_result = self.tools_handler.cache.read(
-                tool=func_name, input=input_str
-            )
-            if cached_result is not None:
-                result = (
-                    str(cached_result)
-                    if not isinstance(cached_result, str)
-                    else cached_result
+            if is_idempotent:
+                from crewai.tools.base_tool import (
+                    IDEMPOTENT_EXECUTION_SENTINEL,
+                    IDEMPOTENT_SENTINEL_MESSAGE,
+                    is_idempotent_sentinel,
                 )
-                from_cache = True
+
+                claimed, existing = self.tools_handler.cache.claim_if_absent(
+                    tool=func_name, input=input_str, sentinel=IDEMPOTENT_EXECUTION_SENTINEL,
+                )
+                if not claimed:
+                    result = (
+                        IDEMPOTENT_SENTINEL_MESSAGE
+                        if is_idempotent_sentinel(existing)
+                        else str(existing) if not isinstance(existing, str) else existing
+                    )
+                    return {
+                        "call_id": call_id,
+                        "func_name": func_name,
+                        "result": result,
+                        "from_cache": True,
+                        "original_tool": original_tool,
+                    }
+            else:
+                cached_result = self.tools_handler.cache.read(
+                    tool=func_name, input=input_str
+                )
+                if cached_result is not None:
+                    result = (
+                        str(cached_result)
+                        if not isinstance(cached_result, str)
+                        else cached_result
+                    )
+                    from_cache = True
 
         # Emit tool usage started event
         started_at = datetime.now()
@@ -1980,17 +2010,22 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     tool_func = self._available_functions[func_name]
                     raw_result = tool_func(**args_dict)
 
-                    # Add to cache after successful execution (before string conversion)
+                    # Always overwrite sentinel for idempotent tools; respect cache_function for others
                     if self.tools_handler and self.tools_handler.cache:
-                        should_cache = True
-                        if original_tool:
-                            should_cache = original_tool.cache_function(
-                                args_dict, raw_result
-                            )
-                        if should_cache:
+                        if is_idempotent:
                             self.tools_handler.cache.add(
                                 tool=func_name, input=input_str, output=raw_result
                             )
+                        else:
+                            should_cache = True
+                            if original_tool:
+                                should_cache = original_tool.cache_function(
+                                    args_dict, raw_result
+                                )
+                            if should_cache:
+                                self.tools_handler.cache.add(
+                                    tool=func_name, input=input_str, output=raw_result
+                                )
 
                     # Convert to string for message
                     result = (

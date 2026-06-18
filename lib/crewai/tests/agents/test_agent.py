@@ -1254,6 +1254,48 @@ def test_agent_max_retry_limit():
         )
 
 
+def test_times_executed_resets_between_tasks():
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        max_retry_limit=2,
+    )
+
+    task1 = Task(
+        agent=agent,
+        description="First task",
+        expected_output="result",
+    )
+    task2 = Task(
+        agent=agent,
+        description="Second task",
+        expected_output="result",
+    )
+
+    agent.create_agent_executor(task=task1)
+
+    from crewai.experimental.agent_executor import AgentExecutor
+
+    with patch.object(AgentExecutor, "invoke") as invoke_mock:
+        invoke_mock.side_effect = Exception("fail")
+
+        with pytest.raises(Exception):
+            agent.execute_task(task=task1)
+
+        calls_after_task1 = invoke_mock.call_count
+        assert calls_after_task1 == agent.max_retry_limit + 1
+
+        agent.create_agent_executor(task=task2)
+        with pytest.raises(Exception):
+            agent.execute_task(task=task2)
+
+        calls_after_task2 = invoke_mock.call_count - calls_after_task1
+        assert calls_after_task2 == agent.max_retry_limit + 1, (
+            f"task2 should get its own full retry budget, got {calls_after_task2} calls"
+        )
+
+
 def test_agent_with_llm():
     agent = Agent(
         role="test role",

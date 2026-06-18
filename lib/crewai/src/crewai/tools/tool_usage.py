@@ -274,14 +274,21 @@ class ToolUsage:
                 input_str = ""
                 if calling.arguments:
                     if isinstance(calling.arguments, dict):
-                        input_str = json.dumps(calling.arguments)
+                        input_str = json.dumps(
+                            calling.arguments, sort_keys=True, separators=(",", ":")
+                        )
                     else:
                         input_str = str(calling.arguments)
 
                 result = self.tools_handler.cache.read(
                     tool=sanitize_tool_name(calling.tool_name), input=input_str
                 )  # type: ignore
-                from_cache = result is not None
+                if result is not None:
+                    from crewai.tools.base_tool import is_idempotent_sentinel, IDEMPOTENT_SENTINEL_MESSAGE
+
+                    if is_idempotent_sentinel(result):
+                        result = IDEMPOTENT_SENTINEL_MESSAGE
+                    from_cache = True
 
             available_tool = next(
                 (
@@ -315,6 +322,17 @@ class ToolUsage:
                             self.task.increment_delegations(coworker)
 
                     fingerprint_config = self._build_fingerprint_config()
+
+                    original_tool = getattr(available_tool, "_original_tool", None)
+                    is_idempotent = original_tool and getattr(original_tool, "idempotent", False)
+                    if is_idempotent and self.tools_handler and self.tools_handler.cache:
+                        from crewai.tools.base_tool import IDEMPOTENT_EXECUTION_SENTINEL
+
+                        self.tools_handler.cache.add(
+                            tool=sanitize_tool_name(calling.tool_name),
+                            input=input_str,
+                            output=IDEMPOTENT_EXECUTION_SENTINEL,
+                        )
 
                     if calling.arguments:
                         try:
@@ -505,14 +523,21 @@ class ToolUsage:
                 input_str = ""
                 if calling.arguments:
                     if isinstance(calling.arguments, dict):
-                        input_str = json.dumps(calling.arguments)
+                        input_str = json.dumps(
+                            calling.arguments, sort_keys=True, separators=(",", ":")
+                        )
                     else:
                         input_str = str(calling.arguments)
 
                 result = self.tools_handler.cache.read(
                     tool=sanitize_tool_name(calling.tool_name), input=input_str
                 )  # type: ignore
-                from_cache = result is not None
+                if result is not None:
+                    from crewai.tools.base_tool import is_idempotent_sentinel, IDEMPOTENT_SENTINEL_MESSAGE
+
+                    if is_idempotent_sentinel(result):
+                        result = IDEMPOTENT_SENTINEL_MESSAGE
+                    from_cache = True
 
             available_tool = next(
                 (
@@ -546,6 +571,17 @@ class ToolUsage:
                             self.task.increment_delegations(coworker)
 
                     fingerprint_config = self._build_fingerprint_config()
+
+                    original_tool = getattr(available_tool, "_original_tool", None)
+                    is_idempotent = original_tool and getattr(original_tool, "idempotent", False)
+                    if is_idempotent and self.tools_handler and self.tools_handler.cache:
+                        from crewai.tools.base_tool import IDEMPOTENT_EXECUTION_SENTINEL
+
+                        self.tools_handler.cache.add(
+                            tool=sanitize_tool_name(calling.tool_name),
+                            input=input_str,
+                            output=IDEMPOTENT_EXECUTION_SENTINEL,
+                        )
 
                     if calling.arguments:
                         try:
