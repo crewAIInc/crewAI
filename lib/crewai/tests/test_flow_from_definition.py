@@ -811,6 +811,166 @@ methods:
     )
 
 
+def test_agent_action_runs_inline_yaml_definition(monkeypatch: pytest.MonkeyPatch):
+    from crewai import Agent
+
+    async def fake_kickoff_async(
+        self: Agent, messages: str, **_kwargs: Any
+    ) -> dict[str, Any]:
+        return {"agent": self.role, "input": messages}
+
+    monkeypatch.setattr(Agent, "kickoff_async", fake_kickoff_async)
+
+    yaml_str = """
+schema: crewai.flow/v1
+name: AgentFlow
+methods:
+  answer:
+    do:
+      call: agent
+      with:
+        role: Analyst
+        goal: Answer questions
+        backstory: Knows things.
+        input: "${state.question}"
+    start: true
+"""
+
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+
+    assert flow.kickoff(inputs={"question": "What is CrewAI?"}) == {
+        "agent": "Analyst",
+        "input": "What is CrewAI?",
+    }
+
+
+def test_agent_action_runs_inside_each(monkeypatch: pytest.MonkeyPatch):
+    from crewai import Agent
+
+    async def fake_kickoff_async(
+        self: Agent, messages: str, **_kwargs: Any
+    ) -> str:
+        return f"{self.role}:{messages}"
+
+    monkeypatch.setattr(Agent, "kickoff_async", fake_kickoff_async)
+
+    yaml_str = """
+schema: crewai.flow/v1
+name: AgentEachFlow
+methods:
+  answer_each:
+    do:
+      call: each
+      in: state.questions
+      do:
+        - name: answer
+          action:
+            call: agent
+            with:
+              role: Analyst
+              goal: Answer questions
+              backstory: Knows things.
+              input: "${item}"
+    start: true
+"""
+
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+
+    assert flow.kickoff(inputs={"questions": ["one", "two"]}) == [
+        "Analyst:one",
+        "Analyst:two",
+    ]
+
+
+def test_agent_action_round_trips_with_inline_definition():
+    definition = FlowDefinition.from_dict(
+        {
+            "schema": "crewai.flow/v1",
+            "name": "AgentFlow",
+            "methods": {
+                "answer": {
+                    "start": True,
+                    "do": {
+                        "call": "agent",
+                        "with": {
+                            "role": "Analyst",
+                            "goal": "Answer questions",
+                            "backstory": "Knows things.",
+                            "settings": {"verbose": True},
+                            "input": "${state.question}",
+                        },
+                    },
+                }
+            },
+        }
+    )
+
+    round_trip = FlowDefinition.from_yaml(definition.to_yaml())
+    action = round_trip.to_dict()["methods"]["answer"]["do"]
+
+    assert action["call"] == "agent"
+    assert action["with"]["role"] == "Analyst"
+    assert action["with"]["input"] == "${state.question}"
+    assert action["with"]["settings"] == {"verbose": True}
+
+
+def test_agent_action_json_schema_describes_inline_agent_definitions():
+    schema_defs = FlowDefinition.json_schema()["$defs"]
+
+    assert set(schema_defs["AgentDefinition"]["properties"]) >= {
+        "role",
+        "goal",
+        "backstory",
+        "settings",
+        "input",
+        "response_format",
+    }
+
+
+def test_agent_action_rejects_non_string_input_in_definition():
+    with pytest.raises(ValidationError, match="agent.input must be a string"):
+        FlowDefinition.from_dict(
+            {
+                "schema": "crewai.flow/v1",
+                "name": "AgentFlow",
+                "methods": {
+                    "answer": {
+                        "start": True,
+                        "do": {
+                            "call": "agent",
+                            "with": {
+                                "role": "Analyst",
+                                "goal": "Answer questions",
+                                "backstory": "Knows things.",
+                                "input": 123,
+                            },
+                        },
+                    }
+                },
+            }
+        )
+
+
+def test_agent_action_reports_invalid_cel_expression():
+    yaml_str = """
+schema: crewai.flow/v1
+name: AgentFlow
+methods:
+  answer:
+    do:
+      call: agent
+      with:
+        role: Analyst
+        goal: Answer questions
+        backstory: Knows things.
+        input: "${state.}"
+    start: true
+"""
+
+    with pytest.raises(ValidationError, match="invalid CEL expression"):
+        FlowDefinition.from_yaml(yaml_str)
+
+
 def test_crew_action_runs_inline_yaml_definition(monkeypatch: pytest.MonkeyPatch):
     from crewai import Crew
 

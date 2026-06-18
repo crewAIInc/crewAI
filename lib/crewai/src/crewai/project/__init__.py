@@ -15,16 +15,22 @@ from crewai.project.annotations import (
 )
 from crewai.project.crew_base import CrewBase
 from crewai.project.crew_definition import (
+    AgentDefinition,
     CrewAgentDefinition,
     CrewDefinition,
     CrewTaskDefinition,
     PythonReferenceDefinition,
 )
 from crewai.project.crew_loader import load_crew, load_crew_and_kickoff
-from crewai.project.json_loader import load_agent, strip_jsonc_comments
+from crewai.project.json_loader import (
+    load_agent,
+    load_agent_from_definition,
+    strip_jsonc_comments,
+)
 
 
 __all__ = [
+    "AgentDefinition",
     "CrewAgentDefinition",
     "CrewBase",
     "CrewDefinition",
@@ -38,6 +44,7 @@ __all__ = [
     "crew",
     "llm",
     "load_agent",
+    "load_agent_from_definition",
     "load_crew",
     "load_crew_and_kickoff",
     "output_json",
