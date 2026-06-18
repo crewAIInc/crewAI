@@ -486,6 +486,98 @@ def test_memory_save_completion_updates_timed_out_row() -> None:
     assert app._log_entries[0]["duration"] == 8.3
 
 
+def test_memory_save_completion_with_unmatched_id_does_not_update_running_row() -> None:
+    app = _app_with_plan()
+    app._subscribe()
+    try:
+        _emit_event(
+            MemorySaveStartedEvent(
+                value="first background save",
+                metadata={},
+                source_type="unified_memory",
+                parent_event_id="manual-parent",
+            )
+        )
+        _emit_event(
+            MemorySaveStartedEvent(
+                value="second background save",
+                metadata={},
+                source_type="unified_memory",
+                parent_event_id="manual-parent",
+            )
+        )
+
+        _emit_event(
+            MemorySaveCompletedEvent(
+                value="orphan save completed",
+                metadata={},
+                save_time_ms=2800,
+                source_type="unified_memory",
+                parent_event_id="manual-parent",
+                started_event_id="missing-memory-save-start",
+            )
+        )
+    finally:
+        app._unsubscribe()
+
+    assert [entry["status"] for entry in app._log_entries] == [
+        "running",
+        "running",
+        "success",
+    ]
+    assert app._log_entries[0]["args"] == "first background save"
+    assert app._log_entries[1]["args"] == "second background save"
+    assert app._log_entries[2]["result"] == "orphan save completed"
+    assert app._log_entries[2]["started_event_id"] == "missing-memory-save-start"
+
+
+def test_memory_save_failure_with_unmatched_id_does_not_update_running_row() -> None:
+    app = _app_with_plan()
+    app._subscribe()
+    try:
+        _emit_event(
+            MemorySaveStartedEvent(
+                value="first background save",
+                metadata={},
+                source_type="unified_memory",
+                parent_event_id="manual-parent",
+            )
+        )
+        _emit_event(
+            MemorySaveStartedEvent(
+                value="second background save",
+                metadata={},
+                source_type="unified_memory",
+                parent_event_id="manual-parent",
+            )
+        )
+
+        _emit_event(
+            MemorySaveFailedEvent(
+                value="orphan save failed",
+                metadata={},
+                error="embedding connection failed",
+                source_type="unified_memory",
+                parent_event_id="manual-parent",
+                started_event_id="missing-memory-save-start",
+            )
+        )
+    finally:
+        app._unsubscribe()
+
+    assert [entry["status"] for entry in app._log_entries] == [
+        "running",
+        "running",
+        "error",
+    ]
+    assert app._log_entries[0]["args"] == "first background save"
+    assert app._log_entries[1]["args"] == "second background save"
+    assert app._log_entries[2]["args"] == "orphan save failed"
+    assert app._log_entries[2]["error"] == "embedding connection failed"
+    assert app._log_entries[2]["started_event_id"] == "missing-memory-save-start"
+    assert app._log_expanded == {2}
+
+
 def test_memory_save_payloads_are_truncated_in_activity_log() -> None:
     app = _app_with_plan()
     long_args = "a" * (_LOG_ARGS_TEXT_LIMIT + 10)

@@ -2040,14 +2040,6 @@ FooterKey .footer-key--key {
                             event.started_event_id
                         )
                 else:
-                    has_matching_entry = event.started_event_id is not None and any(
-                        entry["tool_name"] == "memory_save"
-                        and (
-                            entry.get("event_id") == event.started_event_id
-                            or entry.get("started_event_id") == event.started_event_id
-                        )
-                        for entry in self._log_entries
-                    )
                     for entry in reversed(self._log_entries):
                         if entry["tool_name"] == "memory_save" and (
                             (
@@ -2056,7 +2048,6 @@ FooterKey .footer-key--key {
                             )
                             or entry.get("event_id") == event.started_event_id
                             or entry.get("started_event_id") == event.started_event_id
-                            or (not has_matching_entry and entry["status"] == "running")
                         ):
                             entry["status"] = "success"
                             entry["duration"] = event.save_time_ms / 1000
@@ -2099,14 +2090,6 @@ FooterKey .footer-key--key {
                             event.started_event_id
                         )
                 else:
-                    has_matching_entry = event.started_event_id is not None and any(
-                        entry["tool_name"] == "memory_save"
-                        and (
-                            entry.get("event_id") == event.started_event_id
-                            or entry.get("started_event_id") == event.started_event_id
-                        )
-                        for entry in self._log_entries
-                    )
                     for idx, entry in reversed(list(enumerate(self._log_entries))):
                         if entry["tool_name"] == "memory_save" and (
                             (
@@ -2115,7 +2098,6 @@ FooterKey .footer-key--key {
                             )
                             or entry.get("event_id") == event.started_event_id
                             or entry.get("started_event_id") == event.started_event_id
-                            or (not has_matching_entry and entry["status"] == "running")
                         ):
                             entry["status"] = "error"
                             entry["error"] = event.error
