@@ -819,7 +819,12 @@ async def test_crew_done_does_not_timeout_memory_save() -> None:
 
 
 @pytest.mark.asyncio
-async def test_crew_done_keeps_memory_save_subscription_until_completion() -> None:
+async def test_crew_done_keeps_memory_save_subscription_until_completion(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "crewai_cli.crew_run_tui._MEMORY_SAVE_DRAIN_GRACE_SECONDS", 0.05
+    )
     app = _app_with_plan()
     auto_unsubscribed = False
 
@@ -850,12 +855,70 @@ async def test_crew_done_keeps_memory_save_subscription_until_completion() -> No
             )
             await pilot.pause()
 
+            assert app._event_handlers
+            await pilot.pause(0.08)
             auto_unsubscribed = not app._event_handlers
         finally:
             app._unsubscribe()
 
     assert app._log_entries[0]["tool_name"] == "memory_save"
     assert app._log_entries[0]["status"] == "success"
+    assert app._log_entries[0]["result"] == "9 memories saved"
+    assert app._log_entries[0]["error"] is None
+    assert app._log_entries[0]["duration"] == 8.3
+    assert auto_unsubscribed is True
+
+
+@pytest.mark.asyncio
+async def test_crew_done_waits_for_queued_memory_save_events(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "crewai_cli.crew_run_tui._MEMORY_SAVE_DRAIN_GRACE_SECONDS", 0.05
+    )
+    app = _app_with_plan()
+    auto_unsubscribed = False
+
+    async with app.run_test(size=(100, 40)) as pilot:
+        try:
+            assert app._event_handlers
+
+            app._on_crew_done("final output")
+
+            assert app._event_handlers
+            started_event = MemorySaveStartedEvent(
+                value="9 memories (background)",
+                metadata={},
+                source_type="unified_memory",
+                parent_event_id="manual-parent",
+            )
+            _emit_event(started_event)
+            await pilot.pause()
+
+            assert app._log_entries[0]["tool_name"] == "memory_save"
+            assert app._log_entries[0]["status"] == "running"
+
+            _emit_event(
+                MemorySaveCompletedEvent(
+                    value="9 memories saved",
+                    metadata={},
+                    save_time_ms=8300,
+                    source_type="unified_memory",
+                    parent_event_id="manual-parent",
+                    started_event_id=started_event.event_id,
+                )
+            )
+            await pilot.pause()
+
+            assert app._event_handlers
+            await pilot.pause(0.08)
+            auto_unsubscribed = not app._event_handlers
+        finally:
+            app._unsubscribe()
+
+    assert app._log_entries[0]["tool_name"] == "memory_save"
+    assert app._log_entries[0]["status"] == "success"
+    assert app._log_entries[0]["args"] == "9 memories (background)"
     assert app._log_entries[0]["result"] == "9 memories saved"
     assert app._log_entries[0]["error"] is None
     assert app._log_entries[0]["duration"] == 8.3

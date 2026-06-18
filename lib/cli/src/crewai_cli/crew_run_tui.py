@@ -37,6 +37,8 @@ _INTERNAL_TOOL_NAMES = {"create_reasoning_plan"}
 _LOG_ARGS_TEXT_LIMIT = 3_000
 _LOG_RESULT_TEXT_LIMIT = 5_000
 _LOG_TRUNCATION_SUFFIX = "... [truncated]"
+# Background memory saves can emit their start event just after kickoff returns.
+_MEMORY_SAVE_DRAIN_GRACE_SECONDS = 2.0
 
 
 def _is_save_to_memory_tool(tool_name: str | None) -> bool:
@@ -537,6 +539,7 @@ FooterKey .footer-key--key {
         self._log_scroll_needed: bool = False
         self._log_line_map: list[tuple[int, int, int]] = []
         self._suppressed_memory_save_event_ids: set[str] = set()
+        self._memory_save_drain_timer: Any = None
 
         self._event_handlers: list[tuple[type, Any]] = []
 
@@ -699,7 +702,7 @@ FooterKey .footer-key--key {
         self.call_later(self._focus_activity_log)
         self._tick_timer.stop()
         self._tick_timer = self.set_interval(1 / 2, self._tick)
-        self._unsubscribe_if_no_running_memory_save()
+        self._unsubscribe_if_no_running_memory_save(wait_for_queued=True)
 
     def _on_crew_failed(self, error: str) -> None:
         with self._lock:
@@ -720,7 +723,7 @@ FooterKey .footer-key--key {
         self.call_later(self._focus_activity_log)
         self._tick_timer.stop()
         self._tick_timer = self.set_interval(1 / 2, self._tick)
-        self._unsubscribe_if_no_running_memory_save()
+        self._unsubscribe_if_no_running_memory_save(wait_for_queued=True)
 
     # ── Actions ─────────────────────────────────────────────
 
@@ -1543,7 +1546,32 @@ FooterKey .footer-key--key {
             for entry in self._log_entries
         )
 
-    def _unsubscribe_if_no_running_memory_save(self) -> None:
+    def _on_memory_save_drain_elapsed(self) -> None:
+        self._memory_save_drain_timer = None
+        self._unsubscribe_if_no_running_memory_save()
+
+    def _schedule_memory_save_drain_unsubscribe(self) -> bool:
+        loop = getattr(self, "_loop", None)
+        if loop is None:
+            return False
+        if getattr(self, "_thread_id", None) != threading.get_ident():
+            try:
+                loop.call_soon_threadsafe(self._schedule_memory_save_drain_unsubscribe)
+            except RuntimeError:
+                return False
+            return True
+        if self._memory_save_drain_timer is not None:
+            self._memory_save_drain_timer.stop()
+        self._memory_save_drain_timer = self.set_timer(
+            _MEMORY_SAVE_DRAIN_GRACE_SECONDS,
+            self._on_memory_save_drain_elapsed,
+            name="memory-save-drain",
+        )
+        return True
+
+    def _unsubscribe_if_no_running_memory_save(
+        self, *, wait_for_queued: bool = False
+    ) -> None:
         with self._lock:
             should_unsubscribe = (
                 self._status
@@ -1555,6 +1583,8 @@ FooterKey .footer-key--key {
             )
 
         if should_unsubscribe:
+            if wait_for_queued and self._schedule_memory_save_drain_unsubscribe():
+                return
             self._unsubscribe()
 
     def _subscribe(self) -> None:
@@ -2074,7 +2104,7 @@ FooterKey .footer-key--key {
                             }
                         )
 
-            self._unsubscribe_if_no_running_memory_save()
+            self._unsubscribe_if_no_running_memory_save(wait_for_queued=True)
 
         self._register_handler(MemorySaveCompletedEvent, on_memory_save_completed)
 
@@ -2123,7 +2153,7 @@ FooterKey .footer-key--key {
                         )
                         self._log_expanded.add(len(self._log_entries) - 1)
 
-            self._unsubscribe_if_no_running_memory_save()
+            self._unsubscribe_if_no_running_memory_save(wait_for_queued=True)
 
         self._register_handler(MemorySaveFailedEvent, on_memory_save_failed)
 
