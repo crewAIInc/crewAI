@@ -37,6 +37,7 @@ def test_flow_public_exports_are_explicit():
     }
     assert set(flow_definition.__all__) == {
         "FlowActionDefinition",
+        "FlowAtomicActionDefinition",
         "FlowCodeActionDefinition",
         "FlowConfigDefinition",
         "FlowConversationalDefinition",
@@ -46,7 +47,7 @@ def test_flow_public_exports_are_explicit():
         "FlowDefinitionCondition",
         "FlowDictStateDefinition",
         "FlowEachActionDefinition",
-        "FlowEachInnerActionDefinition",
+        "FlowEachStepDefinition",
         "FlowExpressionActionDefinition",
         "FlowHumanFeedbackDefinition",
         "FlowJsonSchemaStateDefinition",
@@ -107,7 +108,7 @@ def test_flow_definition_json_schema_carries_reference_descriptions():
 
     each_properties = defs["FlowEachActionDefinition"]["properties"]
     assert "list to iterate" in each_properties["in"]["description"]
-    assert "Ordered inner actions" in each_properties["do"]["description"]
+    assert "Ordered steps" in each_properties["do"]["description"]
 
 
 def test_flow_definition_json_schema_carries_field_examples_only():
@@ -122,6 +123,7 @@ def test_flow_definition_json_schema_carries_field_examples_only():
         "FlowExpressionActionDefinition",
         "FlowScriptActionDefinition",
         "FlowEachActionDefinition",
+        "FlowEachStepDefinition",
         "FlowMethodDefinition",
         "FlowDictStateDefinition",
         "FlowJsonSchemaStateDefinition",
@@ -154,7 +156,8 @@ def test_flow_definition_json_schema_carries_field_examples_only():
 
     each_properties = defs["FlowEachActionDefinition"]["properties"]
     assert each_properties["in"]["examples"] == ["state.rows"]
-    assert each_properties["do"]["examples"][0][0]["clean"]["call"] == "script"
+    assert each_properties["do"]["examples"][0][0]["name"] == "clean"
+    assert each_properties["do"]["examples"][0][0]["action"]["call"] == "script"
 
     method_properties = defs["FlowMethodDefinition"]["properties"]
     assert method_properties["listen"]["examples"] == [
@@ -584,14 +587,16 @@ def test_each_action_round_trips_json_and_yaml():
                         "in": "state.rows",
                         "do": [
                             {
-                                "normalize": {
+                                "name": "normalize",
+                                "action": {
                                     "call": "tool",
                                     "ref": "my_tools:NormalizeRowTool",
                                     "with": {"row": "${ item }"},
                                 }
                             },
                             {
-                                "save": {
+                                "name": "save",
+                                "action": {
                                     "call": "code",
                                     "ref": "my_flow:save_row",
                                     "with": {

@@ -15,7 +15,7 @@ from crewai.flow.flow_definition import (
     FlowCodeActionDefinition,
     FlowCrewActionDefinition,
     FlowEachActionDefinition,
-    FlowEachInnerActionDefinition,
+    FlowEachStepDefinition,
     FlowExpressionActionDefinition,
     FlowScriptActionDefinition,
     FlowToolActionDefinition,
@@ -217,9 +217,8 @@ class EachAction:
     def __init__(self, flow: Flow[Any], definition: FlowEachActionDefinition) -> None:
         self.flow = flow
         self.definition = definition
-        self.inner_actions = [
-            (inner_action.name, self._build_inner_action(inner_action))
-            for inner_action in definition.do
+        self.steps = [
+            (step.name, self._build_step_action(step)) for step in definition.do
         ]
 
     async def run(self, *_args: Any, **_kwargs: Any) -> list[Any]:
@@ -232,8 +231,8 @@ class EachAction:
         for item in items:
             local_outputs: dict[str, Any] = {}
             last_output: Any = None
-            for name, run_inner_action in self.inner_actions:
-                last_output = await run_inner_action(
+            for name, run_step_action in self.steps:
+                last_output = await run_step_action(
                     {"item": item, "outputs": local_outputs}
                 )
                 local_outputs[name] = last_output
@@ -241,12 +240,12 @@ class EachAction:
 
         return results
 
-    def _build_inner_action(
-        self, inner_action: FlowEachInnerActionDefinition
+    def _build_step_action(
+        self, step: FlowEachStepDefinition
     ) -> Callable[[LocalContext], Any]:
-        run_action = build_action(self.flow, inner_action.action)
+        run_action = build_action(self.flow, step.action)
 
-        async def run_inner_action(local_context: LocalContext) -> Any:
+        async def run_step_action(local_context: LocalContext) -> Any:
             kwargs = {_LOCAL_CONTEXT_KWARG: local_context}
             if inspect.iscoroutinefunction(run_action):
                 result = run_action(**kwargs)
@@ -261,7 +260,7 @@ class EachAction:
                 result = await result
             return result
 
-        return run_inner_action
+        return run_step_action
 
 
 _ACTION_TYPES: tuple[_ActionType, ...] = (
