@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import os
 from typing import Any, Dict, List, Optional
 from crewai.memory.storage.backend import StorageBackend
 
@@ -20,13 +21,14 @@ class MimirStorage(StorageBackend):
         
         self.config = config or {}
         
-        # Recuperiamo il percorso del database locale (default su ~/.mimir/mimir.db)
-        db_path = self.config.get("db_path", "~/.mimir/mimir.db")
+        # Recuperiamo il percorso del database locale ed espandiamo esplicitamente il carattere '~'
+        raw_db_path = self.config.get("db_path", "~/.mimir/mimir.db")
+        db_path = os.path.expanduser(raw_db_path)
         
-        # Configurazione corretta dei parametri del server per l'avvio del subprocesso
+        # Corretta la flag in '--db' (come da documentazione Mimir CLI)
         self.server_params = StdioServerParameters(
             command="mimir",
-            args=["--db-path", db_path]
+            args=["--db", db_path]
         )
 
     async def _call_tool(self, name: str, args: Dict[str, Any]) -> Any:
@@ -51,10 +53,14 @@ class MimirStorage(StorageBackend):
         if agent:
             body_data["agent"] = agent
 
+        # Isoliamento dei ricordi (Scoping): usiamo l'agente o una chiave di configurazione se presente
+        category = self.config.get("category", "crewai_memory")
+        if agent:
+            category = f"crewai_memory_{agent}"
+
         try:
-            # Esecuzione del ciclo asincrono per lo strumento mimir_remember
             asyncio.run(self._call_tool("mimir_remember", {
-                "category": "crewai_memory",
+                "category": category,
                 "key": f"memory_{hash(value)}",
                 "body_json": json.dumps(body_data)
             }))
@@ -68,19 +74,15 @@ class MimirStorage(StorageBackend):
             raise NotImplementedError("Advanced filtering is not currently supported in MimirStorage search.")
 
         try:
-            # Chiamata al tool di ricerca semantica di Mimir
             mcp_result = asyncio.run(self._call_tool("mimir_recall", {
                 "query": query,
                 "limit": limit
             }))
             
-            # Il protocollo MCP restituisce tipicamente una lista o un oggetto Content.
-            # Gestiamo il parsing dei risultati in base alla struttura restituita dal tool.
             results = mcp_result if isinstance(mcp_result, list) else getattr(mcp_result, 'content', [])
             
             formatted_results = []
             for res in results:
-                # Applichiamo il filtro sulla confidenza (confidence decay) come richiesto
                 score = getattr(res, 'score', 1.0)
                 if score < score_threshold:
                     continue
@@ -106,7 +108,6 @@ class MimirStorage(StorageBackend):
             record_ids = filter.get("record_ids") if filter else [key]
             if record_ids:
                 for r_id in record_ids:
-                    # Chiamata al tool di rimozione ufficiale
                     asyncio.run(self._call_tool("mimir_forget", {
                         "id": r_id
                     }))
