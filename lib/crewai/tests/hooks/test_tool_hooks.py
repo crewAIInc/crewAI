@@ -15,6 +15,7 @@ from crewai.hooks.tool_hooks import (
     get_before_tool_call_hooks,
     register_after_tool_call_hook,
     register_before_tool_call_hook,
+    resolve_tool_call_decision,
 )
 import pytest
 
@@ -515,6 +516,46 @@ class TestToolHooksIntegration:
         assert ToolCallDecision.proceed().decision is ToolCallDecisionType.PROCEED
         assert ToolCallDecision.needs_review().decision is ToolCallDecisionType.NEEDS_REVIEW
         assert ToolCallDecision.silence().decision is ToolCallDecisionType.SILENCE
+
+    def test_tool_call_decision_copies_review_context(self):
+        """Release-control review context is not mutated through caller aliases."""
+        review_context = {"ticket": "REL-42"}
+        decision = ToolCallDecision.needs_review(review_context=review_context)
+
+        review_context["ticket"] = "REL-99"
+
+        assert decision.review_context == {"ticket": "REL-42"}
+
+    def test_unexpected_before_hook_result_fails_closed(self):
+        """Unexpected before-hook results block execution instead of allowing it."""
+        block_message = resolve_tool_call_decision("invalid", "send_email")
+
+        assert block_message is not None
+        assert "Invalid before_tool_call hook return type" in block_message
+        assert "send_email" in block_message
+
+    def test_non_serializable_review_context_still_blocks_execution(self):
+        """Review decisions fail closed even when context cannot be JSON serialized."""
+        review_context = {}
+        review_context["self"] = review_context
+
+        decision = ToolCallDecision.needs_review(review_context=review_context)
+        block_message = resolve_tool_call_decision(decision, "send_email")
+
+        assert block_message is not None
+        assert "requires review" in block_message
+        assert "Review context:" in block_message
+        assert "send_email" in block_message
+
+    def test_string_decision_value_still_blocks_execution(self):
+        """Runtime-constructed decisions with string values do not fail open."""
+        decision = ToolCallDecision("NEEDS_REVIEW")  # type: ignore[arg-type]
+
+        block_message = resolve_tool_call_decision(decision, "send_email")
+
+        assert block_message is not None
+        assert "requires review" in block_message
+        assert "send_email" in block_message
 
 
     def test_unregister_before_hook(self):

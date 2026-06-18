@@ -118,7 +118,7 @@ class ToolCallHookContext:
 
 
 def resolve_tool_call_decision(
-    hook_result: bool | ToolCallDecision | None,
+    hook_result: Any,
     tool_name: str,
 ) -> str | None:
     """Return a block message for hook results that should stop execution."""
@@ -130,7 +130,13 @@ def resolve_tool_call_decision(
     if hook_result is False:
         return f"Tool execution blocked by hook. Tool: {tool_name}"
 
-    return None
+    if hook_result is None or hook_result is True:
+        return None
+
+    return (
+        "Invalid before_tool_call hook return type: "
+        f"{type(hook_result).__name__}. Tool: {tool_name}"
+    )
 
 
 _before_tool_call_hooks: list[BeforeToolCallHookType | BeforeToolCallHookCallable] = []

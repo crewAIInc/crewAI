@@ -24,9 +24,29 @@ class ToolCallDecision:
     runtime branch is not just a bare flag.
     """
 
-    decision: ToolCallDecisionType
+    decision: ToolCallDecisionType | str
     reason: str | None = None
     review_context: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        try:
+            object.__setattr__(self, "decision", ToolCallDecisionType(self.decision))
+        except ValueError:
+            pass
+
+    @staticmethod
+    def _copy_context(review_context: dict[str, Any] | None) -> dict[str, Any]:
+        return dict(review_context) if review_context is not None else {}
+
+    @staticmethod
+    def _serialize_context(review_context: dict[str, Any]) -> str:
+        try:
+            return json.dumps(review_context, sort_keys=True, default=str)
+        except Exception:
+            try:
+                return repr(review_context)
+            except Exception:
+                return "<unserializable review_context>"
 
     @classmethod
     def proceed(
@@ -38,7 +58,7 @@ class ToolCallDecision:
         return cls(
             decision=ToolCallDecisionType.PROCEED,
             reason=reason,
-            review_context=review_context or {},
+            review_context=cls._copy_context(review_context),
         )
 
     @classmethod
@@ -51,7 +71,7 @@ class ToolCallDecision:
         return cls(
             decision=ToolCallDecisionType.NEEDS_REVIEW,
             reason=reason,
-            review_context=review_context or {},
+            review_context=cls._copy_context(review_context),
         )
 
     @classmethod
@@ -64,7 +84,7 @@ class ToolCallDecision:
         return cls(
             decision=ToolCallDecisionType.SILENCE,
             reason=reason,
-            review_context=review_context or {},
+            review_context=cls._copy_context(review_context),
         )
 
     @property
@@ -82,14 +102,18 @@ class ToolCallDecision:
             if self.decision is ToolCallDecisionType.NEEDS_REVIEW
             else "Tool execution silenced by release-control hook."
         )
-        details = [message, f"Tool: {tool_name}", f"Decision: {self.decision.value}"]
+        decision_value = (
+            self.decision.value
+            if isinstance(self.decision, ToolCallDecisionType)
+            else str(self.decision)
+        )
+        details = [message, f"Tool: {tool_name}", f"Decision: {decision_value}"]
 
         if self.reason:
             details.append(f"Reason: {self.reason}")
         if self.review_context:
             details.append(
-                "Review context: "
-                + json.dumps(self.review_context, sort_keys=True, default=str)
+                "Review context: " + self._serialize_context(self.review_context)
             )
 
         return " | ".join(details)

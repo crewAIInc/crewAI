@@ -25,33 +25,10 @@ Executed before every tool execution, these hooks can:
 
 **Signature:**
 ```python
-def before_hook(context: ToolCallHookContext) -> bool | ToolCallDecision | None:
-    # Return False to block execution with a generic message
-    # Return ToolCallDecision.needs_review(...) to pause for review
-    # Return ToolCallDecision.silence(...) to suppress execution
-    # Return True, None, or ToolCallDecision.proceed(...) to allow execution
+def before_hook(context: ToolCallHookContext) -> bool | None:
+    # Return False to block execution
+    # Return True or None to allow execution
     ...
-```
-
-For runtime release-control, return a `ToolCallDecision` from a before-tool hook.
-This lets a hook distinguish normal execution from calls that need review or should
-be silenced before the tool runs:
-
-```python
-from crewai.hooks import ToolCallDecision, ToolCallHookContext, before_tool_call
-
-@before_tool_call
-def release_control(context: ToolCallHookContext) -> ToolCallDecision | None:
-    if context.tool_name == "send_email":
-        return ToolCallDecision.needs_review(
-            reason="Outbound email requires human approval",
-            review_context={"input": context.tool_input},
-        )
-
-    if context.tool_name == "post_to_social_media":
-        return ToolCallDecision.silence(reason="Public posting is disabled")
-
-    return ToolCallDecision.proceed()
 ```
 
 ### After Tool Call Hooks
