@@ -89,7 +89,7 @@ description = "{name} using crewAI"
 authors = [{{ name = "Your Name", email = "you@example.com" }}]
 requires-python = ">=3.10,<3.14"
 dependencies = [
-    "crewai[tools]==1.14.8a"
+    "crewai[tools]==1.14.8a1"
 ]
 
 [build-system]
