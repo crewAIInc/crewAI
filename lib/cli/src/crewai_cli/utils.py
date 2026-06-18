@@ -29,6 +29,7 @@ __all__ = [
     "get_project_description",
     "get_project_name",
     "get_project_version",
+    "is_dmn_mode_enabled",
     "load_env_vars",
     "parse_toml",
     "read_toml",
@@ -39,6 +40,14 @@ __all__ = [
 
 
 console = Console()
+
+
+def is_dmn_mode_enabled() -> bool:
+    """Return True when the enterprise non-interactive mode is enabled."""
+    value = os.environ.get("CREWAI_DMN")
+    if value is None:
+        return False
+    return value.strip().lower() not in {"", "0", "false", "no", "off"}
 
 
 def enable_prompt_line_editing() -> None:

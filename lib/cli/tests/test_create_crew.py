@@ -721,9 +721,30 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
     assert '"guardrail_max_retries": 2' in crew_template
     assert "Docs: https://docs.crewai.com/concepts/tasks" in crew_template
     assert '"output_pydantic": null' in crew_template
+    assert '"type": "ConditionalTask"' in crew_template
+    assert '"condition": { "python": "my_project.conditions.should_run" }' in (
+        crew_template
+    )
+    assert '"output_json": { "python": "my_project.models.ReportOutput" }' in (
+        crew_template
+    )
+    assert (
+        '"converter_cls": { "python": "my_project.converters.CustomConverter" }'
+        in crew_template
+    )
     assert '"markdown": false' in crew_template
+    assert '"input_files": { "brief": "data/brief.txt" }' in crew_template
     assert "Docs: https://docs.crewai.com/concepts/crews" in crew_template
+    assert "manager_agent can reference an agents/<name>.jsonc file" in crew_template
     assert '"manager_agent": "researcher"' in crew_template
+    assert (
+        '"before_kickoff_callbacks": [{"python": '
+        '"my_project.callbacks.before_kickoff"}]'
+    ) in crew_template
+    assert (
+        '"after_kickoff_callbacks": [{"python": '
+        '"my_project.callbacks.after_kickoff"}]'
+    ) in crew_template
     assert '"output_log_file": "crew.log"' in crew_template
     assert "Crew-level LLM fields also accept object form" in crew_template
     assert '"chat_llm": {"model": "llama3", "provider": "ollama"' in (
@@ -740,7 +761,13 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
         agent_template
     )
     assert '"role": "Senior {industry} Researcher"' in agent_template
+    assert '"type": {"python": "my_project.agents.CustomAgent"}' in agent_template
     assert "Optional agent-level guardrail" in agent_template
+    assert "Python refs must point to module-level functions/classes" in agent_template
+    assert (
+        '"step_callback": {"python": "my_project.callbacks.on_agent_step"}'
+        in agent_template
+    )
     assert '"guardrail_max_retries": 2' in agent_template
     assert "Docs: https://docs.crewai.com/concepts/agents" in agent_template
     assert '"reasoning": true' in agent_template
@@ -785,3 +812,34 @@ def test_json_wizard_task_reprompts_on_cancelled_agent_pick(monkeypatch):
 
     assert len(pick_calls) == 2
     assert task["agent"] == "second_agent"
+
+
+def test_json_create_dmn_mode_uses_non_interactive_defaults(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("CREWAI_DMN", "True")
+    monkeypatch.setattr(
+        json_crew,
+        "_wizard_agents_and_tasks",
+        lambda **_: pytest.fail("DMN mode must not run the wizard"),
+    )
+    monkeypatch.setattr(
+        json_crew,
+        "_setup_env",
+        lambda *_args, **_kwargs: pytest.fail("DMN mode must not prompt for env vars"),
+    )
+
+    json_crew.create_json_crew("DMN Crew", provider="anthropic", skip_provider=False)
+
+    project_root = tmp_path / "dmn_crew"
+    assert (project_root / "crew.jsonc").exists()
+    assert (project_root / "agents" / "researcher.jsonc").exists()
+    assert not (project_root / ".env").exists()
+
+    crew_template = (project_root / "crew.jsonc").read_text()
+    agent_template = (project_root / "agents" / "researcher.jsonc").read_text()
+
+    assert '"memory": false' in crew_template
+    assert '"description": "Research current AI trends and write a concise summary."' in (
+        crew_template
+    )
+    assert '"llm": "anthropic/claude-opus-4-6"' in agent_template

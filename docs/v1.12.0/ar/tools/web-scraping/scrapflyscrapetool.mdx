@@ -1,0 +1,221 @@
+---
+title: أداة استخراج مواقع Scrapfly
+description: أداة `ScrapflyScrapeWebsiteTool` تستفيد من Scrapfly web scraping API لاستخراج المحتوى من المواقع بتنسيقات مختلفة.
+icon: spider
+mode: "wide"
+---
+
+# `ScrapflyScrapeWebsiteTool`
+
+## الوصف
+
+أداة `ScrapflyScrapeWebsiteTool` مصممة للاستفادة من [Scrapfly](https://scrapfly.io/) web scraping API لاستخراج المحتوى من المواقع. توفر هذه الأداة قدرات متقدمة لاستخراج البيانات من الويب مع دعم المتصفح بدون واجهة والبروكسيات وميزات تجاوز مكافحة الروبوتات. تسمح باستخراج بيانات صفحات الويب بتنسيقات متعددة، بما في ذلك HTML الخام و markdown والنص العادي، مما يجعلها مثالية لمجموعة واسعة من مهام استخراج البيانات من الويب.
+
+## التثبيت
+
+لاستخدام هذه الأداة، تحتاج إلى تثبيت Scrapfly SDK:
+
+```shell
+uv add scrapfly-sdk
+```
+
+ستحتاج أيضاً إلى الحصول على مفتاح Scrapfly API بالتسجيل في [scrapfly.io/register](https://www.scrapfly.io/register/).
+
+## خطوات البدء
+
+لاستخدام `ScrapflyScrapeWebsiteTool` بفعالية، اتبع هذه الخطوات:
+
+1. **تثبيت التبعيات**: ثبّت Scrapfly SDK باستخدام الأمر أعلاه.
+2. **الحصول على مفتاح API**: سجّل في Scrapfly للحصول على مفتاح API الخاص بك.
+3. **تهيئة الأداة**: أنشئ نسخة من الأداة بمفتاح API الخاص بك.
+4. **تكوين معاملات الاستخراج**: خصص معاملات الاستخراج بناءً على احتياجاتك.
+
+## مثال
+
+يوضح المثال التالي كيفية استخدام `ScrapflyScrapeWebsiteTool` لاستخراج المحتوى من موقع:
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import ScrapflyScrapeWebsiteTool
+
+# Initialize the tool
+scrape_tool = ScrapflyScrapeWebsiteTool(api_key="your_scrapfly_api_key")
+
+# Define an agent that uses the tool
+web_scraper_agent = Agent(
+    role="Web Scraper",
+    goal="Extract information from websites",
+    backstory="An expert in web scraping who can extract content from any website.",
+    tools=[scrape_tool],
+    verbose=True,
+)
+
+# Example task to extract content from a website
+scrape_task = Task(
+    description="Extract the main content from the product page at https://web-scraping.dev/products and summarize the available products.",
+    expected_output="A summary of the products available on the website.",
+    agent=web_scraper_agent,
+)
+
+# Create and run the crew
+crew = Crew(agents=[web_scraper_agent], tasks=[scrape_task])
+result = crew.kickoff()
+```
+
+يمكنك أيضاً تخصيص معاملات الاستخراج:
+
+```python Code
+# Example with custom scraping parameters
+web_scraper_agent = Agent(
+    role="Web Scraper",
+    goal="Extract information from websites with custom parameters",
+    backstory="An expert in web scraping who can extract content from any website.",
+    tools=[scrape_tool],
+    verbose=True,
+)
+
+# The agent will use the tool with parameters like:
+# url="https://web-scraping.dev/products"
+# scrape_format="markdown"
+# ignore_scrape_failures=True
+# scrape_config={
+#     "asp": True,  # Bypass scraping blocking solutions, like Cloudflare
+#     "render_js": True,  # Enable JavaScript rendering with a cloud headless browser
+#     "proxy_pool": "public_residential_pool",  # Select a proxy pool
+#     "country": "us",  # Select a proxy location
+#     "auto_scroll": True,  # Auto scroll the page
+# }
+
+scrape_task = Task(
+    description="Extract the main content from the product page at https://web-scraping.dev/products using advanced scraping options including JavaScript rendering and proxy settings.",
+    expected_output="A detailed summary of the products with all available information.",
+    agent=web_scraper_agent,
+)
+```
+
+## المعاملات
+
+تقبل أداة `ScrapflyScrapeWebsiteTool` المعاملات التالية:
+
+### معاملات التهيئة
+
+- **api_key**: مطلوب. مفتاح Scrapfly API الخاص بك.
+
+### معاملات التشغيل
+
+- **url**: مطلوب. عنوان URL للموقع المراد استخراجه.
+- **scrape_format**: اختياري. التنسيق الذي يتم استخراج محتوى صفحة الويب به. الخيارات هي "raw" (HTML) أو "markdown" أو "text". الافتراضي هو "markdown".
+- **scrape_config**: اختياري. قاموس يحتوي على خيارات تكوين استخراج Scrapfly إضافية.
+- **ignore_scrape_failures**: اختياري. ما إذا كان يجب تجاهل الفشل أثناء الاستخراج. إذا تم التعيين إلى `True`، ستُرجع الأداة `None` بدلاً من إثارة استثناء عند فشل الاستخراج.
+
+## خيارات تكوين Scrapfly
+
+يسمح معامل `scrape_config` بتخصيص سلوك الاستخراج بالخيارات التالية:
+
+- **asp**: تفعيل تجاوز حماية مكافحة الاستخراج.
+- **render_js**: تفعيل تصيير JavaScript مع متصفح سحابي بدون واجهة.
+- **proxy_pool**: اختيار مجموعة بروكسيات (مثل "public_residential_pool"، "datacenter").
+- **country**: اختيار موقع البروكسي (مثل "us"، "uk").
+- **auto_scroll**: التمرير التلقائي للصفحة لتحميل المحتوى المُحمّل كسولاً.
+- **js**: تنفيذ كود JavaScript مخصص بواسطة المتصفح بدون واجهة.
+
+للحصول على قائمة كاملة بخيارات التكوين، راجع [توثيق Scrapfly API](https://scrapfly.io/docs/scrape-api/getting-started).
+
+## الاستخدام
+
+عند استخدام `ScrapflyScrapeWebsiteTool` مع وكيل، سيحتاج الوكيل إلى تقديم عنوان URL للموقع المراد استخراجه ويمكنه اختيارياً تحديد التنسيق وخيارات التكوين الإضافية:
+
+```python Code
+# Example of using the tool with an agent
+web_scraper_agent = Agent(
+    role="Web Scraper",
+    goal="Extract information from websites",
+    backstory="An expert in web scraping who can extract content from any website.",
+    tools=[scrape_tool],
+    verbose=True,
+)
+
+# Create a task for the agent
+scrape_task = Task(
+    description="Extract the main content from example.com in markdown format.",
+    expected_output="The main content of example.com in markdown format.",
+    agent=web_scraper_agent,
+)
+
+# Run the task
+crew = Crew(agents=[web_scraper_agent], tasks=[scrape_task])
+result = crew.kickoff()
+```
+
+للاستخدام المتقدم مع تكوين مخصص:
+
+```python Code
+# Create a task with more specific instructions
+advanced_scrape_task = Task(
+    description="""
+    Extract content from example.com with the following requirements:
+    - Convert the content to plain text format
+    - Enable JavaScript rendering
+    - Use a US-based proxy
+    - Handle any scraping failures gracefully
+    """,
+    expected_output="The extracted content from example.com",
+    agent=web_scraper_agent,
+)
+```
+
+## معالجة الأخطاء
+
+بشكل افتراضي، ستُثير أداة `ScrapflyScrapeWebsiteTool` استثناء إذا فشل الاستخراج. يمكن توجيه الوكلاء للتعامل مع الفشل بسلاسة عن طريق تحديد معامل `ignore_scrape_failures`:
+
+```python Code
+# Create a task that instructs the agent to handle errors
+error_handling_task = Task(
+    description="""
+    Extract content from a potentially problematic website and make sure to handle any
+    scraping failures gracefully by setting ignore_scrape_failures to True.
+    """,
+    expected_output="Either the extracted content or a graceful error message",
+    agent=web_scraper_agent,
+)
+```
+
+## تفاصيل التنفيذ
+
+تستخدم أداة `ScrapflyScrapeWebsiteTool` Scrapfly SDK للتفاعل مع Scrapfly API:
+
+```python Code
+class ScrapflyScrapeWebsiteTool(BaseTool):
+    name: str = "Scrapfly web scraping API tool"
+    description: str = (
+        "Scrape a webpage url using Scrapfly and return its content as markdown or text"
+    )
+
+    # Implementation details...
+
+    def _run(
+        self,
+        url: str,
+        scrape_format: str = "markdown",
+        scrape_config: Optional[Dict[str, Any]] = None,
+        ignore_scrape_failures: Optional[bool] = None,
+    ):
+        from scrapfly import ScrapeApiResponse, ScrapeConfig
+
+        scrape_config = scrape_config if scrape_config is not None else {}
+        try:
+            response: ScrapeApiResponse = self.scrapfly.scrape(
+                ScrapeConfig(url, format=scrape_format, **scrape_config)
+            )
+            return response.scrape_result["content"]
+        except Exception as e:
+            if ignore_scrape_failures:
+                logger.error(f"Error fetching data from {url}, exception: {e}")
+                return None
+            else:
+                raise e
+```
+
+## الخلاصة
+
+توفر أداة `ScrapflyScrapeWebsiteTool` طريقة قوية لاستخراج المحتوى من المواقع باستخدام قدرات Scrapfly المتقدمة لاستخراج البيانات من الويب. مع ميزات مثل دعم المتصفح بدون واجهة والبروكسيات وتجاوز مكافحة الروبوتات، يمكنها التعامل مع المواقع المعقدة واستخراج المحتوى بتنسيقات مختلفة. هذه الأداة مفيدة بشكل خاص لاستخراج البيانات ومراقبة المحتوى ومهام البحث حيث يكون استخراج البيانات الموثوق من الويب مطلوباً.

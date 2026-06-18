@@ -954,6 +954,54 @@ def test_remember_many_returns_immediately(tmp_path: Path) -> None:
     assert mem._storage.count() == 2
 
 
+def test_reset_all_blocks_new_save_submission_until_reset_completes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A save cannot be submitted between draining writes and resetting storage."""
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(
+        storage=str(tmp_path / "db"),
+        llm=MagicMock(),
+        embedder=lambda texts: [[0.1] * 4 for _ in texts],
+    )
+    reset_started = threading.Event()
+    release_reset = threading.Event()
+    submission_returned = threading.Event()
+    order: list[str] = []
+    original_reset = mem._storage.reset
+
+    def blocking_reset(scope_prefix: str | None = None) -> None:
+        order.append("reset-start")
+        reset_started.set()
+        assert release_reset.wait(timeout=2)
+        original_reset(scope_prefix=scope_prefix)
+        order.append("reset-end")
+
+    def submit_save() -> None:
+        mem._submit_save(lambda: order.append("save"))
+        order.append("submit-returned")
+        submission_returned.set()
+
+    monkeypatch.setattr(mem._storage, "reset", blocking_reset)
+
+    reset_thread = threading.Thread(target=mem.reset_all)
+    reset_thread.start()
+    assert reset_started.wait(timeout=2)
+
+    submit_thread = threading.Thread(target=submit_save)
+    submit_thread.start()
+    assert not submission_returned.wait(timeout=0.1)
+
+    release_reset.set()
+    reset_thread.join(timeout=2)
+    submit_thread.join(timeout=2)
+
+    assert not reset_thread.is_alive()
+    assert not submit_thread.is_alive()
+    assert order.index("reset-end") < order.index("submit-returned")
+
+
 def test_recall_drains_pending_writes(tmp_path: Path, mock_embedder: MagicMock) -> None:
     """recall() should automatically wait for pending background saves."""
     from crewai.memory.unified_memory import Memory

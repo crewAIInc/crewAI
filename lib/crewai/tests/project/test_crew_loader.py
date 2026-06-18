@@ -4,12 +4,44 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import sys
+import types
 
 import pytest
 
 from crewai.llms.base_llm import BaseLLM
 from crewai.project.json_loader import JSONProjectError, JSONProjectValidationError
-from crewai.project.crew_loader import load_crew
+from crewai.project.crew_loader import load_crew, load_crew_from_definition
+
+
+def _write_python_defs(tmp_path: Path) -> None:
+    module = tmp_path / "json_refs.py"
+    module.write_text(
+        "from pydantic import BaseModel\n"
+        "from crewai import Agent, Task\n"
+        "from crewai.security.security_config import SecurityConfig\n"
+        "from crewai.utilities.converter import Converter\n"
+        "\n"
+        "def always_true(_context):\n"
+        "    return True\n"
+        "\n"
+        "def task_callback(output):\n"
+        "    return output\n"
+        "\n"
+        "class SpecialAgent(Agent):\n"
+        "    specialty: str = 'general'\n"
+        "\n"
+        "class SpecialTask(Task):\n"
+        "    priority: int = 0\n"
+        "\n"
+        "class ReportModel(BaseModel):\n"
+        "    summary: str\n"
+        "\n"
+        "class SpecialConverter(Converter):\n"
+        "    pass\n"
+        "\n"
+        "security_config = SecurityConfig(fingerprint='agent-seed')\n"
+    )
 
 
 def _write_agent(agents_dir: Path, name: str, **overrides) -> Path:
@@ -30,7 +62,101 @@ def _write_crew(project_dir: Path, crew_def: dict) -> Path:
     return f
 
 
+def _input_file_path(value) -> Path:
+    if isinstance(value, dict):
+        source = value.get("source", value)
+    else:
+        source = getattr(value, "source", value)
+    path = getattr(source, "path", source)
+    return Path(str(path))
+
+
 class TestLoadCrew:
+    def test_load_crew_from_inline_definition(self):
+        crew, inputs = load_crew_from_definition(
+            {
+                "name": "inline_crew",
+                "agents": {
+                    "researcher": {
+                        "role": "Researcher",
+                        "goal": "Research {topic}",
+                        "backstory": "Knows things.",
+                    }
+                },
+                "tasks": [
+                    {
+                        "name": "research",
+                        "description": "Research {topic}",
+                        "expected_output": "Findings about {topic}",
+                        "agent": "researcher",
+                    }
+                ],
+                "inputs": {"topic": "AI"},
+            }
+        )
+
+        assert crew.name == "inline_crew"
+        assert crew.agents[0].role == "Researcher"
+        assert crew.tasks[0].description == "Research {topic}"
+        assert inputs == {"topic": "AI"}
+
+    def test_inline_definition_accepts_null_inputs(self):
+        _, inputs = load_crew_from_definition(
+            {
+                "agents": {
+                    "researcher": {
+                        "role": "Researcher",
+                        "goal": "Research",
+                        "backstory": "Knows things.",
+                    }
+                },
+                "tasks": [
+                    {
+                        "description": "Research",
+                        "expected_output": "Findings",
+                        "agent": "researcher",
+                    }
+                ],
+                "inputs": None,
+            }
+        )
+
+        assert inputs == {}
+
+    def test_inline_hierarchical_manager_agent_is_not_duplicated(self):
+        crew, _ = load_crew_from_definition(
+            {
+                "name": "inline_hier_manager_crew",
+                "agents": {
+                    "worker": {
+                        "role": "Worker",
+                        "goal": "Do work",
+                        "backstory": "Does things.",
+                    },
+                    "manager": {
+                        "role": "Manager",
+                        "goal": "Coordinate work",
+                        "backstory": "Keeps the work moving.",
+                    },
+                },
+                "tasks": [
+                    {
+                        "description": "Do work",
+                        "expected_output": "Work done",
+                        "agent": "manager",
+                    }
+                ],
+                "process": "hierarchical",
+                "manager_agent": "manager",
+            }
+        )
+
+        assert len(crew.agents) == 1
+        assert crew.agents[0].role == "Worker"
+        assert crew.manager_agent is not None
+        assert crew.manager_agent.role == "Manager"
+        assert crew.tasks[0].agent is crew.manager_agent
+
     def test_minimal_crew(self, tmp_path: Path):
         agents_dir = tmp_path / "agents"
         agents_dir.mkdir()
@@ -138,6 +264,38 @@ class TestLoadCrew:
         crew, _ = load_crew(crew_file)
         from crewai import Process
         assert crew.process == Process.hierarchical
+
+    def test_crew_hierarchical_manager_agent_from_separate_agent_file(
+        self, tmp_path: Path
+    ):
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(agents_dir, "worker")
+        _write_agent(agents_dir, "manager")
+
+        crew_def = {
+            "name": "hier_manager_crew",
+            "agents": ["worker"],
+            "tasks": [
+                {
+                    "name": "work",
+                    "description": "Do work",
+                    "expected_output": "Work done",
+                    "agent": "manager",
+                }
+            ],
+            "process": "hierarchical",
+            "manager_agent": "manager",
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        crew, _ = load_crew(crew_file)
+
+        assert len(crew.agents) == 1
+        assert crew.agents[0].role == "worker role"
+        assert crew.manager_agent is not None
+        assert crew.manager_agent.role == "manager role"
+        assert crew.tasks[0].agent is crew.manager_agent
 
     def test_crew_accepts_llm_config_objects(self, tmp_path: Path):
         agents_dir = tmp_path / "agents"
@@ -288,6 +446,389 @@ class TestLoadCrew:
         assert task.markdown is True
         assert task.guardrail == "Return a summary field."
         assert task.allow_crewai_trigger_context is False
+
+    def test_crew_loads_conditional_task_with_python_condition(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        _write_python_defs(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(agents_dir, "worker")
+
+        crew_def = {
+            "name": "conditional_crew",
+            "agents": ["worker"],
+            "tasks": [
+                {
+                    "name": "first",
+                    "description": "First task",
+                    "expected_output": "First output",
+                    "agent": "worker",
+                },
+                {
+                    "type": "ConditionalTask",
+                    "name": "second",
+                    "description": "Second task",
+                    "expected_output": "Second output",
+                    "agent": "worker",
+                    "condition": {"python": "json_refs.always_true"},
+                },
+            ],
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        crew, _ = load_crew(crew_file)
+
+        from crewai.tasks.conditional_task import ConditionalTask
+
+        assert isinstance(crew.tasks[1], ConditionalTask)
+        assert crew.tasks[1].should_execute(None)
+
+    def test_crew_loads_custom_agent_and_task_types(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        _write_python_defs(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(
+            agents_dir,
+            "specialist",
+            type={"python": "json_refs.SpecialAgent"},
+            security_config={"python": "json_refs.security_config"},
+            specialty="research",
+        )
+
+        crew_def = {
+            "name": "custom_types_crew",
+            "agents": ["specialist"],
+            "tasks": [
+                {
+                    "type": {"python": "json_refs.SpecialTask"},
+                    "name": "prioritized",
+                    "description": "Do prioritized work",
+                    "expected_output": "Prioritized output",
+                    "agent": "specialist",
+                    "priority": 7,
+                }
+            ],
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        crew, _ = load_crew(crew_file)
+
+        assert crew.agents[0].__class__.__name__ == "SpecialAgent"
+        assert crew.agents[0].specialty == "research"
+        from crewai.security.fingerprint import Fingerprint
+
+        assert crew.agents[0].security_config.fingerprint == Fingerprint.generate(
+            seed="agent-seed"
+        )
+        assert crew.tasks[0].__class__.__name__ == "SpecialTask"
+        assert crew.tasks[0].priority == 7
+
+    def test_crew_loads_python_ref_task_fields(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        _write_python_defs(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(agents_dir, "writer")
+
+        crew_def = {
+            "name": "python_refs_crew",
+            "agents": ["writer"],
+            "tasks": [
+                {
+                    "name": "write",
+                    "description": "Write something",
+                    "expected_output": "Written content",
+                    "agent": "writer",
+                    "callback": {"python": "json_refs.task_callback"},
+                    "output_json": {"python": "json_refs.ReportModel"},
+                    "converter_cls": {"python": "json_refs.SpecialConverter"},
+                }
+            ],
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        crew, _ = load_crew(crew_file)
+        task = crew.tasks[0]
+
+        assert task.callback.__name__ == "task_callback"
+        assert task.output_json.__name__ == "ReportModel"
+        assert "summary" in task.output_json.model_fields
+        assert task.converter_cls.__name__ == "SpecialConverter"
+
+    def test_crew_rejects_stdlib_python_ref_for_agent_callback(
+        self, tmp_path: Path
+    ):
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(
+            agents_dir,
+            "worker",
+            step_callback={"python": "os.system"},
+        )
+
+        crew_def = {
+            "name": "unsafe_callback_crew",
+            "agents": ["worker"],
+            "tasks": [
+                {
+                    "name": "work",
+                    "description": "Do work",
+                    "expected_output": "Work done",
+                    "agent": "worker",
+                }
+            ],
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        with pytest.raises(JSONProjectError, match="project root"):
+            load_crew(crew_file)
+
+    def test_crew_rejects_stdlib_python_ref_for_mcp_tool_filter(
+        self, tmp_path: Path
+    ):
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(
+            agents_dir,
+            "worker",
+            mcps=[
+                {
+                    "command": "python",
+                    "args": ["server.py"],
+                    "tool_filter": {"python": "os.system"},
+                }
+            ],
+        )
+
+        crew_def = {
+            "name": "unsafe_mcp_filter_crew",
+            "agents": ["worker"],
+            "tasks": [
+                {
+                    "name": "work",
+                    "description": "Do work",
+                    "expected_output": "Work done",
+                    "agent": "worker",
+                }
+            ],
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        with pytest.raises(JSONProjectError, match="project root"):
+            load_crew(crew_file)
+
+    def test_crew_rejects_callable_python_ref_for_object_field(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        _write_python_defs(tmp_path)
+        monkeypatch.syspath_prepend(str(tmp_path))
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(
+            agents_dir,
+            "worker",
+            security_config={"python": "json_refs.always_true"},
+        )
+
+        crew_def = {
+            "name": "unsafe_object_ref_crew",
+            "agents": ["worker"],
+            "tasks": [
+                {
+                    "name": "work",
+                    "description": "Do work",
+                    "expected_output": "Work done",
+                    "agent": "worker",
+                }
+            ],
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        with pytest.raises(JSONProjectError, match="supported object reference"):
+            load_crew(crew_file)
+
+    def test_crew_loads_project_relative_input_files(self, tmp_path: Path):
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(agents_dir, "reader")
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        brief_path = data_dir / "brief.txt"
+        spec_path = data_dir / "spec.md"
+        brief_path.write_text("brief")
+        spec_path.write_text("spec")
+
+        crew_def = {
+            "name": "input_files_crew",
+            "agents": ["reader"],
+            "tasks": [
+                {
+                    "name": "read",
+                    "description": "Read files",
+                    "expected_output": "File summary",
+                    "agent": "reader",
+                    "input_files": {
+                        "brief": "data/brief.txt",
+                        "spec": {"source": "data/spec.md"},
+                    },
+                }
+            ],
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        crew, _ = load_crew(crew_file)
+        input_files = crew.tasks[0].input_files
+
+        assert _input_file_path(input_files["brief"]) == brief_path
+        assert _input_file_path(input_files["spec"]) == spec_path
+
+    def test_crew_rejects_relative_input_file_outside_project(self, tmp_path: Path):
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(agents_dir, "reader")
+
+        crew_def = {
+            "name": "unsafe_input_files_crew",
+            "agents": ["reader"],
+            "tasks": [
+                {
+                    "name": "read",
+                    "description": "Read files",
+                    "expected_output": "File summary",
+                    "agent": "reader",
+                    "input_files": {"secret": "../secret.txt"},
+                }
+            ],
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        with pytest.raises(JSONProjectValidationError, match="outside the project root"):
+            load_crew(crew_file)
+
+    def test_crew_rejects_absolute_input_file_outside_project(self, tmp_path: Path):
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(agents_dir, "reader")
+        outside_path = tmp_path.parent / "secret.txt"
+
+        crew_def = {
+            "name": "unsafe_absolute_input_files_crew",
+            "agents": ["reader"],
+            "tasks": [
+                {
+                    "name": "read",
+                    "description": "Read files",
+                    "expected_output": "File summary",
+                    "agent": "reader",
+                    "input_files": {"secret": str(outside_path)},
+                }
+            ],
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        with pytest.raises(JSONProjectValidationError, match="outside the project root"):
+            load_crew(crew_file)
+
+    def test_crew_rejects_file_uri_input_file_outside_project(self, tmp_path: Path):
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(agents_dir, "reader")
+        outside_uri = (tmp_path.parent / "secret.txt").as_uri()
+
+        crew_def = {
+            "name": "unsafe_file_uri_input_files_crew",
+            "agents": ["reader"],
+            "tasks": [
+                {
+                    "name": "read",
+                    "description": "Read files",
+                    "expected_output": "File summary",
+                    "agent": "reader",
+                    "input_files": {"secret": outside_uri},
+                }
+            ],
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        with pytest.raises(JSONProjectValidationError, match="outside the project root"):
+            load_crew(crew_file)
+
+    @pytest.mark.parametrize(
+        "outside_path",
+        [
+            r"C:\Users\alice\.ssh\id_rsa",
+            "C:/Users/alice/.ssh/id_rsa",
+            r"\\server\share\secret.txt",
+            "//server/share/secret.txt",
+        ],
+    )
+    def test_crew_rejects_windows_input_file_outside_project(
+        self, tmp_path: Path, outside_path: str
+    ):
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(agents_dir, "reader")
+
+        crew_def = {
+            "name": "unsafe_windows_input_files_crew",
+            "agents": ["reader"],
+            "tasks": [
+                {
+                    "name": "read",
+                    "description": "Read files",
+                    "expected_output": "File summary",
+                    "agent": "reader",
+                    "input_files": {"secret": outside_path},
+                }
+            ],
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        with pytest.raises(JSONProjectValidationError, match="outside the project root"):
+            load_crew(crew_file)
+
+    def test_crew_restores_external_module_cache_after_project_ref(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
+        _write_python_defs(tmp_path)
+        external_module = types.ModuleType("json_refs")
+        external_module.__file__ = str(tmp_path.parent / "json_refs.py")
+        external_module.marker = "external"
+        monkeypatch.setitem(sys.modules, "json_refs", external_module)
+
+        agents_dir = tmp_path / "agents"
+        agents_dir.mkdir()
+        _write_agent(
+            agents_dir,
+            "worker",
+            step_callback={"python": "json_refs.task_callback"},
+        )
+
+        crew_def = {
+            "name": "cache_restore_crew",
+            "agents": ["worker"],
+            "tasks": [
+                {
+                    "name": "work",
+                    "description": "Do work",
+                    "expected_output": "Work done",
+                    "agent": "worker",
+                }
+            ],
+        }
+        crew_file = _write_crew(tmp_path, crew_def)
+
+        crew, _ = load_crew(crew_file)
+
+        assert crew.agents[0].step_callback.__name__ == "task_callback"
+        assert sys.modules["json_refs"] is external_module
 
     def test_missing_agent_file_raises(self, tmp_path: Path):
         agents_dir = tmp_path / "agents"

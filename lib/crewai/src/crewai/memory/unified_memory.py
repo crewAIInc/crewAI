@@ -149,6 +149,7 @@ class Memory(BaseModel):
     )
     _pending_saves: list[Future[Any]] = PrivateAttr(default_factory=list)
     _pending_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
+    _reset_lock: Any = PrivateAttr(default_factory=threading.RLock)
 
     def __deepcopy__(self, memo: dict[int, Any] | None = None) -> Memory:
         """Deepcopy that handles unpickleable private attrs (ThreadPoolExecutor, Lock)."""
@@ -168,7 +169,10 @@ class Memory(BaseModel):
         )
         private = {}
         for k, v in (self.__pydantic_private__ or {}).items():
-            if isinstance(v, (ThreadPoolExecutor, threading.Lock)):
+            if k in {"_save_pool", "_pending_lock", "_reset_lock"}:
+                attr = self.__private_attributes__[k]
+                private[k] = attr.get_default()
+            elif isinstance(v, (ThreadPoolExecutor, threading.Lock)):
                 attr = self.__private_attributes__[k]
                 private[k] = attr.get_default()
             else:
@@ -275,22 +279,25 @@ class Memory(BaseModel):
         If the pool has been shut down (e.g. after ``close()``), the save
         runs synchronously as a fallback so late saves still succeed.
         """
-        ctx = contextvars.copy_context()
-        try:
-            future: Future[Any] = self._save_pool.submit(ctx.run, fn, *args, **kwargs)
-        except RuntimeError:
-            # Pool shut down -- run synchronously as fallback
-            future = Future()
+        with self._reset_lock:
+            ctx = contextvars.copy_context()
             try:
-                result = fn(*args, **kwargs)
-                future.set_result(result)
-            except Exception as exc:
-                future.set_exception(exc)
+                future: Future[Any] = self._save_pool.submit(
+                    ctx.run, fn, *args, **kwargs
+                )
+            except RuntimeError:
+                # Pool shut down -- run synchronously as fallback
+                future = Future()
+                try:
+                    result = fn(*args, **kwargs)
+                    future.set_result(result)
+                except Exception as exc:
+                    future.set_exception(exc)
+                return future
+            with self._pending_lock:
+                self._pending_saves.append(future)
+            future.add_done_callback(self._on_save_done)
             return future
-        with self._pending_lock:
-            self._pending_saves.append(future)
-        future.add_done_callback(self._on_save_done)
-        return future
 
     def _on_save_done(self, future: Future[Any]) -> None:
         """Remove a completed future from the pending list and emit failure event if needed.
@@ -990,12 +997,20 @@ class Memory(BaseModel):
             scope: Scope to reset. If None and root_scope is set, resets only
                 within root_scope. If None and no root_scope, resets all.
         """
-        effective_scope = scope
-        if effective_scope is None and self.root_scope:
-            effective_scope = self.root_scope
-        elif effective_scope is not None and self.root_scope:
-            effective_scope = join_scope_paths(self.root_scope, effective_scope)
-        self._storage.reset(scope_prefix=effective_scope)
+        with self._reset_lock:
+            self.drain_writes()
+            effective_scope = scope
+            if effective_scope is None and self.root_scope:
+                effective_scope = self.root_scope
+            elif effective_scope is not None and self.root_scope:
+                effective_scope = join_scope_paths(self.root_scope, effective_scope)
+            self._storage.reset(scope_prefix=effective_scope)
+
+    def reset_all(self) -> None:
+        """Reset the entire backing memory store, ignoring ``root_scope``."""
+        with self._reset_lock:
+            self.drain_writes()
+            self._storage.reset(scope_prefix=None)
 
     async def aextract_memories(self, content: str) -> list[str]:
         """Async variant of extract_memories."""

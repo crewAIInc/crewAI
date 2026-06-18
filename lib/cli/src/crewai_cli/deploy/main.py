@@ -1,3 +1,5 @@
+from pathlib import Path
+import subprocess
 from typing import Any
 
 from crewai_core.plus_api import CreateCrewPayload
@@ -5,14 +7,19 @@ from rich.console import Console
 
 from crewai_cli import git
 from crewai_cli.command import BaseCommand, PlusAPIMixin
-from crewai_cli.deploy.validate import validate_project
+from crewai_cli.deploy.archive import create_project_zip
+from crewai_cli.deploy.validate import DeployValidator, Severity, render_report
 from crewai_cli.utils import fetch_and_json_env_file, get_project_name
 
 
 console = Console()
+_MISSING_LOCKFILE_ERROR_CODES = {"missing_lockfile"}
 
 
-def _run_predeploy_validation(skip_validate: bool) -> bool:
+def _run_predeploy_validation(
+    skip_validate: bool,
+    ignored_error_codes: set[str] | None = None,
+) -> bool:
     """Run pre-deploy validation unless skipped.
 
     Returns True if deployment should proceed, False if it should abort.
@@ -24,8 +31,22 @@ def _run_predeploy_validation(skip_validate: bool) -> bool:
         return True
 
     console.print("Running pre-deploy validation...", style="bold blue")
-    validator = validate_project()
-    if not validator.ok:
+    validator = DeployValidator()
+    validator.run()
+
+    ignored_error_codes = ignored_error_codes or set()
+    visible_results = [
+        result
+        for result in validator.results
+        if result.severity is not Severity.ERROR
+        or result.code not in ignored_error_codes
+    ]
+    render_report(visible_results)
+
+    blocking_errors = [
+        result for result in validator.errors if result.code not in ignored_error_codes
+    ]
+    if blocking_errors:
         console.print(
             "\n[bold red]Pre-deploy validation failed. "
             "Fix the issues above or re-run with --skip-validate.[/bold red]"
@@ -37,34 +58,74 @@ def _run_predeploy_validation(skip_validate: bool) -> bool:
 def _display_git_repository_help() -> None:
     """Explain how to prepare a new project for deployment."""
     console.print(
-        "Deployment requires a Git repository with an origin remote.",
-        style="bold red",
+        "Initialized a local Git repository and created an initial commit.",
+        style="green",
     )
-    console.print(
-        "CrewAI AMP deploys from the remote repository URL, so commit and push "
-        "this project first, then run deploy again.",
-        style="yellow",
-    )
-    console.print("\nSuggested setup:")
-    console.print("  git init")
-    console.print("  git add .")
-    console.print('  git commit -m "Initial crew"')
-    console.print("  git branch -M main")
-    console.print("  git remote add origin <your-repo-url>")
-    console.print("  git push -u origin main")
 
 
 def _display_git_remote_help() -> None:
-    """Explain how to add a remote to an existing Git repository."""
-    console.print("No remote repository URL found.", style="bold red")
+    """Explain that ZIP deployment will be used without an origin remote."""
     console.print(
-        "CrewAI AMP deploys from the origin remote. Add a remote, push your "
-        "latest commit, then run deploy again.",
+        "No origin remote found. Deploying from a ZIP upload instead.",
         style="yellow",
     )
-    console.print("\nSuggested setup:")
-    console.print("  git remote add origin <your-repo-url>")
-    console.print("  git push -u origin HEAD")
+
+
+def _env_summary(env_vars: dict[str, str]) -> str:
+    """Return a compact description of environment variables for prompts."""
+    if not env_vars:
+        return "0 env vars"
+    keys = ", ".join(sorted(env_vars))
+    return f"{len(env_vars)} env vars: {keys}"
+
+
+def _needs_lockfile_for_deploy(project_root: Path | None = None) -> bool:
+    """Return True when deploy should create the project's first lockfile."""
+    root = project_root or Path.cwd()
+    if not (root / "pyproject.toml").is_file():
+        return False
+    return not (root / "uv.lock").is_file() and not (root / "poetry.lock").is_file()
+
+
+def _ensure_lockfile_for_deploy() -> None:
+    """Create a uv lockfile before deploy when a project has not been run yet."""
+    if not _needs_lockfile_for_deploy():
+        return
+
+    from crewai_cli.install_crew import install_crew
+
+    console.print(
+        "No lockfile found. Installing dependencies before deployment...",
+        style="bold blue",
+    )
+    try:
+        install_crew([], raise_on_error=True)
+    except subprocess.CalledProcessError as e:
+        raise SystemExit(e.returncode) from e
+    except Exception as e:
+        raise SystemExit(1) from e
+
+
+def _prepare_project_for_deploy(skip_validate: bool) -> bool:
+    """Validate deploy inputs before creating a missing lockfile."""
+    if skip_validate:
+        _run_predeploy_validation(skip_validate)
+        _ensure_lockfile_for_deploy()
+        return True
+
+    needs_lockfile = _needs_lockfile_for_deploy()
+    ignored_error_codes = _MISSING_LOCKFILE_ERROR_CODES if needs_lockfile else None
+    if not _run_predeploy_validation(
+        skip_validate,
+        ignored_error_codes=ignored_error_codes,
+    ):
+        return False
+
+    if not needs_lockfile:
+        return True
+
+    _ensure_lockfile_for_deploy()
+    return _run_predeploy_validation(skip_validate)
 
 
 class DeployCommand(BaseCommand, PlusAPIMixin):
@@ -125,20 +186,49 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             uuid (Optional[str]): The UUID of the crew to deploy.
             skip_validate (bool): Skip pre-deploy validation checks.
         """
-        if not _run_predeploy_validation(skip_validate):
+        if not _prepare_project_for_deploy(skip_validate):
             return
         self._telemetry.start_deployment_span(uuid)
         console.print("Starting deployment...", style="bold blue")
-        if uuid:
+        repository = self._prepare_git_repository()
+        remote_repo_url = repository.origin_url() if repository else None
+
+        if remote_repo_url and uuid:
             response = self.plus_api_client.deploy_by_uuid(uuid)
-        elif self.project_name:
+        elif remote_repo_url and self.project_name:
             response = self.plus_api_client.deploy_by_name(self.project_name)
+        elif uuid:
+            _display_git_remote_help()
+            env_vars = fetch_and_json_env_file()
+            response = self._update_crew_from_zip(uuid, repository, env_vars)
+        elif self.project_name:
+            _display_git_remote_help()
+            deployment_uuid = self._deployment_uuid_by_name()
+            env_vars = fetch_and_json_env_file()
+            response = self._update_crew_from_zip(
+                deployment_uuid,
+                repository,
+                env_vars,
+            )
         else:
             self._standard_no_param_error_message()
             return
 
         self._validate_response(response)
         self._display_deployment_info(response.json())
+
+    def _deployment_uuid_by_name(self) -> str:
+        """Resolve the current project's deployment UUID by project name."""
+        if not self.project_name:
+            raise ValueError("project_name is required to find a deployment")
+
+        response = self.plus_api_client.crew_status_by_name(self.project_name)
+        self._validate_response(response)
+        json_response = response.json()
+        uuid = json_response.get("uuid")
+        if not uuid:
+            raise ValueError("Deployment status response did not include a uuid")
+        return str(uuid)
 
     def create_crew(self, confirm: bool = False, skip_validate: bool = False) -> None:
         """
@@ -148,28 +238,142 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             confirm (bool): Whether to skip the interactive confirmation prompt.
             skip_validate (bool): Skip pre-deploy validation checks.
         """
-        if not _run_predeploy_validation(skip_validate):
+        if not _prepare_project_for_deploy(skip_validate):
             return
         self._telemetry.create_crew_deployment_span()
         console.print("Creating deployment...", style="bold blue")
         env_vars = fetch_and_json_env_file()
+        repository = self._prepare_git_repository()
+        remote_repo_url = repository.origin_url() if repository else None
 
-        try:
-            remote_repo_url = git.Repository().origin_url()
-        except ValueError:
-            _display_git_repository_help()
-            return
-
-        if remote_repo_url is None:
+        if remote_repo_url:
+            self._confirm_input(env_vars, remote_repo_url, confirm)
+            payload = self._create_payload(env_vars, remote_repo_url)
+            response = self.plus_api_client.create_crew(payload)
+        else:
             _display_git_remote_help()
-            return
-
-        self._confirm_input(env_vars, remote_repo_url, confirm)
-        payload = self._create_payload(env_vars, remote_repo_url)
-        response = self.plus_api_client.create_crew(payload)
+            response = self._create_crew_from_zip(env_vars, repository, confirm)
 
         self._validate_response(response)
         self._display_creation_success(response.json())
+
+    def _prepare_git_repository(self) -> git.Repository | None:
+        """Prepare Git for deploy while preserving remote deploy when possible."""
+        try:
+            repository = git.Repository(fetch=False)
+        except ValueError as exc:
+            if "not a Git repository" not in str(exc):
+                console.print(
+                    f"{exc} Continuing with ZIP deployment.",
+                    style="yellow",
+                )
+                return None
+
+            try:
+                repository = git.Repository.initialize()
+            except Exception as init_error:
+                console.print(
+                    "Git auto-setup did not complete. Continuing with ZIP deployment.",
+                    style="yellow",
+                )
+                console.print(str(init_error), style="dim")
+                try:
+                    return git.Repository(fetch=False)
+                except Exception as repository_error:
+                    console.print(str(repository_error), style="dim")
+                    return None
+
+            _display_git_repository_help()
+            return repository
+
+        remote_repo_url = repository.origin_url()
+        if remote_repo_url:
+            try:
+                repository.fetch()
+            except ValueError as fetch_error:
+                console.print(
+                    "Could not fetch from origin. Continuing with remote deployment.",
+                    style="yellow",
+                )
+                console.print(str(fetch_error), style="dim")
+
+            try:
+                if repository.create_initial_commit_if_needed():
+                    console.print(
+                        "Created an initial Git commit for this project.",
+                        style="green",
+                    )
+            except Exception as commit_error:
+                console.print(
+                    "Could not create an initial Git commit. "
+                    "Continuing with remote deployment.",
+                    style="yellow",
+                )
+                console.print(str(commit_error), style="dim")
+
+            return repository
+
+        try:
+            if repository.create_initial_commit_if_needed():
+                console.print(
+                    "Created an initial Git commit for this project.",
+                    style="green",
+                )
+        except Exception as commit_error:
+            console.print(
+                "Could not create an initial Git commit. "
+                "Continuing with ZIP deployment using Git file listing.",
+                style="yellow",
+            )
+            console.print(str(commit_error), style="dim")
+            return repository
+
+        return repository
+
+    def _create_crew_from_zip(
+        self,
+        env_vars: dict[str, str],
+        repository: git.Repository | None,
+        confirm: bool,
+    ) -> Any:
+        """Create a deployment by uploading a project ZIP archive."""
+        if not self.project_name:
+            raise ValueError("project_name is required to create a ZIP deployment")
+
+        console.print("Preparing project ZIP...", style="bold blue")
+        zip_file_path = create_project_zip(self.project_name, repository=repository)
+        try:
+            self._confirm_zip_input(env_vars, confirm)
+            console.print("Uploading project ZIP...", style="bold blue")
+            return self.plus_api_client.create_crew_from_zip(
+                zip_file_path,
+                name=self.project_name,
+                env=env_vars,
+            )
+        finally:
+            zip_file_path.unlink(missing_ok=True)
+
+    def _update_crew_from_zip(
+        self,
+        uuid: str,
+        repository: git.Repository | None,
+        env_vars: dict[str, str],
+    ) -> Any:
+        """Update an existing deployment by uploading a project ZIP archive."""
+        if not self.project_name:
+            raise ValueError("project_name is required to update a ZIP deployment")
+
+        console.print("Preparing project ZIP...", style="bold blue")
+        zip_file_path = create_project_zip(self.project_name, repository=repository)
+        try:
+            console.print("Uploading project ZIP...", style="bold blue")
+            return self.plus_api_client.update_crew_from_zip(
+                uuid,
+                zip_file_path,
+                env=env_vars,
+            )
+        finally:
+            zip_file_path.unlink(missing_ok=True)
 
     def _confirm_input(
         self, env_vars: dict[str, str], remote_repo_url: str, confirm: bool
@@ -183,10 +387,15 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
             confirm (bool): Whether to confirm input.
         """
         if not confirm:
-            input(f"Press Enter to continue with the following Env vars: {env_vars}")
+            input(f"Press Enter to continue with {_env_summary(env_vars)}")
             input(
                 f"Press Enter to continue with the following remote repository: {remote_repo_url}\n"
             )
+
+    def _confirm_zip_input(self, env_vars: dict[str, str], confirm: bool) -> None:
+        """Prompt before ZIP upload unless confirmation was already supplied."""
+        if not confirm:
+            input(f"Press Enter to continue with {_env_summary(env_vars)}")
 
     def _create_payload(
         self,
