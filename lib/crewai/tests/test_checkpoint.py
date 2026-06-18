@@ -631,7 +631,7 @@ class TestLegacyMethodOutputsRestore:
         assert restored.method_outputs == ["first", "second"]
 
     def test_restore_legacy_outputs_evaluates_expressions(self) -> None:
-        from crewai.flow.runtime._expressions import _expression_context
+        from crewai.flow.expressions import Expression
 
         flow = Flow()
         flow._method_outputs = ["legacy"]
@@ -642,7 +642,7 @@ class TestLegacyMethodOutputsRestore:
             cfg = CheckpointConfig(restore_from=loc)
             restored = Flow.from_checkpoint(cfg)
 
-        context = _expression_context(restored)
+        context = Expression._flow_context(restored)
         assert context["outputs"] == {"": "legacy"}
 
     def test_raw_legacy_outputs_property_remains_readable(self) -> None:
