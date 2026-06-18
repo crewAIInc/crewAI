@@ -644,7 +644,7 @@ methods:
     assert flow.kickoff(inputs={"topic": "ai"}) == "found:ai agents"
 
 
-def test_tool_action_rejects_braces_in_embedded_cel_input():
+def test_tool_action_treats_embedded_cel_marker_as_literal():
     definition = FlowDefinition.from_dict(
         {
             "schema": "crewai.flow/v1",
@@ -660,16 +660,62 @@ def test_tool_action_rejects_braces_in_embedded_cel_input():
                             "prefix": "${'p}x'}",
                         },
                     },
-                }
+                },
             },
         }
     )
 
-    with pytest.raises(ValueError, match="cannot contain braces"):
-        Flow.from_definition(definition).kickoff()
+    assert Flow.from_definition(definition).kickoff() == "p}x:wrapped ${'a}b'} value"
 
 
-def test_tool_action_rejects_braces_in_full_cel_input():
+def test_tool_action_treats_marker_with_trailing_text_as_literal():
+    definition = FlowDefinition.from_dict(
+        {
+            "schema": "crewai.flow/v1",
+            "name": "ToolFlow",
+            "methods": {
+                "search": {
+                    "start": True,
+                    "do": {
+                        "call": "tool",
+                        "ref": f"{__name__}:StaticSearchTool",
+                        "with": {
+                            "search_query": "${state.topic} extra",
+                            "prefix": "p",
+                        },
+                    },
+                },
+            },
+        }
+    )
+
+    assert Flow.from_definition(definition).kickoff() == "p:${state.topic} extra"
+
+
+def test_tool_action_rejects_adjacent_markers_as_invalid_cel():
+    with pytest.raises(ValidationError, match="invalid CEL expression"):
+        FlowDefinition.from_dict(
+            {
+                "schema": "crewai.flow/v1",
+                "name": "ToolFlow",
+                "methods": {
+                    "search": {
+                        "start": True,
+                        "do": {
+                            "call": "tool",
+                            "ref": f"{__name__}:StaticSearchTool",
+                            "with": {
+                                "search_query": "${'a'}${'b'}",
+                                "prefix": "p",
+                            },
+                        },
+                    },
+                },
+            }
+        )
+
+
+def test_tool_action_accepts_braces_in_full_cel_marker():
     definition = FlowDefinition.from_dict(
         {
             "schema": "crewai.flow/v1",
@@ -682,16 +728,15 @@ def test_tool_action_rejects_braces_in_full_cel_input():
                         "ref": f"{__name__}:StaticSearchTool",
                         "with": {
                             "search_query": "${{'query': 'ai agents'}.query}",
-                            "prefix": "found",
+                            "prefix": "${'p}x'}",
                         },
                     },
-                }
+                },
             },
         }
     )
 
-    with pytest.raises(ValueError, match="cannot contain braces"):
-        Flow.from_definition(definition).kickoff()
+    assert Flow.from_definition(definition).kickoff() == "p}x:ai agents"
 
 
 def test_tool_action_renders_latest_output_by_method_name():
@@ -1026,10 +1071,8 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
-
-    with pytest.raises(ValueError, match="failed to evaluate CEL expression"):
-        flow.kickoff()
+    with pytest.raises(ValidationError, match="invalid CEL expression"):
+        FlowDefinition.from_yaml(yaml_str)
 
 
 def test_code_action_renders_keyword_inputs():
@@ -1407,6 +1450,33 @@ methods:
     ) == ["kept:a", "skipped:b"]
 
 
+def test_each_action_accepts_expression_markers_in_explicit_cel_fields():
+    yaml_str = """
+schema: crewai.flow/v1
+name: EachIfFlow
+methods:
+  process_rows:
+    do:
+      call: each
+      in: "${state.rows}"
+      do:
+        - name: kind
+          action:
+            call: expression
+            expr: "${item.kind}"
+        - name: kept
+          if: "${outputs.kind == 'keep'}"
+          action:
+            call: expression
+            expr: "${item.value}"
+    start: true
+"""
+
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+
+    assert flow.kickoff(inputs={"rows": [{"kind": "keep", "value": "a"}]}) == ["a"]
+
+
 def test_each_action_skipped_if_keeps_previous_output():
     yaml_str = """
 schema: crewai.flow/v1
@@ -1690,8 +1760,28 @@ def test_expression_action_round_trips():
     assert Flow.from_definition(definition).kickoff(inputs={"score": 90}) == "qualified"
 
 
+def test_explicit_cel_fields_accept_expression_markers():
+    definition = FlowDefinition.from_dict(
+        {
+            "schema": "crewai.flow/v1",
+            "name": "ExpressionFlow",
+            "methods": {
+                "classify": {
+                    "start": True,
+                    "do": {
+                        "call": "expression",
+                        "expr": "${state.score >= 80 ? 'qualified' : 'nurture'}",
+                    },
+                }
+            },
+        }
+    )
+
+    assert Flow.from_definition(definition).kickoff(inputs={"score": 90}) == "qualified"
+
+
 def test_expression_local_context_recurses_into_dataclass_values():
-    from crewai.flow.runtime._expressions import evaluate_expression
+    from crewai.flow.expressions import Expression
 
     class Payload(BaseModel):
         name: str
@@ -1701,13 +1791,35 @@ def test_expression_local_context_recurses_into_dataclass_values():
         payload: Payload
 
     assert (
-        evaluate_expression(
-            Flow(),
+        Expression.from_flow(
             "item.payload.name",
+            Flow(),
             local_context={"item": Row(payload=Payload(name="qualified"))},
-        )
+        ).evaluate()
         == "qualified"
     )
+
+
+def test_expression_empty_context_overrides_stored_context():
+    from crewai.flow.expressions import Expression, ExpressionError
+
+    expression = Expression("state.score", context={"state": {"score": 90}})
+
+    assert expression.evaluate() == 90
+    with pytest.raises(ExpressionError):
+        expression.evaluate({})
+
+
+def test_expression_template_empty_context_overrides_stored_context():
+    from crewai.flow.expressions import Expression, ExpressionError
+
+    expression = Expression(
+        {"score": "${state.score}"}, context={"state": {"score": 90}}
+    )
+
+    assert expression.render_template() == {"score": 90}
+    with pytest.raises(ExpressionError):
+        expression.render_template({})
 
 
 def test_expression_action_can_route_like_if_else():
@@ -1761,10 +1873,24 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    with pytest.raises(ValidationError, match="invalid CEL expression"):
+        FlowDefinition.from_yaml(yaml_str)
 
-    with pytest.raises(ValueError, match="failed to evaluate CEL expression"):
-        flow.kickoff()
+
+def test_expression_action_rejects_unknown_cel_root():
+    yaml_str = """
+schema: crewai.flow/v1
+name: ExpressionFlow
+methods:
+  classify:
+    do:
+      call: expression
+      expr: "score >= 80"
+    start: true
+"""
+
+    with pytest.raises(ValidationError, match="unknown CEL root"):
+        FlowDefinition.from_yaml(yaml_str)
 
 
 def test_tool_action_requires_module_qualname_ref():

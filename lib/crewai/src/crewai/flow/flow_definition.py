@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Annotated, Any, Literal, TypeAlias
+from typing import Annotated, Any, Literal, TypeAlias, cast
 
 from pydantic import (
     BaseModel,
@@ -27,6 +27,7 @@ from crewai.flow.conversational_definition import (
     FlowConversationalDefinition,
     FlowConversationalRouterDefinition,
 )
+from crewai.flow.expressions import ExpressionData
 from crewai.project.crew_definition import CrewDefinition
 
 
@@ -34,6 +35,8 @@ logger = logging.getLogger(__name__)
 
 FlowDefinitionCondition = str | dict[str, Any]
 _STEP_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_BASE_CEL_ROOTS = frozenset({"outputs", "state"})
+_EACH_STEP_CEL_ROOTS = frozenset({"item", "outputs", "state"})
 
 __all__ = [
     "FlowActionDefinition",
@@ -353,10 +356,14 @@ class FlowCodeActionDefinition(BaseModel):
         description="Import reference for the callable, formatted as module:qualname.",
         examples=["my_project.flows:normalize_topic"],
     )
-    with_: dict[str, Any] | None = Field(
+    with_: dict[str, ExpressionData] | None = Field(
         default=None,
         alias="with",
-        description="Keyword arguments passed to the callable after expression rendering.",
+        description=(
+            "Keyword arguments passed to the callable. String values are evaluated "
+            "as CEL only when the trimmed value starts with ${ and ends with }; "
+            "all other values are literal."
+        ),
         examples=[{"topic": "${state.topic}"}],
     )
 
@@ -377,10 +384,14 @@ class FlowToolActionDefinition(BaseModel):
         description="Import reference for a BaseTool class, formatted as module:qualname.",
         examples=["my_project.tools:SearchTool"],
     )
-    with_: dict[str, Any] | None = Field(
+    with_: dict[str, ExpressionData] | None = Field(
         default=None,
         alias="with",
-        description="Tool input arguments after expression rendering.",
+        description=(
+            "Tool input arguments. String values are evaluated as CEL only when "
+            "the trimmed value starts with ${ and ends with }; all other values "
+            "are literal."
+        ),
         examples=[{"query": "${outputs.normalize_topic}", "limit": 5}],
     )
 
@@ -696,6 +707,16 @@ class FlowDefinition(BaseModel):
             _validate_step_name(method_name, field="Flow method names")
         return self
 
+    @model_validator(mode="after")
+    def _validate_cel_expressions(self) -> FlowDefinition:
+        for method_name, method in self.methods.items():
+            _validate_action_cel(
+                method.do,
+                path=f"methods.{method_name}.do",
+                allowed_roots=_BASE_CEL_ROOTS,
+            )
+        return self
+
     def to_dict(self, *, exclude_none: bool = True) -> dict[str, Any]:
         """Serialize the definition to a JSON/YAML-ready dictionary."""
         return self.model_dump(by_alias=True, exclude_none=exclude_none, mode="json")
@@ -751,6 +772,54 @@ def _validate_step_list(steps: list[FlowEachStepDefinition], *, field: str) -> N
         if name in seen:
             raise ValueError(f"{field} step names must be unique: {name!r}")
         seen.add(name)
+
+
+def _validate_action_cel(
+    action: FlowActionDefinition,
+    *,
+    path: str,
+    allowed_roots: frozenset[str],
+) -> None:
+    from crewai.flow.expressions import Expression
+
+    if isinstance(action, FlowExpressionActionDefinition):
+        Expression(action.expr).validate_expression(
+            allowed_roots=allowed_roots, source=f"{path}.expr"
+        )
+        return
+
+    if isinstance(action, (FlowCodeActionDefinition, FlowToolActionDefinition)):
+        if action.with_ is not None:
+            Expression(action.with_).validate_template(
+                allowed_roots=allowed_roots, source=f"{path}.with"
+            )
+        return
+
+    if isinstance(action, FlowCrewActionDefinition):
+        Expression(cast(ExpressionData, action.with_.inputs)).validate_template(
+            allowed_roots=allowed_roots,
+            source=f"{path}.with.inputs",
+        )
+        return
+
+    if isinstance(action, FlowEachActionDefinition):
+        Expression(action.in_).validate_expression(
+            allowed_roots=_BASE_CEL_ROOTS,
+            source=f"{path}.in",
+        )
+        for index, step in enumerate(action.do):
+            step_path = f"{path}.do[{index}]"
+            if step.if_ is not None:
+                Expression(step.if_).validate_expression(
+                    allowed_roots=_EACH_STEP_CEL_ROOTS,
+                    source=f"{step_path}.if",
+                )
+            _validate_action_cel(
+                step.action,
+                path=f"{step_path}.action",
+                allowed_roots=_EACH_STEP_CEL_ROOTS,
+            )
+        return
 
 
 def log_flow_definition_issues(definition: FlowDefinition) -> None:

@@ -10,6 +10,7 @@ import inspect
 import os
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
+from crewai.flow.expressions import Expression, ExpressionData
 from crewai.flow.flow_definition import (
     FlowActionDefinition,
     FlowCodeActionDefinition,
@@ -20,7 +21,6 @@ from crewai.flow.flow_definition import (
     FlowScriptActionDefinition,
     FlowToolActionDefinition,
 )
-from crewai.flow.runtime._expressions import evaluate_expression, render_with_block
 from crewai.flow.runtime._outputs import outputs_by_name
 from crewai.flow.runtime._refs import InvalidRefError, resolve_ref
 
@@ -67,9 +67,9 @@ class CodeAction:
         if self.definition.with_ is None:
             return self.handler(*args, **kwargs)
         return self.handler(
-            **render_with_block(
-                self.flow, self.definition.with_, local_context=local_context
-            )
+            **Expression.from_flow(
+                self.definition.with_, self.flow, local_context=local_context
+            ).render_template()
         )
 
     def _resolve_handler(self) -> Callable[..., Any]:
@@ -95,7 +95,9 @@ class ToolAction:
     def run(self, *_args: Any, **kwargs: Any) -> Any:
         local_context = _pop_local_context(kwargs)
         return self.tool.run(
-            **render_with_block(self.flow, self.kwargs, local_context=local_context)
+            **Expression.from_flow(
+                self.kwargs, self.flow, local_context=local_context
+            ).render_template()
         )
 
     def _build_tool(self) -> Any:
@@ -129,9 +131,11 @@ class CrewAction:
 
         local_context = _pop_local_context(kwargs)
         crew_definition = self.definition.with_
-        inputs = render_with_block(
-            self.flow, crew_definition.inputs, local_context=local_context
-        )
+        inputs = Expression.from_flow(
+            cast(ExpressionData, crew_definition.inputs),
+            self.flow,
+            local_context=local_context,
+        ).render_template()
         crew, _ = load_crew_from_definition(crew_definition, source="crew action")
         return await crew.kickoff_async(inputs=inputs)
 
@@ -147,9 +151,9 @@ class ExpressionAction:
 
     def run(self, *_args: Any, **kwargs: Any) -> Any:
         local_context = _pop_local_context(kwargs)
-        return evaluate_expression(
-            self.flow, self.definition.expr, local_context=local_context
-        )
+        return Expression.from_flow(
+            self.definition.expr, self.flow, local_context=local_context
+        ).evaluate()
 
 
 class ScriptAction:
@@ -225,7 +229,7 @@ class EachAction:
         ]
 
     async def run(self, *_args: Any, **_kwargs: Any) -> list[Any]:
-        items = evaluate_expression(self.flow, self.definition.in_)
+        items = Expression.from_flow(self.definition.in_, self.flow).evaluate()
         if not isinstance(items, list):
             raise ValueError("each.in must evaluate to an array")
 
@@ -248,7 +252,9 @@ class EachAction:
         return results
 
     def _condition_matches(self, condition: str, local_context: LocalContext) -> bool:
-        result = evaluate_expression(self.flow, condition, local_context=local_context)
+        result = Expression.from_flow(
+            condition, self.flow, local_context=local_context
+        ).evaluate()
         if not isinstance(result, bool):
             raise ValueError("if expression must evaluate to a boolean")
         return result
