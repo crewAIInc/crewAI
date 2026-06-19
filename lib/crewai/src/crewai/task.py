@@ -1165,9 +1165,17 @@ Follow these guidelines:
         return None
 
     def _calculate_token_delta(self, before: Any, after: Any) -> Any:
-        """Calculate the difference in token consumption between before and after execution."""
-        if before is None or after is None:
-            return after
+        """Calculate the delta of token usage."""
+        if isinstance(before, dict) and isinstance(after, dict):
+            delta_dict = {}
+            for key, after_val in after.items():
+                before_val = before.get(key, 0)
+                if isinstance(after_val, (int, float)) and isinstance(before_val, (int, float)):
+                    delta_dict[key] = after_val - before_val
+                else:
+                    delta_dict[key] = after_val
+            return delta_dict
+
         try:
             return after - before
         except Exception:
@@ -1310,7 +1318,7 @@ Follow these guidelines:
                     task_output.json_dict = json_output
                 elif isinstance(guardrail_result.result, TaskOutput):
                     task_output = guardrail_result.result
-                    if getattr(task_output, 'token_usage', None) is None and current_token_usage:
+                    if getattr(task_output, 'token_usage', None) is None and current_token_usage is not None:
                         task_output.token_usage = current_token_usage
                 return task_output
 
@@ -1423,8 +1431,8 @@ Follow these guidelines:
                     task_output.json_dict = json_output
                 elif isinstance(guardrail_result.result, TaskOutput):
                     task_output = guardrail_result.result
-                    if getattr(task_output, 'token_usage', None) is None and current_token_usage:
-                            task_output.token_usage = current_token_usage
+                    if getattr(task_output, 'token_usage', None) is None and current_token_usage is not None:
+                        task_output.token_usage = current_token_usage
                 return task_output
 
             if attempt >= self.guardrail_max_retries:
