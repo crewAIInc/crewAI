@@ -12,7 +12,13 @@
     var hash = window.location.hash;
     if (!hash) return;
 
-    var id = hash.substring(1);
+    var rawId = hash.substring(1);
+    var id;
+    try {
+      id = decodeURIComponent(rawId);
+    } catch (e) {
+      id = rawId;
+    }
     var el = document.getElementById(id);
     if (el) {
       el.scrollIntoView();
