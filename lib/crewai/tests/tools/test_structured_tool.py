@@ -1,5 +1,7 @@
+import json
+
 from crewai.tools.structured_tool import CrewStructuredTool
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 import pytest
 
 
@@ -84,6 +86,116 @@ def test_from_function(basic_function):
     assert tool.description == "Test description"
     assert tool.func == basic_function
     assert isinstance(tool.args_schema, type(BaseModel))
+
+
+class StructuredOutput(BaseModel):
+    value: str
+    count: int
+
+
+class StructuredOutputList(RootModel[list[StructuredOutput]]):
+    pass
+
+
+def _build_explicit_structured_value(value: str) -> dict[str, object]:
+    """Build a value."""
+    return {"value": value, "count": 1}
+
+
+def _build_inferred_structured_value(value: str) -> StructuredOutput:
+    """Build a value."""
+    return StructuredOutput(value=value, count=1)
+
+
+def _build_structured_values(value: str) -> StructuredOutputList:
+    """Build values."""
+    return StructuredOutputList([StructuredOutput(value=value, count=1)])
+
+
+def _build_plain_structured_value(value: str) -> dict[str, object]:
+    """Build a value."""
+    return {"value": value, "count": 1}
+
+
+@pytest.mark.parametrize(
+    ("func", "output_schema", "expected_raw", "expected_agent_payload"),
+    [
+        pytest.param(
+            _build_explicit_structured_value,
+            StructuredOutput,
+            {"value": "crew", "count": 1},
+            {"value": "crew", "count": 1},
+            id="explicit-schema",
+        ),
+        pytest.param(
+            _build_inferred_structured_value,
+            None,
+            StructuredOutput(value="crew", count=1),
+            {"value": "crew", "count": 1},
+            id="inferred-base-model",
+        ),
+        pytest.param(
+            _build_structured_values,
+            None,
+            StructuredOutputList([StructuredOutput(value="crew", count=1)]),
+            [{"value": "crew", "count": 1}],
+            id="inferred-root-model",
+        ),
+    ],
+)
+def test_from_function_returns_raw_result_and_json_agent_text(
+    func,
+    output_schema,
+    expected_raw,
+    expected_agent_payload,
+):
+    """Typed structured tools return raw values and format JSON for the agent."""
+    kwargs = {"output_schema": output_schema} if output_schema is not None else {}
+    tool = CrewStructuredTool.from_function(
+        func=func,
+        name="build_value",
+        **kwargs,
+    )
+
+    raw_result = tool.invoke({"value": "crew"})
+
+    assert raw_result == expected_raw
+    assert json.loads(tool.format_output_for_agent(raw_result)) == (
+        expected_agent_payload
+    )
+
+
+def test_from_function_does_not_infer_non_pydantic_output_schema():
+    """Non-Pydantic return annotations use the plain string formatter."""
+    tool = CrewStructuredTool.from_function(
+        func=_build_plain_structured_value,
+        name="build_value",
+    )
+
+    raw_result = tool.invoke({"value": "crew"})
+
+    assert raw_result == {"value": "crew", "count": 1}
+    assert tool.format_output_for_agent(raw_result) == str(raw_result)
+
+
+def test_invalid_typed_output_warns_and_uses_string_agent_text():
+    """Invalid structured output leaves the raw result unchanged."""
+    def build_value(value: str) -> dict[str, object]:
+        """Build a value."""
+        return {"value": value, "count": "wrong"}
+
+    tool = CrewStructuredTool.from_function(
+        func=build_value,
+        name="build_value",
+        output_schema=StructuredOutput,
+    )
+    raw_result = tool.invoke({"value": "crew"})
+
+    with pytest.warns(RuntimeWarning, match="Failed to validate or serialize"):
+        agent_text = tool.format_output_for_agent(raw_result)
+
+    assert raw_result == {"value": "crew", "count": "wrong"}
+    assert agent_text == str(raw_result)
 
 
 def test_validate_function_signature(basic_function, schema_class):

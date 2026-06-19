@@ -5,7 +5,8 @@ from collections.abc import Callable
 import inspect
 import json
 import textwrap
-from typing import TYPE_CHECKING, Annotated, Any, get_type_hints
+from typing import TYPE_CHECKING, Annotated, Any, cast, get_type_hints
+import warnings
 
 from pydantic import (
     BaseModel,
@@ -34,6 +35,47 @@ def _deserialize_schema(v: Any) -> type[BaseModel] | None:
     if isinstance(v, dict):
         return create_model_from_schema(v)
     return None
+
+
+def _infer_output_schema_from_callable(
+    func: Callable[..., Any],
+) -> type[BaseModel] | None:
+    try:
+        return_annotation = get_type_hints(func).get("return", inspect.Signature.empty)
+    except Exception:
+        return_annotation = inspect.signature(func).return_annotation
+
+    if isinstance(return_annotation, type) and issubclass(return_annotation, BaseModel):
+        return return_annotation
+
+    return None
+
+
+def _format_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
+    output_schema = getattr(tool, "output_schema", None)
+    if output_schema is None:
+        return str(raw_result)
+
+    try:
+        validation_input = raw_result
+        if isinstance(raw_result, BaseModel) and not isinstance(
+            raw_result, output_schema
+        ):
+            validation_input = raw_result.model_dump()
+
+        validated = output_schema.model_validate(validation_input)
+        return cast(str, validated.model_dump_json())
+    except Exception as exc:
+        warnings.warn(
+            (
+                f"Failed to validate or serialize output from tool "
+                f"'{getattr(tool, 'name', '<unknown>')}' using output_schema "
+                f"'{output_schema.__name__}': {exc}. Falling back to str(raw_result)."
+            ),
+            RuntimeWarning,
+            stacklevel=2,
+        )
+        return str(raw_result)
 
 
 if TYPE_CHECKING:
@@ -81,6 +123,11 @@ class CrewStructuredTool(BaseModel):
         BeforeValidator(_deserialize_schema),
         PlainSerializer(_serialize_schema),
     ] = Field(default=None)
+    output_schema: Annotated[
+        type[BaseModel] | None,
+        BeforeValidator(_deserialize_schema),
+        PlainSerializer(_serialize_schema),
+    ] = Field(default=None)
     func: Any = Field(default=None, exclude=True)
     result_as_answer: bool = Field(default=False)
     max_usage_count: int | None = Field(default=None)
@@ -103,6 +150,7 @@ class CrewStructuredTool(BaseModel):
         description: str | None = None,
         return_direct: bool = False,
         args_schema: type[BaseModel] | None = None,
+        output_schema: type[BaseModel] | None = None,
         infer_schema: bool = True,
         **kwargs: Any,
     ) -> CrewStructuredTool:
@@ -114,6 +162,7 @@ class CrewStructuredTool(BaseModel):
             description: The description of the tool. Defaults to the function docstring
             return_direct: Whether to return the output directly
             args_schema: Optional schema for the function arguments
+            output_schema: Optional schema for the function output
             infer_schema: Whether to infer the schema from the function signature
             **kwargs: Additional arguments to pass to the tool
 
@@ -149,9 +198,15 @@ class CrewStructuredTool(BaseModel):
             name=name,
             description=description,
             args_schema=schema,
+            output_schema=output_schema or _infer_output_schema_from_callable(func),
             func=func,
             result_as_answer=return_direct,
+            **kwargs,
         )
+
+    def format_output_for_agent(self, raw_result: Any) -> str:
+        """Format a raw tool result into the string representation sent to an agent."""
+        return _format_tool_output_for_agent(self, raw_result)
 
     @staticmethod
     def _create_schema_from_function(

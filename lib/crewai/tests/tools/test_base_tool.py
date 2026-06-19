@@ -1,12 +1,13 @@
 import asyncio
 from collections.abc import Callable
+import json
 from unittest.mock import patch
 
 from crewai.agent import Agent
 from crewai.crew import Crew
 from crewai.task import Task
 from crewai.tools import BaseTool, tool
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 import pytest
 
 
@@ -350,6 +351,240 @@ class TestToolDecoratorRunValidation:
         result = greet.run("World")
         assert result == "Hello, World!"
 
+
+class SearchOutput(BaseModel):
+    query: str
+    score: float
+
+
+class SearchResults(RootModel[list[SearchOutput]]):
+    pass
+
+
+class ExplicitSearchTool(BaseTool):
+    name: str = "search"
+    description: str = "Search for a query"
+    output_schema: type[BaseModel] = SearchOutput
+
+    def _run(self, query: str) -> dict[str, object]:
+        return {"query": query, "score": 0.8}
+
+
+class InferredSearchTool(BaseTool):
+    name: str = "search"
+    description: str = "Search for a query"
+
+    def _run(self, query: str) -> SearchOutput:
+        return SearchOutput(query=query, score=0.7)
+
+
+class RootSearchTool(BaseTool):
+    name: str = "search"
+    description: str = "Search for a query"
+
+    def _run(self, query: str) -> SearchResults:
+        return SearchResults([SearchOutput(query=query, score=1.0)])
+
+
+class DictAnnotatedSearchTool(BaseTool):
+    name: str = "search"
+    description: str = "Search for a query"
+
+    def _run(self, query: str) -> dict[str, object]:
+        return {"query": query, "score": 0.5}
+
+
+def _make_explicit_decorator_tool() -> BaseTool:
+    @tool("search", output_schema=SearchOutput)
+    def search(query: str) -> dict[str, object]:
+        """Search for a query."""
+        return {"query": query, "score": 0.8}
+
+    return search
+
+
+def _make_inferred_decorator_tool() -> BaseTool:
+    @tool("search")
+    def search(query: str) -> SearchOutput:
+        """Search for a query."""
+        return SearchOutput(query=query, score=0.6)
+
+    return search
+
+
+def _make_root_decorator_tool() -> BaseTool:
+    @tool("search")
+    def search(query: str) -> SearchResults:
+        """Search for a query."""
+        return SearchResults([SearchOutput(query=query, score=1.0)])
+
+    return search
+
+
+class TestToolOutputSchema:
+    """Tests for typed tool output behavior."""
+
+    @pytest.mark.parametrize(
+        ("tool_cls", "expected_raw", "expected_agent_payload"),
+        [
+            pytest.param(
+                ExplicitSearchTool,
+                {"query": "crew", "score": 0.8},
+                {"query": "crew", "score": 0.8},
+                id="explicit-schema",
+            ),
+            pytest.param(
+                InferredSearchTool,
+                SearchOutput(query="crew", score=0.7),
+                {"query": "crew", "score": 0.7},
+                id="inferred-base-model",
+            ),
+            pytest.param(
+                RootSearchTool,
+                SearchResults([SearchOutput(query="crew", score=1.0)]),
+                [{"query": "crew", "score": 1.0}],
+                id="inferred-root-model",
+            ),
+        ],
+    )
+    def test_base_tools_return_raw_result_and_json_agent_text(
+        self,
+        tool_cls: type[BaseTool],
+        expected_raw: object,
+        expected_agent_payload: object,
+    ) -> None:
+        t = tool_cls()
+
+        raw_result = t.run(query="crew")
+
+        assert raw_result == expected_raw
+        assert json.loads(t.format_output_for_agent(raw_result)) == (
+            expected_agent_payload
+        )
+
+    def test_base_tool_does_not_infer_non_pydantic_return_annotation(self) -> None:
+        t = DictAnnotatedSearchTool()
+
+        raw_result = t.run(query="crew")
+
+        assert raw_result == {"query": "crew", "score": 0.5}
+        assert t.format_output_for_agent(raw_result) == str(raw_result)
+
+    @pytest.mark.parametrize(
+        ("make_tool", "expected_raw", "expected_agent_payload"),
+        [
+            pytest.param(
+                _make_explicit_decorator_tool,
+                {"query": "crew", "score": 0.8},
+                {"query": "crew", "score": 0.8},
+                id="explicit-schema",
+            ),
+            pytest.param(
+                _make_inferred_decorator_tool,
+                SearchOutput(query="crew", score=0.6),
+                {"query": "crew", "score": 0.6},
+                id="inferred-base-model",
+            ),
+            pytest.param(
+                _make_root_decorator_tool,
+                SearchResults([SearchOutput(query="crew", score=1.0)]),
+                [{"query": "crew", "score": 1.0}],
+                id="inferred-root-model",
+            ),
+        ],
+    )
+    def test_decorator_tools_return_raw_result_and_json_agent_text(
+        self,
+        make_tool: Callable[[], BaseTool],
+        expected_raw: object,
+        expected_agent_payload: object,
+    ) -> None:
+        search = make_tool()
+
+        raw_result = search.run(query="crew")
+
+        assert raw_result == expected_raw
+        assert json.loads(search.format_output_for_agent(raw_result)) == (
+            expected_agent_payload
+        )
+
+    def test_decorator_tool_does_not_infer_non_pydantic_return_annotation(
+        self,
+    ) -> None:
+        @tool("search")
+        def search(query: str) -> dict[str, object]:
+            """Search for a query."""
+            return {"query": query, "score": 0.5}
+
+        raw_result = search.run(query="crew")
+
+        assert raw_result == {"query": "crew", "score": 0.5}
+        assert search.format_output_for_agent(raw_result) == str(raw_result)
+
+    def test_explicit_output_schema_wins_over_return_annotation(self) -> None:
+        class AlternateOutput(BaseModel):
+            value: str
+
+        @tool("search", output_schema=AlternateOutput)
+        def search(query: str) -> SearchOutput:
+            """Search for a query."""
+            return SearchOutput(query=query, score=0.6)
+
+        raw_result = search.run(query="crew")
+
+        with pytest.warns(RuntimeWarning, match="AlternateOutput"):
+            agent_text = search.format_output_for_agent(raw_result)
+
+        assert raw_result == SearchOutput(query="crew", score=0.6)
+        assert agent_text == str(raw_result)
+
+    def test_invalid_typed_output_warns_and_uses_string_agent_text(
+        self,
+    ) -> None:
+        @tool("search", output_schema=SearchOutput)
+        def search(query: str) -> dict[str, object]:
+            """Search for a query."""
+            return {"query": query, "score": "not-a-float"}
+
+        raw_result = search.run(query="crew")
+
+        with pytest.warns(RuntimeWarning, match="Failed to validate or serialize"):
+            agent_text = search.format_output_for_agent(raw_result)
+
+        assert raw_result == {"query": "crew", "score": "not-a-float"}
+        assert agent_text == str(raw_result)
+
+    def test_unserializable_typed_output_warns_and_uses_string_agent_text(
+        self,
+    ) -> None:
+        class OpaqueOutput(BaseModel):
+            value: object
+
+        raw_result = OpaqueOutput(value=object())
+
+        @tool("opaque", output_schema=OpaqueOutput)
+        def opaque() -> OpaqueOutput:
+            """Return an opaque object."""
+            return raw_result
+
+        result = opaque.run()
+
+        with pytest.warns(RuntimeWarning, match="Failed to validate or serialize"):
+            agent_text = opaque.format_output_for_agent(result)
+
+        assert result is raw_result
+        assert agent_text == str(raw_result)
+
+    def test_output_schema_behavior_carries_over_to_structured_tool(self) -> None:
+        structured = ExplicitSearchTool().to_structured_tool()
+
+        raw_result = structured.invoke({"query": "crew"})
+
+        assert raw_result == {"query": "crew", "score": 0.8}
+        assert json.loads(structured.format_output_for_agent(raw_result)) == {
+            "query": "crew",
+            "score": 0.8,
+        }
 
 # Async arun() Schema Validation Tests
 
