@@ -2802,8 +2802,15 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     )
 
                 if self.state.ask_for_human_input:
-                    formatted_answer = self._handle_human_feedback(formatted_answer)
+                            # Force output display using standard print & console utilities
+                            if formatted_answer and hasattr(formatted_answer, "output"):
+                                print(f"\n[FORCED OUTPUT] Final Answer: {formatted_answer.output}\n")
+                                try:
+                                    self._console.print(f"[bold purple]Final Answer:[/bold purple] {formatted_answer.output}")
+                                except Exception:
+                                    pass
 
+                            formatted_answer = self._handle_human_feedback(formatted_answer)
             self._save_to_memory(formatted_answer)
 
             return {"output": formatted_answer.output}
@@ -2908,10 +2915,17 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     )
 
                 if self.state.ask_for_human_input:
-                    formatted_answer = await self._ahandle_human_feedback(
-                        formatted_answer
-                    )
-
+                            # Force output display using standard print & console utilities
+                            if formatted_answer and hasattr(formatted_answer, "output"):
+                                print(f"\n[FORCED OUTPUT] Final Answer: {formatted_answer.output}\n")
+                                try:
+                                    self._console.print(f"[bold purple]Final Answer:[/bold purple] {formatted_answer.output}")
+                                except Exception:
+                                    pass
+                                    
+                            formatted_answer = await self._ahandle_human_feedback(
+                                formatted_answer
+                            )
             self._save_to_memory(formatted_answer)
 
             return {"output": formatted_answer.output}
