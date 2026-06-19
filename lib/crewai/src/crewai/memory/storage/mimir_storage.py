@@ -4,14 +4,32 @@ import subprocess
 import json
 import logging
 import hashlib
-from typing import List, Dict, Any, Optional
+import re
+from typing import List, Dict, Any, Optional, Tuple
+
+# Import standard CrewAI MemoryRecord structure
+from crewai.memory.storage.backend import StorageBackend
+# Note: Ensure MemoryRecord is imported correctly based on CrewAI structure
+# mapping fields: value/text -> record.value, metadata -> record.metadata
+try:
+    from crewai.memory.storage.interface import MemoryRecord
+except ImportError:
+    # Fallback/Mock definition if import path varies in local branch environment
+    from dataclasses import dataclass, field
+    @dataclass
+    class MemoryRecord:
+        value: Any
+        metadata: Dict[str, Any] = field(default_factory=dict)
 
 logger = logging.getLogger(__name__)
 
-class MimirStorage:
-    def __init__(self, db_path: str = "~/mimir_db"):
-        # Resolve db_path, expanding '~' to home directory
-        self.db_path = os.path.expanduser(db_path)
+class MimirStorage(StorageBackend):
+    def __init__(self, config: Optional[Dict[str, Any]] = None):
+        self.config = config or {}
+        
+        # Resolve db_path from config dictionary, expanding '~' to home directory
+        raw_db_path = self.config.get("db_path", "~/mimir_db")
+        self.db_path = os.path.expanduser(raw_db_path)
         os.makedirs(self.db_path, exist_ok=True)
         
         # Verify mimir binary availability in common paths or system PATH
@@ -24,12 +42,10 @@ class MimirStorage:
 
     def _find_mimir_binary(self) -> Optional[str]:
         """Checks common paths and system PATH for the mimir binary."""
-        # 1. Check system PATH
         path_binary = shutil.which("mimir")
         if path_binary:
             return path_binary
             
-        # 2. Check common installation paths
         common_paths = [
             os.path.expanduser("~/.cargo/bin/mimir"),
             "/usr/local/bin/mimir",
@@ -40,34 +56,47 @@ class MimirStorage:
                 return path
         return None
 
-    def save(self, value: Any, metadata: Optional[Dict[str, Any]] = None, agent_id: Optional[str] = None) -> None:
-        # Generate a persistent deterministic hash key using hashlib MD5
-        value_str = str(value)
-        hash_suffix = hashlib.md5(value_str.encode('utf-8')).hexdigest()[:12]
-        key = f"memory_{hash_suffix}"
-        
-        # Scope memories by agent or config category if agent_id is provided
-        category = agent_id if agent_id else "default"
-        
-        # Prepare payload
-        payload = {
-            "key": key,
-            "value": value_str,
-            "category": category,
-            "metadata": metadata or {}
-        }
-        
-        # Call the subprocess using '--db' flag per Mimir CLI docs
-        try:
-            cmd = [self.mimir_path, "--db", self.db_path, "store", json.dumps(payload)]
-            subprocess.run(cmd, check=True, capture_output=True, text=True)
-            logger.info(f"Successfully stored memory with key: {key}")
-        except subprocess.CalledProcessError as e:
-            logger.error(f"Failed to store memory in Mimir: {e.stderr}")
-            raise e
+    def _validate_inputs(self, category: str, query: Optional[str] = None) -> None:
+        """Validates input arguments to safeguard against CLI/flag injection attacks."""
+        if category and not re.match(r"^[A-Za-z0-9_-]+$", category):
+            raise ValueError(f"Malicious characters detected in scope/category: '{category}'")
+        if query and query.startswith("-"):
+            raise ValueError("Query string cannot start with a hyphen to prevent flag injection.")
 
-    def search(self, query: str, limit: int = 3, agent_id: Optional[str] = None) -> List[Dict[str, Any]]:
-        category = agent_id if agent_id else "default"
+    def save(self, records: List[MemoryRecord]) -> None:
+        """Saves a list of MemoryRecords conforming to the StorageBackend protocol."""
+        for record in records:
+            value_str = str(record.value)
+            
+            # Generate a persistent deterministic hash key using hashlib MD5
+            hash_suffix = hashlib.md5(value_str.encode('utf-8')).hexdigest()[:12]
+            key = f"memory_{hash_suffix}"
+            
+            # Scope memories using config metadata or default category
+            category = record.metadata.get("agent_id", "default")
+            self._validate_inputs(category)
+            
+            # Prepare payload
+            payload = {
+                "key": key,
+                "value": value_str,
+                "category": category,
+                "metadata": record.metadata
+            }
+            
+            # Call the subprocess using '--db' flag per Mimir CLI docs
+            try:
+                cmd = [self.mimir_path, "--db", self.db_path, "store", json.dumps(payload)]
+                subprocess.run(cmd, check=True, capture_output=True, text=True)
+                logger.info(f"Successfully stored memory with key: {key}")
+            except subprocess.CalledProcessError as e:
+                logger.error(f"Failed to store memory in Mimir: {e.stderr}")
+                raise e
+
+    def search(self, query: str, limit: int = 3, scope_prefix: Optional[str] = None) -> List[Tuple[MemoryRecord, float]]:
+        """Searches memories and returns a list of (MemoryRecord, score) tuples."""
+        category = scope_prefix if scope_prefix else "default"
+        self._validate_inputs(category, query)
         
         try:
             cmd = [
@@ -83,20 +112,16 @@ class MimirStorage:
             raw_results = json.loads(result.stdout)
             formatted_results = []
             
-            # Map raw outputs to structured results with text, score, and metadata
             for res in raw_results:
-                # Fallback to empty dict or default scores if fields are missing dynamically
                 content_text = res.get("value", res.get("text", ""))
-                score = res.get("score", 0.0)
+                score = float(res.get("score", 0.0))
                 meta = res.get("metadata", {})
                 
-                formatted_results.append({
-                    "text": content_text,
-                    "score": score,
-                    "metadata": meta
-                })
+                # Construct official MemoryRecord instances
+                record = MemoryRecord(value=content_text, metadata=meta)
+                formatted_results.append((record, score))
                 
             return formatted_results
         except subprocess.CalledProcessError as e:
             logger.error(f"Search failed in Mimir: {e.stderr}")
-            return []
+            raise e

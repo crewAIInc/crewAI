@@ -50,14 +50,14 @@ def resolve_memory_storage(spec: str, config: Optional[dict] = None) -> StorageB
     ``None`` means no factory is registered or it declined this spec; the
     caller then falls back to the built-in selection.
     """
-    # Rispettiamo prima le factory customizzate degli utenti se registrate
+    # First, respect user-registered custom factories if available
     factory = _factory
     if factory is not None:
         custom_backend = factory(spec)
         if custom_backend is not None:
             return custom_backend
             
-    # Fallback integrato su Mimir se lo spec corrisponde
+    # Built-in fallback to Mimir storage if the spec matches
     if spec == "mimir":
         from crewai.memory.storage.mimir_storage import MimirStorage
         return MimirStorage(config=config)
