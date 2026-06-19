@@ -398,6 +398,7 @@
                     "pages": [
                       "edge/en/enterprise/features/automations",
                       "edge/en/enterprise/features/crew-studio",
+                      "edge/en/enterprise/features/merged-step-card",
                       "edge/en/enterprise/features/marketplace",
                       "edge/en/enterprise/features/agent-repositories",
                       "edge/en/enterprise/features/tools-and-integrations",
@@ -922,6 +923,7 @@
                     "pages": [
                       "v1.14.7/en/enterprise/features/automations",
                       "v1.14.7/en/enterprise/features/crew-studio",
+                      "v1.14.7/en/enterprise/features/merged-step-card",
                       "v1.14.7/en/enterprise/features/marketplace",
                       "v1.14.7/en/enterprise/features/agent-repositories",
                       "v1.14.7/en/enterprise/features/tools-and-integrations",
@@ -8548,6 +8550,7 @@
                     "pages": [
                       "edge/pt-BR/enterprise/features/automations",
                       "edge/pt-BR/enterprise/features/crew-studio",
+                      "edge/pt-BR/enterprise/features/merged-step-card",
                       "edge/pt-BR/enterprise/features/marketplace",
                       "edge/pt-BR/enterprise/features/agent-repositories",
                       "edge/pt-BR/enterprise/features/tools-and-integrations",
@@ -9049,6 +9052,7 @@
                     "pages": [
                       "v1.14.7/pt-BR/enterprise/features/automations",
                       "v1.14.7/pt-BR/enterprise/features/crew-studio",
+                      "v1.14.7/pt-BR/enterprise/features/merged-step-card",
                       "v1.14.7/pt-BR/enterprise/features/marketplace",
                       "v1.14.7/pt-BR/enterprise/features/agent-repositories",
                       "v1.14.7/pt-BR/enterprise/features/tools-and-integrations",
@@ -16412,6 +16416,7 @@
                     "pages": [
                       "edge/ko/enterprise/features/automations",
                       "edge/ko/enterprise/features/crew-studio",
+                      "edge/ko/enterprise/features/merged-step-card",
                       "edge/ko/enterprise/features/marketplace",
                       "edge/ko/enterprise/features/agent-repositories",
                       "edge/ko/enterprise/features/tools-and-integrations",
@@ -16925,6 +16930,7 @@
                     "pages": [
                       "v1.14.7/ko/enterprise/features/automations",
                       "v1.14.7/ko/enterprise/features/crew-studio",
+                      "v1.14.7/ko/enterprise/features/merged-step-card",
                       "v1.14.7/ko/enterprise/features/marketplace",
                       "v1.14.7/ko/enterprise/features/agent-repositories",
                       "v1.14.7/ko/enterprise/features/tools-and-integrations",
@@ -24468,6 +24474,7 @@
                     "pages": [
                       "edge/ar/enterprise/features/automations",
                       "edge/ar/enterprise/features/crew-studio",
+                      "edge/ar/enterprise/features/merged-step-card",
                       "edge/ar/enterprise/features/marketplace",
                       "edge/ar/enterprise/features/agent-repositories",
                       "edge/ar/enterprise/features/tools-and-integrations",
@@ -24981,6 +24988,7 @@
                     "pages": [
                       "v1.14.7/ar/enterprise/features/automations",
                       "v1.14.7/ar/enterprise/features/crew-studio",
+                      "v1.14.7/ar/enterprise/features/merged-step-card",
                       "v1.14.7/ar/enterprise/features/marketplace",
                       "v1.14.7/ar/enterprise/features/agent-repositories",
                       "v1.14.7/ar/enterprise/features/tools-and-integrations",
