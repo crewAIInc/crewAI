@@ -39,6 +39,7 @@ The Enterprise Tools Repository includes:
 - **Error Handling**: Incorporates robust error handling mechanisms to ensure smooth operation.
 - **Caching Mechanism**: Features intelligent caching to optimize performance and reduce redundant operations.
 - **Asynchronous Support**: Handles both synchronous and asynchronous tools, enabling non-blocking operations.
+- **Typed Outputs**: Optionally validates tool results with Pydantic models and sends agents a JSON-safe representation while preserving the raw Python value for direct calls and hooks.
 
 ## Using CrewAI Tools
 
@@ -183,6 +184,34 @@ class MyCustomTool(BaseTool):
         # Your tool's logic here
         return "Tool's result"
 ```
+
+### Typed Tool Outputs
+
+As a best practice, define a Pydantic output model when a tool returns structured data. CrewAI keeps `tool.run(...)` unchanged: it returns the raw Python value from `_run`. During agent execution, CrewAI validates that raw value against the tool's `output_schema` and sends the agent a JSON string.
+
+```python Code
+from crewai.tools import BaseTool
+from pydantic import BaseModel
+
+class SearchResult(BaseModel):
+    query: str
+    score: float
+
+class SearchTool(BaseTool):
+    name: str = "Search"
+    description: str = "Searches for a query and returns the top match score."
+
+    def _run(self, query: str) -> SearchResult:
+        return SearchResult(query=query, score=0.97)
+
+tool = SearchTool()
+
+# Direct calls receive the raw Pydantic object.
+raw_result = tool.run(query="CrewAI")
+print(raw_result.score)
+```
+
+If validation or serialization fails during agent execution, CrewAI emits a runtime warning and falls back to `str(raw_result)` for the agent-facing text. Direct tool calls still receive the raw result.
 
 ## Asynchronous Tool Support
 

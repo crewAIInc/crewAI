@@ -53,6 +53,102 @@ def my_simple_tool(question: str) -> str:
     return "Tool output"
 ```
 
+### Best Practice: Define Typed Outputs
+
+When a tool returns structured data, define the output as a Pydantic model. This is optional, but recommended because it gives CrewAI a clear contract for the data your tool returns.
+
+Typed outputs create a clear split between direct Python usage and agent execution:
+
+- `tool.run(...)` returns the raw Python value from your tool.
+- Agent execution validates the raw value with the tool's output schema and sends the agent an LLM-safe string.
+- Valid Pydantic outputs are serialized to JSON for the agent.
+- If validation or serialization fails, CrewAI emits a runtime warning and falls back to `str(raw_result)` only for the agent-facing text.
+
+#### Return a Pydantic Model
+
+CrewAI infers the output schema when your `BaseTool` or `@tool` function has a Pydantic return annotation.
+
+```python Code
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
+
+class SentimentResult(BaseModel):
+    label: str = Field(description="The sentiment label, such as positive, neutral, or negative.")
+    confidence: float = Field(description="Confidence score from 0 to 1.")
+
+class SentimentTool(BaseTool):
+    name: str = "Sentiment Analyzer"
+    description: str = "Analyze the sentiment of a short text passage."
+
+    def _run(self, text: str) -> SentimentResult:
+        # Replace this with your model, API call, or business logic.
+        return SentimentResult(label="positive", confidence=0.92)
+
+tool = SentimentTool()
+result = tool.run(text="CrewAI makes multi-agent workflows easier.")
+
+# Direct Python calls receive the raw Pydantic object.
+print(result.label)
+print(result.confidence)
+```
+
+When an agent calls `SentimentTool`, it receives JSON like this:
+
+```json
+{"label":"positive","confidence":0.92}
+```
+
+This is easier for the agent to reason over than a Python object representation.
+
+#### Use `output_schema` for Dictionary Results
+
+If your implementation naturally returns a dictionary, set `output_schema` explicitly. CrewAI validates the dictionary and serializes the validated result to JSON for the agent.
+
+```python Code
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
+
+class ProductLookupResult(BaseModel):
+    sku: str = Field(description="The product SKU.")
+    name: str = Field(description="The product name.")
+    in_stock: bool = Field(description="Whether the product is available.")
+
+class ProductLookupTool(BaseTool):
+    name: str = "Product Lookup"
+    description: str = "Look up product availability by SKU."
+    output_schema: type[BaseModel] = ProductLookupResult
+
+    def _run(self, sku: str) -> dict[str, object]:
+        return {
+            "sku": sku,
+            "name": "CrewAI Enterprise License",
+            "in_stock": True,
+        }
+```
+
+You can use the same pattern with the `@tool` decorator:
+
+```python Code
+from crewai.tools import tool
+from pydantic import BaseModel, Field
+
+class ProductLookupResult(BaseModel):
+    sku: str = Field(description="The product SKU.")
+    name: str = Field(description="The product name.")
+    in_stock: bool = Field(description="Whether the product is available.")
+
+@tool("Product Lookup", output_schema=ProductLookupResult)
+def product_lookup(sku: str) -> dict[str, object]:
+    """Look up product availability by SKU."""
+    return {
+        "sku": sku,
+        "name": "CrewAI Enterprise License",
+        "in_stock": True,
+    }
+```
+
+Use typed outputs for tool results that have stable fields, nested data, lists, IDs, status values, scores, or any structure the agent should interpret precisely. Plain strings are still fine for simple prose results.
+
 ### Defining a Cache Function for the Tool
 
 To optimize tool performance with caching, define custom caching strategies using the `cache_function` attribute.

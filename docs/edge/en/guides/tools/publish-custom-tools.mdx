@@ -65,7 +65,7 @@ Regardless of which approach you use, your tool must:
 - Have a **`description`** — tells the agent when and how to use the tool. This directly affects how well agents use your tool, so be clear and specific.
 - Implement **`_run`** (BaseTool) or provide a **function body** (@tool) — the synchronous execution logic.
 - Use **type annotations** on all parameters and return values.
-- Return a **string** result (or something that can be meaningfully converted to one).
+- Return a **string** result, or define an optional Pydantic output schema for structured results.
 
 ### Optional: Async Support
 
@@ -103,6 +103,44 @@ class TranslateInput(BaseModel):
 ```
 
 Explicit schemas are recommended for published tools — they produce better agent behavior and clearer documentation for your users.
+
+### Optional: Typed Outputs with `output_schema`
+
+If your tool returns structured data, define a Pydantic output model. This is a best practice for published tools because it gives agents a predictable JSON shape while preserving the raw Python value for direct users of your package.
+
+CrewAI keeps direct execution unchanged: `tool.run(...)` returns the raw value from your tool. During agent execution, CrewAI validates that raw value against the output schema and sends the agent a JSON string. If validation or serialization fails, CrewAI warns and falls back to `str(raw_result)` for the agent-facing text.
+
+You can let CrewAI infer the output schema from a Pydantic return annotation:
+
+```python
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
+
+
+class GeolocateResult(BaseModel):
+    latitude: float = Field(..., description="Latitude in decimal degrees.")
+    longitude: float = Field(..., description="Longitude in decimal degrees.")
+
+
+class GeolocateTool(BaseTool):
+    name: str = "Geolocate"
+    description: str = "Converts a street address into latitude/longitude coordinates."
+
+    def _run(self, address: str) -> GeolocateResult:
+        return GeolocateResult(latitude=40.7128, longitude=-74.0060)
+```
+
+Or set `output_schema` explicitly when your implementation returns a dictionary:
+
+```python
+class GeolocateTool(BaseTool):
+    name: str = "Geolocate"
+    description: str = "Converts a street address into latitude/longitude coordinates."
+    output_schema: type[BaseModel] = GeolocateResult
+
+    def _run(self, address: str) -> dict[str, float]:
+        return {"latitude": 40.7128, "longitude": -74.0060}
+```
 
 ### Optional: Environment Variables
 
