@@ -20,6 +20,55 @@ from urllib.parse import urlparse
 logger = logging.getLogger(__name__)
 
 _UNSAFE_PATHS_ENV = "CREWAI_TOOLS_ALLOW_UNSAFE_PATHS"
+_ALLOWED_DIRS_ENV = "CREWAI_TOOLS_ALLOWED_DIRS"
+
+
+def _get_allowed_roots(
+    base_dir: str | None = None,
+    allowed_dirs: list[str] | None = None,
+) -> list[str]:
+    """Build the deny-by-default set of allowed root directories.
+
+    Roots are drawn from, in order:
+
+    1. ``base_dir`` (defaults to the current working directory),
+    2. the ``CREWAI_TOOLS_ALLOWED_DIRS`` environment variable, split on
+       ``os.pathsep``,
+    3. the caller-supplied ``allowed_dirs`` list.
+
+    Every root is resolved with :func:`os.path.realpath` so a symlinked root
+    is compared by its real location. Empty entries are ignored and duplicates
+    are collapsed while preserving order. The first element is always the
+    primary root used to resolve relative candidate paths.
+    """
+    raw_roots: list[str] = [base_dir if base_dir is not None else os.getcwd()]
+
+    env_dirs = os.environ.get(_ALLOWED_DIRS_ENV, "")
+    if env_dirs:
+        raw_roots.extend(d for d in env_dirs.split(os.pathsep) if d)
+
+    if allowed_dirs:
+        raw_roots.extend(d for d in allowed_dirs if d)
+
+    resolved: list[str] = []
+    seen: set[str] = set()
+    for root in raw_roots:
+        real = os.path.realpath(root)
+        if real not in seen:
+            seen.add(real)
+            resolved.append(real)
+    return resolved
+
+
+def _is_within_root(resolved_path: str, resolved_root: str) -> bool:
+    """Return True if *resolved_path* equals *resolved_root* or lives beneath it.
+
+    When ``resolved_root`` already ends with a separator (e.g. the filesystem
+    root ``"/"``), appending ``os.sep`` would double it, so the root is used
+    as-is for the prefix in that case.
+    """
+    prefix = resolved_root if resolved_root.endswith(os.sep) else resolved_root + os.sep
+    return resolved_path == resolved_root or resolved_path.startswith(prefix)
 
 
 def format_path_for_display(path: str, base_dir: str | None = None) -> str:
@@ -52,21 +101,32 @@ def _is_escape_hatch_enabled() -> bool:
     return os.environ.get(_UNSAFE_PATHS_ENV, "").lower() in ("true", "1", "yes")
 
 
-def validate_file_path(path: str, base_dir: str | None = None) -> str:
+def validate_file_path(
+    path: str,
+    base_dir: str | None = None,
+    *,
+    allowed_dirs: list[str] | None = None,
+) -> str:
     """Validate that a file path is safe to read.
 
     Resolves symlinks and ``..`` components, then checks that the resolved
-    path falls within *base_dir* (defaults to the current working directory).
+    path falls within at least one allowed root directory. The allow-list is
+    built from *base_dir* (defaults to the current working directory), the
+    ``CREWAI_TOOLS_ALLOWED_DIRS`` environment variable, and *allowed_dirs* —
+    see :func:`_get_allowed_roots`. Access is denied by default for anything
+    outside that set.
 
     Args:
         path: The file path to validate.
-        base_dir: Allowed root directory. Defaults to ``os.getcwd()``.
+        base_dir: Primary allowed root. Defaults to ``os.getcwd()`` and is
+            used to resolve relative ``path`` values.
+        allowed_dirs: Additional allowed root directories.
 
     Returns:
         The resolved, validated absolute path.
 
     Raises:
-        ValueError: If the path escapes the allowed directory.
+        ValueError: If the path escapes every allowed directory.
     """
     if _is_escape_hatch_enabled():
         logger.warning(
@@ -76,30 +136,30 @@ def validate_file_path(path: str, base_dir: str | None = None) -> str:
         )
         return os.path.realpath(path)
 
-    if base_dir is None:
-        base_dir = os.getcwd()
+    allowed_roots = _get_allowed_roots(base_dir, allowed_dirs)
+    primary_root = allowed_roots[0]
 
-    resolved_base = os.path.realpath(base_dir)
     resolved_path = os.path.realpath(
-        os.path.join(resolved_base, path) if not os.path.isabs(path) else path
+        path if os.path.isabs(path) else os.path.join(primary_root, path)
     )
 
-    # Ensure the resolved path is within the base directory.
-    # When resolved_base already ends with a separator (e.g. the filesystem
-    # root "/"), appending os.sep would double it ("//"), so use the base
-    # as-is in that case.
-    prefix = resolved_base if resolved_base.endswith(os.sep) else resolved_base + os.sep
-    if not resolved_path.startswith(prefix) and resolved_path != resolved_base:
-        raise ValueError(
-            f"Path '{format_path_for_display(resolved_path, resolved_base)}' is "
-            f"outside the allowed directory. "
-            f"Set {_UNSAFE_PATHS_ENV}=true to bypass this check."
-        )
+    if any(_is_within_root(resolved_path, root) for root in allowed_roots):
+        return resolved_path
 
-    return resolved_path
+    raise ValueError(
+        f"Path '{format_path_for_display(resolved_path, primary_root)}' is "
+        f"outside the allowed directories. "
+        f"Add the directory via {_ALLOWED_DIRS_ENV}, or set "
+        f"{_UNSAFE_PATHS_ENV}=true to bypass this check."
+    )
 
 
-def validate_directory_path(path: str, base_dir: str | None = None) -> str:
+def validate_directory_path(
+    path: str,
+    base_dir: str | None = None,
+    *,
+    allowed_dirs: list[str] | None = None,
+) -> str:
     """Validate that a directory path is safe to read.
 
     Same as :func:`validate_file_path` but also checks that the path
@@ -107,15 +167,16 @@ def validate_directory_path(path: str, base_dir: str | None = None) -> str:
 
     Args:
         path: The directory path to validate.
-        base_dir: Allowed root directory. Defaults to ``os.getcwd()``.
+        base_dir: Primary allowed root. Defaults to ``os.getcwd()``.
+        allowed_dirs: Additional allowed root directories.
 
     Returns:
         The resolved, validated absolute path.
 
     Raises:
-        ValueError: If the path escapes the allowed directory or is not a directory.
+        ValueError: If the path escapes every allowed directory or is not a directory.
     """
-    validated = validate_file_path(path, base_dir)
+    validated = validate_file_path(path, base_dir, allowed_dirs=allowed_dirs)
     if not os.path.isdir(validated):
         raise ValueError(f"Path '{validated}' is not a directory.")
     return validated

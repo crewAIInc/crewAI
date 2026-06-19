@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 from typing import Any
 
 from crewai.tools import BaseTool
@@ -8,6 +7,7 @@ from pydantic import BaseModel
 from crewai_tools.security.safe_path import (
     format_error_for_display,
     format_path_for_display,
+    validate_file_path,
 )
 
 
@@ -41,22 +41,27 @@ class FileWriterTool(BaseTool):
 
             filepath = os.path.join(directory, filename)
 
-            # Prevent path traversal: the resolved path must be strictly inside
-            # filename, and symlink escapes regardless of how directory is set.
-            # is_relative_to() does a proper path-component comparison that is
-            # safe on case-insensitive filesystems and avoids the "// " edge case
-            # We also reject the case where filepath resolves to the directory
-            # itself, since that is not a valid file target.
-            real_directory = Path(directory).resolve()
-            real_filepath = Path(filepath).resolve()
-            display_filepath = format_path_for_display(
-                str(real_filepath), str(real_directory)
-            )
-            if (
-                not real_filepath.is_relative_to(real_directory)
-                or real_filepath == real_directory
-            ):
-                return "Error: Invalid file path — the filename must not escape the target directory."
+            # Confine the resolved write target to an allow-listed root
+            # (cwd + CREWAI_TOOLS_ALLOWED_DIRS), NOT merely inside the
+            # caller-supplied `directory`. That value is itself untrusted when
+            # an LLM tool call chooses it, so checking containment against it
+            # would let an agent write anywhere (e.g. ~/.ssh/authorized_keys).
+            # validate_file_path resolves symlinks and ".." before checking.
+            try:
+                real_filepath = validate_file_path(filepath)
+            except ValueError as e:
+                return f"Error: {format_error_for_display(e)}"
+
+            real_directory = os.path.dirname(real_filepath)
+            display_filepath = format_path_for_display(real_filepath, real_directory)
+
+            # A target that resolves to an existing directory is not a valid
+            # file destination.
+            if os.path.isdir(real_filepath):
+                return (
+                    "Error: Invalid file path — the target must be a file, "
+                    "not a directory."
+                )
 
             if kwargs.get("directory"):
                 os.makedirs(real_directory, exist_ok=True)
