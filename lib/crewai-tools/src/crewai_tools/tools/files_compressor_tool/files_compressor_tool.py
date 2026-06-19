@@ -125,6 +125,9 @@ class FileCompressorTool(BaseTool):
         validated to stop a symlink inside the tree from copying the contents
         of an out-of-tree target (e.g. ``~/.ssh/id_rsa``) into the archive.
         """
+        # Defense in depth: validate the write target at the sink, so this is
+        # safe even if called directly rather than through _run.
+        output_path = validate_file_path(output_path)
         skipped: list[str] = []
         with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zipf:
             if os.path.isfile(input_path):
@@ -171,6 +174,9 @@ class FileCompressorTool(BaseTool):
                 return None
             return tarinfo
 
+        # Defense in depth: validate the write target at the sink, so this is
+        # safe even if called directly rather than through _run.
+        output_path = validate_file_path(output_path)
         with tarfile.open(output_path, mode) as tarf:  # type: ignore[call-overload]
             arcname = os.path.basename(input_path)
             tarf.add(input_path, arcname=arcname, filter=_drop_links)

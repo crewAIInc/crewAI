@@ -143,10 +143,16 @@ def test_prepare_output_makes_dir(mock_exists, mock_makedirs):
 
 @pytest.fixture
 def symlink_env():
-    """A working dir (allow-listed) containing a normal file and a symlink that
-    points to a secret file OUTSIDE the allow-list."""
-    work_dir = tempfile.mkdtemp()
-    secret_dir = tempfile.mkdtemp()  # deliberately NOT allow-listed
+    """A working dir (the allowed root, via cwd) containing a normal file and a
+    symlink pointing at a secret file OUTSIDE that root.
+
+    The working directory is the allowed root for path validation, so we chdir
+    into ``work_dir`` rather than relying on CREWAI_TOOLS_ALLOWED_DIRS. This
+    keeps the test independent of the configurable-allow-list feature and
+    exercises the default cwd confinement.
+    """
+    work_dir = os.path.realpath(tempfile.mkdtemp())
+    secret_dir = os.path.realpath(tempfile.mkdtemp())  # outside the allowed root
     secret_file = os.path.join(secret_dir, "secret.txt")
     with open(secret_file, "w") as f:
         f.write("TOP_SECRET_PRIVATE_KEY")
@@ -157,13 +163,10 @@ def symlink_env():
         f.write("safe content")
     os.symlink(secret_file, os.path.join(src, "leak.txt"))
 
-    prev = os.environ.get("CREWAI_TOOLS_ALLOWED_DIRS")
-    os.environ["CREWAI_TOOLS_ALLOWED_DIRS"] = work_dir
+    prev_cwd = os.getcwd()
+    os.chdir(work_dir)
     yield {"work_dir": work_dir, "src": src, "secret_dir": secret_dir}
-    if prev is None:
-        os.environ.pop("CREWAI_TOOLS_ALLOWED_DIRS", None)
-    else:
-        os.environ["CREWAI_TOOLS_ALLOWED_DIRS"] = prev
+    os.chdir(prev_cwd)
     shutil.rmtree(work_dir, ignore_errors=True)
     shutil.rmtree(secret_dir, ignore_errors=True)
 
@@ -200,3 +203,19 @@ def test_tar_excludes_symlink_to_outside_file(tool, symlink_env):
         assert any(m.endswith("normal.txt") for m in members)
         assert not any(m.endswith("leak.txt") for m in members)
         assert all(not (tf.getmember(m).issym() or tf.getmember(m).islnk()) for m in members)
+
+
+def test_compress_zip_validates_output_path_at_sink(symlink_env):
+    # Calling the compressor directly (bypassing _run) must still refuse to
+    # write outside the allow-list.
+    outside = os.path.join(symlink_env["secret_dir"], "evil.zip")
+    with pytest.raises(ValueError, match="outside the allowed director"):
+        FileCompressorTool._compress_zip(symlink_env["src"], outside)
+    assert not os.path.exists(outside)
+
+
+def test_compress_tar_validates_output_path_at_sink(symlink_env):
+    outside = os.path.join(symlink_env["secret_dir"], "evil.tar.gz")
+    with pytest.raises(ValueError, match="outside the allowed director"):
+        FileCompressorTool._compress_tar(symlink_env["src"], outside, "tar.gz")
+    assert not os.path.exists(outside)
