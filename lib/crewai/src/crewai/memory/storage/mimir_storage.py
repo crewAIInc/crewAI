@@ -89,30 +89,32 @@ class MimirStorage(StorageBackend):
     def search(
         self, 
         query: Any, 
-        limit: int = 3, 
+        limit: Optional[int] = None,          
         scope_prefix: Optional[str] = None,
         categories: Optional[List[str]] = None,
-        min_score: Optional[float] = None,
+        min_score: Optional[float] = None,   
+        metadata_filter: Optional[Dict[str, Any]] = None,
         **kwargs
     ) -> List[Tuple[MemoryRecord, float]]:
         """Searches memories and returns a list of (MemoryRecord, score) tuples."""
         query_str = query if isinstance(query, str) else str(query)
         
+        actual_limit = limit if limit is not None else 3
+        
         category = scope_prefix if scope_prefix else "default"
         
         if categories and len(categories) > 0:
-            category = categories[0] 
+            category = categories[0]
             
         self._validate_inputs(category, query_str)
         
-        # Call the subprocess to query Mimir CLI (with 10s timeout)
         try:
             cmd = [
                 self.mimir_path, 
                 "--db", self.db_path, 
                 "search", 
                 query_str, 
-                "--limit", str(limit), 
+                "--limit", str(actual_limit),  
                 "--category", category
             ]
             result = subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=10)
@@ -127,6 +129,15 @@ class MimirStorage(StorageBackend):
                 
                 if min_score is not None and score < min_score:
                     continue
+                
+                if metadata_filter:
+                    match = True
+                    for k, v in metadata_filter.items():
+                        if meta.get(k) != v:
+                            match = False
+                            break
+                    if not match:
+                        continue
                 
                 # Construct official MemoryRecord instances
                 record = MemoryRecord(value=content_text, metadata=meta)
