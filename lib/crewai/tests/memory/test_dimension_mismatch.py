@@ -8,6 +8,7 @@ not silently zero-fill vectors or return empty search results.
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -95,6 +96,33 @@ def test_lancedb_reopened_store_detects_mismatch(lancedb_path: Path) -> None:
         reopened.save([_record(8)])
     with pytest.raises(EmbeddingDimensionMismatchError):
         reopened.search([0.1] * 8)
+
+
+def test_memory_reset_all_rebuilds_reopened_store_with_new_dimension(
+    lancedb_path: Path,
+) -> None:
+    from crewai.memory.storage.lancedb_storage import LanceDBStorage
+    from crewai.memory.unified_memory import Memory
+
+    old = LanceDBStorage(path=str(lancedb_path), vector_dim=4)
+    old.save([_record(4)])
+
+    mem = Memory(
+        storage=str(lancedb_path),
+        llm=MagicMock(),
+        embedder=lambda texts: [[0.1] * 8 for _ in texts],
+        root_scope="/crew/test",
+    )
+
+    mem.reset_all()
+    mem.remember(
+        "new embedder output",
+        scope="/facts",
+        categories=["test"],
+        importance=0.5,
+    )
+
+    assert mem.recall("new embedder output", scope="/facts", depth="shallow")
 
 
 def test_lancedb_matching_dim_still_works(lancedb_path: Path) -> None:

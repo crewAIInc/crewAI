@@ -767,10 +767,11 @@ class CustomSearchTool(BaseTool):
 ```python
 from crewai.tools import tool
 
-@tool("Calculator")
-def calculator(expression: str) -> str:
-    """Evaluates a mathematical expression and returns the result."""
-    return str(eval(expression))
+@tool("WordCount")
+def word_count(text: str) -> str:
+    """Counts the number of words in the given text."""
+    count = len(text.split())
+    return f"Word count: {count}"
 ```
 
 ### Built-in Tools (install with `uv add crewai-tools`)

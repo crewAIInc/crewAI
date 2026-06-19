@@ -89,12 +89,15 @@ description = "{name} using crewAI"
 authors = [{{ name = "Your Name", email = "you@example.com" }}]
 requires-python = ">=3.10,<3.14"
 dependencies = [
-    "crewai[tools]>=1.14.7"
+    "crewai[tools]==1.14.8a1"
 ]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+only-include = ["agents", "crew.jsonc", "tools", "knowledge", "skills"]
 
 [tool.crewai]
 type = "crew"

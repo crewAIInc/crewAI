@@ -2275,6 +2275,8 @@ class Crew(FlowTrackable, BaseModel):
         """
 
         def default_reset(memory: Any) -> Any:
+            if isinstance(memory, Memory):
+                return memory.reset_all()
             return memory.reset()
 
         def knowledge_reset(memory: Any) -> Any:
