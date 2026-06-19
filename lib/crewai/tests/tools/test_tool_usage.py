@@ -244,6 +244,23 @@ def test_react_tool_hooks_receive_agent_text_and_raw_cached_typed_output():
     ]
 
 
+def test_last_raw_result_falls_back_only_until_recorded():
+    tool_usage = ToolUsage(
+        tools_handler=None,
+        tools=[],
+        task=None,
+        function_calling_llm=MagicMock(),
+        agent=None,
+        action=MagicMock(),
+    )
+
+    assert tool_usage.get_last_raw_result("formatted result") == "formatted result"
+
+    tool_usage.last_raw_result = None
+
+    assert tool_usage.get_last_raw_result("formatted result") is None
+
+
 def test_validate_tool_input_booleans_and_none():
     tool_usage = ToolUsage(
         tools_handler=MagicMock(),
