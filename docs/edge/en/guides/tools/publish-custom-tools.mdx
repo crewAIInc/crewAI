@@ -65,7 +65,7 @@ Regardless of which approach you use, your tool must:
 - Have a **`description`** — tells the agent when and how to use the tool. This directly affects how well agents use your tool, so be clear and specific.
 - Implement **`_run`** (BaseTool) or provide a **function body** (@tool) — the synchronous execution logic.
 - Use **type annotations** on all parameters and return values.
-- Return a **string** result (or something that can be meaningfully converted to one).
+- Return a **string** result, or define an optional Pydantic output schema for structured results.
 
 ### Optional: Async Support
 
@@ -103,6 +103,67 @@ class TranslateInput(BaseModel):
 ```
 
 Explicit schemas are recommended for published tools — they produce better agent behavior and clearer documentation for your users.
+
+### Optional: Typed Outputs with `result_schema`
+
+If your tool returns structured data, define a Pydantic output model. This is a good default for published tools because users and agents can rely on named fields.
+
+Direct Python calls still receive the value your tool returns. When an agent uses the tool, CrewAI sends the agent JSON based on the output model.
+
+CrewAI can infer the output schema from a Pydantic return annotation:
+
+```python
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
+
+
+class GeolocateResult(BaseModel):
+    latitude: float = Field(..., description="Latitude in decimal degrees.")
+    longitude: float = Field(..., description="Longitude in decimal degrees.")
+
+
+class GeolocateTool(BaseTool):
+    name: str = "Geolocate"
+    description: str = "Converts a street address into latitude/longitude coordinates."
+
+    def _run(self, address: str) -> GeolocateResult:
+        if "1600 Pennsylvania" in address:
+            return GeolocateResult(latitude=38.8977, longitude=-77.0365)
+        return GeolocateResult(latitude=40.7128, longitude=-74.0060)
+```
+
+Set `result_schema` explicitly when your tool returns a dictionary:
+
+```python
+class GeolocateTool(BaseTool):
+    name: str = "Geolocate"
+    description: str = "Converts a street address into latitude/longitude coordinates."
+    result_schema: type[BaseModel] = GeolocateResult
+
+    def _run(self, address: str) -> dict[str, float]:
+        if "1600 Pennsylvania" in address:
+            return {"latitude": 38.8977, "longitude": -77.0365}
+        return {"latitude": 40.7128, "longitude": -74.0060}
+```
+
+If agents should receive a short text summary instead of JSON, override `format_output_for_agent` on your `BaseTool` subclass.
+
+```python
+class GeolocateTool(BaseTool):
+    name: str = "Geolocate"
+    description: str = "Converts a street address into latitude/longitude coordinates."
+
+    def _run(self, address: str) -> GeolocateResult:
+        if "1600 Pennsylvania" in address:
+            return GeolocateResult(latitude=38.8977, longitude=-77.0365)
+        return GeolocateResult(latitude=40.7128, longitude=-74.0060)
+
+    def format_output_for_agent(self, raw_result: object) -> str:
+        result = GeolocateResult.model_validate(raw_result)
+        return f"Latitude {result.latitude}, longitude {result.longitude}"
+```
+
+The override only changes what the agent sees. Direct users of your package still receive the normal value from `tool.run(...)`.
 
 ### Optional: Environment Variables
 
