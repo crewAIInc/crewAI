@@ -548,6 +548,7 @@ def test_bedrock_context_window_size_cross_region_inference_profile():
         "bedrock/us.anthropic.claude-sonnet-4-20250514-v1:0",
         "bedrock/eu.anthropic.claude-sonnet-4-20250514-v1:0",
         "bedrock/apac.anthropic.claude-sonnet-4-20250514-v1:0",
+        "bedrock/us-gov.anthropic.claude-sonnet-4-20250514-v1:0",
     ):
         llm = LLM(model=profile_model)
         assert llm.get_context_window_size() == base_size, (
@@ -567,7 +568,9 @@ def test_bedrock_supports_multimodal_cross_region_inference_profile():
         "bedrock/us.anthropic.claude-sonnet-4-20250514-v1:0",
         "bedrock/eu.anthropic.claude-sonnet-4-20250514-v1:0",
         "bedrock/apac.anthropic.claude-sonnet-4-20250514-v1:0",
+        "bedrock/us-gov.anthropic.claude-sonnet-4-20250514-v1:0",
         "bedrock/eu.amazon.nova-pro-v1:0",
+        "bedrock/us-gov.amazon.nova-pro-v1:0",
     ):
         llm = LLM(model=profile_model)
         assert llm.supports_multimodal() is True, (
