@@ -32,6 +32,9 @@ class YoutubeChannelLoader(BaseLoader):
 
         channel_url = source.source
 
+        if not channel_url.startswith(("https://", "http://")):
+            channel_url = f"https://www.youtube.com/@{channel_url.lstrip('@')}"
+
         if not any(
             pattern in channel_url
             for pattern in [
