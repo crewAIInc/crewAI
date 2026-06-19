@@ -39,7 +39,7 @@ The Enterprise Tools Repository includes:
 - **Error Handling**: Incorporates robust error handling mechanisms to ensure smooth operation.
 - **Caching Mechanism**: Features intelligent caching to optimize performance and reduce redundant operations.
 - **Asynchronous Support**: Handles both synchronous and asynchronous tools, enabling non-blocking operations.
-- **Typed Outputs**: Optionally validates tool results with Pydantic models and sends agents a JSON-safe representation while preserving the raw Python value for direct calls and hooks.
+- **Typed Outputs**: Uses optional Pydantic models to give agents clear JSON fields while direct Python calls still receive the tool's normal return value.
 
 ## Using CrewAI Tools
 
@@ -187,48 +187,52 @@ class MyCustomTool(BaseTool):
 
 ### Typed Tool Outputs
 
-As a best practice, define a Pydantic output model when a tool returns structured data. CrewAI keeps `tool.run(...)` unchanged: it returns the raw Python value from `_run`. During agent execution, CrewAI validates that raw value against the tool's `output_schema` and sends the agent a JSON string.
+When a tool returns structured data, define a Pydantic output model. This gives the agent field names it can trust, such as `sku`, `quantity`, or `needs_reorder`.
+
+Direct Python calls still receive the value your tool returns. When an agent uses the tool, CrewAI sends the agent a JSON string based on the output model.
 
 ```python Code
 from crewai.tools import BaseTool
 from pydantic import BaseModel
 
-class SearchResult(BaseModel):
-    query: str
-    score: float
+class InventoryResult(BaseModel):
+    sku: str
+    quantity: int
+    needs_reorder: bool
 
-class SearchTool(BaseTool):
-    name: str = "Search"
-    description: str = "Searches for a query and returns the top match score."
+class InventoryTool(BaseTool):
+    name: str = "Inventory Check"
+    description: str = "Checks current stock for a product SKU."
 
-    def _run(self, query: str) -> SearchResult:
-        return SearchResult(query=query, score=0.97)
+    def _run(self, sku: str) -> InventoryResult:
+        quantity = {"SKU-123": 14, "SKU-456": 0}.get(sku, 0)
+        return InventoryResult(sku=sku, quantity=quantity, needs_reorder=quantity < 5)
 
-tool = SearchTool()
+tool = InventoryTool()
 
 # Direct calls receive the raw Pydantic object.
-raw_result = tool.run(query="CrewAI")
-print(raw_result.score)
+result = tool.run(sku="SKU-123")
+print(result.quantity)
 ```
 
-To send a custom representation to the agent, such as Markdown, override `format_output_for_agent` on your `BaseTool` subclass. This does not change direct execution: `tool.run(...)` still returns the raw Python value.
+To send Markdown or another short text format to the agent, override `format_output_for_agent`. Direct calls to `tool.run(...)` still return the normal Python value.
 
 ```python Code
-class SearchTool(BaseTool):
-    name: str = "Search"
-    description: str = "Searches for a query and returns the top match score."
+class InventoryTool(BaseTool):
+    name: str = "Inventory Check"
+    description: str = "Checks current stock for a product SKU."
 
-    def _run(self, query: str) -> SearchResult:
-        return SearchResult(query=query, score=0.97)
+    def _run(self, sku: str) -> InventoryResult:
+        quantity = {"SKU-123": 14, "SKU-456": 0}.get(sku, 0)
+        return InventoryResult(sku=sku, quantity=quantity, needs_reorder=quantity < 5)
 
     def format_output_for_agent(self, raw_result: object) -> str:
-        result = SearchResult.model_validate(raw_result)
-        return f"### Search result\n\n- Query: `{result.query}`\n- Score: {result.score}"
+        result = InventoryResult.model_validate(raw_result)
+        status = "reorder needed" if result.needs_reorder else "stock is healthy"
+        return f"{result.sku}: {result.quantity} units. {status}."
 ```
 
-If you do not override `format_output_for_agent`, CrewAI uses the default typed-output behavior: Pydantic outputs become JSON for the agent, and untyped outputs use `str(raw_result)`.
-
-If validation or serialization fails during agent execution, CrewAI emits a runtime warning and falls back to `str(raw_result)` for the agent-facing text. Direct tool calls still receive the raw result.
+If you do not override `format_output_for_agent`, typed outputs are sent to the agent as JSON. Plain string results work as before.
 
 ## Asynchronous Tool Support
 

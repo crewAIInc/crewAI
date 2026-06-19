@@ -80,6 +80,7 @@ from crewai.utilities.agent_utils import (
     enforce_rpm_limit,
     extract_tool_call_info,
     format_message_for_llm,
+    format_native_tool_output_for_agent,
     get_llm_response,
     handle_agent_action_core,
     handle_context_length,
@@ -1930,7 +1931,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             )
             if cached_result is not None:
                 raw_tool_result = cached_result
-                result = output_tool.format_output_for_agent(cached_result)
+                result = format_native_tool_output_for_agent(output_tool, cached_result)
                 from_cache = True
 
         # Emit tool usage started event
@@ -1994,7 +1995,9 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                                 tool=func_name, input=input_str, output=raw_result
                             )
 
-                    result = output_tool.format_output_for_agent(raw_result)
+                    result = format_native_tool_output_for_agent(
+                        output_tool, raw_result
+                    )
                 except Exception as e:
                     result = f"Error executing tool: {e}"
                     raw_tool_result = result

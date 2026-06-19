@@ -55,143 +55,108 @@ def my_simple_tool(question: str) -> str:
 
 ### Best Practice: Define Typed Outputs
 
-When a tool returns structured data, define the output as a Pydantic model. This is optional, but recommended because it gives CrewAI a clear contract for the data your tool returns.
+When a tool returns structured data, define a Pydantic output model. This helps the agent read the result as clear fields instead of guessing from plain text.
 
-Typed outputs create a clear split between direct Python usage and agent execution:
+Typed outputs are useful for results with stable fields, such as IDs, status values, scores, prices, or lists. Plain strings are still fine for short prose results.
 
-- `tool.run(...)` returns the raw Python value from your tool.
-- Agent execution validates the raw value with the tool's output schema and sends the agent an LLM-safe string.
-- Valid Pydantic outputs are serialized to JSON for the agent.
-- If validation or serialization fails, CrewAI emits a runtime warning and falls back to `str(raw_result)` only for the agent-facing text.
+Direct Python calls still receive the value your tool returns. When an agent uses a typed tool, CrewAI sends the agent JSON based on the output model.
 
 #### Return a Pydantic Model
 
-CrewAI infers the output schema when your `BaseTool` or `@tool` function has a Pydantic return annotation.
+CrewAI infers the output schema when your `BaseTool` has a Pydantic return annotation.
 
 ```python Code
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
-class SentimentResult(BaseModel):
-    label: str = Field(description="The sentiment label, such as positive, neutral, or negative.")
-    confidence: float = Field(description="Confidence score from 0 to 1.")
+class InventoryResult(BaseModel):
+    sku: str = Field(description="The product SKU.")
+    quantity: int = Field(description="Units available.")
+    needs_reorder: bool = Field(description="Whether the item should be reordered.")
 
-class SentimentTool(BaseTool):
-    name: str = "Sentiment Analyzer"
-    description: str = "Analyze the sentiment of a short text passage."
+class InventoryTool(BaseTool):
+    name: str = "Inventory Check"
+    description: str = "Check current stock for a product SKU."
 
-    def _run(self, text: str) -> SentimentResult:
-        # Replace this with your model, API call, or business logic.
-        return SentimentResult(label="positive", confidence=0.92)
+    def _run(self, sku: str) -> InventoryResult:
+        quantity = {"SKU-123": 14, "SKU-456": 0}.get(sku, 0)
+        return InventoryResult(sku=sku, quantity=quantity, needs_reorder=quantity < 5)
 
-tool = SentimentTool()
-result = tool.run(text="CrewAI makes multi-agent workflows easier.")
+tool = InventoryTool()
+result = tool.run(sku="SKU-123")
 
 # Direct Python calls receive the raw Pydantic object.
-print(result.label)
-print(result.confidence)
+print(result.quantity)
 ```
 
-When an agent calls `SentimentTool`, it receives JSON like this:
+When an agent calls `InventoryTool`, it receives JSON like this:
 
 ```json
-{"label":"positive","confidence":0.92}
+{"sku":"SKU-123","quantity":14,"needs_reorder":false}
 ```
 
-This is easier for the agent to reason over than a Python object representation.
+#### Use `output_schema` with Dictionary Results
 
-#### Use `output_schema` for Dictionary Results
-
-If your implementation naturally returns a dictionary, set `output_schema` explicitly. CrewAI validates the dictionary and serializes the validated result to JSON for the agent.
-
-```python Code
-from crewai.tools import BaseTool
-from pydantic import BaseModel, Field
-
-class ProductLookupResult(BaseModel):
-    sku: str = Field(description="The product SKU.")
-    name: str = Field(description="The product name.")
-    in_stock: bool = Field(description="Whether the product is available.")
-
-class ProductLookupTool(BaseTool):
-    name: str = "Product Lookup"
-    description: str = "Look up product availability by SKU."
-    output_schema: type[BaseModel] = ProductLookupResult
-
-    def _run(self, sku: str) -> dict[str, object]:
-        return {
-            "sku": sku,
-            "name": "CrewAI Enterprise License",
-            "in_stock": True,
-        }
-```
-
-You can use the same pattern with the `@tool` decorator:
+If your tool returns a dictionary, set `output_schema` explicitly. You can do this on a `BaseTool` subclass or with the `@tool` decorator:
 
 ```python Code
 from crewai.tools import tool
 from pydantic import BaseModel, Field
 
-class ProductLookupResult(BaseModel):
+class ProductResult(BaseModel):
     sku: str = Field(description="The product SKU.")
     name: str = Field(description="The product name.")
     in_stock: bool = Field(description="Whether the product is available.")
 
-@tool("Product Lookup", output_schema=ProductLookupResult)
+@tool("Product Lookup", output_schema=ProductResult)
 def product_lookup(sku: str) -> dict[str, object]:
     """Look up product availability by SKU."""
+    catalog = {
+        "SKU-123": ("Noise-canceling headset", True),
+        "SKU-456": ("USB-C dock", False),
+    }
+    name, in_stock = catalog.get(sku, ("Unknown product", False))
     return {
         "sku": sku,
-        "name": "CrewAI Enterprise License",
-        "in_stock": True,
+        "name": name,
+        "in_stock": in_stock,
     }
 ```
 
 #### Customize the Text Sent to the Agent
 
-By default, typed tool outputs are sent to the agent as JSON. If your agent should receive Markdown, XML, or a compact human-readable summary instead, subclass `BaseTool` and override `format_output_for_agent`.
-
-This only changes the agent-facing text. Direct calls to `tool.run(...)` still return the raw Python value from `_run`.
+By default, typed tool outputs are sent to the agent as JSON. If the agent should receive a short summary instead, subclass `BaseTool` and override `format_output_for_agent`.
 
 ```python Code
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 
-class ProductLookupResult(BaseModel):
+class InventoryResult(BaseModel):
     sku: str = Field(description="The product SKU.")
-    name: str = Field(description="The product name.")
-    in_stock: bool = Field(description="Whether the product is available.")
+    quantity: int = Field(description="Units available.")
+    needs_reorder: bool = Field(description="Whether the item should be reordered.")
 
-class ProductLookupTool(BaseTool):
-    name: str = "Product Lookup"
-    description: str = "Look up product availability by SKU."
+class InventoryTool(BaseTool):
+    name: str = "Inventory Check"
+    description: str = "Check current stock for a product SKU."
 
-    def _run(self, sku: str) -> ProductLookupResult:
-        return ProductLookupResult(
-            sku=sku,
-            name="CrewAI Enterprise License",
-            in_stock=True,
-        )
+    def _run(self, sku: str) -> InventoryResult:
+        quantity = {"SKU-123": 14, "SKU-456": 0}.get(sku, 0)
+        return InventoryResult(sku=sku, quantity=quantity, needs_reorder=quantity < 5)
 
     def format_output_for_agent(self, raw_result: object) -> str:
-        result = ProductLookupResult.model_validate(raw_result)
-        status = "in stock" if result.in_stock else "out of stock"
-        return (
-            f"### {result.name}\n\n"
-            f"- SKU: `{result.sku}`\n"
-            f"- Status: **{status}**"
-        )
+        result = InventoryResult.model_validate(raw_result)
+        status = "reorder needed" if result.needs_reorder else "stock is healthy"
+        return f"{result.sku}: {result.quantity} units. {status}."
 
-tool = ProductLookupTool()
-result = tool.run(sku="CREW-ENT")
+tool = InventoryTool()
+result = tool.run(sku="SKU-123")
 
 # Direct Python calls receive the raw Pydantic object.
-print(result.name)
+print(result.quantity)
 ```
 
-When an agent calls `ProductLookupTool`, it receives the Markdown returned by `format_output_for_agent`. When you do not override this method, CrewAI uses the default behavior: validate typed outputs and serialize them to JSON, or use `str(raw_result)` for untyped outputs.
-
-Use typed outputs for tool results that have stable fields, nested data, lists, IDs, status values, scores, or any structure the agent should interpret precisely. Plain strings are still fine for simple prose results.
+The override only changes what the agent sees. Direct calls to `tool.run(...)` still return the normal Python value.
 
 ### Defining a Cache Function for the Tool
 

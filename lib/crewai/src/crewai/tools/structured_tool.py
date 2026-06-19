@@ -57,7 +57,7 @@ def _format_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
         return cast(str, original_tool.format_output_for_agent(raw_result))
 
     output_schema = getattr(tool, "output_schema", None)
-    if output_schema is None:
+    if not (isinstance(output_schema, type) and issubclass(output_schema, BaseModel)):
         return str(raw_result)
 
     try:
@@ -68,13 +68,14 @@ def _format_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
             validation_input = raw_result.model_dump()
 
         validated = output_schema.model_validate(validation_input)
-        return cast(str, validated.model_dump_json())
+        return validated.model_dump_json()
     except Exception as exc:
         warnings.warn(
             (
                 f"Failed to validate or serialize output from tool "
                 f"'{getattr(tool, 'name', '<unknown>')}' using output_schema "
-                f"'{output_schema.__name__}': {exc}. Falling back to str(raw_result)."
+                f"'{output_schema.__name__}': {exc.__class__.__name__}. "
+                "Falling back to str(raw_result)."
             ),
             RuntimeWarning,
             stacklevel=2,

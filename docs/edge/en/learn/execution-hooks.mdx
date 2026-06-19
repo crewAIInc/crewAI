@@ -199,7 +199,7 @@ class ToolCallHookContext:
     raw_tool_result: Any | None  # Raw Python result (after hooks)
 ```
 
-For typed tool outputs, `tool_result` is the JSON string sent to the agent, while `raw_tool_result` is the original Python value returned by the tool.
+For typed tool outputs, `tool_result` is the string the agent sees. By default, this is JSON. If the tool uses custom formatting, it can be Markdown or another string. `raw_tool_result` is the original Python value returned by the tool.
 
 ## Common Patterns
 

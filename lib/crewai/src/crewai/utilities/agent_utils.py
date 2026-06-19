@@ -1383,6 +1383,19 @@ class NativeToolCallResult:
     tool_message: LLMMessage = field(default_factory=dict)  # type: ignore[assignment]
 
 
+def format_native_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
+    """Format native tool output when a tool explicitly defines a formatter."""
+    formatter = inspect.getattr_static(tool, "format_output_for_agent", None)
+    if formatter is None:
+        return str(raw_result)
+
+    runtime_formatter = getattr(tool, "format_output_for_agent", None)
+    if not callable(runtime_formatter):
+        return str(raw_result)
+
+    return str(runtime_formatter(raw_result))
+
+
 def execute_single_native_tool_call(
     tool_call: Any,
     *,
@@ -1473,7 +1486,7 @@ def execute_single_native_tool_call(
         cached_result = tools_handler.cache.read(tool=func_name, input=input_str)
         if cached_result is not None:
             raw_tool_result = cached_result
-            result = output_tool.format_output_for_agent(cached_result)
+            result = format_native_tool_output_for_agent(output_tool, cached_result)
             from_cache = True
 
     started_at = datetime.now()
@@ -1531,7 +1544,7 @@ def execute_single_native_tool_call(
                             tool=func_name, input=input_str, output=raw_result
                         )
 
-                result = output_tool.format_output_for_agent(raw_result)
+                result = format_native_tool_output_for_agent(output_tool, raw_result)
             except Exception as e:
                 result = f"Error executing tool: {e}"
                 raw_tool_result = result

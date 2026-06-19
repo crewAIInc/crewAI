@@ -188,11 +188,16 @@ def test_invalid_typed_output_warns_and_uses_string_agent_text():
     )
     raw_result = tool.invoke({"value": "crew"})
 
-    with pytest.warns(RuntimeWarning, match="Failed to validate or serialize"):
+    with pytest.warns(
+        RuntimeWarning, match="Failed to validate or serialize"
+    ) as warnings:
         agent_text = tool.format_output_for_agent(raw_result)
 
     assert raw_result == {"value": "crew", "count": "wrong"}
     assert agent_text == str(raw_result)
+    warning_message = str(warnings[0].message)
+    assert "ValidationError" in warning_message
+    assert "wrong" not in warning_message
 
 
 def test_validate_function_signature(basic_function, schema_class):
