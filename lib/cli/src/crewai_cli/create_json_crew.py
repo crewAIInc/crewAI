@@ -97,7 +97,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-only-include = ["agents", "crew.jsonc", "tools", "knowledge", "skills", "src"]
+only-include = ["agents", "crew.jsonc", "tools", "knowledge", "skills"]
 
 [tool.crewai]
 type = "crew"
@@ -1137,10 +1137,6 @@ def create_json_crew(
         _PYPROJECT_TOML.format(folder_name=folder_name, name=name),
         encoding="utf-8",
     )
-
-    from crewai_cli.deploy.archive import add_json_crew_deploy_wrapper
-
-    add_json_crew_deploy_wrapper(folder_path)
 
     # Write .gitignore
     (folder_path / ".gitignore").write_text(_GITIGNORE, encoding="utf-8")

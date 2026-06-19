@@ -145,7 +145,7 @@ def _stage_project(root: Path, files: list[Path]) -> Path:
             shutil.copy2(source, destination)
 
         if _is_json_crew_project(staging_root):
-            add_json_crew_deploy_wrapper(staging_root)
+            _add_json_crew_deploy_wrapper(staging_root)
     except Exception:
         shutil.rmtree(staging_root, ignore_errors=True)
         raise
@@ -212,7 +212,7 @@ def _class_name(package_name: str) -> str:
     return class_name
 
 
-def add_json_crew_deploy_wrapper(root: Path) -> None:
+def _add_json_crew_deploy_wrapper(root: Path) -> None:
     """Add Python wrapper files required to deploy a JSON crew project."""
     package_name = _package_name(root)
     if package_name is None:

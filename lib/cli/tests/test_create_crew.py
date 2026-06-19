@@ -712,14 +712,7 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
         default_llm="openai/gpt-5.5",
     )
     assert (tmp_path / "json_crew" / "crew.jsonc").exists()
-    assert (tmp_path / "json_crew" / "src" / "json_crew" / "crew.py").exists()
-    assert (tmp_path / "json_crew" / "src" / "json_crew" / "main.py").exists()
-    assert (
-        tmp_path / "json_crew" / "src" / "json_crew" / "config" / "agents.yaml"
-    ).exists()
-    assert (
-        tmp_path / "json_crew" / "src" / "json_crew" / "config" / "tasks.yaml"
-    ).exists()
+    assert not (tmp_path / "json_crew" / "src").exists()
     assert not (tmp_path / "json_crew" / "tests").exists()
     assert not (tmp_path / "json_crew" / "config.jsonc").exists()
 
@@ -729,12 +722,7 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
     assert Version("1.14.8a1") in Requirement(dependency).specifier
     assert pyproject["tool"]["hatch"]["build"]["targets"]["wheel"][
         "only-include"
-    ] == ["agents", "crew.jsonc", "tools", "knowledge", "skills", "src"]
-    assert pyproject["project"]["scripts"]["run_crew"] == "json_crew.main:run"
-    assert (
-        pyproject["project"]["scripts"]["run_with_trigger"]
-        == "json_crew.main:run_with_trigger"
-    )
+    ] == ["agents", "crew.jsonc", "tools", "knowledge", "skills"]
 
     crew_template = (tmp_path / "json_crew" / "crew.jsonc").read_text()
     assert (
