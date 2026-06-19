@@ -177,6 +177,17 @@ You can connect to OpenAI-compatible LLMs using either environment variables or 
             agent = Agent(llm=llm, ...)
             ```
         </CodeGroup>
+
+        <Note>
+        Configuring an OpenAI-compatible gateway changes the model-call path only.
+        CrewAI continues to own agent, task, tool, and workflow behavior; the
+        gateway can handle model routing, policy checks, audit/usage logging, and
+        approval requirements. Use a tenant-scoped gateway key rather than a
+        direct provider key. If the gateway is unavailable, the LLM call fails as
+        a provider error; CrewAI does not automatically fall back to a direct
+        provider unless you explicitly configure that behavior in your
+        application.
+        </Note>
     </Tab>
 </Tabs>
 
