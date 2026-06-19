@@ -131,7 +131,7 @@ postgresql = [
 ]
 bedrock = [
     "beautifulsoup4>=4.13.4",
-    "bedrock-agentcore>=0.1.0",
+    "bedrock-agentcore>=1.7.0,<1.8.0",
     "playwright>=1.52.0",
     "nest-asyncio>=1.6.0",
 ]
