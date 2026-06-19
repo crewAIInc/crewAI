@@ -393,6 +393,8 @@ def _safe_extractall(tf: tarfile.TarFile, dest: Path) -> None:
         member_path = (dest / member.name).resolve()
         if not member_path.is_relative_to(dest_resolved):
             raise ValueError(f"Blocked path traversal attempt: {member.name!r}")
+        if member.ischr() or member.isblk() or member.isfifo():
+            raise ValueError(f"Blocked special file type in archive: {member.name!r}")
         if member.issym() or member.islnk():
             link_target = member.linkname
             # Absolute link targets always escape the destination.
