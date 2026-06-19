@@ -100,6 +100,8 @@ class TokenManager:
         try:
             storage_path.chmod(0o700)
         except OSError:
+            # Best-effort permission hardening only: some platforms/filesystems
+            # may reject chmod here, and token operations should still proceed.
             pass
 
         return storage_path
