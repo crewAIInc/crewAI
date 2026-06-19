@@ -86,10 +86,24 @@ class MimirStorage(StorageBackend):
                 logger.error(f"Failed to store memory in Mimir: {e.stderr}")
                 raise e
 
-    def search(self, query: str, limit: int = 3, scope_prefix: Optional[str] = None) -> List[Tuple[MemoryRecord, float]]:
+    def search(
+        self, 
+        query: Any, 
+        limit: int = 3, 
+        scope_prefix: Optional[str] = None,
+        categories: Optional[List[str]] = None,
+        min_score: Optional[float] = None,
+        **kwargs
+    ) -> List[Tuple[MemoryRecord, float]]:
         """Searches memories and returns a list of (MemoryRecord, score) tuples."""
+        query_str = query if isinstance(query, str) else str(query)
+        
         category = scope_prefix if scope_prefix else "default"
-        self._validate_inputs(category, query)
+        
+        if categories and len(categories) > 0:
+            category = categories[0] 
+            
+        self._validate_inputs(category, query_str)
         
         # Call the subprocess to query Mimir CLI (with 10s timeout)
         try:
@@ -97,7 +111,7 @@ class MimirStorage(StorageBackend):
                 self.mimir_path, 
                 "--db", self.db_path, 
                 "search", 
-                query, 
+                query_str, 
                 "--limit", str(limit), 
                 "--category", category
             ]
@@ -110,6 +124,9 @@ class MimirStorage(StorageBackend):
                 content_text = res.get("value", res.get("text", ""))
                 score = float(res.get("score", 0.0))
                 meta = res.get("metadata", {})
+                
+                if min_score is not None and score < min_score:
+                    continue
                 
                 # Construct official MemoryRecord instances
                 record = MemoryRecord(value=content_text, metadata=meta)

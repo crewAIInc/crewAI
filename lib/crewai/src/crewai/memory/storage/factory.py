@@ -53,7 +53,12 @@ def resolve_memory_storage(spec: str, config: Optional[dict] = None) -> StorageB
     # First, respect user-registered custom factories if available
     factory = _factory
     if factory is not None:
-        custom_backend = factory(spec)
+        try:
+            # Try to pass config if the custom factory supports it
+            custom_backend = factory(spec, config=config) # type: ignore
+        except TypeError:
+            custom_backend = factory(spec)
+            
         if custom_backend is not None:
             return custom_backend
             
