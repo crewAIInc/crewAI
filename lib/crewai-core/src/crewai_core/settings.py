@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from logging import getLogger
+import os
 from pathlib import Path
 import tempfile
 from typing import Any
@@ -25,6 +26,37 @@ logger = getLogger(__name__)
 DEFAULT_CONFIG_PATH = Path.home() / ".config" / "crewai" / "settings.json"
 
 
+def _ensure_dir_mode(directory: Path) -> None:
+    """Tighten a dedicated config directory to 0o700.
+
+    Skips directories shared with other users or content (the system temp dir
+    and the current working directory), which are used as best-effort fallbacks
+    by :func:`get_writable_config_path` and must not be globally chmod'd. Secret
+    files written there are still protected by their own 0o600 mode.
+    """
+    try:
+        shared = {Path(tempfile.gettempdir()).resolve(), Path.cwd().resolve()}
+        if directory.resolve() in shared:
+            return
+        directory.chmod(0o700)
+    except OSError:
+        pass
+
+
+def _write_secure_json(path: Path, data: dict[str, Any]) -> None:
+    """Atomically write ``data`` as JSON to ``path`` with owner-only (0o600) mode."""
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
+    try:
+        with os.fdopen(fd, "w") as f:
+            json.dump(data, f, indent=4)
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, path)
+    except BaseException:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+        raise
+
+
 def get_writable_config_path() -> Path | None:
     """Find a writable location for the config file with fallback options.
 
@@ -43,6 +75,7 @@ def get_writable_config_path() -> Path | None:
     for config_path in fallback_paths:
         try:
             config_path.parent.mkdir(parents=True, exist_ok=True)
+            _ensure_dir_mode(config_path.parent)
             test_file = config_path.parent / ".crewai_write_test"
             try:
                 test_file.write_text("test")
@@ -153,6 +186,7 @@ class Settings(BaseModel):
 
         try:
             config_path.parent.mkdir(parents=True, exist_ok=True)
+            _ensure_dir_mode(config_path.parent)
         except Exception:
             merged_data = {**data}
             super().__init__(config_path=Path("/dev/null"), **merged_data)
@@ -194,8 +228,7 @@ class Settings(BaseModel):
                 existing_data = {}
 
             updated_data = {**existing_data, **self.model_dump(exclude_unset=True)}
-            with self.config_path.open("w") as f:
-                json.dump(updated_data, f, indent=4)
+            _write_secure_json(self.config_path, updated_data)
 
         except Exception:  # noqa: S110
             pass
