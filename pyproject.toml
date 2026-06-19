@@ -222,6 +222,8 @@ override-dependencies = [
     "pydantic-settings>=2.14.0",
     "paramiko>=5.0.0",
     "starlette>=1.3.1",
+    # scrapegraph-py 2.x removed Client class; pin until upstream fixes type ignores
+    "scrapegraph-py>=1.46.0,<2",
 ]
 
 [tool.uv.workspace]
