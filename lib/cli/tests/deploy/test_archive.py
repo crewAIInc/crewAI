@@ -168,6 +168,39 @@ type = "crew"
     assert "run_crew" not in pyproject
 
 
+def test_create_project_zip_keeps_json_project_root_shape(tmp_path: Path):
+    (tmp_path / "pyproject.toml").write_text(
+        """
+[project]
+name = "json_crew"
+version = "0.1.0"
+dependencies = ["crewai[tools]==1.14.8a1"]
+
+[tool.crewai]
+type = "crew"
+""".strip()
+        + "\n"
+    )
+    (tmp_path / "uv.lock").write_text("# lock\n")
+    (tmp_path / "agents").mkdir()
+    (tmp_path / "agents" / "foo.jsonc").write_text("{}\n")
+    (tmp_path / "crew.jsonc").write_text("{}\n")
+
+    archive_path = create_project_zip("json_crew", project_dir=tmp_path)
+    try:
+        with zipfile.ZipFile(archive_path) as archive:
+            names = set(archive.namelist())
+    finally:
+        archive_path.unlink(missing_ok=True)
+
+    assert names == {
+        "agents/foo.jsonc",
+        "crew.jsonc",
+        "pyproject.toml",
+        "uv.lock",
+    }
+
+
 def test_create_project_zip_does_not_rewrite_json_project_scripts(tmp_path: Path):
     (tmp_path / "pyproject.toml").write_text(
         """

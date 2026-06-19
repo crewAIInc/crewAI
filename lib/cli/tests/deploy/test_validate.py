@@ -200,6 +200,41 @@ def test_json_runtime_fields_are_deploy_errors(tmp_path: Path) -> None:
     assert "runtime-only" in finding.detail
 
 
+def test_json_crew_requires_agents_dir_without_classic_errors(tmp_path: Path) -> None:
+    _scaffold_json_crew(tmp_path)
+    for path in (tmp_path / "agents").iterdir():
+        path.unlink()
+    (tmp_path / "agents").rmdir()
+
+    v = DeployValidator(project_root=tmp_path)
+    v.run()
+
+    codes = _codes(v)
+    assert "missing_agents_dir" in codes
+    assert "missing_src_dir" not in codes
+    assert "missing_crew_py" not in codes
+    assert "missing_agents_yaml" not in codes
+    assert "missing_tasks_yaml" not in codes
+
+
+def test_json_crew_reports_project_metadata_before_invalid_json(
+    tmp_path: Path,
+) -> None:
+    _scaffold_json_crew(tmp_path)
+    (tmp_path / "pyproject.toml").unlink()
+    (tmp_path / "uv.lock").unlink()
+    (tmp_path / "crew.jsonc").write_text('{"agents": ["researcher"], "tasks": []}\n')
+
+    v = DeployValidator(project_root=tmp_path)
+    v.run()
+
+    codes = _codes(v)
+    assert "missing_pyproject" in codes
+    assert "missing_lockfile" in codes
+    assert "invalid_crew_json" in codes
+    assert "missing_src_dir" not in codes
+
+
 def test_missing_pyproject_errors(tmp_path: Path) -> None:
     v = _run_without_import_check(tmp_path)
     assert "missing_pyproject" in _codes(v)
