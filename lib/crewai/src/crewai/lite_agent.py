@@ -922,6 +922,9 @@ class LiteAgent(FlowTrackable, BaseModel):
                     except Exception as e:
                         raise e
 
+                    if tool_result.files:
+                        self._attach_tool_files_to_messages(tool_result.files)
+
                     formatted_answer = handle_agent_action_core(
                         formatted_answer=formatted_answer,
                         tool_result=tool_result,
@@ -970,6 +973,32 @@ class LiteAgent(FlowTrackable, BaseModel):
             )
         self._show_logs(formatted_answer)
         return formatted_answer
+
+    def _attach_tool_files_to_messages(self, files: dict[str, FileInput]) -> None:
+        """Attach files returned by a tool to the most recent user message.
+
+        Tools may return ``crewai_files.FileInput`` instances (or lists/dicts
+        of them) to dynamically extend the agent's multimodal context. This
+        method merges those files into the existing ``files`` mapping on the
+        most recent user message so the next LLM call includes them.
+
+        Args:
+            files: Mapping of file names to ``FileInput`` instances.
+        """
+        if not files:
+            return
+
+        for i in range(len(self._messages) - 1, -1, -1):
+            msg = self._messages[i]
+            if msg.get("role") == "user":
+                existing = cast(dict[str, FileInput], msg.get("files") or {})
+                merged = {**existing, **files}
+                msg["files"] = merged
+                return
+
+        self._messages.append(
+            cast(LLMMessage, {"role": "user", "content": "", "files": dict(files)})
+        )
 
     def _show_logs(self, formatted_answer: AgentAction | AgentFinish) -> None:
         """Show logs for the agent's execution."""
