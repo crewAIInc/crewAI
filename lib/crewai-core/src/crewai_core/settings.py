@@ -39,8 +39,12 @@ def _ensure_dir_mode(directory: Path) -> None:
         if directory.resolve() in shared:
             return
         directory.chmod(0o700)
-    except OSError:
-        pass
+    except OSError as e:
+        logger.debug(
+            "Could not enforce 0o700 on config directory %s (best-effort): %s",
+            directory,
+            e,
+        )
 
 
 def _write_secure_json(path: Path, data: dict[str, Any]) -> None:
