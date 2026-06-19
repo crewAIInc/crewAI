@@ -37,7 +37,7 @@ def _deserialize_schema(v: Any) -> type[BaseModel] | None:
     return None
 
 
-def _infer_output_schema_from_callable(
+def _infer_result_schema_from_callable(
     func: Callable[..., Any],
 ) -> type[BaseModel] | None:
     try:
@@ -56,25 +56,25 @@ def _format_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
     if original_tool is not None:
         return cast(str, original_tool.format_output_for_agent(raw_result))
 
-    output_schema = getattr(tool, "output_schema", None)
-    if not (isinstance(output_schema, type) and issubclass(output_schema, BaseModel)):
+    result_schema = getattr(tool, "result_schema", None)
+    if not (isinstance(result_schema, type) and issubclass(result_schema, BaseModel)):
         return str(raw_result)
 
     try:
         validation_input = raw_result
         if isinstance(raw_result, BaseModel) and not isinstance(
-            raw_result, output_schema
+            raw_result, result_schema
         ):
             validation_input = raw_result.model_dump()
 
-        validated = output_schema.model_validate(validation_input)
+        validated = result_schema.model_validate(validation_input)
         return validated.model_dump_json()
     except Exception as exc:
         warnings.warn(
             (
                 f"Failed to validate or serialize output from tool "
-                f"'{getattr(tool, 'name', '<unknown>')}' using output_schema "
-                f"'{output_schema.__name__}': {exc.__class__.__name__}. "
+                f"'{getattr(tool, 'name', '<unknown>')}' using result_schema "
+                f"'{result_schema.__name__}': {exc.__class__.__name__}. "
                 "Falling back to str(raw_result)."
             ),
             RuntimeWarning,
@@ -128,7 +128,7 @@ class CrewStructuredTool(BaseModel):
         BeforeValidator(_deserialize_schema),
         PlainSerializer(_serialize_schema),
     ] = Field(default=None)
-    output_schema: Annotated[
+    result_schema: Annotated[
         type[BaseModel] | None,
         BeforeValidator(_deserialize_schema),
         PlainSerializer(_serialize_schema),
@@ -155,7 +155,7 @@ class CrewStructuredTool(BaseModel):
         description: str | None = None,
         return_direct: bool = False,
         args_schema: type[BaseModel] | None = None,
-        output_schema: type[BaseModel] | None = None,
+        result_schema: type[BaseModel] | None = None,
         infer_schema: bool = True,
         **kwargs: Any,
     ) -> CrewStructuredTool:
@@ -167,7 +167,7 @@ class CrewStructuredTool(BaseModel):
             description: The description of the tool. Defaults to the function docstring
             return_direct: Whether to return the output directly
             args_schema: Optional schema for the function arguments
-            output_schema: Optional schema for the function output
+            result_schema: Optional schema for the function output
             infer_schema: Whether to infer the schema from the function signature
             **kwargs: Additional arguments to pass to the tool
 
@@ -203,7 +203,7 @@ class CrewStructuredTool(BaseModel):
             name=name,
             description=description,
             args_schema=schema,
-            output_schema=output_schema or _infer_output_schema_from_callable(func),
+            result_schema=result_schema or _infer_result_schema_from_callable(func),
             func=func,
             result_as_answer=return_direct,
             **kwargs,

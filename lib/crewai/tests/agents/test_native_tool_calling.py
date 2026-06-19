@@ -1206,7 +1206,7 @@ class TestNativeToolCallingJsonParseError:
         class TypedSearchTool(BaseTool):
             name: str = "typed_search"
             description: str = "Search for information"
-            output_schema: type[BaseModel] = SearchOutput
+            result_schema: type[BaseModel] = SearchOutput
 
             def _run(self, query: str) -> SearchOutput:
                 return SearchOutput(query=query, score=0.8)
@@ -1237,7 +1237,7 @@ class TestNativeToolCallingJsonParseError:
         class TypedSearchTool(BaseTool):
             name: str = "typed_search"
             description: str = "Search for information"
-            output_schema: type[BaseModel] = SearchOutput
+            result_schema: type[BaseModel] = SearchOutput
 
             def _run(self, query: str) -> SearchOutput:
                 return SearchOutput(query=query, score=0.8)

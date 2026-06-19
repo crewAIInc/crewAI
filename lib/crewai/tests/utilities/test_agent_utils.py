@@ -1048,7 +1048,7 @@ class TestExecuteSingleNativeToolCall:
         class TypedSearchTool(BaseTool):
             name: str = "typed_search"
             description: str = "Search for a query"
-            output_schema: type[BaseModel] = SearchOutput
+            result_schema: type[BaseModel] = SearchOutput
 
             def _run(self, query: str) -> SearchOutput:
                 return SearchOutput(query=query, score=0.9)
@@ -1092,13 +1092,13 @@ class TestExecuteSingleNativeToolCall:
         class MarkdownSearchTool(BaseTool):
             name: str = "markdown_search"
             description: str = "Search for a query"
-            output_schema: type[BaseModel] = SearchOutput
+            result_schema: type[BaseModel] = SearchOutput
 
             def _run(self, query: str) -> SearchOutput:
                 return SearchOutput(query=query, score=0.9)
 
             def format_output_for_agent(self, raw_result: Any) -> str:
-                result = self.output_schema.model_validate(raw_result)
+                result = self.result_schema.model_validate(raw_result)
                 return f"### {result.query}\n\nScore: **{result.score}**"
 
         tool = MarkdownSearchTool()
@@ -1134,7 +1134,7 @@ class TestExecuteSingleNativeToolCall:
         class TypedSearchTool(BaseTool):
             name: str = "typed_search"
             description: str = "Search for a query"
-            output_schema: type[BaseModel] = SearchOutput
+            result_schema: type[BaseModel] = SearchOutput
 
             def _run(self, query: str) -> SearchOutput:
                 return SearchOutput(query=query, score=0.9)

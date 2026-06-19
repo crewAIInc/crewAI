@@ -364,7 +364,7 @@ class SearchResults(RootModel[list[SearchOutput]]):
 class ExplicitSearchTool(BaseTool):
     name: str = "search"
     description: str = "Search for a query"
-    output_schema: type[BaseModel] = SearchOutput
+    result_schema: type[BaseModel] = SearchOutput
 
     def _run(self, query: str) -> dict[str, object]:
         return {"query": query, "score": 0.8}
@@ -395,7 +395,7 @@ class DictAnnotatedSearchTool(BaseTool):
 
 
 def _make_explicit_decorator_tool() -> BaseTool:
-    @tool("search", output_schema=SearchOutput)
+    @tool("search", result_schema=SearchOutput)
     def search(query: str) -> dict[str, object]:
         """Search for a query."""
         return {"query": query, "score": 0.8}
@@ -519,11 +519,11 @@ class TestToolOutputSchema:
         assert raw_result == {"query": "crew", "score": 0.5}
         assert search.format_output_for_agent(raw_result) == str(raw_result)
 
-    def test_explicit_output_schema_wins_over_return_annotation(self) -> None:
+    def test_explicit_result_schema_wins_over_return_annotation(self) -> None:
         class AlternateOutput(BaseModel):
             value: str
 
-        @tool("search", output_schema=AlternateOutput)
+        @tool("search", result_schema=AlternateOutput)
         def search(query: str) -> SearchOutput:
             """Search for a query."""
             return SearchOutput(query=query, score=0.6)
@@ -539,7 +539,7 @@ class TestToolOutputSchema:
     def test_invalid_typed_output_warns_and_uses_string_agent_text(
         self,
     ) -> None:
-        @tool("search", output_schema=SearchOutput)
+        @tool("search", result_schema=SearchOutput)
         def search(query: str) -> dict[str, object]:
             """Search for a query."""
             return {"query": query, "score": "not-a-float"}
@@ -560,7 +560,7 @@ class TestToolOutputSchema:
 
         raw_result = OpaqueOutput(value=object())
 
-        @tool("opaque", output_schema=OpaqueOutput)
+        @tool("opaque", result_schema=OpaqueOutput)
         def opaque() -> OpaqueOutput:
             """Return an opaque object."""
             return raw_result
@@ -573,7 +573,7 @@ class TestToolOutputSchema:
         assert result is raw_result
         assert agent_text == str(raw_result)
 
-    def test_output_schema_behavior_carries_over_to_structured_tool(self) -> None:
+    def test_result_schema_behavior_carries_over_to_structured_tool(self) -> None:
         structured = ExplicitSearchTool().to_structured_tool()
 
         raw_result = structured.invoke({"query": "crew"})
@@ -590,13 +590,13 @@ class TestToolOutputSchema:
         class MarkdownSearchTool(BaseTool):
             name: str = "markdown_search"
             description: str = "Search for information"
-            output_schema: type[BaseModel] = SearchOutput
+            result_schema: type[BaseModel] = SearchOutput
 
             def _run(self, query: str) -> SearchOutput:
                 return SearchOutput(query=query, score=0.8)
 
             def format_output_for_agent(self, raw_result: object) -> str:
-                result = self.output_schema.model_validate(raw_result)
+                result = self.result_schema.model_validate(raw_result)
                 return f"### Search result\n\n- Query: `{result.query}`\n- Score: {result.score}"
 
         structured = MarkdownSearchTool().to_structured_tool()

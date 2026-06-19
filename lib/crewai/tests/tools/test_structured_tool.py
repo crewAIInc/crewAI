@@ -118,7 +118,7 @@ def _build_plain_structured_value(value: str) -> dict[str, object]:
 
 
 @pytest.mark.parametrize(
-    ("func", "output_schema", "expected_raw", "expected_agent_payload"),
+    ("func", "result_schema", "expected_raw", "expected_agent_payload"),
     [
         pytest.param(
             _build_explicit_structured_value,
@@ -145,11 +145,11 @@ def _build_plain_structured_value(value: str) -> dict[str, object]:
 )
 def test_from_function_returns_raw_result_and_json_agent_text(
     func,
-    output_schema,
+    result_schema,
     expected_raw,
     expected_agent_payload,
 ):
-    kwargs = {"output_schema": output_schema} if output_schema is not None else {}
+    kwargs = {"result_schema": result_schema} if result_schema is not None else {}
     tool = CrewStructuredTool.from_function(
         func=func,
         name="build_value",
@@ -164,7 +164,7 @@ def test_from_function_returns_raw_result_and_json_agent_text(
     )
 
 
-def test_from_function_does_not_infer_non_pydantic_output_schema():
+def test_from_function_does_not_infer_non_pydantic_result_schema():
     tool = CrewStructuredTool.from_function(
         func=_build_plain_structured_value,
         name="build_value",
@@ -184,7 +184,7 @@ def test_invalid_typed_output_warns_and_uses_string_agent_text():
     tool = CrewStructuredTool.from_function(
         func=build_value,
         name="build_value",
-        output_schema=StructuredOutput,
+        result_schema=StructuredOutput,
     )
     raw_result = tool.invoke({"value": "crew"})
 

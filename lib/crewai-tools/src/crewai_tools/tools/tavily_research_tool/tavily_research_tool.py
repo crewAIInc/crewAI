@@ -7,14 +7,7 @@ from typing import Any, Literal, cast
 
 from crewai.tools import BaseTool, EnvVar
 from dotenv import load_dotenv
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-    PrivateAttr,
-    field_serializer,
-    field_validator,
-)
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 
 load_dotenv()
@@ -70,11 +63,7 @@ class TavilyResearchTool(BaseTool):
         default="auto",
         description="Default model used for new Tavily research tasks.",
     )
-    # ``output_schema`` here is a Tavily API JSON Schema (a dict), not the
-    # Pydantic model type that ``BaseTool.output_schema`` expects. Tavily
-    # deliberately repurposes the inherited name for its own released parameter,
-    # so the type intentionally diverges from the base class.
-    output_schema: dict[str, Any] | None = Field(  # type: ignore[assignment]
+    output_schema: dict[str, Any] | None = Field(
         default=None,
         description="Default JSON Schema used to structure research output.",
     )
@@ -97,26 +86,7 @@ class TavilyResearchTool(BaseTool):
         ]
     )
 
-    # Override the inherited validator/serializer so the framework's
-    # model-coercion logic leaves Tavily's JSON Schema dict untouched.
-    @field_validator("output_schema", mode="before")
-    @classmethod
-    def _default_output_schema(  # type: ignore[override]
-        cls, v: dict[str, Any] | None
-    ) -> dict[str, Any] | None:
-        return v
-
-    @field_serializer("output_schema", when_used="json")
-    def _serialize_output_schema(  # type: ignore[override]
-        self, schema: dict[str, Any] | None
-    ) -> dict[str, Any] | None:
-        return schema
-
     def __init__(self, **kwargs: Any):
-        tavily_output_schema = kwargs.pop("tavily_output_schema", None)
-        if "output_schema" not in kwargs and tavily_output_schema is not None:
-            kwargs["output_schema"] = tavily_output_schema
-
         super().__init__(**kwargs)
         if TAVILY_AVAILABLE:
             api_key = os.getenv("TAVILY_API_KEY")

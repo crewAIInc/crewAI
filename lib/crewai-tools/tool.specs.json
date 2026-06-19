@@ -25386,6 +25386,20 @@
             "title": "Model",
             "type": "string"
           },
+          "output_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Default JSON Schema used to structure research output.",
+            "title": "Output Schema"
+          },
           "stream": {
             "default": false,
             "description": "Whether new Tavily research tasks should stream responses by default.",
