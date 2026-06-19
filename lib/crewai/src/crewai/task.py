@@ -650,7 +650,7 @@ class Task(BaseModel):
                 raise Exception(
                     f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
                 )
-
+            tokens_before = self._get_agent_token_usage(agent)
             self.prompt_context = context
             tools = tools or self.tools or []
 
@@ -688,6 +688,9 @@ class Task(BaseModel):
                 raw = result
                 pydantic_output, json_output = None, None
 
+            tokens_after = self._get_agent_token_usage(agent)
+            token_delta = self._calculate_token_delta(tokens_before, tokens_after)
+            
             task_output = TaskOutput(
                 name=self.name or self.description,
                 description=self.description,
@@ -698,6 +701,7 @@ class Task(BaseModel):
                 agent=agent.role,
                 output_format=self._get_output_format(),
                 messages=agent.last_messages,  # type: ignore[attr-defined]
+                token_usage=token_delta,
             )
 
             if self._guardrails:
@@ -775,7 +779,7 @@ class Task(BaseModel):
                 raise Exception(
                     f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
                 )
-
+            tokens_before = self._get_agent_token_usage(agent)
             self.prompt_context = context
             tools = tools or self.tools or []
 
@@ -813,6 +817,9 @@ class Task(BaseModel):
                 raw = result
                 pydantic_output, json_output = None, None
 
+            tokens_after = self._get_agent_token_usage(agent)
+            token_delta = self._calculate_token_delta(tokens_before, tokens_after)
+
             task_output = TaskOutput(
                 name=self.name or self.description,
                 description=self.description,
@@ -823,6 +830,7 @@ class Task(BaseModel):
                 agent=agent.role,
                 output_format=self._get_output_format(),
                 messages=agent.last_messages,  # type: ignore[attr-defined]
+                token_usage=token_delta,
             )
 
             if self._guardrails:
@@ -1149,7 +1157,22 @@ Follow these guidelines:
             pydantic_output, json_output = self._unpack_model_output(model_output)
 
         return pydantic_output, json_output
+    
+    def _get_agent_token_usage(self, agent: BaseAgent) -> Any:
+        """Capture the current snapshot of tokens consumed by the agent's LLM."""
+        if hasattr(agent, "llm") and hasattr(agent.llm, "token_usage"):
+            return shallow_copy(agent.llm.token_usage)
+        return None
 
+    def _calculate_token_delta(self, before: Any, after: Any) -> Any:
+        """Calculate the difference in token consumption between before and after execution."""
+        if before is None or after is None:
+            return after
+        try:
+            return after - before
+        except Exception:
+            return after
+        
     @staticmethod
     def _unpack_model_output(
         model_output: dict[str, Any] | BaseModel | str,
@@ -1262,6 +1285,7 @@ Follow these guidelines:
         max_attempts = self.guardrail_max_retries + 1
 
         for attempt in range(max_attempts):
+            current_token_usage = getattr(task_output, 'token_usage', None)
             guardrail_result = process_guardrail(
                 output=task_output,
                 guardrail=guardrail,
@@ -1286,7 +1310,8 @@ Follow these guidelines:
                     task_output.json_dict = json_output
                 elif isinstance(guardrail_result.result, TaskOutput):
                     task_output = guardrail_result.result
-
+                    if getattr(task_output, 'token_usage', None) is None and current_token_usage:
+                        task_output.token_usage = current_token_usage
                 return task_output
 
             if attempt >= self.guardrail_max_retries:
@@ -1348,6 +1373,7 @@ Follow these guidelines:
                 agent=agent.role,
                 output_format=self._get_output_format(),
                 messages=agent.last_messages,  # type: ignore[attr-defined]
+                token_usage=current_token_usage,
             )
 
         return task_output
@@ -1372,6 +1398,7 @@ Follow these guidelines:
         max_attempts = self.guardrail_max_retries + 1
 
         for attempt in range(max_attempts):
+            current_token_usage = getattr(task_output, 'token_usage', None)
             guardrail_result = process_guardrail(
                 output=task_output,
                 guardrail=guardrail,
@@ -1396,7 +1423,8 @@ Follow these guidelines:
                     task_output.json_dict = json_output
                 elif isinstance(guardrail_result.result, TaskOutput):
                     task_output = guardrail_result.result
-
+                    if getattr(task_output, 'token_usage', None) is None and current_token_usage:
+                            task_output.token_usage = current_token_usage
                 return task_output
 
             if attempt >= self.guardrail_max_retries:
@@ -1458,6 +1486,7 @@ Follow these guidelines:
                 agent=agent.role,
                 output_format=self._get_output_format(),
                 messages=agent.last_messages,  # type: ignore[attr-defined]
+                token_usage=current_token_usage,
             )
 
         return task_output
