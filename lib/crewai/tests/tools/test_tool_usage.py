@@ -1,4 +1,5 @@
 import datetime
+from collections.abc import Callable
 import json
 import random
 import threading
@@ -15,6 +16,7 @@ from crewai.events.types.tool_usage_events import (
     ToolValidateInputErrorEvent,
 )
 from crewai.tools import BaseTool
+from crewai.tools.tool_calling import ToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from pydantic import BaseModel, Field
 import pytest
@@ -36,6 +38,19 @@ class RandomNumberTool(BaseTool):
 
     def _run(self, min_value: int, max_value: int) -> int:
         return random.randint(min_value, max_value)  # noqa: S311
+
+
+class SearchOutput(BaseModel):
+    query: str
+    score: float
+
+
+class TypedSearchTool(BaseTool):
+    name: str = "typed_search"
+    description: str = "Search for a query"
+
+    def _run(self, query: str) -> SearchOutput:
+        return SearchOutput(query=query, score=0.7)
 
 
 # Example agent and task
@@ -115,6 +130,68 @@ def test_tool_usage_render():
     assert '"type": "integer"' in rendered
     assert '"description": "The minimum value of the range (inclusive)"' in rendered
     assert '"description": "The maximum value of the range (inclusive)"' in rendered
+
+
+def test_tool_usage_returns_json_agent_text_for_typed_output():
+    tool = TypedSearchTool().to_structured_tool()
+    tool_usage = ToolUsage(
+        tools_handler=None,
+        tools=[tool],
+        task=None,
+        function_calling_llm=MagicMock(),
+        agent=None,
+        action=MagicMock(),
+    )
+
+    result = tool_usage.use(
+        calling=ToolCalling(
+            tool_name="typed_search",
+            arguments={"query": "crew"},
+        ),
+        tool_string='Action: typed_search\nAction Input: {"query": "crew"}',
+    )
+
+    assert json.loads(result) == {"query": "crew", "score": 0.7}
+
+
+def test_tool_usage_cache_callback_receives_raw_typed_output():
+    raw_results: list[object] = []
+
+    def cache_result(_args: object, result: object) -> bool:
+        raw_results.append(result)
+        return True
+
+    class CacheAwareTypedSearchTool(TypedSearchTool):
+        cache_function: Callable = cache_result
+
+    tools_handler = MagicMock()
+    tools_handler.cache = None
+    tools_handler.last_used_tool = None
+    tool = CacheAwareTypedSearchTool().to_structured_tool()
+    tool_usage = ToolUsage(
+        tools_handler=tools_handler,
+        tools=[tool],
+        task=None,
+        function_calling_llm=MagicMock(),
+        agent=None,
+        action=MagicMock(),
+    )
+
+    result = tool_usage.use(
+        calling=ToolCalling(
+            tool_name="typed_search",
+            arguments={"query": "crew"},
+        ),
+        tool_string='Action: typed_search\nAction Input: {"query": "crew"}',
+    )
+
+    assert json.loads(result) == {"query": "crew", "score": 0.7}
+    assert raw_results == [SearchOutput(query="crew", score=0.7)]
+    tools_handler.on_tool_use.assert_called_once()
+    assert tools_handler.on_tool_use.call_args.kwargs["output"] == SearchOutput(
+        query="crew",
+        score=0.7,
+    )
 
 
 def test_validate_tool_input_booleans_and_none():

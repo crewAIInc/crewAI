@@ -7,6 +7,7 @@ when the LLM supports it, across multiple providers.
 from __future__ import annotations
 
 from collections.abc import Generator
+import json
 import os
 import threading
 import time
@@ -1196,6 +1197,35 @@ class TestNativeToolCallingJsonParseError:
         )
 
         assert result["result"] == "ran: print(1)"
+
+    def test_typed_output_is_json_agent_text(self) -> None:
+        class SearchOutput(BaseModel):
+            query: str
+            score: float
+
+        class TypedSearchTool(BaseTool):
+            name: str = "typed_search"
+            description: str = "Search for information"
+            output_schema: type[BaseModel] = SearchOutput
+
+            def _run(self, query: str) -> SearchOutput:
+                return SearchOutput(query=query, score=0.8)
+
+        tool = TypedSearchTool()
+        executor = self._make_executor([tool])
+
+        from crewai.utilities.agent_utils import convert_tools_to_openai_schema
+
+        _, available_functions, _ = convert_tools_to_openai_schema([tool])
+
+        result = executor._execute_single_native_tool_call(
+            call_id="call_typed",
+            func_name="typed_search",
+            func_args='{"query": "crew"}',
+            available_functions=available_functions,
+        )
+
+        assert json.loads(result["result"]) == {"query": "crew", "score": 0.8}
 
     def test_native_tool_loop_falls_back_when_provider_rejects_tools(self) -> None:
         """Unsupported native tools errors should continue through ReAct."""

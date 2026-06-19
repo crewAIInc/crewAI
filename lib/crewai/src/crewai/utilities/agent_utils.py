@@ -1456,18 +1456,22 @@ def execute_single_native_tool_call(
             original_tool = tool
             break
 
+    structured_tool: CrewStructuredTool | None = None
+    for structured in structured_tools or []:
+        if sanitize_tool_name(structured.name) == func_name:
+            structured_tool = structured
+            break
+
+    output_tool = original_tool or structured_tool
+
     from_cache = False
     input_str = json.dumps(args_dict) if args_dict else ""
     result = "Tool not found"
 
-    if tools_handler and tools_handler.cache:
+    if tools_handler and tools_handler.cache and output_tool is not None:
         cached_result = tools_handler.cache.read(tool=func_name, input=input_str)
         if cached_result is not None:
-            result = (
-                str(cached_result)
-                if not isinstance(cached_result, str)
-                else cached_result
-            )
+            result = output_tool.format_output_for_agent(cached_result)
             from_cache = True
 
     started_at = datetime.now()
@@ -1485,12 +1489,6 @@ def execute_single_native_tool_call(
     )
 
     track_delegation_if_needed(func_name, args_dict, task)
-
-    structured_tool: CrewStructuredTool | None = None
-    for structured in structured_tools or []:
-        if sanitize_tool_name(structured.name) == func_name:
-            structured_tool = structured
-            break
 
     hook_blocked = False
     before_hook_context = ToolCallHookContext(
@@ -1513,7 +1511,7 @@ def execute_single_native_tool_call(
     if hook_blocked:
         result = f"Tool execution blocked by hook. Tool: {func_name}"
     elif not from_cache:
-        if func_name in available_functions:
+        if func_name in available_functions and output_tool is not None:
             try:
                 tool_func = available_functions[func_name]
                 raw_result = tool_func(**args_dict)
@@ -1529,9 +1527,7 @@ def execute_single_native_tool_call(
                             tool=func_name, input=input_str, output=raw_result
                         )
 
-                result = (
-                    str(raw_result) if not isinstance(raw_result, str) else raw_result
-                )
+                result = output_tool.format_output_for_agent(raw_result)
             except Exception as e:
                 result = f"Error executing tool: {e}"
                 if task:

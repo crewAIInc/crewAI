@@ -1905,19 +1905,29 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         ):
             max_usage_reached = True
 
+        structured_tool: CrewStructuredTool | None = None
+        if original_tool is not None:
+            for structured in self.tools or []:
+                if getattr(structured, "_original_tool", None) is original_tool:
+                    structured_tool = structured
+                    break
+        if structured_tool is None:
+            for structured in self.tools or []:
+                if sanitize_tool_name(structured.name) == func_name:
+                    structured_tool = structured
+                    break
+
+        output_tool = original_tool or structured_tool
+
         # Check cache before executing
         from_cache = False
         input_str = json.dumps(args_dict) if args_dict else ""
-        if self.tools_handler and self.tools_handler.cache:
+        if self.tools_handler and self.tools_handler.cache and output_tool is not None:
             cached_result = self.tools_handler.cache.read(
                 tool=func_name, input=input_str
             )
             if cached_result is not None:
-                result = (
-                    str(cached_result)
-                    if not isinstance(cached_result, str)
-                    else cached_result
-                )
+                result = output_tool.format_output_for_agent(cached_result)
                 from_cache = True
 
         # Emit tool usage started event
@@ -1935,18 +1945,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         error_event_emitted = False
 
         track_delegation_if_needed(func_name, args_dict, self.task)
-
-        structured_tool: CrewStructuredTool | None = None
-        if original_tool is not None:
-            for structured in self.tools or []:
-                if getattr(structured, "_original_tool", None) is original_tool:
-                    structured_tool = structured
-                    break
-        if structured_tool is None:
-            for structured in self.tools or []:
-                if sanitize_tool_name(structured.name) == func_name:
-                    structured_tool = structured
-                    break
 
         hook_blocked = False
         before_hook_context = ToolCallHookContext(
@@ -1973,7 +1971,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         if hook_blocked:
             result = f"Tool execution blocked by hook. Tool: {func_name}"
-        elif not from_cache and not max_usage_reached:
+        elif not from_cache and not max_usage_reached and output_tool is not None:
             result = "Tool not found"
             if func_name in self._available_functions:
                 try:
@@ -1992,12 +1990,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                                 tool=func_name, input=input_str, output=raw_result
                             )
 
-                    # Convert to string for message
-                    result = (
-                        str(raw_result)
-                        if not isinstance(raw_result, str)
-                        else raw_result
-                    )
+                    result = output_tool.format_output_for_agent(raw_result)
                 except Exception as e:
                     result = f"Error executing tool: {e}"
                     if self.task:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from typing import Any, Literal, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -1029,6 +1030,53 @@ class TestParseToolCallArgs:
 
 class TestExecuteSingleNativeToolCall:
     """Tests for execute_single_native_tool_call."""
+
+    def test_typed_tool_output_is_json_agent_text(self) -> None:
+        from crewai.hooks.tool_hooks import (
+            clear_after_tool_call_hooks,
+            clear_before_tool_call_hooks,
+        )
+
+        clear_before_tool_call_hooks()
+        clear_after_tool_call_hooks()
+
+        class SearchOutput(BaseModel):
+            query: str
+            score: float
+
+        class TypedSearchTool(BaseTool):
+            name: str = "typed_search"
+            description: str = "Search for a query"
+            output_schema: type[BaseModel] = SearchOutput
+
+            def _run(self, query: str) -> SearchOutput:
+                return SearchOutput(query=query, score=0.9)
+
+        tool = TypedSearchTool()
+        tool_call = MagicMock()
+        tool_call.id = "call_1"
+        tool_call.function.name = "typed_search"
+        tool_call.function.arguments = '{"query": "crew"}'
+
+        result = execute_single_native_tool_call(
+            tool_call,
+            available_functions={"typed_search": tool._run},
+            original_tools=[tool],
+            structured_tools=[tool.to_structured_tool()],
+            tools_handler=None,
+            agent=None,
+            task=None,
+            crew=None,
+            event_source=MagicMock(),
+            printer=None,
+            verbose=False,
+        )
+
+        assert json.loads(result.result) == {"query": "crew", "score": 0.9}
+        assert json.loads(result.tool_message["content"]) == {
+            "query": "crew",
+            "score": 0.9,
+        }
 
     def test_result_as_answer_false_on_tool_error(self) -> None:
         """When a tool with result_as_answer=True raises, result_as_answer must be False.

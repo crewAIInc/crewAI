@@ -422,8 +422,6 @@ def _make_root_decorator_tool() -> BaseTool:
 
 
 class TestToolOutputSchema:
-    """Tests for typed tool output behavior."""
-
     @pytest.mark.parametrize(
         ("tool_cls", "expected_raw", "expected_agent_payload"),
         [

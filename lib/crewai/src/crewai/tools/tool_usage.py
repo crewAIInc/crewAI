@@ -359,7 +359,9 @@ class ToolUsage:
                         tool_name=sanitize_tool_name(tool.name),
                         attempts=self._run_attempts,
                     )
-                    result = self._format_result(result=result)
+                    result = self._format_result(
+                        result=tool.format_output_for_agent(result)
+                    )
                     data = {
                         "result": result,
                         "tool_name": sanitize_tool_name(tool.name),
@@ -430,7 +432,9 @@ class ToolUsage:
                             self.task.increment_tools_errors()
                         should_retry = True
             else:
-                result = self._format_result(result=result)
+                result = self._format_result(
+                    result=tool.format_output_for_agent(result)
+                )
 
         finally:
             if started_event_emitted and not error_event_emitted:
@@ -590,7 +594,9 @@ class ToolUsage:
                         tool_name=sanitize_tool_name(tool.name),
                         attempts=self._run_attempts,
                     )
-                    result = self._format_result(result=result)
+                    result = self._format_result(
+                        result=tool.format_output_for_agent(result)
+                    )
                     data = {
                         "result": result,
                         "tool_name": sanitize_tool_name(tool.name),
@@ -661,7 +667,9 @@ class ToolUsage:
                             self.task.increment_tools_errors()
                         should_retry = True
             else:
-                result = self._format_result(result=result)
+                result = self._format_result(
+                    result=tool.format_output_for_agent(result)
+                )
 
         finally:
             if started_event_emitted and not error_event_emitted:

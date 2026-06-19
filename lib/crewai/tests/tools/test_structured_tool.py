@@ -149,7 +149,6 @@ def test_from_function_returns_raw_result_and_json_agent_text(
     expected_raw,
     expected_agent_payload,
 ):
-    """Typed structured tools return raw values and format JSON for the agent."""
     kwargs = {"output_schema": output_schema} if output_schema is not None else {}
     tool = CrewStructuredTool.from_function(
         func=func,
@@ -166,7 +165,6 @@ def test_from_function_returns_raw_result_and_json_agent_text(
 
 
 def test_from_function_does_not_infer_non_pydantic_output_schema():
-    """Non-Pydantic return annotations use the plain string formatter."""
     tool = CrewStructuredTool.from_function(
         func=_build_plain_structured_value,
         name="build_value",
@@ -179,7 +177,6 @@ def test_from_function_does_not_infer_non_pydantic_output_schema():
 
 
 def test_invalid_typed_output_warns_and_uses_string_agent_text():
-    """Invalid structured output leaves the raw result unchanged."""
     def build_value(value: str) -> dict[str, object]:
         """Build a value."""
         return {"value": value, "count": "wrong"}
