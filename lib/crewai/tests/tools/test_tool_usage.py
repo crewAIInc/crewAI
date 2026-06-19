@@ -7,6 +7,9 @@ import time
 from unittest.mock import MagicMock, patch
 
 from crewai import Agent, Task
+from crewai.agents.cache.cache_handler import CacheHandler
+from crewai.agents.parser import AgentAction
+from crewai.agents.tools_handler import ToolsHandler
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.tool_usage_events import (
     ToolSelectionErrorEvent,
@@ -15,9 +18,15 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageStartedEvent,
     ToolValidateInputErrorEvent,
 )
+from crewai.hooks.tool_hooks import (
+    ToolCallHookContext,
+    clear_after_tool_call_hooks,
+    register_after_tool_call_hook,
+)
 from crewai.tools import BaseTool
 from crewai.tools.tool_calling import ToolCalling
 from crewai.tools.tool_usage import ToolUsage
+from crewai.utilities.tool_utils import execute_tool_and_check_finality
 from pydantic import BaseModel, Field
 import pytest
 
@@ -192,6 +201,47 @@ def test_tool_usage_cache_callback_receives_raw_typed_output():
         query="crew",
         score=0.7,
     )
+
+
+def test_react_tool_hooks_receive_agent_text_and_raw_cached_typed_output():
+    structured_tool = TypedSearchTool().to_structured_tool()
+    tools_handler = ToolsHandler(cache=CacheHandler())
+    seen_results: list[tuple[str | None, object]] = []
+
+    def after_hook(context: ToolCallHookContext) -> None:
+        seen_results.append((context.tool_result, context.raw_tool_result))
+
+    clear_after_tool_call_hooks()
+    register_after_tool_call_hook(after_hook)
+
+    action = AgentAction(
+        thought="",
+        tool="typed_search",
+        tool_input='{"query": "crew"}',
+        text='Action: typed_search\nAction Input: {"query": "crew"}',
+    )
+
+    try:
+        first = execute_tool_and_check_finality(
+            agent_action=action,
+            tools=[structured_tool],
+            tools_handler=tools_handler,
+        )
+        tools_handler.last_used_tool = None
+        second = execute_tool_and_check_finality(
+            agent_action=action,
+            tools=[structured_tool],
+            tools_handler=tools_handler,
+        )
+    finally:
+        clear_after_tool_call_hooks()
+
+    assert json.loads(first.result) == {"query": "crew", "score": 0.7}
+    assert json.loads(second.result) == {"query": "crew", "score": 0.7}
+    assert seen_results == [
+        ('{"query":"crew","score":0.7}', SearchOutput(query="crew", score=0.7)),
+        ('{"query":"crew","score":0.7}', SearchOutput(query="crew", score=0.7)),
+    ]
 
 
 def test_validate_tool_input_booleans_and_none():

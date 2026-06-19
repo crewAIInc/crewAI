@@ -116,6 +116,7 @@ async def aexecute_tool_and_check_finality(
             logger.log("error", f"Error in before_tool_call hook: {e}")
 
         tool_result = await tool_usage.ause(tool_calling, agent_action.text)
+        raw_tool_result = getattr(tool_usage, "last_raw_result", tool_result)
 
         after_hook_context = ToolCallHookContext(
             tool_name=sanitized_tool_name,
@@ -125,6 +126,7 @@ async def aexecute_tool_and_check_finality(
             task=task,
             crew=crew,
             tool_result=tool_result,
+            raw_tool_result=raw_tool_result,
         )
 
         after_hooks = get_after_tool_call_hooks()
@@ -234,6 +236,7 @@ def execute_tool_and_check_finality(
             logger.log("error", f"Error in before_tool_call hook: {e}")
 
         tool_result = tool_usage.use(tool_calling, agent_action.text)
+        raw_tool_result = getattr(tool_usage, "last_raw_result", tool_result)
 
         after_hook_context = ToolCallHookContext(
             tool_name=sanitized_tool_name,
@@ -243,6 +246,7 @@ def execute_tool_and_check_finality(
             task=task,
             crew=crew,
             tool_result=tool_result,
+            raw_tool_result=raw_tool_result,
         )
 
         after_hooks = get_after_tool_call_hooks()

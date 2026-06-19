@@ -10,6 +10,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic import BaseModel, Field
 
+from crewai.hooks.tool_hooks import (
+    ToolCallHookContext,
+    clear_after_tool_call_hooks,
+    clear_before_tool_call_hooks,
+    register_after_tool_call_hook,
+)
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.agent_utils import (
     _asummarize_chunks,
@@ -1032,11 +1038,6 @@ class TestExecuteSingleNativeToolCall:
     """Tests for execute_single_native_tool_call."""
 
     def test_typed_tool_output_is_json_agent_text(self) -> None:
-        from crewai.hooks.tool_hooks import (
-            clear_after_tool_call_hooks,
-            clear_before_tool_call_hooks,
-        )
-
         clear_before_tool_call_hooks()
         clear_after_tool_call_hooks()
 
@@ -1077,6 +1078,55 @@ class TestExecuteSingleNativeToolCall:
             "query": "crew",
             "score": 0.9,
         }
+
+    def test_after_hook_includes_raw_tool_result_for_typed_output(self) -> None:
+        clear_after_tool_call_hooks()
+
+        class SearchOutput(BaseModel):
+            query: str
+            score: float
+
+        class TypedSearchTool(BaseTool):
+            name: str = "typed_search"
+            description: str = "Search for a query"
+            output_schema: type[BaseModel] = SearchOutput
+
+            def _run(self, query: str) -> SearchOutput:
+                return SearchOutput(query=query, score=0.9)
+
+        seen_results: list[tuple[str | None, object]] = []
+
+        def after_hook(context: ToolCallHookContext) -> None:
+            seen_results.append((context.tool_result, context.raw_tool_result))
+
+        tool = TypedSearchTool()
+        tool_call = MagicMock()
+        tool_call.id = "call_1"
+        tool_call.function.name = "typed_search"
+        tool_call.function.arguments = '{"query": "crew"}'
+
+        register_after_tool_call_hook(after_hook)
+        try:
+            result = execute_single_native_tool_call(
+                tool_call,
+                available_functions={"typed_search": tool._run},
+                original_tools=[tool],
+                structured_tools=[tool.to_structured_tool()],
+                tools_handler=None,
+                agent=None,
+                task=None,
+                crew=None,
+                event_source=MagicMock(),
+                printer=None,
+                verbose=False,
+            )
+        finally:
+            clear_after_tool_call_hooks()
+
+        assert json.loads(result.result) == {"query": "crew", "score": 0.9}
+        assert seen_results == [
+            ('{"query":"crew","score":0.9}', SearchOutput(query="crew", score=0.9))
+        ]
 
     def test_result_as_answer_false_on_tool_error(self) -> None:
         """When a tool with result_as_answer=True raises, result_as_answer must be False.

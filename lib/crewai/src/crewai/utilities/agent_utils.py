@@ -1467,10 +1467,12 @@ def execute_single_native_tool_call(
     from_cache = False
     input_str = json.dumps(args_dict) if args_dict else ""
     result = "Tool not found"
+    raw_tool_result: Any = result
 
     if tools_handler and tools_handler.cache and output_tool is not None:
         cached_result = tools_handler.cache.read(tool=func_name, input=input_str)
         if cached_result is not None:
+            raw_tool_result = cached_result
             result = output_tool.format_output_for_agent(cached_result)
             from_cache = True
 
@@ -1510,11 +1512,13 @@ def execute_single_native_tool_call(
     error_event_emitted = False
     if hook_blocked:
         result = f"Tool execution blocked by hook. Tool: {func_name}"
+        raw_tool_result = result
     elif not from_cache:
         if func_name in available_functions and output_tool is not None:
             try:
                 tool_func = available_functions[func_name]
                 raw_result = tool_func(**args_dict)
+                raw_tool_result = raw_result
 
                 if tools_handler and tools_handler.cache:
                     should_cache = True
@@ -1530,6 +1534,7 @@ def execute_single_native_tool_call(
                 result = output_tool.format_output_for_agent(raw_result)
             except Exception as e:
                 result = f"Error executing tool: {e}"
+                raw_tool_result = result
                 if task:
                     task.increment_tools_errors()
                 crewai_event_bus.emit(
@@ -1555,6 +1560,7 @@ def execute_single_native_tool_call(
         task=task,
         crew=crew,
         tool_result=result,
+        raw_tool_result=raw_tool_result,
     )
     try:
         for after_hook in get_after_tool_call_hooks():

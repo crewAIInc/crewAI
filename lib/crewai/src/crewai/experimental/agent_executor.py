@@ -1921,12 +1921,15 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         # Check cache before executing
         from_cache = False
+        result = "Tool not found"
+        raw_tool_result: Any = result
         input_str = json.dumps(args_dict) if args_dict else ""
         if self.tools_handler and self.tools_handler.cache and output_tool is not None:
             cached_result = self.tools_handler.cache.read(
                 tool=func_name, input=input_str
             )
             if cached_result is not None:
+                raw_tool_result = cached_result
                 result = output_tool.format_output_for_agent(cached_result)
                 from_cache = True
 
@@ -1971,12 +1974,13 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         if hook_blocked:
             result = f"Tool execution blocked by hook. Tool: {func_name}"
+            raw_tool_result = result
         elif not from_cache and not max_usage_reached and output_tool is not None:
-            result = "Tool not found"
             if func_name in self._available_functions:
                 try:
                     tool_func = self._available_functions[func_name]
                     raw_result = tool_func(**args_dict)
+                    raw_tool_result = raw_result
 
                     # Add to cache after successful execution (before string conversion)
                     if self.tools_handler and self.tools_handler.cache:
@@ -1993,6 +1997,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     result = output_tool.format_output_for_agent(raw_result)
                 except Exception as e:
                     result = f"Error executing tool: {e}"
+                    raw_tool_result = result
                     if self.task:
                         self.task.increment_tools_errors()
                     # Emit tool usage error event
@@ -2014,6 +2019,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
             else:
                 result = f"Tool '{func_name}' has reached its maximum usage limit and cannot be used anymore."
+            raw_tool_result = result
 
         # Execute after_tool_call hooks (even if blocked, to allow logging/monitoring)
         after_hook_context = ToolCallHookContext(
@@ -2024,6 +2030,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             task=self.task,
             crew=self.crew,
             tool_result=result,
+            raw_tool_result=raw_tool_result,
         )
         after_hooks = get_after_tool_call_hooks()
         try:
