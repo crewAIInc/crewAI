@@ -104,7 +104,7 @@ class TranslateInput(BaseModel):
 
 Explicit schemas are recommended for published tools — they produce better agent behavior and clearer documentation for your users.
 
-### Optional: Typed Outputs with `output_schema`
+### Optional: Typed Outputs with `result_schema`
 
 If your tool returns structured data, define a Pydantic output model. This is a good default for published tools because users and agents can rely on named fields.
 
@@ -132,13 +132,13 @@ class GeolocateTool(BaseTool):
         return GeolocateResult(latitude=40.7128, longitude=-74.0060)
 ```
 
-Set `output_schema` explicitly when your tool returns a dictionary:
+Set `result_schema` explicitly when your tool returns a dictionary:
 
 ```python
 class GeolocateTool(BaseTool):
     name: str = "Geolocate"
     description: str = "Converts a street address into latitude/longitude coordinates."
-    output_schema: type[BaseModel] = GeolocateResult
+    result_schema: type[BaseModel] = GeolocateResult
 
     def _run(self, address: str) -> dict[str, float]:
         if "1600 Pennsylvania" in address:

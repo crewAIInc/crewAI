@@ -95,9 +95,9 @@ When an agent calls `InventoryTool`, it receives JSON like this:
 {"sku":"SKU-123","quantity":14,"needs_reorder":false}
 ```
 
-#### Use `output_schema` with Dictionary Results
+#### Use `result_schema` with Dictionary Results
 
-If your tool returns a dictionary, set `output_schema` explicitly. You can do this on a `BaseTool` subclass or with the `@tool` decorator:
+If your tool returns a dictionary, set `result_schema` explicitly. You can do this on a `BaseTool` subclass or with the `@tool` decorator:
 
 ```python Code
 from crewai.tools import tool
@@ -108,7 +108,7 @@ class ProductResult(BaseModel):
     name: str = Field(description="The product name.")
     in_stock: bool = Field(description="Whether the product is available.")
 
-@tool("Product Lookup", output_schema=ProductResult)
+@tool("Product Lookup", result_schema=ProductResult)
 def product_lookup(sku: str) -> dict[str, object]:
     """Look up product availability by SKU."""
     catalog = {
