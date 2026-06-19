@@ -132,7 +132,7 @@ def test_create_project_zip_excludes_symlinked_files(tmp_path: Path):
     assert names == {"pyproject.toml"}
 
 
-def test_create_project_zip_adds_json_project_wrapper(tmp_path: Path):
+def test_create_project_zip_preserves_json_project_shape(tmp_path: Path):
     (tmp_path / "pyproject.toml").write_text(
         """
 [project]
@@ -157,8 +157,6 @@ type = "crew"
     try:
         with zipfile.ZipFile(archive_path) as archive:
             names = set(archive.namelist())
-            crew_py = archive.read("src/json_crew/crew.py").decode()
-            main_py = archive.read("src/json_crew/main.py").decode()
             pyproject = archive.read("pyproject.toml").decode()
     finally:
         archive_path.unlink(missing_ok=True)
@@ -166,18 +164,11 @@ type = "crew"
     assert "uv.lock" not in names
     assert "crew.jsonc" in names
     assert "agents/researcher.jsonc" in names
-    assert "src/json_crew/__init__.py" in names
-    assert "src/json_crew/crew.py" in names
-    assert "src/json_crew/main.py" in names
-    assert "src/json_crew/config/agents.yaml" in names
-    assert "src/json_crew/config/tasks.yaml" in names
-    assert "load_crew(_crew_path())" in crew_py
-    assert "JsonCrew" in crew_py
-    assert "from json_crew.crew import JsonCrew" in main_py
-    assert "run_crew = \"json_crew.main:run\"" in pyproject
+    assert all(not name.startswith("src/") for name in names)
+    assert "run_crew" not in pyproject
 
 
-def test_create_project_zip_updates_existing_json_project_scripts(tmp_path: Path):
+def test_create_project_zip_does_not_rewrite_json_project_scripts(tmp_path: Path):
     (tmp_path / "pyproject.toml").write_text(
         """
 [project]
@@ -203,14 +194,9 @@ type = "crew"
     finally:
         archive_path.unlink(missing_ok=True)
 
-    assert 'json_crew = "json_crew.main:run"' in pyproject
-    assert 'run_crew = "json_crew.main:run"' in pyproject
-    assert 'train = "json_crew.main:train"' in pyproject
-    assert 'replay = "json_crew.main:replay"' in pyproject
-    assert 'test = "json_crew.main:test"' in pyproject
-    assert 'run_with_trigger = "json_crew.main:run_with_trigger"' in pyproject
+    assert 'json_crew = "old.module:run"' in pyproject
+    assert 'run_crew = "old.module:run"' in pyproject
     assert 'custom = "custom.module:main"' in pyproject
-    assert "old.module:run" not in pyproject
     assert "[tool.crewai]" in pyproject
 
 
@@ -221,7 +207,7 @@ type = "crew"
         '[tool]\ncrewai = "invalid"\n',
     ],
 )
-def test_create_project_zip_adds_json_wrapper_for_malformed_tool_config(
+def test_create_project_zip_preserves_json_project_with_malformed_tool_config(
     tmp_path: Path, tool_config: str
 ):
     (tmp_path / "pyproject.toml").write_text(
@@ -244,12 +230,11 @@ version = "0.1.0"
     finally:
         archive_path.unlink(missing_ok=True)
 
-    assert "src/json_crew/crew.py" in names
-    assert "src/json_crew/main.py" in names
-    assert "run_crew = \"json_crew.main:run\"" in pyproject
+    assert names == {"crew.jsonc", "pyproject.toml"}
+    assert "run_crew" not in pyproject
 
 
-def test_create_project_zip_rejects_empty_normalized_package_name(tmp_path: Path):
+def test_create_project_zip_accepts_json_project_without_package_name(tmp_path: Path):
     (tmp_path / "pyproject.toml").write_text(
         """
 [project]
@@ -263,8 +248,11 @@ type = "crew"
     )
     (tmp_path / "crew.jsonc").write_text("{}\n")
 
-    with pytest.raises(
-        ValueError,
-        match=r"Could not derive a valid Python package name",
-    ):
-        create_project_zip("invalid", project_dir=tmp_path)
+    archive_path = create_project_zip("invalid", project_dir=tmp_path)
+    try:
+        with zipfile.ZipFile(archive_path) as archive:
+            names = set(archive.namelist())
+    finally:
+        archive_path.unlink(missing_ok=True)
+
+    assert names == {"crew.jsonc", "pyproject.toml"}
