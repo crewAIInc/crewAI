@@ -4,8 +4,29 @@ This module provides models for tracking token usage and request metrics
 during crew and agent execution.
 """
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 from typing_extensions import Self
+
+
+def _coerce_int(value: Any) -> int:
+    if value is None:
+        return 0
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _first_int(usage_data: dict[str, Any], *keys: str) -> int:
+    """Return the first integer-coercible value from ``usage_data`` under any
+    of ``keys``. Falls back to ``0`` when nothing matches."""
+    for key in keys:
+        coerced = _coerce_int(usage_data.get(key))
+        if coerced:
+            return coerced
+    return 0
 
 
 class UsageMetrics(BaseModel):
@@ -54,3 +75,50 @@ class UsageMetrics(BaseModel):
         self.reasoning_tokens += usage_metrics.reasoning_tokens
         self.cache_creation_tokens += usage_metrics.cache_creation_tokens
         self.successful_requests += usage_metrics.successful_requests
+
+    @classmethod
+    def from_provider_dict(cls, usage_data: dict[str, Any] | None) -> Self | None:
+        """Normalize a provider's raw usage dict into a ``UsageMetrics``.
+
+        Accepts the full set of key aliases CrewAI providers emit:
+        ``prompt_tokens`` / ``prompt_token_count`` (Gemini) / ``input_tokens``
+        (Anthropic), and the equivalent completion / cached-prompt aliases.
+        Mirrors ``BaseLLM._track_token_usage_internal`` so per-LLM totals,
+        flow-level aggregation, and OTel spans agree on every provider.
+
+        Returns ``None`` for missing/empty input so callers can decide
+        whether to skip the event entirely or treat it as a zero-token
+        successful request.
+        """
+        if not usage_data:
+            return None
+
+        prompt_tokens = _first_int(
+            usage_data, "prompt_tokens", "prompt_token_count", "input_tokens"
+        )
+        completion_tokens = _first_int(
+            usage_data,
+            "completion_tokens",
+            "candidates_token_count",
+            "output_tokens",
+        )
+        cached_prompt_tokens = _first_int(
+            usage_data,
+            "cached_tokens",
+            "cached_prompt_tokens",
+            "cache_read_input_tokens",
+        )
+        if not cached_prompt_tokens:
+            details = usage_data.get("prompt_tokens_details")
+            if isinstance(details, dict):
+                cached_prompt_tokens = _coerce_int(details.get("cached_tokens"))
+
+        return cls(
+            total_tokens=prompt_tokens + completion_tokens,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            cached_prompt_tokens=cached_prompt_tokens,
+            reasoning_tokens=_coerce_int(usage_data.get("reasoning_tokens")),
+            cache_creation_tokens=_coerce_int(usage_data.get("cache_creation_tokens")),
+            successful_requests=1,
+        )

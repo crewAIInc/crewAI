@@ -146,7 +146,6 @@ def test_task_callback_returns_task_output():
         task_completed.assert_called_once()
         callback_data = task_completed.call_args[0][0]
 
-        # Check if callback_data is TaskOutput object or JSON string
         if isinstance(callback_data, TaskOutput):
             callback_data = json.dumps(callback_data.model_dump())
 
@@ -259,7 +258,6 @@ def test_guardrail_type_error():
         expected_output=expected_output,
         guardrail=obj.guardrail_fn,
     )
-    # Class method
     Task(
         description=desc,
         expected_output=expected_output,
@@ -497,7 +495,7 @@ def test_json_property_without_output_json():
     task = Task(
         description="Give me an integer score between 1-5 for the following title: 'The impact of AI in the future of work'",
         expected_output="The score of the title.",
-        output_pydantic=ScoreOutput,  # Using output_pydantic instead of output_json
+        output_pydantic=ScoreOutput,
         agent=scorer,
     )
 
@@ -759,7 +757,6 @@ def test_custom_converter_cls():
 
     crew = Crew(agents=[scorer], tasks=[task])
 
-    # With native structured output, the LLM returns a BaseModel directly,
     # so the converter is bypassed. Verify the output is valid instead.
     result = crew.kickoff()
     assert isinstance(result.pydantic, ScoreOutput)
@@ -937,7 +934,6 @@ def test_interpolate_inputs(tmp_path):
 def test_interpolate_only():
     """Test the interpolate_only method for various scenarios including JSON structure preservation."""
 
-    # Test JSON structure preservation
     json_string = '{"info": "Look at {placeholder}", "nested": {"val": "{nestedVal}"}}'
     result = interpolate_only(
         input_string=json_string,
@@ -948,18 +944,15 @@ def test_interpolate_only():
     assert "{placeholder}" not in result
     assert "{nestedVal}" not in result
 
-    # Test normal string interpolation
     normal_string = "Hello {name}, welcome to {place}!"
     result = interpolate_only(
         input_string=normal_string, inputs={"name": "John", "place": "CrewAI"}
     )
     assert result == "Hello John, welcome to CrewAI!"
 
-    # Test empty string
     result = interpolate_only(input_string="", inputs={"unused": "value"})
     assert result == ""
 
-    # Test string with no placeholders
     no_placeholders = "Hello, this is a test"
     result = interpolate_only(input_string=no_placeholders, inputs={"unused": "value"})
     assert result == no_placeholders
@@ -1095,7 +1088,6 @@ def test_key():
 
 def test_output_file_validation(tmp_path):
     """Test output file path validation."""
-    # Valid paths
     assert (
         Task(
             description="Test task",
@@ -1104,7 +1096,6 @@ def test_output_file_validation(tmp_path):
         ).output_file
         == "output.txt"
     )
-    # Use secure temporary path instead of /tmp
     temp_file = tmp_path / "output.txt"
     assert (
         Task(
@@ -1123,7 +1114,6 @@ def test_output_file_validation(tmp_path):
         == "{dir}/output_{date}.txt"
     )
 
-    # Invalid paths
     with pytest.raises(ValueError, match="Path traversal"):
         Task(
             description="Test task",
@@ -1308,13 +1298,11 @@ def test_task_execution_times():
 
 
 def test_interpolate_with_list_of_strings():
-    # Test simple list of strings
     input_str = "Available items: {items}"
     inputs = {"items": ["apple", "banana", "cherry"]}
     result = interpolate_only(input_str, inputs)
     assert result == f"Available items: {inputs['items']}"
 
-    # Test empty list
     empty_list_input = {"items": []}
     result = interpolate_only(input_str, empty_list_input)
     assert result == "Available items: []"
@@ -1427,18 +1415,16 @@ def test_interpolate_complex_combination():
 
 
 def test_interpolate_invalid_type_validation():
-    # Test with invalid top-level type
     with pytest.raises(ValueError) as excinfo:
         interpolate_only("{data}", {"data": set()})  # type: ignore we are purposely testing this failure
 
     assert "Unsupported type set" in str(excinfo.value)
 
-    # Test with invalid nested type
     invalid_nested = {
         "profile": {
             "name": "John",
             "age": 30,
-            "tags": {"a", "b", "c"},  # Set is invalid
+            "tags": {"a", "b", "c"},
         }
     }
     with pytest.raises(ValueError) as excinfo:
@@ -1454,22 +1440,18 @@ def test_interpolate_custom_object_validation():
         def __str__(self):
             return str(self.value)
 
-    # Test with custom object at top level
     with pytest.raises(ValueError) as excinfo:
         interpolate_only("{obj}", {"obj": CustomObject(5)})  # type: ignore we are purposely testing this failure
     assert "Unsupported type CustomObject" in str(excinfo.value)
 
-    # Test with nested custom object in dictionary
     with pytest.raises(ValueError) as excinfo:
         interpolate_only("{data}", {"data": {"valid": 1, "invalid": CustomObject(5)}})
     assert "Unsupported type CustomObject" in str(excinfo.value)
 
-    # Test with nested custom object in list
     with pytest.raises(ValueError) as excinfo:
         interpolate_only("{data}", {"data": [1, "valid", CustomObject(5)]})
     assert "Unsupported type CustomObject" in str(excinfo.value)
 
-    # Test with deeply nested custom object
     with pytest.raises(ValueError) as excinfo:
         interpolate_only(
             "{data}", {"data": {"level1": {"level2": [{"level3": CustomObject(5)}]}}}
@@ -1478,7 +1460,6 @@ def test_interpolate_custom_object_validation():
 
 
 def test_interpolate_valid_complex_types():
-    # Valid complex structure
     valid_data = {
         "name": "Valid Dataset",
         "stats": {
@@ -1489,7 +1470,6 @@ def test_interpolate_valid_complex_types():
         },
     }
 
-    # Should not raise any errors
     result = interpolate_only("{data}", {"data": valid_data})
     parsed = ast.literal_eval(result)
     assert parsed["name"] == "Valid Dataset"
@@ -1497,21 +1477,17 @@ def test_interpolate_valid_complex_types():
 
 
 def test_interpolate_edge_cases():
-    # Test empty dict and list
     assert interpolate_only("{}", {"data": {}}) == "{}"
     assert interpolate_only("[]", {"data": []}) == "[]"
 
-    # Test numeric types
     assert interpolate_only("{num}", {"num": 42}) == "42"
     assert interpolate_only("{num}", {"num": 3.14}) == "3.14"
 
-    # Test boolean values (valid JSON types)
     assert interpolate_only("{flag}", {"flag": True}) == "True"
     assert interpolate_only("{flag}", {"flag": False}) == "False"
 
 
 def test_interpolate_valid_types():
-    # Test with boolean and null values (valid JSON types)
     valid_data = {
         "name": "Test",
         "active": True,
@@ -1713,16 +1689,13 @@ def test_task_output_includes_messages():
     crew = Crew(agents=[researcher], tasks=[task1, task2], process=Process.sequential)
     result = crew.kickoff()
 
-    # Verify both tasks have messages
     assert len(result.tasks_output) == 2
 
-    # Check first task output has messages
     task1_output = result.tasks_output[0]
     assert hasattr(task1_output, "messages")
     assert isinstance(task1_output.messages, list)
     assert len(task1_output.messages) > 0
 
-    # Check second task output has messages
     task2_output = result.tasks_output[1]
     assert hasattr(task2_output, "messages")
     assert isinstance(task2_output.messages, list)

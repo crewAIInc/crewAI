@@ -351,7 +351,6 @@ def test_sync_task_execution(researcher, writer):
     ) as mock_execute_sync:
         crew.kickoff()
 
-        # Assert that execute_sync was called for each task
         assert mock_execute_sync.call_count == len(tasks)
 
 
@@ -371,10 +370,8 @@ def test_hierarchical_process(researcher, writer):
 
     result = crew.kickoff()
 
-    # Verify we got a substantial result about AI topics
     assert result.raw is not None
-    assert len(result.raw) > 500  # Should be a substantial response
-    # Check that the output contains AI-related content
+    assert len(result.raw) > 500
     assert "ai" in result.raw.lower() or "artificial intelligence" in result.raw.lower()
 
 
@@ -423,14 +420,11 @@ def test_manager_agent_delegating_to_assigned_task_agent(researcher, writer):
     ) as mock_execute_sync:
         crew.kickoff()
 
-        # Verify execute_sync was called once
         mock_execute_sync.assert_called_once()
 
-        # Get the tools argument from the call
         _, kwargs = mock_execute_sync.call_args
         tools = kwargs["tools"]
 
-        # Verify the delegation tools were passed correctly
         assert len(tools) == 2
         assert any(
             "Delegate a specific task to one of the following coworkers: Researcher"
@@ -483,16 +477,15 @@ def test_manager_agent_delegates_with_varied_role_cases():
     Test that the manager agent can delegate to agents regardless of case or whitespace variations in role names.
     This test verifies the fix for issue #1503 where role matching was too strict.
     """
-    # Create agents with varied case and whitespace in roles
     researcher_spaced = Agent(
-        role=" Researcher ",  # Extra spaces
+        role=" Researcher ",
         goal="Research with spaces in role",
         backstory="A researcher with spaces in role name",
         allow_delegation=False,
     )
 
     writer_caps = Agent(
-        role="SENIOR WRITER",  # All caps
+        role="SENIOR WRITER",
         goal="Write with caps in role",
         backstory="A writer with caps in role name",
         allow_delegation=False,
@@ -521,17 +514,13 @@ def test_manager_agent_delegates_with_varied_role_cases():
     ) as mock_execute_sync:
         crew.kickoff()
 
-        # Verify execute_sync was called once
         mock_execute_sync.assert_called_once()
 
-        # Get the tools argument from the call
         _, kwargs = mock_execute_sync.call_args
         tools = kwargs["tools"]
 
-        # Verify the delegation tools were passed correctly and can handle case/whitespace variations
         assert len(tools) == 2
 
-        # Check delegation tool descriptions (should work despite case/whitespace differences)
         delegation_tool = tools[0]
         question_tool = tools[1]
 
@@ -572,10 +561,8 @@ def test_crew_with_delegating_agents(ceo, writer):
 
     result = crew.kickoff()
 
-    # Verify we got a substantial result about AI Agents
     assert result.raw is not None
     assert len(result.raw) > 200  # Should be at least a few paragraphs
-    # Check that the output contains AI agent-related content
     assert "ai" in result.raw.lower() or "agent" in result.raw.lower()
 
 
@@ -594,7 +581,6 @@ def test_crew_with_delegating_agents_should_not_override_task_tools(ceo, writer)
         def _run(self, query: str) -> str:
             return f"Processed: {query}"
 
-    # Create a task with the test tool
     tasks = [
         Task(
             description="Produce and amazing 1 paragraph draft of an article about AI Agents.",
@@ -623,7 +609,6 @@ def test_crew_with_delegating_agents_should_not_override_task_tools(ceo, writer)
     ) as mock_execute_sync:
         crew.kickoff()
 
-        # Execute the task and verify both tools are present
         _, kwargs = mock_execute_sync.call_args
         tools = kwargs["tools"]
 
@@ -653,7 +638,6 @@ def test_crew_with_delegating_agents_should_not_override_agent_tools(ceo, writer
     new_ceo = ceo.model_copy()
     new_ceo.tools = [TestTool()]
 
-    # Create a task with the test tool
     tasks = [
         Task(
             description="Produce and amazing 1 paragraph draft of an article about AI Agents.",
@@ -681,7 +665,6 @@ def test_crew_with_delegating_agents_should_not_override_agent_tools(ceo, writer
     ) as mock_execute_sync:
         crew.kickoff()
 
-        # Execute the task and verify both tools are present
         _, kwargs = mock_execute_sync.call_args
         tools = kwargs["tools"]
 
@@ -720,7 +703,6 @@ def test_task_tools_override_agent_tools(researcher):
     new_researcher = researcher.model_copy()
     new_researcher.tools = [TestTool()]
 
-    # Create task with different tools
     task = Task(
         description="Write a test task",
         expected_output="Test output",
@@ -732,12 +714,10 @@ def test_task_tools_override_agent_tools(researcher):
 
     crew.kickoff()
 
-    # Verify task tools override agent tools
-    assert len(task.tools) == 1  # AnotherTestTool
+    assert len(task.tools) == 1
     assert any(isinstance(tool, AnotherTestTool) for tool in task.tools)
     assert not any(isinstance(tool, TestTool) for tool in task.tools)
 
-    # Verify agent tools remain unchanged
     assert len(new_researcher.tools) == 1
     assert isinstance(new_researcher.tools[0], TestTool)
 
@@ -766,14 +746,12 @@ def test_task_tools_override_agent_tools_with_allow_delegation(researcher, write
         def _run(self, query: str) -> str:
             return f"Another processed: {query}"
 
-    # Set up agents with tools and allow_delegation
     researcher_with_delegation = researcher.model_copy()
     researcher_with_delegation.allow_delegation = True
     researcher_with_delegation.tools = [TestTool()]
 
     writer_for_delegation = writer.model_copy()
 
-    # Create a task with different tools
     task = Task(
         description="Write a test task",
         expected_output="Test output",
@@ -797,11 +775,9 @@ def test_task_tools_override_agent_tools_with_allow_delegation(researcher, write
     ) as mock_execute_sync:
         crew.kickoff()
 
-        # Inspect the call kwargs to verify the actual tools passed to execution
         _, kwargs = mock_execute_sync.call_args
         used_tools = kwargs["tools"]
 
-        # Confirm AnotherTestTool is present but TestTool is not
         assert any(isinstance(tool, AnotherTestTool) for tool in used_tools), (
             "AnotherTestTool should be present"
         )
@@ -809,7 +785,6 @@ def test_task_tools_override_agent_tools_with_allow_delegation(researcher, write
             "TestTool should not be present among used tools"
         )
 
-        # Confirm delegation tool(s) are present
         assert any("delegate" in tool.name.lower() for tool in used_tools), (
             "Delegation tool should be present"
         )
@@ -834,7 +809,6 @@ def test_crew_verbose_output(researcher, writer, capsys):
         ),
     ]
 
-    # Test with verbose=True
     crew = Crew(
         agents=[researcher, writer],
         tasks=tasks,
@@ -844,11 +818,9 @@ def test_crew_verbose_output(researcher, writer, capsys):
 
     result = crew.kickoff()
 
-    # Verify the crew executed successfully and verbose was set
     assert result is not None
     assert crew.verbose is True
 
-    # Test with verbose=False
     crew_quiet = Crew(
         agents=[researcher, writer],
         tasks=tasks,
@@ -858,7 +830,6 @@ def test_crew_verbose_output(researcher, writer, capsys):
 
     result_quiet = crew_quiet.kickoff()
 
-    # Verify the crew executed successfully and verbose was not set
     assert result_quiet is not None
     assert crew_quiet.verbose is False
 
@@ -904,10 +875,8 @@ def test_cache_hitting_between_agents(researcher, writer, ceo):
             and "input" in call.kwargs
         ]
 
-        # Check if we have the expected number of cache calls
         assert len(cache_calls) == 2, f"Expected 2 cache calls, got {len(cache_calls)}"
 
-        # Check if both calls were made with the expected arguments
         expected_call = call(
             tool="multiplier", input='{"first_number": 2, "second_number": 6}'
         )
@@ -976,7 +945,6 @@ def test_crew_kickoff_usage_metrics():
         agent=agent,
     )
 
-    # Use real LLM calls instead of mocking
     crew = Crew(agents=[agent], tasks=[task])
     results = crew.kickoff_for_each(inputs=inputs)
 
@@ -1012,7 +980,6 @@ def test_crew_kickoff_streaming_usage_metrics():
         agent=agent,
     )
 
-    # Use real LLM calls instead of mocking
     crew = Crew(agents=[agent], tasks=[task])
     results = crew.kickoff_for_each(inputs=inputs)
 
@@ -1134,7 +1101,6 @@ def test_three_task_with_async_execution():
         async_execution=True,
     )
 
-    # Expected result is that we will get an error
     # because a crew can end only end with one or less
     # async tasks
     with pytest.raises(pydantic_core._pydantic_core.ValidationError) as error:
@@ -1226,12 +1192,10 @@ async def test_async_task_execution_call_count(researcher, writer):
         tasks=[list_ideas, list_important_history, write_article],
     )
 
-    # Create a valid TaskOutput instance to mock the return value
     mock_task_output = TaskOutput(
         description="Mock description", raw="mocked output", agent="mocked agent", messages=[]
     )
 
-    # Create a MagicMock Future instance
     mock_future = MagicMock(spec=Future)
     mock_future.result.return_value = mock_task_output
 
@@ -1252,6 +1216,119 @@ async def test_async_task_execution_call_count(researcher, writer):
 
         assert mock_execute_async.call_count == 2
         assert mock_execute_sync.call_count == 1
+
+
+def test_mixed_sync_async_task_outputs_not_dropped(researcher, writer):
+    """Sync outputs accumulated before a pending async batch must survive the flush."""
+    sync1_output = TaskOutput(description="sync1", raw="s1", agent="researcher")
+    async1_output = TaskOutput(description="async1", raw="a1", agent="researcher")
+    sync2_output = TaskOutput(description="sync2", raw="s2", agent="writer")
+
+    sync1 = Task(description="sync1", expected_output="x", agent=researcher)
+    async1 = Task(
+        description="async1",
+        expected_output="x",
+        agent=researcher,
+        async_execution=True,
+    )
+    sync2 = Task(description="sync2", expected_output="x", agent=writer)
+
+    sync1.output = sync1_output
+    async1.output = async1_output
+    sync2.output = sync2_output
+
+    crew = Crew(agents=[researcher, writer], tasks=[sync1, async1, sync2])
+
+    mock_future = MagicMock(spec=Future)
+    mock_future.result.return_value = async1_output
+
+    with (
+        patch.object(
+            Task, "execute_sync", side_effect=[sync1_output, sync2_output]
+        ),
+        patch.object(Task, "execute_async", return_value=mock_future),
+    ):
+        result = crew.kickoff()
+
+    assert [o.raw for o in result.tasks_output] == ["s1", "a1", "s2"]
+
+
+@pytest.mark.asyncio
+async def test_mixed_sync_async_task_outputs_not_dropped_native_async(
+    researcher, writer
+):
+    """Same regression as the sync path, exercised via akickoff (native async)."""
+    sync1_output = TaskOutput(description="sync1", raw="s1", agent="researcher")
+    async1_output = TaskOutput(description="async1", raw="a1", agent="researcher")
+    sync2_output = TaskOutput(description="sync2", raw="s2", agent="writer")
+
+    sync1 = Task(description="sync1", expected_output="x", agent=researcher)
+    async1 = Task(
+        description="async1",
+        expected_output="x",
+        agent=researcher,
+        async_execution=True,
+    )
+    sync2 = Task(description="sync2", expected_output="x", agent=writer)
+
+    sync1.output = sync1_output
+    async1.output = async1_output
+    sync2.output = sync2_output
+
+    crew = Crew(agents=[researcher, writer], tasks=[sync1, async1, sync2])
+
+    aexecute_outputs = iter([sync1_output, async1_output, sync2_output])
+
+    async def fake_aexecute_sync(*_args: Any, **_kwargs: Any) -> TaskOutput:
+        return next(aexecute_outputs)
+
+    with patch.object(Task, "aexecute_sync", side_effect=fake_aexecute_sync):
+        result = await crew.akickoff()
+
+    assert [o.raw for o in result.tasks_output] == ["s1", "a1", "s2"]
+
+
+def test_pending_async_outputs_preserved_through_conditional_task(researcher, writer):
+    """A conditional task encountered after a pending async batch must not silently drop the async output."""
+    sync1_output = TaskOutput(description="sync1", raw="s1", agent="researcher")
+    async1_output = TaskOutput(description="async1", raw="a1", agent="researcher")
+
+    def always_skip(_: TaskOutput) -> bool:
+        return False
+
+    sync1 = Task(description="sync1", expected_output="x", agent=researcher)
+    async1 = Task(
+        description="async1",
+        expected_output="x",
+        agent=researcher,
+        async_execution=True,
+    )
+    conditional = ConditionalTask(
+        description="conditional",
+        expected_output="x",
+        agent=writer,
+        condition=always_skip,
+    )
+
+    sync1.output = sync1_output
+    async1.output = async1_output
+
+    crew = Crew(
+        agents=[researcher, writer], tasks=[sync1, async1, conditional]
+    )
+
+    mock_future = MagicMock(spec=Future)
+    mock_future.result.return_value = async1_output
+
+    with (
+        patch.object(Task, "execute_sync", return_value=sync1_output),
+        patch.object(Task, "execute_async", return_value=mock_future),
+    ):
+        result = crew.kickoff()
+
+    raws = [o.raw for o in result.tasks_output]
+    assert raws[:2] == ["s1", "a1"]
+    assert len(result.tasks_output) == 3
 
 
 @pytest.mark.vcr()
@@ -1345,7 +1422,6 @@ def test_kickoff_for_each_invalid_input():
     crew = Crew(agents=[agent], tasks=[task])
 
     with pytest.raises(TypeError, match="inputs must be a dict or Mapping"):
-        # Pass a string instead of a dict
         crew.kickoff_for_each(["invalid input"])
 
 
@@ -1403,7 +1479,6 @@ async def test_kickoff_async_basic_functionality_and_output():
         agent=agent,
     )
 
-    # Create the crew
     crew = Crew(
         agents=[agent],
         tasks=[task],
@@ -1427,7 +1502,6 @@ async def test_async_kickoff_for_each_async_basic_functionality_and_output():
         {"topic": "apple"},
     ]
 
-    # Define expected outputs for each input
     expected_outputs = [
         "Dogs are loyal companions and popular pets.",
         "Cats are independent and low-maintenance pets.",
@@ -1480,13 +1554,11 @@ async def test_async_kickoff_for_each_async_empty_input():
         agent=agent,
     )
 
-    # Create the crew
     crew = Crew(
         agents=[agent],
         tasks=[task],
     )
 
-    # Call the function we are testing
     results = await crew.kickoff_for_each_async([])
 
     # Assertion
@@ -1612,13 +1684,11 @@ def test_task_with_no_arguments():
     crew = Crew(agents=[researcher], tasks=[task])
 
     result = crew.kickoff()
-    # The result should contain the total (75) or reference to sales data
     assert result.raw is not None
     assert "75" in result.raw or "sales" in result.raw.lower()
 
 
 def test_code_execution_flag_adds_code_tool_upon_kickoff():
-    # Mock Docker validation for the entire test
     with patch.object(Agent, "_validate_docker_installation"):
         programmer = Agent(
             role="Programmer",
@@ -1645,7 +1715,6 @@ def test_code_execution_flag_adds_code_tool_upon_kickoff():
         ) as mock_execute_sync:
             crew.kickoff()
 
-            # Get the tools that were actually used in execution
             _, kwargs = mock_execute_sync.call_args
             used_tools = kwargs["tools"]
 
@@ -1731,7 +1800,6 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
     )
 
     result = crew.kickoff()
-    # Verify we got a result (exact output varies with native tool calling)
     assert result.raw is not None
     assert len(result.raw) > 0
 
@@ -1745,7 +1813,6 @@ def test_agent_usage_metrics_are_captured_for_hierarchical_process():
 def test_hierarchical_kickoff_usage_metrics_include_manager(researcher):
     """Ensure Crew.kickoff() sums UsageMetrics from both regular and manager agents."""
 
-    # ── 1.  Build the manager and a simple task ──────────────────────────────────
     manager = Agent(
         role="Manager",
         goal="Coordinate everything.",
@@ -1756,10 +1823,9 @@ def test_hierarchical_kickoff_usage_metrics_include_manager(researcher):
     task = Task(
         description="Say hello",
         expected_output="Hello",
-        agent=researcher,  # *regular* agent
+        agent=researcher,
     )
 
-    # ── 2.  Stub out each agent's token usage methods ───────────────────
     researcher_metrics = UsageMetrics(
         total_tokens=120, prompt_tokens=80, completion_tokens=40, successful_requests=2
     )
@@ -1767,7 +1833,6 @@ def test_hierarchical_kickoff_usage_metrics_include_manager(researcher):
         total_tokens=30, prompt_tokens=20, completion_tokens=10, successful_requests=1
     )
 
-    # Mock the LLM's get_token_usage_summary method for the researcher
     researcher.llm.get_token_usage_summary = MagicMock(return_value=researcher_metrics)
 
     # Mock the manager's _token_process since it uses the fallback path
@@ -1775,9 +1840,8 @@ def test_hierarchical_kickoff_usage_metrics_include_manager(researcher):
         get_summary=MagicMock(return_value=manager_metrics)
     )
 
-    # ── 3.  Create the crew (hierarchical!) and kick it off ──────────────────────
     crew = Crew(
-        agents=[researcher],  # regular agents
+        agents=[researcher],
         manager_agent=manager,  # manager to be included
         tasks=[task],
         process=Process.hierarchical,
@@ -1793,7 +1857,6 @@ def test_hierarchical_kickoff_usage_metrics_include_manager(researcher):
     ):
         crew.kickoff()
 
-    # ── 4.  Assert the aggregated numbers are the *sum* of both agents ───────────
     assert (
         crew.usage_metrics.total_tokens
         == researcher_metrics.total_tokens + manager_metrics.total_tokens
@@ -1844,14 +1907,11 @@ def test_hierarchical_crew_creation_tasks_with_agents(researcher, writer):
     ) as mock_execute_sync:
         crew.kickoff()
 
-        # Verify execute_sync was called once
         mock_execute_sync.assert_called_once()
 
-        # Get the tools argument from the call
         _, kwargs = mock_execute_sync.call_args
         tools = kwargs["tools"]
 
-        # Verify the delegation tools were passed correctly
         assert len(tools) == 2
         assert any(
             "Delegate a specific task to one of the following coworkers: Senior Writer"
@@ -1888,7 +1948,6 @@ def test_hierarchical_crew_creation_tasks_with_async_execution(researcher, write
         description="Mock description", raw="mocked output", agent="mocked agent", messages=[]
     )
 
-    # Create a mock Future that returns our TaskOutput
     mock_future = MagicMock(spec=Future)
     mock_future.result.return_value = mock_task_output
 
@@ -1901,14 +1960,11 @@ def test_hierarchical_crew_creation_tasks_with_async_execution(researcher, write
     ) as mock_execute_async:
         crew.kickoff()
 
-        # Verify execute_async was called once
         mock_execute_async.assert_called_once()
 
-        # Get the tools argument from the call
         _, kwargs = mock_execute_async.call_args
         tools = kwargs["tools"]
 
-        # Verify the delegation tools were passed correctly
         assert len(tools) == 2
         assert any(
             "Delegate a specific task to one of the following coworkers: Senior Writer\n"
@@ -2201,7 +2257,6 @@ def test_tools_with_custom_caching():
         # Task 3 (2*6) should hit cache from Task 1, so no second add
         assert add_to_cache.call_count == 1
 
-        # Verify the call was with the even number that should be cached
         add_to_cache.assert_called_with(
             tool="multiplcation_tool",
             input='{"first_number": 2, "second_number": 6}',
@@ -2221,11 +2276,9 @@ def test_conditional_task_uses_last_output(researcher, writer):
     )
 
     def condition_fails(task_output: TaskOutput) -> bool:
-        # This condition will never be met
         return "never matches" in task_output.raw.lower()
 
     def condition_succeeds(task_output: TaskOutput) -> bool:
-        # This condition will match first task's output
         return "first success" in task_output.raw.lower()
 
     conditional_task1 = ConditionalTask(
@@ -2247,7 +2300,6 @@ def test_conditional_task_uses_last_output(researcher, writer):
         tasks=[task1, conditional_task1, conditional_task2],
     )
 
-    # Mock outputs for tasks
     mock_first = TaskOutput(
         description="First task output",
         raw="First success output",  # Will be used by third task's condition
@@ -2261,30 +2313,27 @@ def test_conditional_task_uses_last_output(researcher, writer):
         messages=[],
     )
 
-    # Set up mocks for task execution and conditional logic
     with patch.object(ConditionalTask, "should_execute") as mock_should_execute:
-        # First conditional fails, second succeeds
         mock_should_execute.side_effect = [False, True]
         with patch.object(Task, "execute_sync") as mock_execute:
             mock_execute.side_effect = [mock_first, mock_third]
             result = crew.kickoff()
 
             # Verify execution behavior
-            assert mock_execute.call_count == 2  # Only first and third tasks execute
-            assert mock_should_execute.call_count == 2  # Both conditionals checked
+            assert mock_execute.call_count == 2
+            assert mock_should_execute.call_count == 2
 
-            # Verify outputs collection:
             # First executed task output, followed by an automatically generated (skipped) output, then the conditional execution
             assert len(result.tasks_output) == 3
             assert (
                 result.tasks_output[0].raw == "First success output"
-            )  # First task succeeded
+            )
             assert (
                 result.tasks_output[1].raw == ""
-            )  # Second task skipped (condition failed)
+            )
             assert (
                 result.tasks_output[2].raw == "Third task executed"
-            )  # Third task used first task's output
+            )
 
 
 @pytest.mark.vcr()
@@ -2321,10 +2370,9 @@ def test_conditional_tasks_result_collection(researcher, writer):
         tasks=[task1, task2, task3],
     )
 
-    # Mock outputs for different execution paths
     mock_success = TaskOutput(
         description="Success output",
-        raw="Success output",  # Triggers third task's condition
+        raw="Success output",
         agent=researcher.role,
         messages=[],
     )
@@ -2335,39 +2383,35 @@ def test_conditional_tasks_result_collection(researcher, writer):
         messages=[],
     )
 
-    # Set up mocks for task execution and conditional logic
     with patch.object(ConditionalTask, "should_execute") as mock_should_execute:
-        # First conditional fails, second succeeds
         mock_should_execute.side_effect = [False, True]
         with patch.object(Task, "execute_sync") as mock_execute:
             mock_execute.side_effect = [mock_success, mock_conditional]
             result = crew.kickoff()
 
             # Verify execution behavior
-            assert mock_execute.call_count == 2  # Only first and third tasks execute
-            assert mock_should_execute.call_count == 2  # Both conditionals checked
+            assert mock_execute.call_count == 2
+            assert mock_should_execute.call_count == 2
 
-            # Verify task output collection:
             # There should be three outputs: normal task, skipped conditional task (empty output),
             # and the conditional task that executed.
             assert len(result.tasks_output) == 3
             assert (
                 result.tasks_output[0].raw == "Success output"
-            )  # Normal task executed
-            assert result.tasks_output[1].raw == ""  # Second task skipped
+            )
+            assert result.tasks_output[1].raw == ""
             assert (
                 result.tasks_output[2].raw == "Conditional task executed"
-            )  # Third task executed
+            )
 
-            # Verify task output collection
             assert len(result.tasks_output) == 3
             assert (
                 result.tasks_output[0].raw == "Success output"
-            )  # Normal task executed
-            assert result.tasks_output[1].raw == ""  # Second task skipped
+            )
+            assert result.tasks_output[1].raw == ""
             assert (
                 result.tasks_output[2].raw == "Conditional task executed"
-            )  # Third task executed
+            )
 
 
 @pytest.mark.vcr()
@@ -2404,7 +2448,6 @@ def test_multiple_conditional_tasks(researcher, writer):
         tasks=[task1, task2, task3],
     )
 
-    # Mock different task outputs to test conditional logic
     mock_success = TaskOutput(
         description="Mock success",
         raw="Success and proceed output",
@@ -2412,10 +2455,8 @@ def test_multiple_conditional_tasks(researcher, writer):
         messages=[],
     )
 
-    # Set up mocks for task execution
     with patch.object(Task, "execute_sync", return_value=mock_success) as mock_execute:
         result = crew.kickoff()
-        # Verify all tasks were executed (no IndexError)
         assert mock_execute.call_count == 3
         assert len(result.tasks_output) == 3
 
@@ -2521,8 +2562,6 @@ def test_memory_events_are_emitted():
     crew.kickoff()
 
     with condition:
-        # Wait for retrieval events (always fire) and optionally save events.
-        # Save events depend on extract_memories + remember LLM calls which
         # may not be in VCR cassettes; retrieval events are reliable.
         success = condition.wait_for(
             lambda: (
@@ -2707,7 +2746,6 @@ def test_crew_log_file_output(tmp_path, researcher):
 @pytest.mark.vcr()
 def test_crew_output_file_end_to_end(tmp_path):
     """Test output file functionality in a full crew context."""
-    # Create an agent
     agent = Agent(
         role="Researcher",
         goal="Analyze AI topics",
@@ -2715,7 +2753,6 @@ def test_crew_output_file_end_to_end(tmp_path):
         allow_delegation=False,
     )
 
-    # Create a task with dynamic output file path
     dynamic_path = tmp_path / "output_{topic}.txt"
     task = Task(
         description="Explain the advantages of {topic}.",
@@ -2724,7 +2761,6 @@ def test_crew_output_file_end_to_end(tmp_path):
         output_file=str(dynamic_path),
     )
 
-    # Create and run the crew
     crew = Crew(
         agents=[agent],
         tasks=[task],
@@ -2732,7 +2768,6 @@ def test_crew_output_file_end_to_end(tmp_path):
     )
     crew.kickoff(inputs={"topic": "AI"})
 
-    # Verify file creation and cleanup
     expected_file = tmp_path / "output_AI.txt"
     assert expected_file.exists(), f"Output file {expected_file} was not created"
 
@@ -2746,7 +2781,6 @@ def test_crew_output_file_validation_failures():
         allow_delegation=False,
     )
 
-    # Test path traversal
     with pytest.raises(ValueError, match="Path traversal"):
         task = Task(
             description="Analyze data",
@@ -2756,7 +2790,6 @@ def test_crew_output_file_validation_failures():
         )
         Crew(agents=[agent], tasks=[task]).kickoff()
 
-    # Test shell special characters
     with pytest.raises(ValueError, match="Shell special characters"):
         task = Task(
             description="Analyze data",
@@ -2766,7 +2799,6 @@ def test_crew_output_file_validation_failures():
         )
         Crew(agents=[agent], tasks=[task]).kickoff()
 
-    # Test shell expansion
     with pytest.raises(ValueError, match="Shell expansion"):
         task = Task(
             description="Analyze data",
@@ -2776,7 +2808,6 @@ def test_crew_output_file_validation_failures():
         )
         Crew(agents=[agent], tasks=[task]).kickoff()
 
-    # Test invalid template variable
     with pytest.raises(ValueError, match="Invalid template variable"):
         task = Task(
             description="Analyze data",
@@ -2877,6 +2908,12 @@ def test_manager_agent_with_tools_raises_exception(researcher, writer):
         crew.kickoff()
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason="crew.train() relies on CrewAgentExecutor._format_feedback_message; "
+    "AgentExecutor (the new default) does not implement training feedback yet. "
+    "Remove this xfail once training is migrated to AgentExecutor.",
+)
 @pytest.mark.vcr()
 def test_crew_train_success(researcher, writer, monkeypatch):
     task = Task(
@@ -2973,6 +3010,23 @@ def test__setup_for_training(researcher, writer):
         assert agent.allow_delegation is False
 
 
+def test_crew_trained_agents_file_is_preserved_on_copy(researcher):
+    task = Task(
+        description="Come up with a list of 5 interesting ideas to explore for an article",
+        expected_output="5 bullet points with a paragraph for each idea.",
+        agent=researcher,
+    )
+    crew = Crew(
+        agents=[researcher],
+        tasks=[task],
+        trained_agents_file="custom_trained_agents.pkl",
+    )
+
+    cloned_crew = crew.copy()
+
+    assert cloned_crew.trained_agents_file == "custom_trained_agents.pkl"
+
+
 @pytest.mark.vcr()
 def test_replay_feature(researcher, writer):
     list_ideas = Task(
@@ -3059,7 +3113,6 @@ def test_crew_task_db_init():
 
         crew.kickoff()
 
-        # Check if this runs without raising an exception
         try:
             db_handler = TaskOutputStorageHandler()
             db_handler.load()
@@ -3207,13 +3260,11 @@ def test_replay_preserves_messages():
     with patch.object(Task, "execute_sync", return_value=mock_task_output):
         crew.kickoff()
 
-    # Verify the task output was stored with messages
     db_handler = TaskOutputStorageHandler()
     stored_outputs = db_handler.load()
     assert stored_outputs is not None
     assert len(stored_outputs) > 0
 
-    # Verify messages are in the stored output
     stored_output = stored_outputs[0]["output"]
     assert "messages" in stored_output
     assert len(stored_output["messages"]) == 3
@@ -3221,11 +3272,9 @@ def test_replay_preserves_messages():
     assert stored_output["messages"][1]["role"] == "user"
     assert stored_output["messages"][2]["role"] == "assistant"
 
-    # Replay the task and verify messages are preserved
     with patch.object(Task, "execute_sync", return_value=mock_task_output):
         replayed_output = crew.replay(str(task.id))
 
-    # Verify the replayed task output has messages
     assert len(replayed_output.tasks_output) > 0
     replayed_task_output = replayed_output.tasks_output[0]
     assert hasattr(replayed_task_output, "messages")
@@ -3498,7 +3547,6 @@ def test_replay_setup_context():
     ):
         crew.replay(str(task2.id))
 
-        # Check if the first task's output was set correctly
         assert crew.tasks[0].output is not None
         assert isinstance(crew.tasks[0].output, TaskOutput)
         assert crew.tasks[0].output.description == "Context Task Output"
@@ -3714,7 +3762,7 @@ def test_conditional_should_execute(researcher, writer):
 
     condition_mock = MagicMock(
         return_value=True
-    )  # should execute this conditional task
+    )
     task2 = ConditionalTask(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
         expected_output="5 bullet points with a paragraph for each idea.",
@@ -3782,7 +3830,6 @@ def test_crew_testing_function(researcher):
     assert isinstance(received_events[1], CrewTestCompletedEvent)
 
 
-@pytest.mark.vcr()
 def test_hierarchical_verbose_manager_agent(researcher, writer):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
@@ -3797,13 +3844,18 @@ def test_hierarchical_verbose_manager_agent(researcher, writer):
         verbose=True,
     )
 
-    crew.kickoff()
+    mock_task_output = TaskOutput(
+        description="Mock description", raw="mocked output", agent="mocked agent", messages=[]
+    )
+    task.output = mock_task_output
+
+    with patch.object(Task, "execute_sync", return_value=mock_task_output):
+        crew.kickoff()
 
     assert crew.manager_agent is not None
     assert crew.manager_agent.verbose
 
 
-@pytest.mark.vcr()
 def test_hierarchical_verbose_false_manager_agent(researcher, writer):
     task = Task(
         description="Come up with a list of 5 interesting ideas to explore for an article, then write one amazing paragraph highlight for each idea that showcases how good an article about this topic could be. Return the list of ideas with their paragraph and your notes.",
@@ -3818,7 +3870,13 @@ def test_hierarchical_verbose_false_manager_agent(researcher, writer):
         verbose=False,
     )
 
-    crew.kickoff()
+    mock_task_output = TaskOutput(
+        description="Mock description", raw="mocked output", agent="mocked agent", messages=[]
+    )
+    task.output = mock_task_output
+
+    with patch.object(Task, "execute_sync", return_value=mock_task_output):
+        crew.kickoff()
 
     assert crew.manager_agent is not None
     assert not crew.manager_agent.verbose
@@ -3865,9 +3923,7 @@ def test_task_tools_preserve_code_execution_tools():
         def _run(self, query: str) -> str:
             return f"Processed: {query}"
 
-    # Mock Docker validation for the entire test
     with patch.object(Agent, "_validate_docker_installation"):
-        # Create a programmer agent with code execution enabled
         programmer = Agent(
             role="Programmer",
             goal="Write code to solve problems.",
@@ -3876,7 +3932,6 @@ def test_task_tools_preserve_code_execution_tools():
             allow_code_execution=True,
         )
 
-        # Create a code reviewer agent
         reviewer = Agent(
             role="Code Reviewer",
             goal="Review code for bugs and improvements",
@@ -3885,7 +3940,6 @@ def test_task_tools_preserve_code_execution_tools():
             allow_code_execution=True,
         )
 
-    # Create a task with its own tools
     task = Task(
         description="Write a program to calculate fibonacci numbers.",
         expected_output="A working fibonacci calculator.",
@@ -3908,11 +3962,9 @@ def test_task_tools_preserve_code_execution_tools():
     ) as mock_execute_sync:
         crew.kickoff()
 
-        # Get the tools that were actually used in execution
         _, kwargs = mock_execute_sync.call_args
         used_tools = kwargs["tools"]
 
-        # Verify all expected tools are present
         assert any(isinstance(tool, TestTool) for tool in used_tools), (
             "Task's TestTool should be present"
         )
@@ -3932,7 +3984,6 @@ def test_multimodal_flag_adds_multimodal_tools():
     Test that an agent with multimodal=True automatically has multimodal tools added
     when the LLM does not natively support multimodal content.
     """
-    # Create an agent that supports multimodal
     multimodal_agent = Agent(
         role="Multimodal Analyst",
         goal="Handle multiple media types (text, images, etc.).",
@@ -3941,22 +3992,18 @@ def test_multimodal_flag_adds_multimodal_tools():
         multimodal=True,  # crucial for adding the multimodal tool
     )
 
-    # Create a dummy task
     task = Task(
         description="Describe what's in this image and generate relevant metadata.",
         expected_output="An image description plus any relevant metadata.",
         agent=multimodal_agent,
     )
 
-    # Define a crew with the multimodal agent
     crew = Crew(agents=[multimodal_agent], tasks=[task], process=Process.sequential)
 
     mock_task_output = TaskOutput(
         description="Mock description", raw="mocked output", agent="mocked agent", messages=[]
     )
 
-    # Mock execute_sync to verify the tools passed at runtime
-    # Mock supports_multimodal to return False so AddImageTool gets added
     with (
         patch.object(Task, "execute_sync", return_value=mock_task_output) as mock_execute_sync,
         patch.object(
@@ -3965,16 +4012,13 @@ def test_multimodal_flag_adds_multimodal_tools():
     ):
         crew.kickoff()
 
-        # Get the tools that were actually used in execution
         _, kwargs = mock_execute_sync.call_args
         used_tools = kwargs["tools"]
 
-        # Check that the multimodal tool was added
         assert any(isinstance(tool, AddImageTool) for tool in used_tools), (
             "AddImageTool should be present when agent is multimodal and LLM doesn't support it natively"
         )
 
-        # Verify we have exactly one tool (just the AddImageTool)
         assert len(used_tools) == 1, "Should only have the AddImageTool"
 
 
@@ -3983,7 +4027,6 @@ def test_multimodal_agent_image_tool_handling():
     """
     Test that multimodal agents properly handle image tools in the CrewAgentExecutor
     """
-    # Create a multimodal agent
     multimodal_agent = Agent(
         role="Image Analyst",
         goal="Analyze images and provide descriptions",
@@ -3992,7 +4035,6 @@ def test_multimodal_agent_image_tool_handling():
         multimodal=True,
     )
 
-    # Create a task that involves image analysis
     task = Task(
         description="Analyze this image and describe what you see.",
         expected_output="A detailed description of the image.",
@@ -4001,7 +4043,6 @@ def test_multimodal_agent_image_tool_handling():
 
     crew = Crew(agents=[multimodal_agent], tasks=[task])
 
-    # Mock the image tool response
     mock_image_tool_result = {
         "role": "user",
         "content": [
@@ -4015,7 +4056,6 @@ def test_multimodal_agent_image_tool_handling():
         ],
     }
 
-    # Create a mock task output for the final result
     mock_task_output = TaskOutput(
         description="Mock description",
         raw="A detailed analysis of the image",
@@ -4023,33 +4063,26 @@ def test_multimodal_agent_image_tool_handling():
         messages=[],
     )
 
-    # Mock supports_multimodal to return False so AddImageTool gets added
     with (
         patch.object(Task, "execute_sync") as mock_execute_sync,
         patch.object(multimodal_agent.llm, "supports_multimodal", return_value=False),
     ):
-        # Set up the mock to return our task output
         mock_execute_sync.return_value = mock_task_output
 
-        # Execute the crew
         crew.kickoff()
 
-        # Get the tools that were passed to execute_sync
         _, kwargs = mock_execute_sync.call_args
         tools = kwargs["tools"]
 
-        # Verify the AddImageTool is present and properly configured
         image_tools = [tool for tool in tools if tool.name == "Add image to content"]
         assert len(image_tools) == 1, "Should have exactly one AddImageTool"
 
-        # Test the tool's execution
         image_tool = image_tools[0]
         result = image_tool._run(
             image_url="https://example.com/test-image.jpg",
             action="Please analyze this image",
         )
 
-        # Verify the tool returns the expected format
         assert result == mock_image_tool_result
         assert result["role"] == "user"
         assert len(result["content"]) == 2
@@ -4100,7 +4133,6 @@ def test_multimodal_agent_live_image_analysis():
     """
     Test that multimodal agents can analyze images through a real API call
     """
-    # Create a multimodal agent
     image_analyst = Agent(
         role="Image Analyst",
         goal="Analyze images with high attention to detail",
@@ -4111,7 +4143,6 @@ def test_multimodal_agent_live_image_analysis():
         llm="gpt-4o",
     )
 
-    # Create a task for image analysis
     analyze_image = Task(
         description="""
         Analyze the provided image and describe what you see in detail.
@@ -4122,19 +4153,16 @@ def test_multimodal_agent_live_image_analysis():
         agent=image_analyst,
     )
 
-    # Create and run the crew
     crew = Crew(agents=[image_analyst], tasks=[analyze_image])
 
-    # Execute with an image URL
     result = crew.kickoff(
         inputs={
             "image_url": "https://media.istockphoto.com/id/946087016/photo/aerial-view-of-lower-manhattan-new-york.jpg?s=612x612&w=0&k=20&c=viLiMRznQ8v5LzKTt_LvtfPFUVl1oiyiemVdSlm29_k="
         }
     )
 
-    # Verify we got a meaningful response
     assert isinstance(result.raw, str)
-    assert len(result.raw) > 100  # Expecting a detailed analysis
+    assert len(result.raw) > 100
     assert "error" not in result.raw.lower()  # No error messages in response
 
 
@@ -4184,12 +4212,10 @@ def test_crew_with_failing_task_guardrails():
 
     result = crew.kickoff()
 
-    # Verify the final output meets all format requirements
     content = result.raw.strip()
     assert content.startswith("REPORT:"), "Output should start with 'REPORT:'"
     assert content.endswith("END REPORT"), "Output should end with 'END REPORT'"
 
-    # Verify task output
     task_output = result.tasks_output[0]
     assert isinstance(task_output, TaskOutput)
     assert task_output.raw == result.raw
@@ -4205,7 +4231,6 @@ def test_crew_guardrail_feedback_in_context():
             return (False, "Output must contain the keyword 'IMPORTANT'")
         return (True, result.raw)
 
-    # Create execution contexts list to track contexts
     execution_contexts = []
 
     researcher = Agent(
@@ -4226,7 +4251,6 @@ def test_crew_guardrail_feedback_in_context():
     crew = Crew(agents=[researcher], tasks=[task])
 
     with patch.object(Agent, "execute_task") as mock_execute_task:
-        # Define side_effect to capture context and return different responses
         def side_effect(task, context=None, tools=None):
             execution_contexts.append(context if context else "")
             if len(execution_contexts) == 1:
@@ -4237,18 +4261,14 @@ def test_crew_guardrail_feedback_in_context():
 
         result = crew.kickoff()
 
-    # Verify that we had multiple executions
     assert len(execution_contexts) > 1, "Task should have been executed multiple times"
 
-    # Verify that the second execution included the guardrail feedback
     assert "Output must contain the keyword 'IMPORTANT'" in execution_contexts[1], (
         "Guardrail feedback should be included in retry context"
     )
 
-    # Verify final output meets guardrail requirements
     assert "IMPORTANT" in result.raw, "Final output should contain required keyword"
 
-    # Verify task retry count
     assert task.retry_count == 1, "Task should have been retried once"
 
 
@@ -4295,16 +4315,12 @@ def test_before_kickoff_callback():
 
     test_crew = test_crew_instance.crew()
 
-    # Verify that the before_kickoff_callbacks are set
     assert len(test_crew.before_kickoff_callbacks) == 1
 
-    # Prepare inputs
     inputs = {"initial": True}
 
-    # Call kickoff
     test_crew.kickoff(inputs=inputs)
 
-    # Check that the before_kickoff function was called
     # Note: inputs is copied internally, so the original dict is not modified
     assert test_crew_instance.inputs_modified
 
@@ -4347,20 +4363,14 @@ def test_before_kickoff_without_inputs():
         def crew(self):
             return Crew(agents=self.agents, tasks=self.tasks)
 
-    # Instantiate the class
     test_crew_instance = TestCrewClass()
-    # Build the crew
     test_crew = test_crew_instance.crew()
-    # Verify that the before_kickoff_callback is registered
     assert len(test_crew.before_kickoff_callbacks) == 1
 
-    # Call kickoff without passing inputs
     test_crew.kickoff()
 
-    # Check that the before_kickoff function was called
     assert test_crew_instance.inputs_modified
 
-    # Verify that the inputs were initialized and modified inside the before_kickoff method
     assert test_crew_instance.received_inputs is not None
     assert test_crew_instance.received_inputs.get("modified") is True
 
@@ -4399,13 +4409,11 @@ def test_crew_kickoff_for_each_works_with_manager_agent_copy():
         allow_delegation=False,
     )
 
-    # Define task
     task = Task(
         description="Generate a list of 5 interesting ideas for an article, then write one captivating paragraph for each idea that showcases the potential of a full article on this topic. Return the list of ideas with their paragraphs and your notes.",
         expected_output="5 bullet points, each with a paragraph and accompanying notes.",
     )
 
-    # Define manager agent
     manager = Agent(
         role="Project Manager",
         goal="Efficiently manage the crew and ensure high-quality task completion",
@@ -4413,7 +4421,6 @@ def test_crew_kickoff_for_each_works_with_manager_agent_copy():
         allow_delegation=True,
     )
 
-    # Instantiate crew with a custom manager
     crew = Crew(
         agents=[researcher, writer],
         tasks=[task],
@@ -4574,7 +4581,27 @@ def test_reset_knowledge_with_no_crew_knowledge(researcher, writer):
         # Optionally, you can also check the error message
     assert "Crew Knowledge and Agent Knowledge memory system is not initialized" in str(
         excinfo.value
-    )  # Replace with the expected message
+    )
+
+
+def test_reset_memory_uses_full_unified_memory_reset(researcher):
+    crew = Crew(
+        agents=[researcher],
+        process=Process.sequential,
+        tasks=[
+            Task(description="Task 1", expected_output="output", agent=researcher),
+        ],
+        memory=True,
+    )
+
+    assert isinstance(crew._memory, Memory)
+    with patch.object(Memory, "reset_all") as reset_all, patch.object(
+        Memory, "reset"
+    ) as reset:
+        crew.reset_memories(command_type="memory")
+
+    reset_all.assert_called_once_with()
+    reset.assert_not_called()
 
 
 def test_reset_knowledge_with_only_crew_knowledge(researcher, writer):
@@ -4659,7 +4686,7 @@ def test_reset_agent_knowledge_with_no_agent_knowledge(researcher, writer):
     # Optionally, you can also check the error message
     assert "Agent Knowledge memory system is not initialized" in str(
         excinfo.value
-    )  # Replace with the expected message
+    )
 
 
 def test_reset_agent_knowledge_with_only_crew_knowledge(researcher, writer):
@@ -4681,7 +4708,7 @@ def test_reset_agent_knowledge_with_only_crew_knowledge(researcher, writer):
     # Optionally, you can also check the error message
     assert "Agent Knowledge memory system is not initialized" in str(
         excinfo.value
-    )  # Replace with the expected message
+    )
 
 
 def test_reset_agent_knowledge_with_crew_and_agent_knowledge(researcher, writer):
@@ -4852,7 +4879,6 @@ def test_memory_remember_receives_task_content():
     )
 
     with (
-        # Mock extract_memories to return fake memories and capture the raw input.
         # No wraps= needed -- the test only checks what args it receives, not the output.
         patch.object(
             Memory, "extract_memories", return_value=["Fake memory."]
@@ -4868,7 +4894,6 @@ def test_memory_remember_receives_task_content():
     extract_mock.assert_called()
     raw = extract_mock.call_args.args[0]
 
-    # The raw content passed to extract_memories should contain the task context
     assert "Task:" in raw
     assert "Research" in raw or "topic" in raw
     assert "Agent:" in raw

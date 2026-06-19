@@ -27,6 +27,7 @@ from crewai.mcp.filters import (
     create_static_tool_filter,
 )
 
+
 if TYPE_CHECKING:
     from crewai.mcp.client import MCPClient
     from crewai.mcp.tool_resolver import MCPToolResolver

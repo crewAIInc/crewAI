@@ -782,6 +782,20 @@ def _inline_top_level_ref(schema: dict[str, Any]) -> dict[str, Any]:
     return schema
 
 
+def serialize_model_class(value: Any) -> Any:
+    """Serialize a ``type[BaseModel]`` field value as its JSON schema.
+
+    Args:
+        value: A ``type[BaseModel]`` subclass, ``None``, or another union member.
+
+    Returns:
+        ``value.model_json_schema()`` for model classes, ``value`` otherwise.
+    """
+    if isinstance(value, type) and issubclass(value, BaseModel):
+        return value.model_json_schema()
+    return value
+
+
 def create_model_from_schema(  # type: ignore[no-any-unimported]
     json_schema: dict[str, Any],
     *,
@@ -985,7 +999,11 @@ def _json_schema_to_pydantic_field(
     if examples:
         schema_extra["examples"] = examples
 
-    default = ... if is_required else None
+    default = (
+        json_schema["default"]
+        if "default" in json_schema
+        else (... if is_required else None)
+    )
 
     if isinstance(type_, type) and issubclass(type_, (int, float)):
         if "minimum" in json_schema:

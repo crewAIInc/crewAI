@@ -1,0 +1,272 @@
+---
+title: "트리거 개요"
+description: "CrewAI AMP 트리거의 동작 방식과 관리 방법, 그리고 통합별 플레이북을 한눈에 확인하세요"
+icon: "bolt"
+mode: "wide"
+---
+
+CrewAI AMP 트리거는 팀이 이미 사용하고 있는 도구의 실시간 이벤트와 자동화를 연결합니다. 폴링이나 수동 실행 대신, 트리거는 새로운 이메일, 캘린더 업데이트, CRM 상태 변화 등을 감지하여 지정한 크루 또는 플로우를 즉시 실행합니다.
+
+<iframe
+  className="w-full aspect-video rounded-xl"
+  src="https://www.youtube.com/embed/TpQ45lAZh48"
+  title="CrewAI 트리거 개요"
+  frameBorder="0"
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+  allowFullScreen
+></iframe>
+
+### 통합 플레이북
+
+아래 가이드는 각 통합을 활성화하고 테스트하는 방법을 자세히 설명합니다.
+
+<CardGroup cols={2}>
+  <Card title="Gmail 트리거" icon="envelope">
+    <a href="/ko/enterprise/guides/gmail-trigger">새로운 이메일이나 스레드 업데이트에 맞춰 크루를 실행하세요.</a>
+  </Card>
+
+{" "}
+<Card title="Google Calendar 트리거" icon="calendar-days">
+  <a href="/ko/enterprise/guides/google-calendar-trigger">
+    캘린더 이벤트 생성, 수정, 취소에 대응하세요.
+  </a>
+</Card>
+
+{" "}
+<Card title="Google Drive 트리거" icon="folder-open">
+  <a href="/ko/enterprise/guides/google-drive-trigger">
+    Drive 파일 업로드, 수정, 삭제를 감시하세요.
+  </a>
+</Card>
+
+{" "}
+<Card title="Outlook 트리거" icon="envelope-open">
+  <a href="/ko/enterprise/guides/outlook-trigger">
+    Outlook의 새로운 메일이나 삭제된 이벤트에 대응하세요.
+  </a>
+</Card>
+
+{" "}
+<Card title="OneDrive 트리거" icon="cloud">
+  <a href="/ko/enterprise/guides/onedrive-trigger">
+    OneDrive 파일 활동 및 공유 변경 사항을 감사하세요.
+  </a>
+</Card>
+
+{" "}
+<Card title="Microsoft Teams 트리거" icon="comments">
+  <a href="/ko/enterprise/guides/microsoft-teams-trigger">
+    새로운 Teams 채팅이 생성될 때 워크플로우를 시작하세요.
+  </a>
+</Card>
+
+{" "}
+<Card title="HubSpot 트리거" icon="hubspot">
+  <a href="/ko/enterprise/guides/hubspot-trigger">
+    HubSpot 워크플로우와 라이프사이클 이벤트에서 자동화를 실행하세요.
+  </a>
+</Card>
+
+{" "}
+<Card title="Salesforce 트리거" icon="salesforce">
+  <a href="/ko/enterprise/guides/salesforce-trigger">
+    Salesforce 프로세스를 CrewAI 크루와 연결해 CRM 자동화를 구현하세요.
+  </a>
+</Card>
+
+{" "}
+<Card title="Slack 트리거" icon="slack">
+  <a href="/ko/enterprise/guides/slack-trigger">
+    Slack 슬래시 명령으로 크루를 바로 실행하세요.
+  </a>
+</Card>
+
+  <Card title="Zapier 트리거" icon="bolt">
+    <a href="/ko/enterprise/guides/zapier-trigger">CrewAI를 수천 개의 Zapier 지원 앱과 연동하세요.</a>
+  </Card>
+</CardGroup>
+
+## 트리거 기능
+
+- **실시간 대응** – 조건이 충족되면 자동으로 워크플로우 실행
+- **외부 시스템 연동** – Gmail, Outlook, OneDrive, JIRA, Slack, Stripe 등과 연결
+- **자동화 확장성** – 수동 개입 없이 대량 이벤트 처리
+- **컨텍스트 유지** – 트리거 데이터를 크루와 플로우에서 바로 활용
+
+## 트리거 관리
+
+### 사용 가능한 트리거 보기
+
+1. CrewAI 대시보드에서 자동화를 선택합니다.
+2. **Triggers** 탭을 클릭하여 사용 가능한 통합을 확인합니다.
+
+<Frame>
+  <img
+    src="/images/enterprise/list-available-triggers.png"
+    alt="사용 가능한 트리거 목록"
+  />
+</Frame>
+
+### 트리거 활성화/비활성화
+
+<Frame>
+  <img src="/images/enterprise/trigger-selected.png" alt="트리거 토글" />
+</Frame>
+
+- **파랑 (활성)** – 이벤트 발생 시 자동 실행
+- **회색 (비활성)** – 이벤트 무시
+
+토글 버튼을 클릭하면 즉시 적용됩니다.
+
+### 트리거 실행 모니터링
+
+트리거 실행 내역과 상태를 대시보드에서 확인하세요.
+
+<Frame>
+  <img src="/images/enterprise/list-executions.png" alt="트리거 실행 내역" />
+</Frame>
+
+## 트리거 기반 자동화 구성
+
+### 설정 체크리스트
+
+- **Tools & Integrations**에서 해당 서비스를 연결하고 OAuth 또는 API 설정을 완료했나요?
+- 자동화에서 트리거 토글을 활성화했나요?
+- 필요한 환경 변수(토큰, 테넌트 ID, 시크릿 등)를 설정했나요?
+- 첫 번째 작업에서 트리거 payload를 파싱하도록 구성했나요?
+- `allow_crewai_trigger_context` 옵션으로 컨텍스트 자동 주입 여부를 결정했나요?
+- 웹훅 로그, CrewAI 실행 기록, 외부 알림 등 모니터링을 준비했나요?
+
+### CLI로 로컬에서 트리거 테스트
+
+CrewAI CLI는 프로덕션에 배포하기 전에 트리거 기반 자동화를 개발하고 테스트할 수 있는 강력한 명령을 제공합니다.
+
+#### 사용 가능한 트리거 목록 보기
+
+연결된 통합에 사용 가능한 모든 트리거를 확인하세요:
+
+```bash
+crewai triggers list
+```
+
+이 명령은 연결된 통합을 기반으로 사용 가능한 모든 트리거를 표시합니다:
+
+- 통합 이름 및 연결 상태
+- 사용 가능한 트리거 유형
+- 트리거 이름 및 설명
+
+#### 트리거 실행 시뮬레이션
+
+배포 전에 실제 트리거 payload로 크루를 테스트하세요:
+
+```bash
+crewai triggers run <트리거_이름>
+```
+
+예시:
+
+```bash
+crewai triggers run microsoft_onedrive/file_changed
+```
+
+이 명령은:
+
+- 로컬에서 크루를 실행합니다
+- 완전하고 실제적인 트리거 payload를 전달합니다
+- 프로덕션에서 크루가 호출되는 방식을 정확히 시뮬레이션합니다
+
+<Warning>
+  **중요한 개발 노트:**
+  - 개발 중 트리거 실행을 시뮬레이션하려면 `crewai triggers run <trigger>`를 사용하세요
+  - `crewai run`을 사용하면 트리거 호출을 시뮬레이션하지 않으며 트리거 payload를 전달하지 않습니다
+  - 배포 후에는 실제 트리거 payload로 크루가 실행됩니다
+  - 크루가 트리거 payload에 없는 매개변수를 기대하면 실행이 실패할 수 있습니다
+</Warning>
+
+### 트리거와 Crew 연동
+
+```python
+@CrewBase
+class MyAutomatedCrew:
+    @agent
+    def researcher(self) -> Agent:
+        return Agent(
+            config=self.agents_config['researcher'],
+        )
+
+    @task
+    def parse_trigger_payload(self) -> Task:
+        return Task(
+            config=self.tasks_config['parse_trigger_payload'],
+            agent=self.researcher(),
+        )
+
+    @task
+    def analyze_trigger_content(self) -> Task:
+        return Task(
+            config=self.tasks_config['analyze_trigger_data'],
+            agent=self.researcher(),
+        )
+```
+
+### 플로우와의 통합
+
+#### Payload 접근
+
+```python
+from crewai.flow import Flow, start, listen
+
+class MyAutomatedFlow(Flow):
+    @start()
+    def handle_trigger(self, crewai_trigger_payload: dict = None):
+        if crewai_trigger_payload:
+            trigger_id = crewai_trigger_payload.get('id')
+            event_data = crewai_trigger_payload.get('payload', {})
+            self.state.trigger_id = trigger_id
+            self.state.trigger_type = event_data
+            return event_data
+        return None
+
+    @listen(handle_trigger)
+    def process_data(self, trigger_data):
+        # ... 트리거 처리
+```
+
+#### 플로우에서 Crew 실행
+
+```python
+@start()
+def delegate_to_crew(self, crewai_trigger_payload: dict = None):
+    crew = MySpecializedCrew()
+    result = crew.crew().kickoff(
+        inputs={
+            'custom_parameter': "custom_value",
+            'crewai_trigger_payload': crewai_trigger_payload
+        },
+    )
+    return result
+```
+
+## 문제 해결
+
+**트리거가 실행되지 않나요?**
+
+- 배포의 Triggers 탭에서 트리거가 활성화되어 있는지 확인하세요
+- Tools & Integrations에서 통합 연결 상태를 확인하세요
+- 필요한 모든 환경 변수가 올바르게 구성되어 있는지 확인하세요
+
+**실행 중 오류가 발생하나요?**
+
+- 실행 로그에서 오류 세부 정보를 확인하세요
+- `crewai triggers run <트리거_이름>`을 사용하여 로컬에서 테스트하고 정확한 payload 구조를 확인하세요
+- 크루가 `crewai_trigger_payload` 매개변수를 처리할 수 있는지 확인하세요
+- 크루가 트리거 payload에 포함되지 않은 매개변수를 기대하지 않는지 확인하세요
+
+**개발 문제:**
+
+- 배포하기 전에 항상 `crewai triggers run <trigger>`로 테스트하여 전체 payload를 확인하세요
+- `crewai run`은 트리거 호출을 시뮬레이션하지 않으므로 `crewai triggers run`을 대신 사용하세요
+- `crewai triggers list`를 사용하여 연결된 통합에 사용 가능한 트리거를 확인하세요
+- 배포 후 크루는 실제 트리거 payload를 받으므로 먼저 로컬에서 철저히 테스트하세요
+
+트리거를 활용하면 CrewAI 자동화를 이벤트 기반 시스템으로 전환하여 기존 비즈니스 프로세스와 도구에 자연스럽게 녹여낼 수 있습니다.

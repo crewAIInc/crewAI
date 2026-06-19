@@ -3,10 +3,10 @@
 import os
 
 from chromadb import PersistentClient
+from crewai_core.lock_store import lock
 
 from crewai.rag.chromadb.client import ChromaDBClient
 from crewai.rag.chromadb.config import ChromaDBConfig
-from crewai.utilities.lock_store import lock
 
 
 def create_client(config: ChromaDBConfig) -> ChromaDBClient:

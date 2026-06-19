@@ -37,7 +37,6 @@ class DataType(str, Enum):
             DataType.TEXT: ("text_chunker", "TextChunker"),
             DataType.DOCX: ("text_chunker", "DocxChunker"),
             DataType.MDX: ("text_chunker", "MdxChunker"),
-            # Structured formats
             DataType.CSV: ("structured_chunker", "CsvChunker"),
             DataType.JSON: ("structured_chunker", "JsonChunker"),
             DataType.XML: ("structured_chunker", "XmlChunker"),

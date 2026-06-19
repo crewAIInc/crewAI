@@ -16,7 +16,16 @@ P = ParamSpec("P")
 R = TypeVar("R")
 
 FlowConditionType: TypeAlias = Literal["OR", "AND"]
-SimpleFlowCondition: TypeAlias = tuple[FlowConditionType, list[FlowMethodName]]
+
+__all__ = [
+    "FlowCondition",
+    "FlowConditionType",
+    "FlowConditions",
+    "FlowMethod",
+    "ListenMethod",
+    "RouterMethod",
+    "StartMethod",
+]
 
 
 class FlowCondition(TypedDict, total=False):
@@ -26,16 +35,14 @@ class FlowCondition(TypedDict, total=False):
 
     Attributes:
         type: The type of the condition.
-        conditions: A list of conditions types.
-        methods: A list of methods.
+        conditions: A sequence of route labels, method names, or nested conditions.
     """
 
     type: Required[FlowConditionType]
-    conditions: Sequence[FlowMethodName | FlowCondition]
-    methods: list[FlowMethodName]
+    conditions: Sequence[str | FlowCondition]
 
 
-FlowConditions: TypeAlias = list[FlowMethodName | FlowCondition]
+FlowConditions: TypeAlias = Sequence[str | FlowCondition]
 
 
 class FlowMethod(Generic[P, R]):
@@ -72,10 +79,10 @@ class FlowMethod(Generic[P, R]):
 
         # Preserve flow-related attributes from wrapped method (e.g., from @human_feedback)
         for attr in [
-            "__is_router__",
-            "__router_paths__",
             "__human_feedback_config__",
-            "_hf_llm",  # Live LLM object for HITL resume
+            "__conversational_only__",  # gates registration on Flow.conversational
+            "__flow_persistence_config__",
+            "__flow_method_definition__",
         ]:
             if hasattr(meth, attr):
                 setattr(self, attr, getattr(meth, attr))
@@ -144,24 +151,10 @@ class FlowMethod(Generic[P, R]):
 class StartMethod(FlowMethod[P, R]):
     """Wrapper for methods marked as flow start points."""
 
-    __is_start_method__: bool = True
-    __trigger_methods__: list[FlowMethodName] | None = None
-    __condition_type__: FlowConditionType | None = None
-    __trigger_condition__: FlowCondition | None = None
-
 
 class ListenMethod(FlowMethod[P, R]):
     """Wrapper for methods marked as flow listeners."""
 
-    __trigger_methods__: list[FlowMethodName] | None = None
-    __condition_type__: FlowConditionType | None = None
-    __trigger_condition__: FlowCondition | None = None
-
 
 class RouterMethod(FlowMethod[P, R]):
     """Wrapper for methods marked as flow routers."""
-
-    __is_router__: bool = True
-    __trigger_methods__: list[FlowMethodName] | None = None
-    __condition_type__: FlowConditionType | None = None
-    __trigger_condition__: FlowCondition | None = None
