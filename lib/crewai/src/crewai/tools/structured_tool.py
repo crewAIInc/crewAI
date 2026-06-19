@@ -52,6 +52,10 @@ def _infer_output_schema_from_callable(
 
 
 def _format_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
+    original_tool = getattr(tool, "_original_tool", None)
+    if original_tool is not None:
+        return cast(str, original_tool.format_output_for_agent(raw_result))
+
     output_schema = getattr(tool, "output_schema", None)
     if output_schema is None:
         return str(raw_result)

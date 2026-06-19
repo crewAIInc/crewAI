@@ -142,6 +142,27 @@ class GeolocateTool(BaseTool):
         return {"latitude": 40.7128, "longitude": -74.0060}
 ```
 
+If agents should receive a custom text format instead of JSON, override `format_output_for_agent` on your `BaseTool` subclass. This is useful when the best agent-facing representation is Markdown, a terse summary, or another format derived from the same raw result.
+
+```python
+class GeolocateTool(BaseTool):
+    name: str = "Geolocate"
+    description: str = "Converts a street address into latitude/longitude coordinates."
+
+    def _run(self, address: str) -> GeolocateResult:
+        return GeolocateResult(latitude=40.7128, longitude=-74.0060)
+
+    def format_output_for_agent(self, raw_result: object) -> str:
+        result = GeolocateResult.model_validate(raw_result)
+        return (
+            f"### Coordinates\n\n"
+            f"- Latitude: `{result.latitude}`\n"
+            f"- Longitude: `{result.longitude}`"
+        )
+```
+
+The override only controls the text sent to the agent. Direct users of your package still receive the raw value from `tool.run(...)`.
+
 ### Optional: Environment Variables
 
 If your tool requires API keys or other configuration, declare them with `env_vars` so users know what to set:

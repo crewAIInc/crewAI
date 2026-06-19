@@ -1079,6 +1079,51 @@ class TestExecuteSingleNativeToolCall:
             "score": 0.9,
         }
 
+    def test_custom_agent_output_formatter_is_used_from_structured_tool(
+        self,
+    ) -> None:
+        clear_before_tool_call_hooks()
+        clear_after_tool_call_hooks()
+
+        class SearchOutput(BaseModel):
+            query: str
+            score: float
+
+        class MarkdownSearchTool(BaseTool):
+            name: str = "markdown_search"
+            description: str = "Search for a query"
+            output_schema: type[BaseModel] = SearchOutput
+
+            def _run(self, query: str) -> SearchOutput:
+                return SearchOutput(query=query, score=0.9)
+
+            def format_output_for_agent(self, raw_result: Any) -> str:
+                result = self.output_schema.model_validate(raw_result)
+                return f"### {result.query}\n\nScore: **{result.score}**"
+
+        tool = MarkdownSearchTool()
+        tool_call = MagicMock()
+        tool_call.id = "call_1"
+        tool_call.function.name = "markdown_search"
+        tool_call.function.arguments = '{"query": "crew"}'
+
+        result = execute_single_native_tool_call(
+            tool_call,
+            available_functions={"markdown_search": tool._run},
+            original_tools=[],
+            structured_tools=[tool.to_structured_tool()],
+            tools_handler=None,
+            agent=None,
+            task=None,
+            crew=None,
+            event_source=MagicMock(),
+            printer=None,
+            verbose=False,
+        )
+
+        assert result.result == "### crew\n\nScore: **0.9**"
+        assert result.tool_message["content"] == "### crew\n\nScore: **0.9**"
+
     def test_after_hook_includes_raw_tool_result_for_typed_output(self) -> None:
         clear_after_tool_call_hooks()
 

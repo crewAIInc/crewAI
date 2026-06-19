@@ -584,6 +584,30 @@ class TestToolOutputSchema:
             "score": 0.8,
         }
 
+    def test_custom_agent_output_formatter_carries_over_to_structured_tool(
+        self,
+    ) -> None:
+        class MarkdownSearchTool(BaseTool):
+            name: str = "markdown_search"
+            description: str = "Search for information"
+            output_schema: type[BaseModel] = SearchOutput
+
+            def _run(self, query: str) -> SearchOutput:
+                return SearchOutput(query=query, score=0.8)
+
+            def format_output_for_agent(self, raw_result: object) -> str:
+                result = self.output_schema.model_validate(raw_result)
+                return f"### Search result\n\n- Query: `{result.query}`\n- Score: {result.score}"
+
+        structured = MarkdownSearchTool().to_structured_tool()
+
+        raw_result = structured.invoke({"query": "crew"})
+
+        assert raw_result == SearchOutput(query="crew", score=0.8)
+        assert structured.format_output_for_agent(raw_result) == (
+            "### Search result\n\n- Query: `crew`\n- Score: 0.8"
+        )
+
 # Async arun() Schema Validation Tests
 
 

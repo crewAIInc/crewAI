@@ -211,6 +211,23 @@ raw_result = tool.run(query="CrewAI")
 print(raw_result.score)
 ```
 
+To send a custom representation to the agent, such as Markdown, override `format_output_for_agent` on your `BaseTool` subclass. This does not change direct execution: `tool.run(...)` still returns the raw Python value.
+
+```python Code
+class SearchTool(BaseTool):
+    name: str = "Search"
+    description: str = "Searches for a query and returns the top match score."
+
+    def _run(self, query: str) -> SearchResult:
+        return SearchResult(query=query, score=0.97)
+
+    def format_output_for_agent(self, raw_result: object) -> str:
+        result = SearchResult.model_validate(raw_result)
+        return f"### Search result\n\n- Query: `{result.query}`\n- Score: {result.score}"
+```
+
+If you do not override `format_output_for_agent`, CrewAI uses the default typed-output behavior: Pydantic outputs become JSON for the agent, and untyped outputs use `str(raw_result)`.
+
 If validation or serialization fails during agent execution, CrewAI emits a runtime warning and falls back to `str(raw_result)` for the agent-facing text. Direct tool calls still receive the raw result.
 
 ## Asynchronous Tool Support
