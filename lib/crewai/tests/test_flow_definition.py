@@ -37,6 +37,7 @@ def test_flow_public_exports_are_explicit():
     }
     assert set(flow_definition.__all__) == {
         "FlowActionDefinition",
+        "FlowAgentActionDefinition",
         "FlowAtomicActionDefinition",
         "FlowCodeActionDefinition",
         "FlowConfigDefinition",
@@ -80,6 +81,10 @@ def test_flow_definition_json_schema_carries_reference_descriptions():
     assert "not interpolated" in script_properties["code"]["description"]
     assert "not sandboxed" in script_properties["code"]["description"]
 
+    agent_properties = defs["FlowAgentActionDefinition"]["properties"]
+    assert "Inline Agent definition" in agent_properties["with"]["description"]
+    assert "run an inline Agent" in agent_properties["call"]["description"]
+
     state_schema = next(
         branch
         for branch in schema["properties"]["state"]["anyOf"]
@@ -122,6 +127,7 @@ def test_flow_definition_json_schema_carries_field_examples_only():
         "FlowDefinition",
         "FlowCodeActionDefinition",
         "FlowToolActionDefinition",
+        "FlowAgentActionDefinition",
         "FlowCrewActionDefinition",
         "FlowExpressionActionDefinition",
         "FlowScriptActionDefinition",
@@ -156,6 +162,10 @@ def test_flow_definition_json_schema_carries_field_examples_only():
         "my_project.flows:normalize_topic"
     ]
     assert action_properties["with"]["examples"] == [{"topic": "${state.topic}"}]
+
+    agent_properties = defs["FlowAgentActionDefinition"]["properties"]
+    assert agent_properties["call"]["examples"] == ["agent"]
+    assert agent_properties["with"]["examples"][0]["input"] == "${state.question}"
 
     each_properties = defs["FlowEachActionDefinition"]["properties"]
     assert each_properties["in"]["examples"] == ["state.rows"]

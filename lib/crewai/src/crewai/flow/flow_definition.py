@@ -28,7 +28,7 @@ from crewai.flow.conversational_definition import (
     FlowConversationalRouterDefinition,
 )
 from crewai.flow.expressions import ExpressionData
-from crewai.project.crew_definition import CrewDefinition
+from crewai.project.crew_definition import AgentDefinition, CrewDefinition
 
 
 logger = logging.getLogger(__name__)
@@ -40,6 +40,7 @@ _EACH_STEP_CEL_ROOTS = frozenset({"item", "outputs", "state"})
 
 __all__ = [
     "FlowActionDefinition",
+    "FlowAgentActionDefinition",
     "FlowAtomicActionDefinition",
     "FlowCodeActionDefinition",
     "FlowConfigDefinition",
@@ -435,6 +436,33 @@ class FlowCrewActionDefinition(BaseModel):
     )
 
 
+class FlowAgentActionDefinition(BaseModel):
+    """A Flow method action that builds and kicks off a CrewAI agent."""
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        extra="forbid",
+    )
+
+    call: Literal["agent"] = Field(
+        description="Action discriminator. Use agent to run an inline Agent definition.",
+        examples=["agent"],
+    )
+    with_: AgentDefinition = Field(
+        alias="with",
+        description="Inline Agent definition to load and execute for this action.",
+        examples=[
+            {
+                "role": "Analyst",
+                "goal": "Answer user questions",
+                "backstory": "Precise and concise.",
+                "settings": {"llm": "openai/gpt-4o-mini"},
+                "input": "${state.question}",
+            }
+        ],
+    )
+
+
 class FlowExpressionActionDefinition(BaseModel):
     """A Flow method action that evaluates a CEL expression."""
 
@@ -481,6 +509,7 @@ FlowAtomicActionDefinition: TypeAlias = Annotated[
     FlowCodeActionDefinition
     | FlowToolActionDefinition
     | FlowCrewActionDefinition
+    | FlowAgentActionDefinition
     | FlowExpressionActionDefinition
     | FlowScriptActionDefinition,
     Field(discriminator="call"),
@@ -573,6 +602,7 @@ FlowActionDefinition: TypeAlias = (
     FlowCodeActionDefinition
     | FlowToolActionDefinition
     | FlowCrewActionDefinition
+    | FlowAgentActionDefinition
     | FlowExpressionActionDefinition
     | FlowScriptActionDefinition
     | FlowEachActionDefinition
@@ -802,6 +832,13 @@ def _validate_action_cel(
         )
         return
 
+    if isinstance(action, FlowAgentActionDefinition):
+        Expression(cast(ExpressionData, action.with_.input)).validate_template(
+            allowed_roots=allowed_roots,
+            source=f"{path}.with.input",
+        )
+        return
+
     if isinstance(action, FlowEachActionDefinition):
         Expression(action.in_).validate_expression(
             allowed_roots=_BASE_CEL_ROOTS,
@@ -820,6 +857,14 @@ def _validate_action_cel(
                 allowed_roots=_EACH_STEP_CEL_ROOTS,
             )
         return
+
+    if isinstance(action, FlowScriptActionDefinition):
+        return
+
+    raise TypeError(
+        f"no CEL validation defined for action type {type(action).__name__} at "
+        f"{path}; add a branch to _validate_action_cel for it."
+    )
 
 
 def log_flow_definition_issues(definition: FlowDefinition) -> None:
