@@ -106,3 +106,31 @@ def test_allows_benign_archive(tmp_path: Path) -> None:
 
     assert (dest / "SKILL.md").read_bytes() == b"# skill"
     assert (dest / "scripts" / "run.py").read_bytes() == b"print(1)"
+
+
+def test_blocks_hardlink_escaping_destination(tmp_path: Path) -> None:
+    """A hardlink whose target escapes dest must be rejected."""
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    victim = outside / "victim.txt"
+    victim.write_bytes(b"safe")
+
+    dest = tmp_path / "dest"
+    dest.mkdir()
+
+    def build(tf: tarfile.TarFile) -> None:
+        link = tarfile.TarInfo("victim.txt")
+        link.type = tarfile.LNKTYPE
+        link.linkname = str(victim)  # absolute path outside dest
+        tf.addfile(link)
+
+        payload = b"pwned"
+        info = tarfile.TarInfo("victim.txt")
+        info.size = len(payload)
+        tf.addfile(info, io.BytesIO(payload))
+
+    with _tar_from_members(build) as tf:
+        with pytest.raises(ValueError, match="escaping destination"):
+            _safe_extractall(tf, dest)
+
+    assert victim.read_bytes() == b"safe"
