@@ -7,19 +7,9 @@ import hashlib
 import re
 from typing import List, Dict, Any, Optional, Tuple
 
-# Import standard CrewAI MemoryRecord structure
 from crewai.memory.storage.backend import StorageBackend
-# Note: Ensure MemoryRecord is imported correctly based on CrewAI structure
-# mapping fields: value/text -> record.value, metadata -> record.metadata
-try:
-    from crewai.memory.storage.interface import MemoryRecord
-except ImportError:
-    # Fallback/Mock definition if import path varies in local branch environment
-    from dataclasses import dataclass, field
-    @dataclass
-    class MemoryRecord:
-        value: Any
-        metadata: Dict[str, Any] = field(default_factory=dict)
+# CodeRabbit Fix: Direct import to fail-fast and avoid masking integration issues
+from crewai.memory.storage.interface import MemoryRecord
 
 logger = logging.getLogger(__name__)
 
@@ -84,11 +74,14 @@ class MimirStorage(StorageBackend):
                 "metadata": record.metadata
             }
             
-            # Call the subprocess using '--db' flag per Mimir CLI docs
+            # Call the subprocess using '--db' flag per Mimir CLI docs (with 10s timeout)
             try:
                 cmd = [self.mimir_path, "--db", self.db_path, "store", json.dumps(payload)]
-                subprocess.run(cmd, check=True, capture_output=True, text=True)
+                subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=10)
                 logger.info(f"Successfully stored memory with key: {key}")
+            except subprocess.TimeoutExpired as te:
+                logger.error(f"Mimir store operation timed out: {te}")
+                raise te
             except subprocess.CalledProcessError as e:
                 logger.error(f"Failed to store memory in Mimir: {e.stderr}")
                 raise e
@@ -98,6 +91,7 @@ class MimirStorage(StorageBackend):
         category = scope_prefix if scope_prefix else "default"
         self._validate_inputs(category, query)
         
+        # Call the subprocess to query Mimir CLI (with 10s timeout)
         try:
             cmd = [
                 self.mimir_path, 
@@ -107,7 +101,7 @@ class MimirStorage(StorageBackend):
                 "--limit", str(limit), 
                 "--category", category
             ]
-            result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+            result = subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=10)
             
             raw_results = json.loads(result.stdout)
             formatted_results = []
@@ -122,6 +116,9 @@ class MimirStorage(StorageBackend):
                 formatted_results.append((record, score))
                 
             return formatted_results
+        except subprocess.TimeoutExpired as te:
+            logger.error(f"Mimir search operation timed out: {te}")
+            raise te
         except subprocess.CalledProcessError as e:
             logger.error(f"Search failed in Mimir: {e.stderr}")
             raise e
