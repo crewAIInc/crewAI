@@ -50,7 +50,7 @@ class TestValidateFilePath:
         """Reject symlinks that point outside base_dir."""
         link = tmp_path / "sneaky_link"
         os.symlink("/etc/passwd", str(link))
-        with pytest.raises(ValueError, match="outside the allowed director"):
+        with pytest.raises(ValueError, match="outside the allowed directories"):
             validate_file_path("sneaky_link", str(tmp_path))
 
     def test_defaults_to_cwd(self):
