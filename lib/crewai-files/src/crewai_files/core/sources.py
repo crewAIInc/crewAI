@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Iterator
+import asyncio
+from collections.abc import AsyncIterator, Iterator, Sequence
 import inspect
+import ipaddress
 import json
 import mimetypes
 from pathlib import Path
+import socket
 from typing import Annotated, Any, BinaryIO, Protocol, cast, runtime_checkable
+from urllib.parse import urljoin, urlparse
 
 import aiofiles
 from pydantic import (
@@ -486,6 +490,118 @@ class AsyncFileStream(BaseModel):
             yield chunk
 
 
+_MAX_REDIRECTS = 5
+
+
+def _is_blocked_ip(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+    """Return whether an IP address must not be fetched (SSRF protection).
+
+    Normalizes IPv4-mapped IPv6 addresses (e.g. ``::ffff:127.0.0.1``) to their
+    IPv4 form first, because :class:`ipaddress.IPv6Address` does not flag the
+    mapped form as loopback or private on its own, a common SSRF guard bypass.
+
+    Args:
+        ip: The resolved IP address to classify.
+
+    Returns:
+        True if the address is loopback, private, link-local, reserved,
+        multicast, or unspecified; False for a routable public address.
+    """
+    if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped is not None:
+        ip = ip.ipv4_mapped
+    return (
+        ip.is_private
+        or ip.is_loopback
+        or ip.is_link_local
+        or ip.is_reserved
+        or ip.is_multicast
+        or ip.is_unspecified
+    )
+
+
+def _url_host(url: str) -> str:
+    """Extract the host of an absolute URL.
+
+    Args:
+        url: The absolute http(s) URL.
+
+    Returns:
+        The host component.
+
+    Raises:
+        ValueError: If the URL has no host.
+    """
+    host = urlparse(url).hostname
+    if not host:
+        raise ValueError(f"URL has no host: {url}")
+    return host
+
+
+def _reject_blocked_addrinfo(
+    url: str, addrinfo: Sequence[tuple[Any, ...]]
+) -> None:
+    """Raise if any resolved address is non-public (SSRF protection).
+
+    Args:
+        url: The URL being validated, used for the error message.
+        addrinfo: The ``getaddrinfo`` result for the URL host.
+
+    Raises:
+        ValueError: If any resolved address is a blocked (non-public) address.
+    """
+    for *_, sockaddr in addrinfo:
+        ip = ipaddress.ip_address(sockaddr[0])
+        if _is_blocked_ip(ip):
+            raise ValueError(
+                f"Refusing to fetch URL resolving to non-public address {ip} "
+                f"(SSRF protection): {url}"
+            )
+
+
+def _assert_url_allowed(url: str) -> None:
+    """Raise if ``url``'s host resolves to a non-public address (SSRF guard).
+
+    Resolves every address the host maps to and rejects the request if any of
+    them is non-public, so a multi-record host cannot slip a private address
+    past the guard.
+
+    Args:
+        url: The absolute http(s) URL about to be fetched.
+
+    Raises:
+        ValueError: If the URL has no host, cannot be resolved, or resolves to
+            a blocked address.
+    """
+    host = _url_host(url)
+    try:
+        addrinfo = socket.getaddrinfo(host, None)
+    except socket.gaierror as exc:
+        raise ValueError(f"Cannot resolve URL host: {host}") from exc
+    _reject_blocked_addrinfo(url, addrinfo)
+
+
+async def _aassert_url_allowed(url: str) -> None:
+    """Async variant of :func:`_assert_url_allowed`.
+
+    Runs the blocking name resolution in the default executor so the DNS lookup
+    does not block the running event loop.
+
+    Args:
+        url: The absolute http(s) URL about to be fetched.
+
+    Raises:
+        ValueError: If the URL has no host, cannot be resolved, or resolves to
+            a blocked address.
+    """
+    host = _url_host(url)
+    loop = asyncio.get_running_loop()
+    try:
+        addrinfo = await loop.run_in_executor(None, socket.getaddrinfo, host, None)
+    except socket.gaierror as exc:
+        raise ValueError(f"Cannot resolve URL host: {host}") from exc
+    _reject_blocked_addrinfo(url, addrinfo)
+
+
 class FileUrl(BaseModel):
     """File referenced by URL.
 
@@ -526,11 +642,32 @@ class FileUrl(BaseModel):
         return guessed or "application/octet-stream"
 
     def read(self) -> bytes:
-        """Fetch content from URL (for providers that don't support URL references)."""
+        """Fetch content from URL, blocking SSRF to non-public addresses.
+
+        Redirects are followed manually so every hop is re-validated by
+        :func:`_assert_url_allowed`; a public URL therefore cannot redirect into
+        an internal or cloud-metadata address.
+
+        Returns:
+            The fetched file content as bytes.
+
+        Raises:
+            ValueError: If the URL (or a redirect target) resolves to a blocked
+                address, or if there are too many redirects.
+        """
         if self._content is None:
             import httpx
 
-            response = httpx.get(self.url, follow_redirects=True)
+            current = self.url
+            for _ in range(_MAX_REDIRECTS + 1):
+                _assert_url_allowed(current)
+                response = httpx.get(current, follow_redirects=False)
+                if response.is_redirect and "location" in response.headers:
+                    current = urljoin(current, response.headers["location"])
+                    continue
+                break
+            else:
+                raise ValueError(f"Too many redirects while fetching URL: {self.url}")
             response.raise_for_status()
             self._content = response.content
             if "content-type" in response.headers:
@@ -538,16 +675,35 @@ class FileUrl(BaseModel):
         return self._content
 
     async def aread(self) -> bytes:
-        """Async fetch content from URL."""
+        """Async fetch with the same SSRF protection as :meth:`read`.
+
+        Returns:
+            The fetched file content as bytes.
+
+        Raises:
+            ValueError: If the URL (or a redirect target) resolves to a blocked
+                address, or if there are too many redirects.
+        """
         if self._content is None:
             import httpx
 
-            async with httpx.AsyncClient() as client:
-                response = await client.get(self.url, follow_redirects=True)
-                response.raise_for_status()
-                self._content = response.content
-                if "content-type" in response.headers:
-                    self._content_type = response.headers["content-type"].split(";")[0]
+            current = self.url
+            async with httpx.AsyncClient(follow_redirects=False) as client:
+                for _ in range(_MAX_REDIRECTS + 1):
+                    await _aassert_url_allowed(current)
+                    response = await client.get(current)
+                    if response.is_redirect and "location" in response.headers:
+                        current = urljoin(current, response.headers["location"])
+                        continue
+                    break
+                else:
+                    raise ValueError(
+                        f"Too many redirects while fetching URL: {self.url}"
+                    )
+            response.raise_for_status()
+            self._content = response.content
+            if "content-type" in response.headers:
+                self._content_type = response.headers["content-type"].split(";")[0]
         return self._content
 
 

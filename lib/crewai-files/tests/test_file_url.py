@@ -9,6 +9,33 @@ from crewai_files.resolution.resolver import FileResolver
 import pytest
 
 
+def _addrinfo(ip: str) -> list[tuple[int, int, int, str, tuple[str, int]]]:
+    """Build a minimal ``socket.getaddrinfo`` result for a single IP.
+
+    Args:
+        ip: The IP address the host should resolve to.
+
+    Returns:
+        A one-entry list shaped like ``socket.getaddrinfo`` output.
+    """
+    return [(0, 0, 0, "", (ip, 0))]
+
+
+@pytest.fixture(autouse=True)
+def mock_public_dns():
+    """Resolve every host to a public IP so fetch tests stay offline.
+
+    The SSRF guard resolves the URL host; without this fixture the read tests
+    would perform real DNS lookups. Individual tests can still override
+    ``socket.getaddrinfo`` to exercise blocked addresses.
+
+    Yields:
+        The patched ``getaddrinfo`` mock.
+    """
+    with patch("socket.getaddrinfo", return_value=_addrinfo("93.184.216.34")) as m:
+        yield m
+
+
 class TestFileUrl:
     """Tests for FileUrl source type."""
 
@@ -90,12 +117,13 @@ class TestFileUrl:
         mock_response = MagicMock()
         mock_response.content = b"fake image content"
         mock_response.headers = {"content-type": "image/png"}
+        mock_response.is_redirect = False
 
         with patch("httpx.get", return_value=mock_response) as mock_get:
             content = url.read()
 
             mock_get.assert_called_once_with(
-                "https://example.com/image.png", follow_redirects=True
+                "https://example.com/image.png", follow_redirects=False
             )
             assert content == b"fake image content"
 
@@ -309,3 +337,97 @@ class TestImageFileWithUrl:
 
         assert file.source is url
         assert file.content_type == "image/jpeg"
+
+
+class TestFileUrlSSRF:
+    """SSRF protection for FileUrl.read / aread (CWE-918)."""
+
+    @pytest.mark.parametrize(
+        "blocked_ip",
+        [
+            "127.0.0.1",  # loopback
+            "169.254.169.254",  # cloud metadata
+            "10.0.0.5",  # RFC1918
+            "192.168.1.10",  # RFC1918
+            "::1",  # IPv6 loopback
+            "::ffff:127.0.0.1",  # IPv4-mapped loopback (naive-guard bypass)
+            "0.0.0.0",  # unspecified
+        ],
+    )
+    def test_read_blocks_non_public_addresses(self, blocked_ip):
+        """read() must refuse URLs resolving to a non-public address."""
+        url = FileUrl(url="http://internal.example/secret")
+        with patch("socket.getaddrinfo", return_value=_addrinfo(blocked_ip)):
+            with patch("httpx.get") as mock_get:
+                with pytest.raises(ValueError, match="SSRF protection"):
+                    url.read()
+                mock_get.assert_not_called()
+
+    def test_read_allows_public_address(self):
+        """read() must still fetch a normal public URL (no false positive)."""
+        url = FileUrl(url="https://example.com/image.png")
+        mock_response = MagicMock()
+        mock_response.content = b"ok"
+        mock_response.headers = {"content-type": "image/png"}
+        mock_response.is_redirect = False
+
+        with patch("socket.getaddrinfo", return_value=_addrinfo("93.184.216.34")):
+            with patch("httpx.get", return_value=mock_response) as mock_get:
+                assert url.read() == b"ok"
+                mock_get.assert_called_once_with(
+                    "https://example.com/image.png", follow_redirects=False
+                )
+
+    def test_read_blocks_redirect_to_internal(self):
+        """A public URL redirecting to an internal address must be blocked."""
+        url = FileUrl(url="https://example.com/start")
+        redirect = MagicMock()
+        redirect.is_redirect = True
+        redirect.headers = {"location": "http://169.254.169.254/latest/meta-data/"}
+
+        def fake_getaddrinfo(host, *_args, **_kwargs):
+            """Resolve the public start host and the internal redirect host.
+
+            Args:
+                host: The host being resolved.
+
+            Returns:
+                A ``getaddrinfo``-shaped result for the requested host.
+            """
+            mapping = {
+                "example.com": "93.184.216.34",
+                "169.254.169.254": "169.254.169.254",
+            }
+            return _addrinfo(mapping[host])
+
+        with patch("socket.getaddrinfo", side_effect=fake_getaddrinfo):
+            with patch("httpx.get", return_value=redirect):
+                with pytest.raises(ValueError, match="SSRF protection"):
+                    url.read()
+
+    def test_read_blocks_redirect_bomb(self):
+        """Endless redirects must raise rather than loop forever."""
+        url = FileUrl(url="https://example.com/a")
+        loop_response = MagicMock()
+        loop_response.is_redirect = True
+        loop_response.headers = {"location": "https://example.com/a"}
+
+        with patch("socket.getaddrinfo", return_value=_addrinfo("93.184.216.34")):
+            with patch("httpx.get", return_value=loop_response):
+                with pytest.raises(ValueError, match="Too many redirects"):
+                    url.read()
+
+    @pytest.mark.asyncio
+    async def test_aread_blocks_non_public_address(self):
+        """aread() must apply the same SSRF guard as read()."""
+        url = FileUrl(url="http://internal.example/secret")
+        mock_client = MagicMock()
+        mock_client.get = AsyncMock()
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=None)
+
+        with patch("socket.getaddrinfo", return_value=_addrinfo("127.0.0.1")):
+            with patch("httpx.AsyncClient", return_value=mock_client):
+                with pytest.raises(ValueError, match="SSRF protection"):
+                    await url.aread()
+                mock_client.get.assert_not_called()
