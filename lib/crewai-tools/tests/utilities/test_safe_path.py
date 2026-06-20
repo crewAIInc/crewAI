@@ -113,7 +113,7 @@ class TestValidateDirectoryPath:
             validate_directory_path("file.txt", str(tmp_path))
 
     def test_rejects_traversal(self, tmp_path):
-        with pytest.raises(ValueError, match="outside the allowed director"):
+        with pytest.raises(ValueError, match="outside the allowed directories"):
             validate_directory_path("../../", str(tmp_path))
 
 
