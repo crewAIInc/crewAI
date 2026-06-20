@@ -37,7 +37,7 @@ class TestValidateFilePath:
 
     def test_rejects_absolute_path_outside_base(self, tmp_path):
         """Reject absolute path outside base_dir."""
-        with pytest.raises(ValueError, match="outside the allowed director"):
+        with pytest.raises(ValueError, match="outside the allowed directories"):
             validate_file_path("/etc/passwd", str(tmp_path))
 
     def test_allows_absolute_path_inside_base(self, tmp_path):
