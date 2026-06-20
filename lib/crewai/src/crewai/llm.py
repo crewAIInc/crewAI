@@ -14,6 +14,7 @@ from typing import (
     TypedDict,
     cast,
 )
+import traceback
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field, model_validator
@@ -1755,11 +1756,11 @@ class LLM(BaseLLM):
                 return result
             except Exception as e:
                 fn = available_functions.get(function_name, lambda: None)
-                logging.error(f"Error executing function '{function_name}': {e}")
+                logging.error(f"Error executing function '{function_name}': {e}\n{traceback.format_exc(limit=5)}")
                 crewai_event_bus.emit(
                     self,
                     event=LLMCallFailedEvent(
-                        error=f"Tool execution error: {e!s}",
+                        error=f"Tool execution error: {e!s}\nTraceback:\n{traceback.format_exc(limit=5)}",
                         from_task=from_task,
                         from_agent=from_agent,
                         call_id=get_current_call_id(),
@@ -1770,7 +1771,7 @@ class LLM(BaseLLM):
                     event=ToolUsageErrorEvent(
                         tool_name=function_name,
                         tool_args=function_args,
-                        error=f"Tool execution error: {e!s}",
+                        error=f"Tool execution error: {e!s}\nTraceback:\n{traceback.format_exc(limit=5)}",
                         from_task=from_task,
                         from_agent=from_agent,
                     ),
