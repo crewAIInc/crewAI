@@ -250,3 +250,36 @@ class TestAllowList:
         assert validate_file_path(str(b / "fb.txt"), base_dir=str(base)) == str(
             b / "fb.txt"
         )
+
+    def test_cwd_root_default_is_not_an_allowed_root(self, tmp_path, monkeypatch):
+        """An unconfigured cwd of '/' must not open the whole filesystem.
+
+        Regression for the deny-by-default allow-list silently defaulting to the
+        filesystem root in containers started without a WORKDIR.
+        """
+        monkeypatch.delenv("CREWAI_TOOLS_ALLOWED_DIRS", raising=False)
+        monkeypatch.delenv("CREWAI_TOOLS_ALLOW_UNSAFE_PATHS", raising=False)
+        monkeypatch.setattr(os, "getcwd", lambda: os.sep)
+        with pytest.raises(ValueError, match="filesystem root"):
+            validate_file_path("/etc/passwd")
+
+    def test_cwd_root_with_explicit_allowed_dirs_confines(
+        self, tmp_path, monkeypatch
+    ):
+        """With cwd '/', confinement falls back to the explicit allow-list."""
+        monkeypatch.delenv("CREWAI_TOOLS_ALLOWED_DIRS", raising=False)
+        monkeypatch.setattr(os, "getcwd", lambda: os.sep)
+        (tmp_path / "data.txt").touch()
+        assert validate_file_path(
+            str(tmp_path / "data.txt"), allowed_dirs=[str(tmp_path)]
+        ) == str(tmp_path / "data.txt")
+        with pytest.raises(ValueError, match="outside the allowed directories"):
+            validate_file_path("/etc/passwd", allowed_dirs=[str(tmp_path)])
+
+    def test_explicit_base_dir_root_is_opt_in(self, monkeypatch):
+        """An explicit base_dir of '/' is honored as a deliberate opt-in."""
+        monkeypatch.delenv("CREWAI_TOOLS_ALLOWED_DIRS", raising=False)
+        monkeypatch.delenv("CREWAI_TOOLS_ALLOW_UNSAFE_PATHS", raising=False)
+        assert validate_file_path("/etc/passwd", base_dir=os.sep) == os.path.realpath(
+            "/etc/passwd"
+        )

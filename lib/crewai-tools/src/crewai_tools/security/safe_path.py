@@ -40,23 +40,50 @@ def _get_allowed_roots(
     is compared by its real location. Empty entries are ignored and duplicates
     are collapsed while preserving order. The first element is always the
     primary root used to resolve relative candidate paths.
+
+    The filesystem root (``os.sep``, e.g. ``"/"``) is never accepted as an
+    *implicitly defaulted* root. When ``base_dir`` is not supplied and the
+    current working directory is ``/`` -- common in containers started without
+    a ``WORKDIR`` -- defaulting to it would make every absolute path "within"
+    the allow-list and disable confinement entirely. In that case the cwd
+    default is dropped; an operator who genuinely wants the whole filesystem
+    must opt in explicitly via ``base_dir``, ``allowed_dirs``, or
+    ``CREWAI_TOOLS_ALLOWED_DIRS``. If no usable root remains, a ``ValueError``
+    is raised rather than silently allowing everything.
     """
-    raw_roots: list[str] = [base_dir if base_dir is not None else os.getcwd()]
+    primary_explicit = base_dir is not None
+    primary = base_dir if base_dir is not None else os.getcwd()
+
+    # (root, is_explicit) -- explicit roots are operator-provided and may
+    # legitimately include the filesystem root as an opt-in.
+    raw_roots: list[tuple[str, bool]] = [(primary, primary_explicit)]
 
     env_dirs = os.environ.get(_ALLOWED_DIRS_ENV, "")
     if env_dirs:
-        raw_roots.extend(d for d in env_dirs.split(os.pathsep) if d)
+        raw_roots.extend((d, True) for d in env_dirs.split(os.pathsep) if d)
 
     if allowed_dirs:
-        raw_roots.extend(d for d in allowed_dirs if d)
+        raw_roots.extend((d, True) for d in allowed_dirs if d)
 
     resolved: list[str] = []
     seen: set[str] = set()
-    for root in raw_roots:
+    for root, is_explicit in raw_roots:
         real = os.path.realpath(root)
+        if real == os.sep and not is_explicit:
+            # Refuse to let an unconfigured cwd of "/" open the whole filesystem.
+            continue
         if real not in seen:
             seen.add(real)
             resolved.append(real)
+
+    if not resolved:
+        raise ValueError(
+            "No safe allowed directory could be determined: the current working "
+            f"directory is the filesystem root ('{os.sep}'). Set "
+            f"{_ALLOWED_DIRS_ENV} to an explicit directory, pass "
+            f"base_dir/allowed_dirs, or set {_UNSAFE_PATHS_ENV}=true to bypass "
+            "path validation."
+        )
     return resolved
 
 
