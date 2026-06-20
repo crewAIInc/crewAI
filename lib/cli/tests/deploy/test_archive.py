@@ -166,6 +166,8 @@ type = "crew"
     assert "agents/researcher.jsonc" in names
     assert all(not name.startswith("src/") for name in names)
     assert "run_crew" not in pyproject
+    assert "json_crew =" not in pyproject
+    assert "[project.scripts]" not in pyproject
 
 
 def test_create_project_zip_keeps_json_project_root_shape(tmp_path: Path):
@@ -190,6 +192,7 @@ type = "crew"
     try:
         with zipfile.ZipFile(archive_path) as archive:
             names = set(archive.namelist())
+            pyproject = archive.read("pyproject.toml").decode()
     finally:
         archive_path.unlink(missing_ok=True)
 
@@ -199,6 +202,9 @@ type = "crew"
         "pyproject.toml",
         "uv.lock",
     }
+    assert "run_crew" not in pyproject
+    assert "json_crew =" not in pyproject
+    assert "[project.scripts]" not in pyproject
 
 
 def test_create_project_zip_does_not_rewrite_json_project_scripts(tmp_path: Path):
@@ -230,6 +236,7 @@ type = "crew"
     assert 'json_crew = "old.module:run"' in pyproject
     assert 'run_crew = "old.module:run"' in pyproject
     assert 'custom = "custom.module:main"' in pyproject
+    assert pyproject.count("[project.scripts]") == 1
     assert "[tool.crewai]" in pyproject
 
 
@@ -265,6 +272,8 @@ version = "0.1.0"
 
     assert names == {"crew.jsonc", "pyproject.toml"}
     assert "run_crew" not in pyproject
+    assert "json_crew =" not in pyproject
+    assert "[project.scripts]" not in pyproject
 
 
 def test_create_project_zip_accepts_json_project_without_package_name(tmp_path: Path):
@@ -285,7 +294,11 @@ type = "crew"
     try:
         with zipfile.ZipFile(archive_path) as archive:
             names = set(archive.namelist())
+            pyproject = archive.read("pyproject.toml").decode()
     finally:
         archive_path.unlink(missing_ok=True)
 
     assert names == {"crew.jsonc", "pyproject.toml"}
+    assert "run_crew" not in pyproject
+    assert "json_crew =" not in pyproject
+    assert "[project.scripts]" not in pyproject
