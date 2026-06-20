@@ -24,10 +24,12 @@ __all__ = [
     "build_env_with_all_tool_credentials",
     "build_env_with_tool_repository_credentials",
     "copy_template",
+    "enable_prompt_line_editing",
     "fetch_and_json_env_file",
     "get_project_description",
     "get_project_name",
     "get_project_version",
+    "is_dmn_mode_enabled",
     "load_env_vars",
     "parse_toml",
     "read_toml",
@@ -38,6 +40,27 @@ __all__ = [
 
 
 console = Console()
+
+
+def is_dmn_mode_enabled() -> bool:
+    """Return True when the enterprise non-interactive mode is enabled."""
+    value = os.environ.get("CREWAI_DMN")
+    if value is None:
+        return False
+    return value.strip().lower() not in {"", "0", "false", "no", "off"}
+
+
+def enable_prompt_line_editing() -> None:
+    """Enable cursor movement/history editing for Click text prompts when available."""
+    try:
+        import readline
+    except ImportError:
+        return
+
+    try:
+        readline.parse_and_bind("set editing-mode emacs")
+    except Exception:  # pragma: no cover - readline backends vary by platform
+        return
 
 
 def copy_template(

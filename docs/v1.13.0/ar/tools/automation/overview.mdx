@@ -1,0 +1,60 @@
+---
+title: "نظرة عامة"
+description: "أتمتة سير العمل والتكامل مع المنصات والخدمات الخارجية"
+icon: "face-smile"
+mode: "wide"
+---
+
+تمكّن هذه الأدوات وكلاءك من أتمتة سير العمل والتكامل مع المنصات الخارجية والاتصال بخدمات الطرف الثالث المتنوعة لتعزيز الوظائف.
+
+## **الأدوات المتاحة**
+
+<CardGroup cols={2}>
+  <Card title="أداة Apify Actor" icon="spider" href="/ar/tools/automation/apifyactorstool">
+    تشغيل Apify Actors لمهام تجريف الويب والأتمتة.
+  </Card>
+
+  <Card title="أداة Composio" icon="puzzle-piece" href="/ar/tools/automation/composiotool">
+    التكامل مع مئات التطبيقات والخدمات من خلال Composio.
+  </Card>
+
+  <Card title="أداة MultiOn" icon="window-restore" href="/ar/tools/automation/multiontool">
+    أتمتة تفاعلات المتصفح وسير العمل المستند إلى الويب.
+  </Card>
+
+  <Card title="محول إجراءات Zapier" icon="bolt" href="/ar/tools/automation/zapieractionstool">
+    عرض إجراءات Zapier كأدوات CrewAI للأتمتة عبر آلاف التطبيقات.
+  </Card>
+</CardGroup>
+
+## **حالات الاستخدام الشائعة**
+
+- **أتمتة سير العمل**: أتمتة المهام والعمليات المتكررة
+- **تكامل API**: الاتصال بواجهات برمجة التطبيقات والخدمات الخارجية
+- **مزامنة البيانات**: مزامنة البيانات بين منصات مختلفة
+- **تنسيق العمليات**: تنسيق سير العمل المعقد متعدد الخطوات
+- **خدمات الطرف الثالث**: الاستفادة من الأدوات والمنصات الخارجية
+
+```python
+from crewai_tools import ApifyActorTool, ComposioTool, MultiOnTool
+
+# Create automation tools
+apify_automation = ApifyActorTool()
+platform_integration = ComposioTool()
+browser_automation = MultiOnTool()
+
+# Add to your agent
+agent = Agent(
+    role="Automation Specialist",
+    tools=[apify_automation, platform_integration, browser_automation],
+    goal="Automate workflows and integrate systems"
+)
+```
+
+## **فوائد التكامل**
+
+- **الكفاءة**: تقليل العمل اليدوي من خلال الأتمتة
+- **قابلية التوسع**: التعامل مع أعباء العمل المتزايدة تلقائياً
+- **الموثوقية**: تنفيذ متسق لسير العمل
+- **الاتصال**: ربط الأنظمة والمنصات المختلفة
+- **الإنتاجية**: التركيز على المهام ذات القيمة العالية بينما تتولى الأتمتة العمل الروتيني

@@ -850,24 +850,22 @@ class TestLLMConfigPreservation:
         assert _deserialize_llm_from_context(None) is None
 
     def test_serialize_llm_preserves_provider_specific_fields(self):
-        """Test that provider-specific fields like project/location are serialized."""
+        """Test that provider-specific fields like base_url are serialized."""
         from crewai.flow.human_feedback import _serialize_llm_for_context
         from crewai.llm import LLM
 
-        # Create a Gemini-style LLM with project and non-default location
         llm = LLM(
-            model="gemini-2.0-flash",
-            provider="gemini",
-            project="my-project",
-            location="europe-west1",
+            model="llama3",
+            provider="ollama",
+            base_url="http://localhost:11434",
             temperature=0.3,
         )
 
         serialized = _serialize_llm_for_context(llm)
 
         assert isinstance(serialized, dict)
-        assert serialized.get("project") == "my-project"
-        assert serialized.get("location") == "europe-west1"
+        assert serialized.get("model") == "ollama/llama3"
+        assert serialized.get("base_url") == "http://localhost:11434/v1"
         assert serialized.get("temperature") == 0.3
 
     def test_config_preserved_through_full_flow_execution(self):

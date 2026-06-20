@@ -1096,6 +1096,7 @@ def test_lite_agent_memory_true_resolves_to_default_memory():
     )
     assert agent._memory is not None
     assert isinstance(agent._memory, Memory)
+    assert agent._memory.llm is agent.llm
 
 
 @pytest.mark.filterwarnings("ignore:LiteAgent is deprecated")
