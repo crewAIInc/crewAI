@@ -96,4 +96,4 @@ When running the tool (`_run` or `_arun` methods, or via agent execution), it us
 
 ## Response Format
 
-The tool returns a JSON string representing the structured data extracted from the provided URL(s). The exact structure depends on the content of the pages and the `extract_depth` used. Refer to the [Tavily API documentation](https://docs.tavily.com/docs/tavily-api/python-sdk#extract) for details on the response structure.
+The tool returns a JSON string representing the structured data extracted from the provided URL(s). The exact structure depends on the content of the pages and the `extract_depth` used. Refer to the [Tavily API documentation](https://docs.tavily.com) for details on the response structure.
