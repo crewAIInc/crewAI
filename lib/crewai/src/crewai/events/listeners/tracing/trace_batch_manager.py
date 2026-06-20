@@ -6,20 +6,29 @@ import time
 from typing import Any
 import uuid
 
+from crewai_core.plus_api import (
+    TraceBatchInitPayload,
+    TraceBatchMetadata,
+    TraceEventsPayload,
+    TraceExecutionContext,
+    TraceExecutionMetadata,
+    TraceFinalizePayload,
+)
+from crewai_core.settings import Settings
 from rich.console import Console
 from rich.panel import Panel
 
-from crewai.cli.authentication.token import AuthError, get_auth_token
-from crewai.cli.config import Settings
-from crewai.cli.constants import DEFAULT_CREWAI_ENTERPRISE_URL
-from crewai.cli.plus_api import PlusAPI
+from crewai.auth.token import AuthError, get_auth_token
+from crewai.constants import DEFAULT_CREWAI_ENTERPRISE_URL
 from crewai.events.listeners.tracing.types import TraceEvent
 from crewai.events.listeners.tracing.utils import (
     get_user_id,
     is_tracing_enabled_in_context,
+    is_tui_mode,
     should_auto_collect_first_time_traces,
 )
-from crewai.utilities.version import get_crewai_version
+from crewai.plus_api import PlusAPI
+from crewai.version import get_crewai_version
 
 
 logger = getLogger(__name__)
@@ -54,6 +63,7 @@ class TraceBatchManager:
         self._pending_events_lock = Lock()
         self._pending_events_cv = Condition(self._pending_events_lock)
         self._pending_events_count = 0
+        self._finalize_lock = Lock()
 
         self.is_current_batch_ephemeral = False
         self.trace_batch_id: str | None = None
@@ -62,7 +72,10 @@ class TraceBatchManager:
         self.execution_start_times: dict[str, datetime] = {}
         self.batch_owner_type: str | None = None
         self.batch_owner_id: str | None = None
+        self.defer_session_finalization: bool = False
+        self._batch_finalized: bool = False
         self.backend_initialized: bool = False
+        self.trace_url: str | None = None
         self.ephemeral_trace_url: str | None = None
         try:
             self.plus_api = PlusAPI(
@@ -93,10 +106,13 @@ class TraceBatchManager:
                 user_context=user_context, execution_metadata=execution_metadata
             )
             self.is_current_batch_ephemeral = use_ephemeral
+            self._batch_finalized = False
 
             self.record_start_time("execution")
 
-            if should_auto_collect_first_time_traces():
+            if should_auto_collect_first_time_traces() or (
+                is_tui_mode() and not is_tracing_enabled_in_context()
+            ):
                 self.trace_batch_id = self.current_batch.batch_id
             else:
                 self._initialize_backend_batch(
@@ -123,25 +139,27 @@ class TraceBatchManager:
             return None
 
         try:
-            payload = {
+            execution_context: TraceExecutionContext = {
+                "crew_fingerprint": execution_metadata.get("crew_fingerprint"),
+                "crew_name": execution_metadata.get("crew_name", None),
+                "flow_name": execution_metadata.get("flow_name", None),
+                "crewai_version": self.current_batch.version,
+                "privacy_level": user_context.get("privacy_level", "standard"),
+            }
+            execution_metadata_payload: TraceExecutionMetadata = {
+                "expected_duration_estimate": execution_metadata.get(
+                    "expected_duration_estimate", 300
+                ),
+                "agent_count": execution_metadata.get("agent_count", 0),
+                "task_count": execution_metadata.get("task_count", 0),
+                "flow_method_count": execution_metadata.get("flow_method_count", 0),
+                "execution_started_at": datetime.now(timezone.utc).isoformat(),
+            }
+            payload: TraceBatchInitPayload = {
                 "trace_id": self.current_batch.batch_id,
                 "execution_type": execution_metadata.get("execution_type", "crew"),
-                "execution_context": {
-                    "crew_fingerprint": execution_metadata.get("crew_fingerprint"),
-                    "crew_name": execution_metadata.get("crew_name", None),
-                    "flow_name": execution_metadata.get("flow_name", None),
-                    "crewai_version": self.current_batch.version,
-                    "privacy_level": user_context.get("privacy_level", "standard"),
-                },
-                "execution_metadata": {
-                    "expected_duration_estimate": execution_metadata.get(
-                        "expected_duration_estimate", 300
-                    ),
-                    "agent_count": execution_metadata.get("agent_count", 0),
-                    "task_count": execution_metadata.get("task_count", 0),
-                    "flow_method_count": execution_metadata.get("flow_method_count", 0),
-                    "execution_started_at": datetime.now(timezone.utc).isoformat(),
-                },
+                "execution_context": execution_context,
+                "execution_metadata": execution_metadata_payload,
             }
             if use_ephemeral:
                 payload["ephemeral_trace_id"] = self.current_batch.batch_id
@@ -264,13 +282,14 @@ class TraceBatchManager:
         if not self.plus_api or not self.trace_batch_id or not self.event_buffer:
             return 500
         try:
-            payload = {
+            batch_metadata: TraceBatchMetadata = {
+                "events_count": len(self.event_buffer),
+                "batch_sequence": 1,
+                "is_final_batch": False,
+            }
+            payload: TraceEventsPayload = {
                 "events": [event.to_dict() for event in self.event_buffer],
-                "batch_metadata": {
-                    "events_count": len(self.event_buffer),
-                    "batch_sequence": 1,
-                    "is_final_batch": False,
-                },
+                "batch_metadata": batch_metadata,
             }
 
             response = (
@@ -301,6 +320,9 @@ class TraceBatchManager:
     def finalize_batch(self) -> TraceBatch | None:
         """Finalize batch and return it for sending"""
 
+        if self._batch_finalized:
+            return None
+
         if not self.current_batch or not is_tracing_enabled_in_context():
             return None
 
@@ -329,16 +351,15 @@ class TraceBatchManager:
         self.current_batch.events = sorted_events
         events_sent_count = len(sorted_events)
         if sorted_events:
-            original_buffer = self.event_buffer
             self.event_buffer = sorted_events
             events_sent_to_backend_status = self._send_events_to_backend()
-            self.event_buffer = original_buffer
             if events_sent_to_backend_status == 500 and self.trace_batch_id:
                 self._mark_batch_as_failed(
                     self.trace_batch_id, "Error sending events to backend"
                 )
                 return None
-        self._finalize_backend_batch(events_sent_count)
+        if not self._finalize_backend_batch(events_sent_count):
+            return None
 
         finalized_batch = self.current_batch
 
@@ -349,81 +370,91 @@ class TraceBatchManager:
         self.event_buffer.clear()
         self.trace_batch_id = None
         self.is_current_batch_ephemeral = False
+        self._batch_finalized = True
 
         self._cleanup_batch_data()
 
         return finalized_batch
 
-    def _finalize_backend_batch(self, events_count: int = 0) -> None:
+    def _finalize_backend_batch(self, events_count: int = 0) -> bool:
         """Send batch finalization to backend
 
         Args:
             events_count: Number of events that were successfully sent
         """
-        if not self.plus_api or not self.trace_batch_id:
-            return
+        with self._finalize_lock:
+            batch_id = self.trace_batch_id
+            is_ephemeral = self.is_current_batch_ephemeral
+            if self._batch_finalized or not self.plus_api or not batch_id:
+                return True
 
-        try:
-            payload = {
-                "status": "completed",
-                "duration_ms": self.calculate_duration("execution"),
-                "final_event_count": events_count,
-            }
+            try:
+                payload: TraceFinalizePayload = {
+                    "status": "completed",
+                    "duration_ms": self.calculate_duration("execution"),
+                    "final_event_count": events_count,
+                }
 
-            response = (
-                self.plus_api.finalize_ephemeral_trace_batch(
-                    self.trace_batch_id, payload
-                )
-                if self.is_current_batch_ephemeral
-                else self.plus_api.finalize_trace_batch(self.trace_batch_id, payload)
-            )
-
-            if response.status_code == 200:
-                access_code = response.json().get("access_code", None)
-                console = Console()
-                settings = Settings()
-                base_url = settings.enterprise_base_url or DEFAULT_CREWAI_ENTERPRISE_URL
-                return_link = (
-                    f"{base_url}/crewai_plus/trace_batches/{self.trace_batch_id}"
-                    if not self.is_current_batch_ephemeral and access_code is None
-                    else f"{base_url}/crewai_plus/ephemeral_trace_batches/{self.trace_batch_id}?access_code={access_code}"
+                response = (
+                    self.plus_api.finalize_ephemeral_trace_batch(batch_id, payload)
+                    if is_ephemeral
+                    else self.plus_api.finalize_trace_batch(batch_id, payload)
                 )
 
-                if self.is_current_batch_ephemeral:
-                    self.ephemeral_trace_url = return_link
+                if response.status_code == 200:
+                    self._batch_finalized = True
+                    access_code = response.json().get("access_code", None)
+                    console = Console()
+                    settings = Settings()
+                    base_url = (
+                        settings.enterprise_base_url or DEFAULT_CREWAI_ENTERPRISE_URL
+                    )
+                    return_link = (
+                        f"{base_url}/crewai_plus/trace_batches/{batch_id}"
+                        if not is_ephemeral and access_code is None
+                        else f"{base_url}/crewai_plus/ephemeral_trace_batches/{batch_id}?access_code={access_code}"
+                    )
 
-                # Create a properly formatted message with URL on its own line
-                message_parts = [
-                    f"✅ Trace batch finalized with session ID: {self.trace_batch_id}",
-                    "",
-                    f"🔗 View here: {return_link}",
-                ]
+                    self.trace_url = return_link
+                    if is_ephemeral:
+                        self.ephemeral_trace_url = return_link
 
-                if access_code:
-                    message_parts.append(f"🔑 Access Code: {access_code}")
+                    message_parts = [
+                        f"✅ Trace batch finalized with session ID: {batch_id}",
+                        "",
+                        f"🔗 View here: {return_link}",
+                    ]
 
-                panel = Panel(
-                    "\n".join(message_parts),
-                    title="Trace Batch Finalization",
-                    border_style="green",
-                )
-                if not should_auto_collect_first_time_traces():
-                    console.print(panel)
+                    if access_code:
+                        message_parts.append(f"🔑 Access Code: {access_code}")
 
-            else:
+                    panel = Panel(
+                        "\n".join(message_parts),
+                        title="Trace Batch Finalization",
+                        border_style="green",
+                    )
+                    if (
+                        not should_auto_collect_first_time_traces()
+                        and not is_tui_mode()
+                    ):
+                        console.print(panel)
+                    return True
+
                 logger.error(
                     f"❌ Failed to finalize trace batch: {response.status_code} - {response.text}"
                 )
-                self._mark_batch_as_failed(self.trace_batch_id, response.text)
+                self._mark_batch_as_failed(batch_id, response.text)
+                return False
 
-        except Exception as e:
-            logger.error(f"❌ Error finalizing trace batch: {e}")
-            try:
-                self._mark_batch_as_failed(self.trace_batch_id, str(e))
-            except Exception:
-                logger.debug(
-                    "Could not mark trace batch as failed (network unavailable)"
-                )
+            except Exception as e:
+                logger.error(f"❌ Error finalizing trace batch: {e}")
+                try:
+                    self._mark_batch_as_failed(batch_id, str(e))
+                except Exception:
+                    logger.debug(
+                        "Could not mark trace batch as failed (network unavailable)"
+                    )
+                return False
 
     def _cleanup_batch_data(self) -> None:
         """Clean up batch data after successful finalization to free memory"""

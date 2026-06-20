@@ -601,6 +601,19 @@ CrewAI is open-source and we welcome contributions. If you're looking to contrib
 - Send a pull request.
 - We appreciate your input!
 
+### Contributing to the docs
+
+The site at [docs.crewai.com](https://docs.crewai.com) is published from
+`docs/` by [Mintlify](https://www.mintlify.com/). The docs use directory-based
+versioning: edits to `docs/edge/<lang>/...` (e.g.
+`docs/edge/en/concepts/agents.mdx`) land under the **Edge** version selector
+immediately and are frozen into a new versioned snapshot under
+`docs/v<X.Y.Z>/` at the next release cut. Frozen snapshots are immutable — CI
+rejects PRs that modify them without a `[docs-freeze]` title prefix. The
+release CLI (`devtools release`) handles the freeze automatically; see
+[`AGENTS.md`](AGENTS.md) for the full contributor guide and
+[`RELEASING.md`](RELEASING.md) for the release-cut runbook.
+
 ### Installing Dependencies
 
 ```bash

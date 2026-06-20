@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from unittest.mock import Mock
 
-from crewai.hooks import clear_all_tool_call_hooks, unregister_after_tool_call_hook, unregister_before_tool_call_hook
-import pytest
-
+from crewai.hooks import (
+    clear_all_tool_call_hooks,
+    unregister_after_tool_call_hook,
+    unregister_before_tool_call_hook,
+)
 from crewai.hooks.tool_hooks import (
     ToolCallHookContext,
     get_after_tool_call_hooks,
@@ -12,6 +14,7 @@ from crewai.hooks.tool_hooks import (
     register_after_tool_call_hook,
     register_before_tool_call_hook,
 )
+import pytest
 
 
 @pytest.fixture
@@ -51,17 +54,14 @@ def clear_hooks():
     """Clear global hooks before and after each test."""
     from crewai.hooks import tool_hooks
 
-    # Store original hooks
     original_before = tool_hooks._before_tool_call_hooks.copy()
     original_after = tool_hooks._after_tool_call_hooks.copy()
 
-    # Clear hooks
     tool_hooks._before_tool_call_hooks.clear()
     tool_hooks._after_tool_call_hooks.clear()
 
     yield
 
-    # Restore original hooks
     tool_hooks._before_tool_call_hooks.clear()
     tool_hooks._after_tool_call_hooks.clear()
     tool_hooks._before_tool_call_hooks.extend(original_before)
@@ -91,20 +91,24 @@ class TestToolCallHookContext:
         assert context.task == mock_task
         assert context.crew == mock_crew
         assert context.tool_result is None
+        assert context.raw_tool_result is None
 
     def test_context_with_result(self, mock_tool):
         """Test that context includes result when provided."""
         tool_input = {"arg1": "value1"}
         tool_result = "Test tool result"
+        raw_tool_result = {"value": 42}
 
         context = ToolCallHookContext(
             tool_name="test_tool",
             tool_input=tool_input,
             tool=mock_tool,
             tool_result=tool_result,
+            raw_tool_result=raw_tool_result,
         )
 
         assert context.tool_result == tool_result
+        assert context.raw_tool_result == raw_tool_result
 
     def test_tool_input_is_mutable_reference(self, mock_tool):
         """Test that modifying context.tool_input modifies the original dict."""
@@ -115,10 +119,8 @@ class TestToolCallHookContext:
             tool=mock_tool,
         )
 
-        # Modify through context
         context.tool_input["arg2"] = "value2"
 
-        # Check that original dict is also modified
         assert "arg2" in tool_input
         assert tool_input["arg2"] == "value2"
 
@@ -157,8 +159,8 @@ class TestBeforeToolCallHooks:
         """Test that before hooks can block tool execution."""
         def block_hook(context):
             if context.tool_name == "dangerous_tool":
-                return False  # Block execution
-            return None  # Allow execution
+                return False
+            return None
 
         tool_input = {}
         context = ToolCallHookContext(
@@ -173,7 +175,7 @@ class TestBeforeToolCallHooks:
     def test_before_hook_can_allow_execution(self, mock_tool):
         """Test that before hooks can explicitly allow execution."""
         def allow_hook(context):
-            return None  # Allow execution
+            return None
 
         tool_input = {}
         context = ToolCallHookContext(
@@ -189,7 +191,7 @@ class TestBeforeToolCallHooks:
         """Test that before hooks can modify tool input in-place."""
         def modify_input_hook(context):
             context.tool_input["modified_by_hook"] = True
-            return None
+            return
 
         tool_input = {"arg1": "value1"}
         context = ToolCallHookContext(
@@ -212,7 +214,6 @@ class TestBeforeToolCallHooks:
         hooks1 = get_before_tool_call_hooks()
         hooks2 = get_before_tool_call_hooks()
 
-        # They should be equal but not the same object
         assert hooks1 == hooks2
         assert hooks1 is not hooks2
 
@@ -296,7 +297,6 @@ class TestAfterToolCallHooks:
         hooks1 = get_after_tool_call_hooks()
         hooks2 = get_after_tool_call_hooks()
 
-        # They should be equal but not the same object
         assert hooks1 == hooks2
         assert hooks1 is not hooks2
 
@@ -310,15 +310,15 @@ class TestToolHooksIntegration:
 
         def hook1(context):
             execution_order.append(1)
-            return None
+            return
 
         def hook2(context):
             execution_order.append(2)
-            return None
+            return
 
         def hook3(context):
             execution_order.append(3)
-            return None
+            return
 
         register_before_tool_call_hook(hook1)
         register_before_tool_call_hook(hook2)
@@ -343,15 +343,15 @@ class TestToolHooksIntegration:
 
         def hook1(context):
             execution_order.append(1)
-            return None  # Allow
+            return
 
         def hook2(context):
             execution_order.append(2)
-            return False  # Block
+            return False
 
         def hook3(context):
             execution_order.append(3)
-            return None  # This shouldn't run
+            return
 
         register_before_tool_call_hook(hook1)
         register_before_tool_call_hook(hook2)
@@ -373,7 +373,7 @@ class TestToolHooksIntegration:
                 break
 
         assert blocked is True
-        assert execution_order == [1, 2]  # hook3 didn't run
+        assert execution_order == [1, 2]
 
     def test_multiple_after_hooks_chain_modifications(self, mock_tool):
         """Test that multiple after hooks can chain modifications."""
@@ -400,10 +400,8 @@ class TestToolHooksIntegration:
 
         hooks = get_after_tool_call_hooks()
 
-        # Simulate chaining (how it would be used in practice)
         result = context.tool_result
         for hook in hooks:
-            # Update context for next hook
             context.tool_result = result
             modified = hook(context)
             if modified is not None:
@@ -418,7 +416,7 @@ class TestToolHooksIntegration:
             if context.tool_name == "write_file":
                 file_path = context.tool_input.get("file_path", "")
                 if ".env" in file_path:
-                    return False  # Block sensitive files
+                    return False
             return None
 
         # Sanitization hook (after)
@@ -430,7 +428,6 @@ class TestToolHooksIntegration:
         register_before_tool_call_hook(validate_file_path)
         register_after_tool_call_hook(sanitize_secrets)
 
-        # Test blocking
         blocked_context = ToolCallHookContext(
             tool_name="write_file",
             tool_input={"file_path": ".env"},
@@ -446,7 +443,6 @@ class TestToolHooksIntegration:
 
         assert blocked is True
 
-        # Test sanitization
         sanitize_context = ToolCallHookContext(
             tool_name="read_file",
             tool_input={"file_path": "config.txt"},
@@ -501,17 +497,15 @@ class TestToolHooksIntegration:
     def test_lite_agent_hooks_integration_with_real_tool(self):
         """Test that LiteAgent executes before/after tool call hooks with real tool calls."""
         import os
+
         from crewai.lite_agent import LiteAgent
         from crewai.tools import tool
 
-        # Skip if no API key available
         if not os.environ.get("OPENAI_API_KEY"):
             pytest.skip("OPENAI_API_KEY not set - skipping real tool test")
 
-        # Track hook invocations
         hook_calls = {"before": [], "after": []}
 
-        # Create a simple test tool
         @tool("calculate_sum")
         def calculate_sum(a: int, b: int) -> int:
             """Add two numbers together."""
@@ -525,7 +519,6 @@ class TestToolHooksIntegration:
             print(f"[BEFORE HOOK] Task: {context.task}")
             print(f"[BEFORE HOOK] Crew: {context.crew}")
 
-            # Track the call
             hook_calls["before"].append({
                 "tool_name": context.tool_name,
                 "tool_input": context.tool_input,
@@ -534,7 +527,7 @@ class TestToolHooksIntegration:
                 "has_crew": context.crew is not None,
             })
 
-            return True  # Allow execution
+            return True
 
         def after_tool_call_hook(context: ToolCallHookContext) -> str | None:
             """Log and verify after hook execution."""
@@ -542,21 +535,18 @@ class TestToolHooksIntegration:
             print(f"[AFTER HOOK] Tool result: {context.tool_result}")
             print(f"[AFTER HOOK] Agent: {context.agent.role if context.agent else 'None'}")
 
-            # Track the call
             hook_calls["after"].append({
                 "tool_name": context.tool_name,
                 "tool_result": context.tool_result,
                 "has_result": context.tool_result is not None,
             })
 
-            return None  # Don't modify result
+            return None
 
-        # Register hooks
         register_before_tool_call_hook(before_tool_call_hook)
         register_after_tool_call_hook(after_tool_call_hook)
 
         try:
-            # Create LiteAgent with the tool
             lite_agent = LiteAgent(
                 role="Calculator Assistant",
                 goal="Help with math calculations",
@@ -565,29 +555,23 @@ class TestToolHooksIntegration:
                 verbose=True,
             )
 
-            # Execute with a prompt that should trigger tool usage
             result = lite_agent.kickoff("What is 5 + 3? Use the calculate_sum tool.")
 
-            # Verify hooks were called
             assert len(hook_calls["before"]) > 0, "Before hook was never called"
             assert len(hook_calls["after"]) > 0, "After hook was never called"
 
-            # Verify context had correct attributes for LiteAgent (used in flows)
             # LiteAgent doesn't have task/crew context, unlike agents in CrewBase
             before_call = hook_calls["before"][0]
             assert before_call["tool_name"] == "calculate_sum", "Tool name should be 'calculate_sum'"
             assert "a" in before_call["tool_input"], "Tool input should have 'a' parameter"
             assert "b" in before_call["tool_input"], "Tool input should have 'b' parameter"
 
-            # Verify after hook received result
             after_call = hook_calls["after"][0]
             assert after_call["has_result"] is True, "After hook should have tool result"
             assert after_call["tool_name"] == "calculate_sum", "Tool name should match"
-            # The result should contain the sum (8)
             assert "8" in str(after_call["tool_result"]), "Tool result should contain the sum"
 
         finally:
-            # Clean up hooks
             unregister_before_tool_call_hook(before_tool_call_hook)
             unregister_after_tool_call_hook(after_tool_call_hook)
 
@@ -598,7 +582,6 @@ class TestNativeToolCallingHooksIntegration:
     @pytest.mark.vcr()
     def test_agent_native_tool_hooks_before_and_after(self):
         """Test that Agent with native tool calling executes before/after hooks."""
-        import os
         from crewai import Agent
         from crewai.tools import tool
 
@@ -641,7 +624,6 @@ class TestNativeToolCallingHooksIntegration:
                 messages="What is 7 times 6? Use the multiply_numbers tool."
             )
 
-            # Verify before hook was called
             assert len(hook_calls["before"]) > 0, "Before hook was never called"
             before_call = hook_calls["before"][0]
             assert before_call["tool_name"] == "multiply_numbers"
@@ -649,7 +631,6 @@ class TestNativeToolCallingHooksIntegration:
             assert "b" in before_call["tool_input"]
             assert before_call["has_agent"] is True
 
-            # Verify after hook was called
             assert len(hook_calls["after"]) > 0, "After hook was never called"
             after_call = hook_calls["after"][0]
             assert after_call["tool_name"] == "multiply_numbers"
@@ -663,7 +644,6 @@ class TestNativeToolCallingHooksIntegration:
     @pytest.mark.vcr()
     def test_crew_native_tool_hooks_before_and_after(self):
         """Test that Crew with Agent executes before/after hooks with full context."""
-        import os
         from crewai import Agent, Crew, Task
         from crewai.tools import tool
 
@@ -722,7 +702,6 @@ class TestNativeToolCallingHooksIntegration:
 
             crew.kickoff()
 
-            # Verify before hook was called with full context
             assert len(hook_calls["before"]) > 0, "Before hook was never called"
             before_call = hook_calls["before"][0]
             assert before_call["tool_name"] == "divide_numbers"
@@ -733,7 +712,6 @@ class TestNativeToolCallingHooksIntegration:
             assert before_call["has_crew"] is True
             assert before_call["agent_role"] == "Math Assistant"
 
-            # Verify after hook was called with full context
             assert len(hook_calls["after"]) > 0, "After hook was never called"
             after_call = hook_calls["after"][0]
             assert after_call["tool_name"] == "divide_numbers"
@@ -749,7 +727,6 @@ class TestNativeToolCallingHooksIntegration:
     @pytest.mark.vcr()
     def test_before_hook_blocks_tool_execution_in_crew(self):
         """Test that returning False from before hook blocks tool execution."""
-        import os
         from crewai import Agent, Crew, Task
         from crewai.tools import tool
 
@@ -804,15 +781,12 @@ class TestNativeToolCallingHooksIntegration:
 
             crew.kickoff()
 
-            # Verify before hook was called
             assert len(hook_calls["before"]) > 0, "Before hook was never called"
             before_call = hook_calls["before"][0]
             assert before_call["tool_name"] == "dangerous_operation"
 
-            # Verify the actual tool function was NOT executed
             assert hook_calls["tool_executed"] is False, "Tool should have been blocked"
 
-            # Verify after hook was still called (with blocked message)
             assert len(hook_calls["after"]) > 0, "After hook was never called"
             after_call = hook_calls["after"][0]
             assert "blocked" in after_call["tool_result"].lower()

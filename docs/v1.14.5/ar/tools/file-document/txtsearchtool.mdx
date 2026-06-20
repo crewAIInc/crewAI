@@ -1,0 +1,89 @@
+---
+title: بحث RAG في TXT
+description: أداة `TXTSearchTool` مصممة لإجراء بحث RAG (الاسترجاع المعزز بالتوليد) داخل محتوى ملف نصي.
+icon: file-lines
+mode: "wide"
+---
+
+## نظرة عامة
+
+<Note>
+    لا نزال نعمل على تحسين الأدوات، لذا قد يحدث سلوك غير متوقع أو تغييرات في المستقبل.
+</Note>
+
+تُستخدم هذه الأداة لإجراء بحث RAG (الاسترجاع المعزز بالتوليد) داخل محتوى ملف نصي. تتيح البحث الدلالي عن استعلام داخل محتوى ملف نصي محدد، مما يجعلها مورداً لا يُقدَّر بثمن لاستخراج المعلومات بسرعة أو العثور على أقسام محددة من النص بناءً على الاستعلام المقدم.
+
+## التثبيت
+
+لاستخدام `TXTSearchTool`، تحتاج أولاً إلى تثبيت حزمة `crewai_tools`. يمكن القيام بذلك باستخدام pip، مدير الحزم لـ Python. افتح الطرفية أو موجه الأوامر وأدخل الأمر التالي:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+سيقوم هذا الأمر بتنزيل وتثبيت TXTSearchTool مع أي تبعيات ضرورية.
+
+## مثال
+
+يوضح المثال التالي كيفية استخدام TXTSearchTool للبحث داخل ملف نصي. يعرض هذا المثال كلاً من تهيئة الأداة بملف نصي محدد والبحث اللاحق داخل محتوى ذلك الملف.
+
+```python Code
+from crewai_tools import TXTSearchTool
+
+# Initialize the tool to search within any text file's content
+# the agent learns about during its execution
+tool = TXTSearchTool()
+
+# OR
+
+# Initialize the tool with a specific text file,
+# so the agent can search within the given text file's content
+tool = TXTSearchTool(txt='path/to/text/file.txt')
+```
+
+## المعاملات
+- `txt` (str): **اختياري**. مسار الملف النصي المراد البحث فيه. هذا المعامل مطلوب فقط إذا لم يتم تهيئة الأداة بملف نصي محدد؛ وإلا سيتم إجراء البحث داخل الملف النصي المقدم مبدئياً.
+
+## النموذج والتضمينات المخصصة
+
+بشكل افتراضي، تستخدم الأداة OpenAI لكل من التضمينات والتلخيص. لتخصيص النموذج، يمكنك استخدام قاموس تكوين كما يلي:
+
+```python Code
+from chromadb.config import Settings
+
+tool = TXTSearchTool(
+    config={
+        # Required: embeddings provider + config
+        "embedding_model": {
+            "provider": "openai",  # or google-generativeai, cohere, ollama, ...
+            "config": {
+                "model": "text-embedding-3-small",
+                # "api_key": "sk-...",  # optional if env var is set (e.g., OPENAI_API_KEY or EMBEDDINGS_OPENAI_API_KEY)
+                # Provider examples:
+                # Google → model_name: "gemini-embedding-001", task_type: "RETRIEVAL_DOCUMENT"
+                # Cohere → model: "embed-english-v3.0"
+                # Ollama → model: "nomic-embed-text"
+            },
+        },
+
+        # Required: vector database config
+        "vectordb": {
+            "provider": "chromadb",  # or "qdrant"
+            "config": {
+                # Chroma settings (optional persistence)
+                # "settings": Settings(
+                #     persist_directory="/content/chroma",
+                #     allow_reset=True,
+                #     is_persistent=True,
+                # ),
+
+                # Qdrant vector params example:
+                # from qdrant_client.models import VectorParams, Distance
+                # "vectors_config": VectorParams(size=384, distance=Distance.COSINE),
+
+                # Note: collection name is controlled by the tool (default: "rag_tool_collection").
+            }
+        },
+    }
+)
+```

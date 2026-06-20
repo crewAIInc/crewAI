@@ -53,6 +53,8 @@ from crewai.events.types.crew_events import (
     CrewTrainStartedEvent,
 )
 from crewai.events.types.flow_events import (
+    ConversationMessageAddedEvent,
+    ConversationRouteSelectedEvent,
     FlowFinishedEvent,
     FlowStartedEvent,
     MethodExecutionFailedEvent,
@@ -96,6 +98,10 @@ from crewai.events.types.memory_events import (
     MemorySaveCompletedEvent,
     MemorySaveFailedEvent,
     MemorySaveStartedEvent,
+)
+from crewai.events.types.observation_events import (
+    PlanStepCompletedEvent,
+    PlanStepStartedEvent,
 )
 from crewai.events.types.reasoning_events import (
     AgentReasoningCompletedEvent,
@@ -154,6 +160,8 @@ EventTypes = (
     | TaskStartedEvent
     | TaskCompletedEvent
     | TaskFailedEvent
+    | ConversationMessageAddedEvent
+    | ConversationRouteSelectedEvent
     | FlowStartedEvent
     | FlowFinishedEvent
     | MethodExecutionStartedEvent
@@ -187,6 +195,8 @@ EventTypes = (
     | MemoryRetrievalStartedEvent
     | MemoryRetrievalCompletedEvent
     | MemoryRetrievalFailedEvent
+    | PlanStepStartedEvent
+    | PlanStepCompletedEvent
     | MCPConnectionStartedEvent
     | MCPConnectionCompletedEvent
     | MCPConnectionFailedEvent

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from crewai_core.printer import PRINTER
+
 from crewai.events.event_listener import event_listener
 from crewai.hooks.types import (
     AfterToolCallHookCallable,
@@ -9,7 +11,6 @@ from crewai.hooks.types import (
     BeforeToolCallHookCallable,
     BeforeToolCallHookType,
 )
-from crewai.utilities.printer import PRINTER
 
 
 if TYPE_CHECKING:
@@ -39,6 +40,8 @@ class ToolCallHookContext:
         crew: Crew instance (may be None)
         tool_result: Tool execution result (only set for after_tool_call hooks).
             Can be modified by returning a new string from after_tool_call hook.
+        raw_tool_result: Raw Python tool execution result (only set for
+            after_tool_call hooks). This is not modified by after hooks.
     """
 
     def __init__(
@@ -50,6 +53,7 @@ class ToolCallHookContext:
         task: Task | None = None,
         crew: Crew | None = None,
         tool_result: str | None = None,
+        raw_tool_result: Any | None = None,
     ) -> None:
         """Initialize tool call hook context.
 
@@ -61,6 +65,7 @@ class ToolCallHookContext:
             task: Optional current task
             crew: Optional crew instance
             tool_result: Optional tool result (for after hooks)
+            raw_tool_result: Optional raw tool result (for after hooks)
         """
         self.tool_name = tool_name
         self.tool_input = tool_input
@@ -69,6 +74,7 @@ class ToolCallHookContext:
         self.task = task
         self.crew = crew
         self.tool_result = tool_result
+        self.raw_tool_result = raw_tool_result
 
     def request_human_input(
         self,
@@ -115,7 +121,6 @@ class ToolCallHookContext:
             event_listener.formatter.resume_live_updates()
 
 
-# Global hook registries
 _before_tool_call_hooks: list[BeforeToolCallHookType | BeforeToolCallHookCallable] = []
 _after_tool_call_hooks: list[AfterToolCallHookType | AfterToolCallHookCallable] = []
 

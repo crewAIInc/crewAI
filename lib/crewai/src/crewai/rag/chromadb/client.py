@@ -10,6 +10,7 @@ from chromadb.api.types import (
     EmbeddingFunction as ChromaEmbeddingFunction,
     QueryResult,
 )
+from crewai_core.lock_store import lock as store_lock
 from typing_extensions import Unpack
 
 from crewai.rag.chromadb.types import (
@@ -32,7 +33,6 @@ from crewai.rag.core.base_client import (
     BaseCollectionParams,
 )
 from crewai.rag.types import SearchResult
-from crewai.utilities.lock_store import lock as store_lock
 from crewai.utilities.logger_utils import suppress_logging
 
 

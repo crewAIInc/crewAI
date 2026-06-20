@@ -66,7 +66,6 @@ def test_rag_tool_add_and_query(
     tool.add("The sky is blue on a clear day.")
     tool.add("Machine learning is a subset of artificial intelligence.")
 
-    # Verify documents were added
     assert mock_client.add_documents.call_count == 2
 
     result = tool._run(query="What color is the sky?")

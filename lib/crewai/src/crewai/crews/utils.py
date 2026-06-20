@@ -157,7 +157,6 @@ def prepare_task_execution(
     Raises:
         ValueError: If no agent is available for the task.
     """
-    # Handle replay skip
     if start_index is not None and task_index < start_index:
         if task.output:
             task_outputs.append(task.output)
@@ -290,7 +289,6 @@ def prepare_kickoff(
         reset_emission_counter()
         reset_last_event_id()
 
-    # Normalize inputs to dict[str, Any] for internal processing
     normalized: dict[str, Any] | None = None
     if inputs is not None:
         if not isinstance(inputs, Mapping):
@@ -331,15 +329,12 @@ def prepare_kickoff(
     crew._task_output_handler.reset()
     crew._logging_color = "bold_purple"
 
-    # Check for flow input files in baggage context (inherited from parent Flow)
     _flow_files = baggage.get_baggage("flow_input_files")
     flow_files: dict[str, Any] = _flow_files if isinstance(_flow_files, dict) else {}
 
     if normalized is not None:
-        # Extract file objects unpacked directly into inputs
         unpacked_files = _extract_files_from_inputs(normalized)
 
-        # Merge files: flow_files < input_files < unpacked_files (later takes precedence)
         all_files = {**flow_files, **(input_files or {}), **unpacked_files}
         if all_files:
             store_files(crew.id, all_files)
@@ -347,7 +342,6 @@ def prepare_kickoff(
         crew._inputs = normalized
         crew._interpolate_inputs(normalized)
     else:
-        # No inputs dict provided
         all_files = {**flow_files, **(input_files or {})}
         if all_files:
             store_files(crew.id, all_files)

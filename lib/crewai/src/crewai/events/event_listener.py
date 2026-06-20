@@ -154,14 +154,10 @@ class EventListener(BaseEventListener):
             self._initialized = True
             self.formatter = ConsoleFormatter(verbose=True)
 
-            # Initialize trace listener with formatter for memory event handling
             trace_listener = TraceCollectionListener()
             trace_listener.formatter = self.formatter
 
-    # ----------- CREW EVENTS -----------
-
     def setup_listeners(self, crewai_event_bus: CrewAIEventsBus) -> None:
-
         @crewai_event_bus.on(CCEnvEvent)
         def on_cc_env(_: Any, event: CCEnvEvent) -> None:
             self._telemetry.env_context_span(event.type)
@@ -187,7 +183,6 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(CrewKickoffCompletedEvent)
         def on_crew_completed(source: Any, event: CrewKickoffCompletedEvent) -> None:
-            # Handle telemetry
             final_string_output = event.output.raw
             self._telemetry.end_crew(source, final_string_output)
 
@@ -231,8 +226,6 @@ class EventListener(BaseEventListener):
                 event.model,
             )
 
-        # ----------- TASK EVENTS -----------
-
         def get_task_name(source: Any) -> str | None:
             return (
                 source.name
@@ -252,12 +245,10 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(TaskCompletedEvent)
         def on_task_completed(source: Any, event: TaskCompletedEvent) -> None:
-            # Handle telemetry
             span = self.execution_spans.pop(source, None)
             if span:
                 self._telemetry.task_ended(span, source, source.agent.crew)
 
-            # Pass task name if it exists
             task_name = get_task_name(source)
             self.formatter.handle_task_status(
                 source.id, source.agent.role, "completed", task_name
@@ -270,14 +261,10 @@ class EventListener(BaseEventListener):
                 if source.agent and source.agent.crew:
                     self._telemetry.task_ended(span, source, source.agent.crew)
 
-            # Pass task name if it exists
             task_name = get_task_name(source)
             self.formatter.handle_task_status(
                 source.id, source.agent.role, "failed", task_name
             )
-
-        # ----------- AGENT EVENTS -----------
-        # ----------- LITE AGENT EVENTS -----------
 
         @crewai_event_bus.on(LiteAgentExecutionStartedEvent)
         def on_lite_agent_execution_started(
@@ -309,8 +296,6 @@ class EventListener(BaseEventListener):
                 **event.agent_info,
             )
 
-        # ----------- FLOW EVENTS -----------
-
         @crewai_event_bus.on(FlowCreatedEvent)
         def on_flow_created(_: Any, event: FlowCreatedEvent) -> None:
             self._telemetry.flow_creation_span(event.flow_name)
@@ -320,20 +305,24 @@ class EventListener(BaseEventListener):
             self._telemetry.flow_execution_span(
                 event.flow_name, list(source._methods.keys())
             )
-            self.formatter.handle_flow_created(event.flow_name, str(source.flow_id))
-            self.formatter.handle_flow_started(event.flow_name, str(source.flow_id))
+            if not getattr(source, "suppress_flow_events", False):
+                self.formatter.handle_flow_created(event.flow_name, str(source.flow_id))
+                self.formatter.handle_flow_started(event.flow_name, str(source.flow_id))
 
         @crewai_event_bus.on(FlowFinishedEvent)
         def on_flow_finished(source: Any, event: FlowFinishedEvent) -> None:
-            self.formatter.handle_flow_status(
-                event.flow_name,
-                source.flow_id,
-            )
+            if not getattr(source, "suppress_flow_events", False):
+                self.formatter.handle_flow_status(
+                    event.flow_name,
+                    source.flow_id,
+                )
 
         @crewai_event_bus.on(MethodExecutionStartedEvent)
         def on_method_execution_started(
-            _: Any, event: MethodExecutionStartedEvent
+            source: Any, event: MethodExecutionStartedEvent
         ) -> None:
+            if getattr(source, "suppress_flow_events", False):
+                return
             self.formatter.handle_method_status(
                 event.method_name,
                 "running",
@@ -341,8 +330,10 @@ class EventListener(BaseEventListener):
 
         @crewai_event_bus.on(MethodExecutionFinishedEvent)
         def on_method_execution_finished(
-            _: Any, event: MethodExecutionFinishedEvent
+            source: Any, event: MethodExecutionFinishedEvent
         ) -> None:
+            if getattr(source, "suppress_flow_events", False):
+                return
             self.formatter.handle_method_status(
                 event.method_name,
                 "completed",
@@ -374,7 +365,6 @@ class EventListener(BaseEventListener):
                 "paused",
             )
 
-        # ----------- HUMAN FEEDBACK EVENTS -----------
         @crewai_event_bus.on(HumanFeedbackRequestedEvent)
         def on_human_feedback_requested(
             _: Any, event: HumanFeedbackRequestedEvent
@@ -401,7 +391,6 @@ class EventListener(BaseEventListener):
                 outcome=event.outcome,
             )
 
-        # ----------- TOOL USAGE EVENTS -----------
         @crewai_event_bus.on(ToolUsageStartedEvent)
         def on_tool_usage_started(source: Any, event: ToolUsageStartedEvent) -> None:
             if isinstance(source, LLM):
@@ -443,8 +432,6 @@ class EventListener(BaseEventListener):
                     event.run_attempts,
                 )
 
-        # ----------- LLM EVENTS -----------
-
         @crewai_event_bus.on(LLMCallStartedEvent)
         def on_llm_call_started(_: Any, event: LLMCallStartedEvent) -> None:
             self.text_stream = StringIO()
@@ -471,8 +458,6 @@ class EventListener(BaseEventListener):
                 accumulated_text,
                 event.call_type,
             )
-
-        # ----------- LLM GUARDRAIL EVENTS -----------
 
         @crewai_event_bus.on(LLMGuardrailStartedEvent)
         def on_llm_guardrail_started(_: Any, event: LLMGuardrailStartedEvent) -> None:
@@ -556,8 +541,6 @@ class EventListener(BaseEventListener):
         ) -> None:
             self.formatter.handle_knowledge_search_query_failed(event.error)
 
-        # ----------- REASONING EVENTS -----------
-
         @crewai_event_bus.on(AgentReasoningStartedEvent)
         def on_agent_reasoning_started(
             _: Any, event: AgentReasoningStartedEvent
@@ -579,8 +562,6 @@ class EventListener(BaseEventListener):
             self.formatter.handle_reasoning_failed(
                 event.error,
             )
-
-        # ----------- OBSERVATION EVENTS (Plan-and-Execute) -----------
 
         @crewai_event_bus.on(StepObservationStartedEvent)
         def on_step_observation_started(
@@ -640,8 +621,6 @@ class EventListener(BaseEventListener):
             )
             self._telemetry.feature_usage_span("planning:goal_achieved_early")
 
-        # ----------- SKILL EVENTS -----------
-
         @crewai_event_bus.on(SkillDiscoveryCompletedEvent)
         def on_skill_discovery(_: Any, event: SkillDiscoveryCompletedEvent) -> None:
             self._telemetry.feature_usage_span("skill:discovery")
@@ -657,8 +636,6 @@ class EventListener(BaseEventListener):
         @crewai_event_bus.on(SkillActivatedEvent)
         def on_skill_activated(_: Any, event: SkillActivatedEvent) -> None:
             self._telemetry.feature_usage_span("skill:activated")
-
-        # ----------- AGENT LOGGING EVENTS -----------
 
         @crewai_event_bus.on(AgentLogsStartedEvent)
         def on_agent_logs_started(_: Any, event: AgentLogsStartedEvent) -> None:
@@ -702,7 +679,6 @@ class EventListener(BaseEventListener):
         def on_a2a_conversation_started(
             _: Any, event: A2AConversationStartedEvent
         ) -> None:
-            # Store A2A agent name for display in conversation tree
             if event.a2a_agent_name:
                 self.formatter._current_a2a_agent_name = event.a2a_agent_name
 
@@ -756,8 +732,6 @@ class EventListener(BaseEventListener):
                 event.elapsed_seconds,
                 event.poll_count,
             )
-
-        # ----------- MCP EVENTS -----------
 
         @crewai_event_bus.on(MCPConnectionStartedEvent)
         def on_mcp_connection_started(_: Any, event: MCPConnectionStartedEvent) -> None:
@@ -832,8 +806,6 @@ class EventListener(BaseEventListener):
                 event.error_type,
             )
             self._telemetry.feature_usage_span("mcp:tool_execution_failed")
-
-        # ----------- MEMORY TELEMETRY -----------
 
         @crewai_event_bus.on(MemorySaveCompletedEvent)
         def on_memory_save_completed(_: Any, event: MemorySaveCompletedEvent) -> None:

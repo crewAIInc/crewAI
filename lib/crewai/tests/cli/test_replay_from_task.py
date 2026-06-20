@@ -6,8 +6,8 @@ from unittest import mock
 from click.testing import CliRunner
 import pytest
 
-from crewai.cli import replay_from_task
-from crewai.cli.cli import replay
+from crewai_cli import replay_from_task
+from crewai_cli.cli import replay
 
 
 @pytest.fixture
@@ -15,7 +15,7 @@ def runner() -> CliRunner:
     return CliRunner()
 
 
-@mock.patch("crewai.cli.cli.replay_task_command")
+@mock.patch("crewai_cli.cli.replay_task_command")
 def test_replay_passes_filename(replay_task_command_mock: mock.Mock, runner: CliRunner) -> None:
     result = runner.invoke(replay, ["-t", "abc123", "-f", "my_custom.pkl"])
 
@@ -25,7 +25,7 @@ def test_replay_passes_filename(replay_task_command_mock: mock.Mock, runner: Cli
     assert result.exit_code == 0
 
 
-@mock.patch("crewai.cli.cli.replay_task_command")
+@mock.patch("crewai_cli.cli.replay_task_command")
 def test_replay_without_filename_passes_none(
     replay_task_command_mock: mock.Mock, runner: CliRunner
 ) -> None:
@@ -37,7 +37,7 @@ def test_replay_without_filename_passes_none(
     assert result.exit_code == 0
 
 
-@mock.patch("crewai.cli.replay_from_task.subprocess.run")
+@mock.patch("crewai_cli.replay_from_task.subprocess.run")
 def test_replay_task_command_sets_env_var(mock_subprocess_run: mock.Mock) -> None:
     mock_subprocess_run.return_value = subprocess.CompletedProcess(
         args=["uv", "run", "replay", "abc123"], returncode=0
@@ -48,7 +48,7 @@ def test_replay_task_command_sets_env_var(mock_subprocess_run: mock.Mock) -> Non
     assert kwargs["env"]["CREWAI_TRAINED_AGENTS_FILE"] == "my_custom.pkl"
 
 
-@mock.patch("crewai.cli.replay_from_task.subprocess.run")
+@mock.patch("crewai_cli.replay_from_task.subprocess.run")
 def test_replay_task_command_omits_env_var_without_filename(
     mock_subprocess_run: mock.Mock,
 ) -> None:

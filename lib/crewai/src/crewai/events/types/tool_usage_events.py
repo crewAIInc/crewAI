@@ -21,6 +21,8 @@ class ToolUsageEvent(BaseEvent):
     agent: Any | None = None
     task_name: str | None = None
     task_id: str | None = None
+    plan_step_number: int | None = None
+    plan_step_description: str | None = None
     from_task: Any | None = None
     from_agent: Any | None = None
 
@@ -41,7 +43,6 @@ class ToolUsageEvent(BaseEvent):
 
         super().__init__(**data)
 
-        # Set fingerprint data from the agent
         if self.agent and hasattr(self.agent, "fingerprint") and self.agent.fingerprint:
             self.source_fingerprint = self.agent.fingerprint.uuid_str
             self.source_type = "agent"
@@ -101,7 +102,6 @@ class ToolExecutionErrorEvent(BaseEvent):
 
     def __init__(self, **data: Any) -> None:
         super().__init__(**data)
-        # Set fingerprint data from the agent
         if self.agent and hasattr(self.agent, "fingerprint") and self.agent.fingerprint:
             self.source_fingerprint = self.agent.fingerprint.uuid_str
             self.source_type = "agent"

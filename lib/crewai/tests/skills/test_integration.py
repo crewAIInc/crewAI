@@ -5,9 +5,9 @@ from pathlib import Path
 import pytest
 
 from crewai import Agent
-from crewai.agent.utils import append_skill_context
 from crewai.skills.loader import activate_skill, discover_skills, format_skill_context
 from crewai.skills.models import INSTRUCTIONS, METADATA
+from crewai.utilities.prompts import Prompts
 
 
 def _create_skill_dir(parent: Path, name: str, body: str = "Body.") -> Path:
@@ -34,7 +34,7 @@ class TestSkillDiscoveryAndActivation:
         assert activated.instructions == "Use this skill."
 
         context = format_skill_context(activated)
-        assert "## Skill: my-skill" in context
+        assert '<skill name="my-skill">' in context
         assert "Use this skill." in context
 
     def test_filter_by_skill_names(self, tmp_path: Path) -> None:
@@ -94,7 +94,9 @@ class TestSkillDiscoveryAndActivation:
         assert agent.skills[0].disclosure_level == METADATA
         assert agent.skills[0].instructions is None
 
-        prompt = append_skill_context(agent, "Plan a 10-day Japan itinerary.")
-        assert "## Skill: travel" in prompt
-        assert "Skill travel" in prompt
-        assert "Use this skill for travel planning." not in prompt
+        result = Prompts(agent=agent, has_tools=False, use_system_prompt=True).task_execution()
+        system = getattr(result, "system", "") or result.prompt
+        assert '<skill name="travel">' in system
+        assert "Skill travel" in system
+        # METADATA-level skills must not leak full instructions into the prompt
+        assert "Use this skill for travel planning." not in system

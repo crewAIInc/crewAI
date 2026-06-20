@@ -1,0 +1,51 @@
+---
+title: أداة تحميل Browserbase
+description: Browserbase هي منصة للمطورين لتشغيل وإدارة ومراقبة المتصفحات بدون واجهة بشكل موثوق.
+icon: browser
+mode: "wide"
+---
+
+# `BrowserbaseLoadTool`
+
+## الوصف
+
+[Browserbase](https://browserbase.com) هي منصة للمطورين لتشغيل وإدارة ومراقبة المتصفحات بدون واجهة بشكل موثوق.
+
+عزّز عمليات استرجاع بيانات الذكاء الاصطناعي الخاصة بك بـ:
+
+ - [بنية تحتية بدون خادم](https://docs.browserbase.com/under-the-hood) توفر متصفحات موثوقة لاستخراج البيانات من واجهات المستخدم المعقدة
+ - [وضع التخفي](https://docs.browserbase.com/features/stealth-mode) مع تكتيكات البصمة المضمنة وحل CAPTCHA التلقائي
+ - [مصحح الجلسات](https://docs.browserbase.com/features/sessions) لفحص جلسة المتصفح مع الجدول الزمني للشبكة والسجلات
+ - [التصحيح المباشر](https://docs.browserbase.com/guides/session-debug-connection/browser-remote-control) لتصحيح الأتمتة بسرعة
+
+## التثبيت
+
+- احصل على مفتاح API ومعرّف المشروع من [browserbase.com](https://browserbase.com) وعيّنهما في متغيرات البيئة (`BROWSERBASE_API_KEY`، `BROWSERBASE_PROJECT_ID`).
+- ثبّت [Browserbase SDK](http://github.com/browserbase/python-sdk) مع حزمة `crewai[tools]`:
+
+```shell
+pip install browserbase 'crewai[tools]'
+```
+
+## مثال
+
+استخدم BrowserbaseLoadTool كما يلي للسماح لوكيلك بتحميل المواقع:
+
+```python Code
+from crewai_tools import BrowserbaseLoadTool
+
+# Initialize the tool with the Browserbase API key and Project ID
+tool = BrowserbaseLoadTool()
+```
+
+## المعاملات
+
+يمكن استخدام المعاملات التالية لتخصيص سلوك `BrowserbaseLoadTool`:
+
+| المعامل       | النوع     | الوصف                                                                                                                         |
+|:---------------|:---------|:-------------------------------------------------------------------------------------------------------------------------------------|
+| **api_key**    | `string` | _اختياري_. مفتاح Browserbase API. الافتراضي هو متغير البيئة `BROWSERBASE_API_KEY`.                                                |
+| **project_id** | `string` | _اختياري_. معرّف مشروع Browserbase. الافتراضي هو متغير البيئة `BROWSERBASE_PROJECT_ID`.                                                |
+| **text_content** | `bool` | _اختياري_. استرجاع المحتوى النصي فقط. الافتراضي هو `False`.                                                |
+| **session_id** | `string` | _اختياري_. تقديم معرّف جلسة موجود.                                                |
+| **proxy**      | `bool`   | _اختياري_. تفعيل/تعطيل البروكسيات. الافتراضي هو `False`.                                                |

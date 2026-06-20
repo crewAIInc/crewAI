@@ -125,7 +125,6 @@ class ScrapegraphScrapeTool(BaseTool):
         if user_prompt is not None:
             self.user_prompt = user_prompt
 
-        # Configure logging only if enabled
         if self.enable_logging:
             sgai_logger.set_logging(level="INFO")
 
@@ -170,11 +169,9 @@ class ScrapegraphScrapeTool(BaseTool):
         if not website_url:
             raise ValueError("website_url is required")
 
-        # Validate URL format
         self._validate_url(website_url)
 
         try:
-            # Make the SmartScraper request
             if self._client is None:
                 raise RuntimeError("Client not initialized")
             return self._client.smartscraper(
