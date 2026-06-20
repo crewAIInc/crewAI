@@ -228,7 +228,7 @@ class TestAllowList:
         extra.mkdir()
         (extra / "data.txt").touch()
         monkeypatch.delenv("CREWAI_TOOLS_ALLOWED_DIRS", raising=False)
-        with pytest.raises(ValueError, match="outside the allowed director"):
+        with pytest.raises(ValueError, match="outside the allowed directories"):
             validate_file_path(str(extra / "data.txt"), base_dir=str(base))
 
     def test_multiple_env_roots(self, tmp_path, monkeypatch):
