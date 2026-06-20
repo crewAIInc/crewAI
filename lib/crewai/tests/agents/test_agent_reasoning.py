@@ -6,6 +6,61 @@ import pytest
 
 from crewai import Agent, PlanningConfig, Task
 from crewai.llm import LLM
+from crewai.utilities.reasoning_handler import AgentReasoning
+
+
+class TestIsReady:
+    """Regression tests for AgentReasoning._is_ready.
+
+    The prompt templates tell models to conclude with "READY" or "NOT READY".
+    The detection must handle both the short form from current prompts and the
+    legacy long form, and must never treat "NOT READY" as ready.
+    """
+
+    def test_legacy_full_phrase(self):
+        assert AgentReasoning._is_ready("READY: I am ready to execute the task.")
+
+    def test_legacy_full_phrase_case_insensitive(self):
+        assert AgentReasoning._is_ready("ready: i am ready to execute the task.")
+
+    def test_short_form_uppercase(self):
+        assert AgentReasoning._is_ready("Here is my plan.\n\nREADY")
+
+    def test_short_form_mixed_case(self):
+        assert AgentReasoning._is_ready("My plan is complete.\n\nReady")
+
+    def test_not_ready_returns_false(self):
+        assert not AgentReasoning._is_ready("NOT READY")
+
+    def test_not_ready_inline_returns_false(self):
+        assert not AgentReasoning._is_ready("My plan needs more work. NOT READY")
+
+    def test_empty_string_returns_false(self):
+        assert not AgentReasoning._is_ready("")
+
+    def test_no_keyword_returns_false(self):
+        assert not AgentReasoning._is_ready("Here is my plan. I need more information.")
+
+
+class TestParsePlanningResponse:
+    def test_empty_response(self):
+        plan, ready = AgentReasoning._parse_planning_response("")
+        assert plan == "No plan was generated."
+        assert ready is False
+
+    def test_short_ready(self):
+        _, ready = AgentReasoning._parse_planning_response("Step 1: do X.\n\nREADY")
+        assert ready is True
+
+    def test_not_ready(self):
+        _, ready = AgentReasoning._parse_planning_response("Step 1: do X.\n\nNOT READY")
+        assert ready is False
+
+    def test_legacy_phrase(self):
+        _, ready = AgentReasoning._parse_planning_response(
+            "Step 1: do X.\nREADY: I am ready to execute the task."
+        )
+        assert ready is True
 
 
 

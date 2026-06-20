@@ -409,7 +409,7 @@ class AgentReasoning:
             return (
                 response_str,
                 [],
-                "READY: I am ready to execute the task." in response_str,
+                self._is_ready(response_str),
             )
 
         except Exception as e:
@@ -433,7 +433,7 @@ class AgentReasoning:
                 return (
                     fallback_str,
                     [],
-                    "READY: I am ready to execute the task." in fallback_str,
+                    self._is_ready(fallback_str),
                 )
             except Exception as inner_e:
                 self.logger.error(f"Error during fallback text parsing: {inner_e!s}")
@@ -580,6 +580,20 @@ class AgentReasoning:
             )
 
     @staticmethod
+    def _is_ready(response: str) -> bool:
+        """Check whether a text response indicates the agent is ready.
+
+        The prompt templates instruct models to conclude with "READY" or
+        "NOT READY".  Older prompts used the full phrase
+        "READY: I am ready to execute the task."  Both forms are accepted
+        so that models following either convention work correctly.
+        """
+        upper = response.upper()
+        return "READY: I AM READY TO EXECUTE THE TASK." in upper or (
+            "READY" in upper and "NOT READY" not in upper
+        )
+
+    @staticmethod
     def _parse_planning_response(response: str) -> tuple[str, bool]:
         """Parses the planning response to extract the plan and readiness.
 
@@ -592,10 +606,7 @@ class AgentReasoning:
         if not response:
             return "No plan was generated.", False
 
-        plan = response
-        ready = "READY: I am ready to execute the task." in response
-
-        return plan, ready
+        return response, AgentReasoning._is_ready(response)
 
 
 AgentPlanning = AgentReasoning
