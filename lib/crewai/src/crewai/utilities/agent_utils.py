@@ -65,6 +65,15 @@ class SummaryContent(TypedDict):
 console = Console()
 
 _MULTIPLE_NEWLINES: Final[re.Pattern[str]] = re.compile(r"\n+")
+_NATIVE_TOOL_UNSUPPORTED_PATTERNS: Final[tuple[str, ...]] = (
+    "does not support tools",
+    "doesn't support tools",
+    "tools are not supported",
+    "tool calling is not supported",
+    "tool calls are not supported",
+    "function calling is not supported",
+    "does not support function calling",
+)
 
 
 def is_inside_event_loop() -> bool:
@@ -1273,6 +1282,28 @@ def check_native_tool_support(llm: Any, original_tools: list[BaseTool] | None) -
     )
 
 
+def is_native_tool_calling_unsupported_error(error: BaseException) -> bool:
+    """Return whether an error means native tool calling is unavailable."""
+    message = str(error).lower()
+    return any(pattern in message for pattern in _NATIVE_TOOL_UNSUPPORTED_PATTERNS)
+
+
+def build_text_tool_calling_fallback_message(
+    tools_description: str,
+    tools_names: str,
+) -> str:
+    """Build instructions for downgrading native tools to text tool calls."""
+    text_tooling_prompt = I18N_DEFAULT.slice("tools").format(
+        tools=tools_description,
+        tool_names=tools_names,
+    )
+    return (
+        "Native tool calling is unavailable for this model/provider. "
+        "Continue using CrewAI text tool calling instead.\n"
+        f"{text_tooling_prompt}"
+    )
+
+
 def setup_native_tools(
     original_tools: list[BaseTool],
 ) -> tuple[
@@ -1352,6 +1383,19 @@ class NativeToolCallResult:
     tool_message: LLMMessage = field(default_factory=dict)  # type: ignore[assignment]
 
 
+def format_native_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
+    """Format native tool output when a tool explicitly defines a formatter."""
+    formatter = inspect.getattr_static(tool, "format_output_for_agent", None)
+    if formatter is None:
+        return str(raw_result)
+
+    runtime_formatter = getattr(tool, "format_output_for_agent", None)
+    if not callable(runtime_formatter):
+        return str(raw_result)
+
+    return str(runtime_formatter(raw_result))
+
+
 def execute_single_native_tool_call(
     tool_call: Any,
     *,
@@ -1365,6 +1409,8 @@ def execute_single_native_tool_call(
     event_source: Any,
     printer: Printer | None = None,
     verbose: bool = False,
+    plan_step_number: int | None = None,
+    plan_step_description: str | None = None,
 ) -> NativeToolCallResult:
     """Execute a single native tool call with full lifecycle management.
 
@@ -1423,18 +1469,24 @@ def execute_single_native_tool_call(
             original_tool = tool
             break
 
+    structured_tool: CrewStructuredTool | None = None
+    for structured in structured_tools or []:
+        if sanitize_tool_name(structured.name) == func_name:
+            structured_tool = structured
+            break
+
+    output_tool = original_tool or structured_tool
+
     from_cache = False
     input_str = json.dumps(args_dict) if args_dict else ""
     result = "Tool not found"
+    raw_tool_result: Any = result
 
-    if tools_handler and tools_handler.cache:
+    if tools_handler and tools_handler.cache and output_tool is not None:
         cached_result = tools_handler.cache.read(tool=func_name, input=input_str)
         if cached_result is not None:
-            result = (
-                str(cached_result)
-                if not isinstance(cached_result, str)
-                else cached_result
-            )
+            raw_tool_result = cached_result
+            result = format_native_tool_output_for_agent(output_tool, cached_result)
             from_cache = True
 
     started_at = datetime.now()
@@ -1446,16 +1498,12 @@ def execute_single_native_tool_call(
             from_agent=agent,
             from_task=task,
             agent_key=agent_key,
+            plan_step_number=plan_step_number,
+            plan_step_description=plan_step_description,
         ),
     )
 
     track_delegation_if_needed(func_name, args_dict, task)
-
-    structured_tool: CrewStructuredTool | None = None
-    for structured in structured_tools or []:
-        if sanitize_tool_name(structured.name) == func_name:
-            structured_tool = structured
-            break
 
     hook_blocked = False
     before_hook_context = ToolCallHookContext(
@@ -1477,11 +1525,13 @@ def execute_single_native_tool_call(
     error_event_emitted = False
     if hook_blocked:
         result = f"Tool execution blocked by hook. Tool: {func_name}"
+        raw_tool_result = result
     elif not from_cache:
-        if func_name in available_functions:
+        if func_name in available_functions and output_tool is not None:
             try:
                 tool_func = available_functions[func_name]
                 raw_result = tool_func(**args_dict)
+                raw_tool_result = raw_result
 
                 if tools_handler and tools_handler.cache:
                     should_cache = True
@@ -1494,11 +1544,10 @@ def execute_single_native_tool_call(
                             tool=func_name, input=input_str, output=raw_result
                         )
 
-                result = (
-                    str(raw_result) if not isinstance(raw_result, str) else raw_result
-                )
+                result = format_native_tool_output_for_agent(output_tool, raw_result)
             except Exception as e:
                 result = f"Error executing tool: {e}"
+                raw_tool_result = result
                 if task:
                     task.increment_tools_errors()
                 crewai_event_bus.emit(
@@ -1509,6 +1558,8 @@ def execute_single_native_tool_call(
                         from_agent=agent,
                         from_task=task,
                         agent_key=agent_key,
+                        plan_step_number=plan_step_number,
+                        plan_step_description=plan_step_description,
                         error=e,
                     ),
                 )
@@ -1522,6 +1573,7 @@ def execute_single_native_tool_call(
         task=task,
         crew=crew,
         tool_result=result,
+        raw_tool_result=raw_tool_result,
     )
     try:
         for after_hook in get_after_tool_call_hooks():
@@ -1542,6 +1594,8 @@ def execute_single_native_tool_call(
                 from_agent=agent,
                 from_task=task,
                 agent_key=agent_key,
+                plan_step_number=plan_step_number,
+                plan_step_description=plan_step_description,
                 started_at=started_at,
                 finished_at=datetime.now(),
             ),

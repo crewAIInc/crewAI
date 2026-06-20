@@ -247,8 +247,9 @@ class TestStreamingFlowIntegration:
         result = streaming.result
         assert result is not None
 
-    @pytest.mark.vcr()
     @pytest.mark.asyncio
+    @pytest.mark.timeout(180)
+    @pytest.mark.vcr()
     async def test_async_flow_streaming_from_docs(self) -> None:
         """Test async flow streaming example from documentation."""
 

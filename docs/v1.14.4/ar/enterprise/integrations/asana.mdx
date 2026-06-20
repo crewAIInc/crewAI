@@ -1,0 +1,271 @@
+---
+title: تكامل Asana
+description: "تنسيق مهام الفريق والمشاريع مع تكامل Asana لـ CrewAI."
+icon: "circle"
+mode: "wide"
+---
+
+## نظرة عامة
+
+مكّن وكلاءك من إدارة المهام والمشاريع وتنسيق الفريق عبر Asana. أنشئ المهام وحدّث حالة المشروع وأدر التعيينات وبسّط سير عمل فريقك مع الأتمتة المدعومة بالذكاء الاصطناعي.
+
+## المتطلبات الأساسية
+
+قبل استخدام تكامل Asana، تأكد من أن لديك:
+
+- حساب [CrewAI AMP](https://app.crewai.com) مع اشتراك نشط
+- حساب Asana مع الأذونات المناسبة
+- ربط حساب Asana الخاص بك عبر [صفحة التكاملات](https://app.crewai.com/crewai_plus/connectors)
+
+## إعداد تكامل Asana
+
+### 1. ربط حساب Asana الخاص بك
+
+1. انتقل إلى [تكاملات CrewAI AMP](https://app.crewai.com/crewai_plus/connectors)
+2. ابحث عن **Asana** في قسم تكاملات المصادقة
+3. انقر على **ربط** وأكمل تدفق OAuth
+4. امنح الأذونات اللازمة لإدارة المهام والمشاريع
+5. انسخ رمز Enterprise الخاص بك من [إعدادات التكامل](https://app.crewai.com/crewai_plus/settings/integrations)
+
+### 2. تثبيت الحزمة المطلوبة
+
+```bash
+uv add crewai-tools
+```
+
+### 3. إعداد متغير البيئة
+
+<Note>
+  لاستخدام التكاملات مع `Agent(apps=[])`, يجب تعيين متغير البيئة
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` برمز Enterprise الخاص بك.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+أو أضفه إلى ملف `.env`:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
+## الإجراءات المتاحة
+
+<AccordionGroup>
+  <Accordion title="asana/create_comment">
+    **الوصف:** إنشاء تعليق في Asana.
+
+    **المعاملات:**
+    - `task` (string, مطلوب): معرف المهمة - معرف المهمة التي سيُضاف إليها التعليق. سيُنسب التعليق للمستخدم المصادق عليه حاليًا.
+    - `text` (string, مطلوب): النص (مثال: "This is a comment.").
+
+  </Accordion>
+
+  <Accordion title="asana/create_project">
+    **الوصف:** إنشاء مشروع في Asana.
+
+    **المعاملات:**
+    - `name` (string, مطلوب): الاسم (مثال: "Stuff to buy").
+    - `workspace` (string, مطلوب): مساحة العمل - استخدم إعدادات سير عمل بوابة الاتصال للسماح للمستخدمين باختيار مساحة العمل لإنشاء المشاريع فيها. الافتراضي هو أول مساحة عمل للمستخدم إذا تُرك فارغًا.
+    - `team` (string, اختياري): الفريق - استخدم إعدادات سير عمل بوابة الاتصال للسماح للمستخدمين باختيار الفريق لمشاركة هذا المشروع معه. الافتراضي هو أول فريق للمستخدم إذا تُرك فارغًا.
+    - `notes` (string, اختياري): ملاحظات (مثال: "These are things we need to purchase.").
+
+  </Accordion>
+
+  <Accordion title="asana/get_projects">
+    **الوصف:** الحصول على قائمة المشاريع في Asana.
+
+    **المعاملات:**
+    - `archived` (string, اختياري): مؤرشف - اختر "true" لعرض المشاريع المؤرشفة، "false" لعرض المشاريع النشطة فقط، أو "default" لعرض كليهما.
+      - الخيارات: `default`, `true`, `false`
+
+  </Accordion>
+
+  <Accordion title="asana/get_project_by_id">
+    **الوصف:** الحصول على مشروع بواسطة المعرف في Asana.
+
+    **المعاملات:**
+    - `projectFilterId` (string, مطلوب): معرف المشروع.
+
+  </Accordion>
+
+  <Accordion title="asana/create_task">
+    **الوصف:** إنشاء مهمة في Asana.
+
+    **المعاملات:**
+    - `name` (string, مطلوب): الاسم (مثال: "Task Name").
+    - `workspace` (string, اختياري): مساحة العمل - استخدم إعدادات سير عمل بوابة الاتصال للسماح للمستخدمين باختيار مساحة العمل لإنشاء المهام فيها. الافتراضي هو أول مساحة عمل للمستخدم إذا تُرك فارغًا.
+    - `project` (string, اختياري): المشروع - استخدم إعدادات سير عمل بوابة الاتصال للسماح للمستخدمين باختيار المشروع لإنشاء هذه المهمة فيه.
+    - `notes` (string, اختياري): ملاحظات.
+    - `dueOnDate` (string, اختياري): تاريخ الاستحقاق - التاريخ الذي تستحق فيه هذه المهمة. لا يمكن استخدامه مع Due At. (مثال: "YYYY-MM-DD").
+    - `dueAtDate` (string, اختياري): الاستحقاق في - التاريخ والوقت (طابع زمني ISO) الذي تستحق فيه هذه المهمة. لا يمكن استخدامه مع Due On. (مثال: "2019-09-15T02:06:58.147Z").
+    - `assignee` (string, اختياري): المُكلف - معرف مستخدم Asana الذي سيتم تعيين هذه المهمة له. استخدم إعدادات سير عمل بوابة الاتصال للسماح للمستخدمين باختيار المُكلف.
+    - `gid` (string, اختياري): معرف خارجي - معرف من تطبيقك لربط هذه المهمة به. يمكنك استخدام هذا المعرف لمزامنة التحديثات لهذه المهمة لاحقًا.
+
+  </Accordion>
+
+  <Accordion title="asana/update_task">
+    **الوصف:** تحديث مهمة في Asana.
+
+    **المعاملات:**
+    - `taskId` (string, مطلوب): معرف المهمة - معرف المهمة التي سيتم تحديثها.
+    - `completeStatus` (string, اختياري): حالة الإكمال.
+      - الخيارات: `true`, `false`
+    - `name` (string, اختياري): الاسم (مثال: "Task Name").
+    - `notes` (string, اختياري): ملاحظات.
+    - `dueOnDate` (string, اختياري): تاريخ الاستحقاق - التاريخ الذي تستحق فيه هذه المهمة. لا يمكن استخدامه مع Due At. (مثال: "YYYY-MM-DD").
+    - `dueAtDate` (string, اختياري): الاستحقاق في - التاريخ والوقت (طابع زمني ISO) الذي تستحق فيه هذه المهمة. لا يمكن استخدامه مع Due On. (مثال: "2019-09-15T02:06:58.147Z").
+    - `assignee` (string, اختياري): المُكلف - معرف مستخدم Asana الذي سيتم تعيين هذه المهمة له.
+    - `gid` (string, اختياري): معرف خارجي - معرف من تطبيقك لربط هذه المهمة به.
+
+  </Accordion>
+
+  <Accordion title="asana/get_tasks">
+    **الوصف:** الحصول على قائمة المهام في Asana.
+
+    **المعاملات:**
+    - `workspace` (string, اختياري): مساحة العمل - معرف مساحة العمل لتصفية المهام عليها.
+    - `project` (string, اختياري): المشروع - معرف المشروع لتصفية المهام عليه.
+    - `assignee` (string, اختياري): المُكلف - معرف المُكلف لتصفية المهام عليه.
+    - `completedSince` (string, اختياري): مكتملة منذ - إرجاع المهام غير المكتملة فقط أو التي اكتملت منذ هذا الوقت (طابع زمني ISO أو Unix). (مثال: "2014-04-25T16:15:47-04:00").
+
+  </Accordion>
+
+  <Accordion title="asana/get_tasks_by_id">
+    **الوصف:** الحصول على قائمة المهام بواسطة المعرف في Asana.
+
+    **المعاملات:**
+    - `taskId` (string, مطلوب): معرف المهمة.
+
+  </Accordion>
+
+  <Accordion title="asana/get_task_by_external_id">
+    **الوصف:** الحصول على مهمة بواسطة المعرف الخارجي في Asana.
+
+    **المعاملات:**
+    - `gid` (string, مطلوب): المعرف الخارجي - المعرف الذي ترتبط أو تتزامن به هذه المهمة، من تطبيقك.
+
+  </Accordion>
+
+  <Accordion title="asana/add_task_to_section">
+    **الوصف:** إضافة مهمة إلى قسم في Asana.
+
+    **المعاملات:**
+    - `sectionId` (string, مطلوب): معرف القسم - معرف القسم لإضافة هذه المهمة إليه.
+    - `taskId` (string, مطلوب): معرف المهمة - معرف المهمة. (مثال: "1204619611402340").
+    - `beforeTaskId` (string, اختياري): معرف المهمة السابقة - معرف مهمة في هذا القسم سيتم إدراج هذه المهمة قبلها. لا يمكن استخدامه مع After Task ID. (مثال: "1204619611402340").
+    - `afterTaskId` (string, اختياري): معرف المهمة التالية - معرف مهمة في هذا القسم سيتم إدراج هذه المهمة بعدها. لا يمكن استخدامه مع Before Task ID. (مثال: "1204619611402340").
+
+  </Accordion>
+
+  <Accordion title="asana/get_teams">
+    **الوصف:** الحصول على قائمة الفرق في Asana.
+
+    **المعاملات:**
+    - `workspace` (string, مطلوب): مساحة العمل - إرجاع الفرق في مساحة العمل هذه المرئية للمستخدم المصرح له.
+
+  </Accordion>
+
+  <Accordion title="asana/get_workspaces">
+    **الوصف:** الحصول على قائمة مساحات العمل في Asana.
+
+    **المعاملات:** لا توجد معاملات مطلوبة.
+
+  </Accordion>
+</AccordionGroup>
+
+## أمثلة الاستخدام
+
+### إعداد وكيل Asana الأساسي
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create an agent with Asana capabilities
+asana_agent = Agent(
+    role="Project Manager",
+    goal="Manage tasks and projects in Asana efficiently",
+    backstory="An AI assistant specialized in project management and task coordination.",
+    apps=['asana']  # All Asana actions will be available
+)
+
+# Task to create a new project
+create_project_task = Task(
+    description="Create a new project called 'Q1 Marketing Campaign' in the Marketing workspace",
+    agent=asana_agent,
+    expected_output="Confirmation that the project was created successfully with project ID"
+)
+
+# Run the task
+crew = Crew(
+    agents=[asana_agent],
+    tasks=[create_project_task]
+)
+
+crew.kickoff()
+```
+
+### تصفية أدوات Asana محددة
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create agent with specific Asana actions only
+task_manager_agent = Agent(
+    role="Task Manager",
+    goal="Create and manage tasks efficiently",
+    backstory="An AI assistant that focuses on task creation and management.",
+    apps=[
+        'asana/create_task',
+        'asana/update_task',
+        'asana/get_tasks'
+    ]  # Specific Asana actions
+)
+
+# Task to create and assign a task
+task_management = Task(
+    description="Create a task called 'Review quarterly reports' and assign it to the appropriate team member",
+    agent=task_manager_agent,
+    expected_output="Task created and assigned successfully"
+)
+
+crew = Crew(
+    agents=[task_manager_agent],
+    tasks=[task_management]
+)
+
+crew.kickoff()
+```
+
+### إدارة المشاريع المتقدمة
+
+```python
+from crewai import Agent, Task, Crew
+
+project_coordinator = Agent(
+    role="Project Coordinator",
+    goal="Coordinate project activities and track progress",
+    backstory="An experienced project coordinator who ensures projects run smoothly.",
+    apps=['asana']
+)
+
+# Complex task involving multiple Asana operations
+coordination_task = Task(
+    description="""
+    1. Get all active projects in the workspace
+    2. For each project, get the list of incomplete tasks
+    3. Create a summary report task in the 'Management Reports' project
+    4. Add comments to overdue tasks to request status updates
+    """,
+    agent=project_coordinator,
+    expected_output="Summary report created and status update requests sent for overdue tasks"
+)
+
+crew = Crew(
+    agents=[project_coordinator],
+    tasks=[coordination_task]
+)
+
+crew.kickoff()
+```

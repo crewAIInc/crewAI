@@ -1,0 +1,550 @@
+---
+title: Integração Google Docs
+description: "Criação e edição de documentos com integração Google Docs para CrewAI."
+icon: "file-lines"
+mode: "wide"
+---
+
+## Visão Geral
+
+Permita que seus agentes criem, editem e gerenciem documentos do Google Docs com manipulação de texto e formatação. Automatize a criação de documentos, insira e substitua texto, gerencie intervalos de conteúdo e simplifique seus fluxos de trabalho de documentos com automação alimentada por IA.
+
+## Pré-requisitos
+
+Antes de usar a integração Google Docs, certifique-se de ter:
+
+- Uma conta [CrewAI AMP](https://app.crewai.com) com assinatura ativa
+- Uma conta Google com acesso ao Google Docs
+- Conectado sua conta Google através da [página de Integrações](https://app.crewai.com/crewai_plus/connectors)
+
+## Configurando a Integração Google Docs
+
+### 1. Conecte sua Conta Google
+
+1. Navegue para [Integrações CrewAI AMP](https://app.crewai.com/crewai_plus/connectors)
+2. Encontre **Google Docs** na seção de Integrações de Autenticação
+3. Clique em **Conectar** e complete o fluxo OAuth
+4. Conceda as permissões necessárias para acesso a documentos
+5. Copie seu Token Enterprise das [Configurações de Integração](https://app.crewai.com/crewai_plus/settings/integrations)
+
+### 2. Instale o Pacote Necessário
+
+```bash
+uv add crewai-tools
+```
+
+### 3. Configuração de variável de ambiente
+
+<Note>
+  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de
+  ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="seu_enterprise_token"
+```
+
+Ou adicione ao seu arquivo `.env`:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
+```
+
+## Ações Disponíveis
+
+<AccordionGroup>
+  <Accordion title="google_docs/create_document">
+    **Descrição:** Criar um novo documento do Google.
+
+    **Parâmetros:**
+    - `title` (string, opcional): O título para o novo documento.
+
+  </Accordion>
+
+  <Accordion title="google_docs/get_document">
+    **Descrição:** Obter o conteúdo e metadados de um documento do Google.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento a recuperar.
+    - `includeTabsContent` (boolean, opcional): Se deve incluir conteúdo de abas. Padrão: false
+    - `suggestionsViewMode` (string, opcional): O modo de visualização de sugestões a aplicar ao documento. Opções: DEFAULT_FOR_CURRENT_ACCESS, PREVIEW_SUGGESTIONS_ACCEPTED, PREVIEW_WITHOUT_SUGGESTIONS. Padrão: DEFAULT_FOR_CURRENT_ACCESS
+
+  </Accordion>
+
+  <Accordion title="google_docs/batch_update">
+    **Descrição:** Aplicar uma ou mais atualizações a um documento do Google.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento a atualizar.
+    - `requests` (array, obrigatório): Uma lista de atualizações a aplicar ao documento. Cada item é um objeto representando uma solicitação.
+    - `writeControl` (object, opcional): Fornece controle sobre como as solicitações de escrita são executadas. Contém `requiredRevisionId` (string) e `targetRevisionId` (string).
+
+  </Accordion>
+
+  <Accordion title="google_docs/insert_text">
+    **Descrição:** Inserir texto em um documento do Google em um local específico.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento a atualizar.
+    - `text` (string, obrigatório): O texto a inserir.
+    - `index` (integer, opcional): O índice baseado em zero onde inserir o texto. Padrão: 1
+
+  </Accordion>
+
+  <Accordion title="google_docs/replace_text">
+    **Descrição:** Substituir todas as instâncias de texto em um documento do Google.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento a atualizar.
+    - `containsText` (string, obrigatório): O texto a encontrar e substituir.
+    - `replaceText` (string, obrigatório): O texto para substituir.
+    - `matchCase` (boolean, opcional): Se a pesquisa deve respeitar maiúsculas e minúsculas. Padrão: false
+
+  </Accordion>
+
+  <Accordion title="google_docs/delete_content_range">
+    **Descrição:** Excluir conteúdo de um intervalo específico em um documento do Google.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento a atualizar.
+    - `startIndex` (integer, obrigatório): O índice inicial do intervalo a excluir.
+    - `endIndex` (integer, obrigatório): O índice final do intervalo a excluir.
+
+  </Accordion>
+
+  <Accordion title="google_docs/insert_page_break">
+    **Descrição:** Inserir uma quebra de página em um local específico em um documento do Google.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento a atualizar.
+    - `index` (integer, opcional): O índice baseado em zero onde inserir a quebra de página. Padrão: 1
+
+  </Accordion>
+
+  <Accordion title="google_docs/create_named_range">
+    **Descrição:** Criar um intervalo nomeado em um documento do Google.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento a atualizar.
+    - `name` (string, obrigatório): O nome para o intervalo nomeado.
+    - `startIndex` (integer, obrigatório): O índice inicial do intervalo.
+    - `endIndex` (integer, obrigatório): O índice final do intervalo.
+
+  </Accordion>
+
+  <Accordion title="google_docs/create_document_with_content">
+    **Descrição:** Criar um novo documento do Google com conteúdo em uma única ação.
+
+    **Parâmetros:**
+    - `title` (string, obrigatório): O título para o novo documento. Aparece no topo do documento e no Google Drive.
+    - `content` (string, opcional): O conteúdo de texto a inserir no documento. Use `\n` para novos parágrafos.
+
+  </Accordion>
+
+  <Accordion title="google_docs/append_text">
+    **Descrição:** Adicionar texto ao final de um documento do Google. Insere automaticamente no final do documento sem necessidade de especificar um índice.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento obtido da resposta de create_document ou URL.
+    - `text` (string, obrigatório): Texto a adicionar ao final do documento. Use `\n` para novos parágrafos.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_text_bold">
+    **Descrição:** Aplicar ou remover formatação de negrito em texto de um documento do Google.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento.
+    - `startIndex` (integer, obrigatório): Posição inicial do texto a formatar.
+    - `endIndex` (integer, obrigatório): Posição final do texto a formatar (exclusivo).
+    - `bold` (boolean, obrigatório): Defina `true` para aplicar negrito, `false` para remover negrito.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_text_italic">
+    **Descrição:** Aplicar ou remover formatação de itálico em texto de um documento do Google.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento.
+    - `startIndex` (integer, obrigatório): Posição inicial do texto a formatar.
+    - `endIndex` (integer, obrigatório): Posição final do texto a formatar (exclusivo).
+    - `italic` (boolean, obrigatório): Defina `true` para aplicar itálico, `false` para remover itálico.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_text_underline">
+    **Descrição:** Adicionar ou remover formatação de sublinhado em texto de um documento do Google.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento.
+    - `startIndex` (integer, obrigatório): Posição inicial do texto a formatar.
+    - `endIndex` (integer, obrigatório): Posição final do texto a formatar (exclusivo).
+    - `underline` (boolean, obrigatório): Defina `true` para sublinhar, `false` para remover sublinhado.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_text_strikethrough">
+    **Descrição:** Adicionar ou remover formatação de tachado em texto de um documento do Google.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento.
+    - `startIndex` (integer, obrigatório): Posição inicial do texto a formatar.
+    - `endIndex` (integer, obrigatório): Posição final do texto a formatar (exclusivo).
+    - `strikethrough` (boolean, obrigatório): Defina `true` para adicionar tachado, `false` para remover.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_font_size">
+    **Descrição:** Alterar o tamanho da fonte do texto em um documento do Google.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento.
+    - `startIndex` (integer, obrigatório): Posição inicial do texto a formatar.
+    - `endIndex` (integer, obrigatório): Posição final do texto a formatar (exclusivo).
+    - `fontSize` (number, obrigatório): Tamanho da fonte em pontos. Tamanhos comuns: 10, 11, 12, 14, 16, 18, 24, 36.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_text_color">
+    **Descrição:** Alterar a cor do texto usando valores RGB (escala 0-1) em um documento do Google.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento.
+    - `startIndex` (integer, obrigatório): Posição inicial do texto a formatar.
+    - `endIndex` (integer, obrigatório): Posição final do texto a formatar (exclusivo).
+    - `red` (number, obrigatório): Componente vermelho (0-1). Exemplo: `1` para vermelho total.
+    - `green` (number, obrigatório): Componente verde (0-1). Exemplo: `0.5` para metade verde.
+    - `blue` (number, obrigatório): Componente azul (0-1). Exemplo: `0` para sem azul.
+
+  </Accordion>
+
+  <Accordion title="google_docs/create_hyperlink">
+    **Descrição:** Transformar texto existente em um hyperlink clicável em um documento do Google.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento.
+    - `startIndex` (integer, obrigatório): Posição inicial do texto a transformar em link.
+    - `endIndex` (integer, obrigatório): Posição final do texto a transformar em link (exclusivo).
+    - `url` (string, obrigatório): A URL para a qual o link deve apontar. Exemplo: `"https://example.com"`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/apply_heading_style">
+    **Descrição:** Aplicar um estilo de título ou parágrafo a um intervalo de texto em um documento do Google.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento.
+    - `startIndex` (integer, obrigatório): Posição inicial do(s) parágrafo(s) a estilizar.
+    - `endIndex` (integer, obrigatório): Posição final do(s) parágrafo(s) a estilizar.
+    - `style` (string, obrigatório): O estilo a aplicar. Opções: `NORMAL_TEXT`, `TITLE`, `SUBTITLE`, `HEADING_1`, `HEADING_2`, `HEADING_3`, `HEADING_4`, `HEADING_5`, `HEADING_6`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_paragraph_alignment">
+    **Descrição:** Definir o alinhamento de texto para parágrafos em um documento do Google.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento.
+    - `startIndex` (integer, obrigatório): Posição inicial do(s) parágrafo(s) a alinhar.
+    - `endIndex` (integer, obrigatório): Posição final do(s) parágrafo(s) a alinhar.
+    - `alignment` (string, obrigatório): Alinhamento do texto. Opções: `START` (esquerda), `CENTER`, `END` (direita), `JUSTIFIED`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/set_line_spacing">
+    **Descrição:** Definir o espaçamento entre linhas para parágrafos em um documento do Google.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento.
+    - `startIndex` (integer, obrigatório): Posição inicial do(s) parágrafo(s).
+    - `endIndex` (integer, obrigatório): Posição final do(s) parágrafo(s).
+    - `lineSpacing` (number, obrigatório): Espaçamento entre linhas como porcentagem. `100` = simples, `115` = 1.15x, `150` = 1.5x, `200` = duplo.
+
+  </Accordion>
+
+  <Accordion title="google_docs/create_paragraph_bullets">
+    **Descrição:** Converter parágrafos em uma lista com marcadores ou numerada em um documento do Google.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento.
+    - `startIndex` (integer, obrigatório): Posição inicial dos parágrafos a converter em lista.
+    - `endIndex` (integer, obrigatório): Posição final dos parágrafos a converter em lista.
+    - `bulletPreset` (string, obrigatório): Estilo de marcadores/numeração. Opções: `BULLET_DISC_CIRCLE_SQUARE`, `BULLET_DIAMONDX_ARROW3D_SQUARE`, `BULLET_CHECKBOX`, `BULLET_ARROW_DIAMOND_DISC`, `BULLET_STAR_CIRCLE_SQUARE`, `NUMBERED_DECIMAL_ALPHA_ROMAN`, `NUMBERED_DECIMAL_ALPHA_ROMAN_PARENS`, `NUMBERED_DECIMAL_NESTED`, `NUMBERED_UPPERALPHA_ALPHA_ROMAN`, `NUMBERED_UPPERROMAN_UPPERALPHA_DECIMAL`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/delete_paragraph_bullets">
+    **Descrição:** Remover marcadores ou numeração de parágrafos em um documento do Google.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento.
+    - `startIndex` (integer, obrigatório): Posição inicial dos parágrafos de lista.
+    - `endIndex` (integer, obrigatório): Posição final dos parágrafos de lista.
+
+  </Accordion>
+
+  <Accordion title="google_docs/insert_table_with_content">
+    **Descrição:** Inserir uma tabela com conteúdo em um documento do Google em uma única ação. Forneça o conteúdo como um array 2D.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento.
+    - `rows` (integer, obrigatório): Número de linhas na tabela.
+    - `columns` (integer, obrigatório): Número de colunas na tabela.
+    - `index` (integer, opcional): Posição para inserir a tabela. Se não fornecido, a tabela é inserida no final do documento.
+    - `content` (array, obrigatório): Conteúdo da tabela como um array 2D. Cada array interno é uma linha. Exemplo: `[["Ano", "Receita"], ["2023", "$43B"], ["2024", "$45B"]]`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/insert_table_row">
+    **Descrição:** Inserir uma nova linha acima ou abaixo de uma célula de referência em uma tabela existente.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento.
+    - `tableStartIndex` (integer, obrigatório): O índice inicial da tabela. Obtenha de get_document.
+    - `rowIndex` (integer, obrigatório): Índice da linha (baseado em 0) da célula de referência.
+    - `columnIndex` (integer, opcional): Índice da coluna (baseado em 0) da célula de referência. Padrão: `0`.
+    - `insertBelow` (boolean, opcional): Se `true`, insere abaixo da linha de referência. Se `false`, insere acima. Padrão: `true`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/insert_table_column">
+    **Descrição:** Inserir uma nova coluna à esquerda ou à direita de uma célula de referência em uma tabela existente.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento.
+    - `tableStartIndex` (integer, obrigatório): O índice inicial da tabela.
+    - `rowIndex` (integer, opcional): Índice da linha (baseado em 0) da célula de referência. Padrão: `0`.
+    - `columnIndex` (integer, obrigatório): Índice da coluna (baseado em 0) da célula de referência.
+    - `insertRight` (boolean, opcional): Se `true`, insere à direita. Se `false`, insere à esquerda. Padrão: `true`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/delete_table_row">
+    **Descrição:** Excluir uma linha de uma tabela existente em um documento do Google.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento.
+    - `tableStartIndex` (integer, obrigatório): O índice inicial da tabela.
+    - `rowIndex` (integer, obrigatório): Índice da linha (baseado em 0) a excluir.
+    - `columnIndex` (integer, opcional): Índice da coluna (baseado em 0) de qualquer célula na linha. Padrão: `0`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/delete_table_column">
+    **Descrição:** Excluir uma coluna de uma tabela existente em um documento do Google.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento.
+    - `tableStartIndex` (integer, obrigatório): O índice inicial da tabela.
+    - `rowIndex` (integer, opcional): Índice da linha (baseado em 0) de qualquer célula na coluna. Padrão: `0`.
+    - `columnIndex` (integer, obrigatório): Índice da coluna (baseado em 0) a excluir.
+
+  </Accordion>
+
+  <Accordion title="google_docs/merge_table_cells">
+    **Descrição:** Mesclar um intervalo de células de tabela em uma única célula. O conteúdo de todas as células é preservado.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento.
+    - `tableStartIndex` (integer, obrigatório): O índice inicial da tabela.
+    - `rowIndex` (integer, obrigatório): Índice da linha inicial (baseado em 0) para a mesclagem.
+    - `columnIndex` (integer, obrigatório): Índice da coluna inicial (baseado em 0) para a mesclagem.
+    - `rowSpan` (integer, obrigatório): Número de linhas a mesclar.
+    - `columnSpan` (integer, obrigatório): Número de colunas a mesclar.
+
+  </Accordion>
+
+  <Accordion title="google_docs/unmerge_table_cells">
+    **Descrição:** Desfazer a mesclagem de células de tabela previamente mescladas, retornando-as a células individuais.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento.
+    - `tableStartIndex` (integer, obrigatório): O índice inicial da tabela.
+    - `rowIndex` (integer, obrigatório): Índice da linha (baseado em 0) da célula mesclada.
+    - `columnIndex` (integer, obrigatório): Índice da coluna (baseado em 0) da célula mesclada.
+    - `rowSpan` (integer, obrigatório): Número de linhas que a célula mesclada abrange.
+    - `columnSpan` (integer, obrigatório): Número de colunas que a célula mesclada abrange.
+
+  </Accordion>
+
+  <Accordion title="google_docs/insert_inline_image">
+    **Descrição:** Inserir uma imagem de uma URL pública em um documento do Google. A imagem deve ser publicamente acessível, ter menos de 50MB e estar no formato PNG/JPEG/GIF.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento.
+    - `uri` (string, obrigatório): URL pública da imagem. Deve ser acessível sem autenticação.
+    - `index` (integer, opcional): Posição para inserir a imagem. Se não fornecido, a imagem é inserida no final do documento. Padrão: `1`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/insert_section_break">
+    **Descrição:** Inserir uma quebra de seção para criar seções de documento com formatação diferente.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento.
+    - `index` (integer, obrigatório): Posição para inserir a quebra de seção.
+    - `sectionType` (string, obrigatório): O tipo de quebra de seção. Opções: `CONTINUOUS` (permanece na mesma página), `NEXT_PAGE` (inicia uma nova página).
+
+  </Accordion>
+
+  <Accordion title="google_docs/create_header">
+    **Descrição:** Criar um cabeçalho para o documento. Retorna um headerId que pode ser usado com insert_text para adicionar conteúdo ao cabeçalho.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento.
+    - `type` (string, opcional): Tipo de cabeçalho. Opções: `DEFAULT`. Padrão: `DEFAULT`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/create_footer">
+    **Descrição:** Criar um rodapé para o documento. Retorna um footerId que pode ser usado com insert_text para adicionar conteúdo ao rodapé.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento.
+    - `type` (string, opcional): Tipo de rodapé. Opções: `DEFAULT`. Padrão: `DEFAULT`.
+
+  </Accordion>
+
+  <Accordion title="google_docs/delete_header">
+    **Descrição:** Excluir um cabeçalho do documento. Use get_document para encontrar o headerId.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento.
+    - `headerId` (string, obrigatório): O ID do cabeçalho a excluir. Obtenha da resposta de get_document.
+
+  </Accordion>
+
+  <Accordion title="google_docs/delete_footer">
+    **Descrição:** Excluir um rodapé do documento. Use get_document para encontrar o footerId.
+
+    **Parâmetros:**
+    - `documentId` (string, obrigatório): O ID do documento.
+    - `footerId` (string, obrigatório): O ID do rodapé a excluir. Obtenha da resposta de get_document.
+
+  </Accordion>
+</AccordionGroup>
+
+## Exemplos de Uso
+
+### Configuração Básica do Agente Google Docs
+
+```python
+from crewai import Agent, Task, Crew
+
+# Crie um agente com capacidades do Google Docs
+docs_agent = Agent(
+    role="Criador de Documentos",
+    goal="Criar e gerenciar documentos do Google Docs de forma eficiente",
+    backstory="Um assistente IA especializado em criação e edição de documentos do Google Docs.",
+    apps=['google_docs']  # Todas as ações do Google Docs estarão disponíveis
+)
+
+# Tarefa para criar um novo documento
+create_doc_task = Task(
+    description="Criar um novo documento do Google intitulado 'Relatório de Status do Projeto'",
+    agent=docs_agent,
+    expected_output="Novo documento do Google 'Relatório de Status do Projeto' criado com sucesso"
+)
+
+# Execute a tarefa
+crew = Crew(
+    agents=[docs_agent],
+    tasks=[create_doc_task]
+)
+
+crew.kickoff()
+```
+
+### Edição de Texto e Gerenciamento de Conteúdo
+
+```python
+from crewai import Agent, Task, Crew
+
+# Crie um agente focado em edição de texto
+text_editor = Agent(
+    role="Editor de Documentos",
+    goal="Editar e atualizar conteúdo em documentos do Google Docs",
+    backstory="Um assistente IA habilidoso em edição precisa de texto e gerenciamento de conteúdo.",
+    apps=['google_docs/insert_text', 'google_docs/replace_text', 'google_docs/delete_content_range']
+)
+
+# Tarefa para editar conteúdo do documento
+edit_content_task = Task(
+    description="No documento 'your_document_id', inserir o texto 'Resumo Executivo: ' no início, depois substituir todas as instâncias de 'TODO' por 'CONCLUÍDO'.",
+    agent=text_editor,
+    expected_output="Documento atualizado com novo texto inserido e itens TODO substituídos."
+)
+
+crew = Crew(
+    agents=[text_editor],
+    tasks=[edit_content_task]
+)
+
+crew.kickoff()
+```
+
+### Operações Avançadas de Documentos
+
+```python
+from crewai import Agent, Task, Crew
+
+# Crie um agente para operações avançadas de documentos
+document_formatter = Agent(
+    role="Formatador de Documentos",
+    goal="Aplicar formatação avançada e estrutura a documentos do Google",
+    backstory="Um assistente IA que lida com formatação complexa de documentos e organização.",
+    apps=['google_docs/batch_update', 'google_docs/insert_page_break', 'google_docs/create_named_range']
+)
+
+# Tarefa para formatar documento
+format_doc_task = Task(
+    description="No documento 'your_document_id', inserir uma quebra de página na posição 100, criar um intervalo nomeado chamado 'Introdução' para caracteres 1-50, e aplicar atualizações de formatação em lote.",
+    agent=document_formatter,
+    expected_output="Documento formatado com quebra de página, intervalo nomeado e estilo aplicado."
+)
+
+crew = Crew(
+    agents=[document_formatter],
+    tasks=[format_doc_task]
+)
+
+crew.kickoff()
+```
+
+## Solução de Problemas
+
+### Problemas Comuns
+
+**Erros de Autenticação**
+
+- Certifique-se de que sua conta Google tenha as permissões necessárias para acesso ao Google Docs.
+- Verifique se a conexão OAuth inclui todos os escopos necessários (`https://www.googleapis.com/auth/documents`).
+
+**Problemas de ID do Documento**
+
+- Verifique novamente os IDs dos documentos para correção.
+- Certifique-se de que o documento existe e está acessível à sua conta.
+- IDs de documentos podem ser encontrados na URL do Google Docs.
+
+**Inserção de Texto e Operações de Intervalo**
+
+- Ao usar `insert_text` ou `delete_content_range`, certifique-se de que as posições de índice sejam válidas.
+- Lembre-se de que o Google Docs usa indexação baseada em zero.
+- O documento deve ter conteúdo nas posições de índice especificadas.
+
+**Formatação de Solicitação de Atualização em Lote**
+
+- Ao usar `batch_update`, certifique-se de que o array `requests` esteja formatado corretamente de acordo com a documentação da API do Google Docs.
+- Atualizações complexas requerem estruturas JSON específicas para cada tipo de solicitação.
+
+**Operações de Substituição de Texto**
+
+- Para `replace_text`, certifique-se de que o parâmetro `containsText` corresponda exatamente ao texto que você deseja substituir.
+- Use o parâmetro `matchCase` para controlar a sensibilidade a maiúsculas e minúsculas.
+
+### Obtendo Ajuda
+
+<Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
+  Entre em contato com nossa equipe de suporte para assistência com configuração
+  ou solução de problemas da integração Google Docs.
+</Card>

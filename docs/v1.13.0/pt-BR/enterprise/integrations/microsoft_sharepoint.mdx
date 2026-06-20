@@ -1,0 +1,524 @@
+---
+title: Integração Microsoft SharePoint
+description: "Gerenciamento de sites, listas e documentos com integração Microsoft SharePoint para CrewAI."
+icon: "folder-tree"
+mode: "wide"
+---
+
+## Visão Geral
+
+Permita que seus agentes acessem e gerenciem sites, listas e bibliotecas de documentos do SharePoint. Recupere informações do site, gerencie itens de lista, faça upload e organize arquivos, e simplifique seus fluxos de trabalho do SharePoint com automação alimentada por IA.
+
+## Pré-requisitos
+
+Antes de usar a integração Microsoft SharePoint, certifique-se de ter:
+
+- Uma conta [CrewAI AMP](https://app.crewai.com) com assinatura ativa
+- Uma conta Microsoft com acesso ao SharePoint
+- Conectado sua conta Microsoft através da [página de Integrações](https://app.crewai.com/crewai_plus/connectors)
+
+## Configurando a Integração Microsoft SharePoint
+
+### 1. Conecte sua Conta Microsoft
+
+1. Navegue para [Integrações CrewAI AMP](https://app.crewai.com/crewai_plus/connectors)
+2. Encontre **Microsoft SharePoint** na seção de Integrações de Autenticação
+3. Clique em **Conectar** e complete o fluxo OAuth
+4. Conceda as permissões necessárias para acesso a sites e arquivos do SharePoint
+5. Copie seu Token Enterprise das [Configurações de Integração](https://app.crewai.com/crewai_plus/settings/integrations)
+
+### 2. Instale o Pacote Necessário
+
+```bash
+uv add crewai-tools
+```
+
+### 3. Configuração de variável de ambiente
+
+<Note>
+  Para usar integrações com `Agent(apps=[])`, você deve definir a variável de
+  ambiente `CREWAI_PLATFORM_INTEGRATION_TOKEN` com seu Enterprise Token.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="seu_enterprise_token"
+```
+
+Ou adicione ao seu arquivo `.env`:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=seu_enterprise_token
+```
+
+## Ações Disponíveis
+
+<AccordionGroup>
+  <Accordion title="microsoft_sharepoint/get_sites">
+    **Descrição:** Obter todos os sites do SharePoint aos quais o usuário tem acesso.
+
+    **Parâmetros:**
+    - `search` (string, opcional): Consulta de pesquisa para filtrar sites.
+    - `select` (string, opcional): Selecionar propriedades específicas para retornar (ex: 'displayName,id,webUrl').
+    - `filter` (string, opcional): Filtrar resultados usando sintaxe OData.
+    - `expand` (string, opcional): Expandir recursos relacionados inline.
+    - `top` (integer, opcional): Número de itens a retornar (mín 1, máx 999).
+    - `skip` (integer, opcional): Número de itens a pular (mín 0).
+    - `orderby` (string, opcional): Ordenar resultados por propriedades especificadas (ex: 'displayName desc').
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_site">
+    **Descrição:** Obter informações sobre um site específico do SharePoint.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O ID do site do SharePoint.
+    - `select` (string, opcional): Selecionar propriedades específicas para retornar (ex: 'displayName,id,webUrl,drives').
+    - `expand` (string, opcional): Expandir recursos relacionados inline (ex: 'drives,lists').
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_drives">
+    **Descrição:** Listar todas as bibliotecas de documentos (drives) em um site do SharePoint. Use isto para descobrir bibliotecas disponíveis antes de usar operações de arquivo.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O identificador completo do site SharePoint obtido de get_sites.
+    - `top` (integer, opcional): Número máximo de drives a retornar por página (1-999). Padrão: 100
+    - `skip_token` (string, opcional): Token de paginação de uma resposta anterior para buscar a próxima página de resultados.
+    - `select` (string, opcional): Lista de propriedades separadas por vírgula para retornar (ex: 'id,name,webUrl,driveType').
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_site_lists">
+    **Descrição:** Obter todas as listas em um site do SharePoint.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O ID do site do SharePoint.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_list">
+    **Descrição:** Obter informações sobre uma lista específica.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O ID do site do SharePoint.
+    - `list_id` (string, obrigatório): O ID da lista.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_list_items">
+    **Descrição:** Obter itens de uma lista do SharePoint.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O ID do site do SharePoint.
+    - `list_id` (string, obrigatório): O ID da lista.
+    - `expand` (string, opcional): Expandir dados relacionados (ex: 'fields').
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/create_list_item">
+    **Descrição:** Criar um novo item em uma lista do SharePoint.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O ID do site do SharePoint.
+    - `list_id` (string, obrigatório): O ID da lista.
+    - `fields` (object, obrigatório): Os valores de campo para o novo item.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/update_list_item">
+    **Descrição:** Atualizar um item em uma lista do SharePoint.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O ID do site do SharePoint.
+    - `list_id` (string, obrigatório): O ID da lista.
+    - `item_id` (string, obrigatório): O ID do item a atualizar.
+    - `fields` (object, obrigatório): Os valores de campo a atualizar.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/delete_list_item">
+    **Descrição:** Excluir um item de uma lista do SharePoint.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O ID do site do SharePoint.
+    - `list_id` (string, obrigatório): O ID da lista.
+    - `item_id` (string, obrigatório): O ID do item a excluir.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/upload_file_to_library">
+    **Descrição:** Fazer upload de um arquivo para uma biblioteca de documentos do SharePoint.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O ID do site do SharePoint.
+    - `file_path` (string, obrigatório): O caminho onde fazer upload do arquivo (ex: 'pasta/nomeDoArquivo.txt').
+    - `content` (string, obrigatório): O conteúdo do arquivo a fazer upload.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/list_files">
+    **Descrição:** Recuperar arquivos e pastas de uma biblioteca de documentos do SharePoint. Por padrão, lista a pasta raiz, mas você pode navegar em subpastas fornecendo um folder_id.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O identificador completo do site SharePoint obtido de get_sites.
+    - `drive_id` (string, obrigatório): O ID da biblioteca de documentos. Chame get_drives primeiro para obter IDs de drive válidos.
+    - `folder_id` (string, opcional): O ID da pasta para listar o conteúdo. Use 'root' para a pasta raiz, ou forneça um ID de pasta de uma chamada anterior de list_files. Padrão: 'root'
+    - `top` (integer, opcional): Número máximo de itens a retornar por página (1-1000). Padrão: 50
+    - `skip_token` (string, opcional): Token de paginação de uma resposta anterior para buscar a próxima página de resultados.
+    - `orderby` (string, opcional): Ordem de classificação dos resultados (ex: 'name asc', 'size desc', 'lastModifiedDateTime desc'). Padrão: 'name asc'
+    - `filter` (string, opcional): Filtro OData para restringir resultados (ex: 'file ne null' apenas para arquivos, 'folder ne null' apenas para pastas).
+    - `select` (string, opcional): Lista de campos separados por vírgula para retornar (ex: 'id,name,size,folder,file,webUrl,lastModifiedDateTime').
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/delete_file">
+    **Descrição:** Excluir um arquivo ou pasta de uma biblioteca de documentos do SharePoint. Para pastas, todo o conteúdo é excluído recursivamente. Os itens são movidos para a lixeira do site.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O identificador completo do site SharePoint obtido de get_sites.
+    - `drive_id` (string, obrigatório): O ID da biblioteca de documentos. Chame get_drives primeiro para obter IDs de drive válidos.
+    - `item_id` (string, obrigatório): O identificador único do arquivo ou pasta a excluir. Obtenha de list_files.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/list_files_by_path">
+    **Descrição:** Listar arquivos e pastas em uma pasta de biblioteca de documentos do SharePoint pelo caminho. Mais eficiente do que múltiplas chamadas list_files para navegação profunda.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O identificador completo do site SharePoint obtido de get_sites.
+    - `drive_id` (string, obrigatório): O ID da biblioteca de documentos. Chame get_drives primeiro para obter IDs de drive válidos.
+    - `folder_path` (string, obrigatório): O caminho completo para a pasta sem barras iniciais/finais (ex: 'Documents', 'Reports/2024/Q1').
+    - `top` (integer, opcional): Número máximo de itens a retornar por página (1-1000). Padrão: 50
+    - `skip_token` (string, opcional): Token de paginação de uma resposta anterior para buscar a próxima página de resultados.
+    - `orderby` (string, opcional): Ordem de classificação dos resultados (ex: 'name asc', 'size desc'). Padrão: 'name asc'
+    - `select` (string, opcional): Lista de campos separados por vírgula para retornar (ex: 'id,name,size,folder,file,webUrl,lastModifiedDateTime').
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/download_file">
+    **Descrição:** Baixar conteúdo bruto de um arquivo de uma biblioteca de documentos do SharePoint. Use apenas para arquivos de texto simples (.txt, .csv, .json). Para arquivos Excel, use as ações específicas de Excel. Para arquivos Word, use get_word_document_content.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O identificador completo do site SharePoint obtido de get_sites.
+    - `drive_id` (string, obrigatório): O ID da biblioteca de documentos. Chame get_drives primeiro para obter IDs de drive válidos.
+    - `item_id` (string, obrigatório): O identificador único do arquivo a baixar. Obtenha de list_files ou list_files_by_path.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_file_info">
+    **Descrição:** Recuperar metadados detalhados de um arquivo ou pasta específico em uma biblioteca de documentos do SharePoint, incluindo nome, tamanho, datas de criação/modificação e informações do autor.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O identificador completo do site SharePoint obtido de get_sites.
+    - `drive_id` (string, obrigatório): O ID da biblioteca de documentos. Chame get_drives primeiro para obter IDs de drive válidos.
+    - `item_id` (string, obrigatório): O identificador único do arquivo ou pasta. Obtenha de list_files ou list_files_by_path.
+    - `select` (string, opcional): Lista de propriedades separadas por vírgula para retornar (ex: 'id,name,size,createdDateTime,lastModifiedDateTime,webUrl,createdBy,lastModifiedBy').
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/create_folder">
+    **Descrição:** Criar uma nova pasta em uma biblioteca de documentos do SharePoint. Por padrão, cria a pasta na raiz; use parent_id para criar subpastas.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O identificador completo do site SharePoint obtido de get_sites.
+    - `drive_id` (string, obrigatório): O ID da biblioteca de documentos. Chame get_drives primeiro para obter IDs de drive válidos.
+    - `folder_name` (string, obrigatório): Nome para a nova pasta. Não pode conter: \ / : * ? " < > |
+    - `parent_id` (string, opcional): O ID da pasta pai. Use 'root' para a raiz da biblioteca de documentos, ou forneça um ID de pasta de list_files. Padrão: 'root'
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/search_files">
+    **Descrição:** Pesquisar arquivos e pastas em uma biblioteca de documentos do SharePoint por palavras-chave. Pesquisa nomes de arquivos, nomes de pastas e conteúdo de arquivos para documentos Office. Não use curingas ou caracteres especiais.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O identificador completo do site SharePoint obtido de get_sites.
+    - `drive_id` (string, obrigatório): O ID da biblioteca de documentos. Chame get_drives primeiro para obter IDs de drive válidos.
+    - `query` (string, obrigatório): Palavras-chave de pesquisa (ex: 'relatório', 'orçamento 2024'). Curingas como *.txt não são suportados.
+    - `top` (integer, opcional): Número máximo de resultados a retornar por página (1-1000). Padrão: 50
+    - `skip_token` (string, opcional): Token de paginação de uma resposta anterior para buscar a próxima página de resultados.
+    - `select` (string, opcional): Lista de campos separados por vírgula para retornar (ex: 'id,name,size,folder,file,webUrl,lastModifiedDateTime').
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/copy_file">
+    **Descrição:** Copiar um arquivo ou pasta para um novo local dentro do SharePoint. O item original permanece inalterado. A operação de cópia é assíncrona para arquivos grandes.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O identificador completo do site SharePoint obtido de get_sites.
+    - `drive_id` (string, obrigatório): O ID da biblioteca de documentos. Chame get_drives primeiro para obter IDs de drive válidos.
+    - `item_id` (string, obrigatório): O identificador único do arquivo ou pasta a copiar. Obtenha de list_files ou search_files.
+    - `destination_folder_id` (string, obrigatório): O ID da pasta de destino. Use 'root' para a pasta raiz, ou um ID de pasta de list_files.
+    - `new_name` (string, opcional): Novo nome para a cópia. Se não fornecido, o nome original é usado.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/move_file">
+    **Descrição:** Mover um arquivo ou pasta para um novo local dentro do SharePoint. O item é removido de sua localização original. Para pastas, todo o conteúdo é movido também.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O identificador completo do site SharePoint obtido de get_sites.
+    - `drive_id` (string, obrigatório): O ID da biblioteca de documentos. Chame get_drives primeiro para obter IDs de drive válidos.
+    - `item_id` (string, obrigatório): O identificador único do arquivo ou pasta a mover. Obtenha de list_files ou search_files.
+    - `destination_folder_id` (string, obrigatório): O ID da pasta de destino. Use 'root' para a pasta raiz, ou um ID de pasta de list_files.
+    - `new_name` (string, opcional): Novo nome para o item movido. Se não fornecido, o nome original é mantido.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_excel_worksheets">
+    **Descrição:** Listar todas as planilhas (abas) em uma pasta de trabalho Excel armazenada em uma biblioteca de documentos do SharePoint. Use o nome da planilha retornado com outras ações de Excel.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O identificador completo do site SharePoint obtido de get_sites.
+    - `drive_id` (string, obrigatório): O ID da biblioteca de documentos. Chame get_drives primeiro para obter IDs de drive válidos.
+    - `item_id` (string, obrigatório): O identificador único do arquivo Excel no SharePoint. Obtenha de list_files ou search_files.
+    - `select` (string, opcional): Lista de propriedades separadas por vírgula para retornar (ex: 'id,name,position,visibility').
+    - `filter` (string, opcional): Expressão de filtro OData (ex: "visibility eq 'Visible'" para excluir planilhas ocultas).
+    - `top` (integer, opcional): Número máximo de planilhas a retornar. Mínimo: 1, Máximo: 999
+    - `orderby` (string, opcional): Ordem de classificação (ex: 'position asc' para retornar planilhas na ordem das abas).
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/create_excel_worksheet">
+    **Descrição:** Criar uma nova planilha (aba) em uma pasta de trabalho Excel armazenada em uma biblioteca de documentos do SharePoint. A nova planilha é adicionada no final da lista de abas.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O identificador completo do site SharePoint obtido de get_sites.
+    - `drive_id` (string, obrigatório): O ID da biblioteca de documentos. Chame get_drives primeiro para obter IDs de drive válidos.
+    - `item_id` (string, obrigatório): O identificador único do arquivo Excel no SharePoint. Obtenha de list_files ou search_files.
+    - `name` (string, obrigatório): Nome para a nova planilha. Máximo de 31 caracteres. Não pode conter: \ / * ? : [ ]. Deve ser único na pasta de trabalho.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_excel_range_data">
+    **Descrição:** Recuperar valores de células de um intervalo específico em uma planilha Excel armazenada no SharePoint. Para ler todos os dados sem saber as dimensões, use get_excel_used_range em vez disso.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O identificador completo do site SharePoint obtido de get_sites.
+    - `drive_id` (string, obrigatório): O ID da biblioteca de documentos. Chame get_drives primeiro para obter IDs de drive válidos.
+    - `item_id` (string, obrigatório): O identificador único do arquivo Excel no SharePoint. Obtenha de list_files ou search_files.
+    - `worksheet_name` (string, obrigatório): Nome da planilha (aba) para leitura. Obtenha de get_excel_worksheets. Sensível a maiúsculas e minúsculas.
+    - `range` (string, obrigatório): Intervalo de células em notação A1 (ex: 'A1:C10', 'A:C', '1:5', 'A1').
+    - `select` (string, opcional): Lista de propriedades separadas por vírgula para retornar (ex: 'address,values,formulas,numberFormat,text').
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/update_excel_range_data">
+    **Descrição:** Escrever valores em um intervalo específico em uma planilha Excel armazenada no SharePoint. Sobrescreve o conteúdo existente das células. As dimensões do array de valores devem corresponder exatamente às dimensões do intervalo.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O identificador completo do site SharePoint obtido de get_sites.
+    - `drive_id` (string, obrigatório): O ID da biblioteca de documentos. Chame get_drives primeiro para obter IDs de drive válidos.
+    - `item_id` (string, obrigatório): O identificador único do arquivo Excel no SharePoint. Obtenha de list_files ou search_files.
+    - `worksheet_name` (string, obrigatório): Nome da planilha (aba) a atualizar. Obtenha de get_excel_worksheets. Sensível a maiúsculas e minúsculas.
+    - `range` (string, obrigatório): Intervalo de células em notação A1 onde os valores serão escritos (ex: 'A1:C3' para um bloco 3x3).
+    - `values` (array, obrigatório): Array 2D de valores (linhas contendo células). Exemplo para A1:B2: [["Cabeçalho1", "Cabeçalho2"], ["Valor1", "Valor2"]]. Use null para limpar uma célula.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_excel_used_range_metadata">
+    **Descrição:** Retornar apenas os metadados (endereço e dimensões) do intervalo utilizado em uma planilha, sem os valores reais das células. Ideal para arquivos grandes para entender o tamanho da planilha antes de ler dados em blocos.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O identificador completo do site SharePoint obtido de get_sites.
+    - `drive_id` (string, obrigatório): O ID da biblioteca de documentos. Chame get_drives primeiro para obter IDs de drive válidos.
+    - `item_id` (string, obrigatório): O identificador único do arquivo Excel no SharePoint. Obtenha de list_files ou search_files.
+    - `worksheet_name` (string, obrigatório): Nome da planilha (aba) para leitura. Obtenha de get_excel_worksheets. Sensível a maiúsculas e minúsculas.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_excel_used_range">
+    **Descrição:** Recuperar todas as células contendo dados em uma planilha armazenada no SharePoint. Não use para arquivos maiores que 2MB. Para arquivos grandes, use get_excel_used_range_metadata primeiro, depois get_excel_range_data para ler em blocos menores.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O identificador completo do site SharePoint obtido de get_sites.
+    - `drive_id` (string, obrigatório): O ID da biblioteca de documentos. Chame get_drives primeiro para obter IDs de drive válidos.
+    - `item_id` (string, obrigatório): O identificador único do arquivo Excel no SharePoint. Obtenha de list_files ou search_files.
+    - `worksheet_name` (string, obrigatório): Nome da planilha (aba) para leitura. Obtenha de get_excel_worksheets. Sensível a maiúsculas e minúsculas.
+    - `select` (string, opcional): Lista de propriedades separadas por vírgula para retornar (ex: 'address,values,formulas,numberFormat,text,rowCount,columnCount').
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_excel_cell">
+    **Descrição:** Recuperar o valor de uma única célula por índice de linha e coluna de um arquivo Excel no SharePoint. Os índices são baseados em 0 (linha 0 = linha 1 do Excel, coluna 0 = coluna A).
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O identificador completo do site SharePoint obtido de get_sites.
+    - `drive_id` (string, obrigatório): O ID da biblioteca de documentos. Chame get_drives primeiro para obter IDs de drive válidos.
+    - `item_id` (string, obrigatório): O identificador único do arquivo Excel no SharePoint. Obtenha de list_files ou search_files.
+    - `worksheet_name` (string, obrigatório): Nome da planilha (aba). Obtenha de get_excel_worksheets. Sensível a maiúsculas e minúsculas.
+    - `row` (integer, obrigatório): Índice de linha baseado em 0 (linha 0 = linha 1 do Excel). Intervalo válido: 0-1048575
+    - `column` (integer, obrigatório): Índice de coluna baseado em 0 (coluna 0 = A, coluna 1 = B). Intervalo válido: 0-16383
+    - `select` (string, opcional): Lista de propriedades separadas por vírgula para retornar (ex: 'address,values,formulas,numberFormat,text').
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/add_excel_table">
+    **Descrição:** Converter um intervalo de células em uma tabela Excel formatada com recursos de filtragem, classificação e dados estruturados. Tabelas habilitam add_excel_table_row para adicionar dados.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O identificador completo do site SharePoint obtido de get_sites.
+    - `drive_id` (string, obrigatório): O ID da biblioteca de documentos. Chame get_drives primeiro para obter IDs de drive válidos.
+    - `item_id` (string, obrigatório): O identificador único do arquivo Excel no SharePoint. Obtenha de list_files ou search_files.
+    - `worksheet_name` (string, obrigatório): Nome da planilha contendo o intervalo de dados. Obtenha de get_excel_worksheets.
+    - `range` (string, obrigatório): Intervalo de células para converter em tabela, incluindo cabeçalhos e dados (ex: 'A1:D10' onde A1:D1 contém cabeçalhos de coluna).
+    - `has_headers` (boolean, opcional): Defina como true se a primeira linha contém cabeçalhos de coluna. Padrão: true
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_excel_tables">
+    **Descrição:** Listar todas as tabelas em uma planilha Excel específica armazenada no SharePoint. Retorna propriedades da tabela incluindo id, name, showHeaders e showTotals.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O identificador completo do site SharePoint obtido de get_sites.
+    - `drive_id` (string, obrigatório): O ID da biblioteca de documentos. Chame get_drives primeiro para obter IDs de drive válidos.
+    - `item_id` (string, obrigatório): O identificador único do arquivo Excel no SharePoint. Obtenha de list_files ou search_files.
+    - `worksheet_name` (string, obrigatório): Nome da planilha para obter tabelas. Obtenha de get_excel_worksheets.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/add_excel_table_row">
+    **Descrição:** Adicionar uma nova linha ao final de uma tabela Excel em um arquivo do SharePoint. O array de valores deve ter o mesmo número de elementos que o número de colunas da tabela.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O identificador completo do site SharePoint obtido de get_sites.
+    - `drive_id` (string, obrigatório): O ID da biblioteca de documentos. Chame get_drives primeiro para obter IDs de drive válidos.
+    - `item_id` (string, obrigatório): O identificador único do arquivo Excel no SharePoint. Obtenha de list_files ou search_files.
+    - `worksheet_name` (string, obrigatório): Nome da planilha contendo a tabela. Obtenha de get_excel_worksheets.
+    - `table_name` (string, obrigatório): Nome da tabela para adicionar a linha (ex: 'Table1'). Obtenha de get_excel_tables. Sensível a maiúsculas e minúsculas.
+    - `values` (array, obrigatório): Array de valores de células para a nova linha, um por coluna na ordem da tabela (ex: ["João Silva", "joao@exemplo.com", 25]).
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_excel_table_data">
+    **Descrição:** Obter todas as linhas de uma tabela Excel em um arquivo do SharePoint como um intervalo de dados. Mais fácil do que get_excel_range_data ao trabalhar com tabelas estruturadas, pois não é necessário saber o intervalo exato.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O identificador completo do site SharePoint obtido de get_sites.
+    - `drive_id` (string, obrigatório): O ID da biblioteca de documentos. Chame get_drives primeiro para obter IDs de drive válidos.
+    - `item_id` (string, obrigatório): O identificador único do arquivo Excel no SharePoint. Obtenha de list_files ou search_files.
+    - `worksheet_name` (string, obrigatório): Nome da planilha contendo a tabela. Obtenha de get_excel_worksheets.
+    - `table_name` (string, obrigatório): Nome da tabela para obter dados (ex: 'Table1'). Obtenha de get_excel_tables. Sensível a maiúsculas e minúsculas.
+    - `select` (string, opcional): Lista de propriedades separadas por vírgula para retornar (ex: 'address,values,formulas,numberFormat,text').
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/create_excel_chart">
+    **Descrição:** Criar uma visualização de gráfico em uma planilha Excel armazenada no SharePoint a partir de um intervalo de dados. O gráfico é incorporado na planilha.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O identificador completo do site SharePoint obtido de get_sites.
+    - `drive_id` (string, obrigatório): O ID da biblioteca de documentos. Chame get_drives primeiro para obter IDs de drive válidos.
+    - `item_id` (string, obrigatório): O identificador único do arquivo Excel no SharePoint. Obtenha de list_files ou search_files.
+    - `worksheet_name` (string, obrigatório): Nome da planilha onde o gráfico será criado. Obtenha de get_excel_worksheets.
+    - `chart_type` (string, obrigatório): Tipo de gráfico (ex: 'ColumnClustered', 'ColumnStacked', 'Line', 'LineMarkers', 'Pie', 'Bar', 'BarClustered', 'Area', 'Scatter', 'Doughnut').
+    - `source_data` (string, obrigatório): Intervalo de dados para o gráfico em notação A1, incluindo cabeçalhos (ex: 'A1:B10').
+    - `series_by` (string, opcional): Como as séries de dados são organizadas: 'Auto', 'Columns' ou 'Rows'. Padrão: 'Auto'
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/list_excel_charts">
+    **Descrição:** Listar todos os gráficos incorporados em uma planilha Excel armazenada no SharePoint. Retorna propriedades do gráfico incluindo id, name, chartType, height, width e position.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O identificador completo do site SharePoint obtido de get_sites.
+    - `drive_id` (string, obrigatório): O ID da biblioteca de documentos. Chame get_drives primeiro para obter IDs de drive válidos.
+    - `item_id` (string, obrigatório): O identificador único do arquivo Excel no SharePoint. Obtenha de list_files ou search_files.
+    - `worksheet_name` (string, obrigatório): Nome da planilha para listar gráficos. Obtenha de get_excel_worksheets.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/delete_excel_worksheet">
+    **Descrição:** Remover permanentemente uma planilha (aba) e todo seu conteúdo de uma pasta de trabalho Excel armazenada no SharePoint. Não pode ser desfeito. Uma pasta de trabalho deve ter pelo menos uma planilha.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O identificador completo do site SharePoint obtido de get_sites.
+    - `drive_id` (string, obrigatório): O ID da biblioteca de documentos. Chame get_drives primeiro para obter IDs de drive válidos.
+    - `item_id` (string, obrigatório): O identificador único do arquivo Excel no SharePoint. Obtenha de list_files ou search_files.
+    - `worksheet_name` (string, obrigatório): Nome da planilha a excluir. Sensível a maiúsculas e minúsculas. Todos os dados, tabelas e gráficos nesta planilha serão permanentemente removidos.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/delete_excel_table">
+    **Descrição:** Remover uma tabela de uma planilha Excel no SharePoint. Isto exclui a estrutura da tabela (filtragem, formatação, recursos de tabela) mas preserva os dados subjacentes das células.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O identificador completo do site SharePoint obtido de get_sites.
+    - `drive_id` (string, obrigatório): O ID da biblioteca de documentos. Chame get_drives primeiro para obter IDs de drive válidos.
+    - `item_id` (string, obrigatório): O identificador único do arquivo Excel no SharePoint. Obtenha de list_files ou search_files.
+    - `worksheet_name` (string, obrigatório): Nome da planilha contendo a tabela. Obtenha de get_excel_worksheets.
+    - `table_name` (string, obrigatório): Nome da tabela a excluir (ex: 'Table1'). Obtenha de get_excel_tables. Os dados nas células permanecerão após a exclusão da tabela.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/list_excel_names">
+    **Descrição:** Recuperar todos os intervalos nomeados definidos em uma pasta de trabalho Excel armazenada no SharePoint. Intervalos nomeados são rótulos definidos pelo usuário para intervalos de células (ex: 'DadosVendas' para A1:D100).
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O identificador completo do site SharePoint obtido de get_sites.
+    - `drive_id` (string, obrigatório): O ID da biblioteca de documentos. Chame get_drives primeiro para obter IDs de drive válidos.
+    - `item_id` (string, obrigatório): O identificador único do arquivo Excel no SharePoint. Obtenha de list_files ou search_files.
+
+  </Accordion>
+
+  <Accordion title="microsoft_sharepoint/get_word_document_content">
+    **Descrição:** Baixar e extrair conteúdo de texto de um documento Word (.docx) armazenado em uma biblioteca de documentos do SharePoint. Esta é a maneira recomendada de ler documentos Word do SharePoint.
+
+    **Parâmetros:**
+    - `site_id` (string, obrigatório): O identificador completo do site SharePoint obtido de get_sites.
+    - `drive_id` (string, obrigatório): O ID da biblioteca de documentos. Chame get_drives primeiro para obter IDs de drive válidos.
+    - `item_id` (string, obrigatório): O identificador único do documento Word (.docx) no SharePoint. Obtenha de list_files ou search_files.
+
+  </Accordion>
+</AccordionGroup>
+
+## Exemplos de Uso
+
+### Configuração Básica do Agente Microsoft SharePoint
+
+```python
+from crewai import Agent, Task, Crew
+
+# Crie um agente com capacidades do Microsoft SharePoint
+sharepoint_agent = Agent(
+    role="Gerenciador SharePoint",
+    goal="Gerenciar sites, listas e documentos do SharePoint de forma eficiente",
+    backstory="Um assistente IA especializado em administração do Microsoft SharePoint e gerenciamento de conteúdo.",
+    apps=['microsoft_sharepoint']  # Todas as ações do SharePoint estarão disponíveis
+)
+
+# Tarefa para obter todos os sites
+get_sites_task = Task(
+    description="Listar todos os sites do SharePoint aos quais tenho acesso.",
+    agent=sharepoint_agent,
+    expected_output="Uma lista de sites do SharePoint com seus nomes de exibição e URLs."
+)
+
+# Execute a tarefa
+crew = Crew(
+    agents=[sharepoint_agent],
+    tasks=[get_sites_task]
+)
+
+crew.kickoff()
+```
+
+## Solução de Problemas
+
+### Problemas Comuns
+
+**Erros de Autenticação**
+
+- Certifique-se de que sua conta Microsoft tenha as permissões necessárias para acesso ao SharePoint (ex: `Sites.Read.All`, `Sites.ReadWrite.All`).
+- Verifique se a conexão OAuth inclui todos os escopos necessários.
+
+**Problemas de ID de Site/Lista/Item**
+
+- Verifique novamente os IDs de site, lista e item para correção.
+- Certifique-se de que os recursos referenciados existem e estão acessíveis.
+
+### Obtendo Ajuda
+
+<Card title="Precisa de Ajuda?" icon="headset" href="mailto:support@crewai.com">
+  Entre em contato com nossa equipe de suporte para assistência com configuração
+  ou solução de problemas da integração Microsoft SharePoint.
+</Card>

@@ -78,8 +78,9 @@ class TestHumanFeedbackValidation:
             return "output"
 
         assert hasattr(test_method, "__human_feedback_config__")
-        assert test_method.__is_router__ is True
-        assert test_method.__router_emit__ == ["approve", "reject"]
+        assert test_method.__human_feedback_config__.emit == ["approve", "reject"]
+        assert not hasattr(test_method, "__is_router__")
+        assert not hasattr(test_method, "__router_emit__")
 
     def test_valid_configuration_without_routing(self):
         """Test that valid configuration without routing doesn't raise."""
@@ -89,10 +90,10 @@ class TestHumanFeedbackValidation:
             return "output"
 
         assert hasattr(test_method, "__human_feedback_config__")
-        assert not hasattr(test_method, "__is_router__") or not test_method.__is_router__
+        assert not hasattr(test_method, "__is_router__")
 
-    def test_persist_preserves_human_feedback_llm_attribute(self):
-        """Test @persist preserves the live LLM stashed by @human_feedback."""
+    def test_persist_preserves_human_feedback_config(self):
+        """Test @persist preserves the config stamped by @human_feedback."""
         llm = object()
 
         @persist()
@@ -104,8 +105,8 @@ class TestHumanFeedbackValidation:
         def test_method(self):
             return "output"
 
-        assert hasattr(test_method, "_human_feedback_llm")
-        assert test_method._human_feedback_llm is llm
+        assert hasattr(test_method, "__human_feedback_config__")
+        assert test_method.__human_feedback_config__.llm is llm
 
 
 class TestHumanFeedbackConfig:
@@ -177,8 +178,8 @@ class TestDecoratorAttributePreservation:
         assert fragment is not None
         assert fragment.start is True
 
-    def test_preserves_listen_method_attributes(self):
-        """Test that @human_feedback preserves @listen decorator attributes."""
+    def test_preserves_listen_method_definition(self):
+        """Test that @human_feedback preserves the @listen method definition."""
 
         class TestFlow(Flow):
             @start()
@@ -191,12 +192,14 @@ class TestDecoratorAttributePreservation:
                 return "review output"
 
         flow = TestFlow()
-        assert "review" in flow._listeners or any(
-            "review" in str(v) for v in flow._listeners.values()
-        )
+        method = flow._methods.get("review")
+        assert method is not None
+        fragment = getattr(method, "__flow_method_definition__", None)
+        assert fragment is not None
+        assert fragment.listen == "begin"
 
-    def test_sets_router_attributes_when_emit_specified(self):
-        """Test that router attributes are set when emit is specified."""
+    def test_emit_is_stored_on_human_feedback_config(self):
+        """Test that emit outcomes are stored on human feedback config."""
 
         @human_feedback(
             message="Review:",
@@ -206,8 +209,12 @@ class TestDecoratorAttributePreservation:
         def review_method(self):
             return "output"
 
-        assert review_method.__is_router__ is True
-        assert review_method.__router_emit__ == ["approved", "rejected"]
+        assert review_method.__human_feedback_config__.emit == [
+            "approved",
+            "rejected",
+        ]
+        assert not hasattr(review_method, "__is_router__")
+        assert not hasattr(review_method, "__router_emit__")
 
 
 class TestAsyncSupport:
@@ -474,7 +481,7 @@ class TestHumanFeedbackLearn:
         with patch.object(
             flow, "_request_human_feedback", return_value="looks good"
         ):
-            flow.produce()
+            flow.kickoff()
 
         # memory.recall and memory.remember_many should NOT be called
         flow.memory.recall.assert_not_called()
@@ -509,7 +516,7 @@ class TestHumanFeedbackLearn:
             )
             MockLLM.return_value = mock_llm
 
-            flow.produce()
+            flow.kickoff()
 
         # remember_many should be called with the distilled lesson
         flow.memory.remember_many.assert_called_once()
@@ -544,7 +551,7 @@ class TestHumanFeedbackLearn:
 
         captured_output = {}
 
-        def capture_feedback(message, output, metadata=None, emit=None):
+        def capture_feedback(message, output, metadata=None, emit=None, method_name=""):
             captured_output["shown_to_human"] = output
             return "approved"
 
@@ -563,7 +570,7 @@ class TestHumanFeedbackLearn:
             ]
             MockLLM.return_value = mock_llm
 
-            flow.produce()
+            flow.kickoff()
 
         assert captured_output["shown_to_human"] == "draft with citations added"
         # recall was called to find past lessons
@@ -585,12 +592,12 @@ class TestHumanFeedbackLearn:
         with patch.object(
             flow, "_request_human_feedback", return_value=""
         ):
-            flow.produce()
+            flow.kickoff()
 
         flow.memory.remember_many.assert_not_called()
 
     def test_learn_true_uses_default_llm(self):
-        """When learn=True and llm is not explicitly set, the default gpt-4o-mini is used."""
+        """When learn=True and llm is not explicitly set, the default gpt-5.4-mini is used."""
 
         @human_feedback(message="Review:", learn=True)
         def test_method(self):
@@ -599,8 +606,8 @@ class TestHumanFeedbackLearn:
         config = test_method.__human_feedback_config__
         assert config is not None
         assert config.learn is True
-        # llm defaults to "gpt-4o-mini" at the function level
-        assert config.llm == "gpt-4o-mini"
+        # llm defaults to "gpt-5.4-mini" at the function level
+        assert config.llm == "gpt-5.4-mini"
 
     def test_pre_review_failure_logs_and_returns_raw_output(self, caplog):
         """Pre-review LLM failure falls back to raw output AND logs a warning."""
@@ -624,7 +631,7 @@ class TestHumanFeedbackLearn:
 
         captured: dict[str, Any] = {}
 
-        def capture_feedback(message, output, metadata=None, emit=None):
+        def capture_feedback(message, output, metadata=None, emit=None, method_name=""):
             captured["shown_to_human"] = output
             return ""
 
@@ -638,7 +645,7 @@ class TestHumanFeedbackLearn:
             mock_llm.call.side_effect = RuntimeError("simulated pre-review failure")
             MockLLM.return_value = mock_llm
 
-            flow.produce()
+            flow.kickoff()
 
         assert captured["shown_to_human"] == "raw draft"
         assert any(
@@ -683,7 +690,7 @@ class TestHumanFeedbackLearn:
             MockLLM.return_value = mock_llm
 
             with pytest.raises(RuntimeError, match="simulated pre-review failure"):
-                flow.produce()
+                flow.kickoff()
 
     def test_distillation_failure_logs_and_does_not_block_flow(self, caplog):
         """Distillation LLM failure logs a warning but does not break the flow."""
@@ -710,7 +717,7 @@ class TestHumanFeedbackLearn:
             mock_llm.call.side_effect = RuntimeError("simulated distill failure")
             MockLLM.return_value = mock_llm
 
-            flow.produce()  # must not raise
+            flow.kickoff()  # must not raise
 
         flow.memory.remember_many.assert_not_called()
         assert any(
@@ -853,9 +860,9 @@ class TestHumanFeedbackFinalOutputPreservation:
         ):
             flow.kickoff()
 
-        # _method_outputs should contain the real output
-        assert len(flow._method_outputs) == 1
-        assert flow._method_outputs[0] == {"data": "real output"}
+        # method_outputs should contain the real output
+        assert flow.method_outputs == [{"data": "real output"}]
+        assert flow._method_outputs[0]["method"] == "generate"
 
     @patch("builtins.input", return_value="looks good")
     @patch("builtins.print")

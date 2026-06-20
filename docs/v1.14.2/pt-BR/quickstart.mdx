@@ -1,0 +1,278 @@
+---
+title: Guia Rápido
+description: Crie seu primeiro Flow CrewAI em minutos — orquestração, estado e um crew com um agente que gera um relatório real.
+icon: rocket
+mode: "wide"
+---
+
+### Assista: Construindo Agents e Flows CrewAI com Coding Agent Skills
+
+Instale nossas coding agent skills (Claude Code, Codex, ...) para colocar seus agentes de código para funcionar rapidamente com o CrewAI.
+
+Você pode instalar com `npx skills add crewaiinc/skills`
+
+<iframe src="https://www.loom.com/embed/befb9f68b81f42ad8112bfdd95a780af" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen style={{width: "100%", height: "400px"}}></iframe>
+
+Neste guia você vai **criar um Flow** que define um tópico de pesquisa, executa um **crew com um agente** (um pesquisador com busca na web) e termina com um **relatório em Markdown** no disco. Flows são a forma recomendada de estruturar apps em produção: eles controlam **estado** e **ordem de execução**, enquanto os **agentes** fazem o trabalho dentro da etapa do crew.
+
+Se ainda não instalou o CrewAI, siga primeiro o [guia de instalação](/pt-BR/installation).
+
+## Pré-requisitos
+
+- Ambiente Python e a CLI do CrewAI (veja [instalação](/pt-BR/installation))
+- Um LLM configurado com as chaves corretas — veja [LLMs](/pt-BR/concepts/llms#setting-up-your-llm)
+- Uma chave de API do [Serper.dev](https://serper.dev/) (`SERPER_API_KEY`) para busca na web neste tutorial
+
+## Construa seu primeiro Flow
+
+<Steps>
+  <Step title="Crie um projeto Flow">
+  No terminal, gere um projeto Flow (o nome da pasta usa sublinhados, ex.: `latest_ai_flow`):
+
+    <CodeGroup>
+      ```shell Terminal
+      crewai create flow latest-ai-flow
+      cd latest_ai_flow
+      ```
+    </CodeGroup>
+
+  Isso cria um app Flow em `src/latest_ai_flow/`, incluindo um crew inicial em `crews/content_crew/` que você substituirá por um crew de pesquisa **com um único agente** nos próximos passos.
+  </Step>
+
+  <Step title="Configure um agente em `agents.yaml`">
+  Substitua o conteúdo de `src/latest_ai_flow/crews/content_crew/config/agents.yaml` por um único pesquisador. Variáveis como `{topic}` são preenchidas a partir de `crew.kickoff(inputs=...)`.
+
+    ```yaml agents.yaml
+    # src/latest_ai_flow/crews/content_crew/config/agents.yaml
+    researcher:
+      role: >
+        Pesquisador(a) Sênior de Dados em {topic}
+      goal: >
+        Descobrir os desenvolvimentos mais recentes em {topic}
+      backstory: >
+        Você é um pesquisador experiente que descobre os últimos avanços em {topic}.
+        Encontra as informações mais relevantes e apresenta tudo com clareza.
+    ```
+
+  </Step>
+
+  <Step title="Configure uma tarefa em `tasks.yaml`">
+    ```yaml tasks.yaml
+    # src/latest_ai_flow/crews/content_crew/config/tasks.yaml
+    research_task:
+      description: >
+        Faça uma pesquisa aprofundada sobre {topic}. Use busca na web para obter
+        informações atuais e confiáveis. O ano atual é 2026.
+      expected_output: >
+        Um relatório em markdown com seções claras: tendências principais, ferramentas
+        ou empresas relevantes e implicações. Entre 800 e 1200 palavras. Sem cercas de código em volta do documento inteiro.
+      agent: researcher
+      output_file: output/report.md
+    ```
+
+  </Step>
+
+  <Step title="Conecte a classe do crew (`content_crew.py`)">
+  Aponte o crew gerado para o YAML e anexe `SerperDevTool` ao pesquisador.
+
+    ```python content_crew.py
+    # src/latest_ai_flow/crews/content_crew/content_crew.py
+    from typing import List
+
+    from crewai import Agent, Crew, Process, Task
+    from crewai.agents.agent_builder.base_agent import BaseAgent
+    from crewai.project import CrewBase, agent, crew, task
+    from crewai_tools import SerperDevTool
+
+
+    @CrewBase
+    class ResearchCrew:
+      """Crew de pesquisa com um agente, usado dentro do Flow."""
+
+      agents: List[BaseAgent]
+      tasks: List[Task]
+
+      agents_config = "config/agents.yaml"
+      tasks_config = "config/tasks.yaml"
+
+      @agent
+      def researcher(self) -> Agent:
+        return Agent(
+          config=self.agents_config["researcher"],  # type: ignore[index]
+          verbose=True,
+          tools=[SerperDevTool()],
+        )
+
+      @task
+      def research_task(self) -> Task:
+        return Task(
+          config=self.tasks_config["research_task"],  # type: ignore[index]
+        )
+
+      @crew
+      def crew(self) -> Crew:
+        return Crew(
+          agents=self.agents,
+          tasks=self.tasks,
+          process=Process.sequential,
+          verbose=True,
+        )
+    ```
+
+  </Step>
+
+  <Step title="Defina o Flow em `main.py`">
+  Conecte o crew a um Flow: um passo `@start()` define o tópico no **estado** e um `@listen` executa o crew. O `output_file` da tarefa continua gravando `output/report.md`.
+
+    ```python main.py
+    # src/latest_ai_flow/main.py
+    from pydantic import BaseModel
+
+    from crewai.flow import Flow, listen, start
+
+    from latest_ai_flow.crews.content_crew.content_crew import ResearchCrew
+
+
+    class ResearchFlowState(BaseModel):
+      topic: str = ""
+      report: str = ""
+
+
+    class LatestAiFlow(Flow[ResearchFlowState]):
+      @start()
+      def prepare_topic(self, crewai_trigger_payload: dict | None = None):
+        if crewai_trigger_payload:
+          self.state.topic = crewai_trigger_payload.get("topic", "AI Agents")
+        else:
+          self.state.topic = "AI Agents"
+        print(f"Tópico: {self.state.topic}")
+
+      @listen(prepare_topic)
+      def run_research(self):
+        result = ResearchCrew().crew().kickoff(inputs={"topic": self.state.topic})
+        self.state.report = result.raw
+        print("Crew de pesquisa concluído.")
+
+      @listen(run_research)
+      def summarize(self):
+        print("Relatório em: output/report.md")
+
+
+    def kickoff():
+      LatestAiFlow().kickoff()
+
+
+    def plot():
+      LatestAiFlow().plot()
+
+
+    if __name__ == "__main__":
+      kickoff()
+    ```
+
+  <Tip>
+  Se o nome do pacote não for `latest_ai_flow`, ajuste o import de `ResearchCrew` para o caminho de módulo do seu projeto.
+  </Tip>
+  </Step>
+
+  <Step title="Variáveis de ambiente">
+  Na raiz do projeto, no arquivo `.env`, defina:
+
+    - `SERPER_API_KEY` — obtida em [Serper.dev](https://serper.dev/)
+    - As chaves do provedor de modelo conforme necessário — veja [configuração de LLM](/pt-BR/concepts/llms#setting-up-your-llm)
+  </Step>
+
+  <Step title="Instalar e executar">
+    <CodeGroup>
+      ```shell Terminal
+      crewai install
+      crewai run
+      ```
+    </CodeGroup>
+
+  O `crewai run` executa o ponto de entrada do Flow definido no projeto (o mesmo comando dos crews; o tipo do projeto é `"flow"` no `pyproject.toml`).
+  </Step>
+
+  <Step title="Confira o resultado">
+  Você deve ver logs do Flow e do crew. Abra **`output/report.md`** para o relatório gerado (trecho):
+
+  <CodeGroup>
+    ```markdown output/report.md
+    # Agentes de IA em 2026: panorama e tendências
+
+    ## Resumo executivo
+    …
+
+    ## Principais tendências
+    - **Uso de ferramentas e orquestração** — …
+    - **Adoção empresarial** — …
+
+    ## Implicações
+    …
+    ```
+  </CodeGroup>
+
+  O arquivo real será mais longo e refletirá resultados de busca ao vivo.
+  </Step>
+</Steps>
+
+## Como isso se encaixa
+
+1. **Flow** — `LatestAiFlow` executa `prepare_topic`, depois `run_research`, depois `summarize`. O estado (`topic`, `report`) fica no Flow.
+2. **Crew** — `ResearchCrew` executa uma tarefa com um agente: o pesquisador usa **Serper** na web e escreve o relatório.
+3. **Artefato** — O `output_file` da tarefa grava o relatório em `output/report.md`.
+
+Para ir além em Flows (roteamento, persistência, human-in-the-loop), veja [Construa seu primeiro Flow](/pt-BR/guides/flows/first-flow) e [Flows](/pt-BR/concepts/flows). Para crews sem Flow, veja [Crews](/pt-BR/concepts/crews). Para um único `Agent` com `kickoff()` sem tarefas, veja [Agents](/pt-BR/concepts/agents#direct-agent-interaction-with-kickoff).
+
+<Check>
+Você tem um Flow ponta a ponta com um crew de agente e um relatório salvo — uma base sólida para novas etapas, crews ou ferramentas.
+</Check>
+
+### Consistência de nomes
+
+As chaves do YAML (`researcher`, `research_task`) devem coincidir com os nomes dos métodos na classe `@CrewBase`. Veja [Crews](/pt-BR/concepts/crews) para o padrão completo com decoradores.
+
+## Implantação
+
+Envie seu Flow para o **[CrewAI AMP](https://app.crewai.com)** quando rodar localmente e o projeto estiver em um repositório **GitHub**. Na raiz do projeto:
+
+<CodeGroup>
+```bash Autenticar
+crewai login
+```
+
+```bash Criar implantação
+crewai deploy create
+```
+
+```bash Status e logs
+crewai deploy status
+crewai deploy logs
+```
+
+```bash Enviar atualizações após mudanças no código
+crewai deploy push
+```
+
+```bash Listar ou remover implantações
+crewai deploy list
+crewai deploy remove <deployment_id>
+```
+</CodeGroup>
+
+<Tip>
+  A primeira implantação costuma levar **cerca de 1 minuto**. Pré-requisitos completos e fluxo na interface web estão em [Implantar no AMP](/pt-BR/enterprise/guides/deploy-to-amp).
+</Tip>
+
+<CardGroup cols={2}>
+  <Card title="Guia de implantação" icon="book" href="/pt-BR/enterprise/guides/deploy-to-amp">
+    AMP passo a passo (CLI e painel).
+  </Card>
+  <Card
+    title="Comunidade"
+    icon="comments"
+    href="https://community.crewai.com"
+  >
+    Troque ideias, compartilhe projetos e conecte-se com outros desenvolvedores CrewAI.
+  </Card>
+</CardGroup>
