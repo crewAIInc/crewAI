@@ -53,6 +53,111 @@ def my_simple_tool(question: str) -> str:
     return "Tool output"
 ```
 
+### Best Practice: Define Typed Outputs
+
+When a tool returns structured data, define a Pydantic output model. This helps the agent read the result as clear fields instead of guessing from plain text.
+
+Typed outputs are useful for results with stable fields, such as IDs, status values, scores, prices, or lists. Plain strings are still fine for short prose results.
+
+Direct Python calls still receive the value your tool returns. When an agent uses a typed tool, CrewAI sends the agent JSON based on the output model.
+
+#### Return a Pydantic Model
+
+CrewAI infers the output schema when your `BaseTool` has a Pydantic return annotation.
+
+```python Code
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
+
+class InventoryResult(BaseModel):
+    sku: str = Field(description="The product SKU.")
+    quantity: int = Field(description="Units available.")
+    needs_reorder: bool = Field(description="Whether the item should be reordered.")
+
+class InventoryTool(BaseTool):
+    name: str = "Inventory Check"
+    description: str = "Check current stock for a product SKU."
+
+    def _run(self, sku: str) -> InventoryResult:
+        quantity = {"SKU-123": 14, "SKU-456": 0}.get(sku, 0)
+        return InventoryResult(sku=sku, quantity=quantity, needs_reorder=quantity < 5)
+
+tool = InventoryTool()
+result = tool.run(sku="SKU-123")
+
+# Direct Python calls receive the raw Pydantic object.
+print(result.quantity)
+```
+
+When an agent calls `InventoryTool`, it receives JSON like this:
+
+```json
+{"sku":"SKU-123","quantity":14,"needs_reorder":false}
+```
+
+#### Use `result_schema` with Dictionary Results
+
+If your tool returns a dictionary, set `result_schema` explicitly. You can do this on a `BaseTool` subclass or with the `@tool` decorator:
+
+```python Code
+from crewai.tools import tool
+from pydantic import BaseModel, Field
+
+class ProductResult(BaseModel):
+    sku: str = Field(description="The product SKU.")
+    name: str = Field(description="The product name.")
+    in_stock: bool = Field(description="Whether the product is available.")
+
+@tool("Product Lookup", result_schema=ProductResult)
+def product_lookup(sku: str) -> dict[str, object]:
+    """Look up product availability by SKU."""
+    catalog = {
+        "SKU-123": ("Noise-canceling headset", True),
+        "SKU-456": ("USB-C dock", False),
+    }
+    name, in_stock = catalog.get(sku, ("Unknown product", False))
+    return {
+        "sku": sku,
+        "name": name,
+        "in_stock": in_stock,
+    }
+```
+
+#### Customize the Text Sent to the Agent
+
+By default, typed tool outputs are sent to the agent as JSON. If the agent should receive a short summary instead, subclass `BaseTool` and override `format_output_for_agent`.
+
+```python Code
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
+
+class InventoryResult(BaseModel):
+    sku: str = Field(description="The product SKU.")
+    quantity: int = Field(description="Units available.")
+    needs_reorder: bool = Field(description="Whether the item should be reordered.")
+
+class InventoryTool(BaseTool):
+    name: str = "Inventory Check"
+    description: str = "Check current stock for a product SKU."
+
+    def _run(self, sku: str) -> InventoryResult:
+        quantity = {"SKU-123": 14, "SKU-456": 0}.get(sku, 0)
+        return InventoryResult(sku=sku, quantity=quantity, needs_reorder=quantity < 5)
+
+    def format_output_for_agent(self, raw_result: object) -> str:
+        result = InventoryResult.model_validate(raw_result)
+        status = "reorder needed" if result.needs_reorder else "stock is healthy"
+        return f"{result.sku}: {result.quantity} units. {status}."
+
+tool = InventoryTool()
+result = tool.run(sku="SKU-123")
+
+# Direct Python calls receive the raw Pydantic object.
+print(result.quantity)
+```
+
+The override only changes what the agent sees. Direct calls to `tool.run(...)` still return the normal Python value.
+
 ### Defining a Cache Function for the Tool
 
 To optimize tool performance with caching, define custom caching strategies using the `cache_function` attribute.
