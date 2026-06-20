@@ -537,69 +537,105 @@ def _url_host(url: str) -> str:
     return host
 
 
-def _reject_blocked_addrinfo(
-    url: str, addrinfo: Sequence[tuple[Any, ...]]
-) -> None:
-    """Raise if any resolved address is non-public (SSRF protection).
+def _select_validated_ip(host: str, addrinfo: Sequence[tuple[Any, ...]]) -> str:
+    """Validate every resolved address and return one public IP to connect to.
+
+    Rejects the host if *any* resolved address is non-public, so a multi-record
+    host cannot slip a private address past the guard, then returns the first
+    address for the caller to connect to directly.
 
     Args:
-        url: The URL being validated, used for the error message.
-        addrinfo: The ``getaddrinfo`` result for the URL host.
+        host: The host being resolved, used for the error message.
+        addrinfo: The ``getaddrinfo`` result for ``host``.
+
+    Returns:
+        A validated, public IP address to connect to.
 
     Raises:
-        ValueError: If any resolved address is a blocked (non-public) address.
+        ValueError: If the host resolves to no address or to a blocked one.
     """
+    selected: str | None = None
     for *_, sockaddr in addrinfo:
         ip = ipaddress.ip_address(sockaddr[0])
         if _is_blocked_ip(ip):
             raise ValueError(
                 f"Refusing to fetch URL resolving to non-public address {ip} "
-                f"(SSRF protection): {url}"
+                f"(SSRF protection): host {host}"
             )
+        if selected is None:
+            selected = sockaddr[0]
+    if selected is None:
+        raise ValueError(f"Cannot resolve URL host: {host}")
+    return selected
 
 
-def _assert_url_allowed(url: str) -> None:
-    """Raise if ``url``'s host resolves to a non-public address (SSRF guard).
-
-    Resolves every address the host maps to and rejects the request if any of
-    them is non-public, so a multi-record host cannot slip a private address
-    past the guard.
+def _resolve_validated_ip(host: str) -> str:
+    """Resolve ``host`` and return a validated public IP (SSRF guard).
 
     Args:
-        url: The absolute http(s) URL about to be fetched.
+        host: The host to resolve.
+
+    Returns:
+        A validated, public IP address.
 
     Raises:
-        ValueError: If the URL has no host, cannot be resolved, or resolves to
-            a blocked address.
+        ValueError: If the host cannot be resolved or is non-public.
     """
-    host = _url_host(url)
     try:
         addrinfo = socket.getaddrinfo(host, None)
     except socket.gaierror as exc:
         raise ValueError(f"Cannot resolve URL host: {host}") from exc
-    _reject_blocked_addrinfo(url, addrinfo)
+    return _select_validated_ip(host, addrinfo)
 
 
-async def _aassert_url_allowed(url: str) -> None:
-    """Async variant of :func:`_assert_url_allowed`.
+async def _aresolve_validated_ip(host: str) -> str:
+    """Async variant of :func:`_resolve_validated_ip`.
 
     Runs the blocking name resolution in the default executor so the DNS lookup
     does not block the running event loop.
 
     Args:
-        url: The absolute http(s) URL about to be fetched.
+        host: The host to resolve.
+
+    Returns:
+        A validated, public IP address.
 
     Raises:
-        ValueError: If the URL has no host, cannot be resolved, or resolves to
-            a blocked address.
+        ValueError: If the host cannot be resolved or is non-public.
     """
-    host = _url_host(url)
     loop = asyncio.get_running_loop()
     try:
         addrinfo = await loop.run_in_executor(None, socket.getaddrinfo, host, None)
     except socket.gaierror as exc:
         raise ValueError(f"Cannot resolve URL host: {host}") from exc
-    _reject_blocked_addrinfo(url, addrinfo)
+    return _select_validated_ip(host, addrinfo)
+
+
+def _pin_request_kwargs(
+    url: str, ip: str
+) -> tuple[str, dict[str, str], dict[str, Any]]:
+    """Build request arguments that pin the connection to a validated IP.
+
+    The URL host is replaced with the validated IP so the HTTP client connects
+    to that exact address and never resolves the hostname again — closing the
+    DNS-rebinding (TOCTOU) window — while the original ``Host`` header and TLS
+    SNI hostname are preserved so virtual hosting and certificate verification
+    keep working.
+
+    Args:
+        url: The absolute http(s) URL being fetched.
+        ip: The validated public IP to connect to.
+
+    Returns:
+        A ``(pinned_url, headers, extensions)`` tuple for ``build_request``.
+    """
+    parsed = urlparse(url)
+    host = parsed.hostname or ""
+    host_header = parsed.netloc.rsplit("@", 1)[-1]
+    ip_host = f"[{ip}]" if ":" in ip else ip
+    netloc = f"{ip_host}:{parsed.port}" if parsed.port is not None else ip_host
+    pinned_url = parsed._replace(netloc=netloc).geturl()
+    return pinned_url, {"Host": host_header}, {"sni_hostname": host}
 
 
 class FileUrl(BaseModel):
@@ -644,9 +680,11 @@ class FileUrl(BaseModel):
     def read(self) -> bytes:
         """Fetch content from URL, blocking SSRF to non-public addresses.
 
-        Redirects are followed manually so every hop is re-validated by
-        :func:`_assert_url_allowed`; a public URL therefore cannot redirect into
-        an internal or cloud-metadata address.
+        Each request connects to a validated public IP (the hostname is never
+        re-resolved by the HTTP client, closing the DNS-rebinding window), and
+        redirects are followed manually so every hop is re-validated. A public
+        URL therefore cannot reach — or redirect into — an internal or
+        cloud-metadata address.
 
         Returns:
             The fetched file content as bytes.
@@ -659,15 +697,22 @@ class FileUrl(BaseModel):
             import httpx
 
             current = self.url
-            for _ in range(_MAX_REDIRECTS + 1):
-                _assert_url_allowed(current)
-                response = httpx.get(current, follow_redirects=False)
-                if response.is_redirect and "location" in response.headers:
-                    current = urljoin(current, response.headers["location"])
-                    continue
-                break
-            else:
-                raise ValueError(f"Too many redirects while fetching URL: {self.url}")
+            with httpx.Client(follow_redirects=False) as client:
+                for _ in range(_MAX_REDIRECTS + 1):
+                    ip = _resolve_validated_ip(_url_host(current))
+                    pinned_url, headers, extensions = _pin_request_kwargs(current, ip)
+                    request = client.build_request(
+                        "GET", pinned_url, headers=headers, extensions=extensions
+                    )
+                    response = client.send(request)
+                    if response.is_redirect and "location" in response.headers:
+                        current = urljoin(current, response.headers["location"])
+                        continue
+                    break
+                else:
+                    raise ValueError(
+                        f"Too many redirects while fetching URL: {self.url}"
+                    )
             response.raise_for_status()
             self._content = response.content
             if "content-type" in response.headers:
@@ -690,8 +735,12 @@ class FileUrl(BaseModel):
             current = self.url
             async with httpx.AsyncClient(follow_redirects=False) as client:
                 for _ in range(_MAX_REDIRECTS + 1):
-                    await _aassert_url_allowed(current)
-                    response = await client.get(current)
+                    ip = await _aresolve_validated_ip(_url_host(current))
+                    pinned_url, headers, extensions = _pin_request_kwargs(current, ip)
+                    request = client.build_request(
+                        "GET", pinned_url, headers=headers, extensions=extensions
+                    )
+                    response = await client.send(request)
                     if response.is_redirect and "location" in response.headers:
                         current = urljoin(current, response.headers["location"])
                         continue

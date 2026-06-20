@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from crewai_files import FileBytes, FileUrl, ImageFile
 from crewai_files.core.resolved import InlineBase64, UrlReference
-from crewai_files.core.sources import FilePath, _normalize_source
+from crewai_files.core.sources import _MAX_REDIRECTS, FilePath, _normalize_source
 from crewai_files.resolution.resolver import FileResolver
 import pytest
 
@@ -34,6 +34,68 @@ def mock_public_dns():
     """
     with patch("socket.getaddrinfo", return_value=_addrinfo("93.184.216.34")) as m:
         yield m
+
+
+def _response(
+    content: bytes = b"",
+    headers: dict[str, str] | None = None,
+    *,
+    is_redirect: bool = False,
+) -> MagicMock:
+    """Build a mock httpx response.
+
+    Args:
+        content: The response body.
+        headers: The response headers.
+        is_redirect: Whether the response is a redirect.
+
+    Returns:
+        A configured mock response.
+    """
+    response = MagicMock()
+    response.content = content
+    response.headers = headers if headers is not None else {}
+    response.is_redirect = is_redirect
+    response.raise_for_status = MagicMock()
+    return response
+
+
+def _sync_client(responses: list[MagicMock]) -> MagicMock:
+    """Build a mock ``httpx.Client`` yielding ``responses`` in order.
+
+    Args:
+        responses: Responses returned by successive ``send`` calls.
+
+    Returns:
+        A mock client supporting the context-manager and request API.
+    """
+    client = MagicMock()
+    client.__enter__ = MagicMock(return_value=client)
+    client.__exit__ = MagicMock(return_value=False)
+    client.build_request = MagicMock(
+        side_effect=lambda method, url, **kwargs: {"method": method, "url": url, **kwargs}
+    )
+    client.send = MagicMock(side_effect=list(responses))
+    return client
+
+
+def _async_client(responses: list[MagicMock]) -> MagicMock:
+    """Build a mock ``httpx.AsyncClient`` yielding ``responses`` in order.
+
+    Args:
+        responses: Responses returned by successive ``send`` calls.
+
+    Returns:
+        A mock async client supporting the async-context-manager and request API.
+    """
+    client = MagicMock()
+    client.__aenter__ = AsyncMock(return_value=client)
+    client.__aexit__ = AsyncMock(return_value=None)
+    client.build_request = MagicMock(
+        side_effect=lambda method, url, **kwargs: {"method": method, "url": url, **kwargs}
+    )
+    client.send = AsyncMock(side_effect=list(responses))
+    return client
 
 
 class TestFileUrl:
@@ -114,41 +176,34 @@ class TestFileUrl:
     def test_read_fetches_content(self):
         """Test that read() fetches content from URL."""
         url = FileUrl(url="https://example.com/image.png")
-        mock_response = MagicMock()
-        mock_response.content = b"fake image content"
-        mock_response.headers = {"content-type": "image/png"}
-        mock_response.is_redirect = False
+        client = _sync_client([_response(b"fake image content", {"content-type": "image/png"})])
 
-        with patch("httpx.get", return_value=mock_response) as mock_get:
+        with patch("httpx.Client", return_value=client):
             content = url.read()
 
-            mock_get.assert_called_once_with(
-                "https://example.com/image.png", follow_redirects=False
-            )
+            client.send.assert_called_once()
             assert content == b"fake image content"
 
     def test_read_caches_content(self):
         """Test that read() caches content."""
         url = FileUrl(url="https://example.com/image.png")
-        mock_response = MagicMock()
-        mock_response.content = b"fake content"
-        mock_response.headers = {}
+        client = _sync_client([_response(b"fake content")])
 
-        with patch("httpx.get", return_value=mock_response) as mock_get:
+        with patch("httpx.Client", return_value=client):
             content1 = url.read()
             content2 = url.read()
 
-            mock_get.assert_called_once()
+            client.send.assert_called_once()
             assert content1 == content2
 
     def test_read_updates_content_type_from_response(self):
         """Test that read() updates content type from response headers."""
         url = FileUrl(url="https://example.com/file")
-        mock_response = MagicMock()
-        mock_response.content = b"fake content"
-        mock_response.headers = {"content-type": "image/webp; charset=utf-8"}
+        client = _sync_client(
+            [_response(b"fake content", {"content-type": "image/webp; charset=utf-8"})]
+        )
 
-        with patch("httpx.get", return_value=mock_response):
+        with patch("httpx.Client", return_value=client):
             url.read()
 
             assert url.content_type == "image/webp"
@@ -157,17 +212,9 @@ class TestFileUrl:
     async def test_aread_fetches_content(self):
         """Test that aread() fetches content from URL asynchronously."""
         url = FileUrl(url="https://example.com/image.png")
-        mock_response = MagicMock()
-        mock_response.content = b"async fake content"
-        mock_response.headers = {"content-type": "image/png"}
-        mock_response.raise_for_status = MagicMock()
+        client = _async_client([_response(b"async fake content", {"content-type": "image/png"})])
 
-        mock_client = MagicMock()
-        mock_client.get = AsyncMock(return_value=mock_response)
-        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-        mock_client.__aexit__ = AsyncMock(return_value=None)
-
-        with patch("httpx.AsyncClient", return_value=mock_client):
+        with patch("httpx.AsyncClient", return_value=client):
             content = await url.aread()
 
             assert content == b"async fake content"
@@ -176,21 +223,13 @@ class TestFileUrl:
     async def test_aread_caches_content(self):
         """Test that aread() caches content."""
         url = FileUrl(url="https://example.com/image.png")
-        mock_response = MagicMock()
-        mock_response.content = b"cached content"
-        mock_response.headers = {}
-        mock_response.raise_for_status = MagicMock()
+        client = _async_client([_response(b"cached content")])
 
-        mock_client = MagicMock()
-        mock_client.get = AsyncMock(return_value=mock_response)
-        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-        mock_client.__aexit__ = AsyncMock(return_value=None)
-
-        with patch("httpx.AsyncClient", return_value=mock_client):
+        with patch("httpx.AsyncClient", return_value=client):
             content1 = await url.aread()
             content2 = await url.aread()
 
-            mock_client.get.assert_called_once()
+            client.send.assert_called_once()
             assert content1 == content2
 
 
@@ -285,11 +324,10 @@ class TestResolverUrlHandling:
         file_url = FileUrl(url="https://example.com/image.png")
         file = ImageFile(source=file_url)
 
-        mock_response = MagicMock()
-        mock_response.content = b"\x89PNG\r\n\x1a\n" + b"\x00" * 50
-        mock_response.headers = {"content-type": "image/png"}
+        png_bytes = b"\x89PNG\r\n\x1a\n" + b"\x00" * 50
+        client = _sync_client([_response(png_bytes, {"content-type": "image/png"})])
 
-        with patch("httpx.get", return_value=mock_response):
+        with patch("httpx.Client", return_value=client):
             resolved = resolver.resolve(file, "bedrock")
 
             assert not isinstance(resolved, UrlReference)
@@ -340,7 +378,7 @@ class TestImageFileWithUrl:
 
 
 class TestFileUrlSSRF:
-    """SSRF protection for FileUrl.read / aread (CWE-918)."""
+    """SSRF protection for FileUrl.read / aread (CWE-918), incl. DNS rebinding."""
 
     @pytest.mark.parametrize(
         "blocked_ip",
@@ -349,41 +387,103 @@ class TestFileUrlSSRF:
             "169.254.169.254",  # cloud metadata
             "10.0.0.5",  # RFC1918
             "192.168.1.10",  # RFC1918
+            "172.16.0.1",  # RFC1918
             "::1",  # IPv6 loopback
             "::ffff:127.0.0.1",  # IPv4-mapped loopback (naive-guard bypass)
+            "::ffff:169.254.169.254",  # IPv4-mapped metadata
+            "fc00::1",  # IPv6 ULA (private)
+            "fe80::1",  # IPv6 link-local
             "0.0.0.0",  # unspecified
+            "224.0.0.1",  # multicast
         ],
     )
     def test_read_blocks_non_public_addresses(self, blocked_ip):
         """read() must refuse URLs resolving to a non-public address."""
         url = FileUrl(url="http://internal.example/secret")
+        client = _sync_client([])
         with patch("socket.getaddrinfo", return_value=_addrinfo(blocked_ip)):
-            with patch("httpx.get") as mock_get:
+            with patch("httpx.Client", return_value=client):
                 with pytest.raises(ValueError, match="SSRF protection"):
                     url.read()
-                mock_get.assert_not_called()
+                client.send.assert_not_called()
+
+    def test_read_blocks_when_any_record_is_private(self):
+        """A host with mixed public/private records must be rejected."""
+        url = FileUrl(url="http://split.example/x")
+        addrinfo = _addrinfo("93.184.216.34") + _addrinfo("127.0.0.1")
+        client = _sync_client([])
+        with patch("socket.getaddrinfo", return_value=addrinfo):
+            with patch("httpx.Client", return_value=client):
+                with pytest.raises(ValueError, match="SSRF protection"):
+                    url.read()
+                client.send.assert_not_called()
+
+    def test_read_pins_connection_to_validated_ip(self):
+        """read() connects to the validated IP, preserving Host and SNI."""
+        url = FileUrl(url="https://example.com/image.png")
+        client = _sync_client([_response(b"ok", {"content-type": "image/png"})])
+        with patch("socket.getaddrinfo", return_value=_addrinfo("93.184.216.34")):
+            with patch("httpx.Client", return_value=client):
+                assert url.read() == b"ok"
+        method, sent_url = client.build_request.call_args.args
+        kwargs = client.build_request.call_args.kwargs
+        assert method == "GET"
+        assert sent_url == "https://93.184.216.34/image.png"
+        assert kwargs["headers"]["Host"] == "example.com"
+        assert kwargs["extensions"]["sni_hostname"] == "example.com"
+
+    def test_read_does_not_re_resolve_hostname(self):
+        """DNS rebinding cannot bypass the guard (host resolved once, IP pinned)."""
+        url = FileUrl(url="http://rebind.example/x")
+        getaddrinfo = MagicMock(return_value=_addrinfo("93.184.216.34"))
+        client = _sync_client([_response(b"x")])
+        with patch("socket.getaddrinfo", getaddrinfo):
+            with patch("httpx.Client", return_value=client):
+                url.read()
+        assert getaddrinfo.call_count == 1
+        _, sent_url = client.build_request.call_args.args
+        assert "93.184.216.34" in sent_url
+        assert "rebind.example" not in sent_url
+
+    def test_read_preserves_explicit_port(self):
+        """The validated-IP URL and Host header keep the explicit port."""
+        url = FileUrl(url="https://example.com:8443/f")
+        client = _sync_client([_response(b"ok")])
+        with patch("socket.getaddrinfo", return_value=_addrinfo("93.184.216.34")):
+            with patch("httpx.Client", return_value=client):
+                url.read()
+        _, sent_url = client.build_request.call_args.args
+        kwargs = client.build_request.call_args.kwargs
+        assert sent_url == "https://93.184.216.34:8443/f"
+        assert kwargs["headers"]["Host"] == "example.com:8443"
+
+    def test_read_brackets_ipv6_target(self):
+        """An IPv6 connection target must be bracketed in the pinned URL."""
+        url = FileUrl(url="https://v6.example/f")
+        client = _sync_client([_response(b"ok")])
+        with patch("socket.getaddrinfo", return_value=_addrinfo("2606:2800:220:1::1")):
+            with patch("httpx.Client", return_value=client):
+                url.read()
+        _, sent_url = client.build_request.call_args.args
+        assert sent_url == "https://[2606:2800:220:1::1]/f"
 
     def test_read_allows_public_address(self):
         """read() must still fetch a normal public URL (no false positive)."""
         url = FileUrl(url="https://example.com/image.png")
-        mock_response = MagicMock()
-        mock_response.content = b"ok"
-        mock_response.headers = {"content-type": "image/png"}
-        mock_response.is_redirect = False
-
+        client = _sync_client([_response(b"ok", {"content-type": "image/png"})])
         with patch("socket.getaddrinfo", return_value=_addrinfo("93.184.216.34")):
-            with patch("httpx.get", return_value=mock_response) as mock_get:
+            with patch("httpx.Client", return_value=client):
                 assert url.read() == b"ok"
-                mock_get.assert_called_once_with(
-                    "https://example.com/image.png", follow_redirects=False
-                )
+                client.send.assert_called_once()
 
     def test_read_blocks_redirect_to_internal(self):
         """A public URL redirecting to an internal address must be blocked."""
         url = FileUrl(url="https://example.com/start")
-        redirect = MagicMock()
-        redirect.is_redirect = True
-        redirect.headers = {"location": "http://169.254.169.254/latest/meta-data/"}
+        redirect = _response(
+            headers={"location": "http://169.254.169.254/latest/meta-data/"},
+            is_redirect=True,
+        )
+        client = _sync_client([redirect])
 
         def fake_getaddrinfo(host, *_args, **_kwargs):
             """Resolve the public start host and the internal redirect host.
@@ -401,19 +501,20 @@ class TestFileUrlSSRF:
             return _addrinfo(mapping[host])
 
         with patch("socket.getaddrinfo", side_effect=fake_getaddrinfo):
-            with patch("httpx.get", return_value=redirect):
+            with patch("httpx.Client", return_value=client):
                 with pytest.raises(ValueError, match="SSRF protection"):
                     url.read()
 
     def test_read_blocks_redirect_bomb(self):
         """Endless redirects must raise rather than loop forever."""
         url = FileUrl(url="https://example.com/a")
-        loop_response = MagicMock()
-        loop_response.is_redirect = True
-        loop_response.headers = {"location": "https://example.com/a"}
-
+        redirects = [
+            _response(headers={"location": "https://example.com/a"}, is_redirect=True)
+            for _ in range(_MAX_REDIRECTS + 2)
+        ]
+        client = _sync_client(redirects)
         with patch("socket.getaddrinfo", return_value=_addrinfo("93.184.216.34")):
-            with patch("httpx.get", return_value=loop_response):
+            with patch("httpx.Client", return_value=client):
                 with pytest.raises(ValueError, match="Too many redirects"):
                     url.read()
 
@@ -421,13 +522,23 @@ class TestFileUrlSSRF:
     async def test_aread_blocks_non_public_address(self):
         """aread() must apply the same SSRF guard as read()."""
         url = FileUrl(url="http://internal.example/secret")
-        mock_client = MagicMock()
-        mock_client.get = AsyncMock()
-        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-        mock_client.__aexit__ = AsyncMock(return_value=None)
-
+        client = _async_client([])
         with patch("socket.getaddrinfo", return_value=_addrinfo("127.0.0.1")):
-            with patch("httpx.AsyncClient", return_value=mock_client):
+            with patch("httpx.AsyncClient", return_value=client):
                 with pytest.raises(ValueError, match="SSRF protection"):
                     await url.aread()
-                mock_client.get.assert_not_called()
+                client.send.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_aread_pins_connection_to_validated_ip(self):
+        """aread() connects to the validated IP, preserving Host and SNI."""
+        url = FileUrl(url="https://example.com/image.png")
+        client = _async_client([_response(b"ok", {"content-type": "image/png"})])
+        with patch("socket.getaddrinfo", return_value=_addrinfo("93.184.216.34")):
+            with patch("httpx.AsyncClient", return_value=client):
+                assert await url.aread() == b"ok"
+        _, sent_url = client.build_request.call_args.args
+        kwargs = client.build_request.call_args.kwargs
+        assert sent_url == "https://93.184.216.34/image.png"
+        assert kwargs["headers"]["Host"] == "example.com"
+        assert kwargs["extensions"]["sni_hostname"] == "example.com"
