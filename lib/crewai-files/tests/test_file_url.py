@@ -73,7 +73,11 @@ def _sync_client(responses: list[MagicMock]) -> MagicMock:
     client.__enter__ = MagicMock(return_value=client)
     client.__exit__ = MagicMock(return_value=False)
     client.build_request = MagicMock(
-        side_effect=lambda method, url, **kwargs: {"method": method, "url": url, **kwargs}
+        side_effect=lambda method, url, **kwargs: {
+            "method": method,
+            "url": url,
+            **kwargs,
+        }
     )
     client.send = MagicMock(side_effect=list(responses))
     return client
@@ -92,7 +96,11 @@ def _async_client(responses: list[MagicMock]) -> MagicMock:
     client.__aenter__ = AsyncMock(return_value=client)
     client.__aexit__ = AsyncMock(return_value=None)
     client.build_request = MagicMock(
-        side_effect=lambda method, url, **kwargs: {"method": method, "url": url, **kwargs}
+        side_effect=lambda method, url, **kwargs: {
+            "method": method,
+            "url": url,
+            **kwargs,
+        }
     )
     client.send = AsyncMock(side_effect=list(responses))
     return client
@@ -176,7 +184,9 @@ class TestFileUrl:
     def test_read_fetches_content(self):
         """Test that read() fetches content from URL."""
         url = FileUrl(url="https://example.com/image.png")
-        client = _sync_client([_response(b"fake image content", {"content-type": "image/png"})])
+        client = _sync_client(
+            [_response(b"fake image content", {"content-type": "image/png"})]
+        )
 
         with patch("httpx.Client", return_value=client):
             content = url.read()
@@ -212,7 +222,9 @@ class TestFileUrl:
     async def test_aread_fetches_content(self):
         """Test that aread() fetches content from URL asynchronously."""
         url = FileUrl(url="https://example.com/image.png")
-        client = _async_client([_response(b"async fake content", {"content-type": "image/png"})])
+        client = _async_client(
+            [_response(b"async fake content", {"content-type": "image/png"})]
+        )
 
         with patch("httpx.AsyncClient", return_value=client):
             content = await url.aread()
@@ -542,3 +554,71 @@ class TestFileUrlSSRF:
         assert sent_url == "https://93.184.216.34/image.png"
         assert kwargs["headers"]["Host"] == "example.com"
         assert kwargs["extensions"]["sni_hostname"] == "example.com"
+
+    @pytest.mark.asyncio
+    async def test_aread_blocks_redirect_to_internal(self):
+        """A public URL redirecting to an internal address must be blocked (async)."""
+        url = FileUrl(url="https://example.com/start")
+        redirect = _response(
+            headers={"location": "http://169.254.169.254/latest/meta-data/"},
+            is_redirect=True,
+        )
+        client = _async_client([redirect])
+
+        def fake_getaddrinfo(host, *_args, **_kwargs):
+            """Resolve the public start host and the internal redirect host.
+
+            Args:
+                host: The host being resolved.
+
+            Returns:
+                A ``getaddrinfo``-shaped result for the requested host.
+            """
+            mapping = {
+                "example.com": "93.184.216.34",
+                "169.254.169.254": "169.254.169.254",
+            }
+            return _addrinfo(mapping[host])
+
+        with patch("socket.getaddrinfo", side_effect=fake_getaddrinfo):
+            with patch("httpx.AsyncClient", return_value=client):
+                with pytest.raises(ValueError, match="SSRF protection"):
+                    await url.aread()
+
+    @pytest.mark.asyncio
+    async def test_aread_blocks_redirect_bomb(self):
+        """Endless redirects must raise rather than loop forever (async)."""
+        url = FileUrl(url="https://example.com/a")
+        redirects = [
+            _response(headers={"location": "https://example.com/a"}, is_redirect=True)
+            for _ in range(_MAX_REDIRECTS + 2)
+        ]
+        client = _async_client(redirects)
+        with patch("socket.getaddrinfo", return_value=_addrinfo("93.184.216.34")):
+            with patch("httpx.AsyncClient", return_value=client):
+                with pytest.raises(ValueError, match="Too many redirects"):
+                    await url.aread()
+
+    def test_read_constructs_client_without_following_redirects(self):
+        """read() must build the client with follow_redirects disabled.
+
+        Redirects are followed and re-validated manually; letting httpx auto-follow
+        would skip the per-hop SSRF check, so a regression to
+        ``follow_redirects=True`` must fail this test.
+        """
+        url = FileUrl(url="https://example.com/image.png")
+        client = _sync_client([_response(b"ok")])
+        with patch("socket.getaddrinfo", return_value=_addrinfo("93.184.216.34")):
+            with patch("httpx.Client", return_value=client) as client_cls:
+                url.read()
+        assert client_cls.call_args.kwargs.get("follow_redirects") is False
+
+    @pytest.mark.asyncio
+    async def test_aread_constructs_client_without_following_redirects(self):
+        """aread() must build the async client with follow_redirects disabled."""
+        url = FileUrl(url="https://example.com/image.png")
+        client = _async_client([_response(b"ok")])
+        with patch("socket.getaddrinfo", return_value=_addrinfo("93.184.216.34")):
+            with patch("httpx.AsyncClient", return_value=client) as client_cls:
+                await url.aread()
+        assert client_cls.call_args.kwargs.get("follow_redirects") is False
