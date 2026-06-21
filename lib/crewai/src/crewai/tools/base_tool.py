@@ -10,6 +10,7 @@ import threading
 from typing import (
     Any,
     Generic,
+    Optional,
     ParamSpec,
     TypeVar,
     overload,
@@ -149,7 +150,15 @@ class BaseTool(BaseModel, ABC):
         validate_default=True,
         description="The schema for the arguments that the tool accepts.",
     )
-
+    args_schema: type[PydanticBaseModel] = Field(
+        default=_ArgsSchemaPlaceholder,
+        validate_default=True,
+        description="The schema for the arguments that the tool accepts.",
+    )
+    required_capability: Optional[str] = Field(
+        default=None, 
+        description="The specific capability required to execute this tool."
+    )
     @field_serializer("args_schema", when_used="json")
     def _serialize_args_schema(
         self, schema: type[PydanticBaseModel] | None

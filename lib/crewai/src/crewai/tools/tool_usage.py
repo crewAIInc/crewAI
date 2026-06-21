@@ -836,11 +836,36 @@ class ToolUsage:
     ) -> ToolCalling | InstructorToolCalling | ToolUsageError:
         try:
             try:
-                return self._original_tool_calling(tool_string, raise_error=True)
+                tool_calling = self._original_tool_calling(tool_string, raise_error=True)
             except Exception:
                 if self.function_calling_llm:
-                    return self._function_calling(tool_string)
-                return self._original_tool_calling(tool_string)
+                    tool_calling = self._function_calling(tool_string)
+                else:
+                    tool_calling = self._original_tool_calling(tool_string)
+            if tool_calling and not isinstance(tool_calling, ToolUsageError):
+                tool = self._select_tool(tool_calling.tool_name)
+                
+                if tool and hasattr(tool, "required_capability"):
+                    required_cap = tool.required_capability
+                    if required_cap:
+                        agent_caps = getattr(self.agent, "capabilities", None) or []
+                        # Block execution if the agent lacks the required capability
+                        if required_cap not in agent_caps:
+                            error_msg = f"Security Violation: Agent '{self.agent.role}' lacks the required capability '{required_cap}' to execute tool '{tool.name}'."
+                            if self.agent and self.agent.verbose:
+                                PRINTER.print(content=error_msg, color="red")
+                            return ToolUsageError(error_msg)
+
+                # Human-in-the-loop gating / Manual approval check
+                if tool and self.agent:
+                    require_approval_for = getattr(self.agent, "require_approval_for", None) or []
+                    if tool.name in require_approval_for or (hasattr(tool, "required_capability") and tool.required_capability in require_approval_for):
+                        if hasattr(self, "_ask_human_approval"):
+                            approved = self._ask_human_approval(tool.name)
+                            if not approved:
+                                return ToolUsageError("Execution cancelled by human operator.")
+            return tool_calling
+
         except Exception as e:
             self._run_attempts += 1
             if self._run_attempts > self._max_parsing_attempts:

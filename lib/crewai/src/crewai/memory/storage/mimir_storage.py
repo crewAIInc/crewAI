@@ -9,7 +9,7 @@ from typing import List, Dict, Any, Optional, Tuple
 
 from crewai.memory.storage.backend import StorageBackend
 # CodeRabbit Fix: Direct import to fail-fast and avoid masking integration issues
-from crewai.memory.storage.interface import MemoryRecord
+from crewai.memory.storage.interface import MemoryRecord # type: ignore
 
 logger = logging.getLogger(__name__)
 
