@@ -1,0 +1,654 @@
+---
+title: أداة RAG
+description: أداة `RagTool` هي أداة قاعدة معرفية ديناميكية للإجابة على الأسئلة باستخدام التوليد المعزز بالاسترجاع.
+icon: vector-square
+mode: "wide"
+---
+
+# `RagTool`
+
+## الوصف
+
+صُممت `RagTool` للإجابة على الأسئلة من خلال الاستفادة من قوة التوليد المعزز بالاسترجاع (RAG) عبر نظام RAG الأصلي في CrewAI.
+توفر قاعدة معرفية ديناميكية يمكن الاستعلام عنها لاسترجاع المعلومات ذات الصلة من مصادر بيانات متنوعة.
+هذه الأداة مفيدة بشكل خاص للتطبيقات التي تتطلب الوصول إلى مجموعة واسعة من المعلومات وتحتاج إلى تقديم إجابات ذات صلة بالسياق.
+
+## مثال
+
+يوضح المثال التالي كيفية تهيئة الأداة واستخدامها مع مصادر بيانات مختلفة:
+
+```python Code
+from crewai_tools import RagTool
+
+# Create a RAG tool with default settings
+rag_tool = RagTool()
+
+# Add content from a file
+rag_tool.add(data_type="file", path="path/to/your/document.pdf")
+
+# Add content from a web page
+rag_tool.add(data_type="web_page", url="https://example.com")
+
+# Define an agent with the RagTool
+@agent
+def knowledge_expert(self) -> Agent:
+    '''
+    This agent uses the RagTool to answer questions about the knowledge base.
+    '''
+    return Agent(
+        config=self.agents_config["knowledge_expert"],
+        allow_delegation=False,
+        tools=[rag_tool]
+    )
+```
+
+## مصادر البيانات المدعومة
+
+يمكن استخدام `RagTool` مع مجموعة واسعة من مصادر البيانات، بما في ذلك:
+
+- ملفات PDF
+- ملفات CSV
+- ملفات JSON
+- نصوص
+- مجلدات/أدلة
+- صفحات ويب HTML
+- قنوات YouTube
+- فيديوهات YouTube
+- مواقع التوثيق
+- ملفات MDX
+- ملفات DOCX
+- ملفات XML
+- Gmail
+- مستودعات GitHub
+- قواعد بيانات PostgreSQL
+- قواعد بيانات MySQL
+- محادثات Slack
+- رسائل Discord
+- منتديات Discourse
+- نشرات Substack
+- محتوى Beehiiv
+- ملفات Dropbox
+- صور
+- مصادر بيانات مخصصة
+
+## المعاملات
+
+تقبل `RagTool` المعاملات التالية:
+
+- **summarize**: اختياري. ما إذا كان يتم تلخيص المحتوى المسترجع. القيمة الافتراضية `False`.
+- **adapter**: اختياري. محول مخصص لقاعدة المعرفة. إذا لم يُقدَّم، سيُستخدم CrewAIRagAdapter.
+- **config**: اختياري. إعداد نظام RAG الأساسي في CrewAI. يقبل TypedDict من نوع `RagToolConfig` مع مفاتيح اختيارية `embedding_model` (ProviderSpec) و`vectordb` (VectorDbConfig). جميع قيم الإعداد المقدمة برمجياً لها الأولوية على متغيرات البيئة.
+
+## إضافة المحتوى
+
+يمكنك إضافة محتوى إلى قاعدة المعرفة باستخدام طريقة `add`:
+
+```python Code
+# Add a PDF file
+rag_tool.add(data_type="file", path="path/to/your/document.pdf")
+
+# Add a web page
+rag_tool.add(data_type="web_page", url="https://example.com")
+
+# Add a YouTube video
+rag_tool.add(data_type="youtube_video", url="https://www.youtube.com/watch?v=VIDEO_ID")
+
+# Add a directory of files
+rag_tool.add(data_type="directory", path="path/to/your/directory")
+```
+
+## مثال على التكامل مع الوكيل
+
+إليك كيفية دمج `RagTool` مع وكيل CrewAI:
+
+```python Code
+from crewai import Agent
+from crewai.project import agent
+from crewai_tools import RagTool
+
+# Initialize the tool and add content
+rag_tool = RagTool()
+rag_tool.add(data_type="web_page", url="https://docs.crewai.com")
+rag_tool.add(data_type="file", path="company_data.pdf")
+
+# Define an agent with the RagTool
+@agent
+def knowledge_expert(self) -> Agent:
+    return Agent(
+        config=self.agents_config["knowledge_expert"],
+        allow_delegation=False,
+        tools=[rag_tool]
+    )
+```
+
+## إعداد متقدم
+
+يمكنك تخصيص سلوك `RagTool` من خلال تقديم قاموس إعداد:
+
+```python Code
+from crewai_tools import RagTool
+from crewai_tools.tools.rag import RagToolConfig, VectorDbConfig, ProviderSpec
+
+# Create a RAG tool with custom configuration
+
+vectordb: VectorDbConfig = {
+    "provider": "qdrant",
+    "config": {
+        "collection_name": "my-collection"
+    }
+}
+
+embedding_model: ProviderSpec = {
+    "provider": "openai",
+    "config": {
+        "model_name": "text-embedding-3-small"
+    }
+}
+
+config: RagToolConfig = {
+    "vectordb": vectordb,
+    "embedding_model": embedding_model
+}
+
+rag_tool = RagTool(config=config, summarize=True)
+```
+
+## إعداد نموذج التضمين
+
+يقبل معامل `embedding_model` قاموس `crewai.rag.embeddings.types.ProviderSpec` بالبنية التالية:
+
+```python
+{
+    "provider": "provider-name",  # Required
+    "config": {                    # Optional
+        # Provider-specific configuration
+    }
+}
+```
+
+### المزودون المدعومون
+
+<AccordionGroup>
+  <Accordion title="OpenAI">
+    ```python main.py
+    from crewai.rag.embeddings.providers.openai.types import OpenAIProviderSpec
+
+    embedding_model: OpenAIProviderSpec = {
+        "provider": "openai",
+        "config": {
+            "api_key": "your-api-key",
+            "model_name": "text-embedding-ada-002",
+            "dimensions": 1536,
+            "organization_id": "your-org-id",
+            "api_base": "https://api.openai.com/v1",
+            "api_version": "v1",
+            "default_headers": {"Custom-Header": "value"}
+        }
+    }
+    ```
+
+    **خيارات الإعداد:**
+    - `api_key` (str): مفتاح API لـ OpenAI
+    - `model_name` (str): النموذج المستخدم. القيمة الافتراضية: `text-embedding-ada-002`. الخيارات: `text-embedding-3-small`، `text-embedding-3-large`، `text-embedding-ada-002`
+    - `dimensions` (int): عدد أبعاد التضمين
+    - `organization_id` (str): معرّف منظمة OpenAI
+    - `api_base` (str): عنوان URL مخصص لقاعدة API
+    - `api_version` (str): إصدار API
+    - `default_headers` (dict): ترويسات مخصصة لطلبات API
+
+    **متغيرات البيئة:**
+    - `OPENAI_API_KEY` أو `EMBEDDINGS_OPENAI_API_KEY`: `api_key`
+    - `OPENAI_ORGANIZATION_ID` أو `EMBEDDINGS_OPENAI_ORGANIZATION_ID`: `organization_id`
+    - `OPENAI_MODEL_NAME` أو `EMBEDDINGS_OPENAI_MODEL_NAME`: `model_name`
+    - `OPENAI_API_BASE` أو `EMBEDDINGS_OPENAI_API_BASE`: `api_base`
+    - `OPENAI_API_VERSION` أو `EMBEDDINGS_OPENAI_API_VERSION`: `api_version`
+    - `OPENAI_DIMENSIONS` أو `EMBEDDINGS_OPENAI_DIMENSIONS`: `dimensions`
+  </Accordion>
+
+  <Accordion title="Cohere">
+    ```python main.py
+    from crewai.rag.embeddings.providers.cohere.types import CohereProviderSpec
+
+    embedding_model: CohereProviderSpec = {
+        "provider": "cohere",
+        "config": {
+            "api_key": "your-api-key",
+            "model_name": "embed-english-v3.0"
+        }
+    }
+    ```
+
+    **خيارات الإعداد:**
+    - `api_key` (str): مفتاح API لـ Cohere
+    - `model_name` (str): النموذج المستخدم. القيمة الافتراضية: `large`. الخيارات: `embed-english-v3.0`، `embed-multilingual-v3.0`، `large`، `small`
+
+    **متغيرات البيئة:**
+    - `COHERE_API_KEY` أو `EMBEDDINGS_COHERE_API_KEY`: `api_key`
+    - `EMBEDDINGS_COHERE_MODEL_NAME`: `model_name`
+  </Accordion>
+
+  <Accordion title="VoyageAI">
+    ```python main.py
+    from crewai.rag.embeddings.providers.voyageai.types import VoyageAIProviderSpec
+
+    embedding_model: VoyageAIProviderSpec = {
+        "provider": "voyageai",
+        "config": {
+            "api_key": "your-api-key",
+            "model": "voyage-3",
+            "input_type": "document",
+            "truncation": True,
+            "output_dtype": "float32",
+            "output_dimension": 1024,
+            "max_retries": 3,
+            "timeout": 60.0
+        }
+    }
+    ```
+
+    **خيارات الإعداد:**
+    - `api_key` (str): مفتاح API لـ VoyageAI
+    - `model` (str): النموذج المستخدم. القيمة الافتراضية: `voyage-2`. الخيارات: `voyage-3`، `voyage-3-lite`، `voyage-code-3`، `voyage-large-2`
+    - `input_type` (str): نوع الإدخال. الخيارات: `document` (للتخزين)، `query` (للبحث)
+    - `truncation` (bool): ما إذا كان يتم اقتطاع المدخلات التي تتجاوز الحد الأقصى. القيمة الافتراضية: `True`
+    - `output_dtype` (str): نوع بيانات المخرجات
+    - `output_dimension` (int): بُعد تضمينات المخرجات
+    - `max_retries` (int): الحد الأقصى لمحاولات إعادة المحاولة. القيمة الافتراضية: `0`
+    - `timeout` (float): مهلة الطلب بالثواني
+
+    **متغيرات البيئة:**
+    - `VOYAGEAI_API_KEY` أو `EMBEDDINGS_VOYAGEAI_API_KEY`: `api_key`
+    - `VOYAGEAI_MODEL` أو `EMBEDDINGS_VOYAGEAI_MODEL`: `model`
+    - `VOYAGEAI_INPUT_TYPE` أو `EMBEDDINGS_VOYAGEAI_INPUT_TYPE`: `input_type`
+    - `VOYAGEAI_TRUNCATION` أو `EMBEDDINGS_VOYAGEAI_TRUNCATION`: `truncation`
+    - `VOYAGEAI_OUTPUT_DTYPE` أو `EMBEDDINGS_VOYAGEAI_OUTPUT_DTYPE`: `output_dtype`
+    - `VOYAGEAI_OUTPUT_DIMENSION` أو `EMBEDDINGS_VOYAGEAI_OUTPUT_DIMENSION`: `output_dimension`
+    - `VOYAGEAI_MAX_RETRIES` أو `EMBEDDINGS_VOYAGEAI_MAX_RETRIES`: `max_retries`
+    - `VOYAGEAI_TIMEOUT` أو `EMBEDDINGS_VOYAGEAI_TIMEOUT`: `timeout`
+  </Accordion>
+
+  <Accordion title="Ollama">
+    ```python main.py
+    from crewai.rag.embeddings.providers.ollama.types import OllamaProviderSpec
+
+    embedding_model: OllamaProviderSpec = {
+        "provider": "ollama",
+        "config": {
+            "model_name": "llama2",
+            "url": "http://localhost:11434/api/embeddings"
+        }
+    }
+    ```
+
+    **خيارات الإعداد:**
+    - `model_name` (str): اسم نموذج Ollama (مثل `llama2`، `mistral`، `nomic-embed-text`)
+    - `url` (str): عنوان URL لنقطة نهاية API الخاصة بـ Ollama. القيمة الافتراضية: `http://localhost:11434/api/embeddings`
+
+    **متغيرات البيئة:**
+    - `OLLAMA_MODEL` أو `EMBEDDINGS_OLLAMA_MODEL`: `model_name`
+    - `OLLAMA_URL` أو `EMBEDDINGS_OLLAMA_URL`: `url`
+  </Accordion>
+
+  <Accordion title="Amazon Bedrock">
+    ```python main.py
+    from crewai.rag.embeddings.providers.aws.types import BedrockProviderSpec
+
+    embedding_model: BedrockProviderSpec = {
+        "provider": "amazon-bedrock",
+        "config": {
+            "model_name": "amazon.titan-embed-text-v2:0",
+            "session": boto3_session
+        }
+    }
+    ```
+
+    **خيارات الإعداد:**
+    - `model_name` (str): معرّف نموذج Bedrock. القيمة الافتراضية: `amazon.titan-embed-text-v1`. الخيارات: `amazon.titan-embed-text-v1`، `amazon.titan-embed-text-v2:0`، `cohere.embed-english-v3`، `cohere.embed-multilingual-v3`
+    - `session` (Any): كائن جلسة Boto3 لمصادقة AWS
+
+    **متغيرات البيئة:**
+    - `AWS_ACCESS_KEY_ID`: مفتاح وصول AWS
+    - `AWS_SECRET_ACCESS_KEY`: مفتاح سري AWS
+    - `AWS_REGION`: منطقة AWS (مثل `us-east-1`)
+  </Accordion>
+
+  <Accordion title="Azure OpenAI">
+    ```python main.py
+    from crewai.rag.embeddings.providers.microsoft.types import AzureProviderSpec
+
+    embedding_model: AzureProviderSpec = {
+        "provider": "azure",
+        "config": {
+            "deployment_id": "your-deployment-id",
+            "api_key": "your-api-key",
+            "api_base": "https://your-resource.openai.azure.com",
+            "api_version": "2024-02-01",
+            "model_name": "text-embedding-ada-002",
+            "api_type": "azure"
+        }
+    }
+    ```
+
+    **خيارات الإعداد:**
+    - `deployment_id` (str): **مطلوب** - معرّف نشر Azure OpenAI
+    - `api_key` (str): مفتاح API لـ Azure OpenAI
+    - `api_base` (str): نقطة نهاية مورد Azure OpenAI
+    - `api_version` (str): إصدار API. مثال: `2024-02-01`
+    - `model_name` (str): اسم النموذج. القيمة الافتراضية: `text-embedding-ada-002`
+    - `api_type` (str): نوع API. القيمة الافتراضية: `azure`
+    - `dimensions` (int): أبعاد المخرجات
+    - `default_headers` (dict): ترويسات مخصصة
+
+    **متغيرات البيئة:**
+    - `AZURE_OPENAI_API_KEY` أو `EMBEDDINGS_AZURE_API_KEY`: `api_key`
+    - `AZURE_OPENAI_ENDPOINT` أو `EMBEDDINGS_AZURE_API_BASE`: `api_base`
+    - `EMBEDDINGS_AZURE_DEPLOYMENT_ID`: `deployment_id`
+    - `EMBEDDINGS_AZURE_API_VERSION`: `api_version`
+    - `EMBEDDINGS_AZURE_MODEL_NAME`: `model_name`
+    - `EMBEDDINGS_AZURE_API_TYPE`: `api_type`
+    - `EMBEDDINGS_AZURE_DIMENSIONS`: `dimensions`
+  </Accordion>
+
+  <Accordion title="Google Generative AI">
+    ```python main.py
+    from crewai.rag.embeddings.providers.google.types import GenerativeAiProviderSpec
+
+    embedding_model: GenerativeAiProviderSpec = {
+        "provider": "google-generativeai",
+        "config": {
+            "api_key": "your-api-key",
+            "model_name": "gemini-embedding-001",
+            "task_type": "RETRIEVAL_DOCUMENT"
+        }
+    }
+    ```
+
+    **خيارات الإعداد:**
+    - `api_key` (str): مفتاح API لـ Google AI
+    - `model_name` (str): اسم النموذج. القيمة الافتراضية: `gemini-embedding-001`. الخيارات: `gemini-embedding-001`، `text-embedding-005`، `text-multilingual-embedding-002`
+    - `task_type` (str): نوع المهمة للتضمينات. القيمة الافتراضية: `RETRIEVAL_DOCUMENT`. الخيارات: `RETRIEVAL_DOCUMENT`، `RETRIEVAL_QUERY`
+
+    **متغيرات البيئة:**
+    - `GOOGLE_API_KEY` أو `GEMINI_API_KEY` أو `EMBEDDINGS_GOOGLE_API_KEY`: `api_key`
+    - `EMBEDDINGS_GOOGLE_GENERATIVE_AI_MODEL_NAME`: `model_name`
+    - `EMBEDDINGS_GOOGLE_GENERATIVE_AI_TASK_TYPE`: `task_type`
+  </Accordion>
+
+  <Accordion title="Google Vertex AI">
+    ```python main.py
+    from crewai.rag.embeddings.providers.google.types import VertexAIProviderSpec
+
+    embedding_model: VertexAIProviderSpec = {
+        "provider": "google-vertex",
+        "config": {
+            "model_name": "text-embedding-004",
+            "project_id": "your-project-id",
+            "region": "us-central1",
+            "api_key": "your-api-key"
+        }
+    }
+    ```
+
+    **خيارات الإعداد:**
+    - `model_name` (str): اسم النموذج. القيمة الافتراضية: `textembedding-gecko`. الخيارات: `text-embedding-004`، `textembedding-gecko`، `textembedding-gecko-multilingual`
+    - `project_id` (str): معرّف مشروع Google Cloud. القيمة الافتراضية: `cloud-large-language-models`
+    - `region` (str): منطقة Google Cloud. القيمة الافتراضية: `us-central1`
+    - `api_key` (str): مفتاح API للمصادقة
+
+    **متغيرات البيئة:**
+    - `GOOGLE_APPLICATION_CREDENTIALS`: مسار ملف JSON لحساب الخدمة
+    - `GOOGLE_CLOUD_PROJECT` أو `EMBEDDINGS_GOOGLE_VERTEX_PROJECT_ID`: `project_id`
+    - `EMBEDDINGS_GOOGLE_VERTEX_MODEL_NAME`: `model_name`
+    - `EMBEDDINGS_GOOGLE_VERTEX_REGION`: `region`
+    - `EMBEDDINGS_GOOGLE_VERTEX_API_KEY`: `api_key`
+  </Accordion>
+
+  <Accordion title="Jina AI">
+    ```python main.py
+    from crewai.rag.embeddings.providers.jina.types import JinaProviderSpec
+
+    embedding_model: JinaProviderSpec = {
+        "provider": "jina",
+        "config": {
+            "api_key": "your-api-key",
+            "model_name": "jina-embeddings-v3"
+        }
+    }
+    ```
+
+    **خيارات الإعداد:**
+    - `api_key` (str): مفتاح API لـ Jina AI
+    - `model_name` (str): اسم النموذج. القيمة الافتراضية: `jina-embeddings-v2-base-en`. الخيارات: `jina-embeddings-v3`، `jina-embeddings-v2-base-en`، `jina-embeddings-v2-small-en`
+
+    **متغيرات البيئة:**
+    - `JINA_API_KEY` أو `EMBEDDINGS_JINA_API_KEY`: `api_key`
+    - `EMBEDDINGS_JINA_MODEL_NAME`: `model_name`
+  </Accordion>
+
+  <Accordion title="HuggingFace">
+    ```python main.py
+    from crewai.rag.embeddings.providers.huggingface.types import HuggingFaceProviderSpec
+
+    embedding_model: HuggingFaceProviderSpec = {
+        "provider": "huggingface",
+        "config": {
+            "url": "https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2"
+        }
+    }
+    ```
+
+    **خيارات الإعداد:**
+    - `url` (str): عنوان URL الكامل لنقطة نهاية API الاستدلالي لـ HuggingFace
+
+    **متغيرات البيئة:**
+    - `HUGGINGFACE_URL` أو `EMBEDDINGS_HUGGINGFACE_URL`: `url`
+  </Accordion>
+
+  <Accordion title="Instructor">
+    ```python main.py
+    from crewai.rag.embeddings.providers.instructor.types import InstructorProviderSpec
+
+    embedding_model: InstructorProviderSpec = {
+        "provider": "instructor",
+        "config": {
+            "model_name": "hkunlp/instructor-xl",
+            "device": "cuda",
+            "instruction": "Represent the document"
+        }
+    }
+    ```
+
+    **خيارات الإعداد:**
+    - `model_name` (str): معرّف نموذج HuggingFace. القيمة الافتراضية: `hkunlp/instructor-base`. الخيارات: `hkunlp/instructor-xl`، `hkunlp/instructor-large`، `hkunlp/instructor-base`
+    - `device` (str): الجهاز للتشغيل. القيمة الافتراضية: `cpu`. الخيارات: `cpu`، `cuda`، `mps`
+    - `instruction` (str): بادئة التعليمات للتضمينات
+
+    **متغيرات البيئة:**
+    - `EMBEDDINGS_INSTRUCTOR_MODEL_NAME`: `model_name`
+    - `EMBEDDINGS_INSTRUCTOR_DEVICE`: `device`
+    - `EMBEDDINGS_INSTRUCTOR_INSTRUCTION`: `instruction`
+  </Accordion>
+
+  <Accordion title="Sentence Transformer">
+    ```python main.py
+    from crewai.rag.embeddings.providers.sentence_transformer.types import SentenceTransformerProviderSpec
+
+    embedding_model: SentenceTransformerProviderSpec = {
+        "provider": "sentence-transformer",
+        "config": {
+            "model_name": "all-mpnet-base-v2",
+            "device": "cuda",
+            "normalize_embeddings": True
+        }
+    }
+    ```
+
+    **خيارات الإعداد:**
+    - `model_name` (str): اسم نموذج Sentence Transformers. القيمة الافتراضية: `all-MiniLM-L6-v2`. الخيارات: `all-mpnet-base-v2`، `all-MiniLM-L6-v2`، `paraphrase-multilingual-MiniLM-L12-v2`
+    - `device` (str): الجهاز للتشغيل. القيمة الافتراضية: `cpu`. الخيارات: `cpu`، `cuda`، `mps`
+    - `normalize_embeddings` (bool): ما إذا كان يتم تطبيع التضمينات. القيمة الافتراضية: `False`
+
+    **متغيرات البيئة:**
+    - `EMBEDDINGS_SENTENCE_TRANSFORMER_MODEL_NAME`: `model_name`
+    - `EMBEDDINGS_SENTENCE_TRANSFORMER_DEVICE`: `device`
+    - `EMBEDDINGS_SENTENCE_TRANSFORMER_NORMALIZE_EMBEDDINGS`: `normalize_embeddings`
+  </Accordion>
+
+  <Accordion title="ONNX">
+    ```python main.py
+    from crewai.rag.embeddings.providers.onnx.types import ONNXProviderSpec
+
+    embedding_model: ONNXProviderSpec = {
+        "provider": "onnx",
+        "config": {
+            "preferred_providers": ["CUDAExecutionProvider", "CPUExecutionProvider"]
+        }
+    }
+    ```
+
+    **خيارات الإعداد:**
+    - `preferred_providers` (list[str]): قائمة مزودي تنفيذ ONNX حسب ترتيب الأفضلية
+
+    **متغيرات البيئة:**
+    - `EMBEDDINGS_ONNX_PREFERRED_PROVIDERS`: `preferred_providers` (قائمة مفصولة بفواصل)
+  </Accordion>
+
+  <Accordion title="OpenCLIP">
+    ```python main.py
+    from crewai.rag.embeddings.providers.openclip.types import OpenCLIPProviderSpec
+
+    embedding_model: OpenCLIPProviderSpec = {
+        "provider": "openclip",
+        "config": {
+            "model_name": "ViT-B-32",
+            "checkpoint": "laion2b_s34b_b79k",
+            "device": "cuda"
+        }
+    }
+    ```
+
+    **خيارات الإعداد:**
+    - `model_name` (str): بنية نموذج OpenCLIP. القيمة الافتراضية: `ViT-B-32`. الخيارات: `ViT-B-32`، `ViT-B-16`، `ViT-L-14`
+    - `checkpoint` (str): اسم نقطة التحقق المُدرّبة مسبقاً. القيمة الافتراضية: `laion2b_s34b_b79k`. الخيارات: `laion2b_s34b_b79k`، `laion400m_e32`، `openai`
+    - `device` (str): الجهاز للتشغيل. القيمة الافتراضية: `cpu`. الخيارات: `cpu`، `cuda`
+
+    **متغيرات البيئة:**
+    - `EMBEDDINGS_OPENCLIP_MODEL_NAME`: `model_name`
+    - `EMBEDDINGS_OPENCLIP_CHECKPOINT`: `checkpoint`
+    - `EMBEDDINGS_OPENCLIP_DEVICE`: `device`
+  </Accordion>
+
+  <Accordion title="Text2Vec">
+    ```python main.py
+    from crewai.rag.embeddings.providers.text2vec.types import Text2VecProviderSpec
+
+    embedding_model: Text2VecProviderSpec = {
+        "provider": "text2vec",
+        "config": {
+            "model_name": "shibing624/text2vec-base-multilingual"
+        }
+    }
+    ```
+
+    **خيارات الإعداد:**
+    - `model_name` (str): اسم نموذج Text2Vec من HuggingFace. القيمة الافتراضية: `shibing624/text2vec-base-chinese`. الخيارات: `shibing624/text2vec-base-multilingual`، `shibing624/text2vec-base-chinese`
+
+    **متغيرات البيئة:**
+    - `EMBEDDINGS_TEXT2VEC_MODEL_NAME`: `model_name`
+  </Accordion>
+
+  <Accordion title="Roboflow">
+    ```python main.py
+    from crewai.rag.embeddings.providers.roboflow.types import RoboflowProviderSpec
+
+    embedding_model: RoboflowProviderSpec = {
+        "provider": "roboflow",
+        "config": {
+            "api_key": "your-api-key",
+            "api_url": "https://infer.roboflow.com"
+        }
+    }
+    ```
+
+    **خيارات الإعداد:**
+    - `api_key` (str): مفتاح API لـ Roboflow. القيمة الافتراضية: `""` (سلسلة فارغة)
+    - `api_url` (str): عنوان URL لـ API الاستدلالي لـ Roboflow. القيمة الافتراضية: `https://infer.roboflow.com`
+
+    **متغيرات البيئة:**
+    - `ROBOFLOW_API_KEY` أو `EMBEDDINGS_ROBOFLOW_API_KEY`: `api_key`
+    - `ROBOFLOW_API_URL` أو `EMBEDDINGS_ROBOFLOW_API_URL`: `api_url`
+  </Accordion>
+
+  <Accordion title="WatsonX (IBM)">
+    ```python main.py
+    from crewai.rag.embeddings.providers.ibm.types import WatsonXProviderSpec
+
+    embedding_model: WatsonXProviderSpec = {
+        "provider": "watsonx",
+        "config": {
+            "model_id": "ibm/slate-125m-english-rtrvr",
+            "url": "https://us-south.ml.cloud.ibm.com",
+            "api_key": "your-api-key",
+            "project_id": "your-project-id",
+            "batch_size": 100,
+            "concurrency_limit": 10,
+            "persistent_connection": True
+        }
+    }
+    ```
+
+    **خيارات الإعداد:**
+    - `model_id` (str): معرّف نموذج WatsonX
+    - `url` (str): نقطة نهاية API لـ WatsonX
+    - `api_key` (str): مفتاح API لـ IBM Cloud
+    - `project_id` (str): معرّف مشروع WatsonX
+    - `space_id` (str): معرّف مساحة WatsonX (بديل لـ project_id)
+    - `batch_size` (int): حجم الدفعة للتضمينات. القيمة الافتراضية: `100`
+    - `concurrency_limit` (int): الحد الأقصى للطلبات المتزامنة. القيمة الافتراضية: `10`
+    - `persistent_connection` (bool): استخدام اتصالات مستمرة. القيمة الافتراضية: `True`
+    - بالإضافة إلى أكثر من 20 خيار مصادقة وإعداد إضافي
+
+    **متغيرات البيئة:**
+    - `WATSONX_API_KEY` أو `EMBEDDINGS_WATSONX_API_KEY`: `api_key`
+    - `WATSONX_URL` أو `EMBEDDINGS_WATSONX_URL`: `url`
+    - `WATSONX_PROJECT_ID` أو `EMBEDDINGS_WATSONX_PROJECT_ID`: `project_id`
+    - `EMBEDDINGS_WATSONX_MODEL_ID`: `model_id`
+    - `EMBEDDINGS_WATSONX_SPACE_ID`: `space_id`
+    - `EMBEDDINGS_WATSONX_BATCH_SIZE`: `batch_size`
+    - `EMBEDDINGS_WATSONX_CONCURRENCY_LIMIT`: `concurrency_limit`
+    - `EMBEDDINGS_WATSONX_PERSISTENT_CONNECTION`: `persistent_connection`
+  </Accordion>
+
+  <Accordion title="مخصص">
+    ```python main.py
+    from crewai.rag.core.base_embeddings_callable import EmbeddingFunction
+    from crewai.rag.embeddings.providers.custom.types import CustomProviderSpec
+
+    class MyEmbeddingFunction(EmbeddingFunction):
+        def __call__(self, input):
+            # Your custom embedding logic
+            return embeddings
+
+    embedding_model: CustomProviderSpec = {
+        "provider": "custom",
+        "config": {
+            "embedding_callable": MyEmbeddingFunction
+        }
+    }
+    ```
+
+    **خيارات الإعداد:**
+    - `embedding_callable` (type[EmbeddingFunction]): فئة دالة تضمين مخصصة
+
+    **ملاحظة:** يجب أن تنفّذ دوال التضمين المخصصة بروتوكول `EmbeddingFunction` المحدد في `crewai.rag.core.base_embeddings_callable`. يجب أن تقبل طريقة `__call__` بيانات الإدخال وتعيد التضمينات كقائمة من مصفوفات numpy (أو تنسيق متوافق سيتم تطبيعه). يتم تطبيع التضمينات المُعادة والتحقق منها تلقائياً.
+  </Accordion>
+</AccordionGroup>
+
+### ملاحظات
+- جميع حقول الإعداد اختيارية ما لم يُذكر أنها **مطلوبة**
+- يمكن عادة تقديم مفاتيح API عبر متغيرات البيئة بدلاً من الإعداد
+- تُعرض القيم الافتراضية حيثما ينطبق ذلك
+
+
+## الخلاصة
+توفر `RagTool` طريقة قوية لإنشاء واستعلام قواعد المعرفة من مصادر بيانات متنوعة. من خلال الاستفادة من التوليد المعزز بالاسترجاع، تمكّن الوكلاء من الوصول إلى المعلومات ذات الصلة واسترجاعها بكفاءة، مما يعزز قدرتهم على تقديم استجابات دقيقة ومناسبة للسياق.

@@ -23,7 +23,7 @@ __all__ = ["HumanFeedbackResult", "human_feedback"]
 def human_feedback(
     message: str,
     emit: Sequence[str] | None = None,
-    llm: str | BaseLLM | None = "gpt-4o-mini",
+    llm: str | BaseLLM | None = "gpt-5.4-mini",
     default_outcome: str | None = None,
     metadata: dict[str, Any] | None = None,
     provider: HumanFeedbackProvider | None = None,
