@@ -1591,7 +1591,9 @@ class LLM(BaseLLM):
                                             )
 
                 except (AttributeError, KeyError, IndexError, TypeError):
-                    pass
+                    logging.getLogger(__name__).debug(
+                        "Failed to parse streaming chunk", exc_info=True
+                    )
 
                 if chunk_content:
                     full_response += chunk_content
