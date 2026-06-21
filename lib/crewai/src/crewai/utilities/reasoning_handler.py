@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 from pydantic import BaseModel, Field
@@ -589,8 +590,11 @@ class AgentReasoning:
         so that models following either convention work correctly.
         """
         upper = response.upper()
-        return "READY: I AM READY TO EXECUTE THE TASK." in upper or (
-            "READY" in upper and "NOT READY" not in upper
+        if "NOT READY" in upper:
+            return False
+        return bool(
+            "READY: I AM READY TO EXECUTE THE TASK." in upper
+            or re.search(r"\bREADY\b", upper)
         )
 
     @staticmethod

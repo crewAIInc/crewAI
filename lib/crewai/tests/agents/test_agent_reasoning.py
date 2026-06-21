@@ -41,6 +41,12 @@ class TestIsReady:
     def test_no_keyword_returns_false(self):
         assert not AgentReasoning._is_ready("Here is my plan. I need more information.")
 
+    def test_ready_as_substring_returns_false(self):
+        assert not AgentReasoning._is_ready("I already need more info.")
+
+    def test_unready_substring_returns_false(self):
+        assert not AgentReasoning._is_ready("The system is unready for deployment.")
+
 
 class TestParsePlanningResponse:
     def test_empty_response(self):
