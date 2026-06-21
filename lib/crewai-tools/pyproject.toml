@@ -26,6 +26,9 @@ Documentation = "https://docs.crewai.com"
 
 
 [project.optional-dependencies]
+hlido-trust = [
+    "hlido-trust>=0.1.0",
+]
 scrapfly-sdk = [
     "scrapfly-sdk>=0.8.19",
 ]
