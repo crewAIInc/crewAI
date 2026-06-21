@@ -385,6 +385,7 @@ class BaseTool(BaseModel, ABC):
             cache_function=self.cache_function,
         )
         structured_tool._original_tool = self
+        setattr(structured_tool, "required_capability", self.required_capability)
         return structured_tool
 
     @classmethod
