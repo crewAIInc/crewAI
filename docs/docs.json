@@ -398,6 +398,7 @@
                     "pages": [
                       "edge/en/enterprise/features/automations",
                       "edge/en/enterprise/features/crew-studio",
+                      "edge/en/enterprise/features/merged-step-card",
                       "edge/en/enterprise/features/marketplace",
                       "edge/en/enterprise/features/agent-repositories",
                       "edge/en/enterprise/features/tools-and-integrations",
@@ -515,6 +516,7 @@
                       "edge/en/enterprise/guides/update-crew",
                       "edge/en/enterprise/guides/enable-crew-studio",
                       "edge/en/enterprise/guides/capture_telemetry_logs",
+                      "edge/en/enterprise/guides/datadog",
                       "edge/en/enterprise/guides/azure-openai-setup",
                       "edge/en/enterprise/guides/vertex-ai-workload-identity-setup",
                       "edge/en/enterprise/guides/tool-repository",
@@ -921,6 +923,7 @@
                     "pages": [
                       "v1.14.7/en/enterprise/features/automations",
                       "v1.14.7/en/enterprise/features/crew-studio",
+                      "v1.14.7/en/enterprise/features/merged-step-card",
                       "v1.14.7/en/enterprise/features/marketplace",
                       "v1.14.7/en/enterprise/features/agent-repositories",
                       "v1.14.7/en/enterprise/features/tools-and-integrations",
@@ -8547,6 +8550,7 @@
                     "pages": [
                       "edge/pt-BR/enterprise/features/automations",
                       "edge/pt-BR/enterprise/features/crew-studio",
+                      "edge/pt-BR/enterprise/features/merged-step-card",
                       "edge/pt-BR/enterprise/features/marketplace",
                       "edge/pt-BR/enterprise/features/agent-repositories",
                       "edge/pt-BR/enterprise/features/tools-and-integrations",
@@ -8647,6 +8651,7 @@
                       "edge/pt-BR/enterprise/guides/update-crew",
                       "edge/pt-BR/enterprise/guides/enable-crew-studio",
                       "edge/pt-BR/enterprise/guides/capture_telemetry_logs",
+                      "edge/pt-BR/enterprise/guides/datadog",
                       "edge/pt-BR/enterprise/guides/azure-openai-setup",
                       "edge/pt-BR/enterprise/guides/tool-repository",
                       "edge/pt-BR/enterprise/guides/custom-mcp-server",
@@ -9047,6 +9052,7 @@
                     "pages": [
                       "v1.14.7/pt-BR/enterprise/features/automations",
                       "v1.14.7/pt-BR/enterprise/features/crew-studio",
+                      "v1.14.7/pt-BR/enterprise/features/merged-step-card",
                       "v1.14.7/pt-BR/enterprise/features/marketplace",
                       "v1.14.7/pt-BR/enterprise/features/agent-repositories",
                       "v1.14.7/pt-BR/enterprise/features/tools-and-integrations",
@@ -16410,6 +16416,7 @@
                     "pages": [
                       "edge/ko/enterprise/features/automations",
                       "edge/ko/enterprise/features/crew-studio",
+                      "edge/ko/enterprise/features/merged-step-card",
                       "edge/ko/enterprise/features/marketplace",
                       "edge/ko/enterprise/features/agent-repositories",
                       "edge/ko/enterprise/features/tools-and-integrations",
@@ -16510,6 +16517,7 @@
                       "edge/ko/enterprise/guides/update-crew",
                       "edge/ko/enterprise/guides/enable-crew-studio",
                       "edge/ko/enterprise/guides/capture_telemetry_logs",
+                      "edge/ko/enterprise/guides/datadog",
                       "edge/ko/enterprise/guides/azure-openai-setup",
                       "edge/ko/enterprise/guides/tool-repository",
                       "edge/ko/enterprise/guides/custom-mcp-server",
@@ -16922,6 +16930,7 @@
                     "pages": [
                       "v1.14.7/ko/enterprise/features/automations",
                       "v1.14.7/ko/enterprise/features/crew-studio",
+                      "v1.14.7/ko/enterprise/features/merged-step-card",
                       "v1.14.7/ko/enterprise/features/marketplace",
                       "v1.14.7/ko/enterprise/features/agent-repositories",
                       "v1.14.7/ko/enterprise/features/tools-and-integrations",
@@ -24465,6 +24474,7 @@
                     "pages": [
                       "edge/ar/enterprise/features/automations",
                       "edge/ar/enterprise/features/crew-studio",
+                      "edge/ar/enterprise/features/merged-step-card",
                       "edge/ar/enterprise/features/marketplace",
                       "edge/ar/enterprise/features/agent-repositories",
                       "edge/ar/enterprise/features/tools-and-integrations",
@@ -24565,6 +24575,7 @@
                       "edge/ar/enterprise/guides/update-crew",
                       "edge/ar/enterprise/guides/enable-crew-studio",
                       "edge/ar/enterprise/guides/capture_telemetry_logs",
+                      "edge/ar/enterprise/guides/datadog",
                       "edge/ar/enterprise/guides/azure-openai-setup",
                       "edge/ar/enterprise/guides/tool-repository",
                       "edge/ar/enterprise/guides/custom-mcp-server",
@@ -24977,6 +24988,7 @@
                     "pages": [
                       "v1.14.7/ar/enterprise/features/automations",
                       "v1.14.7/ar/enterprise/features/crew-studio",
+                      "v1.14.7/ar/enterprise/features/merged-step-card",
                       "v1.14.7/ar/enterprise/features/marketplace",
                       "v1.14.7/ar/enterprise/features/agent-repositories",
                       "v1.14.7/ar/enterprise/features/tools-and-integrations",

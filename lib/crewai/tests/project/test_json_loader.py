@@ -7,6 +7,7 @@ from pathlib import Path
 import sys
 
 import pytest
+from pydantic import BaseModel
 
 from crewai.llms.base_llm import BaseLLM
 from crewai.project.json_loader import (
@@ -14,6 +15,7 @@ from crewai.project.json_loader import (
     _looks_like_windows_absolute_path,
     find_json_project_file,
     load_agent,
+    load_agent_from_definition,
     strip_jsonc_comments,
 )
 
@@ -356,6 +358,30 @@ class TestLoadAgent:
     def test_load_agent_file_not_found(self):
         with pytest.raises(FileNotFoundError):
             load_agent(Path("/nonexistent/agent.json"))
+
+
+class TestLoadAgentFromDefinition:
+    def test_resolves_response_format_from_project_module(self, tmp_path: Path):
+        (tmp_path / "models.py").write_text(
+            "from pydantic import BaseModel\n"
+            "class AnswerModel(BaseModel):\n"
+            "    answer: str\n"
+        )
+
+        _, response_format = load_agent_from_definition(
+            {
+                "role": "Analyst",
+                "goal": "Analyze data",
+                "backstory": "Data expert.",
+                "input": "Summarize this",
+                "response_format": {"python": "models.AnswerModel"},
+            },
+            source="agent action",
+            project_root=tmp_path,
+        )
+
+        assert issubclass(response_format, BaseModel)
+        assert response_format.__name__ == "AnswerModel"
 
 
 class TestResolveTools:
