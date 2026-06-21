@@ -89,6 +89,22 @@ class GovernanceDecision(TypedDict, total=False):
         extensions["neura"] = {"relay_id": "...", "action_card": "..."}
     """
 
+    # Completeness evidence (omission detection)
+    seq: int
+    """Monotonic position of this decision within the crew run. No gaps allowed.
+
+    A verifier holding N records can prove completeness: if seq values form
+    a contiguous 1..N range, no records were dropped. A gap in seq is a
+    provable omission without access to the issuer.
+    """
+
+    running_count: int
+    """Total number of decisions emitted in this run so far (including this one).
+
+    Must equal seq for the current record. If max(running_count) across held
+    records exceeds the number of held records, at least one record was dropped.
+    """
+
 
 class GovernanceOutcome(TypedDict, total=False):
     """Post-execution result record linked to a GovernanceDecision.
@@ -117,3 +133,10 @@ class GovernanceOutcome(TypedDict, total=False):
 
     extensions: dict[str, Any]
     """Vendor-specific post-execution evidence."""
+
+    seq: int
+    """Back-reference to the seq of the GovernanceDecision this outcome links to.
+
+    Enables omission detection for outcomes: a missing outcome for a known
+    decision seq is a provable gap.
+    """

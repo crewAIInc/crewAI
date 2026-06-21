@@ -217,3 +217,86 @@ def test_all_fixtures_json_serializable() -> None:
         serialized = json.dumps(fixture)
         deserialized = json.loads(serialized)
         assert deserialized == fixture
+
+
+
+# --- Completeness / Omission Detection Tests ---
+
+
+def verify_contiguity(records: list[dict[str, Any]]) -> bool:
+    """Verify that records form a complete, gap-free sequence.
+
+    Returns True if seq values form contiguous 1..N and max(running_count) == len(records).
+    """
+    if not records:
+        return True
+    seqs = sorted(r["seq"] for r in records if "seq" in r)
+    if not seqs:
+        return True
+    expected = list(range(1, len(seqs) + 1))
+    if seqs != expected:
+        return False
+    max_count = max(r.get("running_count", 0) for r in records)
+    if max_count > len(records):
+        return False
+    return True
+
+
+FIXTURE_SEQ_COMPLETE: list[GovernanceDecision] = [
+    {"decision_id": "d-101", "tool": "search", "decision": "allow", "reason": "ok",
+     "issued_at": "2026-06-17T10:00:00Z", "seq": 1, "running_count": 1},
+    {"decision_id": "d-102", "tool": "calc", "decision": "allow", "reason": "ok",
+     "issued_at": "2026-06-17T10:00:01Z", "seq": 2, "running_count": 2},
+    {"decision_id": "d-103", "tool": "write", "decision": "deny", "reason": "blocked",
+     "issued_at": "2026-06-17T10:00:02Z", "seq": 3, "running_count": 3},
+]
+
+FIXTURE_SEQ_GAP: list[GovernanceDecision] = [
+    {"decision_id": "d-201", "tool": "search", "decision": "allow", "reason": "ok",
+     "issued_at": "2026-06-17T10:00:00Z", "seq": 1, "running_count": 1},
+    {"decision_id": "d-202", "tool": "calc", "decision": "allow", "reason": "ok",
+     "issued_at": "2026-06-17T10:00:01Z", "seq": 2, "running_count": 2},
+    # seq 3 is missing — provable gap
+    {"decision_id": "d-204", "tool": "deploy", "decision": "allow", "reason": "ok",
+     "issued_at": "2026-06-17T10:00:03Z", "seq": 4, "running_count": 4},
+]
+
+FIXTURE_SEQ_COUNT_MISMATCH: list[GovernanceDecision] = [
+    {"decision_id": "d-301", "tool": "search", "decision": "allow", "reason": "ok",
+     "issued_at": "2026-06-17T10:00:00Z", "seq": 1, "running_count": 1},
+    {"decision_id": "d-302", "tool": "calc", "decision": "allow", "reason": "ok",
+     "issued_at": "2026-06-17T10:00:01Z", "seq": 2, "running_count": 3},
+    # running_count says 3 exist but only 2 held — provable omission
+]
+
+
+def test_complete_sequence_passes_contiguity() -> None:
+    """A gap-free sequence passes verification."""
+    assert verify_contiguity(FIXTURE_SEQ_COMPLETE) is True
+
+
+def test_gap_in_seq_fails_contiguity() -> None:
+    """A gap in seq (missing record) is detected as incomplete."""
+    assert verify_contiguity(FIXTURE_SEQ_GAP) is False
+
+
+def test_running_count_exceeds_held_records_fails() -> None:
+    """running_count claiming more records exist than are held is detected."""
+    assert verify_contiguity(FIXTURE_SEQ_COUNT_MISMATCH) is False
+
+
+def test_seq_field_present_in_governance_decision_type() -> None:
+    """GovernanceDecision TypedDict accepts seq and running_count."""
+    decision: GovernanceDecision = {
+        "decision_id": "d-seq-test",
+        "tool": "test",
+        "decision": "allow",
+        "reason": "testing seq",
+        "issued_at": "2026-06-17T10:00:00Z",
+        "seq": 1,
+        "running_count": 1,
+    }
+    serialized = json.dumps(decision)
+    deserialized = json.loads(serialized)
+    assert deserialized["seq"] == 1
+    assert deserialized["running_count"] == 1
