@@ -1,5 +1,5 @@
 """
-GovernanceDecision — Vendor-neutral governance hook return type for CrewAI.
+GovernanceDecision -- Vendor-neutral governance hook return type for CrewAI.
 
 This module defines the serialized contract that crew-level governance hooks
 (before_tool_call / after_tool_call) can optionally return. External governance
@@ -58,6 +58,12 @@ class GovernanceDecision(TypedDict, total=False):
     policy_refs: list[str]
     """List of policy rule identifiers that were evaluated."""
 
+    retrieved_policy_refs: list[str]
+    """Stable refs to policy or memory records consulted (for adaptive governance)."""
+
+    policy_digest: str
+    """Hash of the actual policy version evaluated."""
+
     decision: Literal["allow", "deny", "require_approval", "revise"]
     """The governance verdict for this tool call."""
 
@@ -75,7 +81,19 @@ class GovernanceDecision(TypedDict, total=False):
     """decision_id of a prior decision that this one explicitly overrides."""
 
     revalidate_if: list[str]
-    """Conditions that require re-evaluation before execution (e.g., 'policy_updated', 'budget_changed')."""
+    """Conditions that require re-evaluation before execution."""
+
+    # Context
+    decision_context_hash: str
+    """SHA-256 digest over agent_id, tool, params_hash, retrieved_policy_refs,
+    policy_digest, credential_scope, credential_tier, expires_at, revalidate_if.
+    Enables drift detection: if any input changed, the hash changes."""
+
+    credential_scope: str
+    """Authority scope available to the agent (e.g., 'read-only', 'production-write')."""
+
+    credential_tier: str
+    """Credential tier level (e.g., 'service-account', 'human-delegated')."""
 
     # Evidence
     evidence_refs: list[str]
@@ -87,6 +105,7 @@ class GovernanceDecision(TypedDict, total=False):
     Examples:
         extensions["teec"] = {"receipt_id": "...", "evidence_hash": "...", "prev_hash": "..."}
         extensions["neura"] = {"relay_id": "...", "action_card": "..."}
+        extensions["vaara"] = {"chain_hash": "...", "contiguity_report": "..."}
     """
 
     # Completeness evidence (omission detection)
@@ -134,8 +153,9 @@ class GovernanceOutcome(TypedDict, total=False):
     extensions: dict[str, Any]
     """Vendor-specific post-execution evidence."""
 
+    # Completeness back-reference
     seq: int
-    """Back-reference to the seq of the GovernanceDecision this outcome links to.
+    """Same seq value as the GovernanceDecision this outcome links to.
 
     Enables omission detection for outcomes: a missing outcome for a known
     decision seq is a provable gap.
