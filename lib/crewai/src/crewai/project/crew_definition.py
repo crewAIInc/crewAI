@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 
 __all__ = [
+    "AgentDefinition",
     "CrewAgentDefinition",
     "CrewDefinition",
     "CrewTaskDefinition",
@@ -51,6 +52,20 @@ class CrewAgentDefinition(BaseModel):
         if value is not None and not isinstance(value, dict):
             raise ValueError("agent.settings must be a mapping")
         return value or {}
+
+
+class AgentDefinition(CrewAgentDefinition):
+    """Inline agent definition used by a Flow agent action."""
+
+    input: str
+    response_format: PythonReferenceDefinition | None = None
+
+    @field_validator("input", mode="before")
+    @classmethod
+    def _validate_input(cls, value: Any) -> Any:
+        if not isinstance(value, str):
+            raise ValueError("agent.input must be a string")
+        return value
 
 
 class CrewTaskDefinition(BaseModel):

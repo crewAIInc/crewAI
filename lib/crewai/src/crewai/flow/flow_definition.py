@@ -12,13 +12,12 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Annotated, Any, Literal, TypeAlias
+from typing import Annotated, Any, Literal, TypeAlias, cast
 
 from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
-    RootModel,
     field_serializer,
     model_validator,
 )
@@ -28,16 +27,21 @@ from crewai.flow.conversational_definition import (
     FlowConversationalDefinition,
     FlowConversationalRouterDefinition,
 )
-from crewai.project.crew_definition import CrewDefinition
+from crewai.flow.expressions import ExpressionData
+from crewai.project.crew_definition import AgentDefinition, CrewDefinition
 
 
 logger = logging.getLogger(__name__)
 
 FlowDefinitionCondition = str | dict[str, Any]
 _STEP_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_BASE_CEL_ROOTS = frozenset({"outputs", "state"})
+_EACH_STEP_CEL_ROOTS = frozenset({"item", "outputs", "state"})
 
 __all__ = [
     "FlowActionDefinition",
+    "FlowAgentActionDefinition",
+    "FlowAtomicActionDefinition",
     "FlowCodeActionDefinition",
     "FlowConfigDefinition",
     "FlowConversationalDefinition",
@@ -47,7 +51,7 @@ __all__ = [
     "FlowDefinitionCondition",
     "FlowDictStateDefinition",
     "FlowEachActionDefinition",
-    "FlowEachInnerActionDefinition",
+    "FlowEachStepDefinition",
     "FlowExpressionActionDefinition",
     "FlowHumanFeedbackDefinition",
     "FlowJsonSchemaStateDefinition",
@@ -353,10 +357,14 @@ class FlowCodeActionDefinition(BaseModel):
         description="Import reference for the callable, formatted as module:qualname.",
         examples=["my_project.flows:normalize_topic"],
     )
-    with_: dict[str, Any] | None = Field(
+    with_: dict[str, ExpressionData] | None = Field(
         default=None,
         alias="with",
-        description="Keyword arguments passed to the callable after expression rendering.",
+        description=(
+            "Keyword arguments passed to the callable. String values are evaluated "
+            "as CEL only when the trimmed value starts with ${ and ends with }; "
+            "all other values are literal."
+        ),
         examples=[{"topic": "${state.topic}"}],
     )
 
@@ -377,10 +385,14 @@ class FlowToolActionDefinition(BaseModel):
         description="Import reference for a BaseTool class, formatted as module:qualname.",
         examples=["my_project.tools:SearchTool"],
     )
-    with_: dict[str, Any] | None = Field(
+    with_: dict[str, ExpressionData] | None = Field(
         default=None,
         alias="with",
-        description="Tool input arguments after expression rendering.",
+        description=(
+            "Tool input arguments. String values are evaluated as CEL only when "
+            "the trimmed value starts with ${ and ends with }; all other values "
+            "are literal."
+        ),
         examples=[{"query": "${outputs.normalize_topic}", "limit": 5}],
     )
 
@@ -419,6 +431,33 @@ class FlowCrewActionDefinition(BaseModel):
                     }
                 ],
                 "inputs": {"topic": "${state.topic}"},
+            }
+        ],
+    )
+
+
+class FlowAgentActionDefinition(BaseModel):
+    """A Flow method action that builds and kicks off a CrewAI agent."""
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        extra="forbid",
+    )
+
+    call: Literal["agent"] = Field(
+        description="Action discriminator. Use agent to run an inline Agent definition.",
+        examples=["agent"],
+    )
+    with_: AgentDefinition = Field(
+        alias="with",
+        description="Inline Agent definition to load and execute for this action.",
+        examples=[
+            {
+                "role": "Analyst",
+                "goal": "Answer user questions",
+                "backstory": "Precise and concise.",
+                "settings": {"llm": "openai/gpt-4o-mini"},
+                "input": "${state.question}",
             }
         ],
     )
@@ -466,37 +505,48 @@ class FlowScriptActionDefinition(BaseModel):
     )
 
 
-FlowInnerActionDefinition = (
+FlowAtomicActionDefinition: TypeAlias = Annotated[
     FlowCodeActionDefinition
     | FlowToolActionDefinition
     | FlowCrewActionDefinition
+    | FlowAgentActionDefinition
     | FlowExpressionActionDefinition
-    | FlowScriptActionDefinition
-)
+    | FlowScriptActionDefinition,
+    Field(discriminator="call"),
+]
 
 
-class FlowEachInnerActionDefinition(RootModel[dict[str, FlowInnerActionDefinition]]):
-    """One named action inside an ``each`` composite action."""
+class FlowEachStepDefinition(BaseModel):
+    """One named step inside an ``each`` composite action."""
 
-    root: dict[str, FlowInnerActionDefinition] = Field(
-        description="Single-entry mapping from an inner action name to its action.",
-        examples=[{"clean": {"call": "script", "code": "return item.strip()"}}],
+    model_config = ConfigDict(
+        populate_by_name=True,
+        extra="forbid",
+    )
+
+    name: str = Field(
+        description="Step name used to reference this step's output.",
+        examples=["clean"],
+    )
+    if_: str | None = Field(
+        default=None,
+        alias="if",
+        description=(
+            "Optional CEL expression evaluated against state, outputs, and local "
+            "context. When present, the step runs only if the expression evaluates "
+            "to true."
+        ),
+        examples=["item.kind == 'invoice'"],
+    )
+    action: FlowAtomicActionDefinition = Field(
+        description="Atomic action to run for this step.",
+        examples=[{"call": "script", "code": "return item.strip()"}],
     )
 
     @model_validator(mode="after")
-    def _validate_action_mapping(self) -> FlowEachInnerActionDefinition:
-        if len(self.root) != 1:
-            raise ValueError("each.do entries must be one-key mappings")
-        _validate_step_name(self.name, field="each.do action names")
+    def _validate_step_name(self) -> FlowEachStepDefinition:
+        _validate_step_name(self.name, field="each.do step names")
         return self
-
-    @property
-    def name(self) -> str:
-        return next(iter(self.root))
-
-    @property
-    def action(self) -> FlowInnerActionDefinition:
-        return next(iter(self.root.values()))
 
 
 class FlowEachActionDefinition(BaseModel):
@@ -519,38 +569,40 @@ class FlowEachActionDefinition(BaseModel):
         description="CEL expression that must evaluate to the list to iterate.",
         examples=["state.rows"],
     )
-    do: list[FlowEachInnerActionDefinition] = Field(
+    do: list[FlowEachStepDefinition] = Field(
         description=(
-            "Ordered inner actions to run for each item. Each entry must be a "
-            "single-key mapping naming that inner action."
+            "Ordered steps to run for each item. Each step has a name, optional "
+            "if expression, and atomic action."
         ),
         examples=[
             [
-                {"clean": {"call": "script", "code": "return item.strip()"}},
-                {"tag": {"call": "expression", "expr": "outputs.clean"}},
+                {
+                    "name": "clean",
+                    "action": {"call": "script", "code": "return item.strip()"},
+                },
+                {
+                    "name": "tag",
+                    "if": "outputs.clean != ''",
+                    "action": {"call": "expression", "expr": "outputs.clean"},
+                },
             ]
         ],
     )
 
     @model_validator(mode="after")
-    def _validate_inner_action_list(self) -> FlowEachActionDefinition:
+    def _validate_step_list(self) -> FlowEachActionDefinition:
         if not self.do:
-            raise ValueError("each.do must contain at least one action")
+            raise ValueError("each.do must contain at least one step")
 
-        seen: set[str] = set()
-        for inner_action in self.do:
-            name = inner_action.name
-            if name in seen:
-                raise ValueError(f"each.do action names must be unique: {name!r}")
-            seen.add(name)
-
+        _validate_step_list(self.do, field="each.do")
         return self
 
 
-FlowActionDefinition = (
+FlowActionDefinition: TypeAlias = (
     FlowCodeActionDefinition
     | FlowToolActionDefinition
     | FlowCrewActionDefinition
+    | FlowAgentActionDefinition
     | FlowExpressionActionDefinition
     | FlowScriptActionDefinition
     | FlowEachActionDefinition
@@ -685,6 +737,16 @@ class FlowDefinition(BaseModel):
             _validate_step_name(method_name, field="Flow method names")
         return self
 
+    @model_validator(mode="after")
+    def _validate_cel_expressions(self) -> FlowDefinition:
+        for method_name, method in self.methods.items():
+            _validate_action_cel(
+                method.do,
+                path=f"methods.{method_name}.do",
+                allowed_roots=_BASE_CEL_ROOTS,
+            )
+        return self
+
     def to_dict(self, *, exclude_none: bool = True) -> dict[str, Any]:
         """Serialize the definition to a JSON/YAML-ready dictionary."""
         return self.model_dump(by_alias=True, exclude_none=exclude_none, mode="json")
@@ -731,6 +793,78 @@ class FlowDefinition(BaseModel):
 def _validate_step_name(name: str, *, field: str) -> None:
     if not isinstance(name, str) or not _STEP_NAME_PATTERN.fullmatch(name):
         raise ValueError(f"{field} must match {_STEP_NAME_PATTERN.pattern}")
+
+
+def _validate_step_list(steps: list[FlowEachStepDefinition], *, field: str) -> None:
+    seen: set[str] = set()
+    for step in steps:
+        name = step.name
+        if name in seen:
+            raise ValueError(f"{field} step names must be unique: {name!r}")
+        seen.add(name)
+
+
+def _validate_action_cel(
+    action: FlowActionDefinition,
+    *,
+    path: str,
+    allowed_roots: frozenset[str],
+) -> None:
+    from crewai.flow.expressions import Expression
+
+    if isinstance(action, FlowExpressionActionDefinition):
+        Expression(action.expr).validate_expression(
+            allowed_roots=allowed_roots, source=f"{path}.expr"
+        )
+        return
+
+    if isinstance(action, (FlowCodeActionDefinition, FlowToolActionDefinition)):
+        if action.with_ is not None:
+            Expression(action.with_).validate_template(
+                allowed_roots=allowed_roots, source=f"{path}.with"
+            )
+        return
+
+    if isinstance(action, FlowCrewActionDefinition):
+        Expression(cast(ExpressionData, action.with_.inputs)).validate_template(
+            allowed_roots=allowed_roots,
+            source=f"{path}.with.inputs",
+        )
+        return
+
+    if isinstance(action, FlowAgentActionDefinition):
+        Expression(cast(ExpressionData, action.with_.input)).validate_template(
+            allowed_roots=allowed_roots,
+            source=f"{path}.with.input",
+        )
+        return
+
+    if isinstance(action, FlowEachActionDefinition):
+        Expression(action.in_).validate_expression(
+            allowed_roots=_BASE_CEL_ROOTS,
+            source=f"{path}.in",
+        )
+        for index, step in enumerate(action.do):
+            step_path = f"{path}.do[{index}]"
+            if step.if_ is not None:
+                Expression(step.if_).validate_expression(
+                    allowed_roots=_EACH_STEP_CEL_ROOTS,
+                    source=f"{step_path}.if",
+                )
+            _validate_action_cel(
+                step.action,
+                path=f"{step_path}.action",
+                allowed_roots=_EACH_STEP_CEL_ROOTS,
+            )
+        return
+
+    if isinstance(action, FlowScriptActionDefinition):
+        return
+
+    raise TypeError(
+        f"no CEL validation defined for action type {type(action).__name__} at "
+        f"{path}; add a branch to _validate_action_cel for it."
+    )
 
 
 def log_flow_definition_issues(definition: FlowDefinition) -> None:

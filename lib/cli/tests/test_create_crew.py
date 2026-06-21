@@ -5,7 +5,10 @@ from pathlib import Path
 from unittest import mock
 
 import pytest
+import tomli
 from click.testing import CliRunner
+from packaging.requirements import Requirement
+from packaging.version import Version
 import crewai_cli.create_json_crew as json_crew
 import crewai_cli.tui_picker as tui_picker
 from crewai_cli.create_crew import create_crew, create_folder_structure
@@ -711,6 +714,14 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
     assert (tmp_path / "json_crew" / "crew.jsonc").exists()
     assert not (tmp_path / "json_crew" / "tests").exists()
     assert not (tmp_path / "json_crew" / "config.jsonc").exists()
+
+    pyproject = tomli.loads((tmp_path / "json_crew" / "pyproject.toml").read_text())
+    dependency = pyproject["project"]["dependencies"][0]
+    assert dependency == "crewai[tools]==1.14.8a1"
+    assert Version("1.14.8a1") in Requirement(dependency).specifier
+    assert pyproject["tool"]["hatch"]["build"]["targets"]["wheel"][
+        "only-include"
+    ] == ["agents", "crew.jsonc", "tools", "knowledge", "skills"]
 
     crew_template = (tmp_path / "json_crew" / "crew.jsonc").read_text()
     assert (
