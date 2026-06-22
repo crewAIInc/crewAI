@@ -1,0 +1,75 @@
+---
+title: "Highflame Integration"
+description: "Add runtime AI security guardrails to your CrewAI agents with Highflame Shield."
+icon: "shield-check"
+mode: "wide"
+---
+
+# Highflame
+
+[Highflame](https://highflame.ai) provides runtime AI security guardrails for agents —
+prompt injection detection, sensitive-information / PII & DLP, content safety, and
+agentic tool safety — organized around the [OWASP LLM Top 10](https://genai.owasp.org/llm-top-10/)
+and enforced by its **Shield** engine.
+
+The CrewAI integration registers Highflame on CrewAI's event bus (via
+`BaseEventListener`), so every LLM call and tool call your crew makes is evaluated
+against your Highflame application policy — no changes to your agents or tasks.
+
+## Setup
+
+<Steps>
+  <Step title="Install">
+    ```bash
+    pip install 'highflame[crewai]'
+    ```
+  </Step>
+  <Step title="Get a Highflame API key">
+    Create a service key (`hf_sk_...`) in the [Highflame console](https://studio.highflame.ai)
+    and configure which guardrails are active in your application policy.
+  </Step>
+  <Step title="Wrap your crew">
+    ```python
+    from crewai import Crew
+    from highflame import Highflame
+    from highflame.integrations.crewai import HighflameCrewHooks
+
+    client = Highflame(api_key="hf_sk_...")  # or set HIGHFLAME_API_KEY
+
+    crew = Crew(agents=[...], tasks=[...])
+
+    # Guards every LLM + tool call the crew makes.
+    with HighflameCrewHooks(client, mode="enforce"):
+        result = crew.kickoff()
+    ```
+  </Step>
+</Steps>
+
+## Modes
+
+`HighflameCrewHooks(client, mode=...)` accepts:
+
+| Mode | Behavior |
+|---|---|
+| `enforce` | Block on a policy violation (default). |
+| `monitor` | Allow and log — useful for tuning before enforcement. |
+| `alert` | Allow and route to your alert pipeline. |
+| `modify` | Redact sensitive content (e.g. PII) and continue. |
+
+## What it catches
+
+Which guardrails run is controlled by your Highflame **application policy**
+(configured in the console), so coverage stays consistent across every place you
+use Highflame. Capabilities map to the OWASP LLM Top 10:
+
+- **LLM01 Prompt Injection** — jailbreaks and injection attempts in prompts and tool output.
+- **LLM02 Sensitive Information Disclosure** — PII, secrets, and DLP.
+- **LLM06 Excessive Agency** — risky tool calls, tool poisoning, command/SQL/path injection.
+- **LLM09 Misinformation** — hallucination / groundedness.
+- **Content safety** — toxicity and harmful-content moderation.
+
+<Note>
+  Cross-turn context (cumulative risk, action sequences) is tracked per crew run via
+  session IDs automatically. See [docs.highflame.ai](https://docs.highflame.ai) for the
+  full guardrail catalog and policy configuration.
+</Note>
