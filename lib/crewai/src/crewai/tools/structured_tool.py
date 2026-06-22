@@ -322,9 +322,13 @@ class CrewStructuredTool(BaseModel):
             if inspect.iscoroutinefunction(self.func):
                 return await self.func(**parsed_args, **kwargs)
             import asyncio
+            import contextvars
+            import functools
 
+            ctx = contextvars.copy_context()
+            call = functools.partial(self.func, **parsed_args, **kwargs)
             return await asyncio.get_event_loop().run_in_executor(
-                None, lambda: self.func(**parsed_args, **kwargs)
+                None, ctx.run, call
             )
         except Exception:
             raise

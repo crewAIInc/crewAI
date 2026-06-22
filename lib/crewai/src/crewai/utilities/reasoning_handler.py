@@ -15,6 +15,7 @@ from crewai.events.types.reasoning_events import (
     AgentReasoningStartedEvent,
 )
 from crewai.llm import LLM
+from crewai.telemetry.otel import operation
 from crewai.utilities.i18n import I18N_DEFAULT
 from crewai.utilities.llm_utils import create_llm
 from crewai.utilities.planning_types import PlanStep
@@ -207,7 +208,14 @@ class AgentReasoning:
             pass
 
         try:
-            output = self._execute_planning()
+            with operation(
+                "agent reason",
+                {
+                    "crewai.agent.role": self.agent.role,
+                    "crewai.task.id": task_id,
+                },
+            ):
+                output = self._execute_planning()
 
             crewai_event_bus.emit(
                 self.agent,

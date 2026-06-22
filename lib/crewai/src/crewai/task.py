@@ -51,6 +51,7 @@ from crewai.llms.providers.openai.completion import OpenAICompletion
 from crewai.security import Fingerprint, SecurityConfig
 from crewai.tasks.output_format import OutputFormat
 from crewai.tasks.task_output import TaskOutput
+from crewai.telemetry.otel import operation
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
 from crewai.utilities.constants import NOT_SPECIFIED, _NotSpecified
@@ -644,113 +645,122 @@ class Task(BaseModel):
         task_id_token = set_current_task_id(str(self.id))
         self._store_input_files()
         try:
-            agent = agent or self.agent
-            self.agent = agent
-            if not agent:
-                raise Exception(
-                    f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
-                )
-
-            self.prompt_context = context
-            tools = tools or self.tools or []
-
-            self.processed_by_agents.add(agent.role)
-            executor = agent.agent_executor
-            if not (
-                executor and executor._resuming and resume_task_scope(str(self.id))
+            with operation(
+                "execute task",
+                {
+                    "crewai.task.name": self.name or "",
+                    "crewai.task.id": str(self.id),
+                },
             ):
-                crewai_event_bus.emit(
-                    self, TaskStartedEvent(context=context, task=self)
+                agent = agent or self.agent
+                self.agent = agent
+                if not agent:
+                    raise Exception(
+                        f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
+                    )
+
+                self.prompt_context = context
+                tools = tools or self.tools or []
+
+                self.processed_by_agents.add(agent.role)
+                executor = agent.agent_executor
+                if not (
+                    executor and executor._resuming and resume_task_scope(str(self.id))
+                ):
+                    crewai_event_bus.emit(
+                        self, TaskStartedEvent(context=context, task=self)
+                    )
+                result = await agent.aexecute_task(
+                    task=self,
+                    context=context,
+                    tools=tools,
                 )
-            result = await agent.aexecute_task(
-                task=self,
-                context=context,
-                tools=tools,
-            )
 
-            self._post_agent_execution(agent)
+                self._post_agent_execution(agent)
 
-            if isinstance(result, BaseModel):
-                raw = result.model_dump_json()
-                if self.output_pydantic:
-                    pydantic_output = result
-                    json_output = None
-                elif self.output_json:
-                    pydantic_output = None
-                    json_output = result.model_dump()
+                if isinstance(result, BaseModel):
+                    raw = result.model_dump_json()
+                    if self.output_pydantic:
+                        pydantic_output = result
+                        json_output = None
+                    elif self.output_json:
+                        pydantic_output = None
+                        json_output = result.model_dump()
+                    else:
+                        pydantic_output = None
+                        json_output = None
+                elif not self._guardrails and not self._guardrail:
+                    raw = result
+                    pydantic_output, json_output = await self._aexport_output(result)
                 else:
-                    pydantic_output = None
-                    json_output = None
-            elif not self._guardrails and not self._guardrail:
-                raw = result
-                pydantic_output, json_output = await self._aexport_output(result)
-            else:
-                raw = result
-                pydantic_output, json_output = None, None
+                    raw = result
+                    pydantic_output, json_output = None, None
 
-            task_output = TaskOutput(
-                name=self.name or self.description,
-                description=self.description,
-                expected_output=self.expected_output,
-                raw=raw,
-                pydantic=pydantic_output,
-                json_dict=json_output,
-                agent=agent.role,
-                output_format=self._get_output_format(),
-                messages=agent.last_messages,  # type: ignore[attr-defined]
-            )
+                task_output = TaskOutput(
+                    name=self.name or self.description,
+                    description=self.description,
+                    expected_output=self.expected_output,
+                    raw=raw,
+                    pydantic=pydantic_output,
+                    json_dict=json_output,
+                    agent=agent.role,
+                    output_format=self._get_output_format(),
+                    messages=agent.last_messages,  # type: ignore[attr-defined]
+                )
 
-            if self._guardrails:
-                for idx, guardrail in enumerate(self._guardrails):
+                if self._guardrails:
+                    for idx, guardrail in enumerate(self._guardrails):
+                        task_output = await self._ainvoke_guardrail_function(
+                            task_output=task_output,
+                            agent=agent,
+                            tools=tools,
+                            guardrail=guardrail,
+                            guardrail_index=idx,
+                        )
+
+                if self._guardrail:
                     task_output = await self._ainvoke_guardrail_function(
                         task_output=task_output,
                         agent=agent,
                         tools=tools,
-                        guardrail=guardrail,
-                        guardrail_index=idx,
+                        guardrail=self._guardrail,
                     )
 
-            if self._guardrail:
-                task_output = await self._ainvoke_guardrail_function(
-                    task_output=task_output,
-                    agent=agent,
-                    tools=tools,
-                    guardrail=self._guardrail,
-                )
+                self.output = task_output
+                self.end_time = datetime.datetime.now()
 
-            self.output = task_output
-            self.end_time = datetime.datetime.now()
+                if self.callback:
+                    cb_result = self.callback(self.output)
+                    if inspect.isawaitable(cb_result):
+                        await cb_result
 
-            if self.callback:
-                cb_result = self.callback(self.output)
-                if inspect.isawaitable(cb_result):
-                    await cb_result
+                crew = self.agent.crew  # type: ignore[union-attr]
+                if (
+                    crew
+                    and not isinstance(crew, str)
+                    and crew.task_callback
+                    and crew.task_callback != self.callback
+                ):
+                    cb_result = crew.task_callback(self.output)
+                    if inspect.isawaitable(cb_result):
+                        await cb_result
 
-            crew = self.agent.crew  # type: ignore[union-attr]
-            if (
-                crew
-                and not isinstance(crew, str)
-                and crew.task_callback
-                and crew.task_callback != self.callback
-            ):
-                cb_result = crew.task_callback(self.output)
-                if inspect.isawaitable(cb_result):
-                    await cb_result
-
-            if self.output_file:
-                content = (
-                    json_output
-                    if json_output
-                    else (
-                        pydantic_output.model_dump_json() if pydantic_output else result
+                if self.output_file:
+                    content = (
+                        json_output
+                        if json_output
+                        else (
+                            pydantic_output.model_dump_json()
+                            if pydantic_output
+                            else result
+                        )
                     )
+                    self._save_file(content)
+                crewai_event_bus.emit(
+                    self,
+                    TaskCompletedEvent(output=task_output, task=self),
                 )
-                self._save_file(content)
-            crewai_event_bus.emit(
-                self,
-                TaskCompletedEvent(output=task_output, task=self),
-            )
-            return task_output
+                return task_output
         except Exception as e:
             self.end_time = datetime.datetime.now()
             crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))
@@ -769,113 +779,122 @@ class Task(BaseModel):
         task_id_token = set_current_task_id(str(self.id))
         self._store_input_files()
         try:
-            agent = agent or self.agent
-            self.agent = agent
-            if not agent:
-                raise Exception(
-                    f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
-                )
-
-            self.prompt_context = context
-            tools = tools or self.tools or []
-
-            self.processed_by_agents.add(agent.role)
-            executor = agent.agent_executor
-            if not (
-                executor and executor._resuming and resume_task_scope(str(self.id))
+            with operation(
+                "execute task",
+                {
+                    "crewai.task.name": self.name or "",
+                    "crewai.task.id": str(self.id),
+                },
             ):
-                crewai_event_bus.emit(
-                    self, TaskStartedEvent(context=context, task=self)
+                agent = agent or self.agent
+                self.agent = agent
+                if not agent:
+                    raise Exception(
+                        f"The task '{self.description}' has no agent assigned, therefore it can't be executed directly and should be executed in a Crew using a specific process that support that, like hierarchical."
+                    )
+
+                self.prompt_context = context
+                tools = tools or self.tools or []
+
+                self.processed_by_agents.add(agent.role)
+                executor = agent.agent_executor
+                if not (
+                    executor and executor._resuming and resume_task_scope(str(self.id))
+                ):
+                    crewai_event_bus.emit(
+                        self, TaskStartedEvent(context=context, task=self)
+                    )
+                result = agent.execute_task(
+                    task=self,
+                    context=context,
+                    tools=tools,
                 )
-            result = agent.execute_task(
-                task=self,
-                context=context,
-                tools=tools,
-            )
 
-            self._post_agent_execution(agent)
+                self._post_agent_execution(agent)
 
-            if isinstance(result, BaseModel):
-                raw = result.model_dump_json()
-                if self.output_pydantic:
-                    pydantic_output = result
-                    json_output = None
-                elif self.output_json:
-                    pydantic_output = None
-                    json_output = result.model_dump()
+                if isinstance(result, BaseModel):
+                    raw = result.model_dump_json()
+                    if self.output_pydantic:
+                        pydantic_output = result
+                        json_output = None
+                    elif self.output_json:
+                        pydantic_output = None
+                        json_output = result.model_dump()
+                    else:
+                        pydantic_output = None
+                        json_output = None
+                elif not self._guardrails and not self._guardrail:
+                    raw = result
+                    pydantic_output, json_output = self._export_output(result)
                 else:
-                    pydantic_output = None
-                    json_output = None
-            elif not self._guardrails and not self._guardrail:
-                raw = result
-                pydantic_output, json_output = self._export_output(result)
-            else:
-                raw = result
-                pydantic_output, json_output = None, None
+                    raw = result
+                    pydantic_output, json_output = None, None
 
-            task_output = TaskOutput(
-                name=self.name or self.description,
-                description=self.description,
-                expected_output=self.expected_output,
-                raw=raw,
-                pydantic=pydantic_output,
-                json_dict=json_output,
-                agent=agent.role,
-                output_format=self._get_output_format(),
-                messages=agent.last_messages,  # type: ignore[attr-defined]
-            )
+                task_output = TaskOutput(
+                    name=self.name or self.description,
+                    description=self.description,
+                    expected_output=self.expected_output,
+                    raw=raw,
+                    pydantic=pydantic_output,
+                    json_dict=json_output,
+                    agent=agent.role,
+                    output_format=self._get_output_format(),
+                    messages=agent.last_messages,  # type: ignore[attr-defined]
+                )
 
-            if self._guardrails:
-                for idx, guardrail in enumerate(self._guardrails):
+                if self._guardrails:
+                    for idx, guardrail in enumerate(self._guardrails):
+                        task_output = self._invoke_guardrail_function(
+                            task_output=task_output,
+                            agent=agent,
+                            tools=tools,
+                            guardrail=guardrail,
+                            guardrail_index=idx,
+                        )
+
+                if self._guardrail:
                     task_output = self._invoke_guardrail_function(
                         task_output=task_output,
                         agent=agent,
                         tools=tools,
-                        guardrail=guardrail,
-                        guardrail_index=idx,
+                        guardrail=self._guardrail,
                     )
 
-            if self._guardrail:
-                task_output = self._invoke_guardrail_function(
-                    task_output=task_output,
-                    agent=agent,
-                    tools=tools,
-                    guardrail=self._guardrail,
-                )
+                self.output = task_output
+                self.end_time = datetime.datetime.now()
 
-            self.output = task_output
-            self.end_time = datetime.datetime.now()
+                if self.callback:
+                    cb_result = self.callback(self.output)
+                    if inspect.iscoroutine(cb_result):
+                        asyncio.run(cb_result)
 
-            if self.callback:
-                cb_result = self.callback(self.output)
-                if inspect.iscoroutine(cb_result):
-                    asyncio.run(cb_result)
+                crew = self.agent.crew  # type: ignore[union-attr]
+                if (
+                    crew
+                    and not isinstance(crew, str)
+                    and crew.task_callback
+                    and crew.task_callback != self.callback
+                ):
+                    cb_result = crew.task_callback(self.output)
+                    if inspect.iscoroutine(cb_result):
+                        asyncio.run(cb_result)
 
-            crew = self.agent.crew  # type: ignore[union-attr]
-            if (
-                crew
-                and not isinstance(crew, str)
-                and crew.task_callback
-                and crew.task_callback != self.callback
-            ):
-                cb_result = crew.task_callback(self.output)
-                if inspect.iscoroutine(cb_result):
-                    asyncio.run(cb_result)
-
-            if self.output_file:
-                content = (
-                    json_output
-                    if json_output
-                    else (
-                        pydantic_output.model_dump_json() if pydantic_output else result
+                if self.output_file:
+                    content = (
+                        json_output
+                        if json_output
+                        else (
+                            pydantic_output.model_dump_json()
+                            if pydantic_output
+                            else result
+                        )
                     )
+                    self._save_file(content)
+                crewai_event_bus.emit(
+                    self,
+                    TaskCompletedEvent(output=task_output, task=self),
                 )
-                self._save_file(content)
-            crewai_event_bus.emit(
-                self,
-                TaskCompletedEvent(output=task_output, task=self),
-            )
-            return task_output
+                return task_output
         except Exception as e:
             self.end_time = datetime.datetime.now()
             crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))
