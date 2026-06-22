@@ -1005,8 +1005,8 @@ methods:
             description: Research {topic}
             expected_output: Findings about {topic}
             agent: researcher
-        inputs:
-          topic: "${state.topic}"
+      inputs:
+        topic: "${state.topic}"
     start: true
 """
 
@@ -1016,6 +1016,156 @@ methods:
         "crew": "inline_research",
         "agents": ["Researcher"],
         "tasks": ["Research {topic}"],
+        "inputs": {"topic": "AI"},
+    }
+
+
+def test_crew_action_runs_crew_from_declaration(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
+    from crewai import Crew
+
+    project_root = tmp_path / "project"
+    crew_root = project_root / "crews" / "research_crew"
+    agents_root = crew_root / "agents"
+    agents_root.mkdir(parents=True)
+    (agents_root / "researcher.jsonc").write_text(
+        """
+{
+  "role": "Researcher",
+  "goal": "Research {topic}",
+  "backstory": "Knows things."
+}
+""",
+        encoding="utf-8",
+    )
+    (crew_root / "crew.jsonc").write_text(
+        """
+{
+  "name": "referenced_research",
+  "agents": ["researcher"],
+  "tasks": [
+    {
+      "name": "research_task",
+      "description": "Research {topic}",
+      "expected_output": "Findings about {topic}",
+      "agent": "researcher"
+    }
+  ],
+  "inputs": {
+    "topic": "Default topic",
+    "audience": "developers"
+  }
+}
+""",
+        encoding="utf-8",
+    )
+
+    async def fake_kickoff_async(
+        self: Crew, inputs: dict[str, Any] | None = None, **_kwargs: Any
+    ) -> dict[str, Any]:
+        return {
+            "crew": self.name,
+            "tasks": [task.description for task in self.tasks],
+            "inputs": inputs,
+        }
+
+    monkeypatch.setattr(Crew, "kickoff_async", fake_kickoff_async)
+    monkeypatch.chdir(project_root)
+
+    yaml_str = """
+schema: crewai.flow/v1
+name: CrewFlow
+methods:
+  research:
+    do:
+      call: crew
+      from_declaration: crews/research_crew
+      inputs:
+        topic: "${state.topic}"
+    start: true
+"""
+
+    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+
+    assert flow.kickoff(inputs={"topic": "AI"}) == {
+        "crew": "referenced_research",
+        "tasks": ["Research {topic}"],
+        "inputs": {"topic": "AI", "audience": "developers"},
+    }
+
+
+def test_crew_action_from_declaration_resolves_relative_to_flow_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
+    from crewai import Crew
+
+    project_root = tmp_path / "project"
+    crew_root = project_root / "crews" / "research_crew"
+    agents_root = crew_root / "agents"
+    agents_root.mkdir(parents=True)
+    (agents_root / "researcher.jsonc").write_text(
+        """
+{
+  "role": "Researcher",
+  "goal": "Research {topic}",
+  "backstory": "Knows things."
+}
+""",
+        encoding="utf-8",
+    )
+    (crew_root / "crew.jsonc").write_text(
+        """
+{
+  "name": "relative_research",
+  "agents": ["researcher"],
+  "tasks": [
+    {
+      "description": "Research {topic}",
+      "expected_output": "Findings about {topic}",
+      "agent": "researcher"
+    }
+  ],
+  "inputs": {
+    "topic": "Default topic"
+  }
+}
+""",
+        encoding="utf-8",
+    )
+
+    async def fake_kickoff_async(
+        self: Crew, inputs: dict[str, Any] | None = None, **_kwargs: Any
+    ) -> dict[str, Any]:
+        return {"crew": self.name, "inputs": inputs}
+
+    monkeypatch.setattr(Crew, "kickoff_async", fake_kickoff_async)
+
+    flow_path = project_root / "flow.yaml"
+    yaml_str = """
+schema: crewai.flow/v1
+name: CrewFlow
+methods:
+  research:
+    do:
+      call: crew
+      from_declaration: crews/research_crew
+      inputs:
+        topic: "${state.topic}"
+    start: true
+"""
+    flow_path.write_text(yaml_str, encoding="utf-8")
+
+    other_cwd = tmp_path / "other"
+    other_cwd.mkdir()
+    monkeypatch.chdir(other_cwd)
+
+    flow = Flow.from_definition(
+        FlowDefinition.from_yaml(yaml_str, source_path=flow_path)
+    )
+
+    assert flow.kickoff(inputs={"topic": "AI"}) == {
+        "crew": "relative_research",
         "inputs": {"topic": "AI"},
     }
 
@@ -1047,8 +1197,8 @@ def test_crew_action_round_trips_with_inline_definition():
                                     "agent": "researcher",
                                 }
                             ],
-                            "inputs": {"topic": "${state.topic}"},
                         },
+                        "inputs": {"topic": "${state.topic}"},
                     },
                 }
             },
@@ -1062,6 +1212,9 @@ def test_crew_action_round_trips_with_inline_definition():
         ]["role"]
         == "Researcher"
     )
+    assert definition.to_dict()["methods"]["research"]["do"]["inputs"] == {
+        "topic": "${state.topic}"
+    }
 
 
 def test_crew_action_normalizes_named_agent_list_definition():
@@ -1162,7 +1315,7 @@ def test_crew_action_rejects_incomplete_inline_agent_definition():
         )
 
 
-def test_crew_action_rejects_ref():
+def test_crew_action_rejects_python_ref_field():
     with pytest.raises(ValidationError, match="ref"):
         FlowDefinition.from_dict(
             {
@@ -1174,7 +1327,6 @@ def test_crew_action_rejects_ref():
                         "do": {
                             "call": "crew",
                             "ref": "project.crew:build_crew",
-                            "with": {"inputs": {"topic": "AI"}},
                         },
                     }
                 },

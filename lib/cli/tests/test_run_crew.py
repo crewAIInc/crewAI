@@ -51,6 +51,63 @@ def test_run_crew_forwards_trained_agents_file_to_json_crews(monkeypatch):
     assert called == {"trained_agents_file": "some.pkl"}
 
 
+def test_run_crew_uses_configured_declarative_flow(monkeypatch):
+    monkeypatch.setattr(run_crew_module, "_has_json_crew", lambda: False)
+    monkeypatch.setattr(run_crew_module, "get_crewai_version", lambda: "999.0.0")
+    monkeypatch.setattr(
+        run_crew_module,
+        "read_toml",
+        lambda: {"tool": {"crewai": {"type": "flow", "definition": "flow.yaml"}}},
+    )
+    execute_calls = []
+    declarative_calls = []
+
+    monkeypatch.setattr(
+        run_crew_module,
+        "execute_command",
+        lambda *args, **kwargs: execute_calls.append((args, kwargs)),
+    )
+
+    import crewai_cli.run_declarative_flow as run_declarative_flow_module
+
+    monkeypatch.setattr(
+        run_declarative_flow_module,
+        "run_declarative_flow_in_project_env",
+        lambda **kwargs: declarative_calls.append(kwargs),
+    )
+
+    run_crew_module.run_crew()
+
+    assert declarative_calls == [{"definition": "flow.yaml"}]
+    assert execute_calls == []
+
+
+def test_run_crew_without_definition_keeps_python_flow_runner(monkeypatch):
+    monkeypatch.setattr(run_crew_module, "_has_json_crew", lambda: False)
+    monkeypatch.setattr(run_crew_module, "get_crewai_version", lambda: "999.0.0")
+    monkeypatch.setattr(
+        run_crew_module,
+        "read_toml",
+        lambda: {"tool": {"crewai": {"type": "flow"}}},
+    )
+    execute_calls = []
+
+    monkeypatch.setattr(
+        run_crew_module,
+        "execute_command",
+        lambda *args, **kwargs: execute_calls.append((args, kwargs)),
+    )
+
+    run_crew_module.run_crew(trained_agents_file="trained.pkl")
+
+    assert execute_calls == [
+        (
+            (run_crew_module.CrewType.FLOW,),
+            {"trained_agents_file": "trained.pkl"},
+        )
+    ]
+
+
 def test_json_run_uses_project_env_when_pyproject_exists(monkeypatch, tmp_path: Path):
     """JSON crew runs should execute inside the project uv environment."""
     monkeypatch.chdir(tmp_path)

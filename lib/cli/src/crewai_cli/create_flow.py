@@ -5,7 +5,10 @@ import click
 from crewai_core.telemetry import Telemetry
 
 
-def create_flow(name: str) -> None:
+DECLARATIVE_FLOW_FOLDERS = ("crews", "tools", "knowledge", "skills")
+
+
+def create_flow(name: str, *, declarative: bool = False) -> None:
     """Create a new flow."""
     folder_name = name.replace(" ", "_").replace("-", "_").lower()
     class_name = name.replace("_", " ").replace("-", " ").title().replace(" ", "")
@@ -20,6 +23,17 @@ def create_flow(name: str) -> None:
     telemetry = Telemetry()
     telemetry.flow_creation_span(class_name)
 
+    if declarative:
+        _create_declarative_flow(name, class_name, folder_name, project_root)
+    else:
+        _create_python_flow(name, class_name, folder_name, project_root)
+
+    click.secho(f"Flow {name} created successfully!", fg="green", bold=True)
+
+
+def _create_python_flow(
+    name: str, class_name: str, folder_name: str, project_root: Path
+) -> None:
     (project_root / "src" / folder_name).mkdir(parents=True)
     (project_root / "src" / folder_name / "crews").mkdir(parents=True)
     (project_root / "src" / folder_name / "tools").mkdir(parents=True)
@@ -92,4 +106,33 @@ def create_flow(name: str) -> None:
                 fg="yellow",
             )
 
-    click.secho(f"Flow {name} created successfully!", fg="green", bold=True)
+
+def _create_declarative_flow(
+    name: str, class_name: str, folder_name: str, project_root: Path
+) -> None:
+    project_root.mkdir(parents=True)
+    for folder in DECLARATIVE_FLOW_FOLDERS:
+        (project_root / folder).mkdir()
+
+    package_dir = Path(__file__).parent
+    templates_dir = package_dir / "templates" / "declarative_flow"
+
+    agents_md_src = package_dir / "templates" / "AGENTS.md"
+    if agents_md_src.exists():
+        shutil.copy2(agents_md_src, project_root / "AGENTS.md")
+
+    for src_file in templates_dir.rglob("*"):
+        if not src_file.is_file():
+            continue
+
+        dst_file = project_root / src_file.relative_to(templates_dir)
+        dst_file.parent.mkdir(parents=True, exist_ok=True)
+        content = src_file.read_text(encoding="utf-8")
+        content = content.replace("{{name}}", name)
+        content = content.replace("{{flow_name}}", class_name)
+        content = content.replace("{{folder_name}}", folder_name)
+        dst_file.write_text(content, encoding="utf-8")
+
+    (project_root / ".env").write_text("OPENAI_API_KEY=YOUR_API_KEY", encoding="utf-8")
+    for folder in ("knowledge", "skills"):
+        (project_root / folder / ".gitkeep").write_text("", encoding="utf-8")
