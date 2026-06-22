@@ -106,6 +106,25 @@ def _get_flow_method_definition(method: Any) -> FlowMethodDefinition | None:
     return None
 
 
+def _merge_flow_method_definition(
+    wrapper: FlowMethod[P, R],
+    definition: FlowMethodDefinition,
+) -> None:
+    existing = _get_flow_method_definition(wrapper)
+    if existing is None:
+        _set_flow_method_definition(wrapper, definition)
+        return
+
+    updates = {
+        field_name: getattr(definition, field_name)
+        for field_name in definition.model_fields_set
+    }
+    _set_flow_method_definition(
+        wrapper,
+        existing.model_copy(deep=True, update=updates),
+    )
+
+
 def _is_json_serializable(value: Any) -> bool:
     try:
         json.dumps(value)
