@@ -72,6 +72,7 @@ from crewai.events.types.a2a_events import (
     A2ADelegationStartedEvent,
     A2AMessageSentEvent,
 )
+from crewai.telemetry.otel import operation
 
 
 logger = logging.getLogger(__name__)
@@ -303,73 +304,81 @@ async def aexecute_a2a_delegation(
     if turn_number is None:
         turn_number = len([m for m in conversation_history if m.role == Role.user]) + 1
 
-    try:
-        result = await _aexecute_a2a_delegation_impl(
-            endpoint=endpoint,
-            auth=auth,
-            timeout=timeout,
-            task_description=task_description,
-            context=context,
-            context_id=context_id,
-            task_id=task_id,
-            reference_task_ids=reference_task_ids,
-            metadata=metadata,
-            extensions=extensions,
-            conversation_history=conversation_history,
-            is_multiturn=is_multiturn,
-            turn_number=turn_number,
-            agent_branch=agent_branch,
-            agent_id=agent_id,
-            agent_role=agent_role,
-            response_model=response_model,
-            updates=updates,
-            from_task=from_task,
-            from_agent=from_agent,
-            skill_id=skill_id,
-            client_extensions=client_extensions,
-            transport=transport,
-            accepted_output_modes=accepted_output_modes,
-            input_files=input_files,
-        )
-    except Exception as e:
+    with operation(
+        "a2a delegate",
+        {
+            "crewai.a2a.endpoint": endpoint,
+            "crewai.a2a.is_multiturn": is_multiturn,
+            "crewai.a2a.turn_number": turn_number,
+        },
+    ):
+        try:
+            result = await _aexecute_a2a_delegation_impl(
+                endpoint=endpoint,
+                auth=auth,
+                timeout=timeout,
+                task_description=task_description,
+                context=context,
+                context_id=context_id,
+                task_id=task_id,
+                reference_task_ids=reference_task_ids,
+                metadata=metadata,
+                extensions=extensions,
+                conversation_history=conversation_history,
+                is_multiturn=is_multiturn,
+                turn_number=turn_number,
+                agent_branch=agent_branch,
+                agent_id=agent_id,
+                agent_role=agent_role,
+                response_model=response_model,
+                updates=updates,
+                from_task=from_task,
+                from_agent=from_agent,
+                skill_id=skill_id,
+                client_extensions=client_extensions,
+                transport=transport,
+                accepted_output_modes=accepted_output_modes,
+                input_files=input_files,
+            )
+        except Exception as e:
+            crewai_event_bus.emit(
+                agent_branch,
+                A2ADelegationCompletedEvent(
+                    status="failed",
+                    result=None,
+                    error=str(e),
+                    context_id=context_id,
+                    is_multiturn=is_multiturn,
+                    endpoint=endpoint,
+                    metadata=metadata,
+                    extensions=list(extensions.keys()) if extensions else None,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                ),
+            )
+            raise
+
+        agent_card_data = result.get("agent_card")
         crewai_event_bus.emit(
             agent_branch,
             A2ADelegationCompletedEvent(
-                status="failed",
-                result=None,
-                error=str(e),
+                status=result["status"],
+                result=result.get("result"),
+                error=result.get("error"),
                 context_id=context_id,
                 is_multiturn=is_multiturn,
                 endpoint=endpoint,
+                a2a_agent_name=result.get("a2a_agent_name"),
+                agent_card=agent_card_data,
+                provider=agent_card_data.get("provider") if agent_card_data else None,
                 metadata=metadata,
                 extensions=list(extensions.keys()) if extensions else None,
                 from_task=from_task,
                 from_agent=from_agent,
             ),
         )
-        raise
 
-    agent_card_data = result.get("agent_card")
-    crewai_event_bus.emit(
-        agent_branch,
-        A2ADelegationCompletedEvent(
-            status=result["status"],
-            result=result.get("result"),
-            error=result.get("error"),
-            context_id=context_id,
-            is_multiturn=is_multiturn,
-            endpoint=endpoint,
-            a2a_agent_name=result.get("a2a_agent_name"),
-            agent_card=agent_card_data,
-            provider=agent_card_data.get("provider") if agent_card_data else None,
-            metadata=metadata,
-            extensions=list(extensions.keys()) if extensions else None,
-            from_task=from_task,
-            from_agent=from_agent,
-        ),
-    )
-
-    return result
+        return result
 
 
 async def _aexecute_a2a_delegation_impl(
