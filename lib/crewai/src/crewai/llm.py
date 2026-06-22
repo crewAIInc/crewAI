@@ -342,6 +342,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "cerebras",
     "dashscope",
     "snowflake",
+    "groq",
 ]
 
 
@@ -431,6 +432,7 @@ class LLM(BaseLLM):
                 "cerebras": "cerebras",
                 "dashscope": "dashscope",
                 "snowflake": "snowflake",
+                "groq": "groq",
             }
 
             canonical_provider = provider_mapping.get(prefix.lower())
@@ -553,6 +555,12 @@ class LLM(BaseLLM):
         if provider == "snowflake":
             return True
 
+        if provider == "groq":
+            return any(
+                model_lower.startswith(prefix)
+                for prefix in ["llama", "gemma", "mixtral", "whisper"]
+            )
+
         return False
 
     @classmethod
@@ -664,6 +672,7 @@ class LLM(BaseLLM):
             "hosted_vllm",
             "cerebras",
             "dashscope",
+            "groq",
         }
         if provider in openai_compatible_providers:
             from crewai.llms.providers.openai_compatible.completion import (
@@ -2285,6 +2294,18 @@ class LLM(BaseLLM):
                 raise TypeError(
                     "Invalid message format. Each message must be a dict with 'role' and 'content' keys"
                 )
+
+        from crewai.llms.cache import CACHE_BREAKPOINT_KEY
+
+        # Strip cache_breakpoint key from messages if not using Anthropic
+        cleaned_messages = []
+        for msg in messages:
+            if not self.is_anthropic:
+                msg_copy = {k: v for k, v in msg.items() if k != CACHE_BREAKPOINT_KEY}
+            else:
+                msg_copy = dict(msg)
+            cleaned_messages.append(msg_copy)
+        messages = cleaned_messages
 
         if "o1" in self.model.lower():
             formatted_messages = []

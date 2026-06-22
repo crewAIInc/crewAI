@@ -853,6 +853,12 @@ def test_prefixed_models_with_valid_constants_use_native_sdk():
         assert llm3.is_litellm is False
         assert llm3.provider == "gemini"
 
+    # Test groq/ prefix with Groq model in constants → Native SDK
+    with patch.dict(os.environ, {"GROQ_API_KEY": "test-key"}):
+        llm4 = LLM(model="groq/llama-3.1-70b-versatile", is_litellm=False)
+        assert llm4.is_litellm is False
+        assert llm4.provider == "groq"
+
 
 def test_prefixed_models_with_invalid_constants_use_litellm():
     """Test that models with native provider prefixes use LiteLLM when model is NOT in constants and does NOT match patterns."""
@@ -889,10 +895,10 @@ def test_prefixed_models_with_valid_patterns_use_native_sdk():
 
 def test_prefixed_models_with_non_native_providers_use_litellm():
     """Test that models with non-native provider prefixes always use LiteLLM."""
-    # Test groq/ prefix (not a native provider) → LiteLLM
-    llm = LLM(model="groq/llama-3.3-70b", is_litellm=False)
+    # Test replicate/ prefix (not a native provider) → LiteLLM
+    llm = LLM(model="replicate/llama-3-70b", is_litellm=False)
     assert llm.is_litellm is True
-    assert llm.model == "groq/llama-3.3-70b"
+    assert llm.model == "replicate/llama-3-70b"
 
     # Test together/ prefix (not a native provider) → LiteLLM
     llm2 = LLM(model="together/qwen-2.5-72b", is_litellm=False)
