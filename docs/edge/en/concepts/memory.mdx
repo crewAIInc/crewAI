@@ -764,6 +764,53 @@ memory = Memory(
 - **Default**: LanceDB, stored under `./.crewai/memory` (or `$CREWAI_STORAGE_DIR/memory` if the env var is set, or the path you pass as `storage="path/to/dir"`).
 - **Custom backend**: Implement the `StorageBackend` protocol (see `crewai.memory.storage.backend`) and pass an instance to `Memory(storage=your_backend)`.
 
+### Mimir — Persistent Cross-Session Memory (Community)
+
+[Mimir](https://github.com/Perseus-Computing-LLC/mimir) is an **MCP-native, local-first, zero-dependency persistent memory engine** that gives CrewAI agents durable memory across sessions. It runs as a single static Rust binary (~8 MB) with embedded SQLite — no Docker, no Postgres, no cloud dependencies.
+
+**Key capabilities for CrewAI:**
+
+- **36 MCP tools** — agents access memory directly over MCP stdio/HTTP using `mimir_remember`, `mimir_recall`, `mimir_search_memories`, and more.
+- **Hybrid search** — BM25 (FTS5) + dense embeddings with Reciprocal Rank Fusion (RRF) for precise recall.
+- **Confidence decay** — memories naturally fade unless reinforced, preventing stale context from crowding out useful information.
+- **AES-256-GCM encryption** at rest for production deployments.
+- **Entity graph** — link and traverse related memories.
+- **Immutable journal audit trail** — every operation is recorded.
+
+**Getting started:**
+
+```bash
+# Install Mimir (one-liner)
+curl -sSf https://raw.githubusercontent.com/Perseus-Computing-LLC/mimir/main/scripts/install.sh | sh
+
+# Start Mimir
+mimir serve --db ./crew_memory.db
+```
+
+Then connect via MCP from CrewAI:
+
+```python
+from crewai import Agent, Task, Crew
+
+# Mimir is exposed as MCP tools that agents can use natively
+agent = Agent(
+    role="Researcher",
+    goal="Research and remember findings",
+    backstory="Expert researcher with persistent memory",
+    mcp_servers=[
+        {
+            "command": "mimir",
+            "args": ["serve", "--db", "./crew_memory.db"],
+            "transport": "stdio",
+        }
+    ],
+)
+```
+
+For programmatic access via the `MimirMemory` adapter (implements CrewAI's `StorageBackend` protocol), see the [CrewAI integration example](https://github.com/Perseus-Computing-LLC/mimir/blob/main/examples/crewai_integration.py) in Mimir's repository.
+
+[Mimir on GitHub →](https://github.com/Perseus-Computing-LLC/mimir)
+
 
 ## Discovery
 
