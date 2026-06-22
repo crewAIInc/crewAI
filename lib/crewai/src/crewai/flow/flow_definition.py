@@ -870,14 +870,6 @@ def _validate_action_cel(
 def log_flow_definition_issues(definition: FlowDefinition) -> None:
     for method_name, method in definition.methods.items():
         path = f"methods.{method_name}"
-        if method.router and not method.is_start and method.listen is None:
-            _log_flow_definition_issue(
-                definition.name,
-                code="router_without_trigger",
-                severity="error",
-                path=path,
-                message="router: true requires either start or listen",
-            )
         if method.emit and not method.router:
             _log_flow_definition_issue(
                 definition.name,
