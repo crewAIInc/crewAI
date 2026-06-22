@@ -1,0 +1,878 @@
+---
+title: Memory
+description: Leveraging the unified memory system in CrewAI to enhance agent capabilities.
+icon: database
+mode: "wide"
+---
+
+## Overview
+
+CrewAI provides a **unified memory system** -- a single `Memory` class that replaces separate short-term, long-term, entity, and external memory types with one intelligent API. Memory uses an LLM to analyze content when saving (inferring scope, categories, and importance) and supports adaptive-depth recall with composite scoring that blends semantic similarity, recency, and importance.
+
+You can use memory four ways: **standalone** (scripts, notebooks), **with Crews**, **with Agents**, or **inside Flows**.
+
+## Quick Start
+
+```python
+from crewai import Memory
+
+memory = Memory()
+
+# Store -- the LLM infers scope, categories, and importance
+memory.remember("We decided to use PostgreSQL for the user database.")
+
+# Retrieve -- results ranked by composite score (semantic + recency + importance)
+matches = memory.recall("What database did we choose?")
+for m in matches:
+    print(f"[{m.score:.2f}] {m.record.content}")
+
+# Tune scoring for a fast-moving project
+memory = Memory(recency_weight=0.5, recency_half_life_days=7)
+
+# Forget
+memory.forget(scope="/project/old")
+
+# Explore the self-organized scope tree
+print(memory.tree())
+print(memory.info("/"))
+```
+
+## Four Ways to Use Memory
+
+### Standalone
+
+Use memory in scripts, notebooks, CLI tools, or as a standalone knowledge base -- no agents or crews required.
+
+```python
+from crewai import Memory
+
+memory = Memory()
+
+# Build up knowledge
+memory.remember("The API rate limit is 1000 requests per minute.")
+memory.remember("Our staging environment uses port 8080.")
+memory.remember("The team agreed to use feature flags for all new releases.")
+
+# Later, recall what you need
+matches = memory.recall("What are our API limits?", limit=5)
+for m in matches:
+    print(f"[{m.score:.2f}] {m.record.content}")
+
+# Extract atomic facts from a longer text
+raw = """Meeting notes: We decided to migrate from MySQL to PostgreSQL
+next quarter. The budget is $50k. Sarah will lead the migration."""
+
+facts = memory.extract_memories(raw)
+# ["Migration from MySQL to PostgreSQL planned for next quarter",
+#  "Database migration budget is $50k",
+#  "Sarah will lead the database migration"]
+
+for fact in facts:
+    memory.remember(fact)
+```
+
+### With Crews
+
+Pass `memory=True` for default settings, or pass a configured `Memory` instance for custom behavior.
+
+```python
+from crewai import Crew, Agent, Task, Process, Memory
+
+# Option 1: Default memory
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, writing_task],
+    process=Process.sequential,
+    memory=True,
+    verbose=True,
+)
+
+# Option 2: Custom memory with tuned scoring
+memory = Memory(
+    recency_weight=0.4,
+    semantic_weight=0.4,
+    importance_weight=0.2,
+    recency_half_life_days=14,
+)
+crew = Crew(
+    agents=[researcher, writer],
+    tasks=[research_task, writing_task],
+    memory=memory,
+)
+```
+
+When `memory=True`, the crew creates a default `Memory()` and passes the crew's `embedder` configuration through automatically. All agents in the crew share the crew's memory unless an agent has its own.
+
+After each task, the crew automatically extracts discrete facts from the task output and stores them. Before each task, the agent recalls relevant context from memory and injects it into the task prompt.
+
+### With Agents
+
+Agents can use the crew's shared memory (default) or receive a scoped view for private context.
+
+```python
+from crewai import Agent, Memory
+
+memory = Memory()
+
+# Researcher gets a private scope -- only sees /agent/researcher
+researcher = Agent(
+    role="Researcher",
+    goal="Find and analyze information",
+    backstory="Expert researcher with attention to detail",
+    memory=memory.scope("/agent/researcher"),
+)
+
+# Writer uses crew shared memory (no agent-level memory set)
+writer = Agent(
+    role="Writer",
+    goal="Produce clear, well-structured content",
+    backstory="Experienced technical writer",
+    # memory not set -- uses crew._memory when crew has memory enabled
+)
+```
+
+This pattern gives the researcher private findings while the writer reads from the shared crew memory.
+
+### With Flows
+
+Every Flow has built-in memory. Use `self.remember()`, `self.recall()`, and `self.extract_memories()` inside any flow method.
+
+```python
+from crewai.flow.flow import Flow, listen, start
+
+class ResearchFlow(Flow):
+    @start()
+    def gather_data(self):
+        findings = "PostgreSQL handles 10k concurrent connections. MySQL caps at 5k."
+        self.remember(findings, scope="/research/databases")
+        return findings
+
+    @listen(gather_data)
+    def write_report(self, findings):
+        # Recall past research to provide context
+        past = self.recall("database performance benchmarks")
+        context = "\n".join(f"- {m.record.content}" for m in past)
+        return f"Report:\nNew findings: {findings}\nPrevious context:\n{context}"
+```
+
+See the [Flows documentation](/concepts/flows) for more on memory in Flows.
+
+
+## Hierarchical Scopes
+
+### What Scopes Are
+
+Memories are organized into a hierarchical tree of scopes, similar to a filesystem. Each scope is a path like `/`, `/project/alpha`, or `/agent/researcher/findings`.
+
+```
+/
+  /company
+    /company/engineering
+    /company/product
+  /project
+    /project/alpha
+    /project/beta
+  /agent
+    /agent/researcher
+    /agent/writer
+```
+
+Scopes provide **context-dependent memory** -- when you recall within a scope, you only search that branch of the tree, which improves both precision and performance.
+
+### How Scope Inference Works
+
+When you call `remember()` without specifying a scope, the LLM analyzes the content and the existing scope tree, then suggests the best placement. If no existing scope fits, it creates a new one. Over time, the scope tree grows organically from the content itself -- you don't need to design a schema upfront.
+
+```python
+memory = Memory()
+
+# LLM infers scope from content
+memory.remember("We chose PostgreSQL for the user database.")
+# -> might be placed under /project/decisions or /engineering/database
+
+# You can also specify scope explicitly
+memory.remember("Sprint velocity is 42 points", scope="/team/metrics")
+```
+
+### Visualizing the Scope Tree
+
+```python
+print(memory.tree())
+# / (15 records)
+#   /project (8 records)
+#     /project/alpha (5 records)
+#     /project/beta (3 records)
+#   /agent (7 records)
+#     /agent/researcher (4 records)
+#     /agent/writer (3 records)
+
+print(memory.info("/project/alpha"))
+# ScopeInfo(path='/project/alpha', record_count=5,
+#           categories=['architecture', 'database'],
+#           oldest_record=datetime(...), newest_record=datetime(...),
+#           child_scopes=[])
+```
+
+### MemoryScope: Subtree Views
+
+A `MemoryScope` restricts all operations to a branch of the tree. The agent or code using it can only see and write within that subtree.
+
+```python
+memory = Memory()
+
+# Create a scope for a specific agent
+agent_memory = memory.scope("/agent/researcher")
+
+# Everything is relative to /agent/researcher
+agent_memory.remember("Found three relevant papers on LLM memory.")
+# -> stored under /agent/researcher
+
+agent_memory.recall("relevant papers")
+# -> searches only under /agent/researcher
+
+# Narrow further with subscope
+project_memory = agent_memory.subscope("project-alpha")
+# -> /agent/researcher/project-alpha
+```
+
+### Best Practices for Scope Design
+
+- **Start flat, let the LLM organize.** Don't over-engineer your scope hierarchy upfront. Begin with `memory.remember(content)` and let the LLM's scope inference create structure as content accumulates.
+
+- **Use `/{entity_type}/{identifier}` patterns.** Natural hierarchies emerge from patterns like `/project/alpha`, `/agent/researcher`, `/company/engineering`, `/customer/acme-corp`.
+
+- **Scope by concern, not by data type.** Use `/project/alpha/decisions` rather than `/decisions/project/alpha`. This keeps related content together.
+
+- **Keep depth shallow (2-3 levels).** Deeply nested scopes become too sparse. `/project/alpha/architecture` is good; `/project/alpha/architecture/decisions/databases/postgresql` is too deep.
+
+- **Use explicit scopes when you know, let the LLM infer when you don't.** If you're storing a known project decision, pass `scope="/project/alpha/decisions"`. If you're storing freeform agent output, omit the scope and let the LLM figure it out.
+
+### Use Case Examples
+
+**Multi-project team:**
+```python
+memory = Memory()
+# Each project gets its own branch
+memory.remember("Using microservices architecture", scope="/project/alpha/architecture")
+memory.remember("GraphQL API for client apps", scope="/project/beta/api")
+
+# Recall across all projects
+memory.recall("API design decisions")
+
+# Or within a specific project
+memory.recall("API design", scope="/project/beta")
+```
+
+**Per-agent private context with shared knowledge:**
+```python
+memory = Memory()
+
+# Researcher has private findings
+researcher_memory = memory.scope("/agent/researcher")
+
+# Writer can read from both its own scope and shared company knowledge
+writer_view = memory.slice(
+    scopes=["/agent/writer", "/company/knowledge"],
+    read_only=True,
+)
+```
+
+**Customer support (per-customer context):**
+```python
+memory = Memory()
+
+# Each customer gets isolated context
+memory.remember("Prefers email communication", scope="/customer/acme-corp")
+memory.remember("On enterprise plan, 50 seats", scope="/customer/acme-corp")
+
+# Shared product docs are accessible to all agents
+memory.remember("Rate limit is 1000 req/min on enterprise plan", scope="/product/docs")
+```
+
+
+## Memory Slices
+
+### What Slices Are
+
+A `MemorySlice` is a view across multiple, possibly disjoint scopes. Unlike a scope (which restricts to one subtree), a slice lets you recall from several branches simultaneously.
+
+### When to Use Slices vs Scopes
+
+- **Scope**: Use when an agent or code block should be restricted to a single subtree. Example: an agent that only sees `/agent/researcher`.
+- **Slice**: Use when you need to combine context from multiple branches. Example: an agent that reads from its own scope plus shared company knowledge.
+
+### Read-Only Slices
+
+The most common pattern: give an agent read access to multiple branches without letting it write to shared areas.
+
+```python
+memory = Memory()
+
+# Agent can recall from its own scope AND company knowledge,
+# but cannot write to company knowledge
+agent_view = memory.slice(
+    scopes=["/agent/researcher", "/company/knowledge"],
+    read_only=True,
+)
+
+matches = agent_view.recall("company security policies", limit=5)
+# Searches both /agent/researcher and /company/knowledge, merges and ranks results
+
+agent_view.remember("new finding")  # Raises PermissionError (read-only)
+```
+
+### Read-Write Slices
+
+When read-only is disabled, you can write to any of the included scopes, but you must specify which scope explicitly.
+
+```python
+view = memory.slice(scopes=["/team/alpha", "/team/beta"], read_only=False)
+
+# Must specify scope when writing
+view.remember("Cross-team decision", scope="/team/alpha", categories=["decisions"])
+```
+
+
+## Composite Scoring
+
+Recall results are ranked by a weighted combination of three signals:
+
+```
+composite = semantic_weight * similarity + recency_weight * decay + importance_weight * importance
+```
+
+Where:
+- **similarity** = `1 / (1 + distance)` from the vector index (0 to 1)
+- **decay** = `0.5^(age_days / half_life_days)` -- exponential decay (1.0 for today, 0.5 at half-life)
+- **importance** = the record's importance score (0 to 1), set at encoding time
+
+Configure these directly on the `Memory` constructor:
+
+```python
+# Sprint retrospective: favor recent memories, short half-life
+memory = Memory(
+    recency_weight=0.5,
+    semantic_weight=0.3,
+    importance_weight=0.2,
+    recency_half_life_days=7,
+)
+
+# Architecture knowledge base: favor important memories, long half-life
+memory = Memory(
+    recency_weight=0.1,
+    semantic_weight=0.5,
+    importance_weight=0.4,
+    recency_half_life_days=180,
+)
+```
+
+Each `MemoryMatch` includes a `match_reasons` list so you can see why a result ranked where it did (e.g. `["semantic", "recency", "importance"]`).
+
+
+## LLM Analysis Layer
+
+Memory uses the LLM in three ways:
+
+1. **On save** -- When you omit scope, categories, or importance, the LLM analyzes the content and suggests scope, categories, importance, and metadata (entities, dates, topics).
+2. **On recall** -- For deep/auto recall, the LLM analyzes the query (keywords, time hints, suggested scopes, complexity) to guide retrieval.
+3. **Extract memories** -- `extract_memories(content)` breaks raw text (e.g. task output) into discrete memory statements. Agents use this before calling `remember()` on each statement so that atomic facts are stored instead of one large blob.
+
+All analysis degrades gracefully on LLM failure -- see [Failure Behavior](#failure-behavior).
+
+
+## Memory Consolidation
+
+When saving new content, the encoding pipeline automatically checks for similar existing records in storage. If the similarity is above `consolidation_threshold` (default 0.85), the LLM decides what to do:
+
+- **keep** -- The existing record is still accurate and not redundant.
+- **update** -- The existing record should be updated with new information (LLM provides the merged content).
+- **delete** -- The existing record is outdated, superseded, or contradicted.
+- **insert_new** -- Whether the new content should also be inserted as a separate record.
+
+This prevents duplicates from accumulating. For example, if you save "CrewAI ensures reliable operation" three times, consolidation recognizes the duplicates and keeps only one record.
+
+### Intra-batch Dedup
+
+When using `remember_many()`, items within the same batch are compared against each other before hitting storage. If two items have cosine similarity >= `batch_dedup_threshold` (default 0.98), the later one is silently dropped. This catches exact or near-exact duplicates within a single batch without any LLM calls (pure vector math).
+
+```python
+# Only 2 records are stored (the third is a near-duplicate of the first)
+memory.remember_many([
+    "CrewAI supports complex workflows.",
+    "Python is a great language.",
+    "CrewAI supports complex workflows.",  # dropped by intra-batch dedup
+])
+```
+
+
+## Non-blocking Saves
+
+`remember_many()` is **non-blocking** -- it submits the encoding pipeline to a background thread and returns immediately. This means the agent can continue to the next task while memories are being saved.
+
+```python
+# Returns immediately -- save happens in background
+memory.remember_many(["Fact A.", "Fact B.", "Fact C."])
+
+# recall() automatically waits for pending saves before searching
+matches = memory.recall("facts")  # sees all 3 records
+```
+
+### Read Barrier
+
+Every `recall()` call automatically calls `drain_writes()` before searching, ensuring the query always sees the latest persisted records. This is transparent -- you never need to think about it.
+
+### Crew Shutdown
+
+When a crew finishes, `kickoff()` drains all pending memory saves in its `finally` block, so no saves are lost even if the crew completes while background saves are in flight.
+
+### Standalone Usage
+
+For scripts or notebooks where there's no crew lifecycle, call `drain_writes()` or `close()` explicitly:
+
+```python
+memory = Memory()
+memory.remember_many(["Fact A.", "Fact B."])
+
+# Option 1: Wait for pending saves
+memory.drain_writes()
+
+# Option 2: Drain and shut down the background pool
+memory.close()
+```
+
+
+## Source and Privacy
+
+Every memory record can carry a `source` tag for provenance tracking and a `private` flag for access control.
+
+### Source Tracking
+
+The `source` parameter identifies where a memory came from:
+
+```python
+# Tag memories with their origin
+memory.remember("User prefers dark mode", source="user:alice")
+memory.remember("System config updated", source="admin")
+memory.remember("Agent found a bug", source="agent:debugger")
+
+# Recall only memories from a specific source
+matches = memory.recall("user preferences", source="user:alice")
+```
+
+### Private Memories
+
+Private memories are only visible to recall when the `source` matches:
+
+```python
+# Store a private memory
+memory.remember("Alice's API key is sk-...", source="user:alice", private=True)
+
+# This recall sees the private memory (source matches)
+matches = memory.recall("API key", source="user:alice")
+
+# This recall does NOT see it (different source)
+matches = memory.recall("API key", source="user:bob")
+
+# Admin access: see all private records regardless of source
+matches = memory.recall("API key", include_private=True)
+```
+
+This is particularly useful in multi-user or enterprise deployments where different users' memories should be isolated.
+
+
+## RecallFlow (Deep Recall)
+
+`recall()` supports two depths:
+
+- **`depth="shallow"`** -- Direct vector search with composite scoring. Fast (~200ms), no LLM calls.
+- **`depth="deep"` (default)** -- Runs a multi-step RecallFlow: query analysis, scope selection, parallel vector search, confidence-based routing, and optional recursive exploration when confidence is low.
+
+**Smart LLM skip**: Queries shorter than `query_analysis_threshold` (default 200 characters) skip the LLM query analysis entirely, even in deep mode. Short queries like "What database do we use?" are already good search phrases -- the LLM analysis adds little value. This saves ~1-3s per recall for typical short queries. Only longer queries (e.g. full task descriptions) go through LLM distillation into targeted sub-queries.
+
+```python
+# Shallow: pure vector search, no LLM
+matches = memory.recall("What did we decide?", limit=10, depth="shallow")
+
+# Deep (default): intelligent retrieval with LLM analysis for long queries
+matches = memory.recall(
+    "Summarize all architecture decisions from this quarter",
+    limit=10,
+    depth="deep",
+)
+```
+
+The confidence thresholds that control the RecallFlow router are configurable:
+
+```python
+memory = Memory(
+    confidence_threshold_high=0.9,   # Only synthesize when very confident
+    confidence_threshold_low=0.4,    # Explore deeper more aggressively
+    exploration_budget=2,            # Allow up to 2 exploration rounds
+    query_analysis_threshold=200,    # Skip LLM for queries shorter than this
+)
+```
+
+
+## Embedder Configuration
+
+Memory needs an embedding model to convert text into vectors for semantic search. You can configure this in three ways.
+
+### Passing to Memory Directly
+
+```python
+from crewai import Memory
+
+# As a config dict
+memory = Memory(embedder={"provider": "openai", "config": {"model_name": "text-embedding-3-small"}})
+
+# As a pre-built callable
+from crewai.rag.embeddings.factory import build_embedder
+embedder = build_embedder({"provider": "ollama", "config": {"model_name": "mxbai-embed-large"}})
+memory = Memory(embedder=embedder)
+```
+
+### Via Crew Embedder Config
+
+When using `memory=True`, the crew's `embedder` config is passed through:
+
+```python
+from crewai import Crew
+
+crew = Crew(
+    agents=[...],
+    tasks=[...],
+    memory=True,
+    embedder={"provider": "openai", "config": {"model_name": "text-embedding-3-small"}},
+)
+```
+
+### Provider Examples
+
+<AccordionGroup>
+<Accordion title="OpenAI (default)">
+```python
+memory = Memory(embedder={
+    "provider": "openai",
+    "config": {
+        "model_name": "text-embedding-3-small",
+        # "api_key": "sk-...",  # or set OPENAI_API_KEY env var
+    },
+})
+```
+</Accordion>
+
+<Accordion title="Ollama (local, private)">
+```python
+memory = Memory(embedder={
+    "provider": "ollama",
+    "config": {
+        "model_name": "mxbai-embed-large",
+        "url": "http://localhost:11434/api/embeddings",
+    },
+})
+```
+</Accordion>
+
+<Accordion title="Azure OpenAI">
+```python
+memory = Memory(embedder={
+    "provider": "azure",
+    "config": {
+        "deployment_id": "your-embedding-deployment",
+        "api_key": "your-azure-api-key",
+        "api_base": "https://your-resource.openai.azure.com",
+        "api_version": "2024-02-01",
+    },
+})
+```
+</Accordion>
+
+<Accordion title="Google AI">
+```python
+memory = Memory(embedder={
+    "provider": "google-generativeai",
+    "config": {
+        "model_name": "gemini-embedding-001",
+        # "api_key": "...",  # or set GOOGLE_API_KEY env var
+    },
+})
+```
+</Accordion>
+
+<Accordion title="Google Vertex AI">
+```python
+memory = Memory(embedder={
+    "provider": "google-vertex",
+    "config": {
+        "model_name": "gemini-embedding-001",
+        "project_id": "your-gcp-project-id",
+        "location": "us-central1",
+    },
+})
+```
+</Accordion>
+
+<Accordion title="Cohere">
+```python
+memory = Memory(embedder={
+    "provider": "cohere",
+    "config": {
+        "model_name": "embed-english-v3.0",
+        # "api_key": "...",  # or set COHERE_API_KEY env var
+    },
+})
+```
+</Accordion>
+
+<Accordion title="VoyageAI">
+```python
+memory = Memory(embedder={
+    "provider": "voyageai",
+    "config": {
+        "model": "voyage-3",
+        # "api_key": "...",  # or set VOYAGE_API_KEY env var
+    },
+})
+```
+</Accordion>
+
+<Accordion title="AWS Bedrock">
+```python
+memory = Memory(embedder={
+    "provider": "amazon-bedrock",
+    "config": {
+        "model_name": "amazon.titan-embed-text-v1",
+        # Uses default AWS credentials (boto3 session)
+    },
+})
+```
+</Accordion>
+
+<Accordion title="Hugging Face">
+```python
+memory = Memory(embedder={
+    "provider": "huggingface",
+    "config": {
+        "model_name": "sentence-transformers/all-MiniLM-L6-v2",
+    },
+})
+```
+</Accordion>
+
+<Accordion title="Jina">
+```python
+memory = Memory(embedder={
+    "provider": "jina",
+    "config": {
+        "model_name": "jina-embeddings-v2-base-en",
+        # "api_key": "...",  # or set JINA_API_KEY env var
+    },
+})
+```
+</Accordion>
+
+<Accordion title="IBM WatsonX">
+```python
+memory = Memory(embedder={
+    "provider": "watsonx",
+    "config": {
+        "model_id": "ibm/slate-30m-english-rtrvr",
+        "api_key": "your-watsonx-api-key",
+        "project_id": "your-project-id",
+        "url": "https://us-south.ml.cloud.ibm.com",
+    },
+})
+```
+</Accordion>
+
+<Accordion title="Custom Embedder">
+```python
+# Pass any callable that takes a list of strings and returns a list of vectors
+def my_embedder(texts: list[str]) -> list[list[float]]:
+    # Your embedding logic here
+    return [[0.1, 0.2, ...] for _ in texts]
+
+memory = Memory(embedder=my_embedder)
+```
+</Accordion>
+</AccordionGroup>
+
+### Provider Reference
+
+| Provider | Key | Typical Model | Notes |
+| :--- | :--- | :--- | :--- |
+| OpenAI | `openai` | `text-embedding-3-small` | Default. Set `OPENAI_API_KEY`. |
+| Ollama | `ollama` | `mxbai-embed-large` | Local, no API key needed. |
+| Azure OpenAI | `azure` | `text-embedding-ada-002` | Requires `deployment_id`. |
+| Google AI | `google-generativeai` | `gemini-embedding-001` | Set `GOOGLE_API_KEY`. |
+| Google Vertex | `google-vertex` | `gemini-embedding-001` | Requires `project_id`. |
+| Cohere | `cohere` | `embed-english-v3.0` | Strong multilingual support. |
+| VoyageAI | `voyageai` | `voyage-3` | Optimized for retrieval. |
+| AWS Bedrock | `amazon-bedrock` | `amazon.titan-embed-text-v1` | Uses boto3 credentials. |
+| Hugging Face | `huggingface` | `all-MiniLM-L6-v2` | Local sentence-transformers. |
+| Jina | `jina` | `jina-embeddings-v2-base-en` | Set `JINA_API_KEY`. |
+| IBM WatsonX | `watsonx` | `ibm/slate-30m-english-rtrvr` | Requires `project_id`. |
+| Sentence Transformer | `sentence-transformer` | `all-MiniLM-L6-v2` | Local, no API key. |
+| Custom | `custom` | -- | Requires `embedding_callable`. |
+
+
+## LLM Configuration
+
+Memory uses an LLM for save analysis (scope, categories, importance inference), consolidation decisions, and deep recall query analysis. You can configure which model to use.
+
+```python
+from crewai import Memory, LLM
+
+# Default: gpt-4o-mini
+memory = Memory()
+
+# Use a different OpenAI model
+memory = Memory(llm="gpt-4o")
+
+# Use Anthropic
+memory = Memory(llm="anthropic/claude-3-haiku-20240307")
+
+# Use Ollama for fully local/private analysis
+memory = Memory(llm="ollama/llama3.2")
+
+# Use Google Gemini
+memory = Memory(llm="gemini/gemini-2.0-flash")
+
+# Pass a pre-configured LLM instance with custom settings
+llm = LLM(model="gpt-4o", temperature=0)
+memory = Memory(llm=llm)
+```
+
+The LLM is initialized **lazily** -- it's only created when first needed. This means `Memory()` never fails at construction time, even if API keys aren't set. Errors only surface when the LLM is actually called (e.g. when saving without explicit scope/categories, or during deep recall).
+
+For fully offline/private operation, use a local model for both the LLM and embedder:
+
+```python
+memory = Memory(
+    llm="ollama/llama3.2",
+    embedder={"provider": "ollama", "config": {"model_name": "mxbai-embed-large"}},
+)
+```
+
+
+## Storage Backend
+
+- **Default**: LanceDB, stored under `./.crewai/memory` (or `$CREWAI_STORAGE_DIR/memory` if the env var is set, or the path you pass as `storage="path/to/dir"`).
+- **Custom backend**: Implement the `StorageBackend` protocol (see `crewai.memory.storage.backend`) and pass an instance to `Memory(storage=your_backend)`.
+
+
+## Discovery
+
+Inspect the scope hierarchy, categories, and records:
+
+```python
+memory.tree()                        # Formatted tree of scopes and record counts
+memory.tree("/project", max_depth=2) # Subtree view
+memory.info("/project")              # ScopeInfo: record_count, categories, oldest/newest
+memory.list_scopes("/")              # Immediate child scopes
+memory.list_categories()             # Category names and counts
+memory.list_records(scope="/project/alpha", limit=20)  # Records in a scope, newest first
+```
+
+
+## Failure Behavior
+
+If the LLM fails during analysis (network error, rate limit, invalid response), memory degrades gracefully:
+
+- **Save analysis** -- A warning is logged and the memory is still stored with default scope `/`, empty categories, and importance `0.5`.
+- **Extract memories** -- The full content is stored as a single memory so nothing is dropped.
+- **Query analysis** -- Recall falls back to simple scope selection and vector search so you still get results.
+
+No exception is raised for these analysis failures; only storage or embedder failures will raise.
+
+
+## Privacy Note
+
+Memory content is sent to the configured LLM for analysis (scope/categories/importance on save, query analysis and optional deep recall). For sensitive data, use a local LLM (e.g. Ollama) or ensure your provider meets your compliance requirements.
+
+
+## Memory Events
+
+All memory operations emit events with `source_type="unified_memory"`. You can listen for timing, errors, and content.
+
+| Event | Description | Key Properties |
+| :---- | :---------- | :------------- |
+| **MemoryQueryStartedEvent** | Query begins | `query`, `limit` |
+| **MemoryQueryCompletedEvent** | Query succeeds | `query`, `results`, `query_time_ms` |
+| **MemoryQueryFailedEvent** | Query fails | `query`, `error` |
+| **MemorySaveStartedEvent** | Save begins | `value`, `metadata` |
+| **MemorySaveCompletedEvent** | Save succeeds | `value`, `save_time_ms` |
+| **MemorySaveFailedEvent** | Save fails | `value`, `error` |
+| **MemoryRetrievalStartedEvent** | Agent retrieval starts | `task_id` |
+| **MemoryRetrievalCompletedEvent** | Agent retrieval done | `task_id`, `memory_content`, `retrieval_time_ms` |
+
+Example: monitor query time:
+
+```python
+from crewai.events import BaseEventListener, MemoryQueryCompletedEvent
+
+class MemoryMonitor(BaseEventListener):
+    def setup_listeners(self, crewai_event_bus):
+        @crewai_event_bus.on(MemoryQueryCompletedEvent)
+        def on_done(source, event):
+            if getattr(event, "source_type", None) == "unified_memory":
+                print(f"Query '{event.query}' completed in {event.query_time_ms:.0f}ms")
+```
+
+
+## Troubleshooting
+
+**Memory not persisting?**
+- Ensure the storage path is writable (default `./.crewai/memory`). Pass `storage="./your_path"` to use a different directory, or set the `CREWAI_STORAGE_DIR` environment variable.
+- When using a crew, confirm `memory=True` or `memory=Memory(...)` is set.
+
+**Slow recall?**
+- Use `depth="shallow"` for routine agent context. Reserve `depth="deep"` for complex queries.
+- Increase `query_analysis_threshold` to skip LLM analysis for more queries.
+
+**LLM analysis errors in logs?**
+- Memory still saves/recalls with safe defaults. Check API keys, rate limits, and model availability if you want full LLM analysis.
+
+**Background save errors in logs?**
+- Memory saves run in a background thread. Errors are emitted as `MemorySaveFailedEvent` but don't crash the agent. Check logs for the root cause (usually LLM or embedder connection issues).
+
+**Concurrent write conflicts?**
+- LanceDB operations are serialized with a shared lock and retried automatically on conflict. This handles multiple `Memory` instances pointing at the same database (e.g. agent memory + crew memory). No action needed.
+
+**Browse memory from the terminal:**
+```bash
+crewai memory                              # Opens the TUI browser
+crewai memory --storage-path ./my_memory   # Point to a specific directory
+```
+
+**Reset memory (e.g. for tests):**
+```python
+crew.reset_memories(command_type="memory")  # Resets unified memory
+# Or on a Memory instance:
+memory.reset()                    # All scopes
+memory.reset(scope="/project/old")  # Only that subtree
+```
+
+
+## Configuration Reference
+
+All configuration is passed as keyword arguments to `Memory(...)`. Every parameter has a sensible default.
+
+| Parameter | Default | Description |
+| :--- | :--- | :--- |
+| `llm` | `"gpt-4o-mini"` | LLM for analysis (model name or `BaseLLM` instance). |
+| `storage` | `"lancedb"` | Storage backend (`"lancedb"`, a path string, or a `StorageBackend` instance). |
+| `embedder` | `None` (OpenAI default) | Embedder (config dict, callable, or `None` for default OpenAI). |
+| `recency_weight` | `0.3` | Weight for recency in composite score. |
+| `semantic_weight` | `0.5` | Weight for semantic similarity in composite score. |
+| `importance_weight` | `0.2` | Weight for importance in composite score. |
+| `recency_half_life_days` | `30` | Days for recency score to halve (exponential decay). |
+| `consolidation_threshold` | `0.85` | Similarity above which consolidation is triggered on save. Set to `1.0` to disable. |
+| `consolidation_limit` | `5` | Max existing records to compare during consolidation. |
+| `default_importance` | `0.5` | Importance assigned when not provided and LLM analysis is skipped. |
+| `batch_dedup_threshold` | `0.98` | Cosine similarity for dropping near-duplicates within a `remember_many()` batch. |
+| `confidence_threshold_high` | `0.8` | Recall confidence above which results are returned directly. |
+| `confidence_threshold_low` | `0.5` | Recall confidence below which deeper exploration is triggered. |
+| `complex_query_threshold` | `0.7` | For complex queries, explore deeper below this confidence. |
+| `exploration_budget` | `1` | Number of LLM-driven exploration rounds during deep recall. |
+| `query_analysis_threshold` | `200` | Queries shorter than this (in characters) skip LLM analysis during deep recall. |

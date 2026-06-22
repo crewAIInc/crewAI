@@ -1,0 +1,550 @@
+---
+title: Construa Seu Primeiro Flow
+description: Aprenda como criar fluxos de trabalho estruturados e orientados a eventos com controle preciso sobre a execução.
+icon: diagram-project
+mode: "wide"
+---
+
+## Assumindo o Controle de Workflows de IA com Flows
+
+Os Flows do CrewAI representam o próximo nível em orquestração de IA – combinando o poder colaborativo de equipes de agentes de IA com a precisão e flexibilidade da programação procedural. Enquanto os crews se destacam em colaboração de agentes, os flows dão a você controle detalhado sobre exatamente como e quando diferentes componentes do seu sistema de IA interagem.
+
+Neste guia, vamos percorrer a criação de um poderoso CrewAI Flow que gera um guia de aprendizado abrangente sobre qualquer tema. Este tutorial demonstrará como os Flows oferecem controle estruturado e orientado a eventos sobre seus workflows de IA ao combinar código regular, chamadas diretas a LLM e processamento baseado em crews.
+
+### O Que Torna os Flows Poderosos
+
+Com flows, você pode:
+
+1. **Combinar diferentes padrões de interação com IA** – Use crews para tarefas colaborativas complexas, chamadas diretas às LLMs para operações mais simples, e código regular para lógica procedural.
+2. **Construir sistemas orientados a eventos** – Defina como os componentes respondem a eventos e mudanças de dados específicos.
+3. **Manter estado entre componentes** – Compartilhe e transforme dados entre diferentes partes da sua aplicação.
+4. **Integrar com sistemas externos** – Conecte seu fluxo de trabalho de IA com bancos de dados, APIs e interfaces de usuário de forma transparente.
+5. **Criar caminhos de execução complexos** – Projete ramificações condicionais, processamento paralelo e workflows dinâmicos.
+
+### O Que Você Vai Construir e Aprender
+
+Ao final deste guia, você terá:
+
+1. **Criado um sistema sofisticado de geração de conteúdo** que combina entrada do usuário, planejamento por IA e criação de conteúdo multiagente.
+2. **Orquestrado o fluxo de informações** entre diferentes componentes do seu sistema.
+3. **Implementado uma arquitetura orientada a eventos** onde cada etapa responde à conclusão das etapas anteriores.
+4. **Construído uma base para aplicações de IA mais complexas** que você pode expandir e personalizar.
+
+Este flow de criação de guia demonstra padrões fundamentais que podem ser aplicados para criar aplicações muito mais avançadas, como:
+
+- Assistentes de IA interativos que combinam múltiplos subsistemas especializados.
+- Pipelines de processamento de dados complexos com transformações aprimoradas por IA.
+- Agentes autônomos integrados a serviços e APIs externas.
+- Sistemas de tomada de decisão em múltiplas etapas com processos envolvendo humanos no loop.
+
+Vamos começar e construir seu primeiro flow!
+
+## Pré-requisitos
+
+Antes de começar, certifique-se de ter:
+
+1. Instalado o CrewAI seguindo o [guia de instalação](/pt-BR/installation)
+2. Configurado sua chave de API LLM no ambiente, conforme o [guia de configuração do LLM](/pt-BR/concepts/llms#setting-up-your-llm)
+3. Conhecimentos básicos de Python
+
+## Passo 1: Crie um Novo Projeto de CrewAI Flow
+
+Primeiro, vamos criar um novo projeto de Flow do CrewAI usando a CLI. Este comando configura um projeto com todos os diretórios necessários e arquivos de template para seu flow.
+
+```bash
+crewai create flow guide_creator_flow
+cd guide_creator_flow
+```
+
+Isso gerará um projeto com a estrutura básica necessária para seu flow.
+
+<Frame caption="Visão Geral do Framework CrewAI">
+  <img src="/images/flows.png" alt="CrewAI Framework Overview" />
+</Frame>
+
+## Passo 2: Entendendo a Estrutura do Projeto
+
+O projeto gerado possui a seguinte estrutura. A crew inicial embutida usa o layout clássico Python/YAML. Para usar uma crew JSON-first dentro de um Flow, crie `crew.jsonc` e `agents/*.jsonc` na pasta da crew e carregue com `crewai.project.load_crew`, como mostrado em [Flows](/pt-BR/concepts/flows#building-your-crews).
+
+```
+guide_creator_flow/
+├── .gitignore
+├── pyproject.toml
+├── README.md
+├── .env
+└── src/
+    └── guide_creator_flow/
+        ├── __init__.py
+        ├── main.py
+        ├── crews/
+        │   └── poem_crew/
+        │       ├── config/
+        │       │   ├── agents.yaml
+        │       │   └── tasks.yaml
+        │       └── poem_crew.py
+        └── tools/
+            └── custom_tool.py
+```
+
+Esta estrutura oferece uma separação clara entre os diferentes componentes do seu flow:
+- A lógica principal do flow no arquivo `src/guide_creator_flow/main.py`
+- Crews especializados no diretório `src/guide_creator_flow/crews`
+- Ferramentas customizadas no diretório `src/guide_creator_flow/tools`
+
+Vamos modificar esta estrutura para criar nosso flow de criação de guias, que irá orquestrar o processo de geração de guias de aprendizagem abrangentes.
+
+## Passo 3: Adicione um Crew de Redator de Conteúdo
+
+Nosso flow precisará de um crew especializado para lidar com o processo de criação de conteúdo. Vamos usar a CLI do CrewAI para adicionar um crew de redatores de conteúdo:
+
+```bash
+crewai flow add-crew content-crew
+```
+
+Este comando cria automaticamente os diretórios e arquivos de template necessários para seu crew. O crew de redatores será responsável por escrever e revisar seções do nosso guia, trabalhando dentro do flow orquestrado pela aplicação principal.
+
+## Passo 4: Configure o Crew de Redator de Conteúdo
+
+Agora, vamos configurar o crew de redatores com JSONC. Vamos definir dois agentes especializados - um escritor e um revisor - que colaboram para criar conteúdo de alta qualidade para o guia.
+
+1. Crie `src/guide_creator_flow/crews/content_crew/agents/content_writer.jsonc`:
+
+```jsonc
+{
+  "role": "Educational Content Writer",
+  "goal": "Create engaging, informative content that thoroughly explains the assigned topic and provides valuable insights to the reader.",
+  "backstory": "You are a talented educational writer who explains complex concepts in accessible language and organizes information clearly.",
+  "llm": "provider/model-id",
+  "settings": {
+    "verbose": true
+  }
+}
+```
+
+2. Crie `src/guide_creator_flow/crews/content_crew/agents/content_reviewer.jsonc`:
+
+```jsonc
+{
+  "role": "Educational Content Reviewer and Editor",
+  "goal": "Ensure content is accurate, comprehensive, well-structured, and consistent with previously written sections.",
+  "backstory": "You are a meticulous editor with an eye for detail, clarity, and coherence.",
+  "llm": "provider/model-id",
+  "settings": {
+    "verbose": true
+  }
+}
+```
+
+Substitua `provider/model-id` pelo modelo que você usa, como `openai/gpt-4o`, `gemini/gemini-2.0-flash-001` ou `anthropic/claude-sonnet-4-6`.
+
+3. Crie `src/guide_creator_flow/crews/content_crew/crew.jsonc`:
+
+```jsonc
+{
+  "name": "Content Crew",
+  "agents": ["content_writer", "content_reviewer"],
+  "tasks": [
+    {
+      "name": "write_section_task",
+      "description": "Write a comprehensive section on the topic: \"{section_title}\".\n\nSection description: {section_description}\nTarget audience: {audience_level} level learners\n\nYour content should begin with a brief introduction, explain key concepts clearly with examples, include practical applications where appropriate, end with a summary, and be approximately 500-800 words.\n\nPreviously written sections:\n{previous_sections}",
+      "expected_output": "A well-structured, comprehensive section in Markdown format that thoroughly explains the topic and is appropriate for the target audience.",
+      "agent": "content_writer",
+      "markdown": true
+    },
+    {
+      "name": "review_section_task",
+      "description": "Review and improve this section on \"{section_title}\":\n\n{draft_content}\n\nTarget audience: {audience_level} level learners\nPreviously written sections:\n{previous_sections}\n\nFix errors, improve clarity, verify consistency, enhance structure, and add missing key information.",
+      "expected_output": "An improved, polished version of the section that maintains the original structure but enhances clarity, accuracy, and consistency.",
+      "agent": "content_reviewer",
+      "context": ["write_section_task"],
+      "markdown": true
+    }
+  ],
+  "process": "sequential",
+  "verbose": true
+}
+```
+
+O campo `context` permite que o revisor use a saída do escritor.
+
+4. Substitua `src/guide_creator_flow/crews/content_crew/content_crew.py` por um pequeno loader:
+
+```python
+from pathlib import Path
+
+from crewai.project import load_crew
+
+
+def kickoff_content_crew(inputs: dict):
+    crew, default_inputs = load_crew(Path(__file__).with_name("crew.jsonc"))
+    return crew.kickoff(inputs={**default_inputs, **inputs})
+```
+
+Esse loader transforma `crew.jsonc` em uma `Crew` em runtime. Embora essa crew possa funcionar de forma independente, no nosso flow ela será orquestrada como parte de um sistema maior.
+
+## Passo 5: Crie o Flow
+
+Agora vem a parte emocionante – criar o flow que irá orquestrar todo o processo de criação do guia. Aqui iremos combinar código Python regular, chamadas diretas a LLM e nosso crew de criação de conteúdo em um sistema coeso.
+
+Nosso flow irá:
+1. Obter a entrada do usuário sobre o tema e nível do público
+2. Fazer uma chamada direta à LLM para criar um roteiro estruturado do guia
+3. Processar cada seção sequencialmente usando o crew de redatores
+4. Combinar tudo em um documento final abrangente
+
+Vamos criar nosso flow no arquivo `main.py`:
+
+```python
+#!/usr/bin/env python
+import json
+import os
+from typing import List, Dict
+from pydantic import BaseModel, Field
+from crewai import LLM
+from crewai.flow.flow import Flow, listen, start
+from guide_creator_flow.crews.content_crew.content_crew import kickoff_content_crew
+
+# Definir nossos modelos para dados estruturados
+class Section(BaseModel):
+    title: str = Field(description="Title of the section")
+    description: str = Field(description="Brief description of what the section should cover")
+
+class GuideOutline(BaseModel):
+    title: str = Field(description="Title of the guide")
+    introduction: str = Field(description="Introduction to the topic")
+    target_audience: str = Field(description="Description of the target audience")
+    sections: List[Section] = Field(description="List of sections in the guide")
+    conclusion: str = Field(description="Conclusion or summary of the guide")
+
+# Definir o estado do nosso flow
+class GuideCreatorState(BaseModel):
+    topic: str = ""
+    audience_level: str = ""
+    guide_outline: GuideOutline = None
+    sections_content: Dict[str, str] = {}
+
+class GuideCreatorFlow(Flow[GuideCreatorState]):
+    """Flow para criar um guia abrangente sobre qualquer tópico"""
+
+    @start()
+    def get_user_input(self):
+        """Obter entrada do usuário sobre o tópico e público do guia"""
+        print("\n=== Create Your Comprehensive Guide ===\n")
+
+        # Obter entrada do usuário
+        self.state.topic = input("What topic would you like to create a guide for? ")
+
+        # Obter nível do público com validação
+        while True:
+            audience = input("Who is your target audience? (beginner/intermediate/advanced) ").lower()
+            if audience in ["beginner", "intermediate", "advanced"]:
+                self.state.audience_level = audience
+                break
+            print("Please enter 'beginner', 'intermediate', or 'advanced'")
+
+        print(f"\nCreating a guide on {self.state.topic} for {self.state.audience_level} audience...\n")
+        return self.state
+
+    @listen(get_user_input)
+    def create_guide_outline(self, state):
+        """Criar um esboço estruturado para o guia usando uma chamada direta ao LLM"""
+        print("Creating guide outline...")
+
+        # Inicializar o LLM
+        llm = LLM(model="openai/gpt-4o-mini", response_format=GuideOutline)
+
+        # Criar as mensagens para o esboço
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant designed to output JSON."},
+            {"role": "user", "content": f"""
+            Create a detailed outline for a comprehensive guide on "{state.topic}" for {state.audience_level} level learners.
+
+            The outline should include:
+            1. A compelling title for the guide
+            2. An introduction to the topic
+            3. 4-6 main sections that cover the most important aspects of the topic
+            4. A conclusion or summary
+
+            For each section, provide a clear title and a brief description of what it should cover.
+            """}
+        ]
+
+        # Fazer a chamada ao LLM com formato de resposta JSON
+        response = llm.call(messages=messages)
+
+        # Analisar a resposta JSON
+        outline_dict = json.loads(response)
+        self.state.guide_outline = GuideOutline(**outline_dict)
+
+        # Garantir que o diretório de saída exista antes de salvar
+        os.makedirs("output", exist_ok=True)
+
+        # Salvar o esboço em um arquivo
+        with open("output/guide_outline.json", "w") as f:
+            json.dump(outline_dict, f, indent=2)
+
+        print(f"Guide outline created with {len(self.state.guide_outline.sections)} sections")
+        return self.state.guide_outline
+
+    @listen(create_guide_outline)
+    def write_and_compile_guide(self, outline):
+        """Escrever todas as seções e compilar o guia"""
+        print("Writing guide sections and compiling...")
+        completed_sections = []
+
+        # Processar seções uma por uma para manter o fluxo de contexto
+        for section in outline.sections:
+            print(f"Processing section: {section.title}")
+
+            # Construir contexto a partir das seções anteriores
+            previous_sections_text = ""
+            if completed_sections:
+                previous_sections_text = "# Previously Written Sections\n\n"
+                for title in completed_sections:
+                    previous_sections_text += f"## {title}\n\n"
+                    previous_sections_text += self.state.sections_content.get(title, "") + "\n\n"
+            else:
+                previous_sections_text = "No previous sections written yet."
+
+            # Executar a crew de conteúdo para esta seção
+            result = kickoff_content_crew(inputs={
+                "section_title": section.title,
+                "section_description": section.description,
+                "audience_level": self.state.audience_level,
+                "previous_sections": previous_sections_text,
+                "draft_content": ""
+            })
+
+            # Armazenar o conteúdo
+            self.state.sections_content[section.title] = result.raw
+            completed_sections.append(section.title)
+            print(f"Section completed: {section.title}")
+
+        # Compilar o guia final
+        guide_content = f"# {outline.title}\n\n"
+        guide_content += f"## Introduction\n\n{outline.introduction}\n\n"
+
+        # Adicionar cada seção em ordem
+        for section in outline.sections:
+            section_content = self.state.sections_content.get(section.title, "")
+            guide_content += f"\n\n{section_content}\n\n"
+
+        # Adicionar conclusão
+        guide_content += f"## Conclusion\n\n{outline.conclusion}\n\n"
+
+        # Salvar o guia
+        with open("output/complete_guide.md", "w") as f:
+            f.write(guide_content)
+
+        print("\nComplete guide compiled and saved to output/complete_guide.md")
+        return "Guide creation completed successfully"
+
+def kickoff():
+    """Executar o flow criador de guias"""
+    GuideCreatorFlow().kickoff()
+    print("\n=== Flow Complete ===")
+    print("Your comprehensive guide is ready in the output directory.")
+    print("Open output/complete_guide.md to view it.")
+
+def plot():
+    """Gerar uma visualização do flow"""
+    flow = GuideCreatorFlow()
+    flow.plot("guide_creator_flow")
+    print("Flow visualization saved to guide_creator_flow.html")
+
+if __name__ == "__main__":
+    kickoff()
+```
+
+Vamos analisar o que está acontecendo neste flow:
+
+1. Definimos modelos Pydantic para dados estruturados, garantindo segurança de tipos e representação clara dos dados.
+2. Criamos uma classe de estado para manter dados entre os diferentes passos do flow.
+3. Implementamos três etapas principais para o flow:
+   - Obtenção da entrada do usuário com o decorator `@start()`
+   - Criação do roteiro do guia com uma chamada direta à LLM
+   - Processamento das seções com nosso crew de conteúdo
+4. Usamos o decorator `@listen()` para estabelecer relações orientadas a eventos entre as etapas
+
+Este é o poder dos flows – combinar diferentes tipos de processamento (interação com usuário, chamadas diretas a IA, tarefas colaborativas com crews) em um sistema orientado a eventos e coeso.
+
+## Passo 6: Configure suas Variáveis de Ambiente
+
+Crie um arquivo `.env` na raiz do projeto com suas chaves de API. Veja o [guia de configuração do LLM](/pt-BR/concepts/llms#setting-up-your-llm) para detalhes sobre como configurar o provedor.
+
+```sh .env
+OPENAI_API_KEY=sua_chave_openai
+# ou
+GEMINI_API_KEY=sua_chave_gemini
+# ou
+ANTHROPIC_API_KEY=sua_chave_anthropic
+```
+
+## Passo 7: Instale as Dependências
+
+Instale as dependências necessárias:
+
+```bash
+crewai install
+```
+
+## Passo 8: Execute Seu Flow
+
+Agora é hora de ver seu flow em ação! Execute-o usando a CLI do CrewAI:
+
+```bash
+crewai flow kickoff
+```
+
+Quando você rodar esse comando, verá seu flow ganhando vida:
+1. Ele solicitará um tema e o nível do público para você
+2. Criará um roteiro estruturado para o seu guia
+3. Processará cada seção, com o redator e o revisor colaborando em cada uma
+4. Por fim, irá compilar tudo em um guia abrangente
+
+Isso demonstra o poder dos flows para orquestrar processos complexos envolvendo múltiplos componentes, tanto de IA quanto não-IA.
+
+## Passo 9: Visualize Seu Flow
+
+Uma das funcionalidades mais poderosas dos flows é a possibilidade de visualizar sua estrutura:
+
+```bash
+crewai flow plot
+```
+
+Isso irá criar um arquivo HTML que mostra a estrutura do seu flow, incluindo os relacionamentos entre etapas e o fluxo de dados. Essa visualização pode ser inestimável para entender e depurar flows complexos.
+
+## Passo 10: Revise o Resultado
+
+Depois que o flow finalizar, você encontrará dois arquivos no diretório `output`:
+
+1. `guide_outline.json`: Contém o roteiro estruturado do guia
+2. `complete_guide.md`: O guia abrangente com todas as seções
+
+Reserve um momento para revisar esses arquivos e apreciar o que você construiu – um sistema que combina entrada do usuário, interações diretas com IA e trabalho colaborativo de agents para produzir um output complexo e de alta qualidade.
+
+## A Arte do Possível: Além do Seu Primeiro Flow
+
+O que você aprendeu neste guia é uma base para criar sistemas de IA muito mais sofisticados. Veja algumas formas de expandir este flow básico:
+
+### Aprimorando a Interação com o Usuário
+
+Você pode criar flows mais interativos com:
+- Interfaces web para entrada e saída de dados
+- Atualizações em tempo real de progresso
+- Loops de feedback e refinamento interativos
+- Interações multi-stage com o usuário
+
+### Adicionando Mais Etapas de Processamento
+
+Você pode expandir seu flow com etapas adicionais para:
+- Pesquisa antes da criação do roteiro
+- Geração de imagens para ilustrações
+- Geração de snippets de código para guias técnicos
+- Garantia de qualidade e checagem final de fatos
+
+### Criando Flows Mais Complexos
+
+Você pode implementar padrões de flow mais sofisticados:
+- Ramificações condicionais com base na preferência do usuário ou tipo de conteúdo
+- Processamento paralelo de seções independentes
+- Loops de refinamento iterativo com feedback
+- Integração a APIs e serviços externos
+
+### Aplicando a Diferentes Domínios
+
+Os mesmos padrões podem ser usados para criar flows de:
+- **Narrativas interativas**: criação de histórias personalizadas com base na entrada do usuário
+- **Inteligência de negócios**: processamento de dados, geração de insights e criação de relatórios
+- **Desenvolvimento de produtos**: facilitação de ideação, design e planejamento
+- **Sistemas educacionais**: criação de experiências de aprendizagem personalizadas
+
+## Principais Funcionalidades Demonstradas
+
+Este flow de criação de guia demonstra diversos recursos poderosos do CrewAI:
+
+1. **Interação com o usuário**: O flow coleta input diretamente do usuário
+2. **Chamadas diretas à LLM**: Usa a classe LLM para interações eficientes e direcionadas com IA
+3. **Dados estruturados com Pydantic**: Usa Pydantic para garantir segurança de tipos
+4. **Processamento sequencial com contexto**: Escreve seções em ordem, fornecendo as anteriores como contexto
+5. **Crews multiagentes**: Utiliza agents especializados (redator e revisor) para criação de conteúdo
+6. **Gerenciamento de estado**: Mantém estado entre diferentes etapas do processo
+7. **Arquitetura orientada a eventos**: Usa o decorator `@listen` para responder a eventos
+
+## Entendendo a Estrutura do Flow
+
+Vamos decompor os principais componentes dos flows para ajudá-lo a entender como construir o seu:
+
+### 1. Chamadas Diretas à LLM
+
+Flows permitem que você faça chamadas diretas a modelos de linguagem quando precisa de respostas simples e estruturadas:
+
+```python
+llm = LLM(
+    model="model-id-here",  # gpt-4o, gemini-2.0-flash, anthropic/claude...
+    response_format=GuideOutline
+)
+response = llm.call(messages=messages)
+```
+
+Isso é mais eficiente do que usar um crew quando você precisa de um output específico e estruturado.
+
+### 2. Arquitetura Orientada a Eventos
+
+Flows usam decorators para estabelecer relações entre componentes:
+
+```python
+@start()
+def get_user_input(self):
+    # Primeira etapa no flow
+    # ...
+
+@listen(get_user_input)
+def create_guide_outline(self, state):
+    # Esta roda quando get_user_input é concluída
+    # ...
+```
+
+Isso cria uma estrutura clara e declarativa para sua aplicação.
+
+### 3. Gerenciamento de Estado
+
+Flows mantêm o estado entre as etapas, facilitando o compartilhamento de dados:
+
+```python
+class GuideCreatorState(BaseModel):
+    topic: str = ""
+    audience_level: str = ""
+    guide_outline: GuideOutline = None
+    sections_content: Dict[str, str] = {}
+```
+
+Isso fornece uma maneira segura e tipada de rastrear e transformar dados ao longo do flow.
+
+### 4. Integração com Crews
+
+Flows podem integrar crews para tarefas colaborativas complexas:
+
+```python
+result = kickoff_content_crew(inputs={
+    "section_title": section.title,
+    # ...
+})
+```
+
+Assim, você usa a ferramenta certa para cada parte da aplicação – chamadas diretas para tarefas simples e crews para colaboração avançada.
+
+## Próximos Passos
+
+Agora que você construiu seu primeiro flow, pode:
+
+1. Experimentar estruturas e padrões mais complexos de flow
+2. Testar o uso do `@router()` para criar ramificações condicionais em seus flows
+3. Explorar as funções `and_` e `or_` para execuções paralelas e mais complexas
+4. Conectar seu flow a APIs externas, bancos de dados ou interfaces de usuário
+5. Combinar múltiplos crews especializados em um único flow
+6. Criar apps de chat multi-turn com [Flows conversacionais](/pt-BR/guides/flows/conversational-flows) (`kickoff` por mensagem, `ChatSession`, tracing adiado)
+
+<Check>
+Parabéns! Você construiu seu primeiro CrewAI Flow que combina código regular, chamadas diretas a LLM e processamento baseado em crews para criar um guia abrangente. Essas habilidades fundamentais permitem criar aplicações de IA cada vez mais sofisticadas, capazes de resolver problemas complexos de múltiplas etapas por meio de controle procedural e inteligência colaborativa.
+</Check>

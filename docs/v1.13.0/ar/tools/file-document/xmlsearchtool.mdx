@@ -1,0 +1,74 @@
+---
+title: بحث RAG في XML
+description: أداة `XMLSearchTool` مصممة لإجراء بحث RAG (الاسترجاع المعزز بالتوليد) داخل محتوى ملف XML.
+icon: file-xml
+mode: "wide"
+---
+
+# `XMLSearchTool`
+
+<Note>
+    لا نزال نعمل على تحسين الأدوات، لذا قد يحدث سلوك غير متوقع أو تغييرات في المستقبل.
+</Note>
+
+## الوصف
+
+أداة XMLSearchTool هي أداة RAG متطورة مصممة لإجراء عمليات بحث دلالي داخل ملفات XML. مثالية للمستخدمين الذين يحتاجون إلى تحليل واستخراج المعلومات من محتوى XML بكفاءة، تدعم هذه الأداة إدخال استعلام بحث ومسار ملف XML اختياري. من خلال تحديد مسار XML، يمكن للمستخدمين استهداف بحثهم بدقة أكبر نحو محتوى ذلك الملف، وبالتالي الحصول على نتائج بحث أكثر صلة.
+
+## التثبيت
+
+للبدء باستخدام XMLSearchTool، يجب أولاً تثبيت حزمة crewai_tools. يمكن القيام بذلك بسهولة بالأمر التالي:
+
+```shell
+pip install 'crewai[tools]'
+```
+
+## مثال
+
+فيما يلي مثالان يوضحان كيفية استخدام XMLSearchTool. المثال الأول يوضح البحث داخل ملف XML محدد، بينما يوضح المثال الثاني بدء بحث بدون تحديد مسار XML مسبقاً، مما يوفر مرونة في نطاق البحث.
+
+```python Code
+from crewai_tools import XMLSearchTool
+
+# Allow agents to search within any XML file's content
+#as it learns about their paths during execution
+tool = XMLSearchTool()
+
+# OR
+
+# Initialize the tool with a specific XML file path
+#for exclusive search within that document
+tool = XMLSearchTool(xml='path/to/your/xmlfile.xml')
+```
+
+## المعاملات
+
+- `xml`: مسار ملف XML المراد البحث فيه. هذا معامل اختياري أثناء تهيئة الأداة ولكن يجب تقديمه إما عند التهيئة أو كجزء من معاملات طريقة `run` لتنفيذ البحث.
+
+## النموذج والتضمينات المخصصة
+
+بشكل افتراضي، تستخدم الأداة OpenAI لكل من التضمينات والتلخيص. لتخصيص النموذج، يمكنك استخدام قاموس تكوين كما يلي:
+
+```python Code
+from chromadb.config import Settings
+
+tool = XMLSearchTool(
+    config={
+        "embedding_model": {
+            "provider": "openai",
+            "config": {
+                "model": "text-embedding-3-small",
+                # "api_key": "sk-...",
+            },
+        },
+        "vectordb": {
+            "provider": "chromadb",  # or "qdrant"
+            "config": {
+                # "settings": Settings(persist_directory="/content/chroma", allow_reset=True, is_persistent=True),
+                # from qdrant_client.models import VectorParams, Distance
+                # "vectors_config": VectorParams(size=384, distance=Distance.COSINE),
+            }
+        },
+    }
+)
+```
