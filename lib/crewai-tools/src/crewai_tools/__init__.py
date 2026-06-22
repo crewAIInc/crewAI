@@ -105,6 +105,9 @@ from crewai_tools.tools.jina_scrape_website_tool.jina_scrape_website_tool import
     JinaScrapeWebsiteTool,
 )
 from crewai_tools.tools.json_search_tool.json_search_tool import JSONSearchTool
+from crewai_tools.tools.keenable_search_tool.keenable_search_tool import (
+    KeenableSearchTool,
+)
 from crewai_tools.tools.linkup.linkup_search_tool import LinkupSearchTool
 from crewai_tools.tools.llamaindex_tool.llamaindex_tool import LlamaIndexTool
 from crewai_tools.tools.mdx_search_tool.mdx_search_tool import MDXSearchTool
@@ -271,6 +274,7 @@ __all__ = [
     "InvokeCrewAIAutomationTool",
     "JSONSearchTool",
     "JinaScrapeWebsiteTool",
+    "KeenableSearchTool",
     "LinkupSearchTool",
     "LlamaIndexTool",
     "MCPServerAdapter",
