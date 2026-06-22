@@ -779,20 +779,17 @@ memory = Memory(
 
 **Getting started:**
 
-```bash
-# Install Mimir (one-liner)
-curl -sSf https://raw.githubusercontent.com/Perseus-Computing-LLC/mimir/main/scripts/install.sh | sh
+Install Mimir (one command, zero dependencies):
 
-# Start Mimir
-mimir serve --db ./crew_memory.db
+```bash
+curl -sSf https://raw.githubusercontent.com/Perseus-Computing-LLC/mimir/main/scripts/install.sh | sh
 ```
 
-Then connect via MCP from CrewAI:
+**Option 1 – Agent-managed (recommended):** CrewAI launches Mimir for you via MCP stdio. No manual server startup needed.
 
 ```python
 from crewai import Agent, Task, Crew
 
-# Mimir is exposed as MCP tools that agents can use natively
 agent = Agent(
     role="Researcher",
     goal="Research and remember findings",
@@ -806,6 +803,29 @@ agent = Agent(
     ],
 )
 ```
+
+**Option 2 – Standalone server:** Start Mimir manually, then connect from CrewAI (useful for shared memory across multiple agent processes, or direct `mimir` CLI inspection).
+
+```bash
+# Start Mimir (in a separate terminal or as a daemon)
+mimir serve --db ./crew_memory.db --port 9100 --transport http
+```
+
+```python
+agent = Agent(
+    role="Researcher",
+    goal="Research and remember findings",
+    backstory="Expert researcher with persistent memory",
+    mcp_servers=[
+        {
+            "url": "http://localhost:9100/mcp",
+            "transport": "http",
+        }
+    ],
+)
+```
+
+Choose one approach — Option 1 for simplicity, Option 2 for shared or multi-process memory.
 
 For programmatic access via the `MimirMemory` adapter (implements CrewAI's `StorageBackend` protocol), see the [CrewAI integration example](https://github.com/Perseus-Computing-LLC/mimir/blob/main/examples/crewai_integration.py) in Mimir's repository.
 
