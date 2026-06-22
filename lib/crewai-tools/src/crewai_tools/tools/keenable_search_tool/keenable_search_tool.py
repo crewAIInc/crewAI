@@ -61,6 +61,15 @@ class KeenableSearchTool(BaseTool):
         ),
     ]
 
+    def __init__(self, **kwargs: Any):
+        super().__init__(**kwargs)
+        # 'realtime' is not available on the keyless public endpoint, so reject
+        # the invalid combination at construction time for deterministic behavior.
+        if self.mode == "realtime" and not (self.api_key or "").strip():
+            raise ValueError(
+                "Keenable 'realtime' mode requires an API key (set KEENABLE_API_KEY)."
+            )
+
     def _resolved_base_url(self) -> str:
         base = (self.base_url or DEFAULT_BASE_URL).rstrip("/")
         parsed = urlsplit(base)
@@ -98,9 +107,15 @@ class KeenableSearchTool(BaseTool):
                 timeout=self.timeout,
             )
             response.raise_for_status()
-            results = (response.json().get("results") or [])[: self.n_results]
-        except requests.RequestException as e:
+            # response.json() raises ValueError on a non-JSON body.
+            data = response.json()
+        except (requests.RequestException, ValueError) as e:
             return f"Error performing search: {str(e)}"
+
+        # Guard against a malformed response shape (not a dict / results not a list).
+        results = data.get("results") if isinstance(data, dict) else None
+        if not isinstance(results, list):
+            return "Error performing search: unexpected response from the Keenable API."
 
         return json.dumps(
             [
@@ -109,8 +124,8 @@ class KeenableSearchTool(BaseTool):
                     "url": r.get("url"),
                     "description": r.get("description"),
                 }
-                for r in results
-                if r.get("url")
+                for r in results[: self.n_results]
+                if isinstance(r, dict) and r.get("url")
             ],
             indent=2,
         )
