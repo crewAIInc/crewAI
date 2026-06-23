@@ -4,8 +4,8 @@ info:
   version: v1
   description: Supported public API for CrewAI Platform.
 servers:
-  - url: /
-    description: Current CrewAI Platform host
+  - url: https://app.crewai.com
+    description: CrewAI Platform
 security: []
 tags:
   - name: Status

@@ -567,6 +567,16 @@
                       "source": "/edge/openapi/platform-v1.yaml",
                       "directory": "edge/api/v1/platform-api/reference"
                     }
+                  },
+                  {
+                    "group": "Problems",
+                    "pages": [
+                      "edge/api/v1/problems",
+                      "edge/api/v1/problems/bad_request",
+                      "edge/api/v1/problems/not_found",
+                      "edge/api/v1/problems/validation_error",
+                      "edge/api/v1/problems/internal_error"
+                    ]
                   }
                 ]
               },
@@ -1110,6 +1120,16 @@
                       "source": "/v1.14.7/openapi/platform-v1.yaml",
                       "directory": "v1.14.7/api/v1/platform-api/reference"
                     }
+                  },
+                  {
+                    "group": "Problems",
+                    "pages": [
+                      "v1.14.7/api/v1/problems",
+                      "v1.14.7/api/v1/problems/bad_request",
+                      "v1.14.7/api/v1/problems/not_found",
+                      "v1.14.7/api/v1/problems/validation_error",
+                      "v1.14.7/api/v1/problems/internal_error"
+                    ]
                   }
                 ]
               },

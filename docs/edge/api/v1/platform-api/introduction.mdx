@@ -1,17 +1,19 @@
 ---
 title: "Platform API"
-description: "Reference for the CrewAI Platform public API."
+description: "Build against the supported CrewAI Platform public API."
 icon: "code"
 mode: "wide"
 ---
 
 # CrewAI Platform API
 
-The Platform API is the supported public API for interacting with CrewAI
-Platform resources.
+The Platform API is the supported public API for CrewAI Platform. Use it when
+you need stable HTTP contracts for automation, integrations, and agent-facing
+workflows.
 
-This page is authored in `crewai-plus` and copied into the docs repo with the
-generated OpenAPI bundle.
+The current public contract is `v1`. Endpoints live under `/api/v1` on the
+CrewAI Platform app host:
 
-The generated OpenAPI bundle owns endpoint reference details. Authored pages own
-API material that OpenAPI does not model well, such as problem descriptions.
+```text
+https://app.crewai.com/api/v1
+```
