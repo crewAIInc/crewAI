@@ -1,0 +1,17 @@
+---
+code: bad_request
+title: Bad request
+status: 400
+---
+
+# Bad request
+
+The request could not be processed because it was malformed or missing required request data.
+
+## When It Happens
+
+This usually means the request body, query string, headers, or required parameters are invalid before endpoint-specific validation can run.
+
+## How To Fix
+
+Review the endpoint contract, required parameters, request body shape, and content type before retrying.

@@ -1,0 +1,17 @@
+---
+code: validation_error
+title: Validation error
+status: 422
+---
+
+# Validation error
+
+The request was understood, but one or more submitted values failed validation.
+
+## When It Happens
+
+This usually means a submitted field is missing, malformed, out of range, duplicated, or conflicts with another value.
+
+## How To Fix
+
+Inspect the `detail` message for the field-specific issue, update the submitted values, and retry the request.

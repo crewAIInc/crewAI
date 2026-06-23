@@ -1,0 +1,115 @@
+openapi: 3.0.1
+info:
+  title: CrewAI Platform API
+  version: v1
+  description: Supported public API for CrewAI Platform.
+servers:
+  - url: /
+    description: Current CrewAI Platform host
+security: []
+tags:
+  - name: Status
+    description: Platform health and API availability.
+paths:
+  /api/v1/status:
+    get:
+      summary: Check API status
+      operationId: getStatus
+      tags:
+        - Status
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              examples:
+                success:
+                  value:
+                    data:
+                      status: ok
+                  summary: API is available
+              schema:
+                type: object
+                required:
+                  - data
+                additionalProperties: false
+                properties:
+                  data:
+                    type: object
+                    required:
+                      - status
+                    additionalProperties: false
+                    properties:
+                      status:
+                        type: string
+                        enum:
+                          - ok
+                        example: ok
+components:
+  schemas:
+    SuccessEnvelope:
+      type: object
+      required:
+        - data
+      additionalProperties: false
+      properties:
+        data:
+          description: Endpoint-specific response payload.
+    ErrorEnvelope:
+      type: object
+      required:
+        - errors
+      additionalProperties: false
+      properties:
+        errors:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/Error'
+    Error:
+      type: object
+      description: Public API error object.
+      required:
+        - type
+        - code
+        - title
+        - status
+        - detail
+      additionalProperties: false
+      properties:
+        type:
+          type: string
+          format: uri
+          enum:
+            - https://docs.crewai.com/api/v1/problems/bad_request
+            - https://docs.crewai.com/api/v1/problems/internal_error
+            - https://docs.crewai.com/api/v1/problems/not_found
+            - https://docs.crewai.com/api/v1/problems/validation_error
+          example: https://docs.crewai.com/api/v1/problems/bad_request
+        code:
+          type: string
+          enum:
+            - bad_request
+            - internal_error
+            - not_found
+            - validation_error
+          example: bad_request
+        title:
+          type: string
+          enum:
+            - Bad request
+            - Internal error
+            - Not found
+            - Validation error
+          example: Bad request
+        status:
+          type: integer
+          enum:
+            - 400
+            - 404
+            - 422
+            - 500
+          example: 400
+        detail:
+          type: string
+          example: The request is invalid.
