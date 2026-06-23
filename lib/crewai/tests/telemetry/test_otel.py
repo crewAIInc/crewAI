@@ -48,10 +48,6 @@ from opentelemetry.trace import (
 # ---------------------------------------------------------------------------
 
 
-_SHARED_EXPORTER: InMemorySpanExporter | None = None
-_SHARED_PROVIDER: TracerProvider | None = None
-
-
 def _reset_global_tracer_provider() -> None:
     """Reset OTel's process-global tracer provider slot.
 
@@ -78,43 +74,41 @@ def _reset_global_tracer_provider() -> None:
 
 @pytest.fixture
 def span_exporter(monkeypatch: pytest.MonkeyPatch) -> Iterator[InMemorySpanExporter]:
-    """Install (once) an SDK TracerProvider and yield the in-memory exporter.
+    """Install an SDK TracerProvider for one test and tear it back down.
 
-    The OTel global tracer provider is process-wide AND ``ProxyTracer``
-    instances cache the first resolved real tracer. That means we cannot
-    safely swap providers between tests without poisoning every ``operation``
-    call site that resolved its tracer earlier. We instead install one SDK
-    provider for the whole session and clear the exporter between tests so
-    each test sees only its own spans.
+    The OTel global tracer provider is process-wide, so leaving an SDK
+    provider installed after the test ends bleeds into anything that
+    asserts on the default unconfigured state (notably
+    ``test_otel_noop.py``). We install a fresh provider on setup and
+    restore the default ``ProxyTracerProvider`` on teardown so each test
+    sees a clean slate and the suite's overall state is preserved.
+
+    Re-resolving providers between tests is safe here because
+    ``crewai.telemetry.otel._tracer()`` calls ``trace.get_tracer()`` on
+    every span — nothing caches a ``ProxyTracer`` across the swap.
 
     ``.env.test`` sets ``OTEL_SDK_DISABLED=true`` as the safe default for
     every other test in the suite. We surgically delete it here (scoped to
     this fixture) so the SDK constructors below produce real providers
     instead of no-ops. ``OTEL_SDK_DISABLED`` is only read at provider
-    construction time, so restoring the env after teardown does not affect
-    the now-built ``_SHARED_PROVIDER``.
-
-    The "default behavior" tests verify the NoOp path in a separate test
-    file (``test_otel_noop.py``) that runs in its own xdist worker thanks
-    to ``--dist=loadfile``; we never tear the provider back down here.
+    construction time, so restoring the env after teardown does not
+    affect the already-built provider.
     """
-    global _SHARED_EXPORTER, _SHARED_PROVIDER
-
-    if _SHARED_EXPORTER is None:
-        monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
-        _SHARED_EXPORTER = InMemorySpanExporter()
-        _SHARED_PROVIDER = TracerProvider()
-        _SHARED_PROVIDER.add_span_processor(SimpleSpanProcessor(_SHARED_EXPORTER))
+    monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    _reset_global_tracer_provider()
+    trace.set_tracer_provider(provider)
+    actual = trace.get_tracer_provider()
+    assert actual is provider, (
+        f"failed to install SDK TracerProvider; got {type(actual).__name__}"
+    )
+    try:
+        yield exporter
+    finally:
+        provider.shutdown()
         _reset_global_tracer_provider()
-        trace.set_tracer_provider(_SHARED_PROVIDER)
-        actual = trace.get_tracer_provider()
-        assert actual is _SHARED_PROVIDER, (
-            f"failed to install SDK TracerProvider; got {type(actual).__name__}"
-        )
-
-    _SHARED_EXPORTER.clear()
-    yield _SHARED_EXPORTER
-    _SHARED_EXPORTER.clear()
 
 
 @pytest.fixture
