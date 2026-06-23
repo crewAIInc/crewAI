@@ -1095,6 +1095,25 @@
                 ]
               },
               {
+                "tab": "Platform API",
+                "icon": "code",
+                "groups": [
+                  {
+                    "group": "Overview",
+                    "pages": [
+                      "v1.14.7/api/v1/platform-api/introduction"
+                    ]
+                  },
+                  {
+                    "group": "Reference",
+                    "openapi": {
+                      "source": "/v1.14.7/openapi/platform-v1.yaml",
+                      "directory": "v1.14.7/api/v1/platform-api/reference"
+                    }
+                  }
+                ]
+              },
+              {
                 "tab": "Examples",
                 "icon": "code",
                 "groups": [
