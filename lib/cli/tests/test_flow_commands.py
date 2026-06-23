@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from pathlib import Path
 import subprocess
 
 import pytest
+from click.testing import CliRunner
 
-import crewai_cli.kickoff_flow as kickoff_flow_module
+from crewai_cli.cli import flow_run
 import crewai_cli.plot_flow as plot_flow_module
 
 
@@ -33,18 +33,19 @@ def _write_flow_project(project_root: Path) -> None:
     )
 
 
-def test_kickoff_flow_runs_configured_declarative_definition(
+def test_flow_kickoff_runs_configured_declarative_definition(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
-    capsys: pytest.CaptureFixture[str],
 ) -> None:
     _write_flow_project(tmp_path)
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("UV_RUN_RECURSION_DEPTH", "1")
 
-    kickoff_flow_module.kickoff_flow()
+    result = CliRunner().invoke(flow_run)
 
-    assert capsys.readouterr().out == "AI\n"
+    assert result.exit_code == 0
+    assert "DeprecationWarning" in result.output
+    assert "Running the Flow\nAI\n" in result.output
 
 
 def test_plot_flow_runs_configured_declarative_definition(
@@ -57,18 +58,27 @@ def test_plot_flow_runs_configured_declarative_definition(
     plot_flow_module.plot_flow()
 
 
-@pytest.mark.parametrize(
-    ("command", "expected"),
-    [
-        pytest.param(kickoff_flow_module.kickoff_flow, ["uv", "run", "kickoff"]),
-        pytest.param(plot_flow_module.plot_flow, ["uv", "run", "plot"]),
-    ],
-)
-def test_flow_commands_keep_python_entrypoint_without_definition(
+def test_flow_kickoff_delegates_to_run_crew(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = []
+
+    monkeypatch.setattr(
+        "crewai_cli.cli.run_crew",
+        lambda **kwargs: calls.append(kwargs),
+    )
+
+    result = CliRunner().invoke(flow_run)
+
+    assert result.exit_code == 0
+    assert calls == [
+        {"trained_agents_file": None, "definition": None, "inputs": None},
+    ]
+
+
+def test_plot_flow_keeps_python_entrypoint_without_definition(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
-    command: Callable[[], None],
-    expected: list[str],
 ) -> None:
     subprocess_calls = []
 
@@ -79,11 +89,11 @@ def test_flow_commands_keep_python_entrypoint_without_definition(
         lambda command, **kwargs: subprocess_calls.append((command, kwargs)),
     )
 
-    command()
+    plot_flow_module.plot_flow()
 
     assert subprocess_calls == [
         (
-            expected,
+            ["uv", "run", "plot"],
             {"capture_output": False, "text": True, "check": True},
         )
     ]

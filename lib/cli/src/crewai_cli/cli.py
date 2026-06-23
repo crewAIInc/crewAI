@@ -40,14 +40,6 @@ def replay_task_command(*args: Any, **kwargs: Any) -> Any:
     return _replay_task_command(*args, **kwargs)
 
 
-def run_declarative_flow(*args: Any, **kwargs: Any) -> Any:
-    from crewai_cli.run_declarative_flow import (
-        run_declarative_flow as _run_declarative_flow,
-    )
-
-    return _run_declarative_flow(*args, **kwargs)
-
-
 def run_crew(*args: Any, **kwargs: Any) -> Any:
     from crewai_cli.run_crew import run_crew as _run_crew
 
@@ -476,7 +468,7 @@ def memory(
     type=str,
     default=None,
     help=(
-        "Path to a trained-agents pickle (produced by `crewai train -f`). "
+        "Crew-only: path to a trained-agents pickle (produced by `crewai train -f`). "
         "When set, agents load suggestions from this file instead of the "
         "default trained_agents_data.pkl. Equivalent to setting "
         "CREWAI_TRAINED_AGENTS_FILE."
@@ -520,13 +512,13 @@ def install(context: click.Context) -> None:
     "--definition",
     type=str,
     default=None,
-    help="Experimental: path to a declarative Flow YAML/JSON file.",
+    help="Flow-only: path to a declarative flow definition.",
 )
 @click.option(
     "--inputs",
     type=str,
     default=None,
-    help='Experimental: JSON object passed to flow.kickoff(), e.g. \'{"topic":"AI"}\'.',
+    help='Flow-only: JSON object passed to the declarative flow, e.g. \'{"topic":"AI"}\'.',
 )
 def run(
     trained_agents_file: str | None,
@@ -536,16 +528,14 @@ def run(
     """Run the Crew or Flow."""
     if inputs is not None and definition is None:
         raise click.UsageError("--inputs requires --definition")
+    if trained_agents_file is not None and definition is not None:
+        raise click.UsageError("--filename can only be used when running crews")
 
-    if definition is not None:
-        click.secho(
-            "Warning: `crewai run --definition` is experimental and may change without notice.",
-            fg="yellow",
-        )
-        run_declarative_flow(definition=definition, inputs=inputs)
-        return
-
-    run_crew(trained_agents_file=trained_agents_file)
+    run_crew(
+        trained_agents_file=trained_agents_file,
+        definition=definition,
+        inputs=inputs,
+    )
 
 
 @crewai.command()
@@ -797,13 +787,10 @@ def flow() -> None:
     """Flow related commands."""
 
 
-@flow.command(name="kickoff")
+@flow.command(name="kickoff", deprecated=True)
 def flow_run() -> None:
     """Kickoff the Flow."""
-    from crewai_cli.kickoff_flow import kickoff_flow
-
-    click.echo("Running the Flow")
-    kickoff_flow()
+    run_crew(trained_agents_file=None, definition=None, inputs=None)
 
 
 @flow.command(name="plot")

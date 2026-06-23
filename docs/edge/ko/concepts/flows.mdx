@@ -951,7 +951,7 @@ source .venv/bin/activate
 가상 환경을 활성화한 후, 아래 명령어 중 하나를 실행하여 플로우를 실행할 수 있습니다:
 
 ```bash
-crewai flow kickoff
+crewai run
 ```
 
 또는
@@ -1054,10 +1054,4 @@ crewai run
 
 이 명령어는 프로젝트가 pyproject.toml의 `type = "flow"` 설정을 기반으로 flow인지 자동으로 감지하여 해당 방식으로 실행합니다. 명령줄에서 flow를 실행하는 권장 방법입니다.
 
-하위 호환성을 위해 다음 명령어도 사용할 수 있습니다:
-
-```shell
-crewai flow kickoff
-```
-
-하지만 `crewai run` 명령어가 이제 crew와 flow 모두에 작동하므로 더욱 선호되는 방법입니다.
+레거시 `crewai flow kickoff` 명령어는 deprecated되었습니다. crew와 flow 모두 `crewai run`을 사용하세요.

@@ -83,7 +83,7 @@ def test_run_declarative_flow_in_project_env_uses_uv(
 
     assert subprocess_calls == [
         (
-            ["uv", "run", "crewai", "flow", "kickoff"],
+            ["uv", "run", "crewai", "run"],
             {
                 "capture_output": False,
                 "text": True,

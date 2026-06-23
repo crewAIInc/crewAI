@@ -21,7 +21,7 @@ def run_declarative_flow_in_project_env(
     if inputs is not None:
         raise click.UsageError("--inputs is only supported with --definition")
 
-    _execute_declarative_flow_command(["uv", "run", "crewai", "flow", "kickoff"])
+    _execute_declarative_flow_command(["uv", "run", "crewai", "run"])
 
 
 def plot_declarative_flow_in_project_env(definition: str) -> None:
@@ -34,7 +34,7 @@ def plot_declarative_flow_in_project_env(definition: str) -> None:
 
 
 def run_declarative_flow(definition: str, inputs: str | None = None) -> None:
-    """Run a declarative flow from a YAML/JSON file path."""
+    """Run a declarative flow from a definition path."""
     parsed_inputs = _parse_inputs(inputs)
 
     try:
@@ -50,7 +50,7 @@ def run_declarative_flow(definition: str, inputs: str | None = None) -> None:
 
 
 def plot_declarative_flow(definition: str) -> None:
-    """Plot a declarative flow from a YAML/JSON file path."""
+    """Plot a declarative flow from a definition path."""
     try:
         flow = load_declarative_flow(definition)
         flow.plot()
@@ -62,7 +62,7 @@ def plot_declarative_flow(definition: str) -> None:
 
 
 def load_declarative_flow(definition: str) -> Any:
-    """Load a declarative Flow instance from a YAML/JSON file path."""
+    """Load a declarative Flow instance from a definition path."""
     try:
         from crewai.flow.flow import Flow
         from crewai.flow.flow_definition import FlowDefinition
