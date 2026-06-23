@@ -295,8 +295,9 @@ class GeminiCompletion(BaseLLM):
         Returns:
             Chat completion response or tool call result
         """
-        with llm_call_context(), operation(
-            "call llm", {"crewai.llm.model": self.model}
+        with (
+            llm_call_context(),
+            operation("call llm", {"crewai.llm.model": self.model}),
         ):
             try:
                 self._emit_call_started_event(
@@ -383,8 +384,9 @@ class GeminiCompletion(BaseLLM):
         Returns:
             Chat completion response or tool call result
         """
-        with llm_call_context(), operation(
-            "call llm", {"crewai.llm.model": self.model}
+        with (
+            llm_call_context(),
+            operation("call llm", {"crewai.llm.model": self.model}),
         ):
             try:
                 self._emit_call_started_event(

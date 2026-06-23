@@ -504,8 +504,9 @@ class AzureCompletion(BaseLLM):
                 response_model=response_model,
             )
 
-        with llm_call_context(), operation(
-            "call llm", {"crewai.llm.model": self.model}
+        with (
+            llm_call_context(),
+            operation("call llm", {"crewai.llm.model": self.model}),
         ):
             try:
                 self._emit_call_started_event(
@@ -585,8 +586,9 @@ class AzureCompletion(BaseLLM):
                 response_model=response_model,
             )
 
-        with llm_call_context(), operation(
-            "call llm", {"crewai.llm.model": self.model}
+        with (
+            llm_call_context(),
+            operation("call llm", {"crewai.llm.model": self.model}),
         ):
             try:
                 self._emit_call_started_event(

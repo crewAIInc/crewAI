@@ -327,9 +327,7 @@ class CrewStructuredTool(BaseModel):
 
             ctx = contextvars.copy_context()
             call = functools.partial(self.func, **parsed_args, **kwargs)
-            return await asyncio.get_event_loop().run_in_executor(
-                None, ctx.run, call
-            )
+            return await asyncio.get_event_loop().run_in_executor(None, ctx.run, call)
         except Exception:
             raise
 

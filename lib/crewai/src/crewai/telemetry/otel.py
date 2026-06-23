@@ -83,9 +83,7 @@ def operation(
             raise
         except Exception as exc:
             span.record_exception(exc, escaped=True)
-            span.set_status(
-                Status(StatusCode.ERROR, f"{type(exc).__name__}: {exc}")
-            )
+            span.set_status(Status(StatusCode.ERROR, f"{type(exc).__name__}: {exc}"))
             raise
 
 

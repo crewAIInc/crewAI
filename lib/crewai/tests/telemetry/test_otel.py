@@ -52,6 +52,30 @@ _SHARED_EXPORTER: InMemorySpanExporter | None = None
 _SHARED_PROVIDER: TracerProvider | None = None
 
 
+def _reset_global_tracer_provider() -> None:
+    """Reset OTel's process-global tracer provider slot.
+
+    OTel's ``set_tracer_provider`` is a one-shot install: once called, the
+    private ``_TRACER_PROVIDER_SET_ONCE`` latch silently no-ops every
+    subsequent call.  Tests that need to install their own SDK provider
+    have to undo that latch, but OTel exposes no public API for it, so we
+    poke the private symbols directly.
+
+    This helper is pinned to ``opentelemetry-api~=1.34.0`` (see the
+    project's ``pyproject.toml``).  If a future bump renames or removes
+    either of these private attributes, the ``assert`` below will fail
+    loudly and a maintainer can adjust the shim.
+    """
+    assert hasattr(trace, "_TRACER_PROVIDER_SET_ONCE"), (
+        "opentelemetry-api dropped _TRACER_PROVIDER_SET_ONCE; update _reset_global_tracer_provider"
+    )
+    assert hasattr(trace, "_TRACER_PROVIDER"), (
+        "opentelemetry-api dropped _TRACER_PROVIDER; update _reset_global_tracer_provider"
+    )
+    trace._TRACER_PROVIDER_SET_ONCE._done = False  # type: ignore[attr-defined]
+    trace._TRACER_PROVIDER = None  # type: ignore[attr-defined]
+
+
 @pytest.fixture
 def span_exporter(monkeypatch: pytest.MonkeyPatch) -> Iterator[InMemorySpanExporter]:
     """Install (once) an SDK TracerProvider and yield the in-memory exporter.
@@ -81,8 +105,7 @@ def span_exporter(monkeypatch: pytest.MonkeyPatch) -> Iterator[InMemorySpanExpor
         _SHARED_EXPORTER = InMemorySpanExporter()
         _SHARED_PROVIDER = TracerProvider()
         _SHARED_PROVIDER.add_span_processor(SimpleSpanProcessor(_SHARED_EXPORTER))
-        trace._TRACER_PROVIDER_SET_ONCE._done = False  # type: ignore[attr-defined]
-        trace._TRACER_PROVIDER = None  # type: ignore[attr-defined]
+        _reset_global_tracer_provider()
         trace.set_tracer_provider(_SHARED_PROVIDER)
         actual = trace.get_tracer_provider()
         assert actual is _SHARED_PROVIDER, (

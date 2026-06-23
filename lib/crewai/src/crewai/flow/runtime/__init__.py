@@ -2868,12 +2868,13 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                         result = await asyncio.to_thread(
                             ctx.run, method, *args, **kwargs
                         )
+                    # Auto-await coroutines returned from sync methods so the
+                    # whole call stays inside the "execute flow method" span
+                    # (enables AgentExecutor pattern).
+                    if asyncio.iscoroutine(result):
+                        result = await result
             finally:
                 current_flow_method_name.reset(method_name_token)
-
-            # Auto-await coroutines returned from sync methods (enables AgentExecutor pattern)
-            if asyncio.iscoroutine(result):
-                result = await result
 
             method_definition = self._definition.methods[str(method_name)]
             if method_definition.human_feedback is not None:
