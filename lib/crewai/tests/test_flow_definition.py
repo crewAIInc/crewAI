@@ -613,7 +613,7 @@ def test_flow_definition_merges_stacked_listen_router():
     assert methods["second_router"].emit == ["second_approval", "not_approved"]
 
 
-def test_flow_definition_round_trips_json_and_yaml():
+def test_flow_definition_round_trips_declaration_serialization():
     class RoundTripFlow(Flow):
         @start()
         def begin(self):
@@ -629,16 +629,122 @@ def test_flow_definition_round_trips_json_and_yaml():
 
     definition = RoundTripFlow.flow_definition()
 
-    json_round_trip = flow_definition.FlowDefinition.from_json(definition.to_json())
-    yaml_round_trip = flow_definition.FlowDefinition.from_yaml(definition.to_yaml())
+    round_trips = [
+        flow_definition.FlowDefinition.from_declaration(contents=definition.to_json()),
+        flow_definition.FlowDefinition.from_declaration(contents=definition.to_yaml()),
+    ]
 
-    assert json_round_trip.to_dict() == definition.to_dict()
-    assert yaml_round_trip.to_dict() == definition.to_dict()
-    assert yaml_round_trip.methods["decide"].router is True
-    assert yaml_round_trip.methods["decide"].listen == "begin"
+    for round_trip in round_trips:
+        assert round_trip.to_dict() == definition.to_dict()
+        assert round_trip.methods["decide"].router is True
+        assert round_trip.methods["decide"].listen == "begin"
 
 
-def test_each_action_round_trips_json_and_yaml():
+def test_flow_definition_from_declaration_accepts_contents():
+    data = {
+        "schema": "crewai.flow/v1",
+        "name": "DeclarationFlow",
+        "methods": {
+            "begin": {
+                "start": True,
+                "do": {
+                    "call": "expression",
+                    "expr": "'started'",
+                },
+            },
+        },
+    }
+    definition = flow_definition.FlowDefinition.from_dict(data)
+    contents = [
+        definition,
+        data,
+        definition.to_json(),
+        definition.to_yaml(),
+    ]
+    expected = definition.to_dict()
+
+    for content in contents:
+        loaded = flow_definition.FlowDefinition.from_declaration(contents=content)
+
+        assert loaded.to_dict() == expected
+
+
+def test_flow_definition_from_declaration_rejects_empty_file(tmp_path: Path):
+    declaration_path = tmp_path / "flow.crewai"
+    declaration_path.write_text(" \n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Flow declaration file is empty"):
+        flow_definition.FlowDefinition.from_declaration(path=declaration_path)
+
+
+@pytest.mark.parametrize("contents", ["[]", "false", "0", "null", "~"])
+def test_flow_definition_from_declaration_rejects_falsey_non_mapping_contents(
+    contents: str,
+):
+    with pytest.raises(ValueError, match="Flow declaration must contain a mapping"):
+        flow_definition.FlowDefinition.from_declaration(contents=contents)
+
+
+def test_flow_definition_from_declaration_accepts_paths(tmp_path: Path):
+    definition = flow_definition.FlowDefinition.from_dict(
+        {
+            "schema": "crewai.flow/v1",
+            "name": "DeclarationFlow",
+            "methods": {
+                "begin": {
+                    "start": True,
+                    "do": {
+                        "call": "expression",
+                        "expr": "'started'",
+                    },
+                },
+            },
+        }
+    )
+    declaration_path = tmp_path / "flow.crewai"
+    declaration_path.write_text(definition.to_yaml(), encoding="utf-8")
+    path_inputs = [
+        declaration_path,
+        str(declaration_path),
+    ]
+
+    for path_input in path_inputs:
+        loaded = flow_definition.FlowDefinition.from_declaration(path=path_input)
+
+        assert loaded.to_dict() == definition.to_dict()
+        assert loaded.source_path == declaration_path.resolve()
+
+
+def test_flow_definition_from_declaration_requires_input():
+    with pytest.raises(ValueError, match="Provide contents or path"):
+        flow_definition.FlowDefinition.from_declaration()
+
+
+def test_flow_definition_from_declaration_prefers_contents_over_path(
+    tmp_path: Path,
+):
+    data = {
+        "schema": "crewai.flow/v1",
+        "name": "ContentsFlow",
+        "methods": {
+            "begin": {
+                "start": True,
+                "do": {"call": "expression", "expr": "'started'"},
+            },
+        },
+    }
+    declaration_path = tmp_path / "missing.crewai"
+
+    loaded = flow_definition.FlowDefinition.from_declaration(
+        contents=data,
+        path=declaration_path,
+    )
+
+    assert loaded.name == "ContentsFlow"
+    assert loaded.source_path is None
+
+
+def test_each_action_round_trips_declaration_serialization():
     definition = flow_definition.FlowDefinition.from_dict(
         {
             "schema": "crewai.flow/v1",
@@ -677,15 +783,17 @@ def test_each_action_round_trips_json_and_yaml():
         }
     )
 
-    json_round_trip = flow_definition.FlowDefinition.from_json(definition.to_json())
-    yaml_round_trip = flow_definition.FlowDefinition.from_yaml(definition.to_yaml())
+    round_trips = [
+        flow_definition.FlowDefinition.from_declaration(contents=definition.to_json()),
+        flow_definition.FlowDefinition.from_declaration(contents=definition.to_yaml()),
+    ]
 
-    assert json_round_trip.to_dict() == definition.to_dict()
-    assert yaml_round_trip.to_dict() == definition.to_dict()
-    assert yaml_round_trip.methods["process_rows"].description == (
-        "Process every loaded row."
-    )
-    assert yaml_round_trip.methods["process_rows"].do.call == "each"
+    for round_trip in round_trips:
+        assert round_trip.to_dict() == definition.to_dict()
+        assert round_trip.methods["process_rows"].description == (
+            "Process every loaded row."
+        )
+        assert round_trip.methods["process_rows"].do.call == "each"
 
 
 def test_flow_definition_rejects_invalid_method_names():

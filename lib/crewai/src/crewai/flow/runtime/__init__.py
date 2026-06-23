@@ -25,6 +25,7 @@ from datetime import datetime
 import enum
 import inspect
 import logging
+from pathlib import Path
 import threading
 from typing import (
     TYPE_CHECKING,
@@ -769,6 +770,21 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     @classmethod
     def from_definition(cls, definition: FlowDefinition, **kwargs: Any) -> Flow[Any]:
         """Build a runnable Flow directly from a definition; no subclass required."""
+        return cls.from_declaration(contents=definition, **kwargs)
+
+    @classmethod
+    def from_declaration(
+        cls,
+        *,
+        contents: FlowDefinition | str | dict[str, Any] | None = None,
+        path: Path | str | None = None,
+        **kwargs: Any,
+    ) -> Flow[Any]:
+        """Build a runnable declarative flow from contents or a file path."""
+        definition = FlowDefinition.from_declaration(
+            contents=contents,
+            path=path,
+        )
         return cls.model_validate(
             {**definition.config.model_dump(), **kwargs},
             context={"flow_definition": definition},

@@ -60,6 +60,43 @@ def test_run_declarative_flow_reports_missing_file(
     )
 
 
+def test_run_declarative_flow_reports_empty_file(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    definition_path = tmp_path / "flow.yaml"
+    definition_path.write_text(" \n", encoding="utf-8")
+
+    with pytest.raises(SystemExit):
+        run_declarative_flow_module.run_declarative_flow(str(definition_path))
+
+    assert "Flow declaration file is empty" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    "contents, expected_error",
+    [
+        ("[]\n", "Flow declaration must contain a mapping"),
+        ("schema: crewai.flow/v1\nmethods: {}\n", "Field required"),
+    ],
+)
+def test_load_declarative_flow_reports_invalid_declarations(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    contents: str,
+    expected_error: str,
+) -> None:
+    definition_path = tmp_path / "flow.yaml"
+    definition_path.write_text(contents, encoding="utf-8")
+
+    with pytest.raises(SystemExit) as exc_info:
+        run_declarative_flow_module.load_declarative_flow(str(definition_path))
+
+    assert exc_info.value.code == 1
+    stderr = capsys.readouterr().err
+    assert f"Unable to read --definition path {definition_path}:" in stderr
+    assert expected_error in stderr
+
+
 def test_run_declarative_flow_in_project_env_uses_uv(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

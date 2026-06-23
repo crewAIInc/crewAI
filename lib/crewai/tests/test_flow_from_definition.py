@@ -454,7 +454,7 @@ def assert_parity(flow_cls, yaml_str, inputs=None, ordered=True):
     class_flow = flow_cls()
     class_result, class_events = _run_with_events(class_flow, inputs)
 
-    definition = FlowDefinition.from_yaml(yaml_str)
+    definition = FlowDefinition.from_declaration(contents=yaml_str)
     definition_flow = Flow.from_definition(definition)
     definition_result, definition_events = _run_with_events(definition_flow, inputs)
 
@@ -474,6 +474,21 @@ def assert_parity(flow_cls, yaml_str, inputs=None, ordered=True):
 def test_simple_chain_parity():
     flow, result = assert_parity(ChainFlow, CHAIN_YAML)
     assert result == "confirmed:True"
+    assert flow.method_outputs == ["hello", "HELLO", "confirmed:True"]
+
+
+def test_flow_from_declaration_builds_runnable_flow():
+    flow = Flow.from_declaration(contents=CHAIN_YAML)
+
+    assert flow.kickoff() == "confirmed:True"
+    assert flow.method_outputs == ["hello", "HELLO", "confirmed:True"]
+
+
+def test_flow_from_declaration_accepts_flow_definition():
+    definition = FlowDefinition.from_declaration(contents=CHAIN_YAML)
+    flow = Flow.from_declaration(contents=definition)
+
+    assert flow.kickoff() == "confirmed:True"
     assert flow.method_outputs == ["hello", "HELLO", "confirmed:True"]
 
 
@@ -499,7 +514,7 @@ def test_cyclic_flow_parity():
 
 
 def test_definition_flow_events_use_definition_name():
-    definition = FlowDefinition.from_yaml(CHAIN_YAML)
+    definition = FlowDefinition.from_declaration(contents=CHAIN_YAML)
     flow = Flow.from_definition(definition)
     _, events = _run_with_events(flow)
     assert events
@@ -588,7 +603,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
 
     assert flow.kickoff() == "found:ai agents"
 
@@ -639,7 +654,7 @@ methods:
     listen: begin
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
 
     assert flow.kickoff(inputs={"topic": "ai"}) == "found:ai agents"
 
@@ -758,7 +773,7 @@ methods:
     listen: begin
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
 
     assert flow.kickoff() == "search:hello agents"
 
@@ -783,7 +798,7 @@ methods:
     listen: build_query
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
 
     assert flow.kickoff() == "found:ai agents news"
 
@@ -803,7 +818,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
 
     assert (
         flow.kickoff(inputs={"limit": 2, "domains": ["crewai.com", "example.com"]})
@@ -836,7 +851,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
 
     assert flow.kickoff(inputs={"question": "What is CrewAI?"}) == {
         "agent": "Analyst",
@@ -874,7 +889,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
 
     assert flow.kickoff(inputs={"questions": ["one", "two"]}) == [
         "Analyst:one",
@@ -905,7 +920,7 @@ def test_agent_action_round_trips_with_inline_definition():
         }
     )
 
-    round_trip = FlowDefinition.from_yaml(definition.to_yaml())
+    round_trip = FlowDefinition.from_declaration(contents=definition.to_yaml())
     action = round_trip.to_dict()["methods"]["answer"]["do"]
 
     assert action["call"] == "agent"
@@ -968,7 +983,7 @@ methods:
 """
 
     with pytest.raises(ValidationError, match="invalid CEL expression"):
-        FlowDefinition.from_yaml(yaml_str)
+        FlowDefinition.from_declaration(contents=yaml_str)
 
 
 def test_crew_action_runs_inline_yaml_definition(monkeypatch: pytest.MonkeyPatch):
@@ -1010,7 +1025,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
 
     assert flow.kickoff(inputs={"topic": "AI"}) == {
         "crew": "inline_research",
@@ -1086,7 +1101,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
 
     assert flow.kickoff(inputs={"topic": "AI"}) == {
         "crew": "referenced_research",
@@ -1160,9 +1175,7 @@ methods:
     other_cwd.mkdir()
     monkeypatch.chdir(other_cwd)
 
-    flow = Flow.from_definition(
-        FlowDefinition.from_yaml(yaml_str, source_path=flow_path)
-    )
+    flow = Flow.from_definition(FlowDefinition.from_declaration(path=flow_path))
 
     assert flow.kickoff(inputs={"topic": "AI"}) == {
         "crew": "relative_research",
@@ -1185,10 +1198,9 @@ methods:
       from_declaration: ../outside/crew.jsonc
     start: true
 """
+    flow_path.write_text(yaml_str, encoding="utf-8")
 
-    flow = Flow.from_definition(
-        FlowDefinition.from_yaml(yaml_str, source_path=flow_path)
-    )
+    flow = Flow.from_definition(FlowDefinition.from_declaration(path=flow_path))
 
     with pytest.raises(
         ValueError,
@@ -1411,7 +1423,7 @@ methods:
 """
 
     with pytest.raises(ValidationError, match="invalid CEL expression"):
-        FlowDefinition.from_yaml(yaml_str)
+        FlowDefinition.from_declaration(contents=yaml_str)
 
 
 def test_code_action_renders_keyword_inputs():
@@ -1429,7 +1441,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
 
     assert flow.kickoff(inputs={"name": "hello"}) == "hello!"
 
@@ -1448,7 +1460,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
 
     assert flow.kickoff(inputs={"value": "ok"}) == "callable:ok"
 
@@ -1472,7 +1484,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
 
     assert flow.kickoff(inputs={"rows": ["a", "b"]}) == [
         "normalized:a",
@@ -1499,7 +1511,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
     caller_thread_id = threading.get_ident()
 
     assert flow.kickoff(inputs={"rows": ["a"]}) == ["process_rows:a"]
@@ -1526,7 +1538,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
 
     assert flow.kickoff(inputs={"rows": ["a", "b"]}) == ["async:a", "async:b"]
 
@@ -1548,7 +1560,7 @@ methods:
         FlowScriptExecutionDisabledError,
         match="CREWAI_ALLOW_FLOW_SCRIPT_EXECUTION=1",
     ) as exc_info:
-        Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+        Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
     assert "methods with unresolvable actions" not in str(exc_info.value)
 
 
@@ -1572,7 +1584,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
 
     assert flow.kickoff(inputs={"raw_score": 3.2}) == "rounded:4"
     assert flow.state["rounded"] == 4
@@ -1601,7 +1613,7 @@ methods:
     listen: seed
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
 
     assert flow.kickoff() == "alpha:alpha"
     assert flow.state["input_matches_output"] is True
@@ -1639,7 +1651,7 @@ methods:
     listen: seed
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
 
     assert flow.kickoff(inputs={"rows": [" a ", " b "]}) == ["global:a", "global:b"]
 
@@ -1671,7 +1683,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
 
     assert flow.kickoff(inputs={"rows": ["a", "b"]}) == [
         {"row": "a", "normalized": "saved:a"},
@@ -1700,7 +1712,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
 
     assert flow.kickoff(inputs={"rows": ["a", "b"]}) == ["a", "b"]
     assert flow._method_outputs == [
@@ -1738,7 +1750,7 @@ methods:
     listen: seed
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
 
     assert flow.kickoff(inputs={"rows": ["a", "b"]}) == [
         "local:a",
@@ -1777,7 +1789,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
 
     assert flow.kickoff(
         inputs={
@@ -1811,7 +1823,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
 
     assert flow.kickoff(inputs={"rows": [{"kind": "keep", "value": "a"}]}) == ["a"]
 
@@ -1838,7 +1850,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
 
     assert flow.kickoff(
         inputs={
@@ -1868,7 +1880,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
 
     with pytest.raises(ValueError, match="if expression must evaluate to a boolean"):
         flow.kickoff(inputs={"rows": [{"value": "truthy"}]})
@@ -1898,7 +1910,7 @@ methods:
     listen: process_rows
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
     events = []
     with crewai_event_bus.scoped_handlers():
 
@@ -2069,7 +2081,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
 
     with pytest.raises(RuntimeError, match="bad row"):
         flow.kickoff(inputs={"rows": ["ok", "bad"]})
@@ -2190,7 +2202,7 @@ methods:
     listen: right
 """
 
-    definition = FlowDefinition.from_yaml(yaml_str)
+    definition = FlowDefinition.from_declaration(contents=yaml_str)
 
     assert Flow.from_definition(definition).kickoff(
         inputs={"direction": "left"}
@@ -2213,7 +2225,7 @@ methods:
 """
 
     with pytest.raises(ValidationError, match="invalid CEL expression"):
-        FlowDefinition.from_yaml(yaml_str)
+        FlowDefinition.from_declaration(contents=yaml_str)
 
 
 def test_expression_action_rejects_unknown_cel_root():
@@ -2229,7 +2241,7 @@ methods:
 """
 
     with pytest.raises(ValidationError, match="unknown CEL root"):
-        FlowDefinition.from_yaml(yaml_str)
+        FlowDefinition.from_declaration(contents=yaml_str)
 
 
 def test_tool_action_requires_module_qualname_ref():
@@ -2263,14 +2275,16 @@ def test_pydantic_state_from_ref_parity():
 
 
 def test_pydantic_state_default_overlay():
-    flow = Flow.from_definition(FlowDefinition.from_yaml(PYDANTIC_STATE_OVERLAY_YAML))
+    flow = Flow.from_definition(
+        FlowDefinition.from_declaration(contents=PYDANTIC_STATE_OVERLAY_YAML)
+    )
     result = flow.kickoff()
     assert result == "count=6"
     assert flow.state.count == 6
 
 
 def test_json_schema_state():
-    flow = Flow.from_definition(FlowDefinition.from_yaml(JSON_SCHEMA_STATE_YAML))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=JSON_SCHEMA_STATE_YAML))
     result = flow.kickoff()
     assert result == "count=1"
     assert flow.state.count == 1
@@ -2279,14 +2293,14 @@ def test_json_schema_state():
 
 
 def test_json_schema_state_validates_inputs():
-    flow = Flow.from_definition(FlowDefinition.from_yaml(JSON_SCHEMA_STATE_YAML))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=JSON_SCHEMA_STATE_YAML))
     with pytest.raises(ValueError, match="Invalid inputs"):
         flow.kickoff(inputs={"count": "not-a-number"})
 
 
 def test_pydantic_state_falls_back_to_json_schema_when_ref_unimportable():
     flow = Flow.from_definition(
-        FlowDefinition.from_yaml(PYDANTIC_REF_WITH_SCHEMA_FALLBACK_YAML)
+        FlowDefinition.from_declaration(contents=PYDANTIC_REF_WITH_SCHEMA_FALLBACK_YAML)
     )
     result = flow.kickoff()
     assert result == "count=1"
@@ -2295,7 +2309,9 @@ def test_pydantic_state_falls_back_to_json_schema_when_ref_unimportable():
 
 def test_pydantic_state_without_ref_or_schema_falls_back_to_dict(caplog):
     with caplog.at_level("ERROR"):
-        flow = Flow.from_definition(FlowDefinition.from_yaml(UNRESOLVABLE_STATE_YAML))
+        flow = Flow.from_definition(
+            FlowDefinition.from_declaration(contents=UNRESOLVABLE_STATE_YAML)
+        )
     assert "falling back to dict state" in caplog.text
 
     result = flow.kickoff()
@@ -2305,7 +2321,7 @@ def test_pydantic_state_without_ref_or_schema_falls_back_to_dict(caplog):
 
 
 def test_dict_state_is_a_copy_of_default_plus_id():
-    definition = FlowDefinition.from_yaml(DICT_STATE_YAML)
+    definition = FlowDefinition.from_declaration(contents=DICT_STATE_YAML)
 
     flow = Flow.from_definition(definition)
     assert flow.state["count"] == 5
@@ -2322,7 +2338,7 @@ def test_dict_state_is_a_copy_of_default_plus_id():
 
 def test_unknown_state_type_falls_back_to_dict(caplog):
     with caplog.at_level("WARNING"):
-        flow = Flow.from_definition(FlowDefinition.from_yaml(UNKNOWN_STATE_YAML))
+        flow = Flow.from_definition(FlowDefinition.from_declaration(contents=UNKNOWN_STATE_YAML))
     assert "falling back to dict state" in caplog.text
 
     result = flow.kickoff()
@@ -2395,7 +2411,7 @@ def _run_capturing_flow_lifecycle(yaml_str, event_types):
             def capture(source, event):
                 events.append(event)
 
-        flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+        flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
         result = flow.kickoff()
     return flow, result, events
 
@@ -2409,7 +2425,7 @@ _LIFECYCLE_EVENTS = [
 ]
 
 
-def test_config_suppress_flow_events_from_yaml():
+def test_config_suppress_flow_events_from_declaration():
     twin_events = []
     with crewai_event_bus.scoped_handlers():
         for event_type in _LIFECYCLE_EVENTS:
@@ -2432,14 +2448,14 @@ def test_config_suppress_flow_events_from_yaml():
     )
 
 
-def test_config_max_method_calls_from_yaml():
-    flow = Flow.from_definition(FlowDefinition.from_yaml(CAPPED_LOOP_YAML))
+def test_config_max_method_calls_from_declaration():
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=CAPPED_LOOP_YAML))
     with pytest.raises(RecursionError, match="has been called 2 times"):
         flow.kickoff()
 
 
-def test_config_stream_from_yaml():
-    flow = Flow.from_definition(FlowDefinition.from_yaml(STREAMING_CHAIN_YAML))
+def test_config_stream_from_declaration():
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=STREAMING_CHAIN_YAML))
     streaming = flow.kickoff()
     assert isinstance(streaming, FlowStreamingOutput)
     for _ in streaming:
@@ -2448,7 +2464,7 @@ def test_config_stream_from_yaml():
     assert flow.stream is True
 
 
-def test_config_defer_trace_finalization_from_yaml():
+def test_config_defer_trace_finalization_from_declaration():
     _, _, baseline_events = _run_capturing_flow_lifecycle(
         CHAIN_YAML, [FlowFinishedEvent]
     )
@@ -2462,7 +2478,7 @@ def test_config_defer_trace_finalization_from_yaml():
     assert deferred_events == []
 
 
-def test_config_checkpoint_from_yaml(tmp_path):
+def test_config_checkpoint_from_declaration(tmp_path):
     yaml_str = (
         CHAIN_YAML
         + f"""
@@ -2471,19 +2487,23 @@ config:
     location: {tmp_path}
 """
     )
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
     assert isinstance(flow.checkpoint, CheckpointConfig)
     assert flow.checkpoint.location == str(tmp_path)
 
 
-def test_config_input_provider_from_yaml():
-    flow = Flow.from_definition(FlowDefinition.from_yaml(INPUT_PROVIDER_CHAIN_YAML))
+def test_config_input_provider_from_declaration():
+    flow = Flow.from_definition(
+        FlowDefinition.from_declaration(contents=INPUT_PROVIDER_CHAIN_YAML)
+    )
     assert isinstance(flow.input_provider, StubInputProvider)
 
 
 def test_round_trip_config_equivalence():
     class_flow = ConfiguredFlow()
-    definition = FlowDefinition.from_yaml(ConfiguredFlow.flow_definition().to_yaml())
+    definition = FlowDefinition.from_declaration(
+        contents=ConfiguredFlow.flow_definition().to_yaml()
+    )
     definition_flow = Flow.from_definition(definition)
 
     assert definition.config.suppress_flow_events is True
@@ -2653,9 +2673,9 @@ class MethodPersistedFlow(Flow):
         return "two"
 
 
-def test_flow_level_persist_from_yaml_saves_once_per_method():
+def test_flow_level_persist_from_declaration_saves_once_per_method():
     yaml_str = _flow_level_persist_yaml("yaml-flow-level")
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
     result = flow.kickoff()
 
     assert result == "two"
@@ -2665,9 +2685,9 @@ def test_flow_level_persist_from_yaml_saves_once_per_method():
     assert final_save["id"] == flow.state["id"]
 
 
-def test_method_level_persist_from_yaml_saves_only_that_method():
+def test_method_level_persist_from_declaration_saves_only_that_method():
     yaml_str = _method_level_persist_yaml("yaml-method-level")
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
     flow.kickoff()
 
     assert _saved_methods("yaml-method-level") == ["first"]
@@ -2696,20 +2716,20 @@ methods:
     persist:
       enabled: false
 """
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
     flow.kickoff()
 
     assert _saved_methods("yaml-opt-out") == ["first"]
 
 
-def test_persist_restore_by_id_from_yaml():
+def test_persist_restore_by_id_from_declaration():
     yaml_str = _flow_level_persist_yaml("yaml-restore")
 
-    flow1 = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow1 = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
     flow1.kickoff()
     assert flow1.state["count"] == 2
 
-    flow2 = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow2 = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
     flow2.kickoff(inputs={"id": flow1.state["id"]})
     assert flow2.state["count"] == 4
 
@@ -2729,7 +2749,9 @@ def test_method_level_persist_decorator_saves_only_that_method():
 
 
 def test_round_trip_persist_equivalence():
-    definition = FlowDefinition.from_yaml(ClassPersistedFlow.flow_definition().to_yaml())
+    definition = FlowDefinition.from_declaration(
+        contents=ClassPersistedFlow.flow_definition().to_yaml()
+    )
 
     before = len(DefinitionStoreBackend.saves["class-decorator"])
     flow = Flow.from_definition(definition)
@@ -2738,7 +2760,7 @@ def test_round_trip_persist_equivalence():
     assert _saved_methods("class-decorator")[before:] == ["first", "second"]
 
 
-def test_method_persist_backend_overrides_flow_level_backend_from_yaml():
+def test_method_persist_backend_overrides_flow_level_backend_from_declaration():
     yaml_str = f"""
 schema: crewai.flow/v1
 name: PersistedFlow
@@ -2762,7 +2784,7 @@ methods:
         persistence_type: DefinitionStoreBackend
         store: yaml-mixed-method
 """
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
     flow.kickoff()
 
     assert _saved_methods("yaml-mixed-flow") == ["first"]
@@ -2910,8 +2932,8 @@ methods:
 """
 
 
-def test_human_feedback_from_yaml_default_outcome_routes():
-    flow = Flow.from_definition(FlowDefinition.from_yaml(REVIEW_YAML))
+def test_human_feedback_from_declaration_default_outcome_routes():
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=REVIEW_YAML))
 
     with patch.object(flow, "_request_human_feedback", return_value="") as request:
         result = flow.kickoff()
@@ -2922,8 +2944,8 @@ def test_human_feedback_from_yaml_default_outcome_routes():
     assert flow.last_human_feedback.output == "draft-content"
 
 
-def test_human_feedback_from_yaml_collapses_and_routes():
-    flow = Flow.from_definition(FlowDefinition.from_yaml(REVIEW_YAML))
+def test_human_feedback_from_declaration_collapses_and_routes():
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=REVIEW_YAML))
 
     with (
         patch.object(flow, "_request_human_feedback", return_value="ship it"),
@@ -2940,7 +2962,7 @@ def test_round_trip_human_feedback_equivalence():
     with patch.object(class_flow, "_request_human_feedback", return_value=""):
         class_result = class_flow.kickoff()
 
-    definition = FlowDefinition.from_yaml(ReviewFlow.flow_definition().to_yaml())
+    definition = FlowDefinition.from_declaration(contents=ReviewFlow.flow_definition().to_yaml())
     twin = Flow.from_definition(definition)
     with patch.object(twin, "_request_human_feedback", return_value=""):
         twin_result = twin.kickoff()
@@ -2953,8 +2975,8 @@ def test_round_trip_human_feedback_equivalence():
     )
 
 
-def test_human_feedback_pending_and_resume_from_yaml():
-    definition = FlowDefinition.from_yaml(PENDING_REVIEW_YAML)
+def test_human_feedback_pending_and_resume_from_declaration():
+    definition = FlowDefinition.from_declaration(contents=PENDING_REVIEW_YAML)
 
     flow = Flow.from_definition(definition)
     pending = flow.kickoff()
@@ -2975,7 +2997,7 @@ def test_human_feedback_pending_and_resume_from_yaml():
     assert flow_id not in DefinitionStoreBackend.pending
 
 
-def test_flow_config_provider_fallback_from_yaml():
+def test_flow_config_provider_fallback_from_declaration():
     yaml_str = f"""
 schema: crewai.flow/v1
 name: ConfigProviderFlow
@@ -3001,7 +3023,7 @@ methods:
             return "from-config"
 
     provider = RecordingProvider()
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
 
     previous = flow_config.hitl_provider
     flow_config.hitl_provider = provider
@@ -3104,7 +3126,7 @@ methods:
       message: "Review:"
       provider: {__name__}:_NeedsArgsProvider
 """
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
 
     with pytest.raises(
         ValueError, match="cannot instantiate human_feedback.provider ref"
@@ -3125,7 +3147,7 @@ methods:
       message: "Review:"
       provider: missing_module_xyz:Provider
 """
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_definition(FlowDefinition.from_declaration(contents=yaml_str))
 
     with pytest.raises(
         ValueError, match="unresolvable human_feedback.provider ref"
@@ -3137,7 +3159,7 @@ def _checkpoint_chain_flow(tmp_path):
     from crewai.state.provider.json_provider import JsonProvider
     from crewai.state.runtime import RuntimeState
 
-    definition = FlowDefinition.from_yaml(CHAIN_YAML)
+    definition = FlowDefinition.from_declaration(contents=CHAIN_YAML)
     flow = Flow.from_definition(definition)
     result = flow.kickoff()
     assert result == "confirmed:True"
@@ -3177,7 +3199,7 @@ state:
 methods: {}
 """
     with pytest.raises(ValidationError, match="default"):
-        FlowDefinition.from_yaml(yaml_str)
+        FlowDefinition.from_declaration(contents=yaml_str)
 
 
 def test_definition_method_missing_from_class_fails_loudly():
