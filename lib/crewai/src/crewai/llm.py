@@ -558,7 +558,7 @@ class LLM(BaseLLM):
         if provider == "groq":
             return any(
                 model_lower.startswith(prefix)
-                for prefix in ["llama", "gemma", "mixtral", "whisper"]
+                for prefix in ["llama", "gemma", "whisper"]
             )
 
         return False
