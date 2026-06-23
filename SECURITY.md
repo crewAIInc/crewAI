@@ -11,9 +11,14 @@ To report a security issue, use GitHub's private vulnerability reporting feature
 1. Go to <https://github.com/crewAIInc/crewAI/security/advisories/new>
 2. Provide a clear description, affected version(s), and reproduction steps.
 
-A maintainer will respond to triage the report. If you cannot use GitHub's
-private reporting, please contact the maintainers via the channels listed
-in the project [README](README.md).
+A maintainer will respond to triage the report.
+
+If GitHub's private reporting is not available to you, please request a
+private channel by emailing the maintainers. <!-- TODO(maintainers): replace
+with a dedicated security alias (e.g. `security@crewai.com`) before merging. -->
+
+Public channels listed in the README (Discord, X, general support) are **not**
+guaranteed to be private and should not be used to disclose vulnerabilities.
 
 ### What to include
 
