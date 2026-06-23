@@ -556,11 +556,14 @@
                 "icon": "code",
                 "groups": [
                   {
-                    "group": "Reference",
-                    "openapi": "/edge/openapi/platform-v1.yaml",
+                    "group": "Overview",
                     "pages": [
                       "edge/api/v1/platform-api/introduction"
                     ]
+                  },
+                  {
+                    "group": "Reference",
+                    "openapi": "/edge/openapi/platform-v1.yaml"
                   }
                 ]
               },
