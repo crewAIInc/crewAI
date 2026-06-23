@@ -1,7 +1,7 @@
 """Flow Definition: the serializable, declarative Flow contract.
 
-Defines :class:`FlowDefinition` and its sub-models — a static, declarative
-(JSON/YAML) representation of a Flow: its methods, trigger conditions,
+Defines :class:`FlowDefinition` and its sub-models — a static declarative
+representation of a Flow: its methods, trigger conditions,
 state, and configuration. It is independent of the Python authoring
 layer that may have produced it and of the engine that runs it (see
 ``runtime``).
@@ -235,7 +235,7 @@ class FlowPersistenceDefinition(BaseModel):
 
     ``persistence`` may hold a live backend when the definition is built from
     a decorated class — the engine then persists through the exact instance
-    the user configured; the JSON/YAML projection degrades it to its
+    the user configured; the declarative projection degrades it to its
     serialized config.
     """
 
@@ -275,7 +275,7 @@ class FlowHumanFeedbackDefinition(BaseModel):
     """Static human feedback configuration.
 
     ``llm`` and ``provider`` may hold live Python objects when the definition
-    is built from a decorated class; the JSON/YAML projection degrades them to
+    is built from a decorated class; the declarative projection degrades them to
     a serialized config (``llm``) or a ``module:qualname`` ref (``provider``).
     """
 
@@ -777,7 +777,7 @@ class FlowDefinition(BaseModel):
         return self
 
     def to_dict(self, *, exclude_none: bool = True) -> dict[str, Any]:
-        """Serialize the definition to a JSON/YAML-ready dictionary."""
+        """Serialize the definition to a declaration-ready dictionary."""
         return self.model_dump(by_alias=True, exclude_none=exclude_none, mode="json")
 
     def to_json(self, *, indent: int | None = 2, exclude_none: bool = True) -> str:
@@ -817,16 +817,37 @@ class FlowDefinition(BaseModel):
         return definition
 
     @classmethod
-    def from_json(cls, data: str, *, source_path: Path | None = None) -> FlowDefinition:
-        """Load a definition from JSON."""
-        return cls.from_dict(json.loads(data), source_path=source_path)
+    def from_declaration(
+        cls,
+        *,
+        contents: FlowDefinition | str | dict[str, Any] | None = None,
+        path: Path | str | None = None,
+    ) -> FlowDefinition:
+        """Load a declarative flow from contents or a file path."""
+        if isinstance(contents, cls):
+            return contents
 
-    @classmethod
-    def from_yaml(cls, data: str, *, source_path: Path | None = None) -> FlowDefinition:
-        """Load a definition from YAML."""
-        loaded = yaml.safe_load(data) or {}
+        source_path: Path | None = None
+        if contents is None:
+            if path is None:
+                raise ValueError("Provide contents or path")
+            source_path = Path(path)
+            contents = source_path.expanduser().read_text(encoding="utf-8")
+
+        if isinstance(contents, dict):
+            return cls.from_dict(contents)
+
+        if not isinstance(contents, str):
+            raise TypeError("Flow declaration contents must be a string or dictionary")
+
+        if not contents.strip():
+            if source_path is not None:
+                raise ValueError(f"Flow declaration file is empty: {source_path}")
+            raise ValueError("Flow declaration contents are empty")
+
+        loaded = yaml.safe_load(contents)
         if not isinstance(loaded, dict):
-            raise ValueError("Flow definition YAML must contain a mapping")
+            raise ValueError("Flow declaration must contain a mapping")
         return cls.from_dict(loaded, source_path=source_path)
 
     @classmethod
