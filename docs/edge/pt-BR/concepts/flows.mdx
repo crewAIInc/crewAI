@@ -948,7 +948,7 @@ source .venv/bin/activate
 Com o ambiente ativado, execute o flow usando um dos comandos:
 
 ```bash
-crewai flow kickoff
+crewai run
 ```
 
 ou
@@ -1052,10 +1052,4 @@ crewai run
 
 O comando detecta automaticamente se seu projeto é um flow (com base na configuração `type = "flow"` no pyproject.toml) e executa conforme o esperado. Esse é o método recomendado para executar flows pelo terminal.
 
-Por compatibilidade retroativa, também é possível usar:
-
-```shell
-crewai flow kickoff
-```
-
-No entanto, o comando `crewai run` é agora o preferido, pois funciona tanto para crews quanto para flows.
+O comando legado `crewai flow kickoff` está deprecated. Use `crewai run` para crews e flows.

@@ -11,11 +11,10 @@ import pytest
 
 from crewai_cli.cli import run
 from crewai_cli.run_crew import (
-    CrewType,
+    _execute_uv_script,
     _load_json_crew_for_tui,
     _missing_input_names,
     _prompt_for_missing_inputs,
-    execute_command,
 )
 
 
@@ -30,6 +29,8 @@ def test_run_passes_filename_to_run_crew(run_crew_mock: mock.Mock, runner: CliRu
 
     run_crew_mock.assert_called_once_with(
         trained_agents_file="my_custom_trained.pkl",
+        definition=None,
+        inputs=None,
     )
     assert result.exit_code == 0
 
@@ -38,7 +39,11 @@ def test_run_passes_filename_to_run_crew(run_crew_mock: mock.Mock, runner: CliRu
 def test_run_without_filename_passes_none(run_crew_mock: mock.Mock, runner: CliRunner) -> None:
     result = runner.invoke(run)
 
-    run_crew_mock.assert_called_once_with(trained_agents_file=None)
+    run_crew_mock.assert_called_once_with(
+        trained_agents_file=None,
+        definition=None,
+        inputs=None,
+    )
     assert result.exit_code == 0
 
 
@@ -50,7 +55,11 @@ def test_run_without_filename_passes_none(run_crew_mock: mock.Mock, runner: CliR
 def test_execute_command_sets_env_var_when_filename_provided(
     _build_env: mock.Mock, subprocess_run: mock.Mock
 ) -> None:
-    execute_command(CrewType.STANDARD, trained_agents_file="my_custom_trained.pkl")
+    _execute_uv_script(
+        "run_crew",
+        entity_type="crew",
+        trained_agents_file="my_custom_trained.pkl",
+    )
 
     _, kwargs = subprocess_run.call_args
     assert kwargs["env"]["CREWAI_TRAINED_AGENTS_FILE"] == "my_custom_trained.pkl"
@@ -65,7 +74,7 @@ def test_execute_command_sets_env_var_when_filename_provided(
 def test_execute_command_omits_env_var_when_filename_absent(
     _build_env: mock.Mock, subprocess_run: mock.Mock
 ) -> None:
-    execute_command(CrewType.STANDARD)
+    _execute_uv_script("run_crew", entity_type="crew")
 
     _, kwargs = subprocess_run.call_args
     assert "CREWAI_TRAINED_AGENTS_FILE" not in kwargs["env"]
