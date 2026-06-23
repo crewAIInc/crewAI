@@ -31,5 +31,5 @@ def test_create_flow_declarative_project_can_run(
     result = CliRunner().invoke(crewai, ["run"], env={"UV_RUN_RECURSION_DEPTH": "1"})
 
     assert result.exit_code == 0
-    assert "Running the Flow" in result.output
+    assert "Running the Flow" not in result.output
     assert "AI agents" in result.output

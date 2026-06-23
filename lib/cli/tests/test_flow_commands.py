@@ -44,8 +44,12 @@ def test_flow_kickoff_runs_configured_declarative_definition(
     result = CliRunner().invoke(flow_run)
 
     assert result.exit_code == 0
-    assert "DeprecationWarning" in result.output
-    assert "Running the Flow\nAI\n" in result.output
+    assert (
+        "The command 'crewai flow kickoff' is deprecated. Use 'crewai run' instead."
+        in result.output
+    )
+    assert "AI\n" in result.output
+    assert "Running the Flow" not in result.output
 
 
 def test_plot_flow_runs_configured_declarative_definition(

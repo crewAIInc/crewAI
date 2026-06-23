@@ -190,7 +190,10 @@ def test_flow_kickoff_is_deprecated_and_uses_run_path(run_crew, runner):
         definition=None,
         inputs=None,
     )
-    assert "DeprecationWarning" in result.output
+    assert (
+        "The command 'crewai flow kickoff' is deprecated. Use 'crewai run' instead."
+        in result.output
+    )
 
 
 @mock.patch("crewai_cli.create_json_crew.create_json_crew")

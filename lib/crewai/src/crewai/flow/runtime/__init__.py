@@ -2455,11 +2455,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     object.__setattr__(
                         self, "_deferred_flow_started_event_id", started_event.event_id
                     )
-                if not self.suppress_flow_events:
-                    self._log_flow_event(
-                        f"Flow started with ID: {self.flow_id}", color="bold magenta"
-                    )
-
             # After FlowStarted: env events must not pre-empt trace batch init
             # with implicit "crew" execution_type.
             get_env_context()

@@ -787,9 +787,13 @@ def flow() -> None:
     """Flow related commands."""
 
 
-@flow.command(name="kickoff", deprecated=True)
+@flow.command(name="kickoff")
 def flow_run() -> None:
     """Kickoff the Flow."""
+    click.secho(
+        "The command 'crewai flow kickoff' is deprecated. Use 'crewai run' instead.",
+        fg="yellow",
+    )
     run_crew(trained_agents_file=None, definition=None, inputs=None)
 
 
