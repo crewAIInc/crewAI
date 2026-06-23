@@ -5,6 +5,7 @@ from contextlib import AbstractContextManager, nullcontext
 import os
 from pathlib import Path
 import re
+import shlex
 import subprocess
 import sys
 from typing import TYPE_CHECKING, Any, cast
@@ -17,6 +18,7 @@ from crewai_cli.utils import (
     build_env_with_all_tool_credentials,
     enable_prompt_line_editing,
     is_dmn_mode_enabled,
+    parse_toml,
     read_toml,
 )
 from crewai_cli.version import get_crewai_version
@@ -604,12 +606,14 @@ def _run_flow_project(
         run_declarative_flow_in_project_env(definition=definition)
         return
 
+    _ensure_project_script(pyproject_data, "kickoff", entity_type="flow")
     _execute_uv_script("kickoff", entity_type="flow")
 
 
 def _run_classic_crew_project(
     pyproject_data: dict[str, Any], trained_agents_file: str | None
 ) -> None:
+    _ensure_project_script(pyproject_data, "run_crew", entity_type="crew")
     _execute_uv_script(
         "run_crew",
         entity_type="crew",
@@ -620,6 +624,75 @@ def _run_classic_crew_project(
 def _get_project_type(pyproject_data: dict[str, Any]) -> str | None:
     project_type = pyproject_data.get("tool", {}).get("crewai", {}).get("type")
     return project_type if isinstance(project_type, str) else None
+
+
+def _project_scripts(pyproject_data: dict[str, Any]) -> dict[str, Any]:
+    project = pyproject_data.get("project", {})
+    if not isinstance(project, dict):
+        return {}
+    scripts = project.get("scripts", {})
+    return scripts if isinstance(scripts, dict) else {}
+
+
+def _ensure_project_script(
+    pyproject_data: dict[str, Any], script_name: str, *, entity_type: str
+) -> None:
+    if script_name in _project_scripts(pyproject_data):
+        return
+
+    cwd = Path.cwd()
+    child_project_hint = _child_project_run_hint(script_name)
+    raise click.ClickException(
+        f"Cannot run this {entity_type} from {cwd}: pyproject.toml does not "
+        f"define the `{script_name}` project script.\n\n"
+        f"Run `crewai run` from a CrewAI {entity_type} project directory, or add "
+        f"`{script_name}` under `[project.scripts]` in pyproject.toml."
+        f"{child_project_hint}"
+    )
+
+
+def _child_project_run_hint(script_name: str) -> str:
+    child_projects = _find_child_projects_with_script(script_name)
+    if not child_projects:
+        return ""
+
+    if len(child_projects) == 1:
+        project_path = _relative_child_project_path(child_projects[0])
+        project_command = shlex.quote(str(project_path))
+        return (
+            f"\n\nFound a CrewAI project in `{project_path}`. Try:\n\n"
+            f"  cd {project_command}\n"
+            "  crewai run"
+        )
+
+    project_list = "\n".join(
+        f"  - `{_relative_child_project_path(project_path)}`"
+        for project_path in child_projects
+    )
+    return (
+        "\n\nFound CrewAI projects with the expected script:\n"
+        f"{project_list}\n\n"
+        "Run `crewai run` from one of those directories."
+    )
+
+
+def _find_child_projects_with_script(script_name: str) -> list[Path]:
+    projects: list[Path] = []
+    for pyproject_path in sorted(Path.cwd().glob("*/pyproject.toml")):
+        try:
+            pyproject_data = parse_toml(pyproject_path.read_text())
+        except (OSError, ValueError):
+            continue
+        if script_name in _project_scripts(pyproject_data):
+            projects.append(pyproject_path.parent)
+    return projects
+
+
+def _relative_child_project_path(project_path: Path) -> Path:
+    try:
+        return project_path.relative_to(Path.cwd())
+    except ValueError:
+        return project_path
 
 
 def _warn_if_old_poetry_project(pyproject_data: dict[str, Any]) -> None:

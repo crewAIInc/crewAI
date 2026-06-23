@@ -612,7 +612,10 @@ def test_run_crew_runs_classic_crew_project(monkeypatch, capsys):
     monkeypatch.setattr(
         run_crew_module,
         "read_toml",
-        lambda: {"tool": {"crewai": {"type": "crew"}}},
+        lambda: {
+            "project": {"scripts": {"run_crew": "demo.main:run"}},
+            "tool": {"crewai": {"type": "crew"}},
+        },
     )
     monkeypatch.setattr(
         run_crew_module,
@@ -631,6 +634,83 @@ def test_run_crew_runs_classic_crew_project(monkeypatch, capsys):
     ]
 
 
+def test_run_crew_allows_legacy_project_with_run_script(monkeypatch):
+    calls = []
+
+    monkeypatch.setattr(run_crew_module, "_has_json_crew", lambda: False)
+    monkeypatch.setattr(
+        run_crew_module,
+        "read_toml",
+        lambda: {"project": {"scripts": {"run_crew": "demo.main:run"}}},
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "_execute_uv_script",
+        lambda script_name, **kwargs: calls.append((script_name, kwargs)),
+    )
+
+    run_crew_module.run_crew()
+
+    assert calls == [
+        (
+            "run_crew",
+            {"entity_type": "crew", "trained_agents_file": None},
+        )
+    ]
+
+
+def test_run_crew_rejects_project_without_run_script(monkeypatch, tmp_path: Path):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(run_crew_module, "_has_json_crew", lambda: False)
+    monkeypatch.setattr(
+        run_crew_module,
+        "read_toml",
+        lambda: {"project": {"name": "demo"}, "tool": {"crewai": {"type": "crew"}}},
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "_execute_uv_script",
+        lambda *_args, **_kwargs: pytest.fail("missing script must not invoke uv"),
+    )
+
+    with pytest.raises(click.ClickException) as exc_info:
+        run_crew_module.run_crew()
+
+    message = exc_info.value.message
+    assert "does not define the `run_crew` project script" in message
+    assert "Run `crewai run` from a CrewAI crew project directory" in message
+
+
+def test_run_crew_rejects_project_without_run_script_suggests_child_project(
+    monkeypatch, tmp_path: Path
+):
+    monkeypatch.chdir(tmp_path)
+    child_project = tmp_path / "ai_agent_news"
+    child_project.mkdir()
+    (child_project / "pyproject.toml").write_text(
+        "[project.scripts]\nrun_crew = 'ai_agent_news.main:run'\n"
+    )
+    monkeypatch.setattr(run_crew_module, "_has_json_crew", lambda: False)
+    monkeypatch.setattr(
+        run_crew_module,
+        "read_toml",
+        lambda: {"project": {"name": "demo"}, "tool": {"crewai": {"type": "crew"}}},
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "_execute_uv_script",
+        lambda *_args, **_kwargs: pytest.fail("missing script must not invoke uv"),
+    )
+
+    with pytest.raises(click.ClickException) as exc_info:
+        run_crew_module.run_crew()
+
+    message = exc_info.value.message
+    assert "Found a CrewAI project in `ai_agent_news`" in message
+    assert "cd ai_agent_news" in message
+    assert "crewai run" in message
+
+
 def test_run_crew_runs_python_flow_project(monkeypatch, capsys):
     calls = []
 
@@ -638,7 +718,10 @@ def test_run_crew_runs_python_flow_project(monkeypatch, capsys):
     monkeypatch.setattr(
         run_crew_module,
         "read_toml",
-        lambda: {"tool": {"crewai": {"type": "flow"}}},
+        lambda: {
+            "project": {"scripts": {"kickoff": "demo.main:kickoff"}},
+            "tool": {"crewai": {"type": "flow"}},
+        },
     )
     monkeypatch.setattr(
         run_crew_module,
@@ -650,6 +733,30 @@ def test_run_crew_runs_python_flow_project(monkeypatch, capsys):
 
     assert capsys.readouterr().out == ""
     assert calls == [("kickoff", {"entity_type": "flow"})]
+
+
+def test_run_flow_rejects_project_without_kickoff_script(
+    monkeypatch, tmp_path: Path
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(run_crew_module, "_has_json_crew", lambda: False)
+    monkeypatch.setattr(
+        run_crew_module,
+        "read_toml",
+        lambda: {"project": {"name": "demo"}, "tool": {"crewai": {"type": "flow"}}},
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "_execute_uv_script",
+        lambda *_args, **_kwargs: pytest.fail("missing script must not invoke uv"),
+    )
+
+    with pytest.raises(click.ClickException) as exc_info:
+        run_crew_module.run_crew()
+
+    message = exc_info.value.message
+    assert "does not define the `kickoff` project script" in message
+    assert "Run `crewai run` from a CrewAI flow project directory" in message
 
 
 def test_run_crew_rejects_filename_for_flow_project(monkeypatch):
