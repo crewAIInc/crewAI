@@ -568,3 +568,131 @@ def test_has_json_crew_true_without_pyproject(monkeypatch, tmp_path: Path):
     (tmp_path / "crew.jsonc").write_text("{}")
 
     assert run_crew_module._has_json_crew() is True
+
+
+def test_run_crew_rejects_inputs_without_definition():
+    with pytest.raises(click.UsageError) as exc_info:
+        run_crew_module.run_crew(inputs='{"topic":"AI"}')
+
+    assert "--inputs requires --definition" in exc_info.value.message
+
+
+def test_run_crew_rejects_filename_with_explicit_definition():
+    with pytest.raises(click.UsageError) as exc_info:
+        run_crew_module.run_crew(
+            trained_agents_file="trained.pkl",
+            definition="flow.yaml",
+        )
+
+    assert "--filename can only be used when running crews" in exc_info.value.message
+
+
+def test_run_crew_runs_explicit_declarative_definition(monkeypatch, capsys):
+    calls = []
+
+    def fake_run_declarative_flow(definition: str, inputs: str | None = None):
+        calls.append((definition, inputs))
+
+    monkeypatch.setattr(
+        "crewai_cli.run_declarative_flow.run_declarative_flow",
+        fake_run_declarative_flow,
+    )
+
+    run_crew_module.run_crew(definition="flow.yaml", inputs='{"topic":"AI"}')
+
+    captured = capsys.readouterr()
+    assert "experimental" not in captured.out.lower()
+    assert calls == [("flow.yaml", '{"topic":"AI"}')]
+
+
+def test_run_crew_runs_classic_crew_project(monkeypatch, capsys):
+    calls = []
+
+    monkeypatch.setattr(run_crew_module, "_has_json_crew", lambda: False)
+    monkeypatch.setattr(
+        run_crew_module,
+        "read_toml",
+        lambda: {"tool": {"crewai": {"type": "crew"}}},
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "_execute_uv_script",
+        lambda script_name, **kwargs: calls.append((script_name, kwargs)),
+    )
+
+    run_crew_module.run_crew(trained_agents_file="trained.pkl")
+
+    assert capsys.readouterr().out == ""
+    assert calls == [
+        (
+            "run_crew",
+            {"entity_type": "crew", "trained_agents_file": "trained.pkl"},
+        )
+    ]
+
+
+def test_run_crew_runs_python_flow_project(monkeypatch, capsys):
+    calls = []
+
+    monkeypatch.setattr(run_crew_module, "_has_json_crew", lambda: False)
+    monkeypatch.setattr(
+        run_crew_module,
+        "read_toml",
+        lambda: {"tool": {"crewai": {"type": "flow"}}},
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "_execute_uv_script",
+        lambda script_name, **kwargs: calls.append((script_name, kwargs)),
+    )
+
+    run_crew_module.run_crew()
+
+    assert capsys.readouterr().out == ""
+    assert calls == [("kickoff", {"entity_type": "flow"})]
+
+
+def test_run_crew_rejects_filename_for_flow_project(monkeypatch):
+    monkeypatch.setattr(run_crew_module, "_has_json_crew", lambda: False)
+    monkeypatch.setattr(
+        run_crew_module,
+        "read_toml",
+        lambda: {"tool": {"crewai": {"type": "flow"}}},
+    )
+
+    with pytest.raises(click.UsageError) as exc_info:
+        run_crew_module.run_crew(trained_agents_file="trained.pkl")
+
+    assert "--filename can only be used when running crews" in exc_info.value.message
+
+
+def test_run_crew_runs_configured_declarative_flow_project(monkeypatch, capsys):
+    calls = []
+
+    monkeypatch.setattr(run_crew_module, "_has_json_crew", lambda: False)
+    monkeypatch.setattr(
+        run_crew_module,
+        "read_toml",
+        lambda: {
+            "tool": {
+                "crewai": {
+                    "type": "flow",
+                    "definition": "flow.yaml",
+                }
+            }
+        },
+    )
+    monkeypatch.setattr(
+        "crewai_cli.run_declarative_flow.run_declarative_flow_in_project_env",
+        lambda definition, inputs=None: calls.append((definition, inputs)),
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "_execute_uv_script",
+        lambda *_args, **_kwargs: pytest.fail("declarative flows must not run kickoff"),
+    )
+
+    run_crew_module.run_crew()
+
+    assert capsys.readouterr().out == ""
+    assert calls == [("flow.yaml", None)]
