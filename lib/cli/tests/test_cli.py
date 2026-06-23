@@ -12,6 +12,7 @@ from crewai_cli.cli import (
     deploy_remove,
     deply_status,
     flow_add_crew,
+    flow_run,
     login,
     reset_memories,
     run,
@@ -126,38 +127,70 @@ def test_run_uses_project_runner_by_default(run_crew, runner):
     result = runner.invoke(run)
 
     assert result.exit_code == 0
-    run_crew.assert_called_once_with(trained_agents_file=None)
+    run_crew.assert_called_once_with(
+        trained_agents_file=None,
+        definition=None,
+        inputs=None,
+    )
     assert "experimental" not in result.output.lower()
 
 
-@mock.patch("crewai_cli.cli.run_declarative_flow")
-def test_run_with_definition_uses_definition_runner(run_declarative_flow, runner):
+@mock.patch("crewai_cli.cli.run_crew")
+def test_run_with_definition_uses_project_runner(run_crew, runner):
     result = runner.invoke(
         run,
         ["--definition", "flow.yaml", "--inputs", '{"topic":"AI"}'],
     )
 
     assert result.exit_code == 0
-    assert (
-        "Warning: `crewai run --definition` is experimental and may change without notice."
-        in result.output
-    )
-    run_declarative_flow.assert_called_once_with(
-        definition="flow.yaml", inputs='{"topic":"AI"}'
+    run_crew.assert_called_once_with(
+        trained_agents_file=None,
+        definition="flow.yaml",
+        inputs='{"topic":"AI"}',
     )
 
 
 @mock.patch("crewai_cli.cli.run_crew")
-@mock.patch("crewai_cli.cli.run_declarative_flow")
-def test_run_rejects_inputs_without_definition(
-    run_declarative_flow, run_crew, runner
-):
+def test_run_rejects_inputs_without_definition(run_crew, runner):
     result = runner.invoke(run, ["--inputs", '{"topic":"AI"}'])
 
     assert result.exit_code == 2
     assert "Error: --inputs requires --definition" in result.output
-    run_declarative_flow.assert_not_called()
     run_crew.assert_not_called()
+
+
+@mock.patch("crewai_cli.cli.run_crew")
+def test_run_rejects_filename_with_definition(run_crew, runner):
+    result = runner.invoke(run, ["--definition", "flow.yaml", "--filename", "x.pkl"])
+
+    assert result.exit_code == 2
+    assert "Error: --filename can only be used when running crews" in result.output
+    run_crew.assert_not_called()
+
+
+@mock.patch("crewai_cli.cli.run_crew")
+def test_run_passes_filename_to_project_runner(run_crew, runner):
+    result = runner.invoke(run, ["--filename", "trained.pkl"])
+
+    assert result.exit_code == 0
+    run_crew.assert_called_once_with(
+        trained_agents_file="trained.pkl",
+        definition=None,
+        inputs=None,
+    )
+
+
+@mock.patch("crewai_cli.cli.run_crew")
+def test_flow_kickoff_is_deprecated_and_uses_run_path(run_crew, runner):
+    result = runner.invoke(flow_run)
+
+    assert result.exit_code == 0
+    run_crew.assert_called_once_with(
+        trained_agents_file=None,
+        definition=None,
+        inputs=None,
+    )
+    assert "DeprecationWarning" in result.output
 
 
 @mock.patch("crewai_cli.create_json_crew.create_json_crew")

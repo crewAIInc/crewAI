@@ -956,13 +956,13 @@ Once all of the dependencies are installed, you need to activate the virtual env
 source .venv/bin/activate
 ```
 
-After activating the virtual environment, you can run the flow by executing one of the following commands:
+After activating the virtual environment, you can run the flow with the CrewAI CLI:
 
 ```bash
-crewai flow kickoff
+crewai run
 ```
 
-or
+You can also run the project script directly:
 
 ```bash
 uv run kickoff
@@ -1160,10 +1160,4 @@ crewai run
 
 This command automatically detects if your project is a flow (based on the `type = "flow"` setting in your pyproject.toml) and runs it accordingly. This is the recommended way to run flows from the command line.
 
-For backward compatibility, you can also use:
-
-```shell
-crewai flow kickoff
-```
-
-However, the `crewai run` command is now the preferred method as it works for both crews and flows.
+The legacy `crewai flow kickoff` command is deprecated. Use `crewai run` for both crews and flows.
