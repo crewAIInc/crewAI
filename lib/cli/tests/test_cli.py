@@ -16,6 +16,7 @@ from crewai_cli.cli import (
     login,
     reset_memories,
     run,
+    starter,
     test,
     train,
     version,
@@ -178,6 +179,66 @@ def test_run_passes_filename_to_project_runner(run_crew, runner):
         definition=None,
         inputs=None,
     )
+
+
+@mock.patch("crewai_cli.cli.TemplateCommand")
+def test_starter_without_name_lists_starter_packs(template_command, runner):
+    result = runner.invoke(starter)
+
+    assert result.exit_code == 0
+    template_command.return_value.list_starter_packs.assert_called_once_with()
+    template_command.return_value.add_starter_pack.assert_not_called()
+
+
+@mock.patch("crewai_cli.cli.TemplateCommand")
+def test_starter_list_alias_lists_starter_packs(template_command, runner):
+    result = runner.invoke(starter, ["list"])
+
+    assert result.exit_code == 0
+    template_command.return_value.list_starter_packs.assert_called_once_with()
+    template_command.return_value.add_starter_pack.assert_not_called()
+
+
+@mock.patch("crewai_cli.cli.TemplateCommand")
+def test_starter_installs_named_pack(template_command, runner):
+    result = runner.invoke(starter, ["analyst"])
+
+    assert result.exit_code == 0
+    template_command.return_value.add_starter_pack.assert_called_once_with(
+        "analyst", None
+    )
+    template_command.return_value.list_starter_packs.assert_not_called()
+
+
+@mock.patch("crewai_cli.cli.TemplateCommand")
+def test_starter_installs_named_pack_to_target_dir(template_command, runner):
+    result = runner.invoke(starter, ["analyst", "my_analyst"])
+
+    assert result.exit_code == 0
+    template_command.return_value.add_starter_pack.assert_called_once_with(
+        "analyst", "my_analyst"
+    )
+
+
+@mock.patch("crewai_cli.cli.TemplateCommand")
+def test_starter_installs_named_pack_to_output_dir(template_command, runner):
+    result = runner.invoke(starter, ["analyst", "--output-dir", "my_analyst"])
+
+    assert result.exit_code == 0
+    template_command.return_value.add_starter_pack.assert_called_once_with(
+        "analyst", "my_analyst"
+    )
+
+
+@mock.patch("crewai_cli.cli.TemplateCommand")
+def test_starter_rejects_two_output_dirs(template_command, runner):
+    result = runner.invoke(
+        starter, ["analyst", "my_analyst", "--output-dir", "other"]
+    )
+
+    assert result.exit_code == 2
+    assert "Use either TARGET_DIR or --output-dir, not both." in result.output
+    template_command.return_value.add_starter_pack.assert_not_called()
 
 
 @mock.patch("crewai_cli.cli.run_crew")

@@ -1,0 +1,93 @@
+---
+title: Starter Packs
+description: Pull job-focused CrewAI project templates into a new project.
+icon: box-open
+mode: "wide"
+---
+
+## Overview
+
+Starter packs are a beginner-friendly way to start from a job-to-be-done instead of from framework concepts.
+They are installed from external CrewAI template repositories, so they do not add role-specific behavior to CrewAI's core agent, task, crew, or flow runtime.
+
+Use starter packs when you want a runnable baseline that you can customize after it lands in your workspace.
+A starter pack can include agents, tasks, flows, tools, skills, examples, and README guidance.
+
+## Install a Starter Pack
+
+List the available starter packs:
+
+```shell Terminal
+crewai starter list
+```
+
+Install one into the current directory:
+
+```shell Terminal
+crewai starter <name>
+```
+
+Install one into a specific directory:
+
+```shell Terminal
+crewai starter <name> <target_dir>
+```
+
+or:
+
+```shell Terminal
+crewai starter <name> --output-dir <target_dir>
+```
+
+For example, if an `analyst` starter pack is available:
+
+```shell Terminal
+crewai starter analyst my_analyst
+cd my_analyst
+crewai install
+crewai run
+```
+
+## How Starter Packs Work
+
+Starter packs use the same remote template mechanism as:
+
+```shell Terminal
+crewai template add <name>
+```
+
+The command resolves `<name>` to an external template repository such as `template_analyst`, downloads it, and copies the project into your target directory.
+
+This keeps starter packs as an extended capability that gets pulled in when you need it. The generated project is ordinary CrewAI code and configuration, so you can edit it like any other crew or flow project.
+
+## Analyst Starter Pack Pattern
+
+An analyst starter pack can model a reusable workflow without baking analyst logic into CrewAI itself:
+
+```text
+Understand schema -> draft query -> test query -> validate answer
+```
+
+A generated analyst project might include:
+
+```text
+my_analyst/
+|-- crew.jsonc
+|-- agents/
+|   |-- schema_analyst.jsonc
+|   |-- query_writer.jsonc
+|   |-- query_tester.jsonc
+|   `-- validator.jsonc
+|-- tools/
+|   `-- database_tool.py
+|-- skills/
+|   `-- analyst-methodology/
+`-- README.md
+```
+
+The starter pack should give users a working baseline. From there, they can connect their data source, adjust roles, change validation criteria, or replace the default flow with their own.
+
+## When to Use Templates Instead
+
+Use `crewai template list` or `crewai template add <name>` when you already know you want to browse the raw project-template catalog.
+Use `crewai starter` when you want onboarding language focused on the outcome you are trying to build.

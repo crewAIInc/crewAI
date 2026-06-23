@@ -44,18 +44,26 @@ class TemplateCommand(BaseCommand):
 
     def list_templates(self) -> None:
         """List available templates with an interactive selector to install."""
+        self._list_repos(kind="templates")
+
+    def list_starter_packs(self) -> None:
+        """List available starter packs with an interactive selector to install."""
+        self._list_repos(kind="starter packs")
+
+    def _list_repos(self, kind: str) -> None:
+        """List available template repositories using a user-facing label."""
         templates = self._fetch_templates()
         if not templates:
-            click.echo("No templates found.")
+            click.echo(f"No {kind} found.")
             return
 
         console.print(f"\n{BANNER}\n")
-        console.print(" [on cyan] templates [/on cyan]\n")
+        console.print(f" [on cyan] {kind} [/on cyan]\n")
         console.print(f" [green]o[/green]  Source: https://github.com/{GITHUB_ORG}")
         console.print(
-            f" [green]o[/green]  Found [bold]{len(templates)}[/bold] templates\n"
+            f" [green]o[/green]  Found [bold]{len(templates)}[/bold] {kind}\n"
         )
-        console.print(" [green]o[/green]  Select a template to install")
+        console.print(f" [green]o[/green]  Select a {kind[:-1]} to install")
 
         for idx, repo in enumerate(templates, start=1):
             name = repo["name"].removeprefix(TEMPLATE_PREFIX)
@@ -88,7 +96,7 @@ class TemplateCommand(BaseCommand):
 
         selected = templates[selected_index]
         repo_name = selected["name"]
-        self._install_repo(repo_name)
+        self._install_repo(repo_name, kind=kind[:-1])
 
     def add_template(self, name: str, output_dir: str | None = None) -> None:
         """Download a template and copy it into the current working directory.
@@ -105,12 +113,33 @@ class TemplateCommand(BaseCommand):
 
         self._install_repo(repo_name, output_dir)
 
-    def _install_repo(self, repo_name: str, output_dir: str | None = None) -> None:
+    def add_starter_pack(self, name: str, output_dir: str | None = None) -> None:
+        """Download a starter pack template into the current working directory.
+
+        Starter packs are a friendly onboarding layer over the same external
+        template repositories used by ``crewai template add``.
+
+        Args:
+            name: Starter pack name (with or without the template_ prefix).
+            output_dir: Optional directory name. Defaults to the starter pack name.
+        """
+        repo_name = self._resolve_repo_name(name)
+        if repo_name is None:
+            click.secho(f"Starter pack '{name}' not found.", fg="red")
+            click.echo("Run 'crewai starter list' to see available starter packs.")
+            raise SystemExit(1)
+
+        self._install_repo(repo_name, output_dir, kind="starter pack")
+
+    def _install_repo(
+        self, repo_name: str, output_dir: str | None = None, kind: str = "template"
+    ) -> None:
         """Download and extract a template repo into the current directory.
 
         Args:
             repo_name: Full GitHub repo name (e.g. template_deep_research).
             output_dir: Optional directory name. Defaults to the template name.
+            kind: User-facing install label.
         """
         folder_name = output_dir or repo_name.removeprefix(TEMPLATE_PREFIX)
         dest = os.path.join(os.getcwd(), folder_name)
@@ -124,9 +153,7 @@ class TemplateCommand(BaseCommand):
                 return
             dest = os.path.join(os.getcwd(), folder_name)
 
-        click.echo(
-            f"Downloading template '{repo_name.removeprefix(TEMPLATE_PREFIX)}'..."
-        )
+        click.echo(f"Downloading {kind} '{repo_name.removeprefix(TEMPLATE_PREFIX)}'...")
 
         zip_bytes = self._download_zip(repo_name)
         self._extract_zip(zip_bytes, dest)
@@ -134,7 +161,7 @@ class TemplateCommand(BaseCommand):
         self._telemetry.template_installed_span(repo_name.removeprefix(TEMPLATE_PREFIX))
 
         console.print(
-            f"\n [green]\u2713[/green]  Installed template [bold white]{folder_name}[/bold white]"
+            f"\n [green]\u2713[/green]  Installed {kind} [bold white]{folder_name}[/bold white]"
             f" [dim](source: github.com/{GITHUB_ORG}/{repo_name})[/dim]\n"
         )
 
