@@ -5,19 +5,27 @@ import click
 
 def kickoff_flow() -> None:
     """
-    Kickoff the flow by running a command in the UV environment.
+    Kickoff the flow from declarative config or the Python UV entrypoint.
     """
-    command = ["uv", "run", "kickoff"]
+    from crewai_cli.run_declarative_flow import (
+        configured_project_declarative_flow,
+        run_declarative_flow_in_project_env,
+    )
 
-    try:
-        result = subprocess.run(command, capture_output=False, text=True, check=True)  # noqa: S603
+    if definition := configured_project_declarative_flow():
+        run_declarative_flow_in_project_env(definition=definition)
+    else:
+        command = ["uv", "run", "kickoff"]
 
-        if result.stderr:
-            click.echo(result.stderr, err=True)
+        try:
+            subprocess.run(  # noqa: S603
+                command, capture_output=False, text=True, check=True
+            )
 
-    except subprocess.CalledProcessError as e:
-        click.echo(f"An error occurred while running the flow: {e}", err=True)
-        click.echo(e.output, err=True)
+        except subprocess.CalledProcessError as e:
+            click.echo(f"An error occurred while running the flow: {e}", err=True)
+            raise SystemExit(1) from e
 
-    except Exception as e:
-        click.echo(f"An unexpected error occurred: {e}", err=True)
+        except Exception as e:
+            click.echo(f"An unexpected error occurred: {e}", err=True)
+            raise SystemExit(1) from e

@@ -40,12 +40,12 @@ def replay_task_command(*args: Any, **kwargs: Any) -> Any:
     return _replay_task_command(*args, **kwargs)
 
 
-def run_flow_definition(*args: Any, **kwargs: Any) -> Any:
-    from crewai_cli.run_flow_definition import (
-        run_flow_definition as _run_flow_definition,
+def run_declarative_flow(*args: Any, **kwargs: Any) -> Any:
+    from crewai_cli.run_declarative_flow import (
+        run_declarative_flow as _run_declarative_flow,
     )
 
-    return _run_flow_definition(*args, **kwargs)
+    return _run_declarative_flow(*args, **kwargs)
 
 
 def run_crew(*args: Any, **kwargs: Any) -> Any:
@@ -155,12 +155,18 @@ def uv(uv_args: tuple[str, ...]) -> None:
     is_flag=True,
     help="Use classic Python/YAML project structure instead of JSON",
 )
+@click.option(
+    "--declarative",
+    is_flag=True,
+    help="Create a declarative Flow project instead of a Python Flow project",
+)
 def create(
     type: str | None,
     name: str | None,
     provider: str | None,
     skip_provider: bool = False,
     classic: bool = False,
+    declarative: bool = False,
 ) -> None:
     """Create a new crew, or flow."""
     dmn_mode = is_dmn_mode_enabled()
@@ -194,6 +200,8 @@ def create(
     if dmn_mode:
         skip_provider = True
     if type == "crew":
+        if declarative:
+            raise click.UsageError("--declarative can only be used with flow projects")
         if classic:
             from crewai_cli.create_crew import create_crew
 
@@ -205,7 +213,7 @@ def create(
     elif type == "flow":
         from crewai_cli.create_flow import create_flow
 
-        create_flow(name)
+        create_flow(name, declarative=declarative)
     else:
         click.secho("Error: Invalid type. Must be 'crew' or 'flow'.", fg="red")
 
@@ -512,10 +520,7 @@ def install(context: click.Context) -> None:
     "--definition",
     type=str,
     default=None,
-    help=(
-        "Experimental: path to a Flow Definition YAML/JSON file, "
-        "or an inline YAML/JSON string."
-    ),
+    help="Experimental: path to a declarative Flow YAML/JSON file.",
 )
 @click.option(
     "--inputs",
@@ -537,7 +542,7 @@ def run(
             "Warning: `crewai run --definition` is experimental and may change without notice.",
             fg="yellow",
         )
-        run_flow_definition(definition=definition, inputs=inputs)
+        run_declarative_flow(definition=definition, inputs=inputs)
         return
 
     run_crew(trained_agents_file=trained_agents_file)

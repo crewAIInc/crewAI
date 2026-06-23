@@ -130,8 +130,8 @@ def test_run_uses_project_runner_by_default(run_crew, runner):
     assert "experimental" not in result.output.lower()
 
 
-@mock.patch("crewai_cli.cli.run_flow_definition")
-def test_run_with_definition_uses_definition_runner(run_flow_definition, runner):
+@mock.patch("crewai_cli.cli.run_declarative_flow")
+def test_run_with_definition_uses_definition_runner(run_declarative_flow, runner):
     result = runner.invoke(
         run,
         ["--definition", "flow.yaml", "--inputs", '{"topic":"AI"}'],
@@ -142,19 +142,21 @@ def test_run_with_definition_uses_definition_runner(run_flow_definition, runner)
         "Warning: `crewai run --definition` is experimental and may change without notice."
         in result.output
     )
-    run_flow_definition.assert_called_once_with(
+    run_declarative_flow.assert_called_once_with(
         definition="flow.yaml", inputs='{"topic":"AI"}'
     )
 
 
 @mock.patch("crewai_cli.cli.run_crew")
-@mock.patch("crewai_cli.cli.run_flow_definition")
-def test_run_rejects_inputs_without_definition(run_flow_definition, run_crew, runner):
+@mock.patch("crewai_cli.cli.run_declarative_flow")
+def test_run_rejects_inputs_without_definition(
+    run_declarative_flow, run_crew, runner
+):
     result = runner.invoke(run, ["--inputs", '{"topic":"AI"}'])
 
     assert result.exit_code == 2
     assert "Error: --inputs requires --definition" in result.output
-    run_flow_definition.assert_not_called()
+    run_declarative_flow.assert_not_called()
     run_crew.assert_not_called()
 
 
@@ -164,6 +166,23 @@ def test_create_crew_in_dmn_mode_skips_provider_prompts(create_json_crew, runner
 
     assert result.exit_code == 0
     create_json_crew.assert_called_once_with("DMN Crew", None, True)
+
+
+@mock.patch("crewai_cli.create_flow.create_flow")
+def test_create_flow_declarative_uses_declarative_scaffold(create_flow, runner):
+    result = runner.invoke(create, ["flow", "My Flow", "--declarative"])
+
+    assert result.exit_code == 0
+    create_flow.assert_called_once_with("My Flow", declarative=True)
+
+
+@mock.patch("crewai_cli.create_json_crew.create_json_crew")
+def test_create_crew_rejects_declarative_flag(create_json_crew, runner):
+    result = runner.invoke(create, ["crew", "My Crew", "--declarative"])
+
+    assert result.exit_code == 2
+    assert "--declarative can only be used with flow projects" in result.output
+    create_json_crew.assert_not_called()
 
 
 def test_create_requires_type_in_dmn_mode(runner):
