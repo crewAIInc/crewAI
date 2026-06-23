@@ -1,136 +1,100 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
+import subprocess
+
+import pytest
 
 import crewai_cli.kickoff_flow as kickoff_flow_module
 import crewai_cli.plot_flow as plot_flow_module
 
 
-def test_kickoff_flow_uses_configured_definition(monkeypatch):
-    calls = []
-    subprocess_calls = []
-    monkeypatch.delenv("UV_RUN_RECURSION_DEPTH", raising=False)
-
-    monkeypatch.setattr(
-        "crewai_cli.run_declarative_flow.configured_project_declarative_flow",
-        lambda: "flow.yaml",
-    )
-    monkeypatch.setattr(
-        "crewai_cli.run_declarative_flow.run_declarative_flow",
-        lambda **kwargs: calls.append({"in_process": kwargs}),
-    )
-    monkeypatch.setattr(
-        "crewai_cli.run_declarative_flow.run_declarative_flow_in_project_env",
-        lambda **kwargs: calls.append(kwargs),
-    )
-    monkeypatch.setattr(
-        kickoff_flow_module.subprocess,
-        "run",
-        lambda *args, **kwargs: subprocess_calls.append((args, kwargs)),
-    )
-
-    kickoff_flow_module.kickoff_flow()
-
-    assert calls == [{"definition": "flow.yaml"}]
-    assert subprocess_calls == []
+FLOW_YAML = """\
+schema: crewai.flow/v1
+name: TestFlow
+config:
+  suppress_flow_events: true
+methods:
+  begin:
+    start: true
+    do:
+      call: expression
+      expr: "'AI'"
+"""
 
 
-def test_kickoff_flow_keeps_python_entrypoint_without_definition(monkeypatch):
-    subprocess_calls = []
-
-    monkeypatch.setattr(
-        "crewai_cli.run_declarative_flow.configured_project_declarative_flow",
-        lambda: None,
-    )
-    monkeypatch.setattr(
-        kickoff_flow_module.subprocess,
-        "run",
-        lambda *args, **kwargs: subprocess_calls.append((args, kwargs)),
+def _write_flow_project(project_root: Path) -> None:
+    (project_root / "flow.yaml").write_text(FLOW_YAML, encoding="utf-8")
+    (project_root / "pyproject.toml").write_text(
+        '[project]\nname = "demo"\n\n'
+        '[tool.crewai]\ntype = "flow"\ndefinition = "flow.yaml"\n',
+        encoding="utf-8",
     )
 
-    kickoff_flow_module.kickoff_flow()
 
-    assert subprocess_calls == [
-        (
-            (["uv", "run", "kickoff"],),
-            {"capture_output": False, "text": True, "check": True},
-        )
-    ]
-
-
-def test_plot_flow_uses_configured_definition(monkeypatch):
-    calls = []
-    subprocess_calls = []
-    monkeypatch.delenv("UV_RUN_RECURSION_DEPTH", raising=False)
-
-    monkeypatch.setattr(
-        "crewai_cli.run_declarative_flow.configured_project_declarative_flow",
-        lambda: "flow.yaml",
-    )
-    monkeypatch.setattr(
-        "crewai_cli.run_declarative_flow.plot_declarative_flow",
-        lambda definition: calls.append({"in_process": definition}),
-    )
-    monkeypatch.setattr(
-        "crewai_cli.run_declarative_flow.plot_declarative_flow_in_project_env",
-        lambda definition: calls.append(definition),
-    )
-    monkeypatch.setattr(
-        plot_flow_module.subprocess,
-        "run",
-        lambda *args, **kwargs: subprocess_calls.append((args, kwargs)),
-    )
-
-    plot_flow_module.plot_flow()
-
-    assert calls == ["flow.yaml"]
-    assert subprocess_calls == []
-
-
-def test_plot_flow_delegates_project_env_detection_to_runner(monkeypatch):
-    calls = []
+def test_kickoff_flow_runs_configured_declarative_definition(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _write_flow_project(tmp_path)
+    monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("UV_RUN_RECURSION_DEPTH", "1")
-    monkeypatch.setattr(
-        "crewai_cli.run_declarative_flow.configured_project_declarative_flow",
-        lambda: "flow.yaml",
-    )
-    monkeypatch.setattr(
-        "crewai_cli.run_declarative_flow.plot_declarative_flow_in_project_env",
-        lambda definition: calls.append({"project_env": definition}),
-    )
+
+    kickoff_flow_module.kickoff_flow()
+
+    assert capsys.readouterr().out == "AI\n"
+
+
+def test_plot_flow_runs_configured_declarative_definition(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _write_flow_project(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("UV_RUN_RECURSION_DEPTH", "1")
 
     plot_flow_module.plot_flow()
 
-    assert calls == [{"project_env": "flow.yaml"}]
 
-
-def test_plot_flow_keeps_python_entrypoint_without_definition(monkeypatch):
+@pytest.mark.parametrize(
+    ("command", "expected"),
+    [
+        pytest.param(kickoff_flow_module.kickoff_flow, ["uv", "run", "kickoff"]),
+        pytest.param(plot_flow_module.plot_flow, ["uv", "run", "plot"]),
+    ],
+)
+def test_flow_commands_keep_python_entrypoint_without_definition(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    command: Callable[[], None],
+    expected: list[str],
+) -> None:
     subprocess_calls = []
 
+    monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(
-        "crewai_cli.run_declarative_flow.configured_project_declarative_flow",
-        lambda: None,
-    )
-    monkeypatch.setattr(
-        plot_flow_module.subprocess,
+        subprocess,
         "run",
-        lambda *args, **kwargs: subprocess_calls.append((args, kwargs)),
+        lambda command, **kwargs: subprocess_calls.append((command, kwargs)),
     )
 
-    plot_flow_module.plot_flow()
+    command()
 
     assert subprocess_calls == [
         (
-            (["uv", "run", "plot"],),
+            expected,
             {"capture_output": False, "text": True, "check": True},
         )
     ]
 
 
-def test_configured_project_declarative_flow(monkeypatch, tmp_path: Path):
+def test_configured_project_declarative_flow(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     monkeypatch.chdir(tmp_path)
     (tmp_path / "pyproject.toml").write_text(
-        '[tool.crewai]\ntype = "flow"\ndefinition = "flow.yaml"\n',
+        '[tool.crewai]\ntype = "flow"\ndefinition = " flow.yaml "\n',
         encoding="utf-8",
     )
 

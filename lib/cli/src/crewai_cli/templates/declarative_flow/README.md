@@ -1,6 +1,6 @@
 # {{name}} Flow
 
-This project defines a CrewAI Flow in `flow.yaml`.
+This project defines a CrewAI Flow in `src/{{folder_name}}/flow.yaml`.
 
 ## Install
 
@@ -11,7 +11,7 @@ crewai install
 ## Run
 
 ```bash
-crewai run
+crewai flow kickoff
 ```
 
-Edit `flow.yaml` to change the flow. Add reusable crews under `crews/`, custom Python tools under `tools/`, and shared knowledge files under `knowledge/`.
+Edit `src/{{folder_name}}/flow.yaml` to change the flow. Add reusable crews under `src/{{folder_name}}/crews/`, custom Python tools under `src/{{folder_name}}/tools/`, and shared knowledge files under `src/{{folder_name}}/knowledge/`.

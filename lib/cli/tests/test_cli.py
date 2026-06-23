@@ -130,49 +130,33 @@ def test_run_uses_project_runner_by_default(run_crew, runner):
     assert "experimental" not in result.output.lower()
 
 
-@mock.patch("crewai_cli.cli.run_declarative_flow_in_project_env")
-def test_run_with_definition_uses_project_env_declarative_runner(
-    run_declarative_flow_in_project_env, runner, monkeypatch
-):
-    monkeypatch.delenv("UV_RUN_RECURSION_DEPTH", raising=False)
+@mock.patch("crewai_cli.cli.run_declarative_flow")
+def test_run_with_definition_uses_definition_runner(run_declarative_flow, runner):
     result = runner.invoke(
         run,
         ["--definition", "flow.yaml", "--inputs", '{"topic":"AI"}'],
     )
 
     assert result.exit_code == 0
-    assert "experimental" not in result.output.lower()
-    run_declarative_flow_in_project_env.assert_called_once_with(
-        definition="flow.yaml", inputs='{"topic":"AI"}'
+    assert (
+        "Warning: `crewai run --definition` is experimental and may change without notice."
+        in result.output
     )
-
-
-@mock.patch("crewai_cli.cli.run_declarative_flow_in_project_env")
-def test_run_with_definition_delegates_project_env_detection_to_runner(
-    run_declarative_flow_in_project_env, runner
-):
-    result = runner.invoke(
-        run,
-        ["--definition", "flow.yaml", "--inputs", '{"topic":"AI"}'],
-        env={"UV_RUN_RECURSION_DEPTH": "1"},
-    )
-
-    assert result.exit_code == 0
-    run_declarative_flow_in_project_env.assert_called_once_with(
+    run_declarative_flow.assert_called_once_with(
         definition="flow.yaml", inputs='{"topic":"AI"}'
     )
 
 
 @mock.patch("crewai_cli.cli.run_crew")
-@mock.patch("crewai_cli.cli.run_declarative_flow_in_project_env")
+@mock.patch("crewai_cli.cli.run_declarative_flow")
 def test_run_rejects_inputs_without_definition(
-    run_declarative_flow_in_project_env, run_crew, runner
+    run_declarative_flow, run_crew, runner
 ):
     result = runner.invoke(run, ["--inputs", '{"topic":"AI"}'])
 
     assert result.exit_code == 2
     assert "Error: --inputs requires --definition" in result.output
-    run_declarative_flow_in_project_env.assert_not_called()
+    run_declarative_flow.assert_not_called()
     run_crew.assert_not_called()
 
 

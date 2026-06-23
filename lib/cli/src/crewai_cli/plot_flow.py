@@ -18,16 +18,14 @@ def plot_flow() -> None:
         command = ["uv", "run", "plot"]
 
         try:
-            result = subprocess.run(  # noqa: S603
+            subprocess.run(  # noqa: S603
                 command, capture_output=False, text=True, check=True
             )
 
-            if result.stderr:
-                click.echo(result.stderr, err=True)
-
         except subprocess.CalledProcessError as e:
             click.echo(f"An error occurred while plotting the flow: {e}", err=True)
-            click.echo(e.output, err=True)
+            raise SystemExit(1) from e
 
         except Exception as e:
             click.echo(f"An unexpected error occurred: {e}", err=True)
+            raise SystemExit(1) from e

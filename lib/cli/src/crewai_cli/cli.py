@@ -40,12 +40,12 @@ def replay_task_command(*args: Any, **kwargs: Any) -> Any:
     return _replay_task_command(*args, **kwargs)
 
 
-def run_declarative_flow_in_project_env(*args: Any, **kwargs: Any) -> Any:
+def run_declarative_flow(*args: Any, **kwargs: Any) -> Any:
     from crewai_cli.run_declarative_flow import (
-        run_declarative_flow_in_project_env as _run_declarative_flow_in_project_env,
+        run_declarative_flow as _run_declarative_flow,
     )
 
-    return _run_declarative_flow_in_project_env(*args, **kwargs)
+    return _run_declarative_flow(*args, **kwargs)
 
 
 def run_crew(*args: Any, **kwargs: Any) -> Any:
@@ -520,13 +520,13 @@ def install(context: click.Context) -> None:
     "--definition",
     type=str,
     default=None,
-    help="Path to a declarative Flow YAML/JSON file.",
+    help="Experimental: path to a declarative Flow YAML/JSON file.",
 )
 @click.option(
     "--inputs",
     type=str,
     default=None,
-    help='JSON object passed to flow.kickoff(), e.g. \'{"topic":"AI"}\'.',
+    help='Experimental: JSON object passed to flow.kickoff(), e.g. \'{"topic":"AI"}\'.',
 )
 def run(
     trained_agents_file: str | None,
@@ -538,9 +538,14 @@ def run(
         raise click.UsageError("--inputs requires --definition")
 
     if definition is not None:
-        run_declarative_flow_in_project_env(definition=definition, inputs=inputs)
-    else:
-        run_crew(trained_agents_file=trained_agents_file)
+        click.secho(
+            "Warning: `crewai run --definition` is experimental and may change without notice.",
+            fg="yellow",
+        )
+        run_declarative_flow(definition=definition, inputs=inputs)
+        return
+
+    run_crew(trained_agents_file=trained_agents_file)
 
 
 @crewai.command()

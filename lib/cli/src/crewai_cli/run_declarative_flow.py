@@ -18,10 +18,10 @@ def run_declarative_flow_in_project_env(
         run_declarative_flow(definition=definition, inputs=inputs)
         return
 
-    command = ["uv", "run", "crewai", "run", "--definition", definition]
     if inputs is not None:
-        command.extend(["--inputs", inputs])
-    _execute_declarative_flow_command(command)
+        raise click.UsageError("--inputs is only supported with --definition")
+
+    _execute_declarative_flow_command(["uv", "run", "crewai", "flow", "kickoff"])
 
 
 def plot_declarative_flow_in_project_env(definition: str) -> None:
@@ -100,7 +100,9 @@ def configured_project_declarative_flow(
     if crewai_config.get("type") != "flow":
         return None
     definition = crewai_config.get("definition")
-    return definition if isinstance(definition, str) and definition.strip() else None
+    if not isinstance(definition, str):
+        return None
+    return definition.strip() or None
 
 
 def _execute_declarative_flow_command(command: list[str]) -> None:

@@ -1170,6 +1170,33 @@ methods:
     }
 
 
+def test_crew_action_from_declaration_rejects_paths_outside_flow_file(
+    tmp_path: Path,
+):
+    flow_path = tmp_path / "project" / "flow.yaml"
+    flow_path.parent.mkdir()
+    yaml_str = """
+schema: crewai.flow/v1
+name: CrewFlow
+methods:
+  research:
+    do:
+      call: crew
+      from_declaration: ../outside/crew.jsonc
+    start: true
+"""
+
+    flow = Flow.from_definition(
+        FlowDefinition.from_yaml(yaml_str, source_path=flow_path)
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="crew declaration path must be within the flow definition directory",
+    ):
+        flow.kickoff()
+
+
 def test_crew_action_round_trips_with_inline_definition():
     definition = FlowDefinition.from_dict(
         {

@@ -565,24 +565,11 @@ def run_crew(trained_agents_file: str | None = None) -> None:
         )
 
     is_flow = pyproject_data.get("tool", {}).get("crewai", {}).get("type") == "flow"
-    if is_flow:
-        from crewai_cli.run_declarative_flow import configured_project_declarative_flow
+    crew_type = CrewType.FLOW if is_flow else CrewType.STANDARD
 
-        declarative_flow = configured_project_declarative_flow(pyproject_data)
-    else:
-        declarative_flow = None
+    click.echo(f"Running the {'Flow' if is_flow else 'Crew'}")
 
-    if declarative_flow is not None:
-        click.echo("Running the Flow")
-        from crewai_cli.run_declarative_flow import run_declarative_flow_in_project_env
-
-        run_declarative_flow_in_project_env(definition=declarative_flow)
-    else:
-        crew_type = CrewType.FLOW if is_flow else CrewType.STANDARD
-
-        click.echo(f"Running the {'Flow' if is_flow else 'Crew'}")
-
-        execute_command(crew_type, trained_agents_file=trained_agents_file)
+    execute_command(crew_type, trained_agents_file=trained_agents_file)
 
 
 def execute_command(

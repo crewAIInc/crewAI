@@ -9,14 +9,12 @@ dependencies = [
 ]
 
 [build-system]
-requires = ["uv_build>=0.11.23,<0.12"]
-build-backend = "uv_build"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.uv.build-backend]
-module-root = ""
-module-name = ["crews", "tools", "knowledge", "skills"]
-source-include = ["flow.yaml"]
+[tool.hatch.build.targets.wheel]
+packages = ["src/{{folder_name}}"]
 
 [tool.crewai]
 type = "flow"
-definition = "flow.yaml"
+definition = "src/{{folder_name}}/flow.yaml"

@@ -384,8 +384,17 @@ def _resolve_crew_declaration(
     from_declaration: str, *, base_dir: Path | None = None
 ) -> Path:
     path = Path(from_declaration).expanduser()
-    if not path.is_absolute() and base_dir is not None:
-        path = base_dir / path
+    if base_dir is not None:
+        resolved_base_dir = base_dir.expanduser().resolve()
+        if not path.is_absolute():
+            path = resolved_base_dir / path
+        resolved_path = path.resolve()
+        if not resolved_path.is_relative_to(resolved_base_dir):
+            raise ValueError(
+                "crew declaration path must be within the flow definition directory"
+            )
+        path = resolved_path
+
     if not path.is_dir():
         return path
 

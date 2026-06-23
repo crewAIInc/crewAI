@@ -111,8 +111,10 @@ def _create_declarative_flow(
     name: str, class_name: str, folder_name: str, project_root: Path
 ) -> None:
     project_root.mkdir(parents=True)
+    package_root = project_root / "src" / folder_name
+    package_root.mkdir(parents=True)
     for folder in DECLARATIVE_FLOW_FOLDERS:
-        (project_root / folder).mkdir()
+        (package_root / folder).mkdir()
 
     package_dir = Path(__file__).parent
     templates_dir = package_dir / "templates" / "declarative_flow"
@@ -125,7 +127,12 @@ def _create_declarative_flow(
         if not src_file.is_file():
             continue
 
-        dst_file = project_root / src_file.relative_to(templates_dir)
+        relative_path = src_file.relative_to(templates_dir)
+        dst_file = (
+            project_root / relative_path
+            if relative_path.name in {".gitignore", "README.md", "pyproject.toml"}
+            else package_root / relative_path
+        )
         dst_file.parent.mkdir(parents=True, exist_ok=True)
         content = src_file.read_text(encoding="utf-8")
         content = content.replace("{{name}}", name)
@@ -134,5 +141,6 @@ def _create_declarative_flow(
         dst_file.write_text(content, encoding="utf-8")
 
     (project_root / ".env").write_text("OPENAI_API_KEY=YOUR_API_KEY", encoding="utf-8")
-    for folder in ("knowledge", "skills"):
-        (project_root / folder / ".gitkeep").write_text("", encoding="utf-8")
+    (package_root / "__init__.py").write_text("", encoding="utf-8")
+    for folder in DECLARATIVE_FLOW_FOLDERS:
+        (package_root / folder / ".gitkeep").write_text("", encoding="utf-8")
