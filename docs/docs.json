@@ -563,7 +563,10 @@
                   },
                   {
                     "group": "Reference",
-                    "openapi": "/edge/openapi/platform-v1.yaml"
+                    "openapi": {
+                      "source": "/edge/openapi/platform-v1.yaml",
+                      "directory": "edge/api/v1/platform-api/reference"
+                    }
                   }
                 ]
               },
