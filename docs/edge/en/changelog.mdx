@@ -4,6 +4,34 @@ description: "Product updates, improvements, and bug fixes for CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="Jun 23, 2026">
+  ## v1.14.8a3
+
+  [View release on GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.8a3)
+
+  ## What's Changed
+
+  ### Features
+  - Add unified declarative flow loading
+  - Improve crewai run startup UX
+  - Consolidate `crewai run` and `crewai flow kickoff`
+  - Keep flow method progress visible for nested crews
+  - Add declarative Flow CLI support
+  - Allow `@router()` as start method of a flow
+  - Add typed output schemas for CrewAI tools
+
+  ### Bug Fixes
+  - Pin opentelemetry to ~=1.42.0
+
+  ### Documentation
+  - Add "One Card per Step" Studio page
+
+  ## Contributors
+
+  @jessemiller, @joaomdmoura, @lucasgomide, @vinibrsl
+
+</Update>
+
 <Update label="Jun 18, 2026">
   ## v1.14.8a2
 
@@ -64,7 +92,7 @@ mode: "wide"
   - Implement Flow definition run tools without Python code
   - Drive human feedback from the flow definition
   - Wire config and persistence from FlowDefinition into the runtime
-  - Add experimental `crewai run --definition` for flows
+  - Add `crewai run --definition` for declarative flows
   - Support ZIP deployment fallback and JSON crew project env runs
   - Introduce JSON first crews
 
