@@ -373,9 +373,6 @@ To enable tracing, do any one of these:
         status: str = "running",
     ) -> None:
         """Show method status panel."""
-        if not self.verbose:
-            return
-
         if status == "running":
             style = "yellow"
             panel_title = "🔄 Flow Method Running"
