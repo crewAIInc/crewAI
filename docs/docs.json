@@ -557,7 +557,7 @@
                 "groups": [
                   {
                     "group": "Reference",
-                    "openapi": "/openapi/platform-v1.yaml",
+                    "openapi": "/edge/openapi/platform-v1.yaml",
                     "pages": [
                       "edge/api/v1/platform-api/introduction"
                     ]
