@@ -21,12 +21,11 @@ CrewAI supports two log-ingestion paths to Datadog — both are first-class and 
 
 <Tabs>
   <Tab title="Datadog Agent">
-    The Datadog Agent runs alongside your CrewAI containers (typically as a DaemonSet on Kubernetes) and tails their stdout. With `CREWAI_LOG_FORMAT=json` set, each log event ships as a single billable line with structured attributes.
+    The Datadog Agent runs alongside your CrewAI containers (typically as a DaemonSet on Kubernetes) and tails their stdout. Each log event ships as a single billable line with structured attributes — see the [log schema reference](#log-schema-reference) for the full field contract.
 
     **Setup:**
     1. Run the Datadog Agent next to your CrewAI containers — see [Datadog's deployment docs](https://docs.datadoghq.com/agent/) for Kubernetes, ECS, or VM setup. Enable log collection (`logs_enabled: true`) and container log collection (`logs_config.container_collect_all: true`).
-    2. Set `CREWAI_LOG_FORMAT=json` as an **automation environment variable** in CrewAI AMP (open your automation → **Settings → Environment Variables**) so each log event is a single line instead of a multi-line traceback. AMP propagates the value to every container in the deployment (API + workers) — don't set it on the container or host directly. See [Enabling JSON output](#enabling-json-output) below for the AMP UI walkthrough and the [log schema reference](#log-schema-reference) for the full field contract.
-    3. Confirm logs arrive in Datadog Logs with the JSON fields parsed — see [Verify ingestion](#verify-ingestion).
+    2. Confirm logs arrive in Datadog Logs with the JSON fields parsed — see [Verify ingestion](#verify-ingestion).
 
     **Pick this path if** you already operate Datadog Agents (e.g. for infrastructure metrics), or your log volume makes per-event ingestion cost a real concern — collapsing tracebacks into single events keeps Agent ingestion cheap at scale.
   </Tab>
@@ -57,10 +56,10 @@ Either path lands the same structured facets in Datadog (`@automation_id`, `@kic
 ## Log schema reference
 
 <Info>
-This schema applies to the **Datadog Agent path** — stdout JSON logs produced when `CREWAI_LOG_FORMAT=json` is set. Logs delivered via the **Datadog OTLP intake** use OpenTelemetry attribute names and may differ; see [OpenTelemetry Export](./capture_telemetry_logs).
+This schema applies to the **Datadog Agent path** — structured stdout JSON logs emitted by every CrewAI worker container. Logs delivered via the **Datadog OTLP intake** use OpenTelemetry attribute names and may differ; see [OpenTelemetry Export](./capture_telemetry_logs).
 </Info>
 
-When `CREWAI_LOG_FORMAT=json` is set, every log event is emitted as a **single JSON object per line** to stdout, with internal newlines escaped. The format is plain JSON — Datadog parses it natively, and the same payload is also consumable by Splunk, Loki, Elasticsearch, and CloudWatch without custom log pipelines.
+Every log event is emitted as a **single JSON object per line** to stdout, with internal newlines escaped. The format is plain JSON — Datadog parses it natively, and the same payload is also consumable by Splunk, Loki, Elasticsearch, and CloudWatch without custom log pipelines.
 
 ### Why JSON output
 
@@ -78,20 +77,6 @@ When `CREWAI_LOG_FORMAT=json` is set, every log event is emitted as a **single J
     The `schema` field gates compatibility — within `v1`, fields are added but never renamed or removed.
   </Card>
 </CardGroup>
-
-### Enabling JSON output
-
-`CREWAI_LOG_FORMAT=json` must be set as an **automation environment variable** in CrewAI AMP — it is **not** a container, host, or Docker setting. Open your automation in AMP, click the **Settings** icon, and add the variable under the **Environment Variables** section. AMP applies the value to every container in the deployment (API + workers) on the next restart. See [Update Your Crew](./update-crew) for the full UI walkthrough with screenshots.
-
-```shell
-CREWAI_LOG_FORMAT=json
-```
-
-Restart the deployment to pick up the change. Every log line on stdout from that point on is a single JSON object.
-
-<Note>
-  The default value is `text`, which preserves the legacy human-readable line format byte-for-byte. Setting any value other than `json` falls back to text mode. There is no migration step — the variable is read at process start and the format switches immediately.
-</Note>
 
 ### Example events
 
@@ -135,7 +120,7 @@ An error with a Python exception is collapsed into a single event with the trace
 }
 ```
 
-The same error in legacy text mode would have produced ~25 separate log events (one per traceback line) — all of which the backend would bill and index individually.
+Without JSON output, that same error would produce ~25 separate log events (one per traceback line) — all of which the backend would bill and index individually.
 
 ### Schema v1 fields
 
@@ -237,7 +222,7 @@ Open [Logs Explorer](https://app.datadoghq.com/logs) and run a query that matche
   <Tab title="Datadog Agent">
     Search `service:crewai* @schema:v1`. You should see structured logs with the JSON fields parsed into Datadog facets. Pick a recent event and verify it has `@automation_id`, `@kickoff_id`, `@execution_id`, `@crewai_version`, and (when running inside a span) `@trace_id` / `@span_id` populated.
 
-    If nothing appears, confirm `CREWAI_LOG_FORMAT=json` is set under your automation's **Environment Variables** in AMP, the deployment was restarted after the change, and the Datadog Agent is tailing container stdout.
+    If nothing appears, confirm the Datadog Agent is tailing container stdout and that the deployment is running a recent enough CrewAI Enterprise build.
   </Tab>
   <Tab title="Datadog OTLP intake">
     Search `source:otlp service:crewai*`. OTLP attributes land with their OpenTelemetry names (`automation_id`, `crewai.kickoff.id`, etc.) rather than the stdout JSON keys, but they map to the same dashboard facets after [facet promotion](#prerequisite-promote-facets).
@@ -280,7 +265,7 @@ The `$service` template variable defaults to `*` and will catch every CrewAI dep
 | All widgets show "No data" | Facets aren't promoted | Re-do the [Promote facets](#prerequisite-promote-facets) step. Datadog won't query against an un-promoted field. |
 | Error Rate widget shows `NaN` | No executions in the time window | Either no traffic, or `@execution_id` isn't faceted. Expand the time range and re-check facets. |
 | Throughput chart is flat at the same value | Logs aren't reaching Datadog | Search `service:crewai*` in Logs Explorer. If nothing shows, verify the Datadog Agent is running (Agent path) or the OTel collector endpoint is correct (OTLP path). |
-| `crewai_version` shows fewer values than expected | Some containers predate the structured-logs work | The `crewai_version` field was added alongside JSON output. Older deployments running text mode (or older AMP builds) won't emit it. Upgrade those deployments to pick up the field. See the [log schema reference](#log-schema-reference) for the full field contract. |
+| `crewai_version` shows fewer values than expected | Some containers predate the structured-logs work | The `crewai_version` field was added alongside JSON output. Older deployments (pre-structured-logs AMP builds) won't emit it. Upgrade those deployments to pick up the field. See the [log schema reference](#log-schema-reference) for the full field contract. |
 | Template variables don't filter widgets | The widget's filter line doesn't reference the template variable | Edit the widget and confirm the search includes `$automation $version $service`. |
 
 ## Next steps
