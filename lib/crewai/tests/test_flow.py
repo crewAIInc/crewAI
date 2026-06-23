@@ -386,6 +386,54 @@ def test_router_runtime_uses_flow_definition_without_legacy_router_metadata():
     assert execution_order == ["begin", "decide", "handle_left"]
 
 
+def test_start_router_runtime_routes_public_dsl_return_value():
+    execution_order = []
+
+    class StartRouterFlow(Flow):
+        @start()
+        @router(emit=["continue"])
+        def decide(self):
+            execution_order.append("decide")
+            return "continue"
+
+        @listen("continue")
+        def handle_continue(self, result):
+            execution_order.append(f"handle_continue:{result}")
+            return "done"
+
+    assert StartRouterFlow().kickoff() == "done"
+    assert execution_order == ["decide", "handle_continue:continue"]
+
+
+def test_start_router_runtime_chains_to_stacked_listener_router():
+    execution_order = []
+
+    class ChainedStartRouterFlow(Flow):
+        @start()
+        @router(emit=["approved", "not_approved"])
+        def first_router(self):
+            execution_order.append("first_router")
+            return "approved"
+
+        @listen("approved")
+        @router(emit=["second_approval", "not_approved"])
+        def second_router(self):
+            execution_order.append("second_router")
+            return "second_approval"
+
+        @listen("second_approval")
+        def handle_second_approval(self, result):
+            execution_order.append(f"handle_second_approval:{result}")
+            return "done"
+
+    assert ChainedStartRouterFlow().kickoff() == "done"
+    assert execution_order == [
+        "first_router",
+        "second_router",
+        "handle_second_approval:second_approval",
+    ]
+
+
 def test_router_falsy_result_emits_runtime_event():
     execution_order = []
 

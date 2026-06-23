@@ -565,6 +565,54 @@ def test_flow_definition_classifies_start_router_from_human_feedback_emit():
     assert entry_point.emit is None
 
 
+def test_flow_definition_classifies_public_dsl_start_router():
+    class StartRouterFlow(Flow):
+        @start()
+        @router(emit=["continue", "stop"])
+        def entry_point(self):
+            return "continue"
+
+        @router(emit=["resume"])
+        @start()
+        def alternate_entry_point(self):
+            return "resume"
+
+    entry_point = StartRouterFlow.flow_definition().methods["entry_point"]
+    alternate_entry_point = StartRouterFlow.flow_definition().methods[
+        "alternate_entry_point"
+    ]
+
+    assert entry_point.is_start is True
+    assert entry_point.router is True
+    assert entry_point.listen is None
+    assert entry_point.emit == ["continue", "stop"]
+    assert alternate_entry_point.is_start is True
+    assert alternate_entry_point.router is True
+    assert alternate_entry_point.listen is None
+    assert alternate_entry_point.emit == ["resume"]
+
+
+def test_flow_definition_merges_stacked_listen_router():
+    class ChainedRouterFlow(Flow):
+        @start()
+        @router(emit=["approved", "not_approved"])
+        def first_router(self):
+            return "approved"
+
+        @listen("approved")
+        @router(emit=["second_approval", "not_approved"])
+        def second_router(self):
+            return "second_approval"
+
+    methods = ChainedRouterFlow.flow_definition().methods
+
+    assert methods["first_router"].is_start is True
+    assert methods["first_router"].listen is None
+    assert methods["second_router"].router is True
+    assert methods["second_router"].listen == "approved"
+    assert methods["second_router"].emit == ["second_approval", "not_approved"]
+
+
 def test_flow_definition_round_trips_json_and_yaml():
     class RoundTripFlow(Flow):
         @start()
@@ -883,7 +931,7 @@ def test_flow_definition_ignores_legacy_diagnostics_loaded_from_contract():
     assert "diagnostics" not in definition.to_dict()
 
 
-def test_router_start_false_without_listen_logs_missing_trigger(caplog):
+def test_router_start_false_without_listen_is_allowed(caplog):
     caplog.set_level(logging.ERROR, logger="crewai.flow.flow_definition")
 
     flow_definition.FlowDefinition.from_dict(
@@ -901,12 +949,7 @@ def test_router_start_false_without_listen_logs_missing_trigger(caplog):
         }
     )
 
-    assert any(
-        record.levelno == logging.ERROR
-        and "router_without_trigger" in record.message
-        and "methods.decision" in record.message
-        for record in caplog.records
-    )
+    assert not caplog.records
 
 
 def test_router_human_feedback_preserves_existing_router_metadata():
@@ -1048,7 +1091,7 @@ def test_flow_definition_cache_is_not_reused_by_subclasses():
     assert set(child_definition.methods) == {"child_step"}
 
 
-def test_flow_definition_logs_validation_issues_when_loaded_from_contract(caplog):
+def test_flow_definition_allows_router_without_trigger(caplog):
     caplog.set_level(logging.WARNING, logger="crewai.flow.flow_definition")
 
     flow_definition.FlowDefinition.from_dict(
@@ -1065,9 +1108,11 @@ def test_flow_definition_logs_validation_issues_when_loaded_from_contract(caplog
         }
     )
 
-    assert any(
-        record.levelno == logging.ERROR
-        and "LoadedFlow" in record.message
-        and "router_without_trigger" in record.message
-        for record in caplog.records
-    )
+    class StandaloneRouterFlow(Flow):
+        @router(emit=["continue"])
+        def decision(self):
+            return "continue"
+
+    StandaloneRouterFlow.flow_definition()
+
+    assert not caplog.records

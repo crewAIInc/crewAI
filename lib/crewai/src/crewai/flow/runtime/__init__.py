@@ -2455,11 +2455,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     object.__setattr__(
                         self, "_deferred_flow_started_event_id", started_event.event_id
                     )
-                if not self.suppress_flow_events:
-                    self._log_flow_event(
-                        f"Flow started with ID: {self.flow_id}", color="bold magenta"
-                    )
-
             # After FlowStarted: env events must not pre-empt trace batch init
             # with implicit "crew" execution_type.
             get_env_context()
@@ -3007,6 +3002,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         """
         # First, handle routers repeatedly until no router triggers anymore
         router_results = []
+        router_result_payloads: dict[str, Any] = {}
         router_result_to_feedback: dict[
             str, Any
         ] = {}  # Map outcome -> HumanFeedbackResult
@@ -3044,6 +3040,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 router_result_str = str(router_result)
                 router_result_event = FlowMethodName(router_result_str)
                 router_results.append(router_result_event)
+                router_result_payloads[router_result_str] = (
+                    self.last_human_feedback
+                    if self.last_human_feedback is not None
+                    else router_result
+                )
 
                 if self.last_human_feedback is not None:
                     router_result_to_feedback[router_result_str] = (
@@ -3064,7 +3065,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     current_trigger, router_only=False
                 )
                 if listeners_triggered:
-                    listener_result = router_result_to_feedback.get(
+                    listener_result = router_result_payloads.get(
                         str(current_trigger), result
                     )
                     racing_group = self._get_racing_group_for_listeners(
