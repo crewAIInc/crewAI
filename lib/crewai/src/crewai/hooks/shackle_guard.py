@@ -234,3 +234,19 @@ def register_shackle_guard(
     )
     register_before_tool_call_hook(guard)
     return guard
+
+# ── FAIL-CLOSED WRAPPER ──
+# Override __call__ with fail-closed version
+_original_call = ShackleGuard.__call__
+
+def _fail_closed_call(self, context):
+    """Wrapped call that fails closed — any guard error DENIES execution."""
+    try:
+        return _original_call(self, context)
+    except Exception as e:
+        self._circuit_tripped = True
+        self._circuit_reason = f"Guard error (fail-closed): {e}"
+        print(f"\n⛓️ SHACKLE FAIL-CLOSED: {e}\n   Circuit opened for safety.")
+        return False
+
+ShackleGuard.__call__ = _fail_closed_call
