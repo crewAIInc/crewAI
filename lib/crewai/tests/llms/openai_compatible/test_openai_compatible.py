@@ -104,7 +104,6 @@ class TestProviderRegistry:
         assert config.api_key_required is True
 
 
-
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
 
@@ -286,7 +285,6 @@ class TestLLMIntegration:
             llm = LLM(model="groq/llama-3.3-70b-versatile")
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.provider == "groq"
-
 
     def test_llm_with_explicit_provider(self):
         """Test LLM with explicit provider parameter."""

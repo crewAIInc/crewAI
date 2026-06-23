@@ -806,6 +806,31 @@ def test_ollama_does_not_modify_when_last_is_user(ollama_llm):
     assert formatted == original_messages
 
 
+def test_format_messages_strips_cache_breakpoint_for_non_anthropic():
+    """cache_breakpoint keys must be removed for non-Anthropic providers."""
+    from crewai.llms.cache import CACHE_BREAKPOINT_KEY
+
+    llm = LLM(model="gpt-4o-mini", is_litellm=True)
+    # Simulate a message that carries the cache breakpoint marker
+    messages = [
+        {"role": "user", "content": "Hello", CACHE_BREAKPOINT_KEY: True},
+    ]
+    formatted = llm._format_messages_for_provider(messages)
+    assert all(CACHE_BREAKPOINT_KEY not in msg for msg in formatted)
+
+
+def test_format_messages_preserves_cache_breakpoint_for_anthropic():
+    """cache_breakpoint keys must be preserved for Anthropic providers."""
+    from crewai.llms.cache import CACHE_BREAKPOINT_KEY
+
+    llm = LLM(model="claude-3-5-sonnet-20241022", is_litellm=True)
+    messages = [
+        {"role": "user", "content": "Hello", CACHE_BREAKPOINT_KEY: True},
+    ]
+    formatted = llm._format_messages_for_provider(messages)
+    assert any(CACHE_BREAKPOINT_KEY in msg for msg in formatted)
+
+
 def test_native_provider_raises_error_when_supported_but_fails():
     """Test that when a native provider is in SUPPORTED_NATIVE_PROVIDERS but fails to instantiate, we raise the error."""
     with patch("crewai.llm.SUPPORTED_NATIVE_PROVIDERS", ["openai"]):

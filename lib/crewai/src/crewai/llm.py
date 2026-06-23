@@ -45,6 +45,7 @@ from crewai.llms.constants import (
     GEMINI_MODELS,
     OPENAI_MODELS,
 )
+from crewai.llms.cache import CACHE_BREAKPOINT_KEY
 from crewai.utilities import InternalInstructor
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
@@ -2294,8 +2295,6 @@ class LLM(BaseLLM):
                 raise TypeError(
                     "Invalid message format. Each message must be a dict with 'role' and 'content' keys"
                 )
-
-        from crewai.llms.cache import CACHE_BREAKPOINT_KEY
 
         # Strip cache_breakpoint key from messages if not using Anthropic
         cleaned_messages = []
