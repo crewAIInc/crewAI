@@ -595,7 +595,6 @@ def _run_flow_project(
     if trained_agents_file is not None:
         raise click.UsageError("--filename can only be used when running crews")
 
-    click.echo("Running the Flow")
     from crewai_cli.run_declarative_flow import (
         configured_project_declarative_flow,
         run_declarative_flow_in_project_env,
@@ -611,7 +610,6 @@ def _run_flow_project(
 def _run_classic_crew_project(
     pyproject_data: dict[str, Any], trained_agents_file: str | None
 ) -> None:
-    click.echo("Running the Crew")
     _execute_uv_script(
         "run_crew",
         entity_type="crew",

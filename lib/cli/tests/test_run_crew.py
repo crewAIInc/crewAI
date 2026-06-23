@@ -622,7 +622,7 @@ def test_run_crew_runs_classic_crew_project(monkeypatch, capsys):
 
     run_crew_module.run_crew(trained_agents_file="trained.pkl")
 
-    assert capsys.readouterr().out == "Running the Crew\n"
+    assert capsys.readouterr().out == ""
     assert calls == [
         (
             "run_crew",
@@ -648,7 +648,7 @@ def test_run_crew_runs_python_flow_project(monkeypatch, capsys):
 
     run_crew_module.run_crew()
 
-    assert capsys.readouterr().out == "Running the Flow\n"
+    assert capsys.readouterr().out == ""
     assert calls == [("kickoff", {"entity_type": "flow"})]
 
 
@@ -694,5 +694,5 @@ def test_run_crew_runs_configured_declarative_flow_project(monkeypatch, capsys):
 
     run_crew_module.run_crew()
 
-    assert capsys.readouterr().out == "Running the Flow\n"
+    assert capsys.readouterr().out == ""
     assert calls == [("flow.yaml", None)]
