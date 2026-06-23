@@ -5,7 +5,8 @@ from unittest.mock import Mock, patch
 import pytest
 from crewai import Agent, Crew, Task
 from crewai.telemetry import Telemetry
-from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry import trace
+from opentelemetry.trace import ProxyTracerProvider
 
 
 @pytest.fixture(autouse=True)
@@ -53,21 +54,21 @@ def test_telemetry_enabled_by_default():
             assert telemetry.ready is True
 
 
-def test_set_tracer_skips_when_provider_already_configured():
-    """A second telemetry instance must not re-install the global provider."""
+def test_telemetry_does_not_install_global_tracer_provider():
     with (
-        patch.dict(os.environ, {}, clear=True),
-        patch(
-            "crewai.telemetry.telemetry.trace.get_tracer_provider",
-            return_value=TracerProvider(),
+        patch.dict(
+            os.environ,
+            {
+                "CREWAI_DISABLE_TELEMETRY": "false",
+                "CREWAI_DISABLE_TRACKING": "false",
+                "OTEL_SDK_DISABLED": "false",
+            },
         ),
-        patch("crewai.telemetry.telemetry.trace.set_tracer_provider") as mock_set,
+        patch("crewai.telemetry.telemetry.TracerProvider"),
     ):
         telemetry = Telemetry()
-        telemetry.set_tracer()
-
-    mock_set.assert_not_called()
-    assert telemetry.trace_set is True
+        assert telemetry.ready is True
+        assert isinstance(trace.get_tracer_provider(), ProxyTracerProvider)
 
 
 def test_flow_execution_span_records_crewai_version():
@@ -84,10 +85,10 @@ def test_flow_execution_span_records_crewai_version():
                 "OTEL_SDK_DISABLED": "false",
             },
         ),
-        patch("crewai.telemetry.telemetry.TracerProvider"),
-        patch("crewai.telemetry.telemetry.trace.get_tracer", return_value=tracer),
+        patch("crewai.telemetry.telemetry.TracerProvider") as mock_provider_cls,
         patch("crewai.telemetry.telemetry.version", return_value="9.9.9"),
     ):
+        mock_provider_cls.return_value.get_tracer.return_value = tracer
         telemetry = Telemetry()
         telemetry.flow_execution_span("ResearchFlow", ["start", "finish"])
 

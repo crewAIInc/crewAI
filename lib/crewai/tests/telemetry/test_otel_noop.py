@@ -51,6 +51,21 @@ def test_operation_yields_non_recording_span_when_no_provider() -> None:
         assert isinstance(span, NonRecordingSpan)
 
 
+def test_constructing_crew_does_not_globalize_anonymous_telemetry_provider() -> None:
+    agent = Agent(
+        role="tester",
+        goal="goal",
+        backstory="backstory",
+        llm=_FakeLLM(),
+        allow_delegation=False,
+    )
+    Crew(
+        agents=[agent],
+        tasks=[Task(description="d", expected_output="o", agent=agent)],
+    )
+    assert isinstance(trace.get_tracer_provider(), ProxyTracerProvider)
+
+
 def test_kickoff_runs_cleanly_without_provider() -> None:
     agent = Agent(
         role="tester",

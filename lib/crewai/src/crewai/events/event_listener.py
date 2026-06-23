@@ -149,7 +149,6 @@ class EventListener(BaseEventListener):
         if not self._initialized:
             super().__init__()
             self._telemetry = Telemetry()
-            self._telemetry.set_tracer()
             self.execution_spans = {}
             self._initialized = True
             self.formatter = ConsoleFormatter(verbose=True)

@@ -20,13 +20,11 @@ class AuthenticationRequiredError(SystemExit):
 class BaseCommand:
     def __init__(self) -> None:
         self._telemetry = Telemetry()
-        self._telemetry.set_tracer()
 
 
 class PlusAPIMixin:
     def __init__(self, telemetry: Telemetry) -> None:
         try:
-            telemetry.set_tracer()
             self.plus_api_client = PlusAPI(api_key=get_auth_token())
         except Exception:
             telemetry.deploy_signup_error_span()

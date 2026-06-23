@@ -20,7 +20,6 @@ import signal
 import threading
 from typing import TYPE_CHECKING, Any
 
-from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
     OTLPSpanExporter,
 )
@@ -30,7 +29,7 @@ from opentelemetry.sdk.trace.export import (
     BatchSpanProcessor,
     SpanExportResult,
 )
-from opentelemetry.trace import ProxyTracerProvider, Span
+from opentelemetry.trace import Span, Tracer
 from typing_extensions import Self
 
 from crewai.events.event_bus import crewai_event_bus
@@ -90,11 +89,17 @@ class SafeOTLPSpanExporter(OTLPSpanExporter):
 class Telemetry:
     """Handle anonymous telemetry for the CrewAI package.
 
+    The anonymous-telemetry pipeline owns a private ``TracerProvider`` that
+    is never installed as OpenTelemetry's global provider. Host applications
+    keep full control of the process-wide provider slot, and any host spans
+    emitted through ``crewai.telemetry.otel.operation`` stay on the host
+    pipeline rather than getting exfiltrated to crewAI's OTLP endpoint.
+
     Attributes:
         ready: Whether telemetry is initialized and ready.
-        trace_set: Whether the tracer provider has been set.
         resource: OpenTelemetry resource for the telemetry service.
-        provider: OpenTelemetry tracer provider.
+        provider: Local OpenTelemetry tracer provider that is NOT registered
+            globally; all anonymous spans are emitted through it directly.
     """
 
     _instance = None
@@ -113,7 +118,6 @@ class Telemetry:
             return
 
         self.ready: bool = False
-        self.trace_set: bool = False
         self._initialized: bool = True
 
         if self._is_telemetry_disabled():
@@ -157,21 +161,9 @@ class Telemetry:
         """Check if telemetry operations should be executed."""
         return self.ready and not self._is_telemetry_disabled()
 
-    def set_tracer(self) -> None:
-        """Set the tracer provider if ready and not already set."""
-        if self.ready and not self.trace_set:
-            try:
-                with suppress_warnings():
-                    existing_provider = trace.get_tracer_provider()
-                    if not isinstance(existing_provider, ProxyTracerProvider):
-                        self.trace_set = True
-                        return
-                    trace.set_tracer_provider(self.provider)
-                    self.trace_set = True
-            except Exception as e:
-                logger.debug(f"Failed to set tracer provider: {e}")
-                self.ready = False
-                self.trace_set = False
+    def _tracer(self) -> Tracer:
+        """Return the anonymous-telemetry tracer from the private provider."""
+        return self.provider.get_tracer("crewai.telemetry")
 
     def _register_shutdown_handlers(self) -> None:
         """Register handlers for graceful shutdown on process exit and signals."""
@@ -275,7 +267,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self._tracer()
             span = tracer.start_span("Crew Created")
             self._add_attribute(
                 span,
@@ -487,7 +479,7 @@ class Telemetry:
         """
 
         def _operation() -> Span:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self._tracer()
 
             created_span = tracer.start_span("Task Created")
 
@@ -581,7 +573,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self._tracer()
             span = tracer.start_span("Tool Repeated Usage")
             self._add_attribute(
                 span,
@@ -609,7 +601,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self._tracer()
             span = tracer.start_span("Tool Usage")
             self._add_attribute(
                 span,
@@ -638,7 +630,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self._tracer()
             span = tracer.start_span("Tool Usage Error")
             self._add_attribute(
                 span,
@@ -669,7 +661,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self._tracer()
             span = tracer.start_span("Crew Individual Test Result")
 
             self._add_attribute(
@@ -704,7 +696,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self._tracer()
             span = tracer.start_span("Crew Test Execution")
 
             self._add_attribute(
@@ -729,7 +721,7 @@ class Telemetry:
         """Records when an error occurs during the deployment signup process."""
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self._tracer()
             span = tracer.start_span("Deploy Signup Error")
             close_span(span)
 
@@ -743,7 +735,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self._tracer()
             span = tracer.start_span("Start Deployment")
             if uuid:
                 self._add_attribute(span, "uuid", uuid)
@@ -755,7 +747,7 @@ class Telemetry:
         """Records the creation of a new crew deployment."""
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self._tracer()
             span = tracer.start_span("Create Crew Deployment")
             close_span(span)
 
@@ -772,7 +764,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self._tracer()
             span = tracer.start_span("Get Crew Logs")
             self._add_attribute(span, "log_type", log_type)
             if uuid:
@@ -789,7 +781,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self._tracer()
             span = tracer.start_span("Remove Crew")
             if uuid:
                 self._add_attribute(span, "uuid", uuid)
@@ -814,7 +806,7 @@ class Telemetry:
         self.crew_creation(crew, inputs)
 
         def _operation() -> Span:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self._tracer()
             span = tracer.start_span("Crew Execution")
             self._add_attribute(
                 span,
@@ -947,7 +939,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self._tracer()
             span = tracer.start_span("Flow Creation")
             self._add_attribute(span, "flow_name", flow_name)
             close_span(span)
@@ -963,7 +955,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self._tracer()
             span = tracer.start_span("Flow Plotting")
             self._add_attribute(span, "flow_name", flow_name)
             self._add_attribute(span, "node_names", json.dumps(node_names))
@@ -980,7 +972,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self._tracer()
             span = tracer.start_span("Flow Execution")
             self._add_attribute(
                 span,
@@ -997,7 +989,7 @@ class Telemetry:
         """Records the coding tool environment context."""
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self._tracer()
             span = tracer.start_span("Environment Context")
             self._add_attribute(
                 span,
@@ -1028,7 +1020,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self._tracer()
             span = tracer.start_span("Human Feedback")
             self._add_attribute(span, "event_type", event_type)
             self._add_attribute(span, "has_routing", has_routing)
@@ -1050,7 +1042,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self._tracer()
             span = tracer.start_span("Feature Usage")
             self._add_attribute(span, "crewai_version", version("crewai"))
             self._add_attribute(span, "feature", feature)
@@ -1067,7 +1059,7 @@ class Telemetry:
         """
 
         def _operation() -> None:
-            tracer = trace.get_tracer("crewai.telemetry")
+            tracer = self._tracer()
             span = tracer.start_span("Template Installed")
             self._add_attribute(span, "crewai_version", version("crewai"))
             self._add_attribute(span, "template_name", template_name)
