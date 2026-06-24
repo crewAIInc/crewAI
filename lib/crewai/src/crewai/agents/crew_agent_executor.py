@@ -80,6 +80,7 @@ from crewai.utilities.tool_utils import (
     aexecute_tool_and_check_finality,
     execute_tool_and_check_finality,
 )
+from crewai.utilities.tool_errors import format_tool_error
 from crewai.utilities.training_handler import CrewTrainingHandler
 
 
@@ -1006,7 +1007,7 @@ class CrewAgentExecutor(BaseAgentExecutor):
 
                 result = format_native_tool_output_for_agent(output_tool, raw_result)
             except Exception as e:
-                result = f"Error executing tool: {e}"
+                result = format_tool_error(e)
                 raw_tool_result = result
                 if self.task:
                     self.task.increment_tools_errors()
