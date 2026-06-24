@@ -159,6 +159,15 @@ def safe_get(url: str, **kwargs: Any) -> requests.Response:
         ValueError: If the URL, a redirect target, or the connected peer is
             not allowed.
     """
+    # Prevent callers from forcing a proxy path (which would validate the proxy
+    # peer IP rather than the destination), unless the escape hatch is enabled.
+    proxies = kwargs.pop("proxies", None)
+    if proxies and proxies != {} and not _is_escape_hatch_enabled():
+        raise ValueError(
+            "Proxies are not allowed for safe_get. Set CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true to bypass."
+        )
+    kwargs["proxies"] = {}
+
     validate_url(url)
     with create_safe_session() as session:
         return session.get(url, **kwargs)
