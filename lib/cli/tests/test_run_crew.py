@@ -705,9 +705,14 @@ def test_run_crew_rejects_filename_for_flow_project(monkeypatch):
     assert "--filename can only be used when running crews" in exc_info.value.message
 
 
-def test_run_crew_runs_configured_declarative_flow_project(monkeypatch, capsys):
+def test_run_crew_runs_configured_declarative_flow_project(
+    monkeypatch, tmp_path: Path, capsys
+):
     calls = []
 
+    monkeypatch.chdir(tmp_path)
+    definition_path = tmp_path / "flow.yaml"
+    definition_path.write_text("schema: crewai.flow/v1\n", encoding="utf-8")
     monkeypatch.setattr(run_crew_module, "_has_json_crew", lambda: False)
     monkeypatch.setattr(
         run_crew_module,
@@ -734,4 +739,4 @@ def test_run_crew_runs_configured_declarative_flow_project(monkeypatch, capsys):
     run_crew_module.run_crew()
 
     assert capsys.readouterr().out == ""
-    assert calls == [("flow.yaml", None)]
+    assert calls == [(definition_path.resolve(), None)]
