@@ -133,7 +133,6 @@ def interpolate_only(
         )
 
     variables = _VARIABLE_PATTERN.findall(input_string)
-    result = input_string
 
     missing_vars = [var for var in variables if var not in inputs]
     if missing_vars:
@@ -141,10 +140,13 @@ def interpolate_only(
             f"Template variable '{missing_vars[0]}' not found in inputs dictionary"
         )
 
-    for var in variables:
+    def _substitute(match: re.Match[str]) -> str:
+        var = match.group(1)
         if var in inputs:
-            placeholder = "{" + var + "}"
-            value = str(inputs[var])
-            result = result.replace(placeholder, value)
+            return str(inputs[var])
+        return match.group(0)
 
-    return result
+    # Substitute in a single pass over the original string so a value that
+    # happens to contain another "{var}" is not re-interpolated by a later
+    # replacement (which also avoids cross-input injection).
+    return _VARIABLE_PATTERN.sub(_substitute, input_string)
