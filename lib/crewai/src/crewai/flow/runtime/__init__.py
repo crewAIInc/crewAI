@@ -227,7 +227,12 @@ def _build_definition_state_model(
             pass
 
         model_class = StateWithId
-    return model_class(**kwargs)
+    try:
+        return model_class(**kwargs)
+    except ValidationError as e:
+        if any(error.get("type") != "missing" for error in e.errors()):
+            raise
+        return model_class.model_construct(**kwargs)
 
 
 def _iter_condition_events(condition: FlowDefinitionCondition) -> Iterator[str]:
