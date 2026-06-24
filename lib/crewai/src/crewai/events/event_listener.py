@@ -322,7 +322,7 @@ class EventListener(BaseEventListener):
         def on_conversation_turn_started(
             _: Any, event: ConversationTurnStartedEvent
         ) -> None:
-            self._telemetry.feature_usage_span("flow:conversation")
+            self._telemetry.feature_usage_span("flow:conversation_turn")
 
         @crewai_event_bus.on(MethodExecutionStartedEvent)
         def on_method_execution_started(

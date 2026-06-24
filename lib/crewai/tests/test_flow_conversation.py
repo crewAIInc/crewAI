@@ -1184,7 +1184,7 @@ class TestConversationalFlow:
             )
             crewai_event_bus.flush()
 
-        feature_usage_span.assert_any_call("flow:conversation")
+        feature_usage_span.assert_any_call("flow:conversation_turn")
 
     def test_route_event_uses_no_message_index_for_empty_transcript(self) -> None:
         """Route events do not reference index zero when no message exists."""
