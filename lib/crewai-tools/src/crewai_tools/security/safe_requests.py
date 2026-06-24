@@ -48,8 +48,11 @@ def _assert_safe_peer(sock: Any) -> None:
         return
     try:
         peer = sock.getpeername()
-    except OSError:
-        return
+    except OSError as exc:
+        raise ValueError(
+            "Unable to determine the connected peer address; blocking request to prevent SSRF. "
+            "Set CREWAI_TOOLS_ALLOW_UNSAFE_PATHS=true to bypass."
+        ) from exc
     ip_str = str(peer[0])
     if _is_private_or_reserved(ip_str):
         raise ValueError(
