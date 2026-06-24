@@ -83,6 +83,22 @@ class TestResultDisplayBeforeFeedback:
 
         formatter.handle_agent_logs_execution.assert_not_called()
 
+    def test_result_not_reshown_when_agent_verbose(self) -> None:
+        """Agent-verbose (crew non-verbose) is also a no-op: the executor
+        already rendered the result via the verbose log path.
+        """
+        provider = SyncHumanInputProvider()
+        context = _FakeContext(_FakeAgent(verbose=True), _FakeCrew(verbose=False))
+
+        formatter = MagicMock()
+        with (
+            patch.object(event_listener, "formatter", formatter),
+            patch("builtins.input", return_value=""),
+        ):
+            provider.handle_feedback(_answer(), context)  # type: ignore[arg-type]
+
+        formatter.handle_agent_logs_execution.assert_not_called()
+
 
 class TestResultDisplayBeforeFeedbackAsync:
     """The async feedback path must show the result before prompting too."""
@@ -115,6 +131,22 @@ class TestResultDisplayBeforeFeedbackAsync:
     async def test_result_not_reshown_when_verbose(self) -> None:
         provider = SyncHumanInputProvider()
         context = _FakeContext(_FakeAgent(verbose=False), _FakeCrew(verbose=True))
+
+        formatter = MagicMock()
+        with (
+            patch.object(event_listener, "formatter", formatter),
+            patch.object(
+                human_input_module, "_async_readline", new=AsyncMock(return_value="")
+            ),
+        ):
+            await provider.handle_feedback_async(_answer(), context)  # type: ignore[arg-type]
+
+        formatter.handle_agent_logs_execution.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_result_not_reshown_when_agent_verbose(self) -> None:
+        provider = SyncHumanInputProvider()
+        context = _FakeContext(_FakeAgent(verbose=True), _FakeCrew(verbose=False))
 
         formatter = MagicMock()
         with (
