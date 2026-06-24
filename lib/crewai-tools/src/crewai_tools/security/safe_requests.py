@@ -128,6 +128,9 @@ def create_safe_session() -> requests.Session:
     connections to the validated peer IP.
     """
     session = requests.Session()
+    # Ambient proxy settings bypass the protected pool classes via requests'
+    # proxy manager path, so safe fetches must opt out of environment config.
+    session.trust_env = False
     adapter = SSRFProtectedAdapter()
     session.mount("http://", adapter)
     session.mount("https://", adapter)

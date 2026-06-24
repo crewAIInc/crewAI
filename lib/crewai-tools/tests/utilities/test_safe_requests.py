@@ -69,6 +69,30 @@ class TestRedirectRevalidation:
         session = create_safe_session()
         assert isinstance(session.get_adapter("http://x"), SSRFProtectedAdapter)
         assert isinstance(session.get_adapter("https://x"), SSRFProtectedAdapter)
+        assert session.trust_env is False
+
+    def test_safe_get_ignores_environment_proxies(self, monkeypatch):
+        """Environment proxies must not route safe fetches around the safe pool."""
+        monkeypatch.setenv("HTTP_PROXY", "http://127.0.0.1:9999")
+        monkeypatch.setenv("HTTPS_PROXY", "http://127.0.0.1:9999")
+        monkeypatch.setattr(safe_requests, "validate_url", lambda url: url)
+
+        def fail_proxy_manager(self, proxy, **proxy_kwargs):
+            raise AssertionError("safe_get unexpectedly used an environment proxy")
+
+        def fake_send(self, request, **kwargs):
+            assert kwargs["proxies"] == {}
+            response = requests.Response()
+            response.status_code = 200
+            response.url = request.url
+            return response
+
+        monkeypatch.setattr(SSRFProtectedAdapter, "proxy_manager_for", fail_proxy_manager)
+        monkeypatch.setattr(requests.adapters.HTTPAdapter, "send", fake_send)
+
+        response = safe_get("http://example.com/", timeout=10)
+
+        assert response.status_code == 200
 
 
 class _FakeSock:
