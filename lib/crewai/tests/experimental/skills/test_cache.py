@@ -8,7 +8,9 @@ import json
 import tarfile
 from pathlib import Path
 
-from crewai.experimental.skills.cache import SkillCacheManager
+import pytest
+
+from crewai.experimental.skills.cache import SkillCacheManager, _safe_extractall
 
 
 def _make_tar_gz(files: dict[str, str]) -> bytes:
@@ -33,6 +35,15 @@ def _make_tar_gz(files: dict[str, str]) -> bytes:
             info.size = len(data)
             tf.addfile(info, io.BytesIO(data))
     return out.getvalue()
+
+
+def _tar_from_members(build) -> tarfile.TarFile:
+    """Build an in-memory tar archive via `build(tf)` and return it for reading."""
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w") as tf:
+        build(tf)
+    buf.seek(0)
+    return tarfile.open(fileobj=buf, mode="r")
 
 
 class TestSkillCacheManager:
@@ -113,3 +124,70 @@ class TestSkillCacheManager:
         dest = cache.store("acme", "my-skill", None, archive)
         meta = json.loads((dest / ".crewai_meta.json").read_text())
         assert meta["version"] is None
+
+
+def test_safe_extractall_blocks_symlink_escaping_cache_destination(
+    tmp_path: Path,
+) -> None:
+    """A symlink whose target escapes dest is rejected before extraction."""
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    dest = tmp_path / "dest"
+    dest.mkdir()
+
+    def build(tf: tarfile.TarFile) -> None:
+        link = tarfile.TarInfo("link")
+        link.type = tarfile.SYMTYPE
+        link.linkname = str(outside)
+        tf.addfile(link)
+        payload = b"pwned"
+        info = tarfile.TarInfo("link/evil.txt")
+        info.size = len(payload)
+        tf.addfile(info, io.BytesIO(payload))
+
+    with _tar_from_members(build) as tf:
+        with pytest.raises(ValueError, match="escaping destination"):
+            _safe_extractall(tf, dest)
+
+    assert not (outside / "evil.txt").exists()
+
+
+def test_safe_extractall_blocks_hardlink_escaping_cache_destination(
+    tmp_path: Path,
+) -> None:
+    """A hardlink whose target escapes dest is rejected."""
+    dest = tmp_path / "dest"
+    dest.mkdir()
+
+    def build(tf: tarfile.TarFile) -> None:
+        link = tarfile.TarInfo("escape")
+        link.type = tarfile.LNKTYPE
+        link.linkname = "../outside.txt"
+        tf.addfile(link)
+
+    with _tar_from_members(build) as tf:
+        with pytest.raises(ValueError, match="escaping destination"):
+            _safe_extractall(tf, dest)
+
+
+def test_safe_extractall_allows_benign_cache_symlink(tmp_path: Path) -> None:
+    """A symlink that stays within dest is permitted."""
+    dest = tmp_path / "dest"
+    dest.mkdir()
+
+    def build(tf: tarfile.TarFile) -> None:
+        payload = b"hi"
+        info = tarfile.TarInfo("real.txt")
+        info.size = len(payload)
+        tf.addfile(info, io.BytesIO(payload))
+        link = tarfile.TarInfo("alias.txt")
+        link.type = tarfile.SYMTYPE
+        link.linkname = "real.txt"
+        tf.addfile(link)
+
+    with _tar_from_members(build) as tf:
+        _safe_extractall(tf, dest)
+
+    assert (dest / "real.txt").read_bytes() == b"hi"
+    assert (dest / "alias.txt").is_symlink()
+    assert (dest / "alias.txt").readlink() == Path("real.txt")

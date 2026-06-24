@@ -378,7 +378,7 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
 
 
 def _safe_extractall(tf: tarfile.TarFile, dest: Path) -> None:
-    """Path-traversal-safe extraction for Python < 3.12.
+    """Path-traversal-safe extraction for Python versions without tar filters.
 
     Validates both the member's own path and, for symlink/hardlink members,
     the link target. Without the link-target check a malicious archive can
@@ -386,7 +386,7 @@ def _safe_extractall(tf: tarfile.TarFile, dest: Path) -> None:
     followed by a regular member written *through* that link
     (``link/authorized_keys``), escaping ``dest`` even though every member
     name resolves inside it. This mirrors the protection that
-    ``tarfile.extractall(..., filter="data")`` provides on Python >= 3.12.
+    ``tarfile.extractall(..., filter="data")`` provides when available.
     """
     dest_resolved = dest.resolve()
     for member in tf.getmembers():

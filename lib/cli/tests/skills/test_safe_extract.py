@@ -1,7 +1,7 @@
 """Regression tests for path-traversal-safe archive extraction.
 
-Guards against symlink/hardlink-based path traversal in the Python < 3.12
-extraction fallback (`_safe_extractall`). The 3.12+ path relies on
+Guards against symlink/hardlink-based path traversal in the fallback used on
+Python versions without tarfile extraction filters. The filtered path relies on
 `tarfile.extractall(..., filter="data")`; the fallback must provide the same
 protection by validating link targets, not just member names.
 """
@@ -67,6 +67,22 @@ def test_blocks_relative_symlink_escaping_destination(tmp_path: Path) -> None:
             _safe_extractall(tf, dest)
 
 
+def test_blocks_hardlink_escaping_destination(tmp_path: Path) -> None:
+    """A hardlink whose target escapes dest is rejected."""
+    dest = tmp_path / "dest"
+    dest.mkdir()
+
+    def build(tf: tarfile.TarFile) -> None:
+        link = tarfile.TarInfo("escape")
+        link.type = tarfile.LNKTYPE
+        link.linkname = "../outside.txt"  # escapes archive root
+        tf.addfile(link)
+
+    with _tar_from_members(build) as tf:
+        with pytest.raises(ValueError, match="escaping destination"):
+            _safe_extractall(tf, dest)
+
+
 def test_allows_benign_relative_symlink(tmp_path: Path) -> None:
     """A symlink that stays within dest is permitted."""
     dest = tmp_path / "dest"
@@ -86,6 +102,8 @@ def test_allows_benign_relative_symlink(tmp_path: Path) -> None:
         _safe_extractall(tf, dest)
 
     assert (dest / "real.txt").read_bytes() == b"hi"
+    assert (dest / "alias.txt").is_symlink()
+    assert (dest / "alias.txt").readlink() == Path("real.txt")
 
 
 def test_allows_benign_archive(tmp_path: Path) -> None:
