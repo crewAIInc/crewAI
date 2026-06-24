@@ -170,6 +170,21 @@ def test_safe_extractall_blocks_hardlink_escaping_cache_destination(
             _safe_extractall(tf, dest)
 
 
+def test_safe_extractall_blocks_special_cache_tar_member(tmp_path: Path) -> None:
+    """Special tar members such as FIFOs are rejected."""
+    dest = tmp_path / "dest"
+    dest.mkdir()
+
+    def build(tf: tarfile.TarFile) -> None:
+        fifo = tarfile.TarInfo("pipe")
+        fifo.type = tarfile.FIFOTYPE
+        tf.addfile(fifo)
+
+    with _tar_from_members(build) as tf:
+        with pytest.raises(ValueError, match="unsupported tar member"):
+            _safe_extractall(tf, dest)
+
+
 def test_safe_extractall_allows_benign_cache_symlink(tmp_path: Path) -> None:
     """A symlink that stays within dest is permitted."""
     dest = tmp_path / "dest"
