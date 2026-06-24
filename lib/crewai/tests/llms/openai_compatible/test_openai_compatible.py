@@ -383,3 +383,48 @@ class TestStructuredOutputFallback:
         client.chat.completions.create.assert_called_once()
         assert isinstance(result, _Answer)
         assert result.value == 42
+
+    def test_deepseek_streaming_skips_native_stream_and_validates_client_side(self):
+        """DeepSeek + streaming + response_model must use a plain streaming
+        completion (no json_schema beta.stream) and still parse the accumulated
+        text into the requested model, matching the non-streaming fallback.
+        """
+
+        def _chunk(content: str | None = None, finish: str | None = None) -> MagicMock:
+            chunk = MagicMock()
+            chunk.id = "id"
+            chunk.usage = None  # not a usage chunk
+            choice = MagicMock()
+            delta = MagicMock()
+            delta.content = content
+            delta.tool_calls = None
+            choice.delta = delta
+            choice.finish_reason = finish
+            chunk.choices = [choice]
+            return chunk
+
+        with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "test-key"}):
+            llm = OpenAICompatibleCompletion(model="deepseek-chat", provider="deepseek")
+
+        client = MagicMock()
+        client.chat.completions.create.return_value = [
+            _chunk(content='{"value": '),
+            _chunk(content="42}", finish="stop"),
+        ]
+
+        with (
+            patch.object(llm, "_get_sync_client", return_value=client),
+            patch.object(llm, "_emit_stream_chunk_event"),
+            patch.object(llm, "_emit_call_completed_event"),
+        ):
+            result = llm._handle_streaming_completion(
+                {"messages": [{"role": "user", "content": "hi"}]},
+                response_model=_Answer,
+            )
+
+        # The native json_schema streaming path must be skipped entirely.
+        client.beta.chat.completions.stream.assert_not_called()
+        client.chat.completions.create.assert_called_once()
+        # ...and the accumulated text is still parsed into the model.
+        assert isinstance(result, _Answer)
+        assert result.value == 42

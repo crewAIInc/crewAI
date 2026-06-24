@@ -1805,7 +1805,8 @@ class OpenAICompletion(BaseLLM):
         from_agent: Any | None = None,
         finish_reason: str | None = None,
         response_id: str | None = None,
-    ) -> str | list[dict[str, Any]]:
+        response_model: type[BaseModel] | None = None,
+    ) -> str | list[dict[str, Any]] | BaseModel:
         """Finalize a streaming response with usage tracking, tool call handling, and events.
 
         Args:
@@ -1819,6 +1820,10 @@ class OpenAICompletion(BaseLLM):
             finish_reason: Raw provider finish reason (e.g. "stop", "length",
                 "tool_calls") extracted from the last streaming chunk.
             response_id: Raw provider response id from any chunk.
+            response_model: When set and the stream produced text (no tool
+                calls), validate the accumulated response against this model
+                and return the parsed object. Used by the fallback path for
+                providers that don't support native json_schema streaming.
 
         Returns:
             Tool calls list when tools were invoked without available_functions,
@@ -1885,6 +1890,29 @@ class OpenAICompletion(BaseLLM):
                     return result
 
         full_response = self._apply_stop_words(full_response)
+
+        # Fallback structured-output validation: when native json_schema
+        # streaming was skipped (e.g. DeepSeek), parse the accumulated text
+        # into the requested model so the call still returns a parsed object,
+        # matching the async streaming path and the non-streaming fallback.
+        if response_model and full_response:
+            try:
+                structured_result = self._validate_structured_output(
+                    full_response, response_model
+                )
+                self._emit_call_completed_event(
+                    response=structured_result,
+                    call_type=LLMCallType.LLM_CALL,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    messages=params["messages"],
+                    usage=usage_data,
+                    finish_reason=finish_reason,
+                    response_id=response_id,
+                )
+                return structured_result
+            except ValueError as e:
+                logging.warning(f"Structured output validation failed: {e}")
 
         self._emit_call_completed_event(
             response=full_response,
@@ -2046,6 +2074,7 @@ class OpenAICompletion(BaseLLM):
             from_agent=from_agent,
             finish_reason=stream_finish_reason,
             response_id=stream_response_id,
+            response_model=response_model,
         )
         if isinstance(result, str):
             return self._invoke_after_llm_call_hooks(
