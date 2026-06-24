@@ -25,6 +25,7 @@ from datetime import datetime
 import enum
 import inspect
 import logging
+from pathlib import Path
 import threading
 from typing import (
     TYPE_CHECKING,
@@ -121,11 +122,8 @@ from crewai.flow.human_feedback import (
 )
 from crewai.flow.input_provider import InputProvider
 from crewai.flow.persistence.base import FlowPersistence
-from crewai.flow.runtime._resolvers import (
-    resolve_action,
-    resolve_instance_ref,
-    resolve_ref,
-)
+from crewai.flow.runtime._actions import FlowScriptExecutionDisabledError, build_action
+from crewai.flow.runtime._refs import resolve_instance_ref, resolve_ref
 from crewai.flow.types import (
     FlowExecutionData,
     FlowMethodName,
@@ -196,26 +194,24 @@ def _build_definition_state_model(
     kwargs = dict(state_definition.default or {})
 
     model_class: type[BaseModel] | None = None
-    if state_definition.ref:
+    state_ref = getattr(state_definition, "ref", None)
+    if state_ref:
         try:
-            resolved: Any = resolve_ref(state_definition.ref, field="state")
+            resolved: Any = resolve_ref(state_ref, field="state")
         except Exception:
-            logger.warning(
-                "Could not import state ref %r", state_definition.ref, exc_info=True
-            )
+            logger.warning("Could not import state ref %r", state_ref, exc_info=True)
         else:
             if isinstance(resolved, type) and issubclass(resolved, BaseModel):
                 model_class = resolved
             else:
-                logger.warning(
-                    "State ref %r is not a pydantic model", state_definition.ref
-                )
+                logger.warning("State ref %r is not a pydantic model", state_ref)
 
-    if model_class is None and state_definition.json_schema:
+    json_schema = getattr(state_definition, "json_schema", None)
+    if model_class is None and json_schema:
         from crewai.utilities.pydantic_schema_utils import create_model_from_schema
 
         try:
-            model_class = create_model_from_schema(state_definition.json_schema)
+            model_class = create_model_from_schema(json_schema)
         except Exception:
             logger.warning(
                 "Could not build a state model from the declared json_schema",
@@ -774,6 +770,21 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     @classmethod
     def from_definition(cls, definition: FlowDefinition, **kwargs: Any) -> Flow[Any]:
         """Build a runnable Flow directly from a definition; no subclass required."""
+        return cls.from_declaration(contents=definition, **kwargs)
+
+    @classmethod
+    def from_declaration(
+        cls,
+        *,
+        contents: FlowDefinition | str | dict[str, Any] | None = None,
+        path: Path | str | None = None,
+        **kwargs: Any,
+    ) -> Flow[Any]:
+        """Build a runnable declarative flow from contents or a file path."""
+        definition = FlowDefinition.from_declaration(
+            contents=contents,
+            path=path,
+        )
         return cls.model_validate(
             {**definition.config.model_dump(), **kwargs},
             context={"flow_definition": definition},
@@ -1092,9 +1103,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         self._methods.update(methods)
 
     def _action_bound_methods(self) -> dict[FlowMethodName, Callable[..., Any]]:
-        def resolve(name: str, definition: FlowMethodDefinition) -> Callable[..., Any]:
+        def build(name: str, definition: FlowMethodDefinition) -> Callable[..., Any]:
             try:
-                return resolve_action(self, definition.do)
+                return build_action(self, definition.do)
+            except FlowScriptExecutionDisabledError:
+                raise
             except Exception as e:
                 unresolved.append(f"{name}: {e}")
                 return lambda *args, **kwargs: None
@@ -1102,9 +1115,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         methods: dict[FlowMethodName, Callable[..., Any]] = {}
         unresolved: list[str] = []
         for method_name, method_definition in self._definition.methods.items():
-            methods[FlowMethodName(method_name)] = resolve(
-                method_name, method_definition
-            )
+            methods[FlowMethodName(method_name)] = build(method_name, method_definition)
         if unresolved:
             raise ValueError(
                 f"Cannot build flow {self._definition.name!r} from its definition; "
@@ -2460,11 +2471,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     object.__setattr__(
                         self, "_deferred_flow_started_event_id", started_event.event_id
                     )
-                if not self.suppress_flow_events:
-                    self._log_flow_event(
-                        f"Flow started with ID: {self.flow_id}", color="bold magenta"
-                    )
-
             # After FlowStarted: env events must not pre-empt trace batch init
             # with implicit "crew" execution_type.
             get_env_context()
@@ -3012,6 +3018,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         """
         # First, handle routers repeatedly until no router triggers anymore
         router_results = []
+        router_result_payloads: dict[str, Any] = {}
         router_result_to_feedback: dict[
             str, Any
         ] = {}  # Map outcome -> HumanFeedbackResult
@@ -3049,6 +3056,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 router_result_str = str(router_result)
                 router_result_event = FlowMethodName(router_result_str)
                 router_results.append(router_result_event)
+                router_result_payloads[router_result_str] = (
+                    self.last_human_feedback
+                    if self.last_human_feedback is not None
+                    else router_result
+                )
 
                 if self.last_human_feedback is not None:
                     router_result_to_feedback[router_result_str] = (
@@ -3069,7 +3081,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     current_trigger, router_only=False
                 )
                 if listeners_triggered:
-                    listener_result = router_result_to_feedback.get(
+                    listener_result = router_result_payloads.get(
                         str(current_trigger), result
                     )
                     racing_group = self._get_racing_group_for_listeners(

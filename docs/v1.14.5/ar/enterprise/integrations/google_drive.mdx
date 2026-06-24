@@ -1,0 +1,238 @@
+---
+title: تكامل Google Drive
+description: "تخزين الملفات وإدارتها مع تكامل Google Drive لـ CrewAI."
+icon: "google"
+mode: "wide"
+---
+
+## نظرة عامة
+
+مكّن وكلاءك من إدارة الملفات والمجلدات عبر Google Drive. ارفع الملفات وحمّلها ونظّمها وشاركها، وأنشئ المجلدات، وبسّط سير عمل إدارة المستندات باستخدام الأتمتة المدعومة بالذكاء الاصطناعي.
+
+## المتطلبات الأساسية
+
+قبل استخدام تكامل Google Drive، تأكد من توفر ما يلي:
+
+- حساب [CrewAI AMP](https://app.crewai.com) مع اشتراك فعّال
+- حساب Google مع إمكانية الوصول إلى Google Drive
+- ربط حساب Google الخاص بك عبر [صفحة التكاملات](https://app.crewai.com/crewai_plus/connectors)
+
+## إعداد تكامل Google Drive
+
+### 1. ربط حساب Google الخاص بك
+
+1. انتقل إلى [تكاملات CrewAI AMP](https://app.crewai.com/crewai_plus/connectors)
+2. ابحث عن **Google Drive** في قسم تكاملات المصادقة
+3. انقر على **Connect** وأكمل عملية OAuth
+4. امنح الصلاحيات اللازمة لإدارة الملفات والمجلدات
+5. انسخ رمز المؤسسة من [إعدادات التكامل](https://app.crewai.com/crewai_plus/settings/integrations)
+
+### 2. تثبيت الحزمة المطلوبة
+
+```bash
+uv add crewai-tools
+```
+
+### 3. إعداد متغير البيئة
+
+<Note>
+  لاستخدام التكاملات مع `Agent(apps=[])`, يجب تعيين متغير البيئة
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` برمز المؤسسة الخاص بك.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+أو أضفه إلى ملف `.env`:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
+## الإجراءات المتاحة
+
+<AccordionGroup>
+  <Accordion title="google_drive/get_file">
+    **الوصف:** الحصول على ملف بواسطة المعرّف من Google Drive.
+
+    **المعاملات:**
+    - `file_id` (string, مطلوب): معرّف الملف المراد استرجاعه.
+
+  </Accordion>
+
+  <Accordion title="google_drive/list_files">
+    **الوصف:** عرض قائمة الملفات في Google Drive.
+
+    **المعاملات:**
+    - `q` (string, اختياري): سلسلة استعلام لتصفية الملفات (مثال: "name contains 'report'").
+    - `page_size` (integer, اختياري): الحد الأقصى لعدد الملفات المُرجعة (الافتراضي: 100، الحد الأقصى: 1000).
+    - `page_token` (string, اختياري): رمز لاسترجاع الصفحة التالية من النتائج.
+    - `order_by` (string, اختياري): ترتيب الفرز (مثال: "name", "createdTime desc", "modifiedTime").
+    - `spaces` (string, اختياري): قائمة مفصولة بفواصل للمساحات المراد الاستعلام عنها (drive, appDataFolder, photos).
+
+  </Accordion>
+
+  <Accordion title="google_drive/upload_file">
+    **الوصف:** رفع ملف إلى Google Drive.
+
+    **المعاملات:**
+    - `name` (string, مطلوب): اسم الملف المراد إنشاؤه.
+    - `content` (string, مطلوب): محتوى الملف المراد رفعه.
+    - `mime_type` (string, اختياري): نوع MIME للملف (مثال: "text/plain", "application/pdf").
+    - `parent_folder_id` (string, اختياري): معرّف المجلد الأصلي حيث يجب إنشاء الملف.
+    - `description` (string, اختياري): وصف الملف.
+
+  </Accordion>
+
+  <Accordion title="google_drive/download_file">
+    **الوصف:** تحميل ملف من Google Drive.
+
+    **المعاملات:**
+    - `file_id` (string, مطلوب): معرّف الملف المراد تحميله.
+    - `mime_type` (string, اختياري): نوع MIME للتصدير (مطلوب لمستندات Google Workspace).
+
+  </Accordion>
+
+  <Accordion title="google_drive/create_folder">
+    **الوصف:** إنشاء مجلد جديد في Google Drive.
+
+    **المعاملات:**
+    - `name` (string, مطلوب): اسم المجلد المراد إنشاؤه.
+    - `parent_folder_id` (string, اختياري): معرّف المجلد الأصلي حيث يجب إنشاء المجلد الجديد.
+    - `description` (string, اختياري): وصف المجلد.
+
+  </Accordion>
+
+  <Accordion title="google_drive/delete_file">
+    **الوصف:** حذف ملف من Google Drive.
+
+    **المعاملات:**
+    - `file_id` (string, مطلوب): معرّف الملف المراد حذفه.
+
+  </Accordion>
+
+  <Accordion title="google_drive/share_file">
+    **الوصف:** مشاركة ملف في Google Drive مع مستخدمين محددين أو جعله عاماً.
+
+    **المعاملات:**
+    - `file_id` (string, مطلوب): معرّف الملف المراد مشاركته.
+    - `role` (string, مطلوب): الدور الممنوح بهذا الإذن (reader, writer, commenter, owner).
+    - `type` (string, مطلوب): نوع المستفيد (user, group, domain, anyone).
+    - `email_address` (string, اختياري): عنوان البريد الإلكتروني للمستخدم أو المجموعة المراد المشاركة معهم (مطلوب لأنواع user/group).
+    - `domain` (string, اختياري): النطاق المراد المشاركة معه (مطلوب لنوع domain).
+    - `send_notification_email` (boolean, اختياري): ما إذا كان يجب إرسال بريد إلكتروني إشعاري (الافتراضي: true).
+    - `email_message` (string, اختياري): رسالة نصية مخصصة لتضمينها في البريد الإلكتروني الإشعاري.
+
+  </Accordion>
+
+  <Accordion title="google_drive/update_file">
+    **الوصف:** تحديث ملف موجود في Google Drive.
+
+    **المعاملات:**
+    - `file_id` (string, مطلوب): معرّف الملف المراد تحديثه.
+    - `name` (string, اختياري): الاسم الجديد للملف.
+    - `content` (string, اختياري): المحتوى الجديد للملف.
+    - `mime_type` (string, اختياري): نوع MIME الجديد للملف.
+    - `description` (string, اختياري): الوصف الجديد للملف.
+    - `add_parents` (string, اختياري): قائمة مفصولة بفواصل لمعرّفات المجلدات الأصلية المراد إضافتها.
+    - `remove_parents` (string, اختياري): قائمة مفصولة بفواصل لمعرّفات المجلدات الأصلية المراد إزالتها.
+
+  </Accordion>
+</AccordionGroup>
+
+## أمثلة الاستخدام
+
+### إعداد Agent أساسي لـ Google Drive
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create an agent with Google Drive capabilities
+drive_agent = Agent(
+    role="File Manager",
+    goal="Manage files and folders in Google Drive efficiently",
+    backstory="An AI assistant specialized in document and file management.",
+    apps=['google_drive']  # All Google Drive actions will be available
+)
+
+# Task to organize files
+organize_files_task = Task(
+    description="List all files in the root directory and organize them into appropriate folders",
+    agent=drive_agent,
+    expected_output="Summary of files organized with folder structure"
+)
+
+# Run the task
+crew = Crew(
+    agents=[drive_agent],
+    tasks=[organize_files_task]
+)
+
+crew.kickoff()
+```
+
+### تصفية أدوات Google Drive المحددة
+
+```python
+from crewai import Agent, Task, Crew
+
+# Create agent with specific Google Drive actions only
+file_manager_agent = Agent(
+    role="Document Manager",
+    goal="Upload and manage documents efficiently",
+    backstory="An AI assistant that focuses on document upload and organization.",
+    apps=[
+        'google_drive/upload_file',
+        'google_drive/create_folder',
+        'google_drive/share_file'
+    ]  # Specific Google Drive actions
+)
+
+# Task to upload and share documents
+document_task = Task(
+    description="Upload the quarterly report and share it with the finance team",
+    agent=file_manager_agent,
+    expected_output="Document uploaded and sharing permissions configured"
+)
+
+crew = Crew(
+    agents=[file_manager_agent],
+    tasks=[document_task]
+)
+
+crew.kickoff()
+```
+
+### إدارة الملفات المتقدمة
+
+```python
+from crewai import Agent, Task, Crew
+
+file_organizer = Agent(
+    role="File Organizer",
+    goal="Maintain organized file structure and manage permissions",
+    backstory="An experienced file manager who ensures proper organization and access control.",
+    apps=['google_drive']
+)
+
+# Complex task involving multiple Google Drive operations
+organization_task = Task(
+    description="""
+    1. List all files in the shared folder
+    2. Create folders for different document types (Reports, Presentations, Spreadsheets)
+    3. Move files to appropriate folders based on their type
+    4. Set appropriate sharing permissions for each folder
+    5. Create a summary document of the organization changes
+    """,
+    agent=file_organizer,
+    expected_output="Files organized into categorized folders with proper permissions and summary report"
+)
+
+crew = Crew(
+    agents=[file_organizer],
+    tasks=[organization_task]
+)
+
+crew.kickoff()
+```

@@ -85,9 +85,28 @@ def _validate_llm_ref(value: Any) -> Any:
         import inspect
 
         llm_type = value.get("llm_type")
-        if not llm_type or llm_type not in _LLM_TYPE_REGISTRY:
+        if not llm_type:
+            model = (
+                value.get("model")
+                or value.get("model_name")
+                or value.get("deployment_name")
+            )
+            if not model:
+                raise ValueError(
+                    "LLM config objects must include 'model', 'model_name', "
+                    "or 'deployment_name', or a serialized 'llm_type'. "
+                    f"Got keys: {list(value)}"
+                )
+            from crewai.llm import LLM
+
+            llm_kwargs = {**value, "model": model}
+            llm_kwargs.pop("model_name", None)
+            llm_kwargs.pop("deployment_name", None)
+            return LLM(**llm_kwargs)
+
+        if llm_type not in _LLM_TYPE_REGISTRY:
             raise ValueError(
-                f"Unknown or missing llm_type: {llm_type!r}. "
+                f"Unknown llm_type: {llm_type!r}. "
                 f"Expected one of {list(_LLM_TYPE_REGISTRY)}"
             )
         dotted = _LLM_TYPE_REGISTRY[llm_type]
@@ -618,7 +637,10 @@ class BaseAgent(BaseModel, ABC, metaclass=AgentMeta):
         if self.memory is True:
             from crewai.memory.unified_memory import Memory
 
-            self.memory = Memory()
+            memory_kwargs: dict[str, Any] = {}
+            if self.llm is not None:
+                memory_kwargs["llm"] = self.llm
+            self.memory = Memory(**memory_kwargs)
         elif self.memory is False:
             self.memory = None
         return self

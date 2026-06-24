@@ -390,7 +390,10 @@ class LiteAgent(FlowTrackable, BaseModel):
         if self.memory is True:
             from crewai.memory.unified_memory import Memory
 
-            object.__setattr__(self, "_memory", Memory())
+            memory_kwargs: dict[str, Any] = {}
+            if self.llm is not None:
+                memory_kwargs["llm"] = self.llm
+            object.__setattr__(self, "_memory", Memory(**memory_kwargs))
         elif self.memory is not None and self.memory is not False:
             object.__setattr__(self, "_memory", self.memory)
         else:

@@ -383,6 +383,7 @@ def test_bedrock_completion_with_tools():
             assert len(call_kwargs['tools']) > 0
 
 
+@pytest.mark.timeout(180)
 def test_bedrock_raises_error_when_model_not_found(bedrock_mocks):
     """Test that BedrockCompletion raises appropriate error when model not found"""
     from botocore.exceptions import ClientError

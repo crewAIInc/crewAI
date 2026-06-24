@@ -345,6 +345,36 @@ class TestPlusAPI(unittest.TestCase):
             "POST", "/crewai_plus/api/v1/crews", json=payload
         )
 
+    @patch("crewai_core.plus_api.PlusAPI._make_multipart_request")
+    def test_create_crew_from_zip(self, mock_make_multipart_request):
+        self.api.create_crew_from_zip(
+            "/tmp/test.zip",
+            name="test_crew",
+            env={"ENV_VAR": "value"},
+        )
+        mock_make_multipart_request.assert_called_once_with(
+            "POST",
+            "/crewai_plus/api/v1/crews/zip",
+            zip_file_path="/tmp/test.zip",
+            data={"name": "test_crew", "env[ENV_VAR]": "value"},
+            timeout=300,
+        )
+
+    @patch("crewai_core.plus_api.PlusAPI._make_multipart_request")
+    def test_update_crew_from_zip(self, mock_make_multipart_request):
+        self.api.update_crew_from_zip(
+            "test_uuid",
+            "/tmp/test.zip",
+            env={"ENV_VAR": "value"},
+        )
+        mock_make_multipart_request.assert_called_once_with(
+            "POST",
+            "/crewai_plus/api/v1/crews/test_uuid/zip_update",
+            zip_file_path="/tmp/test.zip",
+            data={"env[ENV_VAR]": "value"},
+            timeout=300,
+        )
+
     @patch("crewai_core.plus_api.Settings")
     @patch.dict(os.environ, {"CREWAI_PLUS_URL": ""})
     def test_custom_base_url(self, mock_settings_class):
