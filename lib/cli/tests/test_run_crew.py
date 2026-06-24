@@ -645,11 +645,50 @@ def test_run_crew_runs_python_flow_project(monkeypatch, capsys):
         "_execute_uv_script",
         lambda script_name, **kwargs: calls.append((script_name, kwargs)),
     )
+    monkeypatch.setattr(
+        "crewai_cli.kickoff_flow._load_conversational_flow_from_kickoff_script",
+        lambda: None,
+    )
 
     run_crew_module.run_crew()
 
     assert capsys.readouterr().out == ""
     assert calls == [("kickoff", {"entity_type": "flow"})]
+
+
+def test_run_crew_runs_conversational_flow_tui(monkeypatch, capsys):
+    class Flow:
+        pass
+
+    flow = Flow()
+    calls = []
+
+    monkeypatch.setattr(run_crew_module, "_has_json_crew", lambda: False)
+    monkeypatch.setattr(
+        run_crew_module,
+        "read_toml",
+        lambda: {"tool": {"crewai": {"type": "flow"}}},
+    )
+    monkeypatch.setattr(
+        "crewai_cli.kickoff_flow._load_conversational_flow_from_kickoff_script",
+        lambda: flow,
+    )
+    monkeypatch.setattr(
+        "crewai_cli.kickoff_flow._run_conversational_flow_tui",
+        lambda loaded_flow: calls.append(loaded_flow),
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "_execute_uv_script",
+        lambda *_args, **_kwargs: pytest.fail(
+            "conversational flows must use the TUI"
+        ),
+    )
+
+    run_crew_module.run_crew()
+
+    assert capsys.readouterr().out == ""
+    assert calls == [flow]
 
 
 def test_run_crew_rejects_filename_for_flow_project(monkeypatch):
@@ -666,9 +705,14 @@ def test_run_crew_rejects_filename_for_flow_project(monkeypatch):
     assert "--filename can only be used when running crews" in exc_info.value.message
 
 
-def test_run_crew_runs_configured_declarative_flow_project(monkeypatch, capsys):
+def test_run_crew_runs_configured_declarative_flow_project(
+    monkeypatch, tmp_path: Path, capsys
+):
     calls = []
 
+    monkeypatch.chdir(tmp_path)
+    definition_path = tmp_path / "flow.yaml"
+    definition_path.write_text("schema: crewai.flow/v1\n", encoding="utf-8")
     monkeypatch.setattr(run_crew_module, "_has_json_crew", lambda: False)
     monkeypatch.setattr(
         run_crew_module,
@@ -695,4 +739,4 @@ def test_run_crew_runs_configured_declarative_flow_project(monkeypatch, capsys):
     run_crew_module.run_crew()
 
     assert capsys.readouterr().out == ""
-    assert calls == [("flow.yaml", None)]
+    assert calls == [(definition_path.resolve(), None)]
