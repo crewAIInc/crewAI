@@ -24,6 +24,7 @@ from crewai.hooks.tool_hooks import (
     register_after_tool_call_hook,
 )
 from crewai.tools import BaseTool
+from crewai.tools.base_tool import Tool
 from crewai.tools.tool_calling import ToolCalling
 from crewai.tools.tool_usage import ToolUsage
 from crewai.utilities.tool_utils import execute_tool_and_check_finality
@@ -60,6 +61,15 @@ class TypedSearchTool(BaseTool):
 
     def _run(self, query: str) -> SearchOutput:
         return SearchOutput(query=query, score=0.7)
+
+
+class NestedDictLangChainTool:
+    name = "mock_api_tool"
+    description = "Fetches data from a mock API."
+
+    @staticmethod
+    def func(query: str) -> dict[str, object]:
+        return {"status": "success", "data": {"items": [{"id": 1, "value": query}]}}
 
 
 # Example agent and task
@@ -161,6 +171,28 @@ def test_tool_usage_returns_json_agent_text_for_typed_output():
     )
 
     assert json.loads(result) == {"query": "crew", "score": 0.7}
+
+
+def test_tool_usage_serializes_plain_nested_dict_output_as_json():
+    structured_tool = Tool.from_langchain(
+        NestedDictLangChainTool()
+    ).to_structured_tool()
+    action = AgentAction(
+        thought="",
+        tool="mock_api_tool",
+        tool_input='{"query": "crew"}',
+        text='Action: mock_api_tool\nAction Input: {"query": "crew"}',
+    )
+
+    result = execute_tool_and_check_finality(
+        agent_action=action,
+        tools=[structured_tool],
+    )
+
+    assert json.loads(result.result) == {
+        "status": "success",
+        "data": {"items": [{"id": 1, "value": "crew"}]},
+    }
 
 
 def test_tool_usage_cache_callback_receives_raw_typed_output():

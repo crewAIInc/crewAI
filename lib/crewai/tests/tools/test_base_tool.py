@@ -460,13 +460,16 @@ class TestToolOutputSchema:
             expected_agent_payload
         )
 
-    def test_base_tool_does_not_infer_non_pydantic_return_annotation(self) -> None:
+    def test_base_tool_serializes_non_pydantic_mapping_output_as_json(self) -> None:
         t = DictAnnotatedSearchTool()
 
         raw_result = t.run(query="crew")
 
         assert raw_result == {"query": "crew", "score": 0.5}
-        assert t.format_output_for_agent(raw_result) == str(raw_result)
+        assert json.loads(t.format_output_for_agent(raw_result)) == {
+            "query": "crew",
+            "score": 0.5,
+        }
 
     @pytest.mark.parametrize(
         ("make_tool", "expected_raw", "expected_agent_payload"),
@@ -506,7 +509,7 @@ class TestToolOutputSchema:
             expected_agent_payload
         )
 
-    def test_decorator_tool_does_not_infer_non_pydantic_return_annotation(
+    def test_decorator_tool_serializes_non_pydantic_mapping_output_as_json(
         self,
     ) -> None:
         @tool("search")
@@ -517,7 +520,10 @@ class TestToolOutputSchema:
         raw_result = search.run(query="crew")
 
         assert raw_result == {"query": "crew", "score": 0.5}
-        assert search.format_output_for_agent(raw_result) == str(raw_result)
+        assert json.loads(search.format_output_for_agent(raw_result)) == {
+            "query": "crew",
+            "score": 0.5,
+        }
 
     def test_explicit_result_schema_wins_over_return_annotation(self) -> None:
         class AlternateOutput(BaseModel):
