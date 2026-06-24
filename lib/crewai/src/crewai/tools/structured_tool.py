@@ -64,7 +64,7 @@ def _format_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
         ):
             try:
                 return json.dumps(raw_result)
-            except TypeError:
+            except (TypeError, ValueError):
                 pass
         return str(raw_result)
 

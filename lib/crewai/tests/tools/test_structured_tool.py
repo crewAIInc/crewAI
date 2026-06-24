@@ -179,6 +179,24 @@ def test_from_function_serializes_non_pydantic_mapping_output_as_json():
     }
 
 
+def test_from_function_falls_back_for_circular_mapping_output():
+    def build_value(value: str) -> dict[str, object]:
+        """Build a value."""
+        result: dict[str, object] = {"value": value}
+        result["self"] = result
+        return result
+
+    tool = CrewStructuredTool.from_function(
+        func=build_value,
+        name="build_value",
+    )
+
+    raw_result = tool.invoke({"value": "crew"})
+
+    assert raw_result["self"] is raw_result
+    assert tool.format_output_for_agent(raw_result) == str(raw_result)
+
+
 def test_invalid_typed_output_warns_and_uses_string_agent_text():
     def build_value(value: str) -> dict[str, object]:
         """Build a value."""
