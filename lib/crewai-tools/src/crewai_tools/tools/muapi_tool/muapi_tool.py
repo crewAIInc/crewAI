@@ -1,5 +1,6 @@
 import json
 import time
+import urllib.error
 import urllib.request
 from typing import Any, List, Literal, Optional
 
@@ -78,27 +79,39 @@ class MuApiVideoSchema(BaseModel):
 
 def _submit_and_poll(api_key: str, endpoint: str, payload: dict, timeout: int = 300) -> str:
     """Submit a muapi.ai job and poll until completion, returning the output URL."""
-    import json as _json
-
     headers = {"x-api-key": api_key, "Content-Type": "application/json"}
-    body = _json.dumps(payload).encode()
+    body = json.dumps(payload).encode()
 
     # Submit
-    req = urllib.request.Request(f"{BASE_URL}/{endpoint}", data=body, headers=headers, method="POST")
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        data = _json.loads(resp.read())
-    request_id = data["request_id"]
+    try:
+        req = urllib.request.Request(f"{BASE_URL}/{endpoint}", data=body, headers=headers, method="POST")
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read())
+    except urllib.error.HTTPError as exc:
+        raise RuntimeError(f"MuAPI submit failed [{exc.code}]: {exc.read().decode(errors='replace')}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"MuAPI submit connection error: {exc.reason}") from exc
+
+    request_id = data.get("request_id")
+    if not request_id:
+        raise RuntimeError(f"MuAPI did not return a request_id: {data}")
 
     # Poll
     deadline = time.time() + timeout
     while time.time() < deadline:
         time.sleep(3)
-        poll_req = urllib.request.Request(
-            f"{BASE_URL}/predictions/{request_id}/result",
-            headers={"x-api-key": api_key},
-        )
-        with urllib.request.urlopen(poll_req, timeout=15) as resp:
-            result = _json.loads(resp.read())
+        try:
+            poll_req = urllib.request.Request(
+                f"{BASE_URL}/predictions/{request_id}/result",
+                headers={"x-api-key": api_key},
+            )
+            with urllib.request.urlopen(poll_req, timeout=15) as resp:
+                result = json.loads(resp.read())
+        except urllib.error.HTTPError as exc:
+            raise RuntimeError(f"MuAPI poll failed [{exc.code}]: {exc.read().decode(errors='replace')}") from exc
+        except urllib.error.URLError as exc:
+            raise RuntimeError(f"MuAPI poll connection error: {exc.reason}") from exc
+
         status = result.get("status", "pending")
         if status == "completed":
             outputs = result.get("outputs", [])
