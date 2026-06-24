@@ -24,7 +24,11 @@ from crewai.flow.flow_definition import (
     FlowToolActionDefinition,
 )
 from crewai.flow.runtime._outputs import outputs_by_name
-from crewai.flow.runtime._refs import InvalidRefError, resolve_ref
+from crewai.utilities.declarative_refs import (
+    InvalidRefError,
+    resolve_class_ref,
+    resolve_ref,
+)
 
 
 if TYPE_CHECKING:
@@ -103,16 +107,17 @@ class ToolAction:
         )
 
     def _build_tool(self) -> Any:
-        target = resolve_ref(self.definition.ref, field="do")
         from crewai.tools import BaseTool
 
-        if not (inspect.isclass(target) and issubclass(target, BaseTool)):
-            raise InvalidRefError(
-                f"invalid tool ref {self.definition.ref!r}; expected a BaseTool class"
-            )
-
+        tool_cls = cast(
+            Callable[[], BaseTool],
+            resolve_class_ref(
+                self.definition.ref,
+                field="do",
+                base_class=BaseTool,
+            ),
+        )
         try:
-            tool_cls = cast(Callable[[], BaseTool], target)
             return tool_cls()
         except Exception as e:
             raise InvalidRefError(
