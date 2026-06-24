@@ -18,6 +18,7 @@ import math
 from typing import Any
 from uuid import uuid4
 
+import numpy as np
 from pydantic import BaseModel, Field
 
 from crewai.flow.flow import Flow, listen, start
@@ -118,12 +119,67 @@ class EncodingFlow(Flow[EncodingState]):
 
     @listen(batch_embed)
     def intra_batch_dedup(self) -> None:
-        """Drop near-exact duplicates within the batch."""
+        """Drop near-exact duplicates within the batch.
+
+        Computes the pairwise cosine-similarity matrix in one vectorized pass
+        (normalize rows once, then a single ``X @ Xᵀ`` BLAS call) instead of the
+        previous O(n²) loop of pure-Python cosine calls, each of which also
+        recomputed both vector norms from scratch (O(n²·d)). The greedy
+        "first occurrence wins" selection is preserved exactly: item ``j`` is
+        dropped iff some earlier *kept* item is at least ``threshold`` similar.
+        """
         items = list(self.state.items)
         if len(items) <= 1:
             return
 
         threshold = self._config.batch_dedup_threshold
+
+        # Only items carrying an embedding participate; pre-dropped items are
+        # excluded so they neither get re-dropped nor suppress others — exactly
+        # as the scalar reference skips them.
+        active: list[tuple[int, list[float]]] = [
+            (idx, item.embedding)
+            for idx, item in enumerate(items)
+            if item.embedding and not item.dropped
+        ]
+        if len(active) <= 1:
+            return
+
+        dim = len(active[0][1])
+        if any(len(emb) != dim for _, emb in active):
+            # Ragged embeddings cannot form a matrix; this should not happen for
+            # a single embedder, but fall back to the scalar reference so the
+            # len-mismatch-as-zero-similarity behavior is preserved exactly.
+            self._dedup_scalar(items, threshold)
+            return
+
+        matrix = np.asarray([emb for _, emb in active], dtype=np.float64)
+        norms = np.linalg.norm(matrix, axis=1)
+        nonzero = norms > 0.0
+        normalized = np.zeros_like(matrix)
+        normalized[nonzero] = matrix[nonzero] / norms[nonzero, None]
+        # Cosine-similarity matrix; zero-norm rows contribute 0.0, matching
+        # _cosine_similarity's zero-norm guard.
+        sims = normalized @ normalized.T
+
+        m = len(active)
+        dropped = np.zeros(m, dtype=bool)
+        for j in range(1, m):
+            # Drop j iff an earlier, still-kept item is near-identical.
+            if bool((~dropped[:j] & (sims[:j, j] >= threshold)).any()):
+                dropped[j] = True
+
+        for local_idx in range(m):
+            if dropped[local_idx]:
+                items[active[local_idx][0]].dropped = True
+                self.state.items_dropped_dedup += 1
+
+    def _dedup_scalar(self, items: list[ItemState], threshold: float) -> None:
+        """Reference O(n²) dedup using scalar cosine similarity.
+
+        Retained as the exact behavioral reference and as a fallback for the
+        (unexpected) ragged-embedding case.
+        """
         n = len(items)
         for j in range(1, n):
             if items[j].dropped or not items[j].embedding:
