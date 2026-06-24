@@ -703,9 +703,13 @@ class LLM(BaseLLM):
             self.set_env_callbacks()
         return self
 
-    @staticmethod
-    def _is_anthropic_model(model: str) -> bool:
+    @classmethod
+    def _is_anthropic_model(cls, model: str) -> bool:
         """Determine if the model is from Anthropic provider.
+
+        Delegates to the same pattern matcher used for native-provider
+        routing so detection stays consistent across both, including custom
+        deployment naming such as ``anthropic--claude-...`` (#5893).
 
         Args:
             model: The model identifier string.
@@ -713,8 +717,7 @@ class LLM(BaseLLM):
         Returns:
             bool: True if the model is from Anthropic, False otherwise.
         """
-        anthropic_prefixes = ("anthropic/", "claude-", "claude/")
-        return any(prefix in model.lower() for prefix in anthropic_prefixes)
+        return cls._matches_provider_pattern(model, "anthropic")
 
     def _prepare_completion_params(
         self,

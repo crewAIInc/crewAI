@@ -441,6 +441,9 @@ def test_anthropic_model_detection():
         ("anthropic/claude-3", True),
         ("claude-instant", True),
         ("claude/v1", True),
+        # Custom deployment naming is detected consistently with native routing (#5893)
+        ("anthropic--claude-3-5-sonnet", True),
+        ("anthropic.claude-3-5-sonnet", True),
         ("gpt-4", False),
         ("anthropomorphic", False),
     ]
