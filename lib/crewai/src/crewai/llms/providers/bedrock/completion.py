@@ -13,6 +13,7 @@ from typing_extensions import Required
 from crewai.events.types.llm_events import LLMCallType
 from crewai.llms.base_llm import BaseLLM, llm_call_context
 from crewai.llms.providers.utils.common import safe_tool_conversion
+from crewai.telemetry.otel import operation
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
@@ -362,7 +363,10 @@ class BedrockCompletion(BaseLLM):
         """Call AWS Bedrock Converse API."""
         effective_response_model = response_model or self.response_format
 
-        with llm_call_context():
+        with (
+            llm_call_context(),
+            operation("call llm", {"crewai.llm.model": self.model}),
+        ):
             try:
                 self._emit_call_started_event(
                     messages=messages,
@@ -495,7 +499,10 @@ class BedrockCompletion(BaseLLM):
                 'Install with: uv add "crewai[bedrock-async]"'
             )
 
-        with llm_call_context():
+        with (
+            llm_call_context(),
+            operation("call llm", {"crewai.llm.model": self.model}),
+        ):
             try:
                 self._emit_call_started_event(
                     messages=messages,

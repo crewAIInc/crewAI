@@ -137,6 +137,7 @@ from crewai.state.checkpoint_config import (
     _coerce_checkpoint,
     apply_checkpoint,
 )
+from crewai.telemetry.otel import operation
 
 
 if TYPE_CHECKING:
@@ -1624,6 +1625,22 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 current_flow_id.reset(flow_id_token)
 
     async def _resume_async_body(self, feedback: str = "") -> Any:
+        # Resume traces are causally related to the pause trace but not a
+        # parent-child relationship. Enterprise listeners can attach the
+        # FOLLOWS_FROM link via ``follows_from()`` when they record the
+        # paused span's trace/span IDs at pause time. We always open a
+        # fresh root span here; the link is opt-in.
+        with operation(
+            "resume flow",
+            {
+                "crewai.flow.name": self._definition.name,
+                "crewai.flow.id": self.flow_id,
+            },
+            expected_exceptions=(HumanFeedbackPending,),
+        ):
+            return await self._resume_async_body_inner(feedback)
+
+    async def _resume_async_body_inner(self, feedback: str = "") -> Any:
         if get_current_parent_id() is None:
             reset_emission_counter()
             reset_last_event_id()
@@ -2485,32 +2502,40 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 await self._replay_recorded_events()
 
             try:
-                # Determine which start methods to execute at kickoff
-                # Conditional start methods are only triggered by their conditions
-                # UNLESS there are no unconditional starts (then all starts run as entry points)
-                start_methods = self._start_method_names()
-                unconditional_starts = [
-                    start_method
-                    for start_method in start_methods
-                    if self._start_condition(start_method) is None
-                ]
-                # If there are unconditional starts, only run those at kickoff
-                # If there are NO unconditional starts, run all starts (including conditional ones)
-                starts_to_execute = (
-                    unconditional_starts if unconditional_starts else start_methods
-                )
-                starts_to_execute, run_starts_sequentially = (
-                    self._order_start_methods_for_kickoff(starts_to_execute)
-                )
-                if run_starts_sequentially:
-                    for start_method in starts_to_execute:
-                        await self._execute_start_method(start_method)
-                else:
-                    tasks = [
-                        self._execute_start_method(start_method)
-                        for start_method in starts_to_execute
+                with operation(
+                    "execute flow",
+                    {
+                        "crewai.flow.name": self._definition.name,
+                        "crewai.flow.id": self.flow_id,
+                    },
+                    expected_exceptions=(HumanFeedbackPending,),
+                ):
+                    # Determine which start methods to execute at kickoff
+                    # Conditional start methods are only triggered by their conditions
+                    # UNLESS there are no unconditional starts (then all starts run as entry points)
+                    start_methods = self._start_method_names()
+                    unconditional_starts = [
+                        start_method
+                        for start_method in start_methods
+                        if self._start_condition(start_method) is None
                     ]
-                    await asyncio.gather(*tasks)
+                    # If there are unconditional starts, only run those at kickoff
+                    # If there are NO unconditional starts, run all starts (including conditional ones)
+                    starts_to_execute = (
+                        unconditional_starts if unconditional_starts else start_methods
+                    )
+                    starts_to_execute, run_starts_sequentially = (
+                        self._order_start_methods_for_kickoff(starts_to_execute)
+                    )
+                    if run_starts_sequentially:
+                        for start_method in starts_to_execute:
+                            await self._execute_start_method(start_method)
+                    else:
+                        tasks = [
+                            self._execute_start_method(start_method)
+                            for start_method in starts_to_execute
+                        ]
+                        await asyncio.gather(*tasks)
             except Exception as e:
                 # Check if flow was paused for human feedback
                 if isinstance(e, HumanFeedbackPending):
@@ -2837,19 +2862,30 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
             method_name_token = current_flow_method_name.set(method_name)
             try:
-                if asyncio.iscoroutinefunction(method):
-                    result = await method(*args, **kwargs)
-                else:
-                    # Run sync methods in thread pool for isolation
-                    # This allows Agent.kickoff() to work synchronously inside Flow methods
-                    ctx = contextvars.copy_context()
-                    result = await asyncio.to_thread(ctx.run, method, *args, **kwargs)
+                with operation(
+                    "execute flow method",
+                    {
+                        "crewai.flow.name": self._definition.name,
+                        "crewai.flow.method": str(method_name),
+                    },
+                    expected_exceptions=(HumanFeedbackPending,),
+                ):
+                    if asyncio.iscoroutinefunction(method):
+                        result = await method(*args, **kwargs)
+                    else:
+                        # Run sync methods in thread pool for isolation
+                        # This allows Agent.kickoff() to work synchronously inside Flow methods
+                        ctx = contextvars.copy_context()
+                        result = await asyncio.to_thread(
+                            ctx.run, method, *args, **kwargs
+                        )
+                    # Auto-await coroutines returned from sync methods so the
+                    # whole call stays inside the "execute flow method" span
+                    # (enables AgentExecutor pattern).
+                    if asyncio.iscoroutine(result):
+                        result = await result
             finally:
                 current_flow_method_name.reset(method_name_token)
-
-            # Auto-await coroutines returned from sync methods (enables AgentExecutor pattern)
-            if asyncio.iscoroutine(result):
-                result = await result
 
             method_definition = self._definition.methods[str(method_name)]
             if method_definition.human_feedback is not None:

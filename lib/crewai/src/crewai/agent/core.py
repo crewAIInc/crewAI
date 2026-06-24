@@ -85,6 +85,7 @@ from crewai.security.fingerprint import Fingerprint
 from crewai.skills.loader import activate_skill, discover_skills
 from crewai.skills.models import INSTRUCTIONS, Skill as SkillModel
 from crewai.state.checkpoint_config import CheckpointConfig, apply_checkpoint
+from crewai.telemetry.otel import operation
 from crewai.tools.agent_tools.agent_tools import AgentTools
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.agent_utils import (
@@ -804,55 +805,62 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
-        task_prompt = self._prepare_task_execution(task, context)
+        with operation(
+            "execute agent",
+            {
+                "crewai.agent.role": self.role or "",
+                "crewai.agent.id": str(self.id),
+            },
+        ):
+            task_prompt = self._prepare_task_execution(task, context)
 
-        knowledge_config = get_knowledge_config(self)
-        task_prompt = handle_knowledge_retrieval(
-            self,
-            task,
-            task_prompt,
-            knowledge_config,
-            self.knowledge.query if self.knowledge else lambda *a, **k: None,
-            self.crew.query_knowledge
-            if self.crew and not isinstance(self.crew, str)
-            else lambda *a, **k: None,
-        )
-
-        task_prompt = self._finalize_task_prompt(task_prompt, tools, task)
-
-        try:
-            crewai_event_bus.emit(
+            knowledge_config = get_knowledge_config(self)
+            task_prompt = handle_knowledge_retrieval(
                 self,
-                event=AgentExecutionStartedEvent(
-                    agent=self,
-                    tools=self.tools,
-                    task_prompt=task_prompt,
-                    task=task,
-                ),
+                task,
+                task_prompt,
+                knowledge_config,
+                self.knowledge.query if self.knowledge else lambda *a, **k: None,
+                self.crew.query_knowledge
+                if self.crew and not isinstance(self.crew, str)
+                else lambda *a, **k: None,
             )
 
-            validate_max_execution_time(self.max_execution_time)
-            if self.max_execution_time is not None:
-                result = self._execute_with_timeout(
-                    task_prompt, task, self.max_execution_time
+            task_prompt = self._finalize_task_prompt(task_prompt, tools, task)
+
+            try:
+                crewai_event_bus.emit(
+                    self,
+                    event=AgentExecutionStartedEvent(
+                        agent=self,
+                        tools=self.tools,
+                        task_prompt=task_prompt,
+                        task=task,
+                    ),
                 )
-            else:
-                result = self._execute_without_timeout(task_prompt, task)
 
-        except TimeoutError as e:
-            crewai_event_bus.emit(
-                self,
-                event=AgentExecutionErrorEvent(
-                    agent=self,
-                    task=task,
-                    error=str(e),
-                ),
-            )
-            raise e
-        except Exception as e:
-            result = self._handle_execution_error(e, task, context, tools)
+                validate_max_execution_time(self.max_execution_time)
+                if self.max_execution_time is not None:
+                    result = self._execute_with_timeout(
+                        task_prompt, task, self.max_execution_time
+                    )
+                else:
+                    result = self._execute_without_timeout(task_prompt, task)
 
-        return self._finalize_task_execution(task, result)
+            except TimeoutError as e:
+                crewai_event_bus.emit(
+                    self,
+                    event=AgentExecutionErrorEvent(
+                        agent=self,
+                        task=task,
+                        error=str(e),
+                    ),
+                )
+                raise e
+            except Exception as e:
+                result = self._handle_execution_error(e, task, context, tools)
+
+            return self._finalize_task_execution(task, result)
 
     def _execute_with_timeout(self, task_prompt: str, task: Task, timeout: int) -> Any:
         """Execute a task with a timeout.
@@ -940,48 +948,57 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
-        task_prompt = self._prepare_task_execution(task, context)
+        with operation(
+            "execute agent",
+            {
+                "crewai.agent.role": self.role or "",
+                "crewai.agent.id": str(self.id),
+            },
+        ):
+            task_prompt = self._prepare_task_execution(task, context)
 
-        knowledge_config = get_knowledge_config(self)
-        task_prompt = await ahandle_knowledge_retrieval(
-            self, task, task_prompt, knowledge_config
-        )
-
-        task_prompt = self._finalize_task_prompt(task_prompt, tools, task)
-
-        try:
-            crewai_event_bus.emit(
-                self,
-                event=AgentExecutionStartedEvent(
-                    agent=self,
-                    tools=self.tools,
-                    task_prompt=task_prompt,
-                    task=task,
-                ),
+            knowledge_config = get_knowledge_config(self)
+            task_prompt = await ahandle_knowledge_retrieval(
+                self, task, task_prompt, knowledge_config
             )
 
-            validate_max_execution_time(self.max_execution_time)
-            if self.max_execution_time is not None:
-                result = await self._aexecute_with_timeout(
-                    task_prompt, task, self.max_execution_time
+            task_prompt = self._finalize_task_prompt(task_prompt, tools, task)
+
+            try:
+                crewai_event_bus.emit(
+                    self,
+                    event=AgentExecutionStartedEvent(
+                        agent=self,
+                        tools=self.tools,
+                        task_prompt=task_prompt,
+                        task=task,
+                    ),
                 )
-            else:
-                result = await self._aexecute_without_timeout(task_prompt, task)
 
-        except TimeoutError as e:
-            crewai_event_bus.emit(
-                self,
-                event=AgentExecutionErrorEvent(
-                    agent=self,
-                    task=task,
-                    error=str(e),
-                ),
-            )
-            raise e
-        except Exception as e:
-            result = await self._handle_execution_error_async(e, task, context, tools)
+                validate_max_execution_time(self.max_execution_time)
+                if self.max_execution_time is not None:
+                    result = await self._aexecute_with_timeout(
+                        task_prompt, task, self.max_execution_time
+                    )
+                else:
+                    result = await self._aexecute_without_timeout(task_prompt, task)
 
-        return self._finalize_task_execution(task, result)
+            except TimeoutError as e:
+                crewai_event_bus.emit(
+                    self,
+                    event=AgentExecutionErrorEvent(
+                        agent=self,
+                        task=task,
+                        error=str(e),
+                    ),
+                )
+                raise e
+            except Exception as e:
+                result = await self._handle_execution_error_async(
+                    e, task, context, tools
+                )
+
+            return self._finalize_task_execution(task, result)
 
     async def _aexecute_with_timeout(
         self, task_prompt: str, task: Task, timeout: int
@@ -1616,22 +1633,31 @@ class Agent(BaseAgent):
         )
 
         try:
-            if self.checkpoint_kickoff_event_id is not None:
-                self._kickoff_event_id = self.checkpoint_kickoff_event_id
-                self.checkpoint_kickoff_event_id = None
-            else:
-                started_event = LiteAgentExecutionStartedEvent(
-                    agent_info=agent_info,
-                    tools=parsed_tools,
-                    messages=messages,
-                )
-                crewai_event_bus.emit(self, event=started_event)
-                self._kickoff_event_id = started_event.event_id
+            with operation(
+                "execute agent",
+                {
+                    "crewai.agent.role": self.role or "",
+                    "crewai.agent.id": str(self.id),
+                },
+            ):
+                if self.checkpoint_kickoff_event_id is not None:
+                    self._kickoff_event_id = self.checkpoint_kickoff_event_id
+                    self.checkpoint_kickoff_event_id = None
+                else:
+                    started_event = LiteAgentExecutionStartedEvent(
+                        agent_info=agent_info,
+                        tools=parsed_tools,
+                        messages=messages,
+                    )
+                    crewai_event_bus.emit(self, event=started_event)
+                    self._kickoff_event_id = started_event.event_id
 
-            output = self._execute_and_build_output(executor, inputs, response_format)
-            return self._finalize_kickoff(
-                output, executor, inputs, response_format, messages, agent_info
-            )
+                output = self._execute_and_build_output(
+                    executor, inputs, response_format
+                )
+                return self._finalize_kickoff(
+                    output, executor, inputs, response_format, messages, agent_info
+                )
 
         except Exception as e:
             self._emit_kickoff_error(agent_info, e)
@@ -1931,24 +1957,31 @@ class Agent(BaseAgent):
         )
 
         try:
-            if self.checkpoint_kickoff_event_id is not None:
-                self._kickoff_event_id = self.checkpoint_kickoff_event_id
-                self.checkpoint_kickoff_event_id = None
-            else:
-                started_event = LiteAgentExecutionStartedEvent(
-                    agent_info=agent_info,
-                    tools=parsed_tools,
-                    messages=messages,
-                )
-                crewai_event_bus.emit(self, event=started_event)
-                self._kickoff_event_id = started_event.event_id
+            with operation(
+                "execute agent",
+                {
+                    "crewai.agent.role": self.role or "",
+                    "crewai.agent.id": str(self.id),
+                },
+            ):
+                if self.checkpoint_kickoff_event_id is not None:
+                    self._kickoff_event_id = self.checkpoint_kickoff_event_id
+                    self.checkpoint_kickoff_event_id = None
+                else:
+                    started_event = LiteAgentExecutionStartedEvent(
+                        agent_info=agent_info,
+                        tools=parsed_tools,
+                        messages=messages,
+                    )
+                    crewai_event_bus.emit(self, event=started_event)
+                    self._kickoff_event_id = started_event.event_id
 
-            output = await self._execute_and_build_output_async(
-                executor, inputs, response_format
-            )
-            return self._finalize_kickoff(
-                output, executor, inputs, response_format, messages, agent_info
-            )
+                output = await self._execute_and_build_output_async(
+                    executor, inputs, response_format
+                )
+                return self._finalize_kickoff(
+                    output, executor, inputs, response_format, messages, agent_info
+                )
 
         except Exception as e:
             self._emit_kickoff_error(agent_info, e)

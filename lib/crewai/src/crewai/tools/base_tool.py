@@ -30,6 +30,7 @@ from pydantic import (
 from pydantic_core import CoreSchema, core_schema
 from typing_extensions import TypeIs
 
+from crewai.telemetry.otel import operation
 from crewai.tools.structured_tool import (
     CrewStructuredTool,
     _deserialize_schema,
@@ -323,12 +324,13 @@ class BaseTool(BaseModel, ABC):
         if limit_error:
             return limit_error
 
-        result = self._run(*args, **kwargs)
+        with operation("call tool", {"crewai.tool.name": self.name}):
+            result = self._run(*args, **kwargs)
 
-        if asyncio.iscoroutine(result):
-            result = asyncio.run(result)
+            if asyncio.iscoroutine(result):
+                result = asyncio.run(result)
 
-        return result
+            return result
 
     async def arun(
         self,
@@ -351,7 +353,8 @@ class BaseTool(BaseModel, ABC):
         if limit_error:
             return limit_error
 
-        return await self._arun(*args, **kwargs)
+        with operation("call tool", {"crewai.tool.name": self.name}):
+            return await self._arun(*args, **kwargs)
 
     async def _arun(
         self,
@@ -521,12 +524,13 @@ class Tool(BaseTool, Generic[P, R]):
         if limit_error:
             return limit_error  # type: ignore[return-value]
 
-        result = self.func(*args, **kwargs)
+        with operation("call tool", {"crewai.tool.name": self.name}):
+            result = self.func(*args, **kwargs)
 
-        if asyncio.iscoroutine(result):
-            result = asyncio.run(result)
+            if asyncio.iscoroutine(result):
+                result = asyncio.run(result)
 
-        return result  # type: ignore[return-value]
+            return result  # type: ignore[return-value]
 
     def _run(self, *args: P.args, **kwargs: P.kwargs) -> R:
         """Executes the wrapped function.
@@ -557,7 +561,8 @@ class Tool(BaseTool, Generic[P, R]):
         if limit_error:
             return limit_error  # type: ignore[return-value]
 
-        return await self._arun(*args, **kwargs)
+        with operation("call tool", {"crewai.tool.name": self.name}):
+            return await self._arun(*args, **kwargs)
 
     async def _arun(self, *args: P.args, **kwargs: P.kwargs) -> R:
         """Executes the wrapped function asynchronously.

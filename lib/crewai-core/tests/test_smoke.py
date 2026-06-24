@@ -13,7 +13,8 @@ from crewai_core import (
     user_data,
     version,
 )
-from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry import trace
+from opentelemetry.trace import ProxyTracerProvider
 import pytest
 
 
@@ -97,7 +98,7 @@ def test_unused_var_warning_silenced() -> None:
     assert os.environ is not None
 
 
-def test_core_telemetry_skips_duplicate_tracer_provider(
+def test_core_telemetry_does_not_install_global_tracer_provider(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from crewai_core.telemetry import Telemetry
@@ -107,24 +108,7 @@ def test_core_telemetry_skips_duplicate_tracer_provider(
     monkeypatch.delenv("CREWAI_DISABLE_TELEMETRY", raising=False)
     monkeypatch.delenv("CREWAI_DISABLE_TRACKING", raising=False)
 
-    monkeypatch.setattr(
-        "crewai_core.telemetry.trace.get_tracer_provider",
-        lambda: TracerProvider(),
-    )
-
-    called = False
-
-    def fail_if_called(provider: object) -> None:
-        nonlocal called
-        called = True
-
-    monkeypatch.setattr(
-        "crewai_core.telemetry.trace.set_tracer_provider",
-        fail_if_called,
-    )
-
     telemetry = Telemetry()
-    telemetry.set_tracer()
 
-    assert called is False
-    assert telemetry.trace_set is True
+    assert telemetry.ready is True
+    assert isinstance(trace.get_tracer_provider(), ProxyTracerProvider)

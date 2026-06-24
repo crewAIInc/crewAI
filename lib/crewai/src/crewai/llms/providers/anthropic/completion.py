@@ -12,6 +12,7 @@ from crewai.llms.base_llm import BaseLLM, JsonResponseFormat, llm_call_context
 from crewai.llms.hooks.base import BaseInterceptor
 from crewai.llms.hooks.transport import AsyncHTTPTransport, HTTPTransport
 from crewai.llms.providers.utils.common import safe_tool_conversion
+from crewai.telemetry.otel import operation
 from crewai.utilities.agent_utils import is_context_length_exceeded
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
@@ -297,7 +298,10 @@ class AnthropicCompletion(BaseLLM):
         Returns:
             Chat completion response or tool call result
         """
-        with llm_call_context():
+        with (
+            llm_call_context(),
+            operation("call llm", {"crewai.llm.model": self.model}),
+        ):
             try:
                 self._emit_call_started_event(
                     messages=messages,
@@ -372,7 +376,10 @@ class AnthropicCompletion(BaseLLM):
         Returns:
             Chat completion response or tool call result
         """
-        with llm_call_context():
+        with (
+            llm_call_context(),
+            operation("call llm", {"crewai.llm.model": self.model}),
+        ):
             try:
                 self._emit_call_started_event(
                     messages=messages,

@@ -45,6 +45,7 @@ from crewai.llms.constants import (
     GEMINI_MODELS,
     OPENAI_MODELS,
 )
+from crewai.telemetry.otel import operation
 from crewai.utilities import InternalInstructor
 from crewai.utilities.exceptions.context_window_exceeding_exception import (
     LLMContextLengthExceededError,
@@ -1813,7 +1814,10 @@ class LLM(BaseLLM):
             ValueError: If response format is not supported
             LLMContextLengthExceededError: If input exceeds model's context limit
         """
-        with llm_call_context():
+        with (
+            llm_call_context(),
+            operation("call llm", {"crewai.llm.model": self.model}),
+        ):
             self._emit_call_started_event(
                 messages=messages,
                 tools=tools,
@@ -1952,7 +1956,10 @@ class LLM(BaseLLM):
             ValueError: If response format is not supported
             LLMContextLengthExceededError: If input exceeds model's context limit
         """
-        with llm_call_context():
+        with (
+            llm_call_context(),
+            operation("call llm", {"crewai.llm.model": self.model}),
+        ):
             self._emit_call_started_event(
                 messages=messages,
                 tools=tools,
