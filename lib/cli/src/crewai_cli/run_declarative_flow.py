@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import subprocess
 from typing import Any
 
@@ -12,7 +12,7 @@ from crewai_cli.utils import build_env_with_all_tool_credentials
 
 
 def run_declarative_flow_in_project_env(
-    definition: str, inputs: str | None = None
+    definition: str | Path, inputs: str | None = None
 ) -> None:
     """Run a declarative flow inside the project's Python environment."""
     if is_declarative_flow_project_env() or not _has_project_file():
@@ -25,7 +25,7 @@ def run_declarative_flow_in_project_env(
     _execute_declarative_flow_command(["uv", "run", "crewai", "run"])
 
 
-def plot_declarative_flow_in_project_env(definition: str) -> None:
+def plot_declarative_flow_in_project_env(definition: str | Path) -> None:
     """Plot a declarative flow inside the project's Python environment."""
     if is_declarative_flow_project_env() or not _has_project_file():
         plot_declarative_flow(definition=definition)
@@ -34,7 +34,7 @@ def plot_declarative_flow_in_project_env(definition: str) -> None:
     _execute_declarative_flow_command(["uv", "run", "crewai", "flow", "plot"])
 
 
-def run_declarative_flow(definition: str, inputs: str | None = None) -> None:
+def run_declarative_flow(definition: str | Path, inputs: str | None = None) -> None:
     """Run a declarative flow from a definition path."""
     parsed_inputs = _parse_inputs(inputs)
 
@@ -50,7 +50,7 @@ def run_declarative_flow(definition: str, inputs: str | None = None) -> None:
     click.echo(_format_result(result))
 
 
-def plot_declarative_flow(definition: str) -> None:
+def plot_declarative_flow(definition: str | Path) -> None:
     """Plot a declarative flow from a definition path."""
     try:
         flow = load_declarative_flow(definition)
@@ -62,7 +62,7 @@ def plot_declarative_flow(definition: str) -> None:
         raise SystemExit(1) from exc
 
 
-def load_declarative_flow(definition: str) -> Any:
+def load_declarative_flow(definition: str | Path) -> Any:
     """Load a declarative Flow instance from a definition path."""
     try:
         from crewai.flow.flow import Flow
@@ -102,7 +102,8 @@ def load_declarative_flow(definition: str) -> Any:
 
 def configured_project_declarative_flow(
     pyproject_data: dict[str, Any] | None = None,
-) -> str | None:
+    project_root: Path | None = None,
+) -> Path | None:
     """Return the configured declarative flow source for flow projects."""
     if pyproject_data is None:
         try:
@@ -118,7 +119,66 @@ def configured_project_declarative_flow(
     definition = crewai_config.get("definition")
     if not isinstance(definition, str):
         return None
-    return definition.strip() or None
+    definition = definition.strip()
+    if not definition:
+        return None
+
+    return _resolve_project_definition_path(
+        definition=definition,
+        project_root=project_root or Path.cwd(),
+    )
+
+
+def _resolve_project_definition_path(definition: str, project_root: Path) -> Path:
+    definition_path = Path(definition)
+    windows_definition_path = PureWindowsPath(definition)
+
+    if definition.startswith("~"):
+        raise click.UsageError(
+            "[tool.crewai] definition must be a project-local path; "
+            f"got {definition!r}."
+        )
+
+    if definition_path.is_absolute() or windows_definition_path.is_absolute():
+        raise click.UsageError(
+            "[tool.crewai] definition must be relative to the project root; "
+            f"got {definition!r}."
+        )
+
+    try:
+        root = project_root.resolve(strict=True)
+    except OSError as exc:
+        raise click.UsageError(
+            f"Invalid project root for [tool.crewai] definition: {exc}"
+        ) from exc
+
+    candidate = root / definition_path
+    try:
+        resolved_candidate = candidate.resolve(strict=False)
+    except OSError as exc:
+        raise click.UsageError(
+            f"Invalid [tool.crewai] definition path {definition!r}: {exc}"
+        ) from exc
+
+    if not resolved_candidate.is_relative_to(root):
+        raise click.UsageError(
+            "[tool.crewai] definition must resolve inside the project root; "
+            f"got {definition!r}."
+        )
+
+    if not resolved_candidate.exists():
+        raise click.UsageError(
+            "[tool.crewai] definition must point to an existing file; "
+            f"got {definition!r}."
+        )
+
+    if not resolved_candidate.is_file():
+        raise click.UsageError(
+            "[tool.crewai] definition must point to a regular file; "
+            f"got {definition!r}."
+        )
+
+    return resolved_candidate
 
 
 def _execute_declarative_flow_command(command: list[str]) -> None:

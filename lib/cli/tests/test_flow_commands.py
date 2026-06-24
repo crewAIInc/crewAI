@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import subprocess
 
+import click
 import pytest
 from click.testing import CliRunner
 
@@ -107,6 +108,8 @@ def test_configured_project_declarative_flow(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     monkeypatch.chdir(tmp_path)
+    definition_path = tmp_path / "flow.yaml"
+    definition_path.write_text(FLOW_YAML, encoding="utf-8")
     (tmp_path / "pyproject.toml").write_text(
         '[tool.crewai]\ntype = "flow"\ndefinition = " flow.yaml "\n',
         encoding="utf-8",
@@ -114,4 +117,132 @@ def test_configured_project_declarative_flow(
 
     from crewai_cli.run_declarative_flow import configured_project_declarative_flow
 
-    assert configured_project_declarative_flow() == "flow.yaml"
+    assert configured_project_declarative_flow() == definition_path.resolve()
+
+
+@pytest.mark.parametrize(
+    ("definition", "expected_error"),
+    [
+        ("C:/tmp/flow.yaml", "must be relative to the project root"),
+        ("~/flow.yaml", "must be a project-local path"),
+        ("../flow.yaml", "must resolve inside the project root"),
+    ],
+)
+def test_configured_project_declarative_flow_rejects_unsafe_paths(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    definition: str,
+    expected_error: str,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text(
+        f'[tool.crewai]\ntype = "flow"\ndefinition = "{definition}"\n',
+        encoding="utf-8",
+    )
+
+    from crewai_cli.run_declarative_flow import configured_project_declarative_flow
+
+    with pytest.raises(click.UsageError) as exc_info:
+        configured_project_declarative_flow()
+
+    assert expected_error in exc_info.value.message
+
+
+def test_configured_project_declarative_flow_allows_normalized_project_path(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    definition_path = tmp_path / "flow.yaml"
+    definition_path.write_text(FLOW_YAML, encoding="utf-8")
+    (tmp_path / "src").mkdir()
+    (tmp_path / "pyproject.toml").write_text(
+        '[tool.crewai]\ntype = "flow"\ndefinition = "src/../flow.yaml"\n',
+        encoding="utf-8",
+    )
+
+    from crewai_cli.run_declarative_flow import configured_project_declarative_flow
+
+    assert configured_project_declarative_flow() == definition_path.resolve()
+
+
+def test_configured_project_declarative_flow_rejects_absolute_path(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    definition = tmp_path / "flow.yaml"
+    (tmp_path / "pyproject.toml").write_text(
+        f'[tool.crewai]\ntype = "flow"\ndefinition = "{definition.as_posix()}"\n',
+        encoding="utf-8",
+    )
+
+    from crewai_cli.run_declarative_flow import configured_project_declarative_flow
+
+    with pytest.raises(click.UsageError) as exc_info:
+        configured_project_declarative_flow()
+
+    assert "must be relative to the project root" in exc_info.value.message
+
+
+def test_configured_project_declarative_flow_rejects_symlink_escape(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    outside_definition = tmp_path.parent / "outside-flow.yaml"
+    outside_definition.write_text(FLOW_YAML, encoding="utf-8")
+    link = tmp_path / "flow.yaml"
+    try:
+        link.symlink_to(outside_definition)
+    except (NotImplementedError, OSError) as exc:
+        pytest.skip(f"symlinks unavailable: {exc}")
+
+    (tmp_path / "pyproject.toml").write_text(
+        '[tool.crewai]\ntype = "flow"\ndefinition = "flow.yaml"\n',
+        encoding="utf-8",
+    )
+
+    from crewai_cli.run_declarative_flow import configured_project_declarative_flow
+
+    with pytest.raises(click.UsageError) as exc_info:
+        configured_project_declarative_flow()
+
+    assert "must resolve inside the project root" in exc_info.value.message
+
+
+def test_configured_project_declarative_flow_rejects_missing_file(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text(
+        '[tool.crewai]\ntype = "flow"\ndefinition = "missing-flow.yaml"\n',
+        encoding="utf-8",
+    )
+
+    from crewai_cli.run_declarative_flow import configured_project_declarative_flow
+
+    with pytest.raises(click.UsageError) as exc_info:
+        configured_project_declarative_flow()
+
+    assert "must point to an existing file" in exc_info.value.message
+
+
+def test_configured_project_declarative_flow_rejects_directory(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "flow.yaml").mkdir()
+    (tmp_path / "pyproject.toml").write_text(
+        '[tool.crewai]\ntype = "flow"\ndefinition = "flow.yaml"\n',
+        encoding="utf-8",
+    )
+
+    from crewai_cli.run_declarative_flow import configured_project_declarative_flow
+
+    with pytest.raises(click.UsageError) as exc_info:
+        configured_project_declarative_flow()
+
+    assert "must point to a regular file" in exc_info.value.message
