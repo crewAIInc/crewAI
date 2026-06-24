@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
+import crewai.core.providers.human_input as human_input_module
 from crewai.agents.parser import AgentFinish
 from crewai.core.providers.human_input import SyncHumanInputProvider
 from crewai.events.event_listener import event_listener
@@ -77,5 +80,49 @@ class TestResultDisplayBeforeFeedback:
             patch("builtins.input", return_value=""),
         ):
             provider.handle_feedback(_answer(), context)  # type: ignore[arg-type]
+
+        formatter.handle_agent_logs_execution.assert_not_called()
+
+
+class TestResultDisplayBeforeFeedbackAsync:
+    """The async feedback path must show the result before prompting too."""
+
+    @pytest.mark.asyncio
+    async def test_result_shown_before_prompt_when_not_verbose(self) -> None:
+        provider = SyncHumanInputProvider()
+        context = _FakeContext(_FakeAgent(verbose=False), _FakeCrew(verbose=False))
+        answer = _answer()
+
+        formatter = MagicMock()
+        with (
+            patch.object(event_listener, "formatter", formatter),
+            patch.object(
+                human_input_module, "_async_readline", new=AsyncMock(return_value="")
+            ),
+        ):
+            result = await provider.handle_feedback_async(answer, context)  # type: ignore[arg-type]
+
+        formatter.handle_agent_logs_execution.assert_called_once_with(
+            "Researcher", answer, verbose=True
+        )
+        method_calls = [c[0] for c in formatter.mock_calls]
+        render_idx = method_calls.index("handle_agent_logs_execution")
+        prompt_idx = method_calls.index("console.print")
+        assert render_idx < prompt_idx
+        assert result is answer
+
+    @pytest.mark.asyncio
+    async def test_result_not_reshown_when_verbose(self) -> None:
+        provider = SyncHumanInputProvider()
+        context = _FakeContext(_FakeAgent(verbose=False), _FakeCrew(verbose=True))
+
+        formatter = MagicMock()
+        with (
+            patch.object(event_listener, "formatter", formatter),
+            patch.object(
+                human_input_module, "_async_readline", new=AsyncMock(return_value="")
+            ),
+        ):
+            await provider.handle_feedback_async(_answer(), context)  # type: ignore[arg-type]
 
         formatter.handle_agent_logs_execution.assert_not_called()
