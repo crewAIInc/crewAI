@@ -471,6 +471,13 @@ class TestToolOutputSchema:
             "score": 0.5,
         }
 
+    def test_base_tool_falls_back_for_unserializable_mapping_output(self) -> None:
+        t = DictAnnotatedSearchTool()
+        raw_result: dict[str, object] = {}
+        raw_result["self"] = raw_result
+
+        assert t.format_output_for_agent(raw_result) == str(raw_result)
+
     @pytest.mark.parametrize(
         ("make_tool", "expected_raw", "expected_agent_payload"),
         [
@@ -524,6 +531,19 @@ class TestToolOutputSchema:
             "query": "crew",
             "score": 0.5,
         }
+
+    def test_decorator_tool_falls_back_for_unserializable_mapping_output(
+        self,
+    ) -> None:
+        @tool("search")
+        def search(query: str) -> dict[str, object]:
+            """Search for a query."""
+            return {"query": query, "score": 0.5}
+
+        raw_result: dict[str, object] = {}
+        raw_result["self"] = raw_result
+
+        assert search.format_output_for_agent(raw_result) == str(raw_result)
 
     def test_explicit_result_schema_wins_over_return_annotation(self) -> None:
         class AlternateOutput(BaseModel):
