@@ -123,7 +123,6 @@ from crewai.flow.human_feedback import (
 from crewai.flow.input_provider import InputProvider
 from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.runtime._actions import FlowScriptExecutionDisabledError, build_action
-from crewai.flow.runtime._refs import resolve_instance_ref, resolve_ref
 from crewai.flow.types import (
     FlowExecutionData,
     FlowMethodName,
@@ -137,6 +136,7 @@ from crewai.state.checkpoint_config import (
     _coerce_checkpoint,
     apply_checkpoint,
 )
+from crewai.utilities.declarative_refs import InvalidRefError, resolve_ref
 
 
 if TYPE_CHECKING:
@@ -289,6 +289,18 @@ def _resolve_persistence(value: Any) -> Any:
     return value
 
 
+def _resolve_instance_ref(ref: str, *, field: str) -> Any:
+    target = resolve_ref(ref, field=field)
+    if not inspect.isclass(target):
+        return target
+    try:
+        return target()
+    except Exception as e:
+        raise InvalidRefError(
+            f"cannot instantiate {field} ref {ref!r} without arguments: {e}"
+        ) from e
+
+
 def _serialize_persistence(value: Any) -> dict[str, Any] | None:
     if value is None:
         return None
@@ -304,7 +316,7 @@ def _validate_input_provider(value: Any) -> Any:
     if value is None or isinstance(value, InputProvider):
         return value
     if isinstance(value, str) and ":" in value:
-        resolved = resolve_instance_ref(value, field="input_provider")
+        resolved = _resolve_instance_ref(value, field="input_provider")
     else:
         from crewai.types.callback import _dotted_path_to_instance
 
@@ -3605,7 +3617,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     ) -> Any:
         provider = feedback_definition.provider
         if isinstance(provider, str):
-            provider = resolve_instance_ref(provider, field="human_feedback.provider")
+            provider = _resolve_instance_ref(provider, field="human_feedback.provider")
         if provider is None:
             from crewai.flow.flow_config import flow_config
 
