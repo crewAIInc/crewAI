@@ -6,7 +6,7 @@ original scalar O(n^2) algorithm, which is retained as ``_dedup_scalar``.
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 
@@ -75,6 +75,22 @@ def test_pre_dropped_item_is_skipped() -> None:
     assert items[1].dropped is False
     assert items[2].dropped is True
     assert flow.state.items_dropped_dedup == 1  # only 'c' is a new drop
+
+
+def test_falls_back_to_scalar_when_numpy_unavailable() -> None:
+    """If numpy can't be imported, dedup still works via the scalar path."""
+    items = [
+        ItemState(content="a", embedding=[0.5] * 8),
+        ItemState(content="b", embedding=[0.5] * 8),  # dup -> dropped
+        ItemState(content="c", embedding=[1.0] + [0.0] * 7),  # distinct -> kept
+    ]
+    flow = _make_flow()
+    flow.state.items = items
+    # Make `import numpy` raise ImportError inside intra_batch_dedup.
+    with patch.dict("sys.modules", {"numpy": None}):
+        flow.intra_batch_dedup()
+    assert [it.dropped for it in items] == [False, True, False]
+    assert flow.state.items_dropped_dedup == 1
 
 
 def test_matches_scalar_reference_on_clustered_data() -> None:

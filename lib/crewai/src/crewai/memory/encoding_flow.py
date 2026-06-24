@@ -18,7 +18,6 @@ import math
 from typing import Any
 from uuid import uuid4
 
-import numpy as np
 from pydantic import BaseModel, Field
 
 from crewai.flow.flow import Flow, listen, start
@@ -133,6 +132,14 @@ class EncodingFlow(Flow[EncodingState]):
             return
 
         threshold = self._config.batch_dedup_threshold
+
+        try:
+            import numpy as np
+        except ImportError:
+            # numpy is a transitive dependency (chromadb, lancedb); if it is
+            # somehow unavailable, fall back to the scalar reference.
+            self._dedup_scalar(items, threshold)
+            return
 
         # Only items carrying an embedding participate; pre-dropped items are
         # excluded so they neither get re-dropped nor suppress others — exactly
