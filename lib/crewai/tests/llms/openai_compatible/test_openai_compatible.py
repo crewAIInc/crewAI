@@ -318,6 +318,21 @@ class _Answer(BaseModel):
     value: int
 
 
+def _stream_chunk(content: str | None = None, finish: str | None = None) -> MagicMock:
+    """Build a minimal OpenAI streaming chunk for the regular (non-native) path."""
+    chunk = MagicMock()
+    chunk.id = "id"
+    chunk.usage = None  # not a usage chunk
+    choice = MagicMock()
+    delta = MagicMock()
+    delta.content = content
+    delta.tool_calls = None
+    choice.delta = delta
+    choice.finish_reason = finish
+    chunk.choices = [choice]
+    return chunk
+
+
 class TestStructuredOutputFallback:
     """Structured output must degrade gracefully on OpenAI-compatible
     endpoints that reject OpenAI's json_schema response_format (#5990).
@@ -390,26 +405,13 @@ class TestStructuredOutputFallback:
         text into the requested model, matching the non-streaming fallback.
         """
 
-        def _chunk(content: str | None = None, finish: str | None = None) -> MagicMock:
-            chunk = MagicMock()
-            chunk.id = "id"
-            chunk.usage = None  # not a usage chunk
-            choice = MagicMock()
-            delta = MagicMock()
-            delta.content = content
-            delta.tool_calls = None
-            choice.delta = delta
-            choice.finish_reason = finish
-            chunk.choices = [choice]
-            return chunk
-
         with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "test-key"}):
             llm = OpenAICompatibleCompletion(model="deepseek-chat", provider="deepseek")
 
         client = MagicMock()
         client.chat.completions.create.return_value = [
-            _chunk(content='{"value": '),
-            _chunk(content="42}", finish="stop"),
+            _stream_chunk(content='{"value": '),
+            _stream_chunk(content="42}", finish="stop"),
         ]
 
         with (
@@ -428,3 +430,32 @@ class TestStructuredOutputFallback:
         # ...and the accumulated text is still parsed into the model.
         assert isinstance(result, _Answer)
         assert result.value == 42
+
+    def test_deepseek_streaming_validates_configured_response_format(self):
+        """stream=True with a configured response_format (not a per-call
+        response_model) must also be parsed into the model on the fallback
+        path, matching the non-streaming behavior.
+        """
+        with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "test-key"}):
+            llm = OpenAICompatibleCompletion(
+                model="deepseek-chat", provider="deepseek", response_format=_Answer
+            )
+
+        client = MagicMock()
+        client.chat.completions.create.return_value = [
+            _stream_chunk(content='{"value": '),
+            _stream_chunk(content="7}", finish="stop"),
+        ]
+
+        with (
+            patch.object(llm, "_get_sync_client", return_value=client),
+            patch.object(llm, "_emit_stream_chunk_event"),
+            patch.object(llm, "_emit_call_completed_event"),
+        ):
+            result = llm._handle_streaming_completion(
+                {"messages": [{"role": "user", "content": "hi"}]},
+            )
+
+        client.beta.chat.completions.stream.assert_not_called()
+        assert isinstance(result, _Answer)
+        assert result.value == 7

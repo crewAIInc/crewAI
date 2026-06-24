@@ -1895,10 +1895,16 @@ class OpenAICompletion(BaseLLM):
         # streaming was skipped (e.g. DeepSeek), parse the accumulated text
         # into the requested model so the call still returns a parsed object,
         # matching the async streaming path and the non-streaming fallback.
-        if response_model and full_response:
+        # Honor both a per-call response_model and a configured response_format.
+        structured_format = response_model or self.response_format
+        if (
+            structured_format is not None
+            and isinstance(structured_format, type)
+            and full_response
+        ):
             try:
                 structured_result = self._validate_structured_output(
-                    full_response, response_model
+                    full_response, structured_format
                 )
                 self._emit_call_completed_event(
                     response=structured_result,
