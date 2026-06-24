@@ -55,6 +55,7 @@ from crewai.events.types.crew_events import (
 from crewai.events.types.flow_events import (
     ConversationMessageAddedEvent,
     ConversationRouteSelectedEvent,
+    ConversationTurnStartedEvent,
     FlowFinishedEvent,
     FlowStartedEvent,
     MethodExecutionFailedEvent,
@@ -162,6 +163,7 @@ EventTypes = (
     | TaskFailedEvent
     | ConversationMessageAddedEvent
     | ConversationRouteSelectedEvent
+    | ConversationTurnStartedEvent
     | FlowStartedEvent
     | FlowFinishedEvent
     | MethodExecutionStartedEvent

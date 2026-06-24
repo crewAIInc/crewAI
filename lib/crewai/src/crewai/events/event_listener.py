@@ -41,6 +41,7 @@ from crewai.events.types.env_events import (
     DefaultEnvEvent,
 )
 from crewai.events.types.flow_events import (
+    ConversationTurnStartedEvent,
     FlowCreatedEvent,
     FlowFinishedEvent,
     FlowPausedEvent,
@@ -316,6 +317,12 @@ class EventListener(BaseEventListener):
                     event.flow_name,
                     source.flow_id,
                 )
+
+        @crewai_event_bus.on(ConversationTurnStartedEvent)
+        def on_conversation_turn_started(
+            _: Any, event: ConversationTurnStartedEvent
+        ) -> None:
+            self._telemetry.feature_usage_span("flow:conversation")
 
         @crewai_event_bus.on(MethodExecutionStartedEvent)
         def on_method_execution_started(

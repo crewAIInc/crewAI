@@ -30,6 +30,7 @@ from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.flow_events import (
     ConversationMessageAddedEvent,
     ConversationRouteSelectedEvent,
+    ConversationTurnStartedEvent,
 )
 from crewai.experimental.conversational import (
     AgentMessage,
@@ -280,6 +281,14 @@ class _ConversationalMixin:
         """
         state = cast(ConversationState, self.state)
         sid = session_id or state.id
+        crewai_event_bus.emit(
+            self,
+            ConversationTurnStartedEvent(
+                type="conversation_turn_started",
+                flow_name=self.name or self.__class__.__name__,
+                session_id=sid,
+            ),
+        )
 
         # Stash the pending turn so the kickoff extension hook picks it up
         # after persist restore.

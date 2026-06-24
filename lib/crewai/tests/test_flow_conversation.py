@@ -14,6 +14,7 @@ from crewai.events.listeners.tracing.trace_listener import TraceCollectionListen
 from crewai.events.types.flow_events import (
     ConversationMessageAddedEvent,
     ConversationRouteSelectedEvent,
+    ConversationTurnStartedEvent,
     FlowStartedEvent,
     MethodExecutionFinishedEvent,
     MethodExecutionStartedEvent,
@@ -1124,6 +1125,66 @@ class TestConversationalFlow:
         )
         assert observed_events[0] == "flow_started"
         assert observed_events[1] == "conversation_message_added"
+
+    def test_handle_turn_emits_turn_started_for_each_conversational_turn(
+        self,
+    ) -> None:
+        """Each ``handle_turn()`` emits a usage-friendly turn start event."""
+
+        @ConversationConfig(defer_trace_finalization=True)
+        class DeferredFlow(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "work"
+
+            @listen("work")
+            def do_work(self) -> str:
+                self.append_assistant_message("worked")
+                return "worked"
+
+        flow = DeferredFlow()
+        default_session_id = flow.state.id
+        turn_events: list[ConversationTurnStartedEvent] = []
+
+        with crewai_event_bus.scoped_handlers():
+
+            @crewai_event_bus.on(ConversationTurnStartedEvent)
+            def capture(_: Any, event: ConversationTurnStartedEvent) -> None:
+                turn_events.append(event)
+
+            flow.handle_turn("turn 1")
+            flow.handle_turn("turn 2", session_id="custom-session")
+            crewai_event_bus.flush()
+
+        assert [event.type for event in turn_events] == [
+            "conversation_turn_started",
+            "conversation_turn_started",
+        ]
+        assert turn_events[0].session_id == default_session_id
+        assert turn_events[1].session_id == "custom-session"
+
+    def test_conversation_turn_started_tracks_feature_usage(self) -> None:
+        """Conversation turn events count conversational Flow usage."""
+        from crewai.events.event_listener import event_listener
+
+        with (
+            crewai_event_bus.scoped_handlers(),
+            patch.object(
+                event_listener._telemetry,
+                "feature_usage_span",
+            ) as feature_usage_span,
+        ):
+            event_listener.setup_listeners(crewai_event_bus)
+            crewai_event_bus.emit(
+                self,
+                ConversationTurnStartedEvent(
+                    type="conversation_turn_started",
+                    flow_name="ChatFlow",
+                    session_id="session-1",
+                ),
+            )
+            crewai_event_bus.flush()
+
+        feature_usage_span.assert_any_call("flow:conversation")
 
     def test_route_event_uses_no_message_index_for_empty_transcript(self) -> None:
         """Route events do not reference index zero when no message exists."""

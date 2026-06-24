@@ -184,6 +184,13 @@ class ConversationMessageAddedEvent(FlowEvent):
     type: Literal["conversation_message_added"] = "conversation_message_added"
 
 
+class ConversationTurnStartedEvent(FlowEvent):
+    """Event emitted when a conversational Flow starts a user turn."""
+
+    session_id: str
+    type: Literal["conversation_turn_started"] = "conversation_turn_started"
+
+
 class ConversationRouteSelectedEvent(FlowEvent):
     """Event emitted when a conversational Flow selects a route for a turn."""
 
