@@ -2,22 +2,28 @@
 
 from __future__ import annotations
 
+import ast
 import asyncio
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 import contextvars
 import inspect
+import os
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
+from crewai.flow.expressions import Expression, ExpressionData
 from crewai.flow.flow_definition import (
     FlowActionDefinition,
+    FlowAgentActionDefinition,
     FlowCodeActionDefinition,
     FlowCrewActionDefinition,
     FlowEachActionDefinition,
-    FlowEachInnerActionDefinition,
+    FlowEachStepDefinition,
     FlowExpressionActionDefinition,
+    FlowScriptActionDefinition,
     FlowToolActionDefinition,
 )
-from crewai.flow.runtime._expressions import evaluate_expression, render_with_block
+from crewai.flow.runtime._outputs import outputs_by_name
 from crewai.flow.runtime._refs import InvalidRefError, resolve_ref
 
 
@@ -25,10 +31,18 @@ if TYPE_CHECKING:
     from crewai.flow.runtime import Flow
 
 
-__all__ = ["build_action"]
+__all__ = ["FlowScriptExecutionDisabledError", "build_action"]
 
 LocalContext = dict[str, Any]
+NestedStepRunner = Callable[[LocalContext], Awaitable[Any]]
+NestedStep = tuple[str, str | None, NestedStepRunner]
 _LOCAL_CONTEXT_KWARG = "__flow_definition_local_context"
+_ALLOW_SCRIPT_EXECUTION_ENV_VAR = "CREWAI_ALLOW_FLOW_SCRIPT_EXECUTION"
+_TRUSTED_SCRIPT_EXECUTION_VALUES = frozenset({"1", "true", "yes"})
+
+
+class FlowScriptExecutionDisabledError(RuntimeError):
+    """Raised when a flow definition tries to execute inline script code."""
 
 
 class _BuiltAction(Protocol):
@@ -55,9 +69,9 @@ class CodeAction:
         if self.definition.with_ is None:
             return self.handler(*args, **kwargs)
         return self.handler(
-            **render_with_block(
-                self.flow, self.definition.with_, local_context=local_context
-            )
+            **Expression.from_flow(
+                self.definition.with_, self.flow, local_context=local_context
+            ).render_template()
         )
 
     def _resolve_handler(self) -> Callable[..., Any]:
@@ -83,7 +97,9 @@ class ToolAction:
     def run(self, *_args: Any, **kwargs: Any) -> Any:
         local_context = _pop_local_context(kwargs)
         return self.tool.run(
-            **render_with_block(self.flow, self.kwargs, local_context=local_context)
+            **Expression.from_flow(
+                self.kwargs, self.flow, local_context=local_context
+            ).render_template()
         )
 
     def _build_tool(self) -> Any:
@@ -113,15 +129,64 @@ class CrewAction:
         self.definition = definition
 
     async def run(self, *_args: Any, **kwargs: Any) -> Any:
-        from crewai.project.crew_loader import load_crew_from_definition
+        from crewai.project.crew_loader import load_crew, load_crew_from_definition
 
         local_context = _pop_local_context(kwargs)
-        crew_definition = self.definition.with_
-        inputs = render_with_block(
-            self.flow, crew_definition.inputs, local_context=local_context
-        )
-        crew, _ = load_crew_from_definition(crew_definition, source="crew action")
+        if self.definition.from_declaration is not None:
+            crew, default_inputs = load_crew(
+                _resolve_crew_declaration(
+                    self.definition.from_declaration,
+                    base_dir=self.flow._definition.source_dir,
+                )
+            )
+            input_template = {**default_inputs, **(self.definition.inputs or {})}
+        else:
+            crew_definition = self.definition.with_
+            if crew_definition is None:
+                raise ValueError(
+                    "crew action requires exactly one of from_declaration or with"
+                )
+            input_template = {
+                **crew_definition.inputs,
+                **(self.definition.inputs or {}),
+            }
+            crew, _ = load_crew_from_definition(crew_definition, source="crew action")
+
+        inputs = Expression.from_flow(
+            cast(ExpressionData, input_template),
+            self.flow,
+            local_context=local_context,
+        ).render_template()
         return await crew.kickoff_async(inputs=inputs)
+
+
+class AgentAction:
+    definition_type = FlowAgentActionDefinition
+
+    def __init__(self, flow: Flow[Any], definition: FlowAgentActionDefinition) -> None:
+        self.flow = flow
+        self.definition = definition
+
+    async def run(self, *_args: Any, **kwargs: Any) -> Any:
+        from crewai.project.json_loader import load_agent_from_definition
+
+        local_context = _pop_local_context(kwargs)
+        rendered_input = Expression.from_flow(
+            cast(ExpressionData, self.definition.with_.input),
+            self.flow,
+            local_context=local_context,
+        ).render_template()
+        if not isinstance(rendered_input, str):
+            raise ValueError("agent input must render to a string")
+
+        agent, response_format = load_agent_from_definition(
+            self.definition.with_,
+            source="agent action",
+        )
+        return await agent.kickoff_async(
+            rendered_input,
+            response_format=response_format,
+        )
 
 
 class ExpressionAction:
@@ -135,9 +200,70 @@ class ExpressionAction:
 
     def run(self, *_args: Any, **kwargs: Any) -> Any:
         local_context = _pop_local_context(kwargs)
-        return evaluate_expression(
-            self.flow, self.definition.expr, local_context=local_context
+        return Expression.from_flow(
+            self.definition.expr, self.flow, local_context=local_context
+        ).evaluate()
+
+
+class ScriptAction:
+    definition_type = FlowScriptActionDefinition
+
+    def __init__(self, flow: Flow[Any], definition: FlowScriptActionDefinition) -> None:
+        self.flow = flow
+        self.definition = definition
+        self.handler = self._compile_handler()
+
+    def run(self, *args: Any, **kwargs: Any) -> Any:
+        local_context = _pop_local_context(kwargs)
+        return self.handler(
+            state=self.flow.state,
+            outputs=outputs_by_name(
+                self.flow._method_outputs,
+                local_outputs=local_context.get("outputs") if local_context else None,
+            ),
+            input=args[0] if args else None,
+            item=local_context.get("item") if local_context else None,
         )
+
+    def _compile_handler(self) -> Callable[..., Any]:
+        raw = os.environ.get(_ALLOW_SCRIPT_EXECUTION_ENV_VAR, "")
+        if raw.strip().lower() not in _TRUSTED_SCRIPT_EXECUTION_VALUES:
+            raise FlowScriptExecutionDisabledError(
+                "Flow script execution is disabled by default. "
+                f"Set {_ALLOW_SCRIPT_EXECUTION_ENV_VAR}=1 to enable it only for "
+                "trusted flow definitions."
+            )
+
+        filename = f"crewai.flow.script.{self.flow._definition.name}"
+        module = ast.parse(self.definition.code, filename=filename)
+        function = ast.FunctionDef(
+            name="_flow_script",
+            args=ast.arguments(
+                posonlyargs=[],
+                args=[ast.arg(arg) for arg in ("state", "outputs", "input", "item")],
+                vararg=None,
+                kwonlyargs=[],
+                kw_defaults=[],
+                kwarg=None,
+                defaults=[],
+            ),
+            body=module.body or [ast.Pass()],
+            decorator_list=[],
+            returns=None,
+            type_comment=None,
+            type_params=[],
+        )
+        module.body = [function]
+        ast.fix_missing_locations(module)
+
+        # The YAML here is trusted project source authored by the code owner,
+        # so this has the same trust boundary as using custom tools. We
+        # intentionally do not interpolate user input and runtime values are passed
+        # as function arguments. This is still arbitrary trusted Python execution,
+        # so it remains disabled by default behind `CREWAI_ALLOW_FLOW_SCRIPT_EXECUTION`
+        namespace: dict[str, Any] = {"__name__": filename}
+        exec(compile(module, filename, "exec"), namespace)  # nosec B102 # noqa: S102
+        return cast(Callable[..., Any], namespace["_flow_script"])
 
 
 class EachAction:
@@ -146,13 +272,13 @@ class EachAction:
     def __init__(self, flow: Flow[Any], definition: FlowEachActionDefinition) -> None:
         self.flow = flow
         self.definition = definition
-        self.inner_actions = [
-            (inner_action.name, self._build_inner_action(inner_action))
-            for inner_action in definition.do
+        self.steps: list[NestedStep] = [
+            (step.name, step.if_, self._build_step_action(step))
+            for step in definition.do
         ]
 
     async def run(self, *_args: Any, **_kwargs: Any) -> list[Any]:
-        items = evaluate_expression(self.flow, self.definition.in_)
+        items = Expression.from_flow(self.definition.in_, self.flow).evaluate()
         if not isinstance(items, list):
             raise ValueError("each.in must evaluate to an array")
 
@@ -160,22 +286,32 @@ class EachAction:
 
         for item in items:
             local_outputs: dict[str, Any] = {}
+            local_context = {"item": item, "outputs": local_outputs}
             last_output: Any = None
-            for name, run_inner_action in self.inner_actions:
-                last_output = await run_inner_action(
-                    {"item": item, "outputs": local_outputs}
-                )
+            for name, condition, run_step_action in self.steps:
+                if condition is not None and not self._condition_matches(
+                    condition, local_context
+                ):
+                    continue
+
+                last_output = await run_step_action(local_context)
                 local_outputs[name] = last_output
             results.append(last_output)
 
         return results
 
-    def _build_inner_action(
-        self, inner_action: FlowEachInnerActionDefinition
-    ) -> Callable[[LocalContext], Any]:
-        run_action = build_action(self.flow, inner_action.action)
+    def _condition_matches(self, condition: str, local_context: LocalContext) -> bool:
+        result = Expression.from_flow(
+            condition, self.flow, local_context=local_context
+        ).evaluate()
+        if not isinstance(result, bool):
+            raise ValueError("if expression must evaluate to a boolean")
+        return result
 
-        async def run_inner_action(local_context: LocalContext) -> Any:
+    def _build_step_action(self, step: FlowEachStepDefinition) -> NestedStepRunner:
+        run_action = build_action(self.flow, step.action)
+
+        async def run_step_action(local_context: LocalContext) -> Any:
             kwargs = {_LOCAL_CONTEXT_KWARG: local_context}
             if inspect.iscoroutinefunction(run_action):
                 result = run_action(**kwargs)
@@ -190,15 +326,17 @@ class EachAction:
                 result = await result
             return result
 
-        return run_inner_action
+        return run_step_action
 
 
 _ACTION_TYPES: tuple[_ActionType, ...] = (
     EachAction,
     CodeAction,
     ToolAction,
+    AgentAction,
     CrewAction,
     ExpressionAction,
+    ScriptAction,
 )
 
 
@@ -240,3 +378,29 @@ def _pop_local_context(kwargs: dict[str, Any]) -> LocalContext | None:
     if not isinstance(local_context, dict):
         raise TypeError("flow definition local context must be a mapping")
     return cast(LocalContext, local_context)
+
+
+def _resolve_crew_declaration(
+    from_declaration: str, *, base_dir: Path | None = None
+) -> Path:
+    path = Path(from_declaration).expanduser()
+    if base_dir is not None:
+        resolved_base_dir = base_dir.expanduser().resolve()
+        if not path.is_absolute():
+            path = resolved_base_dir / path
+        resolved_path = path.resolve()
+        if not resolved_path.is_relative_to(resolved_base_dir):
+            raise ValueError(
+                "crew declaration path must be within the flow definition directory"
+            )
+        path = resolved_path
+
+    if not path.is_dir():
+        return path
+
+    for name in ("crew.jsonc", "crew.json"):
+        candidate = path / name
+        if candidate.is_file():
+            return candidate
+
+    return path / "crew.jsonc"

@@ -5,7 +5,10 @@ from pathlib import Path
 from unittest import mock
 
 import pytest
+import tomli
 from click.testing import CliRunner
+from packaging.requirements import Requirement
+from packaging.version import Version
 import crewai_cli.create_json_crew as json_crew
 import crewai_cli.tui_picker as tui_picker
 from crewai_cli.create_crew import create_crew, create_folder_structure
@@ -709,8 +712,34 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
         default_llm="openai/gpt-5.5",
     )
     assert (tmp_path / "json_crew" / "crew.jsonc").exists()
+    assert not (tmp_path / "json_crew" / "src").exists()
     assert not (tmp_path / "json_crew" / "tests").exists()
     assert not (tmp_path / "json_crew" / "config.jsonc").exists()
+    generated_paths = {
+        path.relative_to(tmp_path / "json_crew").as_posix()
+        for path in (tmp_path / "json_crew").rglob("*")
+        if path.is_file()
+    }
+    assert not any(
+        path.endswith("/crew.py") or path == "crew.py" for path in generated_paths
+    )
+    assert not any(
+        path.endswith("/agents.yaml") or path == "agents.yaml"
+        for path in generated_paths
+    )
+    assert not any(
+        path.endswith("/tasks.yaml") or path == "tasks.yaml"
+        for path in generated_paths
+    )
+    assert not any(path.startswith("src/") for path in generated_paths)
+
+    pyproject = tomli.loads((tmp_path / "json_crew" / "pyproject.toml").read_text())
+    dependency = pyproject["project"]["dependencies"][0]
+    assert dependency == "crewai[tools]==1.14.8a1"
+    assert Version("1.14.8a1") in Requirement(dependency).specifier
+    assert pyproject["tool"]["hatch"]["build"]["targets"]["wheel"][
+        "only-include"
+    ] == ["agents", "crew.jsonc", "tools", "knowledge", "skills"]
 
     crew_template = (tmp_path / "json_crew" / "crew.jsonc").read_text()
     assert (
@@ -838,7 +867,7 @@ def test_json_create_dmn_mode_uses_non_interactive_defaults(tmp_path, monkeypatc
     crew_template = (project_root / "crew.jsonc").read_text()
     agent_template = (project_root / "agents" / "researcher.jsonc").read_text()
 
-    assert '"memory": false' in crew_template
+    assert '"memory": true' in crew_template
     assert '"description": "Research current AI trends and write a concise summary."' in (
         crew_template
     )

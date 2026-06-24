@@ -19,6 +19,39 @@ from crewai.memory.types import (
 )
 
 
+def test_memory_analysis_llm_is_isolated_from_streaming_agent_llm(
+    tmp_path: Path,
+) -> None:
+    """Memory analysis should not share a mutable streaming LLM with the agent UI."""
+    from crewai.llms.base_llm import BaseLLM
+    from crewai.memory.unified_memory import Memory
+    from crewai.utilities.types import LLMMessage
+
+    class FakeStreamingLLM(BaseLLM):
+        def call(
+            self,
+            messages: str | list[LLMMessage],
+            tools: list[dict] | None = None,
+            callbacks: list | None = None,
+            available_functions: dict | None = None,
+            from_task: object | None = None,
+            from_agent: object | None = None,
+            response_model: type | None = None,
+        ) -> str:
+            return ""
+
+    agent_llm = FakeStreamingLLM(model="fake-model", stream=True)
+    mem = Memory(
+        storage=str(tmp_path / "db"),
+        llm=agent_llm,
+        embedder=lambda texts: [[0.1] for _ in texts],
+    )
+
+    assert mem._llm is not agent_llm
+    assert mem._llm.stream is False
+
+    agent_llm.stream = True
+    assert mem._llm.stream is False
 
 
 def test_memory_record_defaults() -> None:
@@ -952,6 +985,54 @@ def test_remember_many_returns_immediately(tmp_path: Path) -> None:
     # After draining, records should exist
     mem.drain_writes()
     assert mem._storage.count() == 2
+
+
+def test_reset_all_blocks_new_save_submission_until_reset_completes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A save cannot be submitted between draining writes and resetting storage."""
+    from crewai.memory.unified_memory import Memory
+
+    mem = Memory(
+        storage=str(tmp_path / "db"),
+        llm=MagicMock(),
+        embedder=lambda texts: [[0.1] * 4 for _ in texts],
+    )
+    reset_started = threading.Event()
+    release_reset = threading.Event()
+    submission_returned = threading.Event()
+    order: list[str] = []
+    original_reset = mem._storage.reset
+
+    def blocking_reset(scope_prefix: str | None = None) -> None:
+        order.append("reset-start")
+        reset_started.set()
+        assert release_reset.wait(timeout=2)
+        original_reset(scope_prefix=scope_prefix)
+        order.append("reset-end")
+
+    def submit_save() -> None:
+        mem._submit_save(lambda: order.append("save"))
+        order.append("submit-returned")
+        submission_returned.set()
+
+    monkeypatch.setattr(mem._storage, "reset", blocking_reset)
+
+    reset_thread = threading.Thread(target=mem.reset_all)
+    reset_thread.start()
+    assert reset_started.wait(timeout=2)
+
+    submit_thread = threading.Thread(target=submit_save)
+    submit_thread.start()
+    assert not submission_returned.wait(timeout=0.1)
+
+    release_reset.set()
+    reset_thread.join(timeout=2)
+    submit_thread.join(timeout=2)
+
+    assert not reset_thread.is_alive()
+    assert not submit_thread.is_alive()
+    assert order.index("reset-end") < order.index("submit-returned")
 
 
 def test_recall_drains_pending_writes(tmp_path: Path, mock_embedder: MagicMock) -> None:

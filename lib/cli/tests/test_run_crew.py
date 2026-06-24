@@ -5,10 +5,31 @@ from pathlib import Path
 import subprocess
 import sys
 
+import click
 import pytest
 from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
 
 import crewai_cli.run_crew as run_crew_module
+
+
+def test_missing_crewai_package_shows_full_install_hint(monkeypatch):
+    def missing_crewai_package():
+        raise ModuleNotFoundError("No module named 'crewai'", name="crewai")
+
+    monkeypatch.setattr(
+        run_crew_module, "_import_find_crew_json_file", missing_crewai_package
+    )
+
+    with pytest.raises(click.ClickException) as exc_info:
+        run_crew_module.find_crew_json_file()
+
+    message = exc_info.value.message
+    assert "CrewAI CLI is installed without the `crewai` package" in message
+    assert (
+        "uv tool install --force --prerelease=allow 'crewai[tools]==1.14.8a1'"
+        in message
+    )
+    assert "quotes are required in zsh" in message
 
 
 def test_run_crew_forwards_trained_agents_file_to_json_crews(monkeypatch):
@@ -547,3 +568,175 @@ def test_has_json_crew_true_without_pyproject(monkeypatch, tmp_path: Path):
     (tmp_path / "crew.jsonc").write_text("{}")
 
     assert run_crew_module._has_json_crew() is True
+
+
+def test_run_crew_rejects_inputs_without_definition():
+    with pytest.raises(click.UsageError) as exc_info:
+        run_crew_module.run_crew(inputs='{"topic":"AI"}')
+
+    assert "--inputs requires --definition" in exc_info.value.message
+
+
+def test_run_crew_rejects_filename_with_explicit_definition():
+    with pytest.raises(click.UsageError) as exc_info:
+        run_crew_module.run_crew(
+            trained_agents_file="trained.pkl",
+            definition="flow.yaml",
+        )
+
+    assert "--filename can only be used when running crews" in exc_info.value.message
+
+
+def test_run_crew_runs_explicit_declarative_definition(monkeypatch, capsys):
+    calls = []
+
+    def fake_run_declarative_flow(definition: str, inputs: str | None = None):
+        calls.append((definition, inputs))
+
+    monkeypatch.setattr(
+        "crewai_cli.run_declarative_flow.run_declarative_flow",
+        fake_run_declarative_flow,
+    )
+
+    run_crew_module.run_crew(definition="flow.yaml", inputs='{"topic":"AI"}')
+
+    captured = capsys.readouterr()
+    assert "experimental" not in captured.out.lower()
+    assert calls == [("flow.yaml", '{"topic":"AI"}')]
+
+
+def test_run_crew_runs_classic_crew_project(monkeypatch, capsys):
+    calls = []
+
+    monkeypatch.setattr(run_crew_module, "_has_json_crew", lambda: False)
+    monkeypatch.setattr(
+        run_crew_module,
+        "read_toml",
+        lambda: {"tool": {"crewai": {"type": "crew"}}},
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "_execute_uv_script",
+        lambda script_name, **kwargs: calls.append((script_name, kwargs)),
+    )
+
+    run_crew_module.run_crew(trained_agents_file="trained.pkl")
+
+    assert capsys.readouterr().out == ""
+    assert calls == [
+        (
+            "run_crew",
+            {"entity_type": "crew", "trained_agents_file": "trained.pkl"},
+        )
+    ]
+
+
+def test_run_crew_runs_python_flow_project(monkeypatch, capsys):
+    calls = []
+
+    monkeypatch.setattr(run_crew_module, "_has_json_crew", lambda: False)
+    monkeypatch.setattr(
+        run_crew_module,
+        "read_toml",
+        lambda: {"tool": {"crewai": {"type": "flow"}}},
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "_execute_uv_script",
+        lambda script_name, **kwargs: calls.append((script_name, kwargs)),
+    )
+    monkeypatch.setattr(
+        "crewai_cli.kickoff_flow._load_conversational_flow_from_kickoff_script",
+        lambda: None,
+    )
+
+    run_crew_module.run_crew()
+
+    assert capsys.readouterr().out == ""
+    assert calls == [("kickoff", {"entity_type": "flow"})]
+
+
+def test_run_crew_runs_conversational_flow_tui(monkeypatch, capsys):
+    class Flow:
+        pass
+
+    flow = Flow()
+    calls = []
+
+    monkeypatch.setattr(run_crew_module, "_has_json_crew", lambda: False)
+    monkeypatch.setattr(
+        run_crew_module,
+        "read_toml",
+        lambda: {"tool": {"crewai": {"type": "flow"}}},
+    )
+    monkeypatch.setattr(
+        "crewai_cli.kickoff_flow._load_conversational_flow_from_kickoff_script",
+        lambda: flow,
+    )
+    monkeypatch.setattr(
+        "crewai_cli.kickoff_flow._run_conversational_flow_tui",
+        lambda loaded_flow: calls.append(loaded_flow),
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "_execute_uv_script",
+        lambda *_args, **_kwargs: pytest.fail(
+            "conversational flows must use the TUI"
+        ),
+    )
+
+    run_crew_module.run_crew()
+
+    assert capsys.readouterr().out == ""
+    assert calls == [flow]
+
+
+def test_run_crew_rejects_filename_for_flow_project(monkeypatch):
+    monkeypatch.setattr(run_crew_module, "_has_json_crew", lambda: False)
+    monkeypatch.setattr(
+        run_crew_module,
+        "read_toml",
+        lambda: {"tool": {"crewai": {"type": "flow"}}},
+    )
+
+    with pytest.raises(click.UsageError) as exc_info:
+        run_crew_module.run_crew(trained_agents_file="trained.pkl")
+
+    assert "--filename can only be used when running crews" in exc_info.value.message
+
+
+def test_run_crew_runs_configured_declarative_flow_project(
+    monkeypatch, tmp_path: Path, capsys
+):
+    calls = []
+
+    monkeypatch.chdir(tmp_path)
+    definition_path = tmp_path / "flow.yaml"
+    definition_path.write_text("schema: crewai.flow/v1\n", encoding="utf-8")
+    monkeypatch.setattr(run_crew_module, "_has_json_crew", lambda: False)
+    monkeypatch.setattr(
+        run_crew_module,
+        "read_toml",
+        lambda: {
+            "tool": {
+                "crewai": {
+                    "type": "flow",
+                    "definition": "flow.yaml",
+                }
+            }
+        },
+    )
+    monkeypatch.setattr(
+        "crewai_cli.run_declarative_flow.run_declarative_flow_in_project_env",
+        lambda definition, inputs=None: calls.append((definition, inputs)),
+    )
+    monkeypatch.setattr(
+        run_crew_module,
+        "_execute_uv_script",
+        lambda *_args, **_kwargs: pytest.fail("declarative flows must not run kickoff"),
+    )
+
+    run_crew_module.run_crew()
+
+    assert capsys.readouterr().out == ""
+    assert calls == [(definition_path.resolve(), None)]
