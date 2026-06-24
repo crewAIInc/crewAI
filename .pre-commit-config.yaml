@@ -19,7 +19,7 @@ repos:
         language: system
         pass_filenames: true
         types: [python]
-        exclude: ^(lib/crewai/src/crewai/cli/templates/|lib/crewai/tests/|lib/crewai-tools/tests/|lib/crewai-files/tests/)
+        exclude: ^(lib/crewai/src/crewai/cli/templates/|lib/cli/src/crewai_cli/templates/|lib/cli/tests/|lib/crewai/tests/|lib/crewai-tools/tests/|lib/crewai-files/tests/|lib/devtools/tests/)
   - repo: https://github.com/astral-sh/uv-pre-commit
     rev: 0.11.3
     hooks:
@@ -28,7 +28,35 @@ repos:
     hooks:
       - id: pip-audit
         name: pip-audit
-        entry: bash -c 'source .venv/bin/activate && uv run pip-audit --skip-editable --ignore-vuln CVE-2025-69872 --ignore-vuln CVE-2026-25645 --ignore-vuln CVE-2026-27448 --ignore-vuln CVE-2026-27459 --ignore-vuln PYSEC-2023-235' --
+        # Keep this ignore list in sync with .github/workflows/vulnerability-scan.yml.
+        entry: >-
+          bash -c 'source .venv/bin/activate && uv run pip-audit --skip-editable
+          --ignore-vuln PYSEC-2024-277
+          --ignore-vuln PYSEC-2026-89
+          --ignore-vuln PYSEC-2026-97
+          --ignore-vuln PYSEC-2025-148
+          --ignore-vuln PYSEC-2025-183
+          --ignore-vuln PYSEC-2025-189
+          --ignore-vuln PYSEC-2025-190
+          --ignore-vuln PYSEC-2025-191
+          --ignore-vuln PYSEC-2025-192
+          --ignore-vuln PYSEC-2025-193
+          --ignore-vuln PYSEC-2025-194
+          --ignore-vuln PYSEC-2025-195
+          --ignore-vuln PYSEC-2025-196
+          --ignore-vuln PYSEC-2025-197
+          --ignore-vuln PYSEC-2025-210
+          --ignore-vuln PYSEC-2026-139
+          --ignore-vuln GHSA-rrmf-rvhw-rf47
+          --ignore-vuln PYSEC-2025-211
+          --ignore-vuln PYSEC-2025-212
+          --ignore-vuln PYSEC-2025-213
+          --ignore-vuln PYSEC-2025-214
+          --ignore-vuln PYSEC-2025-215
+          --ignore-vuln PYSEC-2025-216
+          --ignore-vuln PYSEC-2025-217
+          --ignore-vuln PYSEC-2025-218
+          --ignore-vuln GHSA-f4j7-r4q5-qw2c' --
         language: system
         pass_filenames: false
         stages: [pre-push, manual]

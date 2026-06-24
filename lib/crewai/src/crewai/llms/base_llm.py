@@ -14,7 +14,7 @@ from datetime import datetime
 import json
 import logging
 import re
-from typing import TYPE_CHECKING, Any, Final, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal, cast
 import uuid
 
 from pydantic import (
@@ -23,6 +23,7 @@ from pydantic import (
     ConfigDict,
     Field,
     PrivateAttr,
+    field_serializer,
     model_validator,
 )
 from typing_extensions import TypedDict
@@ -42,6 +43,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageStartedEvent,
 )
 from crewai.types.usage_metrics import UsageMetrics
+from crewai.utilities.pydantic_schema_utils import serialize_model_class
 
 
 try:
@@ -72,6 +74,9 @@ _JSON_EXTRACTION_PATTERN: Final[re.Pattern[str]] = re.compile(r"\{.*}", re.DOTAL
 _current_call_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "_current_call_id", default=None
 )
+_call_stop_override_var: contextvars.ContextVar[dict[int, list[str]] | None] = (
+    contextvars.ContextVar("_call_stop_override_var", default=None)
+)
 
 
 @contextmanager
@@ -83,6 +88,31 @@ def llm_call_context() -> Generator[str, None, None]:
         yield call_id
     finally:
         _current_call_id.reset(token)
+
+
+@contextmanager
+def call_stop_override(
+    llm: BaseLLM, stop: list[str] | None
+) -> Generator[None, None, None]:
+    """Override the stop list for ``llm`` within the current call scope.
+
+    Only ``llm``'s reads via :attr:`BaseLLM.stop_sequences` see ``stop``;
+    other LLM instances (e.g. an agent's ``function_calling_llm``) keep their
+    own ``stop`` field. Passing ``None`` clears any prior override for ``llm``
+    in the same scope. The instance-level ``stop`` field is never mutated,
+    so the override is safe under concurrent execution.
+    """
+    current = _call_stop_override_var.get()
+    new_overrides: dict[int, list[str]] = dict(current) if current else {}
+    if stop is None:
+        new_overrides.pop(id(llm), None)
+    else:
+        new_overrides[id(llm)] = stop
+    token = _call_stop_override_var.set(new_overrides)
+    try:
+        yield
+    finally:
+        _call_stop_override_var.reset(token)
 
 
 def get_current_call_id() -> str:
@@ -120,6 +150,13 @@ class BaseLLM(BaseModel, ABC):
     llm_type: str = "base"
     model: str
     temperature: float | None = None
+    top_p: float | None = None
+    max_tokens: int | float | None = None
+    stream: bool | None = None
+    seed: int | None = None
+    frequency_penalty: float | None = None
+    presence_penalty: float | None = None
+    n: int | None = None
     api_key: str | None = None
     base_url: str | None = None
     provider: str = Field(default="openai")
@@ -130,6 +167,10 @@ class BaseLLM(BaseModel, ABC):
         validation_alias=AliasChoices("stop", "stop_sequences"),
     )
     additional_params: dict[str, Any] = Field(default_factory=dict)
+
+    @field_serializer("response_format", when_used="json", check_fields=False)
+    def _serialize_response_format(self, value: Any) -> Any:
+        return serialize_model_class(value)
 
     def __setattr__(self, name: str, value: Any) -> None:
         if name in ("stop", "stop_sequences"):
@@ -158,11 +199,18 @@ class BaseLLM(BaseModel, ABC):
 
     @property
     def stop_sequences(self) -> list[str]:
-        """Alias for ``stop`` — kept for backward compatibility with provider APIs.
+        """Stop list active for the current call.
 
-        Writes are handled by ``__setattr__``, which normalizes and redirects
-        ``stop_sequences`` assignments to the ``stop`` field.
+        Returns the per-instance override set via :func:`call_stop_override`
+        when one is in effect for this LLM; otherwise the instance-level
+        ``stop`` field. Kept under this name for backward compatibility with
+        provider APIs that already read ``stop_sequences``.
         """
+        overrides = _call_stop_override_var.get()
+        if overrides is not None:
+            override = overrides.get(id(self))
+            if override is not None:
+                return override
         return self.stop
 
     _token_usage: dict[str, int] = PrivateAttr(
@@ -186,7 +234,6 @@ class BaseLLM(BaseModel, ABC):
         if not data.get("model"):
             raise ValueError("Model name is required and cannot be empty")
 
-        # Normalize stop: accept str, list, or None; also accept stop_sequences alias
         stop_seqs = data.pop("stop_sequences", None)
         stop = stop_seqs if stop_seqs is not None else data.get("stop")
         if stop is None:
@@ -198,11 +245,9 @@ class BaseLLM(BaseModel, ABC):
         else:
             data["stop"] = list(stop)
 
-        # Default provider
         if not data.get("provider"):
             data["provider"] = "openai"
 
-        # Collect unknown kwargs into additional_params
         known_fields = set(cls.model_fields.keys())
         extras = {k: v for k, v in data.items() if k not in known_fields}
         for k in extras:
@@ -341,7 +386,7 @@ class BaseLLM(BaseModel, ABC):
         Returns:
             True if stop words are configured and can be applied
         """
-        return bool(self.stop)
+        return bool(self.stop_sequences)
 
     def _apply_stop_words(self, content: str) -> str:
         """Apply stop words to truncate response content.
@@ -363,20 +408,19 @@ class BaseLLM(BaseModel, ABC):
             >>> llm._apply_stop_words(response)
             "I need to search.\\n\\nAction: search"
         """
-        if not self.stop or not content:
+        stops = self.stop_sequences
+        if not stops or not content:
             return content
 
-        # Find the earliest occurrence of any stop word
         earliest_stop_pos = len(content)
         found_stop_word = None
 
-        for stop_word in self.stop:
+        for stop_word in stops:
             stop_pos = content.find(stop_word)
             if stop_pos != -1 and stop_pos < earliest_stop_pos:
                 earliest_stop_pos = stop_pos
                 found_stop_word = stop_word
 
-        # Truncate at the stop word if found
         if found_stop_word is not None:
             truncated = content[:earliest_stop_pos].strip()
             logging.debug(
@@ -392,7 +436,6 @@ class BaseLLM(BaseModel, ABC):
         Returns:
             The number of tokens/characters the model can handle.
         """
-        # Default implementation - subclasses should override with model-specific values
         return DEFAULT_CONTEXT_WINDOW_SIZE
 
     def supports_multimodal(self) -> bool:
@@ -428,7 +471,15 @@ class BaseLLM(BaseModel, ABC):
         """
         return None
 
-    # Common helper methods for native SDK implementations
+    def _effective_max_tokens(self) -> int | float | None:
+        """Token cap actually sent to the provider, for start-event telemetry.
+
+        Defaults to ``self.max_tokens``. Providers that cap generation through a
+        differently named field (e.g. ``max_completion_tokens`` on OpenAI/Azure,
+        ``max_output_tokens`` on Gemini) override this so ``LLMCallStartedEvent``
+        reports the real limit instead of ``None``.
+        """
+        return self.max_tokens
 
     def _emit_call_started_event(
         self,
@@ -438,9 +489,37 @@ class BaseLLM(BaseModel, ABC):
         available_functions: dict[str, Any] | None = None,
         from_task: Task | None = None,
         from_agent: BaseAgent | None = None,
+        temperature: float | None = None,
+        top_p: float | None = None,
+        max_tokens: int | float | None = None,
+        stream: bool | None = None,
+        seed: int | None = None,
+        stop_sequences: list[str] | None = None,
+        frequency_penalty: float | None = None,
+        presence_penalty: float | None = None,
+        n: int | None = None,
     ) -> None:
         """Emit LLM call started event."""
         from crewai.utilities.serialization import to_serializable
+
+        if temperature is None:
+            temperature = self.temperature
+        if top_p is None:
+            top_p = self.top_p
+        if max_tokens is None:
+            max_tokens = self._effective_max_tokens()
+        if stream is None:
+            stream = self.stream
+        if seed is None:
+            seed = self.seed
+        if stop_sequences is None:
+            stop_sequences = self.stop_sequences or None
+        if frequency_penalty is None:
+            frequency_penalty = self.frequency_penalty
+        if presence_penalty is None:
+            presence_penalty = self.presence_penalty
+        if n is None:
+            n = self.n
 
         crewai_event_bus.emit(
             self,
@@ -453,6 +532,15 @@ class BaseLLM(BaseModel, ABC):
                 from_agent=from_agent,
                 model=self.model,
                 call_id=get_current_call_id(),
+                temperature=temperature,
+                top_p=top_p,
+                max_tokens=max_tokens,
+                stream=stream,
+                seed=seed,
+                stop_sequences=stop_sequences,
+                frequency_penalty=frequency_penalty,
+                presence_penalty=presence_penalty,
+                n=n,
             ),
         )
 
@@ -464,6 +552,8 @@ class BaseLLM(BaseModel, ABC):
         from_agent: BaseAgent | None = None,
         messages: str | list[LLMMessage] | None = None,
         usage: dict[str, Any] | None = None,
+        finish_reason: str | None = None,
+        response_id: str | None = None,
     ) -> None:
         """Emit LLM call completed event."""
         from crewai.utilities.serialization import to_serializable
@@ -479,6 +569,8 @@ class BaseLLM(BaseModel, ABC):
                 model=self.model,
                 call_id=get_current_call_id(),
                 usage=usage,
+                finish_reason=finish_reason,
+                response_id=response_id,
             ),
         )
 
@@ -585,7 +677,6 @@ class BaseLLM(BaseModel, ABC):
             return None
 
         try:
-            # Emit tool usage started event
             started_at = datetime.now()
 
             crewai_event_bus.emit(
@@ -598,11 +689,9 @@ class BaseLLM(BaseModel, ABC):
                 ),
             )
 
-            # Execute the function
             fn = available_functions[function_name]
             result = fn(**function_args)
 
-            # Emit tool usage finished event
             crewai_event_bus.emit(
                 self,
                 event=ToolUsageFinishedEvent(
@@ -616,7 +705,6 @@ class BaseLLM(BaseModel, ABC):
                 ),
             )
 
-            # Emit LLM call completed event for tool call
             self._emit_call_completed_event(
                 response=result,
                 call_type=LLMCallType.TOOL_CALL,
@@ -630,7 +718,6 @@ class BaseLLM(BaseModel, ABC):
             error_msg = f"Error executing function '{function_name}': {e!s}"
             logging.error(error_msg)
 
-            # Emit tool usage error event
             if not hasattr(crewai_event_bus, "emit"):
                 raise ValueError(
                     "crewai_event_bus does not have an emit method"
@@ -647,7 +734,6 @@ class BaseLLM(BaseModel, ABC):
                 ),
             )
 
-            # Emit LLM call failed event
             self._emit_call_failed_event(
                 error=error_msg,
                 from_task=from_task,
@@ -668,10 +754,19 @@ class BaseLLM(BaseModel, ABC):
         Raises:
             ValueError: If message format is invalid
         """
+        from crewai.llms.cache import CACHE_BREAKPOINT_KEY
+        from crewai.utilities.types import LLMMessage as _LLMMessage
+
         if isinstance(messages, str):
             return [{"role": "user", "content": messages}]
 
-        # Validate message format
+        # Validate then copy each message, dropping the cache-breakpoint
+        # flag in the copy only. The caller (e.g. CrewAgentExecutor,
+        # experimental.AgentExecutor) reuses its messages buffer across
+        # many LLM calls in the tool-use loop; mutating their dicts
+        # in place would erase the markers after the first call and
+        # break prompt caching for every subsequent iteration.
+        cleaned: list[LLMMessage] = []
         for i, msg in enumerate(messages):
             if not isinstance(msg, dict):
                 raise ValueError(f"Message at index {i} must be a dictionary")
@@ -679,8 +774,12 @@ class BaseLLM(BaseModel, ABC):
                 raise ValueError(
                     f"Message at index {i} must have 'role' and 'content' keys"
                 )
+            copy: dict[str, Any] = {
+                k: v for k, v in msg.items() if k != CACHE_BREAKPOINT_KEY
+            }
+            cleaned.append(cast(_LLMMessage, copy))
 
-        return self._process_message_files(messages)
+        return self._process_message_files(cleaned)
 
     def _process_message_files(self, messages: list[LLMMessage]) -> list[LLMMessage]:
         """Process files attached to messages and format for the provider.
@@ -754,7 +853,6 @@ class BaseLLM(BaseModel, ABC):
             return response
 
         try:
-            # Try to parse as JSON first
             if response.strip().startswith("{") or response.strip().startswith("["):
                 data = json.loads(response)
                 return response_format.model_validate(data)
@@ -792,42 +890,17 @@ class BaseLLM(BaseModel, ABC):
         Args:
             usage_data: Token usage data from the API response
         """
-        # Extract tokens in a provider-agnostic way
-        prompt_tokens = (
-            usage_data.get("prompt_tokens")
-            or usage_data.get("prompt_token_count")
-            or usage_data.get("input_tokens")
-            or 0
-        )
+        metrics = UsageMetrics.from_provider_dict(usage_data)
+        if metrics is None:
+            return
 
-        completion_tokens = (
-            usage_data.get("completion_tokens")
-            or usage_data.get("candidates_token_count")
-            or usage_data.get("output_tokens")
-            or 0
-        )
-
-        cached_tokens = (
-            usage_data.get("cached_tokens")
-            or usage_data.get("cached_prompt_tokens")
-            or usage_data.get("cache_read_input_tokens")
-            or 0
-        )
-        if not cached_tokens:
-            prompt_details = usage_data.get("prompt_tokens_details")
-            if isinstance(prompt_details, dict):
-                cached_tokens = prompt_details.get("cached_tokens", 0) or 0
-
-        reasoning_tokens = usage_data.get("reasoning_tokens", 0) or 0
-        cache_creation_tokens = usage_data.get("cache_creation_tokens", 0) or 0
-
-        self._token_usage["prompt_tokens"] += prompt_tokens
-        self._token_usage["completion_tokens"] += completion_tokens
-        self._token_usage["total_tokens"] += prompt_tokens + completion_tokens
-        self._token_usage["successful_requests"] += 1
-        self._token_usage["cached_prompt_tokens"] += cached_tokens
-        self._token_usage["reasoning_tokens"] += reasoning_tokens
-        self._token_usage["cache_creation_tokens"] += cache_creation_tokens
+        self._token_usage["prompt_tokens"] += metrics.prompt_tokens
+        self._token_usage["completion_tokens"] += metrics.completion_tokens
+        self._token_usage["total_tokens"] += metrics.total_tokens
+        self._token_usage["successful_requests"] += metrics.successful_requests
+        self._token_usage["cached_prompt_tokens"] += metrics.cached_prompt_tokens
+        self._token_usage["reasoning_tokens"] += metrics.reasoning_tokens
+        self._token_usage["cache_creation_tokens"] += metrics.cache_creation_tokens
 
     def get_token_usage_summary(self) -> UsageMetrics:
         """Get summary of token usage for this LLM instance.
@@ -861,15 +934,15 @@ class BaseLLM(BaseModel, ABC):
             ... ):
             ...     raise ValueError("LLM call blocked by hook")
         """
-        # Only invoke hooks for direct calls (no agent context)
         if from_agent is not None:
             return True
+
+        from crewai_core.printer import PRINTER
 
         from crewai.hooks.llm_hooks import (
             LLMCallHookContext,
             get_before_llm_call_hooks,
         )
-        from crewai.utilities.printer import PRINTER
 
         before_hooks = get_before_llm_call_hooks()
         if not before_hooks:
@@ -930,15 +1003,15 @@ class BaseLLM(BaseModel, ABC):
             ...         messages, result, from_agent
             ...     )
         """
-        # Only invoke hooks for direct calls (no agent context)
         if from_agent is not None or not isinstance(response, str):
             return response
+
+        from crewai_core.printer import PRINTER
 
         from crewai.hooks.llm_hooks import (
             LLMCallHookContext,
             get_after_llm_call_hooks,
         )
-        from crewai.utilities.printer import PRINTER
 
         after_hooks = get_after_llm_call_hooks()
         if not after_hooks:

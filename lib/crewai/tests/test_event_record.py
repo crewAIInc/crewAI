@@ -10,7 +10,6 @@ from crewai.events.base_events import BaseEvent
 from crewai.state.event_record import EventRecord, EventNode
 
 
-# ── Helpers ──────────────────────────────────────────────────────────
 
 
 def _event(type: str, **kwargs) -> BaseEvent:
@@ -82,7 +81,6 @@ def _tree_record() -> tuple[EventRecord, dict[str, BaseEvent]]:
     }
 
 
-# ── EventNode tests ─────────────────────────────────────────────────
 
 
 class TestEventNode:
@@ -102,7 +100,6 @@ class TestEventNode:
         assert node.neighbors("child") == ["a", "b"]
 
 
-# ── EventRecord core tests ───────────────────────────────────────────
 
 
 class TestEventRecordCore:
@@ -132,7 +129,6 @@ class TestEventRecordCore:
         assert "missing" not in g
 
 
-# ── Edge wiring tests ───────────────────────────────────────────────
 
 
 class TestEdgeWiring:
@@ -188,7 +184,6 @@ class TestEdgeWiring:
         assert node.neighbors("parent") == []
 
 
-# ── Edge symmetry validation ─────────────────────────────────────────
 
 
 SYMMETRIC_PAIRS = [
@@ -222,7 +217,6 @@ class TestEdgeSymmetry:
                 assert node_id in target_node.neighbors(reverse)
 
 
-# ── Ordering tests ───────────────────────────────────────────────────
 
 
 class TestOrdering:
@@ -243,7 +237,6 @@ class TestOrdering:
         assert visited == [e.event_id for e in events]
 
 
-# ── Traversal tests ─────────────────────────────────────────────────
 
 
 class TestTraversal:
@@ -282,7 +275,6 @@ class TestTraversal:
         assert events["crew_start"].event_id not in desc_ids
 
 
-# ── Serialization round-trip tests ──────────────────────────────────
 
 
 class TestSerialization:
@@ -303,7 +295,6 @@ class TestSerialization:
         restored = EventRecord.model_validate_json(g.model_dump_json())
         assert len(restored) == 5
 
-        # Verify edges survived
         crew_node = restored.get(events["crew_start"].event_id)
         assert len(crew_node.neighbors("child")) == 2
 
@@ -335,7 +326,6 @@ class TestSerialization:
         assert re.emission_sequence == 42
 
 
-# ── RuntimeState integration tests ──────────────────────────────────
 
 
 class TestRuntimeStateIntegration:
@@ -395,7 +385,6 @@ class TestRuntimeStateIntegration:
         assert e1.event_id in restored.event_record
         assert e2.event_id in restored.event_record
 
-        # Verify edges survived
         e2_node = restored.event_record.get(e2.event_id)
         assert e1.event_id in e2_node.neighbors("parent")
 
@@ -421,3 +410,30 @@ class TestRuntimeStateIntegration:
         )
         assert len(restored.root) == 1
         assert len(restored.event_record) == 0
+
+    def test_reset_runtime_state_clears_state_and_registry(self):
+        from crewai import Agent, Crew, RuntimeState
+        from crewai.events.event_bus import crewai_event_bus
+
+        if RuntimeState is None:
+            pytest.skip("RuntimeState unavailable (model_rebuild failed)")
+
+        agent = Agent(role="test", goal="test", backstory="test", llm="gpt-4o-mini")
+        crew = Crew(agents=[agent], tasks=[], verbose=False)
+
+        previous_state = crewai_event_bus._runtime_state
+        previous_ids = crewai_event_bus._registered_entity_ids
+        crewai_event_bus._runtime_state = None
+        crewai_event_bus._registered_entity_ids = set()
+        try:
+            crewai_event_bus.register_entity(crew)
+            assert crewai_event_bus.runtime_state is not None
+            assert crewai_event_bus._registered_entity_ids
+
+            crewai_event_bus.reset_runtime_state()
+
+            assert crewai_event_bus.runtime_state is None
+            assert crewai_event_bus._registered_entity_ids == set()
+        finally:
+            crewai_event_bus._runtime_state = previous_state
+            crewai_event_bus._registered_entity_ids = previous_ids

@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import Mock
 
-import pytest
-
 from crewai import Agent, Crew
 from crewai.hooks import (
     LLMCallHookContext,
@@ -16,6 +14,7 @@ from crewai.hooks import (
     get_before_tool_call_hooks,
 )
 from crewai.project import CrewBase, agent, crew
+import pytest
 
 
 @pytest.fixture(autouse=True)
@@ -23,17 +22,14 @@ def clear_hooks():
     """Clear global hooks before and after each test."""
     from crewai.hooks import llm_hooks, tool_hooks
 
-    # Store original hooks
     original_before_llm = llm_hooks._before_llm_call_hooks.copy()
     original_before_tool = tool_hooks._before_tool_call_hooks.copy()
 
-    # Clear hooks
     llm_hooks._before_llm_call_hooks.clear()
     tool_hooks._before_tool_call_hooks.clear()
 
     yield
 
-    # Restore original hooks
     llm_hooks._before_llm_call_hooks.clear()
     tool_hooks._before_tool_call_hooks.clear()
     llm_hooks._before_llm_call_hooks.extend(original_before_llm)
@@ -60,17 +56,13 @@ class TestCrewScopedHooks:
             def crew(self):
                 return Crew(agents=self.agents, tasks=[], verbose=False)
 
-        # Check hooks before instance creation
         hooks_before = get_before_llm_call_hooks()
         initial_count = len(hooks_before)
 
-        # Create instance - should register the hook
         crew_instance = TestCrew()
 
-        # Check hooks after instance creation
         hooks_after = get_before_llm_call_hooks()
 
-        # Should have one more hook registered
         assert len(hooks_after) == initial_count + 1
 
     def test_crew_scoped_hook_has_access_to_self(self):
@@ -85,7 +77,6 @@ class TestCrewScopedHooks:
 
             @before_llm_call
             def my_hook(self, context):
-                # Can access self
                 self.call_count += 1
                 execution_log.append(f"{self.crew_name}:{self.call_count}")
 
@@ -97,14 +88,11 @@ class TestCrewScopedHooks:
             def crew(self):
                 return Crew(agents=self.agents, tasks=[], verbose=False)
 
-        # Create instance
         crew_instance = TestCrew()
 
-        # Get the registered hook
         hooks = get_before_llm_call_hooks()
-        crew_hook = hooks[-1]  # Last registered hook
+        crew_hook = hooks[-1]
 
-        # Create mock context
         mock_executor = Mock()
         mock_executor.messages = []
         mock_executor.agent = Mock(role="Test")
@@ -115,11 +103,9 @@ class TestCrewScopedHooks:
 
         context = LLMCallHookContext(executor=mock_executor)
 
-        # Execute hook multiple times
         crew_hook(context)
         crew_hook(context)
 
-        # Verify hook accessed self and modified instance state
         assert len(execution_log) == 2
         assert execution_log[0] == "TestCrew:1"
         assert execution_log[1] == "TestCrew:2"
@@ -158,15 +144,12 @@ class TestCrewScopedHooks:
             def crew(self):
                 return Crew(agents=self.agents, tasks=[], verbose=False)
 
-        # Create both instances
         instance1 = Crew1()
         instance2 = Crew2()
 
-        # Both hooks should be registered
         hooks = get_before_llm_call_hooks()
         assert len(hooks) >= 2
 
-        # Create mock context
         mock_executor = Mock()
         mock_executor.messages = []
         mock_executor.agent = Mock(role="Test")
@@ -177,11 +160,9 @@ class TestCrewScopedHooks:
 
         context = LLMCallHookContext(executor=mock_executor)
 
-        # Execute all hooks
         for hook in hooks:
             hook(context)
 
-        # Both hooks should have executed
         assert "crew1" in crew1_executions
         assert "crew2" in crew2_executions
 
@@ -194,7 +175,7 @@ class TestCrewScopedHooks:
             @before_tool_call(tools=["delete_file"])
             def filtered_hook(self, context):
                 execution_log.append(f"filtered:{context.tool_name}")
-                return None
+                return
 
             @agent
             def researcher(self):
@@ -204,14 +185,11 @@ class TestCrewScopedHooks:
             def crew(self):
                 return Crew(agents=self.agents, tasks=[], verbose=False)
 
-        # Create instance
         crew_instance = TestCrew()
 
-        # Get registered hooks
         hooks = get_before_tool_call_hooks()
-        crew_hook = hooks[-1]  # Last registered
+        crew_hook = hooks[-1]
 
-        # Test with matching tool
         mock_tool = Mock()
         context1 = ToolCallHookContext(
             tool_name="delete_file", tool_input={}, tool=mock_tool
@@ -221,13 +199,11 @@ class TestCrewScopedHooks:
         assert len(execution_log) == 1
         assert execution_log[0] == "filtered:delete_file"
 
-        # Test with non-matching tool
         context2 = ToolCallHookContext(
             tool_name="read_file", tool_input={}, tool=mock_tool
         )
         crew_hook(context2)
 
-        # Should still be 1 (filtered hook didn't run)
         assert len(execution_log) == 1
 
     def test_crew_scoped_hook_no_double_registration(self):
@@ -247,20 +223,15 @@ class TestCrewScopedHooks:
             def crew(self):
                 return Crew(agents=self.agents, tasks=[], verbose=False)
 
-        # Get initial hook count
         initial_hooks = len(get_before_llm_call_hooks())
 
-        # Create first instance
         instance1 = TestCrew()
 
-        # Should add 1 hook
         hooks_after_first = get_before_llm_call_hooks()
         assert len(hooks_after_first) == initial_hooks + 1
 
-        # Create second instance
         instance2 = TestCrew()
 
-        # Should add another hook (one per instance)
         hooks_after_second = get_before_llm_call_hooks()
         assert len(hooks_after_second) == initial_hooks + 2
 
@@ -274,7 +245,6 @@ class TestCrewScopedHooks:
 
             @before_llm_call
             def my_hook(self, context):
-                # Should be able to access both self and context
                 return f"{self.test_value}:{context.iterations}"
 
             @agent
@@ -285,10 +255,8 @@ class TestCrewScopedHooks:
             def crew(self):
                 return Crew(agents=self.agents, tasks=[], verbose=False)
 
-        # Create instance
         crew_instance = TestCrew()
 
-        # Verify the hook method has is_before_llm_call_hook marker
         assert hasattr(crew_instance.my_hook, "__func__")
         hook_func = crew_instance.my_hook.__func__
         assert hasattr(hook_func, "is_before_llm_call_hook")
@@ -312,14 +280,11 @@ class TestCrewScopedHooks:
             def crew(self):
                 return Crew(agents=self.agents, tasks=[], verbose=False)
 
-        # Create instance
         crew_instance = TestCrew()
 
-        # Get hooks
         hooks = get_before_llm_call_hooks()
         crew_hook = hooks[-1]
 
-        # Test with matching agent
         mock_executor = Mock()
         mock_executor.messages = []
         mock_executor.agent = Mock(role="Researcher")
@@ -334,12 +299,10 @@ class TestCrewScopedHooks:
         assert len(execution_log) == 1
         assert execution_log[0] == "Researcher"
 
-        # Test with non-matching agent
         mock_executor.agent.role = "Analyst"
         context2 = LLMCallHookContext(executor=mock_executor)
         crew_hook(context2)
 
-        # Should still be 1 (filtered out)
         assert len(execution_log) == 1
 
 
@@ -363,7 +326,6 @@ class TestCrewScopedHookAttributes:
             def crew(self):
                 return Crew(agents=self.agents, tasks=[], verbose=False)
 
-        # Check the unbound method has the marker
         assert hasattr(TestCrew.__dict__["my_hook"], "is_before_llm_call_hook")
         assert TestCrew.__dict__["my_hook"].is_before_llm_call_hook is True
 
@@ -384,7 +346,6 @@ class TestCrewScopedHookAttributes:
             def crew(self):
                 return Crew(agents=self.agents, tasks=[], verbose=False)
 
-        # Check filter attributes are set
         hook_method = TestCrew.__dict__["filtered_hook"]
         assert hasattr(hook_method, "is_before_tool_call_hook")
         assert hasattr(hook_method, "_filter_tools")
@@ -413,15 +374,12 @@ class TestCrewScopedHookAttributes:
             def crew(self):
                 return Crew(agents=self.agents, tasks=[], verbose=False)
 
-        # Create instance
         crew_instance = TestCrew()
 
-        # Check that hooks are tracked
         assert hasattr(crew_instance, "_registered_hook_functions")
         assert isinstance(crew_instance._registered_hook_functions, list)
         assert len(crew_instance._registered_hook_functions) == 2
 
-        # Check hook types
         hook_types = [ht for ht, _ in crew_instance._registered_hook_functions]
         assert "before_llm_call" in hook_types
         assert "before_tool_call" in hook_types
@@ -441,7 +399,6 @@ class TestCrewScopedHookExecution:
 
             @before_llm_call
             def my_hook(self, context):
-                # Should have access to self
                 execution_log.append(self.instance_id)
 
             @agent
@@ -452,11 +409,9 @@ class TestCrewScopedHookExecution:
             def crew(self):
                 return Crew(agents=self.agents, tasks=[], verbose=False)
 
-        # Create instance
         crew_instance = TestCrew()
         expected_id = crew_instance.instance_id
 
-        # Get and execute hook
         hooks = get_before_llm_call_hooks()
         crew_hook = hooks[-1]
 
@@ -470,10 +425,8 @@ class TestCrewScopedHookExecution:
 
         context = LLMCallHookContext(executor=mock_executor)
 
-        # Execute hook
         crew_hook(context)
 
-        # Verify it had access to self
         assert len(execution_log) == 1
         assert execution_log[0] == expected_id
 
@@ -488,7 +441,7 @@ class TestCrewScopedHookExecution:
             @before_tool_call
             def increment_counter(self, context):
                 self.counter += 1
-                return None
+                return
 
             @agent
             def researcher(self):
@@ -498,23 +451,19 @@ class TestCrewScopedHookExecution:
             def crew(self):
                 return Crew(agents=self.agents, tasks=[], verbose=False)
 
-        # Create instance
         crew_instance = TestCrew()
         assert crew_instance.counter == 0
 
-        # Get and execute hook
         hooks = get_before_tool_call_hooks()
         crew_hook = hooks[-1]
 
         mock_tool = Mock()
         context = ToolCallHookContext(tool_name="test", tool_input={}, tool=mock_tool)
 
-        # Execute hook 3 times
         crew_hook(context)
         crew_hook(context)
         crew_hook(context)
 
-        # Verify counter was incremented
         assert crew_instance.counter == 3
 
     def test_multiple_instances_maintain_separate_state(self):
@@ -537,18 +486,14 @@ class TestCrewScopedHookExecution:
             def crew(self):
                 return Crew(agents=self.agents, tasks=[], verbose=False)
 
-        # Create two instances
         instance1 = TestCrew()
         instance2 = TestCrew()
 
-        # Get all hooks (should include hooks from both instances)
         all_hooks = get_before_llm_call_hooks()
 
-        # Find hooks for each instance (last 2 registered)
         hook1 = all_hooks[-2]
         hook2 = all_hooks[-1]
 
-        # Create mock context
         mock_executor = Mock()
         mock_executor.messages = []
         mock_executor.agent = Mock(role="Test")
@@ -559,14 +504,11 @@ class TestCrewScopedHookExecution:
 
         context = LLMCallHookContext(executor=mock_executor)
 
-        # Execute first hook twice
         hook1(context)
         hook1(context)
 
-        # Execute second hook once
         hook2(context)
 
-        # Each instance should have independent state
         # Note: We can't easily verify which hook belongs to which instance
         # in this test without more introspection, but the fact that it doesn't
         # crash and hooks can maintain state proves isolation works
@@ -593,12 +535,11 @@ class TestSignatureDetection:
             def crew(self):
                 return Crew(agents=self.agents, tasks=[], verbose=False)
 
-        # Check that method has self parameter
         method = TestCrew.__dict__["method_hook"]
         sig = inspect.signature(method)
         params = list(sig.parameters.keys())
         assert params[0] == "self"
-        assert len(params) == 2  # self + context
+        assert len(params) == 2
 
     def test_standalone_function_signature_detected(self):
         """Test that standalone functions without 'self' are detected."""
@@ -608,12 +549,10 @@ class TestSignatureDetection:
         def standalone_hook(context):
             pass
 
-        # Should have only context parameter (no self)
         sig = inspect.signature(standalone_hook)
         params = list(sig.parameters.keys())
         assert "self" not in params
-        assert len(params) == 1  # Just context
+        assert len(params) == 1
 
-        # Should be registered
         hooks = get_before_llm_call_hooks()
         assert len(hooks) >= 1

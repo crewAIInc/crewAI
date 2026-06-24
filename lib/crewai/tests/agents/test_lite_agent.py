@@ -19,7 +19,6 @@ from crewai.tools import BaseTool
 from crewai.types.usage_metrics import UsageMetrics
 
 
-# A simple test tool
 class SecretLookupTool(BaseTool):
     name: str = "secret_lookup"
     description: str = "A tool to lookup secrets"
@@ -28,7 +27,6 @@ class SecretLookupTool(BaseTool):
         return "SUPERSECRETPASSWORD123"
 
 
-# Define Mock Search Tool
 class WebSearchTool(BaseTool):
     """Tool for searching the web for information."""
 
@@ -37,7 +35,6 @@ class WebSearchTool(BaseTool):
 
     def _run(self, query: str) -> str:
         """Search the web for information about a topic."""
-        # This is a mock implementation
         if "tokyo" in query.lower():
             return "Tokyo's population in 2023 was approximately 21 million people in the city proper, and 37 million in the greater metropolitan area."
         if "climate change" in query.lower() and "coral" in query.lower():
@@ -45,7 +42,6 @@ class WebSearchTool(BaseTool):
         return f"Found information about {query}: This is a simulated search result for demonstration purposes."
 
 
-# Define Mock Calculator Tool
 class CalculatorTool(BaseTool):
     """Tool for performing calculations."""
 
@@ -55,7 +51,6 @@ class CalculatorTool(BaseTool):
     def _run(self, expression: str) -> str:
         """Calculate the result of a mathematical expression."""
         try:
-            # Using eval with restricted builtins for test purposes only
             result = eval(expression, {"__builtins__": {}})  # noqa: S307
             return f"The result of {expression} is {result}"
         except Exception as e:
@@ -75,7 +70,6 @@ class ResearchResult(BaseModel):
 @pytest.mark.parametrize("verbose", [True, False])
 def test_agent_kickoff_preserves_parameters(verbose):
     """Test that Agent.kickoff() uses the correct parameters from the Agent."""
-    # Create a test agent with specific parameters
     mock_llm = Mock(spec=LLM)
     mock_llm.call.return_value = "Final Answer: Test response"
     mock_llm.stop = []
@@ -104,10 +98,8 @@ def test_agent_kickoff_preserves_parameters(verbose):
         verbose=verbose,
     )
 
-    # Call kickoff and verify it works
     result = agent.kickoff("Test query")
 
-    # Verify the agent was configured correctly
     assert agent.role == "Test Agent"
     assert agent.goal == "Test Goal"
     assert agent.backstory == "Test Backstory"
@@ -117,7 +109,6 @@ def test_agent_kickoff_preserves_parameters(verbose):
     assert agent.max_iter == max_iter
     assert agent.verbose == verbose
 
-    # Verify kickoff returned a result
     assert result is not None
     assert result.raw is not None
 
@@ -125,7 +116,6 @@ def test_agent_kickoff_preserves_parameters(verbose):
 @pytest.mark.vcr()
 def test_lite_agent_with_tools():
     """Test that Agent can use tools."""
-    # Create a LiteAgent with tools
     llm = LLM(model="gpt-4o-mini")
     agent = Agent(
         role="Research Assistant",
@@ -157,7 +147,6 @@ def test_lite_agent_with_tools():
 
     agent.kickoff("What are the effects of climate change on coral reefs?")
 
-    # Verify tool usage events were emitted
     assert event_received.wait(timeout=5), "Timeout waiting for tool usage events"
     assert len(received_events) > 0, "Tool usage events should be emitted"
     event = received_events[0]
@@ -269,7 +258,6 @@ async def test_lite_agent_returns_usage_metrics_async():
         "What is the population of Tokyo? Return your structured output in JSON format with the following fields: summary, confidence"
     )
     assert isinstance(result, LiteAgentOutput)
-    # Check for population data in various formats (text or numeric)
     assert (
         "21 million" in result.raw
         or "37 million" in result.raw
@@ -651,7 +639,6 @@ def test_agent_kickoff_with_platform_tools(mock_get, mock_post):
     }
     mock_get.return_value = mock_response
 
-    # Mock the platform tool execution
     mock_post_response = Mock()
     mock_post_response.ok = True
     mock_post_response.json.return_value = {
@@ -680,7 +667,6 @@ def test_agent_kickoff_with_platform_tools(mock_get, mock_post):
 @pytest.mark.vcr()
 def test_agent_kickoff_with_mcp_tools(mock_get_mcp_tools):
     """Test that Agent.kickoff() properly integrates MCP tools with LiteAgent"""
-    # Setup mock MCP tools - create a proper BaseTool instance
     class MockMCPTool(BaseTool):
         name: str = "exa_search"
         description: str = "Search the web using Exa"
@@ -690,7 +676,6 @@ def test_agent_kickoff_with_mcp_tools(mock_get_mcp_tools):
 
     mock_get_mcp_tools.return_value = [MockMCPTool()]
 
-    # Create agent with MCP servers
     agent = Agent(
         role="Test Agent",
         goal="Test goal",
@@ -700,20 +685,14 @@ def test_agent_kickoff_with_mcp_tools(mock_get_mcp_tools):
         verbose=True
     )
 
-    # Execute kickoff
     result = agent.kickoff("Search for information about AI")
 
-    # Verify the result is a LiteAgentOutput
     assert isinstance(result, LiteAgentOutput)
     assert result.raw is not None
 
-    # Verify MCP tools were retrieved
     mock_get_mcp_tools.assert_called_once_with(["https://mcp.exa.ai/mcp?api_key=test_exa_key&profile=research"])
 
 
-# ============================================================================
-# Tests for LiteAgent inside Flow (magic auto-async pattern)
-# ============================================================================
 
 from crewai.flow.flow import listen
 
@@ -726,7 +705,6 @@ def test_lite_agent_inside_flow_sync():
     from within a Flow automatically detects the event loop and returns a
     coroutine that the Flow framework awaits. Users don't need to use async/await.
     """
-    # Track execution
     execution_log = []
 
     class TestFlow(Flow):
@@ -748,7 +726,6 @@ def test_lite_agent_inside_flow_sync():
     flow = TestFlow()
     result = flow.kickoff()
 
-    # Verify the flow executed successfully
     assert "flow_started" in execution_log
     assert "agent_completed" in execution_log
     assert result is not None
@@ -851,7 +828,6 @@ def test_lite_agent_standalone_still_works():
         verbose=False,
     )
 
-    # This should work normally - no Flow, no event loop
     result = agent.kickoff(messages="What is 5+5? Reply with just the number.")
 
     assert result is not None
@@ -1031,7 +1007,7 @@ def test_prepare_kickoff_param_files_override_message_files():
     )
 
     assert "files" in inputs
-    assert inputs["files"]["same.png"] is param_file  # param takes precedence
+    assert inputs["files"]["same.png"] is param_file
 
 
 def test_lite_agent_verbose_false_suppresses_printer_output():
@@ -1066,11 +1042,9 @@ def test_lite_agent_verbose_false_suppresses_printer_output():
 
     assert result is not None
     assert isinstance(result, LiteAgentOutput)
-    # Verify the printer was never called when verbose=False
     mock_printer.print.assert_not_called()
 
 
-# --- LiteAgent memory integration ---
 
 
 @pytest.mark.filterwarnings("ignore:LiteAgent is deprecated")
@@ -1122,6 +1096,7 @@ def test_lite_agent_memory_true_resolves_to_default_memory():
     )
     assert agent._memory is not None
     assert isinstance(agent._memory, Memory)
+    assert agent._memory.llm is agent.llm
 
 
 @pytest.mark.filterwarnings("ignore:LiteAgent is deprecated")

@@ -173,15 +173,12 @@ class BrightDataSearchTool(BaseTool):
         )
         results_count = kwargs.get("results_count", "10")
 
-        # Validate required parameters
         if not query:
             raise ValueError("query is required either in constructor or method call")
 
-        # Build the search URL
         query = urllib.parse.quote(query)
         url = self.get_search_url(search_engine, query)
 
-        # Add parameters to the URL
         params = []
 
         if country:
@@ -214,7 +211,6 @@ class BrightDataSearchTool(BaseTool):
         if params:
             url += "&" + "&".join(params)
 
-        # Set up the API request parameters
         request_params = {"zone": self.zone, "url": url, "format": "raw"}
 
         request_params = {k: v for k, v in request_params.items() if v is not None}

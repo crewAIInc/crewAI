@@ -84,22 +84,18 @@ class CouchbaseFTSVectorSearchTool(BaseTool):
         """
         scope_collection_map: dict[str, Any] = {}
 
-        # Get a list of all scopes in the bucket
         for scope in self._bucket.collections().get_all_scopes():
             scope_collection_map[scope.name] = []
 
-            # Get a list of all the collections in the scope
             for collection in scope.collections:
                 scope_collection_map[scope.name].append(collection.name)
 
-        # Check if the scope exists
-        if self.scope_name not in scope_collection_map.keys():
+        if self.scope_name not in scope_collection_map:
             raise ValueError(
                 f"Scope {self.scope_name} not found in Couchbase "
                 f"bucket {self.bucket_name}"
             )
 
-        # Check if the collection exists in the scope
         if self.collection_name not in scope_collection_map[self.scope_name]:
             raise ValueError(
                 f"Collection {self.collection_name} not found in scope "
@@ -162,7 +158,6 @@ class CouchbaseFTSVectorSearchTool(BaseTool):
                     "Please check the connection and credentials"
                 ) from e
 
-            # check if bucket exists
             if not self._check_bucket_exists():
                 raise ValueError(
                     f"Bucket {self.bucket_name} does not exist. "

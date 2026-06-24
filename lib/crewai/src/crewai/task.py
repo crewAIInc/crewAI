@@ -40,6 +40,7 @@ from crewai.agents.agent_builder.base_agent import BaseAgent, _resolve_agent
 from crewai.context import reset_current_task_id, set_current_task_id
 from crewai.core.providers.content_processor import process_content
 from crewai.events.event_bus import crewai_event_bus
+from crewai.events.event_context import resume_task_scope
 from crewai.events.types.task_events import (
     TaskCompletedEvent,
     TaskFailedEvent,
@@ -53,7 +54,11 @@ from crewai.tasks.task_output import TaskOutput
 from crewai.tools.base_tool import BaseTool
 from crewai.utilities.config import process_config
 from crewai.utilities.constants import NOT_SPECIFIED, _NotSpecified
-from crewai.utilities.converter import Converter, convert_to_model
+from crewai.utilities.converter import (
+    Converter,
+    async_convert_to_model,
+    convert_to_model,
+)
 from crewai.utilities.file_store import (
     clear_task_files,
     get_all_files,
@@ -73,9 +78,13 @@ except ImportError:
         return []
 
 
+from crewai_core.printer import PRINTER
+
 from crewai.types.callback import SerializableCallable
 from crewai.utilities.guardrail import (
     process_guardrail,
+    serialize_guardrail_for_json,
+    serialize_guardrails_for_json,
 )
 from crewai.utilities.guardrail_types import (
     GuardrailCallable,
@@ -83,7 +92,6 @@ from crewai.utilities.guardrail_types import (
     GuardrailsType,
 )
 from crewai.utilities.i18n import I18N_DEFAULT
-from crewai.utilities.printer import PRINTER
 from crewai.utilities.string_utils import interpolate_only
 
 
@@ -235,11 +243,25 @@ class Task(BaseModel):
         default=None,
     )
     processed_by_agents: set[str] = Field(default_factory=set)
-    guardrail: GuardrailType | None = Field(
+    guardrail: Annotated[
+        GuardrailType | None,
+        PlainSerializer(
+            serialize_guardrail_for_json,
+            return_type=str | None,
+            when_used="json",
+        ),
+    ] = Field(
         default=None,
         description="Function or string description of a guardrail to validate task output before proceeding to next task",
     )
-    guardrails: GuardrailsType | None = Field(
+    guardrails: Annotated[
+        GuardrailsType | None,
+        PlainSerializer(
+            serialize_guardrails_for_json,
+            return_type=list[str] | str | None,
+            when_used="json",
+        ),
+    ] = Field(
         default=None,
         description="List of guardrails to validate task output before proceeding to next task. Also supports a single guardrail function or string description of a guardrail to validate task output before proceeding to next task",
     )
@@ -316,7 +338,6 @@ class Task(BaseModel):
             if len(positional_args) != 1:
                 raise ValueError("Guardrail function must accept exactly one parameter")
 
-            # Check return annotation if present, but don't require it
             return_annotation = sig.return_annotation
             if return_annotation != inspect.Signature.empty:
                 return_annotation_args = get_args(return_annotation)
@@ -483,34 +504,28 @@ class Task(BaseModel):
         if value is None:
             return None
 
-        # Basic security checks
         if ".." in value:
             raise ValueError(
                 "Path traversal attempts are not allowed in output_file paths"
             )
 
-        # Check for shell expansion first
         if value.startswith(("~", "$")):
             raise ValueError(
                 "Shell expansion characters are not allowed in output_file paths"
             )
 
-        # Then check other shell special characters
         if any(char in value for char in ["|", ">", "<", "&", ";"]):
             raise ValueError(
                 "Shell special characters are not allowed in output_file paths"
             )
 
-        # Don't strip leading slash if it's a template path with variables
         if "{" in value or "}" in value:
-            # Validate template variable format
             template_vars = [part.split("}")[0] for part in value.split("{")[1:]]
             for var in template_vars:
                 if not var.isidentifier():
                     raise ValueError(f"Invalid template variable name: {var}")
             return value
 
-        # Strip leading slash for regular paths
         if value.startswith("/"):
             return value[1:]
         return value
@@ -640,7 +655,10 @@ class Task(BaseModel):
             tools = tools or self.tools or []
 
             self.processed_by_agents.add(agent.role)
-            if not (agent.agent_executor and agent.agent_executor._resuming):
+            executor = agent.agent_executor
+            if not (
+                executor and executor._resuming and resume_task_scope(str(self.id))
+            ):
                 crewai_event_bus.emit(
                     self, TaskStartedEvent(context=context, task=self)
                 )
@@ -665,7 +683,7 @@ class Task(BaseModel):
                     json_output = None
             elif not self._guardrails and not self._guardrail:
                 raw = result
-                pydantic_output, json_output = self._export_output(result)
+                pydantic_output, json_output = await self._aexport_output(result)
             else:
                 raw = result
                 pydantic_output, json_output = None, None
@@ -736,7 +754,7 @@ class Task(BaseModel):
         except Exception as e:
             self.end_time = datetime.datetime.now()
             crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))
-            raise e  # Re-raise the exception after emitting the event
+            raise e
         finally:
             clear_task_files(self.id)
             reset_current_task_id(task_id_token)
@@ -762,7 +780,10 @@ class Task(BaseModel):
             tools = tools or self.tools or []
 
             self.processed_by_agents.add(agent.role)
-            if not (agent.agent_executor and agent.agent_executor._resuming):
+            executor = agent.agent_executor
+            if not (
+                executor and executor._resuming and resume_task_scope(str(self.id))
+            ):
                 crewai_event_bus.emit(
                     self, TaskStartedEvent(context=context, task=self)
                 )
@@ -814,7 +835,6 @@ class Task(BaseModel):
                         guardrail_index=idx,
                     )
 
-            # backwards support
             if self._guardrail:
                 task_output = self._invoke_guardrail_function(
                     task_output=task_output,
@@ -859,7 +879,7 @@ class Task(BaseModel):
         except Exception as e:
             self.end_time = datetime.datetime.now()
             crewai_event_bus.emit(self, TaskFailedEvent(error=str(e), task=self))
-            raise e  # Re-raise the exception after emitting the event
+            raise e
         finally:
             clear_task_files(self.id)
             reset_current_task_id(task_id_token)
@@ -1094,7 +1114,7 @@ Follow these guidelines:
         )
 
     def _export_output(
-        self, result: str
+        self, result: str | BaseModel
     ) -> tuple[BaseModel | None, dict[str, Any] | None]:
         pydantic_output: BaseModel | None = None
         json_output: dict[str, Any] | None = None
@@ -1107,18 +1127,43 @@ Follow these guidelines:
                 self.agent,
                 self.converter_cls,
             )
-
-            if isinstance(model_output, BaseModel):
-                pydantic_output = model_output
-            elif isinstance(model_output, dict):
-                json_output = model_output
-            elif isinstance(model_output, str):
-                try:
-                    json_output = json.loads(model_output)
-                except json.JSONDecodeError:
-                    json_output = None
+            pydantic_output, json_output = self._unpack_model_output(model_output)
 
         return pydantic_output, json_output
+
+    async def _aexport_output(
+        self, result: str | BaseModel
+    ) -> tuple[BaseModel | None, dict[str, Any] | None]:
+        """Async equivalent of ``_export_output`` — uses ``acall`` so the event loop is not blocked."""
+        pydantic_output: BaseModel | None = None
+        json_output: dict[str, Any] | None = None
+
+        if self.output_pydantic or self.output_json:
+            model_output = await async_convert_to_model(
+                result,
+                self.output_pydantic,
+                self.output_json,
+                self.agent,
+                self.converter_cls,
+            )
+            pydantic_output, json_output = self._unpack_model_output(model_output)
+
+        return pydantic_output, json_output
+
+    @staticmethod
+    def _unpack_model_output(
+        model_output: dict[str, Any] | BaseModel | str,
+    ) -> tuple[BaseModel | None, dict[str, Any] | None]:
+        if isinstance(model_output, BaseModel):
+            return model_output, None
+        if isinstance(model_output, dict):
+            return None, model_output
+        if isinstance(model_output, str):
+            try:
+                return None, json.loads(model_output)
+            except json.JSONDecodeError:
+                return None, None
+        return None, None
 
     def _get_output_format(self) -> OutputFormat:
         if self.output_json:
@@ -1227,7 +1272,6 @@ Follow these guidelines:
             )
 
             if guardrail_result.success:
-                # Guardrail passed
                 if guardrail_result.result is None:
                     raise Exception(
                         "Task guardrail returned None as result. This is not allowed."
@@ -1245,9 +1289,7 @@ Follow these guidelines:
 
                 return task_output
 
-            # Guardrail failed
             if attempt >= self.guardrail_max_retries:
-                # Max retries reached
                 guardrail_name = (
                     f"guardrail {guardrail_index}"
                     if guardrail_index is not None
@@ -1275,7 +1317,6 @@ Follow these guidelines:
                     color="yellow",
                 )
 
-            # Regenerate output from agent
             result = agent.execute_task(
                 task=self,
                 context=context,
@@ -1348,7 +1389,7 @@ Follow these guidelines:
 
                 if isinstance(guardrail_result.result, str):
                     task_output.raw = guardrail_result.result
-                    pydantic_output, json_output = self._export_output(
+                    pydantic_output, json_output = await self._aexport_output(
                         guardrail_result.result
                     )
                     task_output.pydantic = pydantic_output
@@ -1405,7 +1446,7 @@ Follow these guidelines:
                     json_output = None
             else:
                 raw = result
-                pydantic_output, json_output = self._export_output(result)
+                pydantic_output, json_output = await self._aexport_output(result)
 
             task_output = TaskOutput(
                 name=self.name or self.description,

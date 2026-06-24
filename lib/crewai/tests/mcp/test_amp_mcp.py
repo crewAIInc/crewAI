@@ -102,7 +102,7 @@ class TestBuildMCPConfigFromDict:
 
 
 class TestFetchAmpMCPConfigs:
-    @patch("crewai.cli.plus_api.PlusAPI")
+    @patch("crewai.plus_api.PlusAPI")
     @patch("crewai_tools.tools.crewai_platform_tools.misc.get_platform_integration_token", return_value="test-api-key")
     def test_fetches_configs_successfully(self, mock_get_token, mock_plus_api_class, resolver):
         mock_response = MagicMock()
@@ -133,7 +133,7 @@ class TestFetchAmpMCPConfigs:
         mock_plus_api_class.assert_called_once_with(api_key="test-api-key")
         mock_plus_api.get_mcp_configs.assert_called_once_with(["notion", "github"])
 
-    @patch("crewai.cli.plus_api.PlusAPI")
+    @patch("crewai.plus_api.PlusAPI")
     @patch("crewai_tools.tools.crewai_platform_tools.misc.get_platform_integration_token", return_value="test-api-key")
     def test_omits_missing_slugs(self, mock_get_token, mock_plus_api_class, resolver):
         mock_response = MagicMock()
@@ -150,7 +150,7 @@ class TestFetchAmpMCPConfigs:
         assert "notion" in result
         assert "missing-server" not in result
 
-    @patch("crewai.cli.plus_api.PlusAPI")
+    @patch("crewai.plus_api.PlusAPI")
     @patch("crewai_tools.tools.crewai_platform_tools.misc.get_platform_integration_token", return_value="test-api-key")
     def test_returns_empty_on_http_error(self, mock_get_token, mock_plus_api_class, resolver):
         mock_response = MagicMock()
@@ -163,7 +163,7 @@ class TestFetchAmpMCPConfigs:
 
         assert result == {}
 
-    @patch("crewai.cli.plus_api.PlusAPI")
+    @patch("crewai.plus_api.PlusAPI")
     @patch("crewai_tools.tools.crewai_platform_tools.misc.get_platform_integration_token", return_value="test-api-key")
     def test_returns_empty_on_network_error(self, mock_get_token, mock_plus_api_class, resolver):
         import httpx

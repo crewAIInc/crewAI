@@ -12,18 +12,19 @@ import threading
 import time
 from typing import Any
 
+from crewai_core.lock_store import lock as store_lock
 import lancedb  # type: ignore[import-untyped]
 
+from crewai.memory.storage.backend import EmbeddingDimensionMismatchError
 from crewai.memory.types import MemoryRecord, ScopeInfo
-from crewai.utilities.lock_store import lock as store_lock
 
 
 _logger = logging.getLogger(__name__)
 
-# Default embedding vector dimensionality (matches OpenAI text-embedding-3-small).
+# Default embedding vector dimensionality (matches OpenAI text-embedding-3-large).
 # Used when creating new tables and for zero-vector placeholder scans.
 # Callers can override via the ``vector_dim`` constructor parameter.
-DEFAULT_VECTOR_DIM = 1536
+DEFAULT_VECTOR_DIM = 3072
 
 # Safety cap on the number of rows returned by a single scan query.
 # Prevents unbounded memory use when scanning large tables for scope info,
@@ -68,7 +69,7 @@ class LanceDBStorage:
             if storage_dir:
                 path = Path(storage_dir) / "memory"
             else:
-                from crewai.utilities.paths import db_storage_path
+                from crewai_core.paths import db_storage_path
 
                 path = Path(db_storage_path()) / "memory"
         self._path = Path(path)
@@ -197,10 +198,6 @@ class LanceDBStorage:
                 "Scope index creation skipped (may already exist)", exc_info=True
             )
 
-    # ------------------------------------------------------------------
-    # Automatic background compaction
-    # ------------------------------------------------------------------
-
     def _compact_if_needed(self) -> None:
         """Spawn a background compaction on startup.
 
@@ -292,13 +289,19 @@ class LanceDBStorage:
     def save(self, records: list[MemoryRecord]) -> None:
         if not records:
             return
-        # Auto-detect dimension from the first real embedding.
+        # Auto-detect dimension from the first real embedding and validate
+        # the whole batch against it — a silent mismatch would otherwise be
+        # zero-filled below and corrupt search results.
         dim = None
         for r in records:
             if r.embedding and len(r.embedding) > 0:
-                dim = len(r.embedding)
-                break
+                if dim is None:
+                    dim = len(r.embedding)
+                elif len(r.embedding) != dim:
+                    raise EmbeddingDimensionMismatchError(dim, len(r.embedding))
         is_new_table = self._table is None
+        if not is_new_table and dim and self._vector_dim and dim != self._vector_dim:
+            raise EmbeddingDimensionMismatchError(self._vector_dim, dim)
         with store_lock(self._lock_name):
             self._ensure_table(vector_dim=dim)
             rows = [self._record_to_row(rec) for rec in records]
@@ -315,6 +318,15 @@ class LanceDBStorage:
 
     def update(self, record: MemoryRecord) -> None:
         """Update a record by ID. Preserves created_at, updates last_accessed."""
+        if (
+            self._table is not None
+            and record.embedding
+            and self._vector_dim
+            and len(record.embedding) != self._vector_dim
+        ):
+            raise EmbeddingDimensionMismatchError(
+                self._vector_dim, len(record.embedding)
+            )
         with store_lock(self._lock_name):
             self._ensure_table()
             safe_id = str(record.id).replace("'", "''")
@@ -367,6 +379,10 @@ class LanceDBStorage:
     ) -> list[tuple[MemoryRecord, float]]:
         if self._table is None:
             return []
+        if self._vector_dim and len(query_embedding) != self._vector_dim:
+            raise EmbeddingDimensionMismatchError(
+                self._vector_dim, len(query_embedding)
+            )
         query = self._table.search(query_embedding)
         if scope_prefix is not None and scope_prefix.strip("/"):
             prefix = scope_prefix.rstrip("/")

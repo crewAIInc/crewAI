@@ -157,7 +157,6 @@ def prepare_task_execution(
     Raises:
         ValueError: If no agent is available for the task.
     """
-    # Handle replay skip
     if start_index is not None and task_index < start_index:
         if task.output:
             task_outputs.append(task.output)
@@ -290,7 +289,6 @@ def prepare_kickoff(
         reset_emission_counter()
         reset_last_event_id()
 
-    # Normalize inputs to dict[str, Any] for internal processing
     normalized: dict[str, Any] | None = None
     if inputs is not None:
         if not isinstance(inputs, Mapping):
@@ -331,15 +329,12 @@ def prepare_kickoff(
     crew._task_output_handler.reset()
     crew._logging_color = "bold_purple"
 
-    # Check for flow input files in baggage context (inherited from parent Flow)
     _flow_files = baggage.get_baggage("flow_input_files")
     flow_files: dict[str, Any] = _flow_files if isinstance(_flow_files, dict) else {}
 
     if normalized is not None:
-        # Extract file objects unpacked directly into inputs
         unpacked_files = _extract_files_from_inputs(normalized)
 
-        # Merge files: flow_files < input_files < unpacked_files (later takes precedence)
         all_files = {**flow_files, **(input_files or {}), **unpacked_files}
         if all_files:
             store_files(crew.id, all_files)
@@ -347,16 +342,22 @@ def prepare_kickoff(
         crew._inputs = normalized
         crew._interpolate_inputs(normalized)
     else:
-        # No inputs dict provided
         all_files = {**flow_files, **(input_files or {})}
         if all_files:
             store_files(crew.id, all_files)
     crew._set_tasks_callbacks()
     crew._set_allow_crewai_trigger_context_for_first_task()
 
+    agents_to_setup: list[BaseAgent] = list(crew.agents)
+    seen_agent_ids: set[int] = {id(agent) for agent in agents_to_setup}
+    for task in crew.tasks:
+        if task.agent is not None and id(task.agent) not in seen_agent_ids:
+            agents_to_setup.append(task.agent)
+            seen_agent_ids.add(id(task.agent))
+
     setup_agents(
         crew,
-        crew.agents,
+        agents_to_setup,
         crew.embedder,
         crew.function_calling_llm,
         crew.step_callback,

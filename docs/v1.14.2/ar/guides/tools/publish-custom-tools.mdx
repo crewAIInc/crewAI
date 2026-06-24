@@ -1,0 +1,96 @@
+---
+title: نشر أدوات مخصصة
+description: كيفية بناء وتعبئة ونشر أدواتك الخاصة المتوافقة مع CrewAI على PyPI ليتمكن أي مستخدم CrewAI من تثبيتها واستخدامها.
+icon: box-open
+mode: "wide"
+---
+
+## نظرة عامة
+
+نظام الأدوات في CrewAI مصمم للتوسيع. إذا بنيت أداة يمكن أن تفيد الآخرين، يمكنك تعبئتها كمكتبة Python مستقلة ونشرها على PyPI وإتاحتها لأي مستخدم CrewAI — دون الحاجة لطلب سحب إلى مستودع CrewAI.
+
+يمشي هذا الدليل عبر العملية الكاملة: تنفيذ عقد الأدوات، وهيكلة حزمتك، والنشر على PyPI.
+
+<Note type="info" title="لا تبحث عن النشر؟">
+إذا كنت تحتاج فقط أداة مخصصة لمشروعك، راجع دليل [إنشاء أدوات مخصصة](/ar/learn/create-custom-tools) بدلاً من ذلك.
+</Note>
+
+## عقد الأدوات
+
+كل أداة CrewAI يجب أن تستوفي إحدى الواجهتين:
+
+### الخيار 1: وراثة `BaseTool`
+
+ورث من `crewai.tools.BaseTool` وطبّق طريقة `_run`. عرّف `name` و`description` واختياريًا `args_schema` للتحقق من المدخلات.
+
+```python
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
+
+
+class GeolocateInput(BaseModel):
+    """Input schema for GeolocateTool."""
+    address: str = Field(..., description="The street address to geolocate.")
+
+
+class GeolocateTool(BaseTool):
+    name: str = "Geolocate"
+    description: str = "Converts a street address into latitude/longitude coordinates."
+    args_schema: type[BaseModel] = GeolocateInput
+
+    def _run(self, address: str) -> str:
+        return f"40.7128, -74.0060"
+```
+
+### الخيار 2: استخدام مزخرف `@tool`
+
+للأدوات الأبسط، يحوّل مزخرف `@tool` دالة إلى أداة CrewAI. يجب أن تحتوي الدالة على سلسلة توثيق (تُستخدم كوصف الأداة) وتعليقات أنواع.
+
+```python
+from crewai.tools import tool
+
+
+@tool("Geolocate")
+def geolocate(address: str) -> str:
+    """Converts a street address into latitude/longitude coordinates."""
+    return "40.7128, -74.0060"
+```
+
+### المتطلبات الأساسية
+
+بغض النظر عن النهج الذي تستخدمه، يجب أن تحتوي أداتك على:
+
+- **`name`** — معرّف قصير ووصفي.
+- **`description`** — يخبر الـ Agent متى وكيف يستخدم الأداة.
+- **`_run`** (BaseTool) أو **جسم الدالة** (@tool) — منطق التنفيذ المتزامن.
+- **تعليقات أنواع** على جميع المعاملات وقيم الإرجاع.
+- إرجاع نتيجة **نصية** (أو شيء يمكن تحويله لنص).
+
+## هيكل الحزمة
+
+```
+crewai-geolocate/
+├── pyproject.toml
+├── LICENSE
+├── README.md
+└── src/
+    └── crewai_geolocate/
+        ├── __init__.py
+        └── tools.py
+```
+
+## النشر على PyPI
+
+```bash
+# Build the package
+uv build
+
+# Publish to PyPI
+uv publish
+```
+
+بعد النشر، يمكن للمستخدمين تثبيت أداتك بـ:
+
+```bash
+uv add crewai-geolocate
+```

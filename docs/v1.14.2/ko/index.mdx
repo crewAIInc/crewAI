@@ -1,0 +1,102 @@
+---
+title: "CrewAI 문서"
+description: "협업형 AI 에이전트, 크루, 플로우를 설계하고 즉시 프로덕션에 배포하세요."
+icon: "house"
+mode: "wide"
+---
+
+<div
+  style={{
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 20,
+    textAlign: 'center',
+    padding: '48px 24px',
+    borderRadius: 16,
+    background: 'linear-gradient(180deg, rgba(235,102,88,0.12) 0%, rgba(201,76,60,0.08) 100%)',
+    border: '1px solid rgba(235,102,88,0.18)'
+  }}
+>
+  <img src="/images/crew_only_logo.png" alt="CrewAI" width="250" height="100" />
+  <div style={{ maxWidth: 720 }}>
+    <h1 style={{ marginBottom: 12 }}>신뢰할 수 있는 멀티에이전트 시스템 구축</h1>
+    <p style={{ color: 'var(--mint-text-2)' }}>
+      에이전트를 설계하고 크루를 오케스트레이션하며 guardrails, 메모리, 지식, Observability가 기본 내장된 플로우를 자동화하세요.
+    </p>
+  </div>
+
+  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
+    <a className="button button-primary" href="/ko/quickstart">빠르게 시작하기</a>
+    <a className="button button-secondary" href="/ko/changelog">변경 로그 보기</a>
+    <a className="button button-secondary" href="/ko/api-reference/introduction">API 레퍼런스</a>
+  </div>
+</div>
+
+<div style={{ marginTop: 32 }} />
+
+<CardGroup cols={3}>
+  <Card title="소개" href="/ko/introduction" icon="sparkles">
+    CrewAI의 핵심 개념, 아키텍처, 에이전트·크루·플로우로 만들 수 있는 것들을 빠르게 파악하세요.
+  </Card>
+  <Card title="설치" href="/ko/installation" icon="wrench">
+    `uv` 설치, API 키 설정, 로컬 개발을 위한 CLI 초기화까지 모든 단계를 안내합니다.
+  </Card>
+  <Card title="빠른 시작" href="/ko/quickstart" icon="rocket">
+    몇 분 만에 첫 크루를 실행하세요. 런타임, 프로젝트 구조, 개발 루프를 배울 수 있습니다.
+  </Card>
+</CardGroup>
+
+## 기본 구축
+
+<CardGroup cols={3}>
+  <Card title="에이전트" href="/ko/concepts/agents" icon="users">
+    도구, 메모리, 지식, 구조화된 출력을 갖춘 에이전트를 구성하는 방법과 베스트 프랙티스를 배워보세요.
+  </Card>
+  <Card title="플로우" href="/ko/concepts/flows" icon="arrow-progress">
+    start/listen/router 단계, 상태 관리, 실행 저장 및 재개 등 복잡한 워크플로우를 설계하세요.
+  </Card>
+  <Card title="작업 & 프로세스" href="/ko/concepts/tasks" icon="check">
+    guardrails, 콜백, human-in-the-loop가 포함된 순차적·계층적 프로세스를 정의하세요.
+  </Card>
+</CardGroup>
+
+## 엔터프라이즈 여정
+
+<CardGroup cols={3}>
+  <Card title="Automations" href="/ko/enterprise/features/automations" icon="server">
+    환경을 관리하고 안전하게 재배포하며, Enterprise 콘솔에서 실시간 실행을 모니터링하세요.
+  </Card>
+  <Card title="Triggers & Flows" href="/ko/enterprise/guides/automation-triggers" icon="bolt">
+    Gmail, Slack, Salesforce 등 다양한 서비스를 연결하고 trigger payload를 자동으로 크루와 플로우에 전달하세요.
+  </Card>
+  <Card title="팀 관리" href="/ko/enterprise/guides/team-management" icon="users-gear">
+    팀원을 초대하고 RBAC을 설정하며, 프로덕션 자동화에 대한 접근을 제어하세요.
+  </Card>
+</CardGroup>
+
+## 최신 소식
+
+<CardGroup cols={2}>
+  <Card title="트리거 개요" href="/ko/enterprise/guides/automation-triggers" icon="sparkles">
+    Gmail, Drive, Outlook, Teams, OneDrive, HubSpot 등 다수의 통합을 하나의 문서에서 확인하고, payload/crew 예제를 살펴보세요.
+  </Card>
+  <Card title="통합 도구" href="/ko/tools/integration/overview" icon="plug">
+    기존 CrewAI 자동화 또는 Amazon Bedrock Agent를 크루에서 직접 호출하는 방법을 안내합니다.
+  </Card>
+</CardGroup>
+
+<Callout title="실전 예제를 살펴보세요" icon="github">
+  <a href="/ko/examples/cookbooks">examples & cookbooks</a> 섹션에서 에이전트, 플로우, Enterprise 자동화의 엔드-투-엔드 구현을 확인해 보세요.
+</Callout>
+
+## 커뮤니티
+
+<CardGroup cols={2}>
+  <Card title="GitHub 스타 남기기" href="https://github.com/crewAIInc/crewAI" icon="star">
+    CrewAI가 도움이 되었다면 GitHub에서 별을 남기고 빌드를 공유해주세요.
+  </Card>
+  <Card title="커뮤니티 참여" href="https://community.crewai.com" icon="comments">
+    질문을 올리고, 워크플로우를 공유하며, 다른 빌더와 함께 새로운 기능을 제안하세요.
+  </Card>
+</CardGroup>
