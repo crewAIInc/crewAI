@@ -604,6 +604,16 @@ def _run_flow_project(
         run_declarative_flow_in_project_env(definition=definition)
         return
 
+    from crewai_cli.kickoff_flow import (
+        _load_conversational_flow_from_kickoff_script,
+        _run_conversational_flow_tui,
+    )
+
+    flow = _load_conversational_flow_from_kickoff_script()
+    if flow is not None:
+        _run_conversational_flow_tui(flow)
+        return
+
     _execute_uv_script("kickoff", entity_type="flow")
 
 

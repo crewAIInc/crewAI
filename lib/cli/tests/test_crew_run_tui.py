@@ -126,6 +126,52 @@ def test_chain_deploy_does_not_login_for_deploy_exit(monkeypatch, capsys) -> Non
     assert "Deploy failed with exit code 42" in capsys.readouterr().out
 
 
+def test_conversation_turn_done_records_assistant_message() -> None:
+    class RawResult:
+        raw = "hello from the flow"
+
+    app = CrewRunApp(conversational=True)
+    app._conversation_turn_in_progress = True
+    app._enable_conversation_input = lambda: None  # type: ignore[method-assign]
+    app._tick = lambda: None  # type: ignore[method-assign]
+    app._scroll_to_result = lambda: None  # type: ignore[method-assign]
+
+    app._on_conversation_turn_done(RawResult())
+
+    assert app._conversation_messages == [("assistant", "hello from the flow")]
+    assert app._conversation_turn_in_progress is False
+    assert app._status == "chatting"
+    assert isinstance(app._crew_result, RawResult)
+
+
+@pytest.mark.asyncio
+async def test_conversation_input_submits_turn() -> None:
+    class FakeFlow:
+        defer_trace_finalization = False
+
+        def handle_turn(self, message: str) -> str:
+            return f"reply: {message}"
+
+        def finalize_session_traces(self) -> None:
+            pass
+
+    app = CrewRunApp(crew_name="Demo", conversational=True)
+    app._flow = FakeFlow()
+
+    async with app.run_test() as pilot:
+        await pilot.click("#conversation-input")
+        await pilot.press("h", "i", "enter")
+        for _ in range(50):
+            await pilot.pause(0.05)
+            if app._conversation_messages[-1:] == [("assistant", "reply: hi")]:
+                break
+
+    assert app._conversation_messages == [
+        ("user", "hi"),
+        ("assistant", "reply: hi"),
+    ]
+
+
 def test_plan_step_status_updates_only_the_explicit_step() -> None:
     app = _app_with_plan()
 
