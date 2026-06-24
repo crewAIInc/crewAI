@@ -928,8 +928,6 @@ class TestConversationalFlow:
             conversational = True
 
         flow = BareChat()
-        # ``flow.state`` returns a ``StateProxy``; the underlying state is
-        # on ``flow._state``. Both views expose the same chat-shaped fields.
         assert isinstance(flow._state, ConversationState)
         assert flow.state.messages == []
         assert flow.state.current_user_message is None
