@@ -466,7 +466,8 @@ def _run_with_events(flow, inputs=None):
 
 
 def _state_without_id(flow):
-    snapshot = dict(flow.state.model_dump())
+    state = flow.state
+    snapshot = dict(state if isinstance(state, dict) else state.model_dump())
     snapshot.pop("id", None)
     return snapshot
 
