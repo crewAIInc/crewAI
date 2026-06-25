@@ -58,6 +58,8 @@ def _format_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
 
     result_schema = getattr(tool, "result_schema", None)
     if not (isinstance(result_schema, type) and issubclass(result_schema, BaseModel)):
+        if isinstance(raw_result, (dict, list)):
+            return json.dumps(raw_result)
         return str(raw_result)
 
     try:
@@ -80,6 +82,8 @@ def _format_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
             RuntimeWarning,
             stacklevel=2,
         )
+        if isinstance(raw_result, (dict, list)):
+            return json.dumps(raw_result)
         return str(raw_result)
 
 
