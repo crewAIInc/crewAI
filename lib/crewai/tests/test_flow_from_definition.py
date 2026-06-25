@@ -357,6 +357,27 @@ methods:
     listen: begin
 """
 
+JSON_SCHEMA_REQUIRED_INPUT_STATE_YAML = """
+schema: crewai.flow/v1
+name: JsonSchemaRequiredInputStateFlow
+state:
+  type: json_schema
+  json_schema:
+    title: LeadState
+    type: object
+    required:
+      - lead_name
+    properties:
+      lead_name:
+        type: string
+methods:
+  begin:
+    start: true
+    do:
+      call: expression
+      expr: state.lead_name
+"""
+
 PYDANTIC_REF_WITH_SCHEMA_FALLBACK_YAML = f"""
 schema: crewai.flow/v1
 name: SchemaFallbackFlow
@@ -2296,6 +2317,18 @@ def test_json_schema_state_validates_inputs():
     flow = Flow.from_definition(FlowDefinition.from_declaration(contents=JSON_SCHEMA_STATE_YAML))
     with pytest.raises(ValueError, match="Invalid inputs"):
         flow.kickoff(inputs={"count": "not-a-number"})
+
+
+def test_json_schema_state_required_fields_can_come_from_kickoff_inputs():
+    flow = Flow.from_definition(
+        FlowDefinition.from_declaration(contents=JSON_SCHEMA_REQUIRED_INPUT_STATE_YAML)
+    )
+
+    result = flow.kickoff(inputs={"lead_name": "Ada Lovelace"})
+
+    assert result == "Ada Lovelace"
+    assert flow.state.lead_name == "Ada Lovelace"
+    assert flow.state.id
 
 
 def test_pydantic_state_falls_back_to_json_schema_when_ref_unimportable():
