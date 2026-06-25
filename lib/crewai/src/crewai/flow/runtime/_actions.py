@@ -8,6 +8,7 @@ from collections.abc import Awaitable, Callable
 import contextvars
 import inspect
 import os
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, cast
 
 from crewai.flow.expressions import Expression, ExpressionData
@@ -23,7 +24,11 @@ from crewai.flow.flow_definition import (
     FlowToolActionDefinition,
 )
 from crewai.flow.runtime._outputs import outputs_by_name
-from crewai.flow.runtime._refs import InvalidRefError, resolve_ref
+from crewai.utilities.declarative_refs import (
+    InvalidRefError,
+    resolve_class_ref,
+    resolve_ref,
+)
 
 
 if TYPE_CHECKING:
@@ -102,16 +107,17 @@ class ToolAction:
         )
 
     def _build_tool(self) -> Any:
-        target = resolve_ref(self.definition.ref, field="do")
         from crewai.tools import BaseTool
 
-        if not (inspect.isclass(target) and issubclass(target, BaseTool)):
-            raise InvalidRefError(
-                f"invalid tool ref {self.definition.ref!r}; expected a BaseTool class"
-            )
-
+        tool_cls = cast(
+            Callable[[], BaseTool],
+            resolve_class_ref(
+                self.definition.ref,
+                field="do",
+                base_class=BaseTool,
+            ),
+        )
         try:
-            tool_cls = cast(Callable[[], BaseTool], target)
             return tool_cls()
         except Exception as e:
             raise InvalidRefError(
@@ -128,16 +134,34 @@ class CrewAction:
         self.definition = definition
 
     async def run(self, *_args: Any, **kwargs: Any) -> Any:
-        from crewai.project.crew_loader import load_crew_from_definition
+        from crewai.project.crew_loader import load_crew, load_crew_from_definition
 
         local_context = _pop_local_context(kwargs)
-        crew_definition = self.definition.with_
+        if self.definition.from_declaration is not None:
+            crew, default_inputs = load_crew(
+                _resolve_crew_declaration(
+                    self.definition.from_declaration,
+                    base_dir=self.flow._definition.source_dir,
+                )
+            )
+            input_template = {**default_inputs, **(self.definition.inputs or {})}
+        else:
+            crew_definition = self.definition.with_
+            if crew_definition is None:
+                raise ValueError(
+                    "crew action requires exactly one of from_declaration or with"
+                )
+            input_template = {
+                **crew_definition.inputs,
+                **(self.definition.inputs or {}),
+            }
+            crew, _ = load_crew_from_definition(crew_definition, source="crew action")
+
         inputs = Expression.from_flow(
-            cast(ExpressionData, crew_definition.inputs),
+            cast(ExpressionData, input_template),
             self.flow,
             local_context=local_context,
         ).render_template()
-        crew, _ = load_crew_from_definition(crew_definition, source="crew action")
         return await crew.kickoff_async(inputs=inputs)
 
 
@@ -359,3 +383,29 @@ def _pop_local_context(kwargs: dict[str, Any]) -> LocalContext | None:
     if not isinstance(local_context, dict):
         raise TypeError("flow definition local context must be a mapping")
     return cast(LocalContext, local_context)
+
+
+def _resolve_crew_declaration(
+    from_declaration: str, *, base_dir: Path | None = None
+) -> Path:
+    path = Path(from_declaration).expanduser()
+    if base_dir is not None:
+        resolved_base_dir = base_dir.expanduser().resolve()
+        if not path.is_absolute():
+            path = resolved_base_dir / path
+        resolved_path = path.resolve()
+        if not resolved_path.is_relative_to(resolved_base_dir):
+            raise ValueError(
+                "crew declaration path must be within the flow definition directory"
+            )
+        path = resolved_path
+
+    if not path.is_dir():
+        return path
+
+    for name in ("crew.jsonc", "crew.json"):
+        candidate = path / name
+        if candidate.is_file():
+            return candidate
+
+    return path / "crew.jsonc"
