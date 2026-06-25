@@ -61,8 +61,13 @@ def _write_secure_json(path: Path, data: dict[str, Any]) -> None:
         if fd_open:
             try:
                 os.close(fd)
-            except OSError:
-                pass
+            except OSError as close_error:
+                logger.debug(
+                    "Could not close temporary settings file descriptor for %s "
+                    "(best-effort cleanup): %s",
+                    tmp,
+                    close_error,
+                )
         if os.path.exists(tmp):
             os.unlink(tmp)
         raise
