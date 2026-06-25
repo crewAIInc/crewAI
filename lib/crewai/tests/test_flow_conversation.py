@@ -14,6 +14,8 @@ from crewai.events.listeners.tracing.trace_listener import TraceCollectionListen
 from crewai.events.types.flow_events import (
     ConversationMessageAddedEvent,
     ConversationRouteSelectedEvent,
+    ConversationTurnCompletedEvent,
+    ConversationTurnFailedEvent,
     ConversationTurnStartedEvent,
     FlowStartedEvent,
     MethodExecutionFinishedEvent,
@@ -1126,10 +1128,10 @@ class TestConversationalFlow:
         assert observed_events[0] == "flow_started"
         assert observed_events[1] == "conversation_message_added"
 
-    def test_handle_turn_emits_turn_started_for_each_conversational_turn(
+    def test_handle_turn_emits_started_and_completed_for_each_conversational_turn(
         self,
     ) -> None:
-        """Each ``handle_turn()`` emits a usage-friendly turn start event."""
+        """Each ``handle_turn()`` emits paired turn lifecycle events."""
 
         @ConversationConfig(defer_trace_finalization=True)
         class DeferredFlow(ConversationalFlow):
@@ -1143,27 +1145,86 @@ class TestConversationalFlow:
 
         flow = DeferredFlow()
         default_session_id = flow.state.id
-        turn_events: list[ConversationTurnStartedEvent] = []
+        turn_events: list[
+            ConversationTurnStartedEvent | ConversationTurnCompletedEvent
+        ] = []
 
-        with crewai_event_bus.scoped_handlers():
+        original_emit = crewai_event_bus.emit
 
-            @crewai_event_bus.on(ConversationTurnStartedEvent)
-            def capture(_: Any, event: ConversationTurnStartedEvent) -> None:
+        def capture_emit(source: Any, event: Any) -> Any:
+            if isinstance(
+                event, (ConversationTurnStartedEvent, ConversationTurnCompletedEvent)
+            ):
                 turn_events.append(event)
+            return original_emit(source, event)
 
+        with patch.object(crewai_event_bus, "emit", side_effect=capture_emit):
             flow.handle_turn("turn 1")
             flow.handle_turn("turn 2", session_id="custom-session")
             crewai_event_bus.flush()
 
         assert [event.type for event in turn_events] == [
             "conversation_turn_started",
+            "conversation_turn_completed",
             "conversation_turn_started",
+            "conversation_turn_completed",
         ]
         assert turn_events[0].session_id == default_session_id
-        assert turn_events[1].session_id == "custom-session"
+        assert turn_events[1].session_id == default_session_id
+        assert turn_events[2].session_id == "custom-session"
+        assert turn_events[3].session_id == "custom-session"
 
-    def test_conversation_turn_started_tracks_feature_usage(self) -> None:
-        """Conversation turn events count conversational Flow usage."""
+    def test_handle_turn_emits_failed_instead_of_completed_when_turn_raises(
+        self,
+    ) -> None:
+        """Failed turns emit a terminal failure event without completion."""
+
+        @ConversationConfig(defer_trace_finalization=True)
+        class FailingFlow(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "work"
+
+            @listen("work")
+            def do_work(self) -> str:
+                raise RuntimeError("turn exploded")
+
+        flow = FailingFlow()
+        turn_events: list[
+            ConversationTurnStartedEvent
+            | ConversationTurnCompletedEvent
+            | ConversationTurnFailedEvent
+        ] = []
+        original_emit = crewai_event_bus.emit
+
+        def capture_emit(source: Any, event: Any) -> Any:
+            if isinstance(
+                event,
+                (
+                    ConversationTurnStartedEvent,
+                    ConversationTurnCompletedEvent,
+                    ConversationTurnFailedEvent,
+                ),
+            ):
+                turn_events.append(event)
+            return original_emit(source, event)
+
+        with patch.object(crewai_event_bus, "emit", side_effect=capture_emit):
+            with pytest.raises(RuntimeError, match="turn exploded"):
+                flow.handle_turn("turn 1")
+            crewai_event_bus.flush()
+
+        assert [event.type for event in turn_events] == [
+            "conversation_turn_started",
+            "conversation_turn_failed",
+        ]
+        assert turn_events[0].session_id == flow.state.id
+        failed_event = turn_events[1]
+        assert isinstance(failed_event, ConversationTurnFailedEvent)
+        assert failed_event.session_id == flow.state.id
+        assert str(failed_event.error) == "turn exploded"
+
+    def test_conversation_turn_completed_tracks_feature_usage(self) -> None:
+        """Completed conversation turns count conversational Flow usage."""
         from crewai.events.event_listener import event_listener
 
         with (
@@ -1176,8 +1237,8 @@ class TestConversationalFlow:
             event_listener.setup_listeners(crewai_event_bus)
             crewai_event_bus.emit(
                 self,
-                ConversationTurnStartedEvent(
-                    type="conversation_turn_started",
+                ConversationTurnCompletedEvent(
+                    type="conversation_turn_completed",
                     flow_name="ChatFlow",
                     session_id="session-1",
                 ),

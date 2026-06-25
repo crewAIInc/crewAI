@@ -191,6 +191,27 @@ class ConversationTurnStartedEvent(FlowEvent):
     type: Literal["conversation_turn_started"] = "conversation_turn_started"
 
 
+class ConversationTurnCompletedEvent(FlowEvent):
+    """Event emitted when a conversational Flow completes a user turn."""
+
+    session_id: str
+    type: Literal["conversation_turn_completed"] = "conversation_turn_completed"
+
+
+class ConversationTurnFailedEvent(FlowEvent):
+    """Event emitted when a conversational Flow turn fails."""
+
+    session_id: str
+    error: Exception
+    type: Literal["conversation_turn_failed"] = "conversation_turn_failed"
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_serializer("error")
+    def _serialize_error(self, error: Exception) -> str:
+        return str(error)
+
+
 class ConversationRouteSelectedEvent(FlowEvent):
     """Event emitted when a conversational Flow selects a route for a turn."""
 

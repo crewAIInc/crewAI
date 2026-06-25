@@ -30,6 +30,8 @@ from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.flow_events import (
     ConversationMessageAddedEvent,
     ConversationRouteSelectedEvent,
+    ConversationTurnCompletedEvent,
+    ConversationTurnFailedEvent,
     ConversationTurnStartedEvent,
 )
 from crewai.experimental.conversational import (
@@ -296,25 +298,44 @@ class _ConversationalMixin:
         self._pending_intents = list(intents) if intents else None
         self._pending_intent_llm = intent_llm
 
-        # Each turn is a fresh execution; clear graph tracking so the second
-        # turn re-runs instead of being treated as a checkpoint restore.
-        if "from_checkpoint" not in kickoff_kwargs:
-            self._reset_turn_execution_state()
-
-        assistant_count = self._assistant_message_count()
         try:
+            # Each turn is a fresh execution; clear graph tracking so the second
+            # turn re-runs instead of being treated as a checkpoint restore.
+            if "from_checkpoint" not in kickoff_kwargs:
+                self._reset_turn_execution_state()
+
+            assistant_count = self._assistant_message_count()
             result = self.kickoff(inputs={"id": sid}, **kickoff_kwargs)
+            if (
+                result is not None
+                and self._assistant_message_count() == assistant_count
+                and self._is_public_turn_result(result)
+            ):
+                self.append_assistant_message(self._stringify_result(result))
+        except Exception as exc:
+            crewai_event_bus.emit(
+                self,
+                ConversationTurnFailedEvent(
+                    type="conversation_turn_failed",
+                    flow_name=self.name or self.__class__.__name__,
+                    session_id=sid,
+                    error=exc,
+                ),
+            )
+            raise
         finally:
             self._pending_user_message = None
             self._pending_intents = None
             self._pending_intent_llm = None
 
-        if (
-            result is not None
-            and self._assistant_message_count() == assistant_count
-            and self._is_public_turn_result(result)
-        ):
-            self.append_assistant_message(self._stringify_result(result))
+        crewai_event_bus.emit(
+            self,
+            ConversationTurnCompletedEvent(
+                type="conversation_turn_completed",
+                flow_name=self.name or self.__class__.__name__,
+                session_id=sid,
+            ),
+        )
         return result
 
     def chat(
