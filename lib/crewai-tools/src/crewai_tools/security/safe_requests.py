@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import Any
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import requests
 
@@ -11,6 +11,41 @@ from crewai_tools.security.safe_path import validate_url
 
 
 _REDIRECT_STATUS_CODES = {301, 302, 303, 307, 308}
+_SENSITIVE_HEADER_NAMES = {
+    "authorization",
+    "cookie",
+    "proxy-authorization",
+    "x-api-key",
+}
+_SENSITIVE_HEADER_FRAGMENTS = ("api-key", "apikey", "secret", "token")
+
+
+def _same_origin(previous_url: str, next_url: str) -> bool:
+    previous = urlparse(previous_url)
+    next_ = urlparse(next_url)
+    return (previous.scheme, previous.netloc) == (next_.scheme, next_.netloc)
+
+
+def _is_sensitive_header(header: str) -> bool:
+    normalized = header.lower()
+    return (
+        normalized in _SENSITIVE_HEADER_NAMES
+        or normalized.startswith("authorization-")
+        or any(fragment in normalized for fragment in _SENSITIVE_HEADER_FRAGMENTS)
+    )
+
+
+def _strip_cross_origin_credentials(request_kwargs: dict[str, Any]) -> dict[str, Any]:
+    sanitized = {**request_kwargs}
+    headers = sanitized.get("headers")
+    if headers:
+        sanitized["headers"] = {
+            key: value
+            for key, value in headers.items()
+            if not _is_sensitive_header(str(key))
+        }
+    sanitized.pop("cookies", None)
+    return sanitized
 
 
 def safe_get(url: str, *, max_redirects: int = 10, **kwargs: Any) -> requests.Response:
@@ -44,6 +79,10 @@ def safe_get(url: str, *, max_redirects: int = 10, **kwargs: Any) -> requests.Re
         except ValueError:
             response.close()
             raise
+
+        if not _same_origin(current_url, redirect_url):
+            request_kwargs = _strip_cross_origin_credentials(request_kwargs)
+
         history.append(response)
         current_url = redirect_url
         redirects_followed += 1
