@@ -50,12 +50,19 @@ def _ensure_dir_mode(directory: Path) -> None:
 def _write_secure_json(path: Path, data: dict[str, Any]) -> None:
     """Atomically write ``data`` as JSON to ``path`` with owner-only (0o600) mode."""
     fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
+    fd_open = True
     try:
         with os.fdopen(fd, "w") as f:
+            fd_open = False
             json.dump(data, f, indent=4)
         os.chmod(tmp, 0o600)
         os.replace(tmp, path)
     except BaseException:
+        if fd_open:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
         if os.path.exists(tmp):
             os.unlink(tmp)
         raise
