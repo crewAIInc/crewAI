@@ -54,7 +54,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.flow.flow import Flow, StateProxy, listen, or_, router, start
+from crewai.flow.flow import Flow, listen, or_, router, start
 from crewai.flow.types import FlowMethodName
 from crewai.hooks.llm_hooks import (
     get_after_llm_call_hooks,
@@ -80,6 +80,7 @@ from crewai.utilities.agent_utils import (
     enforce_rpm_limit,
     extract_tool_call_info,
     format_message_for_llm,
+    format_native_tool_output_for_agent,
     get_llm_response,
     handle_agent_action_core,
     handle_context_length,
@@ -274,11 +275,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             bool: True if stop words should be used.
         """
         return self.llm.supports_stop_words() if self.llm else False
-
-    @property
-    def state(self) -> AgentExecutorState:
-        """Get thread-safe state proxy."""
-        return StateProxy(self._state, self._state_lock)  # type: ignore[return-value]
 
     @property  # type: ignore[misc]
     def iterations(self) -> int:
@@ -1905,19 +1901,32 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         ):
             max_usage_reached = True
 
+        structured_tool: CrewStructuredTool | None = None
+        if original_tool is not None:
+            for structured in self.tools or []:
+                if getattr(structured, "_original_tool", None) is original_tool:
+                    structured_tool = structured
+                    break
+        if structured_tool is None:
+            for structured in self.tools or []:
+                if sanitize_tool_name(structured.name) == func_name:
+                    structured_tool = structured
+                    break
+
+        output_tool = original_tool or structured_tool
+
         # Check cache before executing
         from_cache = False
+        result = "Tool not found"
+        raw_tool_result: Any = result
         input_str = json.dumps(args_dict) if args_dict else ""
-        if self.tools_handler and self.tools_handler.cache:
+        if self.tools_handler and self.tools_handler.cache and output_tool is not None:
             cached_result = self.tools_handler.cache.read(
                 tool=func_name, input=input_str
             )
             if cached_result is not None:
-                result = (
-                    str(cached_result)
-                    if not isinstance(cached_result, str)
-                    else cached_result
-                )
+                raw_tool_result = cached_result
+                result = format_native_tool_output_for_agent(output_tool, cached_result)
                 from_cache = True
 
         # Emit tool usage started event
@@ -1935,18 +1944,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         error_event_emitted = False
 
         track_delegation_if_needed(func_name, args_dict, self.task)
-
-        structured_tool: CrewStructuredTool | None = None
-        if original_tool is not None:
-            for structured in self.tools or []:
-                if getattr(structured, "_original_tool", None) is original_tool:
-                    structured_tool = structured
-                    break
-        if structured_tool is None:
-            for structured in self.tools or []:
-                if sanitize_tool_name(structured.name) == func_name:
-                    structured_tool = structured
-                    break
 
         hook_blocked = False
         before_hook_context = ToolCallHookContext(
@@ -1973,12 +1970,13 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
         if hook_blocked:
             result = f"Tool execution blocked by hook. Tool: {func_name}"
-        elif not from_cache and not max_usage_reached:
-            result = "Tool not found"
+            raw_tool_result = result
+        elif not from_cache and not max_usage_reached and output_tool is not None:
             if func_name in self._available_functions:
                 try:
                     tool_func = self._available_functions[func_name]
                     raw_result = tool_func(**args_dict)
+                    raw_tool_result = raw_result
 
                     # Add to cache after successful execution (before string conversion)
                     if self.tools_handler and self.tools_handler.cache:
@@ -1992,14 +1990,12 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                                 tool=func_name, input=input_str, output=raw_result
                             )
 
-                    # Convert to string for message
-                    result = (
-                        str(raw_result)
-                        if not isinstance(raw_result, str)
-                        else raw_result
+                    result = format_native_tool_output_for_agent(
+                        output_tool, raw_result
                     )
                 except Exception as e:
                     result = f"Error executing tool: {e}"
+                    raw_tool_result = result
                     if self.task:
                         self.task.increment_tools_errors()
                     # Emit tool usage error event
@@ -2021,6 +2017,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 result = f"Tool '{func_name}' has reached its usage limit of {original_tool.max_usage_count} times and cannot be used anymore."
             else:
                 result = f"Tool '{func_name}' has reached its maximum usage limit and cannot be used anymore."
+            raw_tool_result = result
 
         # Execute after_tool_call hooks (even if blocked, to allow logging/monitoring)
         after_hook_context = ToolCallHookContext(
@@ -2031,6 +2028,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             task=self.task,
             crew=self.crew,
             tool_result=result,
+            raw_tool_result=raw_tool_result,
         )
         after_hooks = get_after_tool_call_hooks()
         try:

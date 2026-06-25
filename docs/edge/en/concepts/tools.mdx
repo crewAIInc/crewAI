@@ -39,6 +39,7 @@ The Enterprise Tools Repository includes:
 - **Error Handling**: Incorporates robust error handling mechanisms to ensure smooth operation.
 - **Caching Mechanism**: Features intelligent caching to optimize performance and reduce redundant operations.
 - **Asynchronous Support**: Handles both synchronous and asynchronous tools, enabling non-blocking operations.
+- **Typed Outputs**: Uses optional Pydantic models to give agents clear JSON fields while direct Python calls still receive the tool's normal return value.
 
 ## Using CrewAI Tools
 
@@ -183,6 +184,55 @@ class MyCustomTool(BaseTool):
         # Your tool's logic here
         return "Tool's result"
 ```
+
+### Typed Tool Outputs
+
+When a tool returns structured data, define a Pydantic output model. This gives the agent field names it can trust, such as `sku`, `quantity`, or `needs_reorder`.
+
+Direct Python calls still receive the value your tool returns. When an agent uses the tool, CrewAI sends the agent a JSON string based on the output model.
+
+```python Code
+from crewai.tools import BaseTool
+from pydantic import BaseModel
+
+class InventoryResult(BaseModel):
+    sku: str
+    quantity: int
+    needs_reorder: bool
+
+class InventoryTool(BaseTool):
+    name: str = "Inventory Check"
+    description: str = "Checks current stock for a product SKU."
+
+    def _run(self, sku: str) -> InventoryResult:
+        quantity = {"SKU-123": 14, "SKU-456": 0}.get(sku, 0)
+        return InventoryResult(sku=sku, quantity=quantity, needs_reorder=quantity < 5)
+
+tool = InventoryTool()
+
+# Direct calls receive the raw Pydantic object.
+result = tool.run(sku="SKU-123")
+print(result.quantity)
+```
+
+To send Markdown or another short text format to the agent, override `format_output_for_agent`. Direct calls to `tool.run(...)` still return the normal Python value.
+
+```python Code
+class InventoryTool(BaseTool):
+    name: str = "Inventory Check"
+    description: str = "Checks current stock for a product SKU."
+
+    def _run(self, sku: str) -> InventoryResult:
+        quantity = {"SKU-123": 14, "SKU-456": 0}.get(sku, 0)
+        return InventoryResult(sku=sku, quantity=quantity, needs_reorder=quantity < 5)
+
+    def format_output_for_agent(self, raw_result: object) -> str:
+        result = InventoryResult.model_validate(raw_result)
+        status = "reorder needed" if result.needs_reorder else "stock is healthy"
+        return f"{result.sku}: {result.quantity} units. {status}."
+```
+
+If you do not override `format_output_for_agent`, typed outputs are sent to the agent as JSON. Plain string results work as before.
 
 ## Asynchronous Tool Support
 
