@@ -19,11 +19,13 @@ class k8sAgentSandboxExecToolSchema(BaseModel):
 
 class K8sAgentSandboxExecTool(K8sAgentSandboxBaseTool):
     name: str = "K8s Agent Sandbox Exec Tool"
-    description: str = "Executes shell commands inside an isolated Kubernetes pod sandbox."
+    description: str = (
+        "Executes shell commands inside an isolated Kubernetes pod sandbox."
+    )
     args_schema: type[BaseModel] = k8sAgentSandboxExecToolSchema
 
     def _run_with_sandbox(self, sandbox: Sandbox, *args, **kwargs) -> dict[str, Any]:
-      return self._run_command(sandbox, *args, **kwargs)
+        return self._run_command(sandbox, *args, **kwargs)
 
     def _run_command(
         self,
@@ -37,5 +39,3 @@ class K8sAgentSandboxExecTool(K8sAgentSandboxBaseTool):
             "stdout": result.stdout,
             "stderr": result.stderr,
         }
-
-

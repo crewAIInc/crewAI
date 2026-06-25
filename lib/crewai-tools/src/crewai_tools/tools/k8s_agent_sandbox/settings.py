@@ -17,11 +17,11 @@ class K8sAgentSandboxToolClientSettings:
     It basically has the same arguments as the `k8s_agent_sandbox.SandboxClient`
     class.
     """
+
     connection_config: SandboxConnectionConfig | None = None
     tracer_config: SandboxTracerConfig | None = None
     cleanup: bool = False
 
-    cache_client: bool = True
     _client: SandboxClient | None = field(default=None, init=False, repr=False)
 
     @property
@@ -30,9 +30,9 @@ class K8sAgentSandboxToolClientSettings:
             return self._client
 
         self._client = SandboxClient(
-          connection_config=self.connection_config,
-          tracer_config=self.tracer_config,
-          cleanup=self.cleanup,
+            connection_config=self.connection_config,
+            tracer_config=self.tracer_config,
+            cleanup=self.cleanup,
         )
         return self._client
 
@@ -47,7 +47,7 @@ class K8sAgentSandboxToolSandboxSettings:
         namespace: Name of the namespace where a sandbox should be created.
         sandbox_timeout: The timeout in seconds after which the sandbox will be automatically killed.
     """
+
     warmpool: str
     namespace: str
     sandbox_timeout: int = 300
-

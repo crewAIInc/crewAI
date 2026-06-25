@@ -11,6 +11,7 @@ class DummyToolInputSchema(BaseModel):
     test_arg: str = Field(description="some positional argument")
     test_kwarg: str | None = Field(default=None, description="some keyword argument")
 
+
 class DummyK8sTool(K8sAgentSandboxBaseTool):
     name: str = "dummy_tool"
     description: str = "Dummy testing tool."
@@ -19,7 +20,9 @@ class DummyK8sTool(K8sAgentSandboxBaseTool):
     def _run_with_sandbox(self, sandbox, *args, **kwargs) -> dict[str, Any]:
         return self._dummy_work(sandbox, *args, **kwargs)
 
-    def _dummy_work(self, sandbox, test_arg: str, test_kwarg: str | None = None) -> dict[str, Any]:
+    def _dummy_work(
+        self, sandbox, test_arg: str, test_kwarg: str | None = None
+    ) -> dict[str, Any]:
         return {
             "sandbox-claim": sandbox.claim_name,
             "arg": test_arg,
@@ -36,8 +39,10 @@ def test_tool_added_to_toolset(sample_toolset):
 
     assert len(sample_toolset.tools) == 1
 
+
 def test_run_with_sandbox(
-    sample_toolset, mock_sandbox,
+    sample_toolset,
+    mock_sandbox,
     lifecycle_mode_sandbox_termination_expected,
 ):
     claim_name = "some-claim"
@@ -75,12 +80,15 @@ def test_sandbox_released_after_error(
         def _run_with_sandbox(self, sandbox, *args, **kwargs) -> dict[str, Any]:
             raise Exception("some error")
 
-
     tool = FailingTool(toolset=sample_toolset)
 
     assert not mock_sandbox.terminate.called
 
-    with patch.object(sample_toolset, 'lifecycle_manager', MagicMock(wraps=sample_toolset.lifecycle_manager)) as m:
+    with patch.object(
+        sample_toolset,
+        "lifecycle_manager",
+        MagicMock(wraps=sample_toolset.lifecycle_manager),
+    ) as m:
         with pytest.raises(Exception, match="some error"):
             tool.run(
                 "some-arg",
@@ -91,4 +99,3 @@ def test_sandbox_released_after_error(
         assert mock_sandbox.terminate.called
     else:
         assert not mock_sandbox.terminate.called
-

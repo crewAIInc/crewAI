@@ -20,6 +20,7 @@ class k8sAgentSandboxPythonToolSchema(BaseModel):
         description="Maximum seconds to wait for the command to finish.",
     )
 
+
 class K8sAgentSandboxPythonTool(K8sAgentSandboxBaseTool):
     name: str = "K8s Agent Sandbox Python Tool"
     description: str = (
@@ -28,7 +29,9 @@ class K8sAgentSandboxPythonTool(K8sAgentSandboxBaseTool):
     )
     args_schema: type[BaseModel] = k8sAgentSandboxPythonToolSchema
 
-    def _run_with_sandbox(self, sandbox: Sandbox, code: str, timeout: int) -> dict[str, Any]:
+    def _run_with_sandbox(
+        self, sandbox: Sandbox, code: str, timeout: int
+    ) -> dict[str, Any]:
 
         timeout_tracker = create_timeout_tracker(timeout)
         sandbox.files.write("main.py", code, timeout=timeout_tracker())

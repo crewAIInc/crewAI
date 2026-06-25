@@ -18,7 +18,6 @@ if typing.TYPE_CHECKING:
     from .base_tool import K8sAgentSandboxBaseTool
 
 
-
 class K8sAgentSandboxToolset:
     """
     The toolset is responsible for sharing the settings among many K8s Agent Sandbox tools.
@@ -32,6 +31,7 @@ class K8sAgentSandboxToolset:
         cleanup_on_exit: When True, registers its :meth:`close` method at the `atexit` module
             to be called when the programm exits.
     """
+
     def __init__(
         self,
         lifecycle_manager: K8sAgentSandboxLifecycleManager,
@@ -42,25 +42,21 @@ class K8sAgentSandboxToolset:
         if cleanup_on_exit:
             atexit.register(self.close)
 
+        self._all_tools: dict[str, "K8sAgentSandboxBaseTool"] = {}
 
-
-        self._all_tools: dict[str, 'K8sAgentSandboxBaseTool'] = {}
-
-    def add_tool(self, tool: 'K8sAgentSandboxBaseTool'):
+    def add_tool(self, tool: "K8sAgentSandboxBaseTool"):
         name = tool.name
         if name in self._all_tools:
             raise ValueError(f"The tool '{name}' is already in the toolset.")
 
         self._all_tools[name] = tool
 
-
     @property
-    def tools(self) -> list['K8sAgentSandboxBaseTool']:
+    def tools(self) -> list["K8sAgentSandboxBaseTool"]:
         return list(self._all_tools.values())
 
     def close(self):
         self.lifecycle_manager.close()
-
 
     @classmethod
     def create(
@@ -71,7 +67,6 @@ class K8sAgentSandboxToolset:
         claim_name: str | None = None,
         cleanup_on_exit: bool = True,
     ) -> Self:
-
         """
         Create a toolset by using Agent Sandbox client and sandbox settings.
 
@@ -93,7 +88,6 @@ class K8sAgentSandboxToolset:
             raise ValueError("The persistent and attach modes are mutually exclusive.")
 
         client_settings = client_settings or K8sAgentSandboxToolClientSettings()
-
 
         if claim_name is not None:
             lifecycle_manager = AttachModeK8sAgentSandboxLifecycleManager(
@@ -118,4 +112,3 @@ class K8sAgentSandboxToolset:
             lifecycle_manager,
             cleanup_on_exit=cleanup_on_exit,
         )
-

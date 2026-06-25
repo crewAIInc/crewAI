@@ -17,13 +17,16 @@ from crewai_tools.tools.k8s_agent_sandbox.file_tool import (
 def k8s_file_tool(sample_toolset):
     return K8sAgentSandboxFileTool(toolset=sample_toolset)
 
+
 class TestFileToolReadAction:
     @pytest.mark.parametrize("binary", [False, True])
     def test_success(self, k8s_file_tool, mock_sandbox, binary):
         content = b"some-content"
         mock_sandbox.files.read.return_value = content
 
-        result = k8s_file_tool.run(action="read", path="some/path", binary=binary, timeout=120)
+        result = k8s_file_tool.run(
+            action="read", path="some/path", binary=binary, timeout=120
+        )
 
         if binary:
             assert result == {
@@ -40,9 +43,8 @@ class TestFileToolReadAction:
 
         mock_sandbox.files.read.assert_called_once_with("some/path", timeout=120)
 
-
     def test_invalid_utf(self, k8s_file_tool, mock_sandbox):
-        content = b"Some malformed \xFF content"
+        content = b"Some malformed \xff content"
         mock_sandbox.files.read.return_value = content
         result = k8s_file_tool.run(action="read", path="some/path")
 
@@ -50,7 +52,7 @@ class TestFileToolReadAction:
             "content": base64.b64encode(content).decode("ascii"),
             "path": "some/path",
             "encoding": "base64",
-            "note": 'File was not valid utf-8; returned as base64.',
+            "note": "File was not valid utf-8; returned as base64.",
         }
 
 
@@ -84,9 +86,14 @@ class TestFileToolWriteAction:
             "status": "written",
         }
 
-        mock_sandbox.commands.run.assert_called_once_with("mkdir -p parent", timeout=120)
+        mock_sandbox.commands.run.assert_called_once_with(
+            "mkdir -p parent", timeout=120
+        )
 
-        assert mock_sandbox.files.write.call_args.args == ("parent/file.txt", b"Hello World!")
+        assert mock_sandbox.files.write.call_args.args == (
+            "parent/file.txt",
+            b"Hello World!",
+        )
         assert 0 <= mock_sandbox.files.write.call_args.kwargs["timeout"] <= 120
 
     def test_missing_content(self, k8s_file_tool, mock_sandbox):
@@ -103,7 +110,6 @@ class TestFileToolWriteAction:
 
         assert mock_sandbox.files.write.call_args.args == ("parent/file.txt", b"")
 
-
     def test_mkdir_parent_error(self, k8s_file_tool, mock_sandbox):
         mock_sandbox.commands.run.return_value = ExecutionResult(
             exit_code=1,
@@ -119,6 +125,7 @@ class TestFileToolWriteAction:
                 path="parent/file.txt",
                 content=content,
             )
+
 
 class TestFileToolAppendAction:
     @pytest.mark.parametrize("binary", [False, True])
@@ -137,7 +144,6 @@ class TestFileToolAppendAction:
             content = base64.b64encode(content_to_append.encode("ascii"))
         else:
             content = content_to_append
-
 
         result = k8s_file_tool.run(
             action="append",
@@ -159,7 +165,10 @@ class TestFileToolAppendAction:
         assert mock_sandbox.files.read.call_args.kwargs["timeout"] == 120
 
         mock_sandbox.files.write.assert_called_once()
-        assert mock_sandbox.files.write.call_args.args == ("parent/file.txt", b"Hello World")
+        assert mock_sandbox.files.write.call_args.args == (
+            "parent/file.txt",
+            b"Hello World",
+        )
         assert 0 <= mock_sandbox.files.write.call_args.kwargs["timeout"] <= 120
 
 
@@ -167,8 +176,12 @@ class TestFileToolListAction:
     def test_success(self, k8s_file_tool, mock_sandbox):
         modification_time = time.time()
         mock_sandbox.files.list.return_value = [
-            FileEntry(name="test.txt", size=1000000, type="file", mod_time=modification_time),
-            FileEntry(name="subdir", size=4096, type="directory", mod_time=modification_time),
+            FileEntry(
+                name="test.txt", size=1000000, type="file", mod_time=modification_time
+            ),
+            FileEntry(
+                name="subdir", size=4096, type="directory", mod_time=modification_time
+            ),
         ]
 
         result = k8s_file_tool.run(action="list", path="some/directory")
@@ -196,9 +209,7 @@ class TestFileToolDeleteAction:
     def test_success(self, k8s_file_tool, mock_sandbox):
         file_path = "parent/file.txt"
         mock_sandbox.commands.run.return_value = ExecutionResult(
-            exit_code=0,
-            stdout="",
-            stderr=""
+            exit_code=0, stdout="", stderr=""
         )
         result = k8s_file_tool.run(action="delete", path=file_path)
 
@@ -208,15 +219,16 @@ class TestFileToolDeleteAction:
         }
 
         mock_sandbox.commands.run.assert_called_once()
-        assert mock_sandbox.commands.run.call_args.args[0] == f"rm -r {shlex.quote(file_path)}"
+        assert (
+            mock_sandbox.commands.run.call_args.args[0]
+            == f"rm -r {shlex.quote(file_path)}"
+        )
 
 
 class TestFileToolMkdirAction:
     def test_success(self, k8s_file_tool, mock_sandbox):
         mock_sandbox.commands.run.return_value = ExecutionResult(
-            exit_code=0,
-            stdout="",
-            stderr=""
+            exit_code=0, stdout="", stderr=""
         )
 
         result = k8s_file_tool.run(action="mkdir", path="parent/subfolder", timeout=120)
@@ -229,7 +241,8 @@ class TestFileToolMkdirAction:
         mock_sandbox.commands.run.assert_called_once_with(
             f"mkdir -p {shlex.quote('parent/subfolder')}",
             timeout=120,
-          )
+        )
+
 
 class TestFileToolInfoAction:
     def test_not_implemented_error(self, k8s_file_tool):
@@ -243,10 +256,8 @@ class TestFileToolExistsAction:
 
         result = k8s_file_tool.run(action="exists", path="parent/file.txt", timeout=120)
 
-        assert result == {
-            "exists": True,
-            "path": "parent/file.txt"
-        }
+        assert result == {"exists": True, "path": "parent/file.txt"}
 
-        mock_sandbox.files.exists.assert_called_once_with("parent/file.txt", timeout=120)
-
+        mock_sandbox.files.exists.assert_called_once_with(
+            "parent/file.txt", timeout=120
+        )

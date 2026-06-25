@@ -14,10 +14,12 @@ from .settings import (
 
 logger = logging.getLogger(__name__)
 
+
 class K8sAgentSandboxLifecycleManager(ABC):
     """
     The base lifecycle manager of the K8s Agent Sandbox.
     """
+
     def __init__(
         self,
         client_settings: K8sAgentSandboxToolClientSettings,
@@ -34,7 +36,6 @@ class K8sAgentSandboxLifecycleManager(ABC):
         self._sandbox: Sandbox | None = None
         self._sandbox_acquired: bool = False
 
-
     def acquire_sandbox(self) -> Sandbox:
         """
         Acquires a sandbox based on this implementation and returns it.
@@ -47,7 +48,7 @@ class K8sAgentSandboxLifecycleManager(ABC):
         self._sandbox_acquired = True
         return self._acquire_sandbox()
 
-    def release_sandbox(self):
+    def release_sandbox(self) -> None:
         """
         Releases a sandbox that is previously acquired.
         """
@@ -60,7 +61,7 @@ class K8sAgentSandboxLifecycleManager(ABC):
         finally:
             self._lock.release()
 
-    def close(self):
+    def close(self) -> None:
         """Closes the lifecycle manager."""
         if self._closed:
             return
@@ -72,14 +73,14 @@ class K8sAgentSandboxLifecycleManager(ABC):
         pass
 
     @abstractmethod
-    def _release_sandbox(self):
+    def _release_sandbox(self) -> None:
         pass
 
     @abstractmethod
-    def _close(self):
+    def _close(self) -> None:
         pass
 
-    def _terminate_sandbox(self):
+    def _terminate_sandbox(self) -> None:
         if self._sandbox is None:
             return
 
@@ -99,14 +100,15 @@ class EphemeralModeK8sAgentSandboxLifecycleManager(K8sAgentSandboxLifecycleManag
     Lifecycle manager that creates new sandbox on each call of the `acquire_sandbox`
     method and terminates it on `release_sandbox`.
     """
+
     def _acquire_sandbox(self) -> Sandbox:
         self._sandbox = self._create_sandbox()
         return self._sandbox
 
-    def _release_sandbox(self):
+    def _release_sandbox(self) -> None:
         self._terminate_sandbox()
 
-    def _close(self):
+    def _close(self) -> None:
         self._terminate_sandbox()
 
 
@@ -115,6 +117,7 @@ class AttachModeK8sAgentSandboxLifecycleManager(K8sAgentSandboxLifecycleManager)
     Lifecycle manager that attaches to existing sandbox by its claim name without creating a new sandbox.
     Sandbox is also not terminated on the `release_sandbox`.
     """
+
     def __init__(
         self,
         client_settings: K8sAgentSandboxToolClientSettings,
@@ -141,10 +144,10 @@ class AttachModeK8sAgentSandboxLifecycleManager(K8sAgentSandboxLifecycleManager)
             "is expected to exist, but cannot be found."
         )
 
-    def _release_sandbox(self):
+    def _release_sandbox(self) -> None:
         pass
 
-    def _close(self):
+    def _close(self) -> None:
         pass
 
 
@@ -153,17 +156,16 @@ class PersistentModeK8sAgentSandboxLifecycleManager(K8sAgentSandboxLifecycleMana
     Lifecycle manager that manages a sandbox which remains the same across all calls
     of the`acquire_sandbox` and `release_sandbox`.
     """
-    def _acquire_sandbox(self):
+
+    def _acquire_sandbox(self) -> Sandbox:
         if self._sandbox is not None:
             return self._sandbox
 
         self._sandbox = self._create_sandbox()
         return self._sandbox
 
-    def _release_sandbox(self):
-          pass
+    def _release_sandbox(self) -> None:
+        pass
 
-    def _close(self):
+    def _close(self) -> None:
         self._terminate_sandbox()
-
-

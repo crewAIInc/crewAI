@@ -26,7 +26,9 @@ def test_run(k8s_python_tool, mock_sandbox, exit_code):
         "stderr": "some-logs",
     }
 
-    mock_sandbox.files.write.assert_called_once_with("main.py", "some-code", timeout=120)
+    mock_sandbox.files.write.assert_called_once_with(
+        "main.py", "some-code", timeout=120
+    )
 
     assert mock_sandbox.commands.run.call_args.args == ("python3 main.py",)
     assert 0 <= mock_sandbox.commands.run.call_args.kwargs["timeout"] <= 120

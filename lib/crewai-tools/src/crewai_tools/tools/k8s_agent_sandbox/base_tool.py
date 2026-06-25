@@ -22,14 +22,12 @@ class K8sAgentSandboxBaseTool(BaseTool, arbitrary_types_allowed=True):
     name: str
     description: str
     toolset: SkipValidation[K8sAgentSandboxToolset] = Field(
-        exclude=True,
-        description="The instance of the ``K8sAgentSandboxToolset``."
+        exclude=True, description="The instance of the ``K8sAgentSandboxToolset``."
     )
 
     def model_post_init(self, __context: Any) -> None:
         self.toolset.add_tool(self)
         super().model_post_init(__context)
-
 
     def _run(self, *args, **kwargs: Any) -> dict[str, Any]:
         try:

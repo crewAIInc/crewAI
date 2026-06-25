@@ -43,7 +43,7 @@ class TestSandboxLifecycleModesSelection:
             ({}, EphemeralModeK8sAgentSandboxLifecycleManager),
             (dict(claim_name="my_claim"), AttachModeK8sAgentSandboxLifecycleManager),
             (dict(persistent=True), PersistentModeK8sAgentSandboxLifecycleManager),
-        ]
+        ],
     )
     def test_lifecycle_modes(
         self,
@@ -60,13 +60,15 @@ class TestSandboxLifecycleModesSelection:
 
         assert type(toolset.lifecycle_manager) is expected_manager_class
 
-
-    def test_persistent_and_attach_error(self, mock_client_settings, sample_sandbox_settings):
-        with pytest.raises(ValueError, match="persistent and attach modes are mutually exclusive"):
-          _ = K8sAgentSandboxToolset.create(
-              sandbox_settings=sample_sandbox_settings,
-              client_settings=mock_client_settings,
-              persistent=True,
-              claim_name="my_claim",
-          )
-
+    def test_persistent_and_attach_error(
+        self, mock_client_settings, sample_sandbox_settings
+    ):
+        with pytest.raises(
+            ValueError, match="persistent and attach modes are mutually exclusive"
+        ):
+            _ = K8sAgentSandboxToolset.create(
+                sandbox_settings=sample_sandbox_settings,
+                client_settings=mock_client_settings,
+                persistent=True,
+                claim_name="my_claim",
+            )

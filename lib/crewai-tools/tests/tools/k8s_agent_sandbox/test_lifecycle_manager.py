@@ -19,25 +19,25 @@ class TestEphemeralModeManager:
 
     def test_main(self, manager, mock_sandbox_client):
 
-      sandbox = manager.acquire_sandbox()
-      assert mock_sandbox_client.create_sandbox.call_count == 1
+        sandbox = manager.acquire_sandbox()
+        assert mock_sandbox_client.create_sandbox.call_count == 1
 
-      assert sandbox.terminate.call_count == 0
-      manager.release_sandbox()
-      assert sandbox.terminate.call_count == 1
+        assert sandbox.terminate.call_count == 0
+        manager.release_sandbox()
+        assert sandbox.terminate.call_count == 1
 
-      sandbox.reset_mock()
+        sandbox.reset_mock()
 
-      sandbox = manager.acquire_sandbox()
-      assert mock_sandbox_client.create_sandbox.call_count == 2
+        sandbox = manager.acquire_sandbox()
+        assert mock_sandbox_client.create_sandbox.call_count == 2
 
-      assert not sandbox.terminate.called
-      manager.release_sandbox()
-      assert sandbox.terminate.call_count == 1
+        assert not sandbox.terminate.called
+        manager.release_sandbox()
+        assert sandbox.terminate.call_count == 1
 
-      assert mock_sandbox_client.get_sandbox.call_count == 0
-      manager.close()
-      assert sandbox.terminate.call_count == 1
+        assert mock_sandbox_client.get_sandbox.call_count == 0
+        manager.close()
+        assert sandbox.terminate.call_count == 1
 
     @pytest.mark.usefixtures("mock_client_returns_mock_sandbox_in_create_sandbox")
     def test_close_non_acquired(self, manager, mock_sandbox):
@@ -63,7 +63,9 @@ class TestAttachModeManager:
         )
 
     @pytest.mark.usefixtures("mock_client_returns_mock_sandbox_in_create_sandbox")
-    def test_acquire_and_release(self, manager, mock_sandbox_client, sample_sandbox_settings):
+    def test_acquire_and_release(
+        self, manager, mock_sandbox_client, sample_sandbox_settings
+    ):
 
         sandbox = manager.acquire_sandbox()
         assert not mock_sandbox_client.create_sandbox.called
@@ -71,7 +73,10 @@ class TestAttachModeManager:
         assert mock_sandbox_client.get_sandbox.call_count == 1
 
         assert mock_sandbox_client.get_sandbox.call_args.args[0] == "my-claim"
-        assert mock_sandbox_client.get_sandbox.call_args.kwargs["namespace"] == sample_sandbox_settings.namespace
+        assert (
+            mock_sandbox_client.get_sandbox.call_args.kwargs["namespace"]
+            == sample_sandbox_settings.namespace
+        )
 
         manager.release_sandbox()
         assert not sandbox.terminate.called

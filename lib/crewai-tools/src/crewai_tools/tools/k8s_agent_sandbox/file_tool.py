@@ -27,6 +27,7 @@ FileAction = Literal[
     "read", "write", "append", "list", "delete", "mkdir", "info", "exists"
 ]
 
+
 class K8sAgentSandboxFileToolSchema(BaseModel):
     action: FileAction = Field(
         ...,
@@ -42,9 +43,12 @@ class K8sAgentSandboxFileToolSchema(BaseModel):
               - mkdir: creates a directory.
               - info: Not currntly supported. Returns file metadata.
               - exists: returns a boolean for whether the path exists.
-        """)
+        """),
     )
-    path: str = Field(..., description="The path inside the sandbox which is relative to a sandbox's working directory.")
+    path: str = Field(
+        ...,
+        description="The path inside the sandbox which is relative to a sandbox's working directory.",
+    )
     content: str | None = Field(
         default=None,
         description=(
@@ -69,7 +73,7 @@ class K8sAgentSandboxFileToolSchema(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _validate_action_args(self) -> 'K8sAgentSandboxFileToolSchema':
+    def _validate_action_args(self) -> "K8sAgentSandboxFileToolSchema":
         if self.action == "append" and self.content is None:
             raise ValueError(
                 "action='append' requires 'content'. Pass the chunk to append "
@@ -143,7 +147,12 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
         raise ValueError(f"Unknown action: {action}")
 
     def _read(
-        self, sandbox: Sandbox, path: str, *, binary: bool, timeout: int,
+        self,
+        sandbox: Sandbox,
+        path: str,
+        *,
+        binary: bool,
+        timeout: int,
     ) -> dict[str, Any]:
 
         data: bytes = sandbox.files.read(path, timeout=timeout)
@@ -214,10 +223,14 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
         try:
             result = sandbox.commands.run(command, timeout=timeout)
         except Exception as e:
-            raise RuntimeError(f"Unexpected error during the run of the deletion command '{command}'. Error: {e}.")
+            raise RuntimeError(
+                f"Unexpected error during the run of the deletion command '{command}'. Error: {e}."
+            )
 
         if result.exit_code != 0:
-            raise RuntimeError(f"Cannot delete directory {path}. Error: {result.stderr}.")
+            raise RuntimeError(
+                f"Cannot delete directory {path}. Error: {result.stderr}."
+            )
 
         return {"status": "deleted", "path": path}
 
@@ -231,10 +244,14 @@ class K8sAgentSandboxFileTool(K8sAgentSandboxBaseTool):
                 timeout=timeout,
             )
         except Exception as e:
-            raise RuntimeError(f"Unexpected error during the creation of a directory {path}. Error: {e}.")
+            raise RuntimeError(
+                f"Unexpected error during the creation of a directory {path}. Error: {e}."
+            )
 
         if result.exit_code != 0:
-            raise RuntimeError(f"Cannot create directory {path}. Error: {result.stderr}.")
+            raise RuntimeError(
+                f"Cannot create directory {path}. Error: {result.stderr}."
+            )
 
     def _ensure_parent_dir(self, sandbox: Sandbox, path: str, timeout: int):
         parent = posixpath.dirname(path)
