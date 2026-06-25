@@ -626,7 +626,10 @@ class LLM(BaseLLM):
         model_lower = model.lower()
         if "claude" in model_lower or "anthropic" in model_lower:
             return "anthropic"
-        if model_lower.startswith("gpt-") or model_lower.startswith("o1") or model_lower.startswith("o3"):
+        if any(
+            model_lower.startswith(prefix)
+            for prefix in ["gpt-", "o1", "o3", "o4", "whisper-"]
+        ):
             return "openai"
         if "gemini" in model_lower:
             return "gemini"
@@ -714,8 +717,8 @@ class LLM(BaseLLM):
         Returns:
             bool: True if the model is from Anthropic, False otherwise.
         """
-        anthropic_prefixes = ("anthropic/", "claude-", "claude/")
-        return any(prefix in model.lower() for prefix in anthropic_prefixes)
+        model_lower = model.lower()
+        return "claude" in model_lower or "anthropic" in model_lower
 
     def _prepare_completion_params(
         self,
