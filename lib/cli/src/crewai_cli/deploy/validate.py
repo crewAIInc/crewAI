@@ -212,8 +212,16 @@ class DeployValidator:
         if crew_path is None:
             return self.results
 
+        agents_dir = self.project_root / "agents"
+
+        self._check_pyproject()
+        self._check_lockfile()
+        agents_dir_ok = self._check_json_agents_dir(agents_dir)
+
+        project = None
         try:
-            project = validate_crew_project(crew_path, self.project_root / "agents")
+            if agents_dir_ok:
+                project = validate_crew_project(crew_path, agents_dir)
         except JSONProjectValidationError as e:
             self._add(
                 Severity.ERROR,
@@ -232,14 +240,26 @@ class DeployValidator:
             )
             return self.results
 
-        agents_dir = self.project_root / "agents"
-
-        self._check_pyproject()
-        self._check_lockfile()
-        self._check_env_vars_json(crew_path, agents_dir, project.agent_names)
+        if project is not None:
+            self._check_env_vars_json(crew_path, agents_dir, project.agent_names)
         self._check_version_vs_lockfile()
 
         return self.results
+
+    def _check_json_agents_dir(self, agents_dir: Path) -> bool:
+        if agents_dir.is_dir():
+            return True
+        self._add(
+            Severity.ERROR,
+            "missing_agents_dir",
+            "Cannot find agents/ directory",
+            detail=(
+                "JSON crew projects load agent definitions from "
+                f"{agents_dir.relative_to(self.project_root)}/*.jsonc or *.json."
+            ),
+            hint="Create agents/ and add one JSON or JSONC file per agent.",
+        )
+        return False
 
     def _check_env_vars_json(
         self, crew_path: Path, agents_dir: Path, agent_names: list[str]

@@ -40,14 +40,6 @@ def replay_task_command(*args: Any, **kwargs: Any) -> Any:
     return _replay_task_command(*args, **kwargs)
 
 
-def run_flow_definition(*args: Any, **kwargs: Any) -> Any:
-    from crewai_cli.run_flow_definition import (
-        run_flow_definition as _run_flow_definition,
-    )
-
-    return _run_flow_definition(*args, **kwargs)
-
-
 def run_crew(*args: Any, **kwargs: Any) -> Any:
     from crewai_cli.run_crew import run_crew as _run_crew
 
@@ -155,12 +147,18 @@ def uv(uv_args: tuple[str, ...]) -> None:
     is_flag=True,
     help="Use classic Python/YAML project structure instead of JSON",
 )
+@click.option(
+    "--declarative",
+    is_flag=True,
+    help="Create a declarative Flow project instead of a Python Flow project",
+)
 def create(
     type: str | None,
     name: str | None,
     provider: str | None,
     skip_provider: bool = False,
     classic: bool = False,
+    declarative: bool = False,
 ) -> None:
     """Create a new crew, or flow."""
     dmn_mode = is_dmn_mode_enabled()
@@ -194,6 +192,8 @@ def create(
     if dmn_mode:
         skip_provider = True
     if type == "crew":
+        if declarative:
+            raise click.UsageError("--declarative can only be used with flow projects")
         if classic:
             from crewai_cli.create_crew import create_crew
 
@@ -205,7 +205,7 @@ def create(
     elif type == "flow":
         from crewai_cli.create_flow import create_flow
 
-        create_flow(name)
+        create_flow(name, declarative=declarative)
     else:
         click.secho("Error: Invalid type. Must be 'crew' or 'flow'.", fg="red")
 
@@ -468,7 +468,7 @@ def memory(
     type=str,
     default=None,
     help=(
-        "Path to a trained-agents pickle (produced by `crewai train -f`). "
+        "Crew-only: path to a trained-agents pickle (produced by `crewai train -f`). "
         "When set, agents load suggestions from this file instead of the "
         "default trained_agents_data.pkl. Equivalent to setting "
         "CREWAI_TRAINED_AGENTS_FILE."
@@ -512,16 +512,13 @@ def install(context: click.Context) -> None:
     "--definition",
     type=str,
     default=None,
-    help=(
-        "Experimental: path to a Flow Definition YAML/JSON file, "
-        "or an inline YAML/JSON string."
-    ),
+    help="Flow-only: path to a declarative flow definition.",
 )
 @click.option(
     "--inputs",
     type=str,
     default=None,
-    help='Experimental: JSON object passed to flow.kickoff(), e.g. \'{"topic":"AI"}\'.',
+    help='Flow-only: JSON object passed to the declarative flow, e.g. \'{"topic":"AI"}\'.',
 )
 def run(
     trained_agents_file: str | None,
@@ -531,16 +528,14 @@ def run(
     """Run the Crew or Flow."""
     if inputs is not None and definition is None:
         raise click.UsageError("--inputs requires --definition")
+    if trained_agents_file is not None and definition is not None:
+        raise click.UsageError("--filename can only be used when running crews")
 
-    if definition is not None:
-        click.secho(
-            "Warning: `crewai run --definition` is experimental and may change without notice.",
-            fg="yellow",
-        )
-        run_flow_definition(definition=definition, inputs=inputs)
-        return
-
-    run_crew(trained_agents_file=trained_agents_file)
+    run_crew(
+        trained_agents_file=trained_agents_file,
+        definition=definition,
+        inputs=inputs,
+    )
 
 
 @crewai.command()
@@ -795,10 +790,11 @@ def flow() -> None:
 @flow.command(name="kickoff")
 def flow_run() -> None:
     """Kickoff the Flow."""
-    from crewai_cli.kickoff_flow import kickoff_flow
-
-    click.echo("Running the Flow")
-    kickoff_flow()
+    click.secho(
+        "The command 'crewai flow kickoff' is deprecated. Use 'crewai run' instead.",
+        fg="yellow",
+    )
+    run_crew(trained_agents_file=None, definition=None, inputs=None)
 
 
 @flow.command(name="plot")

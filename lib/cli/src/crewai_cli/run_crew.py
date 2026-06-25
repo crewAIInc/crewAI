@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from contextlib import AbstractContextManager, nullcontext
-from enum import Enum
 import os
 from pathlib import Path
 import re
@@ -25,11 +24,6 @@ from crewai_cli.version import get_crewai_version
 
 if TYPE_CHECKING:
     from crewai_cli.crew_run_tui import CrewRunApp
-
-
-class CrewType(Enum):
-    STANDARD = "standard"
-    FLOW = "flow"
 
 
 # Must accept the same names as the kickoff interpolation pattern in
@@ -537,7 +531,11 @@ def _print_post_tui_summary(app: CrewRunApp) -> None:
         )
 
 
-def run_crew(trained_agents_file: str | None = None) -> None:
+def run_crew(
+    trained_agents_file: str | None = None,
+    definition: str | None = None,
+    inputs: str | None = None,
+) -> None:
     """Run the crew or flow.
 
     Args:
@@ -545,15 +543,98 @@ def run_crew(trained_agents_file: str | None = None) -> None:
             by ``crewai train -f``. When set, exported as
             ``CREWAI_TRAINED_AGENTS_FILE`` so agents load suggestions from this
             file instead of the default ``trained_agents_data.pkl``.
+        definition: Optional path to a declarative Flow definition.
+        inputs: Optional JSON object passed to a declarative Flow.
     """
-    # JSON crew projects take precedence
+    if inputs is not None and definition is None:
+        raise click.UsageError("--inputs requires --definition")
+
+    if definition is not None:
+        _run_explicit_declarative_flow(
+            definition=definition,
+            inputs=inputs,
+            trained_agents_file=trained_agents_file,
+        )
+        return
+
     if _has_json_crew():
         _run_json_crew_in_project_env(trained_agents_file=trained_agents_file)
         return
 
+    pyproject_data = read_toml()
+    _warn_if_old_poetry_project(pyproject_data)
+    project_type = _get_project_type(pyproject_data)
+
+    if project_type == "flow":
+        _run_flow_project(
+            pyproject_data=pyproject_data,
+            trained_agents_file=trained_agents_file,
+        )
+        return
+
+    _run_classic_crew_project(
+        pyproject_data=pyproject_data,
+        trained_agents_file=trained_agents_file,
+    )
+
+
+def _run_explicit_declarative_flow(
+    definition: str, inputs: str | None, trained_agents_file: str | None
+) -> None:
+    if trained_agents_file is not None:
+        raise click.UsageError("--filename can only be used when running crews")
+
+    from crewai_cli.run_declarative_flow import run_declarative_flow
+
+    run_declarative_flow(definition=definition, inputs=inputs)
+
+
+def _run_flow_project(
+    pyproject_data: dict[str, Any], trained_agents_file: str | None
+) -> None:
+    if trained_agents_file is not None:
+        raise click.UsageError("--filename can only be used when running crews")
+
+    from crewai_cli.run_declarative_flow import (
+        configured_project_declarative_flow,
+        run_declarative_flow_in_project_env,
+    )
+
+    if definition := configured_project_declarative_flow(pyproject_data):
+        run_declarative_flow_in_project_env(definition=definition)
+        return
+
+    from crewai_cli.kickoff_flow import (
+        _load_conversational_flow_from_kickoff_script,
+        _run_conversational_flow_tui,
+    )
+
+    flow = _load_conversational_flow_from_kickoff_script()
+    if flow is not None:
+        _run_conversational_flow_tui(flow)
+        return
+
+    _execute_uv_script("kickoff", entity_type="flow")
+
+
+def _run_classic_crew_project(
+    pyproject_data: dict[str, Any], trained_agents_file: str | None
+) -> None:
+    _execute_uv_script(
+        "run_crew",
+        entity_type="crew",
+        trained_agents_file=trained_agents_file,
+    )
+
+
+def _get_project_type(pyproject_data: dict[str, Any]) -> str | None:
+    project_type = pyproject_data.get("tool", {}).get("crewai", {}).get("type")
+    return project_type if isinstance(project_type, str) else None
+
+
+def _warn_if_old_poetry_project(pyproject_data: dict[str, Any]) -> None:
     crewai_version = get_crewai_version()
     min_required_version = "0.71.0"
-    pyproject_data = read_toml()
 
     if pyproject_data.get("tool", {}).get("poetry") and (
         version.parse(crewai_version) < version.parse(min_required_version)
@@ -564,25 +645,22 @@ def run_crew(trained_agents_file: str | None = None) -> None:
             fg="red",
         )
 
-    is_flow = pyproject_data.get("tool", {}).get("crewai", {}).get("type") == "flow"
-    crew_type = CrewType.FLOW if is_flow else CrewType.STANDARD
 
-    click.echo(f"Running the {'Flow' if is_flow else 'Crew'}")
-
-    execute_command(crew_type, trained_agents_file=trained_agents_file)
-
-
-def execute_command(
-    crew_type: CrewType, trained_agents_file: str | None = None
+def _execute_uv_script(
+    script_name: str,
+    *,
+    entity_type: str,
+    trained_agents_file: str | None = None,
 ) -> None:
-    """Execute the appropriate command based on crew type.
+    """Execute a project script through uv.
 
     Args:
-        crew_type: The type of crew to run.
+        script_name: The project script to run.
+        entity_type: The user-facing entity being run.
         trained_agents_file: Optional trained-agents pickle path forwarded to
             the subprocess via the ``CREWAI_TRAINED_AGENTS_FILE`` env var.
     """
-    command = ["uv", "run", "kickoff" if crew_type == CrewType.FLOW else "run_crew"]
+    command = ["uv", "run", script_name]
 
     env = build_env_with_all_tool_credentials()
     if trained_agents_file:
@@ -592,21 +670,20 @@ def execute_command(
         subprocess.run(command, capture_output=False, text=True, check=True, env=env)  # noqa: S603
 
     except subprocess.CalledProcessError as e:
-        handle_error(e, crew_type)
+        _handle_run_error(e, entity_type)
 
     except Exception as e:
         click.echo(f"An unexpected error occurred: {e}", err=True)
 
 
-def handle_error(error: subprocess.CalledProcessError, crew_type: CrewType) -> None:
+def _handle_run_error(error: subprocess.CalledProcessError, entity_type: str) -> None:
     """
     Handle subprocess errors with appropriate messaging.
 
     Args:
         error: The subprocess error that occurred
-        crew_type: The type of crew that was being run
+        entity_type: The type of entity that was being run
     """
-    entity_type = "flow" if crew_type == CrewType.FLOW else "crew"
     click.echo(f"An error occurred while running the {entity_type}: {error}", err=True)
 
     if error.output:
