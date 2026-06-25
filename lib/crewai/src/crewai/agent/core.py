@@ -376,9 +376,12 @@ class Agent(BaseAgent):
             if not getattr(self, field):  # placeholder, not a user-supplied value
                 explicit.discard(field)
 
+        fields = type(self).model_fields
         for key, value in load_agent_from_repository(self.from_repository).items():
-            if key not in explicit and hasattr(self, key):
-                setattr(self, key, value)
+            if key not in explicit and key in fields:
+                # Validate as construction would (e.g. an llm string -> LLM),
+                # without re-running the model's after-validators.
+                self.__pydantic_validator__.validate_assignment(self, key, value)
 
         self._from_repository_resolved = True
 
