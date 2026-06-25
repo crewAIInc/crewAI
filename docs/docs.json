@@ -280,6 +280,7 @@
                           "edge/en/tools/ai-ml/overview",
                           "edge/en/tools/ai-ml/dalletool",
                           "edge/en/tools/ai-ml/visiontool",
+                          "edge/en/tools/ai-ml/twelvelabsanalyzetool",
                           "edge/en/tools/ai-ml/aimindtool",
                           "edge/en/tools/ai-ml/llamaindextool",
                           "edge/en/tools/ai-ml/langchaintool",

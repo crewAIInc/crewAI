@@ -25724,6 +25724,142 @@
       }
     },
     {
+      "description": "Analyze a video with TwelveLabs Pegasus and answer a natural-language prompt about its content (summaries, Q&A, moderation, metadata). Accepts a public video URL or an indexed TwelveLabs video_id.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for TwelveLabs (https://twelvelabs.io)",
+          "name": "TWELVELABS_API_KEY",
+          "required": false
+        }
+      ],
+      "humanized_name": "TwelveLabs Video Analysis",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Analyze video content using TwelveLabs' Pegasus video-understanding model.\n\nGiven a video (either a public URL or an already-indexed ``video_id``) and a\nnatural-language prompt, the tool returns a text answer generated from the\nvideo's visuals, speech, and on-screen text. Useful for summarization,\nquestion answering over video, content moderation, and metadata extraction.\n\nGet a free API key at https://twelvelabs.io and set ``TWELVELABS_API_KEY``.\n\nAttributes:\n    model_name: TwelveLabs Pegasus model to use (default ``pegasus1.5``).\n    max_tokens: Maximum number of tokens in the generated answer. Must be at\n        least 512 for the Pegasus model.\n    temperature: Sampling temperature for generation.\n    api_key: TwelveLabs API key. Falls back to ``TWELVELABS_API_KEY``.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Api Key"
+          },
+          "max_tokens": {
+            "default": 2048,
+            "title": "Max Tokens",
+            "type": "integer"
+          },
+          "model_name": {
+            "default": "pegasus1.5",
+            "title": "Model Name",
+            "type": "string"
+          },
+          "temperature": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Temperature"
+          }
+        },
+        "required": [],
+        "title": "TwelveLabsAnalyzeTool",
+        "type": "object"
+      },
+      "name": "TwelveLabsAnalyzeTool",
+      "package_dependencies": [
+        "twelvelabs"
+      ],
+      "run_params_schema": {
+        "description": "Input schema for the TwelveLabs video-analysis tool.",
+        "properties": {
+          "prompt": {
+            "description": "Instruction describing what to extract from the video, e.g. 'Summarize this video' or 'List every product shown'.",
+            "title": "Prompt",
+            "type": "string"
+          },
+          "video_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "ID of a video already indexed in TwelveLabs. Provide this or video_url (one is required).",
+            "title": "Video Id"
+          },
+          "video_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Publicly accessible URL of the video to analyze. Provide this or video_id (one is required).",
+            "title": "Video Url"
+          }
+        },
+        "required": [
+          "prompt"
+        ],
+        "title": "TwelveLabsAnalyzeToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "This tool uses OpenAI's Vision API to describe the contents of an image.",
       "env_vars": [
         {
