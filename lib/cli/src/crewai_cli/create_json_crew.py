@@ -680,7 +680,7 @@ def _default_agents_and_tasks(
     ]
     crew_settings = {
         "process": "sequential",
-        "memory": False,
+        "memory": True,
         "inputs": {},
     }
     return agents, tasks, crew_settings

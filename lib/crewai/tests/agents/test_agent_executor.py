@@ -7,6 +7,7 @@ flow methods, routing logic, and error handling.
 from __future__ import annotations
 
 import asyncio
+import threading
 from types import SimpleNamespace
 import time
 from typing import Any
@@ -39,8 +40,6 @@ def _build_executor(**kwargs: Any) -> AgentExecutor:
     executor._human_feedback_method_outputs = {}
     executor._input_history = []
     executor._is_execution_resuming = False
-    import threading
-    executor._state_lock = threading.Lock()
     executor._or_listeners_lock = threading.Lock()
     executor._execution_lock = threading.Lock()
     executor._finalize_lock = threading.Lock()

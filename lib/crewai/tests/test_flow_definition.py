@@ -565,7 +565,55 @@ def test_flow_definition_classifies_start_router_from_human_feedback_emit():
     assert entry_point.emit is None
 
 
-def test_flow_definition_round_trips_json_and_yaml():
+def test_flow_definition_classifies_public_dsl_start_router():
+    class StartRouterFlow(Flow):
+        @start()
+        @router(emit=["continue", "stop"])
+        def entry_point(self):
+            return "continue"
+
+        @router(emit=["resume"])
+        @start()
+        def alternate_entry_point(self):
+            return "resume"
+
+    entry_point = StartRouterFlow.flow_definition().methods["entry_point"]
+    alternate_entry_point = StartRouterFlow.flow_definition().methods[
+        "alternate_entry_point"
+    ]
+
+    assert entry_point.is_start is True
+    assert entry_point.router is True
+    assert entry_point.listen is None
+    assert entry_point.emit == ["continue", "stop"]
+    assert alternate_entry_point.is_start is True
+    assert alternate_entry_point.router is True
+    assert alternate_entry_point.listen is None
+    assert alternate_entry_point.emit == ["resume"]
+
+
+def test_flow_definition_merges_stacked_listen_router():
+    class ChainedRouterFlow(Flow):
+        @start()
+        @router(emit=["approved", "not_approved"])
+        def first_router(self):
+            return "approved"
+
+        @listen("approved")
+        @router(emit=["second_approval", "not_approved"])
+        def second_router(self):
+            return "second_approval"
+
+    methods = ChainedRouterFlow.flow_definition().methods
+
+    assert methods["first_router"].is_start is True
+    assert methods["first_router"].listen is None
+    assert methods["second_router"].router is True
+    assert methods["second_router"].listen == "approved"
+    assert methods["second_router"].emit == ["second_approval", "not_approved"]
+
+
+def test_flow_definition_round_trips_declaration_serialization():
     class RoundTripFlow(Flow):
         @start()
         def begin(self):
@@ -581,16 +629,122 @@ def test_flow_definition_round_trips_json_and_yaml():
 
     definition = RoundTripFlow.flow_definition()
 
-    json_round_trip = flow_definition.FlowDefinition.from_json(definition.to_json())
-    yaml_round_trip = flow_definition.FlowDefinition.from_yaml(definition.to_yaml())
+    round_trips = [
+        flow_definition.FlowDefinition.from_declaration(contents=definition.to_json()),
+        flow_definition.FlowDefinition.from_declaration(contents=definition.to_yaml()),
+    ]
 
-    assert json_round_trip.to_dict() == definition.to_dict()
-    assert yaml_round_trip.to_dict() == definition.to_dict()
-    assert yaml_round_trip.methods["decide"].router is True
-    assert yaml_round_trip.methods["decide"].listen == "begin"
+    for round_trip in round_trips:
+        assert round_trip.to_dict() == definition.to_dict()
+        assert round_trip.methods["decide"].router is True
+        assert round_trip.methods["decide"].listen == "begin"
 
 
-def test_each_action_round_trips_json_and_yaml():
+def test_flow_definition_from_declaration_accepts_contents():
+    data = {
+        "schema": "crewai.flow/v1",
+        "name": "DeclarationFlow",
+        "methods": {
+            "begin": {
+                "start": True,
+                "do": {
+                    "call": "expression",
+                    "expr": "'started'",
+                },
+            },
+        },
+    }
+    definition = flow_definition.FlowDefinition.from_dict(data)
+    contents = [
+        definition,
+        data,
+        definition.to_json(),
+        definition.to_yaml(),
+    ]
+    expected = definition.to_dict()
+
+    for content in contents:
+        loaded = flow_definition.FlowDefinition.from_declaration(contents=content)
+
+        assert loaded.to_dict() == expected
+
+
+def test_flow_definition_from_declaration_rejects_empty_file(tmp_path: Path):
+    declaration_path = tmp_path / "flow.crewai"
+    declaration_path.write_text(" \n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Flow declaration file is empty"):
+        flow_definition.FlowDefinition.from_declaration(path=declaration_path)
+
+
+@pytest.mark.parametrize("contents", ["[]", "false", "0", "null", "~"])
+def test_flow_definition_from_declaration_rejects_falsey_non_mapping_contents(
+    contents: str,
+):
+    with pytest.raises(ValueError, match="Flow declaration must contain a mapping"):
+        flow_definition.FlowDefinition.from_declaration(contents=contents)
+
+
+def test_flow_definition_from_declaration_accepts_paths(tmp_path: Path):
+    definition = flow_definition.FlowDefinition.from_dict(
+        {
+            "schema": "crewai.flow/v1",
+            "name": "DeclarationFlow",
+            "methods": {
+                "begin": {
+                    "start": True,
+                    "do": {
+                        "call": "expression",
+                        "expr": "'started'",
+                    },
+                },
+            },
+        }
+    )
+    declaration_path = tmp_path / "flow.crewai"
+    declaration_path.write_text(definition.to_yaml(), encoding="utf-8")
+    path_inputs = [
+        declaration_path,
+        str(declaration_path),
+    ]
+
+    for path_input in path_inputs:
+        loaded = flow_definition.FlowDefinition.from_declaration(path=path_input)
+
+        assert loaded.to_dict() == definition.to_dict()
+        assert loaded.source_path == declaration_path.resolve()
+
+
+def test_flow_definition_from_declaration_requires_input():
+    with pytest.raises(ValueError, match="Provide contents or path"):
+        flow_definition.FlowDefinition.from_declaration()
+
+
+def test_flow_definition_from_declaration_prefers_contents_over_path(
+    tmp_path: Path,
+):
+    data = {
+        "schema": "crewai.flow/v1",
+        "name": "ContentsFlow",
+        "methods": {
+            "begin": {
+                "start": True,
+                "do": {"call": "expression", "expr": "'started'"},
+            },
+        },
+    }
+    declaration_path = tmp_path / "missing.crewai"
+
+    loaded = flow_definition.FlowDefinition.from_declaration(
+        contents=data,
+        path=declaration_path,
+    )
+
+    assert loaded.name == "ContentsFlow"
+    assert loaded.source_path is None
+
+
+def test_each_action_round_trips_declaration_serialization():
     definition = flow_definition.FlowDefinition.from_dict(
         {
             "schema": "crewai.flow/v1",
@@ -629,15 +783,17 @@ def test_each_action_round_trips_json_and_yaml():
         }
     )
 
-    json_round_trip = flow_definition.FlowDefinition.from_json(definition.to_json())
-    yaml_round_trip = flow_definition.FlowDefinition.from_yaml(definition.to_yaml())
+    round_trips = [
+        flow_definition.FlowDefinition.from_declaration(contents=definition.to_json()),
+        flow_definition.FlowDefinition.from_declaration(contents=definition.to_yaml()),
+    ]
 
-    assert json_round_trip.to_dict() == definition.to_dict()
-    assert yaml_round_trip.to_dict() == definition.to_dict()
-    assert yaml_round_trip.methods["process_rows"].description == (
-        "Process every loaded row."
-    )
-    assert yaml_round_trip.methods["process_rows"].do.call == "each"
+    for round_trip in round_trips:
+        assert round_trip.to_dict() == definition.to_dict()
+        assert round_trip.methods["process_rows"].description == (
+            "Process every loaded row."
+        )
+        assert round_trip.methods["process_rows"].do.call == "each"
 
 
 def test_flow_definition_rejects_invalid_method_names():
@@ -883,7 +1039,7 @@ def test_flow_definition_ignores_legacy_diagnostics_loaded_from_contract():
     assert "diagnostics" not in definition.to_dict()
 
 
-def test_router_start_false_without_listen_logs_missing_trigger(caplog):
+def test_router_start_false_without_listen_is_allowed(caplog):
     caplog.set_level(logging.ERROR, logger="crewai.flow.flow_definition")
 
     flow_definition.FlowDefinition.from_dict(
@@ -901,12 +1057,7 @@ def test_router_start_false_without_listen_logs_missing_trigger(caplog):
         }
     )
 
-    assert any(
-        record.levelno == logging.ERROR
-        and "router_without_trigger" in record.message
-        and "methods.decision" in record.message
-        for record in caplog.records
-    )
+    assert not caplog.records
 
 
 def test_router_human_feedback_preserves_existing_router_metadata():
@@ -1048,7 +1199,7 @@ def test_flow_definition_cache_is_not_reused_by_subclasses():
     assert set(child_definition.methods) == {"child_step"}
 
 
-def test_flow_definition_logs_validation_issues_when_loaded_from_contract(caplog):
+def test_flow_definition_allows_router_without_trigger(caplog):
     caplog.set_level(logging.WARNING, logger="crewai.flow.flow_definition")
 
     flow_definition.FlowDefinition.from_dict(
@@ -1065,9 +1216,11 @@ def test_flow_definition_logs_validation_issues_when_loaded_from_contract(caplog
         }
     )
 
-    assert any(
-        record.levelno == logging.ERROR
-        and "LoadedFlow" in record.message
-        and "router_without_trigger" in record.message
-        for record in caplog.records
-    )
+    class StandaloneRouterFlow(Flow):
+        @router(emit=["continue"])
+        def decision(self):
+            return "continue"
+
+    StandaloneRouterFlow.flow_definition()
+
+    assert not caplog.records

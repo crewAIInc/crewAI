@@ -4,6 +4,83 @@ description: "Atualizações de produto, melhorias e correções do CrewAI"
 icon: "clock"
 mode: "wide"
 ---
+<Update label="24 jun 2026">
+  ## v1.14.8a5
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.8a5)
+
+  ## O que mudou
+
+  ### Recursos
+  - Fazer referências declarativas funcionarem em diferentes fluxos e equipes (#6326)
+
+  ### Correções de Bugs
+  - Corrigir entradas de kickoff de estado de fluxo do esquema JSON (#6325)
+
+  ### Documentação
+  - Aninhar One Card por Etapa sob Crew Studio e remover banner de rollout (AGE-107) (#6317)
+  - Atualizar snapshot e changelog para v1.14.8a4 (#6319)
+
+  ### Refatoração
+  - Remover `StateProxy` do acesso ao estado de fluxo (#6327)
+
+  ## Contribuidores
+
+  @jessemiller, @vinibrsl
+
+</Update>
+
+<Update label="24 jun 2026">
+  ## v1.14.8a4
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.8a4)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Suporte a fluxos de conversa na TUI do CLI.
+
+  ### Correções de Bugs
+  - Corrigir a travessia de caminho de symlink na extração de arquivo de habilidade.
+  - Validar os caminhos de definição de fluxo declarativo.
+
+  ### Documentação
+  - Atualizar snapshot e changelog para v1.14.8a3.
+
+  ## Contribuidores
+
+  @lorenzejay, @theCyberTech, @vinibrsl
+
+</Update>
+
+<Update label="23 jun 2026">
+  ## v1.14.8a3
+
+  [Ver release no GitHub](https://github.com/crewAIInc/crewAI/releases/tag/1.14.8a3)
+
+  ## O que Mudou
+
+  ### Recursos
+  - Adicionar carregamento de fluxo declarativo unificado
+  - Melhorar a experiência de inicialização do crewai run
+  - Consolidar `crewai run` e `crewai flow kickoff`
+  - Manter o progresso do método de fluxo visível para equipes aninhadas
+  - Adicionar suporte a Flow CLI declarativo
+  - Permitir `@router()` como método de início de um fluxo
+  - Adicionar esquemas de saída tipados para ferramentas CrewAI
+
+  ### Correções de Bugs
+  - Fixar opentelemetry em ~=1.42.0
+
+  ### Documentação
+  - Adicionar página "Uma Cartão por Etapa" no Studio
+
+  ## Contribuidores
+
+  @jessemiller, @joaomdmoura, @lucasgomide, @vinibrsl
+
+</Update>
+
 <Update label="18 jun 2026">
   ## v1.14.8a2
 
@@ -64,7 +141,7 @@ mode: "wide"
   - Implementar ferramentas de execução de definição de fluxo sem código Python
   - Conduzir feedback humano a partir da definição de fluxo
   - Conectar configuração e persistência do FlowDefinition ao tempo de execução
-  - Adicionar `crewai run --definition` experimental para fluxos
+  - Adicionar `crewai run --definition` para fluxos declarativos
   - Suportar fallback de implantação ZIP e execuções de projeto de equipe em JSON
   - Introduzir equipes em JSON primeiro
 
