@@ -1,8 +1,8 @@
 """Flow Runtime: the engine that executes a Flow.
 
-Provides the ``Flow`` class (kickoff/resume/listener dispatch), the
-``FlowMeta`` metaclass, and the thread-safe state proxies. Flows
-authored with the Python DSL (see ``dsl``) are described by a Flow
+Provides the ``Flow`` class (kickoff/resume/listener dispatch) and the
+``FlowMeta`` metaclass. Flows authored with the Python DSL (see ``dsl``)
+are described by a Flow
 Structure (see ``flow_definition``) and executed here.
 """
 
@@ -11,12 +11,8 @@ from __future__ import annotations
 import asyncio
 from collections.abc import (
     Callable,
-    ItemsView,
-    Iterable,
     Iterator,
-    KeysView,
     Sequence,
-    ValuesView,
 )
 from concurrent.futures import Future, ThreadPoolExecutor
 import contextvars
@@ -25,6 +21,7 @@ from datetime import datetime
 import enum
 import inspect
 import logging
+from pathlib import Path
 import threading
 from typing import (
     TYPE_CHECKING,
@@ -34,10 +31,8 @@ from typing import (
     Generic,
     Literal,
     ParamSpec,
-    SupportsIndex,
     TypeVar,
     cast,
-    overload,
 )
 from uuid import uuid4
 
@@ -121,11 +116,7 @@ from crewai.flow.human_feedback import (
 )
 from crewai.flow.input_provider import InputProvider
 from crewai.flow.persistence.base import FlowPersistence
-from crewai.flow.runtime._resolvers import (
-    resolve_action,
-    resolve_instance_ref,
-    resolve_ref,
-)
+from crewai.flow.runtime._actions import FlowScriptExecutionDisabledError, build_action
 from crewai.flow.types import (
     FlowExecutionData,
     FlowMethodName,
@@ -139,6 +130,7 @@ from crewai.state.checkpoint_config import (
     _coerce_checkpoint,
     apply_checkpoint,
 )
+from crewai.utilities.declarative_refs import InvalidRefError, resolve_ref
 
 
 if TYPE_CHECKING:
@@ -196,26 +188,24 @@ def _build_definition_state_model(
     kwargs = dict(state_definition.default or {})
 
     model_class: type[BaseModel] | None = None
-    if state_definition.ref:
+    state_ref = getattr(state_definition, "ref", None)
+    if state_ref:
         try:
-            resolved: Any = resolve_ref(state_definition.ref, field="state")
+            resolved: Any = resolve_ref(state_ref, field="state")
         except Exception:
-            logger.warning(
-                "Could not import state ref %r", state_definition.ref, exc_info=True
-            )
+            logger.warning("Could not import state ref %r", state_ref, exc_info=True)
         else:
             if isinstance(resolved, type) and issubclass(resolved, BaseModel):
                 model_class = resolved
             else:
-                logger.warning(
-                    "State ref %r is not a pydantic model", state_definition.ref
-                )
+                logger.warning("State ref %r is not a pydantic model", state_ref)
 
-    if model_class is None and state_definition.json_schema:
+    json_schema = getattr(state_definition, "json_schema", None)
+    if model_class is None and json_schema:
         from crewai.utilities.pydantic_schema_utils import create_model_from_schema
 
         try:
-            model_class = create_model_from_schema(state_definition.json_schema)
+            model_class = create_model_from_schema(json_schema)
         except Exception:
             logger.warning(
                 "Could not build a state model from the declared json_schema",
@@ -231,7 +221,12 @@ def _build_definition_state_model(
             pass
 
         model_class = StateWithId
-    return model_class(**kwargs)
+    try:
+        return model_class(**kwargs)
+    except ValidationError as e:
+        if any(error.get("type") != "missing" for error in e.errors()):
+            raise
+        return model_class.model_construct(**kwargs)
 
 
 def _iter_condition_events(condition: FlowDefinitionCondition) -> Iterator[str]:
@@ -288,6 +283,18 @@ def _resolve_persistence(value: Any) -> Any:
     return value
 
 
+def _resolve_instance_ref(ref: str, *, field: str) -> Any:
+    target = resolve_ref(ref, field=field)
+    if not inspect.isclass(target):
+        return target
+    try:
+        return target()
+    except Exception as e:
+        raise InvalidRefError(
+            f"cannot instantiate {field} ref {ref!r} without arguments: {e}"
+        ) from e
+
+
 def _serialize_persistence(value: Any) -> dict[str, Any] | None:
     if value is None:
         return None
@@ -303,7 +310,7 @@ def _validate_input_provider(value: Any) -> Any:
     if value is None or isinstance(value, InputProvider):
         return value
     if isinstance(value, str) and ":" in value:
-        resolved = resolve_instance_ref(value, field="input_provider")
+        resolved = _resolve_instance_ref(value, field="input_provider")
     else:
         from crewai.types.callback import _dotted_path_to_instance
 
@@ -368,304 +375,6 @@ T = TypeVar("T", bound=dict[str, Any] | BaseModel)
 P = ParamSpec("P")
 R = TypeVar("R")
 F = TypeVar("F", bound=Callable[..., Any])
-
-
-class LockedListProxy(list, Generic[T]):  # type: ignore[type-arg]
-    """Thread-safe proxy for list operations.
-
-    Subclasses ``list`` so that ``isinstance(proxy, list)`` returns True,
-    which is required by libraries like LanceDB and Pydantic that do strict
-    type checks. All mutations go through the lock; reads delegate to the
-    underlying list.
-    """
-
-    def __init__(self, lst: list[T], lock: threading.Lock) -> None:
-        super().__init__()  # empty builtin list; all access goes through self._list
-        self._list = lst
-        self._lock = lock
-
-    def append(self, item: T) -> None:
-        with self._lock:
-            self._list.append(item)
-
-    def extend(self, items: Iterable[T]) -> None:
-        with self._lock:
-            self._list.extend(items)
-
-    def insert(self, index: SupportsIndex, item: T) -> None:
-        with self._lock:
-            self._list.insert(index, item)
-
-    def remove(self, item: T) -> None:
-        with self._lock:
-            self._list.remove(item)
-
-    def pop(self, index: SupportsIndex = -1) -> T:
-        with self._lock:
-            return self._list.pop(index)
-
-    def clear(self) -> None:
-        with self._lock:
-            self._list.clear()
-
-    @overload
-    def __setitem__(self, index: SupportsIndex, value: T) -> None: ...
-    @overload
-    def __setitem__(self, index: slice, value: Iterable[T]) -> None: ...
-    def __setitem__(self, index: Any, value: Any) -> None:
-        with self._lock:
-            self._list[index] = value
-
-    def __delitem__(self, index: SupportsIndex | slice) -> None:
-        with self._lock:
-            del self._list[index]
-
-    @overload
-    def __getitem__(self, index: SupportsIndex) -> T: ...
-    @overload
-    def __getitem__(self, index: slice) -> list[T]: ...
-    def __getitem__(self, index: Any) -> Any:
-        return self._list[index]
-
-    def __len__(self) -> int:
-        return len(self._list)
-
-    def __iter__(self) -> Iterator[T]:
-        return iter(self._list)
-
-    def __contains__(self, item: object) -> bool:
-        return item in self._list
-
-    def __repr__(self) -> str:
-        return repr(self._list)
-
-    def __bool__(self) -> bool:
-        return bool(self._list)
-
-    def index(
-        self, value: T, start: SupportsIndex = 0, stop: SupportsIndex | None = None
-    ) -> int:
-        if stop is None:
-            return self._list.index(value, start)
-        return self._list.index(value, start, stop)
-
-    def count(self, value: T) -> int:
-        return self._list.count(value)
-
-    def sort(self, *, key: Any = None, reverse: bool = False) -> None:
-        with self._lock:
-            self._list.sort(key=key, reverse=reverse)
-
-    def reverse(self) -> None:
-        with self._lock:
-            self._list.reverse()
-
-    def copy(self) -> list[T]:
-        return self._list.copy()
-
-    def __add__(self, other: list[T]) -> list[T]:  # type: ignore[override]
-        return self._list + other
-
-    def __radd__(self, other: list[T]) -> list[T]:
-        return other + self._list
-
-    def __iadd__(self, other: Iterable[T]) -> LockedListProxy[T]:  # type: ignore[override]
-        with self._lock:
-            self._list += list(other)
-        return self
-
-    def __mul__(self, n: SupportsIndex) -> list[T]:
-        return self._list * n
-
-    def __rmul__(self, n: SupportsIndex) -> list[T]:
-        return self._list * n
-
-    def __imul__(self, n: SupportsIndex) -> LockedListProxy[T]:
-        with self._lock:
-            self._list *= n
-        return self
-
-    def __reversed__(self) -> Iterator[T]:
-        return reversed(self._list)
-
-    def __eq__(self, other: object) -> bool:
-        """Compare based on the underlying list contents."""
-        if isinstance(other, LockedListProxy):
-            # Avoid deadlocks by acquiring locks in a consistent order.
-            first, second = (self, other) if id(self) <= id(other) else (other, self)
-            with first._lock:
-                with second._lock:
-                    return first._list == second._list
-        with self._lock:
-            return self._list == other
-
-    def __ne__(self, other: object) -> bool:
-        return not self.__eq__(other)
-
-
-class LockedDictProxy(dict, Generic[T]):  # type: ignore[type-arg]
-    """Thread-safe proxy for dict operations.
-
-    Subclasses ``dict`` so that ``isinstance(proxy, dict)`` returns True,
-    which is required by libraries like Pydantic that do strict type checks.
-    All mutations go through the lock; reads delegate to the underlying dict.
-    """
-
-    def __init__(self, d: dict[str, T], lock: threading.Lock) -> None:
-        super().__init__()  # empty builtin dict; all access goes through self._dict
-        self._dict = d
-        self._lock = lock
-
-    def __setitem__(self, key: str, value: T) -> None:
-        with self._lock:
-            self._dict[key] = value
-
-    def __delitem__(self, key: str) -> None:
-        with self._lock:
-            del self._dict[key]
-
-    def pop(self, key: str, *default: T) -> T:  # type: ignore[override]
-        with self._lock:
-            return self._dict.pop(key, *default)
-
-    def update(self, other: dict[str, T]) -> None:  # type: ignore[override]
-        with self._lock:
-            self._dict.update(other)
-
-    def clear(self) -> None:
-        with self._lock:
-            self._dict.clear()
-
-    def setdefault(self, key: str, default: T) -> T:  # type: ignore[override]
-        with self._lock:
-            return self._dict.setdefault(key, default)
-
-    def __getitem__(self, key: str) -> T:
-        return self._dict[key]
-
-    def __len__(self) -> int:
-        return len(self._dict)
-
-    def __iter__(self) -> Iterator[str]:
-        return iter(self._dict)
-
-    def __contains__(self, key: object) -> bool:
-        return key in self._dict
-
-    def keys(self) -> KeysView[str]:  # type: ignore[override]
-        return self._dict.keys()
-
-    def values(self) -> ValuesView[T]:  # type: ignore[override]
-        return self._dict.values()
-
-    def items(self) -> ItemsView[str, T]:  # type: ignore[override]
-        return self._dict.items()
-
-    def get(self, key: str, default: T | None = None) -> T | None:  # type: ignore[override]
-        return self._dict.get(key, default)
-
-    def __repr__(self) -> str:
-        return repr(self._dict)
-
-    def __bool__(self) -> bool:
-        return bool(self._dict)
-
-    def copy(self) -> dict[str, T]:
-        return self._dict.copy()
-
-    def __or__(self, other: dict[str, T]) -> dict[str, T]:  # type: ignore[override]
-        return self._dict | other
-
-    def __ror__(self, other: dict[str, T]) -> dict[str, T]:  # type: ignore[override]
-        return other | self._dict
-
-    def __ior__(self, other: dict[str, T]) -> LockedDictProxy[T]:  # type: ignore[override]
-        with self._lock:
-            self._dict |= other
-        return self
-
-    def __reversed__(self) -> Iterator[str]:
-        return reversed(self._dict)
-
-    def __eq__(self, other: object) -> bool:
-        """Compare based on the underlying dict contents."""
-        if isinstance(other, LockedDictProxy):
-            # Avoid deadlocks by acquiring locks in a consistent order.
-            first, second = (self, other) if id(self) <= id(other) else (other, self)
-            with first._lock:
-                with second._lock:
-                    return first._dict == second._dict
-        with self._lock:
-            return self._dict == other
-
-    def __ne__(self, other: object) -> bool:
-        return not self.__eq__(other)
-
-
-class StateProxy(Generic[T]):
-    """Proxy that provides thread-safe access to flow state.
-
-    Wraps state objects (dict or BaseModel) and uses a lock for all write
-    operations to prevent race conditions when parallel listeners modify state.
-    """
-
-    __slots__ = ("_proxy_lock", "_proxy_state")
-
-    def __init__(self, state: T, lock: threading.Lock) -> None:
-        object.__setattr__(self, "_proxy_state", state)
-        object.__setattr__(self, "_proxy_lock", lock)
-
-    def __getattr__(self, name: str) -> Any:
-        value = getattr(object.__getattribute__(self, "_proxy_state"), name)
-        lock = object.__getattribute__(self, "_proxy_lock")
-        if isinstance(value, list):
-            return LockedListProxy(value, lock)
-        if isinstance(value, dict):
-            return LockedDictProxy(value, lock)
-        return value
-
-    def __setattr__(self, name: str, value: Any) -> None:
-        if name in ("_proxy_state", "_proxy_lock"):
-            object.__setattr__(self, name, value)
-        else:
-            if isinstance(value, LockedListProxy):
-                value = value._list
-            elif isinstance(value, LockedDictProxy):
-                value = value._dict
-            with object.__getattribute__(self, "_proxy_lock"):
-                setattr(object.__getattribute__(self, "_proxy_state"), name, value)
-
-    def __getitem__(self, key: str) -> Any:
-        return object.__getattribute__(self, "_proxy_state")[key]
-
-    def __setitem__(self, key: str, value: Any) -> None:
-        with object.__getattribute__(self, "_proxy_lock"):
-            object.__getattribute__(self, "_proxy_state")[key] = value
-
-    def __delitem__(self, key: str) -> None:
-        with object.__getattribute__(self, "_proxy_lock"):
-            del object.__getattribute__(self, "_proxy_state")[key]
-
-    def __contains__(self, key: str) -> bool:
-        return key in object.__getattribute__(self, "_proxy_state")
-
-    def __repr__(self) -> str:
-        return repr(object.__getattribute__(self, "_proxy_state"))
-
-    def _unwrap(self) -> T:
-        """Return the underlying state object."""
-        return cast(T, object.__getattribute__(self, "_proxy_state"))
-
-    def model_dump(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
-        """Return state as a dictionary.
-
-        Works for both dict and BaseModel underlying states.
-        """
-        state = object.__getattribute__(self, "_proxy_state")
-        if isinstance(state, dict):
-            return state
-        result: dict[str, Any] = state.model_dump(*args, **kwargs)
-        return result
 
 
 class FlowMeta(ModelMetaclass):
@@ -774,6 +483,21 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     @classmethod
     def from_definition(cls, definition: FlowDefinition, **kwargs: Any) -> Flow[Any]:
         """Build a runnable Flow directly from a definition; no subclass required."""
+        return cls.from_declaration(contents=definition, **kwargs)
+
+    @classmethod
+    def from_declaration(
+        cls,
+        *,
+        contents: FlowDefinition | str | dict[str, Any] | None = None,
+        path: Path | str | None = None,
+        **kwargs: Any,
+    ) -> Flow[Any]:
+        """Build a runnable declarative flow from contents or a file path."""
+        definition = FlowDefinition.from_declaration(
+            contents=contents,
+            path=path,
+        )
         return cls.model_validate(
             {**definition.config.model_dump(), **kwargs},
             context={"flow_definition": definition},
@@ -997,7 +721,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     )
     _method_outputs: list[Any] = PrivateAttr(default_factory=list)
     _definition: FlowDefinition = PrivateAttr()
-    _state_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
     _or_listeners_lock: threading.Lock = PrivateAttr(default_factory=threading.Lock)
     _completed_methods: set[FlowMethodName] = PrivateAttr(default_factory=set)
     _method_call_counts: dict[FlowMethodName, int] = PrivateAttr(default_factory=dict)
@@ -1092,9 +815,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         self._methods.update(methods)
 
     def _action_bound_methods(self) -> dict[FlowMethodName, Callable[..., Any]]:
-        def resolve(name: str, definition: FlowMethodDefinition) -> Callable[..., Any]:
+        def build(name: str, definition: FlowMethodDefinition) -> Callable[..., Any]:
             try:
-                return resolve_action(self, definition.do)
+                return build_action(self, definition.do)
+            except FlowScriptExecutionDisabledError:
+                raise
             except Exception as e:
                 unresolved.append(f"{name}: {e}")
                 return lambda *args, **kwargs: None
@@ -1102,9 +827,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         methods: dict[FlowMethodName, Callable[..., Any]] = {}
         unresolved: list[str] = []
         for method_name, method_definition in self._definition.methods.items():
-            methods[FlowMethodName(method_name)] = resolve(
-                method_name, method_definition
-            )
+            methods[FlowMethodName(method_name)] = build(method_name, method_definition)
         if unresolved:
             raise ValueError(
                 f"Cannot build flow {self._definition.name!r} from its definition; "
@@ -1919,7 +1642,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
     @property
     def state(self) -> T:
-        return StateProxy(self._state, self._state_lock)  # type: ignore[return-value]
+        return cast(T, self._state)
 
     @property
     def method_outputs(self) -> list[Any]:
@@ -2460,11 +2183,6 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     object.__setattr__(
                         self, "_deferred_flow_started_event_id", started_event.event_id
                     )
-                if not self.suppress_flow_events:
-                    self._log_flow_event(
-                        f"Flow started with ID: {self.flow_id}", color="bold magenta"
-                    )
-
             # After FlowStarted: env events must not pre-empt trace batch init
             # with implicit "crew" execution_type.
             get_env_context()
@@ -3012,6 +2730,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         """
         # First, handle routers repeatedly until no router triggers anymore
         router_results = []
+        router_result_payloads: dict[str, Any] = {}
         router_result_to_feedback: dict[
             str, Any
         ] = {}  # Map outcome -> HumanFeedbackResult
@@ -3049,6 +2768,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 router_result_str = str(router_result)
                 router_result_event = FlowMethodName(router_result_str)
                 router_results.append(router_result_event)
+                router_result_payloads[router_result_str] = (
+                    self.last_human_feedback
+                    if self.last_human_feedback is not None
+                    else router_result
+                )
 
                 if self.last_human_feedback is not None:
                     router_result_to_feedback[router_result_str] = (
@@ -3069,7 +2793,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     current_trigger, router_only=False
                 )
                 if listeners_triggered:
-                    listener_result = router_result_to_feedback.get(
+                    listener_result = router_result_payloads.get(
                         str(current_trigger), result
                     )
                     racing_group = self._get_racing_group_for_listeners(
@@ -3588,7 +3312,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     ) -> Any:
         provider = feedback_definition.provider
         if isinstance(provider, str):
-            provider = resolve_instance_ref(provider, field="human_feedback.provider")
+            provider = _resolve_instance_ref(provider, field="human_feedback.provider")
         if provider is None:
             from crewai.flow.flow_config import flow_config
 

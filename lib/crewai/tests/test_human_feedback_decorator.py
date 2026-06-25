@@ -597,7 +597,7 @@ class TestHumanFeedbackLearn:
         flow.memory.remember_many.assert_not_called()
 
     def test_learn_true_uses_default_llm(self):
-        """When learn=True and llm is not explicitly set, the default gpt-4o-mini is used."""
+        """When learn=True and llm is not explicitly set, the default gpt-5.4-mini is used."""
 
         @human_feedback(message="Review:", learn=True)
         def test_method(self):
@@ -606,8 +606,8 @@ class TestHumanFeedbackLearn:
         config = test_method.__human_feedback_config__
         assert config is not None
         assert config.learn is True
-        # llm defaults to "gpt-4o-mini" at the function level
-        assert config.llm == "gpt-4o-mini"
+        # llm defaults to "gpt-5.4-mini" at the function level
+        assert config.llm == "gpt-5.4-mini"
 
     def test_pre_review_failure_logs_and_returns_raw_output(self, caplog):
         """Pre-review LLM failure falls back to raw output AND logs a warning."""

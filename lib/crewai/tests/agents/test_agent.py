@@ -28,6 +28,19 @@ from crewai.tools import tool
 from crewai.utilities import RPMController
 
 
+def test_agent_memory_true_uses_agent_llm_model():
+    agent = Agent(
+        role="test role",
+        goal="test goal",
+        backstory="test backstory",
+        llm="ollama/llama3",
+        memory=True,
+    )
+
+    assert agent.memory is not None
+    assert agent.memory.llm == "ollama/llama3"
+
+
 def test_agent_llm_creation_with_env_vars():
     original_api_key = os.environ.get("OPENAI_API_KEY")
     original_api_base = os.environ.get("OPENAI_API_BASE")

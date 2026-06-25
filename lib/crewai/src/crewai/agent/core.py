@@ -758,6 +758,31 @@ class Agent(BaseAgent):
         self._check_execution_error(e, task)
         return await self.aexecute_task(task, context, tools)
 
+    def message(self, content: str, **kwargs: Any) -> str:
+        """Send a single message and get a response.
+
+        Creates a temporary Task + Crew, executes, and returns the raw output.
+        """
+        from crewai.crew import Crew
+        from crewai.task import Task
+        from crewai.types.streaming import CrewStreamingOutput
+
+        task = Task(
+            description=content,
+            expected_output="Respond to the user's message appropriately.",
+            agent=self,
+        )
+        crew = Crew(
+            agents=[self],
+            tasks=[task],
+            verbose=self.verbose,
+            memory=self.memory or False,
+        )
+        result = crew.kickoff()
+        if isinstance(result, CrewStreamingOutput):
+            return result.result.raw
+        return result.raw
+
     def execute_task(
         self,
         task: Task,

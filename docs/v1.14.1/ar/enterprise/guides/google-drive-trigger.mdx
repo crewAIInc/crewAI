@@ -1,0 +1,80 @@
+---
+title: "مشغل Google Drive"
+description: "الاستجابة لأحداث ملفات Google Drive بطواقم آلية"
+icon: "folder"
+mode: "wide"
+---
+
+## نظرة عامة
+
+شغّل أتمتاتك عند إنشاء أو تحديث أو حذف ملفات في Google Drive. تشمل سير العمل النموذجية تلخيص المحتوى المُحمّل حديثاً، وتطبيق سياسات المشاركة، أو إخطار المالكين عند تغيير ملفات هامة.
+
+<Tip>
+  اربط Google Drive في **Tools & Integrations** وتأكد من تفعيل المشغل
+  للأتمتة التي تريد مراقبتها.
+</Tip>
+
+## تفعيل مشغل Google Drive
+
+1. افتح عملية النشر في CrewAI AMP
+2. انتقل إلى علامة تبويب **Triggers**
+3. حدد موقع **Google Drive** وبدّل مفتاح التبديل للتفعيل
+
+<Frame>
+  <img
+    src="/images/enterprise/gdrive-trigger.png"
+    alt="تفعيل أو تعطيل المشغلات بالتبديل"
+  />
+</Frame>
+
+## مثال: تلخيص نشاط الملفات
+
+تحلل طواقم Drive النموذجية الحمولة لاستخراج بيانات الملف الوصفية وتقييم الصلاحيات ونشر ملخص.
+
+```python
+from drive_file_crew import GoogleDriveFileTrigger
+
+crew = GoogleDriveFileTrigger().crew()
+crew.kickoff({
+    "crewai_trigger_payload": drive_payload,
+})
+```
+
+## الاختبار المحلي
+
+اختبر تكامل مشغل Google Drive محلياً باستخدام CrewAI CLI:
+
+```bash
+# عرض جميع المشغلات المتاحة
+crewai triggers list
+
+# محاكاة مشغل Google Drive بحمولة واقعية
+crewai triggers run google_drive/file_changed
+```
+
+سينفذ أمر `crewai triggers run` طاقمك بحمولة Drive كاملة، مما يتيح لك اختبار منطق التحليل قبل النشر.
+
+<Warning>
+  استخدم `crewai triggers run google_drive/file_changed` (وليس `crewai run`) لمحاكاة
+  تنفيذ المشغل أثناء التطوير. بعد النشر، سيتلقى طاقمك
+  حمولة المشغل تلقائياً.
+</Warning>
+
+## مراقبة عمليات التنفيذ
+
+تتبع سجل وأداء عمليات التشغيل المُشغّلة عبر قائمة **Executions** في لوحة تحكم النشر.
+
+<Frame>
+  <img
+    src="/images/enterprise/list-executions.png"
+    alt="قائمة عمليات التنفيذ المُشغّلة بواسطة الأتمتة"
+  />
+</Frame>
+
+## استكشاف الأخطاء وإصلاحها
+
+- تحقق من ربط Google Drive وتفعيل مفتاح التبديل للمشغل
+- اختبر محلياً بـ `crewai triggers run google_drive/file_changed` لرؤية هيكل الحمولة بالضبط
+- إذا كانت الحمولة تفتقد بيانات الصلاحيات، تأكد من أن الحساب المتصل لديه صلاحية الوصول إلى الملف أو المجلد
+- يرسل المشغل معرّفات الملفات فقط؛ استخدم Drive API إذا كنت تحتاج جلب المحتوى الثنائي أثناء تشغيل الطاقم
+- تذكر: استخدم `crewai triggers run` (وليس `crewai run`) لمحاكاة تنفيذ المشغل

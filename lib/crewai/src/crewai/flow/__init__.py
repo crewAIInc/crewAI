@@ -10,6 +10,7 @@ from crewai.flow.conversation import (
     ConversationalInputs,
 )
 from crewai.flow.dsl import HumanFeedbackResult, human_feedback
+from crewai.flow.expressions import Expression
 from crewai.flow.flow import Flow, and_, listen, or_, router, start
 from crewai.flow.flow_config import flow_config
 from crewai.flow.input_provider import InputProvider, InputResponse
@@ -26,6 +27,7 @@ __all__ = [
     "ConsoleProvider",
     "ConversationalConfig",
     "ConversationalInputs",
+    "Expression",
     "Flow",
     "FlowStructure",
     "HumanFeedbackPending",

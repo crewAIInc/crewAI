@@ -38,6 +38,12 @@ import subprocess
 import sys
 from typing import Any
 
+from crewai.project.json_loader import (
+    JSONProjectValidationError,
+    find_crew_json_file,
+    find_json_project_file,
+    validate_crew_project,
+)
 from rich.console import Console
 
 from crewai_cli.utils import parse_toml
@@ -151,9 +157,33 @@ class DeployValidator:
     def ok(self) -> bool:
         return not self.errors
 
+    @property
+    def _is_json_crew(self) -> bool:
+        """True for JSON crew projects, deferring to the declared type.
+
+        A flow project that also contains a crew.json(c) file validates as
+        the flow it declares in pyproject.toml, not as a JSON crew.
+        """
+        if find_crew_json_file(self.project_root) is None:
+            return False
+        pyproject_path = self.project_root / "pyproject.toml"
+        if not pyproject_path.exists():
+            return True
+        try:
+            data = parse_toml(pyproject_path.read_text())
+        except Exception:
+            return True
+        declared_type: str | None = (
+            (data.get("tool") or {}).get("crewai", {}).get("type")
+        )
+        return declared_type != "flow"
+
     def run(self) -> list[ValidationResult]:
         """Run all checks. Later checks are skipped when earlier ones make
         them impossible (e.g. no pyproject.toml → no lockfile check)."""
+        if self._is_json_crew:
+            return self._run_json_checks()
+
         if not self._check_pyproject():
             return self.results
 
@@ -175,6 +205,130 @@ class DeployValidator:
         self._check_version_vs_lockfile()
 
         return self.results
+
+    def _run_json_checks(self) -> list[ValidationResult]:
+        """Validation suite for JSON-defined crew projects."""
+        crew_path = find_crew_json_file(self.project_root)
+        if crew_path is None:
+            return self.results
+
+        agents_dir = self.project_root / "agents"
+
+        self._check_pyproject()
+        self._check_lockfile()
+        agents_dir_ok = self._check_json_agents_dir(agents_dir)
+
+        project = None
+        try:
+            if agents_dir_ok:
+                project = validate_crew_project(crew_path, agents_dir)
+        except JSONProjectValidationError as e:
+            self._add(
+                Severity.ERROR,
+                "invalid_crew_json",
+                f"{crew_path.name} has invalid JSON crew configuration",
+                detail="\n".join(e.errors),
+                hint="Fix the JSON crew, agent, and task references before deploying.",
+            )
+            return self.results
+        except Exception as e:
+            self._add(
+                Severity.ERROR,
+                "invalid_crew_json",
+                f"Cannot parse {crew_path.name}",
+                detail=str(e),
+            )
+            return self.results
+
+        if project is not None:
+            self._check_env_vars_json(crew_path, agents_dir, project.agent_names)
+        self._check_version_vs_lockfile()
+
+        return self.results
+
+    def _check_json_agents_dir(self, agents_dir: Path) -> bool:
+        if agents_dir.is_dir():
+            return True
+        self._add(
+            Severity.ERROR,
+            "missing_agents_dir",
+            "Cannot find agents/ directory",
+            detail=(
+                "JSON crew projects load agent definitions from "
+                f"{agents_dir.relative_to(self.project_root)}/*.jsonc or *.json."
+            ),
+            hint="Create agents/ and add one JSON or JSONC file per agent.",
+        )
+        return False
+
+    def _check_env_vars_json(
+        self, crew_path: Path, agents_dir: Path, agent_names: list[str]
+    ) -> None:
+        """Check for env var references in JSON crew files."""
+        referenced: set[str] = set()
+        pattern = re.compile(r"\$\{?([A-Z][A-Z0-9_]+)\}?")
+
+        try:
+            referenced.update(pattern.findall(crew_path.read_text(errors="ignore")))
+        except OSError as exc:
+            logger.debug("Skipping unreadable crew file %s: %s", crew_path, exc)
+
+        for name in agent_names:
+            agent_path = find_json_project_file(agents_dir, name)
+            if agent_path is None:
+                continue
+            try:
+                referenced.update(
+                    pattern.findall(agent_path.read_text(errors="ignore"))
+                )
+            except OSError as exc:
+                logger.debug("Skipping unreadable agent file %s: %s", agent_path, exc)
+
+        for py_path in self.project_root.rglob("*.py"):
+            if ".venv" in py_path.parts:
+                continue
+            try:
+                text = py_path.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            env_pattern = re.compile(
+                r"""(?x)
+                (?:os\.environ\s*(?:\[\s*|\.get\s*\(\s*)
+                  |os\.getenv\s*\(\s*
+                  |getenv\s*\(\s*)
+                ['"]([A-Z][A-Z0-9_]*)['"]
+                """
+            )
+            referenced.update(env_pattern.findall(text))
+
+        env_file = self.project_root / ".env"
+        env_keys: set[str] = set()
+        if env_file.exists():
+            for line in env_file.read_text(errors="ignore").splitlines():
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                env_keys.add(line.split("=", 1)[0].strip())
+
+        missing_known = sorted(
+            var
+            for var in referenced
+            if var in _KNOWN_API_KEY_HINTS
+            and var not in env_keys
+            and var not in os.environ
+        )
+        if missing_known:
+            self._add(
+                Severity.WARNING,
+                "env_vars_not_in_dotenv",
+                f"{len(missing_known)} referenced API key(s) not in .env",
+                detail=(
+                    "These env vars are referenced in your project but not set "
+                    f"locally: {', '.join(missing_known)}. Deploys will fail "
+                    "unless they are added to the deployment's Environment "
+                    "Variables in the CrewAI dashboard."
+                ),
+            )
 
     def _check_pyproject(self) -> bool:
         pyproject_path = self.project_root / "pyproject.toml"
