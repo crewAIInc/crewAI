@@ -2207,10 +2207,8 @@ def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
     mock_get_agent.return_value = mock_get_response
 
     agent = Agent(from_repository="test_agent")
-    # Resolution is deferred: nothing is fetched at construction.
-    assert mock_get_agent.called is False
+    assert mock_get_agent.called is False  # deferred until execution
 
-    # Resolution happens on first execution (triggered here directly).
     agent._resolve_from_repository()
 
     assert agent.role == "test role"
@@ -2237,15 +2235,36 @@ def test_agent_from_repository_is_deferred_until_execution(
     }
     mock_get_agent.return_value = mock_get_response
 
-    # Construction must not touch the network — this is what lets from_repository
-    # agents be built while a crew loads, before deployment auth is wired.
+    # Construction must not touch the network; resolution fetches once.
     agent = Agent(from_repository="test_agent")
     assert mock_get_agent.called is False
     assert agent.role == ""
 
-    # Executing the agent resolves the definition; a second run does not refetch.
     agent._resolve_from_repository()
     agent._resolve_from_repository()
+    assert agent.role == "test role"
+    assert mock_get_agent.call_count == 1
+
+
+@pytest.mark.asyncio
+@patch("crewai.plus_api.PlusAPI.get_agent")
+async def test_agent_from_repository_resolves_inside_event_loop(
+    mock_get_agent, mock_get_auth_token
+):
+    mock_get_response = MagicMock()
+    mock_get_response.status_code = 200
+    mock_get_response.json.return_value = {
+        "role": "test role",
+        "goal": "test goal",
+        "backstory": "test backstory",
+    }
+    mock_get_agent.return_value = mock_get_response
+
+    # The blocking fetch must run off the loop (load_agent_from_repository uses
+    # asyncio.run), so async execution does not raise.
+    agent = Agent(from_repository="test_agent")
+    await agent._aresolve_from_repository()
+
     assert agent.role == "test role"
     assert mock_get_agent.call_count == 1
 

@@ -168,6 +168,10 @@ def _serialize_executor_class(value: Any) -> str:
     return value.__name__ if isinstance(value, type) else str(value)
 
 
+# Required fields seeded with placeholders when an agent defers to a repository.
+_REPOSITORY_IDENTITY_FIELDS = ("role", "goal", "backstory")
+
+
 class Agent(BaseAgent):
     """Represents an agent in a system.
 
@@ -347,41 +351,42 @@ class Agent(BaseAgent):
     @model_validator(mode="before")
     @classmethod
     def validate_from_repository(cls, v: Any) -> dict[str, Any] | None | Any:
-        """Defer repository resolution until the agent first runs.
+        """Defer repository resolution to first execution.
 
-        Loading an agent from the repository requires an authenticated network
-        call. Performing it here — during construction — forces that call while a
-        crew is being loaded, before the runtime has wired deployment auth, which
-        breaks ``from_repository`` agents in deployed environments. Instead we keep
-        ``from_repository`` and seed the required identity fields with placeholders
-        so the model validates now; the real definition is fetched on first use
-        (see ``_resolve_from_repository``).
+        Fetching needs authenticated network access; doing it at construction
+        breaks ``from_repository`` agents in deployments, where a crew loads
+        before auth is wired. Seed required fields so the model validates now;
+        the definition is fetched on first run (see ``_resolve_from_repository``).
         """
         if isinstance(v, dict) and v.get("from_repository"):
-            for field in ("role", "goal", "backstory"):
+            for field in _REPOSITORY_IDENTITY_FIELDS:
                 v.setdefault(field, "")
         return v
 
     def _resolve_from_repository(self) -> None:
-        """Fetch and apply the repository agent definition on first use.
+        """Fetch and apply the repository definition once, on first execution.
 
-        Values supplied explicitly at construction take precedence; the
-        repository fills in everything else (including the placeholder identity
-        fields). Runs at most once and only when ``from_repository`` is set.
+        Values set explicitly at construction win; the repository fills the rest.
         """
         if not self.from_repository or self._from_repository_resolved:
             return
 
-        attributes = load_agent_from_repository(self.from_repository)
-        identity_fields = ("role", "goal", "backstory")
-        for key, value in attributes.items():
-            if key in identity_fields:
-                if not getattr(self, key, None):
-                    setattr(self, key, value)
-            elif key not in self.model_fields_set and hasattr(self, key):
+        explicit = set(self.model_fields_set)
+        for field in _REPOSITORY_IDENTITY_FIELDS:
+            if not getattr(self, field):  # placeholder, not a user-supplied value
+                explicit.discard(field)
+
+        for key, value in load_agent_from_repository(self.from_repository).items():
+            if key not in explicit and hasattr(self, key):
                 setattr(self, key, value)
 
         self._from_repository_resolved = True
+
+    async def _aresolve_from_repository(self) -> None:
+        """Async variant: run the blocking repository fetch off the event loop."""
+        if not self.from_repository or self._from_repository_resolved:
+            return
+        await asyncio.to_thread(self._resolve_from_repository)
 
     @model_validator(mode="after")
     def post_init_setup(self) -> Self:
@@ -973,7 +978,7 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
-        self._resolve_from_repository()
+        await self._aresolve_from_repository()
         task_prompt = self._prepare_task_execution(task, context)
 
         knowledge_config = get_knowledge_config(self)
@@ -1452,7 +1457,6 @@ class Agent(BaseAgent):
         Returns:
             Tuple of (executor, inputs, agent_info, parsed_tools) ready for execution.
         """
-        self._resolve_from_repository()
         if self.apps:
             platform_tools = self.get_platform_tools(self.apps)
             if platform_tools:
@@ -1646,6 +1650,7 @@ class Agent(BaseAgent):
         if is_inside_event_loop():
             return self.kickoff_async(messages, response_format, input_files)
 
+        self._resolve_from_repository()
         executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
             messages, response_format, input_files
         )
@@ -1961,6 +1966,7 @@ class Agent(BaseAgent):
                 input_files=input_files,
             )
 
+        await self._aresolve_from_repository()
         executor, inputs, agent_info, parsed_tools = self._prepare_kickoff(
             messages, response_format, input_files
         )
