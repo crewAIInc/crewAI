@@ -157,6 +157,14 @@ class EncodingFlow(Flow[EncodingState]):
             # Ragged embeddings cannot form a matrix; this should not happen for
             # a single embedder, but fall back to the scalar reference so the
             # len-mismatch-as-zero-similarity behavior is preserved exactly.
+            # Warn (rather than silently degrade) since it signals an embedder
+            # returning variable-length vectors — an encoding bug worth surfacing.
+            logger.warning(
+                "intra_batch_dedup: ragged embeddings in batch (sample lengths: "
+                "%s); falling back to scalar dedup. This usually means the "
+                "embedder returned variable-length vectors.",
+                [len(emb) for _, emb in active[:5]],
+            )
             self._dedup_scalar(items, threshold)
             return
 

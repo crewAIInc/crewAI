@@ -6,9 +6,11 @@ original scalar O(n^2) algorithm, which is retained as ``_dedup_scalar``.
 
 from __future__ import annotations
 
+import logging
 from unittest.mock import MagicMock, patch
 
 import numpy as np
+import pytest
 
 from crewai.memory.encoding_flow import EncodingFlow, ItemState
 from crewai.memory.types import MemoryConfig
@@ -89,6 +91,24 @@ def test_falls_back_to_scalar_when_numpy_unavailable() -> None:
     # Make `import numpy` raise ImportError inside intra_batch_dedup.
     with patch.dict("sys.modules", {"numpy": None}):
         flow.intra_batch_dedup()
+    assert [it.dropped for it in items] == [False, True, False]
+    assert flow.state.items_dropped_dedup == 1
+
+
+def test_ragged_embeddings_warn_and_fall_back(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Variable-length embeddings (an encoding bug) must warn and still dedup
+    correctly via the scalar fallback (len mismatch -> 0 similarity)."""
+    items = [
+        ItemState(content="a", embedding=[0.5] * 8),
+        ItemState(content="b", embedding=[0.5] * 8),  # dup of a -> dropped
+        ItemState(content="c", embedding=[0.5] * 4),  # ragged -> never matches
+    ]
+    with caplog.at_level(logging.WARNING, logger="crewai.memory.encoding_flow"):
+        flow = _run_vectorized(items)
+
+    assert any("ragged embeddings" in r.message for r in caplog.records)
     assert [it.dropped for it in items] == [False, True, False]
     assert flow.state.items_dropped_dedup == 1
 
