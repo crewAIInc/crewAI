@@ -298,6 +298,7 @@ class _ConversationalMixin:
         self._pending_intents = list(intents) if intents else None
         self._pending_intent_llm = intent_llm
 
+        failed_event: ConversationTurnFailedEvent | None = None
         try:
             # Each turn is a fresh execution; clear graph tracking so the second
             # turn re-runs instead of being treated as a checkpoint restore.
@@ -313,23 +314,21 @@ class _ConversationalMixin:
             ):
                 self.append_assistant_message(self._stringify_result(result))
         except Exception as exc:
-            crewai_event_bus.emit(
-                self,
-                ConversationTurnFailedEvent(
-                    type="conversation_turn_failed",
-                    flow_name=self.name or self.__class__.__name__,
-                    session_id=sid,
-                    error=exc,
-                ),
+            failed_event = ConversationTurnFailedEvent(
+                type="conversation_turn_failed",
+                flow_name=self.name or self.__class__.__name__,
+                session_id=sid,
+                error=exc,
             )
             raise
         finally:
             self._pending_user_message = None
             self._pending_intents = None
             self._pending_intent_llm = None
+            if failed_event is not None:
+                self._emit_terminal_conversation_turn_event(failed_event)
 
-        crewai_event_bus.emit(
-            self,
+        self._emit_terminal_conversation_turn_event(
             ConversationTurnCompletedEvent(
                 type="conversation_turn_completed",
                 flow_name=self.name or self.__class__.__name__,
@@ -337,6 +336,23 @@ class _ConversationalMixin:
             ),
         )
         return result
+
+    def _emit_terminal_conversation_turn_event(
+        self,
+        event: ConversationTurnCompletedEvent | ConversationTurnFailedEvent,
+    ) -> None:
+        """Emit a terminal turn event and wait for its own handlers."""
+        future = crewai_event_bus.emit(self, event)
+        if future is None:
+            return
+        try:
+            future.result(timeout=30)
+        except Exception:
+            logger.warning(
+                "%s handler failed or timed out",
+                event.__class__.__name__,
+                exc_info=True,
+            )
 
     def chat(
         self,

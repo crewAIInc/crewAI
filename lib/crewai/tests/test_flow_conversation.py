@@ -1194,6 +1194,7 @@ class TestConversationalFlow:
             | ConversationTurnCompletedEvent
             | ConversationTurnFailedEvent
         ] = []
+        handled_failed_events: list[ConversationTurnFailedEvent] = []
         original_emit = crewai_event_bus.emit
 
         def capture_emit(source: Any, event: Any) -> Any:
@@ -1208,10 +1209,19 @@ class TestConversationalFlow:
                 turn_events.append(event)
             return original_emit(source, event)
 
-        with patch.object(crewai_event_bus, "emit", side_effect=capture_emit):
+        with (
+            crewai_event_bus.scoped_handlers(),
+            patch.object(crewai_event_bus, "emit", side_effect=capture_emit),
+        ):
+
+            @crewai_event_bus.on(ConversationTurnFailedEvent)
+            def capture_failed(
+                _: Any, event: ConversationTurnFailedEvent
+            ) -> None:
+                handled_failed_events.append(event)
+
             with pytest.raises(RuntimeError, match="turn exploded"):
                 flow.handle_turn("turn 1")
-            crewai_event_bus.flush()
 
         assert [event.type for event in turn_events] == [
             "conversation_turn_started",
@@ -1222,10 +1232,23 @@ class TestConversationalFlow:
         assert isinstance(failed_event, ConversationTurnFailedEvent)
         assert failed_event.session_id == flow.state.id
         assert str(failed_event.error) == "turn exploded"
+        assert handled_failed_events == [failed_event]
 
     def test_conversation_turn_completed_tracks_feature_usage(self) -> None:
         """Completed conversation turns count conversational Flow usage."""
         from crewai.events.event_listener import event_listener
+
+        @ConversationConfig(defer_trace_finalization=True)
+        class DeferredFlow(ConversationalFlow):
+            def route_turn(self, context: dict[str, Any]) -> str | None:
+                return "work"
+
+            @listen("work")
+            def do_work(self) -> str:
+                self.append_assistant_message("worked")
+                return "worked"
+
+        flow = DeferredFlow()
 
         with (
             crewai_event_bus.scoped_handlers(),
@@ -1235,15 +1258,7 @@ class TestConversationalFlow:
             ) as feature_usage_span,
         ):
             event_listener.setup_listeners(crewai_event_bus)
-            crewai_event_bus.emit(
-                self,
-                ConversationTurnCompletedEvent(
-                    type="conversation_turn_completed",
-                    flow_name="ChatFlow",
-                    session_id="session-1",
-                ),
-            )
-            crewai_event_bus.flush()
+            flow.handle_turn("turn 1")
 
         feature_usage_span.assert_any_call("flow:conversation_turn")
 
