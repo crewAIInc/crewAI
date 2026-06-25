@@ -2207,6 +2207,11 @@ def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
     mock_get_agent.return_value = mock_get_response
 
     agent = Agent(from_repository="test_agent")
+    # Resolution is deferred: nothing is fetched at construction.
+    assert mock_get_agent.called is False
+
+    # Resolution happens on first execution (triggered here directly).
+    agent._resolve_from_repository()
 
     assert agent.role == "test role"
     assert agent.goal == "test goal"
@@ -2217,6 +2222,32 @@ def test_agent_from_repository(mock_get_agent, mock_get_auth_token):
     assert agent.tools[0].n_results == 30
     assert isinstance(agent.tools[1], FileReadTool)
     assert agent.tools[1].file_path == "test.txt"
+
+
+@patch("crewai.plus_api.PlusAPI.get_agent")
+def test_agent_from_repository_is_deferred_until_execution(
+    mock_get_agent, mock_get_auth_token
+):
+    mock_get_response = MagicMock()
+    mock_get_response.status_code = 200
+    mock_get_response.json.return_value = {
+        "role": "test role",
+        "goal": "test goal",
+        "backstory": "test backstory",
+    }
+    mock_get_agent.return_value = mock_get_response
+
+    # Construction must not touch the network — this is what lets from_repository
+    # agents be built while a crew loads, before deployment auth is wired.
+    agent = Agent(from_repository="test_agent")
+    assert mock_get_agent.called is False
+    assert agent.role == ""
+
+    # Executing the agent resolves the definition; a second run does not refetch.
+    agent._resolve_from_repository()
+    agent._resolve_from_repository()
+    assert agent.role == "test role"
+    assert mock_get_agent.call_count == 1
 
 
 @patch("crewai.plus_api.PlusAPI.get_agent")
@@ -2235,6 +2266,7 @@ def test_agent_from_repository_override_attributes(mock_get_agent, mock_get_auth
     }
     mock_get_agent.return_value = mock_get_response
     agent = Agent(from_repository="test_agent", role="Custom Role")
+    agent._resolve_from_repository()
 
     assert agent.role == "Custom Role"
     assert agent.goal == "test goal"
@@ -2259,11 +2291,12 @@ def test_agent_from_repository_with_invalid_tools(mock_get_agent, mock_get_auth_
         ],
     }
     mock_get_agent.return_value = mock_get_response
+    agent = Agent(from_repository="test_agent")
     with pytest.raises(
         AgentRepositoryError,
         match="Tool DoesNotExist could not be loaded: module 'crewai_tools' has no attribute 'DoesNotExist'",
     ):
-        Agent(from_repository="test_agent")
+        agent._resolve_from_repository()
 
 
 @patch("crewai.plus_api.PlusAPI.get_agent")
@@ -2272,11 +2305,12 @@ def test_agent_from_repository_internal_error(mock_get_agent, mock_get_auth_toke
     mock_get_response.status_code = 500
     mock_get_response.text = "Internal server error"
     mock_get_agent.return_value = mock_get_response
+    agent = Agent(from_repository="test_agent")
     with pytest.raises(
         AgentRepositoryError,
         match="Agent test_agent could not be loaded: Internal server error",
     ):
-        Agent(from_repository="test_agent")
+        agent._resolve_from_repository()
 
 
 @patch("crewai.plus_api.PlusAPI.get_agent")
@@ -2285,11 +2319,12 @@ def test_agent_from_repository_agent_not_found(mock_get_agent, mock_get_auth_tok
     mock_get_response.status_code = 404
     mock_get_response.text = "Agent not found"
     mock_get_agent.return_value = mock_get_response
+    agent = Agent(from_repository="test_agent")
     with pytest.raises(
         AgentRepositoryError,
         match="Agent test_agent does not exist, make sure the name is correct or the agent is available on your organization",
     ):
-        Agent(from_repository="test_agent")
+        agent._resolve_from_repository()
 
 
 @patch("crewai.plus_api.PlusAPI.get_agent")
@@ -2314,6 +2349,7 @@ def test_agent_from_repository_displays_org_info(
     mock_get_agent.return_value = mock_get_response
 
     agent = Agent(from_repository="test_agent")
+    agent._resolve_from_repository()
 
     mock_console.print.assert_any_call(
         "Fetching agent from organization: Test Organization (test-org-uuid)",
@@ -2341,11 +2377,12 @@ def test_agent_from_repository_without_org_set(
     mock_get_response.text = "Unauthorized access"
     mock_get_agent.return_value = mock_get_response
 
+    agent = Agent(from_repository="test_agent")
     with pytest.raises(
         AgentRepositoryError,
         match="Agent test_agent could not be loaded: Unauthorized access",
     ):
-        Agent(from_repository="test_agent")
+        agent._resolve_from_repository()
 
     mock_console.print.assert_any_call(
         "No organization currently set. We recommend setting one before using: `crewai org switch <org_id>` command.",

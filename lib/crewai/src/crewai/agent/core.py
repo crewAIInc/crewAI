@@ -200,6 +200,7 @@ class Agent(BaseAgent):
     _times_executed: int = PrivateAttr(default=0)
     _mcp_resolver: MCPToolResolver | None = PrivateAttr(default=None)
     _last_messages: list[LLMMessage] = PrivateAttr(default_factory=list)
+    _from_repository_resolved: bool = PrivateAttr(default=False)
     max_execution_time: int | None = Field(
         default=None,
         description="Maximum execution time for an agent to execute a task",
@@ -346,10 +347,41 @@ class Agent(BaseAgent):
     @model_validator(mode="before")
     @classmethod
     def validate_from_repository(cls, v: Any) -> dict[str, Any] | None | Any:
-        """Merge repository agent config with provided values before validation."""
-        if v is not None and (from_repository := v.get("from_repository")):
-            return load_agent_from_repository(from_repository) | v
+        """Defer repository resolution until the agent first runs.
+
+        Loading an agent from the repository requires an authenticated network
+        call. Performing it here — during construction — forces that call while a
+        crew is being loaded, before the runtime has wired deployment auth, which
+        breaks ``from_repository`` agents in deployed environments. Instead we keep
+        ``from_repository`` and seed the required identity fields with placeholders
+        so the model validates now; the real definition is fetched on first use
+        (see ``_resolve_from_repository``).
+        """
+        if isinstance(v, dict) and v.get("from_repository"):
+            for field in ("role", "goal", "backstory"):
+                v.setdefault(field, "")
         return v
+
+    def _resolve_from_repository(self) -> None:
+        """Fetch and apply the repository agent definition on first use.
+
+        Values supplied explicitly at construction take precedence; the
+        repository fills in everything else (including the placeholder identity
+        fields). Runs at most once and only when ``from_repository`` is set.
+        """
+        if not self.from_repository or self._from_repository_resolved:
+            return
+
+        attributes = load_agent_from_repository(self.from_repository)
+        identity_fields = ("role", "goal", "backstory")
+        for key, value in attributes.items():
+            if key in identity_fields:
+                if not getattr(self, key, None):
+                    setattr(self, key, value)
+            elif key not in self.model_fields_set and hasattr(self, key):
+                setattr(self, key, value)
+
+        self._from_repository_resolved = True
 
     @model_validator(mode="after")
     def post_init_setup(self) -> Self:
@@ -804,6 +836,7 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
+        self._resolve_from_repository()
         task_prompt = self._prepare_task_execution(task, context)
 
         knowledge_config = get_knowledge_config(self)
@@ -940,6 +973,7 @@ class Agent(BaseAgent):
             ValueError: If the max execution time is not a positive integer.
             RuntimeError: If the agent execution fails for other reasons.
         """
+        self._resolve_from_repository()
         task_prompt = self._prepare_task_execution(task, context)
 
         knowledge_config = get_knowledge_config(self)
@@ -1418,6 +1452,7 @@ class Agent(BaseAgent):
         Returns:
             Tuple of (executor, inputs, agent_info, parsed_tools) ready for execution.
         """
+        self._resolve_from_repository()
         if self.apps:
             platform_tools = self.get_platform_tools(self.apps)
             if platform_tools:
