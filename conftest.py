@@ -134,17 +134,21 @@ def bedrock_host_matcher(r1: Request, r2: Request) -> bool:  # type: ignore[no-a
     )
 
 
-def _patched_make_vcr_request(httpx_request: Any, **kwargs: Any) -> Any:
+def _patched_make_vcr_request(
+    httpx_request: Any, real_request_body: Any = None, **kwargs: Any
+) -> Any:
     """Patched version of VCR's _make_vcr_request that handles binary content.
 
     The original implementation fails on binary request bodies (like file uploads)
     because it assumes all content can be decoded as UTF-8.
     """
-    raw_body = httpx_request.read()
-    try:
-        body = raw_body.decode("utf-8")
-    except UnicodeDecodeError:
-        body = base64.b64encode(raw_body).decode("ascii")
+    raw_body = real_request_body if real_request_body is not None else httpx_request.read()
+    body: Any = raw_body
+    if isinstance(raw_body, bytes):
+        try:
+            body = raw_body.decode("utf-8")
+        except UnicodeDecodeError:
+            body = base64.b64encode(raw_body).decode("ascii")
     uri = str(httpx_request.url)
     headers = dict(httpx_request.headers)
     return Request(httpx_request.method, uri, body, headers)

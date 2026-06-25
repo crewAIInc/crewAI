@@ -54,7 +54,7 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.flow.flow import Flow, StateProxy, listen, or_, router, start
+from crewai.flow.flow import Flow, listen, or_, router, start
 from crewai.flow.types import FlowMethodName
 from crewai.hooks.llm_hooks import (
     get_after_llm_call_hooks,
@@ -275,11 +275,6 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             bool: True if stop words should be used.
         """
         return self.llm.supports_stop_words() if self.llm else False
-
-    @property
-    def state(self) -> AgentExecutorState:
-        """Get thread-safe state proxy."""
-        return StateProxy(self._state, self._state_lock)  # type: ignore[return-value]
 
     @property  # type: ignore[misc]
     def iterations(self) -> int:
