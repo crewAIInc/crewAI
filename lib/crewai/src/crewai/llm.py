@@ -508,8 +508,11 @@ class LLM(BaseLLM):
             )
 
         if provider == "anthropic" or provider == "claude":
-            return any(
-                model_lower.startswith(prefix) for prefix in ["claude-", "anthropic."]
+            # Match standard prefixes and any model containing "claude" or "anthropic"
+            # to support custom deployments with non-standard naming (e.g., "anthropic--claude-...")
+            return (
+                "claude" in model_lower
+                or "anthropic" in model_lower
             )
 
         if provider == "gemini" or provider == "google":
@@ -618,6 +621,15 @@ class LLM(BaseLLM):
 
         if model in AZURE_MODELS:
             return "azure"
+
+        # Pattern-based inference for custom deployments
+        model_lower = model.lower()
+        if "claude" in model_lower or "anthropic" in model_lower:
+            return "anthropic"
+        if model_lower.startswith("gpt-") or model_lower.startswith("o1") or model_lower.startswith("o3"):
+            return "openai"
+        if "gemini" in model_lower:
+            return "gemini"
 
         return "openai"
 
