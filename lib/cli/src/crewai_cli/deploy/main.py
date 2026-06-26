@@ -17,7 +17,8 @@ from crewai_cli.utils import fetch_and_json_env_file, get_project_name
 
 console = Console()
 _MISSING_LOCKFILE_ERROR_CODES = {"missing_lockfile"}
-_DEPLOYMENT_IDENTIFIER_KEYS = ("deployment_id", "deploymentId", "id", "uuid")
+_DEPLOYMENT_ID_KEYS = ("deployment_id", "deploymentId")
+_DEPLOYMENT_FALLBACK_IDENTIFIER_KEYS = ("id", "uuid")
 
 
 def _run_predeploy_validation(
@@ -85,17 +86,23 @@ def _env_summary(env_vars: dict[str, str]) -> str:
 
 def _deployment_identifier(json_response: dict[str, Any]) -> str | None:
     """Return the best available identifier for a deployment show URL."""
-    for key in _DEPLOYMENT_IDENTIFIER_KEYS:
+    deployment = json_response.get("deployment")
+
+    for key in _DEPLOYMENT_ID_KEYS:
         value = json_response.get(key)
         if value:
             return str(value)
 
-    deployment = json_response.get("deployment")
     if isinstance(deployment, dict):
-        for key in _DEPLOYMENT_IDENTIFIER_KEYS:
+        for key in _DEPLOYMENT_ID_KEYS + _DEPLOYMENT_FALLBACK_IDENTIFIER_KEYS:
             value = deployment.get(key)
             if value:
                 return str(value)
+
+    for key in _DEPLOYMENT_FALLBACK_IDENTIFIER_KEYS:
+        value = json_response.get(key)
+        if value:
+            return str(value)
 
     return None
 

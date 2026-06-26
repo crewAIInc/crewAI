@@ -177,6 +177,16 @@ def test_deployment_page_url_prefers_deployment_id():
     )
 
 
+def test_deployment_page_url_prefers_nested_deployment_id_over_crew_uuid():
+    assert (
+        deploy_main._deployment_page_url(
+            "https://app.crewai.com",
+            {"uuid": "crew-uuid", "deployment": {"deployment_id": 128687}},
+        )
+        == "https://app.crewai.com/crewai_plus/deployments/128687"
+    )
+
+
 def test_deployment_page_url_falls_back_to_nested_uuid():
     assert (
         deploy_main._deployment_page_url(
