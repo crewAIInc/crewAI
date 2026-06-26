@@ -173,7 +173,7 @@ def test_from_function_does_not_infer_non_pydantic_result_schema():
     raw_result = tool.invoke({"value": "crew"})
 
     assert raw_result == {"value": "crew", "count": 1}
-    assert tool.format_output_for_agent(raw_result) == str(raw_result)
+    assert tool.format_output_for_agent(raw_result) == json.dumps(raw_result)
 
 
 def test_invalid_typed_output_warns_and_uses_string_agent_text():
@@ -194,10 +194,59 @@ def test_invalid_typed_output_warns_and_uses_string_agent_text():
         agent_text = tool.format_output_for_agent(raw_result)
 
     assert raw_result == {"value": "crew", "count": "wrong"}
-    assert agent_text == str(raw_result)
+    assert agent_text == json.dumps(raw_result)
     warning_message = str(warnings[0].message)
     assert "ValidationError" in warning_message
     assert "wrong" not in warning_message
+
+
+def test_nested_dict_output_serialized_as_json():
+    def mock_api_tool(query: str) -> dict:
+        """Fetches data from a mock API."""
+        return {
+            "status": "success",
+            "data": {"items": [{"id": 1, "value": "test"}]},
+        }
+
+    tool = CrewStructuredTool.from_function(func=mock_api_tool, name="mock_api_tool")
+
+    raw_result = tool.invoke({"query": "test"})
+    agent_text = tool.format_output_for_agent(raw_result)
+
+    parsed = json.loads(agent_text)
+    assert parsed == raw_result
+    assert "'" not in agent_text
+
+
+def test_list_output_serialized_as_json():
+    def list_tool(query: str) -> list:
+        """Returns a list of items."""
+        return [{"id": 1, "name": "a"}, {"id": 2, "name": "b"}]
+
+    tool = CrewStructuredTool.from_function(func=list_tool, name="list_tool")
+
+    raw_result = tool.invoke({"query": "test"})
+    agent_text = tool.format_output_for_agent(raw_result)
+
+    parsed = json.loads(agent_text)
+    assert parsed == raw_result
+
+
+def test_non_serializable_output_falls_back_to_str():
+    class CustomObj:
+        def __str__(self):
+            return "custom_object"
+
+    def custom_tool(query: str):
+        """Returns a non-serializable object."""
+        return CustomObj()
+
+    tool = CrewStructuredTool.from_function(func=custom_tool, name="custom_tool")
+
+    raw_result = tool.invoke({"query": "test"})
+    agent_text = tool.format_output_for_agent(raw_result)
+
+    assert agent_text == "custom_object"
 
 
 def test_validate_function_signature(basic_function, schema_class):
