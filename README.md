@@ -57,7 +57,7 @@
 > It empowers developers with both high-level simplicity and precise low-level control, ideal for creating autonomous AI agents tailored to any scenario.
 
 - **CrewAI Crews**: Optimize for autonomy and collaborative intelligence.
-- **CrewAI Flows**: The **enterprise and production architecture** for building and deploying multi-agent systems. Enable granular, event-driven control, single LLM calls for precise task orchestration and supports Crews natively
+- **CrewAI Flows**: The **enterprise and production architecture** for building and deploying multi-agent systems. Enables granular, event-driven control, single LLM calls for precise task orchestration, and native Crews support.
 
 With over 100,000 developers certified through our community courses at [learn.crewai.com](https://learn.crewai.com), CrewAI is rapidly becoming the
 standard for enterprise-ready AI automation.
