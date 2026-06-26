@@ -131,7 +131,7 @@ def test_core_telemetry_skips_duplicate_tracer_provider(
     assert telemetry.trace_set is True
 
 
-def test_core_telemetry_records_tui_button_click(
+def test_core_telemetry_records_feature_usage(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from crewai_core.telemetry import Telemetry
@@ -150,8 +150,8 @@ def test_core_telemetry_records_tui_button_click(
     )
 
     telemetry = Telemetry()
-    telemetry.tui_button_clicked_span("view_traces")
+    telemetry.feature_usage_span("cli_usage:view_traces")
 
-    tracer.start_span.assert_called_once_with("TUI Button Clicked")
-    span.set_attribute.assert_called_once_with("button_name", "view_traces")
+    tracer.start_span.assert_called_once_with("Feature Usage")
+    span.set_attribute.assert_any_call("feature", "cli_usage:view_traces")
     span.end.assert_called_once()

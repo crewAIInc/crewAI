@@ -139,7 +139,7 @@ def test_view_traces_button_click_records_telemetry(monkeypatch) -> None:
 
     app.on_button_pressed(SimpleNamespace(button=SimpleNamespace(id="btn-traces")))
 
-    app._telemetry.tui_button_clicked_span.assert_called_once_with("view_traces")
+    app._telemetry.feature_usage_span.assert_called_once_with("cli_usage:view_traces")
     assert opened_urls == ["https://app.crewai.com/traces/test"]
 
 
@@ -154,7 +154,7 @@ def test_deploy_button_click_records_telemetry() -> None:
 
     app.on_button_pressed(SimpleNamespace(button=SimpleNamespace(id="btn-deploy")))
 
-    app._telemetry.tui_button_clicked_span.assert_called_once_with("deploy")
+    app._telemetry.feature_usage_span.assert_called_once_with("cli_usage:deploy")
     assert app._want_deploy is True
     assert exits == [app._crew_result]
 

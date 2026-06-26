@@ -1049,7 +1049,7 @@ FooterKey .footer-key--key {
             if self._telemetry is None:
                 self._telemetry = Telemetry()
                 self._telemetry.set_tracer()
-            self._telemetry.tui_button_clicked_span(button_name)
+            self._telemetry.feature_usage_span(f"cli_usage:{button_name}")
         except Exception:  # noqa: S110
             pass
 

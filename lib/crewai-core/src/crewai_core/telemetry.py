@@ -249,13 +249,15 @@ class Telemetry:
 
         self._safe_telemetry_procedure(_operation)
 
-    def tui_button_clicked_span(self, button_name: str) -> None:
-        """Records when a user clicks a button in the CLI TUI."""
+    def feature_usage_span(self, feature: str) -> None:
+        """Records that a feature was used. One span = one count."""
+        from crewai_core.version import get_crewai_version
 
         def _operation() -> None:
             tracer = trace.get_tracer("crewai.telemetry")
-            span = tracer.start_span("TUI Button Clicked")
-            self._add_attribute(span, "button_name", button_name)
+            span = tracer.start_span("Feature Usage")
+            self._add_attribute(span, "crewai_version", get_crewai_version())
+            self._add_attribute(span, "feature", feature)
             close_span(span)
 
         self._safe_telemetry_procedure(_operation)
