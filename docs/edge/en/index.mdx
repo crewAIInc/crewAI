@@ -27,10 +27,41 @@ mode: "wide"
   </div>
 
   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
-    <a className="button button-primary" href="/en/quickstart">Get started</a>
+    <a
+      href="/en/quickstart"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: 42,
+        padding: "0 16px",
+        borderRadius: 8,
+        border: "1px solid #EB6658",
+        background: "#EB6658",
+        color: "#FFFFFF",
+        fontWeight: 700,
+        lineHeight: 1,
+        textDecoration: "none"
+      }}
+    >
+      Get started
+    </a>
     <button
       type="button"
-      className="button"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: 42,
+        padding: "0 16px",
+        borderRadius: 8,
+        border: "1px solid rgba(235,102,88,0.36)",
+        background: "rgba(235,102,88,0.08)",
+        color: "#EB6658",
+        fontWeight: 700,
+        lineHeight: 1,
+        cursor: "pointer"
+      }}
       onClick={async (event) => {
         const prompt = `Set up this environment so I can build with CrewAI.
 
@@ -75,15 +106,49 @@ If a command fails, show the exact command and error, explain the likely cause, 
           button.textContent = "Copy failed";
         } finally {
           window.setTimeout(() => {
-            button.textContent = "Copy instructions for coding agents";
+            button.textContent = "Copy agent setup prompt";
           }, 1600);
         }
       }}
     >
-      Copy instructions for coding agents
+      Copy agent setup prompt
     </button>
-    <a className="button" href="/en/changelog">View changelog</a>
-    <a className="button" href="/en/api-reference/introduction">API Reference</a>
+    <a
+      href="/en/guides/coding-tools/build-with-ai"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: 42,
+        padding: "0 16px",
+        borderRadius: 8,
+        border: "1px solid rgba(235,102,88,0.28)",
+        color: "#EB6658",
+        fontWeight: 700,
+        lineHeight: 1,
+        textDecoration: "none"
+      }}
+    >
+      Coding-agent guide
+    </a>
+    <a
+      href="/en/api-reference/introduction"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: 42,
+        padding: "0 16px",
+        borderRadius: 8,
+        border: "1px solid rgba(235,102,88,0.18)",
+        color: "var(--mint-text-2)",
+        fontWeight: 700,
+        lineHeight: 1,
+        textDecoration: "none"
+      }}
+    >
+      API Reference
+    </a>
   </div>
 
 </div>

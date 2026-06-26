@@ -5,15 +5,49 @@ icon: wrench
 mode: "wide"
 ---
 
-### Watch: Building CrewAI Agents & Flows with Coding Agent Skills
+<div
+  style={{
+    display: "flex",
+    flexDirection: "column",
+    gap: 18,
+    padding: "24px",
+    marginBottom: 32,
+    borderRadius: 12,
+    border: "1px solid rgba(235,102,88,0.28)",
+    background: "linear-gradient(180deg, rgba(235,102,88,0.14) 0%, rgba(235,102,88,0.06) 100%)"
+  }}
+>
+  <div>
+    <p style={{ margin: 0, color: "#EB6658", fontSize: 13, fontWeight: 700, textTransform: "uppercase" }}>
+      Coding agent setup
+    </p>
+    <h2 style={{ margin: "6px 0 8px" }}>Set up CrewAI in your coding agent</h2>
+    <p style={{ margin: 0, color: "var(--mint-text-2)", maxWidth: 760 }}>
+      Copy a ready-to-paste setup prompt for Claude Code, Codex, Cursor, or any coding agent. It installs the official CrewAI skills, checks the CLI, and points the agent at the right docs before it edits code.
+    </p>
+  </div>
 
-Install our coding agent skills (Claude Code, Codex, ...) to quickly get your coding agents up and running with CrewAI.
-
-<button
-  type="button"
-  className="button button-primary"
-  onClick={async (event) => {
-    const prompt = `Set up this environment so I can build with CrewAI.
+  <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "center" }}>
+    <button
+      type="button"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: 42,
+        padding: "0 16px",
+        borderRadius: 8,
+        border: "1px solid #EB6658",
+        background: "#EB6658",
+        color: "#FFFFFF",
+        fontSize: 15,
+        fontWeight: 700,
+        lineHeight: 1,
+        cursor: "pointer",
+        boxShadow: "0 10px 24px rgba(235,102,88,0.22)"
+      }}
+      onClick={async (event) => {
+        const prompt = `Set up this environment so I can build with CrewAI.
 
 First install the official CrewAI coding-agent skills if this environment supports npx:
 
@@ -48,21 +82,44 @@ Setup steps:
 Do not hardcode API keys. Use .env.
 Do not invent CLI flags. Validate with crewai --help or crewai create --help.
 If a command fails, show the exact command and error, explain the likely cause, fix what you can safely fix, and retry once.`;
-    const button = event.currentTarget;
-    try {
-      await navigator.clipboard.writeText(prompt);
-      button.textContent = "Copied";
-    } catch {
-      button.textContent = "Copy failed";
-    } finally {
-      window.setTimeout(() => {
-        button.textContent = "Copy instructions for coding agents";
-      }, 1600);
-    }
-  }}
->
-  Copy instructions for coding agents
-</button>
+        const button = event.currentTarget;
+        try {
+          await navigator.clipboard.writeText(prompt);
+          button.textContent = "Copied";
+        } catch {
+          button.textContent = "Copy failed";
+        } finally {
+          window.setTimeout(() => {
+            button.textContent = "Copy agent setup prompt";
+          }, 1600);
+        }
+      }}
+    >
+      Copy agent setup prompt
+    </button>
+    <a
+      href="/en/guides/coding-tools/build-with-ai"
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: 42,
+        padding: "0 16px",
+        borderRadius: 8,
+        border: "1px solid rgba(235,102,88,0.36)",
+        color: "#EB6658",
+        fontSize: 15,
+        fontWeight: 700,
+        lineHeight: 1,
+        textDecoration: "none"
+      }}
+    >
+      View coding-agent guide
+    </a>
+  </div>
+</div>
+
+### Watch: Building CrewAI Agents & Flows with Coding Agent Skills
 
 <iframe src="https://www.loom.com/embed/befb9f68b81f42ad8112bfdd95a780af" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen style={{width: "100%", height: "400px"}}></iframe>
 
