@@ -13,6 +13,7 @@ import click
 from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
 from packaging import version
 
+import crewai_cli
 from crewai_cli.utils import (
     build_env_with_all_tool_credentials,
     enable_prompt_line_editing,
@@ -32,12 +33,12 @@ if TYPE_CHECKING:
 _INPUT_PLACEHOLDER_RE = re.compile(r"(?<!{){([A-Za-z_][A-Za-z0-9_\-]*)}(?!})")
 _CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV = "CREWAI_CLI_RUNNER_PACKAGE_DIR"
 _CREWAI_RUNNER_SOURCE_DIR_ENV = "CREWAI_RUNNER_SOURCE_DIR"
-_FULL_CREWAI_INSTALL_MESSAGE = """\
+_FULL_CREWAI_INSTALL_MESSAGE = f"""\
 CrewAI CLI is installed without the `crewai` package required to run crews.
 
-Install the full CrewAI prerelease package:
+Install the full CrewAI package:
 
-  uv tool install --force --prerelease=allow 'crewai[tools]==1.14.8a1'
+  uv tool install --force 'crewai[tools]=={crewai_cli.__version__}'
 
 The quotes are required in zsh so `crewai[tools]` is not treated as a glob.
 """
