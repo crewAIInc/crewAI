@@ -5,7 +5,6 @@ Two-column layout: left sidebar (tasks/agents/tokens) + main content
 """
 
 from collections.abc import Iterable
-import inspect
 import json as _json
 import re
 import threading
@@ -49,11 +48,16 @@ def _is_save_to_memory_tool(tool_name: str | None) -> bool:
 
 
 def _is_streaming_output(value: Any) -> bool:
-    return (
-        isinstance(value, Iterable)
-        and inspect.getattr_static(value, "get_full_text", None) is not None
-        and inspect.getattr_static(value, "result", None) is not None
-    )
+    if not isinstance(value, Iterable):
+        return False
+
+    value_type = type(value)
+    try:
+        value_type.get_full_text  # noqa: B018
+        value_type.result  # noqa: B018
+    except AttributeError:
+        return False
+    return True
 
 
 def _truncate_log_text(value: Any, limit: int) -> str | None:
