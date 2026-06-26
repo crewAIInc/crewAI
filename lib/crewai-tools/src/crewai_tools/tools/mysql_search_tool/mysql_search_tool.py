@@ -1,9 +1,30 @@
+import re
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 from crewai_tools.rag.data_types import DataType
 from crewai_tools.tools.rag.rag_tool import RagTool
+
+
+_MYSQL_IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_$]*$")
+
+
+def _quote_mysql_table_name(table_name: str) -> str:
+    identifier_parts = table_name.split(".")
+    if (
+        not identifier_parts
+        or len(identifier_parts) > 2
+        or any(
+            not _MYSQL_IDENTIFIER_PATTERN.fullmatch(part) for part in identifier_parts
+        )
+    ):
+        raise ValueError(
+            "MySQL table_name must be a valid table identifier or schema.table "
+            "identifier"
+        )
+
+    return ".".join(f"`{part}`" for part in identifier_parts)
 
 
 class MySQLSearchToolSchema(BaseModel):
@@ -32,7 +53,8 @@ class MySQLSearchTool(RagTool):
         table_name: str,
         **kwargs: Any,
     ) -> None:
-        super().add(f"SELECT * FROM {table_name};", **kwargs)  # noqa: S608
+        quoted_table_name = _quote_mysql_table_name(table_name)
+        super().add(f"SELECT * FROM {quoted_table_name};", **kwargs)  # noqa: S608
 
     def _run(  # type: ignore[override]
         self,
