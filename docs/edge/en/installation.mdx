@@ -83,15 +83,20 @@ Do not hardcode API keys. Use .env.
 Do not invent CLI flags. Validate with crewai --help or crewai create --help.
 If a command fails, show the exact command and error, explain the likely cause, fix what you can safely fix, and retry once.`;
         const button = event.currentTarget;
+        const resetTimeout = button.dataset.resetTimeout;
+        if (resetTimeout) {
+          window.clearTimeout(Number(resetTimeout));
+        }
         try {
           await navigator.clipboard.writeText(prompt);
           button.textContent = "Copied";
         } catch {
           button.textContent = "Copy failed";
         } finally {
-          window.setTimeout(() => {
+          button.dataset.resetTimeout = String(window.setTimeout(() => {
             button.textContent = "Copy agent setup prompt";
-          }, 1600);
+            delete button.dataset.resetTimeout;
+          }, 1600));
         }
       }}
     >
