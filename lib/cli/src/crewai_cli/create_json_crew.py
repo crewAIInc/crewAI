@@ -20,6 +20,7 @@ from crewai_cli.utils import (
     load_env_vars,
     write_env_file,
 )
+from crewai_cli.version import get_crewai_tools_dependency
 
 
 # ── Provider / model data ───────────────────────────────────────
@@ -89,7 +90,7 @@ description = "{name} using crewAI"
 authors = [{{ name = "Your Name", email = "you@example.com" }}]
 requires-python = ">=3.10,<3.14"
 dependencies = [
-    "crewai[tools]==1.14.8a1"
+    "{crewai_tools_dependency}"
 ]
 
 [build-system]
@@ -1134,7 +1135,11 @@ def create_json_crew(
 
     # Write pyproject.toml
     (folder_path / "pyproject.toml").write_text(
-        _PYPROJECT_TOML.format(folder_name=folder_name, name=name),
+        _PYPROJECT_TOML.format(
+            folder_name=folder_name,
+            name=name,
+            crewai_tools_dependency=get_crewai_tools_dependency(),
+        ),
         encoding="utf-8",
     )
 

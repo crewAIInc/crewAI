@@ -4,6 +4,8 @@ import shutil
 import click
 from crewai_core.telemetry import Telemetry
 
+from crewai_cli.version import get_crewai_tools_dependency
+
 
 DECLARATIVE_FLOW_FOLDERS = ("crews", "tools", "knowledge", "skills")
 
@@ -71,6 +73,9 @@ def _create_python_flow(
         content = content.replace("{{name}}", name)
         content = content.replace("{{flow_name}}", class_name)
         content = content.replace("{{folder_name}}", folder_name)
+        content = content.replace(
+            "{{crewai_tools_dependency}}", get_crewai_tools_dependency()
+        )
 
         with open(dst_file, "w") as file:
             file.write(content)
@@ -138,6 +143,9 @@ def _create_declarative_flow(
         content = content.replace("{{name}}", name)
         content = content.replace("{{flow_name}}", class_name)
         content = content.replace("{{folder_name}}", folder_name)
+        content = content.replace(
+            "{{crewai_tools_dependency}}", get_crewai_tools_dependency()
+        )
         dst_file.write_text(content, encoding="utf-8")
 
     (project_root / ".env").write_text("OPENAI_API_KEY=YOUR_API_KEY", encoding="utf-8")
