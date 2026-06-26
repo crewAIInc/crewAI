@@ -176,7 +176,7 @@ def test_create_project_zip_keeps_json_project_root_shape(tmp_path: Path):
 [project]
 name = "json_crew"
 version = "0.1.0"
-dependencies = ["crewai[tools]==1.14.8a1"]
+dependencies = ["crewai[tools]>=1.15.0,<2.0.0"]
 
 [tool.crewai]
 type = "crew"
