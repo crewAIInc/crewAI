@@ -139,6 +139,42 @@ def test_configured_project_definition_rejects_project_escape(tmp_path: Path) ->
         )
 
 
+def test_configured_project_definition_rejects_non_string_definition(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(project.ProjectDefinitionError, match="must be a string"):
+        project.configured_project_definition(
+            "crew",
+            pyproject_data={
+                "tool": {
+                    "crewai": {
+                        "type": "crew",
+                        "definition": ["crew.jsonc"],
+                    }
+                }
+            },
+            project_root=tmp_path,
+        )
+
+
+def test_configured_project_definition_rejects_empty_definition(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(project.ProjectDefinitionError, match="non-empty"):
+        project.configured_project_definition(
+            "crew",
+            pyproject_data={
+                "tool": {
+                    "crewai": {
+                        "type": "crew",
+                        "definition": "  ",
+                    }
+                }
+            },
+            project_root=tmp_path,
+        )
+
+
 def test_core_telemetry_skips_duplicate_tracer_provider(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -172,9 +172,7 @@ class DeployValidator:
         except Exception:
             return False
         crewai_config = get_crewai_project_config(data)
-        return crewai_config.get("type") == "crew" and bool(
-            crewai_config.get("definition", "").strip()
-        )
+        return crewai_config.get("type") == "crew" and "definition" in crewai_config
 
     def run(self) -> list[ValidationResult]:
         """Run all checks. Later checks are skipped when earlier ones make

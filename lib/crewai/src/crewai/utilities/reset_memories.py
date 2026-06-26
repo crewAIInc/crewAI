@@ -137,3 +137,4 @@ def reset_memories_command(
 
     except Exception as e:
         click.echo(f"An unexpected error occurred: {e}", err=True)
+        raise SystemExit(1) from e

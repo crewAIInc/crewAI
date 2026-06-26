@@ -71,9 +71,20 @@ def configured_project_definition(
     if crewai_config.get("type") != project_type:
         return None
 
-    definition = crewai_config.get("definition", "").strip()
-    if not definition:
+    if "definition" not in crewai_config:
         return None
+    raw_definition = crewai_config["definition"]
+    if not isinstance(raw_definition, str):
+        raise ProjectDefinitionError(
+            "[tool.crewai] definition must be a string project-local path; "
+            f"got {raw_definition!r}."
+        )
+
+    definition = raw_definition.strip()
+    if not definition:
+        raise ProjectDefinitionError(
+            "[tool.crewai] definition must be a non-empty project-local path."
+        )
 
     return resolve_project_definition_path(definition=definition, project_root=root)
 

@@ -280,6 +280,7 @@ def test_reset_invalid_json_crew_blocks_reset(
 
     mock_load_crew.assert_called_once_with((tmp_path / "crew.jsonc").resolve())
     mock_crew.reset_memories.assert_not_called()
+    assert result.exit_code != 0
     assert "An unexpected error occurred: invalid JSON" in result.output
 
 

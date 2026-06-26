@@ -569,6 +569,22 @@ def test_is_json_crew_false_for_declared_crew_without_definition(tmp_path):
     assert DeployValidator(project_root=tmp_path)._is_json_crew is False
 
 
+def test_json_crew_non_string_definition_reports_invalid_definition(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "demo"\nversion = "0.1.0"\n\n'
+        '[tool.crewai]\ntype = "crew"\ndefinition = ["crew.jsonc"]\n'
+    )
+
+    v = DeployValidator(project_root=tmp_path)
+    v.run()
+
+    finding = next(r for r in v.results if r.code == "invalid_crew_definition")
+    assert finding.severity is Severity.ERROR
+    assert "must be a string" in finding.detail
+
+
 def test_is_json_crew_false_without_pyproject(tmp_path):
     (tmp_path / "crew.jsonc").write_text("{}")
 
