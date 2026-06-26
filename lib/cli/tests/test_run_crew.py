@@ -227,6 +227,80 @@ def test_json_runner_code_loads_current_cli_package_over_project_env(tmp_path: P
     assert marker.read_text() == "current:trained.pkl"
 
 
+def test_json_runner_imports_with_older_project_env_crewai_core(tmp_path: Path):
+    old_parent = tmp_path / "old_env"
+    old_crewai_core = old_parent / "crewai_core"
+    old_crewai_core.mkdir(parents=True)
+    (old_crewai_core / "__init__.py").write_text("")
+    (old_crewai_core / "constants.py").write_text(
+        "CREWAI_TRAINED_AGENTS_FILE_ENV = 'CREWAI_TRAINED_AGENTS_FILE'\n"
+    )
+    (old_crewai_core / "project.py").write_text(
+        "def read_toml(*args, **kwargs):\n"
+        "    return {}\n"
+        "def parse_toml(*args, **kwargs):\n"
+        "    return {}\n"
+        "def get_project_description(*args, **kwargs):\n"
+        "    return None\n"
+        "def get_project_name(*args, **kwargs):\n"
+        "    return None\n"
+        "def get_project_version(*args, **kwargs):\n"
+        "    return None\n"
+    )
+    (old_crewai_core / "tool_credentials.py").write_text(
+        "def build_env_with_all_tool_credentials(*args, **kwargs):\n"
+        "    return {}\n"
+        "def build_env_with_tool_repository_credentials(*args, **kwargs):\n"
+        "    return {}\n"
+    )
+    (old_crewai_core / "version.py").write_text(
+        "def check_version(*args, **kwargs):\n"
+        "    return None\n"
+        "def get_crewai_version(*args, **kwargs):\n"
+        "    return '1.0.0'\n"
+        "def get_latest_version_from_pypi(*args, **kwargs):\n"
+        "    return None\n"
+        "def is_current_version_yanked(*args, **kwargs):\n"
+        "    return False\n"
+        "def is_newer_version_available(*args, **kwargs):\n"
+        "    return False\n"
+    )
+
+    marker = tmp_path / "marker.txt"
+    old_crewai_project = old_parent / "crewai" / "project"
+    old_crewai_project.mkdir(parents=True)
+    (old_parent / "crewai" / "__init__.py").write_text("")
+    (old_crewai_project / "__init__.py").write_text("")
+    (old_crewai_project / "crew_loader.py").write_text(
+        "from pathlib import Path\n"
+        "class Crew:\n"
+        "    agents = []\n"
+        "    tasks = []\n"
+        "    def kickoff(self, inputs):\n"
+        f"        Path({str(marker)!r}).write_text('ran')\n"
+        "        return 'done'\n"
+        "def load_crew(path):\n"
+        "    return Crew(), {}\n"
+    )
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(old_parent)
+    env["CREWAI_DMN"] = "true"
+    env[run_crew_module._CREWAI_CLI_RUNNER_PACKAGE_DIR_ENV] = str(
+        Path(run_crew_module.__file__).resolve().parent
+    )
+    env[run_crew_module._CREWAI_JSON_CREW_DEFINITION_ENV] = "crew.jsonc"
+
+    subprocess.run(
+        [sys.executable, "-c", run_crew_module._JSON_CREW_RUNNER_CODE],
+        check=True,
+        env=env,
+        cwd=tmp_path,
+    )
+
+    assert marker.read_text() == "ran"
+
+
 def test_json_run_without_pyproject_runs_in_process(monkeypatch, tmp_path: Path):
     monkeypatch.chdir(tmp_path)
     called: dict = {}
