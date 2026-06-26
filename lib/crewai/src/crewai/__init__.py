@@ -48,7 +48,7 @@ def _suppress_pydantic_deprecation_warnings() -> None:
 
 _suppress_pydantic_deprecation_warnings()
 
-__version__ = "1.15.0"
+__version__ = "1.15.1a1"
 
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "Memory": ("crewai.memory.unified_memory", "Memory"),
