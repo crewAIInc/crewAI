@@ -311,6 +311,38 @@ class TestDeployCommand(unittest.TestCase):
             "https://app.crewai.com/crewai_plus/deployments/128687"
         )
 
+    def test_display_deployment_info_warns_when_browser_open_returns_false(self):
+        self.mock_browser_open.return_value = False
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command._display_deployment_info(
+                {"uuid": "test-uuid", "id": 128687, "status": "deployed"}
+            )
+            self.assertIn(
+                "Could not open the deployment page automatically.",
+                fake_out.getvalue(),
+            )
+
+        self.mock_browser_open.assert_called_once_with(
+            "https://app.crewai.com/crewai_plus/deployments/128687"
+        )
+
+    def test_display_deployment_info_warns_when_browser_open_raises(self):
+        self.mock_browser_open.side_effect = RuntimeError("no browser")
+
+        with patch("sys.stdout", new=StringIO()) as fake_out:
+            self.deploy_command._display_deployment_info(
+                {"uuid": "test-uuid", "id": 128687, "status": "deployed"}
+            )
+            self.assertIn(
+                "Could not open the deployment page automatically.",
+                fake_out.getvalue(),
+            )
+
+        self.mock_browser_open.assert_called_once_with(
+            "https://app.crewai.com/crewai_plus/deployments/128687"
+        )
+
     def test_display_logs(self):
         with patch("sys.stdout", new=StringIO()) as fake_out:
             self.deploy_command._display_logs(

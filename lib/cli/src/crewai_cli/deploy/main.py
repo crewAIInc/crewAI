@@ -222,8 +222,11 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
 
         console.print(f"\nOpening deployment page: [blue]{deployment_url}[/blue]")
         try:
-            webbrowser.open(deployment_url)
-        except Exception:  # pragma: no cover
+            opened = webbrowser.open(deployment_url)
+        except Exception:
+            opened = False
+
+        if not opened:
             console.print(
                 "Could not open the deployment page automatically.",
                 style="yellow",
