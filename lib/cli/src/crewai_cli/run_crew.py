@@ -10,12 +10,6 @@ from typing import TYPE_CHECKING, Any
 
 import click
 from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
-from crewai_core.project import (
-    ProjectDefinitionError,
-    configured_project_definition,
-    get_crewai_project_type,
-    read_toml,
-)
 from packaging import version
 
 from crewai_cli.utils import (
@@ -102,11 +96,28 @@ def _full_crewai_install_error() -> click.ClickException:
     return click.ClickException(_FULL_CREWAI_INSTALL_MESSAGE)
 
 
+def read_toml(*args: Any, **kwargs: Any) -> dict[str, Any]:
+    from crewai_core.project import read_toml as _read_toml
+
+    return _read_toml(*args, **kwargs)
+
+
+def get_crewai_project_type(pyproject_data: dict[str, Any]) -> str | None:
+    from crewai_core.project import get_crewai_project_type as _get_crewai_project_type
+
+    return _get_crewai_project_type(pyproject_data)
+
+
 def configured_project_json_crew(
     pyproject_data: dict[str, Any] | None = None,
     project_root: Path | None = None,
 ) -> Path | None:
     """Return the configured JSON crew definition for crew projects."""
+    from crewai_core.project import (
+        ProjectDefinitionError,
+        configured_project_definition,
+    )
+
     root = project_root or Path.cwd()
     if pyproject_data is None and not (root / "pyproject.toml").is_file():
         return None
