@@ -2391,3 +2391,69 @@ class TestVisionImageFormatContract:
         assert hasattr(AnthropicCompletion, "_convert_image_blocks"), (
             "Anthropic provider must have _convert_image_blocks for auto-conversion"
         )
+
+
+# Human Input Protocol Compliance
+
+
+class TestAgentExecutorHumanInputProtocol:
+    """Verify AgentExecutor implements the ExecutorContext protocol methods
+    required for human_input=True to work.
+
+    Regression test for https://github.com/crewAIInc/crewAI/issues/6347
+    """
+
+    def test_has_invoke_loop(self):
+        """AgentExecutor must have _invoke_loop for sync human feedback."""
+        assert hasattr(AgentExecutor, "_invoke_loop"), (
+            "AgentExecutor missing _invoke_loop — human_input=True will crash"
+        )
+        assert callable(getattr(AgentExecutor, "_invoke_loop", None))
+
+    def test_has_ainvoke_loop(self):
+        """AgentExecutor must have _ainvoke_loop for async human feedback."""
+        assert hasattr(AgentExecutor, "_ainvoke_loop"), (
+            "AgentExecutor missing _ainvoke_loop — async human_input=True will crash"
+        )
+        assert callable(getattr(AgentExecutor, "_ainvoke_loop", None))
+
+    def test_has_format_feedback_message(self):
+        """AgentExecutor must have _format_feedback_message for formatting feedback."""
+        assert hasattr(AgentExecutor, "_format_feedback_message"), (
+            "AgentExecutor missing _format_feedback_message — human_input=True will crash"
+        )
+        assert callable(getattr(AgentExecutor, "_format_feedback_message", None))
+
+    def test_format_feedback_message_returns_dict(self):
+        """_format_feedback_message should return a dict with role and content."""
+        executor = _build_executor()
+        result = executor._format_feedback_message("test feedback")
+        assert isinstance(result, dict), "Feedback message should be a dict"
+        assert "role" in result, "Feedback message must have 'role' key"
+        assert "content" in result, "Feedback message must have 'content' key"
+        assert "test feedback" in result["content"], (
+            "Feedback message content should include the feedback text"
+        )
+
+    def test_protocol_methods_match_executor_context(self):
+        """All methods from ExecutorContext protocol must exist on AgentExecutor."""
+        from crewai.core.providers.human_input import ExecutorContext
+
+        # Get all method names from the protocol
+        protocol_methods = [
+            name for name in dir(ExecutorContext)
+            if not name.startswith("_") or name in (
+                "_invoke_loop",
+                "_ainvoke_loop",
+                "_format_feedback_message",
+                "_is_training_mode",
+                "_handle_crew_training_output",
+            )
+        ]
+
+        for method_name in protocol_methods:
+            if method_name.startswith("__"):
+                continue
+            assert hasattr(AgentExecutor, method_name), (
+                f"AgentExecutor missing protocol method: {method_name}"
+            )
