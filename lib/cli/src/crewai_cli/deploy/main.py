@@ -106,8 +106,7 @@ def _deployment_page_url(base_url: str, json_response: dict[str, Any]) -> str | 
     if not identifier:
         return None
     return (
-        f"{base_url.rstrip('/')}/crewai_plus/deployments/"
-        f"{quote(identifier, safe='')}"
+        f"{base_url.rstrip('/')}/crewai_plus/deployments/{quote(identifier, safe='')}"
     )
 
 
@@ -224,7 +223,7 @@ class DeployCommand(BaseCommand, PlusAPIMixin):
         console.print(f"\nOpening deployment page: [blue]{deployment_url}[/blue]")
         try:
             webbrowser.open(deployment_url)
-        except Exception:  # pragma: no cover - browser backends are environment-specific
+        except Exception:  # pragma: no cover
             console.print(
                 "Could not open the deployment page automatically.",
                 style="yellow",
