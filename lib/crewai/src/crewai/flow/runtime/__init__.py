@@ -15,6 +15,7 @@ from collections.abc import (
     Sequence,
 )
 from concurrent.futures import Future, ThreadPoolExecutor
+from contextlib import contextmanager
 import contextvars
 import copy
 from datetime import datetime
@@ -460,6 +461,16 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     def _apply_pending_kickoff_context(self) -> None:
         """Apply optional runtime-extension kickoff context."""
 
+    def _capture_pending_kickoff_context(self) -> Any | None:
+        """Capture optional pending kickoff context for deferred execution."""
+        return None
+
+    def _restore_pending_kickoff_context(self, context: Any) -> None:
+        """Restore optional pending kickoff context in deferred execution."""
+
+    def _clear_pending_kickoff_context(self) -> None:
+        """Clear optional pending kickoff context after deferred execution."""
+
     def _order_start_methods_for_kickoff(
         self,
         start_methods: list[FlowMethodName],
@@ -470,6 +481,19 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     def _should_defer_trace_finalization(self) -> bool:
         """Whether this kickoff should defer final flow trace finalization."""
         return bool(getattr(self, "defer_trace_finalization", False))
+
+    def _should_stream_llm_calls(self) -> bool:
+        """Whether LLM calls inside the current flow run should stream chunks."""
+        return self.stream or self._streaming_run_active
+
+    @contextmanager
+    def _streaming_run(self) -> Iterator[None]:
+        previous_streaming_run = self._streaming_run_active
+        self._streaming_run_active = True
+        try:
+            yield
+        finally:
+            self._streaming_run_active = previous_streaming_run
 
     @classmethod
     def flow_definition(cls) -> FlowDefinition:
@@ -738,6 +762,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
     _usage_aggregation_handler: Callable[..., Any] | None = PrivateAttr(default=None)
     _persist_backends: dict[int, FlowPersistence] = PrivateAttr(default_factory=dict)
     _instance_persistence: bool = PrivateAttr(default=False)
+    _streaming_run_active: bool = PrivateAttr(default=False)
 
     def __class_getitem__(cls: type[Flow[T]], item: type[T]) -> type[Flow[T]]:  # type: ignore[override]
         class _FlowGeneric(cls):  # type: ignore[valid-type,misc]
@@ -1875,6 +1900,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             return restored.kickoff(inputs=inputs, input_files=input_files)
         if self.stream:
             result_holder: list[Any] = []
+            pending_kickoff_context = self._capture_pending_kickoff_context()
             current_task_info: TaskInfo = {
                 "index": 0,
                 "name": "",
@@ -1890,12 +1916,15 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
             def run_flow() -> None:
                 try:
-                    self.stream = False
-                    result = self.kickoff(
-                        inputs=inputs,
-                        input_files=input_files,
-                        restore_from_state_id=restore_from_state_id,
-                    )
+                    if pending_kickoff_context is not None:
+                        self._restore_pending_kickoff_context(pending_kickoff_context)
+                    with self._streaming_run():
+                        self.stream = False
+                        result = self.kickoff(
+                            inputs=inputs,
+                            input_files=input_files,
+                            restore_from_state_id=restore_from_state_id,
+                        )
                     result_holder.append(result)
                 except Exception as e:
                     # HumanFeedbackPending is expected control flow, not an error
@@ -1904,6 +1933,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     else:
                         signal_error(state, e)
                 finally:
+                    if pending_kickoff_context is not None:
+                        self._clear_pending_kickoff_context()
                     self.stream = True
                     signal_end(state)
 
@@ -1975,6 +2006,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             return await restored.kickoff_async(inputs=inputs, input_files=input_files)
         if self.stream:
             result_holder: list[Any] = []
+            pending_kickoff_context = self._capture_pending_kickoff_context()
             current_task_info: TaskInfo = {
                 "index": 0,
                 "name": "",
@@ -1990,12 +2022,15 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
 
             async def run_flow() -> None:
                 try:
-                    self.stream = False
-                    result = await self.kickoff_async(
-                        inputs=inputs,
-                        input_files=input_files,
-                        restore_from_state_id=restore_from_state_id,
-                    )
+                    if pending_kickoff_context is not None:
+                        self._restore_pending_kickoff_context(pending_kickoff_context)
+                    with self._streaming_run():
+                        self.stream = False
+                        result = await self.kickoff_async(
+                            inputs=inputs,
+                            input_files=input_files,
+                            restore_from_state_id=restore_from_state_id,
+                        )
                     result_holder.append(result)
                 except Exception as e:
                     # HumanFeedbackPending is expected control flow, not an error
@@ -2004,6 +2039,8 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                     else:
                         signal_error(state, e, is_async=True)
                 finally:
+                    if pending_kickoff_context is not None:
+                        self._clear_pending_kickoff_context()
                     self.stream = True
                     signal_end(state, is_async=True)
 

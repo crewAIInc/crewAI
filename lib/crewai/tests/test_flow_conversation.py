@@ -204,6 +204,60 @@ class TestConversationalFlow:
         assert flow.state.events[0].agent_name == "researcher"
         assert flow.state.events[0].visibility == "public"
 
+    def test_builtin_converse_enables_llm_streaming_for_streaming_flow(self) -> None:
+        llm = MagicMock()
+        llm.stream = False
+        stream_values_seen: list[bool | None] = []
+
+        def call(*args: Any, **kwargs: Any) -> str:
+            stream_values_seen.append(llm.stream)
+            return "streamed reply"
+
+        llm.call.side_effect = call
+
+        @ConversationConfig(llm=llm)
+        class StreamingFlow(ConversationalFlow):
+            pass
+
+        flow = StreamingFlow()
+        flow.stream = False
+
+        with flow._streaming_run():
+            result = flow.converse_turn()
+
+        assert result == "streamed reply"
+        assert stream_values_seen == [True]
+        assert llm.stream is False
+        assert flow._should_stream_llm_calls() is False
+        assert flow.state.messages[-1].content == "streamed reply"
+
+    def test_streaming_handle_turn_preserves_pending_user_message(self) -> None:
+        @ConversationConfig(llm="unused")
+        class StreamingEchoFlow(ConversationalFlow):
+            stream = True
+
+            def route_turn(self, context: dict[str, Any]) -> str:
+                return "echo"
+
+            @listen("echo")
+            def handle_echo(self) -> str:
+                reply = f"heard: {self.state.current_user_message}"
+                self.append_assistant_message(reply)
+                return reply
+
+        flow = StreamingEchoFlow()
+        result = flow.handle_turn("hello streaming")
+        for _chunk in result:
+            pass
+
+        assert result.result == "heard: hello streaming"
+        assert [message.role for message in flow.state.messages] == [
+            "user",
+            "assistant",
+        ]
+        assert flow.state.messages[0].content == "hello streaming"
+        assert flow.state.messages[1].content == "heard: hello streaming"
+
     @conversational_graph_broken
     def test_private_agent_results_stay_out_of_shared_history(self) -> None:
         class PrivateFlow(ConversationalFlow):

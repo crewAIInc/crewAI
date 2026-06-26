@@ -19,6 +19,7 @@ Import surface:
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
+from contextlib import contextmanager
 from enum import Enum
 import json
 import logging
@@ -60,6 +61,21 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+
+@contextmanager
+def _streaming_conversation_llm(llm: BaseLLM, *, enabled: bool) -> Any:
+    """Temporarily enable LLM streaming for Flow streaming turns."""
+    if not enabled:
+        yield
+        return
+
+    previous_stream = llm.stream
+    llm.stream = True
+    try:
+        yield
+    finally:
+        llm.stream = previous_stream
 
 
 def _iter_condition_labels(condition: Any) -> set[str]:
@@ -146,6 +162,9 @@ class _ConversationalMixin:
         def _copy_and_serialize_state(self) -> dict[str, Any]:
             pass
 
+        def _should_stream_llm_calls(self) -> bool:
+            pass
+
         def kickoff(self, *args: Any, **kwargs: Any) -> Any:
             pass
 
@@ -221,7 +240,12 @@ class _ConversationalMixin:
             messages.append({"role": "system", "content": system_prompt})
         messages.extend(self.conversation_messages)
 
-        response = self._coerce_llm(llm).call(messages=messages)
+        llm_instance = self._coerce_llm(llm)
+        with _streaming_conversation_llm(
+            llm_instance,
+            enabled=self._should_stream_llm_calls(),
+        ):
+            response = llm_instance.call(messages=messages)
         content = self._stringify_result(response)
         self.append_assistant_message(content)
         return content
@@ -702,6 +726,27 @@ class _ConversationalMixin:
 
     def _apply_pending_kickoff_context(self) -> None:
         self._apply_pending_conversational_turn()
+
+    def _capture_pending_kickoff_context(self) -> dict[str, Any] | None:
+        if not self._should_apply_pending_kickoff_context():
+            return None
+        return {
+            "user_message": self._pending_user_message,
+            "intents": self._pending_intents,
+            "intent_llm": self._pending_intent_llm,
+        }
+
+    def _restore_pending_kickoff_context(self, context: Any) -> None:
+        if not isinstance(context, dict):
+            return
+        self._pending_user_message = context["user_message"]
+        self._pending_intents = context["intents"]
+        self._pending_intent_llm = context["intent_llm"]
+
+    def _clear_pending_kickoff_context(self) -> None:
+        self._pending_user_message = None
+        self._pending_intents = None
+        self._pending_intent_llm = None
 
     def _order_start_methods_for_kickoff(
         self,

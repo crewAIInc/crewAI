@@ -4,6 +4,8 @@ Two-column layout: left sidebar (tasks/agents/tokens) + main content
 (task header, plan checklist, activity timeline, streaming output).
 """
 
+from collections.abc import Iterable
+import inspect
 import json as _json
 import re
 import threading
@@ -43,6 +45,14 @@ _MEMORY_SAVE_DRAIN_GRACE_SECONDS = 2.0
 
 def _is_save_to_memory_tool(tool_name: str | None) -> bool:
     return (tool_name or "").replace(" ", "_").lower() == "save_to_memory"
+
+
+def _is_streaming_output(value: Any) -> bool:
+    return (
+        isinstance(value, Iterable)
+        and inspect.getattr_static(value, "get_full_text", None) is not None
+        and inspect.getattr_static(value, "result", None) is not None
+    )
 
 
 def _truncate_log_text(value: Any, limit: int) -> str | None:
@@ -834,13 +844,17 @@ FooterKey .footer-key--key {
         set_suppress_tracing_messages(True)
         try:
             result = self._flow.handle_turn(message)
-            if hasattr(result, "get_full_text") and hasattr(result, "result"):
-                for _chunk in result:
-                    pass
-                result = result.result
+            result = self._consume_conversation_streaming_result(result)
             self.call_from_thread(self._on_conversation_turn_done, result)
         except Exception as e:
             self.call_from_thread(self._on_conversation_turn_failed, str(e))
+
+    def _consume_conversation_streaming_result(self, result: Any) -> Any:
+        if not _is_streaming_output(result):
+            return result
+        for _chunk in result:
+            pass
+        return result.result
 
     def _on_conversation_turn_done(self, result: Any) -> None:
         with self._lock:
