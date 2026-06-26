@@ -18,10 +18,15 @@ Usage:
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from crewai.llms.base_llm import BaseLLM
 
 
 CACHE_BREAKPOINT_KEY = "cache_breakpoint"
+
+_ANTHROPIC_MODEL_PREFIXES: tuple[str, ...] = ("anthropic/", "claude-", "claude/")
 
 
 def mark_cache_breakpoint(message: dict[str, Any]) -> dict[str, Any]:
@@ -35,3 +40,26 @@ def mark_cache_breakpoint(message: dict[str, Any]) -> dict[str, Any]:
 def strip_cache_breakpoint(message: dict[str, Any]) -> None:
     """Remove the breakpoint flag from a message in place."""
     message.pop(CACHE_BREAKPOINT_KEY, None)
+
+
+def supports_cache_breakpoint(llm: BaseLLM | str | None) -> bool:
+    """Check if the given LLM supports Anthropic-style prompt caching.
+
+    Args:
+        llm: The LLM instance, model string, or None.
+
+    Returns:
+        True if the LLM is Anthropic-compatible and supports cache_breakpoint.
+    """
+    if llm is None:
+        return False
+
+    if hasattr(llm, "model"):
+        model = llm.model
+    elif isinstance(llm, str):
+        model = llm
+    else:
+        return False
+
+    model_lower = model.lower()
+    return any(prefix in model_lower for prefix in _ANTHROPIC_MODEL_PREFIXES)

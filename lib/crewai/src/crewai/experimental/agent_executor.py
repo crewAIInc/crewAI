@@ -2762,26 +2762,28 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     "not fully restored or initialized before execution."
                 )
             if "system" in self.prompt:
-                from crewai.llms.cache import mark_cache_breakpoint
+                from crewai.llms.cache import mark_cache_breakpoint, supports_cache_breakpoint
 
+                use_cache = supports_cache_breakpoint(self.llm)
                 prompt = cast("SystemPromptResult", self.prompt)
                 system_prompt = self._format_prompt(prompt["system"], inputs)
                 user_prompt = self._format_prompt(prompt["user"], inputs)
-                self.state.messages.append(
-                    mark_cache_breakpoint(
-                        format_message_for_llm(system_prompt, role="system")
-                    )
-                )
-                self.state.messages.append(
-                    mark_cache_breakpoint(format_message_for_llm(user_prompt))
-                )
+                system_msg = format_message_for_llm(system_prompt, role="system")
+                user_msg = format_message_for_llm(user_prompt)
+                if use_cache:
+                    system_msg = mark_cache_breakpoint(system_msg)
+                    user_msg = mark_cache_breakpoint(user_msg)
+                self.state.messages.append(system_msg)
+                self.state.messages.append(user_msg)
             else:
-                from crewai.llms.cache import mark_cache_breakpoint
+                from crewai.llms.cache import mark_cache_breakpoint, supports_cache_breakpoint
 
+                use_cache = supports_cache_breakpoint(self.llm)
                 user_prompt = self._format_prompt(self.prompt["prompt"], inputs)
-                self.state.messages.append(
-                    mark_cache_breakpoint(format_message_for_llm(user_prompt))
-                )
+                user_msg = format_message_for_llm(user_prompt)
+                if use_cache:
+                    user_msg = mark_cache_breakpoint(user_msg)
+                self.state.messages.append(user_msg)
 
             self._inject_files_from_inputs(inputs)
 
@@ -2868,26 +2870,28 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                     "not fully restored or initialized before execution."
                 )
             if "system" in self.prompt:
-                from crewai.llms.cache import mark_cache_breakpoint
+                from crewai.llms.cache import mark_cache_breakpoint, supports_cache_breakpoint
 
+                use_cache = supports_cache_breakpoint(self.llm)
                 prompt = cast("SystemPromptResult", self.prompt)
                 system_prompt = self._format_prompt(prompt["system"], inputs)
                 user_prompt = self._format_prompt(prompt["user"], inputs)
-                self.state.messages.append(
-                    mark_cache_breakpoint(
-                        format_message_for_llm(system_prompt, role="system")
-                    )
-                )
-                self.state.messages.append(
-                    mark_cache_breakpoint(format_message_for_llm(user_prompt))
-                )
+                system_msg = format_message_for_llm(system_prompt, role="system")
+                user_msg = format_message_for_llm(user_prompt)
+                if use_cache:
+                    system_msg = mark_cache_breakpoint(system_msg)
+                    user_msg = mark_cache_breakpoint(user_msg)
+                self.state.messages.append(system_msg)
+                self.state.messages.append(user_msg)
             else:
-                from crewai.llms.cache import mark_cache_breakpoint
+                from crewai.llms.cache import mark_cache_breakpoint, supports_cache_breakpoint
 
+                use_cache = supports_cache_breakpoint(self.llm)
                 user_prompt = self._format_prompt(self.prompt["prompt"], inputs)
-                self.state.messages.append(
-                    mark_cache_breakpoint(format_message_for_llm(user_prompt))
-                )
+                user_msg = format_message_for_llm(user_prompt)
+                if use_cache:
+                    user_msg = mark_cache_breakpoint(user_msg)
+                self.state.messages.append(user_msg)
 
             await self._ainject_files_from_inputs(inputs)
 
