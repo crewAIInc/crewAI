@@ -8,6 +8,9 @@ from typing_extensions import Unpack
 from crewai.rag.embeddings.providers.voyageai.types import VoyageAIProviderConfig
 
 
+CONTEXTUALIZED_CHUNK_SIZE = 32000
+
+
 class VoyageAIEmbeddingFunction(EmbeddingFunction[Documents]):
     """Embedding function for VoyageAI models."""
 
@@ -50,9 +53,26 @@ class VoyageAIEmbeddingFunction(EmbeddingFunction[Documents]):
         if isinstance(input, str):
             input = [input]
 
+        model = self._config.get("model", "voyage-2")
+
+        if model.startswith("voyage-context"):
+            result = self._client.contextualized_embed(
+                inputs=input,
+                model=model,
+                input_type="document",
+                output_dtype=self._config.get("output_dtype"),
+                output_dimension=self._config.get("output_dimension"),
+                enable_auto_chunking=True,
+                chunk_size=CONTEXTUALIZED_CHUNK_SIZE,
+            )
+            return cast(
+                Embeddings,
+                [embedding for r in result.results for embedding in r.embeddings],
+            )
+
         result = self._client.embed(
             texts=input,
-            model=self._config.get("model", "voyage-2"),
+            model=model,
             input_type=self._config.get("input_type"),
             truncation=self._config.get("truncation", True),
             output_dtype=self._config.get("output_dtype"),
