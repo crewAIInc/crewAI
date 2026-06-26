@@ -128,6 +128,7 @@ class FileCompressorTool(BaseTool):
         # Defense in depth: validate the write target at the sink, so this is
         # safe even if called directly rather than through _run.
         output_path = validate_file_path(output_path)
+        input_path = validate_file_path(input_path)
         skipped: list[str] = []
         with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zipf:
             if os.path.isfile(input_path):
@@ -137,12 +138,12 @@ class FileCompressorTool(BaseTool):
                     for file in files:
                         full_path = os.path.join(root, file)
                         try:
-                            validate_file_path(full_path)
+                            resolved_path = validate_file_path(full_path)
                         except ValueError:
                             skipped.append(full_path)
                             continue
                         arcname = os.path.relpath(full_path, start=input_path)
-                        zipf.write(full_path, arcname)
+                        zipf.write(resolved_path, arcname)
         return skipped
 
     @staticmethod
@@ -177,6 +178,7 @@ class FileCompressorTool(BaseTool):
         # Defense in depth: validate the write target at the sink, so this is
         # safe even if called directly rather than through _run.
         output_path = validate_file_path(output_path)
+        input_path = validate_file_path(input_path)
         with tarfile.open(output_path, mode) as tarf:  # type: ignore[call-overload]
             arcname = os.path.basename(input_path)
             tarf.add(input_path, arcname=arcname, filter=_drop_links)

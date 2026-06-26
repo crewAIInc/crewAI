@@ -165,7 +165,12 @@ def symlink_env():
 
     prev_cwd = os.getcwd()
     os.chdir(work_dir)
-    yield {"work_dir": work_dir, "src": src, "secret_dir": secret_dir}
+    yield {
+        "work_dir": work_dir,
+        "src": src,
+        "secret_dir": secret_dir,
+        "secret_file": secret_file,
+    }
     os.chdir(prev_cwd)
     shutil.rmtree(work_dir, ignore_errors=True)
     shutil.rmtree(secret_dir, ignore_errors=True)
@@ -219,3 +224,17 @@ def test_compress_tar_validates_output_path_at_sink(symlink_env):
     with pytest.raises(ValueError, match="outside the allowed director"):
         FileCompressorTool._compress_tar(symlink_env["src"], outside, "tar.gz")
     assert not os.path.exists(outside)
+
+
+def test_compress_zip_validates_input_path_at_sink(symlink_env):
+    out = os.path.join(symlink_env["work_dir"], "archive.zip")
+    with pytest.raises(ValueError, match="outside the allowed director"):
+        FileCompressorTool._compress_zip(symlink_env["secret_file"], out)
+    assert not os.path.exists(out)
+
+
+def test_compress_tar_validates_input_path_at_sink(symlink_env):
+    out = os.path.join(symlink_env["work_dir"], "archive.tar.gz")
+    with pytest.raises(ValueError, match="outside the allowed director"):
+        FileCompressorTool._compress_tar(symlink_env["secret_file"], out, "tar.gz")
+    assert not os.path.exists(out)
