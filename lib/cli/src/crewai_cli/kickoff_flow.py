@@ -65,7 +65,11 @@ def _load_conversational_flow_from_kickoff_script() -> Any | None:
 
 
 def _run_conversational_flow_tui(flow: Any) -> Any:
+    from crewai.events.event_listener import EventListener
+
     from crewai_cli.crew_run_tui import CrewRunApp
+
+    EventListener()  # ensures we get events from the TUI
 
     app = CrewRunApp(
         crew_name=getattr(flow, "name", None) or type(flow).__name__,

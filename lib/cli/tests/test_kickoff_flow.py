@@ -61,3 +61,40 @@ def test_kickoff_flow_falls_back_to_uv_when_no_conversational_flow(
     kickoff_flow.kickoff_flow()
 
     assert calls == [["uv", "run", "kickoff"]]
+
+
+def test_run_conversational_flow_tui_initializes_event_listener(monkeypatch) -> None:
+    calls: list[str] = []
+
+    class FakeEventListener:
+        def __init__(self) -> None:
+            calls.append("listener")
+
+    class FakeCrewRunApp:
+        def __init__(self, *, crew_name: str, conversational: bool) -> None:
+            calls.append("app")
+            self.crew_name = crew_name
+            self.conversational = conversational
+            self._status = "completed"
+            self._crew_result = "done"
+            self._flow = None
+
+        def run(self) -> None:
+            calls.append("run")
+
+    class DemoFlow:
+        name = "Demo"
+
+    monkeypatch.setattr(
+        "crewai.events.event_listener.EventListener",
+        FakeEventListener,
+    )
+    monkeypatch.setattr(
+        "crewai_cli.crew_run_tui.CrewRunApp",
+        FakeCrewRunApp,
+    )
+
+    result = kickoff_flow._run_conversational_flow_tui(DemoFlow())
+
+    assert result == "done"
+    assert calls == ["listener", "app", "run"]
