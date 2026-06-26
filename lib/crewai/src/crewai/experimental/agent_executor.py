@@ -3188,6 +3188,32 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             formatted_answer, cast("AsyncExecutorContext", self)
         )
 
+    def _invoke_loop(self) -> AgentFinish:
+        """Re-run the agent flow loop for a feedback iteration (sync)."""
+        self._finalize_called = False
+        self.state.is_finished = False
+        self.kickoff()
+        result = self.state.current_answer
+        if not isinstance(result, AgentFinish):
+            raise RuntimeError("Agent execution ended without reaching a final answer.")
+        return result
+
+    async def _ainvoke_loop(self) -> AgentFinish:
+        """Re-run the agent flow loop for a feedback iteration (async)."""
+        self._finalize_called = False
+        self.state.is_finished = False
+        await self.kickoff_async()
+        result = self.state.current_answer
+        if not isinstance(result, AgentFinish):
+            raise RuntimeError("Agent execution ended without reaching a final answer.")
+        return result
+
+    def _format_feedback_message(self, feedback: str) -> LLMMessage:
+        """Format human feedback as a message for the LLM."""
+        return format_message_for_llm(
+            I18N_DEFAULT.slice("feedback_instructions").format(feedback=feedback)
+        )
+
     def _is_training_mode(self) -> bool:
         """Check if training mode is active.
 
