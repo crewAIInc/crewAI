@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path, PureWindowsPath
+from pathlib import Path
 import subprocess
 from typing import Any
 
 import click
+from crewai_core.project import ProjectDefinitionError, configured_project_definition
 from pydantic import ValidationError
 
 from crewai_cli.utils import build_env_with_all_tool_credentials
@@ -105,80 +106,18 @@ def configured_project_declarative_flow(
     project_root: Path | None = None,
 ) -> Path | None:
     """Return the configured declarative flow source for flow projects."""
-    if pyproject_data is None:
-        try:
-            from crewai_cli.utils import read_toml
-
-            pyproject_data = read_toml()
-        except Exception:
-            return None
-
-    crewai_config = pyproject_data.get("tool", {}).get("crewai", {})
-    if crewai_config.get("type") != "flow":
+    root = project_root or Path.cwd()
+    if pyproject_data is None and not (root / "pyproject.toml").is_file():
         return None
-    definition = crewai_config.get("definition")
-    if not isinstance(definition, str):
-        return None
-    definition = definition.strip()
-    if not definition:
-        return None
-
-    return _resolve_project_definition_path(
-        definition=definition,
-        project_root=project_root or Path.cwd(),
-    )
-
-
-def _resolve_project_definition_path(definition: str, project_root: Path) -> Path:
-    definition_path = Path(definition)
-    windows_definition_path = PureWindowsPath(definition)
-
-    if definition.startswith("~"):
-        raise click.UsageError(
-            "[tool.crewai] definition must be a project-local path; "
-            f"got {definition!r}."
-        )
-
-    if definition_path.is_absolute() or windows_definition_path.is_absolute():
-        raise click.UsageError(
-            "[tool.crewai] definition must be relative to the project root; "
-            f"got {definition!r}."
-        )
 
     try:
-        root = project_root.resolve(strict=True)
-    except OSError as exc:
-        raise click.UsageError(
-            f"Invalid project root for [tool.crewai] definition: {exc}"
-        ) from exc
-
-    candidate = root / definition_path
-    try:
-        resolved_candidate = candidate.resolve(strict=False)
-    except OSError as exc:
-        raise click.UsageError(
-            f"Invalid [tool.crewai] definition path {definition!r}: {exc}"
-        ) from exc
-
-    if not resolved_candidate.is_relative_to(root):
-        raise click.UsageError(
-            "[tool.crewai] definition must resolve inside the project root; "
-            f"got {definition!r}."
+        return configured_project_definition(
+            "flow",
+            pyproject_data=pyproject_data,
+            project_root=root,
         )
-
-    if not resolved_candidate.exists():
-        raise click.UsageError(
-            "[tool.crewai] definition must point to an existing file; "
-            f"got {definition!r}."
-        )
-
-    if not resolved_candidate.is_file():
-        raise click.UsageError(
-            "[tool.crewai] definition must point to a regular file; "
-            f"got {definition!r}."
-        )
-
-    return resolved_candidate
+    except ProjectDefinitionError as exc:
+        raise click.UsageError(str(exc)) from exc
 
 
 def _execute_declarative_flow_command(command: list[str]) -> None:

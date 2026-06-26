@@ -16,12 +16,17 @@ def test_missing_crewai_package_shows_full_install_hint(monkeypatch):
     def missing_crewai_package():
         raise ModuleNotFoundError("No module named 'crewai'", name="crewai")
 
-    monkeypatch.setattr(
-        run_crew_module, "_import_find_crew_json_file", missing_crewai_package
-    )
+    real_import = __import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == "crewai.project.crew_loader":
+            missing_crewai_package()
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr("builtins.__import__", fake_import)
 
     with pytest.raises(click.ClickException) as exc_info:
-        run_crew_module.find_crew_json_file()
+        run_crew_module._load_json_crew(Path("crew.jsonc"))
 
     message = exc_info.value.message
     assert "CrewAI CLI is installed without the `crewai` package" in message
@@ -31,11 +36,17 @@ def test_missing_crewai_package_shows_full_install_hint(monkeypatch):
 
 def test_run_crew_forwards_trained_agents_file_to_json_crews(monkeypatch):
     """crewai run -f must reach JSON crews, not only classic subprocess crews."""
-    monkeypatch.setattr(run_crew_module, "_has_json_crew", lambda: True)
+    monkeypatch.setattr(run_crew_module, "read_toml", lambda: {})
+    monkeypatch.setattr(
+        run_crew_module,
+        "configured_project_json_crew",
+        lambda pyproject_data=None, project_root=None: Path("crew.jsonc"),
+    )
     called: dict = {}
 
-    def fake_run_json_crew_in_project_env(trained_agents_file=None):
+    def fake_run_json_crew_in_project_env(trained_agents_file=None, crew_path=None):
         called["trained_agents_file"] = trained_agents_file
+        called["crew_path"] = crew_path
 
     monkeypatch.setattr(
         run_crew_module,
@@ -45,7 +56,10 @@ def test_run_crew_forwards_trained_agents_file_to_json_crews(monkeypatch):
 
     run_crew_module.run_crew(trained_agents_file="some.pkl")
 
-    assert called == {"trained_agents_file": "some.pkl"}
+    assert called == {
+        "trained_agents_file": "some.pkl",
+        "crew_path": Path("crew.jsonc"),
+    }
 
 
 def test_json_run_uses_project_env_when_pyproject_exists(monkeypatch, tmp_path: Path):
@@ -71,8 +85,10 @@ def test_json_run_uses_project_env_when_pyproject_exists(monkeypatch, tmp_path: 
 
     monkeypatch.setattr(run_crew_module.subprocess, "run", fake_subprocess_run)
 
+    crew_path = tmp_path / "crew.jsonc"
     run_crew_module._run_json_crew_in_project_env(
-        trained_agents_file="trained.pkl"
+        trained_agents_file="trained.pkl",
+        crew_path=crew_path,
     )
 
     expected_env = {
@@ -81,6 +97,7 @@ def test_json_run_uses_project_env_when_pyproject_exists(monkeypatch, tmp_path: 
             Path(run_crew_module.__file__).resolve().parent
         ),
         CREWAI_TRAINED_AGENTS_FILE_ENV: "trained.pkl",
+        run_crew_module._CREWAI_JSON_CREW_DEFINITION_ENV: str(crew_path),
     }
     if local_crewai_source_dir := run_crew_module._find_local_crewai_source_dir():
         expected_env[run_crew_module._CREWAI_RUNNER_SOURCE_DIR_ENV] = str(
@@ -214,8 +231,9 @@ def test_json_run_without_pyproject_runs_in_process(monkeypatch, tmp_path: Path)
     monkeypatch.chdir(tmp_path)
     called: dict = {}
 
-    def fake_run_json_crew(trained_agents_file=None):
+    def fake_run_json_crew(trained_agents_file=None, crew_path=None):
         called["trained_agents_file"] = trained_agents_file
+        called["crew_path"] = crew_path
         return "result"
 
     monkeypatch.setattr(run_crew_module, "_run_json_crew", fake_run_json_crew)
@@ -226,7 +244,7 @@ def test_json_run_without_pyproject_runs_in_process(monkeypatch, tmp_path: Path)
         )
         == "result"
     )
-    assert called == {"trained_agents_file": "trained.pkl"}
+    assert called == {"trained_agents_file": "trained.pkl", "crew_path": None}
 
 
 def test_json_project_env_run_failure_exits_nonzero(monkeypatch, tmp_path: Path):
@@ -435,7 +453,7 @@ def _patch_tui_run(monkeypatch, status: str):
 
     crew = SimpleNamespace(name="Demo", tasks=[], agents=[])
     monkeypatch.setattr(
-        run_crew_module, "find_crew_json_file", lambda: Path("crew.jsonc")
+        run_crew_module, "configured_project_json_crew", lambda: Path("crew.jsonc")
     )
     monkeypatch.setattr(
         run_crew_module,
@@ -489,7 +507,9 @@ def test_run_json_crew_dmn_mode_bypasses_tui(monkeypatch, tmp_path: Path, capsys
             kickoff_calls.append(inputs)
             return "plain result"
 
-    monkeypatch.setattr(run_crew_module, "find_crew_json_file", lambda: crew_path)
+    monkeypatch.setattr(
+        run_crew_module, "configured_project_json_crew", lambda: crew_path
+    )
     monkeypatch.setattr(
         run_crew_module,
         "_load_json_crew",
@@ -528,7 +548,9 @@ def test_run_json_crew_dmn_mode_exits_on_missing_inputs(
         tasks=[],
     )
 
-    monkeypatch.setattr(run_crew_module, "find_crew_json_file", lambda: crew_path)
+    monkeypatch.setattr(
+        run_crew_module, "configured_project_json_crew", lambda: crew_path
+    )
     monkeypatch.setattr(
         run_crew_module,
         "_load_json_crew",
@@ -543,28 +565,47 @@ def test_run_json_crew_dmn_mode_exits_on_missing_inputs(
     assert "Missing runtime inputs for CREWAI_DMN mode: topic" in captured.err
 
 
-def test_has_json_crew_defers_to_declared_flow_type(monkeypatch, tmp_path: Path):
+def test_configured_project_json_crew_defers_to_declared_flow_type(
+    monkeypatch, tmp_path: Path
+):
     """A flow project containing a stray crew.jsonc must still run as a flow."""
     monkeypatch.chdir(tmp_path)
     (tmp_path / "crew.jsonc").write_text("{}")
     (tmp_path / "pyproject.toml").write_text('[tool.crewai]\ntype = "flow"\n')
 
-    assert run_crew_module._has_json_crew() is False
+    assert run_crew_module.configured_project_json_crew() is None
 
 
-def test_has_json_crew_true_for_declared_crew_type(monkeypatch, tmp_path: Path):
+def test_configured_project_json_crew_returns_declared_crew_definition(
+    monkeypatch, tmp_path: Path
+):
+    monkeypatch.chdir(tmp_path)
+    crew_path = tmp_path / "crew.jsonc"
+    crew_path.write_text("{}")
+    (tmp_path / "pyproject.toml").write_text(
+        '[tool.crewai]\ntype = "crew"\ndefinition = "crew.jsonc"\n'
+    )
+
+    assert run_crew_module.configured_project_json_crew() == crew_path.resolve()
+
+
+def test_configured_project_json_crew_ignores_declared_crew_without_definition(
+    monkeypatch, tmp_path: Path
+):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "crew.jsonc").write_text("{}")
     (tmp_path / "pyproject.toml").write_text('[tool.crewai]\ntype = "crew"\n')
 
-    assert run_crew_module._has_json_crew() is True
+    assert run_crew_module.configured_project_json_crew() is None
 
 
-def test_has_json_crew_true_without_pyproject(monkeypatch, tmp_path: Path):
+def test_configured_project_json_crew_ignores_missing_pyproject(
+    monkeypatch, tmp_path: Path
+):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "crew.jsonc").write_text("{}")
 
-    assert run_crew_module._has_json_crew() is True
+    assert run_crew_module.configured_project_json_crew() is None
 
 
 def test_run_crew_rejects_inputs_without_definition():
@@ -605,7 +646,6 @@ def test_run_crew_runs_explicit_declarative_definition(monkeypatch, capsys):
 def test_run_crew_runs_classic_crew_project(monkeypatch, capsys):
     calls = []
 
-    monkeypatch.setattr(run_crew_module, "_has_json_crew", lambda: False)
     monkeypatch.setattr(
         run_crew_module,
         "read_toml",
@@ -631,7 +671,6 @@ def test_run_crew_runs_classic_crew_project(monkeypatch, capsys):
 def test_run_crew_runs_python_flow_project(monkeypatch, capsys):
     calls = []
 
-    monkeypatch.setattr(run_crew_module, "_has_json_crew", lambda: False)
     monkeypatch.setattr(
         run_crew_module,
         "read_toml",
@@ -660,7 +699,6 @@ def test_run_crew_runs_conversational_flow_tui(monkeypatch, capsys):
     flow = Flow()
     calls = []
 
-    monkeypatch.setattr(run_crew_module, "_has_json_crew", lambda: False)
     monkeypatch.setattr(
         run_crew_module,
         "read_toml",
@@ -689,7 +727,6 @@ def test_run_crew_runs_conversational_flow_tui(monkeypatch, capsys):
 
 
 def test_run_crew_rejects_filename_for_flow_project(monkeypatch):
-    monkeypatch.setattr(run_crew_module, "_has_json_crew", lambda: False)
     monkeypatch.setattr(
         run_crew_module,
         "read_toml",
@@ -710,7 +747,6 @@ def test_run_crew_runs_configured_declarative_flow_project(
     monkeypatch.chdir(tmp_path)
     definition_path = tmp_path / "flow.yaml"
     definition_path.write_text("schema: crewai.flow/v1\n", encoding="utf-8")
-    monkeypatch.setattr(run_crew_module, "_has_json_crew", lambda: False)
     monkeypatch.setattr(
         run_crew_module,
         "read_toml",

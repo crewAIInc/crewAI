@@ -1,15 +1,16 @@
 """Memory reset utilities for CrewAI crews and flows."""
 
+from pathlib import Path
 import subprocess
 from typing import Any
 
 import click
+from crewai_core.project import configured_project_definition, read_toml
 
 from crewai.flow import Flow
 from crewai.memory.unified_memory import Memory
 from crewai.project.crew_loader import load_crew
-from crewai.project.json_loader import find_crew_json_file
-from crewai.utilities.project_utils import get_crews, get_flows, read_toml
+from crewai.utilities.project_utils import get_crews, get_flows
 
 
 def _reset_flow_memory(flow: Flow[Any]) -> None:
@@ -42,35 +43,20 @@ def _reset_flow_memory(flow: Flow[Any]) -> None:
         click.echo(f"Memory reset skipped: {exc}", err=True)
 
 
-def _current_project_declares_flow() -> bool:
-    try:
-        pyproject_data = read_toml()
-    except Exception:
-        return False
-
-    declared_type: str | None = (
-        pyproject_data.get("tool", {}).get("crewai", {}).get("type")
-    )
-    return declared_type == "flow"
+def _configured_json_crew_path() -> Path | None:
+    if not Path("pyproject.toml").is_file():
+        return None
+    pyproject_data = read_toml()
+    return configured_project_definition("crew", pyproject_data=pyproject_data)
 
 
 def _get_json_crew() -> Any | None:
     """Load a JSON-first crew from the current project, if present."""
-    if _current_project_declares_flow():
-        return None
-
-    crew_path = find_crew_json_file()
+    crew_path = _configured_json_crew_path()
     if crew_path is None:
         return None
 
-    try:
-        crew, _ = load_crew(crew_path)
-    except Exception as exc:
-        click.echo(
-            f"Skipping JSON crew at {crew_path}: failed to load ({exc}).",
-            err=True,
-        )
-        return None
+    crew, _ = load_crew(crew_path)
     return crew
 
 

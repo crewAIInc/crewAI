@@ -240,6 +240,9 @@ def test_reset_no_crew_or_flow_found(runner):
 def test_reset_json_crew_memory(mock_crew, runner, monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "crew.jsonc").write_text("{}")
+    (tmp_path / "pyproject.toml").write_text(
+        '[tool.crewai]\ntype = "crew"\ndefinition = "crew.jsonc"\n'
+    )
 
     with mock.patch(
         "crewai.utilities.reset_memories.get_crews", return_value=[]
@@ -251,16 +254,19 @@ def test_reset_json_crew_memory(mock_crew, runner, monkeypatch, tmp_path):
     ) as mock_load_crew:
         result = runner.invoke(reset_memories, ["-m"])
 
-    mock_load_crew.assert_called_once_with(Path("crew.jsonc"))
+    mock_load_crew.assert_called_once_with((tmp_path / "crew.jsonc").resolve())
     mock_crew.reset_memories.assert_called_once_with(command_type="memory")
     assert f"[Crew ({mock_crew.name})] Memory has been reset." in result.output
 
 
-def test_reset_invalid_json_crew_does_not_block_classic_crew(
+def test_reset_invalid_json_crew_blocks_reset(
     mock_crew, runner, monkeypatch, tmp_path
 ):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "crew.jsonc").write_text("{invalid")
+    (tmp_path / "pyproject.toml").write_text(
+        '[tool.crewai]\ntype = "crew"\ndefinition = "crew.jsonc"\n'
+    )
 
     with mock.patch(
         "crewai.utilities.reset_memories.get_crews", return_value=[mock_crew]
@@ -272,10 +278,9 @@ def test_reset_invalid_json_crew_does_not_block_classic_crew(
     ) as mock_load_crew:
         result = runner.invoke(reset_memories, ["-m"])
 
-    mock_load_crew.assert_called_once_with(Path("crew.jsonc"))
-    mock_crew.reset_memories.assert_called_once_with(command_type="memory")
-    assert "Skipping JSON crew at crew.jsonc: failed to load (invalid JSON)." in result.output
-    assert f"[Crew ({mock_crew.name})] Memory has been reset." in result.output
+    mock_load_crew.assert_called_once_with((tmp_path / "crew.jsonc").resolve())
+    mock_crew.reset_memories.assert_not_called()
+    assert "An unexpected error occurred: invalid JSON" in result.output
 
 
 def test_reset_json_crew_skipped_for_declared_flow_project(

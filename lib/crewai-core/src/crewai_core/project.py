@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from functools import reduce
+from pathlib import Path, PureWindowsPath
 import sys
 from typing import Any
 
@@ -16,7 +17,11 @@ if sys.version_info >= (3, 11):
 console = Console()
 
 
-def read_toml(file_path: str = "pyproject.toml") -> dict[str, Any]:
+class ProjectDefinitionError(ValueError):
+    """Invalid ``[tool.crewai].definition`` project configuration."""
+
+
+def read_toml(file_path: str | Path = "pyproject.toml") -> dict[str, Any]:
     """Read a TOML file from disk and return its parsed contents."""
     with open(file_path, "rb") as f:
         return tomli.load(f)
@@ -27,6 +32,104 @@ def parse_toml(content: str) -> dict[str, Any]:
     if sys.version_info >= (3, 11):
         return tomllib.loads(content)
     return tomli.loads(content)
+
+
+def get_crewai_project_config(pyproject_data: dict[str, Any]) -> dict[str, Any]:
+    """Return the normalized ``[tool.crewai]`` table from pyproject data."""
+    tool_config = pyproject_data.get("tool")
+    if not isinstance(tool_config, dict):
+        return {}
+    crewai_config = tool_config.get("crewai")
+    if not isinstance(crewai_config, dict):
+        return {}
+    return crewai_config
+
+
+def get_crewai_project_type(pyproject_data: dict[str, Any]) -> str | None:
+    """Return ``[tool.crewai].type`` when configured."""
+    project_type = get_crewai_project_config(pyproject_data).get("type")
+    return project_type if isinstance(project_type, str) else None
+
+
+def configured_project_definition(
+    project_type: str,
+    *,
+    pyproject_data: dict[str, Any] | None = None,
+    project_root: Path | str | None = None,
+) -> Path | None:
+    """Return a configured CrewAI definition path for a project type.
+
+    ``[tool.crewai].type`` must match ``project_type`` and ``definition`` must
+    be a non-empty project-local file path. Missing definitions return ``None``
+    so callers can fall back to legacy entrypoints for that project type.
+    """
+    root = Path(project_root) if project_root is not None else Path.cwd()
+    if pyproject_data is None:
+        pyproject_data = read_toml(root / "pyproject.toml")
+
+    crewai_config = get_crewai_project_config(pyproject_data)
+    if crewai_config.get("type") != project_type:
+        return None
+
+    definition = crewai_config.get("definition", "").strip()
+    if not definition:
+        return None
+
+    return resolve_project_definition_path(definition=definition, project_root=root)
+
+
+def resolve_project_definition_path(definition: str, project_root: Path | str) -> Path:
+    """Resolve a ``[tool.crewai].definition`` path inside ``project_root``."""
+    root_path = Path(project_root)
+    definition_path = Path(definition)
+    windows_definition_path = PureWindowsPath(definition)
+
+    if definition.startswith("~"):
+        raise ProjectDefinitionError(
+            "[tool.crewai] definition must be a project-local path; "
+            f"got {definition!r}."
+        )
+
+    if definition_path.is_absolute() or windows_definition_path.is_absolute():
+        raise ProjectDefinitionError(
+            "[tool.crewai] definition must be relative to the project root; "
+            f"got {definition!r}."
+        )
+
+    try:
+        root = root_path.resolve(strict=True)
+    except OSError as exc:
+        raise ProjectDefinitionError(
+            f"Invalid project root for [tool.crewai] definition: {exc}"
+        ) from exc
+
+    candidate = root / definition_path
+    try:
+        resolved_candidate = candidate.resolve(strict=False)
+    except OSError as exc:
+        raise ProjectDefinitionError(
+            f"Invalid [tool.crewai] definition path {definition!r}: {exc}"
+        ) from exc
+
+    if not resolved_candidate.is_relative_to(root):
+        raise ProjectDefinitionError(
+            "[tool.crewai] definition must resolve inside the project root; "
+            f"got {definition!r}."
+        )
+
+    if not resolved_candidate.exists():
+        raise ProjectDefinitionError(
+            "[tool.crewai] definition must point to an existing file; "
+            f"got {definition!r}."
+        )
+
+    if not resolved_candidate.is_file():
+        raise ProjectDefinitionError(
+            "[tool.crewai] definition must point to a regular file; "
+            f"got {definition!r}."
+        )
+
+    return resolved_candidate
 
 
 def _get_nested_value(data: dict[str, Any], keys: list[str]) -> Any:
