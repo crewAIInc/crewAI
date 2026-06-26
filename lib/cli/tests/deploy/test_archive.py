@@ -146,6 +146,7 @@ build-backend = "hatchling.build"
 
 [tool.crewai]
 type = "crew"
+definition = "crew.jsonc"
 """.strip()
         + "\n"
     )
@@ -180,6 +181,7 @@ dependencies = ["crewai[tools]>=1.15.0,<2.0.0"]
 
 [tool.crewai]
 type = "crew"
+definition = "crew.jsonc"
 """.strip()
         + "\n"
     )
@@ -221,6 +223,7 @@ custom = "custom.module:main"
 
 [tool.crewai]
 type = "crew"
+definition = "crew.jsonc"
 """.strip()
         + "\n"
     )
