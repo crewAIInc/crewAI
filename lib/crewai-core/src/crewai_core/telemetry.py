@@ -249,6 +249,17 @@ class Telemetry:
 
         self._safe_telemetry_procedure(_operation)
 
+    def tui_button_clicked_span(self, button_name: str) -> None:
+        """Records when a user clicks a button in the CLI TUI."""
+
+        def _operation() -> None:
+            tracer = trace.get_tracer("crewai.telemetry")
+            span = tracer.start_span("TUI Button Clicked")
+            self._add_attribute(span, "button_name", button_name)
+            close_span(span)
+
+        self._safe_telemetry_procedure(_operation)
+
     def flow_creation_span(self, flow_name: str) -> None:
         """Records the creation of a new flow."""
 

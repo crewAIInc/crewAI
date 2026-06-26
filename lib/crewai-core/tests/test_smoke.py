@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from unittest.mock import Mock
 
 from crewai_core import (
     constants,
@@ -128,3 +129,29 @@ def test_core_telemetry_skips_duplicate_tracer_provider(
 
     assert called is False
     assert telemetry.trace_set is True
+
+
+def test_core_telemetry_records_tui_button_click(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from crewai_core.telemetry import Telemetry
+
+    Telemetry._instance = None
+    monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
+    monkeypatch.delenv("CREWAI_DISABLE_TELEMETRY", raising=False)
+    monkeypatch.delenv("CREWAI_DISABLE_TRACKING", raising=False)
+
+    tracer = Mock()
+    span = Mock()
+    tracer.start_span.return_value = span
+    monkeypatch.setattr(
+        "crewai_core.telemetry.trace.get_tracer",
+        lambda _name: tracer,
+    )
+
+    telemetry = Telemetry()
+    telemetry.tui_button_clicked_span("view_traces")
+
+    tracer.start_span.assert_called_once_with("TUI Button Clicked")
+    span.set_attribute.assert_called_once_with("button_name", "view_traces")
+    span.end.assert_called_once()

@@ -10,6 +10,7 @@ import threading
 import time
 from typing import Any, ClassVar, cast
 
+from crewai_core.telemetry import Telemetry
 from rich.text import Text
 from textual import work
 from textual.app import App, ComposeResult
@@ -571,6 +572,7 @@ FooterKey .footer-key--key {
         self._want_deploy: bool = False
         self._trace_url: str | None = None
         self._consent_screen: TraceConsentScreen | None = None
+        self._telemetry: Telemetry | None = None
 
     # ── Layout ──────────────────────────────────────────────
 
@@ -1042,10 +1044,21 @@ FooterKey .footer-key--key {
         self._unsubscribe()
         self.exit(self._crew_result)
 
+    def _record_tui_button_click(self, button_name: str) -> None:
+        try:
+            if self._telemetry is None:
+                self._telemetry = Telemetry()
+                self._telemetry.set_tracer()
+            self._telemetry.tui_button_clicked_span(button_name)
+        except Exception:  # noqa: S110
+            pass
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id in ("btn-traces", "btn-traces-done"):
+            self._record_tui_button_click("view_traces")
             self.action_view_traces()
         elif event.button.id == "btn-deploy":
+            self._record_tui_button_click("deploy")
             self.action_deploy_crew()
 
     def _scroll_to_result(self) -> None:
