@@ -18,8 +18,10 @@ from crewai_cli.utils import (
     enable_prompt_line_editing,
     is_dmn_mode_enabled,
     load_env_vars,
+    render_template,
     write_env_file,
 )
+from crewai_cli.version import get_crewai_tools_dependency
 
 
 # ── Provider / model data ───────────────────────────────────────
@@ -78,60 +80,7 @@ _PROVIDER_MODELS: dict[str, list[tuple[str, str]]] = {
     ],
 }
 
-
-# ── Static project files ───────────────────────────────────────
-
-_PYPROJECT_TOML = """\
-[project]
-name = "{folder_name}"
-version = "0.1.0"
-description = "{name} using crewAI"
-authors = [{{ name = "Your Name", email = "you@example.com" }}]
-requires-python = ">=3.10,<3.14"
-dependencies = [
-    "crewai[tools]==1.14.8a1"
-]
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.hatch.build.targets.wheel]
-only-include = ["agents", "crew.jsonc", "tools", "knowledge", "skills"]
-
-[tool.crewai]
-type = "crew"
-"""
-
-_GITIGNORE = """\
-.env
-__pycache__/
-.DS_Store
-report.md
-"""
-
-_README = """\
-# {name}
-
-A crewAI project using JSON-first configuration.
-
-## Running
-
-```bash
-crewai run
-```
-
-## Project Structure
-
-- `agents/` - Agent definitions (JSONC)
-- `crew.jsonc` - Crew definition with tasks and configuration
-- `tools/` - Custom tools (Python)
-- `knowledge/` - Knowledge files for agents
-
-> **Note:** `custom:<name>` tool references execute `tools/<name>.py` as local
-> Python code when the crew loads. Only run crew projects from sources you
-> trust.
-"""
+_TEMPLATES_DIR = Path(__file__).parent / "templates" / "json_crew"
 
 
 # ── Common tools for picker ────────────────────────────────────
@@ -692,187 +641,64 @@ def _default_agents_and_tasks(
 def _agent_to_jsonc(agent: dict[str, Any]) -> str:
     """Convert agent wizard data to JSONC string with comments."""
     has_planning = agent["planning"]
-    delegation_val = "true" if agent["allow_delegation"] else "false"
-    delegation_comma = "," if has_planning else ""
-
-    settings_lines = []
-    settings_lines.append("    // Show detailed execution logs")
-    settings_lines.append('    "verbose": false,')
-    settings_lines.append("")
-    settings_lines.append(
-        "    // Allow this agent to delegate tasks to other agents in the crew"
+    settings_block = _render_json_crew_template(
+        "agent_settings.jsonc",
+        {
+            "allow_delegation": "true" if agent["allow_delegation"] else "false",
+            "delegation_comma": "," if has_planning else "",
+            "planning_line": '"planning": true'
+            if has_planning
+            else '// "planning": false',
+        },
     )
-    settings_lines.append(f'    "allow_delegation": {delegation_val}{delegation_comma}')
-    settings_lines.append("")
-    settings_lines.append(
-        "    // Maximum reasoning iterations per task (prevents infinite loops)"
+
+    return _render_json_crew_template(
+        "agent.jsonc",
+        {
+            "role_json": json.dumps(agent["role"]),
+            "goal_json": json.dumps(agent["goal"]),
+            "backstory_json": json.dumps(agent["backstory"]),
+            "llm_json": json.dumps(agent["llm"]),
+            "tools_json": json.dumps(agent["tools"]),
+            "settings_block": settings_block,
+        },
     )
-    settings_lines.append('    // "max_iter": 25,')
-    settings_lines.append("")
-    settings_lines.append("    // Maximum tokens for agent's response generation")
-    settings_lines.append('    // "max_tokens": null,')
-    settings_lines.append("")
-    settings_lines.append("    // Maximum execution time in seconds")
-    settings_lines.append('    // "max_execution_time": null,')
-    settings_lines.append("")
-    settings_lines.append("    // Maximum LLM requests per minute (rate limiting)")
-    settings_lines.append('    // "max_rpm": null,')
-    settings_lines.append("")
-    settings_lines.append("    // Enable agent-level memory (persists across tasks)")
-    settings_lines.append('    // "memory": false,')
-    settings_lines.append("")
-    settings_lines.append("    // Cache tool results to avoid duplicate calls")
-    settings_lines.append('    // "cache": true,')
-    settings_lines.append("")
-    settings_lines.append(
-        "    // Auto-summarize context when it exceeds the LLM's context window"
-    )
-    settings_lines.append('    // "respect_context_window": true,')
-    settings_lines.append("")
-    settings_lines.append("    // Maximum retries on execution errors")
-    settings_lines.append('    // "max_retry_limit": 2,')
-    settings_lines.append("")
-    settings_lines.append("    // Enable step-by-step planning before task execution")
-    if has_planning:
-        settings_lines.append('    "planning": true')
-    else:
-        settings_lines.append('    // "planning": false')
-    settings_lines.append("")
-    settings_lines.append("    // Include system prompt in LLM calls")
-    settings_lines.append('    // "use_system_prompt": true')
-
-    settings_block = "\n".join(settings_lines)
-
-    return f"""\
-{{
-  // Agent's role title — appears in prompts and logs.
-  // You can use {{placeholder}} inputs in role, goal, or backstory.
-  // Example: "role": "Senior {{industry}} Researcher"
-  "role": {json.dumps(agent["role"])},
-
-  // Optional custom Agent subclass
-  // "type": {{"python": "my_project.agents.CustomAgent"}},
-
-  // The agent's primary objective
-  "goal": {json.dumps(agent["goal"])},
-
-  // Background story that shapes the agent's personality and approach
-  "backstory": {json.dumps(agent["backstory"])},
-
-  // LLM model in provider/model format
-  // Examples: "openai/gpt-4o", "anthropic/claude-sonnet-4-6", "ollama/llama3.3"
-  // For custom endpoints or deployment-based providers, replace with:
-  // "llm": {{"model": "llama3", "provider": "ollama", "base_url": "http://localhost:11434"}},
-  // "llm": {{"deployment_name": "my-deployment", "provider": "azure", "api_version": "2024-10-21"}},
-  "llm": {json.dumps(agent["llm"])},
-
-  // Override LLM used specifically for tool/function calling
-  // "function_calling_llm": "openai/gpt-5.4-mini",
-
-  // Tools available to this agent
-  // Built-in: "SerperDevTool", "ScrapeWebsiteTool", "FileReadTool", etc.
-  // Custom: "custom:my_tool" loads from tools/my_tool.py
-  "tools": {json.dumps(agent["tools"])},
-
-  // Optional agent-level guardrail — validates this agent's final output.
-  // String guardrails are checked by an LLM and can reject/retry output.
-  // Python refs must point to module-level functions/classes in trusted code.
-  // "guardrail": "Only answer with information supported by retrieved evidence.",
-  // "step_callback": {{"python": "my_project.callbacks.on_agent_step"}},
-  // "guardrail_max_retries": 2,
-
-  // Advanced agent options:
-  // Docs: https://docs.crewai.com/concepts/agents
-  // "reasoning": true,
-  // "max_reasoning_attempts": 3,
-  // "planning_config": {{
-  //   "reasoning_effort": "medium",
-  //   "llm": {{"model": "deepseek-chat", "provider": "deepseek"}}
-  // }},
-  // "multimodal": false,
-  // "allow_code_execution": false,
-  // "code_execution_mode": "safe",
-  // "knowledge_sources": [],
-  // "knowledge_config": {{}},
-  // "inject_date": true,
-  // "date_format": "%Y-%m-%d",
-  // "security_config": {{}},
-
-  // Agent behavior settings
-  "settings": {{
-{settings_block}
-  }}
-}}
-"""
 
 
 def _task_to_json_fragment(task: dict[str, Any]) -> str:
     """Convert task wizard data to a JSON-like fragment for embedding in crew JSONC."""
-    lines = []
-    lines.append("    {")
-    lines.append("      // Task identifier")
-    lines.append(f'      "name": {json.dumps(task["name"])},')
-    lines.append("")
-    lines.append("      // What the task should accomplish")
-    lines.append(
-        "      // Use {placeholder} inputs here; crewai run prompts for missing values"
-    )
-    lines.append(f'      "description": {json.dumps(task["description"])},')
-    lines.append("")
-    lines.append("      // Clear definition of what the output should look like")
-    lines.append(f'      "expected_output": {json.dumps(task["expected_output"])},')
-    lines.append("")
-    lines.append(
-        "      // Optional task guardrail(s) validate output before completion"
-    )
-    lines.append('      // Use "guardrail" for one rule or "guardrails" for many')
-    lines.append("      // Failed guardrails retry up to guardrail_max_retries times")
-    lines.append('      // "guardrail": "Every factual claim needs context support.",')
-    lines.append('      // "guardrails": [')
-    lines.append('      //   "Every factual claim must be supported by context.",')
-    lines.append('      //   "The answer must match the expected output format."')
-    lines.append("      // ],")
-    lines.append('      // "guardrail_max_retries": 2,')
-    lines.append("")
-    lines.append("      // Advanced task options:")
-    lines.append("      // Docs: https://docs.crewai.com/concepts/tasks")
-    lines.append('      // "type": "ConditionalTask",')
-    lines.append(
-        '      // "condition": { "python": "my_project.conditions.should_run" },'
-    )
-    lines.append(
-        '      // "output_json": { "python": "my_project.models.ReportOutput" },'
-    )
-    lines.append('      // "output_pydantic": null,')
-    lines.append('      // "response_model": null,')
-    lines.append(
-        '      // "converter_cls": { "python": "my_project.converters.CustomConverter" },'
-    )
-    lines.append('      // "markdown": false,')
-    lines.append('      // "input_files": { "brief": "data/brief.txt" },')
-    lines.append('      // "security_config": {},')
-    lines.append("")
-    lines.append("      // Which agent handles this task")
-    lines.append(f'      "agent": {json.dumps(task["agent"])}')
+    has_context = bool(task.get("context"))
+    has_output_file = bool(task.get("output_file"))
+    context_block = ""
+    output_file_block = ""
 
-    if task.get("context"):
-        lines[-1] += ","  # add comma to agent line
-        lines.append("")
-        lines.append("      // Task outputs used as context")
-        lines.append(f'      "context": {json.dumps(task["context"])}')
+    if has_context:
+        context_block = (
+            "\n\n"
+            "      // Task outputs used as context\n"
+            f'      "context": {json.dumps(task["context"])}'
+            f"{',' if has_output_file else ''}"
+        )
 
-    if task.get("output_file"):
-        lines[-1] += ","
-        lines.append("")
-        lines.append("      // Save output to a file")
-        lines.append(f'      "output_file": {json.dumps(task["output_file"])}')
+    if has_output_file:
+        output_file_block = (
+            "\n\n"
+            "      // Save output to a file\n"
+            f'      "output_file": {json.dumps(task["output_file"])}'
+        )
 
-    lines.append("")
-    lines.append('      // "tools": [],')
-    lines.append('      // "human_input": false,')
-    lines.append('      // "async_execution": false')
-    lines.append("    }")
-    return "\n".join(lines)
+    return _render_json_crew_template(
+        "task.jsonc",
+        {
+            "name_json": json.dumps(task["name"]),
+            "description_json": json.dumps(task["description"]),
+            "expected_output_json": json.dumps(task["expected_output"]),
+            "agent_json": json.dumps(task["agent"]),
+            "agent_comma": "," if has_context or has_output_file else "",
+            "context_block": context_block,
+            "output_file_block": output_file_block,
+        },
+    )
 
 
 def _crew_to_jsonc(
@@ -892,69 +718,20 @@ def _crew_to_jsonc(
             inputs_lines[0] + "\n" + "\n".join("  " + line for line in inputs_lines[1:])
         )
 
-    process = settings.get("process", "sequential")
     memory = "true" if settings.get("memory") else "false"
 
-    return f"""\
-{{
-  // Display name for this crew
-  "name": {json.dumps(name)},
-
-  // Agents to include — each must have a matching agents/<name>.jsonc file
-  "agents": {agent_names_json},
-
-  // Task definitions — executed in order for sequential process
-  "tasks": [
-{tasks_fragments}
-  ],
-
-  // Execution process
-  // "sequential" — tasks run in order, each receiving prior task outputs
-  // "hierarchical" — a manager agent delegates tasks (requires manager_llm)
-  "process": "{process}",
-
-  // Enable verbose logging during execution
-  "verbose": true,
-
-  // Enable crew memory — persists context and learnings across tasks
-  "memory": {memory},
-
-  // Automatically plan the execution strategy before running tasks
-  // "planning": false,
-
-  // LLM for the planning step (used when planning is true)
-  // "planning_llm": "openai/gpt-4o",
-
-  // LLM for the manager agent (required when process is "hierarchical")
-  // "manager_llm": "openai/gpt-4o",
-
-  // Crew-level LLM fields also accept object form for custom endpoints
-  // "chat_llm": {{"model": "llama3", "provider": "ollama", "base_url": "http://localhost:11434"}},
-
-  // Advanced crew options:
-  // Docs: https://docs.crewai.com/concepts/crews
-  // For hierarchical crews, manager_agent can reference an agents/<name>.jsonc file
-  // that is not included in the "agents" list.
-  // "manager_agent": "{agents[0]["name"]}",
-  // "before_kickoff_callbacks": [{{"python": "my_project.callbacks.before_kickoff"}}],
-  // "after_kickoff_callbacks": [{{"python": "my_project.callbacks.after_kickoff"}}],
-  // "function_calling_llm": "openai/gpt-4o-mini",
-  // "max_rpm": null,
-  // "cache": true,
-  // "knowledge_sources": [],
-  // "embedder": {{}},
-  // "output_log_file": "crew.log",
-  // "stream": false,
-  // "tracing": false,
-  // "security_config": {{}},
-
-  // Optional runtime input defaults.
-  // Use {{placeholder}} in agent or task text, for example:
-  // "description": "Research {{topic}} and write a brief"
-  // `crewai run` prompts for any placeholders missing from this object.
-  "inputs": {inputs_json}
-}}
-"""
+    return _render_json_crew_template(
+        "crew.jsonc",
+        {
+            "name_json": json.dumps(name),
+            "agent_names_json": agent_names_json,
+            "tasks_fragments": tasks_fragments,
+            "process_json": json.dumps(settings.get("process", "sequential")),
+            "memory": memory,
+            "manager_agent_name": agents[0]["name"],
+            "inputs_json": inputs_json,
+        },
+    )
 
 
 # ── Model selection ─────────────────────────────────────────────
@@ -1027,6 +804,12 @@ def _default_model_for_provider(provider: str | None) -> str | None:
 
 
 # ── Helpers ─────────────────────────────────────────────────────
+
+
+def _render_json_crew_template(
+    template_name: str, replacements: dict[str, str] | None = None
+) -> str:
+    return render_template(_TEMPLATES_DIR / template_name, replacements or {})
 
 
 def _write_jsonc(path: Path, content: str) -> None:
@@ -1134,22 +917,32 @@ def create_json_crew(
 
     # Write pyproject.toml
     (folder_path / "pyproject.toml").write_text(
-        _PYPROJECT_TOML.format(folder_name=folder_name, name=name),
+        _render_json_crew_template(
+            "pyproject.toml",
+            {
+                "folder_name": folder_name,
+                "name": name,
+                "crewai_tools_dependency": get_crewai_tools_dependency(),
+            },
+        ),
         encoding="utf-8",
     )
 
     # Write .gitignore
-    (folder_path / ".gitignore").write_text(_GITIGNORE, encoding="utf-8")
+    (folder_path / ".gitignore").write_text(
+        _render_json_crew_template(".gitignore"),
+        encoding="utf-8",
+    )
 
     # Write README
     (folder_path / "README.md").write_text(
-        _README.format(name=name),
+        _render_json_crew_template("README.md", {"name": name}),
         encoding="utf-8",
     )
 
     # Write knowledge placeholder
     (folder_path / "knowledge" / "user_preference.txt").write_text(
-        "# Add your knowledge files here\n",
+        _render_json_crew_template("knowledge/user_preference.txt"),
         encoding="utf-8",
     )
 

@@ -12,6 +12,8 @@ from packaging.version import Version
 import crewai_cli.create_json_crew as json_crew
 import crewai_cli.tui_picker as tui_picker
 from crewai_cli.create_crew import create_crew, create_folder_structure
+from crewai_cli.utils import render_template
+from crewai_cli.version import get_crewai_tools_dependency
 
 
 @pytest.fixture
@@ -735,11 +737,16 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
 
     pyproject = tomli.loads((tmp_path / "json_crew" / "pyproject.toml").read_text())
     dependency = pyproject["project"]["dependencies"][0]
-    assert dependency == "crewai[tools]==1.14.8a1"
-    assert Version("1.14.8a1") in Requirement(dependency).specifier
+    assert dependency == get_crewai_tools_dependency()
+    assert Version("1.15.0") in Requirement(dependency).specifier
+    assert Version("2.0.0") not in Requirement(dependency).specifier
     assert pyproject["tool"]["hatch"]["build"]["targets"]["wheel"][
         "only-include"
     ] == ["agents", "crew.jsonc", "tools", "knowledge", "skills"]
+    assert pyproject["tool"]["crewai"] == {
+        "type": "crew",
+        "definition": "crew.jsonc",
+    }
 
     crew_template = (tmp_path / "json_crew" / "crew.jsonc").read_text()
     assert (
@@ -809,6 +816,37 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
         agent_template
     )
     assert '"knowledge_sources": []' in agent_template
+
+
+def test_json_crew_uses_template_files():
+    template_names = {
+        "pyproject.toml",
+        "README.md",
+        ".gitignore",
+        "agent.jsonc",
+        "agent_settings.jsonc",
+        "task.jsonc",
+        "crew.jsonc",
+        "knowledge/user_preference.txt",
+    }
+
+    for template_name in template_names:
+        assert (json_crew._TEMPLATES_DIR / template_name).is_file()
+
+
+def test_render_template_does_not_replace_tokens_inside_replacement_values(tmp_path):
+    template = tmp_path / "template.txt"
+    template.write_text("{{first}} {{second}}", encoding="utf-8")
+
+    rendered = render_template(
+        template,
+        {
+            "first": "{{second}}",
+            "second": "done",
+        },
+    )
+
+    assert rendered == "{{second}} done"
 
 
 def test_json_provider_default_model_helper():
