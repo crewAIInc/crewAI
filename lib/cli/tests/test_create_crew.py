@@ -741,6 +741,10 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
     assert pyproject["tool"]["hatch"]["build"]["targets"]["wheel"][
         "only-include"
     ] == ["agents", "crew.jsonc", "tools", "knowledge", "skills"]
+    assert pyproject["tool"]["crewai"] == {
+        "type": "crew",
+        "definition": "crew.jsonc",
+    }
 
     crew_template = (tmp_path / "json_crew" / "crew.jsonc").read_text()
     assert (

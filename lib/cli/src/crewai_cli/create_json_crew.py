@@ -102,6 +102,7 @@ only-include = ["agents", "crew.jsonc", "tools", "knowledge", "skills"]
 
 [tool.crewai]
 type = "crew"
+definition = "crew.jsonc"
 """
 
 _GITIGNORE = """\
