@@ -19,6 +19,8 @@ from crewai_core.tool_credentials import (
 )
 from rich.console import Console
 
+from crewai_cli.version import get_crewai_tools_dependency
+
 
 __all__ = [
     "build_env_with_all_tool_credentials",
@@ -73,6 +75,9 @@ def copy_template(
     content = content.replace("{{name}}", name)
     content = content.replace("{{crew_name}}", class_name)
     content = content.replace("{{folder_name}}", folder_name)
+    content = content.replace(
+        "{{crewai_tools_dependency}}", get_crewai_tools_dependency()
+    )
 
     with open(dst, "w") as file:
         file.write(content)

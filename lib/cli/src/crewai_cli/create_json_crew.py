@@ -12,7 +12,6 @@ import click
 from rich.console import Console
 from rich.text import Text
 
-import crewai_cli
 from crewai_cli.constants import ENV_VARS
 from crewai_cli.tui_picker import pick_many, pick_one
 from crewai_cli.utils import (
@@ -21,6 +20,7 @@ from crewai_cli.utils import (
     load_env_vars,
     write_env_file,
 )
+from crewai_cli.version import get_crewai_tools_dependency
 
 
 # ── Provider / model data ───────────────────────────────────────
@@ -90,7 +90,7 @@ description = "{name} using crewAI"
 authors = [{{ name = "Your Name", email = "you@example.com" }}]
 requires-python = ">=3.10,<3.14"
 dependencies = [
-    "crewai[tools]=={crewai_version}"
+    "{crewai_tools_dependency}"
 ]
 
 [build-system]
@@ -1138,7 +1138,7 @@ def create_json_crew(
         _PYPROJECT_TOML.format(
             folder_name=folder_name,
             name=name,
-            crewai_version=crewai_cli.__version__,
+            crewai_tools_dependency=get_crewai_tools_dependency(),
         ),
         encoding="utf-8",
     )

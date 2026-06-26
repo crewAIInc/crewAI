@@ -13,14 +13,13 @@ import click
 from crewai_core.constants import CREWAI_TRAINED_AGENTS_FILE_ENV
 from packaging import version
 
-import crewai_cli
 from crewai_cli.utils import (
     build_env_with_all_tool_credentials,
     enable_prompt_line_editing,
     is_dmn_mode_enabled,
     read_toml,
 )
-from crewai_cli.version import get_crewai_version
+from crewai_cli.version import get_crewai_tools_dependency, get_crewai_version
 
 
 if TYPE_CHECKING:
@@ -38,7 +37,7 @@ CrewAI CLI is installed without the `crewai` package required to run crews.
 
 Install the full CrewAI package:
 
-  uv tool install --force 'crewai[tools]=={crewai_cli.__version__}'
+  uv tool install --force '{get_crewai_tools_dependency()}'
 
 The quotes are required in zsh so `crewai[tools]` is not treated as a glob.
 """
