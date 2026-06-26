@@ -735,8 +735,9 @@ def test_json_create_provider_preselects_default_model(tmp_path, monkeypatch):
 
     pyproject = tomli.loads((tmp_path / "json_crew" / "pyproject.toml").read_text())
     dependency = pyproject["project"]["dependencies"][0]
-    assert dependency == "crewai[tools]==1.14.8a1"
-    assert Version("1.14.8a1") in Requirement(dependency).specifier
+    assert dependency == "crewai[tools]>=1.15.0,<2.0.0"
+    assert Version("1.15.0") in Requirement(dependency).specifier
+    assert Version("2.0.0") not in Requirement(dependency).specifier
     assert pyproject["tool"]["hatch"]["build"]["targets"]["wheel"][
         "only-include"
     ] == ["agents", "crew.jsonc", "tools", "knowledge", "skills"]
