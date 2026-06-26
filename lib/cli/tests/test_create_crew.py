@@ -11,6 +11,7 @@ from packaging.requirements import Requirement
 from packaging.version import Version
 import crewai_cli.create_json_crew as json_crew
 import crewai_cli.tui_picker as tui_picker
+from crewai_cli.cli import crewai
 from crewai_cli.create_crew import create_crew, create_folder_structure
 from crewai_cli.utils import render_template
 from crewai_cli.version import get_crewai_tools_dependency
@@ -109,6 +110,7 @@ def test_create_crew_with_trailing_slash_creates_valid_project(
             "crewai_cli.create_crew.create_folder_structure"
         ) as mock_create_folder:
             mock_folder_path = Path(work_dir) / "test_project"
+            mock_folder_path.mkdir()
             mock_create_folder.return_value = (
                 mock_folder_path,
                 "test_project",
@@ -143,6 +145,7 @@ def test_create_crew_with_multiple_trailing_slashes(
             "crewai_cli.create_crew.create_folder_structure"
         ) as mock_create_folder:
             mock_folder_path = Path(work_dir) / "test_project"
+            mock_folder_path.mkdir()
             mock_create_folder.return_value = (
                 mock_folder_path,
                 "test_project",
@@ -167,6 +170,7 @@ def test_create_crew_normal_name_still_works(
             "crewai_cli.create_crew.create_folder_structure"
         ) as mock_create_folder:
             mock_folder_path = Path(work_dir) / "normal_project"
+            mock_folder_path.mkdir()
             mock_create_folder.return_value = (
                 mock_folder_path,
                 "normal_project",
@@ -176,6 +180,26 @@ def test_create_crew_normal_name_still_works(
             create_crew("normal-project", skip_provider=True)
 
             mock_create_folder.assert_called_once_with("normal-project", None)
+
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="git is not installed")
+@pytest.mark.parametrize(
+    ("args", "project_root"),
+    [
+        (["create", "crew", "Git Crew"], "git_crew"),
+        (["create", "flow", "Git Flow"], "git_flow"),
+    ],
+)
+def test_create_initializes_git_repo_when_git_is_available(
+    args, project_root, tmp_path, monkeypatch, runner
+):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("CREWAI_DMN", "True")
+
+    result = runner.invoke(crewai, args)
+
+    assert result.exit_code == 0, result.output
+    assert (tmp_path / project_root / ".git").is_dir()
 
 
 def test_create_folder_structure_handles_spaces_and_dashes_with_slash():
