@@ -8,8 +8,8 @@ authors = [
 ]
 requires-python = ">=3.10, <3.14"
 dependencies = [
-    "crewai-core==1.14.8a2",
-    "crewai-cli==1.14.8a2",
+    "crewai-core==1.15.0",
+    "crewai-cli==1.15.0",
     # Core Dependencies
     "pydantic>=2.11.9,<2.13",
     "openai>=2.30.0,<3",
@@ -18,9 +18,9 @@ dependencies = [
     "pdfplumber~=0.11.4",
     "regex~=2026.1.15",
     # Telemetry and Monitoring
-    "opentelemetry-api~=1.34.0",
-    "opentelemetry-sdk~=1.34.0",
-    "opentelemetry-exporter-otlp-proto-http~=1.34.0",
+    "opentelemetry-api~=1.42.0",
+    "opentelemetry-sdk~=1.42.0",
+    "opentelemetry-exporter-otlp-proto-http~=1.42.0",
     # Data Handling
     "chromadb~=1.1.0",
     "tokenizers>=0.21,<1",
@@ -55,7 +55,7 @@ Repository = "https://github.com/crewAIInc/crewAI"
 
 [project.optional-dependencies]
 tools = [
-    "crewai-tools==1.14.8a2",
+    "crewai-tools==1.15.0",
 ]
 embeddings = [
     "tiktoken>=0.8.0,<0.13"

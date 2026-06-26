@@ -13,6 +13,9 @@ on:
       - "docs.json"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   check-links:
     name: Check broken links
