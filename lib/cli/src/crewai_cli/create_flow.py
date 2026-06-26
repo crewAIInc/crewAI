@@ -4,6 +4,7 @@ import shutil
 import click
 from crewai_core.telemetry import Telemetry
 
+from crewai_cli.git import initialize_if_git_available
 from crewai_cli.version import get_crewai_tools_dependency
 
 
@@ -29,6 +30,8 @@ def create_flow(name: str, *, declarative: bool = False) -> None:
         _create_declarative_flow(name, class_name, folder_name, project_root)
     else:
         _create_python_flow(name, class_name, folder_name, project_root)
+
+    initialize_if_git_available(project_root)
 
     click.secho(f"Flow {name} created successfully!", fg="green", bold=True)
 

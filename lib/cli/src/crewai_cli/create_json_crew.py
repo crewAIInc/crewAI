@@ -13,6 +13,7 @@ from rich.console import Console
 from rich.text import Text
 
 from crewai_cli.constants import ENV_VARS
+from crewai_cli.git import initialize_if_git_available
 from crewai_cli.tui_picker import pick_many, pick_one
 from crewai_cli.utils import (
     enable_prompt_line_editing,
@@ -954,6 +955,8 @@ def create_json_crew(
         models = list({a["llm"] for a in agents})
         for model in models:
             _setup_env(folder_path, model)
+
+    initialize_if_git_available(folder_path)
 
     click.echo()
     click.secho(f"  ✔ Crew {name} created successfully!", fg="green", bold=True)
