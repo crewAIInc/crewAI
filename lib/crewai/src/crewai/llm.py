@@ -684,6 +684,21 @@ class LLM(BaseLLM):
         return data
 
     @model_validator(mode="after")
+    def _warn_tokens_uncapped(self) -> LLM:
+        """Warn when neither ``max_tokens`` nor ``max_completion_tokens`` is set.
+
+        Without an explicit cap, a single prompt can produce very large outputs
+        (e.g. 128k+ tokens on modern models), leading to runaway spend. This
+        warning surfaces the risk at runtime without changing behavior.
+        """
+        if self.max_tokens is None and self.max_completion_tokens is None:
+            logging.warning(
+                "max_tokens/max_completion_tokens not set; LLM responses are uncapped. "
+                "Set a limit (e.g., max_tokens=4096) to control token costs and avoid runaway generation."
+            )
+        return self
+
+    @model_validator(mode="after")
     def _init_litellm(self) -> LLM:
         self.is_litellm = True
         if _ensure_litellm():

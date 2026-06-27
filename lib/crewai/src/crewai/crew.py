@@ -6,6 +6,7 @@ from concurrent.futures import Future
 from copy import copy as shallow_copy
 from hashlib import md5
 import json
+import logging
 from pathlib import Path
 import re
 from typing import (
@@ -296,8 +297,8 @@ class Crew(FlowTrackable, BaseModel):
     max_rpm: int | None = Field(
         default=None,
         description=(
-            "Maximum number of requests per minute for the crew execution "
-            "to be respected."
+            "Maximum number of requests per minute for the crew execution. "
+            "Set to None to disable rate limiting (not recommended for production)."
         ),
     )
     prompt_file: str | None = Field(
@@ -612,6 +613,22 @@ class Crew(FlowTrackable, BaseModel):
 
         # TODO: Improve typing
         return json.loads(v) if isinstance(v, Json) else v  # type: ignore
+
+    @model_validator(mode="after")
+    def _warn_rate_limit_disabled(self) -> Crew:
+        """Warn operators when no client-side rate limit is configured.
+
+        With ``max_rpm=None`` the only safeguard against rapid-fire requests is
+        the upstream API provider's own rate limits, which can lead to 429s and
+        unexpected spend. This warning surfaces the risk at runtime without
+        changing behavior.
+        """
+        if self.max_rpm is None:
+            logging.warning(
+                "max_rpm is None: rate limiting is disabled. "
+                "Set a positive integer in Crew() to limit API requests and avoid 429 errors."
+            )
+        return self
 
     @model_validator(mode="after")
     def set_private_attrs(self) -> Crew:
