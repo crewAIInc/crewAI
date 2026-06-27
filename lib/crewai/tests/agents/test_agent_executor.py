@@ -2404,3 +2404,20 @@ class TestAgentExecutorHumanInputProtocolContract:
         assert hasattr(AgentExecutor, "_ainvoke_loop")
         assert hasattr(AgentExecutor, "_is_training_mode")
 
+    def test_agent_executor_format_feedback_message(self, mock_dependencies):
+        executor = _build_executor(**mock_dependencies)
+        msg = executor._format_feedback_message("Please fix the summary")
+        assert msg["role"] == "user"
+        assert "Please fix the summary" in msg["content"]
+
+    def test_agent_executor_invoke_loop_resets_iterations(self, mock_dependencies):
+        executor = _build_executor(**mock_dependencies)
+        executor.state.iterations = 10
+        executor.state.current_answer = AgentFinish(thought="done", output="ok", text="ok")
+        with patch.object(executor, "kickoff") as mock_kickoff:
+            res = executor._invoke_loop()
+            assert executor.state.iterations == 0
+            assert res.output == "ok"
+            mock_kickoff.assert_called_once()
+
+

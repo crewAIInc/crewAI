@@ -3213,6 +3213,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         """Invoke the agent loop and return the result for HITL feedback processing."""
         self._finalize_called = False
         self.state.is_finished = False
+        self.state.iterations = 0
         self.kickoff()
         result = self.state.current_answer
         if not isinstance(result, AgentFinish):
@@ -3223,11 +3224,13 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         """Invoke the agent loop asynchronously and return the result for HITL feedback processing."""
         self._finalize_called = False
         self.state.is_finished = False
+        self.state.iterations = 0
         await self.kickoff_async()
         result = self.state.current_answer
         if not isinstance(result, AgentFinish):
             raise RuntimeError("Agent execution ended without reaching a final answer.")
         return result
+
 
 
 
