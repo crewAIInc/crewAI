@@ -120,12 +120,14 @@ class EncodingFlow(Flow[EncodingState]):
     def intra_batch_dedup(self) -> None:
         """Drop near-exact duplicates within the batch.
 
-        Computes the pairwise cosine-similarity matrix in one vectorized pass
-        (normalize rows once, then a single ``X @ Xᵀ`` BLAS call) instead of the
-        previous O(n²) loop of pure-Python cosine calls, each of which also
-        recomputed both vector norms from scratch (O(n²·d)). The greedy
-        "first occurrence wins" selection is preserved exactly: item ``j`` is
-        dropped iff some earlier *kept* item is at least ``threshold`` similar.
+        Normalizes the embedding matrix once, then computes each row of cosine
+        similarities on demand via a BLAS matrix-vector product, replacing the
+        previous O(n^2) loop of pure-Python cosine calls that also recomputed
+        both vector norms from scratch (O(n^2*d)). Similarities are evaluated
+        row-by-row rather than as a single ``X @ X.T`` so peak memory stays
+        O(n*d) (no n-by-n matrix is materialized). The greedy "first occurrence
+        wins" selection is preserved exactly: item ``j`` is dropped iff some
+        earlier *kept* item is at least ``threshold`` similar.
         """
         items = list(self.state.items)
         if len(items) <= 1:
@@ -172,16 +174,19 @@ class EncodingFlow(Flow[EncodingState]):
         norms = np.linalg.norm(matrix, axis=1)
         nonzero = norms > 0.0
         normalized = np.zeros_like(matrix)
+        # Zero-norm rows stay all-zero, so their cosine similarity is 0.0,
+        # matching _cosine_similarity's zero-norm guard.
         normalized[nonzero] = matrix[nonzero] / norms[nonzero, None]
-        # Cosine-similarity matrix; zero-norm rows contribute 0.0, matching
-        # _cosine_similarity's zero-norm guard.
-        sims = normalized @ normalized.T
 
         m = len(active)
         dropped = np.zeros(m, dtype=bool)
         for j in range(1, m):
+            # Cosine similarities of every earlier item to j, computed on demand
+            # (a length-j BLAS matrix-vector product) so the full m-by-m matrix
+            # is never materialized -- peak memory stays O(m*d), not O(m^2).
+            sims_j = normalized[:j] @ normalized[j]
             # Drop j iff an earlier, still-kept item is near-identical.
-            if bool((~dropped[:j] & (sims[:j, j] >= threshold)).any()):
+            if bool((~dropped[:j] & (sims_j >= threshold)).any()):
                 dropped[j] = True
 
         for local_idx in range(m):
