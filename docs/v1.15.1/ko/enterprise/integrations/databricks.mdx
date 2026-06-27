@@ -1,0 +1,123 @@
+---
+title: Databricks 연동
+description: "Databricks 관리형 MCP 서버를 통해 CrewAI 에이전트를 Databricks Genie, SQL, Unity Catalog Functions, Vector Search에 연결하세요."
+icon: "layer-group"
+mode: "wide"
+---
+
+## 개요
+
+[Databricks 관리형 MCP 서버](https://docs.databricks.com/aws/en/generative-ai/mcp/managed-mcp)를 통해 CrewAI 에이전트를 Databricks 워크스페이스에 직접 연결하세요. Databricks 연동을 사용하면 에이전트가 **Genie**로 자연어 질문을 하고, 거버넌스가 적용된 **SQL**을 실행하며, **Unity Catalog Functions**를 호출하고, **Vector Search**로 문서를 검색할 수 있습니다. 커넥터 코드를 작성하거나 호스팅할 필요가 없으며, 모든 호출에 Unity Catalog 권한이 적용됩니다.
+
+내부적으로 Databricks 연동은 CrewAI의 [커스텀 MCP 서버](/ko/enterprise/guides/custom-mcp-server) 지원을 감싼 관리형 래퍼입니다. Databricks는 각 기능을 개별 [Model Context Protocol](https://modelcontextprotocol.io/) 엔드포인트로 노출하며, CrewAI가 사용자를 대신해 안전하게 연결합니다. 각 서버를 개별적으로 추가하므로 크루에 필요한 기능만 정확히 활성화할 수 있습니다.
+
+## 주요 기능
+
+<CardGroup cols={2}>
+  <Card title="Genie" icon="comments">
+    [Genie](https://docs.databricks.com/aws/en/genie/)로 자연어 질문을 하고 데이터 기반의 근거 있는 답변을 받으세요. Genie는 Genie Spaces와 Unity Catalog를 조회하고 Databricks UI로 연결되는 링크를 제공합니다.
+  </Card>
+  <Card title="Databricks SQL" icon="database">
+    에이전트에서 직접 Databricks 웨어하우스에 거버넌스가 적용된 SQL을 실행하여 데이터를 조회, 변환하고 데이터 파이프라인을 작성하세요.
+  </Card>
+  <Card title="Unity Catalog Functions" icon="function">
+    [Unity Catalog 함수](https://docs.databricks.com/aws/en/udf/unity-catalog)를 호출하여 사전 정의된 SQL과 맞춤형 비즈니스 로직을 거버넌스가 적용된 재사용 가능한 도구로 실행하세요.
+  </Card>
+  <Card title="Vector Search" icon="magnifying-glass">
+    [Mosaic AI Vector Search](https://docs.databricks.com/aws/en/generative-ai/vector-search) 인덱스에서 의미 유사도를 사용해 RAG 및 지식 워크플로우에 필요한 관련 문서를 검색하세요.
+  </Card>
+</CardGroup>
+
+모든 서버는 Unity AI Gateway 뒤에서 실행되며 Unity Catalog 접근 제어를 적용하므로, 에이전트는 허용된 데이터와 도구만 볼 수 있습니다.
+
+## 사전 준비사항
+
+Databricks 연동을 사용하기 전에 다음을 준비해야 합니다:
+
+- 활성 구독이 있는 [CrewAI AMP](https://app.crewai.com) 계정
+- 노출하려는 기능이 있는 Databricks 워크스페이스(Genie Spaces, SQL 웨어하우스, Unity Catalog 함수 또는 Vector Search 인덱스)
+- 기본 객체에 대한 적절한 [Unity Catalog 권한](https://docs.databricks.com/aws/en/data-governance/unity-catalog)
+- Databricks 워크스페이스 호스트명(예: `your-workspace.cloud.databricks.com`)
+
+## Databricks 관리형 MCP 서버
+
+Databricks는 각 기능마다 별도의 관리형 MCP 서버를 게시합니다. CrewAI는 이를 개별 연결로 노출하며, 각 연결은 워크스페이스 호스트와 관련 Unity Catalog 식별자로 구성됩니다. 엔드포인트는 다음 패턴을 따릅니다:
+
+| 서버 | 기능 | MCP URL 패턴 |
+|------|------|--------------|
+| **Genie** | Genie Space에 대한 자연어 Q&A | `https://<workspace-hostname>/api/2.0/mcp/genie/{genie_space_id}` |
+| **Databricks SQL** | 웨어하우스에 SQL 실행 | `https://<workspace-hostname>/api/2.0/mcp/sql` |
+| **Unity Catalog Functions** | 등록된 UC 함수 실행 | `https://<workspace-hostname>/api/2.0/mcp/functions/{catalog}/{schema}` |
+| **Vector Search** | Vector Search 인덱스 조회 | `https://<workspace-hostname>/api/2.0/mcp/vector-search/{catalog}/{schema}` |
+
+<Note>
+이러한 URL을 직접 만들 필요는 없습니다. CrewAI는 연결을 구성할 때 입력한 워크스페이스 호스트와 식별자(Genie Space ID 또는 catalog/schema)로 각 엔드포인트를 생성합니다. 전체 사양과 최신 엔드포인트 세부 정보는 [Databricks 관리형 MCP 문서](https://docs.databricks.com/aws/en/generative-ai/mcp/managed-mcp)를 참고하세요.
+</Note>
+
+## CrewAI AMP에서 Databricks 연결하기
+
+<Frame>
+    <img src="/images/enterprise/databricks-configure.png" alt="CrewAI AMP에서 Databricks 관리형 MCP 서버 구성" />
+</Frame>
+
+각 Databricks 기능(**Databricks Genie**, **Databricks SQL**, **Databricks Unity Catalog Functions**, **Databricks Vector Search**)은 **Tools & Integrations** 페이지의 Databricks 그룹 아래에 별도의 MCP 서버로 표시됩니다. 필요한 것을 구성하세요:
+
+<Steps>
+    <Step title="Tools & Integrations 열기">
+        CrewAI AMP 왼쪽 사이드바에서 **Tools & Integrations**로 이동하여 Connections 목록에서 **Databricks** 그룹을 찾습니다. 그 아래에 Genie, SQL, Unity Catalog Functions, Vector Search 서버가 나열됩니다.
+    </Step>
+
+    <Step title="서버 구성하기">
+        활성화하려는 기능 옆의 **Configure**를 클릭하고 연결 세부 정보를 입력합니다:
+
+        - **Workspace Host** — Databricks 워크스페이스 호스트명(예: `my-workspace.cloud.databricks.com`).
+        - **Genie** — 조회할 **Genie Space ID**.
+        - **Unity Catalog Functions** — 함수가 포함된 **catalog**와 **schema**.
+        - **Vector Search** — 인덱스가 포함된 **catalog**와 **schema**.
+        - **Databricks SQL** — 추가 식별자가 필요 없으며, 쿼리는 워크스페이스의 SQL 웨어하우스에서 실행됩니다.
+    </Step>
+
+    <Step title="인증 방법 선택하기">
+        CrewAI가 Databricks에 인증하는 방법을 선택합니다. **OAuth**를 권장합니다.
+
+        - **Use OAuth** — OAuth 2.0으로 안전하게 연결합니다. 각 사용자가 개별적으로 인증하며, Databricks는 해당 기능(`genie`, `sql`, `unity-catalog` 또는 `vector-search`)으로 범위가 지정된 토큰을 발급합니다. CrewAI가 인증 흐름을 처리하고 토큰을 자동으로 갱신합니다.
+        - **Use personal access token** — [Databricks 개인 액세스 토큰](https://docs.databricks.com/aws/en/dev-tools/auth/pat)으로 인증합니다. 노출을 제한하려면 최소 권한 ID를 사용하세요.
+    </Step>
+
+    <Step title="인증하기">
+        인증을 완료합니다. 연결되면 해당 서버의 도구를 크루에서 사용할 수 있습니다. 활성화하려는 다른 Databricks 기능에 대해서도 반복합니다.
+    </Step>
+</Steps>
+
+<Tip>
+각 기능이 별도의 연결이므로 자유롭게 조합할 수 있습니다. 예를 들어 리서치 크루에는 Genie와 Vector Search를 활성화하고, 데이터 엔지니어링 크루에는 SQL과 Unity Catalog Functions를 사용하도록 할 수 있습니다. 가시성(Visibility) 설정으로 각 기능을 사용할 수 있는 팀원을 제어할 수 있습니다.
+</Tip>
+
+## 크루에서 Databricks 도구 사용하기
+
+연결되면 각 MCP 서버가 노출하는 도구가 **Tools & Integrations** 페이지의 기본 제공 연결과 함께 표시됩니다. 다음을 할 수 있습니다:
+
+- 다른 CrewAI 도구와 마찬가지로 크루의 에이전트에 **도구 할당**.
+- 각 연결을 사용할 수 있는 팀원을 제어하는 **가시성 관리**.
+- Connections 목록에서 언제든지 연결 **편집 또는 제거**.
+
+이제 에이전트는 Genie에 근거 있는 답변을 요청하고, 웨어하우스에 SQL을 실행하며, Unity Catalog 함수를 호출하고, Vector Search 인덱스를 검색할 수 있으며, 그 결과가 자동으로 추론에 반영됩니다.
+
+<Warning>
+Databricks는 Unity Catalog와 Unity AI Gateway를 통해 거버넌스를 적용합니다. 사용자는 워크스페이스 ID에 허용된 도구만 검색하고 호출할 수 있습니다. 도구 호출이 실패하면 연결하는 사용자(또는 토큰 ID)가 Genie Space, 웨어하우스, 함수 또는 인덱스에 필요한 Unity Catalog 권한을 가지고 있는지 확인하세요. 일부 Genie 및 SQL 쿼리는 비동기로 실행되어 결과를 반환하는 데 시간이 걸릴 수 있습니다.
+</Warning>
+
+## 더 알아보기
+
+<CardGroup cols={2}>
+  <Card title="Databricks 관리형 MCP 서버" icon="layer-group" href="https://docs.databricks.com/aws/en/generative-ai/mcp/managed-mcp">
+    관리형 Genie, SQL, Unity Catalog Functions, Vector Search MCP 서버에 대한 공식 Databricks 문서입니다.
+  </Card>
+  <Card title="CrewAI의 커스텀 MCP 서버" icon="plug" href="/ko/enterprise/guides/custom-mcp-server">
+    Databricks 연동의 기반이 되는, CrewAI가 모든 MCP 서버에 연결하는 방법을 알아보세요.
+  </Card>
+</CardGroup>
+
+<Card title="도움이 필요하신가요?" icon="headset" href="mailto:support@crewai.com">
+  Databricks 연동 구성 또는 문제 해결에 대한 지원이 필요하면 지원팀에 문의하세요.
+</Card>
