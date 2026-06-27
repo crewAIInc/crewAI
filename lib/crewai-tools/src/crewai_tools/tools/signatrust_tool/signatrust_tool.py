@@ -11,6 +11,7 @@ Source:     https://github.com/abokenan444/Signatrust
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 from typing import Any, Dict, List, Optional, Type
@@ -199,10 +200,13 @@ class SignatrustTool(BaseTool):
                     f"Error: unknown operation '{operation}'. Use 'generate', "
                     "'verify', or 'get'."
                 )
-            return json.dumps(result, ensure_ascii=False)
+            # sort_keys makes the serialized payload stable across runs and
+            # across upstream services that may emit JSON in different orders.
+            return json.dumps(result, ensure_ascii=False, sort_keys=True)
         except Exception as exc:  # noqa: BLE001 - return friendly message
             return f"Signatrust request failed: {exc}"
 
     async def _arun(self, **kwargs: Any) -> str:
-        # The underlying client is synchronous and thread-safe; delegate.
-        return self._run(**kwargs)
+        # The underlying client uses blocking `requests`; offload to a worker
+        # thread so async callers don't stall the event loop.
+        return await asyncio.to_thread(self._run, **kwargs)

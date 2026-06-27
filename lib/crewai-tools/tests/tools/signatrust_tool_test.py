@@ -1,3 +1,4 @@
+import asyncio
 import json
 from unittest.mock import MagicMock, patch
 
@@ -88,3 +89,43 @@ def test_verify_requires_receipt_id(signatrust_tool):
 def test_unknown_operation(signatrust_tool):
     out = signatrust_tool.run(operation="frobnicate")
     assert "unknown operation" in out.lower()
+
+
+@patch("requests.post")
+def test_arun_non_blocking(mock_post, signatrust_tool):
+    """`_arun` must offload the blocking HTTP call to a worker thread."""
+    mock_resp = MagicMock()
+    mock_resp.json.return_value = {"id": "rcpt_async", "status": "signed"}
+    mock_resp.raise_for_status.return_value = None
+    mock_post.return_value = mock_resp
+
+    out = asyncio.run(
+        signatrust_tool._arun(
+            operation="generate",
+            agent_name="bot",
+            action="approve",
+            decision="approved",
+        )
+    )
+    data = json.loads(out)
+    assert data["id"] == "rcpt_async"
+    assert data["status"] == "signed"
+
+
+@patch("requests.get")
+def test_serialized_output_is_deterministic(mock_get, signatrust_tool):
+    """Equivalent payloads must serialize to the same JSON string regardless of upstream key order."""
+    payload_keys_order_a = {"id": "rcpt_1", "valid": True, "trust": 90}
+    payload_keys_order_b = {"trust": 90, "valid": True, "id": "rcpt_1"}
+
+    outputs = []
+    for payload in (payload_keys_order_a, payload_keys_order_b):
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = payload
+        mock_resp.raise_for_status.return_value = None
+        mock_get.return_value = mock_resp
+        outputs.append(signatrust_tool.run(operation="verify", receipt_id="rcpt_1"))
+
+    assert outputs[0] == outputs[1]
+    # And keys are sorted alphabetically.
+    assert outputs[0] == '{"id": "rcpt_1", "trust": 90, "valid": true}'
