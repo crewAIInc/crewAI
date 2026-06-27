@@ -2413,11 +2413,33 @@ class TestAgentExecutorHumanInputProtocolContract:
     def test_agent_executor_invoke_loop_resets_iterations(self, mock_dependencies):
         executor = _build_executor(**mock_dependencies)
         executor.state.iterations = 10
-        executor.state.current_answer = AgentFinish(thought="done", output="ok", text="ok")
-        with patch.object(executor, "kickoff") as mock_kickoff:
+        iterations_at_kickoff = None
+
+        def mock_kickoff_impl():
+            nonlocal iterations_at_kickoff
+            iterations_at_kickoff = executor.state.iterations
+            executor.state.current_answer = AgentFinish(thought="done", output="ok", text="ok")
+
+        with patch.object(executor, "kickoff", side_effect=mock_kickoff_impl):
             res = executor._invoke_loop()
-            assert executor.state.iterations == 0
+            assert iterations_at_kickoff == 0
             assert res.output == "ok"
-            mock_kickoff.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_agent_executor_ainvoke_loop_resets_iterations(self, mock_dependencies):
+        executor = _build_executor(**mock_dependencies)
+        executor.state.iterations = 10
+        iterations_at_kickoff = None
+
+        async def mock_kickoff_async_impl():
+            nonlocal iterations_at_kickoff
+            iterations_at_kickoff = executor.state.iterations
+            executor.state.current_answer = AgentFinish(thought="done", output="ok_async", text="ok_async")
+
+        with patch.object(executor, "kickoff_async", side_effect=mock_kickoff_async_impl):
+            res = await executor._ainvoke_loop()
+            assert iterations_at_kickoff == 0
+            assert res.output == "ok_async"
+
 
 
