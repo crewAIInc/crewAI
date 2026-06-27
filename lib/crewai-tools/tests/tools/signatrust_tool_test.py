@@ -1,5 +1,6 @@
 import asyncio
 import json
+import threading
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -94,10 +95,17 @@ def test_unknown_operation(signatrust_tool):
 @patch("requests.post")
 def test_arun_non_blocking(mock_post, signatrust_tool):
     """`_arun` must offload the blocking HTTP call to a worker thread."""
-    mock_resp = MagicMock()
-    mock_resp.json.return_value = {"id": "rcpt_async", "status": "signed"}
-    mock_resp.raise_for_status.return_value = None
-    mock_post.return_value = mock_resp
+    main_thread_id = threading.get_ident()
+    call_thread_ids: list[int] = []
+
+    def fake_post(*args, **kwargs):
+        call_thread_ids.append(threading.get_ident())
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = {"id": "rcpt_async", "status": "signed"}
+        mock_resp.raise_for_status.return_value = None
+        return mock_resp
+
+    mock_post.side_effect = fake_post
 
     out = asyncio.run(
         signatrust_tool._arun(
@@ -110,6 +118,11 @@ def test_arun_non_blocking(mock_post, signatrust_tool):
     data = json.loads(out)
     assert data["id"] == "rcpt_async"
     assert data["status"] == "signed"
+    assert len(call_thread_ids) == 1, "requests.post should be invoked exactly once"
+    assert call_thread_ids[0] != main_thread_id, (
+        "_arun must offload the blocking HTTP call to a worker thread; "
+        "got call on the main thread (event loop would block)."
+    )
 
 
 @patch("requests.get")
