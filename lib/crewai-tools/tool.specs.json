@@ -23253,6 +23253,210 @@
       }
     },
     {
+      "description": "Create, verify, or retrieve cryptographically signed AI Decision Receipts via Signatrust. Use 'generate' to record an agent decision, 'verify' to check a receipt's integrity, and 'get' to fetch a receipt by id. Returns a JSON string.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for the Signatrust service (sk_live_...).",
+          "name": "SIGNATRUST_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "Signatrust Decision Receipt",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "description": "Generate, verify, and retrieve Signatrust AI Decision Receipts.\n\nSignatrust produces tamper-evident, cryptographically signed (Ed25519)\nreceipts for decisions made by AI agents, enabling verifiable accountability\nand auditability. By default only a SHA-256 hash of the decision payload is\nstored server-side (privacy-first).\n\nRequires the ``SIGNATRUST_API_KEY`` environment variable (or pass\n``api_key=`` directly). Self-hosted deployments can override ``base_url``.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Api Key"
+          },
+          "base_url": {
+            "default": "https://signatrust.net/api/v1",
+            "title": "Base Url",
+            "type": "string"
+          },
+          "timeout": {
+            "default": 30,
+            "title": "Timeout",
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "title": "SignatrustTool",
+        "type": "object"
+      },
+      "name": "SignatrustTool",
+      "package_dependencies": [
+        "requests"
+      ],
+      "run_params_schema": {
+        "description": "Input schema for :class:`SignatrustTool`.",
+        "properties": {
+          "action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The action being recorded, e.g. 'approve_transaction' (generate).",
+            "title": "Action"
+          },
+          "agent_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Name/identifier of the AI agent making the decision (generate).",
+            "title": "Agent Name"
+          },
+          "decision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "The decision/outcome to record, e.g. 'approved' (generate).",
+            "title": "Decision"
+          },
+          "human_review": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Whether a human reviewed/approved the decision (generate).",
+            "title": "Human Review"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Optional additional structured context (generate).",
+            "title": "Metadata"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Model that produced the decision, e.g. 'gpt-4o' (generate).",
+            "title": "Model"
+          },
+          "operation": {
+            "default": "generate",
+            "description": "Operation to perform. One of: 'generate' (create a new Decision Receipt), 'verify' (verify an existing receipt by id), or 'get' (retrieve a receipt by id).",
+            "title": "Operation",
+            "type": "string"
+          },
+          "policies": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Policies/rules applied while making the decision (generate).",
+            "title": "Policies"
+          },
+          "receipt_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Receipt id, required for the 'verify' and 'get' operations.",
+            "title": "Receipt Id"
+          }
+        },
+        "title": "SignatrustToolInput",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that can be used to semantic search a query from a database.",
       "env_vars": [
         {
