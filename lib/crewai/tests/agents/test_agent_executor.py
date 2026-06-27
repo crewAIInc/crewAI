@@ -2391,3 +2391,16 @@ class TestVisionImageFormatContract:
         assert hasattr(AnthropicCompletion, "_convert_image_blocks"), (
             "Anthropic provider must have _convert_image_blocks for auto-conversion"
         )
+
+
+class TestAgentExecutorHumanInputProtocolContract:
+    """AgentExecutor must implement full ExecutorContext and AsyncExecutorContext protocol for human_input=True."""
+
+    def test_agent_executor_implements_human_input_protocol(self):
+        from crewai.experimental.agent_executor import AgentExecutor
+
+        assert hasattr(AgentExecutor, "_format_feedback_message")
+        assert hasattr(AgentExecutor, "_invoke_loop")
+        assert hasattr(AgentExecutor, "_ainvoke_loop")
+        assert hasattr(AgentExecutor, "_is_training_mode")
+

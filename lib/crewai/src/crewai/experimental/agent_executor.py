@@ -3196,6 +3196,40 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         """
         return bool(self.crew and self.crew._train)
 
+    def _format_feedback_message(self, feedback: str) -> LLMMessage:
+        """Format feedback as a message for the LLM.
+
+        Args:
+            feedback: User feedback string.
+
+        Returns:
+            Formatted message dict.
+        """
+        return format_message_for_llm(
+            I18N_DEFAULT.slice("feedback_instructions").format(feedback=feedback)
+        )
+
+    def _invoke_loop(self) -> AgentFinish:
+        """Invoke the agent loop and return the result for HITL feedback processing."""
+        self._finalize_called = False
+        self.state.is_finished = False
+        self.kickoff()
+        result = self.state.current_answer
+        if not isinstance(result, AgentFinish):
+            raise RuntimeError("Agent execution ended without reaching a final answer.")
+        return result
+
+    async def _ainvoke_loop(self) -> AgentFinish:
+        """Invoke the agent loop asynchronously and return the result for HITL feedback processing."""
+        self._finalize_called = False
+        self.state.is_finished = False
+        await self.kickoff_async()
+        result = self.state.current_answer
+        if not isinstance(result, AgentFinish):
+            raise RuntimeError("Agent execution ended without reaching a final answer.")
+        return result
+
+
 
 # Backward compatibility alias (deprecated)
 CrewAgentExecutorFlow = AgentExecutor
