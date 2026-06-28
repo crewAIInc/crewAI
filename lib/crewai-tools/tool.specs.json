@@ -20159,6 +20159,206 @@
       }
     },
     {
+      "description": "A tool to perform a Google search with a search_query using SearchApi.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for SearchApi searches",
+          "name": "SEARCHAPI_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "SearchApi Google Search",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Api Key"
+          }
+        },
+        "required": [],
+        "title": "SearchApiGoogleSearchTool",
+        "type": "object"
+      },
+      "name": "SearchApiGoogleSearchTool",
+      "package_dependencies": [
+        "requests"
+      ],
+      "run_params_schema": {
+        "description": "Input for Google Search.",
+        "properties": {
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Location you want the search to be performed in.",
+            "title": "Location"
+          },
+          "search_query": {
+            "description": "Mandatory search query you want to use to Google search.",
+            "title": "Search Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "search_query"
+        ],
+        "title": "SearchApiGoogleSearchToolSchema",
+        "type": "object"
+      }
+    },
+    {
+      "description": "A tool to perform a Google Shopping search with a search_query using SearchApi.",
+      "env_vars": [
+        {
+          "default": null,
+          "description": "API key for SearchApi searches",
+          "name": "SEARCHAPI_API_KEY",
+          "required": true
+        }
+      ],
+      "humanized_name": "SearchApi Google Shopping",
+      "init_params_schema": {
+        "$defs": {
+          "EnvVar": {
+            "properties": {
+              "default": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Default"
+              },
+              "description": {
+                "title": "Description",
+                "type": "string"
+              },
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "required": {
+                "default": true,
+                "title": "Required",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ],
+            "title": "EnvVar",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Api Key"
+          }
+        },
+        "required": [],
+        "title": "SearchApiGoogleShoppingTool",
+        "type": "object"
+      },
+      "name": "SearchApiGoogleShoppingTool",
+      "package_dependencies": [
+        "requests"
+      ],
+      "run_params_schema": {
+        "description": "Input for Google Shopping.",
+        "properties": {
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Location you want the search to be performed in.",
+            "title": "Location"
+          },
+          "search_query": {
+            "description": "Mandatory search query you want to use for Google Shopping.",
+            "title": "Search Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "search_query"
+        ],
+        "title": "SearchApiGoogleShoppingToolSchema",
+        "type": "object"
+      }
+    },
+    {
       "description": "A tool that can be used to read a website content.",
       "env_vars": [],
       "humanized_name": "Read a website content",
