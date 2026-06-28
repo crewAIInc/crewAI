@@ -958,6 +958,62 @@ class TestFlowInvoke:
         mock_kickoff.assert_called_once()
         mock_save_to_memory.assert_called_once()
 
+    def test_invoke_loop_clears_transient_state_between_sequential_runs(
+        self, mock_dependencies
+    ):
+        """Feedback reruns must not inherit pipeline state from prior runs."""
+        executor = _build_executor(**mock_dependencies)
+        start_states = []
+        outputs = ["First result", "Second result"]
+
+        def mock_kickoff_side_effect():
+            start_states.append(
+                (
+                    executor.state.iterations,
+                    executor.state.current_answer,
+                    executor.state.use_native_tools,
+                    list(executor.state.pending_tool_calls),
+                )
+            )
+            executor.state.iterations = 3
+            executor.state.use_native_tools = True
+            executor.state.pending_tool_calls.append("tool_call")
+            executor.state.current_answer = AgentFinish(
+                thought="final thinking",
+                output=outputs.pop(0),
+                text="complete",
+            )
+
+        executor.state.iterations = 9
+        executor.state.current_answer = AgentAction(
+            thought="stale", tool="search", tool_input="query", text="action"
+        )
+        executor.state.use_native_tools = True
+        executor.state.pending_tool_calls.append("stale_tool_call")
+
+        with patch.object(
+            AgentExecutor, "kickoff", side_effect=mock_kickoff_side_effect
+        ):
+            first_result = executor._invoke_loop()
+
+            assert first_result.output == "First result"
+            assert executor.state.iterations == 0
+            assert executor.state.current_answer is None
+            assert executor.state.use_native_tools is False
+            assert executor.state.pending_tool_calls == []
+
+            second_result = executor._invoke_loop()
+
+        assert second_result.output == "Second result"
+        assert start_states == [
+            (0, None, False, []),
+            (0, None, False, []),
+        ]
+        assert executor.state.iterations == 0
+        assert executor.state.current_answer is None
+        assert executor.state.use_native_tools is False
+        assert executor.state.pending_tool_calls == []
+
     @patch.object(AgentExecutor, "kickoff")
     def test_invoke_failure_no_agent_finish(self, mock_kickoff, mock_dependencies):
         """Test invoke fails without AgentFinish."""

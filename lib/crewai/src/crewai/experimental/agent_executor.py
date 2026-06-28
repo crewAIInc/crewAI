@@ -263,6 +263,13 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                 )
             )
 
+    def _reset_pipeline_state(self) -> None:
+        """Clear transient pipeline state before and after each execution."""
+        self.state.iterations = 0
+        self.state.current_answer = None
+        self.state.use_native_tools = False
+        self.state.pending_tool_calls.clear()
+
     def _is_tool_call_list(self, response: list[Any]) -> bool:
         """Check if a response is a list of tool calls."""
         return is_tool_call_list(response)
@@ -2741,11 +2748,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             # Reset state for fresh execution
             self._finalize_called = False
             self.state.messages.clear()
-            self.state.iterations = 0
-            self.state.current_answer = None
+            self._reset_pipeline_state()
             self.state.is_finished = False
-            self.state.use_native_tools = False
-            self.state.pending_tool_calls = []
             self.state.plan = None
             self.state.plan_ready = False
             self.state.todos = TodoList()
@@ -2819,6 +2823,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
             raise
         finally:
+            self._reset_pipeline_state()
             self._is_executing = False
 
     async def invoke_async(self, inputs: dict[str, Any]) -> dict[str, Any]:
@@ -2847,11 +2852,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             # Reset state for fresh execution
             self._finalize_called = False
             self.state.messages.clear()
-            self.state.iterations = 0
-            self.state.current_answer = None
+            self._reset_pipeline_state()
             self.state.is_finished = False
-            self.state.use_native_tools = False
-            self.state.pending_tool_calls = []
             self.state.plan = None
             self.state.plan_ready = False
             self.state.todos = TodoList()
@@ -2927,6 +2929,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
             handle_unknown_error(PRINTER, e, verbose=self.agent.verbose)
             raise
         finally:
+            self._reset_pipeline_state()
             self._is_executing = False
 
     async def ainvoke(self, inputs: dict[str, Any]) -> dict[str, Any]:
@@ -3169,15 +3172,19 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         Returns:
             New AgentFinish result after processing feedback.
         """
-        self._finalize_called = False
-        self.state.is_finished = False
-        self.kickoff()
-        result = self.state.current_answer
-        if not isinstance(result, AgentFinish):
-            raise RuntimeError(
-                "Agent execution ended without reaching a final answer."
-            )
-        return result
+        self._reset_pipeline_state()
+        try:
+            self._finalize_called = False
+            self.state.is_finished = False
+            self.kickoff()
+            result = self.state.current_answer
+            if not isinstance(result, AgentFinish):
+                raise RuntimeError(
+                    "Agent execution ended without reaching a final answer."
+                )
+            return result
+        finally:
+            self._reset_pipeline_state()
 
     async def _ainvoke_loop(self) -> AgentFinish:
         """Re-run the agent flow loop for a feedback iteration (async).
@@ -3188,15 +3195,19 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
         Returns:
             New AgentFinish result after processing feedback.
         """
-        self._finalize_called = False
-        self.state.is_finished = False
-        await self.kickoff_async()
-        result = self.state.current_answer
-        if not isinstance(result, AgentFinish):
-            raise RuntimeError(
-                "Agent execution ended without reaching a final answer."
-            )
-        return result
+        self._reset_pipeline_state()
+        try:
+            self._finalize_called = False
+            self.state.is_finished = False
+            await self.kickoff_async()
+            result = self.state.current_answer
+            if not isinstance(result, AgentFinish):
+                raise RuntimeError(
+                    "Agent execution ended without reaching a final answer."
+                )
+            return result
+        finally:
+            self._reset_pipeline_state()
 
     def _format_feedback_message(self, feedback: str) -> LLMMessage:
         """Format human feedback as a message for the LLM.
