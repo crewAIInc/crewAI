@@ -1,0 +1,138 @@
+---
+title: Bolyra CrewAI Tool
+description: Per-agent authorization and scoped delegation for CrewAI workflows
+icon: shield-check
+mode: "wide"
+---
+
+# `bolyra-crewai`
+
+<Note>Community integration — not bundled with `crewai[tools]`.</Note>
+
+The `bolyra-crewai` package adds per-agent authorization to CrewAI workflows. Each agent proves its identity and permission scope before executing tools, preventing unauthorized tool use across multi-agent systems.
+
+It works by wrapping your existing tools with a guard that checks a session-scoped credential before every tool call. No changes to your tools or task logic are required.
+
+## Installation
+
+```bash
+pip install bolyra-crewai
+```
+
+## How It Works
+
+1. **BolyraGuard** wraps each tool's `_run` method with a pre-execution auth check
+2. Agents must authenticate via `BolyraAuthTool` before using guarded tools
+3. The guard verifies the agent's session and permission scope on every tool call
+4. Unauthenticated calls are blocked and return a structured error to the LLM
+
+This integrates with CrewAI's existing tool system -- `BolyraGuard.guard_tools()` patches standard `BaseTool` instances in place, so you keep your existing tools and task definitions.
+
+## Quick Start
+
+```python
+from crewai import Agent, Task, Crew
+from crewai_tools import SerperDevTool
+from bolyra_crewai import BolyraAuthTool, BolyraGuard, BolyraSession
+
+# 1. Set up auth tool and session
+auth_tool = BolyraAuthTool()
+session = BolyraSession(auth_tool=auth_tool)
+
+# 2. Create a guard with required permissions
+guard = BolyraGuard(
+    session=session,
+    required_permissions=["read_data"],
+)
+
+# 3. Wrap your existing tools
+search_tool = SerperDevTool()
+tools = guard.guard_tools([auth_tool, search_tool])
+
+# 4. Create agents and crew as usual
+researcher = Agent(
+    role="Research Analyst",
+    goal="Find market data on renewable energy",
+    backstory="You are a senior analyst. Authenticate first, then search.",
+    tools=tools,
+    verbose=True,
+)
+
+research_task = Task(
+    description=(
+        "Authenticate with bolyra_authenticate, then search for "
+        "recent renewable energy market reports."
+    ),
+    agent=researcher,
+    expected_output="Summary of key market findings",
+)
+
+crew = Crew(agents=[researcher], tasks=[research_task])
+result = crew.kickoff()
+```
+
+The agent will call `bolyra_authenticate` first (which is allow-listed by default), then proceed to use `SerperDevTool`. If it tries to use search before authenticating, the guard blocks the call and tells the LLM to authenticate first.
+
+## Guard Configuration
+
+| Argument | Type | Default | Description |
+|:---------|:-----|:--------|:------------|
+| **session** | `BolyraSession` | `None` | Session object tracking auth state |
+| **required_permissions** | `list[str]` | `["read_data"]` | Permissions the agent must hold |
+| **allow_unauthenticated_tools** | `list[str]` | `["bolyra_authenticate"]` | Tools that bypass the auth check |
+| **on_failure** | `str` | `"raise"` | `"raise"`, `"warn"`, or `"skip"` |
+| **session_ttl_seconds** | `int` | `None` | Max session age before re-auth required |
+
+## Available Tools
+
+- **BolyraAuthTool** — Establishes an authenticated session via mutual ZKP handshake.
+- **BolyraDelegateTool** — Delegates a narrowed subset of permissions to another agent.
+- **BolyraSDJWTTool** — Lightweight SD-JWT delegation without ZKP or Node.js dependencies.
+
+## Delegation Flow
+
+For multi-agent workflows where a lead agent delegates scoped permissions to worker agents:
+
+```python
+from crewai import Agent, Task, Crew, Process
+from bolyra_crewai import (
+    BolyraAuthTool,
+    BolyraDelegateTool,
+    BolyraGuard,
+    BolyraSession,
+    BolyraDelegationFlow,
+)
+
+# Lead agent authenticates and delegates
+auth_tool = BolyraAuthTool()
+delegate_tool = BolyraDelegateTool()
+session = BolyraSession(auth_tool=auth_tool)
+guard = BolyraGuard(session=session, required_permissions=["read_data"])
+
+lead = Agent(
+    role="Lead Analyst",
+    goal="Authenticate then delegate read_data to the junior analyst",
+    tools=guard.guard_tools([auth_tool, delegate_tool]),
+)
+
+junior = Agent(
+    role="Junior Analyst",
+    goal="Use delegated credentials to search for data",
+    tools=guard.guard_tools([SerperDevTool()]),
+)
+
+crew = Crew(
+    agents=[lead, junior],
+    tasks=[
+        Task(description="Authenticate and delegate read_data.", agent=lead),
+        Task(description="Search for market data.", agent=junior),
+    ],
+    process=Process.sequential,
+)
+```
+
+## Links
+
+- [PyPI](https://pypi.org/project/bolyra-crewai/)
+- [GitHub](https://github.com/bolyra/bolyra/tree/main/integrations/crewai)
+- [Bolyra Documentation](https://bolyra.ai)
