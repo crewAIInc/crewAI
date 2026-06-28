@@ -519,3 +519,31 @@ def test_structured_tool_invoke_exception_handling():
         tool.invoke({"should_fail": True})
 
     assert call_count == 1
+
+
+def test_format_output_for_agent_with_dict_and_list():
+    """Test that format_output_for_agent automatically serializes dict and list outputs to JSON."""
+    def dict_tool() -> dict:
+        return {"nested": {"key": "value"}}
+
+    tool = CrewStructuredTool.from_function(
+        func=dict_tool,
+        name="dict_tool",
+        description="A tool returning a dict",
+    )
+    
+    result = tool.format_output_for_agent({"nested": {"key": "value"}})
+    assert json.loads(result) == {"nested": {"key": "value"}}
+
+    def list_tool() -> list:
+        return [{"nested": {"key": "value"}}]
+
+    tool_list = CrewStructuredTool.from_function(
+        func=list_tool,
+        name="list_tool",
+        description="A tool returning a list",
+    )
+
+    result_list = tool_list.format_output_for_agent([{"nested": {"key": "value"}}])
+    assert json.loads(result_list) == [{"nested": {"key": "value"}}]
+
