@@ -2777,8 +2777,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
             self._inject_files_from_inputs(inputs)
 
-            self.ask_for_human_input = bool(
-                inputs.get("ask_for_human_input", False)
+            ask_for_human_input = bool(
+                inputs.get("ask_for_human_input", self.ask_for_human_input)
             )
 
             with _llm_stop_words_applied(self.llm, self):
@@ -2791,7 +2791,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                         "Agent execution ended without reaching a final answer."
                     )
 
-                if self.ask_for_human_input:
+                if ask_for_human_input:
                     formatted_answer = self._handle_human_feedback(formatted_answer)
 
             self._save_to_memory(formatted_answer)
@@ -2883,8 +2883,8 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
 
             await self._ainject_files_from_inputs(inputs)
 
-            self.ask_for_human_input = bool(
-                inputs.get("ask_for_human_input", False)
+            ask_for_human_input = bool(
+                inputs.get("ask_for_human_input", self.ask_for_human_input)
             )
 
             with _llm_stop_words_applied(self.llm, self):
@@ -2897,7 +2897,7 @@ class AgentExecutor(Flow[AgentExecutorState], BaseAgentExecutor):
                         "Agent execution ended without reaching a final answer."
                     )
 
-                if self.ask_for_human_input:
+                if ask_for_human_input:
                     formatted_answer = await self._ahandle_human_feedback(
                         formatted_answer
                     )
