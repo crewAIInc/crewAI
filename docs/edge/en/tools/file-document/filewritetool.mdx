@@ -29,22 +29,40 @@ pip install 'crewai[tools]'
 
 ## Example
 
-To get started with the `FileWriterTool`:
+The `FileWriterTool` is attached to an agent and invoked by that agent during a task — you don't call it yourself. Initialize the tool, hand it to an `Agent` via `tools=[...]`, and let the crew run.
 
 ```python Code
+from crewai import Agent, Crew, Task, Process
 from crewai_tools import FileWriterTool
 
 # Initialize the tool
 file_writer_tool = FileWriterTool()
 
-# Write content to a file in a specified directory
-result = file_writer_tool.run(
-    filename='example.txt',
-    content='This is a test content.',
-    directory='test_directory',
+# Define an agent that can write files
+report_writer = Agent(
+    role="Report Writer",
+    goal="Produce written reports and save them to disk",
+    backstory="A meticulous writer who files every report as a .md file.",
+    tools=[file_writer_tool],
 )
-print(result)
+
+# Task that asks the agent to write a file
+write_task = Task(
+    description="Write a short markdown report summarizing the Q3 results to a file named q3_report.md inside the reports directory.",
+    expected_output="Confirmation that q3_report.md was written to the reports directory.",
+    agent=report_writer,
+)
+
+crew = Crew(
+    agents=[report_writer],
+    tasks=[write_task],
+    process=Process.sequential,
+)
+result = crew.kickoff()
+print(result.raw)
 ```
+
+When the agent decides to write a file, it calls the tool with `filename`, `content`, and optionally `directory` and `overwrite` (see Arguments).
 
 ## Arguments
 
