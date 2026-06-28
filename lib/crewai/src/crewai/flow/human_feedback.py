@@ -20,7 +20,7 @@ Example (synchronous, default):
         @human_feedback(
             message="Please review this content:",
             emit=["approved", "rejected"],
-            llm="gpt-4o-mini",
+            llm="gpt-5.4-mini",
         )
         def generate_content(self):
             return {"title": "Article", "body": "Content..."}
@@ -48,7 +48,7 @@ Example (asynchronous with custom provider):
         @human_feedback(
             message="Review this:",
             emit=["approved", "rejected"],
-            llm="gpt-4o-mini",
+            llm="gpt-5.4-mini",
             provider=SlackProvider(),
         )
         def generate_content(self):
@@ -173,7 +173,7 @@ class HumanFeedbackConfig:
 
     message: str
     emit: Sequence[str] | None = None
-    llm: str | BaseLLM | None = "gpt-4o-mini"
+    llm: str | BaseLLM | None = "gpt-5.4-mini"
     default_outcome: str | None = None
     metadata: dict[str, Any] | None = None
     provider: HumanFeedbackProvider | None = None
@@ -212,7 +212,7 @@ def _validate_human_feedback_options(
         if not llm:
             raise ValueError(
                 "llm is required when emit is specified. "
-                "Provide an LLM model string (e.g., 'gpt-4o-mini') or a BaseLLM instance. "
+                "Provide an LLM model string (e.g., 'gpt-5.4-mini') or a BaseLLM instance. "
                 "See the CrewAI Human-in-the-Loop (HITL) documentation for more information: "
                 "https://docs.crewai.com/en/learn/human-feedback-in-flows"
             )
@@ -235,12 +235,12 @@ def _resolve_llm_instance(llm: Any) -> Any:
     from crewai.llm import LLM
 
     if llm is None:
-        return LLM(model="gpt-4o-mini")
+        return LLM(model="gpt-5.4-mini")
     if isinstance(llm, str):
         return LLM(model=llm)
     if isinstance(llm, dict):
         deserialized = _deserialize_llm_from_context(llm)
-        return deserialized if deserialized is not None else LLM(model="gpt-4o-mini")
+        return deserialized if deserialized is not None else LLM(model="gpt-5.4-mini")
     return llm  # already a BaseLLM instance
 
 
@@ -362,7 +362,7 @@ def _distill_and_store_lessons(
 def human_feedback(
     message: str,
     emit: Sequence[str] | None = None,
-    llm: str | BaseLLM | None = "gpt-4o-mini",
+    llm: str | BaseLLM | None = "gpt-5.4-mini",
     default_outcome: str | None = None,
     metadata: dict[str, Any] | None = None,
     provider: HumanFeedbackProvider | None = None,
