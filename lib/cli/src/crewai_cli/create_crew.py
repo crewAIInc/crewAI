@@ -6,12 +6,18 @@ import click
 import tomli
 
 from crewai_cli.constants import ENV_VARS, MODELS
+from crewai_cli.git import initialize_if_git_available
 from crewai_cli.provider import (
     get_provider_data,
     select_model,
     select_provider,
 )
-from crewai_cli.utils import copy_template, load_env_vars, write_env_file
+from crewai_cli.utils import (
+    copy_template,
+    is_dmn_mode_enabled,
+    load_env_vars,
+    write_env_file,
+)
 
 
 def get_reserved_script_names() -> set[str]:
@@ -120,6 +126,8 @@ def create_folder_structure(
         folder_path = Path(folder_name)
 
     if folder_path.exists():
+        if is_dmn_mode_enabled():
+            raise click.ClickException(f"Folder {folder_name} already exists.")
         if not click.confirm(
             f"Folder {folder_name} already exists. Do you want to override it?"
         ):
@@ -201,6 +209,8 @@ def create_crew(
 ) -> None:
     folder_path, folder_name, class_name = create_folder_structure(name, parent_folder)
     env_vars = load_env_vars(folder_path)
+    if is_dmn_mode_enabled():
+        skip_provider = True
     if not skip_provider:
         if not provider:
             provider_models = get_provider_data()
@@ -308,5 +318,8 @@ def create_crew(
             src_file = templates_dir / file_name
             dst_file = src_folder / file_name
             copy_template(src_file, dst_file, name, class_name, folder_name)
+
+    if not parent_folder:
+        initialize_if_git_available(folder_path)
 
     click.secho(f"Crew {name} created successfully!", fg="green", bold=True)

@@ -1,11 +1,11 @@
 import os
 import threading
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 from crewai import Agent, Crew, Task
 from crewai.telemetry import Telemetry
-from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
 
 
 @pytest.fixture(autouse=True)
@@ -53,6 +53,49 @@ def test_telemetry_enabled_by_default():
             assert telemetry.ready is True
 
 
+def test_set_tracer_skips_when_provider_already_configured():
+    """A second telemetry instance must not re-install the global provider."""
+    with (
+        patch.dict(os.environ, {}, clear=True),
+        patch(
+            "crewai.telemetry.telemetry.trace.get_tracer_provider",
+            return_value=TracerProvider(),
+        ),
+        patch("crewai.telemetry.telemetry.trace.set_tracer_provider") as mock_set,
+    ):
+        telemetry = Telemetry()
+        telemetry.set_tracer()
+
+    mock_set.assert_not_called()
+    assert telemetry.trace_set is True
+
+
+def test_flow_execution_span_records_crewai_version():
+    tracer = Mock()
+    span = Mock()
+    tracer.start_span.return_value = span
+
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "CREWAI_DISABLE_TELEMETRY": "false",
+                "CREWAI_DISABLE_TRACKING": "false",
+                "OTEL_SDK_DISABLED": "false",
+            },
+        ),
+        patch("crewai.telemetry.telemetry.TracerProvider"),
+        patch("crewai.telemetry.telemetry.trace.get_tracer", return_value=tracer),
+        patch("crewai.telemetry.telemetry.version", return_value="9.9.9"),
+    ):
+        telemetry = Telemetry()
+        telemetry.flow_execution_span("ResearchFlow", ["start", "finish"])
+
+    tracer.start_span.assert_called_once_with("Flow Execution")
+    span.set_attribute.assert_any_call("crewai_version", "9.9.9")
+    span.set_attribute.assert_any_call("flow_name", "ResearchFlow")
+
+
 @patch("crewai.telemetry.telemetry.logger.error")
 @patch(
     "opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter.export",
@@ -67,9 +110,8 @@ def test_telemetry_fails_due_connect_timeout(export_mock, logger_mock):
         os.environ, {"CREWAI_DISABLE_TELEMETRY": "false", "OTEL_SDK_DISABLED": "false"}
     ):
         telemetry = Telemetry()
-        telemetry.set_tracer()
 
-        tracer = trace.get_tracer(__name__)
+        tracer = telemetry.provider.get_tracer(__name__)
         with tracer.start_as_current_span("test-span"):
             agent = Agent(
                 role="agent",
@@ -85,7 +127,7 @@ def test_telemetry_fails_due_connect_timeout(export_mock, logger_mock):
             crew = Crew(agents=[agent], tasks=[task], name="TestCrew")
             crew.kickoff()
 
-        trace.get_tracer_provider().force_flush()
+        telemetry.provider.force_flush()
 
     assert export_mock.called
     assert logger_mock.call_count == export_mock.call_count

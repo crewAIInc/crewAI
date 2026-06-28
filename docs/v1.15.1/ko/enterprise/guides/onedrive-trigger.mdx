@@ -1,0 +1,68 @@
+---
+title: "OneDrive Trigger"
+description: "Automate responses to OneDrive file activity"
+icon: "cloud"
+mode: "wide"
+---
+
+## Overview
+
+Start automations when files change inside OneDrive. You can generate audit summaries, notify security teams about external sharing, or update downstream line-of-business systems with new document metadata.
+
+<Tip>
+  Connect OneDrive in **Tools & Integrations** and toggle the trigger on for
+  your deployment.
+</Tip>
+
+## Enabling the OneDrive Trigger
+
+1. Open your deployment in CrewAI AMP
+2. Go to the **Triggers** tab
+3. Locate **OneDrive** and switch the toggle to enable
+
+<Frame caption="Microsoft OneDrive trigger connection">
+  <img
+    src="/images/enterprise/onedrive-trigger.png"
+    alt="Enable or disable triggers with toggle"
+  />
+</Frame>
+
+## Example: Audit file permissions
+
+```python
+from onedrive_file_crew import OneDriveFileTrigger
+
+crew = OneDriveFileTrigger().crew()
+crew.kickoff({
+    "crewai_trigger_payload": onedrive_payload,
+})
+```
+
+The crew inspects file metadata, user activity, and permission changes to produce a compliance-friendly summary.
+
+## 로컬에서 테스트
+
+CrewAI CLI를 사용하여 OneDrive 트리거 통합을 로컬에서 테스트하세요:
+
+```bash
+# 사용 가능한 모든 트리거 보기
+crewai triggers list
+
+# 실제 payload로 OneDrive 트리거 시뮬레이션
+crewai triggers run microsoft_onedrive/file_changed
+```
+
+`crewai triggers run` 명령은 완전한 OneDrive payload로 크루를 실행하여 배포 전에 파싱 로직을 테스트할 수 있게 해줍니다.
+
+<Warning>
+  개발 중에는 `crewai triggers run microsoft_onedrive/file_changed`를 사용하세요
+  (`crewai run`이 아님). 배포 후에는 크루가 자동으로 트리거 payload를 받습니다.
+</Warning>
+
+## Troubleshooting
+
+- Ensure the connected account has permission to read the file metadata included in the webhook
+- `crewai triggers run microsoft_onedrive/file_changed`로 로컬 테스트하여 정확한 payload 구조를 확인하세요
+- If the trigger fires but the payload is missing `permissions`, confirm the site-level sharing settings allow Graph to return this field
+- For large tenants, filter notifications upstream so the crew only runs on relevant directories
+- 주의: 트리거 실행을 시뮬레이션하려면 `crewai triggers run`을 사용하세요 (`crewai run`이 아님)

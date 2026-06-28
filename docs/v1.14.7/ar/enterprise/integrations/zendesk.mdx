@@ -1,0 +1,262 @@
+---
+title: تكامل Zendesk
+description: "دعم العملاء وإدارة مكتب المساعدة مع تكامل Zendesk لـ CrewAI."
+icon: "headset"
+mode: "wide"
+---
+
+## نظرة عامة
+
+مكّن وكلاءك من إدارة عمليات دعم العملاء عبر Zendesk. أنشئ التذاكر وحدّثها، وأدر المستخدمين، وتتبع مقاييس الدعم، وبسّط سير عمل خدمة العملاء باستخدام الأتمتة المدعومة بالذكاء الاصطناعي.
+
+## المتطلبات الأساسية
+
+قبل استخدام تكامل Zendesk، تأكد من توفر ما يلي:
+
+- حساب [CrewAI AMP](https://app.crewai.com) مع اشتراك فعّال
+- حساب Zendesk بصلاحيات API المناسبة
+- ربط حساب Zendesk الخاص بك عبر [صفحة التكاملات](https://app.crewai.com/integrations)
+
+## إعداد تكامل Zendesk
+
+### 1. ربط حساب Zendesk الخاص بك
+
+1. انتقل إلى [تكاملات CrewAI AMP](https://app.crewai.com/crewai_plus/connectors)
+2. ابحث عن **Zendesk** في قسم تكاملات المصادقة
+3. انقر على **Connect** وأكمل عملية OAuth
+4. امنح الصلاحيات اللازمة لإدارة التذاكر والمستخدمين
+5. انسخ رمز المؤسسة من [إعدادات التكامل](https://app.crewai.com/crewai_plus/settings/integrations)
+
+### 2. تثبيت الحزمة المطلوبة
+
+```bash
+uv add crewai-tools
+```
+
+### 3. إعداد متغير البيئة
+
+<Note>
+  لاستخدام التكاملات مع `Agent(apps=[])`, يجب تعيين متغير البيئة
+  `CREWAI_PLATFORM_INTEGRATION_TOKEN` برمز المؤسسة الخاص بك.
+</Note>
+
+```bash
+export CREWAI_PLATFORM_INTEGRATION_TOKEN="your_enterprise_token"
+```
+
+أو أضفه إلى ملف `.env`:
+
+```
+CREWAI_PLATFORM_INTEGRATION_TOKEN=your_enterprise_token
+```
+
+## الأدوات المتاحة
+
+### **إدارة التذاكر**
+
+<AccordionGroup>
+  <Accordion title="zendesk/create_ticket">
+    **الوصف:** إنشاء تذكرة دعم جديدة في Zendesk.
+
+    **المعاملات:**
+    - `ticketSubject` (string, مطلوب): سطر موضوع التذكرة
+    - `ticketDescription` (string, مطلوب): أول تعليق يظهر على التذكرة
+    - `requesterName` (string, مطلوب): اسم المستخدم الذي يطلب الدعم
+    - `requesterEmail` (string, مطلوب): بريد المستخدم الذي يطلب الدعم
+    - `ticketType` (string, اختياري): نوع التذكرة - الخيارات: problem, incident, question, task
+    - `ticketPriority` (string, اختياري): مستوى الأولوية - الخيارات: urgent, high, normal, low
+    - `ticketStatus` (string, اختياري): حالة التذكرة - الخيارات: new, open, pending, hold, solved, closed
+
+  </Accordion>
+
+  <Accordion title="zendesk/update_ticket">
+    **الوصف:** تحديث تذكرة دعم موجودة في Zendesk.
+
+    **المعاملات:**
+    - `ticketId` (string, مطلوب): معرّف التذكرة المراد تحديثها
+    - `requesterName` (string, مطلوب): اسم المستخدم الذي طلب هذه التذكرة
+    - `requesterEmail` (string, مطلوب): بريد المستخدم الذي طلب هذه التذكرة
+    - `ticketSubject` (string, اختياري): موضوع التذكرة المحدّث
+    - `ticketPriority` (string, اختياري): الأولوية المحدّثة
+    - `ticketStatus` (string, اختياري): الحالة المحدّثة
+
+  </Accordion>
+
+  <Accordion title="zendesk/get_ticket_by_id">
+    **الوصف:** استرجاع تذكرة محددة بواسطة معرّفها.
+
+    **المعاملات:**
+    - `ticketId` (string, مطلوب): معرّف التذكرة المراد استرجاعها
+
+  </Accordion>
+
+  <Accordion title="zendesk/add_comment_to_ticket">
+    **الوصف:** إضافة تعليق أو ملاحظة داخلية إلى تذكرة موجودة.
+
+    **المعاملات:**
+    - `ticketId` (string, مطلوب): معرّف التذكرة لإضافة التعليق إليها
+    - `commentBody` (string, مطلوب): رسالة التعليق
+    - `isInternalNote` (boolean, اختياري): عيّن إلى true للملاحظات الداخلية بدلاً من الردود العامة
+
+  </Accordion>
+
+  <Accordion title="zendesk/search_tickets">
+    **الوصف:** البحث عن التذاكر باستخدام فلاتر ومعايير مختلفة.
+
+    **المعاملات:**
+    - `ticketSubject` (string, اختياري): تصفية حسب النص في موضوع التذكرة
+    - `ticketStatus` (string, اختياري): تصفية حسب الحالة
+    - `ticketPriority` (string, اختياري): تصفية حسب الأولوية
+    - `sort_by` (string, اختياري): حقل الفرز - الخيارات: created_at, updated_at, priority, status
+    - `sort_order` (string, اختياري): اتجاه الفرز - الخيارات: asc, desc
+
+  </Accordion>
+</AccordionGroup>
+
+### **إدارة المستخدمين**
+
+<AccordionGroup>
+  <Accordion title="zendesk/create_user">
+    **الوصف:** إنشاء مستخدم جديد في Zendesk.
+
+    **المعاملات:**
+    - `name` (string, مطلوب): الاسم الكامل للمستخدم
+    - `email` (string, اختياري): عنوان البريد الإلكتروني
+    - `phone` (string, اختياري): رقم الهاتف
+    - `role` (string, اختياري): دور المستخدم - الخيارات: admin, agent, end-user
+
+  </Accordion>
+
+  <Accordion title="zendesk/update_user">
+    **الوصف:** تحديث معلومات مستخدم موجود.
+
+    **المعاملات:**
+    - `userId` (string, مطلوب): معرّف المستخدم المراد تحديثه
+    - `name` (string, اختياري): اسم المستخدم المحدّث
+    - `email` (string, اختياري): البريد الإلكتروني المحدّث
+    - `role` (string, اختياري): الدور المحدّث
+
+  </Accordion>
+
+  <Accordion title="zendesk/get_user_by_id">
+    **الوصف:** استرجاع مستخدم محدد بواسطة معرّفه.
+
+    **المعاملات:**
+    - `userId` (string, مطلوب): معرّف المستخدم المراد استرجاعه
+
+  </Accordion>
+
+  <Accordion title="zendesk/search_users">
+    **الوصف:** البحث عن المستخدمين باستخدام معايير مختلفة.
+
+    **المعاملات:**
+    - `name` (string, اختياري): تصفية حسب اسم المستخدم
+    - `email` (string, اختياري): تصفية حسب البريد الإلكتروني
+    - `role` (string, اختياري): تصفية حسب الدور
+
+  </Accordion>
+</AccordionGroup>
+
+### **أدوات إدارية**
+
+<AccordionGroup>
+  <Accordion title="zendesk/get_ticket_fields">
+    **الوصف:** استرجاع جميع الحقول القياسية والمخصصة المتاحة للتذاكر.
+
+    **المعاملات:**
+    - `paginationParameters` (object, اختياري): إعدادات الترقيم
+
+  </Accordion>
+
+  <Accordion title="zendesk/get_ticket_audits">
+    **الوصف:** الحصول على سجلات التدقيق (السجل للقراءة فقط) للتذاكر.
+
+    **المعاملات:**
+    - `ticketId` (string, اختياري): الحصول على سجلات التدقيق لتذكرة محددة
+
+  </Accordion>
+</AccordionGroup>
+
+## مستويات أولوية التذاكر
+
+فهم مستويات الأولوية:
+
+- **urgent** - مشاكل حرجة تتطلب اهتماماً فورياً
+- **high** - مشاكل مهمة يجب معالجتها بسرعة
+- **normal** - أولوية قياسية لمعظم التذاكر
+- **low** - مشاكل ثانوية يمكن معالجتها عند الإمكان
+
+## سير عمل حالة التذكرة
+
+تقدم حالة التذكرة القياسي:
+
+- **new** - أُنشئت حديثاً، لم تُعيّن بعد
+- **open** - يتم العمل عليها بنشاط
+- **pending** - في انتظار رد العميل أو إجراء خارجي
+- **hold** - متوقفة مؤقتاً
+- **solved** - تم حل المشكلة، في انتظار تأكيد العميل
+- **closed** - اكتملت التذكرة وأُغلقت
+
+## أمثلة الاستخدام
+
+### إعداد Agent أساسي لـ Zendesk
+
+```python
+from crewai import Agent, Task, Crew
+from crewai import Agent, Task, Crew
+
+# Create an agent with Zendesk capabilities
+zendesk_agent = Agent(
+    role="Support Manager",
+    goal="Manage customer support tickets and provide excellent customer service",
+    backstory="An AI assistant specialized in customer support operations and ticket management.",
+    apps=['zendesk']  # All Zendesk actions will be available
+)
+
+# Task to create a new support ticket
+create_ticket_task = Task(
+    description="Create a high-priority support ticket for John Smith who is unable to access his account after password reset",
+    agent=zendesk_agent,
+    expected_output="Support ticket created successfully with ticket ID"
+)
+
+# Run the task
+crew = Crew(
+    agents=[zendesk_agent],
+    tasks=[create_ticket_task]
+)
+
+crew.kickoff()
+```
+
+### إدارة التذاكر المتقدمة
+
+```python
+from crewai import Agent, Task, Crew
+
+ticket_manager = Agent(
+    role="Ticket Manager",
+    goal="Manage support ticket workflows and ensure timely resolution",
+    backstory="An AI assistant that specializes in support ticket triage and workflow optimization.",
+    apps=['zendesk']
+)
+
+# Task to manage ticket lifecycle
+ticket_workflow = Task(
+    description="""
+    1. Create a new support ticket for account access issues
+    2. Add internal notes with troubleshooting steps
+    3. Update ticket priority based on customer tier
+    4. Add resolution comments and close the ticket
+    """,
+    agent=ticket_manager,
+    expected_output="Complete ticket lifecycle managed from creation to resolution"
+)
+
+crew = Crew(
+    agents=[ticket_manager],
+    tasks=[ticket_workflow]
+)
+
+crew.kickoff()
+```

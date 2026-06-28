@@ -5,15 +5,7 @@ the Flow system.
 """
 
 from datetime import datetime
-from typing import (
-    Annotated,
-    Any,
-    NewType,
-    ParamSpec,
-    Protocol,
-    TypeVar,
-    TypedDict,
-)
+from typing import Annotated, Any, NewType, ParamSpec, Protocol, TypeVar, TypedDict
 
 from typing_extensions import NotRequired, Required
 
@@ -24,7 +16,7 @@ R = TypeVar("R", covariant=True)
 FlowMethodName = NewType("FlowMethodName", str)
 PendingListenerKey = NewType(
     "PendingListenerKey",
-    Annotated[str, "nested flow conditions use 'listener_name:object_id'"],
+    Annotated[str, "listener method name, or 'start:<method>' for conditional starts"],
 )
 
 

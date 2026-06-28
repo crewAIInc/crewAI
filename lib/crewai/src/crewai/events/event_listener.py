@@ -41,6 +41,7 @@ from crewai.events.types.env_events import (
     DefaultEnvEvent,
 )
 from crewai.events.types.flow_events import (
+    ConversationTurnCompletedEvent,
     FlowCreatedEvent,
     FlowFinishedEvent,
     FlowPausedEvent,
@@ -158,7 +159,6 @@ class EventListener(BaseEventListener):
             trace_listener.formatter = self.formatter
 
     def setup_listeners(self, crewai_event_bus: CrewAIEventsBus) -> None:
-
         @crewai_event_bus.on(CCEnvEvent)
         def on_cc_env(_: Any, event: CCEnvEvent) -> None:
             self._telemetry.env_context_span(event.type)
@@ -317,6 +317,12 @@ class EventListener(BaseEventListener):
                     event.flow_name,
                     source.flow_id,
                 )
+
+        @crewai_event_bus.on(ConversationTurnCompletedEvent)
+        def on_conversation_turn_completed(
+            _: Any, event: ConversationTurnCompletedEvent
+        ) -> None:
+            self._telemetry.feature_usage_span("flow:conversation_turn")
 
         @crewai_event_bus.on(MethodExecutionStartedEvent)
         def on_method_execution_started(
