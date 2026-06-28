@@ -75,6 +75,23 @@ def _format_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
         validated = result_schema.model_validate(validation_input)
         return validated.model_dump_json()
     except Exception as exc:
+        if isinstance(raw_result, (dict, list)):
+            try:
+                serialized = json.dumps(raw_result, ensure_ascii=False)
+                warnings.warn(
+                    (
+                        f"Failed to validate or serialize output from tool "
+                        f"'{getattr(tool, 'name', '<unknown>')}' using result_schema "
+                        f"'{result_schema.__name__}': {exc.__class__.__name__}. "
+                        "Falling back to JSON-serialized raw_result."
+                    ),
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
+                return serialized
+            except Exception:
+                pass
+
         warnings.warn(
             (
                 f"Failed to validate or serialize output from tool "
@@ -85,11 +102,6 @@ def _format_tool_output_for_agent(tool: Any, raw_result: Any) -> str:
             RuntimeWarning,
             stacklevel=2,
         )
-        if isinstance(raw_result, (dict, list)):
-            try:
-                return json.dumps(raw_result, ensure_ascii=False)
-            except Exception:
-                return str(raw_result)
         return str(raw_result)
 
 
