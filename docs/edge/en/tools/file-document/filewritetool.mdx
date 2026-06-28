@@ -37,8 +37,8 @@ from crewai_tools import FileWriterTool
 # Initialize the tool
 file_writer_tool = FileWriterTool()
 
-# Write content to a file in a specified directory (keyword arguments)
-result = file_writer_tool._run(
+# Write content to a file in a specified directory
+result = file_writer_tool.run(
     filename='example.txt',
     content='This is a test content.',
     directory='test_directory',
