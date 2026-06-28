@@ -19,7 +19,14 @@ def mock_searchapi_api_key():
 def test_google_search_tool_initialization():
     tool = SearchApiGoogleSearchTool()
     assert tool.name == "SearchApi Google Search"
-    assert tool.api_key == "test_key"
+    assert tool._api_key == "test_key"
+
+
+def test_api_key_not_serialized():
+    """The API key must never leak via the model's serialization."""
+    tool = SearchApiGoogleSearchTool()
+    assert "test_key" not in str(tool.model_dump(mode="json"))
+    assert "api_key" not in tool.model_dump(mode="json")
 
 
 def test_google_shopping_tool_initialization():

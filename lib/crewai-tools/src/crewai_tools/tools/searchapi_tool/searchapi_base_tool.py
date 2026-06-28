@@ -2,7 +2,7 @@ import os
 from typing import Any
 
 from crewai.tools import BaseTool, EnvVar
-from pydantic import Field
+from pydantic import Field, PrivateAttr
 import requests
 
 
@@ -23,7 +23,9 @@ class SearchApiBaseTool(BaseTool):
         ]
     )
 
-    api_key: str | None = None
+    # Stored as a private attribute so the key is never included in the model's
+    # serialization (model_dump) or repr output.
+    _api_key: str | None = PrivateAttr(default=None)
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
@@ -33,11 +35,11 @@ class SearchApiBaseTool(BaseTool):
             raise ValueError(
                 "Missing API key, you can get the key from https://www.searchapi.io"
             )
-        self.api_key = api_key
+        self._api_key = api_key
 
     def _search(self, params: dict[str, Any]) -> dict[str, Any]:
         """Perform a request against the SearchApi search endpoint."""
-        headers = {"Authorization": f"Bearer {self.api_key}"}
+        headers = {"Authorization": f"Bearer {self._api_key}"}
         response = requests.get(SEARCH_URL, params=params, headers=headers, timeout=30)
         response.raise_for_status()
         data: dict[str, Any] = response.json()

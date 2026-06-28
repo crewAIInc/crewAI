@@ -20207,20 +20207,7 @@
             "type": "object"
           }
         },
-        "properties": {
-          "api_key": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Api Key"
-          }
-        },
+        "properties": {},
         "required": [],
         "title": "SearchApiGoogleSearchTool",
         "type": "object"
@@ -20307,20 +20294,7 @@
             "type": "object"
           }
         },
-        "properties": {
-          "api_key": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Api Key"
-          }
-        },
+        "properties": {},
         "required": [],
         "title": "SearchApiGoogleShoppingTool",
         "type": "object"
