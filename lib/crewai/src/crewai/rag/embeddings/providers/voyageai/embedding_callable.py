@@ -56,18 +56,17 @@ class VoyageAIEmbeddingFunction(EmbeddingFunction[Documents]):
         model = self._config.get("model", "voyage-2")
 
         if model.startswith("voyage-context"):
-            result = self._client.contextualized_embed(
-                inputs=input,
+            inputs = [[s] for s in input]
+            ctx_result = self._client.contextualized_embed(
+                inputs=inputs,
                 model=model,
                 input_type="document",
                 output_dtype=self._config.get("output_dtype"),
                 output_dimension=self._config.get("output_dimension"),
-                enable_auto_chunking=True,
-                chunk_size=CONTEXTUALIZED_CHUNK_SIZE,
             )
             return cast(
                 Embeddings,
-                [embedding for r in result.results for embedding in r.embeddings],
+                [r.embeddings[0] for r in ctx_result.results],
             )
 
         result = self._client.embed(
