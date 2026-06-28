@@ -14,6 +14,11 @@ from crewai_files.core.resolved import (
 )
 
 
+def _normalize_media_type(content_type: str) -> str:
+    """Normalize MIME types before provider capability checks."""
+    return content_type.split(";", 1)[0].strip().lower()
+
+
 class OpenAIResponsesFormatter:
     """Formats resolved files into OpenAI Responses API content blocks.
 
@@ -49,8 +54,9 @@ class OpenAIResponsesFormatter:
         Raises:
             TypeError: If resolved type is not supported.
         """
-        is_image = content_type.startswith("image/")
-        is_pdf = content_type == "application/pdf"
+        media_type = _normalize_media_type(content_type)
+        is_image = media_type.startswith("image/")
+        is_pdf = media_type == "application/pdf"
 
         if isinstance(resolved, FileReference):
             if is_image:
@@ -137,7 +143,8 @@ class OpenAIFormatter:
                 type (e.g. PDF) is not supported by the OpenAI Chat Completions
                 API.
         """
-        is_pdf = content_type == "application/pdf"
+        media_type = _normalize_media_type(content_type)
+        is_pdf = media_type == "application/pdf"
 
         if is_pdf:
             raise TypeError(
