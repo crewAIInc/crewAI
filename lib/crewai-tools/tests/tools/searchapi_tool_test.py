@@ -65,3 +65,17 @@ def test_google_search_run(mock_get):
     assert kwargs["params"]["q"] == "best electric cars 2026"
     assert kwargs["params"]["location"] == "New York"
     assert kwargs["headers"]["Authorization"] == "Bearer test_key"
+
+
+@patch("crewai_tools.tools.searchapi_tool.searchapi_base_tool.requests.get")
+def test_search_handles_network_error(mock_get):
+    """A timeout/connection failure is returned as a message, not raised."""
+    import requests
+
+    mock_get.side_effect = requests.Timeout("connection timed out")
+
+    tool = SearchApiGoogleSearchTool()
+    result = tool._run(search_query="anything")
+
+    assert isinstance(result, str)
+    assert "error occurred" in result.lower()

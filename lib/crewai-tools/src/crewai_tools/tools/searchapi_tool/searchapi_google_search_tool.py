@@ -42,5 +42,5 @@ class SearchApiGoogleSearchTool(SearchApiBaseTool):
 
             results = self._search(params)
             return self._omit_fields(results, OMIT_FIELDS)
-        except requests.HTTPError as e:
-            return f"An error occurred: {e!s}. Some parameters may be invalid."
+        except requests.RequestException as e:
+            return f"An error occurred while performing the search: {e!s}"
