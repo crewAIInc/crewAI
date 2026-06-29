@@ -341,6 +341,7 @@ SUPPORTED_NATIVE_PROVIDERS: Final[list[str]] = [
     "hosted_vllm",
     "cerebras",
     "dashscope",
+    "concentrate",
     "snowflake",
 ]
 
@@ -430,6 +431,7 @@ class LLM(BaseLLM):
                 "hosted_vllm": "hosted_vllm",
                 "cerebras": "cerebras",
                 "dashscope": "dashscope",
+                "concentrate": "concentrate",
                 "snowflake": "snowflake",
             }
 
@@ -550,6 +552,10 @@ class LLM(BaseLLM):
             # OpenRouter uses org/model format but accepts anything
             return True
 
+        if provider == "concentrate":
+            # Concentrate routes to 130+ models from any provider
+            return True
+
         if provider == "snowflake":
             return True
 
@@ -664,6 +670,7 @@ class LLM(BaseLLM):
             "hosted_vllm",
             "cerebras",
             "dashscope",
+            "concentrate",
         }
         if provider in openai_compatible_providers:
             from crewai.llms.providers.openai_compatible.completion import (

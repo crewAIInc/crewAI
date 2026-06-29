@@ -2,7 +2,7 @@
 
 This module provides a thin subclass of OpenAICompletion that supports
 various OpenAI-compatible APIs like OpenRouter, DeepSeek, Ollama, vLLM,
-Cerebras, and Dashscope (Alibaba/Qwen).
+Cerebras, Dashscope (Alibaba/Qwen), and Concentrate.
 
 Usage:
     llm = LLM(model="deepseek/deepseek-chat")  # Uses DeepSeek API
@@ -89,6 +89,12 @@ OPENAI_COMPATIBLE_PROVIDERS: dict[str, ProviderConfig] = {
         base_url_env="DASHSCOPE_BASE_URL",
         api_key_required=True,
     ),
+    "concentrate": ProviderConfig(
+        base_url="https://api.concentrate.ai/v1",
+        api_key_env="CONCENTRATE_API_KEY",
+        base_url_env="CONCENTRATE_BASE_URL",
+        api_key_required=True,
+    ),
 }
 
 
@@ -125,6 +131,7 @@ class OpenAICompatibleCompletion(OpenAICompletion):
         - hosted_vllm: vLLM server (https://github.com/vllm-project/vllm)
         - cerebras: Cerebras (https://cerebras.ai)
         - dashscope: Alibaba Dashscope/Qwen (https://dashscope.aliyun.com)
+        - concentrate: Concentrate (https://concentrate.ai)
 
     Example:
         # Using provider prefix

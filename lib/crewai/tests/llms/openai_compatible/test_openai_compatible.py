@@ -95,6 +95,14 @@ class TestProviderRegistry:
         assert config.api_key_env == "DASHSCOPE_API_KEY"
         assert config.api_key_required is True
 
+    def test_concentrate_config(self):
+        """Test Concentrate provider configuration."""
+        config = OPENAI_COMPATIBLE_PROVIDERS["concentrate"]
+        assert config.base_url == "https://api.concentrate.ai/v1"
+        assert config.api_key_env == "CONCENTRATE_API_KEY"
+        assert config.base_url_env == "CONCENTRATE_BASE_URL"
+        assert config.api_key_required is True
+
 
 class TestNormalizeOllamaBaseUrl:
     """Tests for _normalize_ollama_base_url helper."""
@@ -270,6 +278,14 @@ class TestLLMIntegration:
             llm = LLM(model="dashscope/qwen-turbo")
             assert isinstance(llm, OpenAICompatibleCompletion)
             assert llm.provider == "dashscope"
+
+    def test_llm_creates_openai_compatible_for_concentrate(self):
+        """Test LLM factory creates OpenAICompatibleCompletion for Concentrate."""
+        with patch.dict(os.environ, {"CONCENTRATE_API_KEY": "test-key"}):
+            llm = LLM(model="concentrate/gpt-5.4")
+            assert isinstance(llm, OpenAICompatibleCompletion)
+            assert llm.provider == "concentrate"
+            assert llm.model == "gpt-5.4"
 
     def test_llm_with_explicit_provider(self):
         """Test LLM with explicit provider parameter."""
