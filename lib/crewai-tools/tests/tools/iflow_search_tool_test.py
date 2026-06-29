@@ -133,6 +133,24 @@ class TestIFlowWebFetchTool:
         assert data["content"] == "Example page body."
         assert data["from_cache"] is False
 
+    def test_run_rejects_file_scheme_url(self):
+        client = MagicMock()
+        tool = IFlowWebFetchTool(client=client)
+
+        with pytest.raises(ValueError, match="file://"):
+            tool.run(url="file:///etc/passwd")
+
+        client.web_fetch.assert_not_called()
+
+    def test_run_rejects_private_ip_url(self):
+        client = MagicMock()
+        tool = IFlowWebFetchTool(client=client)
+
+        with pytest.raises(ValueError, match="private/reserved IP"):
+            tool.run(url="http://127.0.0.1/admin")
+
+        client.web_fetch.assert_not_called()
+
 
 class TestIFlowSearchToolBase:
     def test_missing_api_key_raises_clear_error(self):

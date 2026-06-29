@@ -4,6 +4,7 @@ import json
 
 from pydantic import BaseModel, Field
 
+from crewai_tools.security.safe_path import validate_url
 from crewai_tools.tools.iflow_search_tool.base import IFlowSearchToolBase
 
 
@@ -25,7 +26,8 @@ class IFlowWebFetchTool(IFlowSearchToolBase):
 
     def _run(self, url: str) -> str:
         """Fetch a web page via iFlow and return normalized JSON content."""
-        response = self._get_client().web_fetch(url=url)
+        validated_url = validate_url(url)
+        response = self._get_client().web_fetch(url=validated_url)
         return json.dumps(
             {
                 "url": response.url,
