@@ -95,7 +95,6 @@ def test_stream_frame_contract_and_ordering() -> None:
 
     assert stream.result == "done"
     assert all(isinstance(frame, StreamFrame) for frame in frames)
-    assert all(frame.version == "v1" for frame in frames)
     assert [frame.seq for frame in frames] == sorted(frame.seq for frame in frames)
 
     by_type = {frame.type: frame for frame in frames}

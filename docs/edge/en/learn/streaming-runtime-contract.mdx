@@ -18,7 +18,6 @@ Every frame has the same envelope:
 ```python
 from crewai.types.streaming import StreamFrame
 
-frame.version      # "v1"
 frame.id           # unique frame id
 frame.seq          # execution-local order, when available
 frame.type         # source event type, such as "flow_started"

@@ -218,7 +218,6 @@ def stream_frame_from_event(event: BaseEvent) -> StreamFrame:
     if not isinstance(data, dict):
         data = {"value": data}
     return StreamFrame(
-        version="v1",
         id=event.event_id,
         seq=event.emission_sequence,
         type=event.type,

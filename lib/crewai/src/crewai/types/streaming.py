@@ -31,7 +31,6 @@ StreamChannel = Literal[
 class StreamFrame(BaseModel):
     """Stable public stream frame emitted by streamable runtimes."""
 
-    version: Literal["v1"] = "v1"
     id: str = Field(description="Unique frame/event identifier")
     seq: int | None = Field(default=None, description="Execution-local order")
     type: str = Field(description="Source event type")
