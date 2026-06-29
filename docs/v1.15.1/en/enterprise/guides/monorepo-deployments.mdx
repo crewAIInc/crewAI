@@ -1,0 +1,229 @@
+---
+title: "Monorepo Deployments"
+description: "Deploy a Crew or Flow from a subfolder in a larger repository"
+icon: "folder-tree"
+mode: "wide"
+---
+
+<Note>
+  Use a working directory when your Crew or Flow lives inside a larger
+  repository. CrewAI AMP validates, builds, tests, and runs the automation from
+  that subfolder instead of the repository root.
+</Note>
+
+## When to Use This
+
+Monorepo deployments are useful when one repository contains multiple
+automations, shared packages, or other application code:
+
+```text
+company-ai/
+|-- uv.lock
+|-- packages/
+|   `-- shared_tools/
+`-- crews/
+    |-- support_agent/
+    |   |-- pyproject.toml
+    |   |-- crew.jsonc
+    |   `-- agents/
+    |       `-- support_agent.jsonc
+    `-- research_flow/
+        |-- pyproject.toml
+        `-- src/
+            `-- research_flow/
+                `-- main.py
+```
+
+To deploy `support_agent`, set the working directory to:
+
+```text
+crews/support_agent
+```
+
+AMP still pulls or uploads the whole repository, but it treats the selected
+folder as the automation project root.
+
+## What the Working Directory Controls
+
+When a working directory is set, AMP uses that folder for:
+
+- Project validation, including `pyproject.toml`, JSON crew files, and any classic Crew or Flow entry point
+- Dependency installation with `uv`
+- The running process working directory
+- The `CREW_ROOT_DIR` environment variable
+
+Leaving the field empty keeps the existing behavior and uses the repository
+root.
+
+## Supported Sources
+
+You can set a working directory when creating a deployment from:
+
+- A connected GitHub repository
+- A Git repository configured in AMP
+- A ZIP upload
+
+<Info>
+  Configure working directories in the AMP web interface. The
+  `crewai deploy create` CLI flow does not prompt for this field.
+</Info>
+
+You can also add or change the working directory on an existing deployment from
+the deployment's **Settings** page. The change takes effect on the next deploy.
+
+<Warning>
+  Working directories and auto-deploy cannot be used together. If a deployment
+  has a working directory, auto-deploy is disabled for that deployment. Turn
+  auto-deploy off before setting a working directory.
+</Warning>
+
+## Configure a New Deployment
+
+<Steps>
+  <Step title="Open Deploy from Code">
+    In CrewAI AMP, create a new deployment and choose your source: GitHub, Git
+    Repository, or ZIP upload.
+  </Step>
+
+  <Step title="Select the repository, branch, or ZIP file">
+    Choose the repository and branch that contain your monorepo, or upload a ZIP
+    file whose root contains the monorepo contents.
+  </Step>
+
+  <Step title="Open Advanced settings">
+    Expand the **Advanced** section in the deploy form.
+  </Step>
+
+  <Step title="Enter the working directory">
+    Enter the path from the repository root to the Crew or Flow project:
+
+    ```text
+    crews/support_agent
+    ```
+
+    Do not include a leading slash.
+  </Step>
+
+  <Step title="Deploy">
+    Add any required environment variables, then start the deployment.
+  </Step>
+</Steps>
+
+## Configure an Existing Deployment
+
+<Steps>
+  <Step title="Open the deployment settings">
+    Go to your automation in AMP and open **Settings**.
+  </Step>
+
+  <Step title="Turn off auto-deploy if needed">
+    If auto-deploy is enabled, disable it first. The working directory field is
+    unavailable while auto-deploy is on.
+  </Step>
+
+  <Step title="Set the working directory">
+    In **Basic settings**, enter the subfolder path, such as:
+
+    ```text
+    crews/support_agent
+    ```
+  </Step>
+
+  <Step title="Redeploy">
+    Save the setting and redeploy the automation. The new working directory is
+    used on the next deploy.
+  </Step>
+</Steps>
+
+## Path Rules
+
+The working directory must be a relative path inside the repository or ZIP root.
+
+| Rule | Example |
+|------|---------|
+| Use a relative path | `crews/support_agent` |
+| Do not start with `/` | `/crews/support_agent` is invalid |
+| Do not use `.` or `..` path segments | `crews/../support_agent` is invalid |
+| Use only letters, numbers, dashes, underscores, dots, and forward slashes | `crews/support agent` is invalid |
+| Keep the path at 255 characters or fewer | Longer paths are rejected |
+
+AMP trims leading and trailing whitespace, collapses repeated slashes, and
+removes trailing slashes. A blank value uses the repository root.
+
+## Lock Files and UV Workspaces
+
+The selected folder must contain the automation's `pyproject.toml` and the
+project files for its type:
+
+- JSON-first crew: `crew.jsonc` or `crew.json`, plus `agents/`
+- Classic crew or Flow: `src/` with the expected Python entry point
+
+A `uv.lock` or `poetry.lock` file can live either in the selected folder or at
+the repository root.
+
+This supports both common lock-file layouts:
+
+<Tabs>
+  <Tab title="Project lock file">
+    ```text
+    company-ai/
+    `-- crews/
+        `-- support_agent/
+            |-- pyproject.toml
+            |-- uv.lock
+            |-- crew.jsonc
+            `-- agents/
+                `-- support_agent.jsonc
+    ```
+  </Tab>
+
+  <Tab title="Workspace lock file">
+    ```text
+    company-ai/
+    |-- uv.lock
+    |-- packages/
+    |   `-- shared_tools/
+    `-- crews/
+        `-- support_agent/
+            |-- pyproject.toml
+            |-- crew.jsonc
+            `-- agents/
+                `-- support_agent.jsonc
+    ```
+  </Tab>
+</Tabs>
+
+<Tip>
+  If your automation imports shared packages from elsewhere in the monorepo,
+  declare those packages in `pyproject.toml` using UV workspace, path, or source
+  configuration. AMP runs the automation from the selected folder, so shared
+  code should be installed as a dependency instead of relying on the repository
+  root being on the Python path.
+</Tip>
+
+## Troubleshooting
+
+### Working Directory Not Found
+
+Check that the path is relative to the repository or ZIP root. For ZIP uploads,
+the ZIP contents must include the working directory path exactly as entered.
+
+### Missing pyproject.toml
+
+The working directory should point to the Crew or Flow project folder, not just
+to a parent folder that contains several projects.
+
+### Missing uv.lock or poetry.lock
+
+Commit a lock file either in the selected project folder or in the repository
+root. For UV workspaces, keeping `uv.lock` at the workspace root is supported.
+
+### Auto-Deploy Is Unavailable
+
+Auto-deploy is disabled while a working directory is set. Use manual redeploys
+or trigger redeployments from CI/CD with the AMP API instead.
+
+<Card title="Deploy to AMP" icon="rocket" href="/en/enterprise/guides/deploy-to-amp">
+  Continue with the deployment guide after choosing your monorepo working
+  directory.
+</Card>

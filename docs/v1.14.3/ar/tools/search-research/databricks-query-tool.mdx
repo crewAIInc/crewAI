@@ -1,0 +1,81 @@
+---
+title: أداة استعلام Databricks SQL
+description: أداة `DatabricksQueryTool` تنفذ استعلامات SQL على جداول مساحة عمل Databricks.
+icon: trowel-bricks
+mode: "wide"
+---
+
+# `DatabricksQueryTool`
+
+## الوصف
+
+تنفيذ استعلامات SQL على جداول مساحة عمل Databricks باستخدام ملف تعريف CLI أو مصادقة المضيف/الرمز المباشرة.
+
+## التثبيت
+
+```shell
+uv add crewai-tools[databricks-sdk]
+```
+
+## متغيرات البيئة
+
+- `DATABRICKS_CONFIG_PROFILE` أو (`DATABRICKS_HOST` + `DATABRICKS_TOKEN`)
+
+أنشئ رمز وصول شخصي واعثر على تفاصيل المضيف في مساحة عمل Databricks ضمن إعدادات المستخدم ← المطور.
+التوثيق: https://docs.databricks.com/en/dev-tools/auth/pat.html
+
+## مثال
+
+```python Code
+from crewai import Agent, Task, Crew
+from crewai_tools import DatabricksQueryTool
+
+tool = DatabricksQueryTool(
+    default_catalog="main",
+    default_schema="default",
+)
+
+agent = Agent(
+    role="Data Analyst",
+    goal="Query Databricks",
+    tools=[tool],
+    verbose=True,
+)
+
+task = Task(
+    description="SELECT * FROM my_table LIMIT 10",
+    expected_output="10 rows",
+    agent=agent,
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    verbose=True,
+)
+result = crew.kickoff()
+
+print(result)
+```
+
+## المعاملات
+
+- `query` (مطلوب): استعلام SQL المراد تنفيذه
+- `catalog` (اختياري): تجاوز الكتالوج الافتراضي
+- `db_schema` (اختياري): تجاوز المخطط الافتراضي
+- `warehouse_id` (اختياري): تجاوز مستودع SQL الافتراضي
+- `row_limit` (اختياري): الحد الأقصى لعدد الصفوف المُرجعة (الافتراضي: 1000)
+
+## القيم الافتراضية عند التهيئة
+
+- `default_catalog`
+- `default_schema`
+- `default_warehouse_id`
+
+### معالجة الأخطاء والنصائح
+
+- أخطاء المصادقة: تحقق من أن `DATABRICKS_HOST` يبدأ بـ `https://` وأن الرمز صالح.
+- الصلاحيات: تأكد من أن مستودع SQL والمخطط متاحان لرمزك.
+- الحدود: يجب تجنب الاستعلامات طويلة التشغيل في حلقات الـ Agent؛ أضف فلاتر/حدود.
+
+

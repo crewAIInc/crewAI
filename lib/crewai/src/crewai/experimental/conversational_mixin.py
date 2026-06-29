@@ -30,6 +30,9 @@ from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.flow_events import (
     ConversationMessageAddedEvent,
     ConversationRouteSelectedEvent,
+    ConversationTurnCompletedEvent,
+    ConversationTurnFailedEvent,
+    ConversationTurnStartedEvent,
 )
 from crewai.experimental.conversational import (
     AgentMessage,
@@ -144,6 +147,10 @@ class _ConversationalMixin:
             pass
 
         def kickoff(self, *args: Any, **kwargs: Any) -> Any:
+            pass
+
+        @property
+        def method_outputs(self) -> list[Any]:
             pass
 
     def conversation_start(self) -> str | None:
@@ -276,6 +283,14 @@ class _ConversationalMixin:
         """
         state = cast(ConversationState, self.state)
         sid = session_id or state.id
+        crewai_event_bus.emit(
+            self,
+            ConversationTurnStartedEvent(
+                type="conversation_turn_started",
+                flow_name=self.name or self.__class__.__name__,
+                session_id=sid,
+            ),
+        )
 
         # Stash the pending turn so the kickoff extension hook picks it up
         # after persist restore.
@@ -283,26 +298,61 @@ class _ConversationalMixin:
         self._pending_intents = list(intents) if intents else None
         self._pending_intent_llm = intent_llm
 
-        # Each turn is a fresh execution; clear graph tracking so the second
-        # turn re-runs instead of being treated as a checkpoint restore.
-        if "from_checkpoint" not in kickoff_kwargs:
-            self._reset_turn_execution_state()
-
-        assistant_count = self._assistant_message_count()
+        failed_event: ConversationTurnFailedEvent | None = None
         try:
+            # Each turn is a fresh execution; clear graph tracking so the second
+            # turn re-runs instead of being treated as a checkpoint restore.
+            if "from_checkpoint" not in kickoff_kwargs:
+                self._reset_turn_execution_state()
+
+            assistant_count = self._assistant_message_count()
             result = self.kickoff(inputs={"id": sid}, **kickoff_kwargs)
+            if (
+                result is not None
+                and self._assistant_message_count() == assistant_count
+                and self._is_public_turn_result(result)
+            ):
+                self.append_assistant_message(self._stringify_result(result))
+        except Exception as exc:
+            failed_event = ConversationTurnFailedEvent(
+                type="conversation_turn_failed",
+                flow_name=self.name or self.__class__.__name__,
+                session_id=sid,
+                error=exc,
+            )
+            raise
         finally:
             self._pending_user_message = None
             self._pending_intents = None
             self._pending_intent_llm = None
+            if failed_event is not None:
+                self._emit_terminal_conversation_turn_event(failed_event)
 
-        if (
-            result is not None
-            and self._assistant_message_count() == assistant_count
-            and self._is_public_turn_result(result)
-        ):
-            self.append_assistant_message(self._stringify_result(result))
+        self._emit_terminal_conversation_turn_event(
+            ConversationTurnCompletedEvent(
+                type="conversation_turn_completed",
+                flow_name=self.name or self.__class__.__name__,
+                session_id=sid,
+            ),
+        )
         return result
+
+    def _emit_terminal_conversation_turn_event(
+        self,
+        event: ConversationTurnCompletedEvent | ConversationTurnFailedEvent,
+    ) -> None:
+        """Emit a terminal turn event and wait for its own handlers."""
+        future = crewai_event_bus.emit(self, event)
+        if future is None:
+            return
+        try:
+            future.result(timeout=30)
+        except Exception:
+            logger.warning(
+                "%s handler failed or timed out",
+                event.__class__.__name__,
+                exc_info=True,
+            )
 
     def chat(
         self,
@@ -1033,7 +1083,8 @@ class _ConversationalMixin:
         # of warning about an empty scope stack.
         started_id = getattr(self, "_deferred_flow_started_event_id", None)
         if started_id:
-            last_output = self._method_outputs[-1] if self._method_outputs else None
+            method_outputs = self.method_outputs
+            last_output = method_outputs[-1] if method_outputs else None
             restore_event_scope(((started_id, "flow_started"),))
             try:
                 crewai_event_bus.emit(

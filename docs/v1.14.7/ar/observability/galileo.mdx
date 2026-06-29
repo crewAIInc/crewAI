@@ -1,0 +1,86 @@
+---
+title: Galileo
+description: تكامل Galileo مع CrewAI للتتبع والتقييم
+icon: telescope
+mode: "wide"
+---
+
+## نظرة عامة
+
+يوضح هذا الدليل كيفية دمج **Galileo** مع **CrewAI** للتتبع الشامل وهندسة التقييم. بنهاية هذا الدليل، ستتمكن من تتبع وكلاء CrewAI ومراقبة أدائهم وتقييم سلوكهم باستخدام منصة المراقبة القوية من Galileo.
+
+> **ما هو Galileo؟** [Galileo](https://galileo.ai) هو منصة تقييم ومراقبة للذكاء الاصطناعي توفر تتبعاً شاملاً وتقييماً ومراقبة لتطبيقات الذكاء الاصطناعي. تمكّن الفرق من التقاط البيانات الحقيقية وإنشاء حواجز قوية وتشغيل تجارب منهجية مع تتبع تجارب مدمج وتحليلات أداء.
+
+## البدء
+
+يتبع هذا البرنامج التعليمي [البدء السريع مع CrewAI](/ar/quickstart) ويوضح كيفية إضافة [CrewAIEventListener](https://v2docs.galileo.ai/sdk-api/python/reference/handlers/crewai/handler) من Galileo كمعالج أحداث.
+
+> **ملاحظة** يفترض هذا البرنامج التعليمي أنك أكملت [البدء السريع مع CrewAI](/ar/quickstart).
+
+### الخطوة 1: تثبيت الاعتماديات
+
+ثبّت الاعتماديات المطلوبة لتطبيقك:
+
+```bash
+uv add galileo
+```
+
+### الخطوة 2: أضف إلى ملف .env من [البدء السريع مع CrewAI](/ar/quickstart)
+
+```bash
+# Your Galileo API key
+GALILEO_API_KEY="your-galileo-api-key"
+
+# Your Galileo project name
+GALILEO_PROJECT="your-galileo-project-name"
+
+# The name of the Log stream you want to use for logging
+GALILEO_LOG_STREAM="your-galileo-log-stream "
+```
+
+### الخطوة 3: إضافة مستمع أحداث Galileo
+
+لتفعيل التسجيل مع Galileo، تحتاج إلى إنشاء مثيل من `CrewAIEventListener`. استورد حزمة معالج CrewAI من Galileo بإضافة الكود التالي في أعلى ملف main.py:
+
+```python
+from galileo.handlers.crewai.handler import CrewAIEventListener
+```
+
+في بداية دالة التشغيل، أنشئ مستمع الأحداث:
+
+```python
+def run():
+    # Create the event listener
+    CrewAIEventListener()
+    # The rest of your existing code goes here
+```
+
+عند إنشاء مثيل المستمع، يتم تسجيله تلقائياً مع CrewAI.
+
+### الخطوة 4: شغّل طاقمك
+
+شغّل طاقمك باستخدام CrewAI CLI:
+
+```bash
+crewai run
+```
+
+### الخطوة 5: عرض التتبعات في Galileo
+
+بمجرد انتهاء طاقمك، سيتم تفريغ التتبعات وستظهر في Galileo.
+
+![عرض تتبع Galileo](/images/galileo-trace-veiw.png)
+
+## فهم تكامل Galileo
+
+يتكامل Galileo مع CrewAI عن طريق تسجيل مستمع أحداث يلتقط أحداث تنفيذ الطاقم (مثل إجراءات الوكلاء واستدعاءات الأدوات واستجابات النماذج) ويعيد توجيهها إلى Galileo للمراقبة والتقييم.
+
+### فهم مستمع الأحداث
+
+إنشاء مثيل `CrewAIEventListener()` هو كل ما يلزم لتفعيل Galileo لتشغيل CrewAI. عند الإنشاء، يقوم المستمع بـ:
+
+- التسجيل تلقائياً مع CrewAI
+- قراءة إعدادات Galileo من متغيرات البيئة
+- تسجيل جميع بيانات التشغيل في مشروع Galileo وتدفق السجل المحدد بواسطة `GALILEO_PROJECT` و `GALILEO_LOG_STREAM`
+
+لا يلزم أي إعداد إضافي أو تغييرات في الكود.

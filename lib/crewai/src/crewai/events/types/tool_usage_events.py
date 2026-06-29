@@ -21,6 +21,8 @@ class ToolUsageEvent(BaseEvent):
     agent: Any | None = None
     task_name: str | None = None
     task_id: str | None = None
+    plan_step_number: int | None = None
+    plan_step_description: str | None = None
     from_task: Any | None = None
     from_agent: Any | None = None
 
