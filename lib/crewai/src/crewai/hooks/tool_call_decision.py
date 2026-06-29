@@ -29,6 +29,11 @@ class ToolCallDecision:
     review_context: dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "review_context",
+            self._copy_context(self.review_context),
+        )
         try:
             object.__setattr__(self, "decision", ToolCallDecisionType(self.decision))
         except ValueError:

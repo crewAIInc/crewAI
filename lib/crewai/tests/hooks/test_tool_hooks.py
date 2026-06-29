@@ -530,6 +530,18 @@ class TestToolHooksIntegration:
 
         assert decision.review_context == {"ticket": "REL-42"}
 
+    def test_tool_call_decision_constructor_copies_review_context(self):
+        """Direct construction preserves frozen review context semantics."""
+        review_context = {"ticket": "REL-42"}
+        decision = ToolCallDecision(
+            decision=ToolCallDecisionType.NEEDS_REVIEW,
+            review_context=review_context,
+        )
+
+        review_context["ticket"] = "REL-99"
+
+        assert decision.review_context == {"ticket": "REL-42"}
+
     def test_unexpected_before_hook_result_fails_closed(self):
         """Unexpected before-hook results block execution instead of allowing it."""
         block_message = resolve_tool_call_decision("invalid", "send_email")
