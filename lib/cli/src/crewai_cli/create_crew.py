@@ -6,6 +6,7 @@ import click
 import tomli
 
 from crewai_cli.constants import ENV_VARS, MODELS
+from crewai_cli.git import initialize_if_git_available
 from crewai_cli.provider import (
     get_provider_data,
     select_model,
@@ -317,5 +318,8 @@ def create_crew(
             src_file = templates_dir / file_name
             dst_file = src_folder / file_name
             copy_template(src_file, dst_file, name, class_name, folder_name)
+
+    if not parent_folder:
+        initialize_if_git_available(folder_path)
 
     click.secho(f"Crew {name} created successfully!", fg="green", bold=True)

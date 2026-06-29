@@ -357,6 +357,27 @@ methods:
     listen: begin
 """
 
+JSON_SCHEMA_REQUIRED_INPUT_STATE_YAML = """
+schema: crewai.flow/v1
+name: JsonSchemaRequiredInputStateFlow
+state:
+  type: json_schema
+  json_schema:
+    title: LeadState
+    type: object
+    required:
+      - lead_name
+    properties:
+      lead_name:
+        type: string
+methods:
+  begin:
+    start: true
+    do:
+      call: expression
+      expr: state.lead_name
+"""
+
 PYDANTIC_REF_WITH_SCHEMA_FALLBACK_YAML = f"""
 schema: crewai.flow/v1
 name: SchemaFallbackFlow
@@ -445,7 +466,8 @@ def _run_with_events(flow, inputs=None):
 
 
 def _state_without_id(flow):
-    snapshot = dict(flow.state.model_dump())
+    state = flow.state
+    snapshot = dict(state if isinstance(state, dict) else state.model_dump())
     snapshot.pop("id", None)
     return snapshot
 
@@ -454,8 +476,8 @@ def assert_parity(flow_cls, yaml_str, inputs=None, ordered=True):
     class_flow = flow_cls()
     class_result, class_events = _run_with_events(class_flow, inputs)
 
-    definition = FlowDefinition.from_yaml(yaml_str)
-    definition_flow = Flow.from_definition(definition)
+    definition = FlowDefinition.from_declaration(contents=yaml_str)
+    definition_flow = Flow.from_declaration(contents=definition)
     definition_result, definition_events = _run_with_events(definition_flow, inputs)
 
     assert definition_result == class_result
@@ -474,6 +496,21 @@ def assert_parity(flow_cls, yaml_str, inputs=None, ordered=True):
 def test_simple_chain_parity():
     flow, result = assert_parity(ChainFlow, CHAIN_YAML)
     assert result == "confirmed:True"
+    assert flow.method_outputs == ["hello", "HELLO", "confirmed:True"]
+
+
+def test_flow_from_declaration_builds_runnable_flow():
+    flow = Flow.from_declaration(contents=CHAIN_YAML)
+
+    assert flow.kickoff() == "confirmed:True"
+    assert flow.method_outputs == ["hello", "HELLO", "confirmed:True"]
+
+
+def test_flow_from_declaration_accepts_flow_definition():
+    definition = FlowDefinition.from_declaration(contents=CHAIN_YAML)
+    flow = Flow.from_declaration(contents=definition)
+
+    assert flow.kickoff() == "confirmed:True"
     assert flow.method_outputs == ["hello", "HELLO", "confirmed:True"]
 
 
@@ -499,8 +536,8 @@ def test_cyclic_flow_parity():
 
 
 def test_definition_flow_events_use_definition_name():
-    definition = FlowDefinition.from_yaml(CHAIN_YAML)
-    flow = Flow.from_definition(definition)
+    definition = FlowDefinition.from_declaration(contents=CHAIN_YAML)
+    flow = Flow.from_declaration(contents=definition)
     _, events = _run_with_events(flow)
     assert events
     assert all(flow_name == "ChainFlow" for _, _, flow_name in events)
@@ -508,7 +545,7 @@ def test_definition_flow_events_use_definition_name():
 
 def test_definition_method_without_action_is_invalid():
     with pytest.raises(ValidationError, match="do"):
-        FlowDefinition.from_dict(
+        FlowDefinition.from_declaration(contents=
             {
                 "schema": "crewai.flow/v1",
                 "name": "NoActions",
@@ -517,8 +554,8 @@ def test_definition_method_without_action_is_invalid():
         )
 
 
-def test_from_definition_unresolvable_ref_raises():
-    definition = FlowDefinition.from_dict(
+def test_from_declaration_unresolvable_ref_raises():
+    definition = FlowDefinition.from_declaration(contents=
         {
             "schema": "crewai.flow/v1",
             "name": "BadRefs",
@@ -532,11 +569,11 @@ def test_from_definition_unresolvable_ref_raises():
     )
 
     with pytest.raises(ValueError, match="unresolvable actions.*begin"):
-        Flow.from_definition(definition)
+        Flow.from_declaration(contents=definition)
 
 
-def test_from_definition_malformed_ref_raises():
-    definition = FlowDefinition.from_dict(
+def test_from_declaration_malformed_ref_raises():
+    definition = FlowDefinition.from_declaration(contents=
         {
             "schema": "crewai.flow/v1",
             "name": "MalformedRefs",
@@ -545,11 +582,11 @@ def test_from_definition_malformed_ref_raises():
     )
 
     with pytest.raises(ValueError, match="expected 'module:qualname'"):
-        Flow.from_definition(definition)
+        Flow.from_declaration(contents=definition)
 
 
-def test_from_definition_local_scope_ref_raises():
-    definition = FlowDefinition.from_dict(
+def test_from_declaration_local_scope_ref_raises():
+    definition = FlowDefinition.from_declaration(contents=
         {
             "schema": "crewai.flow/v1",
             "name": "LocalRefs",
@@ -563,7 +600,7 @@ def test_from_definition_local_scope_ref_raises():
     )
 
     with pytest.raises(ValueError, match="expected 'module:qualname'"):
-        Flow.from_definition(definition)
+        Flow.from_declaration(contents=definition)
 
 
 def test_flow_definition_stamps_refs():
@@ -573,7 +610,7 @@ def test_flow_definition_stamps_refs():
     assert definition.methods["shout"].do.ref == f"{__name__}:ChainFlow.shout"
 
 
-def test_from_definition_runs_tool_action_with_static_inputs():
+def test_from_declaration_runs_tool_action_with_static_inputs():
     yaml_str = f"""
 schema: crewai.flow/v1
 name: ToolFlow
@@ -588,13 +625,13 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
 
     assert flow.kickoff() == "found:ai agents"
 
 
 def test_tool_action_round_trips_with_inputs():
-    definition = FlowDefinition.from_dict(
+    definition = FlowDefinition.from_declaration(contents=
         {
             "schema": "crewai.flow/v1",
             "name": "ToolFlow",
@@ -611,12 +648,12 @@ def test_tool_action_round_trips_with_inputs():
         }
     )
 
-    assert definition.to_dict()["methods"]["search"]["do"] == {
-        "call": "tool",
-        "ref": f"{__name__}:StaticSearchTool",
-        "with": {"search_query": "ai agents"},
-    }
-    assert Flow.from_definition(definition).kickoff() == "search:ai agents"
+    action = definition.methods["search"].do
+
+    assert action.call == "tool"
+    assert action.ref == f"{__name__}:StaticSearchTool"
+    assert action.with_ == {"search_query": "ai agents"}
+    assert Flow.from_declaration(contents=definition).kickoff() == "search:ai agents"
 
 
 def test_tool_action_renders_cel_inputs_at_runtime():
@@ -639,13 +676,13 @@ methods:
     listen: begin
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
 
     assert flow.kickoff(inputs={"topic": "ai"}) == "found:ai agents"
 
 
 def test_tool_action_treats_embedded_cel_marker_as_literal():
-    definition = FlowDefinition.from_dict(
+    definition = FlowDefinition.from_declaration(contents=
         {
             "schema": "crewai.flow/v1",
             "name": "ToolFlow",
@@ -665,11 +702,11 @@ def test_tool_action_treats_embedded_cel_marker_as_literal():
         }
     )
 
-    assert Flow.from_definition(definition).kickoff() == "p}x:wrapped ${'a}b'} value"
+    assert Flow.from_declaration(contents=definition).kickoff() == "p}x:wrapped ${'a}b'} value"
 
 
 def test_tool_action_treats_marker_with_trailing_text_as_literal():
-    definition = FlowDefinition.from_dict(
+    definition = FlowDefinition.from_declaration(contents=
         {
             "schema": "crewai.flow/v1",
             "name": "ToolFlow",
@@ -689,12 +726,12 @@ def test_tool_action_treats_marker_with_trailing_text_as_literal():
         }
     )
 
-    assert Flow.from_definition(definition).kickoff() == "p:${state.topic} extra"
+    assert Flow.from_declaration(contents=definition).kickoff() == "p:${state.topic} extra"
 
 
 def test_tool_action_rejects_adjacent_markers_as_invalid_cel():
     with pytest.raises(ValidationError, match="invalid CEL expression"):
-        FlowDefinition.from_dict(
+        FlowDefinition.from_declaration(contents=
             {
                 "schema": "crewai.flow/v1",
                 "name": "ToolFlow",
@@ -716,7 +753,7 @@ def test_tool_action_rejects_adjacent_markers_as_invalid_cel():
 
 
 def test_tool_action_accepts_braces_in_full_cel_marker():
-    definition = FlowDefinition.from_dict(
+    definition = FlowDefinition.from_declaration(contents=
         {
             "schema": "crewai.flow/v1",
             "name": "ToolFlow",
@@ -736,7 +773,7 @@ def test_tool_action_accepts_braces_in_full_cel_marker():
         }
     )
 
-    assert Flow.from_definition(definition).kickoff() == "p}x:ai agents"
+    assert Flow.from_declaration(contents=definition).kickoff() == "p}x:ai agents"
 
 
 def test_tool_action_renders_latest_output_by_method_name():
@@ -758,7 +795,7 @@ methods:
     listen: begin
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
 
     assert flow.kickoff() == "search:hello agents"
 
@@ -783,7 +820,7 @@ methods:
     listen: build_query
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
 
     assert flow.kickoff() == "found:ai agents news"
 
@@ -803,7 +840,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
 
     assert (
         flow.kickoff(inputs={"limit": 2, "domains": ["crewai.com", "example.com"]})
@@ -836,7 +873,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
 
     assert flow.kickoff(inputs={"question": "What is CrewAI?"}) == {
         "agent": "Analyst",
@@ -874,7 +911,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
 
     assert flow.kickoff(inputs={"questions": ["one", "two"]}) == [
         "Analyst:one",
@@ -883,7 +920,7 @@ methods:
 
 
 def test_agent_action_round_trips_with_inline_definition():
-    definition = FlowDefinition.from_dict(
+    definition = FlowDefinition.from_declaration(contents=
         {
             "schema": "crewai.flow/v1",
             "name": "AgentFlow",
@@ -905,17 +942,16 @@ def test_agent_action_round_trips_with_inline_definition():
         }
     )
 
-    round_trip = FlowDefinition.from_yaml(definition.to_yaml())
-    action = round_trip.to_dict()["methods"]["answer"]["do"]
+    action = definition.methods["answer"].do
 
-    assert action["call"] == "agent"
-    assert action["with"]["role"] == "Analyst"
-    assert action["with"]["input"] == "${state.question}"
-    assert action["with"]["settings"] == {"verbose": True}
+    assert action.call == "agent"
+    assert action.with_.role == "Analyst"
+    assert action.with_.input == "${state.question}"
+    assert action.with_.settings == {"verbose": True}
 
 
 def test_agent_action_json_schema_describes_inline_agent_definitions():
-    schema_defs = FlowDefinition.json_schema()["$defs"]
+    schema_defs = FlowDefinition.model_json_schema(by_alias=True)["$defs"]
 
     assert set(schema_defs["AgentDefinition"]["properties"]) >= {
         "role",
@@ -929,7 +965,7 @@ def test_agent_action_json_schema_describes_inline_agent_definitions():
 
 def test_agent_action_rejects_non_string_input_in_definition():
     with pytest.raises(ValidationError, match="agent.input must be a string"):
-        FlowDefinition.from_dict(
+        FlowDefinition.from_declaration(contents=
             {
                 "schema": "crewai.flow/v1",
                 "name": "AgentFlow",
@@ -968,7 +1004,7 @@ methods:
 """
 
     with pytest.raises(ValidationError, match="invalid CEL expression"):
-        FlowDefinition.from_yaml(yaml_str)
+        FlowDefinition.from_declaration(contents=yaml_str)
 
 
 def test_crew_action_runs_inline_yaml_definition(monkeypatch: pytest.MonkeyPatch):
@@ -1005,12 +1041,12 @@ methods:
             description: Research {topic}
             expected_output: Findings about {topic}
             agent: researcher
-        inputs:
-          topic: "${state.topic}"
+      inputs:
+        topic: "${state.topic}"
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
 
     assert flow.kickoff(inputs={"topic": "AI"}) == {
         "crew": "inline_research",
@@ -1020,8 +1056,182 @@ methods:
     }
 
 
+def test_crew_action_runs_crew_from_declaration(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
+    from crewai import Crew
+
+    project_root = tmp_path / "project"
+    crew_root = project_root / "crews" / "research_crew"
+    agents_root = crew_root / "agents"
+    agents_root.mkdir(parents=True)
+    (agents_root / "researcher.jsonc").write_text(
+        """
+{
+  "role": "Researcher",
+  "goal": "Research {topic}",
+  "backstory": "Knows things."
+}
+""",
+        encoding="utf-8",
+    )
+    (crew_root / "crew.jsonc").write_text(
+        """
+{
+  "name": "referenced_research",
+  "agents": ["researcher"],
+  "tasks": [
+    {
+      "name": "research_task",
+      "description": "Research {topic}",
+      "expected_output": "Findings about {topic}",
+      "agent": "researcher"
+    }
+  ],
+  "inputs": {
+    "topic": "Default topic",
+    "audience": "developers"
+  }
+}
+""",
+        encoding="utf-8",
+    )
+
+    async def fake_kickoff_async(
+        self: Crew, inputs: dict[str, Any] | None = None, **_kwargs: Any
+    ) -> dict[str, Any]:
+        return {
+            "crew": self.name,
+            "tasks": [task.description for task in self.tasks],
+            "inputs": inputs,
+        }
+
+    monkeypatch.setattr(Crew, "kickoff_async", fake_kickoff_async)
+    monkeypatch.chdir(project_root)
+
+    yaml_str = """
+schema: crewai.flow/v1
+name: CrewFlow
+methods:
+  research:
+    do:
+      call: crew
+      from_declaration: crews/research_crew
+      inputs:
+        topic: "${state.topic}"
+    start: true
+"""
+
+    flow = Flow.from_declaration(contents=yaml_str)
+
+    assert flow.kickoff(inputs={"topic": "AI"}) == {
+        "crew": "referenced_research",
+        "tasks": ["Research {topic}"],
+        "inputs": {"topic": "AI", "audience": "developers"},
+    }
+
+
+def test_crew_action_from_declaration_resolves_relative_to_flow_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
+    from crewai import Crew
+
+    project_root = tmp_path / "project"
+    crew_root = project_root / "crews" / "research_crew"
+    agents_root = crew_root / "agents"
+    agents_root.mkdir(parents=True)
+    (agents_root / "researcher.jsonc").write_text(
+        """
+{
+  "role": "Researcher",
+  "goal": "Research {topic}",
+  "backstory": "Knows things."
+}
+""",
+        encoding="utf-8",
+    )
+    (crew_root / "crew.jsonc").write_text(
+        """
+{
+  "name": "relative_research",
+  "agents": ["researcher"],
+  "tasks": [
+    {
+      "description": "Research {topic}",
+      "expected_output": "Findings about {topic}",
+      "agent": "researcher"
+    }
+  ],
+  "inputs": {
+    "topic": "Default topic"
+  }
+}
+""",
+        encoding="utf-8",
+    )
+
+    async def fake_kickoff_async(
+        self: Crew, inputs: dict[str, Any] | None = None, **_kwargs: Any
+    ) -> dict[str, Any]:
+        return {"crew": self.name, "inputs": inputs}
+
+    monkeypatch.setattr(Crew, "kickoff_async", fake_kickoff_async)
+
+    flow_path = project_root / "flow.yaml"
+    yaml_str = """
+schema: crewai.flow/v1
+name: CrewFlow
+methods:
+  research:
+    do:
+      call: crew
+      from_declaration: crews/research_crew
+      inputs:
+        topic: "${state.topic}"
+    start: true
+"""
+    flow_path.write_text(yaml_str, encoding="utf-8")
+
+    other_cwd = tmp_path / "other"
+    other_cwd.mkdir()
+    monkeypatch.chdir(other_cwd)
+
+    flow = Flow.from_declaration(path=flow_path)
+
+    assert flow.kickoff(inputs={"topic": "AI"}) == {
+        "crew": "relative_research",
+        "inputs": {"topic": "AI"},
+    }
+
+
+def test_crew_action_from_declaration_rejects_paths_outside_flow_file(
+    tmp_path: Path,
+):
+    flow_path = tmp_path / "project" / "flow.yaml"
+    flow_path.parent.mkdir()
+    yaml_str = """
+schema: crewai.flow/v1
+name: CrewFlow
+methods:
+  research:
+    do:
+      call: crew
+      from_declaration: ../outside/crew.jsonc
+    start: true
+"""
+    flow_path.write_text(yaml_str, encoding="utf-8")
+
+    flow = Flow.from_declaration(path=flow_path)
+
+    with pytest.raises(
+        ValueError,
+        match="crew declaration path must be within the flow definition directory",
+    ):
+        flow.kickoff()
+
+
 def test_crew_action_round_trips_with_inline_definition():
-    definition = FlowDefinition.from_dict(
+    definition = FlowDefinition.from_declaration(contents=
         {
             "schema": "crewai.flow/v1",
             "name": "CrewFlow",
@@ -1047,25 +1257,24 @@ def test_crew_action_round_trips_with_inline_definition():
                                     "agent": "researcher",
                                 }
                             ],
-                            "inputs": {"topic": "${state.topic}"},
                         },
+                        "inputs": {"topic": "${state.topic}"},
                     },
                 }
             },
         }
     )
 
-    assert definition.to_dict()["methods"]["research"]["do"]["call"] == "crew"
-    assert (
-        definition.to_dict()["methods"]["research"]["do"]["with"]["agents"][
-            "researcher"
-        ]["role"]
-        == "Researcher"
-    )
+    action = definition.methods["research"].do
+
+    assert action.call == "crew"
+    assert action.with_ is not None
+    assert action.with_.agents["researcher"].role == "Researcher"
+    assert action.inputs == {"topic": "${state.topic}"}
 
 
 def test_crew_action_normalizes_named_agent_list_definition():
-    definition = FlowDefinition.from_dict(
+    definition = FlowDefinition.from_declaration(contents=
         {
             "schema": "crewai.flow/v1",
             "name": "CrewFlow",
@@ -1097,16 +1306,15 @@ def test_crew_action_normalizes_named_agent_list_definition():
         }
     )
 
-    assert (
-        definition.to_dict()["methods"]["research"]["do"]["with"]["agents"][
-            "researcher"
-        ]["role"]
-        == "Researcher"
-    )
+    action = definition.methods["research"].do
+
+    assert action.call == "crew"
+    assert action.with_ is not None
+    assert action.with_.agents["researcher"].role == "Researcher"
 
 
 def test_crew_action_json_schema_describes_inline_crew_definitions():
-    schema_defs = FlowDefinition.json_schema()["$defs"]
+    schema_defs = FlowDefinition.model_json_schema(by_alias=True)["$defs"]
     agents_schema = schema_defs["CrewDefinition"]["properties"]["agents"]
 
     assert set(schema_defs["CrewDefinition"]["properties"]) >= {
@@ -1131,7 +1339,7 @@ def test_crew_action_json_schema_describes_inline_crew_definitions():
 
 def test_crew_action_rejects_incomplete_inline_agent_definition():
     with pytest.raises(ValidationError, match="goal"):
-        FlowDefinition.from_dict(
+        FlowDefinition.from_declaration(contents=
             {
                 "schema": "crewai.flow/v1",
                 "name": "CrewFlow",
@@ -1162,9 +1370,9 @@ def test_crew_action_rejects_incomplete_inline_agent_definition():
         )
 
 
-def test_crew_action_rejects_ref():
+def test_crew_action_rejects_python_ref_field():
     with pytest.raises(ValidationError, match="ref"):
-        FlowDefinition.from_dict(
+        FlowDefinition.from_declaration(contents=
             {
                 "schema": "crewai.flow/v1",
                 "name": "CrewFlow",
@@ -1174,7 +1382,6 @@ def test_crew_action_rejects_ref():
                         "do": {
                             "call": "crew",
                             "ref": "project.crew:build_crew",
-                            "with": {"inputs": {"topic": "AI"}},
                         },
                     }
                 },
@@ -1184,7 +1391,7 @@ def test_crew_action_rejects_ref():
 
 def test_crew_action_rejects_non_mapping_inputs_in_definition():
     with pytest.raises(ValidationError, match="crew.inputs must be a mapping"):
-        FlowDefinition.from_dict(
+        FlowDefinition.from_declaration(contents=
             {
                 "schema": "crewai.flow/v1",
                 "name": "CrewFlow",
@@ -1232,7 +1439,7 @@ methods:
 """
 
     with pytest.raises(ValidationError, match="invalid CEL expression"):
-        FlowDefinition.from_yaml(yaml_str)
+        FlowDefinition.from_declaration(contents=yaml_str)
 
 
 def test_code_action_renders_keyword_inputs():
@@ -1250,7 +1457,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
 
     assert flow.kickoff(inputs={"name": "hello"}) == "hello!"
 
@@ -1269,7 +1476,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
 
     assert flow.kickoff(inputs={"value": "ok"}) == "callable:ok"
 
@@ -1293,7 +1500,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
 
     assert flow.kickoff(inputs={"rows": ["a", "b"]}) == [
         "normalized:a",
@@ -1320,7 +1527,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
     caller_thread_id = threading.get_ident()
 
     assert flow.kickoff(inputs={"rows": ["a"]}) == ["process_rows:a"]
@@ -1347,7 +1554,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
 
     assert flow.kickoff(inputs={"rows": ["a", "b"]}) == ["async:a", "async:b"]
 
@@ -1369,7 +1576,7 @@ methods:
         FlowScriptExecutionDisabledError,
         match="CREWAI_ALLOW_FLOW_SCRIPT_EXECUTION=1",
     ) as exc_info:
-        Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+        Flow.from_declaration(contents=yaml_str)
     assert "methods with unresolvable actions" not in str(exc_info.value)
 
 
@@ -1393,7 +1600,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
 
     assert flow.kickoff(inputs={"raw_score": 3.2}) == "rounded:4"
     assert flow.state["rounded"] == 4
@@ -1422,7 +1629,7 @@ methods:
     listen: seed
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
 
     assert flow.kickoff() == "alpha:alpha"
     assert flow.state["input_matches_output"] is True
@@ -1460,7 +1667,7 @@ methods:
     listen: seed
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
 
     assert flow.kickoff(inputs={"rows": [" a ", " b "]}) == ["global:a", "global:b"]
 
@@ -1492,7 +1699,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
 
     assert flow.kickoff(inputs={"rows": ["a", "b"]}) == [
         {"row": "a", "normalized": "saved:a"},
@@ -1521,7 +1728,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
 
     assert flow.kickoff(inputs={"rows": ["a", "b"]}) == ["a", "b"]
     assert flow._method_outputs == [
@@ -1559,7 +1766,7 @@ methods:
     listen: seed
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
 
     assert flow.kickoff(inputs={"rows": ["a", "b"]}) == [
         "local:a",
@@ -1598,7 +1805,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
 
     assert flow.kickoff(
         inputs={
@@ -1632,7 +1839,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
 
     assert flow.kickoff(inputs={"rows": [{"kind": "keep", "value": "a"}]}) == ["a"]
 
@@ -1659,7 +1866,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
 
     assert flow.kickoff(
         inputs={
@@ -1689,7 +1896,7 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
 
     with pytest.raises(ValueError, match="if expression must evaluate to a boolean"):
         flow.kickoff(inputs={"rows": [{"value": "truthy"}]})
@@ -1719,7 +1926,7 @@ methods:
     listen: process_rows
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
     events = []
     with crewai_event_bus.scoped_handlers():
 
@@ -1745,7 +1952,7 @@ methods:
     ],
 )
 def test_each_action_rejects_non_list_inputs(expr, inputs):
-    definition = FlowDefinition.from_dict(
+    definition = FlowDefinition.from_declaration(contents=
         {
             "schema": "crewai.flow/v1",
             "name": "EachFlow",
@@ -1766,7 +1973,7 @@ def test_each_action_rejects_non_list_inputs(expr, inputs):
             },
         }
     )
-    flow = Flow.from_definition(definition)
+    flow = Flow.from_declaration(contents=definition)
 
     with pytest.raises(ValueError, match="each.in must evaluate to an array"):
         flow.kickoff(inputs=inputs)
@@ -1796,7 +2003,7 @@ def test_each_action_rejects_non_list_inputs(expr, inputs):
 )
 def test_each_action_validates_step_shape(action_do):
     with pytest.raises(ValidationError):
-        FlowDefinition.from_dict(
+        FlowDefinition.from_declaration(contents=
             {
                 "schema": "crewai.flow/v1",
                 "name": "EachFlow",
@@ -1816,7 +2023,7 @@ def test_each_action_validates_step_shape(action_do):
 
 def test_if_clauses_are_rejected_at_method_level():
     with pytest.raises(ValidationError):
-        FlowDefinition.from_dict(
+        FlowDefinition.from_declaration(contents=
             {
                 "schema": "crewai.flow/v1",
                 "name": "TopLevelIfFlow",
@@ -1836,7 +2043,7 @@ def test_if_clauses_are_rejected_at_method_level():
 
 def test_each_action_rejects_nested_each_actions():
     with pytest.raises(ValidationError):
-        FlowDefinition.from_dict(
+        FlowDefinition.from_declaration(contents=
             {
                 "schema": "crewai.flow/v1",
                 "name": "EachFlow",
@@ -1890,14 +2097,14 @@ methods:
     start: true
 """
 
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
 
     with pytest.raises(RuntimeError, match="bad row"):
         flow.kickoff(inputs={"rows": ["ok", "bad"]})
 
 
 def test_expression_action_round_trips():
-    definition = FlowDefinition.from_dict(
+    definition = FlowDefinition.from_declaration(contents=
         {
             "schema": "crewai.flow/v1",
             "name": "ExpressionFlow",
@@ -1913,15 +2120,15 @@ def test_expression_action_round_trips():
         }
     )
 
-    assert definition.to_dict()["methods"]["classify"]["do"] == {
-        "call": "expression",
-        "expr": "state.score >= 80 ? 'qualified' : 'nurture'",
-    }
-    assert Flow.from_definition(definition).kickoff(inputs={"score": 90}) == "qualified"
+    action = definition.methods["classify"].do
+
+    assert action.call == "expression"
+    assert action.expr == "state.score >= 80 ? 'qualified' : 'nurture'"
+    assert Flow.from_declaration(contents=definition).kickoff(inputs={"score": 90}) == "qualified"
 
 
 def test_explicit_cel_fields_accept_expression_markers():
-    definition = FlowDefinition.from_dict(
+    definition = FlowDefinition.from_declaration(contents=
         {
             "schema": "crewai.flow/v1",
             "name": "ExpressionFlow",
@@ -1937,7 +2144,7 @@ def test_explicit_cel_fields_accept_expression_markers():
         }
     )
 
-    assert Flow.from_definition(definition).kickoff(inputs={"score": 90}) == "qualified"
+    assert Flow.from_declaration(contents=definition).kickoff(inputs={"score": 90}) == "qualified"
 
 
 def test_expression_local_context_recurses_into_dataclass_values():
@@ -2011,12 +2218,12 @@ methods:
     listen: right
 """
 
-    definition = FlowDefinition.from_yaml(yaml_str)
+    definition = FlowDefinition.from_declaration(contents=yaml_str)
 
-    assert Flow.from_definition(definition).kickoff(
+    assert Flow.from_declaration(contents=definition).kickoff(
         inputs={"direction": "left"}
     ) == "took-left"
-    assert Flow.from_definition(definition).kickoff(
+    assert Flow.from_declaration(contents=definition).kickoff(
         inputs={"direction": "right"}
     ) == "took-right"
 
@@ -2034,7 +2241,7 @@ methods:
 """
 
     with pytest.raises(ValidationError, match="invalid CEL expression"):
-        FlowDefinition.from_yaml(yaml_str)
+        FlowDefinition.from_declaration(contents=yaml_str)
 
 
 def test_expression_action_rejects_unknown_cel_root():
@@ -2050,11 +2257,11 @@ methods:
 """
 
     with pytest.raises(ValidationError, match="unknown CEL root"):
-        FlowDefinition.from_yaml(yaml_str)
+        FlowDefinition.from_declaration(contents=yaml_str)
 
 
 def test_tool_action_requires_module_qualname_ref():
-    definition = FlowDefinition.from_dict(
+    definition = FlowDefinition.from_declaration(contents=
         {
             "schema": "crewai.flow/v1",
             "name": "ToolFlow",
@@ -2072,7 +2279,7 @@ def test_tool_action_requires_module_qualname_ref():
     )
 
     with pytest.raises(ValueError, match="expected 'module:qualname'"):
-        Flow.from_definition(definition)
+        Flow.from_declaration(contents=definition)
 
 
 def test_pydantic_state_from_ref_parity():
@@ -2084,14 +2291,16 @@ def test_pydantic_state_from_ref_parity():
 
 
 def test_pydantic_state_default_overlay():
-    flow = Flow.from_definition(FlowDefinition.from_yaml(PYDANTIC_STATE_OVERLAY_YAML))
+    flow = Flow.from_declaration(contents=
+        FlowDefinition.from_declaration(contents=PYDANTIC_STATE_OVERLAY_YAML)
+    )
     result = flow.kickoff()
     assert result == "count=6"
     assert flow.state.count == 6
 
 
 def test_json_schema_state():
-    flow = Flow.from_definition(FlowDefinition.from_yaml(JSON_SCHEMA_STATE_YAML))
+    flow = Flow.from_declaration(contents=JSON_SCHEMA_STATE_YAML)
     result = flow.kickoff()
     assert result == "count=1"
     assert flow.state.count == 1
@@ -2100,14 +2309,26 @@ def test_json_schema_state():
 
 
 def test_json_schema_state_validates_inputs():
-    flow = Flow.from_definition(FlowDefinition.from_yaml(JSON_SCHEMA_STATE_YAML))
+    flow = Flow.from_declaration(contents=JSON_SCHEMA_STATE_YAML)
     with pytest.raises(ValueError, match="Invalid inputs"):
         flow.kickoff(inputs={"count": "not-a-number"})
 
 
+def test_json_schema_state_required_fields_can_come_from_kickoff_inputs():
+    flow = Flow.from_declaration(contents=
+        FlowDefinition.from_declaration(contents=JSON_SCHEMA_REQUIRED_INPUT_STATE_YAML)
+    )
+
+    result = flow.kickoff(inputs={"lead_name": "Ada Lovelace"})
+
+    assert result == "Ada Lovelace"
+    assert flow.state.lead_name == "Ada Lovelace"
+    assert flow.state.id
+
+
 def test_pydantic_state_falls_back_to_json_schema_when_ref_unimportable():
-    flow = Flow.from_definition(
-        FlowDefinition.from_yaml(PYDANTIC_REF_WITH_SCHEMA_FALLBACK_YAML)
+    flow = Flow.from_declaration(contents=
+        FlowDefinition.from_declaration(contents=PYDANTIC_REF_WITH_SCHEMA_FALLBACK_YAML)
     )
     result = flow.kickoff()
     assert result == "count=1"
@@ -2116,7 +2337,9 @@ def test_pydantic_state_falls_back_to_json_schema_when_ref_unimportable():
 
 def test_pydantic_state_without_ref_or_schema_falls_back_to_dict(caplog):
     with caplog.at_level("ERROR"):
-        flow = Flow.from_definition(FlowDefinition.from_yaml(UNRESOLVABLE_STATE_YAML))
+        flow = Flow.from_declaration(contents=
+            FlowDefinition.from_declaration(contents=UNRESOLVABLE_STATE_YAML)
+        )
     assert "falling back to dict state" in caplog.text
 
     result = flow.kickoff()
@@ -2126,15 +2349,15 @@ def test_pydantic_state_without_ref_or_schema_falls_back_to_dict(caplog):
 
 
 def test_dict_state_is_a_copy_of_default_plus_id():
-    definition = FlowDefinition.from_yaml(DICT_STATE_YAML)
+    definition = FlowDefinition.from_declaration(contents=DICT_STATE_YAML)
 
-    flow = Flow.from_definition(definition)
+    flow = Flow.from_declaration(contents=definition)
     assert flow.state["count"] == 5
     assert flow.state["id"]
     flow.kickoff()
     assert flow.state["begin_ran"] is True
 
-    second = Flow.from_definition(definition)
+    second = Flow.from_declaration(contents=definition)
     assert second.state["count"] == 5
     assert "begin_ran" not in second.state
     assert second.state["id"] != flow.state["id"]
@@ -2143,7 +2366,7 @@ def test_dict_state_is_a_copy_of_default_plus_id():
 
 def test_unknown_state_type_falls_back_to_dict(caplog):
     with caplog.at_level("WARNING"):
-        flow = Flow.from_definition(FlowDefinition.from_yaml(UNKNOWN_STATE_YAML))
+        flow = Flow.from_declaration(contents=UNKNOWN_STATE_YAML)
     assert "falling back to dict state" in caplog.text
 
     result = flow.kickoff()
@@ -2216,7 +2439,7 @@ def _run_capturing_flow_lifecycle(yaml_str, event_types):
             def capture(source, event):
                 events.append(event)
 
-        flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+        flow = Flow.from_declaration(contents=yaml_str)
         result = flow.kickoff()
     return flow, result, events
 
@@ -2230,7 +2453,7 @@ _LIFECYCLE_EVENTS = [
 ]
 
 
-def test_config_suppress_flow_events_from_yaml():
+def test_config_suppress_flow_events_from_declaration():
     twin_events = []
     with crewai_event_bus.scoped_handlers():
         for event_type in _LIFECYCLE_EVENTS:
@@ -2253,14 +2476,14 @@ def test_config_suppress_flow_events_from_yaml():
     )
 
 
-def test_config_max_method_calls_from_yaml():
-    flow = Flow.from_definition(FlowDefinition.from_yaml(CAPPED_LOOP_YAML))
+def test_config_max_method_calls_from_declaration():
+    flow = Flow.from_declaration(contents=CAPPED_LOOP_YAML)
     with pytest.raises(RecursionError, match="has been called 2 times"):
         flow.kickoff()
 
 
-def test_config_stream_from_yaml():
-    flow = Flow.from_definition(FlowDefinition.from_yaml(STREAMING_CHAIN_YAML))
+def test_config_stream_from_declaration():
+    flow = Flow.from_declaration(contents=STREAMING_CHAIN_YAML)
     streaming = flow.kickoff()
     assert isinstance(streaming, FlowStreamingOutput)
     for _ in streaming:
@@ -2269,7 +2492,7 @@ def test_config_stream_from_yaml():
     assert flow.stream is True
 
 
-def test_config_defer_trace_finalization_from_yaml():
+def test_config_defer_trace_finalization_from_declaration():
     _, _, baseline_events = _run_capturing_flow_lifecycle(
         CHAIN_YAML, [FlowFinishedEvent]
     )
@@ -2283,7 +2506,7 @@ def test_config_defer_trace_finalization_from_yaml():
     assert deferred_events == []
 
 
-def test_config_checkpoint_from_yaml(tmp_path):
+def test_config_checkpoint_from_declaration(tmp_path):
     yaml_str = (
         CHAIN_YAML
         + f"""
@@ -2292,20 +2515,24 @@ config:
     location: {tmp_path}
 """
     )
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
     assert isinstance(flow.checkpoint, CheckpointConfig)
     assert flow.checkpoint.location == str(tmp_path)
 
 
-def test_config_input_provider_from_yaml():
-    flow = Flow.from_definition(FlowDefinition.from_yaml(INPUT_PROVIDER_CHAIN_YAML))
+def test_config_input_provider_from_declaration():
+    flow = Flow.from_declaration(contents=
+        FlowDefinition.from_declaration(contents=INPUT_PROVIDER_CHAIN_YAML)
+    )
     assert isinstance(flow.input_provider, StubInputProvider)
 
 
-def test_round_trip_config_equivalence():
+def test_definition_config_equivalence():
     class_flow = ConfiguredFlow()
-    definition = FlowDefinition.from_yaml(ConfiguredFlow.flow_definition().to_yaml())
-    definition_flow = Flow.from_definition(definition)
+    definition = FlowDefinition.from_declaration(
+        contents=ConfiguredFlow.flow_definition()
+    )
+    definition_flow = Flow.from_declaration(contents=definition)
 
     assert definition.config.suppress_flow_events is True
     assert definition.config.max_method_calls == 5
@@ -2322,7 +2549,7 @@ def test_round_trip_config_equivalence():
 
 def test_unknown_schema_rejected():
     with pytest.raises(ValidationError, match="schema"):
-        FlowDefinition.from_dict(
+        FlowDefinition.from_declaration(contents=
             {
                 "schema": "crewai.flow/v2",
                 "name": "FutureSchema",
@@ -2474,9 +2701,9 @@ class MethodPersistedFlow(Flow):
         return "two"
 
 
-def test_flow_level_persist_from_yaml_saves_once_per_method():
+def test_flow_level_persist_from_declaration_saves_once_per_method():
     yaml_str = _flow_level_persist_yaml("yaml-flow-level")
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
     result = flow.kickoff()
 
     assert result == "two"
@@ -2486,9 +2713,9 @@ def test_flow_level_persist_from_yaml_saves_once_per_method():
     assert final_save["id"] == flow.state["id"]
 
 
-def test_method_level_persist_from_yaml_saves_only_that_method():
+def test_method_level_persist_from_declaration_saves_only_that_method():
     yaml_str = _method_level_persist_yaml("yaml-method-level")
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
     flow.kickoff()
 
     assert _saved_methods("yaml-method-level") == ["first"]
@@ -2517,20 +2744,20 @@ methods:
     persist:
       enabled: false
 """
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
     flow.kickoff()
 
     assert _saved_methods("yaml-opt-out") == ["first"]
 
 
-def test_persist_restore_by_id_from_yaml():
+def test_persist_restore_by_id_from_declaration():
     yaml_str = _flow_level_persist_yaml("yaml-restore")
 
-    flow1 = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow1 = Flow.from_declaration(contents=yaml_str)
     flow1.kickoff()
     assert flow1.state["count"] == 2
 
-    flow2 = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow2 = Flow.from_declaration(contents=yaml_str)
     flow2.kickoff(inputs={"id": flow1.state["id"]})
     assert flow2.state["count"] == 4
 
@@ -2549,17 +2776,19 @@ def test_method_level_persist_decorator_saves_only_that_method():
     assert _saved_methods("method-decorator")[before:] == ["first"]
 
 
-def test_round_trip_persist_equivalence():
-    definition = FlowDefinition.from_yaml(ClassPersistedFlow.flow_definition().to_yaml())
+def test_definition_persist_equivalence():
+    definition = FlowDefinition.from_declaration(
+        contents=ClassPersistedFlow.flow_definition()
+    )
 
     before = len(DefinitionStoreBackend.saves["class-decorator"])
-    flow = Flow.from_definition(definition)
+    flow = Flow.from_declaration(contents=definition)
     flow.kickoff()
 
     assert _saved_methods("class-decorator")[before:] == ["first", "second"]
 
 
-def test_method_persist_backend_overrides_flow_level_backend_from_yaml():
+def test_method_persist_backend_overrides_flow_level_backend_from_declaration():
     yaml_str = f"""
 schema: crewai.flow/v1
 name: PersistedFlow
@@ -2583,7 +2812,7 @@ methods:
         persistence_type: DefinitionStoreBackend
         store: yaml-mixed-method
 """
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
     flow.kickoff()
 
     assert _saved_methods("yaml-mixed-flow") == ["first"]
@@ -2731,8 +2960,8 @@ methods:
 """
 
 
-def test_human_feedback_from_yaml_default_outcome_routes():
-    flow = Flow.from_definition(FlowDefinition.from_yaml(REVIEW_YAML))
+def test_human_feedback_from_declaration_default_outcome_routes():
+    flow = Flow.from_declaration(contents=REVIEW_YAML)
 
     with patch.object(flow, "_request_human_feedback", return_value="") as request:
         result = flow.kickoff()
@@ -2743,8 +2972,8 @@ def test_human_feedback_from_yaml_default_outcome_routes():
     assert flow.last_human_feedback.output == "draft-content"
 
 
-def test_human_feedback_from_yaml_collapses_and_routes():
-    flow = Flow.from_definition(FlowDefinition.from_yaml(REVIEW_YAML))
+def test_human_feedback_from_declaration_collapses_and_routes():
+    flow = Flow.from_declaration(contents=REVIEW_YAML)
 
     with (
         patch.object(flow, "_request_human_feedback", return_value="ship it"),
@@ -2756,13 +2985,13 @@ def test_human_feedback_from_yaml_collapses_and_routes():
     assert [r.outcome for r in flow.human_feedback_history] == ["approved"]
 
 
-def test_round_trip_human_feedback_equivalence():
+def test_definition_human_feedback_equivalence():
     class_flow = ReviewFlow()
     with patch.object(class_flow, "_request_human_feedback", return_value=""):
         class_result = class_flow.kickoff()
 
-    definition = FlowDefinition.from_yaml(ReviewFlow.flow_definition().to_yaml())
-    twin = Flow.from_definition(definition)
+    definition = FlowDefinition.from_declaration(contents=ReviewFlow.flow_definition())
+    twin = Flow.from_declaration(contents=definition)
     with patch.object(twin, "_request_human_feedback", return_value=""):
         twin_result = twin.kickoff()
 
@@ -2774,10 +3003,10 @@ def test_round_trip_human_feedback_equivalence():
     )
 
 
-def test_human_feedback_pending_and_resume_from_yaml():
-    definition = FlowDefinition.from_yaml(PENDING_REVIEW_YAML)
+def test_human_feedback_pending_and_resume_from_declaration():
+    definition = FlowDefinition.from_declaration(contents=PENDING_REVIEW_YAML)
 
-    flow = Flow.from_definition(definition)
+    flow = Flow.from_declaration(contents=definition)
     pending = flow.kickoff()
 
     assert isinstance(pending, HumanFeedbackPending)
@@ -2796,7 +3025,7 @@ def test_human_feedback_pending_and_resume_from_yaml():
     assert flow_id not in DefinitionStoreBackend.pending
 
 
-def test_flow_config_provider_fallback_from_yaml():
+def test_flow_config_provider_fallback_from_declaration():
     yaml_str = f"""
 schema: crewai.flow/v1
 name: ConfigProviderFlow
@@ -2822,7 +3051,7 @@ methods:
             return "from-config"
 
     provider = RecordingProvider()
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
 
     previous = flow_config.hitl_provider
     flow_config.hitl_provider = provider
@@ -2925,7 +3154,7 @@ methods:
       message: "Review:"
       provider: {__name__}:_NeedsArgsProvider
 """
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
 
     with pytest.raises(
         ValueError, match="cannot instantiate human_feedback.provider ref"
@@ -2946,7 +3175,7 @@ methods:
       message: "Review:"
       provider: missing_module_xyz:Provider
 """
-    flow = Flow.from_definition(FlowDefinition.from_yaml(yaml_str))
+    flow = Flow.from_declaration(contents=yaml_str)
 
     with pytest.raises(
         ValueError, match="unresolvable human_feedback.provider ref"
@@ -2958,8 +3187,8 @@ def _checkpoint_chain_flow(tmp_path):
     from crewai.state.provider.json_provider import JsonProvider
     from crewai.state.runtime import RuntimeState
 
-    definition = FlowDefinition.from_yaml(CHAIN_YAML)
-    flow = Flow.from_definition(definition)
+    definition = FlowDefinition.from_declaration(contents=CHAIN_YAML)
+    flow = Flow.from_declaration(contents=definition)
     result = flow.kickoff()
     assert result == "confirmed:True"
 
@@ -2998,7 +3227,7 @@ state:
 methods: {}
 """
     with pytest.raises(ValidationError, match="default"):
-        FlowDefinition.from_yaml(yaml_str)
+        FlowDefinition.from_declaration(contents=yaml_str)
 
 
 def test_definition_method_missing_from_class_fails_loudly():

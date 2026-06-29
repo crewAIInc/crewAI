@@ -1,6 +1,9 @@
 """Tests for TokenManager with atomic file operations."""
 
 import json
+import os
+import stat
+import sys
 import tempfile
 import unittest
 from datetime import datetime, timedelta
@@ -283,6 +286,51 @@ class TestAtomicFileOperations(unittest.TestCase):
         tm = TokenManager()
 
         tm._delete_secure_file("nonexistent.txt")
+
+
+class TestSecureStoragePathPermissions(unittest.TestCase):
+    """Test that the credential directory is created with restrictive permissions."""
+
+    @unittest.skipIf(sys.platform == "win32", "POSIX permission semantics")
+    def test_storage_path_is_owner_only(self) -> None:
+        """The credential directory must be mode 0o700 even under a permissive umask."""
+        with tempfile.TemporaryDirectory() as base:
+            old_umask = os.umask(0o022)
+            try:
+                with (
+                    patch("crewai_core.token_manager.sys.platform", "linux"),
+                    patch(
+                        "crewai_core.token_manager.os.path.expanduser",
+                        return_value=base,
+                    ),
+                ):
+                    storage_path = TokenManager._get_secure_storage_path()
+            finally:
+                os.umask(old_umask)
+
+            self.assertTrue(storage_path.is_dir())
+            mode = stat.S_IMODE(storage_path.stat().st_mode)
+            self.assertEqual(mode, 0o700, f"expected 0o700, got {oct(mode)}")
+
+    @unittest.skipIf(sys.platform == "win32", "POSIX permission semantics")
+    def test_existing_loose_dir_is_tightened(self) -> None:
+        """A pre-existing world-traversable directory is corrected to 0o700."""
+        with tempfile.TemporaryDirectory() as base:
+            loose = Path(base) / "crewai" / "credentials"
+            loose.mkdir(parents=True)
+            loose.chmod(0o755)
+
+            with (
+                patch("crewai_core.token_manager.sys.platform", "linux"),
+                patch(
+                    "crewai_core.token_manager.os.path.expanduser",
+                    return_value=base,
+                ),
+            ):
+                storage_path = TokenManager._get_secure_storage_path()
+
+            mode = stat.S_IMODE(storage_path.stat().st_mode)
+            self.assertEqual(mode, 0o700, f"expected 0o700, got {oct(mode)}")
 
 
 if __name__ == "__main__":

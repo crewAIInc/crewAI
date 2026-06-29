@@ -40,13 +40,17 @@ from typing import Any
 
 from crewai.project.json_loader import (
     JSONProjectValidationError,
-    find_crew_json_file,
     find_json_project_file,
     validate_crew_project,
 )
+from crewai_core.project import (
+    ProjectDefinitionError,
+    configured_project_definition,
+    get_crewai_project_config,
+    get_crewai_project_type,
+    read_toml,
+)
 from rich.console import Console
-
-from crewai_cli.utils import parse_toml
 
 
 console = Console()
@@ -159,24 +163,16 @@ class DeployValidator:
 
     @property
     def _is_json_crew(self) -> bool:
-        """True for JSON crew projects, deferring to the declared type.
-
-        A flow project that also contains a crew.json(c) file validates as
-        the flow it declares in pyproject.toml, not as a JSON crew.
-        """
-        if find_crew_json_file(self.project_root) is None:
-            return False
+        """True for JSON crew projects with configured crew definitions."""
         pyproject_path = self.project_root / "pyproject.toml"
         if not pyproject_path.exists():
-            return True
+            return False
         try:
-            data = parse_toml(pyproject_path.read_text())
+            data = read_toml(pyproject_path)
         except Exception:
-            return True
-        declared_type: str | None = (
-            (data.get("tool") or {}).get("crewai", {}).get("type")
-        )
-        return declared_type != "flow"
+            return False
+        crewai_config = get_crewai_project_config(data)
+        return crewai_config.get("type") == "crew" and "definition" in crewai_config
 
     def run(self) -> list[ValidationResult]:
         """Run all checks. Later checks are skipped when earlier ones make
@@ -208,12 +204,38 @@ class DeployValidator:
 
     def _run_json_checks(self) -> list[ValidationResult]:
         """Validation suite for JSON-defined crew projects."""
-        crew_path = find_crew_json_file(self.project_root)
+        self._check_pyproject()
+        self._check_lockfile()
+
+        try:
+            crew_path = configured_project_definition(
+                "crew",
+                pyproject_data=self._pyproject,
+                project_root=self.project_root,
+            )
+        except ProjectDefinitionError as exc:
+            self._add(
+                Severity.ERROR,
+                "invalid_crew_definition",
+                "[tool.crewai] definition is invalid",
+                detail=str(exc),
+                hint=(
+                    "Set `[tool.crewai] definition` to a project-local JSON "
+                    "or JSONC crew file."
+                ),
+            )
+            return self.results
+
         if crew_path is None:
             return self.results
 
+        agents_dir = crew_path.parent / "agents"
+        agents_dir_ok = self._check_json_agents_dir(agents_dir)
+
+        project = None
         try:
-            project = validate_crew_project(crew_path, self.project_root / "agents")
+            if agents_dir_ok:
+                project = validate_crew_project(crew_path, agents_dir)
         except JSONProjectValidationError as e:
             self._add(
                 Severity.ERROR,
@@ -232,14 +254,26 @@ class DeployValidator:
             )
             return self.results
 
-        agents_dir = self.project_root / "agents"
-
-        self._check_pyproject()
-        self._check_lockfile()
-        self._check_env_vars_json(crew_path, agents_dir, project.agent_names)
+        if project is not None:
+            self._check_env_vars_json(crew_path, agents_dir, project.agent_names)
         self._check_version_vs_lockfile()
 
         return self.results
+
+    def _check_json_agents_dir(self, agents_dir: Path) -> bool:
+        if agents_dir.is_dir():
+            return True
+        self._add(
+            Severity.ERROR,
+            "missing_agents_dir",
+            "Cannot find agents/ directory",
+            detail=(
+                "JSON crew projects load agent definitions from "
+                f"{agents_dir.relative_to(self.project_root)}/*.jsonc or *.json."
+            ),
+            hint="Create agents/ and add one JSON or JSONC file per agent.",
+        )
+        return False
 
     def _check_env_vars_json(
         self, crew_path: Path, agents_dir: Path, agent_names: list[str]
@@ -326,7 +360,7 @@ class DeployValidator:
             return False
 
         try:
-            self._pyproject = parse_toml(pyproject_path.read_text())
+            self._pyproject = read_toml(pyproject_path)
         except Exception as e:
             self._add(
                 Severity.ERROR,
@@ -354,9 +388,7 @@ class DeployValidator:
 
         self._project_name = name
         self._package_name = normalize_package_name(name)
-        self._is_flow = (self._pyproject.get("tool") or {}).get("crewai", {}).get(
-            "type"
-        ) == "flow"
+        self._is_flow = get_crewai_project_type(self._pyproject) == "flow"
         return True
 
     def _check_lockfile(self) -> None:

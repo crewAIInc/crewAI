@@ -1,7 +1,7 @@
-"""Flow Structure: the serializable, language-agnostic Flow contract.
+"""Flow Definition: the serializable, declarative Flow contract.
 
-Defines :class:`FlowDefinition` and its sub-models — a static, textual
-(JSON/YAML) representation of a Flow: its methods, trigger conditions,
+Defines :class:`FlowDefinition` and its sub-models — a static declarative
+representation of a Flow: its methods, trigger conditions,
 state, and configuration. It is independent of the Python authoring
 layer that may have produced it and of the engine that runs it (see
 ``runtime``).
@@ -9,8 +9,8 @@ layer that may have produced it and of the engine that runs it (see
 
 from __future__ import annotations
 
-import json
 import logging
+from pathlib import Path
 import re
 from typing import Annotated, Any, Literal, TypeAlias, cast
 
@@ -18,6 +18,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    PrivateAttr,
     field_serializer,
     model_validator,
 )
@@ -233,7 +234,7 @@ class FlowPersistenceDefinition(BaseModel):
 
     ``persistence`` may hold a live backend when the definition is built from
     a decorated class — the engine then persists through the exact instance
-    the user configured; the JSON/YAML projection degrades it to its
+    the user configured; the declarative projection degrades it to its
     serialized config.
     """
 
@@ -273,7 +274,7 @@ class FlowHumanFeedbackDefinition(BaseModel):
     """Static human feedback configuration.
 
     ``llm`` and ``provider`` may hold live Python objects when the definition
-    is built from a decorated class; the JSON/YAML projection degrades them to
+    is built from a decorated class; the declarative projection degrades them to
     a serialized config (``llm``) or a ``module:qualname`` ref (``provider``).
     """
 
@@ -406,10 +407,19 @@ class FlowCrewActionDefinition(BaseModel):
     )
 
     call: Literal["crew"] = Field(
-        description="Action discriminator. Use crew to run an inline Crew definition.",
+        description=(
+            "Action discriminator. Use crew to run an inline or referenced Crew "
+            "definition."
+        ),
         examples=["crew"],
     )
-    with_: CrewDefinition = Field(
+    from_declaration: str | None = Field(
+        default=None,
+        description="Path to a JSON/JSONC Crew declaration file or folder.",
+        examples=["crews/research_crew"],
+    )
+    with_: CrewDefinition | None = Field(
+        default=None,
         alias="with",
         description="Inline Crew definition to load and execute for this action.",
         examples=[
@@ -430,10 +440,26 @@ class FlowCrewActionDefinition(BaseModel):
                         "agent": "researcher",
                     }
                 ],
-                "inputs": {"topic": "${state.topic}"},
             }
         ],
     )
+    inputs: dict[str, ExpressionData] | None = Field(
+        default=None,
+        description=(
+            "Input overrides passed to the Crew. String values are evaluated as CEL "
+            "only when the trimmed value starts with ${ and ends with }; all other "
+            "values are literal."
+        ),
+        examples=[{"topic": "${state.topic}"}],
+    )
+
+    @model_validator(mode="after")
+    def _validate_crew_source(self) -> FlowCrewActionDefinition:
+        if bool(self.from_declaration) == (self.with_ is not None):
+            raise ValueError(
+                "crew action requires exactly one of from_declaration or with"
+            )
+        return self
 
 
 class FlowAgentActionDefinition(BaseModel):
@@ -684,10 +710,12 @@ class FlowDefinition(BaseModel):
         arbitrary_types_allowed=True,
     )
 
+    _source_path: Path | None = PrivateAttr(default=None)
+
     schema_: Literal["crewai.flow/v1"] = Field(
         default="crewai.flow/v1",
         alias="schema",
-        description="Flow Definition schema identifier and version.",
+        description="Declarative Flow schema identifier and version.",
         examples=["crewai.flow/v1"],
     )
     name: str = Field(
@@ -748,46 +776,64 @@ class FlowDefinition(BaseModel):
         return self
 
     def to_dict(self, *, exclude_none: bool = True) -> dict[str, Any]:
-        """Serialize the definition to a JSON/YAML-ready dictionary."""
+        """Serialize the definition to a declaration-ready dictionary."""
         return self.model_dump(by_alias=True, exclude_none=exclude_none, mode="json")
 
-    def to_json(self, *, indent: int | None = 2, exclude_none: bool = True) -> str:
-        """Serialize the definition to JSON."""
-        data = self.to_dict(exclude_none=exclude_none)
-        return json.dumps(data, indent=indent)
+    @property
+    def source_path(self) -> Path | None:
+        """Original definition file path, when loaded from a file."""
+        return self._source_path
 
-    def to_yaml(self, *, exclude_none: bool = True) -> str:
-        """Serialize the definition to YAML."""
-        return yaml.safe_dump(
-            self.to_dict(exclude_none=exclude_none),
-            sort_keys=False,
-            allow_unicode=True,
-        )
+    @property
+    def source_dir(self) -> Path | None:
+        """Directory used to resolve relative paths in the definition."""
+        if self._source_path is None:
+            return None
+        return self._source_path.parent
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> FlowDefinition:
-        """Load a definition from a dictionary."""
+    def from_declaration(
+        cls,
+        *,
+        contents: FlowDefinition | str | dict[str, Any] | None = None,
+        path: Path | str | None = None,
+    ) -> FlowDefinition:
+        """Load a declarative flow from contents or a file path."""
+        if isinstance(contents, cls):
+            return contents
+
+        source_path: Path | None = None
+        if contents is None:
+            if path is None:
+                raise ValueError("Provide contents or path")
+            source_path = Path(path)
+            contents = source_path.expanduser().read_text(encoding="utf-8")
+
+        if isinstance(contents, dict):
+            return cls._load_mapping(contents)
+
+        if not isinstance(contents, str):
+            raise TypeError("Flow declaration contents must be a string or dictionary")
+
+        if not contents.strip():
+            if source_path is not None:
+                raise ValueError(f"Flow declaration file is empty: {source_path}")
+            raise ValueError("Flow declaration contents are empty")
+
+        loaded = yaml.safe_load(contents)
+        if not isinstance(loaded, dict):
+            raise ValueError("Flow declaration must contain a mapping")
+        return cls._load_mapping(loaded, source_path=source_path)
+
+    @classmethod
+    def _load_mapping(
+        cls, data: dict[str, Any], *, source_path: Path | None = None
+    ) -> FlowDefinition:
         definition = cls.model_validate(data)
+        if source_path is not None:
+            definition._source_path = source_path.expanduser().resolve()
         log_flow_definition_issues(definition)
         return definition
-
-    @classmethod
-    def from_json(cls, data: str) -> FlowDefinition:
-        """Load a definition from JSON."""
-        return cls.from_dict(json.loads(data))
-
-    @classmethod
-    def from_yaml(cls, data: str) -> FlowDefinition:
-        """Load a definition from YAML."""
-        loaded = yaml.safe_load(data) or {}
-        if not isinstance(loaded, dict):
-            raise ValueError("Flow definition YAML must contain a mapping")
-        return cls.from_dict(loaded)
-
-    @classmethod
-    def json_schema(cls) -> dict[str, Any]:
-        """Return the JSON Schema for the Flow Definition contract."""
-        return cls.model_json_schema(by_alias=True)
 
 
 def _validate_step_name(name: str, *, field: str) -> None:
@@ -826,10 +872,16 @@ def _validate_action_cel(
         return
 
     if isinstance(action, FlowCrewActionDefinition):
-        Expression(cast(ExpressionData, action.with_.inputs)).validate_template(
-            allowed_roots=allowed_roots,
-            source=f"{path}.with.inputs",
-        )
+        if action.with_ is not None:
+            Expression(cast(ExpressionData, action.with_.inputs)).validate_template(
+                allowed_roots=allowed_roots,
+                source=f"{path}.with.inputs",
+            )
+        if action.inputs is not None:
+            Expression(cast(ExpressionData, action.inputs)).validate_template(
+                allowed_roots=allowed_roots,
+                source=f"{path}.inputs",
+            )
         return
 
     if isinstance(action, FlowAgentActionDefinition):
@@ -870,14 +922,6 @@ def _validate_action_cel(
 def log_flow_definition_issues(definition: FlowDefinition) -> None:
     for method_name, method in definition.methods.items():
         path = f"methods.{method_name}"
-        if method.router and not method.is_start and method.listen is None:
-            _log_flow_definition_issue(
-                definition.name,
-                code="router_without_trigger",
-                severity="error",
-                path=path,
-                message="router: true requires either start or listen",
-            )
         if method.emit and not method.router:
             _log_flow_definition_issue(
                 definition.name,

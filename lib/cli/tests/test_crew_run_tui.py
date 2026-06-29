@@ -1,5 +1,7 @@
 from datetime import datetime
 import time
+from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
@@ -124,6 +126,83 @@ def test_chain_deploy_does_not_login_for_deploy_exit(monkeypatch, capsys) -> Non
     assert create_calls == [{"confirm": True, "skip_validate": True}]
     assert login_calls == []
     assert "Deploy failed with exit code 42" in capsys.readouterr().out
+
+
+def test_view_traces_button_click_records_telemetry(monkeypatch) -> None:
+    app = CrewRunApp()
+    app._status = "completed"
+    app._trace_url = "https://app.crewai.com/traces/test"
+    app._telemetry = Mock()
+    opened_urls: list[str] = []
+
+    monkeypatch.setattr("webbrowser.open", lambda url: opened_urls.append(url))
+
+    app.on_button_pressed(SimpleNamespace(button=SimpleNamespace(id="btn-traces")))
+
+    app._telemetry.feature_usage_span.assert_called_once_with("cli_usage:view_traces")
+    assert opened_urls == ["https://app.crewai.com/traces/test"]
+
+
+def test_deploy_button_click_records_telemetry() -> None:
+    app = CrewRunApp()
+    app._status = "completed"
+    app._crew_result = object()
+    app._telemetry = Mock()
+    app._unsubscribe = lambda: None  # type: ignore[method-assign]
+    exits: list[object] = []
+    app.exit = lambda result: exits.append(result)  # type: ignore[method-assign]
+
+    app.on_button_pressed(SimpleNamespace(button=SimpleNamespace(id="btn-deploy")))
+
+    app._telemetry.feature_usage_span.assert_called_once_with("cli_usage:deploy")
+    assert app._want_deploy is True
+    assert exits == [app._crew_result]
+
+
+def test_conversation_turn_done_records_assistant_message() -> None:
+    class RawResult:
+        raw = "hello from the flow"
+
+    app = CrewRunApp(conversational=True)
+    app._conversation_turn_in_progress = True
+    app._enable_conversation_input = lambda: None  # type: ignore[method-assign]
+    app._tick = lambda: None  # type: ignore[method-assign]
+    app._scroll_to_result = lambda: None  # type: ignore[method-assign]
+
+    app._on_conversation_turn_done(RawResult())
+
+    assert app._conversation_messages == [("assistant", "hello from the flow")]
+    assert app._conversation_turn_in_progress is False
+    assert app._status == "chatting"
+    assert isinstance(app._crew_result, RawResult)
+
+
+@pytest.mark.asyncio
+async def test_conversation_input_submits_turn() -> None:
+    class FakeFlow:
+        defer_trace_finalization = False
+
+        def handle_turn(self, message: str) -> str:
+            return f"reply: {message}"
+
+        def finalize_session_traces(self) -> None:
+            pass
+
+    app = CrewRunApp(crew_name="Demo", conversational=True)
+    app._flow = FakeFlow()
+
+    async with app.run_test() as pilot:
+        await pilot.click("#conversation-input")
+        await pilot.press("h", "i", "enter")
+        for _ in range(50):
+            await pilot.pause(0.05)
+            if app._conversation_messages[-1:] == [("assistant", "reply: hi")]:
+                break
+
+    assert app._conversation_messages == [
+        ("user", "hi"),
+        ("assistant", "reply: hi"),
+    ]
 
 
 def test_plan_step_status_updates_only_the_explicit_step() -> None:
