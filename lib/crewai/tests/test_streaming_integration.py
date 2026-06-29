@@ -241,8 +241,9 @@ class TestStreamingFlowIntegration:
             pass
 
         assert streaming.is_completed is True
-        streaming.get_full_text()
-        assert len(streaming.chunks) >= 0
+        full_text = "".join(frame.content for frame in streaming.frames)
+        assert isinstance(full_text, str)
+        assert len(streaming.frames) > 0
 
         result = streaming.result
         assert result is not None
