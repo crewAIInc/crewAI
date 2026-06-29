@@ -1,0 +1,96 @@
+---
+title: Secrets Manager Overview
+description: Connect external secret stores to CrewAI Platform and reference managed secrets from environment variables
+sidebarTitle: Overview
+icon: "book-open"
+---
+
+## Overview
+
+The Secrets Manager feature lets your organization connect an external secret store — AWS Secrets Manager, Google Cloud Secret Manager, or Azure Key Vault — and reference those secrets directly from environment variables on your automations and crews. Instead of pasting plaintext values into the platform, you store one set of credentials per provider and refer to secrets by name.
+
+This gives you:
+
+- **Centralized storage** — manage secrets in your provider rather than editing CrewAI Platform configuration. CrewAI Platform keeps no plaintext copy of the secret value.
+- **Reduced exposure** — sensitive values never live in plaintext in your CrewAI Platform configuration.
+- **Cloud-native auditability** — your provider's audit log records every secret read.
+
+<Note>
+Secrets Manager (both the static-credentials and Workload Identity paths) requires CrewAI runtime version `1.14.5` or later in the automation pod image.
+</Note>
+
+## Two Paths: Static Credentials vs Workload Identity
+
+There are two ways to wire CrewAI Platform up to your cloud's secret store. **They differ significantly in rotation behavior**, so choose based on how often your secrets rotate and how strict your security posture is.
+
+| Aspect | Static Credentials | Workload Identity (OIDC Federation) |
+|---|---|---|
+| **Authentication** | Long-lived access keys / service account JSON stored in CrewAI Platform | Short-lived tokens minted per worker process; no static credentials stored anywhere |
+| **Rotation propagation** | Resolved at deploy time and **baked into the deployment's container image** — rotated values require a re-deploy | Resolved at **automation execution time** — rotated values propagate to the next kickoff with no re-deploy |
+| **Setup effort** | Lower — paste keys / upload service account JSON | Higher — register CrewAI Platform as an OIDC provider in your cloud, configure trust policies |
+| **Best for** | Getting started, infrequently-rotated secrets, single-account deployments | Production, frequently-rotated secrets, compliance-driven environments that prohibit long-lived credentials |
+
+<Note>
+**Both paths use the same UI flow** to reference secrets in environment variables (see [Using the Secrets Manager](/en/enterprise/features/secrets-manager/usage)). The difference is entirely in how the platform authenticates to your cloud and when it reads the secret value.
+</Note>
+
+### Choose your setup guide
+
+| Provider | Static Credentials | Workload Identity |
+|---|---|---|
+| AWS Secrets Manager | [AWS — static keys / AssumeRole](/en/enterprise/features/secrets-manager/aws) | [AWS — Workload Identity (OIDC)](/en/enterprise/features/secrets-manager/aws-workload-identity) |
+| Google Cloud Secret Manager | [GCP — service account key](/en/enterprise/features/secrets-manager/gcp) | [GCP — Workload Identity Federation](/en/enterprise/features/secrets-manager/gcp-workload-identity) |
+| Azure Key Vault | [Azure — client secret](/en/enterprise/features/secrets-manager/azure) | [Azure — Workload Identity Federation](/en/enterprise/features/secrets-manager/azure-workload-identity) |
+
+<Note>
+The Secrets Manager and Workload Identity UIs are currently labeled **Beta** in CrewAI Platform.
+</Note>
+
+## How It Fits Together
+
+Setting up Secrets Manager is a three-step flow that involves both your cloud provider and CrewAI Platform:
+
+1. **An admin configures a provider credential.** This is the cloud-side work — and the work differs depending on which path (static credentials or Workload Identity) you choose. Provider-specific guides cover this end to end.
+2. **An admin (or a permitted member) references a secret in an environment variable.** From the Environment Variables page, the user picks a provider credential and selects the secret name. See [Using the Secrets Manager](/en/enterprise/features/secrets-manager/usage#referencing-secrets-in-environment-variables).
+3. **The automation receives the resolved value at runtime.** When a crew or automation runs, CrewAI Platform fetches the secret from your provider and injects it as the environment variable's value. With Workload Identity, this fetch happens on every kickoff (rotation-aware). With static credentials, this fetch happens at deploy time and the value is baked into the deployment image.
+
+## Visibility & Scope
+
+<Note>
+WI-backed environment variables follow the same assignment model as plaintext environment variables: an automation resolves only the WI-backed variables explicitly assigned to it. Assign a WI-backed variable to an automation from the Environment Variables page on that automation; variables defined at the organization level or in a Studio project are not resolved at kickoff until you assign them.
+</Note>
+
+<Note>
+The secret-fetch stage runs on every kickoff but only does work when WI-backed environment variables are assigned to the deployment. For each assigned variable, the runtime resolves the value from your cloud provider on every crew, flow, training, test, or checkpoint-restore kickoff and writes it into the process environment. With nothing assigned, the stage is a no-op. Otherwise, cost is proportional to the number of assigned variables: a small added latency per kickoff plus one cloud-side audit-log entry per variable.
+</Note>
+
+<Warning>
+At the Workload Identity *configuration* level, scope is still organization-wide today. Every automation in the organization is bootstrapped against every Workload Identity configuration the org has registered, and you cannot today bind a specific Workload Identity configuration to a specific automation. Per-automation Workload Identity scoping is on the roadmap. Until then, only register Workload Identity configurations every automation in your organization is allowed to use.
+</Warning>
+
+## Permissions
+
+Two CrewAI Platform features control access to Secrets Manager:
+
+- `secret_providers` — controls who can view or manage provider credentials.
+- `environment_variables` — controls who can create and edit environment variables (including those that reference secrets).
+
+A third feature controls Workload Identity setup:
+
+- `workload_identity_configs` — controls who can view or manage Workload Identity configurations. Required only if you're using the Workload Identity path.
+
+Owners always have full access. Members do **not** receive access to `secret_providers` or `workload_identity_configs` by default and must be granted permission via a custom role. See [Permissions (RBAC)](/en/enterprise/features/secrets-manager/usage#permissions-rbac) for the full matrix and step-by-step instructions.
+
+## Next Steps
+
+Pick your path:
+
+- **Static credentials** (simpler, requires re-deploy on rotation):
+  - [Configure AWS Secrets Manager](/en/enterprise/features/secrets-manager/aws)
+  - [Configure Google Cloud Secret Manager](/en/enterprise/features/secrets-manager/gcp)
+  - [Configure Azure Key Vault](/en/enterprise/features/secrets-manager/azure)
+- **Workload Identity** (rotation-aware, no re-deploy):
+  - [Configure AWS Workload Identity](/en/enterprise/features/secrets-manager/aws-workload-identity)
+  - [Configure GCP Workload Identity Federation](/en/enterprise/features/secrets-manager/gcp-workload-identity)
+  - [Configure Azure Workload Identity Federation](/en/enterprise/features/secrets-manager/azure-workload-identity)
+- Then: [Use secrets in environment variables and manage permissions](/en/enterprise/features/secrets-manager/usage)

@@ -94,20 +94,24 @@ class TestToolCallHookContext:
         assert context.task == mock_task
         assert context.crew == mock_crew
         assert context.tool_result is None
+        assert context.raw_tool_result is None
 
     def test_context_with_result(self, mock_tool):
         """Test that context includes result when provided."""
         tool_input = {"arg1": "value1"}
         tool_result = "Test tool result"
+        raw_tool_result = {"value": 42}
 
         context = ToolCallHookContext(
             tool_name="test_tool",
             tool_input=tool_input,
             tool=mock_tool,
             tool_result=tool_result,
+            raw_tool_result=raw_tool_result,
         )
 
         assert context.tool_result == tool_result
+        assert context.raw_tool_result == raw_tool_result
 
     def test_tool_input_is_mutable_reference(self, mock_tool):
         """Test that modifying context.tool_input modifies the original dict."""

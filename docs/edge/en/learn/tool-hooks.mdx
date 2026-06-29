@@ -83,8 +83,11 @@ class ToolCallHookContext:
     agent: Agent | BaseAgent | None   # Agent executing the tool
     task: Task | None                 # Current task
     crew: Crew | None                 # Crew instance
-    tool_result: str | None           # Tool result (after hooks only)
+    tool_result: str | None           # Agent-facing result string (after hooks only)
+    raw_tool_result: Any | None       # Raw Python result (after hooks only)
 ```
+
+For typed tool outputs, `tool_result` is the string the agent sees. By default, this is JSON. If the tool uses custom formatting, it can be Markdown or another string. Use `raw_tool_result` when your hook needs the typed object or dictionary.
 
 ### Modifying Tool Inputs
 
