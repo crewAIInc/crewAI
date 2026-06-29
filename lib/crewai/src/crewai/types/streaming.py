@@ -160,9 +160,14 @@ class StreamSession(StreamSessionBase[T]):
         self, channels: Sequence[StreamChannel] | None = None
     ) -> Iterator[StreamFrame]:
         """Iterate over frames, optionally filtered by channel."""
+        selected = set(channels) if channels is not None else None
+        if self._exhausted:
+            for frame in self._frames:
+                if selected is None or frame.channel in selected:
+                    yield frame
+            return
         if self._sync_iterator is None:
             raise RuntimeError("Sync iterator not available")
-        selected = set(channels) if channels is not None else None
         try:
             for frame in self._sync_iterator:
                 self._frames.append(frame)
@@ -237,9 +242,14 @@ class AsyncStreamSession(StreamSessionBase[T]):
         self, channels: Sequence[StreamChannel] | None = None
     ) -> AsyncIterator[StreamFrame]:
         """Iterate over frames, optionally filtered by channel."""
+        selected = set(channels) if channels is not None else None
+        if self._exhausted:
+            for frame in self._frames:
+                if selected is None or frame.channel in selected:
+                    yield frame
+            return
         if self._async_iterator is None:
             raise RuntimeError("Async iterator not available")
-        selected = set(channels) if channels is not None else None
         try:
             async for frame in self._async_iterator:
                 self._frames.append(frame)
