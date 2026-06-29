@@ -95,7 +95,10 @@ if TYPE_CHECKING:
         ModelResponseStream,
         StreamingChoices as LiteLLMStreamingChoices,
     )
-    from litellm.utils import supports_response_schema
+    from litellm.utils import (
+        supports_reasoning as supports_reasoning_fn,
+        supports_response_schema,
+    )
 else:
     litellm = None
     Choices = None
@@ -109,6 +112,7 @@ else:
     Function = None
     ModelResponse = None
     supports_response_schema = None
+    supports_reasoning_fn = None
 
 
 def _ensure_litellm() -> bool:
@@ -117,7 +121,7 @@ def _ensure_litellm() -> bool:
     global litellm, Choices, LiteLLMDelta, Message, ModelResponseBase
     global ModelResponseStream, LiteLLMStreamingChoices, get_supported_openai_params
     global ChatCompletionDeltaToolCall, Function
-    global ModelResponse, supports_response_schema
+    global ModelResponse, supports_response_schema, supports_reasoning_fn
 
     if _litellm_loaded:
         return LITELLM_AVAILABLE
@@ -139,7 +143,10 @@ def _ensure_litellm() -> bool:
             ModelResponseStream as _ModelResponseStream,
             StreamingChoices as _LiteLLMStreamingChoices,
         )
-        from litellm.utils import supports_response_schema as _supports_response_schema
+        from litellm.utils import (
+            supports_reasoning as _supports_reasoning,
+            supports_response_schema as _supports_response_schema,
+        )
 
         litellm = _litellm
         Choices = _Choices  # type: ignore[misc]
@@ -153,6 +160,7 @@ def _ensure_litellm() -> bool:
         Function = _Function  # type: ignore[misc]
         ModelResponse = _ModelResponse  # type: ignore[misc]
         supports_response_schema = _supports_response_schema
+        supports_reasoning_fn = _supports_reasoning
 
         _litellm.suppress_debug_info = True
         LITELLM_AVAILABLE = True
@@ -2427,12 +2435,15 @@ class LLM(BaseLLM):
         Note: This validation only applies to the litellm fallback path.
         Native providers have their own validation.
         """
-        if not _ensure_litellm() or supports_response_schema is None:
+        if not _ensure_litellm():
             # When litellm is not available, skip validation
             # (this path should only be reached for litellm fallback models)
             return
 
         provider = self._get_custom_llm_provider()
+        # get_capabilities() carries its own static-allowlist fallback for the
+        # case where litellm introspection (e.g. supports_response_schema) is
+        # unavailable, so we let it run rather than bailing early here.
         caps = self.get_capabilities()
         if self.response_format is not None and not caps.supports_response_format:
             raise ValueError(
@@ -2526,6 +2537,13 @@ class LLM(BaseLLM):
 
         # --- reasoning ---
         supports_reasoning = provider in _PROVIDERS_WITH_REASONING
+        if _ensure_litellm() and supports_reasoning_fn is not None:
+            try:
+                supports_reasoning = supports_reasoning_fn(
+                    model=self.model, custom_llm_provider=provider
+                )
+            except Exception:
+                supports_reasoning = provider in _PROVIDERS_WITH_REASONING
 
         # --- streaming ---
         supports_streaming = True  # virtually all modern providers support streaming
