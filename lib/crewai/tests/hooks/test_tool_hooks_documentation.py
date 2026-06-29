@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 DOCS_ROOT = Path(__file__).parents[4] / "docs"
-TOOL_HOOKS_DOC = DOCS_ROOT / "en" / "learn" / "tool-hooks.mdx"
+TOOL_HOOKS_DOC = DOCS_ROOT / "edge" / "en" / "learn" / "tool-hooks.mdx"
 
 
 def test_tool_hooks_document_agent_threat_rules_integration_path() -> None:
