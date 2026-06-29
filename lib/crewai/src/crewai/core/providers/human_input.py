@@ -190,7 +190,9 @@ class SyncHumanInputProvider(HumanInputProvider):
         if context._is_training_mode():
             return self._handle_training_feedback(formatted_answer, feedback, context)
 
-        return self._handle_regular_feedback(formatted_answer, feedback, context)
+        return self._handle_regular_feedback(
+            formatted_answer, feedback, context, show_answer=not is_verbose
+        )
 
     async def handle_feedback_async(
         self,
@@ -220,7 +222,7 @@ class SyncHumanInputProvider(HumanInputProvider):
             )
 
         return await self._handle_regular_feedback_async(
-            formatted_answer, feedback, context
+            formatted_answer, feedback, context, show_answer=not is_verbose
         )
 
     @staticmethod
@@ -251,6 +253,7 @@ class SyncHumanInputProvider(HumanInputProvider):
         current_answer: AgentFinish,
         initial_feedback: str,
         context: ExecutorContext,
+        show_answer: bool = False,
     ) -> AgentFinish:
         """Process regular feedback with iteration loop.
 
@@ -258,6 +261,7 @@ class SyncHumanInputProvider(HumanInputProvider):
             current_answer: The agent's current answer.
             initial_feedback: Initial human feedback string.
             context: Executor context for callbacks.
+            show_answer: When True, display the updated answer before each prompt.
 
         Returns:
             Final answer after all feedback iterations.
@@ -271,7 +275,10 @@ class SyncHumanInputProvider(HumanInputProvider):
             else:
                 context.messages.append(context._format_feedback_message(feedback))
                 answer = context._invoke_loop()
-                feedback = self._prompt_input(context.crew)
+                feedback = self._prompt_input(
+                    context.crew,
+                    answer=answer if show_answer else None,
+                )
 
         return answer
 
@@ -303,6 +310,7 @@ class SyncHumanInputProvider(HumanInputProvider):
         current_answer: AgentFinish,
         initial_feedback: str,
         context: AsyncExecutorContext,
+        show_answer: bool = False,
     ) -> AgentFinish:
         """Process regular feedback with async iteration loop.
 
@@ -310,6 +318,7 @@ class SyncHumanInputProvider(HumanInputProvider):
             current_answer: The agent's current answer.
             initial_feedback: Initial human feedback string.
             context: Async executor context for callbacks.
+            show_answer: When True, display the updated answer before each prompt.
 
         Returns:
             Final answer after all feedback iterations.
@@ -323,7 +332,10 @@ class SyncHumanInputProvider(HumanInputProvider):
             else:
                 context.messages.append(context._format_feedback_message(feedback))
                 answer = await context._ainvoke_loop()
-                feedback = await self._prompt_input_async(context.crew)
+                feedback = await self._prompt_input_async(
+                    context.crew,
+                    answer=answer if show_answer else None,
+                )
 
         return answer
 
