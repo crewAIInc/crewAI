@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Annotated, Literal
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 import crewai.flow.dsl as flow_dsl
 import crewai.flow.flow_definition as flow_definition
@@ -37,22 +37,179 @@ def test_flow_public_exports_are_explicit():
     }
     assert set(flow_definition.__all__) == {
         "FlowActionDefinition",
+        "FlowAgentActionDefinition",
+        "FlowAtomicActionDefinition",
         "FlowCodeActionDefinition",
         "FlowConfigDefinition",
         "FlowConversationalDefinition",
         "FlowConversationalRouterDefinition",
+        "FlowCrewActionDefinition",
         "FlowDefinition",
         "FlowDefinitionCondition",
-        "FlowDefinitionDiagnostic",
+        "FlowDictStateDefinition",
+        "FlowEachActionDefinition",
+        "FlowEachStepDefinition",
         "FlowExpressionActionDefinition",
         "FlowHumanFeedbackDefinition",
+        "FlowJsonSchemaStateDefinition",
         "FlowMethodDefinition",
         "FlowPersistenceDefinition",
+        "FlowPydanticStateDefinition",
+        "FlowScriptActionDefinition",
         "FlowStateDefinition",
         "FlowToolActionDefinition",
+        "FlowUnknownStateDefinition",
     }
     assert "build_flow_structure" in flow_visualization.__all__
     assert "calculate_node_levels" not in flow_visualization.__all__
+
+
+def test_flow_definition_json_schema_carries_reference_descriptions():
+    schema = flow_definition.FlowDefinition.model_json_schema(by_alias=True)
+    defs = schema["$defs"]
+
+    assert schema["properties"]["schema"]["description"]
+    assert schema["properties"]["methods"]["description"]
+    assert "diagnostics" not in schema["properties"]
+
+    method_properties = defs["FlowMethodDefinition"]["properties"]
+    assert method_properties["do"]["description"] == "Action executed when this method runs."
+    assert "Trigger condition" in method_properties["listen"]["description"]
+
+    script_properties = defs["FlowScriptActionDefinition"]["properties"]
+    assert "trusted inline Python" in script_properties["call"]["description"]
+    assert "not interpolated" in script_properties["code"]["description"]
+    assert "not sandboxed" in script_properties["code"]["description"]
+
+    agent_properties = defs["FlowAgentActionDefinition"]["properties"]
+    assert "Inline Agent definition" in agent_properties["with"]["description"]
+    assert "run an inline Agent" in agent_properties["call"]["description"]
+
+    state_schema = next(
+        branch
+        for branch in schema["properties"]["state"]["anyOf"]
+        if "discriminator" in branch
+    )
+    assert state_schema["discriminator"]["propertyName"] == "type"
+    assert state_schema["discriminator"]["mapping"] == {
+        "dict": "#/$defs/FlowDictStateDefinition",
+        "json_schema": "#/$defs/FlowJsonSchemaStateDefinition",
+        "pydantic": "#/$defs/FlowPydanticStateDefinition",
+        "unknown": "#/$defs/FlowUnknownStateDefinition",
+    }
+
+    dict_state_properties = defs["FlowDictStateDefinition"]["properties"]
+    assert dict_state_properties["type"]["description"]
+    assert "ref" not in dict_state_properties
+
+    json_schema_state_properties = defs["FlowJsonSchemaStateDefinition"]["properties"]
+    assert json_schema_state_properties["json_schema"]["description"]
+    assert "json_schema" in defs["FlowJsonSchemaStateDefinition"]["required"]
+
+    pydantic_state_properties = defs["FlowPydanticStateDefinition"]["properties"]
+    assert "Fallback JSON Schema" in pydantic_state_properties["json_schema"][
+        "description"
+    ]
+
+    each_properties = defs["FlowEachActionDefinition"]["properties"]
+    assert "list to iterate" in each_properties["in"]["description"]
+    assert "Ordered steps" in each_properties["do"]["description"]
+
+    step_properties = defs["FlowEachStepDefinition"]["properties"]
+    assert "runs only if" in step_properties["if"]["description"]
+
+
+def test_flow_definition_json_schema_carries_field_examples_only():
+    schema = flow_definition.FlowDefinition.model_json_schema(by_alias=True)
+    defs = schema["$defs"]
+
+    for model_name in [
+        "FlowDefinition",
+        "FlowCodeActionDefinition",
+        "FlowToolActionDefinition",
+        "FlowAgentActionDefinition",
+        "FlowCrewActionDefinition",
+        "FlowExpressionActionDefinition",
+        "FlowScriptActionDefinition",
+        "FlowEachActionDefinition",
+        "FlowEachStepDefinition",
+        "FlowMethodDefinition",
+        "FlowDictStateDefinition",
+        "FlowJsonSchemaStateDefinition",
+        "FlowPydanticStateDefinition",
+        "FlowUnknownStateDefinition",
+        "FlowConfigDefinition",
+        "FlowPersistenceDefinition",
+        "FlowHumanFeedbackDefinition",
+    ]:
+        model_schema = schema if model_name == "FlowDefinition" else defs[model_name]
+        assert "examples" not in model_schema
+
+    assert schema["properties"]["name"]["examples"] == ["ResearchFlow"]
+    assert schema["properties"]["schema"]["examples"] == ["crewai.flow/v1"]
+    assert schema["properties"]["methods"]["examples"][0]["seed"]["do"] == {
+        "call": "expression",
+        "expr": "state.topic",
+    }
+
+    script_properties = defs["FlowScriptActionDefinition"]["properties"]
+    assert script_properties["call"]["examples"] == ["script"]
+    assert "input.strip()" in script_properties["code"]["examples"][0]
+    assert script_properties["language"]["examples"] == ["python"]
+
+    action_properties = defs["FlowCodeActionDefinition"]["properties"]
+    assert action_properties["ref"]["examples"] == [
+        "my_project.flows:normalize_topic"
+    ]
+    assert action_properties["with"]["examples"] == [{"topic": "${state.topic}"}]
+
+    agent_properties = defs["FlowAgentActionDefinition"]["properties"]
+    assert agent_properties["call"]["examples"] == ["agent"]
+    assert agent_properties["with"]["examples"][0]["input"] == "${state.question}"
+
+    each_properties = defs["FlowEachActionDefinition"]["properties"]
+    assert each_properties["in"]["examples"] == ["state.rows"]
+    assert each_properties["do"]["examples"][0][0]["name"] == "clean"
+    assert each_properties["do"]["examples"][0][0]["action"]["call"] == "script"
+    assert each_properties["do"]["examples"][0][1]["if"] == "outputs.clean != ''"
+
+    step_properties = defs["FlowEachStepDefinition"]["properties"]
+    assert step_properties["if"]["examples"] == ["item.kind == 'invoice'"]
+
+    method_properties = defs["FlowMethodDefinition"]["properties"]
+    assert method_properties["listen"]["examples"] == [
+        "seed",
+        {"or": ["approved", "revise"]},
+    ]
+    assert method_properties["emit"]["examples"] == [["approved", "revise"]]
+
+
+def test_flow_state_definition_uses_discriminated_branches():
+    definition = flow_definition.FlowDefinition.model_validate(
+        {
+            "name": "TypedStateFlow",
+            "state": {
+                "type": "json_schema",
+                "json_schema": {"type": "object"},
+            },
+        }
+    )
+
+    assert isinstance(
+        definition.state,
+        flow_definition.FlowJsonSchemaStateDefinition,
+    )
+
+    with pytest.raises(ValidationError, match="extra_forbidden"):
+        flow_definition.FlowDefinition.model_validate(
+            {
+                "name": "InvalidStateFlow",
+                "state": {
+                    "type": "dict",
+                    "ref": "my_project.flows:ResearchState",
+                },
+            }
+        )
 
 
 def test_condition_combinators_return_nested_runtime_tree():
@@ -198,7 +355,7 @@ def test_flow_definition_maps_dsl_to_static_contract():
     assert review.human_feedback.learn_strict is True
 
     assert definition.methods["audit"].listen == {"and": ["begin", "process"]}
-    assert definition.diagnostics == []
+    assert "diagnostics" not in definition.to_dict()
 
 
 def test_flow_definition_excludes_conversational_builtins_for_regular_flows():
@@ -280,7 +437,8 @@ def test_flow_definition_uses_collapsed_conversational_router_start():
     assert methods["route_conversation"].router is True
 
 
-def test_flow_definition_serializes_human_feedback_metadata():
+def test_flow_definition_degrades_human_feedback_metadata(caplog):
+    caplog.set_level(logging.WARNING, logger="crewai.flow.dsl._utils")
     marker = object()
 
     class MetadataFlow(Flow):
@@ -299,11 +457,11 @@ def test_flow_definition_serializes_human_feedback_metadata():
     assert review.human_feedback is not None
     assert review.human_feedback.metadata == {"ref": "builtins:dict"}
     assert any(
-        diagnostic.code == "non_serializable_value"
-        and diagnostic.path == "methods.review.human_feedback.metadata"
-        for diagnostic in definition.diagnostics
+        "methods.review.human_feedback.metadata" in record.message
+        and "not fully serializable" in record.message
+        for record in caplog.records
     )
-    definition.to_json()
+    definition.to_dict()
 
 
 def test_flow_definition_fragments_cover_start_listen_and_condition_sugar():
@@ -407,7 +565,55 @@ def test_flow_definition_classifies_start_router_from_human_feedback_emit():
     assert entry_point.emit is None
 
 
-def test_flow_definition_round_trips_json_and_yaml():
+def test_flow_definition_classifies_public_dsl_start_router():
+    class StartRouterFlow(Flow):
+        @start()
+        @router(emit=["continue", "stop"])
+        def entry_point(self):
+            return "continue"
+
+        @router(emit=["resume"])
+        @start()
+        def alternate_entry_point(self):
+            return "resume"
+
+    entry_point = StartRouterFlow.flow_definition().methods["entry_point"]
+    alternate_entry_point = StartRouterFlow.flow_definition().methods[
+        "alternate_entry_point"
+    ]
+
+    assert entry_point.is_start is True
+    assert entry_point.router is True
+    assert entry_point.listen is None
+    assert entry_point.emit == ["continue", "stop"]
+    assert alternate_entry_point.is_start is True
+    assert alternate_entry_point.router is True
+    assert alternate_entry_point.listen is None
+    assert alternate_entry_point.emit == ["resume"]
+
+
+def test_flow_definition_merges_stacked_listen_router():
+    class ChainedRouterFlow(Flow):
+        @start()
+        @router(emit=["approved", "not_approved"])
+        def first_router(self):
+            return "approved"
+
+        @listen("approved")
+        @router(emit=["second_approval", "not_approved"])
+        def second_router(self):
+            return "second_approval"
+
+    methods = ChainedRouterFlow.flow_definition().methods
+
+    assert methods["first_router"].is_start is True
+    assert methods["first_router"].listen is None
+    assert methods["second_router"].router is True
+    assert methods["second_router"].listen == "approved"
+    assert methods["second_router"].emit == ["second_approval", "not_approved"]
+
+
+def test_flow_definition_from_declaration_accepts_json_and_yaml_strings():
     class RoundTripFlow(Flow):
         @start()
         def begin(self):
@@ -421,15 +627,268 @@ def test_flow_definition_round_trips_json_and_yaml():
         def left(self):
             return "left"
 
-    definition = RoundTripFlow.flow_definition()
+    expected = RoundTripFlow.flow_definition()
+    declarations = [
+        """
+        {
+          "schema": "crewai.flow/v1",
+          "name": "RoundTripFlow",
+          "methods": {
+            "begin": {
+              "start": true,
+              "do": {
+                "call": "code",
+                "ref": "test_flow_definition:RoundTripFlow.begin"
+              }
+            },
+            "decide": {
+              "listen": "begin",
+              "router": true,
+              "do": {
+                "call": "code",
+                "ref": "test_flow_definition:RoundTripFlow.decide"
+              }
+            },
+            "left": {
+              "listen": "left",
+              "do": {
+                "call": "code",
+                "ref": "test_flow_definition:RoundTripFlow.left"
+              }
+            }
+          }
+        }
+        """,
+        """
+        schema: crewai.flow/v1
+        name: RoundTripFlow
+        methods:
+          begin:
+            start: true
+            do:
+              call: code
+              ref: test_flow_definition:RoundTripFlow.begin
+          decide:
+            listen: begin
+            router: true
+            do:
+              call: code
+              ref: test_flow_definition:RoundTripFlow.decide
+          left:
+            listen: left
+            do:
+              call: code
+              ref: test_flow_definition:RoundTripFlow.left
+        """,
+    ]
 
-    json_round_trip = flow_definition.FlowDefinition.from_json(definition.to_json())
-    yaml_round_trip = flow_definition.FlowDefinition.from_yaml(definition.to_yaml())
+    for declaration in declarations:
+        loaded = flow_definition.FlowDefinition.from_declaration(contents=declaration)
 
-    assert json_round_trip.to_dict() == definition.to_dict()
-    assert yaml_round_trip.to_dict() == definition.to_dict()
-    assert yaml_round_trip.methods["decide"].router is True
-    assert yaml_round_trip.methods["decide"].listen == "begin"
+        assert loaded.name == expected.name
+        assert loaded.methods["decide"].router is True
+        assert loaded.methods["decide"].listen == "begin"
+
+
+def test_flow_definition_from_declaration_accepts_contents():
+    data = {
+        "schema": "crewai.flow/v1",
+        "name": "DeclarationFlow",
+        "methods": {
+            "begin": {
+                "start": True,
+                "do": {
+                    "call": "expression",
+                    "expr": "'started'",
+                },
+            },
+        },
+    }
+    definition = flow_definition.FlowDefinition.from_declaration(contents=data)
+    contents = [
+        definition,
+        data,
+        """
+        {
+          "schema": "crewai.flow/v1",
+          "name": "DeclarationFlow",
+          "methods": {
+            "begin": {
+              "start": true,
+              "do": {
+                "call": "expression",
+                "expr": "'started'"
+              }
+            }
+          }
+        }
+        """,
+        """
+        schema: crewai.flow/v1
+        name: DeclarationFlow
+        methods:
+          begin:
+            start: true
+            do:
+              call: expression
+              expr: "'started'"
+        """,
+    ]
+
+    for content in contents:
+        loaded = flow_definition.FlowDefinition.from_declaration(contents=content)
+
+        assert loaded.to_dict() == definition.to_dict()
+
+def test_flow_definition_from_declaration_rejects_empty_file(tmp_path: Path):
+    declaration_path = tmp_path / "flow.crewai"
+    declaration_path.write_text(" \n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Flow declaration file is empty"):
+        flow_definition.FlowDefinition.from_declaration(path=declaration_path)
+
+
+@pytest.mark.parametrize("contents", ["[]", "false", "0", "null", "~"])
+def test_flow_definition_from_declaration_rejects_falsey_non_mapping_contents(
+    contents: str,
+):
+    with pytest.raises(ValueError, match="Flow declaration must contain a mapping"):
+        flow_definition.FlowDefinition.from_declaration(contents=contents)
+
+
+def test_flow_definition_from_declaration_accepts_paths(tmp_path: Path):
+    definition = flow_definition.FlowDefinition.from_declaration(contents=
+        {
+            "schema": "crewai.flow/v1",
+            "name": "DeclarationFlow",
+            "methods": {
+                "begin": {
+                    "start": True,
+                    "do": {
+                        "call": "expression",
+                        "expr": "'started'",
+                    },
+                },
+            },
+        }
+    )
+    declaration_path = tmp_path / "flow.crewai"
+    declaration_path.write_text(
+        """
+        schema: crewai.flow/v1
+        name: DeclarationFlow
+        methods:
+          begin:
+            start: true
+            do:
+              call: expression
+              expr: "'started'"
+        """,
+        encoding="utf-8",
+    )
+    path_inputs = [
+        declaration_path,
+        str(declaration_path),
+    ]
+
+    for path_input in path_inputs:
+        loaded = flow_definition.FlowDefinition.from_declaration(path=path_input)
+
+        assert loaded.name == definition.name
+        assert loaded.methods["begin"].is_start is True
+        assert loaded.methods["begin"].do.call == "expression"
+        assert loaded.source_path == declaration_path.resolve()
+
+
+def test_flow_definition_from_declaration_requires_input():
+    with pytest.raises(ValueError, match="Provide contents or path"):
+        flow_definition.FlowDefinition.from_declaration()
+
+
+def test_flow_definition_from_declaration_prefers_contents_over_path(
+    tmp_path: Path,
+):
+    data = {
+        "schema": "crewai.flow/v1",
+        "name": "ContentsFlow",
+        "methods": {
+            "begin": {
+                "start": True,
+                "do": {"call": "expression", "expr": "'started'"},
+            },
+        },
+    }
+    declaration_path = tmp_path / "missing.crewai"
+
+    loaded = flow_definition.FlowDefinition.from_declaration(
+        contents=data,
+        path=declaration_path,
+    )
+
+    assert loaded.name == "ContentsFlow"
+    assert loaded.source_path is None
+
+
+def test_each_action_loads_from_declaration():
+    definition = flow_definition.FlowDefinition.from_declaration(contents=
+        {
+            "schema": "crewai.flow/v1",
+            "name": "EachFlow",
+            "methods": {
+                "process_rows": {
+                    "description": "Process every loaded row.",
+                    "start": True,
+                    "do": {
+                        "call": "each",
+                        "in": "state.rows",
+                        "do": [
+                            {
+                                "name": "normalize",
+                                "action": {
+                                    "call": "tool",
+                                    "ref": "my_tools:NormalizeRowTool",
+                                    "with": {"row": "${ item }"},
+                                }
+                            },
+                            {
+                                "name": "save",
+                                "action": {
+                                    "call": "code",
+                                    "ref": "my_flow:save_row",
+                                    "with": {
+                                        "row": "${ item }",
+                                        "normalized": "${ outputs.normalize }",
+                                    },
+                                }
+                            },
+                        ],
+                    },
+                }
+            },
+        }
+    )
+
+    assert definition.methods["process_rows"].description == "Process every loaded row."
+    assert definition.methods["process_rows"].do.call == "each"
+
+
+def test_flow_definition_rejects_invalid_method_names():
+    with pytest.raises(ValueError, match="Flow method names must match"):
+        flow_definition.FlowDefinition.from_declaration(contents=
+            {
+                "schema": "crewai.flow/v1",
+                "name": "InvalidMethodNameFlow",
+                "methods": {
+                    "process-rows": {
+                        "start": True,
+                        "do": {
+                            "call": "expression",
+                            "expr": "'done'",
+                        },
+                    }
+                },
+            }
+        )
 
 
 def test_flow_definition_detects_persist_metadata():
@@ -473,7 +932,6 @@ def test_flow_definition_allows_dynamic_router_emit():
     definition = DynamicRouterFlow.flow_definition()
 
     assert definition.methods["decide"].emit is None
-    assert definition.diagnostics == []
 
 
 def test_flow_definition_infers_literal_router_emit():
@@ -626,16 +1084,15 @@ def test_flow_definition_accepts_explicit_router_events():
     assert definition.methods["decide"].emit == ["left", "right"]
 
 
-def test_flow_definition_preserves_diagnostics_loaded_from_contract():
-    definition = flow_definition.FlowDefinition.from_dict(
+def test_flow_definition_ignores_legacy_diagnostics_loaded_from_contract():
+    definition = flow_definition.FlowDefinition.from_declaration(contents=
         {
             "schema": "crewai.flow/v1",
             "name": "LoadedDiagnosticsFlow",
             "methods": {
-                "decision": {
-                    "do": {"ref": "loaded_flows:LoadedDiagnosticsFlow.decision"},
-                    "router": True,
-                    "emit": ["continue"],
+                "begin": {
+                    "do": {"ref": "loaded_flows:LoadedDiagnosticsFlow.begin"},
+                    "start": True,
                 }
             },
             "diagnostics": [
@@ -655,13 +1112,13 @@ def test_flow_definition_preserves_diagnostics_loaded_from_contract():
         }
     )
 
-    codes = [diagnostic.code for diagnostic in definition.diagnostics]
-    assert "serialized_warning" in codes
-    assert codes.count("router_without_trigger") == 1
+    assert "diagnostics" not in definition.to_dict()
 
 
-def test_router_start_false_without_listen_reports_missing_trigger():
-    definition = flow_definition.FlowDefinition.from_dict(
+def test_router_start_false_without_listen_is_allowed(caplog):
+    caplog.set_level(logging.ERROR, logger="crewai.flow.flow_definition")
+
+    flow_definition.FlowDefinition.from_declaration(contents=
         {
             "schema": "crewai.flow/v1",
             "name": "LoadedFlow",
@@ -676,11 +1133,7 @@ def test_router_start_false_without_listen_reports_missing_trigger():
         }
     )
 
-    assert any(
-        diagnostic.code == "router_without_trigger"
-        and diagnostic.path == "methods.decision"
-        for diagnostic in definition.diagnostics
-    )
+    assert not caplog.records
 
 
 def test_router_human_feedback_preserves_existing_router_metadata():
@@ -707,7 +1160,7 @@ def test_router_human_feedback_preserves_existing_router_metadata():
     assert method.human_feedback is not None
 
 
-def test_dynamic_router_flow_definition_has_no_diagnostics():
+def test_dynamic_router_flow_definition_allows_dynamic_emit():
     class LazyDynamicRouterFlow(Flow):
         @start()
         def begin(self):
@@ -718,7 +1171,7 @@ def test_dynamic_router_flow_definition_has_no_diagnostics():
             return self.state["dynamic_event"]
 
     definition = LazyDynamicRouterFlow.flow_definition()
-    assert definition.diagnostics == []
+    assert definition.methods["decide"].emit is None
 
 
 def test_dynamic_router_string_listener_is_valid_contract():
@@ -737,11 +1190,11 @@ def test_dynamic_router_string_listener_is_valid_contract():
 
     definition = DynamicRouterListenerFlow.flow_definition()
 
-    assert definition.diagnostics == []
+    assert definition.methods["handle"].listen == "dynamic_event"
 
 
 def test_static_string_listener_is_allowed_by_contract():
-    definition = flow_definition.FlowDefinition.from_dict(
+    definition = flow_definition.FlowDefinition.from_declaration(contents=
         {
             "schema": "crewai.flow/v1",
             "name": "TypoFlow",
@@ -757,11 +1210,11 @@ def test_static_string_listener_is_allowed_by_contract():
             },
         }
     )
-    assert definition.diagnostics == []
+    assert definition.methods["handle"].listen == "begni"
 
 
 def test_start_false_not_classified_as_start_method():
-    definition = flow_definition.FlowDefinition.from_dict(
+    definition = flow_definition.FlowDefinition.from_declaration(contents=
         {
             "schema": "crewai.flow/v1",
             "name": "ExplicitNonStartFlow",
@@ -822,10 +1275,10 @@ def test_flow_definition_cache_is_not_reused_by_subclasses():
     assert set(child_definition.methods) == {"child_step"}
 
 
-def test_flow_definition_logs_diagnostics_when_loaded_from_contract(caplog):
+def test_flow_definition_allows_router_without_trigger(caplog):
     caplog.set_level(logging.WARNING, logger="crewai.flow.flow_definition")
 
-    definition = flow_definition.FlowDefinition.from_dict(
+    flow_definition.FlowDefinition.from_declaration(contents=
         {
             "schema": "crewai.flow/v1",
             "name": "LoadedFlow",
@@ -839,13 +1292,11 @@ def test_flow_definition_logs_diagnostics_when_loaded_from_contract(caplog):
         }
     )
 
-    assert any(
-        diagnostic.code == "router_without_trigger"
-        for diagnostic in definition.diagnostics
-    )
-    assert any(
-        record.levelno == logging.ERROR
-        and "LoadedFlow" in record.message
-        and "router_without_trigger" in record.message
-        for record in caplog.records
-    )
+    class StandaloneRouterFlow(Flow):
+        @router(emit=["continue"])
+        def decision(self):
+            return "continue"
+
+    StandaloneRouterFlow.flow_definition()
+
+    assert not caplog.records

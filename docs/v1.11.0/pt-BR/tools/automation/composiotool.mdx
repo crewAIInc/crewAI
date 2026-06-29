@@ -1,0 +1,88 @@
+---
+title: Ferramenta Composio
+description: O Composio oferece mais de 250 ferramentas prontas para produção para agentes de IA com gerenciamento de autenticação flexível.
+icon: gear-code
+mode: "wide"
+---
+
+# `ComposioToolSet`
+
+## Descrição
+Composio é uma plataforma de integração que permite conectar seus agentes de IA a mais de 250 ferramentas. Os principais recursos incluem:
+
+- **Autenticação de Nível Empresarial**: Suporte integrado para OAuth, Chaves de API, JWT com atualização automática de token
+- **Observabilidade Completa**: Logs detalhados de uso das ferramentas, carimbos de data/hora de execução e muito mais
+
+## Instalação
+
+Para incorporar as ferramentas Composio em seu projeto, siga as instruções abaixo:
+
+```shell
+pip install composio composio-crewai
+pip install crewai
+```
+
+Após concluir a instalação, defina sua chave de API do Composio como `COMPOSIO_API_KEY`. Obtenha sua chave de API do Composio [aqui](https://platform.composio.dev)
+
+## Exemplo
+
+O exemplo a seguir demonstra como inicializar a ferramenta e executar uma ação do GitHub:
+
+1. Inicialize o Composio com o Provider do CrewAI
+
+```python Code
+from composio_crewai import ComposioProvider
+from composio import Composio
+from crewai import Agent, Task, Crew
+
+composio = Composio(provider=ComposioProvider())
+```
+
+2. Crie uma nova sessão Composio e recupere as ferramentas
+<CodeGroup>
+```python
+session = composio.create(
+    user_id="your-user-id",
+    toolkits=["gmail", "github"] # optional, default is all toolkits
+)
+tools = session.tools()
+```
+Leia mais sobre sessões e gerenciamento de usuários [aqui](https://docs.composio.dev/docs/configuring-sessions)
+</CodeGroup>
+
+3. Autenticação manual dos usuários
+
+O Composio autentica automaticamente os usuários durante a sessão de chat do agente. No entanto, você também pode autenticar o usuário manualmente chamando o método `authorize`.
+```python Code
+connection_request = session.authorize("github")
+print(f"Open this URL to authenticate: {connection_request.redirect_url}")
+```
+
+4. Defina o agente
+
+```python Code
+crewai_agent = Agent(
+    role="GitHub Agent",
+    goal="You take action on GitHub using GitHub APIs",
+    backstory="You are AI agent that is responsible for taking actions on GitHub on behalf of users using GitHub APIs",
+    verbose=True,
+    tools=tools,
+    llm= # pass an llm
+)
+```
+
+5. Execute a tarefa
+
+```python Code
+task = Task(
+    description="Star a repo composiohq/composio on GitHub",
+    agent=crewai_agent,
+    expected_output="Status of the operation",
+)
+
+crew = Crew(agents=[crewai_agent], tasks=[task])
+
+crew.kickoff()
+```
+
+* Uma lista mais detalhada de ferramentas pode ser encontrada [aqui](https://docs.composio.dev/toolkits)

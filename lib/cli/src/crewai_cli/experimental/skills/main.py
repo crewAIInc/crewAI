@@ -378,12 +378,40 @@ class SkillCommand(BaseCommand, PlusAPIMixin):
 
 
 def _safe_extractall(tf: tarfile.TarFile, dest: Path) -> None:
-    """Path-traversal-safe extraction for Python < 3.12."""
+    """Path-traversal-safe extraction for Python versions without tar filters.
+
+    Validates both the member's own path and, for symlink/hardlink members,
+    the link target. Without the link-target check a malicious archive can
+    plant a symlink that escapes ``dest`` (e.g. ``link -> /home/user/.ssh``)
+    followed by a regular member written *through* that link
+    (``link/authorized_keys``), escaping ``dest`` even though every member
+    name resolves inside it. This mirrors the protection that
+    ``tarfile.extractall(..., filter="data")`` provides when available.
+    """
     dest_resolved = dest.resolve()
     for member in tf.getmembers():
         member_path = (dest / member.name).resolve()
         if not member_path.is_relative_to(dest_resolved):
             raise ValueError(f"Blocked path traversal attempt: {member.name!r}")
+        if not (member.isfile() or member.isdir() or member.issym() or member.islnk()):
+            raise ValueError(f"Blocked unsupported tar member: {member.name!r}")
+        if member.issym() or member.islnk():
+            link_target = member.linkname
+            # Absolute link targets always escape the destination.
+            if os.path.isabs(link_target):
+                raise ValueError(
+                    f"Blocked link target escaping destination: "
+                    f"{member.name!r} -> {link_target!r}"
+                )
+            # Hardlink names are relative to the archive root; symlink
+            # targets are relative to the member's own directory.
+            anchor = dest if member.islnk() else (dest / member.name).parent
+            resolved_target = (anchor / link_target).resolve()
+            if not resolved_target.is_relative_to(dest_resolved):
+                raise ValueError(
+                    f"Blocked link target escaping destination: "
+                    f"{member.name!r} -> {link_target!r}"
+                )
     tf.extractall(dest)  # noqa: S202
 
 
