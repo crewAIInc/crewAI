@@ -267,7 +267,7 @@ class ScriptAction:
         # as function arguments. This is still arbitrary trusted Python execution,
         # so it remains disabled by default behind `CREWAI_ALLOW_FLOW_SCRIPT_EXECUTION`
         namespace: dict[str, Any] = {"__name__": filename}
-        exec(compile(module, filename, "exec"), namespace)  # nosec B102 # noqa: S102
+        exec(compile(module, filename, "exec"), namespace)  # nosec B102 # noqa: S102  # nosemgrep: python.lang.security.audit.exec-detected.exec-detected
         return cast(Callable[..., Any], namespace["_flow_script"])
 
 
