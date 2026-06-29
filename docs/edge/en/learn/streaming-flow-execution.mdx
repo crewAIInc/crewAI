@@ -52,7 +52,7 @@ class ResearchFlow(Flow):
 
 ## Synchronous Streaming
 
-When you call `kickoff()` on a flow with streaming enabled, it returns a `FlowStreamingOutput` object that you can iterate over:
+When you call `kickoff()` on a flow with streaming enabled, it returns a stream session that yields ordered `StreamFrame` items:
 
 ```python Code
 flow = ResearchFlow()
@@ -60,44 +60,43 @@ flow = ResearchFlow()
 # Start streaming execution
 streaming = flow.kickoff()
 
-# Iterate over chunks as they arrive
-for chunk in streaming:
-    print(chunk.content, end="", flush=True)
+# Iterate over stream items as they arrive
+for item in streaming:
+    print(item.content, end="", flush=True)
 
 # Access the final result after streaming completes
 result = streaming.result
 print(f"\n\nFinal output: {result}")
 ```
 
-### Stream Chunk Information
+### Stream Item Information
 
-Each chunk provides context about where it originated in the flow:
+Each item provides both printable content and structured event data:
 
 ```python Code
 streaming = flow.kickoff()
 
-for chunk in streaming:
-    print(f"Agent: {chunk.agent_role}")
-    print(f"Task: {chunk.task_name}")
-    print(f"Content: {chunk.content}")
-    print(f"Type: {chunk.chunk_type}")  # TEXT or TOOL_CALL
+for item in streaming:
+    print(f"Channel: {item.channel}")
+    print(f"Type: {item.type}")
+    print(f"Content: {item.content}")
+    print(f"Event payload: {item.event}")
 ```
 
 ### Accessing Streaming Properties
 
-The `FlowStreamingOutput` object provides useful properties and methods:
+The stream session provides useful properties and methods:
 
 ```python Code
 streaming = flow.kickoff()
 
-# Iterate and collect chunks
-for chunk in streaming:
-    print(chunk.content, end="", flush=True)
+# Iterate and collect items
+for item in streaming:
+    print(item.content, end="", flush=True)
 
 # After iteration completes
 print(f"\nCompleted: {streaming.is_completed}")
-print(f"Full text: {streaming.get_full_text()}")
-print(f"Total chunks: {len(streaming.chunks)}")
+print(f"Total frames: {len(streaming.frames)}")
 print(f"Final result: {streaming.result}")
 ```
 
@@ -114,9 +113,9 @@ async def stream_flow():
     # Start async streaming
     streaming = await flow.kickoff_async()
 
-    # Async iteration over chunks
-    async for chunk in streaming:
-        print(chunk.content, end="", flush=True)
+    # Async iteration over stream items
+    async for item in streaming:
+        print(item.content, end="", flush=True)
 
     # Access final result
     result = streaming.result
@@ -422,7 +421,7 @@ except Exception as e:
 
 ## Cancellation and Resource Cleanup
 
-`FlowStreamingOutput` supports graceful cancellation so that in-flight work stops promptly when the consumer disconnects.
+The stream session supports graceful cancellation so that in-flight work stops promptly when the consumer disconnects.
 
 ### Async Context Manager
 
@@ -430,8 +429,8 @@ except Exception as e:
 streaming = await flow.kickoff_async()
 
 async with streaming:
-    async for chunk in streaming:
-        print(chunk.content, end="", flush=True)
+    async for item in streaming:
+        print(item.content, end="", flush=True)
 ```
 
 ### Explicit Cancellation
@@ -439,8 +438,8 @@ async with streaming:
 ```python Code
 streaming = await flow.kickoff_async()
 try:
-    async for chunk in streaming:
-        print(chunk.content, end="", flush=True)
+    async for item in streaming:
+        print(item.content, end="", flush=True)
 finally:
     await streaming.aclose()  # async
     # streaming.close()       # sync equivalent
@@ -451,7 +450,7 @@ After cancellation, `streaming.is_cancelled` and `streaming.is_completed` are bo
 ## Important Notes
 
 - Streaming automatically enables LLM streaming for any crews used within the flow
-- You must iterate through all chunks before accessing the `.result` property
+- You must iterate through all stream items before accessing the `.result` property
 - Streaming works with both structured and unstructured flow state
 - Flow streaming captures output from all crews and LLM calls in the flow
 - Each chunk includes context about which agent and task generated it

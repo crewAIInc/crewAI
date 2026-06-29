@@ -9,12 +9,7 @@ Structure (see ``flow_definition``) and executed here.
 from __future__ import annotations
 
 import asyncio
-from collections.abc import (
-    AsyncIterator,
-    Callable,
-    Iterator,
-    Sequence,
-)
+from collections.abc import Callable, Iterator, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor
 import contextvars
 import copy
@@ -143,7 +138,6 @@ if TYPE_CHECKING:
 from crewai.flow.visualization import build_flow_structure, render_interactive
 from crewai.types.streaming import (
     AsyncStreamSession,
-    FlowStreamingOutput,
     StreamSession,
 )
 from crewai.types.usage_metrics import UsageMetrics
@@ -152,7 +146,6 @@ from crewai.utilities.streaming import (
     create_async_frame_generator,
     create_frame_generator,
     create_frame_streaming_state,
-    stream_frame_to_chunk,
 )
 
 
@@ -1921,7 +1914,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         input_files: dict[str, FileInput] | None = None,
         from_checkpoint: CheckpointConfig | None = None,
         restore_from_state_id: str | None = None,
-    ) -> Any | FlowStreamingOutput:
+    ) -> Any | StreamSession[Any]:
         """Start the flow execution in a synchronous context.
 
         This method wraps kickoff_async so that all state initialization and event
@@ -1942,7 +1935,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 ``from_checkpoint``; passing both raises ``ValueError``.
 
         Returns:
-            The final output from the flow or FlowStreamingOutput if streaming.
+            The final output from the flow or StreamSession if streaming.
         """
         if from_checkpoint is not None and restore_from_state_id is not None:
             raise ValueError(
@@ -1954,28 +1947,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if restored is not None:
             return restored.kickoff(inputs=inputs, input_files=input_files)
         if self.stream:
-            streaming_output: FlowStreamingOutput
-
-            def chunk_iterator() -> Iterator[Any]:
-                stream_session = self.stream_events(
-                    inputs=inputs,
-                    input_files=input_files,
-                    restore_from_state_id=restore_from_state_id,
-                )
-                try:
-                    with stream_session:
-                        for frame in stream_session.llm:
-                            chunk = stream_frame_to_chunk(frame)
-                            if chunk is not None:
-                                yield chunk
-                    streaming_output._set_result(stream_session.result)
-                finally:
-                    if not stream_session.is_exhausted:
-                        stream_session.close()
-
-            streaming_output = FlowStreamingOutput(sync_iterator=chunk_iterator())
-
-            return streaming_output
+            return self.stream_events(
+                inputs=inputs,
+                input_files=input_files,
+                restore_from_state_id=restore_from_state_id,
+            )
 
         async def _run_flow() -> Any:
             return await self.kickoff_async(
@@ -2002,7 +1978,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         input_files: dict[str, FileInput] | None = None,
         from_checkpoint: CheckpointConfig | None = None,
         restore_from_state_id: str | None = None,
-    ) -> Any | FlowStreamingOutput:
+    ) -> Any | AsyncStreamSession[Any]:
         """Start the flow execution asynchronously.
 
         This method performs state restoration (if an 'id' is provided and persistence is available)
@@ -2036,28 +2012,11 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if restored is not None:
             return await restored.kickoff_async(inputs=inputs, input_files=input_files)
         if self.stream:
-            streaming_output: FlowStreamingOutput
-
-            async def chunk_iterator() -> AsyncIterator[Any]:
-                stream_session = self.astream(
-                    inputs=inputs,
-                    input_files=input_files,
-                    restore_from_state_id=restore_from_state_id,
-                )
-                try:
-                    async with stream_session:
-                        async for frame in stream_session.llm:
-                            chunk = stream_frame_to_chunk(frame)
-                            if chunk is not None:
-                                yield chunk
-                    streaming_output._set_result(stream_session.result)
-                finally:
-                    if not stream_session.is_exhausted:
-                        await stream_session.aclose()
-
-            streaming_output = FlowStreamingOutput(async_iterator=chunk_iterator())
-
-            return streaming_output
+            return self.astream(
+                inputs=inputs,
+                input_files=input_files,
+                restore_from_state_id=restore_from_state_id,
+            )
 
         ctx = baggage.set_baggage("flow_inputs", inputs or {})
         ctx = baggage.set_baggage("flow_input_files", input_files or {}, context=ctx)
@@ -2401,7 +2360,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         input_files: dict[str, FileInput] | None = None,
         from_checkpoint: CheckpointConfig | None = None,
         restore_from_state_id: str | None = None,
-    ) -> Any | FlowStreamingOutput:
+    ) -> Any | AsyncStreamSession[Any]:
         """Native async method to start the flow execution. Alias for kickoff_async.
 
         Args:

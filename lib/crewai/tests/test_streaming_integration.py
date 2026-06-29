@@ -4,7 +4,7 @@ import pytest
 
 from crewai import Agent, Crew, Task
 from crewai.flow.flow import Flow, start
-from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
+from crewai.types.streaming import AsyncStreamSession, CrewStreamingOutput, StreamSession
 
 
 @pytest.fixture
@@ -212,7 +212,7 @@ class TestStreamingFlowIntegration:
 
         streaming = flow.kickoff()
 
-        assert isinstance(streaming, FlowStreamingOutput)
+        assert isinstance(streaming, StreamSession)
 
         chunks = []
         for chunk in streaming:
@@ -281,7 +281,7 @@ class TestStreamingFlowIntegration:
 
         streaming = await flow.kickoff_async()
 
-        assert isinstance(streaming, FlowStreamingOutput)
+        assert isinstance(streaming, AsyncStreamSession)
 
         chunks = []
         async for chunk in streaming:

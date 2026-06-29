@@ -7,7 +7,7 @@ in CrewAI, including common functionality for native SDK implementations.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Generator, Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 import contextvars
 from datetime import datetime
@@ -42,13 +42,12 @@ from crewai.events.types.tool_usage_events import (
     ToolUsageFinishedEvent,
     ToolUsageStartedEvent,
 )
-from crewai.types.streaming import LLMStreamingOutput, StreamSession
+from crewai.types.streaming import StreamSession
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.pydantic_schema_utils import serialize_model_class
 from crewai.utilities.streaming import (
     create_frame_generator,
     create_frame_streaming_state,
-    stream_frame_to_chunk,
 )
 
 
@@ -360,42 +359,6 @@ class BaseLLM(BaseModel, ABC):
         )
         output_holder.append(stream_session)
         return stream_session
-
-    def stream_call(
-        self,
-        messages: str | list[LLMMessage],
-        tools: list[dict[str, BaseTool]] | None = None,
-        callbacks: list[Any] | None = None,
-        available_functions: dict[str, Any] | None = None,
-        from_task: Task | None = None,
-        from_agent: BaseAgent | None = None,
-        response_model: type[BaseModel] | None = None,
-    ) -> LLMStreamingOutput:
-        """Run the LLM call and stream text chunks as they arrive."""
-
-        def chunk_iterator() -> Iterator[Any]:
-            stream_session = self.stream_events(
-                messages=messages,
-                tools=tools,
-                callbacks=callbacks,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-                response_model=response_model,
-            )
-            try:
-                with stream_session:
-                    for frame in stream_session.llm:
-                        chunk = stream_frame_to_chunk(frame)
-                        if chunk is not None:
-                            yield chunk
-                streaming_output._set_result(stream_session.result)
-            finally:
-                if not stream_session.is_exhausted:
-                    stream_session.close()
-
-        streaming_output = LLMStreamingOutput(sync_iterator=chunk_iterator())
-        return streaming_output
 
     async def acall(
         self,

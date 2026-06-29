@@ -42,6 +42,19 @@ class StreamFrame(BaseModel):
     previous_id: str | None = None
     data: dict[str, Any] = Field(default_factory=dict)
 
+    @property
+    def content(self) -> str:
+        """Printable text content for chunk-like consumers."""
+        chunk = self.data.get("chunk")
+        if isinstance(chunk, str):
+            return chunk
+        return ""
+
+    @property
+    def event(self) -> dict[str, Any]:
+        """Structured source event payload."""
+        return self.data
+
 
 class StreamSessionBase(Generic[T]):
     """Base stream session with ordered frame iteration and result access."""
@@ -115,6 +128,10 @@ class StreamSession(StreamSessionBase[T]):
         """Iterate over all ordered frames."""
         return self.subscribe()
 
+    def __iter__(self) -> Iterator[StreamFrame]:
+        """Iterate over all ordered frames."""
+        return self.events
+
     @property
     def llm(self) -> Iterator[StreamFrame]:
         """Iterate over LLM token and thinking frames."""
@@ -185,6 +202,10 @@ class AsyncStreamSession(StreamSessionBase[T]):
     def events(self) -> AsyncIterator[StreamFrame]:
         """Iterate over all ordered frames."""
         return self.subscribe()
+
+    def __aiter__(self) -> AsyncIterator[StreamFrame]:
+        """Iterate over all ordered frames."""
+        return self.events
 
     @property
     def llm(self) -> AsyncIterator[StreamFrame]:
@@ -574,14 +595,5 @@ class FlowStreamingOutput(StreamingOutputBase[Any]):
         Args:
             result: The final flow output.
         """
-        self._result = result
-        self._completed = True
-
-
-class LLMStreamingOutput(StreamingOutputBase[Any]):
-    """Streaming output wrapper for direct LLM calls."""
-
-    def _set_result(self, result: Any) -> None:
-        """Set the final LLM call result after streaming completes."""
         self._result = result
         self._completed = True

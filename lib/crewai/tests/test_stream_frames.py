@@ -14,7 +14,7 @@ from crewai.events.types.llm_events import LLMStreamChunkEvent, LLMThinkingChunk
 from crewai.events.types.tool_usage_events import ToolUsageStartedEvent
 from crewai.flow.flow import Flow, start
 from crewai.llms.base_llm import BaseLLM
-from crewai.types.streaming import FlowStreamingOutput, StreamFrame
+from crewai.types.streaming import StreamFrame
 
 
 class FrameFlow(Flow):
@@ -129,34 +129,35 @@ def test_stream_errors_surface_after_failed_frame() -> None:
         _ = stream.result
 
 
-def test_legacy_flow_streaming_uses_llm_frame_projection() -> None:
+def test_flow_streaming_returns_iterable_frame_session() -> None:
     flow = FrameFlow()
     flow.stream = True
 
-    streaming = flow.kickoff()
+    stream = flow.kickoff()
 
-    assert isinstance(streaming, FlowStreamingOutput)
-    chunks = list(streaming)
-    assert [chunk.content for chunk in chunks] == ["hello", "thinking"]
-    assert streaming.result == "done"
+    with stream:
+        frames = list(stream)
+
+    assert all(isinstance(frame, StreamFrame) for frame in frames)
+    assert [frame.content for frame in frames if frame.content] == [
+        "hello",
+        "thinking",
+    ]
+    first_content_frame = next(frame for frame in frames if frame.content)
+    assert first_content_frame.event["chunk"] == "hello"
+    assert stream.result == "done"
 
 
 def test_direct_llm_stream_events_scope_and_restore_stream_flag() -> None:
     llm = DirectStreamingLLM(model="gpt-4o-mini", stream=False)
 
     with llm.stream_events("hello") as stream:
-        frames = list(stream.llm)
+        frames = list(stream)
 
-    assert [frame.data["chunk"] for frame in frames] == ["hel", "lo"]
+    assert [frame.content for frame in frames] == ["hel", "lo"]
+    assert frames[0].event["chunk"] == "hel"
     assert stream.result == "hello"
     assert llm.stream is False
-
-
-def test_direct_llm_stream_call_projects_chunks() -> None:
-    chunks = DirectStreamingLLM(model="gpt-4o-mini").stream_call("hello")
-
-    assert [chunk.content for chunk in chunks] == ["hel", "lo"]
-    assert chunks.result == "hello"
 
 
 @pytest.mark.asyncio

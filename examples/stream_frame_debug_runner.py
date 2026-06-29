@@ -21,11 +21,12 @@ messages = [
     }
 ]
 
-chunks = llm.stream_call(messages=messages)
+stream = llm.stream_events(messages=messages)
 
 print("--- chunks ---")
-for chunk in chunks:
-    print(chunk.content, end="", flush=True)
+with stream:
+    for chunk in stream:
+        print(chunk.content, end="", flush=True)
 
-# print("\n\n--- result ---")
-# print(chunks.result)
+print("\n\n--- result ---")
+print(stream.result)

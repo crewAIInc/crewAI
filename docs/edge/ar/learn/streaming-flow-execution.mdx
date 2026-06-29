@@ -52,7 +52,7 @@ class ResearchFlow(Flow):
 
 ## البث المتزامن
 
-عند استدعاء `kickoff()` على تدفق مع تفعيل البث، يُرجع كائن `FlowStreamingOutput` يمكنك التكرار عليه:
+عند استدعاء `kickoff()` على تدفق مع تفعيل البث، يُرجع جلسة stream تنتج عناصر `StreamFrame` مرتبة:
 
 ```python Code
 flow = ResearchFlow()
@@ -60,44 +60,43 @@ flow = ResearchFlow()
 # Start streaming execution
 streaming = flow.kickoff()
 
-# Iterate over chunks as they arrive
-for chunk in streaming:
-    print(chunk.content, end="", flush=True)
+# Iterate over stream items as they arrive
+for item in streaming:
+    print(item.content, end="", flush=True)
 
 # Access the final result after streaming completes
 result = streaming.result
 print(f"\n\nFinal output: {result}")
 ```
 
-### معلومات جزء البث
+### معلومات عنصر البث
 
-يوفر كل جزء سياقاً حول مصدره في التدفق:
+يوفر كل عنصر محتوى قابلاً للطباعة وبيانات حدث مهيكلة:
 
 ```python Code
 streaming = flow.kickoff()
 
-for chunk in streaming:
-    print(f"Agent: {chunk.agent_role}")
-    print(f"Task: {chunk.task_name}")
-    print(f"Content: {chunk.content}")
-    print(f"Type: {chunk.chunk_type}")  # TEXT or TOOL_CALL
+for item in streaming:
+    print(f"Channel: {item.channel}")
+    print(f"Type: {item.type}")
+    print(f"Content: {item.content}")
+    print(f"Event payload: {item.event}")
 ```
 
 ### الوصول إلى خصائص البث
 
-يوفر كائن `FlowStreamingOutput` خصائص وطرق مفيدة:
+توفر جلسة stream خصائص وطرق مفيدة:
 
 ```python Code
 streaming = flow.kickoff()
 
-# Iterate and collect chunks
-for chunk in streaming:
-    print(chunk.content, end="", flush=True)
+# Iterate and collect items
+for item in streaming:
+    print(item.content, end="", flush=True)
 
 # After iteration completes
 print(f"\nCompleted: {streaming.is_completed}")
-print(f"Full text: {streaming.get_full_text()}")
-print(f"Total chunks: {len(streaming.chunks)}")
+print(f"Total frames: {len(streaming.frames)}")
 print(f"Final result: {streaming.result}")
 ```
 
@@ -114,9 +113,9 @@ async def stream_flow():
     # Start async streaming
     streaming = await flow.kickoff_async()
 
-    # Async iteration over chunks
-    async for chunk in streaming:
-        print(chunk.content, end="", flush=True)
+    # Async iteration over stream items
+    async for item in streaming:
+        print(item.content, end="", flush=True)
 
     # Access final result
     result = streaming.result
@@ -422,7 +421,7 @@ except Exception as e:
 
 ## الإلغاء وتنظيف الموارد
 
-يدعم `FlowStreamingOutput` الإلغاء السلس بحيث يتوقف العمل الجاري فوراً عند انقطاع اتصال المستهلك.
+تدعم جلسة stream الإلغاء السلس بحيث يتوقف العمل الجاري فوراً عند انقطاع اتصال المستهلك.
 
 ### مدير السياق غير المتزامن
 
@@ -430,8 +429,8 @@ except Exception as e:
 streaming = await flow.kickoff_async()
 
 async with streaming:
-    async for chunk in streaming:
-        print(chunk.content, end="", flush=True)
+    async for item in streaming:
+        print(item.content, end="", flush=True)
 ```
 
 ### الإلغاء الصريح
@@ -439,8 +438,8 @@ async with streaming:
 ```python Code
 streaming = await flow.kickoff_async()
 try:
-    async for chunk in streaming:
-        print(chunk.content, end="", flush=True)
+    async for item in streaming:
+        print(item.content, end="", flush=True)
 finally:
     await streaming.aclose()  # غير متزامن
     # streaming.close()       # المكافئ المتزامن
@@ -451,7 +450,7 @@ finally:
 ## ملاحظات مهمة
 
 - يفعّل البث تلقائياً بث LLM لأي أطقم مستخدمة داخل التدفق
-- يجب التكرار عبر جميع الأجزاء قبل الوصول إلى خاصية `.result`
+- يجب التكرار عبر جميع عناصر stream قبل الوصول إلى خاصية `.result`
 - يعمل البث مع كل من حالة التدفق المنظمة وغير المنظمة
 - يلتقط بث التدفق المخرجات من جميع الأطقم واستدعاءات LLM في التدفق
 - يتضمن كل جزء سياقاً حول الوكيل والمهمة التي ولدته

@@ -1,0 +1,195 @@
+---
+title: 스트리밍 런타임 계약
+description: Flow, 직접 LLM 호출, 대화 턴에서 정렬된 런타임 프레임을 스트리밍합니다.
+icon: tower-broadcast
+mode: "wide"
+---
+
+## 개요
+
+CrewAI는 단순한 텍스트 청크보다 더 많은 정보가 필요한 런타임을 위해 프레임 기반 스트리밍 계약을 제공합니다. 이 계약은 Flow 생명주기 이벤트, 직접 LLM 토큰, 도구 활동, 대화 메시지, 사용자 지정 이벤트에 대해 정렬된 `StreamFrame` 객체를 방출합니다.
+
+UI, 서비스 브리지, 터미널 앱, 배포 런타임을 만들 때 Flow, 채팅 턴, 직접 LLM 호출이 실행되는 동안 안정적인 구조화 이벤트 스트림이 필요하다면 이 API를 사용하세요.
+
+## StreamFrame
+
+모든 프레임은 같은 envelope를 가집니다:
+
+```python
+from crewai.types.streaming import StreamFrame
+
+frame.version      # "v1"
+frame.id           # 고유 프레임 id
+frame.seq          # 사용 가능한 경우 실행 로컬 순서
+frame.type         # "flow_started" 같은 원본 이벤트 타입
+frame.channel      # "llm", "flow", "tools", "messages", "lifecycle", "custom"
+frame.namespace    # 소스/런타임 namespace
+frame.timestamp    # 이벤트 timestamp
+frame.parent_id    # 사용 가능한 경우 부모 이벤트 id
+frame.previous_id  # 사용 가능한 경우 이전 이벤트 id
+frame.data         # 이벤트 payload
+frame.event        # frame.data의 alias
+frame.content      # 토큰류 프레임의 출력 가능한 텍스트, 그 외에는 ""
+```
+
+`channel` 필드는 소비자에서 프레임을 라우팅하는 가장 빠른 방법입니다:
+
+| 채널 | 포함 내용 |
+|------|-----------|
+| `llm` | LLM 스트리밍 이벤트의 토큰 및 thinking 청크 |
+| `flow` | Flow 생명주기, 메서드 실행, 라우팅, pause/resume 이벤트 |
+| `tools` | 도구 사용 이벤트 |
+| `messages` | 대화 transcript 이벤트 |
+| `lifecycle` | 다른 채널에 속하지 않는 런타임 생명주기 이벤트 |
+| `custom` | 내장 채널에 매핑되지 않는 이벤트 |
+
+`frame.type`은 원본 이벤트 타입을 보존하므로, 소비자는 채널 안에서 특정 이벤트를 처리할 수 있습니다.
+
+## Flow 스트리밍
+
+Flow에 `stream=True`를 설정하면 `kickoff()`가 stream session을 반환합니다:
+
+```python
+from crewai.flow import Flow, start
+
+
+class ReportFlow(Flow):
+    @start()
+    def generate(self):
+        return "done"
+
+
+flow = ReportFlow(stream=True)
+stream = flow.kickoff()
+
+with stream:
+    for chunk in stream:
+        print(chunk.content, end="", flush=True)
+        if chunk.type == "tool_usage_started":
+            print(chunk.event["tool_name"])
+
+result = stream.result
+```
+
+`stream.result`를 읽기 전에 stream을 소비해야 합니다. 결과를 너무 일찍 접근하면 `RuntimeError`가 발생하여, 소비자가 부분 실행을 완료된 실행으로 잘못 처리하지 않도록 합니다.
+
+Flow 인스턴스에 `stream=True`를 설정하지 않고 단일 호출만 스트리밍하려면 `flow.stream_events(...)`를 직접 호출할 수도 있습니다.
+
+## 채널별 필터링
+
+`StreamSession`은 선택한 채널 안에서 전역 프레임 순서를 보존하는 채널 projection을 제공합니다:
+
+```python
+stream = flow.stream_events()
+
+with stream:
+    for frame in stream.llm:
+        print(frame.content, end="", flush=True)
+
+result = stream.result
+```
+
+사용 가능한 projection은 다음과 같습니다:
+
+| Projection | 프레임 |
+|------------|--------|
+| `stream.events` | 모든 프레임 |
+| `stream.llm` | LLM 프레임 |
+| `stream.messages` | 대화 메시지 프레임 |
+| `stream.flow` | Flow 프레임 |
+| `stream.tools` | 도구 프레임 |
+| `stream.interleave([...])` | 선택한 채널 집합 |
+
+소비자가 일부 채널만 원하지만 상대 순서도 필요하다면 `stream.interleave(["flow", "llm", "messages"])`를 사용하세요.
+
+## 비동기 스트리밍
+
+비동기 소비자는 `astream()`을 사용하세요:
+
+```python
+flow = ReportFlow()
+stream = flow.astream()
+
+async with stream:
+    async for chunk in stream.events:
+        print(chunk.channel, chunk.type, chunk.content)
+
+result = stream.result
+```
+
+비동기 세션은 동기 세션과 같은 projection을 제공합니다.
+
+## 직접 LLM 호출 스트리밍
+
+`llm.call(...)`은 계속 최종 조립 결과를 반환합니다. 구조화된 이벤트 payload를 유지하면서 청크가 도착하는 대로 반복 처리하려면 `llm.stream_events(...)`를 사용하세요:
+
+```python
+from crewai import LLM
+
+
+llm = LLM(model="gpt-4o-mini")
+stream = llm.stream_events(
+    messages=[
+        {
+            "role": "user",
+            "content": "Explain CrewAI streaming in two short sentences.",
+        }
+    ]
+)
+
+with stream:
+    for chunk in stream:
+        print(chunk.content, end="", flush=True)
+
+result = stream.result
+```
+
+`llm.stream_events(...)`는 감싼 호출 동안 일시적으로 streaming을 활성화하고, 이후 LLM의 이전 `stream` 설정을 복원합니다. provider 통합은 계속 기본 LLM stream 이벤트를 방출하며, 이 helper는 모든 LLM provider에서 그 이벤트 위에 공통 iterator API를 제공합니다.
+
+## 대화 턴
+
+대화형 Flow는 `stream_turn()`으로 사용자 턴 하나를 스트리밍할 수 있습니다:
+
+```python
+from crewai import Flow
+from crewai.experimental.conversational import ConversationConfig, ConversationState
+
+
+@ConversationConfig(llm="gpt-4o-mini", defer_trace_finalization=True)
+class ChatFlow(Flow[ConversationState]):
+    conversational = True
+
+
+flow = ChatFlow()
+stream = flow.stream_turn("What can you help me with?", session_id="session-1")
+
+with stream:
+    for frame in stream.events:
+        if frame.channel == "llm" and frame.type == "llm_stream_chunk":
+            print(frame.content, end="", flush=True)
+
+reply = stream.result
+```
+
+`stream_turn()` 중에는 내장 대화 응답 경로가 해당 턴에 대해 LLM 토큰 스트리밍을 활성화하고 이후 LLM의 이전 `stream` 설정을 복원합니다. 자체 agent 또는 LLM 인스턴스를 만드는 사용자 지정 route handler는 토큰 단위 출력이 필요하다면 해당 LLM을 streaming으로 구성해야 합니다.
+
+## 정리
+
+가능하면 세션을 context manager로 사용하세요. stream이 끝나기 전에 클라이언트 연결이 끊기면 세션을 명시적으로 닫으세요:
+
+```python
+stream = flow.stream_events()
+
+try:
+    for frame in stream.events:
+        print(frame.type)
+finally:
+    if not stream.is_exhausted:
+        stream.close()
+```
+
+비동기 stream에서는 `await stream.aclose()`를 사용하세요.
+
+## 레거시 청크 스트리밍
+
+`stream=True`를 사용하는 Crew 스트리밍은 계속 [스트리밍 Crew 실행](/ko/learn/streaming-crew-execution)에 설명된 청크 중심 `CrewStreamingOutput` API를 반환합니다. 직접 `llm.call(...)` 호출도 계속 최종 LLM 결과를 반환합니다. 프레임 계약은 Flow, 직접 LLM 호출, 대화 턴, 도구, 메시지 전반에서 안정적인 이벤트 envelope가 필요한 런타임을 위한 것입니다.

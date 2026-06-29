@@ -29,7 +29,7 @@ from crewai.flow.persistence.base import FlowPersistence
 from crewai.flow.runtime._actions import FlowScriptExecutionDisabledError
 from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.tools import BaseTool
-from crewai.types.streaming import FlowStreamingOutput
+from crewai.types.streaming import StreamSession
 
 
 class StaticSearchTool(BaseTool):
@@ -2485,7 +2485,7 @@ def test_config_max_method_calls_from_declaration():
 def test_config_stream_from_declaration():
     flow = Flow.from_declaration(contents=STREAMING_CHAIN_YAML)
     streaming = flow.kickoff()
-    assert isinstance(streaming, FlowStreamingOutput)
+    assert isinstance(streaming, StreamSession)
     for _ in streaming:
         pass
     assert streaming.result == "confirmed:True"
