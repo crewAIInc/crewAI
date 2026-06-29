@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 import os
 from pathlib import Path
+import re
 import shutil
 from typing import Any
 
@@ -35,6 +37,7 @@ __all__ = [
     "load_env_vars",
     "parse_toml",
     "read_toml",
+    "render_template",
     "tree_copy",
     "tree_find_and_replace",
     "write_env_file",
@@ -42,6 +45,7 @@ __all__ = [
 
 
 console = Console()
+_TEMPLATE_TOKEN_RE = re.compile(r"{{([a-zA-Z_][a-zA-Z0-9_]*)}}")
 
 
 def is_dmn_mode_enabled() -> bool:
@@ -69,20 +73,29 @@ def copy_template(
     src: Path, dst: Path, name: str, class_name: str, folder_name: str
 ) -> None:
     """Copy a file from src to dst."""
-    with open(src, "r") as file:
-        content = file.read()
-
-    content = content.replace("{{name}}", name)
-    content = content.replace("{{crew_name}}", class_name)
-    content = content.replace("{{folder_name}}", folder_name)
-    content = content.replace(
-        "{{crewai_tools_dependency}}", get_crewai_tools_dependency()
+    content = render_template(
+        src,
+        {
+            "name": name,
+            "crew_name": class_name,
+            "folder_name": folder_name,
+            "crewai_tools_dependency": get_crewai_tools_dependency(),
+        },
     )
 
     with open(dst, "w") as file:
         file.write(content)
 
     click.secho(f"  - Created {dst}", fg="green")
+
+
+def render_template(src: Path, replacements: Mapping[str, str]) -> str:
+    """Render a template file using ``{{placeholder}}`` replacements."""
+    content = src.read_text(encoding="utf-8")
+    return _TEMPLATE_TOKEN_RE.sub(
+        lambda match: replacements.get(match.group(1), match.group(0)),
+        content,
+    )
 
 
 def fetch_and_json_env_file(env_file_path: str = ".env") -> dict[str, Any]:
