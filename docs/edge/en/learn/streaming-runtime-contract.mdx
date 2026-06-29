@@ -1,15 +1,15 @@
 ---
 title: Streaming Runtime Contract
-description: Stream ordered runtime frames from Flows and conversational turns.
+description: Stream ordered runtime frames from Flows, direct LLM calls, and conversational turns.
 icon: tower-broadcast
 mode: "wide"
 ---
 
 ## Overview
 
-CrewAI exposes a frame-based streaming contract for runtimes that need more than plain text chunks. The contract emits ordered `StreamFrame` objects for Flow lifecycle events, LLM tokens, tool activity, conversation messages, and custom events.
+CrewAI exposes a frame-based streaming contract for runtimes that need more than plain text chunks. The contract emits ordered `StreamFrame` objects for Flow lifecycle events, direct LLM tokens, tool activity, conversation messages, and custom events.
 
-Use this API when you are building a UI, service bridge, terminal app, or deployment runtime that needs a stable stream of structured events while a Flow is running.
+Use this API when you are building a UI, service bridge, terminal app, or deployment runtime that needs a stable stream of structured events while a Flow, chat turn, or direct LLM call is running.
 
 ## StreamFrame
 
@@ -113,6 +113,45 @@ result = stream.result
 
 The async session has the same projections as the sync session.
 
+## Stream a Direct LLM Call
+
+`llm.call(...)` still returns the final assembled result. Use `llm.stream_call(...)` when you want to iterate over chunks as they arrive:
+
+```python
+from crewai import LLM
+
+
+llm = LLM(model="gpt-4o-mini")
+chunks = llm.stream_call(
+    messages=[
+        {
+            "role": "user",
+            "content": "Explain CrewAI streaming in two short sentences.",
+        }
+    ]
+)
+
+for chunk in chunks:
+    print(chunk.content, end="", flush=True)
+
+result = chunks.result
+```
+
+Use `llm.stream_events(...)` when a runtime needs the full `StreamFrame` envelope rather than text chunks:
+
+```python
+stream = llm.stream_events("Explain CrewAI streaming in two short sentences.")
+
+with stream:
+    for frame in stream.llm:
+        if frame.type == "llm_stream_chunk":
+            print(frame.data.get("chunk", ""), end="", flush=True)
+
+result = stream.result
+```
+
+Both methods temporarily enable streaming for the wrapped call and restore the LLM's previous `stream` setting afterward. Provider integrations continue to emit the underlying LLM stream events; these helpers provide a common iterator API over those events for every LLM provider.
+
 ## Conversational Turns
 
 Conversational Flows can stream one user turn with `stream_turn()`:
@@ -159,4 +198,4 @@ For async streams, use `await stream.aclose()`.
 
 ## Legacy Chunk Streaming
 
-Crew streaming with `stream=True` still returns the chunk-oriented `CrewStreamingOutput` API described in [Streaming Crew Execution](/en/learn/streaming-crew-execution). The frame contract is intended for runtimes that need a stable event envelope across Flows, conversational turns, LLM output, tools, and messages.
+Crew streaming with `stream=True` still returns the chunk-oriented `CrewStreamingOutput` API described in [Streaming Crew Execution](/en/learn/streaming-crew-execution). Direct `llm.call(...)` still returns the final LLM result. The frame contract is intended for runtimes that need a stable event envelope across Flows, direct LLM calls, conversational turns, tools, and messages.

@@ -576,3 +576,12 @@ class FlowStreamingOutput(StreamingOutputBase[Any]):
         """
         self._result = result
         self._completed = True
+
+
+class LLMStreamingOutput(StreamingOutputBase[Any]):
+    """Streaming output wrapper for direct LLM calls."""
+
+    def _set_result(self, result: Any) -> None:
+        """Set the final LLM call result after streaming completes."""
+        self._result = result
+        self._completed = True

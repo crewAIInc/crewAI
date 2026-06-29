@@ -13,6 +13,7 @@ from crewai.events.types.flow_events import ConversationMessageAddedEvent
 from crewai.events.types.llm_events import LLMStreamChunkEvent, LLMThinkingChunkEvent
 from crewai.events.types.tool_usage_events import ToolUsageStartedEvent
 from crewai.flow.flow import Flow, start
+from crewai.llms.base_llm import BaseLLM
 from crewai.types.streaming import FlowStreamingOutput, StreamFrame
 
 
@@ -55,6 +56,27 @@ class FrameFlow(Flow):
             ),
         )
         return "done"
+
+
+class DirectStreamingLLM(BaseLLM):
+    def call(self, messages: Any, *args: Any, **kwargs: Any) -> str:
+        crewai_event_bus.emit(
+            self,
+            LLMStreamChunkEvent(
+                type="llm_stream_chunk",
+                chunk="hel",
+                call_id="call-1",
+            ),
+        )
+        crewai_event_bus.emit(
+            self,
+            LLMStreamChunkEvent(
+                type="llm_stream_chunk",
+                chunk="lo",
+                call_id="call-1",
+            ),
+        )
+        return "hello"
 
 
 def test_stream_frame_contract_and_ordering() -> None:
@@ -117,6 +139,24 @@ def test_legacy_flow_streaming_uses_llm_frame_projection() -> None:
     chunks = list(streaming)
     assert [chunk.content for chunk in chunks] == ["hello", "thinking"]
     assert streaming.result == "done"
+
+
+def test_direct_llm_stream_events_scope_and_restore_stream_flag() -> None:
+    llm = DirectStreamingLLM(model="gpt-4o-mini", stream=False)
+
+    with llm.stream_events("hello") as stream:
+        frames = list(stream.llm)
+
+    assert [frame.data["chunk"] for frame in frames] == ["hel", "lo"]
+    assert stream.result == "hello"
+    assert llm.stream is False
+
+
+def test_direct_llm_stream_call_projects_chunks() -> None:
+    chunks = DirectStreamingLLM(model="gpt-4o-mini").stream_call("hello")
+
+    assert [chunk.content for chunk in chunks] == ["hel", "lo"]
+    assert chunks.result == "hello"
 
 
 @pytest.mark.asyncio
