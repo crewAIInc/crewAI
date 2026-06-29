@@ -29,6 +29,7 @@ from crewai.experimental import (
     RouterConfig,
 )
 from crewai.flow import Flow, ChatState, listen, start
+from crewai.flow.async_feedback import HumanFeedbackPending, PendingFeedbackContext
 from crewai.flow.flow_context import (
     current_flow_defer_trace_finalization,
     current_flow_id,
@@ -219,6 +220,28 @@ class TestConversationalFlow:
             for frame in frames
             if frame.type == "llm_stream_chunk"
         ] == ["po", "ng"]
+
+    def test_stream_turn_returns_pending_feedback_without_failure_event(self) -> None:
+        flow = ConversationalFlow()
+        pending = HumanFeedbackPending(
+            context=PendingFeedbackContext(
+                flow_id="session-1",
+                flow_class="tests.PendingFeedbackFlow",
+                method_name="review",
+                method_output="draft",
+                message="Please review",
+            )
+        )
+
+        def kickoff_side_effect(*_: Any, **__: Any) -> None:
+            raise pending
+
+        with patch.object(flow, "kickoff", side_effect=kickoff_side_effect):
+            stream = flow.stream_turn("review this", session_id="session-1")
+            frames = list(stream.events)
+
+        assert stream.result is pending
+        assert [frame.type for frame in frames] == ["conversation_turn_started"]
 
     def test_deferred_multi_turn_emits_single_flow_finished(self) -> None:
         """A deferred multi-turn session lands as one trace: exactly one

@@ -11,6 +11,7 @@ from crewai import Agent, Crew, Task
 from crewai.events.event_bus import crewai_event_bus
 from crewai.events.types.llm_events import LLMStreamChunkEvent, ToolCall, FunctionCall
 from crewai.flow.flow import Flow, start
+from crewai.state.checkpoint_config import CheckpointConfig
 from crewai.types.streaming import (
     AsyncStreamSession,
     CrewStreamingOutput,
@@ -509,6 +510,25 @@ class TestFlowKickoffStreaming:
         result = streaming.result
         assert result == "flow result"
 
+    def test_streaming_kickoff_passes_checkpoint_config_to_stream_events(self) -> None:
+        """stream=True preserves checkpoint config when routing to stream_events."""
+
+        class TestFlow(Flow[dict[str, Any]]):
+            @start()
+            def generate(self) -> str:
+                return "flow result"
+
+        flow = TestFlow()
+        flow.stream = True
+        checkpoint = CheckpointConfig()
+
+        with patch.object(flow, "stream_events", wraps=flow.stream_events) as spy:
+            streaming = flow.kickoff(from_checkpoint=checkpoint)
+            list(streaming)
+
+        assert spy.call_args.kwargs["from_checkpoint"] is checkpoint
+        assert streaming.result == "flow result"
+
 
 class TestFlowKickoffStreamingAsync:
     """Tests for Flow(stream=True).kickoff_async() method."""
@@ -610,6 +630,29 @@ class TestFlowKickoffStreamingAsync:
 
         result = streaming.result
         assert result == "async flow result"
+
+    @pytest.mark.asyncio
+    async def test_streaming_kickoff_async_passes_checkpoint_config_to_astream(
+        self,
+    ) -> None:
+        """stream=True preserves checkpoint config when routing to astream."""
+
+        class TestFlow(Flow[dict[str, Any]]):
+            @start()
+            async def generate(self) -> str:
+                return "async flow result"
+
+        flow = TestFlow()
+        flow.stream = True
+        checkpoint = CheckpointConfig()
+
+        with patch.object(flow, "astream", wraps=flow.astream) as spy:
+            streaming = await flow.kickoff_async(from_checkpoint=checkpoint)
+            async for _ in streaming:
+                pass
+
+        assert spy.call_args.kwargs["from_checkpoint"] is checkpoint
+        assert streaming.result == "async flow result"
 
 
 class TestStreamingEdgeCases:

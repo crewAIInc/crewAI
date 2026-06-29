@@ -3,6 +3,8 @@
 import pytest
 
 from crewai import Agent, Crew, Task
+from crewai.events.event_bus import crewai_event_bus
+from crewai.events.types.llm_events import LLMStreamChunkEvent
 from crewai.flow.flow import Flow, start
 from crewai.types.streaming import AsyncStreamSession, CrewStreamingOutput, StreamSession
 
@@ -232,6 +234,14 @@ class TestStreamingFlowIntegration:
 
             @start()
             def execute(self) -> str:
+                crewai_event_bus.emit(
+                    self,
+                    LLMStreamChunkEvent(
+                        type="llm_stream_chunk",
+                        chunk="Flow result",
+                        call_id="call-1",
+                    ),
+                )
                 return "Flow result"
 
         flow = SimpleFlow()
@@ -241,8 +251,10 @@ class TestStreamingFlowIntegration:
             pass
 
         assert streaming.is_completed is True
-        full_text = "".join(frame.content for frame in streaming.frames)
-        assert isinstance(full_text, str)
+        content_frames = [frame for frame in streaming.frames if frame.content]
+        full_text = "".join(frame.content for frame in content_frames)
+        assert full_text == "Flow result"
+        assert len(content_frames) == 1
         assert len(streaming.frames) > 0
 
         result = streaming.result

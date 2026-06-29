@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import AsyncIterator
-from typing import Any
+from typing import Any, ClassVar
 
 import pytest
 
@@ -59,7 +59,12 @@ class FrameFlow(Flow):
 
 
 class DirectStreamingLLM(BaseLLM):
+    call_stream_values: ClassVar[list[bool | None]] = []
+    call_instance_ids: ClassVar[list[int]] = []
+
     def call(self, messages: Any, *args: Any, **kwargs: Any) -> str:
+        self.call_stream_values.append(self.stream)
+        self.call_instance_ids.append(id(self))
         crewai_event_bus.emit(
             self,
             LLMStreamChunkEvent(
@@ -149,6 +154,8 @@ def test_flow_streaming_returns_iterable_frame_session() -> None:
 
 
 def test_direct_llm_stream_events_scope_and_restore_stream_flag() -> None:
+    DirectStreamingLLM.call_stream_values = []
+    DirectStreamingLLM.call_instance_ids = []
     llm = DirectStreamingLLM(model="gpt-4o-mini", stream=False)
 
     with llm.stream_events("hello") as stream:
@@ -158,6 +165,8 @@ def test_direct_llm_stream_events_scope_and_restore_stream_flag() -> None:
     assert frames[0].event["chunk"] == "hel"
     assert stream.result == "hello"
     assert llm.stream is False
+    assert DirectStreamingLLM.call_stream_values == [True]
+    assert DirectStreamingLLM.call_instance_ids != [id(llm)]
 
 
 @pytest.mark.asyncio

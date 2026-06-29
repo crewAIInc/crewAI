@@ -339,20 +339,16 @@ class BaseLLM(BaseModel, ABC):
         output_holder: list[StreamSession[Any]] = []
 
         def run_llm_call() -> Any:
-            original_stream = self.stream
-            try:
-                self.stream = True
-                return self.call(
-                    messages=messages,
-                    tools=tools,
-                    callbacks=callbacks,
-                    available_functions=available_functions,
-                    from_task=from_task,
-                    from_agent=from_agent,
-                    response_model=response_model,
-                )
-            finally:
-                self.stream = original_stream
+            streaming_llm = self.model_copy(update={"stream": True})
+            return streaming_llm.call(
+                messages=messages,
+                tools=tools,
+                callbacks=callbacks,
+                available_functions=available_functions,
+                from_task=from_task,
+                from_agent=from_agent,
+                response_model=response_model,
+            )
 
         stream_session: StreamSession[Any] = StreamSession(
             sync_iterator=create_frame_generator(state, run_llm_call, output_holder)

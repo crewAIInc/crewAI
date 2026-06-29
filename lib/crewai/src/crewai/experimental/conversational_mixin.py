@@ -45,6 +45,7 @@ from crewai.experimental.conversational import (
     _conversational_only,
     message_to_llm_dict,
 )
+from crewai.flow.async_feedback import HumanFeedbackPending
 from crewai.flow.conversation import (
     append_message as _append_conversation_message,
     get_conversation_messages,
@@ -382,7 +383,6 @@ class _ConversationalMixin:
             self._pending_intents = list(intents) if intents else None
             self._pending_intent_llm = intent_llm
 
-            failed_event: ConversationTurnFailedEvent | None = None
             try:
                 if "from_checkpoint" not in kickoff_kwargs:
                     self._reset_turn_execution_state()
@@ -407,6 +407,8 @@ class _ConversationalMixin:
                     and self._is_public_turn_result(result)
                 ):
                     self.append_assistant_message(self._stringify_result(result))
+            except HumanFeedbackPending as exc:
+                return exc
             except Exception as exc:
                 failed_event = ConversationTurnFailedEvent(
                     type="conversation_turn_failed",

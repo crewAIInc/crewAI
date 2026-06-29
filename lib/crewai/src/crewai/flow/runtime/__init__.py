@@ -1950,6 +1950,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             return self.stream_events(
                 inputs=inputs,
                 input_files=input_files,
+                from_checkpoint=from_checkpoint,
                 restore_from_state_id=restore_from_state_id,
             )
 
@@ -2015,6 +2016,7 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
             return self.astream(
                 inputs=inputs,
                 input_files=input_files,
+                from_checkpoint=from_checkpoint,
                 restore_from_state_id=restore_from_state_id,
             )
 

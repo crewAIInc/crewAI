@@ -777,9 +777,7 @@ class CrewAIEventsBus:
             source: The object emitting the event
             event: The event instance to emit
         """
-        self._register_source(source)
-        event.emission_sequence = get_next_emission_sequence()
-        self._record_event(event)
+        self._prepare_event(source, event)
 
         event_type = type(event)
 
