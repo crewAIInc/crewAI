@@ -1,0 +1,162 @@
+---
+title: Streaming Runtime Contract
+description: Stream ordered runtime frames from Flows and conversational turns.
+icon: tower-broadcast
+mode: "wide"
+---
+
+## Overview
+
+CrewAI exposes a frame-based streaming contract for runtimes that need more than plain text chunks. The contract emits ordered `StreamFrame` objects for Flow lifecycle events, LLM tokens, tool activity, conversation messages, and custom events.
+
+Use this API when you are building a UI, service bridge, terminal app, or deployment runtime that needs a stable stream of structured events while a Flow is running.
+
+## StreamFrame
+
+Every frame has the same envelope:
+
+```python
+from crewai.types.streaming import StreamFrame
+
+frame.version      # "v1"
+frame.id           # unique frame id
+frame.seq          # execution-local order, when available
+frame.type         # source event type, such as "flow_started"
+frame.channel      # "llm", "flow", "tools", "messages", "lifecycle", or "custom"
+frame.namespace    # source/runtime namespace
+frame.timestamp    # event timestamp
+frame.parent_id    # parent event id, when available
+frame.previous_id  # previous event id, when available
+frame.data         # event payload
+```
+
+The `channel` field is the fastest way to route frames in consumers:
+
+| Channel | Contains |
+|---------|----------|
+| `llm` | Token and thinking chunks from LLM streaming events |
+| `flow` | Flow lifecycle, method execution, routing, and pause/resume events |
+| `tools` | Tool usage events |
+| `messages` | Conversation transcript events |
+| `lifecycle` | Runtime lifecycle events that are not specific to another channel |
+| `custom` | Events that do not map to a built-in channel |
+
+`frame.type` preserves the source event type, so consumers can handle specific events inside a channel.
+
+## Stream a Flow
+
+Use `stream_events()` to run a Flow and iterate over all frames:
+
+```python
+from crewai.flow import Flow, start
+
+
+class ReportFlow(Flow):
+    @start()
+    def generate(self):
+        return "done"
+
+
+flow = ReportFlow()
+stream = flow.stream_events()
+
+with stream:
+    for frame in stream.events:
+        print(frame.seq, frame.channel, frame.type, frame.data)
+
+result = stream.result
+```
+
+You must consume the stream before reading `stream.result`. Accessing the result early raises a `RuntimeError` so consumers do not accidentally treat a partial run as complete.
+
+## Filter by Channel
+
+`StreamSession` exposes channel projections that preserve global frame order within the selected channel:
+
+```python
+stream = flow.stream_events()
+
+with stream:
+    for frame in stream.llm:
+        print(frame.data.get("chunk", ""), end="", flush=True)
+
+result = stream.result
+```
+
+Available projections are:
+
+| Projection | Frames |
+|------------|--------|
+| `stream.events` | All frames |
+| `stream.llm` | LLM frames |
+| `stream.messages` | Conversation message frames |
+| `stream.flow` | Flow frames |
+| `stream.tools` | Tool frames |
+| `stream.interleave([...])` | A selected set of channels |
+
+Use `stream.interleave(["flow", "llm", "messages"])` when a consumer wants only some channels but still needs their relative order.
+
+## Async Streaming
+
+Use `astream()` for async consumers:
+
+```python
+flow = ReportFlow()
+stream = flow.astream()
+
+async with stream:
+    async for frame in stream.events:
+        print(frame.channel, frame.type)
+
+result = stream.result
+```
+
+The async session has the same projections as the sync session.
+
+## Conversational Turns
+
+Conversational Flows can stream one user turn with `stream_turn()`:
+
+```python
+from crewai import Flow
+from crewai.experimental.conversational import ConversationConfig, ConversationState
+
+
+@ConversationConfig(llm="gpt-4o-mini", defer_trace_finalization=True)
+class ChatFlow(Flow[ConversationState]):
+    conversational = True
+
+
+flow = ChatFlow()
+stream = flow.stream_turn("What can you help me with?", session_id="session-1")
+
+with stream:
+    for frame in stream.events:
+        if frame.channel == "llm" and frame.type == "llm_stream_chunk":
+            print(frame.data.get("chunk", ""), end="", flush=True)
+
+reply = stream.result
+```
+
+During `stream_turn()`, the built-in conversational answer path enables LLM token streaming for that turn and restores the LLM's previous `stream` setting afterward. Custom route handlers that create their own agents or LLM instances should configure those LLMs for streaming if they need token-level output.
+
+## Cleanup
+
+Use the session as a context manager when possible. If a client disconnects before the stream is exhausted, close the session explicitly:
+
+```python
+stream = flow.stream_events()
+
+try:
+    for frame in stream.events:
+        print(frame.type)
+finally:
+    if not stream.is_exhausted:
+        stream.close()
+```
+
+For async streams, use `await stream.aclose()`.
+
+## Legacy Chunk Streaming
+
+Crew streaming with `stream=True` still returns the chunk-oriented `CrewStreamingOutput` API described in [Streaming Crew Execution](/en/learn/streaming-crew-execution). The frame contract is intended for runtimes that need a stable event envelope across Flows, conversational turns, LLM output, tools, and messages.

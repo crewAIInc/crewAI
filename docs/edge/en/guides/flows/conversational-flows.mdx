@@ -25,6 +25,7 @@ Use **`flow.handle_turn(message, session_id=...)`** for every user message from 
 | API | Use for |
 |-----|---------|
 | `handle_turn(message, session_id=...)` | Ergonomic one-turn wrapper for conversational `Flow` |
+| `stream_turn(message, session_id=...)` | Stream one conversational turn as ordered runtime frames |
 | `chat()` | Local terminal REPL for conversational `Flow` |
 | `kickoff(inputs={...})` | Advanced flow execution without conversational turn handling |
 | `ask()` | Blocking prompt **inside** one step (wizard, clarification) |
@@ -84,6 +85,23 @@ try:
 finally:
     flow.finalize_session_traces()  # one trace link for the whole chat
 ```
+
+## Streaming a turn
+
+Use `stream_turn()` when a UI or runtime needs structured events for one chat turn. It returns a stream session with ordered frames for Flow routing, LLM chunks, tool activity, and conversation messages.
+
+```python
+stream = flow.stream_turn("Where is my order?", session_id=session_id)
+
+with stream:
+    for frame in stream.events:
+        if frame.channel == "llm" and frame.type == "llm_stream_chunk":
+            print(frame.data.get("chunk", ""), end="", flush=True)
+
+result = stream.result
+```
+
+For the full frame contract, channel list, and async API, see [Streaming Runtime Contract](/en/learn/streaming-runtime-contract).
 
 ## Turn lifecycle
 

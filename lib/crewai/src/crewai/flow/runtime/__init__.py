@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import (
+    AsyncIterator,
     Callable,
     Iterator,
     Sequence,
@@ -140,17 +141,18 @@ if TYPE_CHECKING:
     from crewai.llms.base_llm import BaseLLM
 
 from crewai.flow.visualization import build_flow_structure, render_interactive
-from crewai.types.streaming import CrewStreamingOutput, FlowStreamingOutput
+from crewai.types.streaming import (
+    AsyncStreamSession,
+    FlowStreamingOutput,
+    StreamSession,
+)
 from crewai.types.usage_metrics import UsageMetrics
 from crewai.utilities.env import get_env_context
 from crewai.utilities.streaming import (
-    TaskInfo,
-    create_async_chunk_generator,
-    create_chunk_generator,
-    create_streaming_state,
-    register_cleanup,
-    signal_end,
-    signal_error,
+    create_async_frame_generator,
+    create_frame_generator,
+    create_frame_streaming_state,
+    stream_frame_to_chunk,
 )
 
 
@@ -1832,6 +1834,87 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
                 if hasattr(self._state, key):
                     object.__setattr__(self._state, key, value)
 
+    def stream_events(
+        self,
+        inputs: dict[str, Any] | None = None,
+        input_files: dict[str, FileInput] | None = None,
+        from_checkpoint: CheckpointConfig | None = None,
+        restore_from_state_id: str | None = None,
+    ) -> StreamSession[Any]:
+        """Run the flow and stream all scoped public ``StreamFrame`` events."""
+        result_holder: list[Any] = []
+        state = create_frame_streaming_state(result_holder, use_async=False)
+        output_holder: list[StreamSession[Any]] = []
+
+        def run_flow() -> Any:
+            original_stream = self.stream
+            try:
+                self.stream = False
+                return self.kickoff(
+                    inputs=inputs,
+                    input_files=input_files,
+                    from_checkpoint=from_checkpoint,
+                    restore_from_state_id=restore_from_state_id,
+                )
+            except HumanFeedbackPending as e:
+                return e
+            finally:
+                self.stream = original_stream
+
+        stream_session: StreamSession[Any] = StreamSession(
+            sync_iterator=create_frame_generator(state, run_flow, output_holder)
+        )
+        output_holder.append(stream_session)
+        return stream_session
+
+    def stream_frames(
+        self,
+        inputs: dict[str, Any] | None = None,
+        input_files: dict[str, FileInput] | None = None,
+        from_checkpoint: CheckpointConfig | None = None,
+        restore_from_state_id: str | None = None,
+    ) -> StreamSession[Any]:
+        """Alias for :meth:`stream_events`."""
+        return self.stream_events(
+            inputs=inputs,
+            input_files=input_files,
+            from_checkpoint=from_checkpoint,
+            restore_from_state_id=restore_from_state_id,
+        )
+
+    def astream(
+        self,
+        inputs: dict[str, Any] | None = None,
+        input_files: dict[str, FileInput] | None = None,
+        from_checkpoint: CheckpointConfig | None = None,
+        restore_from_state_id: str | None = None,
+    ) -> AsyncStreamSession[Any]:
+        """Run the flow asynchronously and stream scoped public frames."""
+        result_holder: list[Any] = []
+        state = create_frame_streaming_state(result_holder, use_async=True)
+        output_holder: list[AsyncStreamSession[Any]] = []
+
+        async def run_flow() -> Any:
+            original_stream = self.stream
+            try:
+                self.stream = False
+                return await self.kickoff_async(
+                    inputs=inputs,
+                    input_files=input_files,
+                    from_checkpoint=from_checkpoint,
+                    restore_from_state_id=restore_from_state_id,
+                )
+            except HumanFeedbackPending as e:
+                return e
+            finally:
+                self.stream = original_stream
+
+        stream_session: AsyncStreamSession[Any] = AsyncStreamSession(
+            async_iterator=create_async_frame_generator(state, run_flow, output_holder)
+        )
+        output_holder.append(stream_session)
+        return stream_session
+
     def kickoff(
         self,
         inputs: dict[str, Any] | None = None,
@@ -1871,44 +1954,26 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if restored is not None:
             return restored.kickoff(inputs=inputs, input_files=input_files)
         if self.stream:
-            result_holder: list[Any] = []
-            current_task_info: TaskInfo = {
-                "index": 0,
-                "name": "",
-                "id": "",
-                "agent_role": "",
-                "agent_id": "",
-            }
+            streaming_output: FlowStreamingOutput
 
-            state = create_streaming_state(
-                current_task_info, result_holder, use_async=False
-            )
-            output_holder: list[CrewStreamingOutput | FlowStreamingOutput] = []
-
-            def run_flow() -> None:
+            def chunk_iterator() -> Iterator[Any]:
+                stream_session = self.stream_events(
+                    inputs=inputs,
+                    input_files=input_files,
+                    restore_from_state_id=restore_from_state_id,
+                )
                 try:
-                    self.stream = False
-                    result = self.kickoff(
-                        inputs=inputs,
-                        input_files=input_files,
-                        restore_from_state_id=restore_from_state_id,
-                    )
-                    result_holder.append(result)
-                except Exception as e:
-                    # HumanFeedbackPending is expected control flow, not an error
-                    if isinstance(e, HumanFeedbackPending):
-                        result_holder.append(e)
-                    else:
-                        signal_error(state, e)
+                    with stream_session:
+                        for frame in stream_session.llm:
+                            chunk = stream_frame_to_chunk(frame)
+                            if chunk is not None:
+                                yield chunk
+                    streaming_output._set_result(stream_session.result)
                 finally:
-                    self.stream = True
-                    signal_end(state)
+                    if not stream_session.is_exhausted:
+                        stream_session.close()
 
-            streaming_output = FlowStreamingOutput(
-                sync_iterator=create_chunk_generator(state, run_flow, output_holder)
-            )
-            register_cleanup(streaming_output, state)
-            output_holder.append(streaming_output)
+            streaming_output = FlowStreamingOutput(sync_iterator=chunk_iterator())
 
             return streaming_output
 
@@ -1971,46 +2036,26 @@ class Flow(BaseModel, Generic[T], metaclass=FlowMeta):
         if restored is not None:
             return await restored.kickoff_async(inputs=inputs, input_files=input_files)
         if self.stream:
-            result_holder: list[Any] = []
-            current_task_info: TaskInfo = {
-                "index": 0,
-                "name": "",
-                "id": "",
-                "agent_role": "",
-                "agent_id": "",
-            }
+            streaming_output: FlowStreamingOutput
 
-            state = create_streaming_state(
-                current_task_info, result_holder, use_async=True
-            )
-            output_holder: list[CrewStreamingOutput | FlowStreamingOutput] = []
-
-            async def run_flow() -> None:
-                try:
-                    self.stream = False
-                    result = await self.kickoff_async(
-                        inputs=inputs,
-                        input_files=input_files,
-                        restore_from_state_id=restore_from_state_id,
-                    )
-                    result_holder.append(result)
-                except Exception as e:
-                    # HumanFeedbackPending is expected control flow, not an error
-                    if isinstance(e, HumanFeedbackPending):
-                        result_holder.append(e)
-                    else:
-                        signal_error(state, e, is_async=True)
-                finally:
-                    self.stream = True
-                    signal_end(state, is_async=True)
-
-            streaming_output = FlowStreamingOutput(
-                async_iterator=create_async_chunk_generator(
-                    state, run_flow, output_holder
+            async def chunk_iterator() -> AsyncIterator[Any]:
+                stream_session = self.astream(
+                    inputs=inputs,
+                    input_files=input_files,
+                    restore_from_state_id=restore_from_state_id,
                 )
-            )
-            register_cleanup(streaming_output, state)
-            output_holder.append(streaming_output)
+                try:
+                    async with stream_session:
+                        async for frame in stream_session.llm:
+                            chunk = stream_frame_to_chunk(frame)
+                            if chunk is not None:
+                                yield chunk
+                    streaming_output._set_result(stream_session.result)
+                finally:
+                    if not stream_session.is_exhausted:
+                        await stream_session.aclose()
+
+            streaming_output = FlowStreamingOutput(async_iterator=chunk_iterator())
 
             return streaming_output
 

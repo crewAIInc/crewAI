@@ -40,6 +40,7 @@ from crewai.events.event_context import (
     set_last_event_id,
 )
 from crewai.events.handler_graph import build_execution_plan
+from crewai.events.stream_context import publish_stream_event
 from crewai.events.types.event_bus_types import (
     AsyncHandler,
     AsyncHandlerSet,
@@ -565,6 +566,7 @@ class CrewAIEventsBus:
 
         set_last_event_id(event.event_id)
 
+        publish_stream_event(source, event)
         self._record_event(event)
 
     def emit(self, source: Any, event: BaseEvent) -> Future[None] | None:
