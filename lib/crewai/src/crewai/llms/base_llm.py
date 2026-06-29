@@ -82,6 +82,9 @@ _current_call_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
 _call_stop_override_var: contextvars.ContextVar[dict[int, list[str]] | None] = (
     contextvars.ContextVar("_call_stop_override_var", default=None)
 )
+_call_stream_override_var: contextvars.ContextVar[dict[int, bool] | None] = (
+    contextvars.ContextVar("_call_stream_override_var", default=None)
+)
 
 
 @contextmanager
@@ -118,6 +121,19 @@ def call_stop_override(
         yield
     finally:
         _call_stop_override_var.reset(token)
+
+
+@contextmanager
+def call_stream_override(llm: BaseLLM, stream: bool) -> Generator[None, None, None]:
+    """Override streaming for ``llm`` within the current call scope."""
+    current = _call_stream_override_var.get()
+    new_overrides: dict[int, bool] = dict(current) if current else {}
+    new_overrides[id(llm)] = stream
+    token = _call_stream_override_var.set(new_overrides)
+    try:
+        yield
+    finally:
+        _call_stream_override_var.reset(token)
 
 
 def get_current_call_id() -> str:
@@ -217,6 +233,13 @@ class BaseLLM(BaseModel, ABC):
             if override is not None:
                 return override
         return self.stop
+
+    def _effective_stream(self) -> bool | None:
+        """Return the call-scoped streaming mode for this instance."""
+        overrides = _call_stream_override_var.get()
+        if overrides is not None and id(self) in overrides:
+            return overrides[id(self)]
+        return self.stream
 
     _token_usage: dict[str, int] = PrivateAttr(
         default_factory=lambda: {
@@ -339,16 +362,16 @@ class BaseLLM(BaseModel, ABC):
         output_holder: list[StreamSession[Any]] = []
 
         def run_llm_call() -> Any:
-            streaming_llm = self.model_copy(update={"stream": True})
-            return streaming_llm.call(
-                messages=messages,
-                tools=tools,
-                callbacks=callbacks,
-                available_functions=available_functions,
-                from_task=from_task,
-                from_agent=from_agent,
-                response_model=response_model,
-            )
+            with call_stream_override(self, True):
+                return self.call(
+                    messages=messages,
+                    tools=tools,
+                    callbacks=callbacks,
+                    available_functions=available_functions,
+                    from_task=from_task,
+                    from_agent=from_agent,
+                    response_model=response_model,
+                )
 
         stream_session: StreamSession[Any] = StreamSession(
             sync_iterator=create_frame_generator(state, run_llm_call, output_holder)
@@ -547,7 +570,7 @@ class BaseLLM(BaseModel, ABC):
         if max_tokens is None:
             max_tokens = self._effective_max_tokens()
         if stream is None:
-            stream = self.stream
+            stream = self._effective_stream()
         if seed is None:
             seed = self.seed
         if stop_sequences is None:

@@ -13,7 +13,7 @@ from crewai.events.types.flow_events import ConversationMessageAddedEvent
 from crewai.events.types.llm_events import LLMStreamChunkEvent, LLMThinkingChunkEvent
 from crewai.events.types.tool_usage_events import ToolUsageStartedEvent
 from crewai.flow.flow import Flow, start
-from crewai.llms.base_llm import BaseLLM
+from crewai.llms.base_llm import BaseLLM, call_stop_override
 from crewai.types.streaming import StreamFrame
 
 
@@ -60,11 +60,22 @@ class FrameFlow(Flow):
 
 class DirectStreamingLLM(BaseLLM):
     call_stream_values: ClassVar[list[bool | None]] = []
+    raw_stream_values: ClassVar[list[bool | None]] = []
     call_instance_ids: ClassVar[list[int]] = []
+    call_stop_values: ClassVar[list[list[str]]] = []
 
     def call(self, messages: Any, *args: Any, **kwargs: Any) -> str:
-        self.call_stream_values.append(self.stream)
+        self.call_stream_values.append(self._effective_stream())
+        self.raw_stream_values.append(self.stream)
         self.call_instance_ids.append(id(self))
+        self.call_stop_values.append(list(self.stop_sequences))
+        self._track_token_usage_internal(
+            {
+                "prompt_tokens": 1,
+                "completion_tokens": 2,
+                "total_tokens": 3,
+            }
+        )
         crewai_event_bus.emit(
             self,
             LLMStreamChunkEvent(
@@ -182,18 +193,28 @@ def test_flow_streaming_returns_iterable_frame_session() -> None:
 
 def test_direct_llm_stream_events_scope_and_restore_stream_flag() -> None:
     DirectStreamingLLM.call_stream_values = []
+    DirectStreamingLLM.raw_stream_values = []
     DirectStreamingLLM.call_instance_ids = []
+    DirectStreamingLLM.call_stop_values = []
     llm = DirectStreamingLLM(model="gpt-4o-mini", stream=False)
 
-    with llm.stream_events("hello") as stream:
-        frames = list(stream)
+    with call_stop_override(llm, ["STOP"]):
+        with llm.stream_events("hello") as stream:
+            frames = list(stream)
 
     assert [frame.content for frame in frames] == ["hel", "lo"]
     assert frames[0].event["chunk"] == "hel"
     assert stream.result == "hello"
     assert llm.stream is False
     assert DirectStreamingLLM.call_stream_values == [True]
-    assert DirectStreamingLLM.call_instance_ids != [id(llm)]
+    assert DirectStreamingLLM.raw_stream_values == [False]
+    assert DirectStreamingLLM.call_instance_ids == [id(llm)]
+    assert DirectStreamingLLM.call_stop_values == [["STOP"]]
+    usage = llm.get_token_usage_summary()
+    assert usage.total_tokens == 3
+    assert usage.prompt_tokens == 1
+    assert usage.completion_tokens == 2
+    assert usage.successful_requests == 1
 
 
 @pytest.mark.asyncio
