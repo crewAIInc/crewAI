@@ -116,6 +116,9 @@ class MarkovianStampTool(BaseTool):
         except Exception as exc:
             return f"Markovian stamp failed: {exc}"
 
+        if not isinstance(receipt, dict):
+            return f"Markovian stamp returned an unexpected response: {receipt}"
+
         merkle_root = receipt.get("merkle_root")
         if not merkle_root:
             return f"Markovian stamp returned no merkle_root: {json.dumps(receipt)}"

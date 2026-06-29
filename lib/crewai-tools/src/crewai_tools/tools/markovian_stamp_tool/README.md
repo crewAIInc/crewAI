@@ -63,7 +63,7 @@ print(receipt)
 
 Example output:
 
-```
+```text
 Markovian provenance receipt (markovian-provenance/v1):
   merkle_root: 65ddefa2b8d3fb994f2a4037f9dd8278688138bf1c5eaa9cdb64c73c02663466
   block_height: 135213

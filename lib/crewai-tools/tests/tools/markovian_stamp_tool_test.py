@@ -1,8 +1,11 @@
+import sys
+from types import ModuleType
 from unittest.mock import MagicMock, patch
 
 import requests
 
 from crewai_tools import MarkovianStampTool
+
 
 SAMPLE_RECEIPT = {
     "ok": True,
@@ -14,14 +17,23 @@ SAMPLE_RECEIPT = {
 }
 
 
-def test_run_uses_sdk_when_available():
+def test_run_uses_sdk_when_available(monkeypatch):
     tool = MarkovianStampTool()
+
     fake_client = MagicMock()
     fake_client.stamp.return_value = SAMPLE_RECEIPT
+    fake_client_cls = MagicMock(return_value=fake_client)
 
-    with patch.object(tool, "_stamp", return_value=SAMPLE_RECEIPT):
-        result = tool.run(data="hello world")
+    fake_module = ModuleType("markovian")
+    fake_module.MarkovianClient = fake_client_cls
+    monkeypatch.setitem(sys.modules, "markovian", fake_module)
 
+    result = tool.run(data="hello world")
+
+    fake_client_cls.assert_called_once()
+    fake_client.stamp.assert_called_once()
+    args, kwargs = fake_client.stamp.call_args
+    assert args[0] == "hello world"
     assert SAMPLE_RECEIPT["merkle_root"] in result
     assert SAMPLE_RECEIPT["verify_url"] in result
     assert "135213" in result
@@ -61,6 +73,15 @@ def test_run_handles_http_error():
 
     assert "Markovian stamp failed" in result
     assert "500" in result
+    assert "boom" in result
+
+
+def test_run_handles_non_dict_response():
+    tool = MarkovianStampTool()
+    with patch.object(tool, "_stamp", return_value=["not", "a", "dict"]):
+        result = tool.run(data="hello world")
+
+    assert "unexpected response" in result
 
 
 def test_run_handles_missing_merkle_root():
