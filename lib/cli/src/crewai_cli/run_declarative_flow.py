@@ -6,12 +6,14 @@ import subprocess
 from typing import Any
 
 import click
+from crewai_core.project import ProjectDefinitionError, configured_project_definition
+from pydantic import ValidationError
 
 from crewai_cli.utils import build_env_with_all_tool_credentials
 
 
 def run_declarative_flow_in_project_env(
-    definition: str, inputs: str | None = None
+    definition: str | Path, inputs: str | None = None
 ) -> None:
     """Run a declarative flow inside the project's Python environment."""
     if is_declarative_flow_project_env() or not _has_project_file():
@@ -24,7 +26,7 @@ def run_declarative_flow_in_project_env(
     _execute_declarative_flow_command(["uv", "run", "crewai", "run"])
 
 
-def plot_declarative_flow_in_project_env(definition: str) -> None:
+def plot_declarative_flow_in_project_env(definition: str | Path) -> None:
     """Plot a declarative flow inside the project's Python environment."""
     if is_declarative_flow_project_env() or not _has_project_file():
         plot_declarative_flow(definition=definition)
@@ -33,7 +35,7 @@ def plot_declarative_flow_in_project_env(definition: str) -> None:
     _execute_declarative_flow_command(["uv", "run", "crewai", "flow", "plot"])
 
 
-def run_declarative_flow(definition: str, inputs: str | None = None) -> None:
+def run_declarative_flow(definition: str | Path, inputs: str | None = None) -> None:
     """Run a declarative flow from a definition path."""
     parsed_inputs = _parse_inputs(inputs)
 
@@ -49,7 +51,7 @@ def run_declarative_flow(definition: str, inputs: str | None = None) -> None:
     click.echo(_format_result(result))
 
 
-def plot_declarative_flow(definition: str) -> None:
+def plot_declarative_flow(definition: str | Path) -> None:
     """Plot a declarative flow from a definition path."""
     try:
         flow = load_declarative_flow(definition)
@@ -61,11 +63,10 @@ def plot_declarative_flow(definition: str) -> None:
         raise SystemExit(1) from exc
 
 
-def load_declarative_flow(definition: str) -> Any:
+def load_declarative_flow(definition: str | Path) -> Any:
     """Load a declarative Flow instance from a definition path."""
     try:
         from crewai.flow.flow import Flow
-        from crewai.flow.flow_definition import FlowDefinition
     except ImportError as exc:
         click.echo(
             "Running declarative flows requires the full crewai package.",
@@ -74,35 +75,49 @@ def load_declarative_flow(definition: str) -> Any:
         raise SystemExit(1) from exc
 
     definition_path = Path(definition).expanduser()
-    definition_source = _read_declarative_flow_source(definition_path, definition)
+    try:
+        if not definition_path.is_file():
+            if definition_path.exists():
+                click.echo(
+                    f"Invalid --definition path: {definition} is not a file.",
+                    err=True,
+                )
+                raise SystemExit(1)
+            click.echo(
+                f"Invalid --definition path: {definition} does not exist.", err=True
+            )
+            raise SystemExit(1)
+    except OSError as exc:
+        click.echo(f"Invalid --definition path: {definition} ({exc})", err=True)
+        raise SystemExit(1) from exc
 
-    flow_definition = _parse_declarative_flow(
-        FlowDefinition,
-        definition_source,
-        source_path=definition_path,
-    )
-    return Flow.from_definition(flow_definition)
+    try:
+        return Flow.from_declaration(path=definition_path)
+    except (OSError, UnicodeError, ValueError, ValidationError) as exc:
+        click.echo(
+            f"Unable to read --definition path {definition_path}: {exc}",
+            err=True,
+        )
+        raise SystemExit(1) from exc
 
 
 def configured_project_declarative_flow(
     pyproject_data: dict[str, Any] | None = None,
-) -> str | None:
+    project_root: Path | None = None,
+) -> Path | None:
     """Return the configured declarative flow source for flow projects."""
-    if pyproject_data is None:
-        try:
-            from crewai_cli.utils import read_toml
-
-            pyproject_data = read_toml()
-        except Exception:
-            return None
-
-    crewai_config = pyproject_data.get("tool", {}).get("crewai", {})
-    if crewai_config.get("type") != "flow":
+    root = project_root or Path.cwd()
+    if pyproject_data is None and not (root / "pyproject.toml").is_file():
         return None
-    definition = crewai_config.get("definition")
-    if not isinstance(definition, str):
-        return None
-    return definition.strip() or None
+
+    try:
+        return configured_project_definition(
+            "flow",
+            pyproject_data=pyproject_data,
+            project_root=root,
+        )
+    except ProjectDefinitionError as exc:
+        raise click.UsageError(str(exc)) from exc
 
 
 def _execute_declarative_flow_command(command: list[str]) -> None:
@@ -152,53 +167,6 @@ def _parse_inputs(inputs: str | None) -> dict[str, Any] | None:
         raise SystemExit(1)
 
     return parsed
-
-
-def _read_declarative_flow_source(path: Path, definition: str) -> str:
-    try:
-        if path.is_file():
-            source = _read_declarative_flow_file(path)
-        elif path.exists():
-            click.echo(
-                f"Invalid --definition path: {definition} is not a file.", err=True
-            )
-            raise SystemExit(1)
-        else:
-            click.echo(
-                f"Invalid --definition path: {definition} does not exist.", err=True
-            )
-            raise SystemExit(1)
-    except OSError as exc:
-        click.echo(f"Invalid --definition path: {definition} ({exc})", err=True)
-        raise SystemExit(1) from exc
-
-    return source
-
-
-def _read_declarative_flow_file(path: Path) -> str:
-    try:
-        source = path.read_text(encoding="utf-8")
-    except (OSError, UnicodeError) as exc:
-        click.echo(
-            f"Unable to read --definition path {path}: {exc}",
-            err=True,
-        )
-        raise SystemExit(1) from exc
-    return source
-
-
-def _parse_declarative_flow(
-    flow_definition_cls: type[Any], source: str, *, source_path: Path
-) -> Any:
-    if _looks_like_json(source):
-        return flow_definition_cls.from_json(source, source_path=source_path)
-
-    return flow_definition_cls.from_yaml(source, source_path=source_path)
-
-
-def _looks_like_json(source: str) -> bool:
-    stripped = source.lstrip()
-    return stripped.startswith("{")
 
 
 def _format_result(result: Any) -> str:

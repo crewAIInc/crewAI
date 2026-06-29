@@ -4,6 +4,9 @@ import shutil
 import click
 from crewai_core.telemetry import Telemetry
 
+from crewai_cli.git import initialize_if_git_available
+from crewai_cli.version import get_crewai_tools_dependency
+
 
 DECLARATIVE_FLOW_FOLDERS = ("crews", "tools", "knowledge", "skills")
 
@@ -27,6 +30,8 @@ def create_flow(name: str, *, declarative: bool = False) -> None:
         _create_declarative_flow(name, class_name, folder_name, project_root)
     else:
         _create_python_flow(name, class_name, folder_name, project_root)
+
+    initialize_if_git_available(project_root)
 
     click.secho(f"Flow {name} created successfully!", fg="green", bold=True)
 
@@ -71,6 +76,9 @@ def _create_python_flow(
         content = content.replace("{{name}}", name)
         content = content.replace("{{flow_name}}", class_name)
         content = content.replace("{{folder_name}}", folder_name)
+        content = content.replace(
+            "{{crewai_tools_dependency}}", get_crewai_tools_dependency()
+        )
 
         with open(dst_file, "w") as file:
             file.write(content)
@@ -138,6 +146,9 @@ def _create_declarative_flow(
         content = content.replace("{{name}}", name)
         content = content.replace("{{flow_name}}", class_name)
         content = content.replace("{{folder_name}}", folder_name)
+        content = content.replace(
+            "{{crewai_tools_dependency}}", get_crewai_tools_dependency()
+        )
         dst_file.write_text(content, encoding="utf-8")
 
     (project_root / ".env").write_text("OPENAI_API_KEY=YOUR_API_KEY", encoding="utf-8")
