@@ -91,6 +91,27 @@ class CrewAgentDefinition(BaseModel):
         ),
         examples=[["gmail", "slack/send_message"]],
     )
+    mcps: list[str | dict[str, Any]] | None = Field(
+        default=None,
+        description=(
+            "MCP server refs or serialized MCP server configs available to this "
+            "agent. String refs can use HTTPS URLs, connected MCP integration "
+            "slugs, or refs with a `#tool_name` suffix for specific tools."
+        ),
+        examples=[
+            [
+                "https://api.weather.com/mcp#get_current_weather",
+                "snowflake",
+                "stripe#list_invoices",
+                {
+                    "url": "https://api.example.com/mcp",
+                    "headers": {"Authorization": "Bearer your_token"},
+                    "streamable": True,
+                    "cache_tools_list": True,
+                },
+            ]
+        ],
+    )
 
     @field_validator("settings", mode="before")
     @classmethod
