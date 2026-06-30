@@ -1293,31 +1293,6 @@ In this section, you'll find detailed examples that help you select, configure, 
     uv add 'crewai[litellm]'
     ```
   </Accordion>
-  <Accordion title="EmpirioLabs">
-    Set the following environment variables in your `.env` file:
-    ```toml Code
-    EMPIRIOLABS_API_KEY=<your-api-key>
-    ```
-
-    Example usage in your CrewAI project:
-    ```python Code
-    llm = LLM(
-        model="empiriolabs/qwen3-7-plus"
-    )
-    ```
-
-    <Info>
-      EmpirioLabs features:
-      - Open and proprietary models (Qwen, DeepSeek, GLM, Kimi, MiniMax, Gemma, and more) behind one OpenAI-compatible API
-      - Pay-as-you-go pricing with per-model rates
-      - Model catalog with context windows at [empiriolabs.ai/models](https://empiriolabs.ai/models)
-    </Info>
-
-    **Note:** This provider uses LiteLLM. Add it as a dependency to your project:
-    ```bash
-    uv add 'crewai[litellm]'
-    ```
-  </Accordion>
 </AccordionGroup>
 
 ## Streaming Responses
